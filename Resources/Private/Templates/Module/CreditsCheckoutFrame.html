@@ -1,0 +1,17 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>T3Planet Checkout</title>
+    <style>
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #fff; }
+        .aiu-checkout-modal__frame { display: block; width: 100%; height: 100vh; border: 0; }
+    </style>
+</head>
+<body>
+    <iframe class="aiu-checkout-modal__frame"
+            src="{checkoutUrl}"
+            title="T3Planet checkout"
+            referrerpolicy="strict-origin-when-cross-origin"></iframe>
+</body>
+</html>

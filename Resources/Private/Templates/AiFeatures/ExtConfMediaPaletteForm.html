@@ -1,0 +1,46 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+<div class="aiu-ai-features-media-palette" data-aiu-features-media-palette>
+    <f:if condition="{prependedExtensionData}">
+        <div class="aiu-ai-features-media-palette__intro mb-3">
+            <f:render partial="AiFeatures/ExtConfCategoryForm" arguments="{extensionKey: extensionKey, extensionData: prependedExtensionData}" />
+        </div>
+    </f:if>
+    <div class="aiu-segment-tabs aiu-ai-features-media-palette__tabs d-flex flex-wrap gap-1" role="tablist" aria-label="AI Media providers">
+        <f:for each="{palettes}" as="palette" iteration="paletteIterator">
+            <button type="button"
+                    class="btn btn-default btn-sm aiu-segment-tabs__btn{f:if(condition: paletteIterator.isFirst, then: ' is-active')}"
+                    role="tab"
+                    data-aiu-features-palette-tab="{palette.id}"
+                    aria-selected="{f:if(condition: paletteIterator.isFirst, then: 'true', else: 'false')}"
+                    aria-controls="aiu-media-palette-{palette.id}">
+                {palette.label}
+            </button>
+        </f:for>
+    </div>
+
+    <f:for each="{palettes}" as="palette" iteration="paletteIterator">
+        <f:if condition="{paletteIterator.isFirst}">
+            <f:then>
+                <div id="aiu-media-palette-{palette.id}"
+                     class="aiu-ai-features-media-palette__panel is-active"
+                     role="tabpanel"
+                     data-aiu-features-palette-panel="{palette.id}">
+                    <f:render partial="AiFeatures/ExtConfCategoryForm" arguments="{extensionKey: extensionKey, extensionData: palette.extensionData}" />
+                </div>
+            </f:then>
+            <f:else>
+                <div id="aiu-media-palette-{palette.id}"
+                     class="aiu-ai-features-media-palette__panel"
+                     role="tabpanel"
+                     data-aiu-features-palette-panel="{palette.id}"
+                     hidden="hidden">
+                    <f:render partial="AiFeatures/ExtConfCategoryForm" arguments="{extensionKey: extensionKey, extensionData: palette.extensionData}" />
+                </div>
+            </f:else>
+        </f:if>
+    </f:for>
+</div>
+</html>

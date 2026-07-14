@@ -1,0 +1,27 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+    <div class="aiu-providers aiu-ai-context"
+         data-aiu-context-root
+         data-context-read-only="{f:if(condition: '{canModifyBrandProfiles} == 1', then: '0', else: '1')}"
+         data-context-create-uri="{brandContextCreateUri}"
+         data-context-update-uri="{brandContextUpdateUri}"
+         data-context-delete-uri="{brandContextDeleteUri}"
+         data-context-set-default-uri="{brandContextSetDefaultUri}"
+         data-aiu-page-id="{currentPageId}">
+        <script type="application/json" id="aiu-context-form-config"><f:format.raw>{brandContextFormConfigJson}</f:format.raw></script>
+        <f:render partial="AiContext/FlashMessages" arguments="{_all}" />
+        <f:render partial="AiContext/Header" arguments="{_all}" />
+        <f:render partial="AiContext/StatusBar" arguments="{_all}" />
+        <f:render partial="AiContext/PlaceholderBar" arguments="{_all}" />
+        <f:render partial="AiContext/ProfileGrid" arguments="{_all}" />
+        <f:if condition="{canModifyBrandProfiles} == 1">
+            <f:render partial="AiContext/ProfileDrawer" arguments="{_all}" />
+        </f:if>
+    </div>
+</f:section>
+</html>

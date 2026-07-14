@@ -1,0 +1,70 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+    <f:variable name="aiFeaturesTotal" value="{aiFeaturesCards -> f:count()}" />
+
+    <div class="aiu-providers aiu-ai-features"
+         data-aiu-features-root
+         data-aiu-page-id="{currentPageId}"
+         data-can-modify-extension-settings="{f:if(condition: '{canModifyExtensionSettings} == 1', then: '1', else: '0')}"
+         data-aiu-features-json="{aiFeaturesCardsJson -> f:format.htmlspecialchars()}"
+         data-aiu-features-managed-extensions="{aiFeaturesManagedExtensionKeysJson -> f:format.htmlspecialchars()}"
+         data-aiu-features-catalog-total="{aiFeaturesTotal}"
+         data-aiu-feature-settings-get-uri="{aiFeaturesSettingsGetUri}"
+         data-aiu-feature-settings-save-uri="{aiFeaturesSettingsSaveUri}">
+        <f:render partial="AiFeatures/HeaderAndMeta" arguments="{_all}" />
+
+        <div class="aiu-toolbar aiu-ai-features__filters">
+            <div class="input-group aiu-ai-features__search flex-grow-1">
+                <label class="visually-hidden" for="aiu-feature-search"><f:translate key="{ll}:module.aiFeatures.searchLabel" /></label>
+                <input id="aiu-feature-search"
+                       class="form-control"
+                       type="search"
+                       data-aiu-features-search
+                       autocomplete="off"
+                       autocorrect="off"
+                       autocapitalize="off"
+                       spellcheck="false"
+                       data-1p-ignore="true"
+                       data-lpignore="true"
+                       data-form-type="other"
+                       readonly="readonly"
+                       placeholder="{f:translate(key: '{ll}:module.aiFeatures.searchPlaceholder')}" />
+            </div>
+            <label class="visually-hidden" for="aiu-feature-extension">
+                <f:translate key="{ll}:module.aiFeatures.filterExtension" default="Extension" />
+            </label>
+            <select id="aiu-feature-extension"
+                    class="form-select aiu-ai-features__extension-select w-auto"
+                    data-aiu-features-extension
+                    aria-label="{f:translate(key: '{ll}:module.aiFeatures.filterExtension', default: 'Extension')}">
+                <option value="all">
+                    <f:translate key="{ll}:module.aiFeatures.filterAllExtensions" default="All Extensions" />
+                </option>
+                <f:for each="{aiFeaturesExtensions}" as="extension">
+                    <option value="{extension.key}">{extension.title}</option>
+                </f:for>
+            </select>
+        </div>
+
+        <div class="card-container aiu-ai-features__grid" data-aiu-features-grid>
+            <f:for each="{aiFeaturesCards}" as="feature">
+                <f:render partial="AiFeatures/Card" arguments="{feature: feature}" />
+            </f:for>
+        </div>
+
+        <div class="aiu-empty aiu-ai-features__empty is-hidden" data-aiu-features-empty>
+            <p class="mb-1"><f:translate key="{ll}:module.aiFeatures.emptyTitle" /></p>
+            <small><f:translate key="{ll}:module.aiFeatures.emptyText" /></small>
+        </div>
+
+        <f:render partial="AiFeatures/Drawer" arguments="{_all}" />
+    </div>
+</f:section>
+</html>

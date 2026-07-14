@@ -1,0 +1,187 @@
+/*!
+ * AI Foundation backend module CSS — 06-credits
+ * T3Planet Credits dashboard (Providers page): balance ring, product grid, feature cost list, transactions.
+ *
+ */
+/* T3Planet Credits dashboard (Providers page) */
+.aiu-credits-panel,
+.aiu-ownkeys-panel { margin-top: 0; }
+.aiu-credits-panel.is-hidden,
+.aiu-ownkeys-panel.is-hidden { display: none !important; }
+
+.aiu-credits-dashboard { display: flex; flex-direction: column; gap: 1.5rem; }
+
+.aiu-credits-section__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+.aiu-credits-section__title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--aiu-text-900);
+    margin: 0 0 .25rem;
+}
+.aiu-credits-section__sub {
+    font-size: .8rem;
+    color: var(--aiu-text-500);
+    margin: 0;
+    max-width: 42rem;
+}
+
+.aiu-credits-balance-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.aiu-credits-ring {
+    --aiu-ring-percent: 50;
+    --aiu-ring-color: var(--typo3-state-primary-border-color, var(--typo3-link-color, var(--aiu-primary, #205eb5)));
+    width: 7.5rem;
+    height: 7.5rem;
+    border-radius: 999px;
+    background: conic-gradient(
+        var(--aiu-ring-color) calc(var(--aiu-ring-percent) * 1%),
+        var(--typo3-surface-container-low, var(--aiu-border-soft)) 0
+    );
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.aiu-credits-ring__inner {
+    width: 5.75rem;
+    height: 5.75rem;
+    border-radius: 999px;
+    background: var(--aiu-bg-white);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.2;
+}
+.aiu-credits-ring__value { font-size: 1.35rem; font-weight: 800; color: var(--aiu-text-900); }
+.aiu-credits-ring__label { font-size: .7rem; color: var(--aiu-text-500); }
+
+.aiu-credits-progress {
+    height: .5rem;
+    background: var(--aiu-border-soft);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: .35rem;
+}
+.aiu-credits-progress__bar {
+    height: 100%;
+    background: var(--typo3-text-color-variant, #737373);
+    border-radius: 999px;
+}
+.aiu-credits-progress__labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: .75rem;
+    color: var(--aiu-text-500);
+}
+
+.aiu-credits-product-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .75rem;
+}
+.aiu-credits-product {
+    position: relative;
+    background: var(--aiu-bg-white);
+    border: 1px solid var(--aiu-border);
+    border-radius: var(--aiu-radius-lg);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+    min-height: 100%;
+}
+.aiu-credits-product.is-current {
+    border-color: var(--aiu-selected-border);
+    box-shadow: 0 0 0 1px var(--typo3-surface-container-low, var(--aiu-border-soft));
+}
+.aiu-credits-product__badge {
+    position: absolute;
+    top: .65rem;
+    right: .65rem;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: .15rem .45rem;
+    border-radius: 999px;
+    background: var(--aiu-accent);
+    color: #fff;
+}
+.aiu-credits-product__badge--best_value { background: var(--typo3-text-color-variant, #737373); }
+.aiu-credits-product__title { font-size: .9rem; font-weight: 700; margin: 0; padding-right: 4rem; }
+.aiu-credits-product__subtitle { font-size: .75rem; color: var(--aiu-text-500); margin: 0; }
+.aiu-credits-product__price { font-size: 1.35rem; font-weight: 800; color: var(--aiu-text-900); }
+.aiu-credits-product__price-note { font-size: .7rem; font-weight: 500; color: var(--aiu-text-500); }
+.aiu-credits-product__credits { font-size: .8rem; color: var(--aiu-text-700); margin: 0; }
+.aiu-credits-product__features {
+    list-style: none;
+    margin: .35rem 0 .75rem;
+    padding: 0;
+    font-size: .72rem;
+    color: var(--aiu-text-500);
+    flex: 1;
+}
+.aiu-credits-product__features li + li { margin-top: .2rem; }
+.aiu-credits-product__cta { width: 100%; margin-top: auto; text-align: center; }
+.aiu-credits-product__cta--disabled {
+    display: block;
+    text-align: center;
+    font-size: .75rem;
+    color: var(--aiu-text-400);
+    padding: .5rem;
+}
+
+.aiu-credits-card__pricing-note,
+.aiu-credits-section__pricing,
+.aiu-credits-pricing-footnote { font-size: 11px; color: var(--aiu-text-500); margin: .35rem 0 0; line-height: 1.45; }
+.aiu-credits-pricing-hint { font-size: 12px; color: var(--aiu-text-500); margin: 0 0 1rem; }
+/* TYPO3 backend modal-size-large: core default is 1000px (backend.css) */
+.modal-size-large {
+    --modal-width: 1100px !important;
+}
+
+/* T3Planet checkout (TYPO3 backend modal iframe) */
+.aiu-checkout-modal .modal-content { overflow: hidden; }
+.aiu-checkout-modal .modal-header { flex-shrink: 0; }
+.aiu-checkout-modal .aiu-checkout-modal__body,
+.aiu-checkout-modal .t3js-modal-body {
+    padding: 0;
+    overflow: hidden;
+    line-height: 0;
+}
+.aiu-checkout-modal__frame,
+.aiu-checkout-modal .t3js-modal-body iframe {
+    display: block;
+    width: 100%;
+    min-height: min(80vh, 720px);
+    height: min(80vh, 720px);
+    border: 0;
+}
+
+.aiu-credits-prompt {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    border: 1px dashed var(--aiu-border);
+    border-radius: var(--aiu-radius-xl);
+    background: var(--aiu-bg-soft);
+}
+.aiu-credits-prompt__title { font-size: 1.1rem; margin: .75rem 0 .35rem; }
+.aiu-credits-prompt__text { font-size: .85rem; color: var(--aiu-text-500); max-width: 32rem; margin: 0 auto; }
+.aiu-credits-empty { font-size: .85rem; color: var(--aiu-text-500); margin: 0; }
+
+@media (max-width: 1200px) {
+    .aiu-credits-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+
+@media (max-width: 900px) {
+    .aiu-credits-balance-grid { grid-template-columns: 1fr; }
+    .aiu-credits-product-grid { grid-template-columns: 1fr; }}

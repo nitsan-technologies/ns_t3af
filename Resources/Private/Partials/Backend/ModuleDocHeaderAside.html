@@ -1,0 +1,53 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<f:if condition="{utilityTabs}">
+    <f:variable name="utilityActiveTitle" value="" />
+    <f:for each="{utilityTabs}" as="tab">
+        <f:if condition="{tab.active} == 1">
+            <f:variable name="utilityActiveTitle" value="{tab.title}" />
+        </f:if>
+    </f:for>
+    <div class="dropdown aiu-module-nav-utility">
+        <button type="button"
+                class="btn btn-default dropdown-toggle d-inline-flex align-items-center gap-2{f:if(condition: '{utilityActiveTitle} != \'\'', then: ' active')}"
+                data-bs-toggle="dropdown"
+                aria-expanded="false">
+            <span>
+                <f:if condition="{utilityActiveTitle} != ''">
+                    <f:then>{utilityActiveTitle}</f:then>
+                    <f:else><f:translate key="{ll}:module.menu.aiUsage" default="AI Usage" /></f:else>
+                </f:if>
+            </span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" role="menu">
+            <f:for each="{utilityTabs}" as="tab">
+                <li>
+                    <a class="dropdown-item d-flex align-items-center gap-2{f:if(condition: '{tab.active} == 1', then: ' active')}"
+                       href="{tab.href}"
+                       role="menuitem"
+                       aria-current="{f:if(condition: '{tab.active} == 1', then: 'page', else: 'false')}">
+                        {tab.title}
+                    </a>
+                </li>
+            </f:for>
+        </ul>
+    </div>
+</f:if>
+
+<f:if condition="{showAiFoundationLink} == 1">
+    <div class="d-flex align-items-center gap-2 mb-0 aiu-module-docheader-actions">
+        <a href="{aiFoundationUri}"
+           class="btn btn-primary d-inline-flex align-items-center gap-1"
+           role="button"
+           title="{f:translate(key: '{ll}:module.link.aiFoundation.title')}">
+            <span class="btn-icon" aria-hidden="true">
+                <core:icon identifier="actions-cog" size="small" alternativeMarkupIdentifier="inline" />
+            </span>
+            <f:translate key="{ll}:module.link.aiFoundation" />
+        </a>
+    </div>
+</f:if>
+</html>

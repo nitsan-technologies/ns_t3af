@@ -1,0 +1,57 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+<f:section name="Content">
+    <div class="aiu-providers">
+        <f:render partial="Module/TabPageHeader" arguments="{_all}" />
+        <f:if condition="{creditsModeActive} == 1">
+            <f:then>
+                <f:if condition="{pricing.footnote} != ''">
+                    <p class="aiu-credits-pricing-footnote">{pricing.footnote}</p>
+                </f:if>
+                <p class="aiu-credits-pricing-hint">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.pricing.hint"
+                                 default="Call Estimate.php with the same meta_json as Charge/Embed to show “≈ X credits” before submit. Actual debit uses tokens_input + tokens_output after upstream." />
+                </p>
+                <div class="aiu-table-wrap">
+                    <table class="aiu-table">
+                        <thead>
+                            <tr>
+                                <th>
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.pricing.col.feature"
+                                                 default="Feature" />
+                                </th>
+                                <th>
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.pricing.col.routing"
+                                                 default="Default routing" />
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <f:for each="{features}" as="feature">
+                                <tr>
+                                    <td>
+                                        <strong>{feature.label}</strong>
+                                        <div class="text-muted small">{feature.key}</div>
+                                    </td>
+                                    <td>
+                                        <f:if condition="{feature.defaultModel} != ''">
+                                            <f:then>{feature.defaultModel} ({feature.defaultBackend})</f:then>
+                                            <f:else>—</f:else>
+                                        </f:if>
+                                    </td>
+                                </tr>
+                            </f:for>
+                        </tbody>
+                    </table>
+                </div>
+            </f:then>
+            <f:else>
+                <p>
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.pricing.inactive"
+                                 default="Activate T3Planet Credits to view the feature catalog and token billing model." />
+                </p>
+            </f:else>
+        </f:if>
+    </div>
+</f:section>
+</html>

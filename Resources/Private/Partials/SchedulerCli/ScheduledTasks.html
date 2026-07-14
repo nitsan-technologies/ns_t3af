@@ -1,0 +1,107 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="aiu-scheduler-cli__filters mb-3" data-scheduler-cli-tasks-filters>
+    <div class="d-flex flex-wrap align-items-stretch gap-2 justify-content-between">
+        <div class="btn-group aiu-scheduler-cli__modes-inline" role="group" aria-label="{f:translate(key: '{ll}:module.schedulerCli.mode.aria', default: 'Scheduler CLI sections')}">
+            <a href="{f:be.uri(route:'t3af_dashboard.scheduler_cli', parameters:{mode:'tasks'})}"
+               class="btn btn-default active is-active">
+                <f:translate key="{ll}:module.schedulerCli.mode.scheduledTasks" default="Scheduled Tasks" />
+            </a>
+            <a href="{f:be.uri(route:'t3af_dashboard.scheduler_cli', parameters:{mode:'library'})}"
+               class="btn btn-default">
+                <f:translate key="{ll}:module.schedulerCli.mode.commandLibrary" default="Command Library" />
+            </a>
+        </div>
+        <div class="btn-group aiu-scheduler-cli__chips" role="group" aria-label="{f:translate(key: '{ll}:module.schedulerCli.filter.status.aria', default: 'Task status filter')}">
+            <button type="button" class="btn btn-default btn-sm active is-active" data-scheduler-status-chip="all">
+                <f:translate key="{ll}:module.schedulerCli.filter.status.all" default="All" />
+            </button>
+            <button type="button" class="btn btn-default btn-sm" data-scheduler-status-chip="enabled">
+                <f:translate key="{ll}:module.schedulerCli.filter.status.enabled" default="Enabled" />
+            </button>
+            <button type="button" class="btn btn-default btn-sm" data-scheduler-status-chip="disabled">
+                <f:translate key="{ll}:module.schedulerCli.filter.status.disabled" default="Disabled" />
+            </button>
+            <button type="button" class="btn btn-default btn-sm" data-scheduler-status-chip="failing">
+                <f:translate key="{ll}:module.schedulerCli.filter.status.failing" default="Failing" />
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="aiu-table-wrap table-responsive aiu-scheduler-cli__task-table">
+    <div class="aiu-scheduler-cli__task-head">
+        <h3><f:translate key="{ll}:module.schedulerCli.mode.scheduledTasks" default="Scheduled Tasks" /></h3>
+        <div class="aiu-scheduler-cli__task-head-actions">
+            <a href="{schedulerManageAddUri}" class="btn btn-primary">
+                <f:translate key="{ll}:module.schedulerCli.action.addScheduler" default="Add Scheduler Task" />
+            </a>
+            <a href="{schedulerManageUri}" class="btn btn-default">
+                <f:translate key="{ll}:module.schedulerCli.action.openScheduler" default="Open Scheduler" />
+            </a>
+        </div>
+    </div>
+    <p class="aiu-scheduler-cli__task-hint">
+        <f:translate key="{ll}:module.schedulerCli.tasks.hint" default="Read-only overview of AI Universe scheduler jobs (t3af:* and legacy nst3ai:/nst3aa:/nst3cs:/nst3af:* aliases). Manage, edit, and execute tasks in the TYPO3 Scheduler module." />
+    </p>
+    <table class="aiu-table table-fit aiu-table--compact table table-striped table-hover align-middle mb-0">
+        <thead>
+        <tr>
+            <th scope="col"><f:translate key="{ll}:module.schedulerCli.table.task" default="Task" /></th>
+            <th scope="col"><f:translate key="{ll}:module.schedulerCli.table.command" default="Command" /></th>
+            <th scope="col"><f:translate key="{ll}:module.schedulerCli.table.schedule" default="Schedule" /></th>
+            <th scope="col"><f:translate key="{ll}:module.schedulerCli.table.nextRun" default="Next Run" /></th>
+            <th scope="col"><f:translate key="{ll}:module.schedulerCli.table.lastRun" default="Last Run" /></th>
+            <th scope="col"><f:translate key="{ll}:module.schedulerCli.table.status" default="Status" /></th>
+            <th scope="col" class="actions"><f:translate key="{ll}:module.schedulerCli.table.actions" default="Actions" /></th>
+        </tr>
+        </thead>
+        <tbody>
+        <f:for each="{schedulerCliTasks}" as="task">
+            <tr data-scheduler-task-row data-task-disabled="{task.disabled}" data-task-failing="{task.hasFailure}">
+                <td>
+                    <div class="aiu-scheduler-cli__task-title">{task.description}</div>
+                    <div class="aiu-scheduler-cli__task-sub">#{task.uid}</div>
+                </td>
+                <td>
+                    <div>{task.commandName}</div>
+                    <div class="aiu-table__mono aiu-scheduler-cli__task-sub">{task.command}</div>
+                </td>
+                <td class="aiu-table__mono">
+                    <f:if condition="{task.scheduleType} == 'cron'">
+                        <f:then>{task.cronExpression}</f:then>
+                        <f:else>Every {task.interval} sec</f:else>
+                    </f:if>
+                </td>
+                <td><f:if condition="{task.nextexecution} > 0"><f:format.date format="Y-m-d H:i">@{task.nextexecution}</f:format.date></f:if></td>
+                <td><f:if condition="{task.lastexecution} > 0"><f:format.date format="Y-m-d H:i">@{task.lastexecution}</f:format.date></f:if></td>
+                <td>
+                    <span class="badge {f:if(condition: '{task.disabled} == 0', then: 'badge-success', else: 'badge-danger')}">
+                        <f:if condition="{task.disabled} == 0"><f:then><f:translate key="{ll}:module.schedulerCli.status.enabled" default="Enabled" /></f:then><f:else><f:translate key="{ll}:module.schedulerCli.status.disabled" default="Disabled" /></f:else></f:if>
+                    </span>
+                </td>
+                <td class="actions">
+                    <div class="btn-group" role="group" aria-label="{f:translate(key: '{ll}:module.schedulerCli.table.actions', default: 'Actions')}">
+                        <a href="{f:be.uri(route:'{routeName}', parameters:{action:'edit', uid:task.uid})}"
+                           class="btn btn-default btn-sm d-inline-flex align-items-center gap-1">
+                            <f:translate key="{ll}:module.schedulerCli.action.editSchedule" default="Edit in Scheduler" />
+                        </a>
+                        <a href="{schedulerManageUri}"
+                           class="btn btn-default btn-sm d-inline-flex align-items-center gap-1">
+                            <f:translate key="{ll}:module.schedulerCli.action.openInScheduler" default="Open in Scheduler" />
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        </f:for>
+        <tr data-scheduler-task-empty{f:if(condition: '{schedulerCliTasks -> f:count()} > 0', then: ' hidden="hidden"')}>
+            <td colspan="7" class="aiu-empty"><f:translate key="{ll}:module.schedulerCli.empty.tasks" default="No scheduled tasks found." /></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+</html>

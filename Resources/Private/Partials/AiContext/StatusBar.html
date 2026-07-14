@@ -1,0 +1,44 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<div class="aiu-ai-context__status-bar mb-3">
+    <div class="aiu-mcp-status-bar aiu-ai-context__kpis">
+        <div class="aiu-mcp-status-bar__cell">
+            <div class="aiu-mcp-status-bar__content">
+                <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.aiContext.kpi.profiles" default="Profiles" /></h4>
+                <span class="aiu-mcp-status-bar__value">{brandContextList.profileCount}</span>
+            </div>
+        </div>
+        <div class="aiu-mcp-status-bar__cell">
+            <div class="aiu-mcp-status-bar__content">
+                <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.aiContext.kpi.defaultProfile" default="Default profile" /></h4>
+                <f:if condition="{brandContextList.defaultProfile}">
+                    <f:then>
+                        <span class="aiu-mcp-status-bar__value">{brandContextList.defaultProfile.brandName}</span>
+                    </f:then>
+                    <f:else>
+                        <span class="aiu-mcp-status-bar__value text-variant">—</span>
+                    </f:else>
+                </f:if>
+            </div>
+        </div>
+        <div class="aiu-mcp-status-bar__cell">
+            <div class="aiu-mcp-status-bar__content">
+                <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.aiContext.kpi.completeness" default="Completeness" /></h4>
+                <f:if condition="{brandContextList.defaultProfile}">
+                    <f:then>
+                        <span class="aiu-mcp-status-bar__value">{brandContextList.defaultProfile.completeness.percent}%</span>
+                    </f:then>
+                    <f:else>
+                        <span class="aiu-mcp-status-bar__value">0%</span>
+                    </f:else>
+                </f:if>
+            </div>
+        </div>
+        <div class="aiu-mcp-status-bar__cell">
+            <div class="aiu-mcp-status-bar__content">
+                <p class="text-variant small mb-0 mt-2"><f:translate key="{ll}:module.aiContext.status.hint" /></p>
+            </div>
+        </div>
+    </div>
+</div>
+</html>

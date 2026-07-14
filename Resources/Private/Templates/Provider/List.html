@@ -1,0 +1,195 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="HeaderBefore">
+    <f:be.pageRenderer includeJavaScriptModules="{0: '@nitsan/nst3af/provider-drawer.js', 1: '@nitsan/nst3af/credits-mode.js'}" />
+</f:section>
+
+<f:section name="Content">
+    <div class="aiu-providers aiu-providers--site" data-aiu-provider-list data-aiu-page-id="{currentPageId}" data-aiu-storage-pid="{siteStoragePid}">
+
+        <f:render partial="Module/TabPageHeader" arguments="{_all}" />
+
+        <f:render partial="Module/EnvironmentRequirementBanner" arguments="{environmentRequirementAlerts: environmentRequirementAlerts}" />
+
+        <f:render partial="Provider/ModeToggle" arguments="{_all}" />
+
+        <div class="aiu-credits-panel{f:if(condition: '{creditsModeEnabled} == 1', else: ' is-hidden')}"
+             data-aiu-credits-panel
+             aria-hidden="{f:if(condition: '{creditsModeEnabled} == 1', then: 'false', else: 'true')}">
+            <f:render partial="Provider/CreditsDashboard" arguments="{
+                creditsModeActive: creditsModeActive,
+                creditsDashboard: creditsDashboard,
+                providersReturnUrl: providersReturnUrl
+            }" />
+        </div>
+
+        <div class="aiu-ownkeys-panel{f:if(condition: '{creditsModeEnabled} == 1', then: ' is-hidden')}"
+             data-aiu-ownkeys-panel
+             aria-hidden="{f:if(condition: '{creditsModeEnabled} == 1', then: 'true', else: 'false')}">
+
+        <f:if condition="{flash} == 'saved'">
+            <div class="aiu-flash aiu-flash--success">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.flash.saved"
+                             default="Provider saved." />
+            </div>
+        </f:if>
+        <f:if condition="{flash} == 'deleted'">
+            <div class="aiu-flash aiu-flash--info">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.flash.deleted"
+                             default="Provider deleted." />
+            </div>
+        </f:if>
+        <f:if condition="{flash} == 'not-found'">
+            <div class="aiu-flash aiu-flash--warn">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.flash.notFound"
+                             default="Provider not found." />
+            </div>
+        </f:if>
+
+        <div class="aiu-meta-strip">
+            <span class="item">
+                <span>{providers -> f:count()}
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.meta.providers"
+                                 default="Providers" />
+                </span>
+            </span>
+            <span class="sep"></span>
+            <span class="item">
+                <core:icon identifier="actions-check-circle" size="small" />
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.meta.active"
+                             default="Active" arguments="{0: '{activeProviderCount}'}" />
+            </span>
+            <f:if condition="{defaultIdentifier} != ''">
+                <span class="item">
+                    <core:icon identifier="actions-star" size="small" />
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.meta.default"
+                                 default="default" />
+                    ({defaultIdentifier})
+                </span>
+            </f:if>
+            <span class="sep"></span>
+            <span class="badge badge-success">
+                <core:icon identifier="actions-lock" size="small" />
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.meta.encrypted"
+                             default="API keys encrypted at rest" />
+            </span>
+            <span class="ms-auto badge badge-warning">
+                <core:icon identifier="actions-exclamation-triangle" size="small" />
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.meta.fallbackWarn"
+                             default="No fallback chain — requests will error if the default provider fails." />
+            </span>
+        </div>
+
+        <div class="aiu-toolbar">
+            <div class="search-wrap w-100">
+                <input type="search" data-aiu-provider-search class="form-control"
+                       autocomplete="off"
+                       autocorrect="off"
+                       autocapitalize="off"
+                       spellcheck="false"
+                       data-1p-ignore="true"
+                       data-lpignore="true"
+                       data-form-type="other"
+                       readonly="readonly"
+                       placeholder="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.search', default:'Search providers...')}" />
+            </div>
+            <f:if condition="{canModifyProviders} == 1">
+                <a class="btn btn-success text-nowrap" href="{newProviderUri}" data-aiu-drawer-trigger="new">
+                    <core:icon identifier="actions-plus" size="small" />
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.add"
+                                 default="New Provider" />
+                </a>
+                <button type="button" class="btn btn-default text-nowrap" data-aiu-provider-import-trigger
+                        data-aiu-import-sites="{importSitesJson -> f:format.htmlspecialchars()}">
+                    <core:icon identifier="actions-download" size="small" />
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.import"
+                                 default="Import" />
+                </button>
+            </f:if>
+        </div>
+
+        <div class="table-fit table-responsive">
+            <table class="table table-striped table-hover align-middle mb-0 aiu-table aiu-table--provider">
+                <thead>
+                    <tr>
+                        <th scope="col"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.col.title" default="Title" /></th>
+                        <th scope="col"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.col.adapter" default="Provider" /></th>
+                        <th scope="col"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.col.model" default="Model" /></th>
+                        <f:if condition="{showEmbeddingModelField} == 1">
+                            <th scope="col"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.col.embeddingModel" default="Embedding Model" /></th>
+                        </f:if>
+                        <th scope="col"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.col.lastUsed" default="Last Used" /></th>
+                        <th scope="col"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.col.priority" default="Priority" /></th>
+                        <th scope="col"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.col.status" default="Status" /></th>
+                        <th scope="col" class="col-control"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.col.actions" default="Actions" /></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <f:for each="{providerRows}" as="row">
+                        <f:render partial="Provider/Row" arguments="{provider: row.provider, adapterLabel: row.adapterLabel, editUri: row.editUri, deleteUri: deleteUri, canModifyProviders: canModifyProviders, showEmbeddingModelField: showEmbeddingModelField}" />
+                    </f:for>
+                    <f:if condition="{providerRows -> f:count()} == 0">
+                        <tr>
+                            <td colspan="{f:if(condition: '{showEmbeddingModelField} == 1', then: '8', else: '7')}" class="aiu-empty">
+                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.empty"
+                                             default="No providers configured yet. Add your first provider." />
+                            </td>
+                        </tr>
+                    </f:if>
+                </tbody>
+            </table>
+        </div>
+
+        <aside class="aiu-drawer" data-aiu-drawer aria-hidden="true">
+            <div class="aiu-drawer__panel" data-aiu-drawer-panel>
+                <div class="aiu-empty">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.drawer.loading"
+                                 default="Loading…" />
+                </div>
+            </div>
+        </aside>
+
+        <aside class="aiu-drawer" data-aiu-import-drawer aria-hidden="true">
+            <div class="aiu-drawer__panel" data-aiu-import-panel>
+                <header class="aiu-drawer__header">
+                    <h2 class="h5 mb-0">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.importTitle"
+                                     default="Import providers from another site" />
+                    </h2>
+                    <button type="button" class="btn btn-sm btn-default" data-aiu-import-close aria-label="Close">
+                        <core:icon identifier="actions-close" size="small" />
+                    </button>
+                </header>
+                <div class="aiu-drawer__body" data-aiu-import-body>
+                    <p class="text-variant">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.importLead"
+                                     default="Copy provider configurations from another site into this site." />
+                    </p>
+                    <label class="form-label" for="aiu-import-site">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.importSourceSite"
+                                     default="Source site" />
+                    </label>
+                    <select id="aiu-import-site" class="form-select mb-3" data-aiu-import-site></select>
+                    <div data-aiu-import-provider-list></div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button type="button" class="btn btn-primary" data-aiu-import-submit disabled="disabled">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.importSubmit"
+                                         default="Import selected" />
+                        </button>
+                        <button type="button" class="btn btn-default" data-aiu-import-close>
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.importCancel"
+                                         default="Cancel" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        </div>
+
+    </div>
+</f:section>
+</html>

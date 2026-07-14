@@ -1,0 +1,118 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+    <div class="aiu-providers aiu-mcp-server" data-mcp-server data-mcp-workspace-saved="{mcpSelectedWorkspaceId}" data-mcp-mode-saved="{mcpMode}">
+
+        <div class="aiu-mcp-topbar aiu-tab-page-header">
+            <div class="aiu-tab-page-header__main min-w-0">
+                <div class="aiu-providers__heading aiu-mcp-topbar__text">
+                    <h1 class="mb-0">{tabHeading}</h1>
+                    <p class="text-variant mb-0">{tabIntro}</p>
+                </div>
+            </div>
+            <div class="aiu-tab-page-header__aside">
+                <f:render partial="Module/PageBreadcrumb" arguments="{_all}" />
+            </div>
+        </div>
+
+        <f:if condition="{mcpNeedsWorkspace} == 1">
+            <div class="callout callout-warning aiu-mcp-workspace-notice mb-3" role="status">
+                <div class="d-flex align-items-center gap-2 justify-content-between w-100 flex-wrap">
+                    <p class="mb-0"><f:translate key="{ll}:module.mcpServer.workspace.missingLead" /></p>
+                    <f:if condition="{mcpCanCreateWorkspace} == 1">
+                        <f:then>
+                            <button type="button" class="btn btn-primary" data-action="create-workspace">
+                                <f:translate key="{ll}:module.mcpServer.workspace.createButton" />
+                            </button>
+                        </f:then>
+                        <f:else>
+                            <span class="text-variant small"><f:translate key="{ll}:module.mcpServer.workspace.createDeniedHint" /></span>
+                        </f:else>
+                    </f:if>
+                </div>
+            </div>
+        </f:if>
+
+        <f:render partial="McpServer/StatusHeader" arguments="{_all}" />
+
+        <div class="aiu-mcp-subtabs-bar mb-3">
+            <div class="aiu-mcp-subtabs">
+                <div class="btn-group" role="group" aria-label="{f:translate(key: '{ll}:module.mcpServer.tabs.aria')}">
+                    <button type="button" class="btn btn-default active is-active" role="tab" aria-selected="true" data-mcp-server-tab="connect">
+                        <f:translate key="{ll}:module.mcpServer.tab.connect" />
+                    </button>
+                    <button type="button" class="btn btn-default" role="tab" aria-selected="false" data-mcp-server-tab="oauthTokens">
+                        <f:translate key="{ll}:module.mcpServer.tab.oauthTokens" />
+                    </button>
+                    <button type="button" class="btn btn-default" role="tab" aria-selected="false" data-mcp-server-tab="security">
+                        <f:translate key="{ll}:module.mcpServer.tab.security" />
+                    </button>
+                    <button type="button" class="btn btn-default" role="tab" aria-selected="false" data-mcp-server-tab="analytics">
+                        <f:translate key="{ll}:module.mcpServer.tab.analytics" />
+                    </button>
+                    <button type="button" class="btn btn-default" role="tab" aria-selected="false" data-mcp-server-tab="advanced">
+                        <f:translate key="{ll}:module.mcpServer.tab.advanced" />
+                    </button>
+                </div>
+            </div>
+            <div class="aiu-mcp-topbar__actions">
+                <div class="aiu-mcp-topbar__controls-row">
+                    <div class="aiu-mcp-topbar__field">
+                        <label class="form-label mb-0" for="mcp-workspace-select">
+                            <f:translate key="{ll}:module.mcpServer.workspace.label" />
+                        </label>
+                        <select id="mcp-workspace-select" class="form-select" data-mcp-workspace>
+                            <f:for each="{mcpWorkspaces}" as="ws">
+                                <option value="{ws.uid}">
+                                    <f:if condition="{ws.uid} == 0">
+                                        <f:then><f:translate key="{ll}:module.mcpServer.workspace.live" /></f:then>
+                                        <f:else>{ws.title}</f:else>
+                                    </f:if>
+                                </option>
+                            </f:for>
+                        </select>
+                    </div>
+                    <div class="aiu-mcp-topbar__field">
+                        <label class="form-label mb-0" for="mcp-mode-select">
+                            <f:translate key="{ll}:module.mcpServer.mode.label" />
+                        </label>
+                        <select id="mcp-mode-select" class="form-select" data-mcp-mode>
+                            <f:if condition="{mcpMode} == 'context'">
+                                <f:then>
+                                    <option value="context" selected="selected"><f:translate key="{ll}:module.mcpServer.mode.context" /></option>
+                                    <option value="native"><f:translate key="{ll}:module.mcpServer.mode.native" /></option>
+                                </f:then>
+                                <f:else>
+                                    <option value="context"><f:translate key="{ll}:module.mcpServer.mode.context" /></option>
+                                    <option value="native" selected="selected"><f:translate key="{ll}:module.mcpServer.mode.native" /></option>
+                                </f:else>
+                            </f:if>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="aiu-mcp-tab-panel is-active" data-mcp-server-panel="connect" role="tabpanel">
+            <f:render partial="McpServer/ConnectTab" arguments="{_all}" />
+        </div>
+        <div class="aiu-mcp-tab-panel is-hidden" data-mcp-server-panel="oauthTokens" role="tabpanel" hidden="hidden">
+            <f:render partial="McpServer/OAuthTokensTab" arguments="{_all}" />
+        </div>
+        <div class="aiu-mcp-tab-panel is-hidden" data-mcp-server-panel="security" role="tabpanel" hidden="hidden">
+            <f:render partial="McpServer/SecurityTab" arguments="{_all}" />
+        </div>
+        <div class="aiu-mcp-tab-panel is-hidden" data-mcp-server-panel="analytics" role="tabpanel" hidden="hidden">
+            <f:render partial="McpServer/AnalyticsTab" arguments="{_all}" />
+        </div>
+        <div class="aiu-mcp-tab-panel is-hidden" data-mcp-server-panel="advanced" role="tabpanel" hidden="hidden">
+            <f:render partial="McpServer/AdvancedTab" arguments="{_all}" />
+        </div>
+    </div>
+</f:section>
+</html>

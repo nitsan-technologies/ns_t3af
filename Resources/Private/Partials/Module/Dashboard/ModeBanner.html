@@ -1,0 +1,41 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="card mb-3 aiu-dashboard-mode-banner {bannerModifier}">
+    <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
+        <div class="d-flex align-items-center gap-2 flex-wrap flex-grow-1 min-w-0">
+            <div class="aiu-dashboard-mode-banner__icon flex-shrink-0">
+                <core:icon identifier="{iconIdentifier}" size="small" />
+            </div>
+            <span class="card-title h4 mb-0">
+                <f:translate key="{ll}:{modeLabelKey}" />
+            </span>
+            <f:if condition="{showActiveBadge} == 1">
+                <span class="badge badge-success">
+                    <f:translate key="{ll}:dashboard.mode.active" default="Active" />
+                </span>
+            </f:if>
+            <f:if condition="{configuredCount} > 0">
+                <a href="{manageHref}" class="btn btn-default btn-sm">
+                    {configuredCount}
+                    <f:translate key="{ll}:dashboard.mode.configured" default="configured" />
+                </a>
+            </f:if>
+        </div>
+        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+            <f:if condition="{showPeriodDropdown} == 1">
+                <f:render partial="Module/PeriodDropdown" arguments="{
+                    periodLabel: periodLabel,
+                    periodPresets: periodPresets,
+                    periodFromDate: periodFromDate,
+                    periodToDate: periodToDate,
+                    periodFormAction: periodFormAction,
+                    periodFormId: periodFormId
+                }" />
+            </f:if>
+        </div>
+    </div>
+</div>
+</html>

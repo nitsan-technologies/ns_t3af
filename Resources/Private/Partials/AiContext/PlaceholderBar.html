@@ -1,0 +1,30 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<div class="aiu-ai-context__placeholder-bar callout callout-info mb-4">
+    <div class="aiu-ai-context__placeholder-main">
+        <div class="callout-icon">
+            <core:icon identifier="actions-lightbulb" size="medium" alternativeMarkupIdentifier="inline" />
+        </div>
+        <div class="callout-content">
+            <div class="callout-title"><f:translate key="{ll}:module.aiContext.placeholders.title" /></div>
+            <div class="callout-body">
+                <div class="aiu-ai-context__placeholder-tokens d-flex flex-wrap gap-1">
+                    <f:for each="{brandContextList.placeholders}" as="placeholder">
+                        <code>{placeholder}</code>
+                    </f:for>
+                </div>
+            </div>
+        </div>
+    </div>
+    <f:if condition="{canModifyBrandProfiles} == 1">
+        <div class="aiu-ai-context__placeholder-actions">
+            <button type="button" class="btn btn-success" data-aiu-context-add>
+                <core:icon identifier="actions-plus" size="small" alternativeMarkupIdentifier="inline" />
+                <f:translate key="{ll}:module.aiContext.addProfile" />
+            </button>
+        </div>
+    </f:if>
+</div>
+</html>

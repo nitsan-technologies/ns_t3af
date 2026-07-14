@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<xliff version="1.0">
+    <file source-language="en" datatype="plaintext" original="messages" product-name="ns_t3af" target-language="de">
+        <header/>
+        <body>
+            <trans-unit id="email.apiAlert.subject.quota">
+                <source>API data quota exceeded</source>
+                <target>API-Datenkontingent überschritten</target>
+            </trans-unit>
+            <trans-unit id="email.apiAlert.subject.apiKey">
+                <source>API Authentication Error</source>
+                <target>API-Authentifizierungsfehler</target>
+            </trans-unit>
+            <trans-unit id="email.apiAlert.aiEngine">
+                <source>AI Engine</source>
+                <target>KI-Engine</target>
+            </trans-unit>
+            <trans-unit id="email.apiAlert.errorMessage">
+                <source>Error Message</source>
+                <target>Fehlermeldung</target>
+            </trans-unit>
+            <trans-unit id="email.apiAlert.occurFrom">
+                <source>Generated from</source>
+                <target>Erstellt von</target>
+            </trans-unit>
+            <trans-unit id="email.apiAlert.timestamp">
+                <source>Time</source>
+                <target>Zeit</target>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

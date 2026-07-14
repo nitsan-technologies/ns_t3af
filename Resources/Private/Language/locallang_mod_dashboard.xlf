@@ -1,0 +1,1896 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+	<file source-language="en" datatype="plaintext" original="EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" date="2026-05-08T00:00:00Z" product-name="ns_t3af">
+		<header/>
+		<body>
+			<trans-unit id="mlang_tabs_tab" resname="mlang_tabs_tab">
+				<source>AI Foundation</source>
+			</trans-unit>
+			<trans-unit id="mlang_labels_tablabel" resname="mlang_labels_tablabel">
+				<source>AI Foundation — providers, stats, and setup.</source>
+			</trans-unit>
+			<trans-unit id="mlang_labels_tabdescr" resname="mlang_labels_tabdescr">
+				<source>Overview for AI Foundation: configured providers, usage stats, MCP status, and quick setup.</source>
+			</trans-unit>
+			<trans-unit id="module.title" resname="module.title">
+				<source>AI Foundation</source>
+			</trans-unit>
+			<trans-unit id="module.menu.dashboard" resname="module.menu.dashboard">
+				<source>Dashboard</source>
+			</trans-unit>
+			<trans-unit id="dashboard.pagePath" resname="dashboard.pagePath">
+				<source>Path: %s</source>
+			</trans-unit>
+			<trans-unit id="module.menu.providers" resname="module.menu.providers">
+				<source>AI Providers</source>
+			</trans-unit>
+			<trans-unit id="module.menu.mcpServer" resname="module.menu.mcpServer">
+				<source>MCP Server</source>
+			</trans-unit>
+			<trans-unit id="module.menu.mcpTools" resname="module.menu.mcpTools">
+				<source>MCP Tools</source>
+			</trans-unit>
+			<trans-unit id="module.menu.mcpConnectors" resname="module.menu.mcpConnectors">
+				<source>MCP Connectors</source>
+			</trans-unit>
+			<trans-unit id="module.menu.aiFeatures" resname="module.menu.aiFeatures">
+				<source>AI Features</source>
+			</trans-unit>
+			<trans-unit id="module.menu.aiUsage" resname="module.menu.aiUsage">
+				<source>AI Usage</source>
+			</trans-unit>
+			<trans-unit id="module.menu.aiLogs" resname="module.menu.aiLogs">
+				<source>AI Logs</source>
+			</trans-unit>
+			<trans-unit id="module.menu.aiPrompts" resname="module.menu.aiPrompts">
+				<source>AI Prompts</source>
+			</trans-unit>
+			<trans-unit id="module.menu.schedulerCli" resname="module.menu.schedulerCli">
+				<source>Scheduler &amp; CLI</source>
+			</trans-unit>
+			<trans-unit id="module.menu.aiAccessRoles" resname="module.menu.aiAccessRoles">
+				<source>AI Permissions</source>
+			</trans-unit>
+			<trans-unit id="module.aiAccessRoles.heading" resname="module.aiAccessRoles.heading">
+				<source>AI Permissions</source>
+			</trans-unit>
+			<trans-unit id="module.aiAccessRoles.intro" resname="module.aiAccessRoles.intro">
+				<source>Guided setup wizard for TYPO3 backend usergroup AI permissions.</source>
+			</trans-unit>
+			<trans-unit id="module.aiAccessRoles.denied.title" resname="module.aiAccessRoles.denied.title">
+				<source>Admin access required</source>
+			</trans-unit>
+			<trans-unit id="module.aiAccessRoles.denied.body" resname="module.aiAccessRoles.denied.body">
+				<source>Only TYPO3 administrators can configure AI permissions.</source>
+			</trans-unit>
+			<trans-unit id="module.menu.forDevelopers" resname="module.menu.forDevelopers">
+				<source>For Developers</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.heading" resname="module.forDevelopers.heading">
+				<source>For Developers</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.intro" resname="module.forDevelopers.intro">
+				<source>Build AI-powered TYPO3 extensions on top of AI Foundation — a shared gateway built on symfony/ai-platform.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.copy" resname="module.forDevelopers.copy">
+				<source>Copy</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.copied" resname="module.forDevelopers.copied">
+				<source>Copied!</source>
+			</trans-unit>
+			<trans-unit id="module.quickSetup" resname="module.quickSetup">
+				<source>Quick Setup</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.heading" resname="module.dashboard.heading">
+				<source>Dashboard</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.intro" resname="module.dashboard.intro">
+				<source>Dashboard for your AI Foundation — requests, usage, and system health.</source>
+			</trans-unit>
+			<trans-unit id="module.providers.heading" resname="module.providers.heading">
+				<source>AI Providers</source>
+			</trans-unit>
+			<trans-unit id="module.providers.intro" resname="module.providers.intro">
+				<source>Configured AI provider connections. Add your own API keys per provider.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.heading" resname="module.aiContext.heading">
+				<source>AI Context</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.intro" resname="module.aiContext.intro">
+				<source>Define brand context profiles to give AI generations a consistent personality and voice.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.addProfile" resname="module.aiContext.addProfile">
+				<source>Add Profile</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.edit" resname="module.aiContext.edit">
+				<source>Edit</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.setDefault" resname="module.aiContext.setDefault">
+				<source>Set Default</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.enable" resname="module.aiContext.enable">
+				<source>Enable</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.disable" resname="module.aiContext.disable">
+				<source>Disable</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.delete" resname="module.aiContext.delete">
+				<source>Delete</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.cardActions" resname="module.aiContext.cardActions">
+				<source>Profile actions</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.defaultBadge" resname="module.aiContext.defaultBadge">
+				<source>Default</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.disabledBadge" resname="module.aiContext.disabledBadge">
+				<source>Disabled</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.created" resname="module.aiContext.created">
+				<source>Created %s</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.usedBy" resname="module.aiContext.usedBy">
+				<source>Used by</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.usedByFeature.seo" resname="module.aiContext.usedByFeature.seo">
+				<source>AI SEO</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.usedByFeature.page" resname="module.aiContext.usedByFeature.page">
+				<source>AI Pages</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.usedByFeature.content" resname="module.aiContext.usedByFeature.content">
+				<source>AI Content</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.empty" resname="module.aiContext.empty">
+				<source>No brand context profiles yet. Add a profile to give AI features a consistent brand voice.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.kpi.profiles" resname="module.aiContext.kpi.profiles">
+				<source>Profiles</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.kpi.defaultProfile" resname="module.aiContext.kpi.defaultProfile">
+				<source>Default profile</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.kpi.completeness" resname="module.aiContext.kpi.completeness">
+				<source>Completeness</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.kpi.placeholders" resname="module.aiContext.kpi.placeholders">
+				<source>Prompt placeholders</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.status.profileCount" resname="module.aiContext.status.profileCount">
+				<source>%s profiles</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.status.default" resname="module.aiContext.status.default">
+				<source>Default: %s · %s%% complete</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.status.defaultPrefix" resname="module.aiContext.status.defaultPrefix">
+				<source>Default:</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.status.defaultSuffix" resname="module.aiContext.status.defaultSuffix">
+				<source>complete</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.status.noDefault" resname="module.aiContext.status.noDefault">
+				<source>No default profile selected</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.status.hint" resname="module.aiContext.status.hint">
+				<source>The active profile is automatically injected into all AI generation prompts.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.placeholders.title" resname="module.aiContext.placeholders.title">
+				<source>Available in AI Prompts:</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.section.identity" resname="module.aiContext.section.identity">
+				<source>Business Identity</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.section.voice" resname="module.aiContext.section.voice">
+				<source>Brand Voice</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.section.audience" resname="module.aiContext.section.audience">
+				<source>Target Audience</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.section.rules" resname="module.aiContext.section.rules">
+				<source>Content Rules</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.section.language" resname="module.aiContext.section.language">
+				<source>Language &amp; Locale</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.section.keywords" resname="module.aiContext.section.keywords">
+				<source>Keywords / SEO</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.section.sample" resname="module.aiContext.section.sample">
+				<source>Sample Content</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.flash.created" resname="module.aiContext.flash.created">
+				<source>Brand context profile created.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.flash.updated" resname="module.aiContext.flash.updated">
+				<source>Brand context profile updated.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.flash.deleted" resname="module.aiContext.flash.deleted">
+				<source>Brand context profile deleted.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.flash.defaultSet" resname="module.aiContext.flash.defaultSet">
+				<source>Default brand context profile updated.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.flash.enabled" resname="module.aiContext.flash.enabled">
+				<source>Brand context profile enabled.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.flash.disabled" resname="module.aiContext.flash.disabled">
+				<source>Brand context profile disabled.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.flash.validationFailed" resname="module.aiContext.flash.validationFailed">
+				<source>Please provide a brand name.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.flash.failed" resname="module.aiContext.flash.failed">
+				<source>Action failed. Please try again.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.modal.addTitle" resname="module.aiContext.modal.addTitle">
+				<source>Add Profile</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.modal.intro" resname="module.aiContext.modal.intro">
+				<source>Define your brand identity, voice, target audience, and content rules.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.modal.close" resname="module.aiContext.modal.close">
+				<source>Close</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.modal.cancel" resname="module.aiContext.modal.cancel">
+				<source>Cancel</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.modal.save" resname="module.aiContext.modal.save">
+				<source>Save Profile</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.modal.universalPlaceholders" resname="module.aiContext.modal.universalPlaceholders">
+				<source>Universal Placeholders</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.section.autoResearch" resname="module.aiContext.section.autoResearch">
+				<source>Auto-Research</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.section.forbidden" resname="module.aiContext.section.forbidden">
+				<source>Forbidden Words</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.section.competitors" resname="module.aiContext.section.competitors">
+				<source>Competitors</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.section.compliance" resname="module.aiContext.section.compliance">
+				<source>Compliance Notes</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.section.documents" resname="module.aiContext.section.documents">
+				<source>Brand Documents</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.research" resname="module.aiContext.field.research">
+				<source>Research</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.researchHint" resname="module.aiContext.field.researchHint">
+				<source>Enter a website URL and click Research to auto-fill brand details using your site default AI provider.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.researchSoon" resname="module.aiContext.field.researchSoon">
+				<source>Auto-research will be available in a future update.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.manualRequiredTitle" resname="module.aiContext.field.manualRequiredTitle">
+				<source>Please complete these fields manually:</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.error.researchUrlRequired" resname="module.aiContext.error.researchUrlRequired">
+				<source>Website URL required</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.error.researchFailed" resname="module.aiContext.error.researchFailed">
+				<source>Brand research failed</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.error.documentsRequired" resname="module.aiContext.error.documentsRequired">
+				<source>No documents selected</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.error.documentsLimit" resname="module.aiContext.error.documentsLimit">
+				<source>Too many documents</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.error.documentsExtractFailed" resname="module.aiContext.error.documentsExtractFailed">
+				<source>Document extraction failed</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.description" resname="module.aiContext.field.description">
+				<source>Brand Description</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.descriptionPlaceholder" resname="module.aiContext.field.descriptionPlaceholder">
+				<source>What does your brand do? Who do you serve?</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.toneTags" resname="module.aiContext.field.toneTags">
+				<source>Tone Tags (select 3–5)</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.voiceNotes" resname="module.aiContext.field.voiceNotes">
+				<source>Voice Description</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.voiceNotesPlaceholder" resname="module.aiContext.field.voiceNotesPlaceholder">
+				<source>Describe how your brand should sound in AI-generated content.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.personaWarning" resname="module.aiContext.field.personaWarning">
+				<source>The primary persona (first row) needs both a name and level for the {target_persona} placeholder.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.addPersona" resname="module.aiContext.field.addPersona">
+				<source>Add Persona</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.contentRulesHint" resname="module.aiContext.field.contentRulesHint">
+				<source>Define always/never rules injected as {content_rules} in prompts.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.addRule" resname="module.aiContext.field.addRule">
+				<source>Add Rule</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.contentRulesPreview" resname="module.aiContext.field.contentRulesPreview">
+				<source>{content_rules} preview</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.forbiddenHint" resname="module.aiContext.field.forbiddenHint">
+				<source>Words and phrases the AI must never use (max 20).</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.forbiddenPlaceholder" resname="module.aiContext.field.forbiddenPlaceholder">
+				<source>Type a word and press Enter</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.keywordsHint" resname="module.aiContext.field.keywordsHint">
+				<source>Preferred terms and phrases to reinforce your brand voice (max 15).</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.keywordsPlaceholder" resname="module.aiContext.field.keywordsPlaceholder">
+				<source>Type a keyword and press Enter</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.competitorsHint" resname="module.aiContext.field.competitorsHint">
+				<source>Competitor names for differentiation context (max 5).</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.competitorsPlaceholder" resname="module.aiContext.field.competitorsPlaceholder">
+				<source>Type a competitor and press Enter</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.language" resname="module.aiContext.field.language">
+				<source>Primary Language</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.languagePlaceholder" resname="module.aiContext.field.languagePlaceholder">
+				<source>Select language</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.languageHelp" resname="module.aiContext.field.languageHelp">
+				<source>Used for the {language} placeholder in AI prompts.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.sampleContent" resname="module.aiContext.field.sampleContent">
+				<source>Sample Content</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.samplePlaceholder" resname="module.aiContext.field.samplePlaceholder">
+				<source>Paste an example paragraph that represents your ideal brand voice.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.complianceNotes" resname="module.aiContext.field.complianceNotes">
+				<source>Compliance &amp; Legal Notes</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.compliancePlaceholder" resname="module.aiContext.field.compliancePlaceholder">
+				<source>Industry regulations, disclaimers, or legal constraints for AI content.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.documentsHint" resname="module.aiContext.field.documentsHint">
+				<source>Upload brand guidelines (PDF, DOCX, MD, TXT, CSV, JSON — max 3 × 10 MB).</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.documentsDrop" resname="module.aiContext.field.documentsDrop">
+				<source>Select brand documents to extract text for AI context.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.documentsFormats" resname="module.aiContext.field.documentsFormats">
+				<source>PDF, DOCX, MD, TXT, CSV, JSON — up to 3 files, 10 MB each.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.documentsSoon" resname="module.aiContext.field.documentsSoon">
+				<source>Document upload will be available in a future update.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.brandName" resname="module.aiContext.field.brandName">
+				<source>Brand Name</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.brandNamePlaceholder" resname="module.aiContext.field.brandNamePlaceholder">
+				<source>e.g. T3Planet</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.industry" resname="module.aiContext.field.industry">
+				<source>Industry</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.industryPlaceholder" resname="module.aiContext.field.industryPlaceholder">
+				<source>Select industry</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.websiteUrl" resname="module.aiContext.field.websiteUrl">
+				<source>Website URL</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.tagline" resname="module.aiContext.field.tagline">
+				<source>One-line Description</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.heading" resname="module.mcpServer.heading">
+				<source>MCP Server</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.intro" resname="module.mcpServer.intro">
+				<source>Manage server status, connection modes, and client access tokens.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.heading" resname="module.mcpTools.heading">
+				<source>MCP Tools</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.intro" resname="module.mcpTools.intro">
+				<source>AI tools exposed via Model Context Protocol — power your AI extensions and enable custom developer integrations.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpConnectors.heading" resname="module.mcpConnectors.heading">
+				<source>MCP Connectors</source>
+			</trans-unit>
+			<trans-unit id="module.mcpConnectors.intro" resname="module.mcpConnectors.intro">
+				<source>Configure external MCP servers and monitor connector health.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.heading" resname="module.aiFeatures.heading">
+				<source>AI Features</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.intro" resname="module.aiFeatures.intro">
+				<source>Control extension-level AI capabilities, defaults, and access.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.extensions" resname="module.aiFeatures.extensions">
+				<source>AI features</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.installedDetected" resname="module.aiFeatures.installedDetected">
+				<source>All installed &amp; detected</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.extensionKeys" resname="module.aiFeatures.extensionKeys">
+				<source>extension</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.kpi.status" resname="module.aiFeatures.kpi.status">
+				<source>Status</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.kpi.extensions" resname="module.aiFeatures.kpi.extensions">
+				<source>Extensions</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.hint" resname="module.aiFeatures.hint">
+				<source>Click any card to configure its AI settings</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.searchLabel" resname="module.aiFeatures.searchLabel">
+				<source>Search extensions</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.searchPlaceholder" resname="module.aiFeatures.searchPlaceholder">
+				<source>Search extensions...</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.filterToolbar" resname="module.aiFeatures.filterToolbar">
+				<source>AI Features filters</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.filterAll" resname="module.aiFeatures.filterAll">
+				<source>All</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.filterAllExtensions" resname="module.aiFeatures.filterAllExtensions">
+				<source>All Extensions</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.filterExtension" resname="module.aiFeatures.filterExtension">
+				<source>Extension</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.clearFilters" resname="module.aiFeatures.clearFilters">
+				<source>Clear filters</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.emptyTitle" resname="module.aiFeatures.emptyTitle">
+				<source>No AI features match your search.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.emptyText" resname="module.aiFeatures.emptyText">
+				<source>Try a different keyword or clear the filters.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.configure" resname="module.aiFeatures.configure">
+				<source>Configure</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.drawerDefaultTitle" resname="module.aiFeatures.drawerDefaultTitle">
+				<source>Feature Configuration</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.drawerDefaultSub" resname="module.aiFeatures.drawerDefaultSub">
+				<source>Update defaults, prompts, automation, and access control settings.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.close" resname="module.aiFeatures.close">
+				<source>Close</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.configScope" resname="module.aiFeatures.configScope">
+				<source>Configuration Scope</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.defaultProvider" resname="module.aiFeatures.defaultProvider">
+				<source>Default provider</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.promptStyle" resname="module.aiFeatures.promptStyle">
+				<source>Prompt style</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.promptStyleBalanced" resname="module.aiFeatures.promptStyleBalanced">
+				<source>Balanced</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.promptStylePrecise" resname="module.aiFeatures.promptStylePrecise">
+				<source>Precise</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.promptStyleCreative" resname="module.aiFeatures.promptStyleCreative">
+				<source>Creative</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.enableAutomation" resname="module.aiFeatures.enableAutomation">
+				<source>Enable automation for this feature</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.restrictToAdmins" resname="module.aiFeatures.restrictToAdmins">
+				<source>Restrict access to administrators</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.cancel" resname="module.aiFeatures.cancel">
+				<source>Cancel</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.saveChanges" resname="module.aiFeatures.saveChanges">
+				<source>Save Changes</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.loadingSettings" resname="module.aiFeatures.loadingSettings">
+				<source>Loading settings…</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.saveSuccessTitle" resname="module.aiFeatures.saveSuccessTitle">
+				<source>Settings saved</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.saveSuccessMessage" resname="module.aiFeatures.saveSuccessMessage">
+				<source>AI Assistant extension configuration was updated.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.saveSuccessMessageT3aa" resname="module.aiFeatures.saveSuccessMessageT3aa">
+				<source>AI Accessibility extension configuration was updated.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.saveSuccessMessageUniverse" resname="module.aiFeatures.saveSuccessMessageUniverse">
+				<source>AI Foundation extension configuration was updated.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.saveSuccessMessageT3cs" resname="module.aiFeatures.saveSuccessMessageT3cs">
+				<source>AI Chatbot/Search extension configuration was updated.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.errorT3AaMissing" resname="module.aiFeatures.errorT3AaMissing">
+				<source>AI Accessibility is not installed or not loaded.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.errorT3CsMissing" resname="module.aiFeatures.errorT3CsMissing">
+				<source>AI Chatbot/Search is not installed or not loaded.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.saveErrorTitle" resname="module.aiFeatures.saveErrorTitle">
+				<source>Could not save settings</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.secretKey.stored" resname="module.aiFeatures.secretKey.stored">
+				<source>API key configured (%s). Leave blank to keep the existing key, or enter a new value to replace it.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.secretKey.placeholderEdit" resname="module.aiFeatures.secretKey.placeholderEdit">
+				<source>Leave blank to keep existing key</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.secretKey.placeholderNew" resname="module.aiFeatures.secretKey.placeholderNew">
+				<source>Enter your API key</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.secretKey.reveal" resname="module.aiFeatures.secretKey.reveal">
+				<source>Show</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.secretKey.configured" resname="module.aiFeatures.secretKey.configured">
+				<source>Configured</source>
+			</trans-unit>
+			<trans-unit id="provider.field.apiKey.stored" resname="provider.field.apiKey.stored">
+				<source>Stored key configured. Enter a new key only to replace it.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.errorT3AiMissing" resname="module.aiFeatures.errorT3AiMissing">
+				<source>AI Assistant is not installed or not loaded.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.errorExtensionMissing" resname="module.aiFeatures.errorExtensionMissing">
+				<source>This extension is not installed or not loaded.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.errorInvalidScope" resname="module.aiFeatures.errorInvalidScope">
+				<source>Unknown settings scope.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.errorEmptyForm" resname="module.aiFeatures.errorEmptyForm">
+				<source>No settings were found for this feature.</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.heading" resname="module.aiUsage.heading">
+				<source>AI Usage</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.intro" resname="module.aiUsage.intro">
+				<source>Inspect request logs, usage analytics, and export usage data.</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.heading" resname="module.aiLogs.heading">
+				<source>AI Logs</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.intro" resname="module.aiLogs.intro">
+				<source>System log entries across all AI extensions — sync, training, errors and scheduler events.</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.mode.requestLog" resname="module.aiUsage.mode.requestLog">
+				<source>Request Log</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.mode.usageSummary" resname="module.aiUsage.mode.usageSummary">
+				<source>Usage Summary</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.period.allTime" resname="module.aiUsage.period.allTime">
+				<source>All Time</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.kpi.totalRequests" resname="module.aiUsage.kpi.totalRequests">
+				<source>Total Requests</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.kpi.totalTokens" resname="module.aiUsage.kpi.totalTokens">
+				<source>Total Tokens</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.kpi.totalCost" resname="module.aiUsage.kpi.totalCost">
+				<source>Total Cost</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.kpi.successRate" resname="module.aiUsage.kpi.successRate">
+				<source>Success Rate</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.filter.search" resname="module.aiUsage.filter.search">
+				<source>Search requests...</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.filter.apply" resname="module.aiUsage.filter.apply">
+				<source>Apply Filters</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.filter.reset" resname="module.aiUsage.filter.reset">
+				<source>Reset</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.filter.engine" resname="module.aiUsage.filter.engine">
+				<source>Engine</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.filter.model" resname="module.aiUsage.filter.model">
+				<source>Model</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.filter.module" resname="module.aiUsage.filter.module">
+				<source>Module</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.filter.scope" resname="module.aiUsage.filter.scope">
+				<source>Scope</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.filter.reqType" resname="module.aiUsage.filter.reqType">
+				<source>Request Type</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.filter.status" resname="module.aiUsage.filter.status">
+				<source>Status</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.filter.user" resname="module.aiUsage.filter.user">
+				<source>User</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.filter.maxRows" resname="module.aiUsage.filter.maxRows">
+				<source>Max Rows</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.filter.perPage" resname="module.aiUsage.filter.perPage">
+				<source>Records per page</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.showingRange" resname="module.aiUsage.showingRange">
+				<source>Showing %1$s–%2$s of %3$s entries</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.action.exportCsv" resname="module.aiUsage.action.exportCsv">
+				<source>Export CSV</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.action.refresh" resname="module.aiUsage.action.refresh">
+				<source>Refresh</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.toolbar.aria" resname="module.aiUsage.toolbar.aria">
+				<source>Request log actions</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.selectAll" resname="module.aiUsage.selectAll">
+				<source>Select all</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.selectEntry" resname="module.aiUsage.selectEntry">
+				<source>Select entry</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.pagination.label" resname="module.aiUsage.pagination.label">
+				<source>Request log pagination</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.pagination.first" resname="module.aiUsage.pagination.first">
+				<source>First page</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.pagination.previous" resname="module.aiUsage.pagination.previous">
+				<source>Previous page</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.pagination.next" resname="module.aiUsage.pagination.next">
+				<source>Next page</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.pagination.last" resname="module.aiUsage.pagination.last">
+				<source>Last page</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.pagination.page" resname="module.aiUsage.pagination.page">
+				<source>Page</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.pagination.records" resname="module.aiUsage.pagination.records">
+				<source>Records %1$s–%2$s of %3$s</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.table.time" resname="module.aiUsage.table.time">
+				<source>Time</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.table.provider" resname="module.aiUsage.table.provider">
+				<source>Provider</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.table.module" resname="module.aiUsage.table.module">
+				<source>Module</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.table.scope" resname="module.aiUsage.table.scope">
+				<source>Scope</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.table.model" resname="module.aiUsage.table.model">
+				<source>Model</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.table.type" resname="module.aiUsage.table.type">
+				<source>Type</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.table.status" resname="module.aiUsage.table.status">
+				<source>Status</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.table.tokens" resname="module.aiUsage.table.tokens">
+				<source>Tokens</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.table.cost" resname="module.aiUsage.table.cost">
+				<source>Cost</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.table.actions" resname="module.aiUsage.table.actions">
+				<source>Actions</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.action.details" resname="module.aiUsage.action.details">
+				<source>Details</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.action.delete" resname="module.aiUsage.action.delete">
+				<source>Delete</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.action.bulkDelete" resname="module.aiUsage.action.bulkDelete">
+				<source>Delete Selected</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.action.export" resname="module.aiUsage.action.export">
+				<source>Export Report</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.detailsTitle" resname="module.aiUsage.modal.detailsTitle">
+				<source>Request Details</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.section.request" resname="module.aiUsage.modal.section.request">
+				<source>Request</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.section.metrics" resname="module.aiUsage.modal.section.metrics">
+				<source>Usage &amp; cost</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.section.error" resname="module.aiUsage.modal.section.error">
+				<source>Error</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.section.meta" resname="module.aiUsage.modal.section.meta">
+				<source>Metadata</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.field" resname="module.aiUsage.modal.field">
+				<source>Field</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.value" resname="module.aiUsage.modal.value">
+				<source>Value</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.promptTokens" resname="module.aiUsage.modal.promptTokens">
+				<source>Prompt tokens</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.completionTokens" resname="module.aiUsage.modal.completionTokens">
+				<source>Completion tokens</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.latency" resname="module.aiUsage.modal.latency">
+				<source>Latency</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.credits" resname="module.aiUsage.modal.credits">
+				<source>Credits</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.errorMessage" resname="module.aiUsage.modal.errorMessage">
+				<source>Message</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.errorCode" resname="module.aiUsage.modal.errorCode">
+				<source>Error code</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.errorClass" resname="module.aiUsage.modal.errorClass">
+				<source>Exception</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.emptyValue" resname="module.aiUsage.modal.emptyValue">
+				<source>—</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.noErrorMessage" resname="module.aiUsage.modal.noErrorMessage">
+				<source>No detailed error message was recorded for this entry.</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.deleteTitle" resname="module.aiUsage.modal.deleteTitle">
+				<source>Delete request log entry</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.deleteMessage" resname="module.aiUsage.modal.deleteMessage">
+				<source>Do you want to soft-delete this log entry?</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.bulkDeleteTitle" resname="module.aiUsage.modal.bulkDeleteTitle">
+				<source>Delete selected entries</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.bulkDeleteMessage" resname="module.aiUsage.modal.bulkDeleteMessage">
+				<source>Do you want to soft-delete %1$s selected log entries?</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.deleteConfirm" resname="module.aiUsage.modal.deleteConfirm">
+				<source>Delete</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.modal.bulkDeleteConfirm" resname="module.aiUsage.modal.bulkDeleteConfirm">
+				<source>Delete selected</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.alert.selectAtLeastOne" resname="module.aiUsage.alert.selectAtLeastOne">
+				<source>Select at least one entry to delete.</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.log.showing" resname="module.aiUsage.log.showing">
+				<source>Showing %1$s log entries</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.empty.log" resname="module.aiUsage.empty.log">
+				<source>No request log entries for current filters.</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.summary.periodLead" resname="module.aiUsage.summary.periodLead">
+				<source>Usage breakdown for selected period.</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.summary.providers" resname="module.aiUsage.summary.providers">
+				<source>Usage by Provider</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.summary.models" resname="module.aiUsage.summary.models">
+				<source>Top Models by Tokens</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.summary.extensions" resname="module.aiUsage.summary.extensions">
+				<source>Usage by Extension</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.flash.deleted" resname="module.aiUsage.flash.deleted">
+				<source>Request log entry deleted.</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.flash.bulkDeleted" resname="module.aiUsage.flash.bulkDeleted">
+				<source>Selected request log entries deleted.</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.flash.noneSelected" resname="module.aiUsage.flash.noneSelected">
+				<source>No entries selected.</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.flash.notDeleted" resname="module.aiUsage.flash.notDeleted">
+				<source>The selected entry could not be deleted.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.heading" resname="module.aiPrompts.heading">
+				<source>AI Prompts</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.intro" resname="module.aiPrompts.intro">
+				<source>Manage reusable prompt templates for all AI modules.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.action.sync" resname="module.aiPrompts.action.sync">
+				<source>Synchronize AI Prompts</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.action.back" resname="module.aiPrompts.action.back">
+				<source>AI Prompts</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.action.addPrompt" resname="module.aiPrompts.action.addPrompt">
+				<source>Add Prompt</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.action.edit" resname="module.aiPrompts.action.edit">
+				<source>Edit</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.action.delete" resname="module.aiPrompts.action.delete">
+				<source>Delete</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.action.cancel" resname="module.aiPrompts.action.cancel">
+				<source>Cancel</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.action.save" resname="module.aiPrompts.action.save">
+				<source>Save Prompt</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.filter.search" resname="module.aiPrompts.filter.search">
+				<source>Search categories...</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.filter.searchDetail" resname="module.aiPrompts.filter.searchDetail">
+				<source>Search prompts...</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.filter.apply" resname="module.aiPrompts.filter.apply">
+				<source>Filter</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.filter.extension" resname="module.aiPrompts.filter.extension">
+				<source>Extension</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.filter.allExtensions" resname="module.aiPrompts.filter.allExtensions">
+				<source>All Extensions</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.filter.reset" resname="module.aiPrompts.filter.reset">
+				<source>Reset</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.extension.ns_t3ac" resname="module.aiPrompts.extension.ns_t3ac">
+				<source>AI Chatbot</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.extension.ns_t3as" resname="module.aiPrompts.extension.ns_t3as">
+				<source>AI Search</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.extension.ns_t3cs" resname="module.aiPrompts.extension.ns_t3cs">
+				<source>AI Chatbot/Search</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.extension.ns_t3ai" resname="module.aiPrompts.extension.ns_t3ai">
+				<source>AI Assistant</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.extension.ns_t3aa" resname="module.aiPrompts.extension.ns_t3aa">
+				<source>AI Accessibility</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.extension.ns_t3af" resname="module.aiPrompts.extension.ns_t3af">
+				<source>AI Foundation</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.filter.title" resname="module.aiPrompts.filter.title">
+				<source>Search title...</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.filter.text" resname="module.aiPrompts.filter.text">
+				<source>Search text...</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.filter.promptType" resname="module.aiPrompts.filter.promptType">
+				<source>Prompt type</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.filter.scope" resname="module.aiPrompts.filter.scope">
+				<source>Scope</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.kpi.categories" resname="module.aiPrompts.kpi.categories">
+				<source>Prompt categories</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.kpi.prompts" resname="module.aiPrompts.kpi.prompts">
+				<source>Total prompts</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.kpi.extensions" resname="module.aiPrompts.kpi.extensions">
+				<source>Extensions covered</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.kpi.custom" resname="module.aiPrompts.kpi.custom">
+				<source>Custom prompts</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.table.promptType" resname="module.aiPrompts.table.promptType">
+				<source>Prompt Type</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.table.scope" resname="module.aiPrompts.table.scope">
+				<source>Scope</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.table.type" resname="module.aiPrompts.table.type">
+				<source>Type</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.table.title" resname="module.aiPrompts.table.title">
+				<source>Prompt Title</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.table.text" resname="module.aiPrompts.table.text">
+				<source>Prompt Text</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.table.actions" resname="module.aiPrompts.table.actions">
+				<source>Actions</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.type.system" resname="module.aiPrompts.type.system">
+				<source>System</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.type.custom" resname="module.aiPrompts.type.custom">
+				<source>Custom</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.newTitle" resname="module.aiPrompts.drawer.newTitle">
+				<source>New Prompt</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.promptTitle" resname="module.aiPrompts.drawer.promptTitle">
+				<source>Prompt Title</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.category" resname="module.aiPrompts.drawer.category">
+				<source>Category</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.selectCategory" resname="module.aiPrompts.drawer.selectCategory">
+				<source>Select category…</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.promptType" resname="module.aiPrompts.drawer.promptType">
+				<source>Prompt Type</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.scope" resname="module.aiPrompts.drawer.scope">
+				<source>Scope</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.promptText" resname="module.aiPrompts.drawer.promptText">
+				<source>Prompt Text</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.brandPlaceholders" resname="module.aiPrompts.drawer.brandPlaceholders">
+				<source>Brand context placeholders</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.brandContextInfo" resname="module.aiPrompts.drawer.brandContextInfo">
+				<source>The selected AI Context profile is applied automatically — its brand details are inserted into the prompt at runtime.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.brandContextTitle" resname="module.aiPrompts.drawer.brandContextTitle">
+				<source>AI Context</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.brandContextScopeInfo" resname="module.aiPrompts.drawer.brandContextScopeInfo">
+				<source>Profile used for %s — brand details are applied automatically at runtime.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.manageBrandContext" resname="module.aiPrompts.drawer.manageBrandContext">
+				<source>Manage in AI Context</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.selectScope" resname="module.aiPrompts.drawer.selectScope">
+				<source>Select scope…</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.selectType" resname="module.aiPrompts.drawer.selectType">
+				<source>Select prompt type…</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.requiredVariables" resname="module.aiPrompts.drawer.requiredVariables">
+				<source>Required variables</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.requiredVariablesHint" resname="module.aiPrompts.drawer.requiredVariablesHint">
+				<source>Include each variable in your prompt text using square brackets, e.g. [Content].</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.defaultText" resname="module.aiPrompts.drawer.defaultText">
+				<source>Built-in default prompt</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.defaultTextHint" resname="module.aiPrompts.drawer.defaultTextHint">
+				<source>Reference only — your custom prompt replaces this at runtime when selected.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.drawer.defaultTextPlaceholderHint" resname="module.aiPrompts.drawer.defaultTextPlaceholderHint">
+				<source>The built-in default prompt is shown as placeholder text below when you select a prompt type. Enter your custom prompt to override it at runtime.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.empty.rows" resname="module.aiPrompts.empty.rows">
+				<source>No prompts found for this category.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.empty.filteredRows" resname="module.aiPrompts.empty.filteredRows">
+				<source>No prompts match your search.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.empty.categories" resname="module.aiPrompts.empty.categories">
+				<source>No prompt categories match your filters.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.flash.synced" resname="module.aiPrompts.flash.synced">
+				<source>AI prompts synchronized.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.flash.alreadySynced" resname="module.aiPrompts.flash.alreadySynced">
+				<source>All default prompts are already synchronized.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.flash.created" resname="module.aiPrompts.flash.created">
+				<source>Prompt created.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.flash.updated" resname="module.aiPrompts.flash.updated">
+				<source>Prompt updated.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.flash.deleted" resname="module.aiPrompts.flash.deleted">
+				<source>Prompt deleted.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.flash.failed" resname="module.aiPrompts.flash.failed">
+				<source>Action failed. Please verify prompt data.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.flash.validationFailed" resname="module.aiPrompts.flash.validationFailed">
+				<source>Prompt validation failed. Select a valid scope and type, and include all required variables in the prompt text.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.validation.missingScopeType" resname="module.aiPrompts.validation.missingScopeType">
+				<source>Please select a scope and prompt type.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.validation.invalidPromptType" resname="module.aiPrompts.validation.invalidPromptType">
+				<source>The selected prompt type is not valid. Choose a type from the list.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.validation.scopeMismatch" resname="module.aiPrompts.validation.scopeMismatch">
+				<source>The prompt type does not belong to the selected scope. Adjust scope or type.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.validation.missingVariables" resname="module.aiPrompts.validation.missingVariables">
+				<source>Include all required variables in the prompt text: %s</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.heading" resname="module.schedulerCli.heading">
+				<source>Scheduler &amp; CLI</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.intro" resname="module.schedulerCli.intro">
+				<source>Run AI commands manually or automate them with TYPO3 scheduler tasks.</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.mode.commandLibrary" resname="module.schedulerCli.mode.commandLibrary">
+				<source>Command Library</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.mode.scheduledTasks" resname="module.schedulerCli.mode.scheduledTasks">
+				<source>Scheduled Tasks</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.kpi.totalCommands" resname="module.schedulerCli.kpi.totalCommands">
+				<source>Total Commands</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.kpi.totalTasks" resname="module.schedulerCli.kpi.totalTasks">
+				<source>Scheduled Tasks</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.kpi.activeTasks" resname="module.schedulerCli.kpi.activeTasks">
+				<source>Active Tasks</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.kpi.failingTasks" resname="module.schedulerCli.kpi.failingTasks">
+				<source>Failing Tasks</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.quickref.title" resname="module.schedulerCli.quickref.title">
+				<source>Quick Reference</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.quickref.subtitle" resname="module.schedulerCli.quickref.subtitle">
+				<source>TYPO3 CLI — Symfony Console</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.quickref.listAll" resname="module.schedulerCli.quickref.listAll">
+				<source>List all AI Universe commands:</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.quickref.help" resname="module.schedulerCli.quickref.help">
+				<source>Get help for a specific command:</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.quickref.verbose" resname="module.schedulerCli.quickref.verbose">
+				<source>Run a command with verbose output:</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.filter.apply" resname="module.schedulerCli.filter.apply">
+				<source>Apply Filters</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.filter.status.all" resname="module.schedulerCli.filter.status.all">
+				<source>All</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.filter.status.enabled" resname="module.schedulerCli.filter.status.enabled">
+				<source>Enabled</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.filter.status.disabled" resname="module.schedulerCli.filter.status.disabled">
+				<source>Disabled</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.filter.status.failing" resname="module.schedulerCli.filter.status.failing">
+				<source>Failing</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.table.task" resname="module.schedulerCli.table.task">
+				<source>Task</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.table.command" resname="module.schedulerCli.table.command">
+				<source>Command</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.table.schedule" resname="module.schedulerCli.table.schedule">
+				<source>Schedule</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.table.nextRun" resname="module.schedulerCli.table.nextRun">
+				<source>Next Run</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.table.lastRun" resname="module.schedulerCli.table.lastRun">
+				<source>Last Run</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.table.status" resname="module.schedulerCli.table.status">
+				<source>Status</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.table.actions" resname="module.schedulerCli.table.actions">
+				<source>Actions</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.action.run" resname="module.schedulerCli.action.run">
+				<source>Run</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.action.schedule" resname="module.schedulerCli.action.schedule">
+				<source>Schedule</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.action.editSchedule" resname="module.schedulerCli.action.editSchedule">
+				<source>Edit in Scheduler</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.action.addScheduler" resname="module.schedulerCli.action.addScheduler">
+				<source>Add Scheduler Task</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.action.openScheduler" resname="module.schedulerCli.action.openScheduler">
+				<source>Open Scheduler</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.action.openInScheduler" resname="module.schedulerCli.action.openInScheduler">
+				<source>Open in Scheduler</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.tasks.hint" resname="module.schedulerCli.tasks.hint">
+				<source>Read-only overview of AI Universe scheduler jobs (t3af:* and legacy nst3ai:/nst3aa:/nst3cs:/nst3af:* aliases). Manage, edit, and execute tasks in the TYPO3 Scheduler module.</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.banner.title" resname="module.schedulerCli.library.banner.title">
+				<source>Command Library</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.banner.body" resname="module.schedulerCli.library.banner.body">
+				<source>Discover t3af:* CLI commands grouped by extension. Run manually or schedule them in the TYPO3 Scheduler.</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.banner.extensions" resname="module.schedulerCli.library.banner.extensions">
+				<source>extensions</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.banner.commands" resname="module.schedulerCli.library.banner.commands">
+				<source>commands</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.commandsLabel" resname="module.schedulerCli.library.commandsLabel">
+				<source>commands</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.viewCommands" resname="module.schedulerCli.library.viewCommands">
+				<source>View Commands</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.extensionKey" resname="module.schedulerCli.library.extensionKey">
+				<source>Extension</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.schedulable" resname="module.schedulerCli.library.schedulable">
+				<source>Schedulable</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.manualOnly" resname="module.schedulerCli.library.manualOnly">
+				<source>Manual only</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.cliCommand" resname="module.schedulerCli.library.cliCommand">
+				<source>CLI Command</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.arguments" resname="module.schedulerCli.library.arguments">
+				<source>Arguments &amp; Options</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.paramName" resname="module.schedulerCli.library.paramName">
+				<source>Name</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.paramKind" resname="module.schedulerCli.library.paramKind">
+				<source>Kind</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.paramRequired" resname="module.schedulerCli.library.paramRequired">
+				<source>Required</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.kindArgument" resname="module.schedulerCli.library.kindArgument">
+				<source>argument</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.kindOption" resname="module.schedulerCli.library.kindOption">
+				<source>option</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.required" resname="module.schedulerCli.library.required">
+				<source>yes</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.optional" resname="module.schedulerCli.library.optional">
+				<source>no</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.library.empty" resname="module.schedulerCli.library.empty">
+				<source>No AI Universe CLI commands found.</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.action.runNow" resname="module.schedulerCli.action.runNow">
+				<source>Run now</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.action.toggle" resname="module.schedulerCli.action.toggle">
+				<source>Enable/Disable</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.action.delete" resname="module.schedulerCli.action.delete">
+				<source>Delete</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.status.enabled" resname="module.schedulerCli.status.enabled">
+				<source>Enabled</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.status.disabled" resname="module.schedulerCli.status.disabled">
+				<source>Disabled</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.empty.tasks" resname="module.schedulerCli.empty.tasks">
+				<source>No scheduled tasks found.</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.flash.created" resname="module.schedulerCli.flash.created">
+				<source>Scheduled task created.</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.flash.updated" resname="module.schedulerCli.flash.updated">
+				<source>Scheduled task updated.</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.flash.deleted" resname="module.schedulerCli.flash.deleted">
+				<source>Scheduled task deleted.</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.flash.toggled" resname="module.schedulerCli.flash.toggled">
+				<source>Task status updated.</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.flash.ranNow" resname="module.schedulerCli.flash.ranNow">
+				<source>Task executed.</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.flash.runOk" resname="module.schedulerCli.flash.runOk">
+				<source>Command executed successfully.</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.flash.failed" resname="module.schedulerCli.flash.failed">
+				<source>Action failed. Please review the command/task configuration.</source>
+			</trans-unit>
+			<trans-unit id="module.providers.empty" resname="module.providers.empty">
+				<source>No providers configured yet.</source>
+			</trans-unit>
+			<trans-unit id="module.providers.add" resname="module.providers.add">
+				<source>+ New provider</source>
+			</trans-unit>
+			<trans-unit id="module.content.placeholder" resname="module.content.placeholder">
+				<source>Tab shell is ready. Integrate feature-specific UI and data sources here.</source>
+			</trans-unit>
+
+			<trans-unit id="provider.heading" resname="provider.heading">
+				<source>AI Providers</source>
+			</trans-unit>
+			<trans-unit id="provider.intro" resname="provider.intro">
+				<source>Manage how your TYPO3 AI extensions connect to language models — use T3Planet's managed credits or bring your own API keys.</source>
+			</trans-unit>
+			<trans-unit id="provider.mode.title" resname="provider.mode.title">
+				<source>AI Provider Mode</source>
+			</trans-unit>
+			<trans-unit id="provider.mode.sub" resname="provider.mode.sub">
+				<source>How AI requests are fulfilled across all TYPO3 AI extensions</source>
+			</trans-unit>
+			<trans-unit id="provider.meta.providers" resname="provider.meta.providers">
+				<source>Providers</source>
+			</trans-unit>
+			<trans-unit id="provider.meta.active" resname="provider.meta.active">
+				<source>%s active</source>
+			</trans-unit>
+			<trans-unit id="provider.meta.default" resname="provider.meta.default">
+				<source>default</source>
+			</trans-unit>
+			<trans-unit id="provider.meta.encrypted" resname="provider.meta.encrypted">
+				<source>API keys encrypted at rest</source>
+			</trans-unit>
+			<trans-unit id="provider.meta.fallbackWarn" resname="provider.meta.fallbackWarn">
+				<source>No fallback chain — requests will error if the default provider fails.</source>
+			</trans-unit>
+			<trans-unit id="provider.col.title" resname="provider.col.title">
+				<source>Title</source>
+			</trans-unit>
+			<trans-unit id="provider.col.lastUsed" resname="provider.col.lastUsed">
+				<source>Last Used</source>
+			</trans-unit>
+			<trans-unit id="provider.field.adapter.placeholder" resname="provider.field.adapter.placeholder">
+				<source>Select adapter</source>
+			</trans-unit>
+			<trans-unit id="provider.field.isDefault.desc" resname="provider.field.isDefault.desc">
+				<source>All AI extensions will use this provider</source>
+			</trans-unit>
+			<trans-unit id="provider.drawer.desc" resname="provider.drawer.desc">
+				<source>Configure a new language model provider connection.</source>
+			</trans-unit>
+			<trans-unit id="provider.badge.count" resname="provider.badge.count">
+				<source>Total</source>
+			</trans-unit>
+			<trans-unit id="provider.badge.encrypted" resname="provider.badge.encrypted">
+				<source>Encryption: enc:v1 (sodium)</source>
+			</trans-unit>
+			<trans-unit id="provider.badge.default" resname="provider.badge.default">
+				<source>Default</source>
+			</trans-unit>
+			<trans-unit id="provider.search" resname="provider.search">
+				<source>Search providers…</source>
+			</trans-unit>
+			<trans-unit id="provider.add" resname="provider.add">
+				<source>New Provider</source>
+			</trans-unit>
+			<trans-unit id="provider.import" resname="provider.import">
+				<source>Import</source>
+			</trans-unit>
+			<trans-unit id="provider.importTitle" resname="provider.importTitle">
+				<source>Import providers from another site</source>
+			</trans-unit>
+			<trans-unit id="provider.importLead" resname="provider.importLead">
+				<source>Copy provider configurations from another site into this site.</source>
+			</trans-unit>
+			<trans-unit id="provider.importSourceSite" resname="provider.importSourceSite">
+				<source>Source site</source>
+			</trans-unit>
+			<trans-unit id="provider.importSubmit" resname="provider.importSubmit">
+				<source>Import selected</source>
+			</trans-unit>
+			<trans-unit id="provider.importCancel" resname="provider.importCancel">
+				<source>Cancel</source>
+			</trans-unit>
+			<trans-unit id="module.siteStorage.pageRequiredTitle" resname="module.siteStorage.pageRequiredTitle">
+				<source>Select a site first</source>
+			</trans-unit>
+			<trans-unit id="module.siteStorage.pageRequired" resname="module.siteStorage.pageRequired">
+				<source>Choose a page in the page tree on the left. AI Providers and AI Features are stored per site at that site's root page.</source>
+			</trans-unit>
+			<trans-unit id="module.siteStorage.pageNotInSite" resname="module.siteStorage.pageNotInSite">
+				<source>The selected page is not part of a configured site. Choose a page that belongs to one of your sites.</source>
+			</trans-unit>
+			<trans-unit id="provider.empty" resname="provider.empty">
+				<source>No providers configured yet. Add your first provider.</source>
+			</trans-unit>
+			<trans-unit id="provider.col.identifier" resname="provider.col.identifier">
+				<source>Identifier</source>
+			</trans-unit>
+			<trans-unit id="provider.col.adapter" resname="provider.col.adapter">
+				<source>Adapter</source>
+			</trans-unit>
+			<trans-unit id="provider.col.model" resname="provider.col.model">
+				<source>Model</source>
+			</trans-unit>
+			<trans-unit id="provider.col.embeddingModel" resname="provider.col.embeddingModel">
+				<source>Embedding Model</source>
+			</trans-unit>
+			<trans-unit id="provider.col.priority" resname="provider.col.priority">
+				<source>Priority</source>
+			</trans-unit>
+			<trans-unit id="provider.col.status" resname="provider.col.status">
+				<source>Status</source>
+			</trans-unit>
+			<trans-unit id="provider.col.actions" resname="provider.col.actions">
+				<source>Actions</source>
+			</trans-unit>
+			<trans-unit id="provider.action.test" resname="provider.action.test">
+				<source>Test connection</source>
+			</trans-unit>
+			<trans-unit id="provider.action.setDefault" resname="provider.action.setDefault">
+				<source>Make default</source>
+			</trans-unit>
+			<trans-unit id="provider.action.edit" resname="provider.action.edit">
+				<source>Edit</source>
+			</trans-unit>
+			<trans-unit id="provider.action.delete" resname="provider.action.delete">
+				<source>Delete</source>
+			</trans-unit>
+			<trans-unit id="provider.action.confirmDelete" resname="provider.action.confirmDelete">
+				<source>Do you really want to delete the provider "%s"?</source>
+			</trans-unit>
+			<trans-unit id="provider.action.cancel" resname="provider.action.cancel">
+				<source>Cancel</source>
+			</trans-unit>
+			<trans-unit id="provider.action.save" resname="provider.action.save">
+				<source>Save Provider</source>
+			</trans-unit>
+			<trans-unit id="provider.flash.saved" resname="provider.flash.saved">
+				<source>Provider saved.</source>
+			</trans-unit>
+			<trans-unit id="provider.flash.deleted" resname="provider.flash.deleted">
+				<source>Provider deleted.</source>
+			</trans-unit>
+			<trans-unit id="provider.flash.notFound" resname="provider.flash.notFound">
+				<source>Provider not found.</source>
+			</trans-unit>
+			<trans-unit id="provider.drawer.titleNew" resname="provider.drawer.titleNew">
+				<source>Add AI Provider</source>
+			</trans-unit>
+			<trans-unit id="provider.drawer.titleEdit" resname="provider.drawer.titleEdit">
+				<source>Edit AI Provider</source>
+			</trans-unit>
+			<trans-unit id="provider.drawer.identity" resname="provider.drawer.identity">
+				<source>Identity</source>
+			</trans-unit>
+			<trans-unit id="provider.drawer.connection" resname="provider.drawer.connection">
+				<source>Connection</source>
+			</trans-unit>
+			<trans-unit id="provider.drawer.model" resname="provider.drawer.model">
+				<source>Model</source>
+			</trans-unit>
+			<trans-unit id="provider.drawer.configuration" resname="provider.drawer.configuration">
+				<source>Configuration</source>
+			</trans-unit>
+			<trans-unit id="provider.drawer.loading" resname="provider.drawer.loading">
+				<source>Loading…</source>
+			</trans-unit>
+			<trans-unit id="provider.field.identifier" resname="provider.field.identifier">
+				<source>Identifier</source>
+			</trans-unit>
+			<trans-unit id="provider.field.title" resname="provider.field.title">
+				<source>Display name</source>
+			</trans-unit>
+			<trans-unit id="provider.field.adapter" resname="provider.field.adapter">
+				<source>Adapter type</source>
+			</trans-unit>
+			<trans-unit id="provider.field.endpoint" resname="provider.field.endpoint">
+				<source>Endpoint URL</source>
+			</trans-unit>
+			<trans-unit id="provider.field.endpoint.optional" resname="provider.field.endpoint.optional">
+				<source>optional unless Custom / Other</source>
+			</trans-unit>
+			<trans-unit id="provider.field.endpoint.requiredCustom" resname="provider.field.endpoint.requiredCustom">
+				<source>Required for Custom / Other: OpenAI-compatible API base URL (often ends with /v1).</source>
+			</trans-unit>
+			<trans-unit id="provider.field.endpoint.requiredOllama" resname="provider.field.endpoint.requiredOllama">
+				<source>Ollama base URL (no API key). In Docker/DDEV use http://host.docker.internal:11434 instead of localhost.</source>
+			</trans-unit>
+			<trans-unit id="provider.field.apiKey" resname="provider.field.apiKey">
+				<source>API key</source>
+			</trans-unit>
+			<trans-unit id="provider.field.apiKey.placeholderEdit" resname="provider.field.apiKey.placeholderEdit">
+				<source>Leave blank to keep existing key</source>
+			</trans-unit>
+			<trans-unit id="provider.field.apiKey.reveal" resname="provider.field.apiKey.reveal">
+				<source>Show</source>
+			</trans-unit>
+			<trans-unit id="provider.field.modelId" resname="provider.field.modelId">
+				<source>Model ID</source>
+			</trans-unit>
+			<trans-unit id="provider.field.chatModelId" resname="provider.field.chatModelId">
+				<source>Chat / completion model</source>
+			</trans-unit>
+			<trans-unit id="provider.field.embeddingModelId" resname="provider.field.embeddingModelId">
+				<source>Embedding model</source>
+			</trans-unit>
+			<trans-unit id="provider.field.embeddingModelId.subnote" resname="provider.field.embeddingModelId.subnote">
+				<source>Leave blank to use the chat model for embeddings.</source>
+			</trans-unit>
+			<trans-unit id="provider.field.capabilities" resname="provider.field.capabilities">
+				<source>Capabilities</source>
+			</trans-unit>
+			<trans-unit id="provider.field.temperature" resname="provider.field.temperature">
+				<source>Temperature</source>
+			</trans-unit>
+			<trans-unit id="provider.field.systemPrompt" resname="provider.field.systemPrompt">
+				<source>System prompt</source>
+			</trans-unit>
+			<trans-unit id="provider.field.priority" resname="provider.field.priority">
+				<source>Priority</source>
+			</trans-unit>
+			<trans-unit id="provider.field.pricingInput" resname="provider.field.pricingInput">
+				<source>Input price / 1M tokens</source>
+			</trans-unit>
+			<trans-unit id="provider.field.pricingOutput" resname="provider.field.pricingOutput">
+				<source>Output price / 1M tokens</source>
+			</trans-unit>
+			<trans-unit id="provider.field.pricingCurrency" resname="provider.field.pricingCurrency">
+				<source>Currency</source>
+			</trans-unit>
+			<trans-unit id="provider.field.costCenter" resname="provider.field.costCenter">
+				<source>Cost center</source>
+			</trans-unit>
+			<trans-unit id="provider.field.pricingNote" resname="provider.field.pricingNote">
+				<source>Costs are estimated using manual provider pricing fields.</source>
+			</trans-unit>
+			<trans-unit id="provider.field.isEnabled" resname="provider.field.isEnabled">
+				<source>Provider enabled</source>
+			</trans-unit>
+			<trans-unit id="provider.field.isEnabled.desc" resname="provider.field.isEnabled.desc">
+				<source>Disabled providers are excluded from runtime usage.</source>
+			</trans-unit>
+			<trans-unit id="provider.field.enabledForDashboard" resname="provider.field.enabledForDashboard">
+				<source>Include in dashboard analytics</source>
+			</trans-unit>
+			<trans-unit id="provider.field.enabledForDashboard.desc" resname="provider.field.enabledForDashboard.desc">
+				<source>When off, runtime works but dashboard excludes this provider rows.</source>
+			</trans-unit>
+			<trans-unit id="provider.field.isDefault" resname="provider.field.isDefault">
+				<source>Set as Default Provider</source>
+			</trans-unit>
+			<trans-unit id="provider.drawer.access" resname="provider.drawer.access">
+				<source>Access &amp; Governance</source>
+			</trans-unit>
+			<trans-unit id="provider.field.beGroups" resname="provider.field.beGroups">
+				<source>Allowed BE groups</source>
+			</trans-unit>
+			<trans-unit id="provider.field.beGroups.desc" resname="provider.field.beGroups.desc">
+				<source>Restrict to selected backend groups. Empty = available to all groups.</source>
+			</trans-unit>
+			<trans-unit id="provider.field.beGroups.empty" resname="provider.field.beGroups.empty">
+				<source>No backend groups defined yet.</source>
+			</trans-unit>
+			<trans-unit id="provider.field.privacyLevel" resname="provider.field.privacyLevel">
+				<source>Privacy level</source>
+			</trans-unit>
+			<trans-unit id="provider.field.privacyLevel.desc" resname="provider.field.privacyLevel.desc">
+				<source>Controls how much request telemetry is stored. The strictest of provider and user setting wins.</source>
+			</trans-unit>
+			<trans-unit id="provider.field.noRerouting" resname="provider.field.noRerouting">
+				<source>Prevent rerouting</source>
+			</trans-unit>
+			<trans-unit id="provider.field.noRerouting.desc" resname="provider.field.noRerouting.desc">
+				<source>When enabled, smart routing may not redirect requests away from this provider.</source>
+			</trans-unit>
+			<trans-unit id="provider.mode.ownKeys.title" resname="provider.mode.ownKeys.title">
+				<source>Your Own API Keys</source>
+			</trans-unit>
+			<trans-unit id="provider.mode.ownKeys.body" resname="provider.mode.ownKeys.body">
+				<source>Configure providers below with the API keys you already pay for. Encrypted at rest.</source>
+			</trans-unit>
+			<trans-unit id="provider.mode.credits.title" resname="provider.mode.credits.title">
+				<source>T3Planet Credits</source>
+			</trans-unit>
+			<trans-unit id="provider.mode.credits.body" resname="provider.mode.credits.body">
+				<source>T3Planet's hosted AI infrastructure — start in seconds, predictable billing, all features included.</source>
+			</trans-unit>
+			<trans-unit id="provider.mode.credits.tokenReference" resname="provider.mode.credits.tokenReference">
+				<source>Support reference token (quote this when contacting T3Planet):</source>
+			</trans-unit>
+			<trans-unit id="provider.mode.credits.meta.costEffective" resname="provider.mode.credits.meta.costEffective">
+				<source>Cost effective</source>
+			</trans-unit>
+			<trans-unit id="provider.mode.comingSoon" resname="provider.mode.comingSoon">
+				<source>Coming soon</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.balance.title" resname="credits.dashboard.balance.title">
+				<source>Credit Balance</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.balance.remaining" resname="credits.dashboard.balance.remaining">
+				<source>credits remaining · never expire</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.buyMore" resname="credits.dashboard.buyMore">
+				<source>Buy more credits</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.plan.active" resname="credits.dashboard.plan.active">
+				<source>Credits active</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.plan.last" resname="credits.dashboard.plan.last">
+				<source>Last:</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.plan.credits" resname="credits.dashboard.plan.credits">
+				<source>credits</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.plan.none" resname="credits.dashboard.plan.none">
+				<source>No active plan</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.plan.noneHint" resname="credits.dashboard.plan.noneHint">
+				<source>Purchase a bundle below to add credits to your pool.</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.stats.daysLeft" resname="credits.dashboard.stats.daysLeft">
+				<source>days left at current rate</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.stats.used" resname="credits.dashboard.stats.used">
+				<source>Credits used</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.stats.ofTotal" resname="credits.dashboard.stats.ofTotal">
+				<source>of %s purchased</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.stats.daily" resname="credits.dashboard.stats.daily">
+				<source>Daily average</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.stats.perDay" resname="credits.dashboard.stats.perDay">
+				<source>credits / day</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.stats.estimated" resname="credits.dashboard.stats.estimated">
+				<source>Est. remaining days</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.stats.atRate" resname="credits.dashboard.stats.atRate">
+				<source>at current usage rate</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.bundles.title" resname="credits.dashboard.bundles.title">
+				<source>AI Credit Bundles</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.bundles.sub" resname="credits.dashboard.bundles.sub">
+				<source>One-time purchases — credits never expire and stack with your balance</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.bundles.badge" resname="credits.dashboard.bundles.badge">
+				<source>No subscription · buy when you need</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.bundles.oneTime" resname="credits.dashboard.bundles.oneTime">
+				<source>one-time</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.bundles.creditsLabel" resname="credits.dashboard.bundles.creditsLabel">
+				<source>credits</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.bundles.buy" resname="credits.dashboard.bundles.buy">
+				<source>Buy</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.bundles.unavailable" resname="credits.dashboard.bundles.unavailable">
+				<source>Checkout unavailable</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.bundles.empty" resname="credits.dashboard.bundles.empty">
+				<source>No credit bundles available from T3Planet right now.</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.features.title" resname="credits.dashboard.features.title">
+				<source>Credit Costs per Operation</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.features.sub" resname="credits.dashboard.features.sub">
+				<source>Know exactly what each AI action costs</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.features.badge" resname="credits.dashboard.features.badge">
+				<source>No hidden fees</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.features.credits" resname="credits.dashboard.features.credits">
+				<source>credits</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.features.empty" resname="credits.dashboard.features.empty">
+				<source>Feature pricing is not available yet.</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.features.col.feature" resname="credits.dashboard.features.col.feature">
+				<source>Feature</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.features.col.key" resname="credits.dashboard.features.col.key">
+				<source>Key</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.features.col.model" resname="credits.dashboard.features.col.model">
+				<source>Default model</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.history.title" resname="credits.dashboard.history.title">
+				<source>Recent AI Usage</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.history.sub" resname="credits.dashboard.history.sub">
+				<source>Charges on this installation (local mirror). Purchases appear after server sync.</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.history.empty" resname="credits.dashboard.history.empty">
+				<source>No AI usage recorded on this installation yet.</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.history.col.description" resname="credits.dashboard.history.col.description">
+				<source>Description</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.history.col.date" resname="credits.dashboard.history.col.date">
+				<source>Date</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.history.col.credits" resname="credits.dashboard.history.col.credits">
+				<source>Credits</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.prompt.title" resname="credits.dashboard.prompt.title">
+				<source>Connect T3Planet Credits</source>
+			</trans-unit>
+			<trans-unit id="credits.dashboard.prompt.body" resname="credits.dashboard.prompt.body">
+				<source>T3Planet Credits mode is selected. Click Activate above to load your balance, bundles, and pricing from the T3Planet API.</source>
+			</trans-unit>
+			<trans-unit id="dashboard.period.customRange" resname="dashboard.period.customRange">
+				<source>Custom date range</source>
+			</trans-unit>
+			<trans-unit id="dashboard.period.from" resname="dashboard.period.from">
+				<source>From</source>
+			</trans-unit>
+			<trans-unit id="dashboard.period.to" resname="dashboard.period.to">
+				<source>To</source>
+			</trans-unit>
+			<trans-unit id="dashboard.period.apply" resname="dashboard.period.apply">
+				<source>Apply</source>
+			</trans-unit>
+			<trans-unit id="dashboard.manageProviders" resname="dashboard.manageProviders">
+				<source>Manage providers</source>
+			</trans-unit>
+			<trans-unit id="dashboard.kpi.requests" resname="dashboard.kpi.requests">
+				<source>Total requests</source>
+			</trans-unit>
+			<trans-unit id="dashboard.kpi.successRate" resname="dashboard.kpi.successRate">
+				<source>Success Rate</source>
+			</trans-unit>
+			<trans-unit id="dashboard.kpi.creditsBurned" resname="dashboard.kpi.creditsBurned">
+				<source>Credits burned</source>
+			</trans-unit>
+			<trans-unit id="dashboard.kpi.inPeriod" resname="dashboard.kpi.inPeriod">
+				<source>%s day period</source>
+			</trans-unit>
+			<trans-unit id="dashboard.kpi.balance" resname="dashboard.kpi.balance">
+				<source>Credit balance</source>
+			</trans-unit>
+			<trans-unit id="dashboard.kpi.daysLeft" resname="dashboard.kpi.daysLeft">
+				<source>days left</source>
+			</trans-unit>
+			<trans-unit id="dashboard.kpi.tokens" resname="dashboard.kpi.tokens">
+				<source>Tokens used</source>
+			</trans-unit>
+			<trans-unit id="dashboard.kpi.activeProviders" resname="dashboard.kpi.activeProviders">
+				<source>Active providers</source>
+			</trans-unit>
+			<trans-unit id="dashboard.chart.creditsBurnTitle" resname="dashboard.chart.creditsBurnTitle">
+				<source>Credit burn over time</source>
+			</trans-unit>
+			<trans-unit id="dashboard.chart.extensionSpend" resname="dashboard.chart.extensionSpend">
+				<source>Spend by extension</source>
+			</trans-unit>
+			<trans-unit id="dashboard.chart.requestsTitle" resname="dashboard.chart.requestsTitle">
+				<source>API requests over time</source>
+			</trans-unit>
+			<trans-unit id="dashboard.chart.providerDistribution" resname="dashboard.chart.providerDistribution">
+				<source>Provider distribution</source>
+			</trans-unit>
+			<trans-unit id="dashboard.topUp" resname="dashboard.topUp">
+				<source>Top up</source>
+			</trans-unit>
+			<trans-unit id="dashboard.creditsLabel" resname="dashboard.creditsLabel">
+				<source>credits</source>
+			</trans-unit>
+			<trans-unit id="dashboard.usedInPeriod" resname="dashboard.usedInPeriod">
+				<source>Used (period)</source>
+			</trans-unit>
+			<trans-unit id="dashboard.avgPerDay" resname="dashboard.avgPerDay">
+				<source>Avg / day</source>
+			</trans-unit>
+			<trans-unit id="dashboard.activateCreditsHint" resname="dashboard.activateCreditsHint">
+				<source>Activate T3Planet Credits to see your balance and burn charts.</source>
+			</trans-unit>
+			<trans-unit id="dashboard.recentActivity" resname="dashboard.recentActivity">
+				<source>Recent Requests</source>
+			</trans-unit>
+			<trans-unit id="dashboard.col.time" resname="dashboard.col.time">
+				<source>TimeStamp</source>
+			</trans-unit>
+			<trans-unit id="dashboard.col.extension" resname="dashboard.col.extension">
+				<source>Extension</source>
+			</trans-unit>
+			<trans-unit id="dashboard.col.model" resname="dashboard.col.model">
+				<source>Model</source>
+			</trans-unit>
+			<trans-unit id="dashboard.col.tokens" resname="dashboard.col.tokens">
+				<source>Tokens</source>
+			</trans-unit>
+			<trans-unit id="dashboard.col.credits" resname="dashboard.col.credits">
+				<source>Credits</source>
+			</trans-unit>
+			<trans-unit id="dashboard.col.status" resname="dashboard.col.status">
+				<source>Status</source>
+			</trans-unit>
+			<trans-unit id="dashboard.noActivity" resname="dashboard.noActivity">
+				<source>No requests logged in this period yet.</source>
+			</trans-unit>
+			<trans-unit id="dashboard.noDataInPeriod" resname="dashboard.noDataInPeriod">
+				<source>No AI requests were logged between %s. Try Last 30 days or a custom range that includes earlier activity.</source>
+			</trans-unit>
+			<trans-unit id="provider.default" resname="provider.default">
+				<source>default</source>
+			</trans-unit>
+			<trans-unit id="dashboard.period.subtitle" resname="dashboard.period.subtitle">
+				<source>Showing data for: %s. Trends compare to the prior equivalent period.</source>
+			</trans-unit>
+			<trans-unit id="dashboard.openRequestLog" resname="dashboard.openRequestLog">
+				<source>Open Request Log</source>
+			</trans-unit>
+			<trans-unit id="dashboard.col.cost" resname="dashboard.col.cost">
+				<source>Cost</source>
+			</trans-unit>
+			<trans-unit id="dashboard.mode.credits.label" resname="dashboard.mode.credits.label">
+				<source>T3PLANET CREDITS MODE</source>
+			</trans-unit>
+			<trans-unit id="dashboard.mode.credits.manage" resname="dashboard.mode.credits.manage">
+				<source>Manage credits</source>
+			</trans-unit>
+			<trans-unit id="dashboard.mode.ownKeys.label" resname="dashboard.mode.ownKeys.label">
+				<source>OWN API KEYS MODE</source>
+			</trans-unit>
+			<trans-unit id="dashboard.mode.ownKeys.manage" resname="dashboard.mode.ownKeys.manage">
+				<source>Manage AI Providers</source>
+			</trans-unit>
+			<trans-unit id="dashboard.mode.active" resname="dashboard.mode.active">
+				<source>Active</source>
+			</trans-unit>
+			<trans-unit id="dashboard.mode.configured" resname="dashboard.mode.configured">
+				<source>configured</source>
+			</trans-unit>
+			<trans-unit id="dashboard.manage" resname="dashboard.manage">
+				<source>Manage</source>
+			</trans-unit>
+			<trans-unit id="dashboard.credits.ofTotal" resname="dashboard.credits.ofTotal">
+				<source>of %s credits</source>
+			</trans-unit>
+			<trans-unit id="dashboard.credits.usedLabel" resname="dashboard.credits.usedLabel">
+				<source>used</source>
+			</trans-unit>
+			<trans-unit id="dashboard.credits.totalLabel" resname="dashboard.credits.totalLabel">
+				<source>total</source>
+			</trans-unit>
+			<trans-unit id="dashboard.credits.remaining" resname="dashboard.credits.remaining">
+				<source>%s%% remaining</source>
+			</trans-unit>
+			<trans-unit id="dashboard.credits.consumed" resname="dashboard.credits.consumed">
+				<source>%s%% consumed</source>
+			</trans-unit>
+			<trans-unit id="dashboard.credits.usedBox" resname="dashboard.credits.usedBox">
+				<source>Used</source>
+			</trans-unit>
+			<trans-unit id="dashboard.credits.consumedSub" resname="dashboard.credits.consumedSub">
+				<source>credits consumed</source>
+			</trans-unit>
+			<trans-unit id="dashboard.credits.dailyAvg" resname="dashboard.credits.dailyAvg">
+				<source>Daily avg</source>
+			</trans-unit>
+			<trans-unit id="dashboard.kpi.left" resname="dashboard.kpi.left">
+				<source>left</source>
+			</trans-unit>
+			<trans-unit id="dashboard.kpi.creditsUsed" resname="dashboard.kpi.creditsUsed">
+				<source>Credits used</source>
+			</trans-unit>
+			<trans-unit id="dashboard.kpi.apiCost" resname="dashboard.kpi.apiCost">
+				<source>API cost</source>
+			</trans-unit>
+			<trans-unit id="dashboard.kpi.scheduledTasks" resname="dashboard.kpi.scheduledTasks">
+				<source>Scheduled tasks</source>
+			</trans-unit>
+			<trans-unit id="dashboard.kpi.active" resname="dashboard.kpi.active">
+				<source>active</source>
+			</trans-unit>
+			<trans-unit id="dashboard.chart.successRate" resname="dashboard.chart.successRate">
+				<source>Request Success Rate</source>
+			</trans-unit>
+			<trans-unit id="dashboard.chart.extensionUsage" resname="dashboard.chart.extensionUsage">
+				<source>Extensions Usage</source>
+			</trans-unit>
+			<trans-unit id="dashboard.chart.topExtensionsCredits" resname="dashboard.chart.topExtensionsCredits">
+				<source>Top extensions by credits</source>
+			</trans-unit>
+			<trans-unit id="dashboard.chart.costTrend" resname="dashboard.chart.costTrend">
+				<source>API Cost Trend</source>
+			</trans-unit>
+			<trans-unit id="dashboard.chart.topModels" resname="dashboard.chart.topModels">
+				<source>Top Models by Tokens</source>
+			</trans-unit>
+			<trans-unit id="dashboard.projection.title" resname="dashboard.projection.title">
+				<source>Credit projection</source>
+			</trans-unit>
+			<trans-unit id="dashboard.projection.runOut" resname="dashboard.projection.runOut">
+				<source>At current burn, credits may run out around %1$s (%2$s cr/day avg).</source>
+			</trans-unit>
+			<trans-unit id="dashboard.projection.buyMore" resname="dashboard.projection.buyMore">
+				<source>Buy more credits</source>
+			</trans-unit>
+			<trans-unit id="dashboard.spend.title" resname="dashboard.spend.title">
+				<source>7-day API spend</source>
+			</trans-unit>
+			<trans-unit id="dashboard.spend.total" resname="dashboard.spend.total">
+				<source>Total spend</source>
+			</trans-unit>
+			<trans-unit id="dashboard.spend.empty" resname="dashboard.spend.empty">
+				<source>No provider spend recorded in this period.</source>
+			</trans-unit>
+			<trans-unit id="dashboard.spend.manageKeys" resname="dashboard.spend.manageKeys">
+				<source>Manage API Keys</source>
+			</trans-unit>
+			<trans-unit id="dashboard.provider.degraded" resname="dashboard.provider.degraded">
+				<source>Degraded</source>
+			</trans-unit>
+			<trans-unit id="dashboard.provider.status.active" resname="dashboard.provider.status.active">
+				<source>Active</source>
+			</trans-unit>
+			<trans-unit id="dashboard.provider.status.attention" resname="dashboard.provider.status.attention">
+				<source>Needs attention</source>
+			</trans-unit>
+			<trans-unit id="dashboard.provider.status.offline" resname="dashboard.provider.status.offline">
+				<source>Inactive</source>
+			</trans-unit>
+			<trans-unit id="dashboard.provider.lastUsed" resname="dashboard.provider.lastUsed">
+				<source>last used: %s</source>
+			</trans-unit>
+			<trans-unit id="dashboard.provider.periodCost" resname="dashboard.provider.periodCost">
+				<source>period cost</source>
+			</trans-unit>
+			<trans-unit id="dashboard.provider.errorRate" resname="dashboard.provider.errorRate">
+				<source>errors</source>
+			</trans-unit>
+			<trans-unit id="dashboard.periodSummary.title" resname="dashboard.periodSummary.title">
+				<source>Period Summary</source>
+			</trans-unit>
+			<trans-unit id="dashboard.moduleHealth.title" resname="dashboard.moduleHealth.title">
+				<source>Module Health</source>
+			</trans-unit>
+			<trans-unit id="dashboard.aiContextOverview.warningNoDefault" resname="dashboard.aiContextOverview.warningNoDefault">
+				<source>No default Brand Context profile is configured for this site. AI generations will not include brand voice until you set one up.</source>
+			</trans-unit>
+			<trans-unit id="dashboard.aiContextOverview.kicker" resname="dashboard.aiContextOverview.kicker">
+				<source>AI Context</source>
+			</trans-unit>
+			<trans-unit id="dashboard.aiContextOverview.noDefaultName" resname="dashboard.aiContextOverview.noDefaultName">
+				<source>No default profile</source>
+			</trans-unit>
+			<trans-unit id="dashboard.aiContextOverview.completenessLabel" resname="dashboard.aiContextOverview.completenessLabel">
+				<source>Completeness</source>
+			</trans-unit>
+			<trans-unit id="dashboard.aiContextOverview.sectionsCount" resname="dashboard.aiContextOverview.sectionsCount">
+				<source>%1$s of %2$s sections</source>
+			</trans-unit>
+			<trans-unit id="dashboard.aiContextOverview.manage" resname="dashboard.aiContextOverview.manage">
+				<source>Manage Contexts</source>
+			</trans-unit>
+			<trans-unit id="dashboard.aiContextOverview.warningIncomplete" resname="dashboard.aiContextOverview.warningIncomplete">
+				<source>Default profile “%1$s” is only %2$s%% complete. Finish identity, voice, and rules for consistent brand output.</source>
+			</trans-unit>
+			<trans-unit id="dashboard.aiContextOverview.ok" resname="dashboard.aiContextOverview.ok">
+				<source>Default profile “%1$s” is %2$s%% complete and ready for injection.</source>
+			</trans-unit>
+			<trans-unit id="dashboard.aiContextOverview.link" resname="dashboard.aiContextOverview.link">
+				<source>Set up Brand Context</source>
+			</trans-unit>
+			<trans-unit id="dashboard.aiContextOverview.linkManage" resname="dashboard.aiContextOverview.linkManage">
+				<source>Manage profiles</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.brandContext.label" resname="module.aiFeatures.brandContext.label">
+				<source>Brand Context profile</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.brandContext.help" resname="module.aiFeatures.brandContext.help">
+				<source>Override the site default profile for this AI feature. Leave on site default to use the profile marked as default in AI Context.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.brandContext.useDefault" resname="module.aiFeatures.brandContext.useDefault">
+				<source>Use site default profile</source>
+			</trans-unit>
+			<trans-unit id="dashboard.restricted.intro" resname="dashboard.restricted.intro">
+				<source>Your account has access to the following AI Foundation areas. Open a section below to get started.</source>
+			</trans-unit>
+			<trans-unit id="dashboard.restricted.open" resname="dashboard.restricted.open">
+				<source>Open section</source>
+			</trans-unit>
+			<trans-unit id="dashboard.restricted.empty" resname="dashboard.restricted.empty">
+				<source>No AI Foundation sections are assigned to your backend user group yet. Contact an administrator.</source>
+			</trans-unit>
+		</body>
+	</file>
+</xliff>

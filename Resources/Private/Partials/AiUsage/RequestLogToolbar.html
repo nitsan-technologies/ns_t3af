@@ -1,0 +1,87 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2 aiu-ai-usage__log-toolbar">
+    <span class="text-variant mb-0">
+        <f:if condition="{aiUsageTotalCount} > 0">
+            <f:then>
+                <f:translate key="{ll}:module.aiUsage.showingRange"
+                             arguments="{0: aiUsagePagination.pagination.startRecordNumber, 1: aiUsagePagination.pagination.endRecordNumber, 2: aiUsageTotalCount}" />
+            </f:then>
+            <f:else>
+                <f:translate key="{ll}:module.aiUsage.empty.log" default="No request log entries for current filters." />
+            </f:else>
+        </f:if>
+    </span>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <label class="visually-hidden" for="aiu-ai-usage-per-page">
+            <f:translate key="{ll}:module.aiUsage.filter.perPage" default="Records per page" />
+        </label>
+        <select id="aiu-ai-usage-per-page"
+                class="form-select form-select-sm aiu-ai-usage__per-page"
+                data-aiu-usage-per-page
+                aria-label="{f:translate(key: '{ll}:module.aiUsage.filter.perPage', default: 'Records per page')}">
+            <option value="20" {f:if(condition: '{aiUsageFilters.max} == 20', then: 'selected="selected"')}>20</option>
+            <option value="50" {f:if(condition: '{aiUsageFilters.max} == 50', then: 'selected="selected"')}>50</option>
+            <option value="100" {f:if(condition: '{aiUsageFilters.max} == 100', then: 'selected="selected"')}>100</option>
+            <option value="200" {f:if(condition: '{aiUsageFilters.max} == 200', then: 'selected="selected"')}>200</option>
+            <option value="500" {f:if(condition: '{aiUsageFilters.max} == 500', then: 'selected="selected"')}>500</option>
+        </select>
+        <div class="btn-group" role="group" aria-label="{f:translate(key: '{ll}:module.aiUsage.toolbar.aria', default: 'Log actions')}">
+            <a class="btn btn-success btn-sm" href="{f:be.uri(route: 't3af_dashboard.ai_usage.export', parameters: {
+              format: 'csv',
+              mode: 'log',
+              search: aiUsageFilters.search,
+              engine: aiUsageFilters.engine,
+              model: aiUsageFilters.model,
+              module: aiUsageFilters.module,
+              scope: aiUsageFilters.scope,
+              reqType: aiUsageFilters.reqType,
+              status: aiUsageFilters.status,
+              user: aiUsageFilters.user,
+              max: aiUsageFilters.max,
+              currentPage: aiUsageFilters.currentPage,
+              period: aiUsagePeriod.key,
+              from: aiUsagePeriodFromDate,
+              to: aiUsagePeriodToDate
+          })}">
+                <core:icon identifier="actions-download" alternativeMarkupIdentifier="inline" size="small" />
+                <f:translate key="{ll}:module.aiUsage.action.exportCsv" default="Export CSV" />
+            </a>
+            <a class="btn btn-default btn-sm"
+               data-aiu-usage-refresh
+               href="{f:be.uri(route: 't3af_dashboard.ai_usage', parameters: {
+              mode: 'log',
+              search: aiUsageFilters.search,
+              engine: aiUsageFilters.engine,
+              model: aiUsageFilters.model,
+              module: aiUsageFilters.module,
+              scope: aiUsageFilters.scope,
+              reqType: aiUsageFilters.reqType,
+              status: aiUsageFilters.status,
+              user: aiUsageFilters.user,
+              max: aiUsageFilters.max,
+              currentPage: aiUsageFilters.currentPage,
+              period: aiUsagePeriod.key,
+              from: aiUsagePeriodFromDate,
+              to: aiUsagePeriodToDate
+          })}">
+                <core:icon identifier="actions-refresh" alternativeMarkupIdentifier="inline" size="small" />
+                <f:translate key="{ll}:module.aiUsage.action.refresh" default="Refresh" />
+            </a>
+        </div>
+        <f:if condition="{aiUsagePagination}">
+            <f:render partial="AiUsage/RequestLogPagination" arguments="{_all}" />
+        </f:if>
+        <button type="submit"
+                form="aiu-usage-bulk-form"
+                class="btn btn-danger btn-sm aiu-ai-usage__delete-selected d-none"
+                data-aiu-usage-bulk-delete>
+            <core:icon identifier="actions-delete" alternativeMarkupIdentifier="inline" size="small" />
+            <f:translate key="{ll}:module.aiUsage.action.bulkDelete" default="Delete Selected" />
+        </button>
+    </div>
+</div>
+</html>

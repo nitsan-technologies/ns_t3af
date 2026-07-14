@@ -1,0 +1,52 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="aiu-mcp-custom-tool-overlay"
+     data-mcp-tools-custom-tool-overlay
+     hidden
+     aria-hidden="true">
+    <div class="aiu-mcp-custom-tool-overlay__backdrop" data-mcp-tools-custom-tool-close></div>
+    <div class="card card-size-large aiu-mcp-custom-tool-overlay__dialog w-100"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="aiu-mcp-custom-tool-title">
+        <div class="card-header aiu-mcp-custom-tool-overlay__header">
+            <div class="card-header-body">
+                <h2 class="card-title mb-0"
+                    id="aiu-mcp-custom-tool-title"
+                    data-mcp-tools-custom-tool-title
+                    data-title-create="{f:translate(key: '{ll}:module.mcpTools.customTool.modalTitle', default: 'New Custom Tool')}"
+                    data-title-edit="{f:translate(key: '{ll}:module.mcpTools.customTool.editTitle', default: 'Edit Custom Tool')}">
+                    <f:translate key="{ll}:module.mcpTools.customTool.modalTitle" default="New Custom Tool" />
+                </h2>
+            </div>
+            <button type="button"
+                    class="btn btn-default btn-sm aiu-mcp-custom-tool-overlay__close"
+                    data-mcp-tools-custom-tool-close
+                    aria-label="{f:translate(key: '{ll}:module.mcpTools.drawer.close', default: 'Close')}">
+                <core:icon identifier="actions-close" size="small" />
+            </button>
+        </div>
+        <div class="card-body aiu-mcp-custom-tool-overlay__body">
+            <f:render partial="McpTools/CustomToolModal" arguments="{_all}" />
+        </div>
+        <div class="card-footer aiu-mcp-custom-tool-overlay__footer">
+            <button type="button" class="btn btn-default" data-mcp-tools-custom-tool-close>
+                <f:translate key="{ll}:module.mcpTools.table.cancel" />
+            </button>
+            <button type="button" class="btn btn-default" data-mcp-tools-custom-tool-submit>
+                <core:icon identifier="actions-check" size="small" />
+                <span data-mcp-tools-custom-tool-submit-label
+                      data-label-create="{f:translate(key: '{ll}:module.mcpTools.customTool.submit', default: 'Create Tool')}"
+                      data-label-edit="{f:translate(key: '{ll}:module.mcpTools.customTool.update', default: 'Update Tool')}">
+                    <f:translate key="{ll}:module.mcpTools.customTool.submit" default="Create Tool" />
+                </span>
+            </button>
+        </div>
+    </div>
+</div>
+
+</html>

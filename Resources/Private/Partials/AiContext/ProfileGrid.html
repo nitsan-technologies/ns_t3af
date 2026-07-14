@@ -1,0 +1,19 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<f:if condition="{brandContextList.profiles}">
+    <f:then>
+        <div class="row g-3">
+            <f:for each="{brandContextList.profiles}" as="profile">
+                <div class="col-12 col-md-6 col-xl-4 d-flex">
+                    <f:render partial="AiContext/ProfileCard" arguments="{profile: profile, ll: ll, brandContextSetDefaultUri: brandContextSetDefaultUri, brandContextSetEnabledUri: brandContextSetEnabledUri, brandContextDeleteUri: brandContextDeleteUri, currentPageId: currentPageId, canModifyBrandProfiles: canModifyBrandProfiles}" />
+                </div>
+            </f:for>
+        </div>
+    </f:then>
+    <f:else>
+        <div class="callout callout-notice">
+            <f:translate key="{ll}:module.aiContext.empty" />
+        </div>
+    </f:else>
+</f:if>
+</html>

@@ -1,0 +1,243 @@
+/*!
+ * AI Foundation backend module CSS — 09-ai-usage
+ * AI Usage tab: header/date switch, KPIs, request-log filters, log table, usage summary.
+ *
+ */
+/* ── AI Usage tab ───────────────────────────────────────── */
+.aiu-ai-usage {
+    padding-top: .25rem;
+}
+
+.aiu-ai-usage__header {
+    margin-bottom: 1rem;
+}
+
+.aiu-ai-usage__header-main {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.aiu-ai-usage__header-main .aiu-providers__heading {
+    flex: 1 1 16rem;
+    min-width: 0;
+}
+
+.aiu-ai-usage__header-main .aiu-period,
+.aiu-ai-usage__toolbar .aiu-period {
+    flex-shrink: 0;
+}
+
+.aiu-ai-usage__toolbar .btn-group {
+    flex: 0 1 auto;
+}
+
+.aiu-ai-usage__date-form,
+.aiu-ai-usage__mode-form {
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.aiu-ai-usage__toolbar {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .65rem;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.aiu-ai-usage__kpis {
+    margin: 1rem 0;
+}
+
+.aiu-ai-usage__filters {
+    background: var(--aiu-bg-white);
+    border: 1px solid var(--aiu-border);
+    border-radius: var(--aiu-radius-lg);
+    margin-bottom: 1rem;
+    padding: 1rem;
+}
+
+.aiu-ai-usage__filters .aiu-toolbar {
+    margin: 0 0 .85rem;
+}
+
+.aiu-ai-usage__filter-toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: .65rem;
+    justify-content: flex-start;
+}
+
+.aiu-ai-usage__search {
+    flex: 1 1 14rem;
+    min-width: 0;
+}
+
+.aiu-ai-usage__filter-grid {
+    display: grid;
+    gap: .75rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.aiu-ai-usage__log-table {
+    margin-bottom: 1rem;
+}
+
+.aiu-ai-usage__table-card .pagination-wrap,
+.aiu-ai-usage__pagination {
+    margin-bottom: 0;
+}
+
+.aiu-ai-usage__pagination-records {
+    white-space: nowrap;
+}
+
+.aiu-ai-usage__pagination-sep {
+    color: var(--typo3-text-color-variant);
+    margin: 0 .35rem;
+}
+
+.aiu-ai-usage__per-page {
+    width: auto;
+    min-width: 4.5rem;
+}
+
+.aiu-ai-usage__col-select {
+    width: 2.75rem;
+    min-width: 2.75rem;
+}
+
+.aiu-ai-usage__table-card .form-check {
+    margin-bottom: 0;
+    min-height: 1rem;
+    padding-left: 1.5em;
+}
+
+.aiu-ai-usage__table-card .form-check-input {
+    cursor: pointer;
+    float: left;
+    margin-left: -1.5em;
+    margin-top: 0.2em;
+}
+
+.aiu-ai-usage__table-card td.col-control .btn-group {
+    display: inline-flex;
+}
+
+.aiu-ai-usage__log-toolbar .btn-group,
+.aiu-ai-usage__log-toolbar .aiu-ai-usage__pagination {
+    flex-shrink: 0;
+}
+
+.aiu-ai-usage-detail-modal .modal-body {
+    padding-top: .75rem;
+}
+
+.aiu-ai-usage-detail__table {
+    border: 1px solid var(--aiu-border);
+    border-collapse: separate;
+    border-radius: var(--typo3-component-border-radius, .375rem);
+    border-spacing: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+    table-layout: fixed;
+    width: 100%;
+}
+
+.aiu-ai-usage-detail__col-label {
+    width: 38%;
+}
+
+.aiu-ai-usage-detail__col-value {
+    width: 62%;
+}
+
+.aiu-ai-usage-detail__divider th {
+    background: var(--typo3-surface-container-low, #f5f5f5);
+    border-top: 1px solid var(--aiu-border);
+    color: var(--typo3-text-color-variant);
+    font-size: .875rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    padding: .6rem .75rem;
+    text-align: left;
+    text-transform: uppercase;
+}
+
+.aiu-ai-usage-detail__divider:first-child th {
+    border-top: 0;
+}
+
+.aiu-ai-usage-detail__table tbody tr:not(.aiu-ai-usage-detail__divider):not(.aiu-ai-usage-detail__callout-row) th[scope="row"] {
+    background: var(--typo3-surface-container-low, #f8f9fa);
+    border-top: 1px solid var(--aiu-border);
+    color: var(--typo3-text-color-variant);
+    font-size: .8125rem;
+    font-weight: 600;
+    padding: .5rem .75rem;
+    text-align: left;
+    vertical-align: top;
+    white-space: normal;
+}
+
+.aiu-ai-usage-detail__table tbody tr:not(.aiu-ai-usage-detail__divider):not(.aiu-ai-usage-detail__callout-row) td {
+    background: var(--typo3-card-bg, #fff);
+    border-top: 1px solid var(--aiu-border);
+    font-size: .875rem;
+    padding: .5rem .75rem;
+    text-align: left;
+    vertical-align: top;
+    word-break: break-word;
+}
+
+.aiu-ai-usage-detail__callout-row td {
+    background: var(--typo3-card-bg, #fff);
+    border-top: 1px solid var(--aiu-border);
+    padding: .65rem .75rem;
+}
+
+.aiu-ai-usage-detail__callout {
+    margin: 0;
+}
+
+.aiu-ai-usage__summary-head {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: .75rem;
+}
+
+.aiu-ai-usage__summary-grid {
+    display: grid;
+    gap: .9rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: .9rem;
+}
+
+@media (max-width: 1200px) {
+    .aiu-ai-usage__filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }}
+
+@media (max-width: 900px) {
+    .aiu-ai-usage__header {
+        flex-direction: column;
+    }
+
+    .aiu-ai-usage__summary-grid {
+        grid-template-columns: 1fr;
+    }}
+
+@media (max-width: 720px) {
+    .aiu-ai-usage__filter-grid {
+        grid-template-columns: 1fr;
+    }}
+
+[data-color-scheme=dark] .aiu-ai-usage__filters {
+    background: var(--aiu-bg-white);
+}

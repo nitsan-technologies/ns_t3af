@@ -1,0 +1,219 @@
+/*
+ * MCP OAuth authorization page — mirrors TYPO3 backend login (Rise) styling.
+ * Scoped to .aiu-oauth-authorize; dynamic background/highlight via inline vars.
+ */
+
+.aiu-oauth-authorize {
+    --aiu-oauth-highlight: #ff8700;
+    --aiu-oauth-highlight-hover: #e67700;
+    --aiu-oauth-highlight-focus: #cc6900;
+    --aiu-oauth-btn-bg: var(--typo3-state-default-bg, #ebebeb);
+    --aiu-oauth-btn-border: var(--typo3-state-default-border-color, #adadad);
+    --aiu-oauth-btn-hover: var(--typo3-state-default-hover-bg, #dedede);
+    --aiu-oauth-btn-hover-border: var(--typo3-state-default-hover-border-color, #adadad);
+    --aiu-oauth-btn-focus-ring: color-mix(in srgb, var(--typo3-text-color-base, #1e1e1e) 25%, transparent);
+    --aiu-oauth-text: #1e1e1e;
+    --aiu-oauth-text-muted: rgba(0, 0, 0, .65);
+    --aiu-oauth-surface: #fff;
+    --aiu-oauth-border: #d7d7d7;
+    --aiu-oauth-width: 22.5rem;
+
+    background-color: #f5f5f5;
+    background-image: var(--aiu-oauth-bg-image, none);
+    background-position: center;
+    background-size: cover;
+    color: var(--aiu-oauth-text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.45;
+    margin: 0;
+    min-height: 100dvh;
+}
+
+.aiu-oauth-authorize *,
+.aiu-oauth-authorize *::before,
+.aiu-oauth-authorize *::after {
+    box-sizing: border-box;
+}
+
+.aiu-oauth-authorize__inner {
+    display: flex;
+    flex-direction: column;
+    margin: 0 auto;
+    min-height: 100dvh;
+    position: relative;
+    width: 100%;
+}
+
+.aiu-oauth-authorize__container {
+    align-items: center;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1.5rem;
+}
+
+.aiu-oauth-authorize__wrap {
+    margin: 0 auto;
+    max-width: var(--aiu-oauth-width);
+    width: 100%;
+}
+
+.aiu-oauth-authorize__card {
+    background: var(--aiu-oauth-surface);
+    border: 1px solid var(--aiu-oauth-border);
+    border-radius: .5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+    overflow: hidden;
+}
+
+.aiu-oauth-authorize__header {
+    padding: 2rem 2.5rem 0;
+    text-align: center;
+}
+
+.aiu-oauth-authorize__logo {
+    display: block;
+    height: 4rem;
+    margin: 0 auto 1rem;
+    width: 4rem;
+}
+
+.aiu-oauth-authorize__title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 0;
+}
+
+.aiu-oauth-authorize__body {
+    padding: 1.25rem 2.5rem 2rem;
+}
+
+.aiu-oauth-authorize__lead {
+    color: var(--aiu-oauth-text-muted);
+    font-size: .875rem;
+    margin: 0 0 1.25rem;
+    text-align: center;
+}
+
+.aiu-oauth-authorize__client {
+    color: var(--aiu-oauth-highlight);
+    font-weight: 600;
+}
+
+.aiu-oauth-authorize__alert {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: .375rem;
+    color: #991b1b;
+    font-size: .8125rem;
+    margin-bottom: 1rem;
+    padding: .75rem .875rem;
+}
+
+.aiu-oauth-authorize__alert-title {
+    font-weight: 600;
+    margin: 0 0 .15rem;
+}
+
+.aiu-oauth-authorize__alert-message {
+    margin: 0;
+}
+
+.aiu-oauth-authorize__field {
+    margin-bottom: 1rem;
+}
+
+.aiu-oauth-authorize__label {
+    display: block;
+    font-size: .8125rem;
+    font-weight: 600;
+    margin-bottom: .35rem;
+}
+
+.aiu-oauth-authorize__input {
+    appearance: none;
+    background: #fff;
+    border: 1px solid var(--aiu-oauth-border);
+    border-radius: .375rem;
+    color: var(--aiu-oauth-text);
+    display: block;
+    font-family: inherit;
+    font-size: .875rem;
+    line-height: 1.3;
+    padding: .65rem .75rem;
+    width: 100%;
+}
+
+.aiu-oauth-authorize__input:focus {
+    border-color: var(--aiu-oauth-btn-bg);
+    box-shadow: 0 0 0 2px var(--aiu-oauth-btn-focus-ring);
+    outline: none;
+}
+
+.aiu-oauth-authorize__submit {
+    appearance: none;
+    background: var(--aiu-oauth-btn-bg);
+    border: 1px solid var(--aiu-oauth-btn-border);
+    border-radius: .375rem;
+    color: var(--typo3-text-color-base, var(--aiu-oauth-text));
+    cursor: pointer;
+    display: block;
+    font-family: inherit;
+    font-size: .875rem;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-top: .25rem;
+    padding: .75rem 1rem;
+    transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+    width: 100%;
+}
+
+.aiu-oauth-authorize__submit:hover {
+    background: var(--aiu-oauth-btn-hover);
+    border-color: var(--aiu-oauth-btn-hover-border);
+    color: var(--typo3-text-color-base, var(--aiu-oauth-text));
+}
+
+.aiu-oauth-authorize__submit:focus-visible {
+    background: var(--aiu-oauth-btn-hover);
+    border-color: var(--aiu-oauth-btn-hover-border);
+    box-shadow: 0 0 0 2px var(--aiu-oauth-btn-focus-ring);
+    color: var(--typo3-text-color-base, var(--aiu-oauth-text));
+    outline: none;
+}
+
+.aiu-oauth-authorize__footer {
+    border-top: 3px solid var(--aiu-oauth-highlight);
+    color: var(--aiu-oauth-text-muted);
+    font-size: .75rem;
+    padding: 1rem 2.5rem 1.25rem;
+    text-align: center;
+}
+
+.aiu-oauth-authorize__footnote {
+    bottom: 1.5rem;
+    color: #666;
+    font-size: .8125rem;
+    margin: 0;
+    padding: 0 1.5rem 1.5rem;
+    text-align: center;
+}
+
+@media (min-width: 768px) {
+    .aiu-oauth-authorize__footnote {
+        bottom: 1.5rem;
+        inset-inline-end: 0;
+        margin-left: auto;
+        margin-right: auto;
+        max-width: 28rem;
+        position: absolute;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aiu-oauth-authorize__submit {
+        transition: none;
+    }
+}

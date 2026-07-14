@@ -1,0 +1,14 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<form method="post" class="m-0 flex-shrink-0">
+    <input type="hidden" name="id" value="{currentPageId}" />
+    <input type="hidden" name="mode" value="overview" />
+    <button type="submit" class="btn btn-default d-inline-flex align-items-center gap-1 aiu-ai-prompts__back-link">
+        <core:icon identifier="actions-chevron-left" size="small" />
+        <f:translate key="{ll}:module.aiPrompts.action.back" default="AI Prompts" />
+    </button>
+</form>
+</html>

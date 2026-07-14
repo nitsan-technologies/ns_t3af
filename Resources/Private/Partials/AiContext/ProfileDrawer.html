@@ -1,0 +1,228 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="aiu-drawer aiu-ai-context__drawer" data-aiu-context-drawer aria-hidden="true">
+    <div class="aiu-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="aiu-context-drawer-title">
+        <form method="post" action="{brandContextCreateUri}" data-aiu-context-form>
+            <input type="hidden" name="id" value="{currentPageId}" />
+            <input type="hidden" name="uid" value="0" data-aiu-context-field-uid />
+            <input type="hidden" name="toneTags" value="[]" data-aiu-context-field-tone-tags />
+            <input type="hidden" name="personas" value="[]" data-aiu-context-field-personas />
+            <input type="hidden" name="contentRules" value="[]" data-aiu-context-field-content-rules />
+            <input type="hidden" name="forbiddenWords" value="[]" data-aiu-context-field-forbidden-words />
+            <input type="hidden" name="keywords" value="[]" data-aiu-context-field-keywords />
+            <input type="hidden" name="competitors" value="[]" data-aiu-context-field-competitors />
+            <input type="hidden" name="documentExtract" value="" data-aiu-context-field-document-extract />
+
+            <div class="aiu-drawer__header">
+                <h2 class="aiu-drawer__title" id="aiu-context-drawer-title" data-aiu-context-drawer-title>
+                    <f:translate key="{ll}:module.aiContext.modal.addTitle" />
+                </h2>
+                <p class="aiu-drawer__desc" data-aiu-context-drawer-desc>
+                    <f:translate key="{ll}:module.aiContext.modal.intro" />
+                </p>
+                <button type="button"
+                        class="aiu-drawer__close"
+                        data-aiu-context-drawer-close
+                        aria-label="{f:translate(key: '{ll}:module.aiContext.modal.close')}">
+                    <core:icon identifier="actions-close" size="small" />
+                </button>
+            </div>
+
+            <div class="aiu-drawer__body aiu-ai-context__drawer-body">
+                <div class="aiu-ai-context__completeness-panel card mb-3">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                            <span class="fw-bold"><f:translate key="{ll}:module.aiContext.modal.completeness" default="Profile completeness" /></span>
+                            <span class="badge badge-default" data-aiu-context-modal-ring-value>0%</span>
+                        </div>
+                        <div class="aiu-ai-context__progress" data-aiu-context-modal-ring role="progressbar"
+                             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" style="--aiu-context-progress: 0;">
+                            <span class="aiu-ai-context__progress-bar"></span>
+                        </div>
+                        <ul class="aiu-ai-context__modal-checklist list-unstyled mb-0 mt-3" data-aiu-context-completeness-list></ul>
+                    </div>
+                </div>
+
+                <div class="aiu-ai-context__drawer-section aiu-ai-context__drawer-section--research">
+                    <f:render partial="AiContext/ModalSectionHead" arguments="{labelKey: 'module.aiContext.section.autoResearch', ll: ll}"/>
+                    <p class="mb-2 small text-variant"><f:translate key="{ll}:module.aiContext.field.researchHint" /></p>
+                    <div class="callout callout-notice small mb-2" data-aiu-context-research-notice hidden="hidden"></div>
+                    <div class="callout callout-warning small mb-2" data-aiu-context-manual-callout hidden="hidden">
+                        <strong><f:translate key="{ll}:module.aiContext.field.manualRequiredTitle" /></strong>
+                        <ul class="mb-0 ps-3" data-aiu-context-manual-list></ul>
+                    </div>
+                    <div class="input-group">
+                        <span class="input-group-text"><core:icon identifier="actions-globe" size="small" /></span>
+                        <input type="url" class="form-control" id="aiu-context-research-url" maxlength="255"
+                               placeholder="https://example.com" data-aiu-context-research-url />
+                        <button type="button" class="btn btn-default" data-aiu-context-research-btn>
+                            <core:icon identifier="actions-search" size="small" />
+                            <f:translate key="{ll}:module.aiContext.field.research" />
+                        </button>
+                    </div>
+                </div>
+
+                <hr class="aiu-ai-context__section-divider" />
+
+                <f:render partial="AiContext/ModalSectionHead" arguments="{labelKey: 'module.aiContext.section.identity', ll: ll}"/>
+                <div class="form-group mb-3">
+                    <label class="form-label" for="aiu-context-brand-name">
+                        <f:translate key="{ll}:module.aiContext.field.brandName" /> *
+                    </label>
+                    <input type="text" class="form-control" id="aiu-context-brand-name" name="brandName" required="required"
+                           maxlength="60" placeholder="{f:translate(key: '{ll}:module.aiContext.field.brandNamePlaceholder')}"
+                           data-aiu-context-field-brand-name data-aiu-context-track />
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label" for="aiu-context-industry"><f:translate key="{ll}:module.aiContext.field.industry" /></label>
+                    <select class="form-select" id="aiu-context-industry" name="industry" data-aiu-context-field-industry data-aiu-context-track>
+                        <option value=""><f:translate key="{ll}:module.aiContext.field.industryPlaceholder" /></option>
+                        <f:for each="{brandContextIndustries}" as="industryOption">
+                            <option value="{industryOption}">{industryOption}</option>
+                        </f:for>
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label" for="aiu-context-website"><f:translate key="{ll}:module.aiContext.field.websiteUrl" /></label>
+                    <div class="input-group">
+                        <span class="input-group-text"><core:icon identifier="actions-globe" size="small" /></span>
+                        <input type="url" class="form-control" id="aiu-context-website" name="websiteUrl" maxlength="255"
+                               placeholder="https://example.com" data-aiu-context-field-website />
+                    </div>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label" for="aiu-context-tagline"><f:translate key="{ll}:module.aiContext.field.tagline" /></label>
+                    <input type="text" class="form-control" id="aiu-context-tagline" name="tagline" maxlength="160"
+                           data-aiu-context-field-tagline data-aiu-context-track />
+                </div>
+                <div class="form-group mb-4">
+                    <label class="form-label" for="aiu-context-description"><f:translate key="{ll}:module.aiContext.field.description" /></label>
+                    <textarea class="form-control" id="aiu-context-description" name="description" rows="3" maxlength="500"
+                              placeholder="{f:translate(key: '{ll}:module.aiContext.field.descriptionPlaceholder')}"
+                              data-aiu-context-field-description data-aiu-context-track></textarea>
+                </div>
+
+                <f:render partial="AiContext/ModalSectionHead" arguments="{labelKey: 'module.aiContext.section.voice', ll: ll}"/>
+                <div class="form-group mb-2">
+                    <label class="form-label"><f:translate key="{ll}:module.aiContext.field.toneTags" /></label>
+                    <div class="aiu-ai-context__tone-tags d-flex flex-wrap gap-1" data-aiu-context-tone-tags></div>
+                </div>
+                <div class="form-group mb-4">
+                    <label class="form-label" for="aiu-context-voice-notes"><f:translate key="{ll}:module.aiContext.field.voiceNotes" /></label>
+                    <textarea class="form-control" id="aiu-context-voice-notes" name="voiceNotes" rows="3" maxlength="300"
+                              placeholder="{f:translate(key: '{ll}:module.aiContext.field.voiceNotesPlaceholder')}"
+                              data-aiu-context-field-voice-notes data-aiu-context-track></textarea>
+                </div>
+
+                <f:render partial="AiContext/ModalSectionHead" arguments="{labelKey: 'module.aiContext.section.audience', ll: ll}"/>
+                <div class="callout callout-notice small mb-2" data-aiu-context-persona-warning hidden="hidden">
+                    <f:translate key="{ll}:module.aiContext.field.personaWarning" />
+                </div>
+                <div class="panel-group aiu-ai-context__personas mb-2" data-aiu-context-personas></div>
+                <button type="button" class="btn btn-success btn-sm mb-3" data-aiu-context-add-persona>
+                    <core:icon identifier="actions-plus" size="small" />
+                    <f:translate key="{ll}:module.aiContext.field.addPersona" />
+                </button>
+
+                <f:render partial="AiContext/ModalSectionHead" arguments="{labelKey: 'module.aiContext.section.rules', ll: ll}"/>
+                <p class="mb-2 small"><f:translate key="{ll}:module.aiContext.field.contentRulesHint" /></p>
+                <div class="d-flex flex-column gap-2 mb-2" data-aiu-context-content-rules></div>
+                <button type="button" class="btn btn-success btn-sm mb-3" data-aiu-context-add-rule>
+                    <core:icon identifier="actions-plus" size="small" />
+                    <f:translate key="{ll}:module.aiContext.field.addRule" />
+                </button>
+                <div class="aiu-ai-context__rules-preview card mb-4">
+                    <div class="card-body py-2">
+                        <div class="small fw-bold mb-1"><f:translate key="{ll}:module.aiContext.field.contentRulesPreview" /></div>
+                        <ul class="mb-0 ps-3" data-aiu-context-rules-preview></ul>
+                    </div>
+                </div>
+
+                <f:render partial="AiContext/ModalSectionHead" arguments="{labelKey: 'module.aiContext.section.forbidden', ll: ll}"/>
+                <p class="mb-2 small"><f:translate key="{ll}:module.aiContext.field.forbiddenHint" /></p>
+                <div class="form-group mb-4">
+                    <div class="aiu-ai-context__chip-input" data-aiu-context-chip-input="forbiddenWords">
+                        <div class="aiu-ai-context__chips d-flex flex-wrap gap-1 mb-1" data-aiu-context-chips></div>
+                        <input type="text" class="form-control" placeholder="{f:translate(key: '{ll}:module.aiContext.field.forbiddenPlaceholder')}"
+                               data-aiu-context-chip-field />
+                    </div>
+                </div>
+
+                <f:render partial="AiContext/ModalSectionHead" arguments="{labelKey: 'module.aiContext.section.keywords', ll: ll}"/>
+                <p class="mb-2 small"><f:translate key="{ll}:module.aiContext.field.keywordsHint" /></p>
+                <div class="form-group mb-4">
+                    <div class="aiu-ai-context__chip-input" data-aiu-context-chip-input="keywords">
+                        <div class="aiu-ai-context__chips d-flex flex-wrap gap-1 mb-1" data-aiu-context-chips></div>
+                        <input type="text" class="form-control" placeholder="{f:translate(key: '{ll}:module.aiContext.field.keywordsPlaceholder')}"
+                               data-aiu-context-chip-field />
+                    </div>
+                </div>
+
+                <f:render partial="AiContext/ModalSectionHead" arguments="{labelKey: 'module.aiContext.section.competitors', ll: ll}"/>
+                <p class="mb-2 small"><f:translate key="{ll}:module.aiContext.field.competitorsHint" /></p>
+                <div class="form-group mb-4">
+                    <div class="aiu-ai-context__chip-input" data-aiu-context-chip-input="competitors">
+                        <div class="aiu-ai-context__chips d-flex flex-wrap gap-1 mb-1" data-aiu-context-chips></div>
+                        <input type="text" class="form-control" placeholder="{f:translate(key: '{ll}:module.aiContext.field.competitorsPlaceholder')}"
+                               data-aiu-context-chip-field />
+                    </div>
+                </div>
+
+                <f:render partial="AiContext/ModalSectionHead" arguments="{labelKey: 'module.aiContext.section.sample', ll: ll}"/>
+                <div class="form-group mb-4">
+                    <label class="form-label" for="aiu-context-sample"><f:translate key="{ll}:module.aiContext.field.sampleContent" /></label>
+                    <textarea class="form-control" id="aiu-context-sample" name="sampleContent" rows="4" maxlength="600"
+                              placeholder="{f:translate(key: '{ll}:module.aiContext.field.samplePlaceholder')}"
+                              data-aiu-context-field-sample data-aiu-context-track></textarea>
+                </div>
+
+                <f:render partial="AiContext/ModalSectionHead" arguments="{labelKey: 'module.aiContext.section.compliance', ll: ll}"/>
+                <div class="form-group mb-4">
+                    <label class="form-label" for="aiu-context-compliance"><f:translate key="{ll}:module.aiContext.field.complianceNotes" /></label>
+                    <textarea class="form-control" id="aiu-context-compliance" name="complianceNotes" rows="3" maxlength="400"
+                              placeholder="{f:translate(key: '{ll}:module.aiContext.field.compliancePlaceholder')}"
+                              data-aiu-context-field-compliance></textarea>
+                </div>
+
+                <f:render partial="AiContext/ModalSectionHead" arguments="{labelKey: 'module.aiContext.section.documents', ll: ll}"/>
+                <p class="mb-2 small"><f:translate key="{ll}:module.aiContext.field.documentsHint" /></p>
+                <div class="form-group mb-2">
+                    <label class="form-label" for="aiu-context-documents"><f:translate key="{ll}:module.aiContext.field.documentsDrop" /></label>
+                    <input type="file" class="form-control" id="aiu-context-documents" multiple="multiple"
+                           accept=".pdf,.docx,.md,.txt,.csv,.json" data-aiu-context-document-input />
+                    <p class="form-text text-variant mb-0"><f:translate key="{ll}:module.aiContext.field.documentsFormats" /></p>
+                </div>
+                <ul class="list-unstyled small mb-4" data-aiu-context-document-list></ul>
+
+                <div class="callout callout-info aiu-ai-context__drawer-placeholders mb-0">
+                    <div class="callout-icon">
+                        <core:icon identifier="actions-lightbulb" size="medium" alternativeMarkupIdentifier="inline" />
+                    </div>
+                    <div class="callout-content">
+                        <div class="callout-title"><f:translate key="{ll}:module.aiContext.modal.universalPlaceholders" /></div>
+                        <div class="callout-body">
+                            <div class="aiu-ai-context__placeholder-tokens d-flex flex-wrap gap-1">
+                                <f:for each="{brandContextList.placeholders}" as="placeholder">
+                                    <code>{placeholder}</code>
+                                </f:for>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="aiu-drawer__footer">
+                <button type="button" class="btn btn-default" data-aiu-context-drawer-close>
+                    <f:translate key="{ll}:module.aiContext.modal.cancel" />
+                </button>
+                <button type="submit" class="btn btn-success save" data-aiu-context-save>
+                    <f:translate key="{ll}:module.aiContext.modal.save" />
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</html>

@@ -1,0 +1,39 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="HeaderBefore">
+    <f:be.pageRenderer includeJavaScriptModules="{
+        0: '@nitsan/nst3af/period-filter.js',
+        1: '@nitsan/nst3af/ai-logs.js'
+    }" />
+</f:section>
+
+<f:section name="Content">
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+    <div class="aiu-ai-logs" data-aiu-logs-root data-aiu-nav-replace="[data-aiu-logs-root]"
+    data-aiu-nav-replace-callback="aiuReinitAiLogsRoot">
+        <f:if condition="{flash} == 'deleted'">
+            <div class="callout callout-success mb-3" role="status">
+                <div class="callout-body"><f:translate key="{ll}:module.aiLogs.flash.deleted" /></div>
+            </div>
+        </f:if>
+        <f:if condition="{flash} == 'bulk-deleted'">
+            <div class="callout callout-success mb-3" role="status">
+                <div class="callout-body"><f:translate key="{ll}:module.aiLogs.flash.bulkDeleted" /></div>
+            </div>
+        </f:if>
+        <f:if condition="{flash} == 'none-selected'">
+            <div class="callout callout-warning mb-3" role="status">
+                <div class="callout-body"><f:translate key="{ll}:module.aiLogs.flash.noneSelected" /></div>
+            </div>
+        </f:if>
+
+        <f:render partial="AiLogs/HeaderAndSummary" arguments="{_all}" />
+        <f:render partial="AiLogs/Filter" arguments="{_all}" />
+        <f:render partial="AiLogs/LogEntries" arguments="{_all}" />
+    </div>
+</f:section>
+</html>

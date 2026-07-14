@@ -1,0 +1,51 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="aiu-ai-logs__header">
+    <div class="aiu-ai-logs__header-main aiu-tab-page-header">
+        <div class="aiu-tab-page-header__main min-w-0">
+            <div class="aiu-providers__heading">
+                <h1 class="mb-0">{tabHeading}</h1>
+                <p class="text-variant mb-0">{tabIntro}</p>
+            </div>
+        </div>
+        <div class="aiu-tab-page-header__aside d-flex flex-wrap align-items-center gap-2">
+            <f:render partial="Module/PageBreadcrumb" arguments="{_all}" />
+        </div>
+    </div>
+</div>
+
+<div class="aiu-mcp-status-bar aiu-ai-logs__summary">
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <span class="aiu-mcp-status-bar__label"><f:translate key="{ll}:module.aiLogs.kpi.total" /></span>
+            <span class="aiu-mcp-status-bar__value">{aiLogsStats.total}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <span class="aiu-mcp-status-bar__label"><f:translate key="{ll}:module.aiLogs.kpi.info" /></span>
+            <span class="aiu-mcp-status-bar__value">{aiLogsStats.info}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <span class="aiu-mcp-status-bar__label"><f:translate key="{ll}:module.aiLogs.kpi.warning" /></span>
+            <span class="aiu-mcp-status-bar__value">{aiLogsStats.warning}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <span class="aiu-mcp-status-bar__label"><f:translate key="{ll}:module.aiLogs.kpi.error" /></span>
+            <span class="aiu-mcp-status-bar__value">{aiLogsStats.error}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell aiu-ai-logs__summary-cell--last">
+        <div class="aiu-mcp-status-bar__content">
+            <span class="aiu-mcp-status-bar__label"><f:translate key="{ll}:module.aiLogs.kpi.lastEntry" /></span>
+            <span class="aiu-mcp-status-bar__value text-truncate">{aiLogsStats.lastEntryFormatted}</span>
+        </div>
+    </div>
+</div>
+</html>

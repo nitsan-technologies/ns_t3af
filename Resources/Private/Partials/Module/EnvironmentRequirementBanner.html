@@ -1,0 +1,24 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<f:if condition="{environmentRequirementAlerts -> f:count()} > 0">
+    <div class="aiu-env-alerts" role="alert">
+        <f:for each="{environmentRequirementAlerts}" as="alert">
+            <div class="aiu-flash aiu-flash--warn aiu-env-alerts__item" data-aiu-env-code="{alert.code}">
+                <strong class="d-block mb-1">
+                    <core:icon identifier="actions-exclamation-triangle" size="small" />
+                    {alert.title}
+                </strong>
+                <span class="d-block">{alert.description}</span>
+                <f:if condition="{alert.code} == 'sodium'">
+                    <span class="d-block mt-2 text-variant">
+                        <f:translate key="{ll}:checklist.env.sodium.hint"
+                                     default="TYPO3 Environment → PHP Info → search for &quot;sodium&quot;. If missing, ask your host to enable ext-sodium and restart PHP-FPM." />
+                    </span>
+                </f:if>
+            </div>
+        </f:for>
+    </div>
+</f:if>

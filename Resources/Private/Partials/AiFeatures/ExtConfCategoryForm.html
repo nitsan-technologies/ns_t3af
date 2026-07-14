@@ -1,0 +1,108 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+<f:for each="{extensionData}" as="subcategory">
+    <f:for each="{subcategory.items}" as="configurationItem">
+        <section class="aiu-section">
+            <f:switch expression="{configurationItem.type}">
+                <f:case value="user">
+                    <f:if condition="{configurationItem.label}">
+                        <div class="aiu-section__label">{configurationItem.label}</div>
+                    </f:if>
+                    <f:if condition="{configurationItem.description}">
+                        <p class="form-text">{configurationItem.description -> f:format.nl2br()}</p>
+                    </f:if>
+                    {configurationItem.html -> f:format.raw()}
+                </f:case>
+                <f:case value="boolean">
+                    <div class="form-check mb-3">
+                        <input type="hidden" name="{configurationItem.name}" value="0" />
+                        <input class="form-check-input"
+                               type="checkbox"
+                               name="{configurationItem.name}"
+                               id="aiu-em-{extensionKey}-{configurationItem.name}"
+                               value="{configurationItem.trueValue}"
+                               {f:if(condition: '{configurationItem.value} == {configurationItem.trueValue}', then: 'checked')} />
+                        <label class="form-check-label" for="aiu-em-{extensionKey}-{configurationItem.name}">
+                            {configurationItem.label}
+                        </label>
+                    </div>
+                    <f:if condition="{configurationItem.description}">
+                        <p class="form-text">{configurationItem.description -> f:format.nl2br()}</p>
+                    </f:if>
+                    <f:if condition="{configurationItem.typeHint}">
+                        <p class="form-text">{configurationItem.typeHint}</p>
+                    </f:if>
+                </f:case>
+                <f:defaultCase>
+                    <f:if condition="{configurationItem.isSecret}">
+                        <f:then>
+                            <f:render partial="AiFeatures/ExtConfSecretField" arguments="{extensionKey: extensionKey, configurationItem: configurationItem}" />
+                        </f:then>
+                        <f:else>
+                    <div class="mb-3" data-aiu-features-ext-conf-field>
+                        <label class="form-label" for="aiu-em-{extensionKey}-{configurationItem.name}">
+                            {configurationItem.label}
+                        </label>
+                        <f:switch expression="{configurationItem.type}">
+                            <f:case value="int+">
+                                <input class="form-control"
+                                       id="aiu-em-{extensionKey}-{configurationItem.name}"
+                                       type="number"
+                                       step="1"
+                                       name="{configurationItem.name}"
+                                       value="{configurationItem.value}"
+                                       {f:if(condition: '{configurationItem.typeIntPlusMin} || {configurationItem.typeIntPlusMin == 0}', then: 'min="{configurationItem.typeIntPlusMin}"')}
+                                       {f:if(condition: configurationItem.typeIntPlusMax, then: 'max="{configurationItem.typeIntPlusMax}"')} />
+                            </f:case>
+                            <f:case value="int">
+                                <input class="form-control"
+                                       id="aiu-em-{extensionKey}-{configurationItem.name}"
+                                       type="number"
+                                       step="1"
+                                       name="{configurationItem.name}"
+                                       value="{configurationItem.value}"
+                                       {f:if(condition: '{configurationItem.typeIntMin} || {configurationItem.typeIntMin == 0}', then: 'min="{configurationItem.typeIntMin}"')}
+                                       {f:if(condition: '{configurationItem.typeIntMax} || {configurationItem.typeIntMax == 0}', then: 'max="{configurationItem.typeIntMax}"')} />
+                            </f:case>
+                            <f:case value="options">
+                                <select class="form-select"
+                                        id="aiu-em-{extensionKey}-{configurationItem.name}"
+                                        name="{configurationItem.name}">
+                                    <f:for each="{configurationItem.labelValueArray}" as="labelAndValue">
+                                        <option value="{labelAndValue.value}"
+                                                data-adapter-available="{f:if(condition: labelAndValue.adapterAvailable, then: '1', else: '0')}"
+                                                data-required-package="{labelAndValue.requiredPackage}"
+                                                data-unavailable-message="{labelAndValue.unavailableMessage}"
+                                                data-hf-embeddings="{f:if(condition: labelAndValue.hfEmbeddings, then: '1', else: '0')}"
+                                                data-hf-llm-supported="{f:if(condition: labelAndValue.hfLlmSupported, then: '1', else: '0')}"
+                                                {f:if(condition: '{labelAndValue.value} == {configurationItem.value}', then: 'selected')}>
+                                            {labelAndValue.label}
+                                        </option>
+                                    </f:for>
+                                </select>
+                            </f:case>
+                            <f:defaultCase>
+                                <input class="form-control"
+                                       id="aiu-em-{extensionKey}-{configurationItem.name}"
+                                       type="text"
+                                       name="{configurationItem.name}"
+                                       value="{configurationItem.value}" />
+                            </f:defaultCase>
+                        </f:switch>
+                        <f:if condition="{configurationItem.description}">
+                            <div class="form-text">{configurationItem.description -> f:format.nl2br()}</div>
+                        </f:if>
+                        <f:if condition="{configurationItem.typeHint}">
+                            <div class="form-text">{configurationItem.typeHint}</div>
+                        </f:if>
+                    </div>
+                        </f:else>
+                    </f:if>
+                </f:defaultCase>
+            </f:switch>
+        </section>
+    </f:for>
+</f:for>
+</html>

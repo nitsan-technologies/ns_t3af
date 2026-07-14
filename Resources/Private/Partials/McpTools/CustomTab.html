@@ -1,0 +1,209 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="callout callout-info mb-3 aiu-mcp-tools__banner">
+    <div class="callout-content flex-grow-1">
+        <div class="aiu-mcp-tools__banner-title">
+            <core:icon identifier="actions-extension" size="small" alternativeMarkupIdentifier="inline" />
+            <div class="callout-title mb-0"><f:translate key="{ll}:module.mcpTools.custom.title" /></div>
+        </div>
+        <div class="callout-body">
+            <p class="mb-0"><f:translate key="{ll}:module.mcpTools.custom.body" /></p>
+        </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2 flex-shrink-0 align-items-start aiu-mcp-tools__banner-actions">
+        <button type="button" class="btn btn-default btn-sm" data-mcp-tools-discover>
+            <f:translate key="{ll}:module.mcpTools.discover.button" />
+        </button>
+        <button type="button" class="btn btn-default btn-sm" data-mcp-tools-code-config aria-expanded="false">
+            <f:translate key="{ll}:module.mcpTools.codeConfig.button" />
+        </button>
+    </div>
+</div>
+
+<div class="aiu-mcp-code aiu-mcp-code--panel mb-3" data-mcp-tools-code-panel hidden>
+    <div class="aiu-mcp-code__toolbar">
+        <span class="aiu-mcp-code__label">ext_localconf.php</span>
+        <button type="button" class="btn btn-link btn-sm" data-mcp-tools-copy-snippet>
+            <f:translate key="{ll}:module.mcpTools.copySnippet" />
+        </button>
+    </div>
+    <pre class="aiu-mcp-code__pre" data-mcp-tools-snippet><code>{mcpToolsExtConfSnippet}</code></pre>
+</div>
+
+<div class="card aiu-mcp-table-section mb-0">
+    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-3 py-3">
+        <div>
+            <h3 class="card-title h6 mb-1"><f:translate key="{ll}:module.mcpTools.table.sectionTitle" /></h3>
+            <span class="text-variant small">
+                {mcpToolsStats.customTableTotal} <f:translate key="{ll}:module.mcpTools.table.countTables" />
+                ·
+                {mcpToolsStats.customTableCount} <f:translate key="{ll}:module.mcpTools.table.countEnabled" />
+            </span>
+        </div>
+        <div class="input-group aiu-mcp-table-section__filter">
+            <label class="visually-hidden" for="aiu-mcp-tools-table-filter">
+                <f:translate key="{ll}:module.mcpTools.table.filterPlaceholder" />
+            </label>
+            <input type="search"
+                   id="aiu-mcp-tools-table-filter"
+                   class="form-control"
+                   data-mcp-tools-table-filter
+                   autocomplete="off"
+                   autocorrect="off"
+                   autocapitalize="off"
+                   spellcheck="false"
+                   data-1p-ignore="true"
+                   data-lpignore="true"
+                   data-form-type="other"
+                   readonly="readonly"
+                   placeholder="{f:translate(key: '{ll}:module.mcpTools.table.filterPlaceholder')}" />
+        </div>
+    </div>
+
+    <div class="table-fit table-responsive">
+        <table class="aiu-table aiu-table--compact aiu-mcp-ext-table table table-striped table-hover align-middle mb-0" data-mcp-tools-table>
+            <thead>
+                <tr>
+                    <th scope="col" class="aiu-mcp-ext-table__expand-col" aria-hidden="true"></th>
+                    <th scope="col"><f:translate key="{ll}:module.mcpTools.table.tableName" /></th>
+                    <th scope="col"><f:translate key="{ll}:module.mcpTools.table.label" /></th>
+                    <th scope="col"><f:translate key="{ll}:module.mcpTools.table.prefix" /></th>
+                    <th scope="col"><f:translate key="{ll}:module.mcpTools.table.source" /></th>
+                    <th scope="col"><f:translate key="{ll}:module.mcpTools.table.status" /></th>
+                    <th scope="col" class="col-control"><f:translate key="{ll}:module.mcpTools.table.actions" /></th>
+                </tr>
+            </thead>
+            <tbody>
+                <f:for each="{customTables}" as="table">
+                    <tr class="aiu-mcp-ext-table__row"
+                        data-mcp-tools-row
+                        data-search-text="{table.tableName} {table.label} {table.prefix}"
+                        data-table-id="{table.id}"
+                        data-table-source="{table.source}"
+                        data-table-enabled="{f:if(condition: table.enabled, then: '1', else: '0')}">
+                        <td class="aiu-mcp-ext-table__expand-col">
+                            <button type="button"
+                                    class="btn btn-sm btn-default aiu-mcp-ext-table__expand"
+                                    data-mcp-tools-expand-row
+                                    aria-expanded="false"
+                                    aria-label="{f:translate(key: '{ll}:module.mcpTools.table.expandRow')}">
+                                <span class="aiu-mcp-ext-table__chevron" aria-hidden="true">
+                                    <core:icon identifier="actions-chevron-down" size="small" />
+                                </span>
+                            </button>
+                        </td>
+                        <td><code class="aiu-table__mono">{table.tableName}</code></td>
+                        <td>
+                            <span class="aiu-table-row-label">{table.label}</span>
+                            <f:if condition="{table.source} == 'discovered'">
+                                <div class="aiu-table-row-edit" hidden>
+                                    <input type="text" class="form-control" data-edit-label value="{table.label}" />
+                                </div>
+                            </f:if>
+                        </td>
+                        <td>
+                            <span class="aiu-table-row-prefix">{table.prefix}</span>
+                            <f:if condition="{table.source} == 'discovered'">
+                                <div class="aiu-table-row-edit" hidden>
+                                    <input type="text" class="form-control" data-edit-prefix value="{table.prefix}" />
+                                </div>
+                            </f:if>
+                        </td>
+                        <td>
+                            <f:if condition="{table.source} == 'code'">
+                                <f:then><span class="badge badge-default"><f:translate key="{ll}:module.mcpTools.source.code" /></span></f:then>
+                                <f:else><span class="badge badge-secondary"><f:translate key="{ll}:module.mcpTools.source.discovered" /></span></f:else>
+                            </f:if>
+                        </td>
+                        <td>
+                            <f:if condition="{table.enabled}">
+                                <f:then><span class="badge badge-success"><f:translate key="{ll}:module.mcpTools.status.enabled" /></span></f:then>
+                                <f:else><span class="badge badge-danger"><f:translate key="{ll}:module.mcpTools.status.disabled" /></span></f:else>
+                            </f:if>
+                        </td>
+                        <td class="col-control">
+                            <f:if condition="{table.source} == 'discovered'">
+                                <div class="btn-group"
+                                     role="group"
+                                     aria-label="{f:translate(key: '{ll}:module.mcpTools.table.actions')}"
+                                     data-mcp-tools-row-actions>
+                                    <f:if condition="{table.enabled}">
+                                        <f:then>
+                                            <button type="button"
+                                                    class="btn btn-default btn-sm"
+                                                    data-mcp-tools-toggle-table
+                                                    data-enabled="1">
+                                                <f:translate key="{ll}:module.mcpTools.table.disable" />
+                                            </button>
+                                        </f:then>
+                                        <f:else>
+                                            <button type="button"
+                                                    class="btn btn-success btn-sm"
+                                                    data-mcp-tools-toggle-table
+                                                    data-enabled="0">
+                                                <f:translate key="{ll}:module.mcpTools.table.enable" />
+                                            </button>
+                                        </f:else>
+                                    </f:if>
+                                    <button type="button"
+                                            class="btn btn-default btn-sm"
+                                            data-mcp-tools-edit-row
+                                            title="{f:translate(key: '{ll}:module.mcpTools.table.edit')}"
+                                            aria-label="{f:translate(key: '{ll}:module.mcpTools.table.edit')}">
+                                        <core:icon identifier="actions-open" size="small" alternativeMarkupIdentifier="inline" />
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-default btn-sm"
+                                            data-mcp-tools-save-row
+                                            disabled="disabled">
+                                        <f:translate key="{ll}:module.mcpTools.table.save" />
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-default btn-sm"
+                                            data-mcp-tools-cancel-row
+                                            disabled="disabled">
+                                        <f:translate key="{ll}:module.mcpTools.table.cancel" />
+                                    </button>
+                                </div>
+                            </f:if>
+                        </td>
+                    </tr>
+                    <tr class="aiu-mcp-ext-table__detail" data-mcp-tools-row-detail hidden>
+                        <td colspan="7">
+                            <div class="aiu-mcp-ext-table__detail-inner">
+                                <div class="aiu-mcp-ext-table__detail-head">
+                                    <span class="aiu-mcp-ext-table__detail-title">
+                                        <f:translate key="{ll}:module.mcpTools.table.autoTools" arguments="{0: table.toolCount}" />
+                                    </span>
+                                    <f:if condition="{table.enabled}">
+                                        <a href="{mcpServerUri}" class="aiu-mcp-ext-table__server-link btn btn-default">
+                                            <f:translate key="{ll}:module.mcpTools.table.viewInServer" /> ↗
+                                        </a>
+                                    </f:if>
+                                </div>
+                                <f:if condition="{table.toolNames -> f:count()} > 0">
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <f:for each="{table.toolNames}" as="toolName">
+                                            <span class="badge badge-default">{toolName}</span>
+                                        </f:for>
+                                    </div>
+                                </f:if>
+                                <f:if condition="{table.enabled} == 0">
+                                    <p class="aiu-mcp-ext-table__detail-hint mb-0">
+                                        <f:translate key="{ll}:module.mcpTools.table.enableHint" />
+                                    </p>
+                                </f:if>
+                            </div>
+                        </td>
+                    </tr>
+                </f:for>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</html>

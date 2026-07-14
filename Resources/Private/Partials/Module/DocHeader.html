@@ -1,0 +1,80 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+
+<div class="module-docheader t3js-module-docheader module-docheader-navigation pb-0 aiu-module-docheader justify-content-end">
+    <div class="container-fluid aiu-module-docheader__inner">
+        <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 aiu-module-docheader__row">
+            <ul class="nav nav-pills aiu-module-nav-tabs aiu-module-nav-tabs--primary" role="tablist">
+                <f:for each="{primaryTabs}" as="tab">
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link{f:if(condition: '{tab.active} == 1', then: ' active')}"
+                           href="{tab.href}"
+                           role="tab"
+                           aria-selected="{f:if(condition: '{tab.active} == 1', then: 'true', else: 'false')}">
+                            {tab.title}
+                        </a>
+                    </li>
+                </f:for>
+            </ul>
+            <div class="d-flex flex-wrap align-items-end gap-2 aiu-module-docheader__aside mb-0">
+                <f:if condition="{utilityTabs}">
+                    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+                    <f:variable name="utilityActiveTitle" value="" />
+                    <f:variable name="utilityActiveIcon" value="" />
+                    <f:for each="{utilityTabs}" as="tab">
+                        <f:if condition="{tab.active} == 1">
+                            <f:variable name="utilityActiveTitle" value="{tab.title}" />
+                            <f:variable name="utilityActiveIcon" value="{tab.iconIdentifier}" />
+                        </f:if>
+                    </f:for>
+                    <div class="dropdown aiu-module-nav-utility">
+                        <button type="button"
+                                class="btn btn-default dropdown-toggle d-inline-flex align-items-center gap-2{f:if(condition: '{utilityActiveTitle} != \'\'', then: ' active')}"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false">
+                            <span>
+                                <f:if condition="{utilityActiveTitle} != ''">
+                                    <f:then>{utilityActiveTitle}</f:then>
+                                    <f:else><f:translate key="{ll}:module.menu.aiUsage" default="AI Usage" /></f:else>
+                                </f:if>
+                            </span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" role="menu">
+                            <f:for each="{utilityTabs}" as="tab">
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2{f:if(condition: '{tab.active} == 1', then: ' active')}"
+                                       href="{tab.href}"
+                                       role="menuitem"
+                                       aria-current="{f:if(condition: '{tab.active} == 1', then: 'page', else: 'false')}">
+                                        {tab.title}
+                                    </a>
+                                </li>
+                            </f:for>
+                        </ul>
+                    </div>
+                </f:if>
+
+                <div class="d-flex align-items-center gap-2 mb-0 aiu-module-docheader-actions">
+                    <f:if condition="{quickSetupLabel} != ''">
+                        <button type="button"
+                                class="btn btn-primary aiu-module-quick-setup"
+                                id="aiu-quick-setup-trigger"
+                                data-aiu-wizard-open="1"
+                                aria-haspopup="dialog"
+                                aria-controls="aiu-setup-wizard-dialog">
+                            <span class="btn-icon" aria-hidden="true">
+                                <core:icon identifier="actions-cog" size="small" />
+                            </span>
+                            {quickSetupLabel}
+                        </button>
+                    </f:if>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</html>

@@ -1,0 +1,2933 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+	<file source-language="en" datatype="plaintext" original="EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" date="2026-05-07T00:00:00Z" product-name="ns_t3af">
+		<header/>
+		<body>
+			<trans-unit id="mlang_tabs_tab" resname="mlang_tabs_tab">
+				<source>AI Universe</source>
+			</trans-unit>
+			<trans-unit id="mlang_labels_tablabel" resname="mlang_labels_tablabel">
+				<source>Manage AI providers, models, and MCP tools.</source>
+			</trans-unit>
+			<trans-unit id="mlang_labels_tabdescr" resname="mlang_labels_tabdescr">
+				<source>AI Universe — master extension for AI providers, governance, MCP server, and dynamic tools in TYPO3.</source>
+			</trans-unit>
+			<trans-unit id="module.title" resname="module.title">
+				<source>AI Universe</source>
+			</trans-unit>
+			<trans-unit id="module.accessDenied.title" resname="module.accessDenied.title">
+				<source>Access denied</source>
+			</trans-unit>
+			<trans-unit id="module.accessDenied.body" resname="module.accessDenied.body">
+				<source>Your backend user group does not have permission to open this AI Universe tab.</source>
+			</trans-unit>
+			<trans-unit id="module.menu.dashboard" resname="module.menu.dashboard">
+				<source>Dashboard</source>
+			</trans-unit>
+			<trans-unit id="module.menu.providers" resname="module.menu.providers">
+				<source>AI Providers</source>
+			</trans-unit>
+			<trans-unit id="module.menu.aiContext" resname="module.menu.aiContext">
+				<source>AI Context</source>
+			</trans-unit>
+			<trans-unit id="module.menu.mcpServer" resname="module.menu.mcpServer">
+				<source>MCP Server</source>
+			</trans-unit>
+			<trans-unit id="module.menu.mcpTools" resname="module.menu.mcpTools">
+				<source>MCP Tools</source>
+			</trans-unit>
+			<trans-unit id="module.menu.mcpConnectors" resname="module.menu.mcpConnectors">
+				<source>MCP Connectors</source>
+			</trans-unit>
+			<trans-unit id="module.menu.aiFeatures" resname="module.menu.aiFeatures">
+				<source>AI Features</source>
+			</trans-unit>
+			<trans-unit id="module.menu.aiUsage" resname="module.menu.aiUsage">
+				<source>AI Usage</source>
+			</trans-unit>
+			<trans-unit id="module.menu.aiLogs" resname="module.menu.aiLogs">
+				<source>AI Logs</source>
+			</trans-unit>
+			<trans-unit id="module.link.aiUniverseLogs" resname="module.link.aiUniverseLogs">
+				<source>AI Foundation</source>
+			</trans-unit>
+			<trans-unit id="module.link.aiUniverseLogs.title" resname="module.link.aiUniverseLogs.title">
+				<source>Open AI Foundation</source>
+			</trans-unit>
+			<trans-unit id="module.link.aiFoundation" resname="module.link.aiFoundation">
+				<source>AI Foundation</source>
+			</trans-unit>
+			<trans-unit id="module.link.aiFoundation.title" resname="module.link.aiFoundation.title">
+				<source>Open AI Foundation</source>
+			</trans-unit>
+			<trans-unit id="module.menu.aiPrompts" resname="module.menu.aiPrompts">
+				<source>AI Prompts</source>
+			</trans-unit>
+			<trans-unit id="module.menu.schedulerCli" resname="module.menu.schedulerCli">
+				<source>Scheduler &amp; CLI</source>
+			</trans-unit>
+			<trans-unit id="module.menu.aiAccessRoles" resname="module.menu.aiAccessRoles">
+				<source>AI Permissions</source>
+			</trans-unit>
+			<trans-unit id="module.aiAccessRoles.heading" resname="module.aiAccessRoles.heading">
+				<source>AI Permissions</source>
+			</trans-unit>
+			<trans-unit id="module.aiAccessRoles.intro" resname="module.aiAccessRoles.intro">
+				<source>Guided setup wizard for TYPO3 backend usergroup AI permissions.</source>
+			</trans-unit>
+			<trans-unit id="module.aiAccessRoles.denied.title" resname="module.aiAccessRoles.denied.title">
+				<source>Admin access required</source>
+			</trans-unit>
+			<trans-unit id="module.aiAccessRoles.denied.body" resname="module.aiAccessRoles.denied.body">
+				<source>Only TYPO3 administrators can configure AI Permissions.</source>
+			</trans-unit>
+			<trans-unit id="module.menu.forDevelopers" resname="module.menu.forDevelopers">
+				<source>For Developers</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.heading" resname="module.forDevelopers.heading">
+				<source>For Developers</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.intro" resname="module.forDevelopers.intro">
+				<source>Build AI-powered TYPO3 extensions on top of AI Foundation — a shared gateway built on symfony/ai-platform.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.copy" resname="module.forDevelopers.copy">
+				<source>Copy</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.copied" resname="module.forDevelopers.copied">
+				<source>Copied!</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.action.readGuide" resname="module.forDevelopers.action.readGuide">
+				<source>Read the Developer Guide</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.action.getStarted" resname="module.forDevelopers.action.getStarted">
+				<source>Get started in 3 steps</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.action.starterKitExtended" resname="module.forDevelopers.action.starterKitExtended">
+				<source>Starter Kit</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.architecture.title" resname="module.forDevelopers.architecture.title">
+				<source>Architecture at a glance</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.architecture.subtitle" resname="module.forDevelopers.architecture.subtitle">
+				<source>Every extension talks to one hub — AI Foundation routes to providers and MCP.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.architecture.ariaLabel" resname="module.forDevelopers.architecture.ariaLabel">
+				<source>Architecture diagram: extensions connect through AI Foundation to AI providers and MCP clients</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.architecture.yourExtension" resname="module.forDevelopers.architecture.yourExtension">
+				<source>your extension</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.architecture.shippedNote" resname="module.forDevelopers.architecture.shippedNote">
+				<source>six shipped extensions plug in the exact same way</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.architecture.hubTitle" resname="module.forDevelopers.architecture.hubTitle">
+				<source>EXT:ns_t3af — AI Foundation</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.architecture.hubSubtitle" resname="module.forDevelopers.architecture.hubSubtitle">
+				<source>AiServiceInterface · single entry point</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.dashboard" resname="module.forDevelopers.label.dashboard">
+				<source>Dashboard</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.aiProviders" resname="module.forDevelopers.label.aiProviders">
+				<source>AI Providers</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.aiContext" resname="module.forDevelopers.label.aiContext">
+				<source>AI Context</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.mcpServer" resname="module.forDevelopers.label.mcpServer">
+				<source>MCP Server</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.aiFeatures" resname="module.forDevelopers.label.aiFeatures">
+				<source>AI Features</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.aiUsageLogs" resname="module.forDevelopers.label.aiUsageLogs">
+				<source>AI Usage &amp; Logs</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.aiAccess" resname="module.forDevelopers.label.aiAccess">
+				<source>AI Access</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.aiPrompts" resname="module.forDevelopers.label.aiPrompts">
+				<source>AI Prompts</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.mcpClients" resname="module.forDevelopers.label.mcpClients">
+				<source>MCP Clients</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.transportsCount" resname="module.forDevelopers.label.transportsCount">
+				<source>7 transports</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.cursor" resname="module.forDevelopers.label.cursor">
+				<source>Cursor</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.claudeDesktop" resname="module.forDevelopers.label.claudeDesktop">
+				<source>Claude Desktop</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.aiAgents" resname="module.forDevelopers.label.aiAgents">
+				<source>AI Agents</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.remoteOauth" resname="module.forDevelopers.label.remoteOauth">
+				<source>Remote (OAuth)</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.websocket" resname="module.forDevelopers.label.websocket">
+				<source>WebSocket</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.docker" resname="module.forDevelopers.label.docker">
+				<source>Docker</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.ssh" resname="module.forDevelopers.label.ssh">
+				<source>SSH</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.npx" resname="module.forDevelopers.label.npx">
+				<source>npx</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.localBridge" resname="module.forDevelopers.label.localBridge">
+				<source>Local Bridge</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.stdio" resname="module.forDevelopers.label.stdio">
+				<source>STDIO</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.custom" resname="module.forDevelopers.label.custom">
+				<source>Custom</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.mcpServerTools" resname="module.forDevelopers.label.mcpServerTools">
+				<source>MCP Server &amp; Tools</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.label.aiAccessPermissions" resname="module.forDevelopers.label.aiAccessPermissions">
+				<source>AI Access &amp; Permissions</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.whatIs.title" resname="module.forDevelopers.whatIs.title">
+				<source>What is AI Foundation?</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.whatIs.body" resname="module.forDevelopers.whatIs.body">
+				<source>T3AF (AI Foundation for TYPO3) turns your TYPO3 installation into a fully AI-ready platform. Complete AI-infrastructure for whole TYPO3 team, zero setup. Manage every AI provider, MCP servers &amp; tools, brand context, prompts, users permissions, and budget in one native backend module. You stay in control, your every TYPO3 team (editors, integrators, developers &amp; administrator) works with AI on one governed, self-hosted foundation. Use it standalone — or as the foundation that powers the complete AI Universe.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.whatIs.anyProvider.title" resname="module.forDevelopers.whatIs.anyProvider.title">
+				<source>Any provider, one interface</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.whatIs.anyProvider.body" resname="module.forDevelopers.whatIs.anyProvider.body">
+				<source>Built on symfony/ai-platform — OpenAI, Anthropic, Azure, Mistral, Ollama and more work through the same call. Swap providers in settings, not code.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.whatIs.usage.title" resname="module.forDevelopers.whatIs.usage.title">
+				<source>Usage &amp; credits handled</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.whatIs.usage.body" resname="module.forDevelopers.whatIs.usage.body">
+				<source>Token-based billing, streaming, and pre-submit estimates come free — no per-feature cost tables to maintain.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.whatIs.nativeUi.title" resname="module.forDevelopers.whatIs.nativeUi.title">
+				<source>Native backend UI</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.whatIs.nativeUi.body" resname="module.forDevelopers.whatIs.nativeUi.body">
+				<source>Your feature cards, prompts, and settings drawers render directly inside AI Foundation. No custom module chrome.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.whatIs.mcpReady.title" resname="module.forDevelopers.whatIs.mcpReady.title">
+				<source>MCP-ready by default</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.whatIs.mcpReady.body" resname="module.forDevelopers.whatIs.mcpReady.body">
+				<source>Expose tools to Cursor, Claude Desktop, and AI agents with a single attribute — no server to stand up.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.flow.title" resname="module.forDevelopers.flow.title">
+				<source>How it fits together</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.flow.subtitle" resname="module.forDevelopers.flow.subtitle">
+				<source>Your code never talks to a provider directly — AI Foundation sits in between.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.flow.yourExtension" resname="module.forDevelopers.flow.yourExtension">
+				<source>Your extension</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.flow.featureCode" resname="module.forDevelopers.flow.featureCode">
+				<source>Feature code</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.flow.apiLabel" resname="module.forDevelopers.flow.apiLabel">
+				<source>AiServiceInterface</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.flow.apiHint" resname="module.forDevelopers.flow.apiHint">
+				<source>Single public API</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.flow.foundation" resname="module.forDevelopers.flow.foundation">
+				<source>AI Foundation</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.flow.foundationHint" resname="module.forDevelopers.flow.foundationHint">
+				<source>Routing, credits, events</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.flow.bridge" resname="module.forDevelopers.flow.bridge">
+				<source>via symfony/ai-platform bridges</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.gettingStarted.title" resname="module.forDevelopers.gettingStarted.title">
+				<source>Getting started</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.gettingStarted.subtitle" resname="module.forDevelopers.gettingStarted.subtitle">
+				<source>Three steps from a fresh extension to your first AI call.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.gettingStarted.step1.title" resname="module.forDevelopers.gettingStarted.step1.title">
+				<source>Depend on AI Foundation</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.gettingStarted.step1.body" resname="module.forDevelopers.gettingStarted.step1.body">
+				<source>Add EXT:ns_t3af as a dependency of your extension. No API keys or SDKs to install — providers are configured once, centrally.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.gettingStarted.step2.title" resname="module.forDevelopers.gettingStarted.step2.title">
+				<source>Inject AiServiceInterface</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.gettingStarted.step2.body" resname="module.forDevelopers.gettingStarted.step2.body">
+				<source>Resolve it through TYPO3's dependency injection or GeneralUtility::makeInstance(). It's the only class you need to know.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.gettingStarted.step3.title" resname="module.forDevelopers.gettingStarted.step3.title">
+				<source>Call complete()</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.gettingStarted.step3.body" resname="module.forDevelopers.gettingStarted.step3.body">
+				<source>Pass an extensionKey and featureKey — AI Foundation resolves the provider via symfony/ai-platform, tracks credits, and logs the request for you.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.example.title" resname="module.forDevelopers.example.title">
+				<source>Minimal integration example</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.example.subtitle" resname="module.forDevelopers.example.subtitle">
+				<source>Inject AiServiceInterface, call complete() — routing, providers, and billing are handled for you.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.example.filename" resname="module.forDevelopers.example.filename">
+				<source>MyFeatureService.php</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.example.realWorldLabel" resname="module.forDevelopers.example.realWorldLabel">
+				<source>Real-world example:</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.example.setupHint" resname="module.forDevelopers.example.setupHint">
+				<source>Save as Classes/Service/MyFeatureService.php. Declare EXT:ns_t3af in ext_emconf.php, autowire your extension in Configuration/Services.yaml, then replace Vendor\MyExtension and my_extension with your values.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.example.realWorldBody" resname="module.forDevelopers.example.realWorldBody">
+				<source>this is the same call T3AI uses for its SEO meta description generator — extensionKey: %s, featureKey: %s. Swap the prompt and feature key for your own extension and you inherit the same provider routing, credits, and logging.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.title" resname="module.forDevelopers.hooks.title">
+				<source>What you can hook into</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.subtitle" resname="module.forDevelopers.hooks.subtitle">
+				<source>Six extension points — pick the ones your extension needs.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.readGuide" resname="module.forDevelopers.hooks.readGuide">
+				<source>Read guide</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.integration.title" resname="module.forDevelopers.hooks.integration.title">
+				<source>Extension Integration</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.integration.body" resname="module.forDevelopers.hooks.integration.body">
+				<source>Connect via AiServiceInterface — request flow, AiOptions, and a minimal working example.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.providers.title" resname="module.forDevelopers.hooks.providers.title">
+				<source>Custom AI Providers</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.providers.body" resname="module.forDevelopers.hooks.providers.body">
+				<source>Ship proprietary, on-prem, or niche cloud adapters alongside the built-in symfony/ai-platform bridges.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.prompts.title" resname="module.forDevelopers.hooks.prompts.title">
+				<source>Custom AI Prompts</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.prompts.body" resname="module.forDevelopers.hooks.prompts.body">
+				<source>Register prompt catalog providers that show up under AI Foundation → AI Prompts.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.features.title" resname="module.forDevelopers.hooks.features.title">
+				<source>Custom AI Features</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.features.body" resname="module.forDevelopers.hooks.features.body">
+				<source>Add feature cards and per-site settings schemas to AI Foundation → AI Features.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.overrides.title" resname="module.forDevelopers.hooks.overrides.title">
+				<source>Feature Provider Overrides</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.overrides.body" resname="module.forDevelopers.hooks.overrides.body">
+				<source>Give editors a per-feature default AI provider dropdown for SEO, pages, content, translation.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.mcpTools.title" resname="module.forDevelopers.hooks.mcpTools.title">
+				<source>Custom MCP Tools</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.hooks.mcpTools.body" resname="module.forDevelopers.hooks.mcpTools.body">
+				<source>Register tools from your extension for Cursor, Claude Desktop, and the backend MCP playground.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.builtOn.title" resname="module.forDevelopers.builtOn.title">
+				<source>Built on this today</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.builtOn.subtitle" resname="module.forDevelopers.builtOn.subtitle">
+				<source>A growing set of features already running on the same gateway — click through to each extension's docs.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.builtOn.aiAssistant" resname="module.forDevelopers.builtOn.aiAssistant">
+				<source>AI Assistant</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.builtOn.aiSearch" resname="module.forDevelopers.builtOn.aiSearch">
+				<source>AI Search</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.builtOn.aiChatbot" resname="module.forDevelopers.builtOn.aiChatbot">
+				<source>AI Chatbot</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.builtOn.aiAccessibility" resname="module.forDevelopers.builtOn.aiAccessibility">
+				<source>AI Accessibility</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.builtOn.aiLocalization" resname="module.forDevelopers.builtOn.aiLocalization">
+				<source>AI Localization</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.builtOn.aiBuilder" resname="module.forDevelopers.builtOn.aiBuilder">
+				<source>AI Builder</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.builtOn.buildYourOwn" resname="module.forDevelopers.builtOn.buildYourOwn">
+				<source>Build your own?</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.autoConfig.title" resname="module.forDevelopers.autoConfig.title">
+				<source>Auto-configured for your extension</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.autoConfig.subtitle" resname="module.forDevelopers.autoConfig.subtitle">
+				<source>Install EXT:ns_t3af and your child extension inherits every capability below.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.autoConfig.notice" resname="module.forDevelopers.autoConfig.notice">
+				<source>EXT:extension_key depends on EXT:ns_t3af — no backend module, settings screen, or logging table to build yourself.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.autoConfig.dashboard" resname="module.forDevelopers.autoConfig.dashboard">
+				<source>Your extension's activity, credits, and health surface here automatically — no widget to build.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.autoConfig.aiProviders" resname="module.forDevelopers.autoConfig.aiProviders">
+				<source>Every provider an admin connects is instantly usable by your extension.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.autoConfig.aiContext" resname="module.forDevelopers.autoConfig.aiContext">
+				<source>Brand voice, tone, and site context are injected into your calls automatically.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.autoConfig.mcpServerTools" resname="module.forDevelopers.autoConfig.mcpServerTools">
+				<source>Register a tool once and it's exposed to every connected MCP client.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.autoConfig.aiFeatures" resname="module.forDevelopers.autoConfig.aiFeatures">
+				<source>Your feature card renders inside AI Foundation → AI Features with per-site settings.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.autoConfig.aiUsageLogs" resname="module.forDevelopers.autoConfig.aiUsageLogs">
+				<source>Every call is metered, credited, and logged centrally.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.autoConfig.aiAccess" resname="module.forDevelopers.autoConfig.aiAccess">
+				<source>Roles are enforced by AI Foundation — your extension inherits the same guardrails.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.autoConfig.aiPrompts" resname="module.forDevelopers.autoConfig.aiPrompts">
+				<source>Ship a prompt catalog and it appears under AI Foundation → AI Prompts.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.title" resname="module.forDevelopers.mcp.title">
+				<source>MCP Server &amp; Tools</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.subtitle" resname="module.forDevelopers.mcp.subtitle">
+				<source>AI Foundation runs one shared MCP server for the whole TYPO3 install. Register a tool from your extension and it's callable by Cursor, Claude Desktop, and any MCP client.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.serverMeta" resname="module.forDevelopers.mcp.serverMeta">
+				<source>7 transports · OAuth 2.1 protected</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.docs" resname="module.forDevelopers.mcp.docs">
+				<source>MCP Server docs</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.remoteOauth.body" resname="module.forDevelopers.mcp.remoteOauth.body">
+				<source>Hosted server URL + OAuth 2.1 — recommended for Claude Desktop, Cursor, and cloud agents.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.websocket.body" resname="module.forDevelopers.mcp.websocket.body">
+				<source>Persistent bidirectional connection for low-latency, streaming-heavy clients.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.docker.body" resname="module.forDevelopers.mcp.docker.body">
+				<source>Run the MCP server in a container alongside your TYPO3 stack.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.ssh.body" resname="module.forDevelopers.mcp.ssh.body">
+				<source>Tunnel stdio transport over SSH for locked-down environments.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.npx.body" resname="module.forDevelopers.mcp.npx.body">
+				<source>Zero-install bridge — launch a local MCP proxy with a single npx command.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.localBridge.body" resname="module.forDevelopers.mcp.localBridge.body">
+				<source>A thin local process bridges stdio clients to the remote HTTP server.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.stdio.body" resname="module.forDevelopers.mcp.stdio.body">
+				<source>Direct process-to-process transport — ideal for local development.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.registerTool.title" resname="module.forDevelopers.mcp.registerTool.title">
+				<source>Register a tool from your extension</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.registerTool.body" resname="module.forDevelopers.mcp.registerTool.body">
+				<source>Tag a service mcp.tool, annotate execute() with #[McpTool], flush caches.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.registerTool.cta" resname="module.forDevelopers.mcp.registerTool.cta">
+				<source>Custom MCP Tools guide</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.connectClient.title" resname="module.forDevelopers.mcp.connectClient.title">
+				<source>Connect a client</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.connectClient.body" resname="module.forDevelopers.mcp.connectClient.body">
+				<source>Copy the server URL and token from MCP Server → Connect, or launch the local bridge with npx.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.mcp.connectClient.cta" resname="module.forDevelopers.mcp.connectClient.cta">
+				<source>Connection &amp; transport setup</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.cta.title" resname="module.forDevelopers.cta.title">
+				<source>Ready to build?</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.cta.body" resname="module.forDevelopers.cta.body">
+				<source>Installation, architecture, MCP server setup, and every extension point in one place.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.cta.button" resname="module.forDevelopers.cta.button">
+				<source>Go to docs.t3planet.de</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.starterKitCta.title" resname="module.forDevelopers.starterKitCta.title">
+				<source>Need a starter kit?</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.starterKitCta.body" resname="module.forDevelopers.starterKitCta.body">
+				<source>EXT:ns_t3af_extended on GitHub is a reference extension with every integration hook — providers, prompts, features, MCP tools, access, and AiServiceInterface usage.</source>
+			</trans-unit>
+			<trans-unit id="module.forDevelopers.starterKitCta.button" resname="module.forDevelopers.starterKitCta.button">
+				<source>Open starter kit on GitHub</source>
+			</trans-unit>
+			<trans-unit id="module.footer.developedBy" resname="module.footer.developedBy">
+				<source>Developed with 💙 by Team T3Planet.</source>
+			</trans-unit>
+			<trans-unit id="module.footer.developedBy.prefix" resname="module.footer.developedBy.prefix">
+				<source>Developed with 💙 by Team </source>
+			</trans-unit>
+			<trans-unit id="module.footer.developedBy.brand" resname="module.footer.developedBy.brand">
+				<source>T3Planet.</source>
+			</trans-unit>
+			<trans-unit id="module.footer.developedBy.link" resname="module.footer.developedBy.link">
+				<source>https://t3planet.de/en/</source>
+			</trans-unit>
+			<trans-unit id="module.footer.about" resname="module.footer.about">
+				<source>About</source>
+			</trans-unit>
+			<trans-unit id="module.footer.about.link" resname="module.footer.about.link">
+				<source>https://t3planet.de/en/ai-foundation-for-typo3</source>
+			</trans-unit>
+			<trans-unit id="module.footer.demo" resname="module.footer.demo">
+				<source>Demo</source>
+			</trans-unit>
+			<trans-unit id="module.footer.demo.link" resname="module.footer.demo.link">
+				<source>https://app.supademo.com/showcase/cmrd4sr54012yz60jfwts8f2i?utm_source=link</source>
+			</trans-unit>
+			<trans-unit id="module.footer.demoGuide" resname="module.footer.demoGuide">
+				<source>Demo</source>
+			</trans-unit>
+			<trans-unit id="module.footer.demoGuide.link" resname="module.footer.demoGuide.link">
+				<source>https://app.supademo.com/showcase/cmmyt7j5c0075wy0imx44tkvn?utm_source=link</source>
+			</trans-unit>
+			<trans-unit id="module.footer.documentation" resname="module.footer.documentation">
+				<source>Documentation</source>
+			</trans-unit>
+			<trans-unit id="module.footer.documentation.link" resname="module.footer.documentation.link">
+				<source>https://docs.t3planet.de/en/latest/ExtNsT3AF/Index.html</source>
+			</trans-unit>
+			<trans-unit id="module.footer.support" resname="module.footer.support">
+				<source>Support</source>
+			</trans-unit>
+			<trans-unit id="module.footer.support.link" resname="module.footer.support.link">
+				<source>https://t3planet.de/en/support</source>
+			</trans-unit>
+			<trans-unit id="module.menu.dropdown.label" resname="module.menu.dropdown.label">
+				<source>Module actions</source>
+			</trans-unit>
+			<trans-unit id="module.quickSetup" resname="module.quickSetup">
+				<source>Quick Setup</source>
+			</trans-unit>
+			<trans-unit id="toolbar.credits.balance" resname="toolbar.credits.balance">
+				<source>T3Planet Credits: %s · %s%% remaining</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.heading" resname="module.dashboard.heading">
+				<source>Dashboard</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.intro" resname="module.dashboard.intro">
+				<source>Dashboard for your AI Foundation — requests, usage, and system health.</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.period.today" resname="module.dashboard.period.today">
+				<source>Today</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.period.yesterday" resname="module.dashboard.period.yesterday">
+				<source>Yesterday</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.period.7d" resname="module.dashboard.period.7d">
+				<source>Last 7 days</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.period.14d" resname="module.dashboard.period.14d">
+				<source>Last 14 days</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.period.30d" resname="module.dashboard.period.30d">
+				<source>Last 30 days</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.period.allTime" resname="module.aiUsage.period.allTime">
+				<source>All Time</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.period.custom" resname="module.dashboard.period.custom">
+				<source>Custom range</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.period.customRange" resname="module.dashboard.period.customRange">
+				<source>Custom date range</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.period.from" resname="module.dashboard.period.from">
+				<source>From</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.period.to" resname="module.dashboard.period.to">
+				<source>To</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.period.apply" resname="module.dashboard.period.apply">
+				<source>Apply</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.manageProviders" resname="module.dashboard.manageProviders">
+				<source>Manage providers</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.title" resname="module.dashboard.mcpOverview.title">
+				<source>MCP Overview</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.link.server" resname="module.dashboard.mcpOverview.link.server">
+				<source>MCP Server</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.link.tools" resname="module.dashboard.mcpOverview.link.tools">
+				<source>MCP Tools</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.server.title" resname="module.dashboard.mcpOverview.server.title">
+				<source>Server Status</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.server.subtitle" resname="module.dashboard.mcpOverview.server.subtitle">
+				<source>TYPO3 MCP</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.server.clients" resname="module.dashboard.mcpOverview.server.clients">
+				<source>Clients</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.server.tools" resname="module.dashboard.mcpOverview.server.tools">
+				<source>Tools</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.server.success" resname="module.dashboard.mcpOverview.server.success">
+				<source>Success</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.server.transports" resname="module.dashboard.mcpOverview.server.transports">
+				<source>Transports</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.server.endpoint" resname="module.dashboard.mcpOverview.server.endpoint">
+				<source>Endpoint</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.server.oauthEndpoints" resname="module.dashboard.mcpOverview.server.oauthEndpoints">
+				<source>OAuth endpoints</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.server.oauthConfigured" resname="module.dashboard.mcpOverview.server.oauthConfigured">
+				<source>%1$s configured</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.server.uptime" resname="module.dashboard.mcpOverview.server.uptime">
+				<source>Server uptime</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.server.action" resname="module.dashboard.mcpOverview.server.action">
+				<source>Open MCP Server</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.tools.title" resname="module.dashboard.mcpOverview.tools.title">
+				<source>Top MCP Tools</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.tools.calls" resname="module.dashboard.mcpOverview.tools.calls">
+				<source>%1$s calls</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.tools.empty" resname="module.dashboard.mcpOverview.tools.empty">
+				<source>No MCP tool calls were logged in this period yet.</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.tools.action" resname="module.dashboard.mcpOverview.tools.action">
+				<source>View all %1$s tools</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.clients.title" resname="module.dashboard.mcpOverview.clients.title">
+				<source>Active MCP Clients</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.clients.connected" resname="module.dashboard.mcpOverview.clients.connected">
+				<source>%1$s connected</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.clients.calls" resname="module.dashboard.mcpOverview.clients.calls">
+				<source>calls</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.clients.empty" resname="module.dashboard.mcpOverview.clients.empty">
+				<source>No active MCP clients are connected right now.</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.clients.action" resname="module.dashboard.mcpOverview.clients.action">
+				<source>Manage connections</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.transport.http" resname="module.dashboard.mcpOverview.transport.http">
+				<source>HTTP</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.transport.stdio" resname="module.dashboard.mcpOverview.transport.stdio">
+				<source>STDIO</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.transport.mcpRemote" resname="module.dashboard.mcpOverview.transport.mcpRemote">
+				<source>mcp-remote</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.transport.oauth" resname="module.dashboard.mcpOverview.transport.oauth">
+				<source>Remote OAuth</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.client.unknown" resname="module.dashboard.mcpOverview.client.unknown">
+				<source>Unknown client</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.mcpOverview.duration.unknown" resname="module.dashboard.mcpOverview.duration.unknown">
+				<source>—</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.chart.requests" resname="module.dashboard.chart.requests">
+				<source>Requests</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.chart.creditsBurn" resname="module.dashboard.chart.creditsBurn">
+				<source>Credits burned</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.chart.extensionSpend" resname="module.dashboard.chart.extensionSpend">
+				<source>Extension spend</source>
+			</trans-unit>
+			<trans-unit id="module.dashboard.chart.providerDistribution" resname="module.dashboard.chart.providerDistribution">
+				<source>Providers</source>
+			</trans-unit>
+			<trans-unit id="dashboard.chart.success" resname="dashboard.chart.success">
+				<source>Success</source>
+			</trans-unit>
+			<trans-unit id="dashboard.chart.failed" resname="dashboard.chart.failed">
+				<source>Failed</source>
+			</trans-unit>
+			<trans-unit id="dashboard.chart.creditsBurn" resname="dashboard.chart.creditsBurn">
+				<source>Credits burned</source>
+			</trans-unit>
+			<trans-unit id="module.providers.heading" resname="module.providers.heading">
+				<source>AI Providers</source>
+			</trans-unit>
+			<trans-unit id="module.providers.intro" resname="module.providers.intro">
+				<source>Configured AI provider connections. Add your own API keys per provider.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.heading" resname="module.mcpServer.heading">
+				<source>MCP Server</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.intro" resname="module.mcpServer.intro">
+				<source>Manage server status, connection modes, and client access tokens.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.workspace.label" resname="module.mcpServer.workspace.label">
+				<source>Workspace</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mode.label" resname="module.mcpServer.mode.label">
+				<source>AI MCP Mode</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mode.context" resname="module.mcpServer.mode.context">
+				<source>Context (AI Generate via AI Agent)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mode.native" resname="module.mcpServer.mode.native">
+				<source>Native (AI Generate via TYPO3)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.workspace.live" resname="module.mcpServer.workspace.live">
+				<source>Live</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.workspace.missingLead" resname="module.mcpServer.workspace.missingLead">
+				<source>No draft workspace exists yet. MCP changes should be staged in a workspace before publishing to Live.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.workspace.createButton" resname="module.mcpServer.workspace.createButton">
+				<source>Generate MCP workspace</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.workspace.createDeniedHint" resname="module.mcpServer.workspace.createDeniedHint">
+				<source>Ask an administrator or a user with Workspaces module access to create a workspace.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.workspace.createDenied" resname="module.mcpServer.workspace.createDenied">
+				<source>Access denied.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.workspace.createFailed" resname="module.mcpServer.workspace.createFailed">
+				<source>Could not create workspace. Please try again or create one manually in the Workspaces module.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.status.online" resname="module.mcpServer.status.online">
+				<source>Server Online</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.status.offline" resname="module.mcpServer.status.offline">
+				<source>Server Offline</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.kpi.serverStatus" resname="module.mcpServer.kpi.serverStatus">
+				<source>Server Status</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.kpi.online" resname="module.mcpServer.kpi.online">
+				<source>Online</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.kpi.offline" resname="module.mcpServer.kpi.offline">
+				<source>Offline</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.kpi.activeClients" resname="module.mcpServer.kpi.activeClients">
+				<source>Active Clients</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.kpi.connected" resname="module.mcpServer.kpi.connected">
+				<source>connected</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.kpi.oauthEndpoints" resname="module.mcpServer.kpi.oauthEndpoints">
+				<source>OAuth Endpoints</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.kpi.oauthAuthServer" resname="module.mcpServer.kpi.oauthAuthServer">
+				<source>oauth-authorization-server</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.kpi.oauthProtectedResource" resname="module.mcpServer.kpi.oauthProtectedResource">
+				<source>oauth-protected-resource</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.kpi.serverUrl" resname="module.mcpServer.kpi.serverUrl">
+				<source>Server URL</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.action.copy" resname="module.mcpServer.action.copy">
+				<source>Copy</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.action.copyToken" resname="module.mcpServer.action.copyToken">
+				<source>Copy Token</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.action.refresh" resname="module.mcpServer.action.refresh">
+				<source>Refresh</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.action.revoke" resname="module.mcpServer.action.revoke">
+				<source>Revoke</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.action.revokeAll" resname="module.mcpServer.action.revokeAll">
+				<source>Revoke All</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.action.saveSettings" resname="module.mcpServer.action.saveSettings">
+				<source>Save settings</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.action.copyServerUrl" resname="module.mcpServer.action.copyServerUrl">
+				<source>Copy Server URL</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.connect.heading" resname="module.mcpServer.connect.heading">
+				<source>MCP Connection Setup</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.connect.intro" resname="module.mcpServer.connect.intro">
+				<source>Choose your preferred method to connect MCP clients to this TYPO3 instance.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.connect.methodsAria" resname="module.mcpServer.connect.methodsAria">
+				<source>Connection methods</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.method.oauth.badge" resname="module.mcpServer.method.oauth.badge">
+				<source>Recommended</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.method.oauth.title" resname="module.mcpServer.method.oauth.title">
+				<source>Remote MCP Setup</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.method.oauth.desc" resname="module.mcpServer.method.oauth.desc">
+				<source>Connect over the internet using OAuth authentication (recommended).</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.method.mcpremote.badge" resname="module.mcpServer.method.mcpremote.badge">
+				<source>Local</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.method.mcpremote.title" resname="module.mcpServer.method.mcpremote.title">
+				<source>Local Setup (mcp-remote)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.method.mcpremote.desc" resname="module.mcpServer.method.mcpremote.desc">
+				<source>For MCP clients that need a local bridge via mcp-remote.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.method.cli.badge" resname="module.mcpServer.method.cli.badge">
+				<source>Local</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.method.cli.title" resname="module.mcpServer.method.cli.title">
+				<source>Local Setup (TYPO3 CLI)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.method.cli.desc" resname="module.mcpServer.method.cli.desc">
+				<source>Run the MCP server locally via TYPO3 CLI (stdio).</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.oauth.intro" resname="module.mcpServer.oauth.intro">
+				<source>Connect MCP clients to this TYPO3 instance over the internet using OAuth authentication. This is the recommended method for most use cases.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.endpoint.statusLabel" resname="module.mcpServer.endpoint.statusLabel">
+				<source>MCP endpoint status:</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.clientToken.active" resname="module.mcpServer.clientToken.active">
+				<source>%1$s token active</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.clientToken.missing" resname="module.mcpServer.clientToken.missing">
+				<source>No %1$s token found. Create an %1$s token to connect %1$s workflows to this TYPO3 instance.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.clientToken.create" resname="module.mcpServer.clientToken.create">
+				<source>+ Create %1$s Token</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.clientToken.bearerLabel" resname="module.mcpServer.clientToken.bearerLabel">
+				<source>Bearer Token</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.clients.aria" resname="module.mcpServer.clients.aria">
+				<source>AI clients</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.claude" resname="module.mcpServer.client.claude">
+				<source>Claude Desktop</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.n8n" resname="module.mcpServer.client.n8n">
+				<source>n8n</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.manus" resname="module.mcpServer.client.manus">
+				<source>Manus</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.inspector" resname="module.mcpServer.client.inspector">
+				<source>MCP Inspector</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.other" resname="module.mcpServer.client.other">
+				<source>Other Clients</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.dify" resname="module.mcpServer.client.dify">
+				<source>Dify</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.langchain" resname="module.mcpServer.client.langchain">
+				<source>LangChain</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.autogen" resname="module.mcpServer.client.autogen">
+				<source>AutoGen</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.codex" resname="module.mcpServer.client.codex">
+				<source>OpenAI Codex</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.openai-gpts" resname="module.mcpServer.client.openai-gpts">
+				<source>OpenAI Custom GPTs</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.copilot-studio" resname="module.mcpServer.client.copilot-studio">
+				<source>Copilot Studio</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mcpremote.panelTitle" resname="module.mcpServer.mcpremote.panelTitle">
+				<source>Local Bridge (mcp-remote)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mcpremote.warn" resname="module.mcpServer.mcpremote.warn">
+				<source>URL tokens are sensitive — anyone with the link can access TYPO3 as your backend user. Use OAuth when possible.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mcpremote.lead" resname="module.mcpServer.mcpremote.lead">
+				<source>For MCP clients that don't support remote connections natively. The mcp-remote package acts as a local bridge, connecting to this TYPO3 instance on behalf of your MCP client.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mcpremote.activeTitle" resname="module.mcpServer.mcpremote.activeTitle">
+				<source>Using your active token:</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mcpremote.activeText" resname="module.mcpServer.mcpremote.activeText">
+				<source>Your existing OAuth token will be included in the URL as a query parameter.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mcpremote.missing" resname="module.mcpServer.mcpremote.missing">
+				<source>No mcp-remote token found. Create one to generate a token URL for local MCP clients.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mcpremote.copyTokenUrl" resname="module.mcpServer.mcpremote.copyTokenUrl">
+				<source>Copy Token URL</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mcpremote.configLabel" resname="module.mcpServer.mcpremote.configLabel">
+				<source>Example mcp-remote configuration:</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mcpremote.copyConfiguration" resname="module.mcpServer.mcpremote.copyConfiguration">
+				<source>Copy Configuration</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mcpremote.securityTitle" resname="module.mcpServer.mcpremote.securityTitle">
+				<source>Security Note:</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mcpremote.securityText" resname="module.mcpServer.mcpremote.securityText">
+				<source>The token URL includes your authentication token in the URL. Only use this method when your MCP client doesn't support Authorization headers or when using mcp-remote configurations that require tokens in the URL.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.mcpremote.create" resname="module.mcpServer.mcpremote.create">
+				<source>Create mcp-remote Token</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.cli.lead" resname="module.mcpServer.cli.lead">
+				<source>For local development where your MCP client has direct shell access to this TYPO3 installation.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.cli.configLabel" resname="module.mcpServer.cli.configLabel">
+				<source>Example configuration:</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.cli.copyConfiguration" resname="module.mcpServer.cli.copyConfiguration">
+				<source>Copy Configuration</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.cli.infoTitle" resname="module.mcpServer.cli.infoTitle">
+				<source>How CLI access works:</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.cli.infoDirect" resname="module.mcpServer.cli.infoDirect">
+				<source>Direct access: No OAuth needed</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.cli.infoLocal" resname="module.mcpServer.cli.infoLocal">
+				<source>Local only: Only works when your client has shell access to TYPO3</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.cli.considerationsTitle" resname="module.mcpServer.cli.considerationsTitle">
+				<source>Important considerations:</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.cli.considerationProcess" resname="module.mcpServer.cli.considerationProcess">
+				<source>Long-running process: The CLI server runs continuously and may accumulate memory usage over time. Restart periodically if you notice performance issues.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.cli.considerationCode" resname="module.mcpServer.cli.considerationCode">
+				<source>Code changes: Changes to PHP code won't be reflected immediately. You'll need to restart the CLI server to pick up code modifications.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.connections.heading" resname="module.mcpServer.connections.heading">
+				<source>Active OAuth Tokens</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.connections.intro" resname="module.mcpServer.connections.intro">
+				<source>Manage your active OAuth tokens. Each token represents an authorized MCP client connection.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.table.client" resname="module.mcpServer.table.client">
+				<source>Client Name</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.table.created" resname="module.mcpServer.table.created">
+				<source>Created</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.table.lastUsed" resname="module.mcpServer.table.lastUsed">
+				<source>Last Used</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.table.expires" resname="module.mcpServer.table.expires">
+				<source>Expires</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.table.token" resname="module.mcpServer.table.token">
+				<source>Token</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.table.workspace" resname="module.mcpServer.table.workspace">
+				<source>Workspace</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.table.action" resname="module.mcpServer.table.action">
+				<source>Action</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.table.empty" resname="module.mcpServer.table.empty">
+				<source>No active connections yet.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.table.expiresSoon" resname="module.mcpServer.table.expiresSoon">
+				<source>Expires soon</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.table.transport" resname="module.mcpServer.table.transport">
+				<source>Transport</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.tabs.aria" resname="module.mcpServer.tabs.aria">
+				<source>MCP Server sections</source>
+			</trans-unit>
+            <trans-unit id="module.mcpServer.tab.connect" resname="module.mcpServer.tab.connect">
+				<source>Connect</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.tab.oauthTokens" resname="module.mcpServer.tab.oauthTokens">
+				<source>OAuth Tokens</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.oauthTokens.calloutTitle" resname="module.mcpServer.oauthTokens.calloutTitle">
+				<source>OAuth token overview</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.oauthTokens.title" resname="module.mcpServer.oauthTokens.title">
+				<source>Active OAuth tokens</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.oauthTokens.intro" resname="module.mcpServer.oauthTokens.intro">
+				<source>Manage all active OAuth tokens across backend users. Each token represents an authorized MCP client connection.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.oauthTokens.activeCount" resname="module.mcpServer.oauthTokens.activeCount">
+				<source>active</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.oauthTokens.empty" resname="module.mcpServer.oauthTokens.empty">
+				<source>No active OAuth tokens.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.table.backendUser" resname="module.mcpServer.table.backendUser">
+				<source>Backend user</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.tab.security" resname="module.mcpServer.tab.security">
+				<source>Security</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.tab.analytics" resname="module.mcpServer.tab.analytics">
+				<source>Analytics</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.tab.advanced" resname="module.mcpServer.tab.advanced">
+				<source>Advanced</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.clients.heading" resname="module.mcpServer.clients.heading">
+				<source>Setup guide for your client</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.clients.intro" resname="module.mcpServer.clients.intro">
+				<source>Pick your MCP client and follow the setup steps.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.cursor" resname="module.mcpServer.client.cursor">
+				<source>Cursor</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.vscode" resname="module.mcpServer.client.vscode">
+				<source>VS Code</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.windsurf" resname="module.mcpServer.client.windsurf">
+				<source>Windsurf</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.cline" resname="module.mcpServer.client.cline">
+				<source>Cline</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.continue" resname="module.mcpServer.client.continue">
+				<source>Continue</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.zed" resname="module.mcpServer.client.zed">
+				<source>Zed</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.jetbrains" resname="module.mcpServer.client.jetbrains">
+				<source>JetBrains</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.neovim" resname="module.mcpServer.client.neovim">
+				<source>Neovim</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.emacs" resname="module.mcpServer.client.emacs">
+				<source>Emacs</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.sublime" resname="module.mcpServer.client.sublime">
+				<source>Sublime</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.raycast" resname="module.mcpServer.client.raycast">
+				<source>Raycast</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.chatgpt" resname="module.mcpServer.client.chatgpt">
+				<source>ChatGPT</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.gemini" resname="module.mcpServer.client.gemini">
+				<source>Gemini CLI</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.customjson" resname="module.mcpServer.client.customjson">
+				<source>Custom JSON</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.client.curl" resname="module.mcpServer.client.curl">
+				<source>cURL</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.http.title" resname="module.mcpServer.transport.http.title">
+				<source>Remote (OAuth)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.http.desc" resname="module.mcpServer.transport.http.desc">
+				<source>Secure Internet access with OAuth 2.0 authentication.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.stdio.title" resname="module.mcpServer.transport.stdio.title">
+				<source>Local CLI (TYPO3)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.stdio.desc" resname="module.mcpServer.transport.stdio.desc">
+				<source>Development-only stdio bridge via vendor/bin/typo3 mcp:server.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.mcpremote.title" resname="module.mcpServer.transport.mcpremote.title">
+				<source>Local Bridge</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.mcpremote.desc" resname="module.mcpServer.transport.mcpremote.desc">
+				<source>URL-embedded token bridge for clients without Bearer header support.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.websocket.title" resname="module.mcpServer.transport.websocket.title">
+				<source>WebSocket (WSS)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.websocket.desc" resname="module.mcpServer.transport.websocket.desc">
+				<source>Real-time WebSocket transport via reverse proxy.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.websocket.lead" resname="module.mcpServer.transport.websocket.lead">
+				<source>Configure your reverse proxy to upgrade HTTP connections to WebSocket on the MCP path. Clients connect with WSS and send the same OAuth Bearer token.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.websocket.urlLabel" resname="module.mcpServer.transport.websocket.urlLabel">
+				<source>WebSocket URL</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.websocket.noteTitle" resname="module.mcpServer.transport.websocket.noteTitle">
+				<source>Proxy requirement</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.websocket.noteText" resname="module.mcpServer.transport.websocket.noteText">
+				<source>Streamable HTTP at %s remains the primary transport. Enable WSS only when your proxy supports Upgrade headers and you need persistent connections.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.docker.title" resname="module.mcpServer.transport.docker.title">
+				<source>Docker / Container</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.docker.desc" resname="module.mcpServer.transport.docker.desc">
+				<source>Run the MCP stdio server inside your web container.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.docker.lead" resname="module.mcpServer.transport.docker.lead">
+				<source>Use this when your MCP client runs on the host and talks to TYPO3 through Docker or DDEV.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.docker.commandLabel" resname="module.mcpServer.transport.docker.commandLabel">
+				<source>Container command</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.docker.infoTitle" resname="module.mcpServer.transport.docker.infoTitle">
+				<source>How it works</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.docker.infoExec" resname="module.mcpServer.transport.docker.infoExec">
+				<source>Runs the MCP stdio server inside your web container via docker exec.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.docker.infoDdev" resname="module.mcpServer.transport.docker.infoDdev">
+				<source>For DDEV, replace the container name with your project's web container.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.sshtunnel.title" resname="module.mcpServer.transport.sshtunnel.title">
+				<source>SSH Tunnel</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.sshtunnel.desc" resname="module.mcpServer.transport.sshtunnel.desc">
+				<source>Secure remote access through an SSH port forward.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.sshtunnel.lead" resname="module.mcpServer.transport.sshtunnel.lead">
+				<source>Forward a local port to the TYPO3 HTTPS endpoint, then point MCP clients at https://localhost:8787/mcp.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.sshtunnel.commandLabel" resname="module.mcpServer.transport.sshtunnel.commandLabel">
+				<source>SSH command</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.sshtunnel.hint" resname="module.mcpServer.transport.sshtunnel.hint">
+				<source>After the tunnel is up, use the Remote (OAuth) server URL pattern with localhost, or %s directly if you forward to the MCP path.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.npx.title" resname="module.mcpServer.transport.npx.title">
+				<source>npx Wrapper</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.npx.desc" resname="module.mcpServer.transport.npx.desc">
+				<source>Bridge HTTP MCP through the mcp-remote npm package.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.npx.lead" resname="module.mcpServer.transport.npx.lead">
+				<source>For desktop clients that only support stdio, run mcp-remote as a local subprocess.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.npx.commandLabel" resname="module.mcpServer.transport.npx.commandLabel">
+				<source>Shell command</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.badge.recommended" resname="module.mcpServer.transport.badge.recommended">
+				<source>Recommended</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.badge.advanced" resname="module.mcpServer.transport.badge.advanced">
+				<source>Advanced</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.badge.realTime" resname="module.mcpServer.transport.badge.realTime">
+				<source>Real-time</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.badge.enterprise" resname="module.mcpServer.transport.badge.enterprise">
+				<source>Enterprise</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.transport.badge.devOnly" resname="module.mcpServer.transport.badge.devOnly">
+				<source>Dev only</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.oauth.authLabel" resname="module.mcpServer.oauth.authLabel">
+				<source>Authentication</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.oauth.authType" resname="module.mcpServer.oauth.authType">
+				<source>OAuth 2.0 Bearer Token</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.oauth.authSecure" resname="module.mcpServer.oauth.authSecure">
+				<source>Secure</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.clients.tabsAria" resname="module.mcpServer.clients.tabsAria">
+				<source>MCP client setup guides</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.tokens.title" resname="module.mcpServer.security.tokens.title">
+				<source>Token Management</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.tokens.intro" resname="module.mcpServer.security.tokens.intro">
+				<source>Issue and revoke long-lived OAuth bearer tokens for integrations.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.tokens.empty" resname="module.mcpServer.security.tokens.empty">
+				<source>No active tokens for your account.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.oauth.title" resname="module.mcpServer.security.oauth.title">
+				<source>Token Scopes &amp; OAuth Settings</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.pkce" resname="module.mcpServer.security.pkce">
+				<source>Enforce PKCE (S256)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.scopes.label" resname="module.mcpServer.security.scopes.label">
+				<source>Default scopes</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.ipAllowlist.title" resname="module.mcpServer.security.ipAllowlist.title">
+				<source>IP Allowlist</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.ipAllowlist.label" resname="module.mcpServer.security.ipAllowlist.label">
+				<source>Label</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.ipAllowlist.cidr" resname="module.mcpServer.security.ipAllowlist.cidr">
+				<source>CIDR</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.ipAllowlist.add" resname="module.mcpServer.security.ipAllowlist.add">
+				<source>Add entry</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.ipAllowlist.empty" resname="module.mcpServer.security.ipAllowlist.empty">
+				<source>No IP allowlist entries yet.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.enabled" resname="module.mcpServer.security.enabled">
+				<source>Enabled</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.enabledYes" resname="module.mcpServer.security.enabledYes">
+				<source>Yes</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.enabledNo" resname="module.mcpServer.security.enabledNo">
+				<source>No</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.title" resname="module.mcpServer.security.mtls.title">
+				<source>Mutual TLS (mTLS)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.lead" resname="module.mcpServer.security.mtls.lead">
+				<source>Require clients to present a signed certificate. The connection itself becomes the credential — no tokens needed for verified clients.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.info" resname="module.mcpServer.security.mtls.info">
+				<source>mTLS is recommended for financial services, government, and on-premise TYPO3 deployments where token leakage must be completely eliminated.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.caTitle" resname="module.mcpServer.security.mtls.caTitle">
+				<source>CA Certificate (PEM)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.caLead" resname="module.mcpServer.security.mtls.caLead">
+				<source>Upload your Certificate Authority certificate. Only clients whose certs are signed by this CA will be accepted.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.upload" resname="module.mcpServer.security.mtls.upload">
+				<source>Upload CA Certificate</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.uploaded" resname="module.mcpServer.security.mtls.uploaded">
+				<source>ca-cert.pem uploaded</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.remove" resname="module.mcpServer.security.mtls.remove">
+				<source>Remove</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.validationTitle" resname="module.mcpServer.security.mtls.validationTitle">
+				<source>Certificate Validation</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.validationOcsp" resname="module.mcpServer.security.mtls.validationOcsp">
+				<source>Revocation check (OCSP)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.validationEv" resname="module.mcpServer.security.mtls.validationEv">
+				<source>Extended validation only</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.validationSelfSigned" resname="module.mcpServer.security.mtls.validationSelfSigned">
+				<source>Allow self-signed (dev)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.enable" resname="module.mcpServer.security.mtls.enable">
+				<source>Validate client certificates</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.ca" resname="module.mcpServer.security.mtls.ca">
+				<source>CA certificate (PEM)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.comingSoon" resname="module.mcpServer.security.mtls.comingSoon">
+				<source>Coming soon</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.comingSoonLead" resname="module.mcpServer.security.mtls.comingSoonLead">
+				<source>Client certificate validation (mTLS) is planned for a future release. Use OAuth Bearer tokens and the IP allowlist until then.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.security.mtls.caPlaceholder" resname="module.mcpServer.security.mtls.caPlaceholder">
+				<source>CA certificate (PEM) — available in a future release</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.toolCalls" resname="module.mcpServer.analytics.toolCalls">
+				<source>Tool calls (7d)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.successRate" resname="module.mcpServer.analytics.successRate">
+				<source>Success rate</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.avgLatency" resname="module.mcpServer.analytics.avgLatency">
+				<source>Avg latency</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.chart.title" resname="module.mcpServer.analytics.chart.title">
+				<source>Daily tool calls</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.export" resname="module.mcpServer.analytics.export">
+				<source>Export CSV</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.topTools" resname="module.mcpServer.analytics.topTools">
+				<source>Top tools</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.errors" resname="module.mcpServer.analytics.errors">
+				<source>Error tracking</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.rateLimits" resname="module.mcpServer.analytics.rateLimits">
+				<source>Rate limits</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.tool" resname="module.mcpServer.analytics.tool">
+				<source>Tool</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.calls" resname="module.mcpServer.analytics.calls">
+				<source>Calls</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.client" resname="module.mcpServer.analytics.client">
+				<source>Client</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.error" resname="module.mcpServer.analytics.error">
+				<source>Error</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.used" resname="module.mcpServer.analytics.used">
+				<source>Used</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.limit" resname="module.mcpServer.analytics.limit">
+				<source>Limit</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.analytics.empty" resname="module.mcpServer.analytics.empty">
+				<source>No data for this period yet.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.health.title" resname="module.mcpServer.advanced.health.title">
+				<source>Connection health</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.health.testAll" resname="module.mcpServer.advanced.health.testAll">
+				<source>Test all</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.health.status" resname="module.mcpServer.advanced.health.status">
+				<source>Status</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.health.ok" resname="module.mcpServer.advanced.health.ok">
+				<source>Healthy</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.health.degraded" resname="module.mcpServer.advanced.health.degraded">
+				<source>Degraded</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.cursor.step1" resname="module.mcpServer.snippet.cursor.step1">
+				<source>Open Cursor Settings → MCP.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.cursor.step2" resname="module.mcpServer.snippet.cursor.step2">
+				<source>Add server URL: %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.cursor.step3" resname="module.mcpServer.snippet.cursor.step3">
+				<source>Complete OAuth when prompted.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.vscode.step1" resname="module.mcpServer.snippet.vscode.step1">
+				<source>Install an MCP-compatible VS Code extension.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.vscode.step2" resname="module.mcpServer.snippet.vscode.step2">
+				<source>Configure server URL: %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.vscode.step3" resname="module.mcpServer.snippet.vscode.step3">
+				<source>Use OAuth or bearer token auth.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.windsurf.step1" resname="module.mcpServer.snippet.windsurf.step1">
+				<source>Open Windsurf MCP settings.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.windsurf.step2" resname="module.mcpServer.snippet.windsurf.step2">
+				<source>Paste server URL: %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.cline.step1" resname="module.mcpServer.snippet.cline.step1">
+				<source>Open Cline MCP configuration.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.cline.step2" resname="module.mcpServer.snippet.cline.step2">
+				<source>Add remote server: %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.continue.step1" resname="module.mcpServer.snippet.continue.step1">
+				<source>Edit Continue config.json.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.continue.step2" resname="module.mcpServer.snippet.continue.step2">
+				<source>Register MCP server URL: %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.zed.step1" resname="module.mcpServer.snippet.zed.step1">
+				<source>Open Zed → Agent settings → MCP.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.zed.step2" resname="module.mcpServer.snippet.zed.step2">
+				<source>Add server: %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.jetbrains.step1" resname="module.mcpServer.snippet.jetbrains.step1">
+				<source>Install JetBrains AI Assistant MCP plugin.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.jetbrains.step2" resname="module.mcpServer.snippet.jetbrains.step2">
+				<source>Configure endpoint: %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.neovim.step1" resname="module.mcpServer.snippet.neovim.step1">
+				<source>Configure your Neovim MCP plugin.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.neovim.step2" resname="module.mcpServer.snippet.neovim.step2">
+				<source>Set URL to %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.emacs.step1" resname="module.mcpServer.snippet.emacs.step1">
+				<source>Configure Emacs MCP integration.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.emacs.step2" resname="module.mcpServer.snippet.emacs.step2">
+				<source>Point to %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.sublime.step1" resname="module.mcpServer.snippet.sublime.step1">
+				<source>Install Sublime MCP package.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.sublime.step2" resname="module.mcpServer.snippet.sublime.step2">
+				<source>Server URL: %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.raycast.step1" resname="module.mcpServer.snippet.raycast.step1">
+				<source>Create a Raycast Script Command or Extension.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.raycast.step2" resname="module.mcpServer.snippet.raycast.step2">
+				<source>Call MCP at %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.chatgpt.step1" resname="module.mcpServer.snippet.chatgpt.step1">
+				<source>In ChatGPT developer settings, add a custom MCP connector.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.chatgpt.step2" resname="module.mcpServer.snippet.chatgpt.step2">
+				<source>Server URL: %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.gemini.step1" resname="module.mcpServer.snippet.gemini.step1">
+				<source>Configure Gemini CLI MCP settings.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.gemini.step2" resname="module.mcpServer.snippet.gemini.step2">
+				<source>Register %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.customjson.lead" resname="module.mcpServer.snippet.customjson.lead">
+				<source>Generic mcpServers JSON snippet:</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.curl.lead" resname="module.mcpServer.snippet.curl.lead">
+				<source>Example authenticated request:</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.show" resname="module.mcpServer.advanced.show">
+				<source>Show advanced</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.hide" resname="module.mcpServer.advanced.hide">
+				<source>Hide advanced</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.title" resname="module.mcpServer.advanced.title">
+				<source>OAuth 2.0 Settings &amp; Server Access</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.optionsLegend" resname="module.mcpServer.advanced.optionsLegend">
+				<source>Options</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.redirectUrisPlaceholder" resname="module.mcpServer.advanced.redirectUrisPlaceholder">
+				<source>https://claude.ai/oauth/callback</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.redirectUrisHint" resname="module.mcpServer.advanced.redirectUrisHint">
+				<source>One redirect URI per line. Used for OAuth authorization code flow with MCP clients.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.scopesHint" resname="module.mcpServer.advanced.scopesHint">
+				<source>Space-separated scopes granted to new OAuth tokens (e.g. mcp:read mcp:write mcp:tools).</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.clientId" resname="module.mcpServer.advanced.clientId">
+				<source>Client ID</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.tokenExpiry" resname="module.mcpServer.advanced.tokenExpiry">
+				<source>Token Expiry (seconds)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.redirectUris" resname="module.mcpServer.advanced.redirectUris">
+				<source>Allowed Redirect URIs</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.scopes" resname="module.mcpServer.advanced.scopes">
+				<source>Allowed Scopes</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.maxTokens" resname="module.mcpServer.advanced.maxTokens">
+				<source>Max Active Tokens per User</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.enableServer" resname="module.mcpServer.advanced.enableServer">
+				<source>Enable MCP Server</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.requireAuth" resname="module.mcpServer.advanced.requireAuth">
+				<source>Require Authentication</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.rateLimit" resname="module.mcpServer.advanced.rateLimit">
+				<source>Rate Limiting</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.logTools" resname="module.mcpServer.advanced.logTools">
+				<source>Log All Tool Calls</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.advanced.anonymousRead" resname="module.mcpServer.advanced.anonymousRead">
+				<source>Anonymous Read-Only</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.claude.step1" resname="module.mcpServer.snippet.claude.step1">
+				<source>Go to Settings → Integrations in Claude Desktop.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.claude.step2" resname="module.mcpServer.snippet.claude.step2">
+				<source>Click "Add Integration".</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.claude.step3" resname="module.mcpServer.snippet.claude.step3">
+				<source>Enter an integration name (for example: New TYPO3 site).</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.claude.step4" resname="module.mcpServer.snippet.claude.step4">
+				<source>Paste the Server URL: %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.claude.step5" resname="module.mcpServer.snippet.claude.step5">
+				<source>Claude Desktop will automatically handle OAuth authentication.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.n8n.step1" resname="module.mcpServer.snippet.n8n.step1">
+				<source>In your n8n workflow, add an MCP Client node.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.n8n.step2" resname="module.mcpServer.snippet.n8n.step2">
+				<source>Set Endpoint to %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.n8n.step3" resname="module.mcpServer.snippet.n8n.step3">
+				<source>Set Server Transport to HTTP Streamable.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.n8n.step4" resname="module.mcpServer.snippet.n8n.step4">
+				<source>Set Authentication to Bearer Auth.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.n8n.step5" resname="module.mcpServer.snippet.n8n.step5">
+				<source>Paste the bearer token from above.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.n8n.step6" resname="module.mcpServer.snippet.n8n.step6">
+				<source>Save and execute the workflow.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.kv.serverUrl" resname="module.mcpServer.snippet.kv.serverUrl">
+				<source>Server URL</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.kv.authType" resname="module.mcpServer.snippet.kv.authType">
+				<source>Auth type</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.kv.scopes" resname="module.mcpServer.snippet.kv.scopes">
+				<source>Scopes</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.kv.oauthPkce" resname="module.mcpServer.snippet.kv.oauthPkce">
+				<source>OAuth 2.0 + PKCE</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.manus.step1" resname="module.mcpServer.snippet.manus.step1">
+				<source>In manus, add a new MCP server connection.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.manus.step2" resname="module.mcpServer.snippet.manus.step2">
+				<source>Set Server Name to your TYPO3 site name.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.manus.step3" resname="module.mcpServer.snippet.manus.step3">
+				<source>Set Transport to HTTP.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.manus.step4" resname="module.mcpServer.snippet.manus.step4">
+				<source>Set Server URL to %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.manus.step5" resname="module.mcpServer.snippet.manus.step5">
+				<source>Add a custom Authorization header: Bearer &lt;token&gt;</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.manus.step6" resname="module.mcpServer.snippet.manus.step6">
+				<source>Save the connection.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.inspector.lead" resname="module.mcpServer.snippet.inspector.lead">
+				<source>Debug tools, resources, and prompts with MCP Inspector:</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.inspector.step1" resname="module.mcpServer.snippet.inspector.step1">
+				<source>Run the command above in your terminal (requires Node.js).</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.inspector.step2" resname="module.mcpServer.snippet.inspector.step2">
+				<source>The Inspector UI opens in your browser with parameters pre-configured.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.inspector.step3" resname="module.mcpServer.snippet.inspector.step3">
+				<source>Complete OAuth authorization when prompted.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.inspector.step4" resname="module.mcpServer.snippet.inspector.step4">
+				<source>Browse and test TYPO3 MCP tools.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.other.lead" resname="module.mcpServer.snippet.other.lead">
+				<source>Generic MCP client setup:</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.other.step1" resname="module.mcpServer.snippet.other.step1">
+				<source>Open your MCP client settings and add a new remote server.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.other.step2" resname="module.mcpServer.snippet.other.step2">
+				<source>Set the Server URL to %1$s</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.other.step3" resname="module.mcpServer.snippet.other.step3">
+				<source>Use HTTP Streamable transport when available.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.other.step4" resname="module.mcpServer.snippet.other.step4">
+				<source>For OAuth-capable clients, complete the authorization flow when prompted.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpServer.snippet.other.step5" resname="module.mcpServer.snippet.other.step5">
+				<source>For Bearer-only clients, create a token under the n8n or manus tabs above.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.heading" resname="module.mcpTools.heading">
+				<source>MCP Tools</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.intro" resname="module.mcpTools.intro">
+				<source>AI tools exposed via Model Context Protocol — power your AI extensions and enable custom developer integrations.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tab.extensions" resname="module.mcpTools.tab.extensions">
+				<source>AI Universe Extensions</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tab.custom" resname="module.mcpTools.tab.custom">
+				<source>Custom Extensions</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.search.placeholder" resname="module.mcpTools.search.placeholder">
+				<source>Search tools…</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.banner.title" resname="module.mcpTools.banner.title">
+				<source>AI Skills + MCP Tools — linked by extension</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.banner.body" resname="module.mcpTools.banner.body">
+				<source>Each AI extension ships with a set of MCP tools and a downloadable .md AI Skill file for your assistant. Type the skill trigger in your chat to activate the workflow.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.custom.title" resname="module.mcpTools.custom.title">
+				<source>Custom MCP Tools for Other Extensions</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.custom.body" resname="module.mcpTools.custom.body">
+				<source>Enable your own TYPO3 extension tables as MCP tools. Scan installed extensions with Discover Extension Tables, or register tables via Code Configuration in ext_localconf.php. Each enabled table automatically generates 9 CRUD tools.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.discover.button" resname="module.mcpTools.discover.button">
+				<source>Discover Extension Tables</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.codeConfig.button" resname="module.mcpTools.codeConfig.button">
+				<source>Code Configuration</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.downloadSkill" resname="module.mcpTools.downloadSkill">
+				<source>Download Skill</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.viewTools" resname="module.mcpTools.viewTools">
+				<source>View Tools</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.hideTools" resname="module.mcpTools.hideTools">
+				<source>Hide Tools</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.collapse" resname="module.mcpTools.collapse">
+				<source>Collapse</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.banner.extensions" resname="module.mcpTools.banner.extensions">
+				<source>extensions</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.banner.totalTools" resname="module.mcpTools.banner.totalTools">
+				<source>total MCP tools</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.trigger" resname="module.mcpTools.trigger">
+				<source>Trigger</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tool.ready" resname="module.mcpTools.tool.ready">
+				<source>Ready</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tool.parameters" resname="module.mcpTools.tool.parameters">
+				<source>Parameters</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tool.paramName" resname="module.mcpTools.tool.paramName">
+				<source>Name</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tool.paramType" resname="module.mcpTools.tool.paramType">
+				<source>Type</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tool.paramRequired" resname="module.mcpTools.tool.paramRequired">
+				<source>Required</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tool.paramDescription" resname="module.mcpTools.tool.paramDescription">
+				<source>Description</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tool.required" resname="module.mcpTools.tool.required">
+				<source>Required</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tool.optional" resname="module.mcpTools.tool.optional">
+				<source>Optional</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tool.examplePrompts" resname="module.mcpTools.tool.examplePrompts">
+				<source>Example prompts</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.toolsLabel" resname="module.mcpTools.toolsLabel">
+				<source>tools</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.extensions.empty" resname="module.mcpTools.extensions.empty">
+				<source>No AI Universe extensions registered yet. Built-in core tools appear when no extension catalog is configured.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.copySnippet" resname="module.mcpTools.copySnippet">
+				<source>Copy snippet</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.sectionTitle" resname="module.mcpTools.table.sectionTitle">
+				<source>Extension Tables</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.countTables" resname="module.mcpTools.table.countTables">
+				<source>tables</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.countEnabled" resname="module.mcpTools.table.countEnabled">
+				<source>enabled</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.filterPlaceholder" resname="module.mcpTools.table.filterPlaceholder">
+				<source>Filter tables…</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.expandRow" resname="module.mcpTools.table.expandRow">
+				<source>Expand row</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.enable" resname="module.mcpTools.table.enable">
+				<source>Enable</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.disable" resname="module.mcpTools.table.disable">
+				<source>Disable</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.autoTools" resname="module.mcpTools.table.autoTools">
+				<source>Auto-generated MCP Tools (%s tools active)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.viewInServer" resname="module.mcpTools.table.viewInServer">
+				<source>View in MCP Server</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.enableHint" resname="module.mcpTools.table.enableHint">
+				<source>Enable this table to activate the 9 auto-generated MCP tools.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.tableName" resname="module.mcpTools.table.tableName">
+				<source>Table Name</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.label" resname="module.mcpTools.table.label">
+				<source>Label</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.prefix" resname="module.mcpTools.table.prefix">
+				<source>Prefix</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.source" resname="module.mcpTools.table.source">
+				<source>Source</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.tools" resname="module.mcpTools.table.tools">
+				<source>Tools</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.status" resname="module.mcpTools.table.status">
+				<source>Status</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.actions" resname="module.mcpTools.table.actions">
+				<source>Actions</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.edit" resname="module.mcpTools.table.edit">
+				<source>Edit</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.save" resname="module.mcpTools.table.save">
+				<source>Save</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.table.cancel" resname="module.mcpTools.table.cancel">
+				<source>Cancel</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.source.code" resname="module.mcpTools.source.code">
+				<source>Code</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.source.discovered" resname="module.mcpTools.source.discovered">
+				<source>Discovered</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.status.enabled" resname="module.mcpTools.status.enabled">
+				<source>Enabled</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.status.disabled" resname="module.mcpTools.status.disabled">
+				<source>Disabled</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.stats.totalTools" resname="module.mcpTools.stats.totalTools">
+				<source>Total Tools</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.stats.extensionTools" resname="module.mcpTools.stats.extensionTools">
+				<source>AI Universe Extensions</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.stats.customTools" resname="module.mcpTools.stats.customTools">
+				<source>Custom Extensions</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.stats.customTables" resname="module.mcpTools.stats.customTables">
+				<source>Enabled Tables</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.stats.extensions" resname="module.mcpTools.stats.extensions">
+				<source>Extension Cards</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.stats.toolCalls" resname="module.mcpTools.stats.toolCalls">
+				<source>Tool Calls</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.stats.successRate" resname="module.mcpTools.stats.successRate">
+				<source>Success Rate</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.period.aria" resname="module.mcpTools.period.aria">
+				<source>Statistics period</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.mainTabs.aria" resname="module.mcpTools.mainTabs.aria">
+				<source>MCP Tools sections</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tab.toolsResources" resname="module.mcpTools.tab.toolsResources">
+				<source>Tools &amp; Resources</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tab.playground" resname="module.mcpTools.tab.playground">
+				<source>Playground</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tab.skillHub" resname="module.mcpTools.tab.skillHub">
+				<source>Skill Hub</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.sidebar.aria" resname="module.mcpTools.sidebar.aria">
+				<source>Tools and resources sections</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.sidebar.extensions" resname="module.mcpTools.sidebar.extensions">
+				<source>Extensions</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.sidebar.aiExtensions" resname="module.mcpTools.sidebar.aiExtensions">
+				<source>AI Extensions</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.sidebar.createCustomTool" resname="module.mcpTools.sidebar.createCustomTool">
+				<source>Create Custom Tool</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.sidebar.bundles" resname="module.mcpTools.sidebar.bundles">
+				<source>bundles</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.sidebar.customMeta" resname="module.mcpTools.sidebar.customMeta">
+				<source>Tables &amp; custom tools</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.sidebar.promptTemplates" resname="module.mcpTools.sidebar.promptTemplates">
+				<source>Prompt Templates</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.sidebar.templatesMeta" resname="module.mcpTools.sidebar.templatesMeta">
+				<source>templates</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.sidebar.customTools" resname="module.mcpTools.sidebar.customTools">
+				<source>Custom Tools</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.sidebar.customToolsMeta" resname="module.mcpTools.sidebar.customToolsMeta">
+				<source>created</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.title" resname="module.mcpTools.prompts.title">
+				<source>MCP Prompt Templates</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.bodyLong" resname="module.mcpTools.prompts.bodyLong">
+				<source>Server-defined prompts the AI client can invoke by name via prompts/list and prompts/get. Served dynamically — no download required.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.create" resname="module.mcpTools.prompts.create">
+				<source>Add Prompt Template</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.args" resname="module.mcpTools.prompts.args">
+				<source>args</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.sectionArguments" resname="module.mcpTools.prompts.sectionArguments">
+				<source>Arguments</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.sectionTemplate" resname="module.mcpTools.prompts.sectionTemplate">
+				<source>Prompt Template</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.sectionInvocation" resname="module.mcpTools.prompts.sectionInvocation">
+				<source>Invocation</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.footer" resname="module.mcpTools.prompts.footer">
+				<source>Prompt templates complement your skill files. Skill files require manual download and setup per client. MCP Prompts are served automatically to any connected client that calls prompts/list.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.required" resname="module.mcpTools.prompts.required">
+				<source>Required</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.optional" resname="module.mcpTools.prompts.optional">
+				<source>Optional</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.builtin" resname="module.mcpTools.prompts.builtin">
+				<source>Built-in</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.edit" resname="module.mcpTools.prompts.edit">
+				<source>Edit</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.delete" resname="module.mcpTools.prompts.delete">
+				<source>Delete</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.empty" resname="module.mcpTools.prompts.empty">
+				<source>No prompt templates yet.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.showDetails" resname="module.mcpTools.prompts.showDetails">
+				<source>Show details</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.hideDetails" resname="module.mcpTools.prompts.hideDetails">
+				<source>Hide details</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.viewTemplate" resname="module.mcpTools.prompts.viewTemplate">
+				<source>Show details</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.formTitle" resname="module.mcpTools.prompts.formTitle">
+				<source>Prompt template</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.name" resname="module.mcpTools.prompts.name">
+				<source>Name</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.nameHelp" resname="module.mcpTools.prompts.nameHelp">
+				<source>Unique snake_case identifier exposed via prompts/get (e.g. weekly_content_review).</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.category" resname="module.mcpTools.prompts.category">
+				<source>Category</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.description" resname="module.mcpTools.prompts.description">
+				<source>Description</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.templateBody" resname="module.mcpTools.prompts.templateBody">
+				<source>Template body</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.templateBodyHelp" resname="module.mcpTools.prompts.templateBodyHelp">
+				<source>Use {{argumentName}} placeholders matching the arguments JSON below.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.argumentsJson" resname="module.mcpTools.prompts.argumentsJson">
+				<source>Arguments (JSON)</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.argumentsJsonHelp" resname="module.mcpTools.prompts.argumentsJsonHelp">
+				<source>Array of objects: [{"name":"page_id","required":true,"description":"Page UID"}]</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.argName" resname="module.mcpTools.prompts.argName">
+				<source>Name</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.prompts.argRequired" resname="module.mcpTools.prompts.argRequired">
+				<source>Required</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.customTools.title" resname="module.mcpTools.customTools.title">
+				<source>Custom MCP Tools</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.customTools.body" resname="module.mcpTools.customTools.body">
+				<source>Tools created via Create Custom Tool. Register PHP handlers in your extension or point to REST/webhook endpoints.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.customTools.empty" resname="module.mcpTools.customTools.empty">
+				<source>No custom tools yet. Use Create Custom Tool in the sidebar to add one.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.customTool.label" resname="module.mcpTools.customTool.label">
+				<source>Tool Label</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.customTool.toolKey" resname="module.mcpTools.customTool.toolKey">
+				<source>Tool key</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.customTool.submit" resname="module.mcpTools.customTool.submit">
+				<source>Create Tool</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.customTool.modalTitle" resname="module.mcpTools.customTool.modalTitle">
+				<source>New Custom Tool</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.customTool.editTitle" resname="module.mcpTools.customTool.editTitle">
+				<source>Edit Custom Tool</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.customTool.update" resname="module.mcpTools.customTool.update">
+				<source>Update Tool</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.customTools.edit" resname="module.mcpTools.customTools.edit">
+				<source>Edit</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.customTools.delete" resname="module.mcpTools.customTools.delete">
+				<source>Delete</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.customTool.handlerPhp" resname="module.mcpTools.customTool.handlerPhp">
+				<source>PHP Class</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.customTool.handlerRest" resname="module.mcpTools.customTool.handlerRest">
+				<source>REST Endpoint</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.customTool.handlerWebhook" resname="module.mcpTools.customTool.handlerWebhook">
+				<source>Webhook</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.copy" resname="module.mcpTools.copy">
+				<source>Copy</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.sidebar.custom" resname="module.mcpTools.sidebar.custom">
+				<source>Custom Extensions</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.sidebar.core" resname="module.mcpTools.sidebar.core">
+				<source>TYPO3 Core</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.sidebar.coreMeta" resname="module.mcpTools.sidebar.coreMeta">
+				<source>built-in tools</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.core.banner.title" resname="module.mcpTools.core.banner.title">
+				<source>TYPO3 Core MCP Tools</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.core.banner.body" resname="module.mcpTools.core.banner.body">
+				<source>Built-in tools shipped with AI Universe for page reads, content listing, TCA schema, workspaces, files, and generic record writes via DataHandler.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.core.empty" resname="module.mcpTools.core.empty">
+				<source>No TYPO3 Core MCP tools registered.</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tool.test" resname="module.mcpTools.tool.test">
+				<source>Test</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.sidebar.prompts" resname="module.mcpTools.sidebar.prompts">
+				<source>Prompts</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.categoryFilter.aria" resname="module.mcpTools.categoryFilter.aria">
+				<source>Tool categories</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.extensionFilter.aria" resname="module.mcpTools.extensionFilter.aria">
+				<source>AI extensions</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.category.all" resname="module.mcpTools.category.all">
+				<source>All</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tool.calls" resname="module.mcpTools.tool.calls">
+				<source>Calls</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tool.successRate" resname="module.mcpTools.tool.successRate">
+				<source>Success</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.tool.latency" resname="module.mcpTools.tool.latency">
+				<source>Avg latency</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.drawer.close" resname="module.mcpTools.drawer.close">
+				<source>Close</source>
+			</trans-unit>
+			<trans-unit id="module.mcpTools.drawer.openPlayground" resname="module.mcpTools.drawer.openPlayground">
+				<source>Open in Playground</source>
+			</trans-unit>
+			<trans-unit id="module.mcpConnectors.heading" resname="module.mcpConnectors.heading">
+				<source>MCP Connectors</source>
+			</trans-unit>
+			<trans-unit id="module.mcpConnectors.intro" resname="module.mcpConnectors.intro">
+				<source>Configure external MCP servers and monitor connector health.</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.heading" resname="module.aiFeatures.heading">
+				<source>AI Features</source>
+			</trans-unit>
+			<trans-unit id="module.aiFeatures.intro" resname="module.aiFeatures.intro">
+				<source>Control extension-level AI capabilities, defaults, and access.</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.heading" resname="module.aiUsage.heading">
+				<source>AI Usage</source>
+			</trans-unit>
+			<trans-unit id="module.aiUsage.intro" resname="module.aiUsage.intro">
+				<source>Inspect request logs, usage analytics, and export usage data.</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.heading" resname="module.aiLogs.heading">
+				<source>AI Logs</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.intro" resname="module.aiLogs.intro">
+				<source>System log entries across all AI extensions — sync, training, errors and scheduler events.</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.kpi.total" resname="module.aiLogs.kpi.total">
+				<source>Total Entries</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.kpi.info" resname="module.aiLogs.kpi.info">
+				<source>Info</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.kpi.warning" resname="module.aiLogs.kpi.warning">
+				<source>Warnings</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.kpi.error" resname="module.aiLogs.kpi.error">
+				<source>Errors</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.kpi.lastEntry" resname="module.aiLogs.kpi.lastEntry">
+				<source>Last Entry</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.all" resname="module.aiLogs.logChannel.all">
+				<source>[ALL]</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.scheduler" resname="module.aiLogs.logChannel.scheduler">
+				<source>Scheduler</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.nst3af_mcp" resname="module.aiLogs.logChannel.nst3af_mcp">
+				<source>MCP Tools</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.nst3af_mcp_config" resname="module.aiLogs.logChannel.nst3af_mcp_config">
+				<source>MCP Configuration</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.nst3af_mcp_cfg" resname="module.aiLogs.logChannel.nst3af_mcp_cfg">
+				<source>MCP Configuration</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.nst3af_providers" resname="module.aiLogs.logChannel.nst3af_providers">
+				<source>AI Providers</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.nst3af_wizard" resname="module.aiLogs.logChannel.nst3af_wizard">
+				<source>Quick Setup Wizard</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.nst3af_prompts" resname="module.aiLogs.logChannel.nst3af_prompts">
+				<source>AI Prompts</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.nst3af_scheduler" resname="module.aiLogs.logChannel.nst3af_scheduler">
+				<source>Scheduler CLI</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3as_index" resname="module.aiLogs.logChannel.t3as_index">
+				<source>AI Search Index</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3as_chat" resname="module.aiLogs.logChannel.t3as_chat">
+				<source>AI Search ChatMode</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3ac_index" resname="module.aiLogs.logChannel.t3ac_index">
+				<source>AI Chatbot Index</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3ac_chat" resname="module.aiLogs.logChannel.t3ac_chat">
+				<source>AI Chatbot Chat</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3cs_training" resname="module.aiLogs.logChannel.t3cs_training">
+				<source>AI Chatbot/Search Training</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3cs_sync" resname="module.aiLogs.logChannel.t3cs_sync">
+				<source>AI Chatbot/Search Sync</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3cs_chat" resname="module.aiLogs.logChannel.t3cs_chat">
+				<source>AI Chatbot/Search Chat</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3cs_index" resname="module.aiLogs.logChannel.t3cs_index">
+				<source>AI Chatbot/Search Index</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3ai_content" resname="module.aiLogs.logChannel.t3ai_content">
+				<source>AI Assistant Content</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3ai_seo" resname="module.aiLogs.logChannel.t3ai_seo">
+				<source>AI Assistant SEO</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3ai_translation" resname="module.aiLogs.logChannel.t3ai_translation">
+				<source>AI Assistant Translation</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3ai_media" resname="module.aiLogs.logChannel.t3ai_media">
+				<source>AI Assistant Media</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3ai_prompts" resname="module.aiLogs.logChannel.t3ai_prompts">
+				<source>AI Assistant Prompts</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3ai_bulkops" resname="module.aiLogs.logChannel.t3ai_bulkops">
+				<source>AI Assistant Bulk Ops</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3ai_forms" resname="module.aiLogs.logChannel.t3ai_forms">
+				<source>AI Assistant Forms</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3aa_scan" resname="module.aiLogs.logChannel.t3aa_scan">
+				<source>AI Accessibility Scan</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3aa_autofix" resname="module.aiLogs.logChannel.t3aa_autofix">
+				<source>AI Accessibility Auto Fix</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.logChannel.t3aa_reports" resname="module.aiLogs.logChannel.t3aa_reports">
+				<source>AI Accessibility Reports</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.extension.all" resname="module.aiLogs.extension.all">
+				<source>All Extensions</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.filter.logChannel" resname="module.aiLogs.filter.logChannel">
+				<source>Channel</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.filter.extension" resname="module.aiLogs.filter.extension">
+				<source>AI Extensions</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.filter.reset" resname="module.aiLogs.filter.reset">
+				<source>Reset</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.action.exportCsv" resname="module.aiLogs.action.exportCsv">
+				<source>Export CSV</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.action.refresh" resname="module.aiLogs.action.refresh">
+				<source>Refresh</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.footer.retention" resname="module.aiLogs.footer.retention">
+				<source>Retention is managed via Scheduler &amp; CLI (t3af:ai-logs:cleanup --days, default 90 days).</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.footer.retentionLink" resname="module.aiLogs.footer.retentionLink">
+				<source>Configure in Scheduler &amp; CLI</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.footer.source" resname="module.aiLogs.footer.source">
+				<source>Source: TYPO3 sys_log</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.channel.all" resname="module.aiLogs.channel.all">
+				<source>All channels</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.channel.ns_t3af" resname="module.aiLogs.channel.ns_t3af">
+				<source>AI Foundation</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.channel.ns_t3cs" resname="module.aiLogs.channel.ns_t3cs">
+				<source>AI Chatbot/Search</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.channel.ns_t3as" resname="module.aiLogs.channel.ns_t3as">
+				<source>AI Search</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.channel.ns_t3ac" resname="module.aiLogs.channel.ns_t3ac">
+				<source>AI Chatbot</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.channel.ns_t3ai" resname="module.aiLogs.channel.ns_t3ai">
+				<source>AI Assistant</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.channel.ns_t3aa" resname="module.aiLogs.channel.ns_t3aa">
+				<source>AI Accessibility</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.filter.search" resname="module.aiLogs.filter.search">
+				<source>Search</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.filter.searchPlaceholder" resname="module.aiLogs.filter.searchPlaceholder">
+				<source>Search in message…</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.filter.channel" resname="module.aiLogs.filter.channel">
+				<source>Channel</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.filter.level" resname="module.aiLogs.filter.level">
+				<source>Level</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.filter.any" resname="module.aiLogs.filter.any">
+				<source>ALL</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.filter.max" resname="module.aiLogs.filter.max">
+				<source>Max rows</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.filter.perPage" resname="module.aiLogs.filter.perPage">
+				<source>Records per page</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.toolbar.aria" resname="module.aiLogs.toolbar.aria">
+				<source>Log actions</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.filter.submit" resname="module.aiLogs.filter.submit">
+				<source>Filter</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.col.time" resname="module.aiLogs.col.time">
+				<source>Time</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.col.channel" resname="module.aiLogs.col.channel">
+				<source>Channel</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.col.level" resname="module.aiLogs.col.level">
+				<source>Level</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.col.user" resname="module.aiLogs.col.user">
+				<source>User</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.col.details" resname="module.aiLogs.col.details">
+				<source>Details</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.col.actions" resname="module.aiLogs.col.actions">
+				<source>Actions</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.level.error" resname="module.aiLogs.level.error">
+				<source>Error</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.level.info" resname="module.aiLogs.level.info">
+				<source>Info</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.level.warning" resname="module.aiLogs.level.warning">
+				<source>Warning</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.noEntries" resname="module.aiLogs.noEntries">
+				<source>No log entries found for the selected filters.</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.showingRange" resname="module.aiLogs.showingRange">
+				<source>Showing %1$d–%2$d of %3$d entries</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.deleteSelected" resname="module.aiLogs.deleteSelected">
+				<source>Delete selected</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.deleteOne" resname="module.aiLogs.deleteOne">
+				<source>Delete entry</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.selectAll" resname="module.aiLogs.selectAll">
+				<source>Select all</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.selectEntry" resname="module.aiLogs.selectEntry">
+				<source>Select entry</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.pagination.label" resname="module.aiLogs.pagination.label">
+				<source>Log pagination</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.pagination.first" resname="module.aiLogs.pagination.first">
+				<source>First page</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.pagination.previous" resname="module.aiLogs.pagination.previous">
+				<source>Previous page</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.pagination.next" resname="module.aiLogs.pagination.next">
+				<source>Next page</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.pagination.last" resname="module.aiLogs.pagination.last">
+				<source>Last page</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.pagination.page" resname="module.aiLogs.pagination.page">
+				<source>Page</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.pagination.records" resname="module.aiLogs.pagination.records">
+				<source>Records %1$d–%2$d of %3$d</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.flash.deleted" resname="module.aiLogs.flash.deleted">
+				<source>Log entry deleted.</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.flash.bulkDeleted" resname="module.aiLogs.flash.bulkDeleted">
+				<source>Selected log entries deleted.</source>
+			</trans-unit>
+			<trans-unit id="module.aiLogs.flash.noneSelected" resname="module.aiLogs.flash.noneSelected">
+				<source>No entries selected.</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.heading" resname="module.aiPrompts.heading">
+				<source>AI Prompts</source>
+			</trans-unit>
+			<trans-unit id="module.aiPrompts.intro" resname="module.aiPrompts.intro">
+				<source>Manage reusable prompt templates for all AI modules.</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.heading" resname="module.schedulerCli.heading">
+				<source>Scheduler &amp; CLI</source>
+			</trans-unit>
+			<trans-unit id="module.schedulerCli.intro" resname="module.schedulerCli.intro">
+				<source>Run AI commands manually or automate them with TYPO3 scheduler tasks.</source>
+			</trans-unit>
+			<trans-unit id="module.providers.empty" resname="module.providers.empty">
+				<source>No providers configured yet.</source>
+			</trans-unit>
+			<trans-unit id="module.providers.add" resname="module.providers.add">
+				<source>+ New provider</source>
+			</trans-unit>
+			<trans-unit id="module.content.placeholder" resname="module.content.placeholder">
+				<source>Tab shell is ready. Integrate feature-specific UI and data sources here.</source>
+			</trans-unit>
+			<trans-unit id="checklist.card.title" resname="checklist.card.title">
+				<source>AI Foundation Setup Checklist</source>
+			</trans-unit>
+			<trans-unit id="checklist.card.progress" resname="checklist.card.progress">
+				<source>%1$d of 7 complete</source>
+			</trans-unit>
+			<trans-unit id="checklist.card.done" resname="checklist.card.done">
+				<source>done</source>
+			</trans-unit>
+			<trans-unit id="checklist.card.warnings" resname="checklist.card.warnings">
+				<source>warnings</source>
+			</trans-unit>
+			<trans-unit id="checklist.card.incomplete" resname="checklist.card.incomplete">
+				<source>incomplete</source>
+			</trans-unit>
+			<trans-unit id="checklist.action.open" resname="checklist.action.open">
+				<source>Open</source>
+			</trans-unit>
+			<trans-unit id="checklist.action.configure" resname="checklist.action.configure">
+				<source>Configure</source>
+			</trans-unit>
+			<trans-unit id="checklist.action.fix" resname="checklist.action.fix">
+				<source>Fix</source>
+			</trans-unit>
+			<trans-unit id="checklist.env.sodium.title" resname="checklist.env.sodium.title">
+				<source>PHP Sodium extension required</source>
+			</trans-unit>
+			<trans-unit id="checklist.env.sodium.descMissing" resname="checklist.env.sodium.descMissing">
+				<source>Enable ext-sodium on the PHP used by the webserver, then restart PHP-FPM/Apache. API keys cannot be stored securely without it.</source>
+			</trans-unit>
+			<trans-unit id="checklist.env.sodium.hint" resname="checklist.env.sodium.hint">
+				<source>TYPO3 Environment → PHP Info → search for "sodium". Or ask your host to enable ext-sodium and restart PHP-FPM.</source>
+			</trans-unit>
+			<trans-unit id="checklist.env.encryptionKey.title" resname="checklist.env.encryptionKey.title">
+				<source>TYPO3 encryption key missing</source>
+			</trans-unit>
+			<trans-unit id="checklist.env.encryptionKey.descMissing" resname="checklist.env.encryptionKey.descMissing">
+				<source>Set SYS/encryptionKey in the Install Tool (Configuration). Credentials cannot be encrypted without it.</source>
+			</trans-unit>
+			<trans-unit id="checklist.env.curl.title" resname="checklist.env.curl.title">
+				<source>PHP cURL extension required</source>
+			</trans-unit>
+			<trans-unit id="checklist.env.curl.descMissing" resname="checklist.env.curl.descMissing">
+				<source>Enable ext-curl on the PHP used by the webserver. Outbound AI and credits API calls need it.</source>
+			</trans-unit>
+			<trans-unit id="checklist.providers.title" resname="checklist.providers.title">
+				<source>LLM provider configured</source>
+			</trans-unit>
+			<trans-unit id="checklist.providers.descOk" resname="checklist.providers.descOk">
+				<source>%1$s providers registered</source>
+			</trans-unit>
+			<trans-unit id="checklist.providers.descMissing" resname="checklist.providers.descMissing">
+				<source>Add at least one AI provider under AI Providers.</source>
+			</trans-unit>
+			<trans-unit id="checklist.default.title" resname="checklist.default.title">
+				<source>Default provider set</source>
+			</trans-unit>
+			<trans-unit id="checklist.default.descOk" resname="checklist.default.descOk">
+				<source>%1$s · model %2$s</source>
+			</trans-unit>
+			<trans-unit id="checklist.default.descMissing" resname="checklist.default.descMissing">
+				<source>Set a default provider so extensions know which connection to prefer.</source>
+			</trans-unit>
+			<trans-unit id="checklist.keys.title" resname="checklist.keys.title">
+				<source>API credentials present</source>
+			</trans-unit>
+			<trans-unit id="checklist.keys.descOk" resname="checklist.keys.descOk">
+				<source>Each enabled provider has a stored credential reference.</source>
+			</trans-unit>
+			<trans-unit id="checklist.keys.descMissing" resname="checklist.keys.descMissing">
+				<source>One or more providers are missing API credentials.</source>
+			</trans-unit>
+			<trans-unit id="checklist.keys.descPending" resname="checklist.keys.descPending">
+				<source>Configure providers first.</source>
+			</trans-unit>
+			<trans-unit id="checklist.mcp.title" resname="checklist.mcp.title">
+				<source>MCP Server</source>
+			</trans-unit>
+			<trans-unit id="checklist.mcp.descPlaceholder" resname="checklist.mcp.descPlaceholder">
+				<source>Optional — enable and verify when your MCP integration is connected.</source>
+			</trans-unit>
+			<trans-unit id="checklist.activity.title" resname="checklist.activity.title">
+				<source>Request activity</source>
+			</trans-unit>
+			<trans-unit id="checklist.activity.descOk" resname="checklist.activity.descOk">
+				<source>%1$s requests logged in the selected window.</source>
+			</trans-unit>
+			<trans-unit id="checklist.activity.descQuiet" resname="checklist.activity.descQuiet">
+				<source>No requests recorded yet — trigger a test call from an AI-powered extension.</source>
+			</trans-unit>
+			<trans-unit id="checklist.activity.descPending" resname="checklist.activity.descPending">
+				<source>Add providers to start logging AI traffic.</source>
+			</trans-unit>
+			<trans-unit id="checklist.scheduler.title" resname="checklist.scheduler.title">
+				<source>Scheduler tasks</source>
+			</trans-unit>
+			<trans-unit id="checklist.scheduler.descOk" resname="checklist.scheduler.descOk">
+				<source>No failing AI Universe scheduler tasks detected.</source>
+			</trans-unit>
+			<trans-unit id="checklist.scheduler.descFailing" resname="checklist.scheduler.descFailing">
+				<source>%1$s scheduler task(s) reported a failure — inspect Scheduler &amp; CLI.</source>
+			</trans-unit>
+			<trans-unit id="checklist.scheduler.descNone" resname="checklist.scheduler.descNone">
+				<source>No AI Universe scheduler tasks found yet.</source>
+			</trans-unit>
+			<trans-unit id="checklist.prompts.title" resname="checklist.prompts.title">
+				<source>Custom prompts</source>
+			</trans-unit>
+			<trans-unit id="checklist.prompts.descPlaceholder" resname="checklist.prompts.descPlaceholder">
+				<source>Prompt library UI is upcoming — defaults apply until custom prompts ship.</source>
+			</trans-unit>
+			<trans-unit id="checklist.credits.active.title" resname="checklist.credits.active.title">
+				<source>Credits activated</source>
+			</trans-unit>
+			<trans-unit id="checklist.credits.active.descOk" resname="checklist.credits.active.descOk">
+				<source>T3Planet license and API token are connected.</source>
+			</trans-unit>
+			<trans-unit id="checklist.credits.active.descMissing" resname="checklist.credits.active.descMissing">
+				<source>Activate T3Planet Credits to load balance and pricing.</source>
+			</trans-unit>
+			<trans-unit id="checklist.credits.balance.title" resname="checklist.credits.balance.title">
+				<source>Credit balance loaded</source>
+			</trans-unit>
+			<trans-unit id="checklist.credits.balance.descOk" resname="checklist.credits.balance.descOk">
+				<source>Balance and bundles are synced from T3Planet.</source>
+			</trans-unit>
+			<trans-unit id="checklist.credits.balance.descMissing" resname="checklist.credits.balance.descMissing">
+				<source>Activate credits or refresh the dashboard to load your balance.</source>
+			</trans-unit>
+			<trans-unit id="checklist.credits.activity.title" resname="checklist.credits.activity.title">
+				<source>Recent credits activity</source>
+			</trans-unit>
+			<trans-unit id="checklist.credits.activity.descOk" resname="checklist.credits.activity.descOk">
+				<source>%1$s T3Planet credit requests in the selected period.</source>
+			</trans-unit>
+			<trans-unit id="checklist.credits.activity.descQuiet" resname="checklist.credits.activity.descQuiet">
+				<source>No T3Planet credit traffic in this period yet.</source>
+			</trans-unit>
+			<trans-unit id="checklist.mcp.descOk" resname="checklist.mcp.descOk">
+				<source>MCP server is reachable and responding.</source>
+			</trans-unit>
+			<trans-unit id="checklist.mcp.descOffline" resname="checklist.mcp.descOffline">
+				<source>MCP server is offline or not configured — check MCP Server tab.</source>
+			</trans-unit>
+			<trans-unit id="checklist.brandContext.title" resname="checklist.brandContext.title">
+				<source>Brand Context</source>
+			</trans-unit>
+			<trans-unit id="checklist.brandContext.descOk" resname="checklist.brandContext.descOk">
+				<source>%1$s · %2$s%% complete</source>
+			</trans-unit>
+			<trans-unit id="checklist.brandContext.descMissing" resname="checklist.brandContext.descMissing">
+				<source>No default profile — set up brand voice in AI Context</source>
+			</trans-unit>
+			<trans-unit id="checklist.brandContext.descIncomplete" resname="checklist.brandContext.descIncomplete">
+				<source>%1$s · %2$s%% complete — finish profile in AI Context</source>
+			</trans-unit>
+			<trans-unit id="checklist.budget.title" resname="checklist.budget.title">
+				<source>Daily cost limit</source>
+			</trans-unit>
+			<trans-unit id="checklist.budget.descOk" resname="checklist.budget.descOk">
+				<source>A UserTSconfig budget cap is configured for AI spend.</source>
+			</trans-unit>
+			<trans-unit id="checklist.budget.descMissing" resname="checklist.budget.descMissing">
+				<source>No daily cost cap detected — set nst3af.budget.maxCost in UserTSconfig.</source>
+			</trans-unit>
+			<trans-unit id="checklist.scheduler.descFailingNamed" resname="checklist.scheduler.descFailingNamed">
+				<source>Task "%1$s" failed — inspect Scheduler &amp; CLI.</source>
+			</trans-unit>
+			<trans-unit id="checklist.prompts.descOk" resname="checklist.prompts.descOk">
+				<source>%1$s prompts available in the library.</source>
+			</trans-unit>
+			<trans-unit id="checklist.prompts.descEmpty" resname="checklist.prompts.descEmpty">
+				<source>No custom prompts yet — add prompts under AI Prompts.</source>
+			</trans-unit>
+			<trans-unit id="checklist.prompts.descDefaults" resname="checklist.prompts.descDefaults">
+				<source>%1$s prompts in library — review custom entries under AI Prompts.</source>
+			</trans-unit>
+			<trans-unit id="checklist.footer.modeCredits" resname="checklist.footer.modeCredits">
+				<source>T3PLANET CREDITS MODE</source>
+			</trans-unit>
+			<trans-unit id="checklist.footer.modeOwnKeys" resname="checklist.footer.modeOwnKeys">
+				<source>OWN API KEYS MODE</source>
+			</trans-unit>
+			<trans-unit id="checklist.footer.badgeActive" resname="checklist.footer.badgeActive">
+				<source>Active</source>
+			</trans-unit>
+			<trans-unit id="checklist.footer.badgeInactive" resname="checklist.footer.badgeInactive">
+				<source>Not activated</source>
+			</trans-unit>
+			<trans-unit id="checklist.footer.badgeConfigured" resname="checklist.footer.badgeConfigured">
+				<source>%1$s configured</source>
+			</trans-unit>
+			<trans-unit id="checklist.footer.manageCredits" resname="checklist.footer.manageCredits">
+				<source>Manage credits</source>
+			</trans-unit>
+			<trans-unit id="checklist.footer.manageKeys" resname="checklist.footer.manageKeys">
+				<source>Manage AI Providers</source>
+			</trans-unit>
+			<trans-unit id="wizard.kicker.before" resname="wizard.kicker.before">
+				<source>Setup Wizard · Step </source>
+			</trans-unit>
+			<trans-unit id="wizard.kicker.after" resname="wizard.kicker.after">
+				<source> of 7</source>
+			</trans-unit>
+			<trans-unit id="wizard.close" resname="wizard.close">
+				<source>Close wizard</source>
+			</trans-unit>
+			<trans-unit id="wizard.stepper.label" resname="wizard.stepper.label">
+				<source>Setup steps</source>
+			</trans-unit>
+			<trans-unit id="wizard.stepper.1.short" resname="wizard.stepper.1.short">
+				<source>Welcome</source>
+			</trans-unit>
+			<trans-unit id="wizard.stepper.2.short" resname="wizard.stepper.2.short">
+				<source>Mode</source>
+			</trans-unit>
+			<trans-unit id="wizard.stepper.3.short" resname="wizard.stepper.3.short">
+				<source>Provider</source>
+			</trans-unit>
+			<trans-unit id="wizard.stepper.4.short" resname="wizard.stepper.4.short">
+				<source>API Key</source>
+			</trans-unit>
+			<trans-unit id="wizard.stepper.5.short" resname="wizard.stepper.5.short">
+				<source>Extensions</source>
+			</trans-unit>
+			<trans-unit id="wizard.stepper.6.short" resname="wizard.stepper.6.short">
+				<source>Context</source>
+			</trans-unit>
+			<trans-unit id="wizard.stepper.7.short" resname="wizard.stepper.7.short">
+				<source>MCP</source>
+			</trans-unit>
+			<trans-unit id="wizard.stepper.8.short" resname="wizard.stepper.8.short">
+				<source>Done</source>
+			</trans-unit>
+			<trans-unit id="wizard.skip" resname="wizard.skip">
+				<source>Skip step</source>
+			</trans-unit>
+			<trans-unit id="wizard.start" resname="wizard.start">
+				<source>Get Started</source>
+			</trans-unit>
+			<trans-unit id="wizard.continue" resname="wizard.continue">
+				<source>Continue</source>
+			</trans-unit>
+			<trans-unit id="wizard.back" resname="wizard.back">
+				<source>Back</source>
+			</trans-unit>
+			<trans-unit id="wizard.done" resname="wizard.done">
+				<source>Close</source>
+			</trans-unit>
+			<trans-unit id="wizard.step1.heading" resname="wizard.step1.heading">
+				<source>Welcome to AI Foundation</source>
+			</trans-unit>
+			<trans-unit id="wizard.step1.brand" resname="wizard.step1.brand">
+				<source>T3Planet AI Foundation</source>
+			</trans-unit>
+			<trans-unit id="wizard.step1.lead" resname="wizard.step1.lead">
+				<source>You've installed the AI Foundation extension. This quick wizard gets your suite ready in under 2 minutes.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step1.previewHeading" resname="wizard.step1.previewHeading">
+				<source>What you'll configure</source>
+			</trans-unit>
+			<trans-unit id="wizard.step1.skipNote" resname="wizard.step1.skipNote">
+				<source>You can skip any step and configure it later from the respective module tabs.</source>
+			</trans-unit>
+			<trans-unit id="wizard.preview.mode.title" resname="wizard.preview.mode.title">
+				<source>AI Provider Mode</source>
+			</trans-unit>
+			<trans-unit id="wizard.preview.mode.desc" resname="wizard.preview.mode.desc">
+				<source>T3Planet Credits or your own OpenAI, Anthropic, Google keys</source>
+			</trans-unit>
+			<trans-unit id="wizard.preview.extensions.title" resname="wizard.preview.extensions.title">
+				<source>AI Extensions</source>
+			</trans-unit>
+			<trans-unit id="wizard.preview.extensions.desc" resname="wizard.preview.extensions.desc">
+				<source>Enable SEO, Content, Translation, Media and more</source>
+			</trans-unit>
+			<trans-unit id="wizard.preview.mcp.title" resname="wizard.preview.mcp.title">
+				<source>MCP Server (optional)</source>
+			</trans-unit>
+			<trans-unit id="wizard.preview.mcp.desc" resname="wizard.preview.mcp.desc">
+				<source>Enable tool-use and external system integrations</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.mainHeading" resname="wizard.step2.mainHeading">
+				<source>AI Provider Mode</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.heading" resname="wizard.step2.heading">
+				<source>Choose how extensions reach models</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.sub" resname="wizard.step2.sub">
+				<source>Choose how your TYPO3 AI extensions access language models. You can change this at any time from the AI Providers tab.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.credits.title" resname="wizard.step2.credits.title">
+				<source>T3Planet Credits</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.credits.badge" resname="wizard.step2.credits.badge">
+				<source>Recommended</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.credits.desc" resname="wizard.step2.credits.desc">
+				<source>Use T3Planet's hosted AI infrastructure. No API keys, predictable billing, all features work out of the box.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.credits.meta1" resname="wizard.step2.credits.meta1">
+				<source>No API key setup</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.credits.meta2" resname="wizard.step2.credits.meta2">
+				<source>Predictable cost</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.credits.meta3" resname="wizard.step2.credits.meta3">
+				<source>All features included</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.credits.pricing" resname="wizard.step2.credits.pricing">
+				<source>Bundles from €6 · 250 to 8,000 credits, never expire · gpt-4o, Claude 3.5, Gemini Pro available</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.own.title" resname="wizard.step2.own.title">
+				<source>Your Own API Keys</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.own.badge" resname="wizard.step2.own.badge">
+				<source>Advanced</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.own.desc" resname="wizard.step2.own.desc">
+				<source>Connect OpenAI, Anthropic, Google Gemini, Ollama, or any OpenAI-compatible provider directly. You manage billing with each provider.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.own.meta1" resname="wizard.step2.own.meta1">
+				<source>Full control</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.own.meta2" resname="wizard.step2.own.meta2">
+				<source>Use any model</source>
+			</trans-unit>
+			<trans-unit id="wizard.step2.own.meta3" resname="wizard.step2.own.meta3">
+				<source>No platform fees</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.mainHeading" resname="wizard.step3.mainHeading">
+				<source>Connect AI Provider</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.heading" resname="wizard.step3.heading">
+				<source>Connect your first provider</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.lead" resname="wizard.step3.lead">
+				<source>Choose the AI provider that will power your extensions. You can add more providers later from the AI Providers tab.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.catalog.openai.title" resname="wizard.step3.catalog.openai.title">
+				<source>OpenAI</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.catalog.openai.badge" resname="wizard.step3.catalog.openai.badge">
+				<source>Most popular</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.catalog.openai.models" resname="wizard.step3.catalog.openai.models">
+				<source>gpt-4o-mini · gpt-4o</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.catalog.anthropic.title" resname="wizard.step3.catalog.anthropic.title">
+				<source>Anthropic</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.catalog.anthropic.badge" resname="wizard.step3.catalog.anthropic.badge">
+				<source>Best reasoning</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.catalog.anthropic.models" resname="wizard.step3.catalog.anthropic.models">
+				<source>claude-3-haiku · claude-3.5-sonnet</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.catalog.gemini.title" resname="wizard.step3.catalog.gemini.title">
+				<source>Google Gemini</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.catalog.gemini.badge" resname="wizard.step3.catalog.gemini.badge">
+				<source>Free tier</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.catalog.gemini.models" resname="wizard.step3.catalog.gemini.models">
+				<source>gemini-1.5-flash · gemini-1.5-pro</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.catalog.ollama.title" resname="wizard.step3.catalog.ollama.title">
+				<source>Ollama (Local)</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.catalog.ollama.badge" resname="wizard.step3.catalog.ollama.badge">
+				<source>Privacy-first</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.catalog.ollama.models" resname="wizard.step3.catalog.ollama.models">
+				<source>llama3.2 · mistral</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.linkProviders" resname="wizard.step3.linkProviders">
+				<source>Open AI Providers</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.linkNew" resname="wizard.step3.linkNew">
+				<source>New provider</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.pickHeading" resname="wizard.step3.pickHeading">
+				<source>Enabled providers</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.defaultBadge" resname="wizard.step3.defaultBadge">
+				<source>Default</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsLead" resname="wizard.step3.creditsLead">
+				<source>When T3Planet Credits is available, keys stay off your server.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsLeadFluid" resname="wizard.step3.creditsLeadFluid">
+				<source>You chose hosted capacity. No provider row is required — finish the wizard and enable credits when your account is ready.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.headingCredits" resname="wizard.step3.headingCredits">
+				<source>T3Planet Credits</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsNoticeTitle" resname="wizard.step3.creditsNoticeTitle">
+				<source>T3Planet Credits mode selected</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsNoticeText" resname="wizard.step3.creditsNoticeText">
+				<source>T3Planet's infrastructure will handle all AI requests. No provider configuration needed.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsModelsHeading" resname="wizard.step3.creditsModelsHeading">
+				<source>Available models with T3Planet Credits</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsModel.gpt4o.name" resname="wizard.step3.creditsModel.gpt4o.name">
+				<source>OpenAI GPT-4o</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsModel.gpt4o.badge" resname="wizard.step3.creditsModel.gpt4o.badge">
+				<source>Default</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsModel.gpt4o.rate" resname="wizard.step3.creditsModel.gpt4o.rate">
+				<source>5 cr / 1K tokens</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsModel.gpt4oMini.name" resname="wizard.step3.creditsModel.gpt4oMini.name">
+				<source>GPT-4o mini</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsModel.gpt4oMini.badge" resname="wizard.step3.creditsModel.gpt4oMini.badge">
+				<source>Economy</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsModel.gpt4oMini.rate" resname="wizard.step3.creditsModel.gpt4oMini.rate">
+				<source>1 cr / 1K tokens</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsModel.claude.name" resname="wizard.step3.creditsModel.claude.name">
+				<source>Anthropic Claude 3.5</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsModel.claude.badge" resname="wizard.step3.creditsModel.claude.badge">
+				<source>Best reasoning</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsModel.claude.rate" resname="wizard.step3.creditsModel.claude.rate">
+				<source>6 cr / 1K tokens</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsModel.gemini.name" resname="wizard.step3.creditsModel.gemini.name">
+				<source>Google Gemini Pro</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsModel.gemini.badge" resname="wizard.step3.creditsModel.gemini.badge">
+				<source>Multimodal</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsModel.gemini.rate" resname="wizard.step3.creditsModel.gemini.rate">
+				<source>4 cr / 1K tokens</source>
+			</trans-unit>
+			<trans-unit id="wizard.step3.creditsOk" resname="wizard.step3.creditsOk">
+				<source>All good — T3Planet will handle model routing automatically. Click &lt;strong&gt;Continue&lt;/strong&gt; to activate your AI extensions.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.mainHeading" resname="wizard.step4.mainHeading">
+				<source>API Key &amp; Model</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.heading" resname="wizard.step4.heading">
+				<source>Verify connectivity</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.lead" resname="wizard.step4.lead">
+				<source>Enter your %1$s API key. It will be stored encrypted in TYPO3's configuration.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.leadNoKey" resname="wizard.step4.leadNoKey">
+				<source>Configure your %1$s connection. No API key is required for local Ollama.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.modelLabel" resname="wizard.step4.modelLabel">
+				<source>Default Model</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.fieldLabel" resname="wizard.step4.fieldLabel">
+				<source>API Key</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.placeholder" resname="wizard.step4.placeholder">
+				<source>sk-...</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.toggleKey" resname="wizard.step4.toggleKey">
+				<source>Show or hide API key</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.keyUrl.openai" resname="wizard.step4.keyUrl.openai">
+				<source>Get your key from platform.openai.com</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.keyUrl.anthropic" resname="wizard.step4.keyUrl.anthropic">
+				<source>Get your key from console.anthropic.com</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.keyUrl.gemini" resname="wizard.step4.keyUrl.gemini">
+				<source>Get your key from aistudio.google.com</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.keyUrl.ollama" resname="wizard.step4.keyUrl.ollama">
+				<source>Run Ollama locally — no cloud API key required</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.testOkInline" resname="wizard.step4.testOkInline">
+				<source>Connection successful</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.note" resname="wizard.step4.note">
+				<source>This field is disabled here — use AI Providers → Edit provider to store secrets.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.noteDynamic" resname="wizard.step4.noteDynamic">
+				<source>Secrets are encrypted when saved on the provider record.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.test" resname="wizard.step4.test">
+				<source>Test connection</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.headingCredits" resname="wizard.step4.headingCredits">
+				<source>No API key needed</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.leadCredits" resname="wizard.step4.leadCredits">
+				<source>T3Planet manages all authentication securely. Your AI requests are routed through T3Planet's infrastructure.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.keyUrlPrefix" resname="wizard.step4.keyUrlPrefix">
+				<source>Get your key from</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.creditsFeature1" resname="wizard.step4.creditsFeature1">
+				<source>API keys managed by T3Planet</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.creditsFeature2" resname="wizard.step4.creditsFeature2">
+				<source>Encrypted in transit &amp; at rest</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.creditsFeature3" resname="wizard.step4.creditsFeature3">
+				<source>Automatic key rotation</source>
+			</trans-unit>
+			<trans-unit id="wizard.step4.creditsFeature4" resname="wizard.step4.creditsFeature4">
+				<source>No vendor lock-in — switch any time</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.mainHeading" resname="wizard.step5.mainHeading">
+				<source>Activate AI Extensions</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.heading" resname="wizard.step5.heading">
+				<source>Optional capability packs</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.lead" resname="wizard.step5.lead">
+				<source>Select which AI extensions to activate. You can change these at any time from the AI Features tab.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.selectedCount" resname="wizard.step5.selectedCount">
+				<source>%1$s of %2$s toggles selected</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.generalSettings" resname="wizard.step5.generalSettings">
+				<source>General settings</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.suiteNote" resname="wizard.step5.suiteNote">
+				<source>Configure detailed settings later under AI Features.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.ext.seo.title" resname="wizard.step5.ext.seo.title">
+				<source>AI SEO</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.ext.seo.desc" resname="wizard.step5.ext.seo.desc">
+				<source>Meta tags, page titles, focus keywords</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.ext.content.title" resname="wizard.step5.ext.content.title">
+				<source>AI Content</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.ext.content.desc" resname="wizard.step5.ext.content.desc">
+				<source>Rewrite, summarise, generate body text</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.ext.translation.title" resname="wizard.step5.ext.translation.title">
+				<source>AI Translation</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.ext.translation.desc" resname="wizard.step5.ext.translation.desc">
+				<source>Translate content to multiple languages</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.ext.media.title" resname="wizard.step5.ext.media.title">
+				<source>AI Media</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.ext.media.desc" resname="wizard.step5.ext.media.desc">
+				<source>Auto alt-text, image captions</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.ext.pages.title" resname="wizard.step5.ext.pages.title">
+				<source>AI Pages</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.ext.pages.desc" resname="wizard.step5.ext.pages.desc">
+				<source>Generate full page layouts from prompts</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.ext.chat.title" resname="wizard.step5.ext.chat.title">
+				<source>AI Chat</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.ext.chat.desc" resname="wizard.step5.ext.chat.desc">
+				<source>On-site AI chat widget</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.note" resname="wizard.step5.note">
+				<source>Extension-specific modules continue to register themselves automatically.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step5.unavailable" resname="wizard.step5.unavailable">
+				<source>Install the AI Content extension (ns_t3ai) to manage SEO, Content, Translation and Media feature toggles here.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step6.mainHeading" resname="wizard.step6.mainHeading">
+				<source>Brand Context</source>
+			</trans-unit>
+			<trans-unit id="wizard.step6.lead" resname="wizard.step6.lead">
+				<source>Set a brand foundation so AI output matches your voice. Brand name, industry, and tone tags are required; you can refine the full profile later in AI Context.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step6.brandName" resname="wizard.step6.brandName">
+				<source>Brand Name (required)</source>
+			</trans-unit>
+			<trans-unit id="wizard.step6.industry" resname="wizard.step6.industry">
+				<source>Industry (required)</source>
+			</trans-unit>
+			<trans-unit id="wizard.step6.industryPlaceholder" resname="wizard.step6.industryPlaceholder">
+				<source>Select industry…</source>
+			</trans-unit>
+			<trans-unit id="wizard.step6.toneTags" resname="wizard.step6.toneTags">
+				<source>Tone Tags (required, pick 3–5)</source>
+			</trans-unit>
+			<trans-unit id="wizard.step6.voiceNotes" resname="wizard.step6.voiceNotes">
+				<source>Voice Description</source>
+			</trans-unit>
+			<trans-unit id="wizard.step6.voiceNotesPlaceholder" resname="wizard.step6.voiceNotesPlaceholder">
+				<source>Write like a trusted expert — clear and direct. Not like a salesperson — no jargon or hype.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step6.notice" resname="wizard.step6.notice">
+				<source>Voice description is optional here. Add personas, rules, and more in the AI Context module after setup.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.mainHeading" resname="wizard.step7.mainHeading">
+				<source>MCP Server (Optional)</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.heading" resname="wizard.step7.heading">
+				<source>Optional MCP endpoint</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.lead" resname="wizard.step7.lead">
+				<source>The MCP (Model Context Protocol) server allows your LLM to call external tools and APIs — Slack, Notion, databases, and more.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.toggleTitle" resname="wizard.step7.toggleTitle">
+				<source>MCP Server</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.toggleSub" resname="wizard.step7.toggleSub">
+				<source>Enables tool-use &amp; external integrations</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.connectorsHeading" resname="wizard.step7.connectorsHeading">
+				<source>Available MCP Connectors</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.connector.filesystem.title" resname="wizard.step7.connector.filesystem.title">
+				<source>File System</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.connector.filesystem.desc" resname="wizard.step7.connector.filesystem.desc">
+				<source>Read/write TYPO3 file mounts</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.connector.database.title" resname="wizard.step7.connector.database.title">
+				<source>Database Query</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.connector.database.desc" resname="wizard.step7.connector.database.desc">
+				<source>Run read-only SQL via AI</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.connector.slack.title" resname="wizard.step7.connector.slack.title">
+				<source>Slack</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.connector.slack.desc" resname="wizard.step7.connector.slack.desc">
+				<source>Post messages, read channels</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.connector.notion.title" resname="wizard.step7.connector.notion.title">
+				<source>Notion</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.connector.notion.desc" resname="wizard.step7.connector.notion.desc">
+				<source>Sync pages and databases</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.badge.ready" resname="wizard.step7.badge.ready">
+				<source>Ready</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.badge.later" resname="wizard.step7.badge.later">
+				<source>Configure later</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.note" resname="wizard.step7.note">
+				<source>Full connector setup is available in the MCP Connectors tab.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step7.linkMcp" resname="wizard.step7.linkMcp">
+				<source>Open MCP Server tab</source>
+			</trans-unit>
+			<trans-unit id="wizard.step8.mainHeading" resname="wizard.step8.mainHeading">
+				<source>All set</source>
+			</trans-unit>
+			<trans-unit id="wizard.step8.heading" resname="wizard.step8.heading">
+				<source>AI Foundation is ready to explore</source>
+			</trans-unit>
+			<trans-unit id="wizard.step8.lead" resname="wizard.step8.lead">
+				<source>Return to AI Foundation to monitor usage or jump into AI Providers for deeper configuration.</source>
+			</trans-unit>
+			<trans-unit id="wizard.step8.headingAllSet" resname="wizard.step8.headingAllSet">
+				<source>You’re All Set!</source>
+			</trans-unit>
+			<trans-unit id="wizard.step8.headingReady" resname="wizard.step8.headingReady">
+				<source>AI Foundation is ready!</source>
+			</trans-unit>
+			<trans-unit id="wizard.step8.summaryLeadStatic" resname="wizard.step8.summaryLeadStatic">
+				<source>Your configuration has been saved. Here’s a summary:</source>
+			</trans-unit>
+			<trans-unit id="wizard.step8.summaryAria" resname="wizard.step8.summaryAria">
+				<source>Setup summary</source>
+			</trans-unit>
+			<trans-unit id="wizard.step8.nextTitle" resname="wizard.step8.nextTitle">
+				<source>Next steps</source>
+			</trans-unit>
+			<trans-unit id="wizard.step8.next1" resname="wizard.step8.next1">
+				<source>Visit &lt;strong&gt;AI Features&lt;/strong&gt; to fine-tune each extension</source>
+			</trans-unit>
+			<trans-unit id="wizard.step8.next2" resname="wizard.step8.next2">
+				<source>Customise prompts in the &lt;strong&gt;AI Prompts&lt;/strong&gt; library</source>
+			</trans-unit>
+			<trans-unit id="wizard.step8.next3" resname="wizard.step8.next3">
+				<source>Schedule CLI tasks from &lt;strong&gt;Scheduler &amp; CLI&lt;/strong&gt;</source>
+			</trans-unit>
+			<trans-unit id="wizard.step8.goDashboard" resname="wizard.step8.goDashboard">
+				<source>Go to AI Foundation</source>
+			</trans-unit>
+		</body>
+	</file>
+</xliff>

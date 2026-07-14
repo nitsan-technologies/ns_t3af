@@ -1,0 +1,470 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  _instanceof:
+    NITSAN\NsT3AF\Provider\Contract\AdapterInterface:
+      tags: ['nst3af.adapter']
+    NITSAN\NsT3AF\Contract\FeatureProviderFormOptionsInterface:
+      tags: ['t3af.feature_provider_form_options']
+    NITSAN\NsT3AF\Contract\ExtensionSettingsDynamicDefaultsProviderInterface:
+      tags: ['t3af.extension_settings_dynamic_defaults']
+    NITSAN\NsT3AF\Mcp\Contract\McpToolHandlerInterface:
+      tags: ['mcp.tool']
+      public: true
+    NITSAN\NsT3AF\Contract\FeatureHealthContributorInterface:
+      tags: ['t3af.feature_health']
+    NITSAN\NsT3AF\Mcp\Contract\McpPromptHandlerInterface:
+      tags: ['mcp.prompt']
+      public: true
+    NITSAN\NsT3AF\Contract\PromptCatalogProviderInterface:
+      tags: ['t3af.prompt_catalog_provider']
+    NITSAN\NsT3AF\Contract\AiFeatureCardProviderInterface:
+      tags: ['t3af.ai_feature_card_provider']
+    NITSAN\NsT3AF\Contract\ExtensionSettingsScopeProviderInterface:
+      tags: ['t3af.extension_settings_scope']
+    NITSAN\NsT3AF\Contract\McpToolsExtensionCardProviderInterface:
+      tags: ['t3af.mcp_tools_extension_card_provider']
+    NITSAN\NsT3AF\Contract\AiAccessCatalogProviderInterface:
+      tags: ['t3af.ai_access_catalog_provider']
+    NITSAN\NsT3AF\Contract\LegacyCustomOptionExpanderInterface:
+      tags: ['t3af.legacy_custom_option_expander']
+    NITSAN\NsT3AF\Contract\PromptDefaultsSyncProviderInterface:
+      tags: ['t3af.prompt_defaults_sync']
+    NITSAN\NsT3AF\Contract\GroupPresetContributorInterface:
+      tags: ['t3af.group_preset_contributor']
+    NITSAN\NsT3AF\Contract\ExtensionSettingsSecretProviderInterface:
+      tags: ['t3af.extension_settings_secret']
+    NITSAN\NsT3AF\Contract\BrandContextFeatureScopeProviderInterface:
+      tags: ['t3af.brand_context_feature_scope']
+    NITSAN\NsT3AF\Contract\BrandContextPromptCategoryProviderInterface:
+      tags: ['t3af.brand_context_prompt_category']
+    NITSAN\NsT3AF\Contract\EmbeddingCapabilityProviderInterface:
+      tags: ['t3af.embedding_capability']
+    NITSAN\NsT3AF\Contract\WizardSuiteBadgeProviderInterface:
+      tags: ['t3af.wizard_suite_badge']
+    NITSAN\NsT3AF\Contract\ExtensionSettingsStorageProbeProviderInterface:
+      tags: ['t3af.extension_settings_storage_probe']
+    NITSAN\NsT3AF\Contract\AiLogChannelProviderInterface:
+      tags: ['t3af.ai_log_channel']
+    NITSAN\NsT3AF\Contract\FeatureHealthAreaProviderInterface:
+      tags: ['t3af.feature_health_area']
+    NITSAN\NsT3AF\Contract\CreditsFeatureKeyAliasProviderInterface:
+      tags: ['t3af.credits_feature_key_alias']
+    NITSAN\NsT3AF\Contract\McpSkillHubEntryProviderInterface:
+      tags: ['t3af.mcp_skill_hub_entry']
+
+  NITSAN\NsT3AF\:
+    resource: '../Classes/*'
+    exclude:
+      - '../Classes/Api/*'
+      - '../Classes/Domain/Model/*'
+      - '../Classes/Event/*'
+      - '../Classes/Exception/*'
+      - '../Classes/DependencyInjection/*'
+      - '../Classes/Mcp/*'
+      - '../Classes/Provider/Capability.php'
+      - '../Classes/Provider/Contract/*'
+      - '../Classes/Provider/Model/ModelInfo.php'
+      - '../Classes/Provider/Model/ModelDiscoveryServiceInterface.php'
+      - '../Classes/Provider/SymfonyAi/BridgeDescriptor.php'
+      - '../Classes/Provider/SymfonyAi/SymfonyAiBridgeAdapter.php'
+      - '../Classes/Service/ProviderFormResult.php'
+
+  NITSAN\NsT3AF\Provider\AdapterRegistry:
+    arguments:
+      $adapters: !tagged_iterator nst3af.adapter
+
+  NITSAN\NsT3AF\Service\AiService:
+    public: false
+
+  NITSAN\NsT3AF\Service\FeatureExtensionHealthService:
+    arguments:
+      $areaProviders: !tagged_iterator t3af.feature_health_area
+      $contributors: !tagged_iterator t3af.feature_health
+
+  NITSAN\NsT3AF\Service\AiLogChannelCatalog:
+    arguments:
+      $channelProviders: !tagged_iterator t3af.ai_log_channel
+
+  NITSAN\NsT3AF\Credits\Service\CreditsFeatureKeyMapper:
+    arguments:
+      $aliasProviders: !tagged_iterator t3af.credits_feature_key_alias
+
+  NITSAN\NsT3AF\Mcp\Service\Backend\McpSkillHubService:
+    arguments:
+      $entryProviders: !tagged_iterator t3af.mcp_skill_hub_entry
+
+  NITSAN\NsT3AF\Service\SchedulerCliCommandCatalogService:
+    arguments:
+      $cardProviderRegistry: '@NITSAN\NsT3AF\Registry\McpToolsExtensionCardProviderRegistry'
+
+  NITSAN\NsT3AF\Service\SiteStorageContext:
+    public: true
+
+  NITSAN\NsT3AF\Service\TtsService:
+    public: false
+
+  NITSAN\NsT3AF\Service\ImageGenerationService:
+    public: false
+
+  NITSAN\NsT3AF\Mcp\Contract\AiPromptsMcpOperationsInterface:
+    alias: NITSAN\NsT3AF\Service\AiPromptsService
+
+  NITSAN\NsT3AF\Credits\Service\T3PlanetCreditTtsService:
+    decorates: NITSAN\NsT3AF\Service\TtsService
+    arguments:
+      $inner: '@.inner'
+
+  NITSAN\NsT3AF\Api\TtsServiceInterface:
+    alias: NITSAN\NsT3AF\Credits\Service\T3PlanetCreditTtsService
+    public: true
+
+  NITSAN\NsT3AF\Api\ImageGenerationServiceInterface:
+    alias: NITSAN\NsT3AF\Service\ImageGenerationService
+    public: true
+
+  NITSAN\NsT3AF\Credits\Service\T3PlanetCreditAiService:
+    decorates: NITSAN\NsT3AF\Service\AiService
+    arguments:
+      $inner: '@.inner'
+
+  NITSAN\NsT3AF\Api\AiServiceInterface:
+    alias: NITSAN\NsT3AF\Credits\Service\T3PlanetCreditAiService
+    public: true
+
+  NITSAN\NsT3AF\Registry\PromptCatalogProviderRegistry:
+    arguments:
+      $providers: !tagged_iterator t3af.prompt_catalog_provider
+
+  NITSAN\NsT3AF\Service\AiPromptsService:
+    arguments:
+      $defaultsSyncProviders: !tagged_iterator t3af.prompt_defaults_sync
+
+  NITSAN\NsT3AF\Access\GroupPresetRegistry:
+    arguments:
+      $contributors: !tagged_iterator t3af.group_preset_contributor
+
+  NITSAN\NsT3AF\Registry\AiFeatureCardProviderRegistry:
+    arguments:
+      $providers: !tagged_iterator t3af.ai_feature_card_provider
+
+  NITSAN\NsT3AF\Registry\ExtensionSettingsScopeRegistry:
+    arguments:
+      $providers: !tagged_iterator t3af.extension_settings_scope
+
+  NITSAN\NsT3AF\Settings\ExtensionSettingsSecretRegistry:
+    arguments:
+      $providers: !tagged_iterator t3af.extension_settings_secret
+
+  NITSAN\NsT3AF\Registry\WizardSuiteBadgeProviderRegistry:
+    arguments:
+      $providers: !tagged_iterator t3af.wizard_suite_badge
+
+  NITSAN\NsT3AF\Registry\ExtensionSettingsStorageProbeRegistry:
+    arguments:
+      $providers: !tagged_iterator t3af.extension_settings_storage_probe
+
+  NITSAN\NsT3AF\Access\ExtensionAvailability:
+    arguments:
+      $embeddingCapabilities: !tagged_iterator t3af.embedding_capability
+
+  NITSAN\NsT3AF\Service\WizardExtensionCatalogService:
+    arguments:
+      $suiteBadgeProviderRegistry: '@NITSAN\NsT3AF\Registry\WizardSuiteBadgeProviderRegistry'
+
+  NITSAN\NsT3AF\Service\BrandContextFeatureSettingsService:
+    arguments:
+      $scopeProviders: !tagged_iterator t3af.brand_context_feature_scope
+
+  NITSAN\NsT3AF\Service\AiPromptsBrandContextInfoService:
+    arguments:
+      $categoryProviders: !tagged_iterator t3af.brand_context_prompt_category
+
+  NITSAN\NsT3AF\Service\SiteExtensionSettingsResolver:
+    arguments:
+      $probeRegistry: '@NITSAN\NsT3AF\Registry\ExtensionSettingsStorageProbeRegistry'
+
+  NITSAN\NsT3AF\Registry\McpToolsExtensionCardProviderRegistry:
+    arguments:
+      $providers: !tagged_iterator t3af.mcp_tools_extension_card_provider
+
+  NITSAN\NsT3AF\Registry\AiAccessCatalogProviderRegistry:
+    arguments:
+      $providers: !tagged_iterator t3af.ai_access_catalog_provider
+
+  NITSAN\NsT3AF\Registry\FeatureAccessBindingRegistry:
+    public: true
+    arguments:
+      $providerRegistry: '@NITSAN\NsT3AF\Registry\AiAccessCatalogProviderRegistry'
+
+  NITSAN\NsT3AF\Access\FeaturePermissionCatalog:
+    arguments:
+      $accessProviderRegistry: '@NITSAN\NsT3AF\Registry\AiAccessCatalogProviderRegistry'
+
+  NITSAN\NsT3AF\Access\RecordPermissionCatalog:
+    arguments:
+      $accessProviderRegistry: '@NITSAN\NsT3AF\Registry\AiAccessCatalogProviderRegistry'
+
+  NITSAN\NsT3AF\Access\ModuleAccessCatalog:
+    arguments:
+      $accessProviderRegistry: '@NITSAN\NsT3AF\Registry\AiAccessCatalogProviderRegistry'
+
+  NITSAN\NsT3AF\Access\T3AiPermissionResolver:
+    public: true
+    arguments:
+      $bindings: '@NITSAN\NsT3AF\Registry\FeatureAccessBindingRegistry'
+
+  NITSAN\NsT3AF\Access\FeaturePermissionGate:
+    public: true
+    arguments:
+      $resolver: '@NITSAN\NsT3AF\Access\T3AiPermissionResolver'
+      $bindings: '@NITSAN\NsT3AF\Registry\FeatureAccessBindingRegistry'
+
+  NITSAN\NsT3AF\Access\GroupConfigSerializer:
+    arguments:
+      $bindingRegistry: '@NITSAN\NsT3AF\Registry\FeatureAccessBindingRegistry'
+      $legacyCustomOptionExpanders: !tagged_iterator t3af.legacy_custom_option_expander
+
+  NITSAN\NsT3AF\Access\GroupConfigDeserializer:
+    arguments:
+      $bindingRegistry: '@NITSAN\NsT3AF\Registry\FeatureAccessBindingRegistry'
+
+  NITSAN\NsT3AF\Access\GroupConfigNormalizer:
+    arguments:
+      $bindingRegistry: '@NITSAN\NsT3AF\Registry\FeatureAccessBindingRegistry'
+
+  NITSAN\NsT3AF\Access\BeGroupPermissionMerger:
+    arguments:
+      $bindingRegistry: '@NITSAN\NsT3AF\Registry\FeatureAccessBindingRegistry'
+
+  NITSAN\NsT3AF\Bootstrap\AiAccessCustomOptionsBootstrapListener:
+    tags:
+      - name: event.listener
+        identifier: 'nst3af/access/custom-options-bootstrap'
+        event: TYPO3\CMS\Core\Core\Event\BootCompletedEvent
+
+  NITSAN\NsT3AF\EventListener\BackendUserLoginListener:
+    tags:
+      - name: event.listener
+        identifier: 'nst3af/license/backend-user-login'
+        event: TYPO3\CMS\Core\Authentication\Event\AfterUserLoggedInEvent
+
+  # Governance — access control gate on every provider request.
+  NITSAN\NsT3AF\Governance\AccessControlListener:
+    tags:
+      - name: event.listener
+        identifier: 'nst3af/governance/access-control'
+        event: NITSAN\NsT3AF\Event\BeforeProviderRequestEvent
+
+  NITSAN\NsT3AF\Governance\GroupLimitsListener:
+    tags:
+      - name: event.listener
+        identifier: 'nst3af/governance/group-limits'
+        event: NITSAN\NsT3AF\Event\BeforeProviderRequestEvent
+        after: 'nst3af/governance/access-control'
+
+  NITSAN\NsT3AF\EventListener\BrandContextPromptInjectionListener:
+    tags:
+      - name: event.listener
+        identifier: 'nst3af/brand-context/prompt-injection'
+        event: NITSAN\NsT3AF\Event\BeforeProviderRequestEvent
+        after: 'nst3af/governance/access-control'
+
+  # Governance — record per-user budget usage after a successful response.
+  NITSAN\NsT3AF\EventListener\RecordBudgetUsageListener:
+    tags:
+      - name: event.listener
+        identifier: 'nst3af/governance/record-budget-usage'
+        event: NITSAN\NsT3AF\Event\AfterProviderResponseEvent
+
+  NITSAN\NsT3AF\DependencyInjection\NsLicenseRepositoryFactory:
+    public: true
+
+  nst3af.ns_license_repository:
+    class: NITSAN\NsT3AF\Credits\Contract\LicenseDataRepositoryInterface
+    factory: ['@NITSAN\NsT3AF\DependencyInjection\NsLicenseRepositoryFactory', '__invoke']
+
+  NITSAN\NsT3AF\Credits\Service\LicenseKeyResolver:
+    arguments:
+      $licenseRepository: '@?nst3af.ns_license_repository'
+
+  nst3af.cacheFrontend.credits_token:
+    class: TYPO3\CMS\Core\Cache\Frontend\FrontendInterface
+    factory: ['@TYPO3\CMS\Core\Cache\CacheManager', 'getCache']
+    arguments: ['nst3af_credits_token']
+
+  nst3af.cacheFrontend.credits_api:
+    class: TYPO3\CMS\Core\Cache\Frontend\FrontendInterface
+    factory: ['@TYPO3\CMS\Core\Cache\CacheManager', 'getCache']
+    arguments: ['nst3af_credits_api']
+
+  nst3af.cacheFrontend.provider_models:
+    class: TYPO3\CMS\Core\Cache\Frontend\FrontendInterface
+    factory: ['@TYPO3\CMS\Core\Cache\CacheManager', 'getCache']
+    arguments: ['nst3af_provider_models']
+
+  nst3af.cacheFrontend.dashboard_analytics:
+    class: TYPO3\CMS\Core\Cache\Frontend\FrontendInterface
+    factory: ['@TYPO3\CMS\Core\Cache\CacheManager', 'getCache']
+    arguments: ['nst3af_dashboard_analytics']
+
+  nst3af.cacheFacade.credits_token:
+    class: NITSAN\NsT3AF\Cache\Typo3CacheFacade
+    arguments:
+      $cache: '@nst3af.cacheFrontend.credits_token'
+
+  nst3af.cacheFacade.credits_api:
+    class: NITSAN\NsT3AF\Cache\Typo3CacheFacade
+    arguments:
+      $cache: '@nst3af.cacheFrontend.credits_api'
+
+  nst3af.cacheFacade.provider_models:
+    class: NITSAN\NsT3AF\Cache\Typo3CacheFacade
+    arguments:
+      $cache: '@nst3af.cacheFrontend.provider_models'
+
+  nst3af.cacheFacade.dashboard_analytics:
+    class: NITSAN\NsT3AF\Cache\Typo3CacheFacade
+    arguments:
+      $cache: '@nst3af.cacheFrontend.dashboard_analytics'
+
+  NITSAN\NsT3AF\Service\DashboardStatisticsCache:
+    arguments:
+      $cache: '@nst3af.cacheFacade.dashboard_analytics'
+
+  NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface:
+    alias: NITSAN\NsT3AF\Credits\Service\CreditsApiResponseCache
+
+  NITSAN\NsT3AF\Credits\Service\CreditsApiResponseCache:
+    arguments:
+      $cache: '@nst3af.cacheFacade.credits_api'
+
+  NITSAN\NsT3AF\Credits\Service\TokenResolver:
+    arguments:
+      $cache: '@nst3af.cacheFacade.credits_token'
+
+  NITSAN\NsT3AF\Credits\Service\CreditsReleaseGateInterface:
+    alias: NITSAN\NsT3AF\Credits\Service\CreditsReleaseGate
+
+  NITSAN\NsT3AF\Controller\Backend\CreditModeController:
+    public: true
+
+  NITSAN\NsT3AF\Credits\Service\CreditsEstimateService:
+    public: true
+
+  NITSAN\NsT3AF\Backend\ToolbarItems\CreditBalanceToolbarItem:
+    tags:
+      - name: backend.toolbar.item
+
+  NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface:
+    alias: NITSAN\NsT3AF\Domain\Repository\ProviderRepository
+    public: true
+
+  NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface:
+    alias: NITSAN\NsT3AF\Domain\Repository\ProviderRepository
+    public: true
+
+  NITSAN\NsT3AF\Domain\Repository\ProviderRepository:
+    public: true
+
+  NITSAN\NsT3AF\Domain\Repository\BrandContextProfileRepositoryInterface:
+    alias: NITSAN\NsT3AF\Domain\Repository\BrandContextProfileRepository
+    public: true
+
+  NITSAN\NsT3AF\Service\BrandContextProfileOverrideReaderInterface:
+    alias: NITSAN\NsT3AF\Service\BrandContextFeatureSettingsService
+
+  NITSAN\NsT3AF\Domain\Repository\BrandContextProfileRepository:
+    public: true
+
+  NITSAN\NsT3AF\Service\ExtensionExtConfCategoryService:
+    arguments:
+      $featureProviderFormOptionsProviders: !tagged_iterator t3af.feature_provider_form_options
+
+  NITSAN\NsT3AF\Service\ProviderLegacyConfigService:
+    public: true
+
+  NITSAN\NsT3AF\Service\AiApiAlertNotificationService:
+    public: true
+
+  NITSAN\NsT3AF\Service\SetupChecklistPresenter:
+    public: true
+
+  NITSAN\NsT3AF\Utility\HttpAuthUtility:
+    arguments:
+      $extensionKey: 'ns_t3af'
+
+  NITSAN\NsT3AF\Controller\Backend\ModuleController:
+    public: true
+
+  NITSAN\NsT3AF\Controller\Backend\ProviderController:
+    public: true
+
+  NITSAN\NsT3AF\Controller\Backend\BrandContextController:
+    public: true
+
+  NITSAN\NsT3AF\Controller\Backend\WizardController:
+    public: true
+
+  NITSAN\NsT3AF\Controller\Backend\FeatureSettingsController:
+    public: true
+
+  NITSAN\NsT3AF\Controller\Backend\BrandContextAjaxController:
+    public: true
+
+  NITSAN\NsT3AF\Controller\Backend\AccessRolesController:
+    public: true
+
+  NITSAN\NsT3AF\Controller\Backend\AccessRolesAjaxController:
+    public: true
+
+  NITSAN\NsT3AF\Access\RecordAccessGate:
+    public: true
+
+  NITSAN\NsT3AF\Access\RecordAccessEnforcer:
+    public: true
+
+  NITSAN\NsT3AF\Mcp\:
+    resource: '../Classes/Mcp/'
+    exclude:
+      - '../Classes/Mcp/Domain/Enum/*'
+      - '../Classes/Mcp/Domain/Model/*'
+
+  NITSAN\NsT3AF\Mcp\Tool\:
+    resource: '../Classes/Mcp/Tool/*'
+
+  NITSAN\NsT3AF\Mcp\Server\McpServerFactory:
+    arguments:
+      $tools: !tagged_iterator mcp.tool
+      $prompts: !tagged_iterator mcp.prompt
+
+  NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService:
+    arguments:
+      $tools: !tagged_iterator mcp.tool
+
+  NITSAN\NsT3AF\Mcp\Service\Backend\McpPlaygroundService:
+    arguments:
+      $tools: !tagged_iterator mcp.tool
+
+  NITSAN\NsT3AF\Mcp\Controller\Backend\McpServerController:
+    public: true
+
+  NITSAN\NsT3AF\Mcp\Controller\Backend\McpToolsController:
+    public: true
+
+  NITSAN\NsT3AF\Provider\Model\ModelDiscoveryService:
+    arguments:
+      $cache: '@nst3af.cacheFacade.provider_models'
+
+  NITSAN\NsT3AF\Provider\Model\ModelDiscoveryServiceInterface:
+    alias: NITSAN\NsT3AF\Provider\Model\ModelDiscoveryService
+
+  NITSAN\NsT3AF\Settings\ExtensionSettingsService:
+    public: true
+
+  NITSAN\NsT3AF\Settings\ExtensionSettingsDynamicDefaultsRegistry:
+    arguments:
+      $providers: !tagged_iterator t3af.extension_settings_dynamic_defaults

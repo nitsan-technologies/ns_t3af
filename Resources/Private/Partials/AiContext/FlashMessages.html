@@ -1,0 +1,82 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<f:variable name="flashState" value="" />
+<f:variable name="flashIcon" value="actions-info" />
+<f:variable name="flashMsgKey" value="" />
+
+<f:switch expression="{flash}">
+    <f:case value="profile-created">
+        <f:variable name="flashState" value="success" />
+        <f:variable name="flashIcon" value="actions-check" />
+        <f:variable name="flashMsgKey" value="module.aiContext.flash.created" />
+    </f:case>
+    <f:case value="profile-updated">
+        <f:variable name="flashState" value="success" />
+        <f:variable name="flashIcon" value="actions-check" />
+        <f:variable name="flashMsgKey" value="module.aiContext.flash.updated" />
+    </f:case>
+    <f:case value="profile-deleted">
+        <f:variable name="flashState" value="success" />
+        <f:variable name="flashIcon" value="actions-check" />
+        <f:variable name="flashMsgKey" value="module.aiContext.flash.deleted" />
+    </f:case>
+    <f:case value="profile-default-set">
+        <f:variable name="flashState" value="success" />
+        <f:variable name="flashIcon" value="actions-check" />
+        <f:variable name="flashMsgKey" value="module.aiContext.flash.defaultSet" />
+    </f:case>
+    <f:case value="profile-enabled">
+        <f:variable name="flashState" value="success" />
+        <f:variable name="flashIcon" value="actions-check" />
+        <f:variable name="flashMsgKey" value="module.aiContext.flash.enabled" />
+    </f:case>
+    <f:case value="profile-disabled">
+        <f:variable name="flashState" value="success" />
+        <f:variable name="flashIcon" value="actions-check" />
+        <f:variable name="flashMsgKey" value="module.aiContext.flash.disabled" />
+    </f:case>
+    <f:case value="profile-validation-fail">
+        <f:variable name="flashState" value="warning" />
+        <f:variable name="flashIcon" value="actions-exclamation" />
+        <f:variable name="flashMsgKey" value="module.aiContext.flash.validationFailed" />
+    </f:case>
+    <f:case value="profile-update-fail">
+        <f:variable name="flashState" value="danger" />
+        <f:variable name="flashIcon" value="actions-exclamation" />
+        <f:variable name="flashMsgKey" value="module.aiContext.flash.failed" />
+    </f:case>
+    <f:case value="profile-delete-fail">
+        <f:variable name="flashState" value="danger" />
+        <f:variable name="flashIcon" value="actions-exclamation" />
+        <f:variable name="flashMsgKey" value="module.aiContext.flash.failed" />
+    </f:case>
+    <f:case value="profile-default-fail">
+        <f:variable name="flashState" value="danger" />
+        <f:variable name="flashIcon" value="actions-exclamation" />
+        <f:variable name="flashMsgKey" value="module.aiContext.flash.failed" />
+    </f:case>
+    <f:case value="profile-enabled-fail">
+        <f:variable name="flashState" value="danger" />
+        <f:variable name="flashIcon" value="actions-exclamation" />
+        <f:variable name="flashMsgKey" value="module.aiContext.flash.failed" />
+    </f:case>
+</f:switch>
+
+<f:if condition="{flashMsgKey}">
+    <div class="callout callout-{flashState} mb-3" role="alert">
+        <div class="callout-icon">
+            <span class="icon-emphasized">
+                <core:icon identifier="{flashIcon}" alternativeMarkupIdentifier="inline" />
+            </span>
+        </div>
+        <div class="callout-content">
+            <div class="callout-body">
+                <p class="mb-0"><f:translate key="{ll}:{flashMsgKey}" /></p>
+            </div>
+        </div>
+    </div>
+</f:if>
+</html>

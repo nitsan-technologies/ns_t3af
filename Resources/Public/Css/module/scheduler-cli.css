@@ -1,0 +1,237 @@
+/*!
+ * AI Foundation backend module CSS — scheduler-cli
+ */
+.aiu-scheduler-cli {
+    padding-top: .25rem;
+}
+
+.aiu-scheduler-cli__banner.callout {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem 1rem;
+}
+
+.aiu-scheduler-cli__cards.card-container .card {
+    margin-bottom: 0;
+}
+
+
+.aiu-scheduler-cli__tools-meta {
+    background: var(--typo3-surface-container-default);
+}
+
+.aiu-scheduler-cli__command-panel {
+    border-bottom: 1px solid var(--aiu-border);
+}
+
+.aiu-scheduler-cli__command-panel:last-child {
+    border-bottom: 0;
+}
+
+.aiu-scheduler-cli__command-panel-header {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    padding: var(--typo3-card-padding);
+    text-align: start;
+    transition: background .15s ease-in-out;
+    width: 100%;
+}
+
+.aiu-scheduler-cli__command-panel-header:hover,
+.aiu-scheduler-cli__command-panel-header.is-open {
+    background: var(--typo3-surface-container-default);
+}
+
+.aiu-scheduler-cli__command-panel-end {
+    align-items: center;
+    display: flex;
+    flex-shrink: 0;
+    gap: .65rem;
+}
+
+.aiu-scheduler-cli__command-chevron {
+    display: inline-flex;
+    flex-shrink: 0;
+    transition: transform .15s ease;
+}
+
+.aiu-scheduler-cli__command-panel-header.is-open .aiu-scheduler-cli__command-chevron {
+    transform: rotate(180deg);
+}
+
+.aiu-scheduler-cli__command-panel-identity {
+    min-width: 0;
+}
+
+.aiu-scheduler-cli__command-panel-body {
+    border-top: 1px solid var(--aiu-border);
+    padding: 0 var(--typo3-card-padding) var(--typo3-card-padding);
+}
+
+.aiu-scheduler-cli__command-panel-body > :first-child {
+    margin-top: var(--typo3-card-padding);
+}
+
+.aiu-scheduler-cli__header {
+    margin-bottom: 1rem;
+}
+
+.aiu-scheduler-cli__title {
+    color: var(--aiu-text-900);
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1.15;
+    margin: 0 0 .2rem;
+}
+
+.aiu-scheduler-cli__intro {
+    color: var(--aiu-text-600);
+    font-size: .8rem;
+    margin: 0;
+}
+
+.aiu-scheduler-cli__filters--library {
+    border-top-left-radius: .5rem;
+    border-top-right-radius: .5rem;
+}
+
+.aiu-scheduler-cli__modes-inline {
+    flex-shrink: 0;
+}
+
+.aiu-scheduler-cli__chips.btn-group {
+    flex-shrink: 0;
+}
+
+.aiu-scheduler-cli__card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    margin-top: .5rem;
+}
+
+.aiu-scheduler-cli__command-panel-body .aiu-scheduler-cli__card-actions {
+    padding-top: .25rem;
+}
+
+.aiu-scheduler-cli__cli-block {
+    background: var(--aiu-mcp-code-bg) !important;
+    border: 1px solid var(--aiu-mcp-code-border);
+    border-radius: .45rem;
+    color: var(--aiu-mcp-code-fg) !important;
+    font-family: var(--typo3-font-family-code, ui-monospace, monospace);
+    font-size: .72rem;
+    line-height: 1.5;
+    margin-bottom: .65rem;
+    overflow: auto;
+    padding: .55rem .65rem;
+}
+
+.aiu-scheduler-cli__cli-block code {
+    background: transparent !important;
+    border: 0;
+    color: var(--aiu-mcp-code-fg) !important;
+    display: block;
+    font-size: inherit;
+    padding: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.aiu-scheduler-cli__task-table {
+    margin-bottom: 1rem;
+}
+
+.aiu-scheduler-cli__task-head {
+    align-items: center;
+    border: 1px solid var(--aiu-border);
+    border-bottom: 0;
+    border-radius: .6rem .6rem 0 0;
+    display: flex;
+    justify-content: space-between;
+    padding: .68rem .85rem;
+}
+
+.aiu-scheduler-cli__task-head h3 {
+    font-size: .84rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.aiu-scheduler-cli__task-head-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+}
+
+.aiu-scheduler-cli__task-hint {
+    border: 1px solid var(--aiu-border);
+    border-bottom: 0;
+    color: var(--aiu-text-600);
+    font-size: .74rem;
+    margin: 0;
+    padding: .55rem .85rem;
+}
+
+.aiu-scheduler-cli__task-title {
+    color: var(--aiu-text-900);
+    font-weight: 600;
+}
+
+.aiu-scheduler-cli__task-sub {
+    color: var(--aiu-text-500);
+    font-size: .7rem;
+}
+
+.aiu-scheduler-cli__task-table .actions form {
+    display: inline-flex;
+}
+
+.aiu-scheduler-cli__task-table table {
+    border-radius: 0 0 .6rem .6rem;
+}
+
+.aiu-scheduler-cli__run-output {
+    background: #fff;
+    border: 1px solid var(--aiu-border);
+    border-radius: .5rem;
+    font-size: .74rem;
+    margin: .5rem 0 0;
+    max-height: 200px;
+    overflow: auto;
+    padding: .55rem;
+    white-space: pre-wrap;
+}
+
+.aiu-scheduler-cli .modal-body .form-group {
+    margin-bottom: .75rem;
+}
+
+.aiu-scheduler-cli .modal-body .form-label {
+    color: var(--aiu-text-700);
+    font-size: .74rem;
+    font-weight: 600;
+    margin-bottom: .28rem;
+}
+
+.aiu-scheduler-cli .modal-body .mb-2 {
+    background: var(--aiu-bg-soft);
+    border: 1px solid var(--aiu-border);
+    border-radius: .5rem;
+    color: var(--aiu-text-800);
+    font-size: .76rem;
+    margin-bottom: .75rem;
+    padding: .5rem .65rem;
+}
+
+@media (max-width: 640px) {
+    .aiu-scheduler-cli__card-actions {
+        flex-wrap: wrap;
+    }
+}

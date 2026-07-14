@@ -1,0 +1,26 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<f:variable name="breadcrumbPageId" value="{f:if(condition: currentPageId, then: currentPageId, else: pageId)}" />
+<f:variable name="displayPageId" value="{f:if(condition: rootPageUid, then: rootPageUid, else: breadcrumbPageId)}" />
+<f:variable name="displayPageTitle" value="{f:if(condition: rootPageTitle, then: rootPageTitle, else: pagePathData.pageTitle)}" />
+
+<f:if condition="{breadcrumbPageId} > 0">
+    <div class="aiu-page-breadcrumb d-flex flex-column justify-content-center">
+        <span class="typo3-docheader-pagePath">
+            <f:translate key="{ll}:dashboard.pagePath" arguments="{0: '/'}" />
+        </span>
+        <strong>
+            <button type="button"
+                    class="btn btn-link p-0"
+                    data-contextmenu-trigger="click"
+                    data-contextmenu-table="pages"
+                    data-contextmenu-uid="{displayPageId}"
+                    aria-label="{displayPageTitle}">
+                <core:icon identifier="apps-pagetree-page-domain" size="small" />
+            </button><f:format.crop maxCharacters="50"> {displayPageTitle}</f:format.crop> [{displayPageId}]
+        </strong>
+    </div>
+</f:if>
+</html>

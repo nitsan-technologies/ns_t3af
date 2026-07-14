@@ -1,0 +1,52 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:if condition="{creditsFeatureAvailable} == 1">
+<div class="aiu-dashboard-toolbar"
+     data-aiu-dashboard-toolbar
+     data-aiu-providers-credits-root
+     data-nst3af-credits-mode
+     data-credits-feature-available="1"
+     data-credits-active="{f:if(condition: '{creditsModeActive} == 1', then: '1', else: '0')}"
+     data-credit-mode="{f:if(condition: '{creditsModeEnabled} == 1', then: '1', else: '0')}">
+    <div class="aiu-dashboard-toolbar__mode d-flex flex-wrap align-items-center gap-2" role="radiogroup" aria-label="AI Provider Mode">
+                <div class="btn-group" role="group">
+                    <button type="button"
+                            class="btn btn-default d-inline-flex align-items-center gap-1 aiu-dashboard__mode-btn{f:if(condition: '{creditsFeatureAvailable} == 0', then: ' is-disabled')}{f:if(condition: '{creditsModeEnabled} == 1', then: ' active is-active')}"
+                            data-aiu-providers-mode="credits"
+                            data-credits-mode="credits"
+                            aria-disabled="{f:if(condition: '{creditsFeatureAvailable} == 0', then: 'true', else: 'false')}"
+                            aria-pressed="{f:if(condition: '{creditsModeEnabled} == 1', then: 'true', else: 'false')}">
+                        <core:icon identifier="actions-wallet" size="small" />
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.credits.title"
+                                     default="T3Planet Credits" />
+                    </button>
+                    <button type="button"
+                            class="btn btn-default d-inline-flex align-items-center gap-1 aiu-dashboard__mode-btn{f:if(condition: '{creditsModeEnabled} == 1', then: '', else: ' active is-active')}"
+                            data-aiu-providers-mode="ownkeys"
+                            data-credits-mode="ownkeys"
+                            aria-pressed="{f:if(condition: '{creditsModeEnabled} == 1', then: 'false', else: 'true')}">
+                        <core:icon identifier="actions-key" size="small" />
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.ownKeys.title"
+                                     default="Own API Keys" />
+                    </button>
+                </div>
+                <f:if condition="{creditsFeatureAvailable} == 0">
+                    <f:then>
+                        <span class="badge badge-secondary">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.comingSoon"
+                                         default="Coming soon" />
+                        </span>
+                    </f:then>
+                    <f:else>
+                        <span class="aiu-pill aiu-pill--activate{f:if(condition: '{creditsModeEnabled} == 1', then: '', else: ' is-hidden')}{f:if(condition: '{creditsModeActive} == 1', then: ' is-hidden', else: '')}"
+                              data-credits-activate role="button" tabindex="0">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.credits.activate"
+                                         default="Activate" />
+                        </span>
+                    </f:else>
+                </f:if>
+    </div>
+</div>
+</f:if>
+</html>

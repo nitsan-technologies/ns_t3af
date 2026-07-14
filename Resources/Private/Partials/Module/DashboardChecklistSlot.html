@@ -1,0 +1,15 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<div class="aiu-dashboard__checklist-slot">
+    <div class="aiu-checklist-view{f:if(condition: '{creditsModeEnabled} == 1', then: '', else: ' is-hidden')}"
+         data-aiu-checklist-view="credits"
+         aria-hidden="{f:if(condition: '{creditsModeEnabled} == 1', then: 'false', else: 'true')}">
+        <f:render partial="Module/SetupChecklist" arguments="{setupChecklist: setupChecklistCredits, checklistBodyId: 'aiu-checklist-body-credits'}" />
+    </div>
+    <div class="aiu-checklist-view{f:if(condition: '{creditsModeEnabled} == 1', then: ' is-hidden', else: '')}"
+         data-aiu-checklist-view="ownkeys"
+         aria-hidden="{f:if(condition: '{creditsModeEnabled} == 1', then: 'true', else: 'false')}">
+        <f:render partial="Module/SetupChecklist" arguments="{setupChecklist: setupChecklistOwnKeys, checklistBodyId: 'aiu-checklist-body-ownkeys'}" />
+    </div>
+</div>
+</html>

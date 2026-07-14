@@ -1,0 +1,77 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+<f:render section="HeaderBefore" arguments="{_all}" optional="true" />
+<f:render section="Before" arguments="{_all}" optional="true" />
+
+<f:be.pageRenderer
+    includeCssFiles="{
+        0: 'EXT:ns_t3af/Resources/Public/Css/module/base.css',
+        1: 'EXT:ns_t3af/Resources/Public/Css/module/setup.css',
+        2: 'EXT:ns_t3af/Resources/Public/Css/module/dashboard.css',
+        3: 'EXT:ns_t3af/Resources/Public/Css/module/mcp-server.css',
+        4: 'EXT:ns_t3af/Resources/Public/Css/module/shared-components.css',
+        5: 'EXT:ns_t3af/Resources/Public/Css/module/credits.css',
+        6: 'EXT:ns_t3af/Resources/Public/Css/module/mcp-tools.css',
+        7: 'EXT:ns_t3af/Resources/Public/Css/module/ai-features.css',
+        8: 'EXT:ns_t3af/Resources/Public/Css/module/ai-usage.css',
+        9: 'EXT:ns_t3af/Resources/Public/Css/module/ai-prompts.css',
+        10: 'EXT:ns_t3af/Resources/Public/Css/module/scheduler-cli.css',
+        11: 'EXT:ns_t3af/Resources/Public/Css/module/ai-logs.css',
+        12: 'EXT:ns_t3af/Resources/Public/Css/module/ai-context.css',
+        13: 'EXT:ns_t3af/Resources/Public/Css/module/access-roles.css'
+    }"
+    includeJavaScriptModules="{0: '@nitsan/nst3af/setup-wizard.js'}"
+/>
+
+<div class="module module-layout-{moduleLayout} {moduleClass} aiu-module-shell" data-module-id="{moduleId}" data-module-name="{moduleName}" data-aiu-requires-page-id="{requiresPageSelection}">
+    <f:if condition="{formTag}">
+        <f:then>
+            <f:format.raw>{formTag}</f:format.raw>
+        </f:then>
+    </f:if>
+
+    <f:render partial="Module/DocHeader" arguments="{_all}" />
+
+    <div class="module-body t3js-module-body">
+        <div class="module-body-container t3js-module-body-container">
+            <f:if condition="{uiBlock}">
+                <div id="t3js-ui-block" class="ui-block">
+                    <core:icon identifier="spinner-circle" size="large" />
+                </div>
+            </f:if>
+            <f:flashMessages queueIdentifier="{flashMessageQueueIdentifier}" />
+
+            <div class="aiu-module-page">
+                <div class="aiu-module-content">
+                    <f:if condition="{licenseBannerVisible} == 1">
+                        <f:then>
+                            <f:render partial="Module/LicenseRequired" arguments="{_all}" />
+                        </f:then>
+                        <f:else>
+                            <f:render partial="Module/AccessDenied" arguments="{_all}" />
+                            <f:if condition="{tabAccessDenied} != 1">
+                                <f:render section="Content" arguments="{_all}" />
+                            </f:if>
+                        </f:else>
+                    </f:if>
+                </div>
+
+                <f:render partial="Module/SetupWizard" arguments="{_all}" />
+            </div>
+        </div>
+    </div>
+
+    <f:render partial="Module/FooterLinks" arguments="{_all}" />
+
+    <f:if condition="{formTag}">
+        <f:then>
+            </form>
+        </f:then>
+    </f:if>
+</div>
+
+<f:render section="After" arguments="{_all}" optional="true" />
+</html>

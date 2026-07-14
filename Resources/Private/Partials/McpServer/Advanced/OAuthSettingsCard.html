@@ -1,0 +1,148 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="card aiu-mcp-oauth-settings">
+    <div class="card-header aiu-mcp-oauth-settings__header">
+        <h3 class="card-title mb-0 aiu-mcp-oauth-settings__title">
+            <span class="aiu-mcp-oauth-settings__title-icon" aria-hidden="true">
+                <core:icon identifier="actions-lock" size="small" />
+            </span>
+            <f:translate key="{ll}:module.mcpServer.advanced.title" />
+        </h3>
+    </div>
+    <div class="card-body">
+        <form data-advanced-form>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="aiu-mcp-oauth-client-id">
+                        <f:translate key="{ll}:module.mcpServer.advanced.clientId" />
+                    </label>
+                    <input class="form-control font-monospace"
+                           id="aiu-mcp-oauth-client-id"
+                           name="oauthDefaultClientId"
+                           value="{mcpAdvancedSettings.oauthDefaultClientId}" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="aiu-mcp-token-expiry">
+                        <f:translate key="{ll}:module.mcpServer.advanced.tokenExpiry" />
+                    </label>
+                    <input class="form-control"
+                           type="number"
+                           min="60"
+                           id="aiu-mcp-token-expiry"
+                           name="accessTokenLifetime"
+                           value="{mcpAdvancedSettings.accessTokenLifetime}" />
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="aiu-mcp-redirect-uris">
+                        <f:translate key="{ll}:module.mcpServer.advanced.redirectUris" />
+                    </label>
+                    <textarea class="form-control font-monospace"
+                              id="aiu-mcp-redirect-uris"
+                              rows="3"
+                              name="oauthDefaultRedirectUris"
+                              placeholder="{f:translate(key: '{ll}:module.mcpServer.advanced.redirectUrisPlaceholder')}">{mcpAdvancedSettings.oauthDefaultRedirectUris}</textarea>
+                    <p class="form-text text-variant small mb-0">
+                        <f:translate key="{ll}:module.mcpServer.advanced.redirectUrisHint" />
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="aiu-mcp-max-tokens">
+                        <f:translate key="{ll}:module.mcpServer.advanced.maxTokens" />
+                    </label>
+                    <input class="form-control"
+                           type="number"
+                           min="1"
+                           id="aiu-mcp-max-tokens"
+                           name="oauthMaxActiveTokensPerUser"
+                           value="{mcpAdvancedSettings.oauthMaxActiveTokensPerUser}" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="aiu-mcp-oauth-scopes">
+                        <f:translate key="{ll}:module.mcpServer.advanced.scopes" />
+                    </label>
+                    <input class="form-control font-monospace"
+                           id="aiu-mcp-oauth-scopes"
+                           name="oauthDefaultScopes"
+                           value="{mcpAdvancedSettings.oauthDefaultScopes}" />
+                    <p class="form-text text-variant small mb-0">
+                        <f:translate key="{ll}:module.mcpServer.advanced.scopesHint" />
+                    </p>
+                </div>
+            </div>
+
+            <div class="aiu-mcp-oauth-settings__options mt-4">
+                <p class="aiu-mcp-oauth-settings__options-title mb-0">
+                    <f:translate key="{ll}:module.mcpServer.advanced.optionsLegend" />
+                </p>
+                <div class="aiu-mcp-oauth-settings__options-list">
+                    <div class="form-check">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="aiu-mcp-enable-server"
+                               name="enableMcpServer"
+                               value="1"
+                               {f:if(condition: '{mcpAdvancedSettings.enableMcpServer} == 1', then: 'checked="checked"')} />
+                        <label class="form-check-label" for="aiu-mcp-enable-server">
+                            <f:translate key="{ll}:module.mcpServer.advanced.enableServer" />
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="aiu-mcp-require-auth"
+                               name="requireAuth"
+                               value="1"
+                               {f:if(condition: '{mcpAdvancedSettings.requireAuth} == 1', then: 'checked="checked"')} />
+                        <label class="form-check-label" for="aiu-mcp-require-auth">
+                            <f:translate key="{ll}:module.mcpServer.advanced.requireAuth" />
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="aiu-mcp-rate-limit"
+                               name="rateLimitGlobal"
+                               value="1"
+                               {f:if(condition: '{mcpAdvancedSettings.rateLimitGlobal} == 1', then: 'checked="checked"')} />
+                        <label class="form-check-label" for="aiu-mcp-rate-limit">
+                            <f:translate key="{ll}:module.mcpServer.advanced.rateLimit" />
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="aiu-mcp-log-tools"
+                               name="logAllToolCalls"
+                               value="1"
+                               {f:if(condition: '{mcpAdvancedSettings.logAllToolCalls} == 1', then: 'checked="checked"')} />
+                        <label class="form-check-label" for="aiu-mcp-log-tools">
+                            <f:translate key="{ll}:module.mcpServer.advanced.logTools" />
+                        </label>
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="aiu-mcp-anonymous-read"
+                               name="allowAnonymousReadOnly"
+                               value="1"
+                               {f:if(condition: '{mcpAdvancedSettings.allowAnonymousReadOnly} == 1', then: 'checked="checked"')} />
+                        <label class="form-check-label" for="aiu-mcp-anonymous-read">
+                            <f:translate key="{ll}:module.mcpServer.advanced.anonymousRead" />
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="aiu-mcp-oauth-settings__actions mt-3">
+                <button type="button" class="btn btn-primary" data-action="save-advanced">
+                    <core:icon identifier="actions-check" size="small" />
+                    <f:translate key="{ll}:module.mcpServer.action.saveSettings" />
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+</html>

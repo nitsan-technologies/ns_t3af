@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<xliff version="1.0">
+    <file source-language="en" datatype="plaintext" original="messages" product-name="ns_t3af" target-language="de">
+        <header/>
+        <body>
+            <trans-unit id="tx_nst3af_provider">
+                <source>AI Provider</source>
+                <target>AI Provider</target>
+            </trans-unit>
+            <trans-unit id="tx_nst3af_oauth_client">
+                <source>MCP OAuth Client</source>
+                <target>MCP OAuth-Client</target>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

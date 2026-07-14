@@ -1,0 +1,75 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="card aiu-mcp-transport-panel" data-transport-panel="http"
+     data-personal-token-uid="{mcpPersonalTokenUid}"
+     data-personal-token-plain="{mcpPersonalTokenPlain}">
+    <div class="card-header">
+        <h3 class="card-title mb-0"><f:translate key="{ll}:module.mcpServer.transport.http.title" /></h3>
+    </div>
+    <div class="card-body">
+        <div class="callout callout-info">
+            <p class="mb-0"><f:translate key="{ll}:module.mcpServer.oauth.intro" /></p>
+        </div>
+
+        <div class="aiu-mcp-field-row mt-3">
+            <label class="form-label text-uppercase small"><f:translate key="{ll}:module.mcpServer.kpi.serverUrl" /></label>
+            <div class="aiu-mcp-url-row">
+                <code class="aiu-mcp-url-row__code" data-copy-target="oauth-url">{mcpServerUrl}</code>
+                <button type="button" class="btn btn-sm btn-default" data-copy="oauth-url">
+                    <core:icon identifier="actions-clipboard" size="small" />
+                    <f:translate key="{ll}:module.mcpServer.action.copyServerUrl" />
+                </button>
+            </div>
+        </div>
+
+        <div class="aiu-mcp-field-row">
+            <label class="form-label text-uppercase small"><f:translate key="{ll}:module.mcpServer.oauth.authLabel" /></label>
+            <div class="d-flex align-items-center gap-2">
+                <span><f:translate key="{ll}:module.mcpServer.oauth.authType" /></span>
+                <span class="badge badge-success"><f:translate key="{ll}:module.mcpServer.oauth.authSecure" /></span>
+            </div>
+        </div>
+
+        <f:if condition="{mcpPersonalTokenActive} == 1">
+            <div class="aiu-mcp-bearer-token mt-3">
+                <div class="aiu-mcp-bearer-token__box">
+                    <div class="aiu-mcp-bearer-token__header">
+                        <span class="aiu-mcp-bearer-token__label">
+                            <f:translate key="{ll}:module.mcpServer.clientToken.bearerLabel" />
+                        </span>
+                        <button type="button"
+                                class="btn btn-link btn-sm p-0 aiu-mcp-bearer-token__copy"
+                                data-copy="personal-bearer-token"
+                                aria-label="{f:translate(key: '{ll}:module.mcpServer.action.copyToken')}">
+                            <core:icon identifier="actions-clipboard" size="small" alternativeMarkupIdentifier="inline" />
+                        </button>
+                    </div>
+                    <code class="aiu-mcp-bearer-token__value"
+                          data-copy-target="personal-bearer-token"
+                          data-token-uid="{mcpPersonalTokenUid}">{mcpPersonalTokenPreview}</code>
+                </div>
+            </div>
+        </f:if>
+
+        <div class="aiu-mcp-endpoint-status mt-3">
+            <div class="aiu-mcp-endpoint-status__row">
+                <span class="aiu-mcp-endpoint-status__label"><f:translate key="{ll}:module.mcpServer.endpoint.statusLabel" /></span>
+                <core:icon identifier="{f:if(condition: '{mcpStatus.endpointChecks.mcp} == 1', then: 'actions-check', else: 'actions-exclamation-triangle')}" size="small" />
+            </div>
+            <div class="aiu-mcp-endpoint-status__row">
+                <code class="aiu-mcp-endpoint-status__url" data-copy-target="well-known-auth">{mcpWellKnownAuthUrl}</code>
+                <core:icon identifier="{f:if(condition: '{mcpStatus.endpointChecks.authorizationServer} == 1', then: 'actions-check', else: 'actions-exclamation-triangle')}" size="small" />
+            </div>
+            <div class="aiu-mcp-endpoint-status__row">
+                <code class="aiu-mcp-endpoint-status__url" data-copy-target="well-known-resource">{mcpWellKnownResourceUrl}</code>
+                <core:icon identifier="{f:if(condition: '{mcpStatus.endpointChecks.protectedResource} == 1', then: 'actions-check', else: 'actions-exclamation-triangle')}" size="small" />
+            </div>
+        </div>
+
+        <f:render partial="McpServer/Connect/ClientSetupGuides" arguments="{transportKey: 'http', transportClients: mcpTransportGuides.http, mcpSnippetArgs: mcpSnippetArgs}" />
+    </div>
+</div>
+</html>

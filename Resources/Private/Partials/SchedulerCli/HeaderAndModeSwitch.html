@@ -1,0 +1,56 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="aiu-mcp-status-bar">
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.schedulerCli.kpi.totalCommands" default="Total Commands" /></h4>
+            <span class="aiu-mcp-status-bar__value">{schedulerCliKpis.totalCommands}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.schedulerCli.kpi.totalTasks" default="Scheduled Tasks" /></h4>
+            <span class="aiu-mcp-status-bar__value">{schedulerCliKpis.totalTasks}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.schedulerCli.kpi.activeTasks" default="Active Tasks" /></h4>
+            <span class="aiu-mcp-status-bar__value">{schedulerCliKpis.activeTasks}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.schedulerCli.kpi.failingTasks" default="Failing Tasks" /></h4>
+            <span class="aiu-mcp-status-bar__value">{schedulerCliKpis.failingTasks}</span>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <div class="card-header-body">
+            <h3 class="card-title mb-0"><f:translate key="{ll}:module.schedulerCli.quickref.title" default="Quick Reference" /></h3>
+            <span class="card-subtitle"><f:translate key="{ll}:module.schedulerCli.quickref.subtitle" default="TYPO3 CLI — Symfony Console" /></span>
+        </div>
+    </div>
+    <div class="card-body">
+        <ul class="mb-0 ps-3">
+            <li class="mb-2">
+                <f:translate key="{ll}:module.schedulerCli.quickref.listAll" default="List all AI Universe commands:" />
+                <code class="font-monospace d-inline-block mt-1">vendor/bin/typo3 list t3af</code>
+            </li>
+            <li class="mb-2">
+                <f:translate key="{ll}:module.schedulerCli.quickref.help" default="Get help for a specific command:" />
+                <code class="font-monospace d-inline-block mt-1">vendor/bin/typo3 help t3af:seo:generateMeta</code>
+            </li>
+            <li class="mb-0">
+                <f:translate key="{ll}:module.schedulerCli.quickref.verbose" default="Run a command with verbose output:" />
+                <code class="font-monospace d-inline-block mt-1">vendor/bin/typo3 t3af:seo:generateMeta -vvv</code>
+            </li>
+        </ul>
+    </div>
+</div>
+
+</html>

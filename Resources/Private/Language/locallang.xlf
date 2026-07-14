@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file source-language="en" datatype="plaintext" original="EXT:ns_t3af/Resources/Private/Language/locallang.xlf" product-name="ns_t3af">
+        <header/>
+        <body>
+            <trans-unit id="email.apiAlert.subject.quota" resname="email.apiAlert.subject.quota">
+                <source>API data quota exceeded</source>
+            </trans-unit>
+            <trans-unit id="email.apiAlert.subject.apiKey" resname="email.apiAlert.subject.apiKey">
+                <source>API Authentication Error</source>
+            </trans-unit>
+            <trans-unit id="email.apiAlert.aiEngine" resname="email.apiAlert.aiEngine">
+                <source>AI Engine</source>
+            </trans-unit>
+            <trans-unit id="email.apiAlert.errorMessage" resname="email.apiAlert.errorMessage">
+                <source>Error Message</source>
+            </trans-unit>
+            <trans-unit id="email.apiAlert.occurFrom" resname="email.apiAlert.occurFrom">
+                <source>Generated from</source>
+            </trans-unit>
+            <trans-unit id="email.apiAlert.timestamp" resname="email.apiAlert.timestamp">
+                <source>Time</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

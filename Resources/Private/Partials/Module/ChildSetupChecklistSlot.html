@@ -1,0 +1,15 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:if condition="{showSetupChecklist} == 1">
+    <div class="aiu-module-page aiu-module-page--child-embed">
+        <div class="aiu-dashboard__checklist-slot aiu-dashboard__checklist-slot--child">
+            <f:render partial="Module/SetupChecklist" arguments="{
+                setupChecklist: setupChecklist,
+                checklistBodyId: checklistBodyId,
+                checklistDefaultOpen: checklistDefaultOpen,
+                checklistShowFoundationCta: 1
+            }" />
+        </div>
+    </div>
+</f:if>
+</html>

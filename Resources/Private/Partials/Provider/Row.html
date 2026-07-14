@@ -1,0 +1,148 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<tr class="aiu-provider-row" data-aiu-provider-row data-uid="{provider.uid}"
+    data-identifier="{provider.identifier}"
+    data-title="{provider.title}"
+    data-model="{provider.modelId}">
+    <th scope="row">
+        <div class="aiu-cell-title">
+            <div>
+                <div>
+                    <span class="name">{provider.title}</span>
+                    <f:if condition="{provider.isDefault} == 1">
+                        <span class="badge badge-primary">Default</span>
+                    </f:if>
+                </div>
+                <div class="identifier">{provider.identifier}</div>
+            </div>
+        </div>
+    </th>
+    <td><span class="aiu-adapter-type">{adapterLabel}</span></td>
+    <td>
+        <f:if condition="{provider.modelId} != ''">
+            <span class="badge badge-default">{provider.modelId}</span>
+        </f:if>
+    </td>
+    <f:if condition="{showEmbeddingModelField} == 1">
+        <td>
+          <f:if condition="{provider.embeddingModelId} != ''">
+              <span class="badge badge-default">{provider.embeddingModelId}</span>
+          </f:if>
+        </td>
+    </f:if>
+    <td>
+        <f:if condition="{provider.lastUsedAt} > 0">
+            <f:then>
+                <span class="aiu-last-used"><f:format.date format="Y-m-d H:i">@{provider.lastUsedAt}</f:format.date></span>
+            </f:then>
+            <f:else>
+                <span class="aiu-last-used aiu-last-used--empty">—</span>
+            </f:else>
+        </f:if>
+    </td>
+    <td>
+        <span class="aiu-priority badge {f:if(condition:'{provider.priority} >= 50', then:'aiu-priority--high badge-primary', else:'aiu-priority--mid badge-default')}">{provider.priority}</span>
+        <f:if condition="{provider.isDefault} == 1">
+            <span class="badge badge-primary">primary</span>
+        </f:if>
+    </td>
+    <td data-aiu-provider-status>
+        <f:if condition="{provider.lastStatus} == 'connected'">
+            <f:then>
+                <span class="badge badge-success">
+                    Connected
+                </span>
+            </f:then>
+            <f:else>
+                <f:if condition="{provider.lastStatus} == 'disconnected'">
+                    <f:then>
+                        <span class="badge badge-danger">Disconnected
+                        </span>
+                    </f:then>
+                    <f:else>
+                        <span class="badge badge-warning">
+                             unknown
+                        </span>
+                    </f:else>
+                </f:if>
+            </f:else>
+        </f:if>
+    </td>
+    <td class="col-control">
+        <div class="btn-group" role="group"
+             aria-label="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.col.actions', default:'Actions')}">
+            <f:if condition="{canModifyProviders} == 1">
+                <f:then>
+                    <a class="btn btn-default"
+                       href="{editUri}"
+                       data-aiu-drawer-trigger="edit"
+                       data-uid="{provider.uid}"
+                       title="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.edit', default:'Edit')}"
+                       role="button">
+                        <core:icon identifier="actions-open" size="small" />
+                    </a>
+                    <button type="button"
+                            class="btn btn-default aiu-test-btn"
+                            data-aiu-test-uid="{provider.uid}"
+                            data-aiu-status="{provider.lastStatus}"
+                            title="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.test', default:'Test connection')}">
+                        <svg class="aiu-test-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path class="aiu-test-icon__arc aiu-test-icon__arc--outer" d="M2 8.82a15 15 0 0 1 20 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                            <path class="aiu-test-icon__arc aiu-test-icon__arc--mid" d="M5 12.859a10 10 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                            <path class="aiu-test-icon__arc aiu-test-icon__arc--inner" d="M8.5 16.429a5 5 0 0 1 7 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                            <circle class="aiu-test-icon__dot" cx="12" cy="20" r="1.5" fill="currentColor" stroke="none"></circle>
+                        </svg>
+                    </button>
+                    <f:if condition="{provider.isDefault} == 1">
+                        <f:then>
+                            <span class="btn btn-default disabled aiu-provider-default-btn is-default"
+                                  title="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.setDefault', default:'Make default')}">
+                                <core:icon identifier="actions-star-alt" size="small" />
+                            </span>
+                        </f:then>
+                        <f:else>
+                            <button type="button"
+                                    class="btn btn-default"
+                                    data-aiu-default-uid="{provider.uid}"
+                                    title="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.setDefault', default:'Make default')}">
+                                <core:icon identifier="actions-star" size="small" />
+                            </button>
+                        </f:else>
+                    </f:if>
+                    <form method="post"
+                          action="{deleteUri}"
+                          id="aiu-provider-delete-{provider.uid}">
+                        <input type="hidden" name="uid" value="{provider.uid}" />
+                    </form>
+                    <button type="submit"
+                            class="btn btn-danger t3js-modal-trigger"
+                            data-target-form="aiu-provider-delete-{provider.uid}"
+                            title="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.delete', default:'Delete')}"
+                            data-severity="warning"
+                            data-title="{f:translate(key:'LLL:EXT:backend/Resources/Private/Language/locallang_alt_doc.xlf:label.confirm.delete_record.title')}"
+                            data-content="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.confirmDelete', arguments: {0: provider.title}, default:'Delete this provider?')}"
+                            data-button-close-text="{f:translate(key:'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:cancel')}"
+                            data-button-ok-text="{f:translate(key:'LLL:EXT:backend/Resources/Private/Language/locallang_alt_doc.xlf:buttons.confirm.delete_record.yes')}">
+                        <core:icon identifier="actions-delete" size="small" />
+                    </button>
+                </f:then>
+                <f:else>
+                    <button type="button"
+                            class="btn btn-default aiu-test-btn"
+                            data-aiu-test-uid="{provider.uid}"
+                            data-aiu-status="{provider.lastStatus}"
+                            title="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.test', default:'Test connection')}">
+                        <svg class="aiu-test-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path class="aiu-test-icon__arc aiu-test-icon__arc--outer" d="M2 8.82a15 15 0 0 1 20 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                            <path class="aiu-test-icon__arc aiu-test-icon__arc--mid" d="M5 12.859a10 10 0 0 1 14 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                            <path class="aiu-test-icon__arc aiu-test-icon__arc--inner" d="M8.5 16.429a5 5 0 0 1 7 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                            <circle class="aiu-test-icon__dot" cx="12" cy="20" r="1.5" fill="currentColor" stroke="none"></circle>
+                        </svg>
+                    </button>
+                </f:else>
+            </f:if>
+        </div>
+    </td>
+</tr>
+</html>

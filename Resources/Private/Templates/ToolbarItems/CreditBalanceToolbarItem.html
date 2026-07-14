@@ -1,0 +1,18 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="aiu-toolbar-credit-balance aiu-toolbar-credit-balance--{badge.level} d-inline-flex align-items-center"
+     role="status"
+     title="{f:translate(key: '{ll}:toolbar.credits.balance', arguments: {0: badge.creditsLabel, 1: badge.percentLeft})}">
+    <span class="aiu-toolbar-credit-balance__icon" aria-hidden="true">
+        <core:icon identifier="actions-wallet" size="small" alternativeMarkupIdentifier="inline" />
+    </span>
+    <span class="aiu-toolbar-credit-balance__amount">{badge.creditsLabel}</span>
+    <f:if condition="{badge.showPercent} == 1">
+        <span class="aiu-toolbar-credit-balance__sep" aria-hidden="true">|</span>
+        <span class="aiu-toolbar-credit-balance__percent">{badge.percentLeft}%</span>
+    </f:if>
+</div>
+</html>

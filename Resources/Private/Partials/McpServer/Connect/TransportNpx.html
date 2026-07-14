@@ -1,0 +1,37 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="card aiu-mcp-transport-panel is-hidden" data-transport-panel="npx">
+    <div class="card-header">
+        <h3 class="card-title mb-1"><f:translate key="{ll}:module.mcpServer.transport.npx.title" /></h3>
+        <p class="text-variant small"><f:translate key="{ll}:module.mcpServer.transport.npx.lead" /></p>
+    </div>
+    <div class="card-body">
+        <div class="aiu-mcp-field-row">
+            <label class="form-label"><f:translate key="{ll}:module.mcpServer.transport.npx.commandLabel" /></label>
+            <div class="aiu-mcp-code">
+                <button type="button" class="aiu-mcp-code__copy btn btn-sm btn-default" data-copy-snippet="npx">
+                    <core:icon identifier="actions-clipboard" size="small" />
+                    <f:translate key="{ll}:module.mcpServer.cli.copyConfiguration" />
+                </button>
+                <pre class="aiu-mcp-code__pre" data-snippet="npx">{mcpNpxCommand}</pre>
+            </div>
+        </div>
+
+        <div class="aiu-mcp-field-row mt-3">
+            <label class="form-label"><f:translate key="{ll}:module.mcpServer.mcpremote.configLabel" /></label>
+            <div class="aiu-mcp-code">
+                <button type="button" class="aiu-mcp-code__copy btn btn-sm btn-default" data-copy-snippet="mcpremote">
+                    <core:icon identifier="actions-clipboard" size="small" alternativeMarkupIdentifier="inline" />
+                    <f:translate key="{ll}:module.mcpServer.mcpremote.copyConfiguration" />
+                </button>
+                <pre class="aiu-mcp-code__pre" data-snippet="mcpremote">{mcpRemoteConfigJson}</pre>
+            </div>
+        </div>
+
+        <f:render partial="McpServer/Connect/ClientSetupGuides" arguments="{transportKey: 'npx', transportClients: mcpTransportGuides.npx, mcpSnippetArgs: mcpSnippetArgs}" />
+    </div>
+</div>
+</html>

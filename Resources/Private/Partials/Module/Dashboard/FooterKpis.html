@@ -1,0 +1,39 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<f:variable name="totals" value="{analytics.totals}" />
+<f:variable name="sf" value="{analytics.successFail}" />
+<div class="aiu-dashboard-footer-kpis">
+    <article class="aiu-footer-kpi">
+        <div class="aiu-footer-kpi__label"><f:translate key="{ll}:dashboard.kpi.requests" /></div>
+        <div class="aiu-footer-kpi__value">{totals.totalRequests}</div>
+        <f:render partial="Module/Dashboard/TrendBadge" arguments="{trend: trends.totalRequests}" />
+    </article>
+    <article class="aiu-footer-kpi">
+        <div class="aiu-footer-kpi__label"><f:translate key="{ll}:dashboard.kpi.tokens" /></div>
+        <div class="aiu-footer-kpi__value">{totals.totalTokens}</div>
+        <f:render partial="Module/Dashboard/TrendBadge" arguments="{trend: trends.totalTokens}" />
+    </article>
+    <article class="aiu-footer-kpi">
+        <div class="aiu-footer-kpi__label">
+            <f:translate key="{ll}:{costLabelKey}" default="API Cost" />
+        </div>
+        <div class="aiu-footer-kpi__value">{costDisplay}</div>
+        <f:render partial="Module/Dashboard/TrendBadge" arguments="{trend: trends.cost}" />
+    </article>
+    <article class="aiu-footer-kpi">
+        <div class="aiu-footer-kpi__label"><f:translate key="{ll}:dashboard.kpi.successRate" /></div>
+        <div class="aiu-footer-kpi__value">{totals.successRate}<span class="aiu-kpi-card__unit">%</span></div>
+        <f:render partial="Module/Dashboard/TrendBadge" arguments="{trend: trends.successRate}" />
+    </article>
+    <article class="aiu-footer-kpi">
+        <div class="aiu-footer-kpi__label">
+            <f:translate key="{ll}:{extraLabelKey}" default="Est. Days Left" />
+        </div>
+        <div class="aiu-footer-kpi__value">{extraValue}</div>
+    </article>
+    <article class="aiu-footer-kpi">
+        <div class="aiu-footer-kpi__label"><f:translate key="{ll}:dashboard.kpi.scheduledTasks" default="Scheduled Tasks" /></div>
+        <div class="aiu-footer-kpi__value">{analytics.scheduledTasks.active} <f:translate key="{ll}:dashboard.kpi.active" default="active" /></div>
+    </article>
+</div>
+</html>

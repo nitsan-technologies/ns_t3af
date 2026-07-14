@@ -1,0 +1,80 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="HeaderBefore">
+    <f:be.pageRenderer includeJavaScriptModules="{0: '@nitsan/nst3af/period-filter.js'}" />
+</f:section>
+
+<f:section name="Content">
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+    <div class="aiu-providers aiu-ai-usage"
+         data-aiu-usage-root
+         data-aiu-nav-replace="[data-aiu-usage-root]"
+         data-aiu-nav-replace-callback="aiuReinitAiUsageRoot"
+         data-l10n-details-title="{f:translate(key: '{ll}:module.aiUsage.modal.detailsTitle', default: 'Request Details')}"
+         data-l10n-detail-section-request="{f:translate(key: '{ll}:module.aiUsage.modal.section.request', default: 'Request')}"
+         data-l10n-detail-section-metrics="{f:translate(key: '{ll}:module.aiUsage.modal.section.metrics', default: 'Usage & cost')}"
+         data-l10n-detail-section-error="{f:translate(key: '{ll}:module.aiUsage.modal.section.error', default: 'Error')}"
+         data-l10n-detail-section-meta="{f:translate(key: '{ll}:module.aiUsage.modal.section.meta', default: 'Metadata')}"
+         data-l10n-detail-time="{f:translate(key: '{ll}:module.aiUsage.table.time', default: 'Time')}"
+         data-l10n-detail-provider="{f:translate(key: '{ll}:module.aiUsage.table.provider', default: 'Provider')}"
+         data-l10n-detail-module="{f:translate(key: '{ll}:module.aiUsage.table.module', default: 'Module')}"
+         data-l10n-detail-scope="{f:translate(key: '{ll}:module.aiUsage.table.scope', default: 'Scope')}"
+         data-l10n-detail-model="{f:translate(key: '{ll}:module.aiUsage.table.model', default: 'Model')}"
+         data-l10n-detail-type="{f:translate(key: '{ll}:module.aiUsage.table.type', default: 'Type')}"
+         data-l10n-detail-status="{f:translate(key: '{ll}:module.aiUsage.table.status', default: 'Status')}"
+         data-l10n-detail-tokens="{f:translate(key: '{ll}:module.aiUsage.table.tokens', default: 'Tokens')}"
+         data-l10n-detail-prompt-tokens="{f:translate(key: '{ll}:module.aiUsage.modal.promptTokens', default: 'Prompt tokens')}"
+         data-l10n-detail-completion-tokens="{f:translate(key: '{ll}:module.aiUsage.modal.completionTokens', default: 'Completion tokens')}"
+         data-l10n-detail-latency="{f:translate(key: '{ll}:module.aiUsage.modal.latency', default: 'Latency')}"
+         data-l10n-detail-credits="{f:translate(key: '{ll}:module.aiUsage.modal.credits', default: 'Credits')}"
+         data-l10n-detail-cost="{f:translate(key: '{ll}:module.aiUsage.table.cost', default: 'Cost')}"
+         data-l10n-detail-error-message="{f:translate(key: '{ll}:module.aiUsage.modal.errorMessage', default: 'Message')}"
+         data-l10n-detail-error-code="{f:translate(key: '{ll}:module.aiUsage.modal.errorCode', default: 'Error code')}"
+         data-l10n-detail-error-class="{f:translate(key: '{ll}:module.aiUsage.modal.errorClass', default: 'Exception')}"
+         data-l10n-detail-empty="{f:translate(key: '{ll}:module.aiUsage.modal.emptyValue', default: '—')}"
+         data-l10n-detail-no-error-message="{f:translate(key: '{ll}:module.aiUsage.modal.noErrorMessage', default: 'No detailed error message was recorded for this entry.')}"
+         data-l10n-delete-title="{f:translate(key: '{ll}:module.aiUsage.modal.deleteTitle', default: 'Delete request log entry')}"
+         data-l10n-delete-message="{f:translate(key: '{ll}:module.aiUsage.modal.deleteMessage', default: 'Do you want to soft-delete this log entry?')}"
+         data-l10n-delete-confirm="{f:translate(key: '{ll}:module.aiUsage.modal.deleteConfirm', default: 'Delete')}"
+         data-l10n-bulk-delete-title="{f:translate(key: '{ll}:module.aiUsage.modal.bulkDeleteTitle', default: 'Delete selected entries')}"
+         data-l10n-bulk-delete-message="{f:translate(key: '{ll}:module.aiUsage.modal.bulkDeleteMessage', default: 'Do you want to soft-delete %1$s selected log entries?')}"
+         data-l10n-bulk-delete-confirm="{f:translate(key: '{ll}:module.aiUsage.modal.bulkDeleteConfirm', default: 'Delete selected')}"
+         data-l10n-alert-select-at-least-one="{f:translate(key: '{ll}:module.aiUsage.alert.selectAtLeastOne', default: 'Select at least one entry to delete.')}">
+        <f:if condition="{flash} == 'deleted'">
+            <div class="aiu-flash aiu-flash--success">
+                <f:translate key="{ll}:module.aiUsage.flash.deleted" default="Request log entry deleted." />
+            </div>
+        </f:if>
+        <f:if condition="{flash} == 'bulk-deleted'">
+            <div class="aiu-flash aiu-flash--success">
+                <f:translate key="{ll}:module.aiUsage.flash.bulkDeleted" default="Selected request log entries deleted." />
+            </div>
+        </f:if>
+        <f:if condition="{flash} == 'none-selected'">
+            <div class="aiu-flash aiu-flash--warn">
+                <f:translate key="{ll}:module.aiUsage.flash.noneSelected" default="No entries selected." />
+            </div>
+        </f:if>
+        <f:if condition="{flash} == 'not-deleted'">
+            <div class="aiu-flash aiu-flash--warn">
+                <f:translate key="{ll}:module.aiUsage.flash.notDeleted" default="The selected entry could not be deleted." />
+            </div>
+        </f:if>
+
+        <f:render partial="AiUsage/HeaderAndDateRange" arguments="{_all}" />
+        <f:render partial="AiUsage/ModeSwitch" arguments="{_all}" />
+
+        <f:if condition="{aiUsageMode} == 'log'">
+            <f:then>
+                <f:render partial="AiUsage/RequestLogFilters" arguments="{_all}" />
+                <f:render partial="AiUsage/RequestLogTable" arguments="{_all}" />
+            </f:then>
+            <f:else>
+                <f:render partial="AiUsage/UsageSummary" arguments="{_all}" />
+            </f:else>
+        </f:if>
+    </div>
+</f:section>
+</html>

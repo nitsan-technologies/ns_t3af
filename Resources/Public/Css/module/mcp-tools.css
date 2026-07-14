@@ -1,0 +1,876 @@
+/*!
+ * AI Foundation backend module CSS — 07-mcp-tools
+ * MCP Tools tab: segment tabs, skills banner, extension cards, tool panels, discovered-table editor.
+ *
+ */
+/* ── MCP Tools tab ─────────────────────────────────────── */
+.aiu-mcp-tools {
+    padding-top: .25rem;
+}
+
+.aiu-mcp-topbar {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem 1rem;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.aiu-mcp-topbar__text {
+    flex: 1 1 16rem;
+    min-width: 0;
+}
+
+.aiu-mcp-tools__toolbar-actions {
+    align-items: stretch;
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    gap: .65rem;
+    justify-content: flex-end;
+    margin-left: auto;
+    min-width: 0;
+}
+
+.aiu-mcp-tools__toolbar-actions .aiu-period {
+    flex-shrink: 0;
+}
+
+.aiu-mcp-tools-shell {
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: 18rem minmax(0, 1fr);
+}
+
+.aiu-mcp-tools-shell__sidebar {
+    max-width: 22rem;
+    min-width: 18rem;
+    width: 18rem;
+}
+
+.aiu-mcp-tools-shell__content {
+    min-width: 0;
+    width: 100%;
+}
+
+.aiu-mcp-tools-shell__sidebar > .card {
+    position: sticky;
+    top: .5rem;
+    width: 100%;
+}
+
+.aiu-tool-panel__section > .card.card-size-small {
+    width: 100%;
+}
+
+.aiu-mcp-tools-shell__sidebar .btn[data-mcp-tools-custom-tool-open] {
+    align-items: center;
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    justify-content: center;
+    line-height: 1.35;
+    white-space: normal;
+}
+
+.aiu-mcp-tools-shell__sidebar .btn[data-mcp-tools-custom-tool-open] .icon {
+    flex-shrink: 0;
+}
+
+.aiu-mcp-tools-nav {
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+}
+
+.aiu-mcp-tools-nav__item {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--typo3-component-border-radius, .25rem);
+    color: var(--typo3-text-color-base);
+    cursor: pointer;
+    display: flex;
+    gap: .75rem;
+    padding: .625rem .75rem;
+    text-align: start;
+    width: 100%;
+}
+
+.aiu-mcp-tools-nav__item .icon {
+    flex-shrink: 0;
+}
+
+.aiu-mcp-tools-nav__item:hover,
+.aiu-mcp-tools-nav__item:focus-visible {
+    background: var(--typo3-surface-container-low, var(--aiu-bg-soft));
+    border-color: var(--typo3-card-border-color, var(--aiu-border));
+    color: var(--typo3-text-color-base);
+    outline: 2px solid var(--typo3-state-focus-border-color, var(--typo3-link-color));
+    outline-offset: 1px;
+}
+
+.aiu-mcp-tools-nav__item.active,
+.aiu-mcp-tools-nav__item.is-active {
+    background: var(--aiu-selected-bg);
+    border-color: var(--aiu-selected-border);
+    color: var(--aiu-selected-fg);
+    font-weight: 600;
+}
+
+.aiu-mcp-tools-nav__item.active h4,
+.aiu-mcp-tools-nav__item.is-active h4 {
+    font-weight: 600;
+}
+
+.aiu-mcp-tools-nav__item.active .icon,
+.aiu-mcp-tools-nav__item.is-active .icon {
+    color: currentColor;
+}
+
+.aiu-mcp-tools-nav__item.active .aiu-mcp-tools-nav__meta,
+.aiu-mcp-tools-nav__item.is-active .aiu-mcp-tools-nav__meta {
+    color: var(--aiu-selected-fg);
+}
+
+.aiu-mcp-tools-nav__title {
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+    min-width: 0;
+}
+
+.aiu-mcp-tools-nav__meta {
+    color: var(--typo3-text-color-variant);
+    font-size: var(--typo3-font-size-sm, .6875rem);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.aiu-mcp-prompt-card .aiu-mcp-prompt-row__body {
+    border-top: 1px solid var(--typo3-card-border-color, var(--aiu-border));
+}
+
+.aiu-mcp-prompt-card.is-open .card-footer [data-mcp-tools-prompt-toggle] {
+    font-weight: 600;
+}
+
+.aiu-mcp-prompt-card__chevron {
+    display: inline-flex;
+    flex-shrink: 0;
+    transition: transform .15s ease;
+}
+
+.aiu-mcp-prompt-card.is-open .aiu-mcp-prompt-card__chevron {
+    transform: rotate(180deg);
+}
+
+.aiu-mcp-custom-tool-modal__body {
+    min-width: min(100%, 42rem);
+}
+
+.aiu-mcp-code--light {
+    background: var(--typo3-surface-container-low, var(--aiu-bg-soft)) !important;
+    border: 1px solid var(--aiu-border);
+}
+
+.aiu-mcp-code--light .aiu-mcp-code__toolbar {
+    background: transparent;
+    border-bottom-color: var(--aiu-border);
+}
+
+.aiu-mcp-code--light .aiu-mcp-code__toolbar .btn-link {
+    color: var(--typo3-link-color) !important;
+}
+
+.aiu-mcp-tools-shell__section {
+    display: none;
+}
+
+.aiu-mcp-tools-shell__section.is-active {
+    display: block;
+}
+
+.aiu-mcp-custom-tool-overlay {
+    inset: 0;
+    position: fixed;
+    z-index: 12000;
+}
+
+.aiu-mcp-custom-tool-overlay:not([hidden]) {
+    display: block;
+}
+
+.aiu-mcp-custom-tool-overlay__backdrop {
+    background: rgba(0, 0, 0, .45);
+    inset: 0;
+    position: absolute;
+}
+
+.aiu-mcp-custom-tool-overlay__dialog {
+    display: flex;
+    flex-direction: column;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    max-height: min(90vh, 52rem);
+    max-width: min(48rem, calc(100vw - 2rem));
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 100%;
+}
+
+.aiu-mcp-custom-tool-overlay__header {
+    align-items: center;
+    display: flex;
+    gap: .75rem;
+    justify-content: space-between;
+}
+
+.aiu-mcp-custom-tool-overlay__title-icon {
+    align-items: center;
+    background: var(--bs-danger);
+    border-radius: .375rem;
+    color: #fff;
+    display: inline-flex;
+    margin-inline-end: .5rem;
+    padding: .25rem;
+}
+
+.aiu-mcp-custom-tool-overlay__close {
+    flex-shrink: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.aiu-mcp-custom-tool-overlay__footer {
+    display: flex;
+    gap: .5rem;
+    justify-content: flex-end;
+}
+
+.aiu-mcp-custom-tool-overlay__body {
+    overflow: auto;
+}
+
+.aiu-mcp-custom-tool-overlay__body .btn-group.w-100 .btn {
+    flex: 1;
+}
+
+.aiu-mcp-tool-drawer.aiu-drawer[hidden] {
+    display: none;
+}
+
+.aiu-mcp-tool-drawer.aiu-drawer:not([hidden]) {
+    display: block;
+}
+
+.aiu-mcp-tool-drawer .aiu-drawer__panel {
+    border-inline-start: 1px solid var(--typo3-card-border-color, var(--aiu-border));
+    box-shadow: var(--typo3-component-box-shadow, -4px 0 16px rgba(0, 0, 0, .12));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    width: min(36rem, 100vw);
+}
+
+.aiu-mcp-tool-drawer .aiu-drawer__header {
+    padding-inline-end: 3.25rem;
+}
+
+.aiu-mcp-tool-drawer__name {
+    word-break: break-word;
+}
+
+.aiu-mcp-tool-drawer .aiu-drawer__body {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.aiu-mcp-tool-drawer .aiu-drawer__body code,
+.aiu-tool-panel__body code:not(.aiu-mcp-inline-code) {
+    background: transparent;
+    border: 0;
+    color: var(--typo3-text-color-base, inherit);
+    font-family: var(--typo3-font-family-code, ui-monospace, monospace);
+    font-size: inherit;
+    padding: 0;
+}
+
+.aiu-mcp-playground .aiu-mcp-code__pre,
+.aiu-mcp-playground [data-mcp-tools-playground-result] {
+    font-size: .8125rem;
+    line-height: 1.6;
+    max-height: 24rem;
+    overflow: auto;
+    padding: 1rem;
+    white-space: pre;
+    word-break: normal;
+}
+
+.aiu-mcp-playground [data-mcp-tools-playground-result] code {
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    white-space: pre;
+}
+
+.aiu-mcp-playground__sidebar .card-size-small {
+    width: 100%;
+}
+
+.aiu-mcp-playground-stat {
+    background: var(--bs-secondary-bg);
+    border-radius: .375rem;
+    padding: .75rem;
+    text-align: center;
+}
+
+.aiu-mcp-playground-stat__value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.aiu-mcp-playground-stat__value--success {
+    color: var(--bs-success);
+}
+
+.aiu-mcp-playground-stat__label {
+    color: var(--bs-secondary-color);
+    font-size: .75rem;
+    margin-top: .25rem;
+}
+
+.aiu-mcp-playground-prompts {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+.aiu-mcp-playground-prompt {
+    background: var(--bs-secondary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: .375rem;
+    cursor: pointer;
+    font-size: .875rem;
+    padding: .625rem .75rem;
+    transition: background-color .15s ease;
+}
+
+.aiu-mcp-playground-prompt:hover {
+    background: var(--bs-tertiary-bg);
+}
+
+/* Skill Hub import */
+.aiu-skill-import-card {
+    border: 1px solid var(--bs-border-color);
+    border-radius: .5rem;
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem;
+}
+
+.aiu-skill-import-card__header {
+    align-items: center;
+    display: flex;
+    gap: .75rem;
+    margin-bottom: .75rem;
+}
+
+.aiu-skill-import-card__icon {
+    align-items: center;
+    border-radius: .5rem;
+    display: inline-flex;
+    flex-shrink: 0;
+    height: 2.5rem;
+    justify-content: center;
+    width: 2.5rem;
+}
+
+.aiu-skill-import-card__icon--url {
+    background: var(--aiu-tint-neutral-bg);
+    color: var(--typo3-text-color-base, var(--aiu-text-700));
+}
+
+.aiu-skill-import-card__icon--file {
+    background: var(--aiu-tint-neutral-bg);
+    color: var(--typo3-text-color-variant, var(--aiu-text-500));
+}
+
+.aiu-skill-import-dropzone {
+    align-items: center;
+    background: var(--bs-secondary-bg);
+    border: 2px dashed var(--bs-border-color);
+    border-radius: .5rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    justify-content: center;
+    min-height: 10rem;
+    padding: 1.5rem;
+    text-align: center;
+    transition: border-color .15s ease, background-color .15s ease;
+}
+
+.aiu-skill-import-dropzone:hover,
+.aiu-skill-import-dropzone.is-dragover,
+.aiu-skill-import-dropzone.has-file {
+    background: var(--typo3-state-default-hover-bg, var(--aiu-bg-soft));
+    border-color: var(--aiu-selected-border);
+}
+
+.aiu-skill-import-dropzone__title {
+    font-weight: 500;
+}
+
+.aiu-skill-import-dropzone__filename {
+    color: var(--typo3-text-color-base, var(--aiu-text-700));
+    font-weight: 500;
+    margin-top: .25rem;
+}
+
+.aiu-skill-import-install-btn:not(:disabled) {
+    background: var(--typo3-state-default-bg, var(--aiu-bg-soft));
+    border-color: var(--aiu-border);
+    color: var(--typo3-text-color-base, var(--aiu-text-700));
+}
+
+.aiu-skill-import-install-btn:not(:disabled):hover {
+    background: var(--typo3-state-default-hover-bg, #dedede);
+    border-color: var(--typo3-state-default-hover-border-color, var(--aiu-border));
+    color: var(--typo3-text-color-base, var(--aiu-text-900));
+}
+
+.aiu-mcp-tools__stats {
+    margin-bottom: 1rem;
+}
+
+.aiu-mcp-tools__toolbar {
+    align-items: stretch;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .65rem;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.aiu-mcp-tools__search {
+    flex: 1 1 14rem;
+    max-width: 22rem;
+    min-width: 0;
+}
+
+.aiu-mcp-tools__banner.callout {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem 1rem;
+}
+
+.aiu-mcp-tools__banner-title {
+    align-items: center;
+    display: flex;
+    gap: .5rem;
+    margin-bottom: .5rem;
+}
+
+.aiu-mcp-tools__banner-title .callout-title {
+    margin-bottom: 0;
+}
+
+.aiu-mcp-tools__banner-title .icon {
+    flex-shrink: 0;
+}
+
+.aiu-mcp-tools__banner-badges,
+.aiu-mcp-tools__banner-actions {
+    flex-shrink: 0;
+}
+
+.aiu-mcp-custom-tool-handler {
+    max-width: 16rem;
+}
+
+.aiu-mcp-tools__cards {
+    align-items: stretch;
+    margin-bottom: 0;
+}
+
+.aiu-mcp-tools__cards .card {
+    border: 1px solid var(--typo3-card-border-color, var(--aiu-border));
+    border-radius: var(--typo3-card-border-radius, var(--typo3-component-border-radius, .375rem));
+}
+
+.aiu-mcp-tools__cards .card-header,
+.aiu-mcp-tools__cards .card-footer {
+    border-color: var(--typo3-card-border-color, var(--aiu-border));
+}
+
+.aiu-mcp-tools__tool-tags .btn {
+    border-color: var(--typo3-state-default-border-color, var(--aiu-border));
+    font-family: var(--typo3-font-family-code, ui-monospace, monospace);
+    font-size: var(--typo3-input-sm-font-size, .6875rem);
+}
+
+.aiu-ext-card__tools {
+    border-top: 1px solid var(--typo3-card-border-color, var(--aiu-border));
+}
+
+.aiu-ext-card__skill-strip {
+    background: var(--typo3-surface-container-low, var(--aiu-bg-soft));
+    border-bottom: 1px solid var(--typo3-card-border-color, var(--aiu-border));
+}
+
+
+.aiu-mcp-tools__panel {
+    display: none;
+}
+
+.aiu-mcp-tools__panel.is-active {
+    display: block;
+}
+
+.aiu-tool-panel {
+    background: var(--typo3-card-bg, var(--aiu-bg-white));
+    border-bottom: 1px solid var(--typo3-card-border-color, var(--aiu-border));
+}
+
+.aiu-tool-panel:last-child {
+    border-bottom: 0;
+}
+
+.aiu-tool-panel__header {
+    align-items: center;
+    background: var(--typo3-card-bg, var(--aiu-bg-white));
+    border: 0;
+    border-bottom: 1px solid var(--typo3-card-border-color, var(--aiu-border));
+    cursor: pointer;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    padding: .65rem 1rem;
+    text-align: left;
+    transition: background .15s;
+    width: 100%;
+}
+
+.aiu-tool-panel__header:hover {
+    background: var(--typo3-state-default-hover-bg, var(--aiu-bg-soft));
+}
+
+.aiu-tool-panel__header.is-open {
+    background: var(--typo3-state-default-hover-bg, var(--aiu-bg-soft));
+    border-bottom-color: var(--typo3-card-border-color, var(--aiu-border));
+}
+
+.aiu-tool-panel__header-end {
+    align-items: center;
+    display: flex;
+    flex-shrink: 0;
+    gap: .65rem;
+}
+
+.aiu-tool-panel__chevron {
+    display: inline-flex;
+    flex-shrink: 0;
+    transition: transform .15s ease;
+}
+
+.aiu-tool-panel__header.is-open .aiu-tool-panel__chevron {
+    transform: rotate(180deg);
+}
+
+.aiu-tool-panel__identity {
+    align-items: center;
+    display: flex;
+    gap: .65rem;
+    min-width: 0;
+}
+
+.aiu-tool-panel__name {
+    color: var(--typo3-text-color-base, var(--aiu-text-900));
+    font-family: var(--typo3-font-family-code, ui-monospace, monospace);
+    font-size: .8rem;
+    font-weight: 700;
+}
+
+.aiu-tool-panel__subtitle {
+    color: var(--aiu-text-500);
+    font-size: .72rem;
+    margin-top: .1rem;
+}
+
+.aiu-tool-panel__body {
+    background: var(--typo3-card-bg, var(--aiu-bg-white));
+    padding: 1rem;
+}
+
+.aiu-tool-panel__body .card {
+    overflow: hidden;
+}
+
+.aiu-mcp-tool-prompts__item {
+    background: var(--typo3-surface-container-low, var(--aiu-bg-soft));
+    border: 1px solid var(--typo3-card-border-color, var(--aiu-border));
+    border-radius: var(--typo3-component-border-radius, .375rem);
+    margin-bottom: .5rem;
+    padding: .5rem .75rem;
+}
+
+.aiu-mcp-tool-prompts__item:last-child {
+    margin-bottom: 0;
+}
+
+.aiu-tool-panel__description {
+    color: var(--aiu-text-500);
+    font-size: .75rem;
+    line-height: 1.55;
+    margin: 0 0 .85rem;
+}
+
+.aiu-tool-panel__section + .aiu-tool-panel__section {
+    margin-top: .85rem;
+}
+
+.aiu-tool-panel__section-title {
+    color: var(--typo3-text-color-variant, var(--aiu-text-500));
+    font-size: .6875rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+    margin-bottom: .45rem;
+    text-transform: uppercase;
+}
+
+.aiu-tool-panel__body .table td,
+.aiu-tool-panel__body .table th {
+    vertical-align: top;
+}
+
+.aiu-tool-prompts {
+    display: grid;
+    gap: .5rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+    width: 100%;
+}
+
+/* legacy alias — use .aiu-mcp-tool-prompts in ToolDetailDrawer */
+
+@media (max-width: 992px) {
+    .aiu-mcp-tools__toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .aiu-mcp-tools__toolbar-actions {
+        justify-content: flex-start;
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .aiu-mcp-tools__search {
+        max-width: none;
+    }
+
+    .aiu-mcp-table-section .card-header {
+        align-items: stretch;
+        flex-direction: column;
+    }}
+
+.aiu-mcp-code--panel {
+    margin-bottom: 1rem;
+}
+
+.aiu-mcp-tools .aiu-mcp-code {
+    background: var(--aiu-mcp-code-bg) !important;
+    border: 1px solid var(--aiu-mcp-code-border);
+    border-radius: var(--aiu-radius-lg);
+    overflow: hidden;
+}
+
+.aiu-mcp-tools .aiu-mcp-code__toolbar {
+    align-items: center;
+    background: rgba(255, 255, 255, .04);
+    border-bottom: 1px solid var(--aiu-mcp-code-border);
+    display: flex;
+    justify-content: space-between;
+    padding: .55rem .85rem;
+}
+
+.aiu-mcp-tools .aiu-mcp-code__label {
+    color: var(--aiu-mcp-code-fg);
+    font-size: .72rem;
+    font-weight: 600;
+}
+
+.aiu-mcp-tools .aiu-mcp-code__toolbar .btn-link {
+    color: #93c5fd !important;
+    font-size: .72rem;
+    text-decoration: none;
+}
+
+.aiu-mcp-tools .aiu-mcp-code__toolbar .btn-link:hover {
+    color: #bfdbfe !important;
+    text-decoration: underline;
+}
+
+.aiu-mcp-tools .aiu-mcp-code pre,
+.aiu-mcp-tools .aiu-mcp-code pre *,
+.aiu-mcp-tools .aiu-mcp-code code,
+.aiu-mcp-tools .aiu-mcp-code .aiu-mcp-code__pre {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: var(--aiu-mcp-code-fg) !important;
+}
+
+.aiu-mcp-tools .aiu-mcp-code .aiu-mcp-code__pre {
+    display: block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: .72rem;
+    line-height: 1.6;
+    margin: 0 !important;
+    overflow-x: auto;
+    padding: 1rem 1.15rem !important;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.aiu-mcp-table-section__filter {
+    max-width: 20rem;
+    min-width: 12rem;
+}
+
+.aiu-mcp-ext-table__expand-col {
+    width: 2rem;
+}
+
+.aiu-mcp-ext-table__expand {
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+    padding-inline: .35rem;
+}
+
+.aiu-mcp-ext-table__chevron {
+    display: inline-flex;
+    transition: transform .15s ease;
+}
+
+.aiu-mcp-ext-table__expand.is-open .aiu-mcp-ext-table__chevron {
+    transform: rotate(180deg);
+}
+
+.aiu-mcp-ext-table__row:hover {
+    background: var(--aiu-bg-soft);
+}
+
+.aiu-mcp-ext-table__detail td {
+    background: var(--aiu-bg-soft);
+    border-top: 0;
+    padding: 0;
+}
+
+.aiu-mcp-ext-table__detail-inner {
+    padding: .85rem 0.85rem .85rem 0;
+}
+
+.aiu-mcp-ext-table__detail-head {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem;
+    justify-content: space-between;
+    margin-bottom: .55rem;
+}
+
+.aiu-mcp-ext-table__detail-title {
+    color: var(--aiu-text-700);
+    font-size: .75rem;
+    font-weight: 600;
+}
+
+.aiu-mcp-ext-table__server-link {
+    color: var(--typo3-link-color, inherit);
+    font-size: .72rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.aiu-mcp-ext-table__server-link:hover {
+    text-decoration: underline;
+}
+
+.aiu-mcp-ext-table__detail-hint {
+    color: var(--aiu-text-500);
+    font-size: .72rem;
+    margin: .55rem 0 0;
+}
+
+.aiu-mcp-status {
+    border-radius: 999px;
+    display: inline-block;
+    font-size: .625rem;
+    font-weight: 700;
+    padding: .18rem .55rem;
+    text-transform: uppercase;
+}
+
+.aiu-mcp-ext-table td.col-control {
+    min-width: 14rem;
+    white-space: nowrap;
+}
+
+.aiu-mcp-ext-table td.col-control .btn-group {
+    display: inline-flex;
+    vertical-align: middle;
+}
+
+.aiu-mcp-action-btn {
+    align-items: center;
+    background: transparent;
+    box-shadow: none;
+    border: transparent;
+    border-radius: .4rem;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: .72rem;
+    font-weight: 600;
+    justify-content: center;
+    line-height: 1.2;
+    min-height: 1.75rem;
+    padding: .28rem .65rem;
+    transition: background .15s, border-color .15s, color .15s;
+}
+
+.aiu-mcp-ext-table__row.is-editing {
+    background: var(--typo3-surface-container-low, var(--aiu-bg-soft));
+}
+
+.aiu-mcp-ext-table__row.is-editing .aiu-table-row-edit .form-control {
+    border-color: var(--aiu-selected-border);
+    box-shadow: 0 0 0 2px var(--typo3-surface-container-low, var(--aiu-border-soft));
+}
+
+[data-mcp-tools-code-config].is-active {
+    background: var(--aiu-selected-bg);
+    border-color: var(--aiu-selected-border);
+    color: var(--aiu-selected-fg);
+}
+
+[data-color-scheme=dark] .aiu-tool-panel,
+[data-bs-theme=dark] .aiu-tool-panel {
+    background: var(--typo3-surface-base, var(--aiu-bg-white));
+}
+
+[data-color-scheme=dark] .aiu-tool-panel__header,
+[data-bs-theme=dark] .aiu-tool-panel__header {
+    background: var(--typo3-surface-base, var(--aiu-bg-white));
+}
+
+[data-color-scheme=dark] .aiu-mcp-ext-table__row.is-editing,
+[data-bs-theme=dark] .aiu-mcp-ext-table__row.is-editing {
+    background: var(--aiu-bg-soft);
+}

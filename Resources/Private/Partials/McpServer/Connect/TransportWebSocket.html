@@ -1,0 +1,35 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="card aiu-mcp-transport-panel is-hidden" data-transport-panel="websocket">
+    <div class="card-header">
+        <h3 class="card-title mb-1"><f:translate key="{ll}:module.mcpServer.transport.websocket.title" /></h3>
+        <p class="text-variant small"><f:translate key="{ll}:module.mcpServer.transport.websocket.lead" /></p>
+    </div>
+    <div class="card-body">
+        <div class="aiu-mcp-field-row">
+            <label class="form-label"><f:translate key="{ll}:module.mcpServer.transport.websocket.urlLabel" /></label>
+            <div class="aiu-mcp-url-row">
+                <code class="aiu-mcp-url-row__code" data-copy-target="websocket-url">{mcpWebSocketUrl}</code>
+                <button type="button" class="btn btn-sm btn-default" data-copy="websocket-url">
+                    <core:icon identifier="actions-clipboard" size="small" />
+                    <f:translate key="{ll}:module.mcpServer.action.copyServerUrl" />
+                </button>
+            </div>
+        </div>
+
+        <div class="callout callout-info mt-3">
+            <div class="callout-content">
+                <div class="callout-title"><f:translate key="{ll}:module.mcpServer.transport.websocket.noteTitle" /></div>
+                <div class="callout-body">
+                    <p class="mb-0"><f:translate key="{ll}:module.mcpServer.transport.websocket.noteText" arguments="{0: mcpServerUrl}" /></p>
+                </div>
+            </div>
+        </div>
+
+        <f:render partial="McpServer/Connect/ClientSetupGuides" arguments="{transportKey: 'websocket', transportClients: mcpTransportGuides.websocket, mcpSnippetArgs: mcpSnippetArgs}" />
+    </div>
+</div>
+</html>

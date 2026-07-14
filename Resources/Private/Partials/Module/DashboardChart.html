@@ -1,0 +1,10 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<canvas class="aiu-chart t3ai-chart"
+        data-aiu-chart="{chartKey}"
+        data-aiu-chart-config-id="aiu-chart-config-{chartKey}"
+        role="img"></canvas>
+<script type="application/json"
+        id="aiu-chart-config-{chartKey}"
+        class="aiu-chart-config">{chartConfig -> f:format.raw()}</script>
+</html>

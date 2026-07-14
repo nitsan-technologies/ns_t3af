@@ -1,0 +1,159 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<f:if condition="{coreExtension}">
+    <f:then>
+        <div class="callout callout-info mb-3 aiu-mcp-tools__banner">
+            <div class="callout-content flex-grow-1">
+                <div class="aiu-mcp-tools__banner-title">
+                    <core:icon identifier="actions-lightbulb-on" size="small" alternativeMarkupIdentifier="inline" />
+                    <div class="callout-title mb-0">
+                        <f:translate key="{ll}:module.mcpTools.core.banner.title" />
+                    </div>
+                </div>
+                <div class="callout-body">
+                    <p class="mb-0">
+                        <f:translate key="{ll}:module.mcpTools.core.banner.body" />
+                    </p>
+                </div>
+            </div>
+            <div class="aiu-mcp-tools__banner-badges d-flex flex-wrap gap-2">
+                <div class="badge badge-default">
+                    {coreExtension.toolCount}
+                    <f:translate key="{ll}:module.mcpTools.toolsLabel" />
+                </div>
+            </div>
+        </div>
+
+        <f:if condition="{mcpToolCategories -> f:count()} > 0">
+            <div class="btn-group mb-3" role="group" aria-label="{f:translate(key: '{ll}:module.mcpTools.categoryFilter.aria')}">
+                <button type="button" class="btn btn-default active is-active" data-mcp-tools-category="all">
+                    <f:translate key="{ll}:module.mcpTools.category.all" default="All" />
+                </button>
+                <f:for each="{mcpToolCategories}" as="category">
+                    <button type="button"
+                            class="btn btn-default"
+                            data-mcp-tools-category="{category.key}">
+                        {category.label}
+                    </button>
+                </f:for>
+            </div>
+        </f:if>
+
+        <div class="card card-size-large"
+             data-mcp-tools-card
+             data-search-text="{coreExtension.searchText}">
+            <div class="card-header">
+                <div class="card-icon">
+                    <core:icon identifier="{coreExtension.iconIdentifier}" size="medium" alternativeMarkupIdentifier="inline" />
+                </div>
+                <div class="card-header-body">
+                    <div class="card-header-body__top d-flex align-items-start justify-content-between gap-2">
+                        <h2 class="card-title mb-0">{coreExtension.label}</h2>
+                        <span class="badge badge-default flex-shrink-0">
+                            {coreExtension.toolCount}
+                            <f:translate key="{ll}:module.mcpTools.toolsLabel" />
+                        </span>
+                    </div>
+                    <span>{coreExtension.tagline}</span>
+                    <f:if condition="{coreExtension.skillTrigger}">
+                        <span class="small d-block mt-1">
+                            <b><f:translate key="{ll}:module.mcpTools.trigger" />:</b>
+                            <code class="badge badge-default">{coreExtension.skillTrigger}</code>
+                        </span>
+                    </f:if>
+                </div>
+            </div>
+
+            <f:if condition="{coreExtension.tools -> f:count()} > 0">
+                <div class="card-body pt-2 pb-3">
+                    <div class="d-flex flex-wrap gap-1 aiu-mcp-tools__tool-tags">
+                        <f:for each="{coreExtension.tools}" as="tool">
+                            <button type="button"
+                                    class="btn btn-sm btn-default"
+                                    data-mcp-tools-tool-tag="{tool.name}"
+                                    data-mcp-tools-open-drawer
+                                    data-tool-name="{tool.name}"
+                                    data-tool-category="{tool.category}"
+                                    data-tool-status="{tool.status}"
+                                    data-tool-description="{tool.description}"
+                                    data-tool-short-title="{tool.shortTitle}">
+                                {tool.name}
+                            </button>
+                        </f:for>
+                    </div>
+                </div>
+            </f:if>
+
+            <div class="aiu-ext-card__tools" hidden>
+                <f:if condition="{coreExtension.skillDesc}">
+                    <div class="card-body py-2 aiu-ext-card__skill-strip">
+                        <p class="small text-variant mb-0">{coreExtension.skillDesc}</p>
+                    </div>
+                </f:if>
+                <f:for each="{coreExtension.tools}" as="tool">
+                    <div class="aiu-tool-panel"
+                         data-mcp-tools-tool-panel
+                         data-tool-name="{tool.name}"
+                         data-tool-category="{tool.category}">
+                        <button type="button"
+                                class="aiu-tool-panel__header"
+                                data-mcp-tools-toggle-tool
+                                aria-expanded="false">
+                            <div class="aiu-tool-panel__identity">
+                                <div>
+                                    <div class="aiu-tool-panel__name">{tool.name}</div>
+                                    <div class="small text-variant">{tool.shortTitle}</div>
+                                </div>
+                            </div>
+                            <div class="aiu-tool-panel__header-end">
+                                <span class="badge badge-default">{tool.category}</span>
+                                <span class="badge badge-success">{tool.status}</span>
+                                <span class="aiu-tool-panel__chevron" aria-hidden="true">
+                                    <core:icon identifier="actions-chevron-down" size="small" />
+                                </span>
+                            </div>
+                        </button>
+                        <div class="aiu-tool-panel__body" hidden>
+                            <f:render partial="McpTools/ToolDetailDrawer" section="ToolBody" arguments="{tool: tool, ll: ll}" />
+                        </div>
+                    </div>
+                </f:for>
+            </div>
+
+            <div class="card-footer d-flex flex-wrap align-items-center gap-2">
+                <div class="btn-group" role="group">
+                    <button type="button"
+                            class="btn btn-success d-inline-flex align-items-center gap-1"
+                            data-mcp-tools-download-skill
+                            data-skill-name="{coreExtension.skillName}"
+                            data-skill-trigger="{coreExtension.skillTrigger}"
+                            data-skill-file="{coreExtension.skillFile}"
+                            data-skill-desc="{coreExtension.skillDesc}"
+                            data-skill-label="{coreExtension.label}">
+                        <core:icon identifier="actions-download" size="small" alternativeMarkupIdentifier="inline" />
+                        <f:translate key="{ll}:module.mcpTools.downloadSkill" />
+                    </button>
+                    <button type="button"
+                            class="btn btn-default"
+                            data-mcp-tools-toggle
+                            aria-expanded="false">
+                        <f:translate key="{ll}:module.mcpTools.viewTools" />
+                    </button>
+                </div>
+            </div>
+        </div>
+    </f:then>
+    <f:else>
+        <div class="callout callout-notice mb-0">
+            <div class="callout-body">
+                <f:translate key="{ll}:module.mcpTools.core.empty" />
+            </div>
+        </div>
+    </f:else>
+</f:if>
+
+</html>

@@ -1,0 +1,67 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<div class="aiu-panel__head">
+    <h3 class="aiu-panel__title">
+        <f:translate key="{ll}:dashboard.recentActivity" default="Recent Activity" />
+    </h3>
+    <a href="{aiUsageUri}" class="aiu-panel__link">
+        <f:translate key="{ll}:dashboard.openRequestLog" default="Open Request Log" /> →
+    </a>
+</div>
+<div class="aiu-panel__body aiu-panel__body--table">
+    <div class="aiu-table-wrap aiu-table-wrap--panel table-fit table-responsive">
+        <table class="aiu-table aiu-table--bordered aiu-table--compact table table-striped table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col"><f:translate key="{ll}:dashboard.col.time" default="TimeStamp" /></th>
+                    <th scope="col"><f:translate key="{ll}:dashboard.col.extension" default="Extension" /></th>
+                    <th scope="col"><f:translate key="{ll}:dashboard.col.model" default="Model" /></th>
+                    <th scope="col" class="text-end"><f:translate key="{ll}:dashboard.col.tokens" default="Tokens" /></th>
+                    <th scope="col" class="text-end">
+                        <f:if condition="{activityColumnMode} == 'cost'">
+                            <f:then><f:translate key="{ll}:dashboard.col.cost" default="Cost" /></f:then>
+                            <f:else><f:translate key="{ll}:dashboard.col.credits" default="Credits" /></f:else>
+                        </f:if>
+                    </th>
+                    <th scope="col" class="text-end"><f:translate key="{ll}:dashboard.col.status" default="Status" /></th>
+                </tr>
+            </thead>
+            <tbody>
+                <f:for each="{dashboardAnalytics.recentRequests}" as="item">
+                    <tr>
+                        <td class="aiu-table__muted">{item.crdate -> f:format.date(format: 'Y-m-d H:i')}</td>
+                        <td><span class="aiu-badge aiu-badge--ext">{item.extension_key}</span></td>
+                        <td class="aiu-table__mono">{item.model_used}</td>
+                        <td class="text-end">{item.total_tokens}</td>
+                        <td class="text-end">
+                            <f:if condition="{activityColumnMode} == 'cost'">
+                                <f:then>${item.estimated_cost -> f:format.number(decimals: 4)}</f:then>
+                                <f:else>
+                                    <f:if condition="{item.credits_used} > 0">
+                                        <f:then>{item.credits_used -> f:format.number(decimals: 3)}</f:then>
+                                        <f:else>—</f:else>
+                                    </f:if>
+                                </f:else>
+                            </f:if>
+                        </td>
+                        <td class="text-end">
+                            <f:if condition="{item.success} == 1">
+                                <f:then><span class="aiu-badge aiu-badge--ok">ok</span></f:then>
+                                <f:else><span class="aiu-badge aiu-badge--err">error</span></f:else>
+                            </f:if>
+                        </td>
+                    </tr>
+                </f:for>
+                <f:if condition="{dashboardAnalytics.recentRequests -> f:count()} == 0">
+                    <tr>
+                        <td colspan="6" class="aiu-empty">
+                            <f:translate key="{ll}:dashboard.noActivity" default="No requests logged in this period yet." />
+                        </td>
+                    </tr>
+                </f:if>
+            </tbody>
+        </table>
+    </div>
+</div>
+</html>

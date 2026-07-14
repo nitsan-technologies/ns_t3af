@@ -1,0 +1,43 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<div class="aiu-ai-usage__header">
+    <div class="aiu-ai-usage__header-main aiu-tab-page-header">
+        <div class="aiu-tab-page-header__main min-w-0">
+            <div class="aiu-providers__heading">
+                <h1 class="mb-0">{tabHeading}</h1>
+                <p class="text-variant mb-0">{tabIntro}</p>
+            </div>
+        </div>
+        <div class="aiu-tab-page-header__aside d-flex flex-wrap align-items-center gap-2">
+            <f:render partial="Module/PageBreadcrumb" arguments="{_all}" />
+        </div>
+    </div>
+</div>
+
+<div class="aiu-mcp-status-bar aiu-ai-usage__kpis">
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <span class="aiu-mcp-status-bar__label"><f:translate key="{ll}:module.aiUsage.kpi.totalRequests" default="Total Requests" /></span>
+            <span class="aiu-mcp-status-bar__value">{aiUsageKpis.totalRequests}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <span class="aiu-mcp-status-bar__label"><f:translate key="{ll}:module.aiUsage.kpi.totalTokens" default="Total Tokens" /></span>
+            <span class="aiu-mcp-status-bar__value">{aiUsageKpis.totalTokens}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <span class="aiu-mcp-status-bar__label"><f:translate key="{ll}:module.aiUsage.kpi.totalCost" default="Total Cost" /></span>
+            <span class="aiu-mcp-status-bar__value">${aiUsageKpis.totalCost -> f:format.number(decimals: 4)}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <span class="aiu-mcp-status-bar__label"><f:translate key="{ll}:module.aiUsage.kpi.successRate" default="Success Rate" /></span>
+            <span class="aiu-mcp-status-bar__value">{aiUsageKpis.successRate -> f:format.number(decimals: 2)}%</span>
+        </div>
+    </div>
+</div>
+</html>

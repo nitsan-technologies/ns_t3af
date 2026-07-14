@@ -1,0 +1,113 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+<f:variable name="tokenCount" value="{mcpConnections -> f:count()}" />
+
+<div class="aiu-mcp-oauth-tokens">
+    <div class="callout callout-info mb-3 aiu-mcp-oauth-tokens__banner">
+        <div class="callout-icon">
+            <core:icon identifier="actions-key" size="medium" />
+        </div>
+        <div class="callout-content flex-grow-1">
+            <div class="callout-title"><f:translate key="{ll}:module.mcpServer.oauthTokens.calloutTitle" /></div>
+            <div class="callout-body">
+                <p class="mb-0"><f:translate key="{ll}:module.mcpServer.oauthTokens.intro" /></p>
+            </div>
+        </div>
+        <div class="text-end text-variant small flex-shrink-0">
+            <span class="badge badge-info">{tokenCount}</span>
+            <f:translate key="{ll}:module.mcpServer.oauthTokens.activeCount" />
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h2 class="card-title mb-0"><f:translate key="{ll}:module.mcpServer.oauthTokens.title" /></h2>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-default" data-action="refresh-connections">
+                    <core:icon identifier="actions-refresh" size="small" />
+                    <f:translate key="{ll}:module.mcpServer.action.refresh" />
+                </button>
+                <button type="button" class="btn btn-sm btn-danger" data-action="revoke-all">
+                    <core:icon identifier="actions-ban" size="small" />
+                    <f:translate key="{ll}:module.mcpServer.action.revokeAll" />
+                </button>
+            </div>
+        </div>
+        <div class="table-fit table-responsive">
+            <table class="table table-striped table-hover align-middle mb-0" data-connections-table>
+                <thead>
+                    <tr>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.table.client" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.table.backendUser" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.table.transport" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.security.scopes.label" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.table.created" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.table.lastUsed" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.table.expires" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.table.workspace" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.table.token" /></th>
+                        <th scope="col" class="actions"><f:translate key="{ll}:module.mcpServer.table.action" /></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <f:if condition="{tokenCount} == 0">
+                        <tr>
+                            <td colspan="10" class="aiu-empty"><f:translate key="{ll}:module.mcpServer.oauthTokens.empty" /></td>
+                        </tr>
+                    </f:if>
+                    <f:for each="{mcpConnections}" as="conn">
+                        <tr data-connection-uid="{conn.uid}">
+                            <td>
+                                <div class="fw-semibold">{conn.client}</div>
+                                <f:if condition="{conn.clientId}">
+                                    <div class="text-variant small"><code>{conn.clientId}</code></div>
+                                </f:if>
+                            </td>
+                            <td>
+                                <f:if condition="{conn.beUserLabel}">
+                                    <f:then>{conn.beUserLabel}</f:then>
+                                    <f:else><span class="text-variant">—</span></f:else>
+                                </f:if>
+                            </td>
+                            <td><span class="badge badge-info">{conn.transport}</span></td>
+                            <td>
+                                <f:if condition="{conn.scope}">
+                                    <f:then><code>{conn.scope}</code></f:then>
+                                    <f:else><span class="text-variant">—</span></f:else>
+                                </f:if>
+                            </td>
+                            <td><f:format.date format="Y-m-d H:i:s">{conn.connected}</f:format.date></td>
+                            <td>
+                                <f:if condition="{conn.lastActive}">
+                                    <f:then><f:format.date format="Y-m-d H:i:s">{conn.lastActive}</f:format.date></f:then>
+                                    <f:else><span class="text-variant">—</span></f:else>
+                                </f:if>
+                            </td>
+                            <td>
+                                <f:format.date format="Y-m-d H:i:s">{conn.expires}</f:format.date>
+                                <f:if condition="{conn.expiresSoon} == 1"><span class="badge badge-warning ms-1"><f:translate key="{ll}:module.mcpServer.table.expiresSoon" /></span></f:if>
+                            </td>
+                            <td><span class="badge badge-success">{conn.workspace}</span></td>
+                            <td>
+                                <div class="aiu-mcp-table-token">
+                                    <code class="aiu-mcp-table__token" data-copy-target="token-{conn.uid}" data-token-uid="{conn.uid}">{conn.tokenPreview}</code>
+                                    <button type="button" class="btn btn-sm btn-default" data-copy="token-{conn.uid}">
+                                        <f:translate key="{ll}:module.mcpServer.action.copyToken" />
+                                    </button>
+                                </div>
+                            </td>
+                            <td class="actions">
+                                <button type="button" class="btn btn-sm btn-danger" data-action="revoke-token" data-uid="{conn.uid}">
+                                    <f:translate key="{ll}:module.mcpServer.action.revoke" />
+                                </button>
+                            </td>
+                        </tr>
+                    </f:for>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</html>

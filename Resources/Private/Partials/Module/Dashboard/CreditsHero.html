@@ -1,0 +1,149 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="card card-size-small mb-0 w-100 h-100 aiu-credits-hero">
+    <f:if condition="{creditsModeActive} == 1">
+        <f:then>
+            <div class="card-header">
+                <div class="card-icon">
+                    <core:icon identifier="actions-wallet" size="small" alternativeMarkupIdentifier="inline" />
+                </div>
+                <div class="card-header-body">
+                    <div class="card-header-body__top d-flex align-items-start justify-content-between gap-2">
+                        <h2 class="card-title mb-0">
+                            <f:translate key="{ll}:credits.dashboard.balance.title" />
+                        </h2>
+                        <span class="badge badge-success flex-shrink-0">
+                            <f:translate key="{ll}:dashboard.mode.active" />
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body d-flex flex-column gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="aiu-progress-ring aiu-progress-ring--hero flex-shrink-0"
+                         role="img"
+                         aria-label="{hero.percentLeft}% remaining">
+                        <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+                            <circle class="aiu-progress-ring__track" cx="22" cy="22" r="18" fill="none" stroke-width="3.5"/>
+                            <circle class="aiu-progress-ring__value"
+                                    cx="22" cy="22" r="18" fill="none"
+                                    stroke-width="3.5"
+                                    pathLength="100"
+                                    stroke-dasharray="{hero.progressDash} 100"
+                                    stroke-linecap="round"
+                                    transform="rotate(-90 22 22)"/>
+                        </svg>
+                        <span class="aiu-progress-ring__label">
+                            <span>{hero.percentLeft}%</span>
+                            <span class="small">
+                                <f:translate key="{ll}:dashboard.kpi.left" />
+                            </span>
+                        </span>
+                    </div>
+                    <div class="min-w-0">
+                        <p class="h4 fw-bold mb-0">{hero.remainingFormatted}</p>
+                        <p class="small text-variant mb-1">
+                            <f:translate key="{ll}:dashboard.credits.ofTotal" arguments="{0: hero.totalFormatted}" />
+                        </p>
+                        <f:if condition="{hero.planLine} != ''">
+                            <p class="small text-variant mb-1">{hero.planLine}</p>
+                        </f:if>
+                        <f:if condition="{hero.daysLeftLabel} != ''">
+                            <p class="small text-variant mb-0 d-inline-flex align-items-center gap-1">
+                                <core:icon identifier="actions-calendar" size="small" alternativeMarkupIdentifier="inline" />
+                                <span>{hero.daysLeftLabel}</span>
+                            </p>
+                        </f:if>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="d-flex justify-content-between small text-variant mb-1">
+                        <span>
+                            {hero.usedFormatted}
+                            <f:translate key="{ll}:dashboard.credits.usedLabel" />
+                        </span>
+                        <span>
+                            {hero.totalFormatted}
+                            <f:translate key="{ll}:dashboard.credits.totalLabel" />
+                        </span>
+                    </div>
+                    <div class="progress mb-1 aiu-credits-hero__progress"
+                         style="--aiu-credits-progress: {hero.percentLeft};"
+                         data-aiu-credits-progress="{hero.percentLeft}"
+                         role="progressbar"
+                         aria-valuenow="{hero.percentLeft}"
+                         aria-valuemin="0"
+                         aria-valuemax="100"
+                         aria-label="{hero.percentLeft}% remaining">
+                        <div class="progress-bar"></div>
+                    </div>
+                    <div class="d-flex justify-content-between small text-variant">
+                        <span>
+                            <f:translate key="{ll}:dashboard.credits.remaining" arguments="{0: hero.percentLeft}" />
+                        </span>
+                        <span>
+                            <f:translate key="{ll}:dashboard.credits.consumed" arguments="{0: hero.consumedPercent}" />
+                        </span>
+                    </div>
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="border-top pt-2">
+                            <div class="small text-variant text-uppercase">
+                                <f:translate key="{ll}:dashboard.credits.usedBox" />
+                            </div>
+                            <div class="fw-bold">{hero.usedFormatted}</div>
+                            <div class="small text-variant">
+                                <f:translate key="{ll}:dashboard.credits.consumedSub" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border-top border-start pt-2 ps-2">
+                            <div class="small text-variant text-uppercase">
+                                <f:translate key="{ll}:dashboard.credits.dailyAvg" />
+                            </div>
+                            <div class="fw-bold">{hero.dailyAverageFormatted}</div>
+                            <div class="small text-variant">{hero.weeklyBurnFormatted}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-auto">
+                    <a href="{providersUri}" class="btn btn-default">
+                        <f:translate key="{ll}:dashboard.topUp" />
+                    </a>
+                    <a href="{providersUri}" class="btn btn-primary">
+                        <f:translate key="{ll}:dashboard.manage" />
+                    </a>
+                </div>
+            </div>
+        </f:then>
+        <f:else>
+            <div class="card-header">
+                <div class="card-icon">
+                    <core:icon identifier="actions-wallet" size="small" alternativeMarkupIdentifier="inline" />
+                </div>
+                <div class="card-header-body">
+                    <h2 class="card-title mb-0">
+                        <f:translate key="{ll}:credits.dashboard.balance.title" />
+                    </h2>
+                </div>
+            </div>
+            <div class="card-body d-flex flex-column gap-3">
+                <p class="text-variant mb-0">
+                    <f:translate key="{ll}:dashboard.activateCreditsHint" />
+                </p>
+                <span class="btn btn-primary aiu-pill--activate align-self-start" data-credits-activate role="button" tabindex="0">
+                    <f:translate key="{ll}:provider.mode.credits.activate" />
+                </span>
+            </div>
+        </f:else>
+    </f:if>
+</div>
+</html>

@@ -1,0 +1,57 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="HeaderBefore">
+    <f:be.pageRenderer includeJavaScriptModules="{0: '@nitsan/nst3af/credits-mode.js'}" />
+</f:section>
+
+<f:section name="Content">
+    <div class="aiu-providers">
+        <f:render partial="Module/TabPageHeader" arguments="{_all}" />
+        <f:if condition="{creditsModeActive} == 1">
+            <f:then>
+                <f:if condition="{creditsDashboard.pricing.footnote} != ''">
+                    <p class="aiu-credits-pricing-footnote">{creditsDashboard.pricing.footnote}</p>
+                </f:if>
+                <f:if condition="{products -> f:count()} > 0">
+                    <f:then>
+                        <div class="aiu-credits-product-grid">
+                            <f:for each="{products}" as="product">
+                                <article class="aiu-credits-product">
+                                    <h3 class="aiu-credits-product__title">{product.title}</h3>
+                                    <p class="aiu-credits-product__credits">{product.credits} credits</p>
+                                    <f:if condition="{product.checkoutUrl} != ''">
+                                        <a class="btn btn-primary aiu-credits-product__cta"
+                                           href="{product.checkoutUrl}"
+                                           data-aiu-checkout
+                                           data-aiu-checkout-url="{product.checkoutUrl}"
+                                           data-aiu-checkout-title="{product.title}">
+                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.buy"
+                                                         default="Buy" />
+                                            {product.title}
+                                        </a>
+                                    </f:if>
+                                </article>
+                            </f:for>
+                        </div>
+                    </f:then>
+                    <f:else>
+                        <p class="aiu-credits-empty">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.empty"
+                                         default="No credit bundles available from T3Planet right now." />
+                        </p>
+                    </f:else>
+                </f:if>
+            </f:then>
+            <f:else>
+                <p>
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.buy.inactive"
+                                 default="Activate T3Planet Credits on the Providers tab to browse credit bundles." />
+                </p>
+            </f:else>
+        </f:if>
+    </div>
+</f:section>
+</html>

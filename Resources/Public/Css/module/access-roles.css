@@ -1,0 +1,294 @@
+.aiu-access-roles-page {
+    font-size: var(--typo3-font-size, inherit);
+    line-height: var(--typo3-line-height, 1.5);
+}
+
+/* Sidebar shell + nav: reuse aiu-mcp-tools-shell / aiu-mcp-tools-nav from mcp-tools.css (see ToolsResourcesShell.html). */
+.aiu-ar-group-list {
+    max-height: min(50vh, 28rem);
+    overflow-y: auto;
+}
+
+.aiu-ar-layout .aiu-mcp-tools-shell__sidebar .btn[data-be-groups-add] {
+    align-items: center;
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    justify-content: center;
+    line-height: 1.35;
+    white-space: normal;
+}
+
+.aiu-ar-layout .aiu-mcp-tools-shell__sidebar .btn[data-be-groups-add] .icon {
+    flex-shrink: 0;
+}
+
+.aiu-ar-steps {
+    margin-top: 0.25rem;
+}
+
+.aiu-ar-step {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    line-height: 1.2;
+    cursor: default;
+    pointer-events: none;
+}
+
+.aiu-ar-step__num {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.aiu-ar-step__label {
+    line-height: 1.2;
+}
+
+.aiu-ar-step.is-complete {
+    background: var(--typo3-badge-primary-bg, var(--bs-primary, #0078e6));
+    border-color: var(--typo3-badge-primary-bg, var(--bs-primary, #0078e6));
+    color: var(--typo3-badge-primary-color, #ffffff);
+}
+
+.aiu-ar-step.is-active,
+.aiu-ar-step.active {
+    background: var(--typo3-state-primary-bg, var(--typo3-link-color, #0078e6));
+    border-color: var(--typo3-state-primary-border-color, var(--typo3-link-color, #0078e6));
+    color: var(--typo3-state-primary-color, #fff);
+    font-weight: 600;
+}
+
+
+.aiu-ar-limit-tile {
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--aiu-border, #d9d9d9);
+    border-radius: var(--typo3-component-border-radius, 0.375rem);
+    background: var(--typo3-surface-container-lowest, #fff);
+}
+
+.aiu-ar-preset-card {
+    cursor: pointer;
+    transition: box-shadow 0.15s ease;
+}
+
+.aiu-ar-preset-card:hover {
+    box-shadow: 0 0 0 1px var(--typo3-state-primary-border-color, var(--typo3-link-color, #0078e6));
+}
+
+.aiu-ar-dim {
+    opacity: 0.4;
+}
+
+.aiu-ar-overlay-card {
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.aiu-ar-module-card {
+    height: 100%;
+}
+
+.aiu-ar-feature-group__title {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.35rem;
+    border-bottom: 1px solid var(--aiu-border, #e5e5e5);
+}
+
+.aiu-ar-feature-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--aiu-border, #eee);
+}
+
+.aiu-ar-feature-row:last-child {
+    border-bottom: 0;
+}
+
+.aiu-ar-level-picker .btn.active,
+.aiu-ar-level-picker .btn.is-active {
+    font-weight: 600;
+}
+
+.aiu-ar-review-block {
+    padding: 0.75rem 0.875rem;
+    border: 1px solid var(--aiu-border, #eee);
+    border-radius: var(--typo3-component-border-radius, 0.375rem);
+    background: var(--typo3-surface-container-low, #fafafa);
+}
+
+.aiu-ar-summary-list .list-group-item {
+    background: transparent;
+    border-color: var(--aiu-border, #eee);
+}
+
+.aiu-ar-summary-list .list-group-item .list-group-item-label,
+.aiu-ar-perm-label  {
+    font-size: 13px;
+    line-height: 1.2;
+}
+
+.aiu-ar-summary-list .list-group-item:first-child {
+    border-top: 0;
+}
+
+.aiu-ar-matrix-card {
+    --aiu-ar-matrix-accent: var(--typo3-state-primary-border-color, #0078e6);
+}
+
+.aiu-ar-matrix-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: var(--typo3-font-size-small, 0.6875rem);
+    color: var(--typo3-text-color-variant, #666);
+    align-items: center;
+}
+
+.aiu-ar-matrix-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.aiu-ar-matrix-table {
+    margin-bottom: 0;
+    font-size: var(--typo3-font-size-small, 0.6875rem);
+    border: 1px solid var(--typo3-table-border-color, var(--aiu-border, #d7d7d7));
+}
+
+.aiu-ar-matrix-table th,
+.aiu-ar-matrix-table td {
+    vertical-align: middle;
+    border: 1px solid var(--typo3-table-border-color, var(--aiu-border, #d7d7d7));
+}
+
+.aiu-ar-matrix-section {
+    text-align: center;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: color-mix(in srgb, var(--aiu-ar-matrix-accent, #0078e6) 8%, transparent);
+    border-bottom: 2px solid color-mix(in srgb, var(--aiu-ar-matrix-accent, #0078e6) 35%, transparent);
+}
+
+.aiu-ar-matrix-section--group {
+    background: var(--typo3-surface-container-low, #f5f5f5);
+}
+
+.aiu-ar-matrix-section--safety {
+    background: color-mix(in srgb, var(--typo3-state-success-border-color, #059669) 8%, transparent);
+    border-bottom-color: color-mix(in srgb, var(--typo3-state-success-border-color, #059669) 35%, transparent);
+}
+
+.aiu-ar-matrix-col-row th {
+    white-space: nowrap;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.aiu-ar-matrix-col {
+    min-width: 4.5rem;
+}
+
+.aiu-ar-matrix-group strong {
+    display: block;
+}
+
+.aiu-ar-matrix-subgroup {
+    display: inline-block;
+    margin-left: 0.35rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--typo3-text-color-variant, #888);
+}
+
+.aiu-ar-matrix-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.25rem;
+}
+
+.aiu-ar-matrix-check {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--typo3-surface-container-success-text, var(--typo3-state-success-border-color, #059669));
+    vertical-align: middle;
+    line-height: 0;
+}
+
+.aiu-ar-matrix-cell--none {
+    color: var(--typo3-text-color-variant, #bbb);
+}
+
+.aiu-ar-matrix-cell--muted {
+    color: var(--typo3-text-color-variant, #888);
+}
+
+.aiu-ar-matrix-cell--dim {
+    opacity: 0.25;
+}
+
+.aiu-ar-matrix-members {
+    text-align: center;
+    width: 4rem;
+}
+
+.aiu-ar-perm-grid {
+    margin-bottom: 0;
+}
+
+.aiu-ar-perm-row {
+    min-height: 2rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--aiu-border, #eee);
+}
+
+/* Single column (stacked): every row has a divider except the last */
+.aiu-ar-perm-grid .col-md-6:last-child .aiu-ar-perm-row {
+    border-bottom: 0;
+}
+
+/* Two columns: drop the divider on the final row of each column */
+@media (min-width: 768px) {
+    .aiu-ar-perm-grid .col-md-6 {
+        padding-inline: 0;
+    }
+    .aiu-ar-perm-grid .col-md-6:nth-child(odd) {
+        padding-right: 1.5rem;
+    }
+    .aiu-ar-perm-grid .col-md-6:nth-last-child(-n+2) .aiu-ar-perm-row {
+        border-bottom: 0;
+    }
+}
+
+
+.aiu-ar-record-summary th,
+.aiu-ar-record-summary td {
+    font-size: var(--typo3-font-size-small, 0.8125rem);
+    border: 1px solid var(--typo3-table-border-color, var(--aiu-border, #d7d7d7));
+}
+
+.aiu-ar-record-summary th {
+    font-weight: 600;
+}
+
+.aiu-ar-record-summary {
+    border: 1px solid var(--typo3-table-border-color, var(--aiu-border, #d7d7d7));
+}
+
+.aiu-ar-scope-label {
+    font-size: var(--typo3-font-size-small, 0.8125rem);
+}

@@ -1,0 +1,37 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <div class="aiu-access-roles-page aiu-module-page">
+        <f:if condition="{accessDenied}">
+            <f:then>
+                <div class="callout callout-warning">
+                    <div class="callout-content">
+                        <div class="callout-title"><f:translate key="module.aiAccessRoles.denied.title" extensionName="NsT3AF" /></div>
+                        <div class="callout-body"><f:translate key="module.aiAccessRoles.denied.body" extensionName="NsT3AF" /></div>
+                    </div>
+                </div>
+            </f:then>
+            <f:else>
+                <f:render partial="Module/TabPageHeader" arguments="{_all}" />
+                <f:if condition="{bootstrapError}">
+                    <div class="callout callout-danger mb-3">
+                        <div class="callout-content">
+                            <div class="callout-title">Could not load AI Access data</div>
+                            <div class="callout-body">{bootstrapError}</div>
+                        </div>
+                    </div>
+                </f:if>
+                <div id="aiu-access-roles-root"
+                     class="aiu-access-roles-root"
+                     data-be-groups-url="{beGroupsEditUrl}"
+                     data-tab-heading="{tabHeading -> f:format.htmlspecialchars()}"
+                     data-tab-intro="{tabIntro -> f:format.htmlspecialchars()}">
+                    <p class="text-variant mb-0" data-aiu-access-roles-loading>Loading…</p>
+                </div>
+                <script type="application/json" id="aiu-access-roles-bootstrap">{bootstrapJson -> f:format.raw()}</script>
+            </f:else>
+        </f:if>
+    </div>
+</f:section>
+</html>

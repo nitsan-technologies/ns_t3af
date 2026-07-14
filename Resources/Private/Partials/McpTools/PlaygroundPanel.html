@@ -1,0 +1,127 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="callout callout-info mb-3">
+    <div class="callout-icon">
+        <core:icon identifier="actions-play" size="medium" />
+    </div>
+    <div class="callout-content">
+        <div class="callout-title"><f:translate key="{ll}:module.mcpTools.playground.title" default="MCP Tool Playground" /></div>
+        <div class="callout-body">
+            <p class="mb-0"><f:translate key="{ll}:module.mcpTools.playground.body" default="Select a tool, fill in parameters, and execute it against this TYPO3 instance." /></p>
+        </div>
+    </div>
+</div>
+
+<div class="aiu-mcp-playground" data-mcp-tools-playground>
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="card card-size-large mb-3 w-100">
+                <div class="card-header">
+                    <div class="card-header-body">
+                        <h2 class="card-title mb-2">
+                            <f:translate key="{ll}:module.mcpTools.playground.tool" default="Tool" />
+                        </h2>
+                    </div>
+                    <select id="mcp-playground-tool" class="form-select" data-mcp-tools-playground-tool style="max-width: 14rem;" autocomplete="off">
+                        <option value=""><f:translate key="{ll}:module.mcpTools.playground.selectTool" default="Select a tool…" /></option>
+                        <f:for each="{mcpPlaygroundConfig.categories}" as="category">
+                            <optgroup label="{category.label}">
+                                <f:for each="{category.tools}" as="tool">
+                                    <option value="{tool.name}">{tool.name}</option>
+                                </f:for>
+                            </optgroup>
+                        </f:for>
+                    </select>
+                </div>
+                <div class="card-body">
+                    <form autocomplete="off" data-mcp-tools-playground-form novalidate>
+                    <div data-mcp-tools-playground-params hidden>
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h3 class="h6 mb-0"><f:translate key="{ll}:module.mcpTools.playground.params" default="Parameters" /></h3>
+                            <button type="button" class="btn btn-danger btn-sm" data-mcp-tools-playground-clear>
+                                <core:icon identifier="actions-edit-delete" size="small" />
+                            </button>
+                        </div>
+                        <div data-mcp-tools-playground-params-fields></div>
+                    </div>
+                    <div class="mt-3" data-mcp-tools-playground-empty>
+                        <p class="text-variant mb-0"><f:translate key="{ll}:module.mcpTools.playground.selectToolHint" default="Choose a tool above to configure parameters." /></p>
+                    </div>
+                    </form>
+                </div>
+                <div class="card-footer">
+                    <button type="button" class="btn btn-success" data-mcp-tools-playground-run disabled>
+                        <core:icon identifier="actions-play" size="small" />
+                        <f:translate key="{ll}:module.mcpTools.playground.run" default="Execute" />
+                    </button>
+                    <code class="btn btn-default ms-2" data-mcp-tools-playground-call hidden></code>
+                </div>
+            </div>
+
+            <div class="card card-size-large mb-0 w-100" data-mcp-tools-playground-result-wrap hidden>
+                <div class="card-header">
+                    <div class="card-header-body">
+                        <h2 class="card-title mb-0"><f:translate key="{ll}:module.mcpTools.playground.result" default="Result" /></h2>
+                    </div>
+                    <div class="small text-variant" data-mcp-tools-playground-meta></div>
+                </div>
+                <div class="card-body">
+                    <pre class="aiu-mcp-code__pre mb-0" data-mcp-tools-playground-result><code></code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 aiu-mcp-playground__sidebar">
+            <div class="card card-size-small mb-3 w-100" data-mcp-tools-playground-info hidden>
+                <div class="card-header">
+                    <div class="card-header-body">
+                        <h2 class="card-title mb-0">
+                            <f:translate key="{ll}:module.mcpTools.playground.toolInfo" default="Tool Info" />
+                        </h2>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2" data-mcp-tools-playground-tagline></p>
+                    <div class="callout callout-notice mb-3" data-mcp-tools-playground-notes-wrap hidden>
+                        <div class="callout-body">
+                            <p class="mb-0 small" data-mcp-tools-playground-notes></p>
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-0">
+                        <div class="col-6">
+                            <div class="aiu-mcp-playground-stat">
+                                <div class="aiu-mcp-playground-stat__value" data-mcp-tools-playground-calls>—</div>
+                                <div class="aiu-mcp-playground-stat__label"><f:translate key="{ll}:module.mcpTools.playground.callsWeek" default="calls/week" /></div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="aiu-mcp-playground-stat">
+                                <div class="aiu-mcp-playground-stat__value aiu-mcp-playground-stat__value--success" data-mcp-tools-playground-success>—</div>
+                                <div class="aiu-mcp-playground-stat__label"><f:translate key="{ll}:module.mcpTools.playground.successRate" default="success rate" /></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-size-small mb-0 w-100" data-mcp-tools-playground-prompts hidden>
+                <div class="card-header">
+                    <div class="card-header-body">
+                        <h2 class="card-title mb-0">
+                            <f:translate key="{ll}:module.mcpTools.playground.examplePrompts" default="Example Prompts" />
+                        </h2>
+                    </div>
+                </div>
+                <div class="card-body pt-2">
+                    <div class="aiu-mcp-playground-prompts" data-mcp-tools-playground-prompts-list></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</html>

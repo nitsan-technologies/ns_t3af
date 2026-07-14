@@ -1,0 +1,65 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<f:if condition="{transportClients -> f:count()} > 0">
+    <div class="aiu-mcp-transport-divider" role="separator"></div>
+
+    <div class="aiu-mcp-client-guide-section" data-mcp-client-guide data-transport-guide="{transportKey}">
+        <p class="aiu-mcp-client-guide-section__label form-label text-uppercase small">
+            <f:translate key="{ll}:module.mcpServer.clients.heading" />
+        </p>
+
+        <div class="d-flex flex-wrap gap-1 mb-3" data-mcp-client-tabs role="tablist" aria-label="{f:translate(key: '{ll}:module.mcpServer.clients.tabsAria')}">
+            <f:for each="{transportClients}" as="client" iteration="clientIterator">
+                <button type="button"
+                        class="btn btn-default d-inline-flex align-items-center gap-1{f:if(condition: clientIterator.isFirst, then: ' active is-active')}"
+                        data-client-tab="{client.key}"
+                        role="tab"
+                        aria-selected="{f:if(condition: clientIterator.isFirst, then: 'true', else: 'false')}">
+                    <core:icon identifier="{client.icon}" size="small" />
+                    <f:translate key="{ll}:module.mcpServer.client.{client.key}" />
+                </button>
+            </f:for>
+        </div>
+
+        <div class="aiu-mcp-client-guide-panel">
+            <f:for each="{transportClients}" as="client" iteration="clientIterator">
+                <f:if condition="{clientIterator.isFirst}">
+                    <f:then>
+                        <div class="aiu-mcp-client-snippet" data-client-snippet="{client.key}" role="tabpanel">
+                            <div class="aiu-mcp-client-guide-panel__header mb-1">
+                                <span class="aiu-mcp-client-card__icon" aria-hidden="true">
+                                    <core:icon identifier="{client.icon}" size="small" />
+                                </span>
+                                <h2 class="h3 mb-0">
+                                    <f:translate key="{ll}:module.mcpServer.client.{client.key}" />
+                                </h2>
+                            </div>
+                            <div class="aiu-mcp-client-guide-panel__body">
+                                <f:render partial="McpServer/Snippets/{client.snippet}" arguments="{mcpSnippetArgs}" />
+                            </div>
+                        </div>
+                    </f:then>
+                    <f:else>
+                        <div class="aiu-mcp-client-snippet is-hidden" data-client-snippet="{client.key}" role="tabpanel" hidden="hidden">
+                            <div class="aiu-mcp-client-guide-panel__header">
+                                <span class="aiu-mcp-client-card__icon" aria-hidden="true">
+                                    <core:icon identifier="{client.icon}" size="small" />
+                                </span>
+                                <h4 class="h5 mb-0">
+                                    <f:translate key="{ll}:module.mcpServer.client.{client.key}" />
+                                </h4>
+                            </div>
+                            <div class="aiu-mcp-client-guide-panel__body">
+                                <f:render partial="McpServer/Snippets/{client.snippet}" arguments="{mcpSnippetArgs}" />
+                            </div>
+                        </div>
+                    </f:else>
+                </f:if>
+            </f:for>
+        </div>
+    </div>
+</f:if>
+</html>

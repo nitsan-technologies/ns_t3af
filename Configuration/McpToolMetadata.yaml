@@ -1,0 +1,410 @@
+# Core MCP tool catalog metadata for the backend MCP Tools module.
+# Merged into introspected tool data by McpToolMetadataService.
+
+categories:
+  Content:
+    label: Content
+    description: Page navigation and content element reads.
+  Records:
+    label: Records
+    description: Generic record CRUD via DataHandler and table writes.
+  Workspaces:
+    label: Workspaces
+    description: Workspace listing and staged-change workflows.
+  Files:
+    label: Files
+    description: FAL uploads and file reference management.
+  Schema:
+    label: Schema
+    description: TCA schema inspection before writes.
+  Translation:
+    label: Translation
+    description: Site languages and translation preparation.
+  Search:
+    label: Search
+    description: Cross-table record search and discovery.
+  Cache:
+    label: Cache
+    description: TYPO3 cache flush operations.
+
+defaults:
+  category: Records
+  status: ready
+  tagline: ''
+  notes: ''
+  examplePrompts: []
+
+tools:
+  pages_get:
+    category: Content
+    status: ready
+    tagline: Fetch a single TYPO3 page by UID
+    notes: Returns page fields and language overlays when available.
+    examplePrompts:
+      - 'Show me the page with UID 1 including its translations'
+      - 'What are all the fields of pages record 5?'
+      - 'Read the homepage page record'
+      - 'Get page details for the About Us page'
+
+  content_list:
+    category: Content
+    status: ready
+    tagline: List content elements on a TYPO3 page
+    notes: Use sysLanguageUid to read a specific language overlay.
+    examplePrompts:
+      - 'What content is on the About Us page?'
+      - 'Read all text content from page ID 42'
+      - 'Show me everything on the homepage'
+      - 'List content elements on page 15'
+
+  table_schema:
+    category: Schema
+    status: ready
+    tagline: Inspect available tables and their fields
+    notes: Call before write_table to discover valid field names and types.
+    examplePrompts:
+      - 'What fields does the tx_news_domain_model_news table have?'
+      - 'Which tables can the AI write to?'
+      - 'Show me the schema for tt_content'
+      - 'Inspect the pages table schema before creating records'
+
+  write_table:
+    category: Records
+    status: ready
+    tagline: Create, update, or delete records in any workspace-capable table
+    notes: All writes go through DataHandler. Review staged changes in Workspaces before publishing.
+    examplePrompts:
+      - 'Create a news article titled Summer Sale 2026 on the News page'
+      - 'Add a new text content element to the homepage'
+      - 'Update the meta description on the About Us page'
+      - 'Delete the orphaned content element #199'
+
+  workspace_list:
+    category: Workspaces
+    status: ready
+    tagline: List workspaces available to the current backend user
+    notes: Ask the editor which workspace to use before write operations.
+    examplePrompts:
+      - 'What workspaces are available for staging changes?'
+      - 'List draft workspaces I can write to'
+      - 'Which workspace should I use before creating content?'
+      - 'Show me Live and all draft workspaces'
+
+  site_languages_list:
+    category: Translation
+    status: ready
+    tagline: List site languages configured for a page
+    notes: Provide pageId or pageUrl before mass translation workflows.
+    examplePrompts:
+      - 'Which languages are configured for the homepage?'
+      - 'List site languages available for page 15'
+      - 'What target languages can I translate page 42 into?'
+      - 'Show languages for the /contact page URL'
+
+  file_upload_from_url:
+    category: Files
+    status: ready
+    tagline: Download a file from a URL into FAL storage
+    notes: Returns sys_file UID for use with file_reference_add.
+    examplePrompts:
+      - 'Upload an image from https://example.com/banner.jpg to /uploads/'
+      - 'Download and store a PDF from an external URL'
+      - 'Upload a logo file from URL into the media folder'
+      - 'Fetch a hero image from the web and save it to fileadmin'
+
+  file_reference_add:
+    category: Files
+    status: ready
+    tagline: Attach uploaded files to a record file or image field
+    notes: Pass comma-separated sys_file UIDs from file_upload_from_url.
+    examplePrompts:
+      - 'Attach file UID 88 to the hero image field on content element 45'
+      - 'Link the uploaded banner image to this news record'
+      - 'Add the new PDF to the downloads field on page 12'
+      - 'Connect the uploaded logo to the header media field'
+
+  file_reference_list:
+    category: Files
+    status: ready
+    tagline: List file references on a record field
+    notes: Returns reference UIDs for file_reference_remove and sys_file UIDs.
+    examplePrompts:
+      - 'List all images attached to content element 88'
+      - 'Show file references on the news article media field'
+      - 'Which files are linked to the homepage hero field?'
+      - 'Inspect attachments on record 47 table tx_news_domain_model_news'
+
+  file_reference_remove:
+    category: Files
+    status: ready
+    tagline: Remove a file reference from a record field
+    notes: Uses the sys_file_reference UID from file_reference_list.
+    examplePrompts:
+      - 'Remove file reference 12 from the content element'
+      - 'Detach the obsolete banner image from this record'
+      - 'Unlink the duplicate PDF reference from the downloads field'
+      - 'Delete file reference UID 55 from the gallery field'
+
+  pages_list:
+    category: Content
+    status: ready
+    tagline: List child pages under a parent page ID
+    notes: Use sysLanguageUid to filter by language. selectFields limits returned columns.
+
+  pages_tree:
+    category: Content
+    status: ready
+    tagline: Get nested page tree from a root page
+    notes: depth controls traversal (max 10). Returns totalNodes count.
+
+  content_get:
+    category: Content
+    status: ready
+    tagline: Fetch a single tt_content element by UID
+    notes: Includes translations when the default-language record is requested.
+
+  file_list:
+    category: Files
+    status: ready
+    tagline: List files and folders in a FAL storage directory
+    notes: Default storageUid is 1 (fileadmin). Supports pagination.
+
+  file_search:
+    category: Files
+    status: ready
+    tagline: Search sys_file records by name or extension
+    notes: Uses database search across the storage.
+
+  file_get_info:
+    category: Files
+    status: ready
+    tagline: Get file metadata and public URL
+    notes: Requires storageUid and file identifier from file_list or file_search.
+
+  file_upload:
+    category: Files
+    status: ready
+    tagline: Upload file content to a FAL directory
+    notes: Provide content (text) or base64Content (binary), not both.
+
+  record_search:
+    category: Search
+    status: ready
+    tagline: Search any TCA table with structured conditions
+    notes: Pass search as JSON. Supports eq, like, gt, in, null operators.
+
+  record_count:
+    category: Search
+    status: ready
+    tagline: Count records matching search conditions
+    notes: Same search JSON format as record_search without fetching rows.
+
+  cache_clear:
+    category: Cache
+    status: ready
+    tagline: Flush TYPO3 page, single-page, or all caches
+    notes: scope pages (default), all, or page (requires pageId).
+
+  permission_check_summary:
+    category: Records
+    status: ready
+    tagline: Summarize current backend user permissions
+    notes: Returns admin flag, table ACL, languages, file perms, and mounts.
+
+  backend_user_list:
+    category: Records
+    status: ready
+    tagline: List backend users (admin only)
+    notes: Never returns password or MFA fields.
+
+  backend_group_list:
+    category: Records
+    status: ready
+    tagline: List backend user groups (admin only)
+    notes: Soft-deleted groups are excluded.
+
+  workspace_switch:
+    category: Workspaces
+    status: ready
+    tagline: Switch active workspace for the current user
+    notes: Requires cms-workspaces. Use 0 for live workspace.
+
+  workspace_changes_list:
+    category: Workspaces
+    status: ready
+    tagline: List staged changes in the current workspace
+    notes: Grouped by table with state and stage per version record.
+
+  workspace_publish:
+    category: Workspaces
+    status: ready
+    tagline: Publish a workspace version to live
+    notes: Swaps workspace version with live record via DataHandler cmdmap.
+
+  redirect_list:
+    category: Records
+    status: ready
+    tagline: List URL redirects with filters
+    notes: Requires cms-redirects extension.
+
+  redirect_get:
+    category: Records
+    status: ready
+    tagline: Get a single redirect record
+    notes: Requires cms-redirects extension.
+
+  redirect_create:
+    category: Records
+    status: ready
+    tagline: Create a new URL redirect
+    notes: Requires cms-redirects. sourceHost, sourcePath, and target are required.
+
+  redirect_update:
+    category: Records
+    status: ready
+    tagline: Update redirect fields via JSON
+    notes: Requires cms-redirects extension.
+
+  redirect_delete:
+    category: Records
+    status: ready
+    tagline: Delete a redirect by UID
+    notes: Requires cms-redirects extension.
+
+  scheduler_list:
+    category: Records
+    status: ready
+    tagline: List scheduler tasks
+    notes: Requires cms-scheduler extension.
+
+  scheduler_get:
+    category: Records
+    status: ready
+    tagline: Get a scheduler task by UID
+    notes: Requires cms-scheduler extension.
+
+  scheduler_update:
+    category: Records
+    status: ready
+    tagline: Update scheduler task fields
+    notes: Requires cms-scheduler. Writable fields include disable and description.
+
+  scheduler_delete:
+    category: Records
+    status: ready
+    tagline: Delete a scheduler task
+    notes: Requires cms-scheduler extension.
+
+  permission_check_page:
+    category: Records
+    status: ready
+    tagline: Check page-level permissions for the current user
+    notes: Returns show, edit, delete, new-subpage, and content-edit flags.
+
+  permission_check_table:
+    category: Records
+    status: ready
+    tagline: Check table select/modify permissions
+    notes: Use before record_search or write_table operations.
+
+  pages_search:
+    category: Content
+    status: ready
+    tagline: Search pages by title or JSON conditions
+    notes: Plain text searches title with LIKE. JSON supports advanced operators.
+
+  pages_copy:
+    category: Content
+    status: ready
+    tagline: Copy a page to a new tree position
+    notes: Positive target = child of page. Negative target = after page uid. includeSubpages copies subtree.
+
+  content_search:
+    category: Content
+    status: ready
+    tagline: Search content elements by header or JSON conditions
+    notes: Filter by pid and sysLanguageUid. Plain text searches header field.
+
+  content_move:
+    category: Content
+    status: ready
+    tagline: Move a content element to a new position
+    notes: Positive target = top of page. Negative target = after element uid.
+
+  file_copy:
+    category: Files
+    status: ready
+    tagline: Copy a file within the same FAL storage
+    notes: Requires file identifier and target directory path.
+
+  file_delete:
+    category: Files
+    status: ready
+    tagline: Delete a file from FAL storage
+    notes: Uses file identifier from file_list or file_search.
+
+  file_move:
+    category: Files
+    status: ready
+    tagline: Move a file to another directory
+    notes: Same storage only.
+
+  file_rename:
+    category: Files
+    status: ready
+    tagline: Rename a file in FAL storage
+    notes: Provide identifier and new file name.
+
+  directory_create:
+    category: Files
+    status: ready
+    tagline: Create a new FAL directory
+    notes: parentPath defaults to / (storage root).
+
+  directory_delete:
+    category: Files
+    status: ready
+    tagline: Delete a FAL directory
+    notes: Set recursive true for non-empty directories.
+
+  directory_move:
+    category: Files
+    status: ready
+    tagline: Move a directory to a new parent
+    notes: Same storage only.
+
+  directory_rename:
+    category: Files
+    status: ready
+    tagline: Rename a FAL directory
+    notes: Provide directory identifier and new name.
+
+  backend_user_get:
+    category: Records
+    status: ready
+    tagline: Get backend user details by UID
+    notes: Admin only. Never returns password or MFA fields.
+
+  backend_group_get:
+    category: Records
+    status: ready
+    tagline: Get backend group details by UID
+    notes: Admin only. Includes permission and mount configuration.
+
+  workspace_get:
+    category: Workspaces
+    status: ready
+    tagline: Get workspace metadata and access level
+    notes: Use uid 0 for live workspace. Requires cms-workspaces.
+
+  workspace_discard:
+    category: Workspaces
+    status: ready
+    tagline: Discard unpublished workspace changes
+    notes: Uses DataHandler version clearWSID action.
+
+  workspace_stage_set:
+    category: Workspaces
+    status: ready
+    tagline: Move a workspace version to a review stage
+    notes: Stages -10 publish, -20 review, 0 editing, or custom stage uid.

@@ -1,0 +1,16 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="row g-3 mb-3">
+    <div class="col-12 col-xl-7">
+        <f:render partial="Module/Dashboard/RecentRequests" arguments="{recentRequests: recentRequests, activityColumnMode: activityColumnMode, aiUsageUri: aiUsageUri}" />
+    </div>
+    <div class="col-12 col-xl-5">
+        <div class="d-flex flex-column gap-3 h-100">
+            <f:render partial="Module/Dashboard/ModuleHealth" arguments="{moduleHealth: moduleHealth, moduleHealthSummary: moduleHealthSummary}" />
+        </div>
+    </div>
+</div>
+</html>

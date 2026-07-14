@@ -1,0 +1,101 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+<form method="get" action="{aiLogsListUri}" class="aiu-ai-logs__filter mb-3" id="aiu-ai-logs-filter">
+    <input type="hidden" name="currentPage" value="1" />
+    <input type="hidden" name="max" value="{aiLogsFilters.max}" />
+    <input type="hidden" name="period" value="{aiLogsFilters.period}" />
+    <f:if condition="{aiLogsFilters.period} == 'custom'">
+        <input type="hidden" name="from" value="{aiLogsFilters.from}" />
+        <input type="hidden" name="to" value="{aiLogsFilters.to}" />
+    </f:if>
+    <div class="card card-size-large mb-0">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-lg-4 col-xl-2">
+                    <label class="form-label" for="aiu-ai-logs-search">
+                        <f:translate key="{ll}:module.aiLogs.filter.search" />
+                    </label>
+                    <input type="search"
+                           id="aiu-ai-logs-search"
+                           name="search"
+                           class="form-control"
+                           value="{aiLogsFilters.search}"
+                           data-aiu-filter-initial="{aiLogsFilters.search}"
+                           autocomplete="off"
+                           autocorrect="off"
+                           autocapitalize="off"
+                           spellcheck="false"
+                           data-1p-ignore="true"
+                           data-lpignore="true"
+                           data-form-type="other"
+                           placeholder="{f:translate(key: '{ll}:module.aiLogs.filter.searchPlaceholder')}" />
+                </div>
+                <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                    <label class="form-label" for="aiu-ai-logs-log-channel">
+                        <f:translate key="{ll}:module.aiLogs.filter.logChannel" />
+                    </label>
+                    <select id="aiu-ai-logs-log-channel" name="logChannel" class="form-select">
+                        <f:for each="{aiLogsLogChannelOptions}" as="option">
+                            <option value="{option.value}" {f:if(condition: '{aiLogsFilters.logChannel} == {option.value}', then: 'selected="selected"')} >
+                                {option.label}
+                            </option>
+                        </f:for>
+                    </select>
+                </div>
+                <div class="col-6 col-md-4 col-lg-3 col-xl-2">
+                    <label class="form-label" for="aiu-ai-logs-extension">
+                        <f:translate key="{ll}:module.aiLogs.filter.extension" />
+                    </label>
+                    <select id="aiu-ai-logs-extension" name="extension" class="form-select">
+                        <f:for each="{aiLogsExtensionOptions}" as="option">
+                            <option value="{option.value}" {f:if(condition: '{aiLogsFilters.extension} == {option.value}', then: 'selected="selected"')} >
+                                {option.label}
+                            </option>
+                        </f:for>
+                    </select>
+                </div>
+                <div class="col-6 col-md-4 col-lg-2 col-xl-2">
+                    <label class="form-label" for="aiu-ai-logs-level">
+                        <f:translate key="{ll}:module.aiLogs.filter.level" />
+                    </label>
+                    <select id="aiu-ai-logs-level" name="level" class="form-select">
+                        <option value="" {f:if(condition: '{aiLogsFilters.level} == \'\'', then: 'selected="selected"')}>
+                            <f:translate key="{ll}:module.aiLogs.filter.any" />
+                        </option>
+                        <option value="error" {f:if(condition: '{aiLogsFilters.level} == \'error\'', then: 'selected="selected"')}>
+                            <f:translate key="{ll}:module.aiLogs.level.error" />
+                        </option>
+                        <option value="warning" {f:if(condition: '{aiLogsFilters.level} == \'warning\'', then: 'selected="selected"')}>
+                            <f:translate key="{ll}:module.aiLogs.level.warning" />
+                        </option>
+                        <option value="info" {f:if(condition: '{aiLogsFilters.level} == \'info\'', then: 'selected="selected"')}>
+                            <f:translate key="{ll}:module.aiLogs.level.info" />
+                        </option>
+                    </select>
+                </div>
+                <div class="col-12 col-lg-auto ms-lg-auto d-flex flex-wrap gap-2 aiu-ai-logs__filter-actions">
+                    <button class="btn btn-primary" type="button">
+                        <core:icon identifier="actions-filter" alternativeMarkupIdentifier="inline" />
+                        <f:translate key="{ll}:module.aiLogs.filter.submit" />
+                    </button>
+                    <a class="btn btn-default"
+                       href="{f:be.uri(route: 't3af_dashboard.ai_logs', parameters: {period: '7d'})}">
+                        <core:icon identifier="actions-close" alternativeMarkupIdentifier="inline" />
+                        <f:translate key="{ll}:module.aiLogs.filter.reset" />
+                    </a>
+                    <f:render partial="Module/PeriodDropdown" arguments="{
+                        periodLabel: aiLogsPeriodLabel,
+                        periodPresets: aiLogsPeriodPresets,
+                        periodFromDate: aiLogsPeriodFromDate,
+                        periodToDate: aiLogsPeriodToDate,
+                        periodFormAction: aiLogsPeriodFormAction,
+                        periodFormId: 'ailogs'
+                    }" />
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+</html>

@@ -1,0 +1,123 @@
+# cat=deepl//01; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.deepl_api_key
+deepl_api_key =
+
+# cat=deepl//02; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.deeplKey
+deepl_api_url = https://api-free.deepl.com/v2
+
+# cat=google/01; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.google_api_key
+google_api_key =
+
+# cat=google/02; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.googleUrl
+google_api_url = https://translation.googleapis.com/language/translate/v2
+
+#cat=Basic Authentication//01; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extConfiguration.basicAuthEnabled
+basicAuthEnabled =
+
+#cat=Basic Authentication//02; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extConfiguration.basicAuthUsername
+basicAuthUsername =
+
+#cat=Basic Authentication//03; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extConfiguration.basicAuthPassword
+basicAuthPassword =
+
+#cat=API Notifications//10; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.enableApiQuotaEmailNotification
+enableApiQuotaEmailNotification = 0
+
+#cat=API Notifications//20; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.apiQuotaNotificationEmail
+apiQuotaNotificationEmail =
+
+# cat=OpenAI Usage API//10; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.adminApiKey
+openai_admin_api_key =
+
+# cat=MCP Server//10; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mcpBasePath
+mcpBasePath = /mcp
+
+# cat=MCP Server//20; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.enableMcpServer
+enableMcpServer = 1
+
+# cat=MCP Server//25; type=options[context=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mcpMode.context,native=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mcpMode.native]; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mcpMode
+mcpMode = context
+
+# cat=MCP Server//21; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.requireAuth
+requireAuth = 1
+
+# cat=MCP Server//22; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.rateLimitGlobal
+rateLimitGlobal = 1
+
+# cat=MCP Server//23; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.logAllToolCalls
+logAllToolCalls = 1
+
+# cat=MCP Server//24; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.allowAnonymousReadOnly
+allowAnonymousReadOnly = 0
+
+# cat=MCP Server//30; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.accessTokenLifetime
+accessTokenLifetime = 3600
+
+# cat=MCP Server//31; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.refreshTokenLifetime
+refreshTokenLifetime = 2592000
+
+# cat=MCP Server//32; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.codeLifetime
+codeLifetime = 60
+
+# cat=MCP Server//33; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mcpRemoteTokenLifetime
+mcpRemoteTokenLifetime = 2592000
+
+# cat=MCP Server//34; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.sessionLifetime
+sessionLifetime = 86400
+
+# cat=MCP Server//40; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.rateLimitEnabled
+rateLimitEnabled = 1
+
+# cat=MCP Server//41; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.rateLimitAuthorize
+rateLimitAuthorize = 5
+
+# cat=MCP Server//42; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.rateLimitAuthorizeWindow
+rateLimitAuthorizeWindow = 300
+
+# cat=MCP Server//43; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.rateLimitAuthorizeGet
+rateLimitAuthorizeGet = 20
+
+# cat=MCP Server//44; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.rateLimitAuthorizeGetWindow
+rateLimitAuthorizeGetWindow = 300
+
+# cat=MCP Server//45; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.rateLimitToken
+rateLimitToken = 20
+
+# cat=MCP Server//46; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.rateLimitTokenWindow
+rateLimitTokenWindow = 300
+
+# cat=MCP Server//47; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.rateLimitRegister
+rateLimitRegister = 10
+
+# cat=MCP Server//48; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.rateLimitRegisterWindow
+rateLimitRegisterWindow = 3600
+
+# cat=MCP Server//49; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.rateLimitRevoke
+rateLimitRevoke = 20
+
+# cat=MCP Server//50; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.rateLimitRevokeWindow
+rateLimitRevokeWindow = 300
+
+# cat=MCP Server//60; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.oauthDefaultClientId
+oauthDefaultClientId = typo3-ai-universe-mcp-client
+
+# cat=MCP Server//61; type=text; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.oauthDefaultRedirectUris
+oauthDefaultRedirectUris = https://claude.ai/oauth/callback
+https://app.n8n.io/oauth/callback
+
+# cat=MCP Server//62; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.oauthDefaultScopes
+oauthDefaultScopes = mcp:read mcp:write mcp:tools
+
+# cat=MCP Server//63; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.oauthMaxActiveTokensPerUser
+oauthMaxActiveTokensPerUser = 5
+
+# cat=MCP Server//70; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.enforcePkce
+enforcePkce = 1
+
+# cat=MCP Server//71; type=text; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mtlsCaCertificate
+mtlsCaCertificate =
+
+# cat=MCP Server//72; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mtlsValidationEnabled
+mtlsValidationEnabled = 0
+
+# cat=MCP Server//75; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mcpServerOnlineSince
+mcpServerOnlineSince = 0

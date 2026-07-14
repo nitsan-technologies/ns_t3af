@@ -1,0 +1,144 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<div class="card w-100 h-100 mb-0 d-flex flex-column{f:if(condition: profile.isDefault, then: ' aiu-ai-context__card--default')}{f:if(condition: profile.isEnabled == 0, then: ' aiu-ai-context__card--disabled')}"
+     data-aiu-context-card
+     data-profile-json="{profile.profileJson -> f:format.htmlspecialchars()}">
+    <div class="card-header">
+        <div class="card-icon">
+            <core:icon identifier="actions-lightbulb" size="medium" alternativeMarkupIdentifier="inline" />
+        </div>
+        <div class="card-header-body min-w-0">
+            <div class="card-header-body__top d-flex align-items-start justify-content-between gap-2">
+                <h2 class="card-title mb-0 text-truncate">{profile.brandName}</h2>
+                <div class="d-flex flex-wrap gap-1 flex-shrink-0">
+                    <f:if condition="{profile.isDefault}">
+                        <span class="badge badge-success"><f:translate key="{ll}:module.aiContext.defaultBadge" /></span>
+                    </f:if>
+                    <f:if condition="{profile.isEnabled} == 0">
+                        <span class="badge badge-warning"><f:translate key="{ll}:module.aiContext.disabledBadge" /></span>
+                    </f:if>
+                </div>
+            </div>
+            <f:if condition="{profile.industry}">
+                <span class="card-subtitle">{profile.industry}</span>
+            </f:if>
+            <f:if condition="{profile.websiteUrl}">
+                <span class="d-block text-variant small text-truncate">{profile.websiteUrl}</span>
+            </f:if>
+        </div>
+    </div>
+    <div class="card-body flex-grow-1">
+        <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+            <span class="text-variant small"><f:translate key="{ll}:module.aiContext.modal.completeness" default="Profile completeness" /></span>
+            <span class="badge badge-default">{profile.completeness.percent}%</span>
+        </div>
+        <div class="aiu-ai-context__progress mb-3" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+             aria-valuenow="{profile.completeness.percent}" style="--aiu-context-progress: {profile.completeness.percent};">
+            <span class="aiu-ai-context__progress-bar"></span>
+        </div>
+        <ul class="aiu-ai-context__checklist list-unstyled mb-0">
+            <f:for each="{profile.completeness.sections}" as="section">
+                <li class="aiu-ai-context__checklist-item{f:if(condition: section.complete, then: ' is-complete', else: ' is-incomplete')}">
+                    <f:if condition="{section.complete}">
+                        <f:then>
+                            <core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" />
+                        </f:then>
+                        <f:else>
+                            <core:icon identifier="actions-placeholder" size="small" alternativeMarkupIdentifier="inline" />
+                        </f:else>
+                    </f:if>
+                    <span class="aiu-ai-context__checklist-label">
+                        <f:translate key="{ll}:{section.labelKey}" />
+                    </span>
+                </li>
+            </f:for>
+        </ul>
+        <f:if condition="{profile.linkedFeatures}">
+            <div class="aiu-ai-context__linked-features mt-3">
+                <div class="text-variant small mb-1"><f:translate key="{ll}:module.aiContext.usedBy" default="Used by" /></div>
+                <div class="d-flex flex-wrap gap-1">
+                    <f:for each="{profile.linkedFeatures}" as="feature">
+                        <span class="badge badge-info">{feature}</span>
+                    </f:for>
+                </div>
+            </div>
+        </f:if>
+    </div>
+    <div class="card-footer aiu-ai-context__card-footer mt-auto">
+        <f:if condition="{canModifyBrandProfiles} == 1">
+            <f:if condition="{profile.isDefault} == 0">
+                <form method="post" action="{brandContextSetDefaultUri}" id="aiu-ctx-default-{profile.uid}" class="d-none">
+                    <input type="hidden" name="id" value="{currentPageId}" />
+                    <input type="hidden" name="uid" value="{profile.uid}" />
+                </form>
+            </f:if>
+            <form method="post" action="{brandContextSetEnabledUri}" id="aiu-ctx-enabled-{profile.uid}" class="d-none">
+                <input type="hidden" name="id" value="{currentPageId}" />
+                <input type="hidden" name="uid" value="{profile.uid}" />
+                <input type="hidden" name="enabled" value="{f:if(condition: profile.isEnabled, then: '0', else: '1')}" />
+            </form>
+            <form method="post" action="{brandContextDeleteUri}" id="aiu-ctx-delete-{profile.uid}" class="d-none" data-aiu-context-delete-form>
+                <input type="hidden" name="id" value="{currentPageId}" />
+                <input type="hidden" name="uid" value="{profile.uid}" />
+            </form>
+
+            <div class="btn-group aiu-ai-context__card-actions" role="group" aria-label="{f:translate(key: '{ll}:module.aiContext.cardActions', default: 'Profile actions')}">
+                <button type="button"
+                        class="btn btn-default btn-sm"
+                        data-aiu-context-edit="{profile.uid}"
+                        title="{f:translate(key: '{ll}:module.aiContext.edit')}"
+                        aria-label="{f:translate(key: '{ll}:module.aiContext.edit')}">
+                    <core:icon identifier="actions-open" size="small" alternativeMarkupIdentifier="inline" />
+                </button>
+                <f:if condition="{profile.isDefault}">
+                    <f:then>
+                        <span class="btn btn-default btn-sm disabled aiu-provider-default-btn is-default"
+                              title="{f:translate(key: '{ll}:module.aiContext.defaultBadge')}"
+                              aria-label="{f:translate(key: '{ll}:module.aiContext.defaultBadge')}">
+                            <core:icon identifier="actions-star-alt" size="small" alternativeMarkupIdentifier="inline" />
+                        </span>
+                    </f:then>
+                    <f:else>
+                        <button type="submit"
+                                form="aiu-ctx-default-{profile.uid}"
+                                class="btn btn-default btn-sm"
+                                title="{f:translate(key: '{ll}:module.aiContext.setDefault')}"
+                                aria-label="{f:translate(key: '{ll}:module.aiContext.setDefault')}">
+                            <core:icon identifier="actions-star" size="small" alternativeMarkupIdentifier="inline" />
+                        </button>
+                    </f:else>
+                </f:if>
+                <f:if condition="{profile.isEnabled}">
+                    <f:then>
+                        <button type="submit"
+                                form="aiu-ctx-enabled-{profile.uid}"
+                                class="btn btn-default btn-sm"
+                                title="{f:translate(key: '{ll}:module.aiContext.disable')}"
+                                aria-label="{f:translate(key: '{ll}:module.aiContext.disable')}">
+                            <core:icon identifier="actions-edit-hide" size="small" alternativeMarkupIdentifier="inline" />
+                        </button>
+                    </f:then>
+                    <f:else>
+                        <button type="submit"
+                                form="aiu-ctx-enabled-{profile.uid}"
+                                class="btn btn-default btn-sm"
+                                title="{f:translate(key: '{ll}:module.aiContext.enable')}"
+                                aria-label="{f:translate(key: '{ll}:module.aiContext.enable')}">
+                            <core:icon identifier="actions-edit-unhide" size="small" alternativeMarkupIdentifier="inline" />
+                        </button>
+                    </f:else>
+                </f:if>
+                <button type="submit"
+                        form="aiu-ctx-delete-{profile.uid}"
+                        class="btn btn-default btn-sm"
+                        data-aiu-context-delete
+                        title="{f:translate(key: '{ll}:module.aiContext.delete', default: 'Delete')}"
+                        aria-label="{f:translate(key: '{ll}:module.aiContext.delete', default: 'Delete')}">
+                    <core:icon identifier="actions-delete" size="small" alternativeMarkupIdentifier="inline" />
+                </button>
+            </div>
+        </f:if>
+    </div>
+</div>
+</html>

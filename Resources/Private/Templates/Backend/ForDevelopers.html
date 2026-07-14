@@ -1,0 +1,690 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+    <f:variable name="aiProviderNames" value="{0: 'OpenAI', 1: 'Anthropic', 2: 'Azure OpenAI', 3: 'Mistral', 4: 'Ollama', 5: 'Google Gemini'}" />
+
+    <div class="aiu-for-developers" data-aiu-for-developers-root>
+
+        <div class="page-header d-flex justify-content-between align-items-center gap-3 mb-4">
+            <div class="min-w-0 flex-grow-1">
+                <h1 class="mb-1">{tabHeading}</h1>
+                <p class="text-variant mb-0">{tabIntro}</p>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2 flex-shrink-0">
+                <f:render partial="Module/PageBreadcrumb" arguments="{_all}" />
+            </div>
+        </div>
+        <div class="mb-4 d-flex align-items-center justify-content-between gap-2 flex-wrap">
+            <div class="min-w-0 flex-grow-1">
+                <h2 class="mb-0"><f:translate key="{ll}:module.forDevelopers.architecture.title" /></h2>
+                <span class="text-variant small"><f:translate key="{ll}:module.forDevelopers.architecture.subtitle" /></span>
+            </div>
+            <div class="page-actions d-flex flex-wrap gap-2">
+                <a href="https://github.com/nitsan-technologies/ns_t3af_extended"
+                    class="btn btn-primary d-inline-flex align-items-center gap-1"
+                    target="_blank"
+                    rel="noopener noreferrer">
+                     <f:translate key="{ll}:module.forDevelopers.action.starterKitExtended" />
+                </a>
+                <a href="https://docs.t3planet.de/en/latest/ExtNsT3AF/DeveloperGuide/Index.html"
+                   class="btn btn-primary d-inline-flex align-items-center gap-1"
+                   target="_blank"
+                   rel="noopener noreferrer">
+                    <f:translate key="{ll}:module.forDevelopers.action.readGuide" />
+                </a>
+                <a href="#aiu-dev-getting-started" class="btn btn-default d-inline-flex align-items-center gap-1">
+                    <f:translate key="{ll}:module.forDevelopers.action.getStarted" />
+                </a>
+            </div>
+        </div>
+
+        <div class="card card-size-large mb-4">
+            <div class="card-body">
+                <div class="aiu-dev-arch-diagram" role="img" aria-label="{f:translate(key: '{ll}:module.forDevelopers.architecture.ariaLabel')}">
+
+                    <div class="aiu-dev-arch-diagram__extensions mx-auto">
+                        <div class="card card-size-small mb-0 w-100">
+                            <div class="card-body py-3 text-center">
+                                <code>EXT:extension_key</code>
+                                <span class="text-variant small d-block text-uppercase mt-1"><f:translate key="{ll}:module.forDevelopers.architecture.yourExtension" /></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="aiu-dev-arch-diagram__arrow-down text-variant" aria-hidden="true">
+                        <core:icon identifier="actions-arrow-down" size="small" alternativeMarkupIdentifier="inline" />
+                    </div>
+
+                    <div class="card card-size-large mb-0 w-100">
+                        <div class="card-header aiu-dev-arch-diagram__hub-header">
+                            <div class="card-header-body text-center">
+                                <h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.architecture.hubTitle" /></h2>
+                                <span class="card-subtitle"><f:translate key="{ll}:module.forDevelopers.architecture.hubSubtitle" /></span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="aiu-dev-arch-diagram__hub-grid">
+                                <span class="badge badge-default d-inline-flex align-items-center gap-1">
+                                    <core:icon identifier="actions-check-circle" size="small" alternativeMarkupIdentifier="inline" />
+                                    <f:translate key="{ll}:module.forDevelopers.label.dashboard" />
+                                </span>
+                                <span class="badge badge-default d-inline-flex align-items-center gap-1">
+                                    <core:icon identifier="actions-system-extension-configure" size="small" alternativeMarkupIdentifier="inline" />
+                                    <f:translate key="{ll}:module.forDevelopers.label.aiProviders" />
+                                </span>
+                                <span class="badge badge-default d-inline-flex align-items-center gap-1">
+                                    <core:icon identifier="actions-lightbulb" size="small" alternativeMarkupIdentifier="inline" />
+                                    <f:translate key="{ll}:module.forDevelopers.label.aiContext" />
+                                </span>
+                                <span class="badge badge-default d-inline-flex align-items-center gap-1">
+                                    <core:icon identifier="actions-link" size="small" alternativeMarkupIdentifier="inline" />
+                                    <f:translate key="{ll}:module.forDevelopers.label.mcpServer" />
+                                </span>
+                                <span class="badge badge-default d-inline-flex align-items-center gap-1">
+                                    <core:icon identifier="actions-star" size="small" alternativeMarkupIdentifier="inline" />
+                                    <f:translate key="{ll}:module.forDevelopers.label.aiFeatures" />
+                                </span>
+                                <span class="badge badge-default d-inline-flex align-items-center gap-1">
+                                    <core:icon identifier="actions-document-info" size="small" alternativeMarkupIdentifier="inline" />
+                                    <f:translate key="{ll}:module.forDevelopers.label.aiUsageLogs" />
+                                </span>
+                                <span class="badge badge-default d-inline-flex align-items-center gap-1">
+                                    <core:icon identifier="actions-user" size="small" alternativeMarkupIdentifier="inline" />
+                                    <f:translate key="{ll}:module.forDevelopers.label.aiAccess" />
+                                </span>
+                                <span class="badge badge-default d-inline-flex align-items-center gap-1">
+                                    <core:icon identifier="actions-message" size="small" alternativeMarkupIdentifier="inline" />
+                                    <f:translate key="{ll}:module.forDevelopers.label.aiPrompts" />
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="aiu-dev-arch-diagram__split" aria-hidden="true">
+                        <span class="aiu-dev-arch-diagram__split-stem"></span>
+                        <span class="aiu-dev-arch-diagram__split-bar"></span>
+                        <span class="aiu-dev-arch-diagram__split-leg aiu-dev-arch-diagram__split-leg--left"></span>
+                        <span class="aiu-dev-arch-diagram__split-leg aiu-dev-arch-diagram__split-leg--right"></span>
+                    </div>
+
+                    <div class="aiu-dev-arch-diagram__branches">
+                        <div class="card mb-0">
+                            <div class="card-header">
+                                <div class="card-header-body">
+                                    <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                                        <h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.label.aiProviders" /></h2>
+                                        <code class="small">symfony/ai-platform</code>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex flex-wrap gap-1">
+                                    <f:for each="{aiProviderNames}" as="providerName">
+                                        <span class="badge badge-default">{providerName}</span>
+                                    </f:for>
+                                    <span class="badge badge-default"><f:translate key="{ll}:module.forDevelopers.label.custom" /></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card mb-0">
+                            <div class="card-header">
+                                <div class="card-header-body">
+                                    <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+                                        <h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.label.mcpClients" /></h2>
+                                        <span class="text-variant small"><f:translate key="{ll}:module.forDevelopers.label.transportsCount" /></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex flex-wrap justify-content-center gap-3 mb-3">
+                                    <span class="badge badge-default d-inline-flex flex-column align-items-center gap-1 py-2">
+                                        <core:icon identifier="actions-device-desktop" size="small" alternativeMarkupIdentifier="inline" />
+                                        <f:translate key="{ll}:module.forDevelopers.label.cursor" />
+                                    </span>
+                                    <span class="badge badge-default d-inline-flex flex-column align-items-center gap-1 py-2">
+                                        <core:icon identifier="actions-chat" size="small" alternativeMarkupIdentifier="inline" />
+                                        <f:translate key="{ll}:module.forDevelopers.label.claudeDesktop" />
+                                    </span>
+                                    <span class="badge badge-default d-inline-flex flex-column align-items-center gap-1 py-2">
+                                        <core:icon identifier="actions-user" size="small" alternativeMarkupIdentifier="inline" />
+                                        <f:translate key="{ll}:module.forDevelopers.label.aiAgents" />
+                                    </span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <span class="badge badge-default"><f:translate key="{ll}:module.forDevelopers.label.remoteOauth" /></span>
+                                    <span class="badge badge-default"><f:translate key="{ll}:module.forDevelopers.label.websocket" /></span>
+                                    <span class="badge badge-default"><f:translate key="{ll}:module.forDevelopers.label.docker" /></span>
+                                    <span class="badge badge-default"><f:translate key="{ll}:module.forDevelopers.label.ssh" /></span>
+                                    <span class="badge badge-default"><f:translate key="{ll}:module.forDevelopers.label.npx" /></span>
+                                    <span class="badge badge-default"><f:translate key="{ll}:module.forDevelopers.label.localBridge" /></span>
+                                    <span class="badge badge-default"><f:translate key="{ll}:module.forDevelopers.label.stdio" /></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <h2 class="mb-2"><f:translate key="{ll}:module.forDevelopers.whatIs.title" /></h2>
+        <p class="text-variant mb-3"><f:translate key="{ll}:module.forDevelopers.whatIs.body" /></p>
+        <div class="card-container aiu-dev-cards mb-4">
+            <div class="card card-size-small">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <core:icon identifier="actions-system-extension-configure" size="small" alternativeMarkupIdentifier="inline" />
+                    </div>
+                    <div class="card-header-body">
+                        <h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.whatIs.anyProvider.title" /></h2>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.whatIs.anyProvider.body" /></p>
+                </div>
+            </div>
+            <div class="card card-size-small">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <core:icon identifier="actions-wallet" size="small" alternativeMarkupIdentifier="inline" />
+                    </div>
+                    <div class="card-header-body">
+                        <h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.whatIs.usage.title" /></h2>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.whatIs.usage.body" /></p>
+                </div>
+            </div>
+            <div class="card card-size-small">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <core:icon identifier="actions-viewmode-list" size="small" alternativeMarkupIdentifier="inline" />
+                    </div>
+                    <div class="card-header-body">
+                        <h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.whatIs.nativeUi.title" /></h2>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.whatIs.nativeUi.body" /></p>
+                </div>
+            </div>
+            <div class="card card-size-small">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <core:icon identifier="actions-link" size="small" alternativeMarkupIdentifier="inline" />
+                    </div>
+                    <div class="card-header-body">
+                        <h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.whatIs.mcpReady.title" /></h2>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.whatIs.mcpReady.body" /></p>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="mb-2"><f:translate key="{ll}:module.forDevelopers.flow.title" /></h2>
+        <p class="text-variant mb-3"><f:translate key="{ll}:module.forDevelopers.flow.subtitle" /></p>
+
+        <div class="card card-size-large mb-4">
+            <div class="card-body">
+                <div class="aiu-dev-flow-diagram">
+                    <div class="aiu-dev-flow-diagram__lane" role="list">
+                        <div class="aiu-dev-flow-diagram__node" role="listitem">
+                            <span class="aiu-dev-flow-diagram__icon-box" aria-hidden="true">
+                                <core:icon identifier="actions-extension" size="small" alternativeMarkupIdentifier="inline" />
+                            </span>
+                            <span class="aiu-dev-flow-diagram__label"><f:translate key="{ll}:module.forDevelopers.flow.yourExtension" /></span>
+                            <span class="text-variant small d-block"><f:translate key="{ll}:module.forDevelopers.flow.featureCode" /></span>
+                        </div>
+                        <span class="aiu-dev-flow-diagram__connector" aria-hidden="true"></span>
+                        <div class="aiu-dev-flow-diagram__node" role="listitem">
+                            <span class="aiu-dev-flow-diagram__icon-box" aria-hidden="true">
+                                <core:icon identifier="actions-code" size="small" alternativeMarkupIdentifier="inline" />
+                            </span>
+                            <span class="aiu-dev-flow-diagram__label"><f:translate key="{ll}:module.forDevelopers.flow.apiLabel" /></span>
+                            <span class="text-variant small d-block"><f:translate key="{ll}:module.forDevelopers.flow.apiHint" /></span>
+                        </div>
+                        <span class="aiu-dev-flow-diagram__connector" aria-hidden="true"></span>
+                        <div class="aiu-dev-flow-diagram__node" role="listitem">
+                            <span class="aiu-dev-flow-diagram__icon-box" aria-hidden="true">
+                                <core:icon identifier="actions-share" size="small" alternativeMarkupIdentifier="inline" />
+                            </span>
+                            <span class="aiu-dev-flow-diagram__label"><f:translate key="{ll}:module.forDevelopers.flow.foundation" /></span>
+                            <span class="text-variant small d-block"><f:translate key="{ll}:module.forDevelopers.flow.foundationHint" /></span>
+                        </div>
+                    </div>
+                    <div class="aiu-dev-flow-diagram__divider" aria-hidden="true">
+                        <span class="aiu-dev-flow-diagram__divider-line"></span>
+                        <code class="aiu-dev-flow-diagram__bridge text-variant small"><f:translate key="{ll}:module.forDevelopers.flow.bridge" /></code>
+                        <span class="aiu-dev-flow-diagram__divider-line"></span>
+                    </div>
+                    <div class="aiu-dev-flow-diagram__providers">
+                        <f:for each="{aiProviderNames}" as="providerName">
+                            <span class="badge badge-default">{providerName}</span>
+                        </f:for>
+                        <span class="badge badge-default"><f:translate key="{ll}:module.forDevelopers.label.custom" /></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section id="aiu-dev-getting-started" class="card card-size-large mb-4">
+            <div class="card-header">
+                <div class="card-header-body">
+                    <h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.gettingStarted.title" /></h2>
+                    <span class="card-subtitle"><f:translate key="{ll}:module.forDevelopers.gettingStarted.subtitle" /></span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="aiu-dev-steps-row">
+                    <div class="card mb-0">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="aiu-dev-step-num" aria-hidden="true">1</span>
+                                <h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.gettingStarted.step1.title" /></h2>
+                            </div>
+                            <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.gettingStarted.step1.body" /></p>
+                        </div>
+                    </div>
+                    <div class="card mb-0">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="aiu-dev-step-num" aria-hidden="true">2</span>
+                                <h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.gettingStarted.step2.title" /></h2>
+                            </div>
+                            <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.gettingStarted.step2.body" /></p>
+                        </div>
+                    </div>
+                    <div class="card mb-0">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="aiu-dev-step-num" aria-hidden="true">3</span>
+                                <h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.gettingStarted.step3.title" /></h2>
+                            </div>
+                            <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.gettingStarted.step3.body" /></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <h2 class="mb-2"><f:translate key="{ll}:module.forDevelopers.example.title" /></h2>
+        <p class="text-variant mb-3"><f:translate key="{ll}:module.forDevelopers.example.subtitle" /></p>
+
+        <div class="aiu-mcp-code aiu-dev-code-example mb-3">
+            <div class="aiu-mcp-code__toolbar">
+                <span class="aiu-dev-code-example__dots" aria-hidden="true">
+                    <span></span><span></span><span></span>
+                </span>
+                <span class="aiu-mcp-code__label"><f:translate key="{ll}:module.forDevelopers.example.filename" /></span>
+                <button type="button"
+                        class="btn btn-default btn-sm d-inline-flex align-items-center gap-1"
+                        data-aiu-dev-copy
+                        data-copy-label="{f:translate(key: '{ll}:module.forDevelopers.copy')}"
+                        data-copied-label="{f:translate(key: '{ll}:module.forDevelopers.copied')}">
+                    <core:icon identifier="actions-clipboard" size="small" alternativeMarkupIdentifier="inline" />
+                    <span data-aiu-dev-copy-label aria-live="polite"><f:translate key="{ll}:module.forDevelopers.copy" /></span>
+                </button>
+            </div>
+            <pre class="aiu-mcp-code__pre mb-0" data-aiu-dev-code-block><code>&lt;?php
+
+declare(strict_types=1);
+
+namespace Vendor\MyExtension\Service;
+
+use NITSAN\NsT3AF\Api\AiOptions;
+use NITSAN\NsT3AF\Api\AiServiceInterface;
+
+final class MyFeatureService
+{
+    public function __construct(private readonly AiServiceInterface $ai) {}
+
+    public function summarize(string $input): string
+    {
+        $response = $this->ai->complete(
+            $input,
+            new AiOptions(
+                // Replace namespace, extensionKey, featureKey, and requestSource for your extension.
+                extensionKey: 'my_extension',
+                featureKey: 'summary',
+                requestSource: 'backend_module',
+            ),
+        );
+
+        return $response->content;
+    }
+}</code></pre>
+        </div>
+
+        <p class="text-variant small mb-2"><f:translate key="{ll}:module.forDevelopers.example.setupHint" /></p>
+
+        <p class="text-variant small mb-4">
+            <strong><f:translate key="{ll}:module.forDevelopers.example.realWorldLabel" /></strong>
+            <f:translate key="{ll}:module.forDevelopers.example.realWorldBody" arguments="{0: 'ns_t3ai', 1: 'seo.meta_description'}" />
+        </p>
+
+        <h2 class="mb-2"><f:translate key="{ll}:module.forDevelopers.hooks.title" /></h2>
+        <p class="text-variant mb-3"><f:translate key="{ll}:module.forDevelopers.hooks.subtitle" /></p>
+        <div class="card-container aiu-dev-cards mb-4">
+            <div class="card card-size-small">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <core:icon identifier="actions-code" size="small" alternativeMarkupIdentifier="inline" />
+                    </div>
+                    <div class="card-header-body"><h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.hooks.integration.title" /></h2></div>
+                </div>
+                <div class="card-body"><p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.hooks.integration.body" /></p></div>
+                <div class="card-footer">
+                    <a href="https://docs.t3planet.de/en/latest/ExtNsT3AF/DeveloperGuide/ExtensionIntegration/Index.html" class="btn btn-default btn-sm" target="_blank" rel="noopener noreferrer">
+                        <f:translate key="{ll}:module.forDevelopers.hooks.readGuide" />
+                    </a>
+                </div>
+            </div>
+            <div class="card card-size-small">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <core:icon identifier="actions-system-extension-configure" size="small" alternativeMarkupIdentifier="inline" />
+                    </div>
+                    <div class="card-header-body"><h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.hooks.providers.title" /></h2></div>
+                </div>
+                <div class="card-body"><p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.hooks.providers.body" /></p></div>
+                <div class="card-footer">
+                    <a href="https://docs.t3planet.de/en/latest/ExtNsT3AF/DeveloperGuide/CustomProviders/Index.html" class="btn btn-default btn-sm" target="_blank" rel="noopener noreferrer"><f:translate key="{ll}:module.forDevelopers.hooks.readGuide" /></a>
+                </div>
+            </div>
+            <div class="card card-size-small">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <core:icon identifier="actions-message" size="small" alternativeMarkupIdentifier="inline" />
+                    </div>
+                    <div class="card-header-body"><h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.hooks.prompts.title" /></h2></div>
+                </div>
+                <div class="card-body"><p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.hooks.prompts.body" /></p></div>
+                <div class="card-footer">
+                    <a href="https://docs.t3planet.de/en/latest/ExtNsT3AF/DeveloperGuide/CustomAiPrompts/Index.html" class="btn btn-default btn-sm" target="_blank" rel="noopener noreferrer"><f:translate key="{ll}:module.forDevelopers.hooks.readGuide" /></a>
+                </div>
+            </div>
+            <div class="card card-size-small">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <core:icon identifier="actions-star" size="small" alternativeMarkupIdentifier="inline" />
+                    </div>
+                    <div class="card-header-body"><h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.hooks.features.title" /></h2></div>
+                </div>
+                <div class="card-body"><p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.hooks.features.body" /></p></div>
+                <div class="card-footer">
+                    <a href="https://docs.t3planet.de/en/latest/ExtNsT3AF/DeveloperGuide/CustomAiFeatures/Index.html" class="btn btn-default btn-sm" target="_blank" rel="noopener noreferrer"><f:translate key="{ll}:module.forDevelopers.hooks.readGuide" /></a>
+                </div>
+            </div>
+            <div class="card card-size-small">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <core:icon identifier="actions-exchange" size="small" alternativeMarkupIdentifier="inline" />
+                    </div>
+                    <div class="card-header-body"><h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.hooks.overrides.title" /></h2></div>
+                </div>
+                <div class="card-body"><p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.hooks.overrides.body" /></p></div>
+                <div class="card-footer">
+                    <a href="https://docs.t3planet.de/en/latest/ExtNsT3AF/DeveloperGuide/FeatureProviderOverrides/Index.html" class="btn btn-default btn-sm" target="_blank" rel="noopener noreferrer"><f:translate key="{ll}:module.forDevelopers.hooks.readGuide" /></a>
+                </div>
+            </div>
+            <div class="card card-size-small">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <core:icon identifier="actions-system-extension-install" size="small" alternativeMarkupIdentifier="inline" />
+                    </div>
+                    <div class="card-header-body"><h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.hooks.mcpTools.title" /></h2></div>
+                </div>
+                <div class="card-body"><p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.hooks.mcpTools.body" /></p></div>
+                <div class="card-footer">
+                    <a href="https://docs.t3planet.de/en/latest/ExtNsT3AF/DeveloperGuide/CustomMcpTools/Index.html" class="btn btn-default btn-sm" target="_blank" rel="noopener noreferrer"><f:translate key="{ll}:module.forDevelopers.hooks.readGuide" /></a>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="mb-2"><f:translate key="{ll}:module.forDevelopers.builtOn.title" /></h2>
+        <p class="text-variant mb-3"><f:translate key="{ll}:module.forDevelopers.builtOn.subtitle" /></p>
+        <div class="aiu-dev-built-on mb-4" role="list">
+            <a href="https://docs.t3planet.de/en/latest/ExtNsT3AI/Index.html"
+               class="btn btn-default d-inline-flex align-items-center gap-1"
+               role="listitem"
+               target="_blank"
+               rel="noopener noreferrer">
+                <f:translate key="{ll}:module.forDevelopers.builtOn.aiAssistant" />
+                <core:icon identifier="actions-link" size="small" alternativeMarkupIdentifier="inline" />
+            </a>
+            <a href="https://docs.t3planet.de/en/latest/ExtNsT3AS/Index.html"
+               class="btn btn-default d-inline-flex align-items-center gap-1"
+               role="listitem"
+               target="_blank"
+               rel="noopener noreferrer">
+                <f:translate key="{ll}:module.forDevelopers.builtOn.aiSearch" />
+                <core:icon identifier="actions-link" size="small" alternativeMarkupIdentifier="inline" />
+            </a>
+            <a href="https://docs.t3planet.de/en/latest/ExtNsT3AC/Index.html"
+               class="btn btn-default d-inline-flex align-items-center gap-1"
+               role="listitem"
+               target="_blank"
+               rel="noopener noreferrer">
+                <f:translate key="{ll}:module.forDevelopers.builtOn.aiChatbot" />
+                <core:icon identifier="actions-link" size="small" alternativeMarkupIdentifier="inline" />
+            </a>
+            <a href="https://docs.t3planet.de/en/latest/ExtNsT3AA/Index.html"
+               class="btn btn-default d-inline-flex align-items-center gap-1"
+               role="listitem"
+               target="_blank"
+               rel="noopener noreferrer">
+                <f:translate key="{ll}:module.forDevelopers.builtOn.aiAccessibility" />
+                <core:icon identifier="actions-link" size="small" alternativeMarkupIdentifier="inline" />
+            </a>
+            <a href="https://docs.t3planet.de/en/latest/ExtNsT3AL/Index.html"
+               class="btn btn-default d-inline-flex align-items-center gap-1"
+               role="listitem"
+               target="_blank"
+               rel="noopener noreferrer">
+                <f:translate key="{ll}:module.forDevelopers.builtOn.aiLocalization" />
+                <core:icon identifier="actions-link" size="small" alternativeMarkupIdentifier="inline" />
+            </a>
+            <a href="https://docs.t3planet.de/en/latest/ExtNsT3AB/Index.html"
+               class="btn btn-default d-inline-flex align-items-center gap-1"
+               role="listitem"
+               target="_blank"
+               rel="noopener noreferrer">
+                <f:translate key="{ll}:module.forDevelopers.builtOn.aiBuilder" />
+                <core:icon identifier="actions-link" size="small" alternativeMarkupIdentifier="inline" />
+            </a>
+            <a href="https://docs.t3planet.de/en/latest/ExtNsT3AF/DeveloperGuide/Index.html"
+               class="btn btn-default d-inline-flex align-items-center gap-1 aiu-dev-built-on__cta"
+               role="listitem"
+               target="_blank"
+               rel="noopener noreferrer">
+                <core:icon identifier="actions-add" size="small" alternativeMarkupIdentifier="inline" />
+                <f:translate key="{ll}:module.forDevelopers.builtOn.buildYourOwn" />
+            </a>
+        </div>
+
+        <div class="card card-size-large mb-4">
+            <div class="card-header">
+                <div class="card-header-body">
+                    <h2 class="card-title mb-0"><f:translate key="{ll}:module.forDevelopers.autoConfig.title" /></h2>
+                    <span class="card-subtitle"><f:translate key="{ll}:module.forDevelopers.autoConfig.subtitle" /></span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="callout callout-notice mb-3">
+                    <div class="callout-content">
+                        <div class="callout-body mb-0">
+                            <f:translate key="{ll}:module.forDevelopers.autoConfig.notice" />
+                        </div>
+                    </div>
+                </div>
+                <div class="card-container aiu-dev-cards">
+                    <div class="card card-size-small mb-0">
+                        <div class="card-body">
+                            <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.dashboard" /></h3>
+                            <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.autoConfig.dashboard" /></p>
+                        </div>
+                    </div>
+                    <div class="card card-size-small mb-0">
+                        <div class="card-body">
+                            <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.aiProviders" /></h3>
+                            <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.autoConfig.aiProviders" /></p>
+                        </div>
+                    </div>
+                    <div class="card card-size-small mb-0">
+                        <div class="card-body">
+                            <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.aiContext" /></h3>
+                            <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.autoConfig.aiContext" /></p>
+                        </div>
+                    </div>
+                    <div class="card card-size-small mb-0">
+                        <div class="card-body">
+                            <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.mcpServerTools" /></h3>
+                            <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.autoConfig.mcpServerTools" /></p>
+                        </div>
+                    </div>
+                    <div class="card card-size-small mb-0">
+                        <div class="card-body">
+                            <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.aiFeatures" /></h3>
+                            <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.autoConfig.aiFeatures" /></p>
+                        </div>
+                    </div>
+                    <div class="card card-size-small mb-0">
+                        <div class="card-body">
+                            <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.aiUsageLogs" /></h3>
+                            <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.autoConfig.aiUsageLogs" /></p>
+                        </div>
+                    </div>
+                    <div class="card card-size-small mb-0">
+                        <div class="card-body">
+                            <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.aiAccessPermissions" /></h3>
+                            <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.autoConfig.aiAccess" /></p>
+                        </div>
+                    </div>
+                    <div class="card card-size-small mb-0">
+                        <div class="card-body">
+                            <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.aiPrompts" /></h3>
+                            <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.autoConfig.aiPrompts" /></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="mb-2"><f:translate key="{ll}:module.forDevelopers.mcp.title" /></h2>
+        <p class="text-variant mb-3"><f:translate key="{ll}:module.forDevelopers.mcp.subtitle" /></p>
+
+        <div class="card card-size-large mb-4">
+            <div class="card-body d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div>
+                    <div><code>t3mcp.example.com/mcp</code></div>
+                    <span class="text-variant small"><f:translate key="{ll}:module.forDevelopers.mcp.serverMeta" /></span>
+                </div>
+                <a href="https://docs.t3planet.de/Developer/CustomMcpTools.html" class="btn btn-default" target="_blank" rel="noopener noreferrer"><f:translate key="{ll}:module.forDevelopers.mcp.docs" /></a>
+            </div>
+        </div>
+
+        <div class="card-container aiu-dev-cards mb-4">
+            <div class="card card-size-small mb-0">
+                <div class="card-body">
+                    <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.remoteOauth" /></h3>
+                    <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.mcp.remoteOauth.body" /></p>
+                </div>
+            </div>
+            <div class="card card-size-small mb-0">
+                <div class="card-body">
+                    <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.websocket" /></h3>
+                    <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.mcp.websocket.body" /></p>
+                </div>
+            </div>
+            <div class="card card-size-small mb-0">
+                <div class="card-body">
+                    <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.docker" /></h3>
+                    <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.mcp.docker.body" /></p>
+                </div>
+            </div>
+            <div class="card card-size-small mb-0">
+                <div class="card-body">
+                    <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.ssh" /></h3>
+                    <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.mcp.ssh.body" /></p>
+                </div>
+            </div>
+            <div class="card card-size-small mb-0">
+                <div class="card-body">
+                    <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.npx" /></h3>
+                    <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.mcp.npx.body" /></p>
+                </div>
+            </div>
+            <div class="card card-size-small mb-0">
+                <div class="card-body">
+                    <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.localBridge" /></h3>
+                    <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.mcp.localBridge.body" /></p>
+                </div>
+            </div>
+            <div class="card card-size-small mb-0">
+                <div class="card-body">
+                    <h3 class="card-title"><f:translate key="{ll}:module.forDevelopers.label.stdio" /></h3>
+                    <p class="card-text mb-0"><f:translate key="{ll}:module.forDevelopers.mcp.stdio.body" /></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-container aiu-dev-cards mb-4">
+            <div class="card card-size-medium mb-0">
+                <div class="card-body">
+                    <h2 class="card-title"><f:translate key="{ll}:module.forDevelopers.mcp.registerTool.title" /></h2>
+                    <p class="card-text"><f:translate key="{ll}:module.forDevelopers.mcp.registerTool.body" /></p>
+                    <a href="https://docs.t3planet.de/en/latest/ExtNsT3AF/DeveloperGuide/CustomMcpTools/Index.html" class="btn btn-default btn-sm" target="_blank" rel="noopener noreferrer"><f:translate key="{ll}:module.forDevelopers.mcp.registerTool.cta" /></a>
+                </div>
+            </div>
+            <div class="card card-size-medium mb-0">
+                <div class="card-body">
+                    <h2 class="card-title"><f:translate key="{ll}:module.forDevelopers.mcp.connectClient.title" /></h2>
+                    <p class="card-text"><f:translate key="{ll}:module.forDevelopers.mcp.connectClient.body" /></p>
+                    <a href="https://docs.t3planet.de/en/latest/ExtNsT3AF/MCPServer/Index.html" class="btn btn-default btn-sm" target="_blank" rel="noopener noreferrer"><f:translate key="{ll}:module.forDevelopers.mcp.connectClient.cta" /></a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card card-size-large aiu-dev-cta">
+            <div class="card-body aiu-dev-cta__body">
+                <div class="aiu-dev-cta__text">
+                    <h2 class="card-title mb-1"><f:translate key="{ll}:module.forDevelopers.cta.title" /></h2>
+                    <p class="text-variant mb-0"><f:translate key="{ll}:module.forDevelopers.cta.body" /></p>
+                </div>
+                <a href="https://docs.t3planet.de/en/latest/ExtNsT3AF/Index.html"
+                   class="btn btn-primary d-inline-flex align-items-center gap-1 flex-shrink-0"
+                   target="_blank"
+                   rel="noopener noreferrer">
+                    <core:icon identifier="actions-document" size="small" alternativeMarkupIdentifier="inline" />
+                    <f:translate key="{ll}:module.forDevelopers.cta.button" />
+                </a>
+            </div>
+        </div>
+
+        <div class="card card-size-large aiu-dev-cta mt-4">
+            <div class="card-body aiu-dev-cta__body">
+                <div class="aiu-dev-cta__text">
+                    <h2 class="card-title mb-1"><f:translate key="{ll}:module.forDevelopers.starterKitCta.title" /></h2>
+                    <p class="text-variant mb-0"><f:translate key="{ll}:module.forDevelopers.starterKitCta.body" /></p>
+                </div>
+                <a href="https://github.com/nitsan-technologies/ns_t3af_extended"
+                   class="btn btn-primary d-inline-flex align-items-center gap-1 flex-shrink-0"
+                   target="_blank"
+                   rel="noopener noreferrer">
+                    <core:icon identifier="actions-link" size="small" alternativeMarkupIdentifier="inline" />
+                    <f:translate key="{ll}:module.forDevelopers.starterKitCta.button" />
+                </a>
+            </div>
+        </div>
+
+    </div>
+</f:section>
+</html>

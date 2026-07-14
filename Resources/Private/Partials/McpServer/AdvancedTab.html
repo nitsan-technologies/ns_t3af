@@ -1,0 +1,46 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="aiu-mcp-advanced-tab">
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title mb-0"><f:translate key="{ll}:module.mcpServer.advanced.health.title" /></h3>
+            <button type="button" class="btn btn-sm btn-default" data-action="health-ping-all">
+                <core:icon identifier="actions-play" size="small" />
+                <f:translate key="{ll}:module.mcpServer.advanced.health.testAll" />
+            </button>
+        </div>
+        <div class="table-fit table-responsive">
+            <table class="table table-striped table-hover align-middle mb-0" data-health-table>
+                <thead>
+                    <tr>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.table.client" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.table.transport" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.advanced.health.status" /></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <f:if condition="{mcpConnectionHealth -> f:count()} == 0">
+                        <tr><td colspan="3" class="aiu-empty"><f:translate key="{ll}:module.mcpServer.table.empty" /></td></tr>
+                    </f:if>
+                    <f:for each="{mcpConnectionHealth}" as="health">
+                        <tr>
+                            <td>{health.client}</td>
+                            <td><span class="badge badge-info">{health.transport}</span></td>
+                            <td>
+                                <span class="badge {f:if(condition: '{health.healthy} == 1', then: 'badge-success', else: 'badge-warning')}">
+                                    <f:if condition="{health.healthy} == 1"><f:then><f:translate key="{ll}:module.mcpServer.advanced.health.ok" /></f:then><f:else><f:translate key="{ll}:module.mcpServer.advanced.health.degraded" /></f:else></f:if>
+                                </span>
+                            </td>
+                        </tr>
+                    </f:for>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <f:render partial="McpServer/Advanced/OAuthSettingsCard" arguments="{_all}" />
+</div>
+</html>

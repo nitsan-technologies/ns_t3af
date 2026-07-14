@@ -1,0 +1,134 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+<div class="card card-size-large aiu-ai-logs__table-card mb-0">
+    <f:render partial="AiLogs/Toolbar" arguments="{_all}" />
+    <div class="card-body p-0">
+        <div class="table-fit table-responsive">
+            <form method="post"
+                  action="{f:be.uri(route: 't3af_dashboard.ai_logs.delete')}"
+                  id="aiu-ai-logs-entries-form">
+                <input type="hidden" name="level" value="{aiLogsFilters.level}" />
+                <input type="hidden" name="search" value="{aiLogsFilters.search}" />
+                <input type="hidden" name="logChannel" value="{aiLogsFilters.logChannel}" />
+                <input type="hidden" name="extension" value="{aiLogsFilters.extension}" />
+                <input type="hidden" name="max" value="{aiLogsFilters.max}" />
+                <input type="hidden" name="currentPage" value="{aiLogsFilters.currentPage}" />
+                <input type="hidden" name="period" value="{aiLogsFilters.period}" />
+                <input type="hidden" name="from" value="{aiLogsFilters.from}" />
+                <input type="hidden" name="to" value="{aiLogsFilters.to}" />
+                <table class="table table-striped table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="aiu-ai-logs__col-select" style="width: 2.5rem;">
+                                <f:if condition="{aiLogsEntries}">
+                                    <div class="form-check mb-0">
+                                        <input type="checkbox"
+                                               class="form-check-input aiu-ai-logs__select-all"
+                                               id="aiu-ai-logs-select-all"
+                                               title="{f:translate(key: '{ll}:module.aiLogs.selectAll')}"
+                                               aria-label="{f:translate(key: '{ll}:module.aiLogs.selectAll')}" />
+                                    </div>
+                                </f:if>
+                            </th>
+                            <th scope="col"><f:translate key="{ll}:module.aiLogs.col.time" default="Time" /></th>
+                            <th scope="col"><f:translate key="{ll}:module.aiLogs.col.level" default="Level" /></th>
+                            <th scope="col"><f:translate key="{ll}:module.aiLogs.col.user" default="User" /></th>
+                            <th scope="col"><f:translate key="{ll}:module.aiLogs.col.details" default="Details" /></th>
+                            <th scope="col" class="col-control actions text-end">
+                                <f:translate key="{ll}:module.aiLogs.col.actions" default="Actions" />
+                            </th>
+                        </tr>
+                    </thead>
+                    <f:if condition="{aiLogsEntries}">
+                        <f:then>
+                            <tbody>
+                                <f:for each="{aiLogsEntries}" as="entry">
+                                    <tr class="{f:if(condition: '{entry.level} == \'error\'', then: 'aiu-ai-logs__row--error')}">
+                                        <td class="align-middle">
+                                            <div class="form-check">
+                                                <input type="checkbox"
+                                                       class="form-check-input aiu-ai-logs__checkbox"
+                                                       name="uids[]"
+                                                       value="{entry.uid}"
+                                                       id="aiu-ai-logs-cb-{entry.uid}"
+                                                       aria-label="{f:translate(key: '{ll}:module.aiLogs.selectEntry')}" />
+                                            </div>
+                                        </td>
+                                        <td class="text-nowrap align-middle">
+                                            <f:format.date format="d.m.Y H:i:s">@{entry.tstamp}</f:format.date>
+                                        </td>
+                                    <td class="align-middle">
+                                        <f:switch expression="{entry.level}">
+                                            <f:case value="error">
+                                                <span class="badge badge-danger"><f:translate key="{ll}:module.aiLogs.level.error" /></span>
+                                            </f:case>
+                                            <f:case value="warning">
+                                                <span class="badge badge-warning"><f:translate key="{ll}:module.aiLogs.level.warning" /></span>
+                                            </f:case>
+                                            <f:case value="info">
+                                                <span class="badge badge-info"><f:translate key="{ll}:module.aiLogs.level.info" /></span>
+                                            </f:case>
+                                            <f:defaultCase>
+                                                <span class="badge badge-default">{entry.level}</span>
+                                            </f:defaultCase>
+                                        </f:switch>
+                                    </td>
+                                    <td class="align-middle">{entry.userid}</td>
+                                    <td class="align-middle aiu-ai-logs__details text-variant">
+                                        {entry.details}
+                                    </td>
+                                    <td class="col-control">
+                                        <div class="btn-group" role="group">
+                                            <button type="button"
+                                                    class="btn btn-danger btn-sm aiu-ai-logs__delete-one"
+                                                    title="{f:translate(key: '{ll}:module.aiLogs.deleteOne')}"
+                                                    aria-label="{f:translate(key: '{ll}:module.aiLogs.deleteOne')}"
+                                                    data-uri="{f:be.uri(route: 't3af_dashboard.ai_logs.delete')}"
+                                                    data-uid="{entry.uid}"
+                                                    data-level="{aiLogsFilters.level}"
+                                                    data-search="{aiLogsFilters.search}"
+                                                    data-logchannel="{aiLogsFilters.logChannel}"
+                                                    data-extension="{aiLogsFilters.extension}"
+                                                    data-max="{aiLogsFilters.max}"
+                                                    data-currentpage="{aiLogsFilters.currentPage}"
+                                                    data-period="{aiLogsFilters.period}"
+                                                    data-from="{aiLogsFilters.from}"
+                                                    data-to="{aiLogsFilters.to}">
+                                                <core:icon identifier="actions-delete" alternativeMarkupIdentifier="inline" size="small" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </f:for>
+                        </tbody>
+                    </f:then>
+                    <f:else>
+                        <tbody>
+                            <tr>
+                                <td colspan="6" class="text-center text-variant py-4">
+                                    <f:translate key="{ll}:module.aiLogs.noEntries" />
+                                </td>
+                            </tr>
+                        </tbody>
+                    </f:else>
+                </f:if>
+            </table>
+        </form>
+        </div>
+    </div>
+
+    <div class="card-footer aiu-ai-logs__footer d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <span class="text-variant small mb-0">
+            <f:translate key="{ll}:module.aiLogs.footer.retention" />
+            <a href="{aiLogsSchedulerCliUri}" class="btn btn-link p-0 align-baseline">
+                <f:translate key="{ll}:module.aiLogs.footer.retentionLink" />
+            </a>
+        </span>
+        <span class="text-variant small mb-0">
+            <f:translate key="{ll}:module.aiLogs.footer.source" />
+        </span>
+    </div>
+</div>
+</html>

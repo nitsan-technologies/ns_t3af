@@ -1,0 +1,61 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<section class="mb-4 aiu-dashboard-extension-health" aria-labelledby="aiu-extension-health-heading">
+    <div class="card mb-0">
+        <div class="card-header">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <h2 id="aiu-extension-health-heading" class="h3 mb-0">
+                        <f:translate key="{ll}:dashboard.extensionHealth.title" default="Extensions Health" />
+                    </h2>
+                    <span class="badge badge-success">{extensionHealth.healthy}/{extensionHealth.total} healthy</span>
+                    <f:if condition="{extensionHealth.warnings} > 0">
+                        <span class="badge badge-warning">{extensionHealth.warnings} warnings</span>
+                    </f:if>
+                </div>
+                <span class="small text-variant">
+                    <f:translate key="{ll}:dashboard.extensionHealth.subtitle" default="TYPO3 AI Extensions — ambient health status" />
+                </span>
+            </div>
+        </div>
+        <div class="card-body">
+            <f:if condition="{extensionHealth.items -> f:count()} > 0">
+                <f:then>
+                    <div class="card-container">
+                        <f:for each="{extensionHealth.items}" as="ext">
+                            <div class="card card-size-small mb-0{f:if(condition: '{ext.status} == \'warning\'', then: ' border-warning')}">
+                                <div class="card-header">
+                                    <div class="card-icon">
+                                        <core:icon identifier="{ext.iconIdentifier}" size="small" alternativeMarkupIdentifier="inline" />
+                                    </div>
+                                    <div class="card-header-body">
+                                        <div class="card-header-body__top d-flex align-items-start justify-content-between gap-2">
+                                            <h2 class="card-title text-truncate mb-0">{ext.label}</h2>
+                                            <span class="flex-shrink-0" aria-hidden="true">
+                                                <f:if condition="{ext.status} == 'healthy'">
+                                                    <f:then><core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" /></f:then>
+                                                    <f:else><core:icon identifier="actions-exclamation-triangle" size="small" alternativeMarkupIdentifier="inline" /></f:else>
+                                                </f:if>
+                                            </span>
+                                        </div>
+                                        <span class="card-subtitle"><code>{ext.version}</code></span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <p class="card-text mb-0 text-truncate">{ext.detail}</p>
+                                </div>
+                            </div>
+                        </f:for>
+                    </div>
+                </f:then>
+                <f:else>
+                    <p class="mb-0"><f:translate key="{ll}:dashboard.extensionHealth.empty" default="No AI child extensions detected." /></p>
+                </f:else>
+            </f:if>
+        </div>
+    </div>
+</section>
+</html>

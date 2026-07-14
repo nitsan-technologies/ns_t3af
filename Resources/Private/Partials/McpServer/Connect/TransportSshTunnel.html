@@ -1,0 +1,31 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="card aiu-mcp-transport-panel is-hidden" data-transport-panel="sshtunnel">
+    <div class="card-header">
+        <h3 class="card-title mb-1"><f:translate key="{ll}:module.mcpServer.transport.sshtunnel.title" /></h3>
+        <p class="text-variant small"><f:translate key="{ll}:module.mcpServer.transport.sshtunnel.lead" /></p>
+    </div>
+    <div class="card-body">
+
+        <div class="aiu-mcp-field-row">
+            <label class="form-label"><f:translate key="{ll}:module.mcpServer.transport.sshtunnel.commandLabel" /></label>
+            <div class="aiu-mcp-code">
+                <button type="button" class="aiu-mcp-code__copy btn btn-sm btn-default" data-copy-snippet="sshtunnel">
+                    <core:icon identifier="actions-clipboard" size="small" />
+                    <f:translate key="{ll}:module.mcpServer.cli.copyConfiguration" />
+                </button>
+                <pre class="aiu-mcp-code__pre" data-snippet="sshtunnel">{mcpSshTunnelCommand}</pre>
+            </div>
+        </div>
+
+        <div class="callout callout-info mt-3">
+            <p class="mb-0"><f:translate key="{ll}:module.mcpServer.transport.sshtunnel.hint" arguments="{0: mcpServerUrl}" /></p>
+        </div>
+
+        <f:render partial="McpServer/Connect/ClientSetupGuides" arguments="{transportKey: 'sshtunnel', transportClients: mcpTransportGuides.sshtunnel, mcpSnippetArgs: mcpSnippetArgs}" />
+    </div>
+</div>
+</html>

@@ -1,0 +1,63 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+    <div class="aiu-providers aiu-ai-prompts"
+         data-aiu-prompts-root
+         data-prompts-create-uri="{aiPromptsCreateUri}"
+         data-prompts-update-uri="{aiPromptsUpdateUri}"
+         data-prompts-delete-uri="{aiPromptsDeleteUri}"
+         data-prompts-mode="{aiPromptsMode}"
+         data-prompts-category="{aiPromptsCategory}"
+         data-prompts-catalog-json="{aiPromptsCatalogJson -> f:format.htmlspecialchars()}"
+         data-prompts-rows-json="{aiPromptsRowsJson -> f:format.htmlspecialchars()}"
+         data-prompts-validation-messages="{aiPromptsValidationMessagesJson -> f:format.htmlspecialchars()}"
+         data-prompts-validation-error="{aiPromptsValidationError -> f:format.htmlspecialchars()}"
+         data-prompts-validation-prompt-type="{aiPromptsValidationPromptType -> f:format.htmlspecialchars()}"
+         data-prompts-brand-context-json="{aiPromptsBrandContextJson -> f:format.htmlspecialchars()}"
+         data-prompts-brand-context-hint="{f:translate(key: '{ll}:module.aiPrompts.drawer.brandContextScopeInfo', default: 'Profile used for %s — brand details are applied automatically at runtime.') -> f:format.htmlspecialchars()}">
+        <f:if condition="{flash} == 'prompts-synced'">
+            <div class="aiu-flash aiu-flash--success"><f:translate key="{ll}:module.aiPrompts.flash.synced" default="AI prompts synchronized." /></div>
+        </f:if>
+        <f:if condition="{flash} == 'prompts-already-synced'">
+            <div class="aiu-flash aiu-flash--warn"><f:translate key="{ll}:module.aiPrompts.flash.alreadySynced" default="All default prompts are already synchronized." /></div>
+        </f:if>
+        <f:if condition="{flash} == 'prompt-created'">
+            <div class="aiu-flash aiu-flash--success"><f:translate key="{ll}:module.aiPrompts.flash.created" default="Prompt created." /></div>
+        </f:if>
+        <f:if condition="{flash} == 'prompt-updated'">
+            <div class="aiu-flash aiu-flash--success"><f:translate key="{ll}:module.aiPrompts.flash.updated" default="Prompt updated." /></div>
+        </f:if>
+        <f:if condition="{flash} == 'prompt-deleted'">
+            <div class="aiu-flash aiu-flash--success"><f:translate key="{ll}:module.aiPrompts.flash.deleted" default="Prompt deleted." /></div>
+        </f:if>
+        <f:if condition="{flash} == 'prompt-create-fail'">
+            <div class="aiu-flash aiu-flash--warn"><f:translate key="{ll}:module.aiPrompts.flash.failed" default="Action failed. Please verify prompt data." /></div>
+        </f:if>
+        <f:if condition="{flash} == 'prompt-update-fail'">
+            <div class="aiu-flash aiu-flash--warn"><f:translate key="{ll}:module.aiPrompts.flash.failed" default="Action failed. Please verify prompt data." /></div>
+        </f:if>
+        <f:if condition="{flash} == 'prompt-delete-fail'">
+            <div class="aiu-flash aiu-flash--warn"><f:translate key="{ll}:module.aiPrompts.flash.failed" default="Action failed. Please verify prompt data." /></div>
+        </f:if>
+        <f:if condition="{flash} == 'prompt-validation-fail'">
+            <div class="aiu-flash aiu-flash--warn"><f:translate key="{ll}:module.aiPrompts.flash.validationFailed" default="Prompt validation failed. Select a valid scope and type, and include all required variables in the prompt text." /></div>
+        </f:if>
+
+        <f:render partial="AiPrompts/HeaderAndKpis" arguments="{_all}" />
+
+        <f:if condition="{aiPromptsMode} == 'overview'">
+            <f:then>
+                <f:render partial="AiPrompts/OverviewGrid" arguments="{_all}" />
+            </f:then>
+            <f:else>
+                <f:render partial="AiPrompts/CategoryDetail" arguments="{_all}" />
+            </f:else>
+        </f:if>
+
+        <f:render partial="AiPrompts/PromptDrawer" arguments="{_all}" />
+    </div>
+</f:section>
+</html>
+

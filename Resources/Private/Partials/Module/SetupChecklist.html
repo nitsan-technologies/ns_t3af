@@ -1,0 +1,106 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+<f:variable name="bodyId" value="{f:if(condition: checklistBodyId, then: checklistBodyId, else: 'aiu-checklist-body')}" />
+<f:variable name="isOpen" value="{f:if(condition: checklistDefaultOpen, then: '1', else: '0')}" />
+
+<f:if condition="{setupChecklist.items -> f:count()} > 0">
+    <section class="card aiu-checklist aiu-checklist--dashboard{f:if(condition: isOpen, then: ' is-open')}"
+             data-aiu-checklist="">
+        <div class="card-header">
+            <div class="d-flex align-items-center w-100 aiu-checklist__header-row">
+            <button type="button"
+                    class="aiu-checklist__toggle border-0 bg-transparent flex-grow-1 min-w-0 text-start p-0"
+                    data-aiu-checklist-toggle=""
+                    aria-expanded="{f:if(condition: isOpen, then: 'true', else: 'false')}"
+                    aria-controls="{bodyId}">
+                <div class="card-header-body d-flex align-items-center gap-3 w-100 mb-0">
+                    <div class="aiu-checklist__progress flex-shrink-0" aria-hidden="true">
+                        <div class="aiu-progress-ring aiu-progress-ring--checklist">
+                            <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+                                <circle class="aiu-progress-ring__track" cx="22" cy="22" r="18" fill="none" stroke-width="3.5"/>
+                                <circle class="aiu-progress-ring__value"
+                                        cx="22" cy="22" r="18" fill="none"
+                                        stroke-width="3.5"
+                                        pathLength="100"
+                                        stroke-dasharray="{setupChecklist.progressDash} 100"
+                                        stroke-linecap="round"
+                                        transform="rotate(-90 22 22)"/>
+                            </svg>
+                            <span class="aiu-progress-ring__label">
+                                <span>{setupChecklist.percent}</span>
+                                <span class="small">%</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="flex-grow-1 min-w-0">
+                        <h2 class="card-title h6 mb-0">
+                            <f:translate key="{ll}:checklist.card.title" />
+                        </h2>
+                        <span class="card-subtitle">
+                            <f:translate key="{ll}:checklist.card.progress" arguments="{0: setupChecklist.done}" />
+                        </span>
+                        <div class="d-flex flex-wrap gap-2 mt-2">
+                            <span class="badge badge-success">
+                                {setupChecklist.done} <f:translate key="{ll}:checklist.card.done" />
+                            </span>
+                            <span class="badge badge-warning">
+                                {setupChecklist.warnings} <f:translate key="{ll}:checklist.card.warnings" />
+                            </span>
+                            <span class="badge badge-danger">
+                                {setupChecklist.incomplete} <f:translate key="{ll}:checklist.card.incomplete" />
+                            </span>
+                        </div>
+                    </div>
+                    <span class="aiu-checklist__chevron-wrap flex-shrink-0 text-variant{f:if(condition: isOpen, then: ' is-open')}" aria-hidden="true">
+                        <core:icon identifier="actions-chevron-down" size="small" />
+                    </span>
+                </div>
+            </button>
+            <f:if condition="{checklistShowFoundationCta} == 1 && {setupChecklist.foundationUri}">
+                <a href="{setupChecklist.foundationUri}"
+                   class="btn btn-default btn-sm aiu-checklist__header-cta flex-shrink-0">
+                    <f:translate key="{ll}:module.link.aiFoundation" />
+                </a>
+            </f:if>
+            </div>
+        </div>
+        <f:if condition="{isOpen} == 1">
+            <f:then><div id="{bodyId}" class="card-body p-0 aiu-checklist__body" data-aiu-checklist-panel=""></f:then>
+            <f:else><div id="{bodyId}" class="card-body p-0 aiu-checklist__body" data-aiu-checklist-panel="" hidden=""></f:else>
+        </f:if>
+            <ul class="list-group list-group-flush aiu-checklist__list">
+                <f:for each="{setupChecklist.items}" as="item">
+                    <li class="list-group-item d-flex align-items-center gap-3 py-3 aiu-checklist__item aiu-checklist__item--{item.status}">
+                        <f:switch expression="{item.status}">
+                            <f:case value="ok">
+                                <span class="aiu-checklist__ico badge badge-success flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-check-circle" size="medium" /></span>
+                            </f:case>
+                            <f:case value="warn">
+                                <span class="aiu-checklist__ico badge badge-warning flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-exclamation-triangle" size="medium" /></span>
+                            </f:case>
+                            <f:case value="error">
+                                <span class="aiu-checklist__ico badge badge-danger flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-close" size="medium" /></span>
+                            </f:case>
+                            <f:defaultCase>
+                                <span class="aiu-checklist__ico aiu-checklist__ico--pend flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-info" size="medium" /></span>
+                            </f:defaultCase>
+                        </f:switch>
+                        <div class="aiu-checklist__item-text min-w-0 flex-grow-1">
+                            <div class="aiu-checklist__item-title fw-semibold">{item.title}</div>
+                            <div class="aiu-checklist__item-desc text-variant small mt-1 mb-0">{item.description}</div>
+                        </div>
+                        <f:if condition="{item.actionUri}">
+                            <a href="{item.actionUri}" class="btn btn-default btn-sm aiu-checklist__cta flex-shrink-0">
+                                {item.actionLabel}
+                            </a>
+                        </f:if>
+                    </li>
+                </f:for>
+            </ul>
+        </div>
+    </section>
+</f:if>
+
+</html>

@@ -1,0 +1,128 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="card card-size-large aiu-ai-usage__table-card mb-0">
+    <div class="card-body p-0">
+        <f:render partial="AiUsage/RequestLogToolbar" arguments="{_all}" />
+        <div class="table-fit table-responsive aiu-ai-usage__log-table">
+            <form method="post"
+                  action="{aiUsageBulkDeleteUri}"
+                  id="aiu-usage-bulk-form"
+                  data-aiu-usage-bulk-form
+                  class="d-none"
+                  aria-hidden="true">
+                <f:render partial="AiUsage/PreserveFilterState" arguments="{_all}" />
+            </form>
+            <table class="table table-striped table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col" class="aiu-ai-usage__col-select">
+                            <f:if condition="{aiUsageEntries}">
+                                <div class="form-check mb-0">
+                                    <input type="checkbox"
+                                           class="form-check-input"
+                                           id="aiu-ai-usage-select-all"
+                                           data-aiu-usage-select-all
+                                           title="{f:translate(key: '{ll}:module.aiUsage.selectAll', default: 'Select all')}"
+                                           aria-label="{f:translate(key: '{ll}:module.aiUsage.selectAll', default: 'Select all')}" />
+                                </div>
+                            </f:if>
+                        </th>
+                        <th scope="col"><f:translate key="{ll}:module.aiUsage.table.time" default="Time" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.aiUsage.table.provider" default="Provider" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.aiUsage.table.module" default="Module" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.aiUsage.table.scope" default="Scope" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.aiUsage.table.model" default="Model" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.aiUsage.table.type" default="Type" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.aiUsage.table.status" default="Status" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.aiUsage.table.tokens" default="Tokens" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.aiUsage.table.cost" default="Cost" /></th>
+                        <th scope="col" class="col-control"><f:translate key="{ll}:module.aiUsage.table.actions" default="Actions" /></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <f:for each="{aiUsageEntries}" as="entry">
+                        <tr>
+                            <td class="align-middle">
+                                <div class="form-check mb-0">
+                                    <input type="checkbox"
+                                           class="form-check-input"
+                                           form="aiu-usage-bulk-form"
+                                           name="uids[]"
+                                           value="{entry.uid}"
+                                           id="aiu-ai-usage-cb-{entry.uid}"
+                                           data-aiu-usage-select
+                                           aria-label="{f:translate(key: '{ll}:module.aiUsage.selectEntry', default: 'Select entry')}" />
+                                </div>
+                            </td>
+                            <td class="aiu-table__muted"><f:format.date format="Y-m-d H:i">@{entry.crdate}</f:format.date></td>
+                            <td class="aiu-table__mono">{entry.provider_identifier}</td>
+                            <td class="aiu-table__mono">{entry.extension_key}</td>
+                            <td class="aiu-table__mono">{entry.feature_key}</td>
+                            <td class="aiu-table__mono">{entry.model_used}</td>
+                            <td><span class="badge {f:if(condition: '{entry.request_type} == complete', then: 'badge-success', else: 'badge-default')}">{entry.request_type}</span></td>
+                            <td>
+                                <span class="badge {f:if(condition: '{entry.success} == 1', then: 'badge-success', else: 'badge-danger')}">
+                                    <f:if condition="{entry.success} == 1"><f:then>success</f:then><f:else>failed</f:else></f:if>
+                                </span>
+                            </td>
+                            <td>{entry.total_tokens}</td>
+                            <td>${entry.estimated_cost -> f:format.number(decimals: 4)}</td>
+                            <td class="col-control">
+                                <div class="btn-group" role="group"
+                                     aria-label="{f:translate(key: '{ll}:module.aiUsage.table.actions', default: 'Actions')}">
+                                    <button type="button"
+                                            class="btn btn-default"
+                                            data-aiu-usage-open-detail
+                                            data-uid="{entry.uid}"
+                                            data-provider="{entry.provider_identifier}"
+                                            data-module="{entry.extension_key}"
+                                            data-scope="{entry.feature_key}"
+                                            data-model="{entry.model_used}"
+                                            data-type="{entry.request_type}"
+                                            data-status="{f:if(condition: '{entry.success} == 1', then: 'success', else: 'failed')}"
+                                            data-tokens="{entry.total_tokens}"
+                                            data-prompt-tokens="{entry.prompt_tokens}"
+                                            data-completion-tokens="{entry.completion_tokens}"
+                                            data-cost="{entry.estimated_cost}"
+                                            data-latency="{entry.latency_ms}"
+                                            data-credits="{entry.credits_used}"
+                                            data-error-code="{entry.error_code}"
+                                            data-error-class="{entry.error_class}"
+                                            data-meta="{entry.raw_meta}"
+                                            data-time="{entry.crdate -> f:format.date(format: 'Y-m-d H:i')}"
+                                            title="{f:translate(key: '{ll}:module.aiUsage.action.details', default: 'Details')}">
+                                        <core:icon identifier="actions-document-info" size="small" />
+                                    </button>
+                                    <form method="post"
+                                          action="{aiUsageDeleteUri}"
+                                          id="aiu-usage-delete-{entry.uid}">
+                                        <f:render partial="AiUsage/PreserveFilterState" arguments="{_all}" />
+                                        <input type="hidden" name="uid" value="{entry.uid}" />
+                                    </form>
+                                    <button type="submit"
+                                            class="btn btn-danger t3js-modal-trigger"
+                                            data-target-form="aiu-usage-delete-{entry.uid}"
+                                            title="{f:translate(key: '{ll}:module.aiUsage.action.delete', default: 'Delete')}"
+                                            data-severity="danger"
+                                            data-title="{f:translate(key: '{ll}:module.aiUsage.modal.deleteTitle', default: 'Delete request log entry')}"
+                                            data-content="{f:translate(key: '{ll}:module.aiUsage.modal.deleteMessage', default: 'Do you want to soft-delete this log entry?')}"
+                                            data-button-close-text="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:cancel')}"
+                                            data-button-ok-text="{f:translate(key: '{ll}:module.aiUsage.modal.deleteConfirm', default: 'Delete')}">
+                                        <core:icon identifier="actions-delete" size="small" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </f:for>
+                    <f:if condition="{aiUsageEntries -> f:count()} == 0">
+                        <tr><td colspan="11" class="aiu-empty"><f:translate key="{ll}:module.aiUsage.empty.log" default="No request log entries for current filters." /></td></tr>
+                    </f:if>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</html>

@@ -1,0 +1,387 @@
+/*!
+ * AI Foundation backend module CSS — ai-context
+ */
+.aiu-ai-context {
+    padding-top: .25rem;
+}
+
+.aiu-ai-context [data-aiu-context-card] {
+    container-type: inline-size;
+    min-height: 100%;
+}
+
+.aiu-ai-context .row > [class*="col-"].d-flex {
+    align-items: stretch;
+}
+
+.aiu-ai-context__card--default {
+    border-color: var(--typo3-state-success-border-color, #75b798);
+}
+
+.aiu-ai-context__card--disabled {
+    opacity: .82;
+}
+
+.aiu-ai-context__card--disabled .card-header,
+.aiu-ai-context__card--disabled .card-body {
+    filter: grayscale(.15);
+}
+
+.aiu-ai-context__ring {
+    --aiu-context-progress: 0;
+    align-items: center;
+    background: radial-gradient(farthest-side, var(--aiu-bg-white, #fff) 72%, transparent 73%) center,
+        conic-gradient(var(--typo3-state-success-border-color, #75b798) calc(var(--aiu-context-progress) * 1%), var(--aiu-border, #dee2e6) 0);
+    border-radius: 50%;
+    display: inline-flex;
+    flex-shrink: 0;
+    height: 2.25rem;
+    justify-content: center;
+    width: 2.25rem;
+}
+
+.aiu-ai-context__ring-value {
+    font-size: .65rem;
+    font-weight: 600;
+}
+
+.aiu-ai-context__checklist {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .35rem 1.25rem;
+}
+
+@container (max-width: 22rem) {
+    .aiu-ai-context__checklist {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.aiu-ai-context__checklist-item {
+    align-items: center;
+    display: flex;
+    gap: .5rem;
+    line-height: 1.35;
+    color: var(--typo3-text-color-base, #212529);
+}
+
+.aiu-ai-context__checklist-item .icon,
+.aiu-ai-context__checklist-item typo3-backend-icon {
+    flex-shrink: 0;
+}
+
+.aiu-ai-context__checklist-item.is-complete .icon,
+.aiu-ai-context__checklist-item.is-complete typo3-backend-icon {
+    color: var(--typo3-surface-container-success-text, var(--typo3-state-success-border-color, #1f8a4c));
+}
+
+.aiu-ai-context__checklist-item.is-incomplete {
+    color: var(--typo3-text-color-variant, #6c757d);
+}
+
+
+.aiu-ai-context__card-actions {
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+}
+
+.aiu-ai-context__card-actions .btn,
+.aiu-ai-context__card-actions .btn.disabled {
+    align-items: center;
+    display: inline-flex;
+    justify-content: center;
+    min-width: 2rem;
+    padding-left: .5rem;
+    padding-right: .5rem;
+}
+
+.aiu-ai-context__placeholder-tokens {
+    row-gap: .35rem;
+}
+
+.aiu-ai-context__placeholder-tokens code {
+    white-space: nowrap;
+}
+
+.aiu-ai-context__placeholder-bar {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    justify-content: space-between;
+}
+
+.aiu-ai-context__placeholder-bar .callout-icon {
+    flex-shrink: 0;
+    margin: 0;
+}
+
+.aiu-ai-context__placeholder-main {
+    align-items: flex-start;
+    display: flex;
+    flex: 1 1 auto;
+    gap: .75rem 1rem;
+    min-width: 0;
+}
+
+.aiu-ai-context__placeholder-main .callout-content {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.aiu-ai-context__placeholder-actions {
+    align-self: center;
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+.aiu-ai-context__placeholder-actions .btn {
+    align-items: center;
+    display: inline-flex;
+    gap: .35rem;
+    white-space: nowrap;
+}
+
+@media (max-width: 48rem) {
+    .aiu-ai-context__placeholder-actions {
+        align-self: flex-start;
+        margin-left: 0;
+        width: 100%;
+    }
+}
+
+.aiu-ai-context__drawer .aiu-drawer__panel {
+    width: min(640px, 100vw);
+}
+
+.aiu-ai-context__section-head {
+    margin-bottom: .75rem;
+}
+
+.aiu-ai-context__section-title {
+    font-size: .9375rem;
+    font-weight: 700;
+    letter-spacing: .01em;
+    margin: 0;
+}
+
+.aiu-ai-context__drawer-section--research {
+    background: var(--typo3-surface-container-low, #f5f5f5);
+    border: 1px solid var(--aiu-border, #d7d7d7);
+    border-radius: var(--typo3-component-border-radius, .375rem);
+    margin-bottom: 0;
+    padding: 1rem;
+}
+
+.aiu-ai-context__section-divider {
+    border: 0;
+    border-top: 1px solid var(--aiu-border, #d7d7d7);
+    margin: 1.25rem 0;
+    opacity: 1;
+}
+
+.aiu-ai-context__progress {
+    background: var(--typo3-surface-container, var(--aiu-border, #e9ecef));
+    border-radius: 999px;
+    height: .5rem;
+    overflow: hidden;
+    width: 100%;
+}
+
+.aiu-ai-context__progress-bar {
+    background: var(--typo3-state-primary-bg, var(--typo3-link-color, #0078e6));
+    border-radius: inherit;
+    display: block;
+    height: 100%;
+    transition: width .25s ease;
+    width: calc(var(--aiu-context-progress, 0) * 1%);
+}
+
+/* Compact 2-column completeness checklist below the progress bar */
+.aiu-ai-context__modal-checklist {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .35rem 1.25rem;
+    align-content: center;
+}
+
+@media (max-width: 32rem) {
+    .aiu-ai-context__modal-checklist {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+.aiu-ai-context__modal-checklist .aiu-ai-context__checklist-item {
+    color: var(--typo3-text-color-base, #212529);
+}
+
+.aiu-ai-context__modal-checklist .aiu-ai-context__checklist-item.is-incomplete {
+    color: var(--typo3-text-color-variant, #6c757d);
+}
+
+/* Success tint on the check icon only — not label text.
+   --typo3-state-success-color is foreground ON success buttons (white), not readable green text. */
+.aiu-ai-context__modal-checklist .aiu-ai-context__checklist-item.is-complete typo3-backend-icon {
+    color: var(--typo3-surface-container-success-text, var(--typo3-state-success-border-color, #1f8a4c));
+}
+
+.aiu-ai-context__modal-checklist .aiu-ai-context__checklist-item typo3-backend-icon {
+    flex-shrink: 0;
+}
+
+.aiu-ai-context__tone-tags {
+    gap: .35rem;
+}
+
+.aiu-ai-context__tone-pill {
+    background: var(--aiu-bg-white, #fff);
+    border: 1px solid var(--aiu-border, #dee2e6);
+    border-radius: 999px;
+    color: inherit;
+    cursor: pointer;
+    font-size: .8125rem;
+    line-height: 1.2;
+    padding: .35rem .75rem;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.aiu-ai-context__tone-pill:hover:not(:disabled) {
+    background: var(--typo3-state-default-hover-bg, var(--aiu-bg-soft));
+    border-color: var(--aiu-selected-border);
+    color: var(--typo3-text-color-base, inherit);
+}
+
+.aiu-ai-context__tone-pill.is-active {
+    background: var(--typo3-state-primary-bg, #006699);
+    border-color: var(--typo3-state-primary-border-color, var(--typo3-state-primary-bg, #006699));
+    color: var(--typo3-state-primary-color, #fff);
+}
+
+.aiu-ai-context__tone-pill.is-active:hover:not(:disabled) {
+    background: var(--typo3-state-primary-bg, #006699);
+    border-color: var(--typo3-state-primary-border-color, var(--typo3-state-primary-bg, #006699));
+    color: var(--typo3-state-primary-color, #fff);
+    filter: brightness(.95);
+}
+
+.aiu-ai-context__tone-pill:disabled {
+    cursor: not-allowed;
+    opacity: .45;
+}
+
+/* Persona editor uses the core .panel collapsible component.
+   Only minimal hooks remain; layout/borders/caret come from backend.css. */
+.aiu-ai-context__rule-row {
+    background: var(--aiu-bg-surface, #fff);
+    border: 1px solid var(--aiu-border, #dee2e6);
+    border-radius: var(--aiu-radius, .5rem);
+}
+
+.aiu-ai-context__persona-card.panel {
+    border: 0;
+    box-shadow: none;
+    border-radius: 0;
+}
+
+.aiu-ai-context__persona-card.panel + .aiu-ai-context__persona-card.panel {
+    border-top: 1px solid var(--aiu-border, #dee2e6);
+}
+
+.aiu-ai-context__persona-card .panel-button {
+    text-align: left;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    min-width: 0;
+}
+
+.aiu-ai-context__persona-card .panel-title {
+    min-width: 0;
+}
+
+.aiu-ai-context__persona-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.aiu-ai-context__persona-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aiu-ai-context__persona-chevron {
+    color: var(--typo3-text-color-variant, #6c757d);
+    display: inline-flex;
+    flex-shrink: 0;
+    transition: transform .15s ease;
+}
+
+.aiu-ai-context__persona-card .panel-button[aria-expanded="true"] .aiu-ai-context__persona-chevron {
+    transform: rotate(180deg);
+}
+
+.aiu-ai-context__persona-remove {
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.aiu-ai-context__persona-card .panel-body .form-label {
+    font-weight: 600;
+    margin-bottom: .25rem;
+}
+
+.aiu-ai-context__rule-row {
+    padding: .65rem;
+}
+
+.aiu-ai-context__rules-preview {
+    background: var(--aiu-bg-muted, #f8f9fa);
+}
+
+
+.aiu-ai-context__chip {
+    align-items: center;
+    display: inline-flex;
+    font-family: var(--typo3-font-family-monospace, monospace);
+    gap: .25rem;
+    padding-right: .35rem;
+}
+
+.aiu-ai-context__chip-remove {
+    background: transparent;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0 .15rem;
+}
+
+.aiu-ai-context__confidence {
+    border-radius: 999px;
+    font-size: .625rem;
+    font-weight: 600;
+    letter-spacing: .03em;
+    margin-left: .35rem;
+    padding: .1rem .45rem;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+.aiu-ai-context__confidence--high {
+    background: var(--typo3-state-success-bg, #d1e7dd);
+    color: var(--typo3-state-success-color, #198754);
+}
+
+.aiu-ai-context__confidence--medium {
+    background: var(--typo3-state-warning-bg, #fff3cd);
+    color: var(--typo3-state-warning-color, #997404);
+}
+
+.aiu-ai-context__confidence--low {
+    background: var(--typo3-state-danger-bg, #f8d7da);
+    color: var(--typo3-state-danger-color, #842029);
+}

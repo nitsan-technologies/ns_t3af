@@ -1,0 +1,132 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+<f:variable name="extensionCount" value="{aiExtensions -> f:count()}" />
+<f:variable name="customTableCount" value="{customTables -> f:count()}" />
+<f:variable name="promptCount" value="{mcpPromptTemplates -> f:count()}" />
+<f:variable name="customToolCount" value="{mcpCustomTools -> f:count()}" />
+<f:variable name="coreToolCount" value="{coreToolCount}" />
+
+<div class="aiu-mcp-tools-shell">
+    <aside class="aiu-mcp-tools-shell__sidebar" aria-label="{f:translate(key: '{ll}:module.mcpTools.sidebar.aria')}">
+        <div class="card card-size-small mb-0 w-100">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <f:translate key="{ll}:module.mcpTools.tab.toolsResources" default="Tools &amp; Resources" />
+                </h3>
+            </div>
+            <div class="card-body">
+                <button type="button"
+                        class="btn btn-default w-100 mb-3"
+                        data-mcp-tools-custom-tool-open>
+                    <core:icon identifier="actions-plus" size="small" alternativeMarkupIdentifier="inline" />
+                    <f:translate key="{ll}:module.mcpTools.sidebar.createCustomTool" default="Create Custom Tool" />
+                </button>
+
+                <nav class="aiu-mcp-tools-nav" role="tablist">
+                    <button type="button"
+                            class="aiu-mcp-tools-nav__item active is-active"
+                            role="tab"
+                            data-mcp-tools-sidebar="extensions"
+                            aria-selected="true">
+                        <core:icon identifier="actions-extension" size="small" alternativeMarkupIdentifier="inline" />
+                        <span class="aiu-mcp-tools-nav__title">
+                            <h4 class="aiu-mcp-tools-nav__label mb-0">
+                                <f:translate key="{ll}:module.mcpTools.sidebar.aiExtensions" default="AI Extensions" />
+                            </h4>
+                            <span class="aiu-mcp-tools-nav__meta">
+                                {extensionCount}
+                                <f:translate key="{ll}:module.mcpTools.sidebar.bundles" default="bundles" />
+                            </span>
+                        </span>
+                    </button>
+                    <button type="button"
+                            class="aiu-mcp-tools-nav__item"
+                            role="tab"
+                            data-mcp-tools-sidebar="custom"
+                            aria-selected="false">
+                        <core:icon identifier="actions-code" size="small" alternativeMarkupIdentifier="inline" />
+                        <span class="aiu-mcp-tools-nav__title">
+                            <h4 class="aiu-mcp-tools-nav__label mb-0">
+                                <f:translate key="{ll}:module.mcpTools.sidebar.custom" />
+                            </h4>
+                            <span class="aiu-mcp-tools-nav__meta">
+                                <f:translate key="{ll}:module.mcpTools.sidebar.customMeta" default="Tables &amp; custom tools" />
+                            </span>
+                        </span>
+                    </button>
+                    <button type="button"
+                            class="aiu-mcp-tools-nav__item"
+                            role="tab"
+                            data-mcp-tools-sidebar="core"
+                            aria-selected="false">
+                        <core:icon identifier="actions-document" size="small" alternativeMarkupIdentifier="inline" />
+                        <span class="aiu-mcp-tools-nav__title">
+                            <h4 class="aiu-mcp-tools-nav__label mb-0">
+                                <f:translate key="{ll}:module.mcpTools.sidebar.core" default="TYPO3 Core" />
+                            </h4>
+                            <span class="aiu-mcp-tools-nav__meta">
+                                {coreToolCount}
+                                <f:translate key="{ll}:module.mcpTools.sidebar.coreMeta" default="built-in tools" />
+                            </span>
+                        </span>
+                    </button>
+                    <button type="button"
+                            class="aiu-mcp-tools-nav__item"
+                            role="tab"
+                            data-mcp-tools-sidebar="prompts"
+                            aria-selected="false">
+                        <core:icon identifier="actions-message" size="small" alternativeMarkupIdentifier="inline" />
+                        <span class="aiu-mcp-tools-nav__title">
+                            <h4 class="aiu-mcp-tools-nav__label mb-0">
+                                <f:translate key="{ll}:module.mcpTools.sidebar.promptTemplates" default="Prompt Templates" />
+                            </h4>
+                            <span class="aiu-mcp-tools-nav__meta">
+                                {promptCount}
+                                <f:translate key="{ll}:module.mcpTools.sidebar.templatesMeta" default="templates" />
+                            </span>
+                        </span>
+                    </button>
+                    <button type="button"
+                            class="aiu-mcp-tools-nav__item"
+                            role="tab"
+                            data-mcp-tools-sidebar="custom-tools"
+                            aria-selected="false">
+                        <core:icon identifier="actions-cog" size="small" alternativeMarkupIdentifier="inline" />
+                        <span class="aiu-mcp-tools-nav__title">
+                            <h4 class="aiu-mcp-tools-nav__label mb-0">
+                                <f:translate key="{ll}:module.mcpTools.sidebar.customTools" default="Custom Tools" />
+                            </h4>
+                            <span class="aiu-mcp-tools-nav__meta">
+                                {customToolCount}
+                                <f:translate key="{ll}:module.mcpTools.sidebar.customToolsMeta" default="created" />
+                            </span>
+                        </span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </aside>
+
+    <div class="aiu-mcp-tools-shell__content">
+        <div class="aiu-mcp-tools-shell__section is-active" data-mcp-tools-sidebar-panel="extensions">
+            <f:render partial="McpTools/ExtensionsPanel" arguments="{_all}" />
+        </div>
+        <div class="aiu-mcp-tools-shell__section" data-mcp-tools-sidebar-panel="custom" hidden>
+            <f:render partial="McpTools/CustomPanel" arguments="{_all}" />
+        </div>
+        <div class="aiu-mcp-tools-shell__section" data-mcp-tools-sidebar-panel="core" hidden>
+            <f:render partial="McpTools/CorePanel" arguments="{_all}" />
+        </div>
+        <div class="aiu-mcp-tools-shell__section" data-mcp-tools-sidebar-panel="prompts" hidden>
+            <f:render partial="McpTools/PromptsPanel" arguments="{_all}" />
+        </div>
+        <div class="aiu-mcp-tools-shell__section" data-mcp-tools-sidebar-panel="custom-tools" hidden>
+            <f:render partial="McpTools/CustomToolsListPanel" arguments="{_all}" />
+        </div>
+    </div>
+</div>
+
+</html>

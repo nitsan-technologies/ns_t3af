@@ -1,0 +1,181 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="callout callout-info mb-3 aiu-mcp-tools__banner">
+    <div class="callout-content flex-grow-1">
+        <div class="aiu-mcp-tools__banner-title">
+            <core:icon identifier="actions-lightbulb-on" size="small" alternativeMarkupIdentifier="inline" />
+            <div class="callout-title mb-0"><f:translate key="{ll}:module.mcpTools.banner.title" /></div>
+        </div>
+        <div class="callout-body">
+            <p class="mb-0"><f:translate key="{ll}:module.mcpTools.banner.body" /></p>
+        </div>
+    </div>
+    <div class="text-end text-variant small flex-shrink-0 aiu-mcp-tools__banner-badges">
+        <div class="badge badge-default">{mcpToolsStats.extensionCount} <f:translate key="{ll}:module.mcpTools.banner.extensions" /></div>
+        <div class="badge badge-default">{mcpToolsStats.extensionTools} <f:translate key="{ll}:module.mcpTools.banner.totalTools" /></div>
+    </div>
+</div>
+
+<f:if condition="{aiExtensions -> f:count()} == 0">
+    <f:then>
+        <div class="callout callout-notice mb-0">
+            <div class="callout-content">
+                <div class="callout-body"><f:translate key="{ll}:module.mcpTools.extensions.empty" /></div>
+            </div>
+        </div>
+    </f:then>
+    <f:else>
+        <div class="row g-3 aiu-mcp-tools__cards" data-mcp-tools-extensions>
+            <f:for each="{aiExtensions}" as="extension">
+                <div class="col-lg-12"
+                     data-mcp-tools-card
+                     data-search-text="{extension.searchText}">
+                    <article class="card h-100 aiu-ext-card">
+                        <div class="card-body">
+                            <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+                                <div class="min-w-0">
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                        <h3 class="card-titl mb-0"><b>{extension.label}</b></h3>
+                                        <span class="badge badge-default">
+                                            {extension.toolCount} <f:translate key="{ll}:module.mcpTools.toolsLabel" />
+                                        </span>
+                                    </div>
+                                    <p class="text-variant mb-0">{extension.tagline}</p>
+                                </div>
+                                <div class="btn-group flex-shrink-0" role="group">
+                                    <button type="button"
+                                            class="btn btn-success btn-sm"
+                                            data-mcp-tools-download-skill
+                                            data-skill-name="{extension.skillName}"
+                                            data-skill-trigger="{extension.skillTrigger}"
+                                            data-skill-file="{extension.skillFile}"
+                                            data-skill-desc="{extension.skillDesc}"
+                                            data-skill-label="{extension.label}">
+                                            <core:icon identifier="actions-download" size="small" />
+                                        <f:translate key="{ll}:module.mcpTools.downloadSkill" />
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-default btn-sm"
+                                            data-mcp-tools-toggle
+                                            aria-expanded="false">
+                                        <f:translate key="{ll}:module.mcpTools.viewTools" />
+                                    </button>
+                                </div>
+                            </div>
+                            <f:if condition="{extension.tools -> f:count()} > 0">
+                                <div class="d-flex flex-wrap gap-1 aiu-ext-card__tags">
+                                    <f:for each="{extension.tools}" as="tool">
+                                        <button type="button"
+                                                class="btn btn-sm btn-default"
+                                                data-mcp-tools-tool-tag="{tool.name}">
+                                            {tool.name}
+                                        </button>
+                                    </f:for>
+                                </div>
+                            </f:if>
+                        </div>
+                    <div class="aiu-ext-card__tools border-top" hidden>
+                        <f:if condition="{extension.skillDesc} || {extension.skillTrigger}">
+                            <div class="card-body py-2 border-bottom aiu-ext-card__skill-strip">
+                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 small">
+                                    <span class="text-variant">
+                                        {f:if(condition: extension.skillDesc, then: extension.skillDesc, else: extension.tagline)}
+                                    </span>
+                                    <span >
+                                        <b><f:translate key="{ll}:module.mcpTools.trigger" />:</b>
+                                        <code class="badge badge-default">{extension.skillTrigger}</code>
+                                    </span>
+                                </div>
+                            </div>
+                        </f:if>
+
+                        <f:for each="{extension.tools}" as="tool">
+                            <div class="aiu-tool-panel" data-mcp-tools-tool-panel data-tool-name="{tool.name}">
+                                <button type="button"
+                                        class="aiu-tool-panel__header"
+                                        data-mcp-tools-toggle-tool
+                                        aria-expanded="false">
+                                    <div class="aiu-tool-panel__identity">
+                                        <div>
+                                            <div class="aiu-tool-panel__name">{tool.name}</div>
+                                            <div class="aiu-tool-panel__subtitle">{tool.shortTitle}</div>
+                                        </div>
+                                    </div>
+                                    <div class="aiu-tool-panel__header-end">
+                                        <span class="badge badge-success">
+                                            <f:translate key="{ll}:module.mcpTools.tool.ready" />
+                                        </span>
+                                        <span class="aiu-tool-panel__chevron" aria-hidden="true">
+                                            <core:icon identifier="actions-chevron-down" size="small" />
+                                        </span>
+                                    </div>
+                                </button>
+
+                                <div class="aiu-tool-panel__body" hidden>
+                                    <f:if condition="{tool.description}">
+                                        <p class="aiu-tool-panel__description">{tool.description}</p>
+                                    </f:if>
+
+                                    <f:if condition="{tool.params -> f:count()} > 0">
+                                        <div class="aiu-tool-panel__section">
+                                            <h4 class="aiu-tool-panel__section-title"><f:translate key="{ll}:module.mcpTools.tool.parameters" /></h4>
+                                            <div class="card mb-0">
+                                                <div class="table-fit border-0">
+                                                    <table class="table table-striped table-hover align-middle mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th scope="col"><f:translate key="{ll}:module.mcpTools.tool.paramName" /></th>
+                                                            <th scope="col"><f:translate key="{ll}:module.mcpTools.tool.paramType" /></th>
+                                                            <th scope="col"><f:translate key="{ll}:module.mcpTools.tool.paramRequired" /></th>
+                                                            <th scope="col"><f:translate key="{ll}:module.mcpTools.tool.paramDescription" /></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <f:for each="{tool.params}" as="param">
+                                                            <tr>
+                                                                <td><code>{param.name}</code></td>
+                                                                <td><code class="text-variant">{param.type}</code></td>
+                                                                <td>
+                                                                    <f:if condition="{param.required}">
+                                                                        <f:then><f:translate key="{ll}:module.mcpTools.tool.required" /></f:then>
+                                                                        <f:else><f:translate key="{ll}:module.mcpTools.tool.optional" /></f:else>
+                                                                    </f:if>
+                                                                </td>
+                                                                <td>{param.description}</td>
+                                                            </tr>
+                                                        </f:for>
+                                                    </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </f:if>
+
+                                    <f:if condition="{tool.examplePrompts -> f:count()} > 0">
+                                        <div class="aiu-tool-panel__section">
+                                            <h4 class="aiu-tool-panel__section-title"><f:translate key="{ll}:module.mcpTools.tool.examplePrompts" /></h4>
+                                            <div class="aiu-tool-prompts">
+                                                <f:for each="{tool.examplePrompts}" as="prompt">
+                                                    <div class="card card-sm h-100 mb-0">
+                                                        <div class="card-body py-2 px-3 small">{prompt}</div>
+                                                    </div>
+                                                </f:for>
+                                            </div>
+                                        </div>
+                                    </f:if>
+                                </div>
+                            </div>
+                        </f:for>
+                    </div>
+                </article>
+                </div>
+            </f:for>
+        </div>
+    </f:else>
+</f:if>
+
+</html>

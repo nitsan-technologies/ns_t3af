@@ -1,0 +1,18 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:if condition="{trend.changePercent} != 0">
+    <f:if condition="{trend.direction} == 'up'">
+        <span class="badge badge-success aiu-trend aiu-trend--up">
+            <core:icon identifier="actions-arrow-up" size="small" alternativeMarkupIdentifier="inline" />
+            {trend.changePercent}%
+        </span>
+    </f:if>
+    <f:if condition="{trend.direction} == 'down'">
+        <span class="badge badge-danger aiu-trend aiu-trend--down">
+            <core:icon identifier="actions-arrow-down" size="small" alternativeMarkupIdentifier="inline" />
+            {trend.changePercent}%
+        </span>
+    </f:if>
+</f:if>
+</html>

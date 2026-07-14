@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file source-language="en" datatype="plaintext" original="EXT:ns_t3af/Resources/Private/Language/locallang_db.xlf" product-name="ns_t3af">
+        <header/>
+        <body>
+            <trans-unit id="tx_nst3af_provider">
+                <source>AI Provider</source>
+            </trans-unit>
+            <trans-unit id="tx_nst3af_oauth_client">
+                <source>MCP OAuth Client</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

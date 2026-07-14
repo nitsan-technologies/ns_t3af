@@ -1,0 +1,53 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="aiu-mcp-status-bar">
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-1"><f:translate key="{ll}:module.mcpServer.kpi.serverStatus" /></h4>
+            <span class="aiu-mcp-status-bar__value">
+                <span class="aiu-mcp-status-bar__status-dot{f:if(condition: '{mcpStatus.online} == 1', then: ' is-online', else: ' is-offline')}"></span>
+                <f:if condition="{mcpStatus.online} == 1">
+                    <f:then><f:translate key="{ll}:module.mcpServer.kpi.online" /></f:then>
+                    <f:else><f:translate key="{ll}:module.mcpServer.kpi.offline" /></f:else>
+                </f:if>
+            </span>
+        </div>
+    </div>
+
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-1"><f:translate key="{ll}:module.mcpServer.kpi.activeClients" /></h4>
+            <span class="aiu-mcp-status-bar__value">{mcpStatus.activeClients} <f:translate key="{ll}:module.mcpServer.kpi.connected" /></span>
+        </div>
+    </div>
+
+    <div class="aiu-mcp-status-bar__cell aiu-mcp-status-bar__cell--endpoints">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-1"><f:translate key="{ll}:module.mcpServer.kpi.oauthEndpoints" /></h4>
+            <div class="aiu-mcp-status-bar__endpoints">
+                <span class="aiu-mcp-status-bar__endpoint" title="{mcpWellKnownAuthUrl}">
+                    <code><f:translate key="{ll}:module.mcpServer.kpi.oauthAuthServer" /></code>
+                </span>
+                <span class="aiu-mcp-status-bar__endpoint" title="{mcpWellKnownResourceUrl}">
+                    <code><f:translate key="{ll}:module.mcpServer.kpi.oauthProtectedResource" /></code>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <div class="aiu-mcp-status-bar__cell aiu-mcp-status-bar__cell--url">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-1"><f:translate key="{ll}:module.mcpServer.kpi.serverUrl" /></h4>
+            <div class="aiu-mcp-status-bar__url-row">
+                <code class="aiu-mcp-status-bar__url" data-copy-target="server-url">{mcpServerUrl}</code>
+                <button type="button" class="btn btn-sm btn-default aiu-mcp-status-bar__copy" data-copy="server-url">
+                    <f:translate key="{ll}:module.mcpServer.action.copy" />
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+</html>

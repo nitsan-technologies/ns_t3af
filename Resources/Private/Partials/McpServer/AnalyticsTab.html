@@ -1,0 +1,133 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="aiu-mcp-analytics">
+    <div class="aiu-mcp-status-bar aiu-mcp-analytics__kpis mb-3">
+        <div class="aiu-mcp-status-bar__cell">
+            <div class="aiu-mcp-status-bar__content">
+                <span class="aiu-mcp-status-bar__label text-variant small"><f:translate key="{ll}:module.mcpServer.analytics.toolCalls" /></span>
+                <span class="aiu-mcp-status-bar__value">{mcpAnalyticsSummary.toolCalls}</span>
+            </div>
+        </div>
+        <div class="aiu-mcp-status-bar__cell">
+            <div class="aiu-mcp-status-bar__content">
+                <span class="aiu-mcp-status-bar__label text-variant small"><f:translate key="{ll}:module.mcpServer.analytics.successRate" /></span>
+                <span class="aiu-mcp-status-bar__value"><f:format.number decimals="1" decimalSeparator="." thousandsSeparator="">{mcpAnalyticsSummary.avgSuccessRate}</f:format.number>%</span>
+            </div>
+        </div>
+        <div class="aiu-mcp-status-bar__cell">
+            <div class="aiu-mcp-status-bar__content">
+                <span class="aiu-mcp-status-bar__label text-variant small"><f:translate key="{ll}:module.mcpServer.analytics.avgLatency" /></span>
+                <span class="aiu-mcp-status-bar__value"><f:format.number decimals="0" decimalSeparator="." thousandsSeparator="">{mcpAnalyticsSummary.avgLatencyMs}</f:format.number> ms</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3 class="card-title mb-0"><f:translate key="{ll}:module.mcpServer.analytics.chart.title" /></h3>
+            <button type="button" class="btn btn-sm btn-default" data-action="analytics-export" data-period="{mcpAnalyticsPeriod}">
+                <core:icon identifier="actions-download" size="small" />
+                <f:translate key="{ll}:module.mcpServer.analytics.export" />
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="aiu-mcp-analytics-chart" data-analytics-chart>
+                <f:for each="{mcpAnalyticsChart}" as="day">
+                    <div class="aiu-mcp-analytics-chart__bar" style="--aiu-bar-height: {day.barHeight}" title="{day.day}: {day.calls} calls">
+                        <span class="aiu-mcp-analytics-chart__label text-variant small">{day.day}</span>
+                    </div>
+                </f:for>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><h3 class="card-title mb-0"><f:translate key="{ll}:module.mcpServer.analytics.topTools" /></h3></div>
+                <div class="table-fit table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col"><f:translate key="{ll}:module.mcpServer.analytics.tool" /></th>
+                                <th scope="col"><f:translate key="{ll}:module.mcpServer.analytics.calls" /></th>
+                                <th scope="col"><f:translate key="{ll}:module.mcpServer.analytics.successRate" /></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <f:if condition="{mcpAnalyticsTopTools -> f:count()} == 0">
+                                <tr><td colspan="3" class="aiu-empty"><f:translate key="{ll}:module.mcpServer.analytics.empty" /></td></tr>
+                            </f:if>
+                            <f:for each="{mcpAnalyticsTopTools}" as="tool">
+                                <tr>
+                                    <td><code>{tool.toolName}</code></td>
+                                    <td>{tool.calls}</td>
+                                    <td><f:format.number decimals="1" decimalSeparator="." thousandsSeparator="">{tool.successRate}</f:format.number>%</td>
+                                </tr>
+                            </f:for>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><h3 class="card-title mb-0"><f:translate key="{ll}:module.mcpServer.analytics.errors" /></h3></div>
+                <div class="table-fit table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col"><f:translate key="{ll}:module.mcpServer.analytics.tool" /></th>
+                                <th scope="col"><f:translate key="{ll}:module.mcpServer.analytics.client" /></th>
+                                <th scope="col"><f:translate key="{ll}:module.mcpServer.analytics.error" /></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <f:if condition="{mcpAnalyticsErrors -> f:count()} == 0">
+                                <tr><td colspan="3" class="aiu-empty"><f:translate key="{ll}:module.mcpServer.analytics.empty" /></td></tr>
+                            </f:if>
+                            <f:for each="{mcpAnalyticsErrors}" as="error">
+                                <tr>
+                                    <td><code>{error.toolName}</code></td>
+                                    <td>{error.clientLabel}</td>
+                                    <td class="text-variant small">{error.errorMessage}</td>
+                                </tr>
+                            </f:for>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header"><h3 class="card-title mb-0"><f:translate key="{ll}:module.mcpServer.analytics.rateLimits" /></h3></div>
+        <div class="table-fit table-responsive">
+            <table class="table table-striped table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.analytics.client" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.analytics.used" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpServer.analytics.limit" /></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <f:if condition="{mcpAnalyticsRateLimits -> f:count()} == 0">
+                        <tr><td colspan="3" class="aiu-empty"><f:translate key="{ll}:module.mcpServer.analytics.empty" /></td></tr>
+                    </f:if>
+                    <f:for each="{mcpAnalyticsRateLimits}" as="row">
+                        <tr>
+                            <td>{row.clientLabel}</td>
+                            <td>{row.used}</td>
+                            <td>{row.limit}</td>
+                        </tr>
+                    </f:for>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</html>

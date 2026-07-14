@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+	<file source-language="en" datatype="plaintext" original="EXT:ns_t3af/Resources/Private/Language/locallang_credits.xlf" date="2026-05-18T00:00:00Z" product-name="ns_t3af">
+		<header/>
+		<body>
+			<trans-unit id="credits.api.error.token_missing" resname="credits.api.error.token_missing">
+				<source>Authentication with T3Planet Credits failed: no access token was sent.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.token_invalid" resname="credits.api.error.token_invalid">
+				<source>Your T3Planet Credits session is invalid or expired. Click Activate to sign in again.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.license_invalid" resname="credits.api.error.license_invalid">
+				<source>The selected license key is not valid for T3Planet Credits.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.license_expired" resname="credits.api.error.license_expired">
+				<source>Your T3Planet license has expired. Renew the license to use Credits mode.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.license_suspended" resname="credits.api.error.license_suspended">
+				<source>Your T3Planet license is suspended. Contact T3Planet support.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.domain_mismatch" resname="credits.api.error.domain_mismatch">
+				<source>This TYPO3 installation domain is not authorized for the selected license.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.insufficient_credits" resname="credits.api.error.insufficient_credits">
+				<source>Your T3Planet credit balance is too low for this request.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.insufficient_credits.topup_hint" resname="credits.api.error.insufficient_credits.topup_hint">
+				<source>Purchase more credits: %s</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.plan_expired" resname="credits.api.error.plan_expired">
+				<source>Your T3Planet Credits plan has expired. Renew or upgrade your plan.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.rate_limited" resname="credits.api.error.rate_limited">
+				<source>Too many requests to T3Planet Credits. Please wait %s seconds and try again.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.idempotency_conflict" resname="credits.api.error.idempotency_conflict">
+				<source>This request was already processed with different data. Start a new AI request.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.feature_unknown" resname="credits.api.error.feature_unknown">
+				<source>The requested AI feature is not available on your T3Planet Credits plan.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.request_not_found" resname="credits.api.error.request_not_found">
+				<source>The referenced T3Planet Credits request could not be found.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.admin_unauthorized" resname="credits.api.error.admin_unauthorized">
+				<source>Admin access to T3Planet Credits was denied.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.upstream_ai_error" resname="credits.api.error.upstream_ai_error">
+				<source>The upstream AI provider returned an error. Try again or switch feature/model.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.upstream_ai_timeout" resname="credits.api.error.upstream_ai_timeout">
+				<source>The upstream AI provider timed out. Try again with a shorter prompt.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.required_field_missing" resname="credits.api.error.required_field_missing">
+				<source>A required field was missing in the T3Planet Credits request.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.method_not_allowed" resname="credits.api.error.method_not_allowed">
+				<source>This T3Planet Credits endpoint does not accept the request method used.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.internal_error" resname="credits.api.error.internal_error">
+				<source>T3Planet Credits encountered an internal error. Please try again later.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.network_error" resname="credits.api.error.network_error">
+				<source>Could not reach the T3Planet Credits API. Check the API base URL in extension settings and your network connection.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.invalid_response" resname="credits.api.error.invalid_response">
+				<source>T3Planet Credits returned an invalid response. Check the API base URL and server logs.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.license_keys_missing" resname="credits.api.error.license_keys_missing">
+				<source>No T3Planet license keys are configured. Install ns_license or add license keys.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.no_licenses" resname="credits.api.error.no_licenses">
+				<source>No T3Planet license keys were found. Activate a T3Planet extension license first.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.feature_key_required" resname="credits.api.error.feature_key_required">
+				<source>An AI feature key is required when T3Planet Credits mode is active.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.api_error" resname="credits.api.error.api_error">
+				<source>The T3Planet Credits service returned an error. Please try again.</source>
+			</trans-unit>
+			<trans-unit id="credits.api.error.unexpected" resname="credits.api.error.unexpected">
+				<source>An unexpected error occurred while contacting T3Planet Credits.</source>
+			</trans-unit>
+		</body>
+	</file>
+</xliff>

@@ -1,0 +1,39 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<f:variable name="totals" value="{analytics.totals}" />
+<section class="card card-size-small mb-0 w-100">
+    <div class="card-header">
+        <h2 class="card-title h6 mb-0"><f:translate key="{ll}:dashboard.periodSummary.title" default="Period Summary" /></h2>
+    </div>
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-6">
+                <div class="small text-variant"><f:translate key="{ll}:dashboard.kpi.tokens" /></div>
+                <div class="fw-bold">{totals.totalTokens}</div>
+            </div>
+            <f:if condition="{summaryMode} == 'credits'">
+                <f:then>
+                    <div class="col-6">
+                        <div class="small text-variant"><f:translate key="{ll}:dashboard.kpi.creditsUsed" /></div>
+                        <div class="fw-bold">{totals.totalCredits -> f:format.number(decimals: 1)} cr</div>
+                    </div>
+                </f:then>
+                <f:else>
+                    <div class="col-6">
+                        <div class="small text-variant"><f:translate key="{ll}:dashboard.kpi.apiCost" default="API Cost" /></div>
+                        <div class="fw-bold">{metricValue}</div>
+                    </div>
+                </f:else>
+            </f:if>
+            <div class="col-6">
+                <div class="small text-variant"><f:translate key="{ll}:dashboard.kpi.requests" /></div>
+                <div class="fw-bold">{totals.totalRequests}</div>
+            </div>
+            <div class="col-6">
+                <div class="small text-variant"><f:translate key="{ll}:dashboard.kpi.successRate" /></div>
+                <div class="fw-bold">{totals.successRate}%</div>
+            </div>
+        </div>
+    </div>
+</section>
+</html>

@@ -1,0 +1,28 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <h1><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:module.dashboard.heading" /></h1>
+    <p class="lead">
+        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:module.dashboard.intro" />
+    </p>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="card-title">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:module.menu.providers" />
+                    </h2>
+                    <p class="card-text">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:module.providers.intro" />
+                    </p>
+                    <a href="{providersUri}" class="btn btn-primary">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:module.menu.providers" />
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</f:section>
+</html>

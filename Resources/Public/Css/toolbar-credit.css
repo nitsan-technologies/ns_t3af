@@ -1,0 +1,39 @@
+/*!
+ * T3Planet Credits — global backend toolbar balance display (scaffold header).
+ */
+.aiu-toolbar-credit-balance {
+    align-items: center;
+    color: var(--typo3-text-color-base, inherit);
+    display: inline-flex;
+    font-size: var(--typo3-font-size-small, .875rem);
+    font-weight: 600;
+    gap: .5rem;
+    height: var(--scaffold-header-item-height, 2.75rem);
+    line-height: 1;
+    padding: 0 .75rem;
+    white-space: nowrap;
+}
+
+.aiu-toolbar-credit-balance__icon {
+    align-items: center;
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.aiu-toolbar-credit-balance__sep {
+    color: var(--typo3-text-color-variant, #737373);
+    font-weight: 400;
+    user-select: none;
+}
+
+.aiu-toolbar-credit-balance__percent {
+    font-variant-numeric: tabular-nums;
+}
+
+.aiu-toolbar-credit-balance--low .aiu-toolbar-credit-balance__percent {
+    color: var(--typo3-state-warning-color, #d97706);
+}
+
+.aiu-toolbar-credit-balance--critical .aiu-toolbar-credit-balance__percent {
+    color: var(--typo3-state-danger-color, #dc2626);
+}

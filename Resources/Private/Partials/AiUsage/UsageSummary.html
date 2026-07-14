@@ -1,0 +1,101 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="aiu-ai-usage__summary-head">
+    <p class="aiu-table__muted">
+        <f:translate key="{ll}:module.aiUsage.summary.periodLead" default="Usage breakdown for selected period." />
+    </p>
+    <a class="btn btn-success"
+       href="{f:be.uri(route:'t3af_dashboard.ai_usage.export', parameters: {
+           mode: aiUsageMode,
+           search: aiUsageFilters.search,
+           engine: aiUsageFilters.engine,
+           model: aiUsageFilters.model,
+           module: aiUsageFilters.module,
+           scope: aiUsageFilters.scope,
+           reqType: aiUsageFilters.reqType,
+           status: aiUsageFilters.status,
+           user: aiUsageFilters.user,
+           max: aiUsageFilters.max,
+           currentPage: aiUsageFilters.currentPage,
+           format: 'json',
+           period: aiUsagePeriod.key,
+           from: aiUsagePeriod.fromDate,
+           to: aiUsagePeriod.toDate
+       })}">
+        <core:icon identifier="actions-download" size="small" alternativeMarkupIdentifier="inline" />
+        <f:translate key="{ll}:module.aiUsage.action.export" default="Export Report" />
+    </a>
+</div>
+
+<div class="aiu-ai-usage__summary-grid">
+    <div class="aiu-panel">
+        <div class="aiu-panel__head">
+            <h3 class="aiu-panel__title"><f:translate key="{ll}:module.aiUsage.summary.providers" default="Usage by Provider" /></h3>
+        </div>
+        <div class="aiu-panel__body">
+            <table class="aiu-table aiu-table--compact table table-striped table-hover align-middle mb-0">
+                <thead><tr><th scope="col">Provider</th><th scope="col">Requests</th><th scope="col">Cost</th></tr></thead>
+                <tbody>
+                    <f:for each="{aiUsageSummary.providers}" as="item">
+                        <tr>
+                            <td class="aiu-table__mono">{item.provider}</td>
+                            <td>{item.requests}</td>
+                            <td>${item.cost -> f:format.number(decimals: 4)}</td>
+                        </tr>
+                    </f:for>
+                    <f:if condition="{aiUsageSummary.providers -> f:count()} == 0">
+                        <tr><td colspan="3" class="aiu-empty">No provider data.</td></tr>
+                    </f:if>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="aiu-panel">
+        <div class="aiu-panel__head">
+            <h3 class="aiu-panel__title"><f:translate key="{ll}:module.aiUsage.summary.models" default="Top Models by Tokens" /></h3>
+        </div>
+        <div class="aiu-panel__body">
+            <table class="aiu-table aiu-table--compact table table-striped table-hover align-middle mb-0">
+                <thead><tr><th scope="col">Model</th><th scope="col">Tokens</th><th scope="col">Cost</th></tr></thead>
+                <tbody>
+                    <f:for each="{aiUsageSummary.models}" as="item">
+                        <tr>
+                            <td class="aiu-table__mono">{item.model}</td>
+                            <td>{item.tokens}</td>
+                            <td>${item.cost -> f:format.number(decimals: 4)}</td>
+                        </tr>
+                    </f:for>
+                    <f:if condition="{aiUsageSummary.models -> f:count()} == 0">
+                        <tr><td colspan="3" class="aiu-empty">No model data.</td></tr>
+                    </f:if>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="aiu-panel">
+    <div class="aiu-panel__head">
+        <h3 class="aiu-panel__title"><f:translate key="{ll}:module.aiUsage.summary.extensions" default="Usage by Extension" /></h3>
+    </div>
+    <div class="aiu-panel__body">
+        <table class="aiu-table aiu-table--compact table table-striped table-hover align-middle mb-0">
+            <thead><tr><th scope="col">Extension</th><th scope="col">Requests</th><th scope="col">Tokens</th><th scope="col">Cost</th></tr></thead>
+            <tbody>
+                <f:for each="{aiUsageSummary.extensions}" as="item">
+                    <tr>
+                        <td class="aiu-table__mono">{item.extensionKey}</td>
+                        <td>{item.requests}</td>
+                        <td>{item.tokens}</td>
+                        <td>${item.cost -> f:format.number(decimals: 4)}</td>
+                    </tr>
+                </f:for>
+                <f:if condition="{aiUsageSummary.extensions -> f:count()} == 0">
+                    <tr><td colspan="4" class="aiu-empty">No extension data.</td></tr>
+                </f:if>
+            </tbody>
+        </table>
+    </div>
+</div>
+</html>

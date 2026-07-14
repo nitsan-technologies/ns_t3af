@@ -1,0 +1,55 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="aiu-mcp-connect">
+    <div class="aiu-mcp-section__head">
+        <h2 class="aiu-mcp-section__title"><f:translate key="{ll}:module.mcpServer.connect.heading" /></h2>
+        <p class="aiu-mcp-section__sub text-variant small"><f:translate key="{ll}:module.mcpServer.connect.intro" /></p>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-3">
+            <div class="aiu-mcp-transport-list mb-3" data-mcp-transport-tabs role="tablist" aria-label="{f:translate(key: '{ll}:module.mcpServer.connect.methodsAria')}">
+                <f:for each="{mcpTransports}" as="transport" iteration="it">
+                    <button type="button"
+                            class="aiu-mcp-transport-card{f:if(condition: it.isFirst, then: ' active is-active')}"
+                            data-transport="{transport.key}"
+                            role="tab"
+                            aria-selected="{f:if(condition: it.isFirst, then: 'true', else: 'false')}">
+                        <span class="aiu-mcp-transport-card__icon" aria-hidden="true">
+                            <core:icon identifier="{transport.icon}" size="small" />
+                        </span>
+                        <span class="aiu-mcp-transport-card__body">
+                            <span class="aiu-mcp-transport-card__title-row">
+                                <h4 class="aiu-mcp-transport-card__title mb-0">
+                                    <f:translate key="{ll}:module.mcpServer.transport.{transport.key}.title" />
+                                </h4>
+                                <f:if condition="{transport.badge} != ''">
+                                    <span class="badge aiu-mcp-transport-card__badge badge-{transport.badge}">
+                                        <f:translate key="{ll}:module.mcpServer.transport.badge.{transport.badge}" default="{transport.badge}" />
+                                    </span>
+                                </f:if>
+                            </span>
+                            <span class="aiu-mcp-transport-card__desc small">
+                                <f:translate key="{ll}:module.mcpServer.transport.{transport.key}.desc" />
+                            </span>
+                        </span>
+                    </button>
+                </f:for>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <f:render partial="McpServer/Connect/TransportHttp" arguments="{_all}" />
+            <f:render partial="McpServer/Connect/TransportWebSocket" arguments="{_all}" />
+            <f:render partial="McpServer/Connect/TransportDocker" arguments="{_all}" />
+            <f:render partial="McpServer/Connect/TransportSshTunnel" arguments="{_all}" />
+            <f:render partial="McpServer/Connect/TransportNpx" arguments="{_all}" />
+            <f:render partial="McpServer/Connect/TransportMcpRemote" arguments="{_all}" />
+            <f:render partial="McpServer/Connect/TransportStdio" arguments="{_all}" />
+        </div>
+    </div>
+</div>
+</html>

@@ -1,0 +1,516 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      xmlns:aiu="http://typo3.org/ns/NITSAN/NsT3AF/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<form method="post" action="{saveUri}" data-aiu-drawer-form autocomplete="off"
+      data-aiu-has-stored-api-key="{f:if(condition: '{apiKeyMasked}', then: '1', else: '0')}">
+    <input type="hidden" name="uid" value="{provider.uid}" />
+
+    <div class="aiu-drawer__header">
+        <button type="button" class="aiu-drawer__close btn" data-aiu-drawer-close aria-label="Close">
+            <core:icon identifier="actions-close" size="small" />
+        </button>
+        <h2 class="aiu-drawer__title">
+            <f:if condition="{provider.uid} > 0">
+                <f:then>
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.drawer.titleEdit"
+                                 default="Edit AI Provider" />
+                </f:then>
+                <f:else>
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.drawer.titleNew"
+                                 default="Add AI Provider" />
+                </f:else>
+            </f:if>
+        </h2>
+        <p class="aiu-drawer__desc">
+            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.drawer.desc"
+                         default="Configure a new language model provider connection." />
+        </p>
+    </div>
+
+    <div class="aiu-drawer__body">
+
+        <f:render partial="Module/EnvironmentRequirementBanner" arguments="{environmentRequirementAlerts: environmentRequirementAlerts}" />
+
+        <section class="aiu-section">
+            <div class="aiu-section__label">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.drawer.identity"
+                             default="Identity" />
+            </div>
+
+            <label class="aiu-field aiu-field--mono">
+                <span class="aiu-field-label">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.identifier"
+                                 default="Identifier" />
+                </span>
+                <input type="text" class="form-control" name="identifier" required maxlength="64"
+                       value="{provider.identifier}{submitted.identifier}"
+                       placeholder="my-openai-prod"
+                       pattern="[A-Za-z0-9._\-]+" />
+                <f:if condition="{errors.identifier} != ''"><small class="aiu-error">{errors.identifier}</small></f:if>
+            </label>
+
+            <label class="aiu-field">
+                <span class="aiu-field-label">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.title"
+                                 default="Display Name" />
+                </span>
+                <input type="text" class="form-control" name="title" required maxlength="255"
+                       value="{provider.title}{submitted.title}"
+                       placeholder="OpenAI Production" />
+                <f:if condition="{errors.title} != ''"><small class="aiu-error">{errors.title}</small></f:if>
+            </label>
+
+            <div class="aiu-field">
+                <span class="aiu-field-label" id="aiu-adapter-field-label">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.adapter"
+                                 default="Adapter Type" />
+                </span>
+                <f:if condition="{submitted.adapter_type} != ''">
+                    <f:then>
+                        <f:variable name="selectedAdapter" value="{submitted.adapter_type}" />
+                    </f:then>
+                    <f:else>
+                        <f:variable name="selectedAdapter" value="{provider.adapterType}" />
+                    </f:else>
+                </f:if>
+
+                <div class="aiu-adapter-chips" role="group" aria-labelledby="aiu-adapter-field-label">
+                    <f:for each="{adapterRows}" as="row">
+                        <button type="button"
+                                class="aiu-chip{f:if(condition: '{selectedAdapter} == {row.type}', then: ' aiu-chip--active')}"
+                                data-aiu-adapter-chip="1"
+                                data-adapter-type="{row.type}"
+                                aria-pressed="{f:if(condition: '{selectedAdapter} == {row.type}', then: 'true', else: 'false')}">
+                            {row.label}
+                        </button>
+                    </f:for>
+                </div>
+
+                <label class="aiu-sr-only" for="aiu-adapter-type-select">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.adapter"
+                                 default="Adapter Type" />
+                </label>
+                <select id="aiu-adapter-type-select" name="adapter_type" required data-aiu-adapter-select class="aiu-adapter-select-native">
+                    <option value="">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.adapter.placeholder"
+                                     default="Select adapter" />
+                    </option>
+                    <f:for each="{adapterRows}" as="row">
+                        <f:if condition="{selectedAdapter} == {row.type}">
+                            <f:then>
+                                <option value="{row.type}" selected="selected" data-endpoint="{row.defaultEndpoint}">{row.label}</option>
+                            </f:then>
+                            <f:else>
+                                <option value="{row.type}" data-endpoint="{row.defaultEndpoint}">{row.label}</option>
+                            </f:else>
+                        </f:if>
+                    </f:for>
+                </select>
+                <f:if condition="{errors.adapter_type} != ''"><small class="aiu-error">{errors.adapter_type}</small></f:if>
+            </div>
+        </section>
+
+        <section class="aiu-section">
+            <div class="aiu-section__label">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.drawer.connection"
+                             default="Connection" />
+            </div>
+
+            <label class="aiu-field aiu-field--mono" data-aiu-endpoint-field
+                   {f:if(condition: '{showEndpointField} == 1', then: '', else: 'hidden="hidden"')}>
+                <span class="aiu-field-label">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.endpoint"
+                                 default="Endpoint URL" />
+                    <span class="aiu-field-note" data-aiu-endpoint-optional-note>
+                        (<f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.endpoint.optional"
+                                     default="optional unless Custom / Other" />)
+                    </span>
+                </span>
+                <small class="aiu-field-subnote" data-aiu-endpoint-required-hint hidden>
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.endpoint.requiredCustom"
+                                 default="Required for Custom / Other: OpenAI-compatible API base URL (often ends with /v1)." />
+                </small>
+                <small class="aiu-field-subnote" data-aiu-endpoint-ollama-hint hidden>
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.endpoint.requiredOllama"
+                                 default="Ollama base URL (no API key). In Docker/DDEV use http://host.docker.internal:11434 instead of localhost." />
+                </small>
+                <input type="url" class="form-control" name="endpoint_url" maxlength="255"
+                       data-aiu-endpoint-input
+                       value="{provider.endpointUrl}{submitted.endpoint_url}" placeholder="https://api.openai.com/v1" />
+                <f:if condition="{errors.endpoint_url} != ''"><small class="aiu-error">{errors.endpoint_url}</small></f:if>
+            </label>
+
+            <div class="aiu-field aiu-field--mono" data-aiu-api-key-field
+                 {f:if(condition: '{showApiKeyField} == 1', then: '', else: 'hidden="hidden"')}">
+                <span class="aiu-field-label">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.apiKey"
+                                 default="API Key" />
+                </span>
+                <f:if condition="{apiKeyMasked} != ''">
+                    <small class="aiu-field-subnote">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.apiKey.stored"
+                                     default="Stored key configured. Enter a new key only to replace it." />
+                    </small>
+                </f:if>
+                <div class="aiu-field__inline">
+                    <f:if condition="{apiKeyMasked} != ''">
+                        <f:then>
+                            <input type="password" class="form-control" name="api_key" value="" autocomplete="off"
+                                   data-aiu-api-key-input
+                                   placeholder="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.apiKey.placeholderEdit', default: 'Leave blank to keep existing key')}" />
+                        </f:then>
+                        <f:else>
+                            <input type="password" class="form-control" name="api_key" value="" autocomplete="off"
+                                   data-aiu-api-key-input
+                                   placeholder="sk-••••••••••••" />
+                        </f:else>
+                    </f:if>
+                    <f:if condition="{errors.api_key} != ''"><small class="aiu-error">{errors.api_key}</small></f:if>
+                    <button type="button" class="reveal" data-aiu-toggle-reveal>
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.apiKey.reveal"
+                                     default="Show" />
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <section class="aiu-section">
+            <div class="aiu-section__label">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.drawer.model"
+                             default="Model" />
+            </div>
+
+            <div class="aiu-field aiu-field--mono" data-aiu-model-field>
+                <span class="aiu-field-label">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.chatModelId"
+                                 default="Chat / completion model" />
+                </span>
+                <div class="aiu-field__inline aiu-model-row">
+                    <select class="form-select" data-aiu-model-select hidden>
+                        <option value="">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.modelId.placeholder"
+                                         default="Select a model…" />
+                        </option>
+                        <option value="__custom__">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.modelId.custom"
+                                         default="Custom (enter manually)" />
+                        </option>
+                    </select>
+                    <input type="text" class="form-control" name="model_id" maxlength="128"
+                           data-aiu-model-input
+                           value="{provider.modelId}" placeholder="gpt-4o-mini" />
+                    <button type="button"
+                            class="aiu-icon-btn"
+                            data-aiu-model-refresh
+                            title="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.modelId.refresh', default:'Refresh model list')}"
+                            aria-label="{f:translate(key:'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.modelId.refresh', default:'Refresh model list')}">
+                        <core:icon identifier="actions-refresh" size="small" />
+                    </button>
+                </div>
+                <small class="aiu-field-subnote" data-aiu-model-hint hidden></small>
+            </div>
+
+            <f:if condition="{showEmbeddingModelField} == 1">
+            <div class="aiu-field aiu-field--mono" data-aiu-embedding-model-field>
+                <span class="aiu-field-label">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.embeddingModelId"
+                                 default="Embedding model" />
+                </span>
+                <div class="aiu-field__inline aiu-model-row">
+                    <select class="form-select" data-aiu-embedding-model-select hidden>
+                        <option value="">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.modelId.placeholder"
+                                         default="Select a model…" />
+                        </option>
+                        <option value="__custom__">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.modelId.custom"
+                                         default="Custom (enter manually)" />
+                        </option>
+                    </select>
+                    <input type="text" class="form-control" name="embedding_model_id" maxlength="128"
+                           data-aiu-embedding-model-input
+                           value="{provider.embeddingModelId}" placeholder="mistral-embed" />
+                </div>
+                <small class="aiu-field-subnote">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.embeddingModelId.subnote"
+                                 default="Leave blank to use the chat model for embeddings." />
+                </small>
+                <small class="aiu-field-subnote" data-aiu-embedding-model-hint hidden></small>
+            </div>
+            </f:if>
+
+            <div class="aiu-field">
+                <span class="aiu-field-label">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.capabilities"
+                                 default="Capabilities" />
+                </span>
+                <div class="form-grid aiu-form-grid--2">
+                    <f:if condition="{submitted.capabilities} != ''">
+                    <f:then>
+                        <f:variable name="selectedCapabilities" value="{submitted.capabilities}" />
+                    </f:then>
+                    <f:else>
+                        <f:variable name="selectedCapabilities" value="{provider.capabilities}" />
+                    </f:else>
+                </f:if>
+                    <f:for each="{allCapabilities}" as="capability">
+                        <f:variable name="capChecked" value="0" />
+                        <f:if condition="{selectedCapabilities} != ''">
+                            <f:then>
+                                <f:if condition="{aiu:contains(subject: selectedCapabilities, value: capability)}">
+                                    <f:variable name="capChecked" value="1" />
+                                </f:if>
+                            </f:then>
+                            <f:else>
+                                <f:if condition="{provider.uid} > 0">
+                                    <f:if condition="{provider.hasCapability(capability)} == 1">
+                                        <f:variable name="capChecked" value="1" />
+                                    </f:if>
+                                </f:if>
+                            </f:else>
+                        </f:if>
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="aiu-provider-cap-{capability}" name="capabilities[]" value="{capability}"<f:if condition="{capChecked}"> checked="checked"</f:if> />
+                                <label class="form-check-label" for="aiu-provider-cap-{capability}">{capability}</label>
+                            </div>
+                        </div>
+                    </f:for>
+                </div>
+            </div>
+        </section>
+
+        <section class="aiu-section">
+            <div class="aiu-section__label">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.drawer.configuration"
+                             default="Configuration" />
+            </div>
+
+            <label class="aiu-field">
+                <span class="aiu-field-label">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.temperature"
+                                 default="Temperature" />:
+                    <span class="aiu-temp-output" data-aiu-temp-output>{f:if(condition:provider,then:'{provider.temperature}',else:'0.7')}</span>
+                </span>
+                <input type="range" name="temperature" min="0" max="2" step="0.05"
+                       value="{f:if(condition:provider,then:'{provider.temperature}',else:'0.7')}"
+                       data-aiu-temp-input />
+            </label>
+
+            <label class="aiu-field">
+                <span class="aiu-field-label">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.systemPrompt"
+                                 default="System Prompt" />
+                </span>
+                <textarea class="form-control" name="system_prompt" rows="3"
+                          placeholder="You are a helpful TYPO3 assistant...">{provider.systemPrompt}</textarea>
+            </label>
+
+            <label class="aiu-field">
+                <span class="aiu-field-label">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.priority"
+                                 default="Priority" />
+                </span>
+                <input type="number" class="form-control" name="priority" min="0" max="100"
+                       value="{f:if(condition:provider,then:'{provider.priority}',else:'50')}" />
+            </label>
+
+            <div class="aiu-field-grid">
+                <label class="aiu-field">
+                    <span class="aiu-field-label">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.pricingInput"
+                                     default="Input price / 1M tokens" />
+                    </span>
+                    <input type="number" class="form-control" name="pricing_input_per_1m" min="0" step="0.000001"
+                           value="{f:if(condition:provider,then:'{provider.pricingInputPer1m}',else:'0')}" />
+                </label>
+                <label class="aiu-field">
+                    <span class="aiu-field-label">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.pricingOutput"
+                                     default="Output price / 1M tokens" />
+                    </span>
+                    <input type="number" class="form-control" name="pricing_output_per_1m" min="0" step="0.000001"
+                           value="{f:if(condition:provider,then:'{provider.pricingOutputPer1m}',else:'0')}" />
+                </label>
+            </div>
+
+            <div class="aiu-field-grid">
+                <label class="aiu-field">
+                    <span class="aiu-field-label">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.pricingCurrency"
+                                     default="Currency" />
+                    </span>
+                    <input type="text" class="form-control" name="pricing_currency" maxlength="3"
+                           value="{f:if(condition:provider.pricingCurrency,then:'{provider.pricingCurrency}',else:'USD')}" />
+                </label>
+                <label class="aiu-field">
+                    <span class="aiu-field-label">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.costCenter"
+                                     default="Cost center" />
+                    </span>
+                    <input type="text" class="form-control" name="cost_center" maxlength="64"
+                           value="{provider.costCenter}" placeholder="marketing-seo" />
+                </label>
+            </div>
+
+            <small class="aiu-field-subnote">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.pricingNote"
+                             default="Costs are estimated using manual provider pricing fields." />
+            </small>
+
+            <div class="aiu-default-card">
+                <div class="aiu-default-card__content">
+                    <div class="aiu-default-card__title">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.isDefault"
+                                     default="Set as Default Provider" />
+                    </div>
+                    <div class="aiu-default-card__sub">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.isDefault.desc"
+                                     default="All AI extensions will use this provider" />
+                    </div>
+                </div>
+                <label class="aiu-toggle">
+                    <input type="hidden" name="is_default" value="0" />
+                    <input type="checkbox" name="is_default" value="1"
+                           {f:if(condition:provider.isDefault, then:'checked="checked"')} />
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="aiu-default-card">
+                <div class="aiu-default-card__content">
+                    <div class="aiu-default-card__title">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.isEnabled"
+                                     default="Provider enabled" />
+                    </div>
+                    <div class="aiu-default-card__sub">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.isEnabled.desc"
+                                     default="Disabled providers are excluded from runtime usage." />
+                    </div>
+                </div>
+                <label class="aiu-toggle">
+                    <input type="hidden" name="is_enabled" value="0" />
+                    <f:if condition="{provider.uid} > 0">
+                        <f:then>
+                            <input type="checkbox" name="is_enabled" value="1"
+                                   {f:if(condition:provider.isEnabled, then:'checked=&quot;checked&quot;')} />
+                        </f:then>
+                        <f:else>
+                            <input type="checkbox" name="is_enabled" value="1" checked="checked" />
+                        </f:else>
+                    </f:if>
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <div class="aiu-default-card">
+                <div class="aiu-default-card__content">
+                    <div class="aiu-default-card__title">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.enabledForDashboard"
+                                     default="Include in dashboard analytics" />
+                    </div>
+                    <div class="aiu-default-card__sub">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.enabledForDashboard.desc"
+                                     default="When off, runtime works but dashboard excludes this provider rows." />
+                    </div>
+                </div>
+                <label class="aiu-toggle">
+                    <input type="hidden" name="enabled_for_dashboard" value="0" />
+                    <f:if condition="{provider.uid} > 0">
+                        <f:then>
+                            <input type="checkbox" name="enabled_for_dashboard" value="1"
+                                   {f:if(condition:provider.enabledForDashboard, then:'checked=&quot;checked&quot;')} />
+                        </f:then>
+                        <f:else>
+                            <input type="checkbox" name="enabled_for_dashboard" value="1" checked="checked" />
+                        </f:else>
+                    </f:if>
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </section>
+
+        <section class="aiu-section">
+            <div class="aiu-section__label">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.drawer.access"
+                             default="Access &amp; Governance" />
+            </div>
+
+            <div class="aiu-field">
+                <span class="aiu-field-label">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.beGroups"
+                                 default="Allowed BE groups" />
+                </span>
+                <small class="aiu-field-subnote">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.beGroups.desc"
+                                 default="Restrict to selected backend groups. Empty = available to all groups." />
+                </small>
+                <div class="form-grid aiu-form-grid--2">
+                    <f:for each="{availableGroups}" as="group">
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="aiu-provider-be-group-{group.uid}" name="be_groups[]" value="{group.uid}"<f:if condition="{selectedGroups.{group.uid}}"> checked="checked"</f:if> />
+                                <label class="form-check-label" for="aiu-provider-be-group-{group.uid}">{group.title}</label>
+                            </div>
+                        </div>
+                    </f:for>
+                    <f:if condition="{availableGroups -> f:count()} == 0">
+                        <small class="aiu-field-subnote">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.beGroups.empty"
+                                         default="No backend groups defined yet." />
+                        </small>
+                    </f:if>
+                </div>
+            </div>
+
+            <label class="aiu-field">
+                <span class="aiu-field-label">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.privacyLevel"
+                                 default="Privacy level" />
+                </span>
+                <small class="aiu-field-subnote">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.privacyLevel.desc"
+                                 default="Controls how much request telemetry is stored. The strictest of provider and user setting wins." />
+                </small>
+                <select class="form-select" name="privacy_level">
+                    <f:for each="{privacyLevels}" as="level">
+                        <option value="{level.value}" {f:if(condition:'{level.value} == {selectedPrivacy}', then:'selected="selected"')}>{level.label}</option>
+                    </f:for>
+                </select>
+            </label>
+
+            <div class="aiu-default-card">
+                <div class="aiu-default-card__content">
+                    <div class="aiu-default-card__title">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.noRerouting"
+                                     default="Prevent rerouting" />
+                    </div>
+                    <div class="aiu-default-card__sub">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.noRerouting.desc"
+                                     default="When enabled, smart routing may not redirect requests away from this provider." />
+                    </div>
+                </div>
+                <label class="aiu-toggle">
+                    <input type="hidden" name="no_rerouting" value="0" />
+                    <input type="checkbox" name="no_rerouting" value="1"
+                           {f:if(condition:noReroutingChecked, then:'checked="checked"')} />
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </section>
+
+    </div>
+
+    <div class="aiu-drawer__footer">
+        <button type="submit" class="btn btn-success save">
+            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.save"
+                         default="Save Provider" />
+        </button>
+        <a class="btn btn-default" href="{cancelUri}" data-aiu-drawer-close>
+            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.action.cancel"
+                         default="Cancel" />
+        </a>
+    </div>
+</form>
+</html>

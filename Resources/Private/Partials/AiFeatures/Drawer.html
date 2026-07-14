@@ -1,0 +1,79 @@
+<html
+    xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+    xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+    data-namespace-typo3-fluid="true"
+>
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="aiu-drawer aiu-ai-features__drawer" data-aiu-features-drawer aria-hidden="true">
+    <div class="aiu-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="aiu-feature-drawer-title">
+        <div class="aiu-drawer__header">
+            <h2 class="aiu-drawer__title" id="aiu-feature-drawer-title" data-aiu-feature-drawer-title>
+                <f:translate key="{ll}:module.aiFeatures.drawerDefaultTitle" />
+            </h2>
+            <p class="aiu-drawer__desc" data-aiu-feature-drawer-subtitle>
+                <f:translate key="{ll}:module.aiFeatures.drawerDefaultSub" />
+            </p>
+            <button type="button"
+                    class="aiu-drawer__close"
+                    data-aiu-features-drawer-close
+                    aria-label="{f:translate(key: '{ll}:module.aiFeatures.close')}">
+                <core:icon identifier="actions-close" size="small" />
+            </button>
+        </div>
+
+        <div class="aiu-drawer__body">
+            <div class="aiu-section" data-aiu-features-local-config>
+                <div class="aiu-section__label"><f:translate key="{ll}:module.aiFeatures.configScope" /></div>
+                <div class="mb-3">
+                    <label class="form-label" for="aiu-feature-default-provider"><f:translate key="{ll}:module.aiFeatures.defaultProvider" /></label>
+                    <select id="aiu-feature-default-provider" class="form-select">
+                        <option>OpenAI</option>
+                        <option>Anthropic</option>
+                        <option>Google Gemini</option>
+                        <option>Custom / Other</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="aiu-feature-prompt-style"><f:translate key="{ll}:module.aiFeatures.promptStyle" /></label>
+                    <select id="aiu-feature-prompt-style" class="form-select">
+                        <option><f:translate key="{ll}:module.aiFeatures.promptStyleBalanced" /></option>
+                        <option><f:translate key="{ll}:module.aiFeatures.promptStylePrecise" /></option>
+                        <option><f:translate key="{ll}:module.aiFeatures.promptStyleCreative" /></option>
+                    </select>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="aiu-feature-enable-automation" checked="checked" />
+                    <label class="form-check-label" for="aiu-feature-enable-automation">
+                        <f:translate key="{ll}:module.aiFeatures.enableAutomation" />
+                    </label>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="aiu-feature-restrict-admins" />
+                    <label class="form-check-label" for="aiu-feature-restrict-admins">
+                        <f:translate key="{ll}:module.aiFeatures.restrictToAdmins" />
+                    </label>
+                </div>
+            </div>
+
+            <div class="is-hidden" hidden="hidden" data-aiu-features-ext-conf-config>
+                <p class="text-muted mb-3 is-hidden" data-aiu-features-ext-conf-loading>
+                    <f:translate key="{ll}:module.aiFeatures.loadingSettings" />
+                </p>
+                <form data-aiu-features-ext-conf-form class="aiu-features-ext-conf-form"></form>
+            </div>
+        </div>
+
+        <div class="aiu-drawer__footer">
+            <button type="button" class="btn btn-default" data-aiu-features-drawer-cancel>
+                <f:translate key="{ll}:module.aiFeatures.cancel" />
+            </button>
+            <f:if condition="{canModifyExtensionSettings} == 1">
+                <button type="button" class="btn btn-success save" data-aiu-features-drawer-save>
+                    <f:translate key="{ll}:module.aiFeatures.saveChanges" />
+                </button>
+            </f:if>
+        </div>
+    </div>
+</div>
+</html>

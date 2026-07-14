@@ -1,0 +1,140 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div data-mcp-tools-custom-tool-form>
+    <div class="mb-3">
+        <label class="form-label" for="aiu-custom-tool-label">
+            <f:translate key="{ll}:module.mcpTools.customTool.label" default="Tool Label" />
+            <span class="text-danger">*</span>
+        </label>
+        <input type="text"
+               id="aiu-custom-tool-label"
+               class="form-control"
+               data-mcp-tools-custom-tool-field="label"
+               placeholder="{f:translate(key: '{ll}:module.mcpTools.customTool.labelPlaceholder', default: 'e.g. Warm Up Cache')}" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label" for="aiu-custom-tool-description">
+            <f:translate key="{ll}:module.mcpTools.customTool.description" default="Description" />
+        </label>
+        <textarea id="aiu-custom-tool-description"
+                  class="form-control"
+                  rows="3"
+                  data-mcp-tools-custom-tool-field="description"
+                  placeholder="{f:translate(key: '{ll}:module.mcpTools.customTool.descriptionPlaceholder', default: 'What does this tool do? This text is sent to the AI with the tool definition.')}"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label d-block">
+            <f:translate key="{ll}:module.mcpTools.customTool.handlerType" default="Handler Type" />
+        </label>
+        <div class="btn-group w-100" role="group" aria-label="{f:translate(key: '{ll}:module.mcpTools.customTool.handlerType', default: 'Handler Type')}">
+            <button type="button"
+                    class="btn btn-default active is-active"
+                    data-mcp-tools-custom-tool-handler="php">
+                <f:translate key="{ll}:module.mcpTools.customTool.handlerPhp" default="PHP Class" />
+            </button>
+            <button type="button"
+                    class="btn btn-default"
+                    data-mcp-tools-custom-tool-handler="rest">
+                <f:translate key="{ll}:module.mcpTools.customTool.handlerRest" default="REST Endpoint" />
+            </button>
+            <button type="button"
+                    class="btn btn-default"
+                    data-mcp-tools-custom-tool-handler="webhook">
+                <f:translate key="{ll}:module.mcpTools.customTool.handlerWebhook" default="Webhook" />
+            </button>
+        </div>
+    </div>
+
+    <div class="mb-3" data-mcp-tools-custom-tool-handler-panel="php">
+        <label class="form-label" for="aiu-custom-tool-handler-php">
+            <f:translate key="{ll}:module.mcpTools.customTool.phpClass" default="PHP Class Name" />
+            <span class="text-danger">*</span>
+        </label>
+        <input type="text"
+               id="aiu-custom-tool-handler-php"
+               class="form-control"
+               data-mcp-tools-custom-tool-field="handlerValue"
+               placeholder="\Vendor\Extension\Handler\MyTool" />
+    </div>
+
+    <div class="mb-3" data-mcp-tools-custom-tool-handler-panel="rest" hidden>
+        <label class="form-label" for="aiu-custom-tool-handler-rest">
+            <f:translate key="{ll}:module.mcpTools.customTool.restUrl" default="REST Endpoint URL" />
+            <span class="text-danger">*</span>
+        </label>
+        <input type="url"
+               id="aiu-custom-tool-handler-rest"
+               class="form-control"
+               data-mcp-tools-custom-tool-field="handlerValueRest"
+               placeholder="https://example.com/api/tool" />
+    </div>
+
+    <div class="mb-3" data-mcp-tools-custom-tool-handler-panel="webhook" hidden>
+        <label class="form-label" for="aiu-custom-tool-handler-webhook">
+            <f:translate key="{ll}:module.mcpTools.customTool.webhookUrl" default="Webhook URL" />
+            <span class="text-danger">*</span>
+        </label>
+        <input type="url"
+               id="aiu-custom-tool-handler-webhook"
+               class="form-control"
+               data-mcp-tools-custom-tool-field="handlerValueWebhook"
+               placeholder="https://example.com/webhook" />
+    </div>
+
+    <div class="mb-0">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <label class="form-label mb-0">
+                <f:translate key="{ll}:module.mcpTools.customTool.parameters" default="Parameters" />
+            </label>
+            <button type="button" class="btn btn-success btn-sm" data-mcp-tools-custom-tool-add-param>
+                <f:translate key="{ll}:module.mcpTools.customTool.addParameter" default="+ Add" />
+            </button>
+        </div>
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col"><f:translate key="{ll}:module.mcpTools.customTool.paramName" default="Name" /></th>
+                    <th scope="col"><f:translate key="{ll}:module.mcpTools.customTool.paramType" default="Type" /></th>
+                    <th scope="col"><f:translate key="{ll}:module.mcpTools.customTool.paramRequired" default="Req" /></th>
+                    <th scope="col"><f:translate key="{ll}:module.mcpTools.customTool.paramDescription" default="Description" /></th>
+                    <th scope="col" class="actions"></th>
+                </tr>
+            </thead>
+            <tbody data-mcp-tools-custom-tool-params>
+                <tr data-mcp-tools-custom-tool-param-row>
+                    <td>
+                        <input type="text" class="form-control" data-param-name placeholder="param_name" />
+                    </td>
+                    <td>
+                        <select class="form-select" data-param-type>
+                            <option value="string">string</option>
+                            <option value="integer">integer</option>
+                            <option value="number">number</option>
+                            <option value="boolean">boolean</option>
+                            <option value="array">array</option>
+                            <option value="object">object</option>
+                        </select>
+                    </td>
+                    <td class="text-center">
+                        <input type="checkbox" class="form-check-input" data-param-required />
+                    </td>
+                    <td>
+                        <input type="text" class="form-control" data-param-description placeholder="{f:translate(key: '{ll}:module.mcpTools.customTool.paramDescriptionPlaceholder', default: 'Description...')}" />
+                    </td>
+                    <td class="actions">
+                        <button type="button" class="btn btn-danger btn-sm" data-mcp-tools-custom-tool-remove-param hidden>
+                            <core:icon identifier="actions-delete" size="small" alternativeMarkupIdentifier="inline" />
+                        </button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</html>

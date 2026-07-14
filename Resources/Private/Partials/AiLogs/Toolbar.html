@@ -1,0 +1,73 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2 aiu-ai-logs__toolbar">
+    <span class="text-variant mb-0">
+        <f:if condition="{aiLogsTotalCount} > 0">
+            <f:then>
+                <f:translate key="{ll}:module.aiLogs.showingRange"
+                             arguments="{0: aiLogsPagination.pagination.startRecordNumber, 1: aiLogsPagination.pagination.endRecordNumber, 2: aiLogsTotalCount}" />
+            </f:then>
+            <f:else>
+                <f:translate key="{ll}:module.aiLogs.noEntries" />
+            </f:else>
+        </f:if>
+    </span>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <label class="visually-hidden" for="aiu-ai-logs-per-page">
+            <f:translate key="{ll}:module.aiLogs.filter.perPage" default="Records per page" />
+        </label>
+        <select id="aiu-ai-logs-per-page"
+                class="form-select form-select-sm aiu-ai-logs__per-page"
+                data-aiu-logs-per-page
+                aria-label="{f:translate(key: '{ll}:module.aiLogs.filter.perPage', default: 'Records per page')}">
+            <option value="20" {f:if(condition: '{aiLogsFilters.max} == 20', then: 'selected="selected"')}>20</option>
+            <option value="50" {f:if(condition: '{aiLogsFilters.max} == 50', then: 'selected="selected"')}>50</option>
+            <option value="100" {f:if(condition: '{aiLogsFilters.max} == 100', then: 'selected="selected"')}>100</option>
+            <option value="200" {f:if(condition: '{aiLogsFilters.max} == 200', then: 'selected="selected"')}>200</option>
+            <option value="500" {f:if(condition: '{aiLogsFilters.max} == 500', then: 'selected="selected"')}>500</option>
+        </select>
+        <div class="btn-group" role="group" aria-label="{f:translate(key: '{ll}:module.aiLogs.toolbar.aria', default: 'Log actions')}">
+            <a class="btn btn-success btn-sm" href="{f:be.uri(route: 't3af_dashboard.ai_logs.export', parameters: {
+              logChannel: aiLogsFilters.logChannel,
+              extension: aiLogsFilters.extension,
+              level: aiLogsFilters.level,
+              search: aiLogsFilters.search,
+              max: aiLogsFilters.max,
+              currentPage: aiLogsFilters.currentPage,
+              period: aiLogsFilters.period,
+              from: aiLogsFilters.from,
+              to: aiLogsFilters.to
+          })}">
+                <core:icon identifier="actions-download" alternativeMarkupIdentifier="inline" size="small" />
+                <f:translate key="{ll}:module.aiLogs.action.exportCsv" />
+            </a>
+            <a class="btn btn-default btn-sm"
+               data-aiu-logs-refresh
+               href="{f:be.uri(route: 't3af_dashboard.ai_logs', parameters: {
+              logChannel: aiLogsFilters.logChannel,
+              extension: aiLogsFilters.extension,
+              level: aiLogsFilters.level,
+              search: aiLogsFilters.search,
+              max: aiLogsFilters.max,
+              currentPage: aiLogsFilters.currentPage,
+              period: aiLogsFilters.period,
+              from: aiLogsFilters.from,
+              to: aiLogsFilters.to
+          })}">
+                <core:icon identifier="actions-refresh" alternativeMarkupIdentifier="inline" size="small" />
+                <f:translate key="{ll}:module.aiLogs.action.refresh" />
+            </a>
+        </div>
+        <f:render partial="AiLogs/Pagination" arguments="{_all}" />
+        <button type="submit"
+                form="aiu-ai-logs-entries-form"
+                class="btn btn-danger btn-sm aiu-ai-logs__delete-selected d-none">
+            <core:icon identifier="actions-delete" alternativeMarkupIdentifier="inline" size="small" />
+            <f:translate key="{ll}:module.aiLogs.deleteSelected" />
+        </button>
+    </div>
+</div>
+</html>

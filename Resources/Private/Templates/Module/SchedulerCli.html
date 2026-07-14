@@ -1,0 +1,32 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+    <div class="aiu-providers aiu-scheduler-cli"
+         data-aiu-scheduler-root
+         data-commands-json="{schedulerCliCommandsJson -> f:format.htmlspecialchars()}"
+         data-run-uri="{schedulerCliRunUri}">
+        <f:render partial="Module/TabPageHeader" arguments="{_all}" />
+
+        <f:if condition="{flash} == 'scheduler-run-ok'">
+            <div class="aiu-flash aiu-flash--success">
+                <f:translate key="{ll}:module.schedulerCli.flash.runOk" default="Command executed successfully." />
+                <f:if condition="{schedulerCliRunOutput} != ''"><pre class="aiu-scheduler-cli__run-output">{schedulerCliRunOutput}</pre></f:if>
+            </div>
+        </f:if>
+        <f:if condition="{flash} == 'scheduler-run-fail'">
+            <div class="aiu-flash aiu-flash--warn">
+                <f:translate key="{ll}:module.schedulerCli.flash.failed" default="Action failed. Please review the command/task configuration." />
+                <f:if condition="{schedulerCliRunOutput} != ''"><pre class="aiu-scheduler-cli__run-output">{schedulerCliRunOutput}</pre></f:if>
+            </div>
+        </f:if>
+
+        <f:render partial="SchedulerCli/HeaderAndModeSwitch" arguments="{_all}" />
+        <f:if condition="{schedulerCliMode} == 'library'">
+            <f:then><f:render partial="SchedulerCli/CommandLibrary" arguments="{_all}" /></f:then>
+            <f:else><f:render partial="SchedulerCli/ScheduledTasks" arguments="{_all}" /></f:else>
+        </f:if>
+    </div>
+</f:section>
+</html>

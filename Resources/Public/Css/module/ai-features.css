@@ -1,0 +1,118 @@
+/*!
+ * AI Foundation backend module CSS — 08-ai-features
+ * AI Features tab: meta strip, filters, feature grid, configuration drawer.
+ */
+/* ── Extension configuration drawer form ─────────────────── */
+.aiu-features-ext-conf-form .aiu-section:first-child {
+    margin-top: 0;
+}
+
+/* ── AI Features tab layout ──────────────────────────────── */
+.aiu-ai-features {
+    padding-top: .25rem;
+}
+
+.aiu-ai-features__header {
+    align-items: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+    margin-bottom: 0;
+}
+
+.aiu-ai-features__meta {
+    margin: 1rem 0;
+}
+
+.aiu-ai-features__meta-hint {
+    flex: 1.35 1 200px;
+}
+
+.aiu-ai-features__meta-hint .aiu-mcp-status-bar__content {
+    justify-content: center;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.aiu-ai-features__filters {
+    align-items: stretch;
+    flex-wrap: wrap;
+    gap: .65rem;
+    justify-content: flex-start;
+    margin: 1rem 0 .75rem;
+}
+
+.aiu-ai-features__search {
+    flex: 1 1 14rem;
+    min-width: 0;
+}
+
+.aiu-ai-features__extension-select {
+    flex: 0 0 auto;
+    min-width: 12.5rem;
+}
+
+/* Media palette (T3AA extConf userFunc) */
+.aiu-ai-features-media-palette {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.aiu-ai-features-media-palette__tabs {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.aiu-ai-features-media-palette__panel {
+    display: none;
+}
+
+.aiu-ai-features-media-palette__panel.is-active {
+    display: block;
+}
+
+/* Feature card grid (core card-container + card-size-small) */
+.aiu-ai-features__grid.card-container {
+    align-items: stretch;
+}
+
+.aiu-ai-features__grid.card-container .card {
+    align-self: stretch;
+    height: auto;
+}
+
+.aiu-ai-features__grid.card-container .card .card-footer {
+    margin-top: auto;
+}
+
+.aiu-ai-features [data-aiu-features-card] {
+    cursor: pointer;
+    text-align: start;
+}
+
+.aiu-ai-features [data-aiu-features-card]:focus-visible {
+    outline: var(--typo3-outline-width, 2px) var(--typo3-outline-style, solid) var(--typo3-state-focus-border-color, var(--typo3-link-color));
+    outline-offset: 2px;
+}
+
+.aiu-ai-features [data-aiu-features-card].is-hidden,
+.aiu-ai-features [data-aiu-features-card][hidden] {
+    display: none !important;
+}
+
+.aiu-ai-features [data-aiu-features-card] .card-footer .btn {
+    pointer-events: none;
+}
+
+.aiu-ai-features__empty {
+    margin-top: .5rem;
+}
+
+@media (max-width: 860px) {
+    .aiu-ai-features__meta-hint {
+        flex-basis: 100%;
+    }
+}

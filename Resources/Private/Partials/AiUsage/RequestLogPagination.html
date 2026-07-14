@@ -1,0 +1,115 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<nav class="pagination-wrap aiu-ai-usage__pagination" aria-label="{f:translate(key: '{ll}:module.aiUsage.pagination.label', default: 'Request log pagination')}">
+    <ul class="pagination mb-0">
+        <f:if condition="{aiUsagePagination.pagination.previousPageNumber} && {aiUsagePagination.pagination.previousPageNumber} >= {aiUsagePagination.pagination.firstPageNumber}">
+            <f:then>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: 't3af_dashboard.ai_usage', parameters: {
+                        mode: 'log',
+                        currentPage: aiUsagePagination.pagination.firstPageNumber,
+                        search: aiUsageFilters.search,
+                        engine: aiUsageFilters.engine,
+                        model: aiUsageFilters.model,
+                        module: aiUsageFilters.module,
+                        scope: aiUsageFilters.scope,
+                        reqType: aiUsageFilters.reqType,
+                        status: aiUsageFilters.status,
+                        user: aiUsageFilters.user,
+                        max: aiUsageFilters.max,
+                        period: aiUsagePeriod.key,
+                        from: aiUsagePeriodFromDate,
+                        to: aiUsagePeriodToDate
+                    })}" class="page-link" title="{f:translate(key: '{ll}:module.aiUsage.pagination.first', default: 'First page')}">
+                        <core:icon identifier="actions-view-paging-first" />
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: 't3af_dashboard.ai_usage', parameters: {
+                        mode: 'log',
+                        currentPage: aiUsagePagination.pagination.previousPageNumber,
+                        search: aiUsageFilters.search,
+                        engine: aiUsageFilters.engine,
+                        model: aiUsageFilters.model,
+                        module: aiUsageFilters.module,
+                        scope: aiUsageFilters.scope,
+                        reqType: aiUsageFilters.reqType,
+                        status: aiUsageFilters.status,
+                        user: aiUsageFilters.user,
+                        max: aiUsageFilters.max,
+                        period: aiUsagePeriod.key,
+                        from: aiUsagePeriodFromDate,
+                        to: aiUsagePeriodToDate
+                    })}" class="page-link" title="{f:translate(key: '{ll}:module.aiUsage.pagination.previous', default: 'Previous page')}">
+                        <core:icon identifier="actions-view-paging-previous" />
+                    </a>
+                </li>
+            </f:then>
+            <f:else>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+            </f:else>
+        </f:if>
+        <li class="page-item">
+            <span class="page-link aiu-ai-usage__pagination-records">
+                <f:translate key="{ll}:module.aiUsage.pagination.records"
+                             arguments="{0: aiUsagePagination.pagination.startRecordNumber, 1: aiUsagePagination.pagination.endRecordNumber, 2: aiUsageTotalCount}"
+                             default="Records %1$s–%2$s of %3$s" />
+                <span class="aiu-ai-usage__pagination-sep">|</span>
+                <f:translate key="{ll}:module.aiUsage.pagination.page" default="Page" />
+                {aiUsagePagination.paginator.currentPageNumber} / {aiUsagePagination.pagination.lastPageNumber}
+            </span>
+        </li>
+        <f:if condition="{aiUsagePagination.pagination.nextPageNumber} && {aiUsagePagination.pagination.nextPageNumber} <= {aiUsagePagination.pagination.lastPageNumber}">
+            <f:then>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: 't3af_dashboard.ai_usage', parameters: {
+                        mode: 'log',
+                        currentPage: aiUsagePagination.pagination.nextPageNumber,
+                        search: aiUsageFilters.search,
+                        engine: aiUsageFilters.engine,
+                        model: aiUsageFilters.model,
+                        module: aiUsageFilters.module,
+                        scope: aiUsageFilters.scope,
+                        reqType: aiUsageFilters.reqType,
+                        status: aiUsageFilters.status,
+                        user: aiUsageFilters.user,
+                        max: aiUsageFilters.max,
+                        period: aiUsagePeriod.key,
+                        from: aiUsagePeriodFromDate,
+                        to: aiUsagePeriodToDate
+                    })}" class="page-link" title="{f:translate(key: '{ll}:module.aiUsage.pagination.next', default: 'Next page')}">
+                        <core:icon identifier="actions-view-paging-next" />
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: 't3af_dashboard.ai_usage', parameters: {
+                        mode: 'log',
+                        currentPage: aiUsagePagination.pagination.lastPageNumber,
+                        search: aiUsageFilters.search,
+                        engine: aiUsageFilters.engine,
+                        model: aiUsageFilters.model,
+                        module: aiUsageFilters.module,
+                        scope: aiUsageFilters.scope,
+                        reqType: aiUsageFilters.reqType,
+                        status: aiUsageFilters.status,
+                        user: aiUsageFilters.user,
+                        max: aiUsageFilters.max,
+                        period: aiUsagePeriod.key,
+                        from: aiUsagePeriodFromDate,
+                        to: aiUsagePeriodToDate
+                    })}" class="page-link" title="{f:translate(key: '{ll}:module.aiUsage.pagination.last', default: 'Last page')}">
+                        <core:icon identifier="actions-view-paging-last" />
+                    </a>
+                </li>
+            </f:then>
+            <f:else>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+            </f:else>
+        </f:if>
+    </ul>
+</nav>
+</html>

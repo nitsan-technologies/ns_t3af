@@ -1,0 +1,85 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<div class="aiu-ai-prompts__overview-filters" data-aiu-prompt-overview-filters>
+    <div class="aiu-toolbar aiu-ai-prompts__toolbar">
+        <div class="input-group aiu-ai-prompts__search flex-grow-1">
+            <input type="search"
+                   id="aiu-ai-prompts-search"
+                   class="form-control"
+                   value="{aiPromptsFilters.search}"
+                   data-aiu-prompt-overview-search
+                   data-aiu-filter-initial="{aiPromptsFilters.search}"
+                   autocomplete="off"
+                   autocorrect="off"
+                   autocapitalize="off"
+                   spellcheck="false"
+                   data-1p-ignore="true"
+                   data-lpignore="true"
+                   data-form-type="other"
+                   placeholder="{f:translate(key: '{ll}:module.aiPrompts.filter.search', default:'Search categories...')}" />
+        </div>
+        <label class="visually-hidden" for="aiu-ai-prompts-extension">
+            <f:translate key="{ll}:module.aiPrompts.filter.extension" default="Extension" />
+        </label>
+        <select id="aiu-ai-prompts-extension"
+                class="form-select aiu-ai-prompts__extension-select w-auto"
+                data-aiu-prompt-overview-extension>
+            <option value="all" {f:if(condition:'{aiPromptsFilters.extension} == \'all\'', then:'selected="selected"')}>
+                <f:translate key="{ll}:module.aiPrompts.filter.allExtensions" default="All Extensions" />
+            </option>
+            <f:for each="{aiPromptsOverview.extensions}" as="ext">
+                <option value="{ext.key}" {f:if(condition:'{aiPromptsFilters.extension} == {ext.key}', then:'selected="selected"')}>{ext.title}</option>
+            </f:for>
+        </select>
+        <button type="button" class="btn btn-default flex-shrink-0" data-aiu-prompt-overview-reset>
+            <f:translate key="{ll}:module.aiPrompts.filter.reset" default="Reset" />
+        </button>
+        <div class="aiu-ai-prompts__toolbar-actions">
+            <f:render partial="AiPrompts/AddPromptButton" arguments="{_all}" />
+        </div>
+    </div>
+</div>
+
+<div class="card-container aiu-ai-prompts__grid" data-aiu-prompt-overview-grid>
+    <f:for each="{aiPromptsOverview.categories}" as="category">
+        <div class="card card-size-small"
+             data-aiu-overview-category-card
+             data-category-provider-extension="{category.providerExtension}"
+             data-category-search="{category.title} {category.description} {category.extension} {category.providerExtension} {category.providerExtensionTitle}">
+            <div class="card-header">
+                <div class="card-header-body">
+                    <div class="card-header-body__top d-flex align-items-center justify-content-between gap-2">
+                        <h2 class="card-title text-truncate mb-0">{category.title}</h2>
+                        <f:if condition="{category.providerExtensionTitle}">
+                            <span class="badge badge-default flex-shrink-0">{category.providerExtensionTitle}</span>
+                        </f:if>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <f:if condition="{category.description}">
+                    <p class="card-text">{category.description}</p>
+                </f:if>
+                <f:if condition="{category.promptCount} > 0">
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge badge-default">{category.promptCount} prompts</span>
+                    </div>
+                </f:if>
+            </div>
+            <div class="card-footer">
+                <form method="post">
+                    <input type="hidden" name="id" value="{currentPageId}" />
+                    <input type="hidden" name="mode" value="detail" />
+                    <input type="hidden" name="category" value="{category.id}" />
+                    <button type="submit" class="btn btn-default">
+                        {category.manageLabel}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </f:for>
+</div>
+<p class="aiu-empty aiu-ai-prompts__grid-empty" data-aiu-overview-empty hidden="hidden">
+    <f:translate key="{ll}:module.aiPrompts.empty.categories" default="No prompt categories match your filters." />
+</p>
+</html>

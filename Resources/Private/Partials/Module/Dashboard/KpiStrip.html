@@ -1,0 +1,34 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="card-container mb-3 gap-3 aiu-dashboard-kpi-strip">
+    <f:for each="{kpiStrip}" as="kpi">
+        <div class="card card-size-small mb-0 aiu-kpi-strip-card w-100">
+            <div class="card-body aiu-kpi-strip-card__body">
+                <div class="aiu-kpi-strip-card__top">
+                    <div class="aiu-kpi-strip-card__icon" aria-hidden="true">
+                        <core:icon identifier="{kpi.iconIdentifier}" size="small" alternativeMarkupIdentifier="inline" />
+                    </div>
+                    <div class="aiu-kpi-strip-card__trend">
+                        <f:if condition="{kpi.trend.changePercent} != 0">
+                            <f:then>
+                                <f:render partial="Module/Dashboard/TrendBadge" arguments="{trend: kpi.trend}" />
+                            </f:then>
+                            <f:else>
+                                <span class="aiu-kpi-strip-card__trend-placeholder" aria-hidden="true">—</span>
+                            </f:else>
+                        </f:if>
+                    </div>
+                </div>
+                <p class="aiu-kpi-strip-card__label mb-0">
+                    <f:translate key="{ll}:dashboard.kpi.{kpi.id}" default="{kpi.id}" />
+                </p>
+                <p class="aiu-kpi-strip-card__value mb-0">{kpi.value}</p>
+                <p class="aiu-kpi-strip-card__meta mb-0 text-truncate">{kpi.subLabel}</p>
+            </div>
+        </div>
+    </f:for>
+</div>
+</html>

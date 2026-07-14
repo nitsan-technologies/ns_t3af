@@ -1,0 +1,47 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<form method="post" class="aiu-ai-usage__mode-form">
+    <f:render partial="AiUsage/PreserveFilterFields" arguments="{_all}" />
+    <input type="hidden" name="mode" value="{aiUsageMode}" />
+    <f:if condition="{aiUsagePeriod.key} == 'custom'">
+        <f:then>
+            <input type="hidden" name="period" value="custom" />
+            <input type="hidden" name="from" value="{aiUsagePeriod.fromDate}" />
+            <input type="hidden" name="to" value="{aiUsagePeriod.toDate}" />
+        </f:then>
+        <f:else>
+            <input type="hidden" name="period" value="{aiUsagePeriod.key}" />
+        </f:else>
+    </f:if>
+    <div class="aiu-ai-usage__toolbar">
+        <div class="btn-group" role="group" aria-label="{f:translate(key: '{ll}:module.aiUsage.mode.aria', default: 'AI Usage views')}">
+            <button type="submit"
+                    name="mode"
+                    value="log"
+                    class="btn btn-default {f:if(condition: '{aiUsageMode} == \'log\'', then: 'active is-active')}"
+                    role="tab"
+                    aria-selected="{f:if(condition: '{aiUsageMode} == \'log\'', then: 'true', else: 'false')}"
+                    data-aiu-usage-mode="log">
+                <f:translate key="{ll}:module.aiUsage.mode.requestLog" default="Request Log" />
+            </button>
+            <button type="submit"
+                    name="mode"
+                    value="summary"
+                    class="btn btn-default {f:if(condition: '{aiUsageMode} == \'summary\'', then: 'active is-active')}"
+                    role="tab"
+                    aria-selected="{f:if(condition: '{aiUsageMode} == \'summary\'', then: 'true', else: 'false')}"
+                    data-aiu-usage-mode="summary">
+                <f:translate key="{ll}:module.aiUsage.mode.usageSummary" default="Usage Summary" />
+            </button>
+        </div>
+        <f:render partial="Module/PeriodDropdown" arguments="{
+            periodLabel: aiUsagePeriodLabel,
+            periodPresets: aiUsagePeriodPresets,
+            periodFromDate: aiUsagePeriodFromDate,
+            periodToDate: aiUsagePeriodToDate,
+            periodFormAction: aiUsagePeriodFormAction,
+            periodFormId: 'aiusage'
+        }" />
+    </div>
+</form>
+</html>

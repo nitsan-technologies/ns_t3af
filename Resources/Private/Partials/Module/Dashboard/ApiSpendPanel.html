@@ -1,0 +1,38 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="card card-size-small mb-0 w-100 h-100 aiu-api-spend-panel">
+    <div class="card-header">
+        <h2 class="card-title mb-0">
+            <f:translate key="{ll}:dashboard.spend.title" default="7-day API spend" />
+        </h2>
+    </div>
+    <div class="card-body d-flex flex-column gap-3">
+        <div>
+            <p class="h2 fw-bold mb-1">{apiSpendSummary.totalFormatted}</p>
+            <p class="small text-variant mb-0">{apiSpendSummary.dailyAvgFormatted}</p>
+        </div>
+        <f:if condition="{apiSpendSummary.rows -> f:count()} > 0">
+            <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
+                <f:for each="{apiSpendSummary.rows}" as="row">
+                    <li>
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span>{row.label}</span>
+                            <span class="fw-semibold">{row.costFormatted}</span>
+                        </div>
+                        <div class="progress" role="presentation" style="height: 6px;">
+                            <div class="progress-bar" style="width: {row.barPercent}%"></div>
+                        </div>
+                    </li>
+                </f:for>
+            </ul>
+        </f:if>
+        <a href="{providersUri}" class="btn btn-default mt-auto">
+            <f:translate key="{ll}:dashboard.spend.manageKeys" default="Manage API Keys" />
+            <core:icon identifier="actions-chevron-right" size="small" />
+        </a>
+    </div>
+</div>
+</html>

@@ -1,0 +1,114 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<f:variable name="totals" value="{dashboardAnalyticsCredits.totals}" />
+<f:variable name="balance" value="{creditsDashboard.balance}" />
+<f:variable name="stats" value="{creditsDashboard.stats}" />
+
+<f:render partial="Module/Dashboard/ModeBanner" arguments="{
+    modeLabelKey: 'dashboard.mode.credits.label',
+    bannerModifier: 'aiu-dashboard-mode-banner--credits',
+    iconIdentifier: 'actions-wallet',
+    showActiveBadge: creditsModeActive,
+    configuredCount: 0,
+    manageHref: providersUri,
+    manageLabelKey: 'dashboard.mode.credits.manage'
+}" />
+
+<div class="aiu-dashboard__grid aiu-dashboard__grid--hero">
+    <section class="aiu-panel aiu-panel--hero-balance">
+        <div class="aiu-hero-balance">
+            <f:if condition="{creditsModeActive} == 1">
+                <f:then>
+                    <p class="aiu-hero-balance__eyebrow">
+                        <f:translate key="{ll}:credits.dashboard.balance.title" default="Credit Balance" />
+                    </p>
+                    <div class="aiu-hero-balance__ring-wrap">
+                        <div class="aiu-credits-ring aiu-credits-ring--hero" style="--aiu-ring-percent: {balance.percentLeft}" role="img" aria-label="{balance.percentLeft} percent remaining">
+                            <div class="aiu-credits-ring__inner">
+                                <span class="aiu-credits-ring__value">{balance.percentLeft}%</span>
+                                <span class="aiu-credits-ring__label"><f:translate key="{ll}:dashboard.kpi.left" default="left" /></span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="aiu-hero-balance__amount">
+                        <span class="aiu-hero-balance__amount-primary">{balance.remainingFormatted}</span>
+                        <span class="aiu-hero-balance__amount-sep">/</span>
+                        <span class="aiu-hero-balance__amount-secondary">{balance.totalFormatted}</span>
+                    </p>
+                    <div class="aiu-hero-balance__actions">
+                        <a href="{providersUri}" class="aiu-hero-balance__btn aiu-hero-balance__btn--primary">
+                            <f:translate key="{ll}:dashboard.topUp" />
+                        </a>
+                        <a href="{providersUri}" class="aiu-hero-balance__btn aiu-hero-balance__btn--secondary">
+                            <f:translate key="{ll}:dashboard.manage" default="Manage" />
+                        </a>
+                    </div>
+                </f:then>
+                <f:else>
+                    <div class="aiu-hero-balance__inactive">
+                        <p class="aiu-hero-balance__inactive-text"><f:translate key="{ll}:dashboard.activateCreditsHint" /></p>
+                        <span class="aiu-hero-balance__btn aiu-hero-balance__btn--primary aiu-pill--activate" data-credits-activate role="button" tabindex="0">
+                            <f:translate key="{ll}:provider.mode.credits.activate" />
+                        </span>
+                    </div>
+                </f:else>
+            </f:if>
+        </div>
+    </section>
+    <section class="aiu-panel aiu-panel--chart-wide">
+        <div class="aiu-panel__head">
+            <h3 class="aiu-panel__title"><f:translate key="{ll}:dashboard.chart.creditsBurnTitle" /></h3>
+            <span class="aiu-panel__meta">{dashboardPeriodRangeLabel}</span>
+        </div>
+        <div class="aiu-panel__chart">
+            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'credits-stacked', chartConfig: chartCreditsStackedBurn}" />
+        </div>
+    </section>
+    <section class="aiu-panel aiu-panel--extension-spend">
+        <div class="aiu-panel__head">
+            <h3 class="aiu-panel__title"><f:translate key="{ll}:dashboard.chart.extensionSpend" /></h3>
+        </div>
+        <div class="aiu-panel__body aiu-panel__body--extension-spend">
+            <ul class="aiu-extension-spend-list">
+                <f:for each="{dashboardAnalyticsCredits.extensionSpendRows}" as="row">
+                    <li class="aiu-extension-spend-list__item">
+                        <span class="aiu-extension-spend-list__label">{row.extensionKey}</span>
+                        <span class="aiu-extension-spend-list__value">{row.credits -> f:format.number(decimals: 0)} cr</span>
+                    </li>
+                </f:for>
+            </ul>
+            <f:if condition="{creditProjection.runOutDate} != ''">
+                <p class="aiu-projection aiu-projection--extension-spend">
+                    <f:translate key="{ll}:dashboard.projection.runOut" arguments="{0: creditProjection.runOutDate, 1: creditProjection.dailyAvgFormatted}" />
+                    <a href="{providersUri}" class="aiu-projection__cta"><f:translate key="{ll}:dashboard.projection.buyMore" /></a>
+                </p>
+            </f:if>
+        </div>
+    </section>
+</div>
+
+<f:render partial="Module/Dashboard/FooterKpis" arguments="{analytics: dashboardAnalyticsCredits, trends: trendsCredits, costLabelKey: 'dashboard.kpi.creditsUsed', costDisplay: creditsFooterCost, extraLabelKey: 'dashboard.kpi.daysLeft', extraValue: creditsFooterExtra}" />
+
+<div class="aiu-dashboard__grid aiu-dashboard__grid--charts-secondary">
+    <section class="aiu-panel aiu-panel--chart-wide">
+        <div class="aiu-panel__head"><h3 class="aiu-panel__title"><f:translate key="{ll}:dashboard.chart.requestsTitle" /></h3></div>
+        <div class="aiu-panel__chart"><f:render partial="Module/DashboardChart" arguments="{chartKey: 'req-sf-credits', chartConfig: chartRequestsSuccessFail}" /></div>
+    </section>
+    <section class="aiu-panel aiu-panel--chart-side">
+        <div class="aiu-panel__head"><h3 class="aiu-panel__title"><f:translate key="{ll}:dashboard.chart.successRate" default="Success rate" /></h3></div>
+        <div class="aiu-panel__chart aiu-panel__chart--donut"><f:render partial="Module/DashboardChart" arguments="{chartKey: 'success-credits', chartConfig: chartSuccessRateCredits}" /></div>
+    </section>
+    <section class="aiu-panel aiu-panel--chart-side">
+        <div class="aiu-panel__head"><h3 class="aiu-panel__title"><f:translate key="{ll}:dashboard.chart.extensionUsage" default="Extensions Usage" /></h3></div>
+        <div class="aiu-panel__chart aiu-panel__chart--donut"><f:render partial="Module/DashboardChart" arguments="{chartKey: 'ext-usage-credits', chartConfig: chartExtensionUsageCredits}" /></div>
+    </section>
+    <section class="aiu-panel">
+        <div class="aiu-panel__head"><h3 class="aiu-panel__title"><f:translate key="{ll}:dashboard.chart.topExtensionsCredits" default="Top extensions by credits" /></h3></div>
+        <div class="aiu-panel__chart"><f:render partial="Module/DashboardChart" arguments="{chartKey: 'top-ext-cr', chartConfig: chartTopExtensionsCredits}" /></div>
+    </section>
+</div>
+
+<f:render partial="Module/Dashboard/InsightsRow" arguments="{analytics: dashboardAnalyticsCredits, activityColumnMode: 'credits', aiUsageUri: aiUsageUri, moduleHealth: moduleHealth}" />
+</html>

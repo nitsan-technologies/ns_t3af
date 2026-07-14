@@ -1,0 +1,433 @@
+/*!
+ * For Developers — layout-only CSS (TYPO3 core owns component chrome).
+ * @see context/Typo3CoreBackendDesign.generic.md
+ */
+
+.aiu-for-developers code,
+.aiu-for-developers pre {
+    font-family: var(--typo3-font-family-code, ui-monospace, monospace);
+}
+
+.aiu-for-developers .icon-size-small {
+    --icon-size: 20px;
+}
+
+.card-body.aiu-dev-cta__body .icon-size-small,
+.aiu-dev-arch-diagram__hub-grid .icon-size-small,
+.aiu-dev-built-on .icon-size-small {
+    --icon-size: 18px;
+}
+
+/* Equal-height card grids — no h-100 inside card-container */
+.aiu-dev-cards.card-container,
+.aiu-dev-arch__branches.card-container {
+    align-items: stretch;
+}
+
+.aiu-dev-cards.card-container .card,
+.aiu-dev-arch__branches.card-container .card {
+    align-self: stretch;
+    height: auto;
+}
+
+.aiu-dev-cards.card-container .card .card-footer {
+    margin-top: auto;
+}
+
+/* Getting started — three equal columns, full width */
+.aiu-dev-steps-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--typo3-spacing, 1rem);
+    width: 100%;
+}
+
+.aiu-dev-step-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: var(--typo3-state-primary-bg, var(--typo3-link-color, #205eb5));
+    color: var(--typo3-state-primary-color, #fff);
+}
+
+/* How it fits together — layout only (core .card / .badge own chrome) */
+.aiu-dev-flow-diagram {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--typo3-spacing, 1.25rem);
+    width: 100%;
+}
+
+.aiu-dev-flow-diagram__lane {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(1.5rem, 3.5rem) minmax(0, 1fr) minmax(1.5rem, 3.5rem) minmax(0, 1fr);
+    align-items: start;
+    gap: 0 .25rem;
+    width: 100%;
+    max-width: 40rem;
+}
+
+.aiu-dev-flow-diagram__node {
+    min-width: 0;
+    text-align: center;
+}
+
+.aiu-dev-flow-diagram__icon-box {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-bottom: .5rem;
+    border: 1px solid var(--aiu-border, #d7d7d7);
+    border-radius: var(--typo3-component-border-radius, .375rem);
+    background: var(--aiu-bg-white);
+}
+
+.aiu-dev-flow-diagram__icon-box typo3-backend-icon,
+.aiu-dev-flow-diagram__icon-box .typo3-backend-icon {
+    --icon-size: 18px;
+    display: inline-flex;
+}
+
+.aiu-dev-flow-diagram__label {
+    display: block;
+    font-weight: 600;
+}
+
+.aiu-dev-flow-diagram__connector {
+    align-self: start;
+    width: 100%;
+    margin-top: 1.2rem;
+    border-top: 1px dashed var(--aiu-border, #d7d7d7);
+}
+
+.aiu-dev-flow-diagram__divider {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+}
+
+.aiu-dev-flow-diagram__divider-line {
+    flex: 1 1 auto;
+    height: 1px;
+    background: var(--aiu-border, #d7d7d7);
+}
+
+.aiu-dev-flow-diagram__bridge {
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0 .75rem;
+    white-space: nowrap;
+    background: var(--typo3-card-bg, var(--aiu-bg-white));
+}
+
+.aiu-dev-flow-diagram__providers {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: .35rem;
+    width: 100%;
+}
+
+/* Architecture at a glance — layout only (core .card / .badge own chrome) */
+.aiu-dev-arch-diagram {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    max-width: 70rem;
+    margin-inline: auto;
+}
+
+.aiu-dev-arch-diagram__extensions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: .75rem 1rem;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto;
+}
+
+.aiu-dev-arch-diagram__plus {
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.aiu-dev-arch-diagram__arrow-down {
+    display: flex;
+    justify-content: center;
+    padding: .35rem 0;
+}
+
+.aiu-dev-arch-diagram__hub-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.aiu-dev-arch-diagram__hub-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .5rem;
+    justify-items: stretch;
+}
+
+.aiu-dev-arch-diagram__hub-grid .badge {
+   padding: 8px;
+   font-size: 12px;
+}
+
+.aiu-dev-arch-diagram__split {
+    position: relative;
+    width: 100%;
+    height: 4.5rem;
+}
+
+.aiu-dev-arch-diagram__split-stem {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 1.25rem;
+    transform: translateX(-50%);
+    background: var(--aiu-border, #d7d7d7);
+}
+
+.aiu-dev-arch-diagram__split-bar {
+    position: absolute;
+    top: 1.25rem;
+    left: 25%;
+    right: 25%;
+    height: 2px;
+    background: var(--aiu-border, #d7d7d7);
+}
+
+.aiu-dev-arch-diagram__split-leg {
+    position: absolute;
+    top: 1.25rem;
+    width: 2px;
+    height: 2.75rem;
+    background: var(--aiu-border, #d7d7d7);
+}
+
+.aiu-dev-arch-diagram__split-leg::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid var(--aiu-border, #d7d7d7);
+}
+
+.aiu-dev-arch-diagram__split-leg--left {
+    left: 25%;
+    transform: translateX(-50%);
+}
+
+.aiu-dev-arch-diagram__split-leg--right {
+    left: 75%;
+    right: auto;
+    transform: translateX(-50%);
+}
+
+.aiu-dev-arch-diagram__branches {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--typo3-spacing, 1.25rem);
+    width: 100%;
+    align-items: stretch;
+    margin-top: .25rem;
+}
+
+.aiu-dev-arch-diagram__branches > .card {
+    min-width: 0;
+    height: auto;
+}
+
+.aiu-dev-arch-diagram .badge code {
+    background: transparent;
+    padding: 0;
+}
+
+
+
+[data-color-scheme="dark"] .aiu-dev-arch-diagram__split-stem,
+[data-bs-theme="dark"] .aiu-dev-arch-diagram__split-stem,
+[data-color-scheme="dark"] .aiu-dev-arch-diagram__split-bar,
+[data-bs-theme="dark"] .aiu-dev-arch-diagram__split-bar,
+[data-color-scheme="dark"] .aiu-dev-arch-diagram__split-leg,
+[data-bs-theme="dark"] .aiu-dev-arch-diagram__split-leg {
+    background: var(--aiu-border, #4b4b4b);
+}
+
+[data-color-scheme="dark"] .aiu-dev-arch-diagram__split-leg::after,
+[data-bs-theme="dark"] .aiu-dev-arch-diagram__split-leg::after {
+    border-top-color: var(--aiu-border, #4b4b4b);
+}
+
+/* Architecture diagram connectors (legacy) */
+.aiu-dev-arch__connector {
+    width: 2px;
+    height: 1rem;
+    background: var(--aiu-border, #d7d7d7);
+}
+
+/* Ready to build CTA — text left, action right */
+.aiu-dev-cta__body {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--typo3-spacing, 1rem);
+}
+
+.aiu-dev-cta__text {
+    flex: 1 1 16rem;
+    min-width: 0;
+}
+
+/* Built on this today — pill row layout only */
+.aiu-dev-built-on {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .5rem;
+}
+
+.aiu-dev-built-on__cta {
+    border-style: dashed;
+    color: var(--typo3-link-color, var(--typo3-state-primary-bg, #205eb5));
+    border-color: var(--typo3-link-color, var(--typo3-state-primary-bg, #205eb5));
+}
+
+.aiu-dev-built-on__cta:hover,
+.aiu-dev-built-on__cta:focus {
+    color: var(--typo3-link-hover-color, var(--typo3-link-color, #205eb5));
+    border-color: var(--typo3-link-hover-color, var(--typo3-link-color, #205eb5));
+}
+
+/* Minimal integration example — code window (reuses --aiu-mcp-code-* tokens from base.css) */
+.aiu-for-developers .aiu-dev-code-example.aiu-mcp-code {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--aiu-mcp-code-border, #334155);
+    border-radius: var(--typo3-card-border-radius, var(--typo3-component-border-radius, .5rem));
+    background: var(--aiu-mcp-code-bg, #0f172a);
+}
+
+.aiu-for-developers .aiu-dev-code-example .aiu-mcp-code__toolbar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: .75rem;
+    padding: .55rem .85rem;
+    border-bottom: 1px solid var(--aiu-mcp-code-border, #334155);
+    background: rgba(255, 255, 255, .04);
+}
+
+.aiu-for-developers .aiu-dev-code-example__dots {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+}
+
+.aiu-for-developers .aiu-dev-code-example__dots span {
+    width: .65rem;
+    height: .65rem;
+    border-radius: 50%;
+}
+
+.aiu-for-developers .aiu-dev-code-example__dots span:nth-child(1) {
+    background: #ff5f57;
+}
+
+.aiu-for-developers .aiu-dev-code-example__dots span:nth-child(2) {
+    background: #febc2e;
+}
+
+.aiu-for-developers .aiu-dev-code-example__dots span:nth-child(3) {
+    background: #28c840;
+}
+
+.aiu-for-developers .aiu-dev-code-example .aiu-mcp-code__label {
+    justify-self: center;
+    color: var(--aiu-mcp-code-fg, #e2e8f0);
+    font-size: var(--typo3-font-size-small, .8125rem);
+    font-weight: 600;
+    text-align: center;
+}
+
+.aiu-for-developers .aiu-dev-code-example .aiu-mcp-code__toolbar .btn-link {
+    justify-self: end;
+    color: var(--aiu-mcp-code-fg, #e2e8f0);
+    font-size: var(--typo3-font-size-small, .8125rem);
+    text-decoration: none;
+}
+
+.aiu-for-developers .aiu-dev-code-example .aiu-mcp-code__toolbar .btn-link .t3js-icon,
+.aiu-for-developers .aiu-dev-code-example .aiu-mcp-code__toolbar .btn-link typo3-backend-icon {
+    color: currentColor;
+}
+
+.aiu-for-developers .aiu-dev-code-example .aiu-mcp-code__toolbar .btn-link:hover {
+    color: var(--aiu-mcp-code-fg, #f8fafc);
+    text-decoration: underline;
+}
+
+.aiu-for-developers .aiu-dev-code-example .aiu-mcp-code__pre,
+.aiu-for-developers .aiu-dev-code-example pre.aiu-mcp-code__pre,
+.aiu-module-page .aiu-for-developers .aiu-dev-code-example .aiu-mcp-code__pre,
+.aiu-module-page .aiu-for-developers .aiu-dev-code-example .aiu-mcp-code__pre code {
+    display: block;
+    margin: 0 !important;
+    padding: 1rem 1.15rem !important;
+    overflow-x: auto;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--aiu-mcp-code-fg, #e2e8f0) !important;
+    font-family: var(--typo3-font-family-code, ui-monospace, monospace);
+    font-size: var(--typo3-font-size-small, .8125rem);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+
+
+[data-color-scheme="dark"] .aiu-dev-arch__connector,
+[data-bs-theme="dark"] .aiu-dev-arch__connector,
+[data-color-scheme="dark"] .aiu-dev-flow-diagram__divider-line,
+[data-bs-theme="dark"] .aiu-dev-flow-diagram__divider-line,
+[data-color-scheme="dark"] .aiu-dev-flow-diagram__connector,
+[data-bs-theme="dark"] .aiu-dev-flow-diagram__connector {
+    border-color: var(--aiu-border, #4b4b4b);
+}
+
+[data-color-scheme="dark"] .aiu-dev-flow-diagram__divider-line,
+[data-bs-theme="dark"] .aiu-dev-flow-diagram__divider-line {
+    background: var(--aiu-border, #4b4b4b);
+}
+
+[data-color-scheme="dark"] .aiu-dev-flow-diagram__bridge,
+[data-bs-theme="dark"] .aiu-dev-flow-diagram__bridge {
+    background: var(--typo3-card-bg, var(--typo3-surface-container-default, #1e1e1e));
+}
+
+[data-color-scheme="dark"] .aiu-dev-flow-diagram__icon-box,
+[data-bs-theme="dark"] .aiu-dev-flow-diagram__icon-box {
+    background: var(--typo3-surface-container-default, #1e1e1e);
+}

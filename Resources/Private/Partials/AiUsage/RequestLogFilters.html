@@ -1,0 +1,83 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<form method="get" action="{aiUsageListUri}" class="aiu-ai-usage__filters mb-3" id="aiu-ai-usage-filter">
+    <f:if condition="{aiUsagePeriod.key} == 'custom'">
+        <f:then>
+            <input type="hidden" name="period" value="custom" />
+            <input type="hidden" name="from" value="{aiUsagePeriod.fromDate}" />
+            <input type="hidden" name="to" value="{aiUsagePeriod.toDate}" />
+        </f:then>
+        <f:else>
+            <input type="hidden" name="period" value="{aiUsagePeriod.key}" />
+        </f:else>
+    </f:if>
+    <input type="hidden" name="mode" value="log" />
+    <input type="hidden" name="currentPage" value="1" />
+    <input type="hidden" name="max" value="{aiUsageFilters.max}" />
+
+    <div class="aiu-toolbar aiu-ai-usage__filter-toolbar">
+        <div class="input-group aiu-ai-usage__search flex-grow-1">
+            <label class="visually-hidden" for="aiu-ai-usage-search">
+                <f:translate key="{ll}:module.aiUsage.filter.search" default="Search requests" />
+            </label>
+            <input type="search"
+                   id="aiu-ai-usage-search"
+                   name="search"
+                   class="form-control"
+                   value="{aiUsageFilters.search}"
+                   data-aiu-filter-initial="{aiUsageFilters.search}"
+                   autocomplete="off"
+                   autocorrect="off"
+                   autocapitalize="off"
+                   spellcheck="false"
+                   data-1p-ignore="true"
+                   data-lpignore="true"
+                   data-form-type="other"
+                   placeholder="{f:translate(key: '{ll}:module.aiUsage.filter.search', default:'Search requests...')}" />
+        </div>
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-1 flex-shrink-0">
+            <core:icon identifier="actions-filter" size="small" />
+            <f:translate key="{ll}:module.aiUsage.filter.apply" default="Apply Filters" />
+        </button>
+        <a class="btn btn-default d-inline-flex align-items-center gap-1 flex-shrink-0"
+           href="{f:be.uri(route: 't3af_dashboard.ai_usage', parameters: {mode: 'log', period: '7d'})}">
+            <core:icon identifier="actions-close" size="small" />
+            <f:translate key="{ll}:module.aiUsage.filter.reset" default="Reset" />
+        </a>
+    </div>
+
+    <div class="aiu-ai-usage__filter-grid">
+        <f:render section="selectField" arguments="{labelKey: 'module.aiUsage.filter.engine', name: 'engine', value: aiUsageFilters.engine, options: aiUsageFilterOptions.engines, anyLabel: 'Any'}" />
+        <f:render section="selectField" arguments="{labelKey: 'module.aiUsage.filter.model', name: 'model', value: aiUsageFilters.model, options: aiUsageFilterOptions.models, anyLabel: 'Any'}" />
+        <f:render section="selectField" arguments="{labelKey: 'module.aiUsage.filter.module', name: 'module', value: aiUsageFilters.module, options: aiUsageFilterOptions.modules, anyLabel: 'Any'}" />
+        <f:render section="selectField" arguments="{labelKey: 'module.aiUsage.filter.scope', name: 'scope', value: aiUsageFilters.scope, options: aiUsageFilterOptions.scopes, anyLabel: 'Any'}" />
+        <f:render section="selectField" arguments="{labelKey: 'module.aiUsage.filter.reqType', name: 'reqType', value: aiUsageFilters.reqType, options: aiUsageFilterOptions.reqTypes, anyLabel: 'Any'}" />
+
+        <div class="aiu-field">
+            <label class="aiu-field-label"><f:translate key="{ll}:module.aiUsage.filter.status" default="Status" /></label>
+            <select name="status" class="form-select">
+                <option value="All" {f:if(condition:'{aiUsageFilters.status} == \'All\'', then:'selected="selected"')}>All</option>
+                <option value="success" {f:if(condition:'{aiUsageFilters.status} == \'success\'', then:'selected="selected"')}>Success</option>
+                <option value="failed" {f:if(condition:'{aiUsageFilters.status} == \'failed\'', then:'selected="selected"')}>Failed</option>
+            </select>
+        </div>
+
+        <f:render section="selectField" arguments="{labelKey: 'module.aiUsage.filter.user', name: 'user', value: aiUsageFilters.user, options: aiUsageFilterOptions.users, anyLabel: 'ALL'}" />
+    </div>
+</form>
+
+<f:section name="selectField">
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+    <div class="aiu-field">
+        <label class="aiu-field-label"><f:translate key="{ll}:{labelKey}" default="{labelKey}" /></label>
+        <select name="{name}" class="form-select">
+            <option value="{anyLabel}" {f:if(condition:'{value} == {anyLabel}', then:'selected="selected"')}>{anyLabel}</option>
+            <f:for each="{options}" as="optionItem">
+                <option value="{optionItem}" {f:if(condition:'{value} == {optionItem}', then:'selected="selected"')}>{optionItem}</option>
+            </f:for>
+        </select>
+    </div>
+</f:section>
+</html>

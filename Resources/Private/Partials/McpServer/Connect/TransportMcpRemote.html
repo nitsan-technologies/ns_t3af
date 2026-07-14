@@ -1,0 +1,61 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="card aiu-mcp-transport-panel is-hidden" data-transport-panel="mcpremote" data-mcp-remote-token-uid="{mcpRemoteTokenUid}">
+    <div class="card-header">
+        <h3 class="card-title mb-1"><f:translate key="{ll}:module.mcpServer.transport.mcpremote.title" /></h3>
+        <p class="text-variant small"><f:translate key="{ll}:module.mcpServer.mcpremote.lead" /></p>
+    </div>
+    <div class="card-body">
+
+        <f:if condition="{mcpRemoteTokenActive} == 1">
+            <f:then>
+                <div class="callout callout-info">
+                    <strong><f:translate key="{ll}:module.mcpServer.mcpremote.activeTitle" /></strong>
+                    <p class="mb-0"><f:translate key="{ll}:module.mcpServer.mcpremote.activeText" /></p>
+                </div>
+                <div class="aiu-mcp-field-row">
+                    <div class="aiu-mcp-url-row">
+                        <code class="aiu-mcp-url-row__code" data-mcp-remote-url data-copy-target="mcp-remote-url">{mcpRemoteTokenUrl}</code>
+                        <button type="button" class="btn btn-sm btn-default" data-copy="mcp-remote-url">
+                            <f:translate key="{ll}:module.mcpServer.mcpremote.copyTokenUrl" />
+                        </button>
+                    </div>
+                </div>
+            </f:then>
+            <f:else>
+                <div class="callout callout-notice">
+                    <p class="mb-2"><f:translate key="{ll}:module.mcpServer.mcpremote.missing" /></p>
+                    <button type="button" class="btn btn-primary" data-action="issue-mcp-remote">
+                        <f:translate key="{ll}:module.mcpServer.mcpremote.create" />
+                    </button>
+                </div>
+            </f:else>
+        </f:if>
+
+        <div class="aiu-mcp-field-row mt-3">
+            <label class="form-label"><f:translate key="{ll}:module.mcpServer.mcpremote.configLabel" /></label>
+            <div class="aiu-mcp-code">
+                <button type="button" class="aiu-mcp-code__copy btn btn-sm btn-default" data-copy-snippet="mcpremote">
+                    <core:icon identifier="actions-clipboard" size="small" alternativeMarkupIdentifier="inline" />
+                    <f:translate key="{ll}:module.mcpServer.mcpremote.copyConfiguration" />
+                </button>
+                <pre class="aiu-mcp-code__pre" data-snippet="mcpremote">{mcpRemoteConfigJson}</pre>
+            </div>
+        </div>
+
+        <div class="callout callout-warning mt-3">
+            <div class="callout-content">
+                <div class="callout-title"><f:translate key="{ll}:module.mcpServer.mcpremote.securityTitle" /></div>
+                <div class="callout-body">
+                    <p class="mb-0"><f:translate key="{ll}:module.mcpServer.mcpremote.securityText" /></p>
+                </div>
+            </div>
+        </div>
+
+        <f:render partial="McpServer/Connect/ClientSetupGuides" arguments="{transportKey: 'mcpremote', transportClients: mcpTransportGuides.mcpremote, mcpSnippetArgs: mcpSnippetArgs}" />
+    </div>
+</div>
+</html>

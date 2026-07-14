@@ -1,0 +1,40 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<div class="aiu-dashboard__allowed-tabs">
+    <p class="text-variant mb-4">
+        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:dashboard.restricted.intro"
+                     default="Your account has access to the following AI Foundation areas. Open a section below to get started." />
+    </p>
+
+    <f:if condition="{allowedDashboardTabs}">
+        <f:then>
+            <div class="row g-3">
+                <f:for each="{allowedDashboardTabs}" as="tab">
+                    <div class="col-md-6 col-xl-4">
+                        <a href="{tab.href}" class="card aiu-dashboard-tab-card h-100 text-decoration-none">
+                            <div class="card-body d-flex flex-column gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <core:icon identifier="{tab.iconIdentifier}" size="small" />
+                                    <h2 class="h5 mb-0">{tab.title}</h2>
+                                </div>
+                                <p class="text-variant small mb-0 flex-grow-1">{tab.intro}</p>
+                                <span class="small fw-semibold">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:dashboard.restricted.open"
+                                                 default="Open section" />
+                                </span>
+                            </div>
+                        </a>
+                    </div>
+                </f:for>
+            </div>
+        </f:then>
+        <f:else>
+            <div class="alert alert-warning mb-0" role="status">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:dashboard.restricted.empty"
+                             default="No AI Foundation sections are assigned to your backend user group yet. Contact an administrator." />
+            </div>
+        </f:else>
+    </f:if>
+</div>
+</html>

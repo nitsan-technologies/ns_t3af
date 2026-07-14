@@ -1,0 +1,8 @@
+#cat=T3Planet Credits//10; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.t3planetApiBaseUrl
+t3planetApiBaseUrl = https://composer.t3planet.cloud
+
+#cat=T3Planet Credits//15; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.t3planetCreditsDomain
+t3planetCreditsDomain =
+
+#cat=T3Planet Credits//20; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.t3planetApiToken
+t3planetApiToken =

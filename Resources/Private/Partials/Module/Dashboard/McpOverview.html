@@ -1,0 +1,233 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<section class="mb-4 aiu-mcp-overview" aria-labelledby="aiu-mcp-overview-heading">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <h2 id="aiu-mcp-overview-heading" class="headline-spaced mb-0 mt-0">
+            <span class="d-inline-flex align-items-center gap-1">
+                <core:icon identifier="actions-server" size="small" alternativeMarkupIdentifier="inline" />
+                <f:translate key="{ll}:module.dashboard.mcpOverview.title" />
+            </span>
+        </h2>
+        <div class="btn-toolbar mb-0" role="toolbar" aria-label="{f:translate(key: '{ll}:module.dashboard.mcpOverview.title')}">
+            <a href="{mcpOverview.serverStatus.mcpServerUri}" class="btn btn-sm btn-default">
+                <f:translate key="{ll}:module.dashboard.mcpOverview.link.server" />
+            </a>
+            <a href="{mcpOverview.topTools.mcpToolsUri}" class="btn btn-sm btn-default">
+                <f:translate key="{ll}:module.dashboard.mcpOverview.link.tools" />
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-4 d-flex">
+        <div class="card w-100 mb-0">
+            <div class="card-header">
+                <div class="card-icon">
+                    <core:icon identifier="actions-server" size="small" alternativeMarkupIdentifier="inline" />
+                </div>
+                <div class="card-header-body">
+                    <div class="card-header-body__top d-flex align-items-start justify-content-between gap-2">
+                        <h2 class="card-title text-truncate mb-0">
+                            <f:translate key="{ll}:module.dashboard.mcpOverview.server.title" />
+                        </h2>
+                        <span class="badge{f:if(condition: '{mcpOverview.serverStatus.online} == 1', then: ' badge-success', else: ' badge-danger')} flex-shrink-0">
+                            {mcpOverview.serverStatus.onlineLabel}
+                        </span>
+                    </div>
+                    <span class="card-subtitle">
+                        <f:translate key="{ll}:module.dashboard.mcpOverview.server.subtitle" />
+                    </span>
+                </div>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <dl class="mb-3">
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        <dt class="mb-0 fw-bold">
+                            <f:translate key="{ll}:module.dashboard.mcpOverview.server.endpoint" />
+                        </dt>
+                        <dd class="mb-0 min-w-0 flex-grow-1">
+                            <code class="d-block text-truncate">{mcpOverview.serverStatus.endpoint}</code>
+                        </dd>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mb-2">
+                        <dt class="mb-0 fw-bold">
+                            <f:translate key="{ll}:module.dashboard.mcpOverview.server.oauthEndpoints" />
+                        </dt>
+                        <dd class="mb-0">
+                            <f:translate key="{ll}:module.dashboard.mcpOverview.server.oauthConfigured"
+                                         arguments="{0: mcpOverview.serverStatus.oauthEndpointsConfigured}" />
+                        </dd>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mb-0">
+                        <dt class="mb-0 fw-bold">
+                            <f:translate key="{ll}:module.dashboard.mcpOverview.server.uptime" />
+                        </dt>
+                        <dd class="mb-0">{mcpOverview.serverStatus.uptime}</dd>
+                    </div>
+                </dl>
+
+                <div class="fw-bold h4 mb-2">
+                    <f:translate key="{ll}:module.dashboard.mcpOverview.server.transports" />
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-1 mb-3">
+                    <f:for each="{mcpOverview.serverStatus.transports}" as="transport">
+                        <span class="badge badge-default">
+                            {transport.label}
+                            <f:if condition="{transport.count} > 0">
+                                ({transport.count})
+                            </f:if>
+                        </span>
+                    </f:for>
+                </div>
+
+                <div class="row g-0 text-center border-top pt-3 mt-auto">
+                    <div class="col-4">
+                        <div class="h4 fw-bold mb-0">{mcpOverview.serverStatus.clientCount}</div>
+                        <div class="small text-variant">
+                            <f:translate key="{ll}:module.dashboard.mcpOverview.server.clients" />
+                        </div>
+                    </div>
+                    <div class="col-4 border-start">
+                        <div class="h4 fw-bold mb-0">{mcpOverview.serverStatus.toolCount}</div>
+                        <div class="small text-variant">
+                            <f:translate key="{ll}:module.dashboard.mcpOverview.server.tools" />
+                        </div>
+                    </div>
+                    <div class="col-4 border-start">
+                        <div class="h4 fw-bold mb-0{f:if(condition: '{mcpOverview.serverStatus.successHigh} == 1', then: ' text-success', else: ' text-warning')}">
+                            {mcpOverview.serverStatus.successRateFormatted}
+                        </div>
+                        <div class="small text-variant">
+                            <f:translate key="{ll}:module.dashboard.mcpOverview.server.success" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{mcpOverview.serverStatus.mcpServerUri}" class="btn btn-default">
+                    <f:translate key="{ll}:module.dashboard.mcpOverview.server.action" />
+                </a>
+            </div>
+        </div>
+        </div>
+
+        <div class="col-12 col-lg-4 d-flex">
+        <div class="card w-100 mb-0">
+            <div class="card-header">
+                <div class="card-icon">
+                    <core:icon identifier="actions-code" size="small" alternativeMarkupIdentifier="inline" />
+                </div>
+                <div class="card-header-body">
+                    <h2 class="card-title">
+                        <f:translate key="{ll}:module.dashboard.mcpOverview.tools.title" />
+                    </h2>
+                    <span class="card-subtitle">
+                        {mcpOverview.topTools.periodLabel}
+                        ·
+                        <f:translate key="{ll}:module.dashboard.mcpOverview.tools.calls"
+                                     arguments="{0: mcpOverview.topTools.totalCallsFormatted}" />
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <f:if condition="{mcpOverview.topTools.hasItems} == 1">
+                    <f:then>
+                        <ul class="list-unstyled mb-0">
+                            <f:for each="{mcpOverview.topTools.items}" as="tool">
+                                <li class="mb-2">
+                                    <div class="d-flex align-items-start justify-content-between gap-2 mb-1">
+                                        <div class="d-flex align-items-center gap-1 min-w-0">
+                                            <span class="small text-variant">{tool.rank}</span>
+                                            <code class="text-truncate">{tool.toolName}</code>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                                            <span>{tool.callsFormatted}</span>
+                                            <span class="badge{f:if(condition: '{tool.successHigh} == 1', then: ' badge-success', else: ' badge-warning')}">
+                                                {tool.successRateFormatted}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="progress" role="presentation">
+                                        <div class="progress-bar" style="width: {tool.barPercent}%"></div>
+                                    </div>
+                                </li>
+                            </f:for>
+                        </ul>
+                    </f:then>
+                    <f:else>
+                        <p class="card-text text-variant mb-0">
+                            <f:translate key="{ll}:module.dashboard.mcpOverview.tools.empty" />
+                        </p>
+                    </f:else>
+                </f:if>
+            </div>
+            <div class="card-footer">
+                <a href="{mcpOverview.topTools.mcpToolsUri}" class="btn btn-default">
+                    <f:translate key="{ll}:module.dashboard.mcpOverview.tools.action"
+                                 arguments="{0: mcpOverview.topTools.toolCount}" />
+                </a>
+            </div>
+        </div>
+        </div>
+
+        <div class="col-12 col-lg-4 d-flex">
+        <div class="card w-100 mb-0">
+            <div class="card-header">
+                <div class="card-icon">
+                    <core:icon identifier="actions-user" size="small" alternativeMarkupIdentifier="inline" />
+                </div>
+                <div class="card-header-body">
+                    <h2 class="card-title">
+                        <f:translate key="{ll}:module.dashboard.mcpOverview.clients.title" />
+                    </h2>
+                    <span class="card-subtitle">
+                        <f:translate key="{ll}:module.dashboard.mcpOverview.clients.connected"
+                                     arguments="{0: mcpOverview.activeClients.count}" />
+                    </span>
+                </div>
+            </div>
+            <f:if condition="{mcpOverview.activeClients.hasItems} == 1">
+                <f:then>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush">
+                            <f:for each="{mcpOverview.activeClients.items}" as="client">
+                                <li class="list-group-item d-flex align-items-start gap-2">
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="text-truncate">{client.name}</div>
+                                        <div class="d-flex flex-wrap align-items-center gap-1 mt-1">
+                                            <span class="badge badge-default">{client.transport}</span>
+                                            <span class="small text-variant">{client.since}</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-end flex-shrink-0">
+                                        <div>{client.callsFormatted}</div>
+                                        <div class="small text-variant">
+                                            <f:translate key="{ll}:module.dashboard.mcpOverview.clients.calls" />
+                                        </div>
+                                    </div>
+                                </li>
+                            </f:for>
+                        </ul>
+                    </div>
+                </f:then>
+                <f:else>
+                    <div class="card-body">
+                        <p class="card-text text-variant mb-0">
+                            <f:translate key="{ll}:module.dashboard.mcpOverview.clients.empty" />
+                        </p>
+                    </div>
+                </f:else>
+            </f:if>
+            <div class="card-footer">
+                <a href="{mcpOverview.activeClients.mcpServerUri}" class="btn btn-default">
+                    <f:translate key="{ll}:module.dashboard.mcpOverview.clients.action" />
+                </a>
+            </div>
+        </div>
+        </div>
+    </div>
+</section>
+</html>

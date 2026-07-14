@@ -1,0 +1,56 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<div class="dropdown aiu-period">
+    <button type="button"
+            class="btn btn-default dropdown-toggle aiu-period__btn d-inline-flex align-items-center gap-2"
+            data-bs-toggle="dropdown"
+            data-bs-auto-close="outside"
+            aria-expanded="false">
+        <core:icon identifier="actions-calendar" size="small" />
+        <span>{periodLabel}</span>
+    </button>
+    <div class="dropdown-menu dropdown-menu-end aiu-period__menu" role="menu" aria-label="{f:translate(key: '{ll}:dashboard.period.aria', default: 'Date range')}">
+        <f:for each="{periodPresets}" as="preset">
+            <a href="{preset.href}"
+               class="dropdown-item aiu-period__option{f:if(condition: '{preset.active} == 1', then: ' active')}"
+               role="menuitem">
+                {preset.label}
+            </a>
+        </f:for>
+        <div class="dropdown-divider"></div>
+        <h6 class="dropdown-header">
+            <f:translate key="{ll}:dashboard.period.customRange" default="Custom range" />
+        </h6>
+        <div class="dropdown-item-text aiu-period__custom">
+            <form class="aiu-period__custom-form" method="get" action="{periodFormAction}">
+                <input type="hidden" name="period" value="custom" />
+                <div class="mb-2">
+                    <label class="form-label" for="aiu-period-from-{periodFormId}">
+                        <f:translate key="{ll}:dashboard.period.from" default="From" />
+                    </label>
+                    <input type="date"
+                           id="aiu-period-from-{periodFormId}"
+                           class="form-control"
+                           name="from"
+                           value="{periodFromDate}" />
+                </div>
+                <div class="mb-2">
+                    <label class="form-label" for="aiu-period-to-{periodFormId}">
+                        <f:translate key="{ll}:dashboard.period.to" default="To" />
+                    </label>
+                    <input type="date"
+                           id="aiu-period-to-{periodFormId}"
+                           class="form-control"
+                           name="to"
+                           value="{periodToDate}" />
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm w-100">
+                    <f:translate key="{ll}:dashboard.period.apply" default="Apply" />
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+</html>

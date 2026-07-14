@@ -1,0 +1,655 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<script type="application/json" id="aiu-wizard-json-providers"><f:format.raw>{wizardProvidersJson}</f:format.raw></script>
+<script type="application/json" id="aiu-wizard-json-catalog"><f:format.raw>{wizardCatalogJson}</f:format.raw></script>
+<script type="application/json" id="aiu-wizard-json-extensions"><f:format.raw>{wizardExtensionsJson}</f:format.raw></script>
+<script type="application/json" id="aiu-wizard-json-ui"><f:format.raw>{wizardUiJson}</f:format.raw></script>
+
+<dialog id="aiu-setup-wizard-dialog"
+        class="aiu-wizard__dialog"
+        aria-labelledby="aiu-wizard-heading"
+        aria-describedby="aiu-wizard-step-label"
+        data-dashboard-uri="{dashboardUri}"
+        data-aiu-page-id="{currentPageId}"
+        data-credits-feature-available="{f:if(condition: '{creditsFeatureAvailable} == 1', then: '1', else: '0')}"
+        data-extensions-available="{wizardExtensionsAvailable}"
+        data-wizard-auto-open="{wizardAutoOpen}"
+        data-wizard-resume-step="{wizardResumeStep}"
+        data-wizard-max-step="{wizardMaxStep}">
+    <div class="aiu-wizard">
+        <header class="aiu-wizard__header">
+            <div class="aiu-wizard__header-top">
+                <p class="aiu-wizard__kicker small text-variant mb-2" id="aiu-wizard-step-label">
+                    <span class="aiu-wizard__kicker-icon" aria-hidden="true">
+                        <core:icon identifier="actions-star" size="small" alternativeMarkupIdentifier="inline" />
+                    </span>
+                    <span><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.kicker.before" /></span>
+                    <span data-aiu-wizard-kicker-step="">1</span>
+                    <span><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.kicker.after" /></span>
+                </p>
+                <button type="button" class="btn btn-default btn-sm aiu-wizard__close" data-aiu-wizard-close="" aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.close')}">
+                    <core:icon identifier="actions-close" size="small" alternativeMarkupIdentifier="inline" />
+                </button>
+            </div>
+            <h2 class="h2 mb-3" id="aiu-wizard-heading">
+                <span data-aiu-wizard-title><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step1.heading" /></span>
+            </h2>
+            <div class="aiu-wizard__stepper d-flex flex-wrap gap-1" role="tablist" aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.stepper.label')}">
+                <button type="button" class="btn btn-default btn-sm aiu-wizard__step-btn active is-active" role="tab" id="aiu-wizard-tab-1" data-aiu-wizard-goto="1" aria-selected="true" tabindex="0">
+                    <span class="aiu-wizard__step-num" aria-hidden="true">1</span>
+                    <span class="aiu-wizard__step-short"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.stepper.1.short" /></span>
+                </button>
+                <button type="button" class="btn btn-default btn-sm aiu-wizard__step-btn" role="tab" id="aiu-wizard-tab-2" data-aiu-wizard-goto="2" aria-selected="false" tabindex="-1">
+                    <span class="aiu-wizard__step-num" aria-hidden="true">2</span>
+                    <span class="aiu-wizard__step-short"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.stepper.2.short" /></span>
+                </button>
+                <button type="button" class="btn btn-default btn-sm aiu-wizard__step-btn" role="tab" id="aiu-wizard-tab-3" data-aiu-wizard-goto="3" aria-selected="false" tabindex="-1">
+                    <span class="aiu-wizard__step-num" aria-hidden="true">3</span>
+                    <span class="aiu-wizard__step-short"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.stepper.3.short" /></span>
+                </button>
+                <button type="button" class="btn btn-default btn-sm aiu-wizard__step-btn" role="tab" id="aiu-wizard-tab-4" data-aiu-wizard-goto="4" aria-selected="false" tabindex="-1">
+                    <span class="aiu-wizard__step-num" aria-hidden="true">4</span>
+                    <span class="aiu-wizard__step-short"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.stepper.4.short" /></span>
+                </button>
+                <f:if condition="{wizardExtensionsAvailable} == 1">
+                    <button type="button" class="btn btn-default btn-sm aiu-wizard__step-btn" role="tab" id="aiu-wizard-tab-5" data-aiu-wizard-goto="5" aria-selected="false" tabindex="-1">
+                        <span class="aiu-wizard__step-num" aria-hidden="true">5</span>
+                        <span class="aiu-wizard__step-short"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.stepper.5.short" /></span>
+                    </button>
+                </f:if>
+                <button type="button" class="btn btn-default btn-sm aiu-wizard__step-btn" role="tab" id="aiu-wizard-tab-6" data-aiu-wizard-goto="6" aria-selected="false" tabindex="-1">
+                    <span class="aiu-wizard__step-num" aria-hidden="true">6</span>
+                    <span class="aiu-wizard__step-short"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.stepper.6.short" /></span>
+                </button>
+                <button type="button" class="btn btn-default btn-sm aiu-wizard__step-btn" role="tab" id="aiu-wizard-tab-7" data-aiu-wizard-goto="7" aria-selected="false" tabindex="-1">
+                    <span class="aiu-wizard__step-num" aria-hidden="true">7</span>
+                    <span class="aiu-wizard__step-short"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.stepper.7.short" /></span>
+                </button>
+                <button type="button" class="btn btn-default btn-sm aiu-wizard__step-btn" role="tab" id="aiu-wizard-tab-8" data-aiu-wizard-goto="8" aria-selected="false" tabindex="-1">
+                    <span class="aiu-wizard__step-num" aria-hidden="true">8</span>
+                    <span class="aiu-wizard__step-short"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.stepper.8.short" /></span>
+                </button>
+            </div>
+        </header>
+
+        <div class="aiu-wizard__scroll">
+            <section class="aiu-wizard__panel is-active"
+                     data-aiu-wizard-step="1"
+                     data-wizard-heading="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step1.heading')}"
+                     role="tabpanel"
+                     aria-labelledby="aiu-wizard-tab-1"
+                     id="aiu-wizard-panel-1">
+                <div class="card card-size-small mb-1 w-100">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <core:icon identifier="{moduleIconIdentifier}" size="medium" alternativeMarkupIdentifier="inline" />
+                        </div>
+                        <div class="card-header-body">
+                            <div class="card-title mb-1"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step1.brand" /></div>
+                            <p class="mb-0 text-variant"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step1.lead" /></p>
+                        </div>
+                    </div>
+                </div>
+                <h3 class="h4 mb-1"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step1.previewHeading" /></h3>
+                <ul class="aiu-wizard__preview-list list-group mb-1">
+                    <li class="aiu-wizard__preview-item list-group-item d-flex align-items-center gap-3">
+                        <span class="flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-key" size="small" alternativeMarkupIdentifier="inline" /></span>
+                        <div class="aiu-wizard__preview-copy">
+                            <div class="fw-semibold"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.preview.mode.title" /></div>
+                            <div class="text-variant small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.preview.mode.desc" /></div>
+                        </div>
+                        <span class="badge badge-success flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" /></span>
+                    </li>
+                    <li class="aiu-wizard__preview-item list-group-item d-flex align-items-center gap-3">
+                        <span class="flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-lightbulb-on" size="small" alternativeMarkupIdentifier="inline" /></span>
+                        <div class="aiu-wizard__preview-copy">
+                            <div class="fw-semibold"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.preview.extensions.title" /></div>
+                            <div class="text-variant small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.preview.extensions.desc" /></div>
+                        </div>
+                        <span class="badge badge-success flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" /></span>
+                    </li>
+                    <li class="aiu-wizard__preview-item list-group-item d-flex align-items-center gap-3">
+                        <span class="flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-link" size="small" alternativeMarkupIdentifier="inline" /></span>
+                        <div class="aiu-wizard__preview-copy">
+                            <div class="fw-semibold"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.preview.mcp.title" /></div>
+                            <div class="text-variant small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.preview.mcp.desc" /></div>
+                        </div>
+                        <span class="badge badge-success flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" /></span>
+                    </li>
+                </ul>
+                <div class="callout callout-info mb-0" role="note">
+                    <div class="callout-icon">
+                        <core:icon identifier="actions-info" size="small" alternativeMarkupIdentifier="inline" />
+                    </div>
+                    <div class="callout-body">
+                        <p class="mb-0"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step1.skipNote" /></p>
+                    </div>
+                </div>
+                <footer class="aiu-wizard__footer module-footer py-0">
+                    <div class="btn-toolbar w-100 align-items-center pt-3" role="toolbar">
+                        <button type="button" class="btn btn-default aiu-wizard__skip" data-aiu-wizard-skip=""><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.skip" /></button>
+                        <div class="btn-toolbar ms-auto" role="toolbar">
+                            <button type="button" class="btn btn-primary aiu-wizard__primary d-inline-flex align-items-center gap-1" data-aiu-wizard-next="">
+                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.start" />
+                            </button>
+                        </div>
+                    </div>
+                </footer>
+            </section>
+
+            <section class="aiu-wizard__panel"
+                     data-aiu-wizard-step="2"
+                     data-wizard-heading="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.mainHeading')}"
+                     role="tabpanel"
+                     aria-labelledby="aiu-wizard-tab-2"
+                     id="aiu-wizard-panel-2"
+                     hidden="">
+                <div class="aiu-mode aiu-wizard__mode" role="radiogroup" aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.mainHeading')}">
+                    <header class="aiu-mode__head aiu-wizard__mode-head">
+                        <p class="aiu-mode__head-sub"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.sub" /></p>
+                    </header>
+                    <button type="button" class="aiu-mode__card aiu-mode__card--credits{f:if(condition: '{creditsFeatureAvailable} == 0', then: ' is-disabled')}" data-aiu-wizard-mode="credits" aria-pressed="false" aria-disabled="{f:if(condition: '{creditsFeatureAvailable} == 0', then: 'true', else: 'false')}">
+                        <div class="aiu-mode__content">
+                            <div class="aiu-mode__title-row">
+                                <span class="aiu-mode__icon" aria-hidden="true">
+                                    <core:icon identifier="actions-wallet" size="small" alternativeMarkupIdentifier="inline" />
+                                </span>
+                                <span class="aiu-mode__title"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.credits.title" /></span>
+                                <f:if condition="{creditsFeatureAvailable} == 0">
+                                    <f:then>
+                                        <span class="aiu-pill badge badge-secondary ms-auto"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.comingSoon" /></span>
+                                    </f:then>
+                                    <f:else>
+                                        <span class="aiu-pill aiu-pill--recommended badge badge-warning"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.credits.badge" /></span>
+                                    </f:else>
+                                </f:if>
+                            </div>
+                            <p class="aiu-mode__desc"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.credits.desc" /></p>
+                            <div class="aiu-mode__meta aiu-mode__meta--checks pb-2">
+                                <span class="ok"><core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" /> <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.credits.meta1" /></span>
+                                <span class="ok"><core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" /> <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.credits.meta2" /></span>
+                                <span class="ok"><core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" /> <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.credits.meta3" /></span>
+                            </div>
+                            <p class="aiu-mode__pricing"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.credits.pricing" /></p>
+                        </div>
+                    </button>
+                    <button type="button" class="aiu-mode__card aiu-mode__card--ownkeys is-active" data-aiu-wizard-mode="ownkeys" aria-pressed="true">
+                        <div class="aiu-mode__content">
+                            <div class="aiu-mode__title-row">
+                                <span class="aiu-mode__icon" aria-hidden="true">
+                                    <core:icon identifier="actions-key" size="small" alternativeMarkupIdentifier="inline" />
+                                </span>
+                                <span class="aiu-mode__title"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.own.title" /></span>
+                                <span class="aiu-pill aiu-pill--advanced"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.own.badge" /></span>
+                            </div>
+                            <p class="aiu-mode__desc"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.own.desc" /></p>
+                            <div class="aiu-mode__meta aiu-mode__meta--checks">
+                                <span class="muted"><core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" /> <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.own.meta1" /></span>
+                                <span class="muted"><core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" /> <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.own.meta2" /></span>
+                                <span class="muted"><core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" /> <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step2.own.meta3" /></span>
+                            </div>
+                        </div>
+                    </button>
+                </div>
+                <footer class="aiu-wizard__footer module-footer py-0">
+                    <div class="btn-toolbar w-100 align-items-center pt-3" role="toolbar">
+                        <button type="button" class="btn btn-default aiu-wizard__skip" data-aiu-wizard-skip=""><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.skip" /></button>
+                        <div class="btn-toolbar ms-auto" role="toolbar">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-default" data-aiu-wizard-prev=""><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.back" /></button>
+                                <button type="button" class="btn btn-primary aiu-wizard__primary d-inline-flex align-items-center gap-1" data-aiu-wizard-next="">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.continue" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </footer>
+            </section>
+
+            <section class="aiu-wizard__panel"
+                     data-aiu-wizard-step="3"
+                     data-wizard-heading="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.mainHeading')}"
+                     role="tabpanel"
+                     aria-labelledby="aiu-wizard-tab-3"
+                     id="aiu-wizard-panel-3"
+                     hidden="">
+                <div id="aiu-wizard-provider-own">
+                    <p class="aiu-wizard__panel-lead aiu-wizard__panel-lead--step3 small">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.lead" />
+                    </p>
+                    <div id="aiu-wizard-provider-list-mount"
+                         class="aiu-wizard__catalog-grid"
+                         role="radiogroup"
+                         aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.pickHeading')}"></div>
+                </div>
+                <div id="aiu-wizard-provider-credits" hidden="">
+                    <div class="callout callout-info mb-3" role="status">
+                        <div class="callout-icon">
+                            <core:icon identifier="actions-wallet" size="small" alternativeMarkupIdentifier="inline" />
+                        </div>
+                        <div class="callout-content">
+                            <div class="callout-title">
+                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsNoticeTitle" />
+                            </div>
+                            <div class="callout-body">
+                                <p class="mb-0">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsNoticeText" />
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <h3 class="h6 text-variant mb-2">
+                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsModelsHeading" />
+                    </h3>
+                    <div class="aiu-wizard__credits-models card-container mb-3" role="list">
+                        <article class="card card-size-small aiu-wizard__model-card w-100" role="listitem">
+                            <div class="card-body d-flex flex-column gap-2 py-3">
+                            <div class="aiu-wizard__model-card-head">
+                                <span class="aiu-wizard__model-icon" aria-hidden="true">
+                                    <core:icon identifier="actions-star" size="small" alternativeMarkupIdentifier="inline" />
+                                </span>
+                                <span class="fw-semibold small">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsModel.gpt4o.name" />
+                                </span>
+                            </div>
+                            <div class="aiu-wizard__model-card-foot">
+                                <span class="badge badge-default">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsModel.gpt4o.badge" />
+                                </span>
+                                <span class="aiu-wizard__model-rate text-variant small">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsModel.gpt4o.rate" />
+                                </span>
+                            </div>
+                            </div>
+                        </article>
+                        <article class="card card-size-small aiu-wizard__model-card w-100" role="listitem">
+                            <div class="card-body d-flex flex-column gap-2 py-3">
+                            <div class="aiu-wizard__model-card-head">
+                                <span class="aiu-wizard__model-icon" aria-hidden="true">
+                                    <core:icon identifier="actions-star" size="small" alternativeMarkupIdentifier="inline" />
+                                </span>
+                                <span class="fw-semibold small">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsModel.gpt4oMini.name" />
+                                </span>
+                            </div>
+                            <div class="aiu-wizard__model-card-foot">
+                                <span class="badge badge-default">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsModel.gpt4oMini.badge" />
+                                </span>
+                                <span class="aiu-wizard__model-rate text-variant small">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsModel.gpt4oMini.rate" />
+                                </span>
+                            </div>
+                            </div>
+                        </article>
+                        <article class="card card-size-small aiu-wizard__model-card w-100" role="listitem">
+                            <div class="card-body d-flex flex-column gap-2 py-3">
+                            <div class="aiu-wizard__model-card-head">
+                                <span class="aiu-wizard__model-icon" aria-hidden="true">
+                                    <core:icon identifier="actions-star" size="small" alternativeMarkupIdentifier="inline" />
+                                </span>
+                                <span class="fw-semibold small">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsModel.claude.name" />
+                                </span>
+                            </div>
+                            <div class="aiu-wizard__model-card-foot">
+                                <span class="badge badge-default">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsModel.claude.badge" />
+                                </span>
+                                <span class="aiu-wizard__model-rate text-variant small">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsModel.claude.rate" />
+                                </span>
+                            </div>
+                            </div>
+                        </article>
+                        <article class="card card-size-small aiu-wizard__model-card w-100" role="listitem">
+                            <div class="card-body d-flex flex-column gap-2 py-3">
+                            <div class="aiu-wizard__model-card-head">
+                                <span class="aiu-wizard__model-icon" aria-hidden="true">
+                                    <core:icon identifier="actions-star" size="small" alternativeMarkupIdentifier="inline" />
+                                </span>
+                                <span class="fw-semibold small">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsModel.gemini.name" />
+                                </span>
+                            </div>
+                            <div class="aiu-wizard__model-card-foot">
+                                <span class="badge badge-default">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsModel.gemini.badge" />
+                                </span>
+                                <span class="aiu-wizard__model-rate text-variant small">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsModel.gemini.rate" />
+                                </span>
+                            </div>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="callout callout-success mb-3" role="status">
+                        <div class="callout-icon">
+                            <core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" />
+                        </div>
+                        <div class="callout-body">
+                            <p class="mb-0">
+                                <f:format.raw>
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step3.creditsOk" />
+                                </f:format.raw>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <footer class="aiu-wizard__footer module-footer py-0">
+                    <div class="btn-toolbar w-100 align-items-center pt-3" role="toolbar">
+                        <button type="button" class="btn btn-default aiu-wizard__skip" data-aiu-wizard-skip=""><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.skip" /></button>
+                        <div class="btn-toolbar ms-auto" role="toolbar">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-default" data-aiu-wizard-prev=""><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.back" /></button>
+                                <button type="button" class="btn btn-primary aiu-wizard__primary d-inline-flex align-items-center gap-1" data-aiu-wizard-next="">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.continue" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </footer>
+            </section>
+
+            <section class="aiu-wizard__panel"
+                     data-aiu-wizard-step="4"
+                     data-wizard-heading="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step4.mainHeading')}"
+                     role="tabpanel"
+                     aria-labelledby="aiu-wizard-tab-4"
+                     id="aiu-wizard-panel-4"
+                     hidden="">
+                <div id="aiu-wizard-api-own">
+                    <p class="aiu-wizard__panel-lead aiu-wizard__panel-lead--step4" id="aiu-wizard-api-lead"></p>
+                    <div class="aiu-wizard__model-field mb-3">
+                        <div class="form-label mb-2"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step4.modelLabel" /></div>
+                        <div id="aiu-wizard-model-pills" class="aiu-wizard__model-pills d-flex flex-wrap gap-1" role="radiogroup" aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step4.modelLabel')}"></div>
+                    </div>
+                    <div class="aiu-field aiu-wizard__api-key-field mb-3" id="aiu-wizard-api-key-wrap">
+                        <label class="form-label" for="aiu-wizard-api-key">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step4.fieldLabel" />
+                            <span class="text-danger" aria-hidden="true"> *</span>
+                        </label>
+                        <div class="aiu-wizard__api-key-input-wrap">
+                            <input id="aiu-wizard-api-key" type="password" class="form-control" autocomplete="off" placeholder="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step4.placeholder')}" />
+                            <button type="button" class="btn btn-default btn-sm aiu-wizard__api-key-toggle" id="aiu-wizard-api-key-toggle" aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step4.toggleKey')}">
+                                <core:icon identifier="actions-eye" size="small" alternativeMarkupIdentifier="inline" />
+                            </button>
+                        </div>
+                        <span class="aiu-field-subnote small text-variant" id="aiu-wizard-api-key-help"></span>
+                    </div>
+                    <div class="aiu-wizard__row-actions">
+                        <button type="button" class="btn btn-default btn-sm" id="aiu-wizard-test-api" data-aiu-wizard-test-api="">
+                            <span class="aiu-wizard__test-icon" aria-hidden="true">
+                                <core:icon identifier="actions-refresh" size="small" alternativeMarkupIdentifier="inline" />
+                            </span>
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step4.test" />
+                        </button>
+                        <span class="aiu-wizard__test-status text-muted" id="aiu-wizard-test-status" aria-live="polite"></span>
+                    </div>
+                </div>
+                <div id="aiu-wizard-api-credits" hidden="">
+                    <div class="aiu-wizard__api-credits-hero">
+                        <span class="aiu-wizard__api-credits-icon" aria-hidden="true">
+                            <core:icon identifier="actions-check" size="large" alternativeMarkupIdentifier="inline" />
+                        </span>
+                        <h3 class="aiu-wizard__api-credits-title">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step4.headingCredits" />
+                        </h3>
+                        <p class="aiu-wizard__api-credits-lead">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step4.leadCredits" />
+                        </p>
+                        <ul class="list-group list-group-flush aiu-wizard__api-credits-features mb-0" role="list">
+                            <li class="list-group-item aiu-wizard__api-credits-feature border-0 px-0">
+                                <span class="aiu-wizard__api-credits-feature-icon" aria-hidden="true">
+                                    <core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" />
+                                </span>
+                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step4.creditsFeature1" />
+                            </li>
+                            <li class="list-group-item aiu-wizard__api-credits-feature border-0 px-0">
+                                <span class="aiu-wizard__api-credits-feature-icon" aria-hidden="true">
+                                    <core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" />
+                                </span>
+                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step4.creditsFeature2" />
+                            </li>
+                            <li class="list-group-item aiu-wizard__api-credits-feature border-0 px-0">
+                                <span class="aiu-wizard__api-credits-feature-icon" aria-hidden="true">
+                                    <core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" />
+                                </span>
+                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step4.creditsFeature3" />
+                            </li>
+                            <li class="list-group-item aiu-wizard__api-credits-feature border-0 px-0">
+                                <span class="aiu-wizard__api-credits-feature-icon" aria-hidden="true">
+                                    <core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" />
+                                </span>
+                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step4.creditsFeature4" />
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <footer class="aiu-wizard__footer module-footer py-0">
+                    <div class="btn-toolbar w-100 align-items-center pt-3" role="toolbar">
+                        <button type="button" class="btn btn-default aiu-wizard__skip" data-aiu-wizard-skip=""><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.skip" /></button>
+                        <div class="btn-toolbar ms-auto" role="toolbar">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-default" data-aiu-wizard-prev=""><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.back" /></button>
+                                <button type="button" class="btn btn-primary aiu-wizard__primary d-inline-flex align-items-center gap-1" data-aiu-wizard-next="">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.continue" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </footer>
+            </section>
+
+            <section class="aiu-wizard__panel"
+                     data-aiu-wizard-step="5"
+                     data-wizard-heading="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step5.mainHeading')}"
+                     role="tabpanel"
+                     aria-labelledby="aiu-wizard-tab-5"
+                     id="aiu-wizard-panel-5"
+                     hidden="">
+                <f:if condition="{wizardExtensionsAvailable} == 1">
+                    <f:then>
+                        <p class="aiu-wizard__panel-lead aiu-wizard__panel-lead--step5 small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step5.lead" /></p>
+                        <div id="aiu-wizard-extensions-root" class="aiu-wizard__ext-groups d-flex flex-column gap-4"></div>
+                        <p class="aiu-wizard__ext-count text-variant" id="aiu-wizard-ext-count" aria-live="polite"></p>
+                    </f:then>
+                    <f:else>
+                        <p class="aiu-wizard__hint text-muted"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step5.unavailable" /></p>
+                    </f:else>
+                </f:if>
+                <footer class="aiu-wizard__footer module-footer py-0">
+                    <div class="btn-toolbar w-100 align-items-center pt-3" role="toolbar">
+                        <button type="button" class="btn btn-default aiu-wizard__skip" data-aiu-wizard-skip=""><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.skip" /></button>
+                        <div class="btn-toolbar ms-auto" role="toolbar">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-default" data-aiu-wizard-prev=""><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.back" /></button>
+                                <button type="button" class="btn btn-primary aiu-wizard__primary d-inline-flex align-items-center gap-1" data-aiu-wizard-next="">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.continue" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </footer>
+            </section>
+
+            <section class="aiu-wizard__panel"
+                     data-aiu-wizard-step="6"
+                     data-wizard-heading="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step6.mainHeading')}"
+                     role="tabpanel"
+                     aria-labelledby="aiu-wizard-tab-6"
+                     id="aiu-wizard-panel-6"
+                     hidden="">
+                <p class="aiu-wizard__panel-lead small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step6.lead" /></p>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="aiu-wizard-brand-name"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step6.brandName" /></label>
+                        <input type="text" class="form-control" id="aiu-wizard-brand-name" maxlength="60" data-aiu-wizard-brand-name="" required="required" aria-required="true" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="aiu-wizard-industry"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step6.industry" /></label>
+                        <select class="form-select" id="aiu-wizard-industry" data-aiu-wizard-industry="" required="required" aria-required="true">
+                            <option value=""><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step6.industryPlaceholder" /></option>
+                            <f:for each="{brandContextIndustries}" as="industryOption">
+                                <option value="{industryOption}">{industryOption}</option>
+                            </f:for>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-label mb-2"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step6.toneTags" /></div>
+                    <div class="aiu-wizard__tone-pills d-flex flex-wrap gap-1" id="aiu-wizard-tone-pills" role="group" aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step6.toneTags')}">
+                        <f:for each="{brandContextToneTags}" as="toneTag">
+                            <button type="button" class="btn btn-default btn-sm aiu-wizard__tone-pill" data-aiu-wizard-tone="{toneTag}" aria-pressed="false">{toneTag}</button>
+                        </f:for>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="aiu-wizard-voice-notes"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step6.voiceNotes" /></label>
+                    <textarea class="form-control" id="aiu-wizard-voice-notes" rows="3" maxlength="300" data-aiu-wizard-voice-notes="" placeholder="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step6.voiceNotesPlaceholder')}"></textarea>
+                </div>
+                <div class="callout callout-info mb-0" role="note">
+                    <div class="callout-icon">
+                        <core:icon identifier="actions-info" size="small" alternativeMarkupIdentifier="inline" />
+                    </div>
+                    <div class="callout-body">
+                        <p class="mb-0"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step6.notice" /></p>
+                    </div>
+                </div>
+                <footer class="aiu-wizard__footer module-footer py-0">
+                    <div class="btn-toolbar w-100 align-items-center justify-content-end pt-3" role="toolbar">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-default" data-aiu-wizard-prev=""><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.back" /></button>
+                            <button type="button" class="btn btn-primary aiu-wizard__primary d-inline-flex align-items-center gap-1" data-aiu-wizard-next="">
+                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.continue" />
+                            </button>
+                        </div>
+                    </div>
+                </footer>
+            </section>
+
+            <section class="aiu-wizard__panel"
+                     data-aiu-wizard-step="7"
+                     data-wizard-heading="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.mainHeading')}"
+                     role="tabpanel"
+                     aria-labelledby="aiu-wizard-tab-7"
+                     id="aiu-wizard-panel-7"
+                     hidden="">
+                <p class="aiu-wizard__panel-lead aiu-wizard__panel-lead--step6 small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.lead" /></p>
+                <div class="card card-size-small aiu-wizard__mcp-card mb-3 w-100" id="aiu-wizard-mcp-card">
+                    <div class="card-body d-flex align-items-center gap-3 py-3">
+                    <span class="flex-shrink-0" aria-hidden="true">
+                        <core:icon identifier="actions-server" size="small" alternativeMarkupIdentifier="inline" />
+                    </span>
+                    <div class="aiu-wizard__mcp-card-copy flex-grow-1 min-w-0">
+                        <div class="fw-semibold small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.toggleTitle" /></div>
+                        <div class="text-variant small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.toggleSub" /></div>
+                    </div>
+                    <label class="aiu-toggle aiu-toggle--wizard-lg flex-shrink-0">
+                        <input type="checkbox" id="aiu-wizard-mcp" data-aiu-wizard-mcp="" />
+                        <span class="slider" aria-hidden="true"></span>
+                    </label>
+                    </div>
+                </div>
+                <h4 class="h6 text-variant text-uppercase small mb-2"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.connectorsHeading" /></h4>
+                <ul class="list-group aiu-wizard__mcp-connectors mb-3" role="list">
+                    <li class="list-group-item aiu-wizard__mcp-connector d-flex align-items-center gap-2">
+                        <div class="aiu-wizard__mcp-connector-copy flex-grow-1 min-w-0">
+                            <div class="fw-semibold small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.connector.filesystem.title" /></div>
+                            <div class="text-variant small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.connector.filesystem.desc" /></div>
+                        </div>
+                        <span class="badge badge-success flex-shrink-0"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.badge.ready" /></span>
+                    </li>
+                    <li class="list-group-item aiu-wizard__mcp-connector d-flex align-items-center gap-2">
+                        <div class="aiu-wizard__mcp-connector-copy flex-grow-1 min-w-0">
+                            <div class="fw-semibold small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.connector.database.title" /></div>
+                            <div class="text-variant small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.connector.database.desc" /></div>
+                        </div>
+                        <span class="badge badge-success flex-shrink-0"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.badge.ready" /></span>
+                    </li>
+                    <li class="list-group-item aiu-wizard__mcp-connector d-flex align-items-center gap-2">
+                        <div class="aiu-wizard__mcp-connector-copy flex-grow-1 min-w-0">
+                            <div class="fw-semibold small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.connector.slack.title" /></div>
+                            <div class="text-variant small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.connector.slack.desc" /></div>
+                        </div>
+                        <span class="badge badge-default flex-shrink-0"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.badge.later" /></span>
+                    </li>
+                    <li class="list-group-item aiu-wizard__mcp-connector d-flex align-items-center gap-2">
+                        <div class="aiu-wizard__mcp-connector-copy flex-grow-1 min-w-0">
+                            <div class="fw-semibold small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.connector.notion.title" /></div>
+                            <div class="text-variant small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.connector.notion.desc" /></div>
+                        </div>
+                        <span class="badge badge-default flex-shrink-0"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.badge.later" /></span>
+                    </li>
+                </ul>
+                <p class="aiu-wizard__mcp-note small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step7.note" /></p>
+                <footer class="aiu-wizard__footer module-footer py-0">
+                    <div class="btn-toolbar w-100 align-items-center pt-3" role="toolbar">
+                        <button type="button" class="btn btn-default aiu-wizard__skip" data-aiu-wizard-skip=""><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.skip" /></button>
+                        <div class="btn-toolbar ms-auto" role="toolbar">
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-default" data-aiu-wizard-prev=""><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.back" /></button>
+                                <button type="button" class="btn btn-primary aiu-wizard__primary d-inline-flex align-items-center gap-1" data-aiu-wizard-next="">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.continue" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </footer>
+            </section>
+
+            <section class="aiu-wizard__panel"
+                     data-aiu-wizard-step="8"
+                     data-wizard-heading="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step8.headingAllSet')}"
+                     role="tabpanel"
+                     aria-labelledby="aiu-wizard-tab-8"
+                     id="aiu-wizard-panel-8"
+                     hidden="">
+                <div class="aiu-wizard__summary-wrap">
+                    <div class="aiu-wizard__summary-hero">
+                        <div class="aiu-wizard__summary-rocket" aria-hidden="true">
+                            <core:icon identifier="actions-rocket" size="medium" alternativeMarkupIdentifier="inline" />
+                        </div>
+                        <h3 class="h4 aiu-wizard__done-title"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step8.headingReady" /></h3>
+                        <p class="aiu-wizard__done-text text-variant small" id="aiu-wizard-summary-lead"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step8.summaryLeadStatic" /></p>
+                    </div>
+                    <ul class="list-group aiu-wizard__summary-cards mb-3" id="aiu-wizard-summary-cards" aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step8.summaryAria')}"></ul>
+                    <div class="callout callout-info aiu-wizard__next-steps mb-0">
+                        <div class="callout-body">
+                        <div class="fw-semibold mb-2"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step8.nextTitle" /></div>
+                        <ul class="list-unstyled mb-0 aiu-wizard__next-steps-list">
+                            <li class="aiu-wizard__next-step mb-2">
+                                <a href="{aiFeaturesUri}" class="aiu-wizard__next-step-link">
+                                    <f:format.raw><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step8.next1" /></f:format.raw>
+                                </a>
+                            </li>
+                            <li class="aiu-wizard__next-step mb-2">
+                                <a href="{aiPromptsUri}" class="aiu-wizard__next-step-link">
+                                    <f:format.raw><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step8.next2" /></f:format.raw>
+                                </a>
+                            </li>
+                            <li class="aiu-wizard__next-step">
+                                <a href="{schedulerCliUri}" class="aiu-wizard__next-step-link">
+                                    <f:format.raw><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step8.next3" /></f:format.raw>
+                                </a>
+                            </li>
+                        </ul>
+                        </div>
+                    </div>
+                </div>
+                <footer class="aiu-wizard__footer module-footer py-0 aiu-wizard__footer--done">
+                    <div class="btn-toolbar w-100 justify-content-end" role="toolbar">
+                        <button type="button" class="btn btn-primary mt-3 d-inline-flex align-items-center gap-1" data-aiu-wizard-goto-dashboard="">
+                            <core:icon identifier="actions-rocket" size="small" alternativeMarkupIdentifier="inline" />
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.step8.goDashboard" />
+                        </button>
+                    </div>
+                </footer>
+            </section>
+        </div>
+    </div>
+</dialog>
+
+</html>

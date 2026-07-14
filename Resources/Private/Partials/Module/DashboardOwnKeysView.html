@@ -1,0 +1,108 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<f:variable name="totals" value="{dashboardAnalyticsOwnKeys.totals}" />
+
+<f:render partial="Module/Dashboard/ModeBanner" arguments="{
+    modeLabelKey: 'dashboard.mode.ownKeys.label',
+    bannerModifier: 'aiu-dashboard-mode-banner--ownkeys',
+    iconIdentifier: 'actions-key',
+    showActiveBadge: 0,
+    configuredCount: activeProviderCount,
+    manageHref: providersUri,
+    manageLabelKey: 'dashboard.mode.ownKeys.manage'
+}" />
+
+<div class="card-container">
+    <f:for each="{providerCards}" as="card">
+        <f:render partial="Module/Dashboard/ProviderCard" arguments="{card: card}" />
+    </f:for>
+</div>
+
+<div class="aiu-dashboard__grid aiu-dashboard__grid--ownkeys-primary">
+    <section class="aiu-panel aiu-panel--chart-wide">
+        <div class="aiu-panel__head">
+            <h3 class="aiu-panel__title"><f:translate key="{ll}:dashboard.chart.costTrend" default="API Cost Trend" /></h3>
+            <span class="aiu-panel__meta">{dashboardPeriodRangeLabel}</span>
+        </div>
+        <div class="aiu-panel__chart aiu-panel__chart--medium">
+            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'cost-trend', chartConfig: chartCostTrend}" />
+        </div>
+    </section>
+    <section class="aiu-panel aiu-panel--api-spend">
+        <div class="aiu-panel__head">
+            <h3 class="aiu-panel__title"><f:translate key="{ll}:dashboard.spend.title" default="7-day API spend" /></h3>
+        </div>
+        <div class="aiu-panel__body aiu-panel__body--api-spend">
+            <div class="aiu-api-spend-total">
+                <span class="aiu-api-spend-total__label"><f:translate key="{ll}:dashboard.spend.total" default="Total spend" /></span>
+                <p class="aiu-api-spend-total__value">{ownKeysSpendTotalFormatted}</p>
+            </div>
+            <f:if condition="{dashboardAnalyticsOwnKeys.providerDistribution -> f:count()} > 0">
+                <f:then>
+                    <ul class="aiu-api-spend-list">
+                        <f:for each="{dashboardAnalyticsOwnKeys.providerDistribution}" as="row">
+                            <li class="aiu-api-spend-list__item">
+                                <span class="aiu-api-spend-list__label">{row.provider}</span>
+                                <span class="aiu-api-spend-list__value">${row.cost -> f:format.number(decimals: 2)}</span>
+                            </li>
+                        </f:for>
+                    </ul>
+                </f:then>
+                <f:else>
+                    <p class="aiu-api-spend-empty">
+                        <f:translate key="{ll}:dashboard.spend.empty" default="No provider spend recorded in this period." />
+                    </p>
+                </f:else>
+            </f:if>
+            <a href="{providersUri}" class="aiu-api-spend__cta">
+                <f:translate key="{ll}:dashboard.spend.manageKeys" default="Manage API Keys" />
+                <span class="aiu-api-spend__cta-arrow" aria-hidden="true">→</span>
+            </a>
+        </div>
+    </section>
+</div>
+
+<div class="aiu-dashboard__grid aiu-dashboard__grid--ownkeys-analytics">
+    <section class="aiu-panel aiu-panel--chart-wide">
+        <div class="aiu-panel__head"><h3 class="aiu-panel__title"><f:translate key="{ll}:dashboard.chart.requestsTitle" /></h3></div>
+        <div class="aiu-panel__chart aiu-panel__chart--tall">
+            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'req-sf-own', chartConfig: chartRequests}" />
+        </div>
+    </section>
+    <section class="aiu-panel aiu-panel--chart-narrow">
+        <div class="aiu-panel__head"><h3 class="aiu-panel__title"><f:translate key="{ll}:dashboard.chart.topModels" default="Top Models by Tokens" /></h3></div>
+        <div class="aiu-panel__chart aiu-panel__chart--bar">
+            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'top-models', chartConfig: chartTopModels}" />
+        </div>
+    </section>
+</div>
+
+<f:render partial="Module/Dashboard/FooterKpis" arguments="{analytics: dashboardAnalyticsOwnKeys, trends: trendsOwnKeys, costLabelKey: 'dashboard.kpi.apiCost', costDisplay: ownKeysSpendTotalFormatted, extraLabelKey: 'dashboard.kpi.activeProviders', extraValue: '{dashboardAnalyticsOwnKeys.activeProviders}'}" />
+
+<div class="aiu-dashboard__grid aiu-dashboard__grid--ownkeys-donuts">
+    <section class="aiu-panel aiu-panel--chart-side">
+        <div class="aiu-panel__head">
+          <h3 class="aiu-panel__title"><f:translate key="{ll}:dashboard.chart.successRate" /></h3>
+          <span class="aiu-panel__meta">{dashboardPeriodRangeLabel}</span>
+        </div>
+        <div class="aiu-panel__chart aiu-panel__chart--donut">
+            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'success-own', chartConfig: chartSuccessRateOwnKeys}" />
+        </div>
+    </section>
+    <section class="aiu-panel aiu-panel--chart-side">
+        <div class="aiu-panel__head"><h3 class="aiu-panel__title"><f:translate key="{ll}:dashboard.chart.extensionUsage" /></h3></div>
+        <div class="aiu-panel__chart aiu-panel__chart--donut">
+            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'ext-usage-own', chartConfig: chartExtensionUsageOwnKeys}" />
+        </div>
+    </section>
+    <section class="aiu-panel aiu-panel--chart-side">
+        <div class="aiu-panel__head"><h3 class="aiu-panel__title"><f:translate key="{ll}:dashboard.chart.providerDistribution" /></h3></div>
+        <div class="aiu-panel__chart aiu-panel__chart--donut">
+            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'provider-dist', chartConfig: chartProviderDistribution}" />
+        </div>
+    </section>
+</div>
+
+<f:render partial="Module/Dashboard/InsightsRow" arguments="{analytics: dashboardAnalyticsOwnKeys, activityColumnMode: 'cost', aiUsageUri: aiUsageUri, moduleHealth: moduleHealth}" />
+</html>

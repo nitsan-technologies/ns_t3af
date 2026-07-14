@@ -1,0 +1,217 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<form class="aiu-scheduler-cli__filters aiu-scheduler-cli__filters--library" method="get">
+    <input type="hidden" name="mode" value="library" />
+    <div class="d-flex flex-wrap align-items-stretch gap-2 mb-3 justify-content-between">
+        <div class="btn-group aiu-scheduler-cli__modes-inline" role="group" aria-label="{f:translate(key: '{ll}:module.schedulerCli.mode.aria', default: 'Scheduler CLI sections')}">
+            <a href="{f:be.uri(route:'t3af_dashboard.scheduler_cli', parameters:{mode:'tasks'})}"
+               class="btn btn-default">
+                <f:translate key="{ll}:module.schedulerCli.mode.scheduledTasks" default="Scheduled Tasks" />
+            </a>
+            <a href="{f:be.uri(route:'t3af_dashboard.scheduler_cli', parameters:{mode:'library'})}"
+               class="btn btn-default active is-active">
+                <f:translate key="{ll}:module.schedulerCli.mode.commandLibrary" default="Command Library" />
+            </a>
+        </div>
+        <div class="btn-group aiu-scheduler-cli__chips justify-content-end" role="group" aria-label="{f:translate(key: '{ll}:module.schedulerCli.filter.extension.aria', default: 'Extension filter')}">
+            <button type="button" class="btn btn-default btn-sm active is-active" data-scheduler-chip="all">All</button>
+            <f:for each="{schedulerCliExtensions}" as="ext">
+                <button type="button" class="btn btn-default btn-sm" data-scheduler-chip="{ext}">{ext}</button>
+            </f:for>
+        </div>
+    </div>
+</form>
+
+<div class="callout callout-info mb-3 aiu-scheduler-cli__banner">
+    <div class="callout-icon">
+        <core:icon identifier="actions-terminal" size="medium" />
+    </div>
+    <div class="callout-content flex-grow-1">
+        <div class="callout-title"><f:translate key="{ll}:module.schedulerCli.library.banner.title" default="Command Library" /></div>
+        <div class="callout-body">
+            <p class="mb-0">
+                <f:translate key="{ll}:module.schedulerCli.library.banner.body" default="Discover t3af:* CLI commands grouped by extension. Run manually or schedule them in the TYPO3 Scheduler." />
+            </p>
+        </div>
+    </div>
+    <div class="text-end text-variant small flex-shrink-0">
+        <div class="badge badge-default">{schedulerCliExtensions -> f:count()} <f:translate key="{ll}:module.schedulerCli.library.banner.extensions" default="extensions" /></div>
+        <div class="badge badge-default">{schedulerCliKpis.totalCommands} <f:translate key="{ll}:module.schedulerCli.library.banner.commands" default="commands" /></div>
+    </div>
+</div>
+
+<f:if condition="{schedulerCliExtensionGroups -> f:count()} == 0">
+    <f:then>
+        <div class="callout callout-notice mb-0">
+            <div class="callout-content">
+                <div class="callout-body">
+                    <f:translate key="{ll}:module.schedulerCli.library.empty" default="No AI Universe CLI commands found." />
+                </div>
+            </div>
+        </div>
+    </f:then>
+    <f:else>
+        <div class="card-container aiu-scheduler-cli__cards" data-scheduler-cli-extensions>
+            <f:for each="{schedulerCliExtensionGroups}" as="extension">
+                <div class="card card-size-large"
+                     data-scheduler-cli-card
+                     data-scheduler-extension="{extension.id}">
+                    <div class="card-header">
+                        <div class="card-header-body">
+                            <div class="d-flex flex-wrap align-items-center gap-2 justify-content-between">
+                                <h3 class="card-title">
+                                    {extension.label}
+                                </h3>
+                                <span class="badge badge-default">
+                                    {extension.commandCount} <f:translate key="{ll}:module.schedulerCli.library.commandsLabel" default="commands" />
+                                </span>
+                            </div>
+                            <span class="card-subtitle">{extension.tagline}</span>
+                        </div>
+                    </div>
+
+                    <f:if condition="{extension.commands -> f:count()} > 0">
+                        <div class="card-body">
+                            <div class="d-flex flex-wrap gap-1 aiu-scheduler-cli__command-tags pb-2">
+                                <f:for each="{extension.commands}" as="command">
+                                    <button type="button"
+                                            class="btn btn-sm btn-default"
+                                            data-scheduler-cli-command-tag="{command.command}">
+                                        {command.command}
+                                    </button>
+                                </f:for>
+                            </div>
+                        </div>
+                    </f:if>
+
+                    <div class="aiu-scheduler-cli__tools" hidden>
+                        <div class="card-body py-2 border-top border-bottom aiu-scheduler-cli__tools-meta">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 small">
+                                <span class="text-variant">{extension.tagline}</span>
+                                <span>
+                                    <b><f:translate key="{ll}:module.schedulerCli.library.extensionKey" default="Extension" />:</b>
+                                    <code class="badge badge-default">{extension.id}</code>
+                                </span>
+                            </div>
+                        </div>
+
+                        <f:for each="{extension.commands}" as="command">
+                            <div class="aiu-scheduler-cli__command-panel" data-scheduler-cli-command-panel data-command-name="{command.command}">
+                                <button type="button"
+                                        class="aiu-scheduler-cli__command-panel-header"
+                                        data-scheduler-cli-toggle-command
+                                        aria-expanded="false">
+                                    <div class="aiu-scheduler-cli__command-panel-identity">
+                                        <div>
+                                            <h3 class="card-title mb-1"><code class="d-block">{command.command}</code></h3>
+                                            <div class="text-variant small">{command.shortTitle}</div>
+                                        </div>
+                                    </div>
+                                    <div class="aiu-scheduler-cli__command-panel-end">
+                                        <f:if condition="{command.schedulable} == 1">
+                                            <f:then>
+                                                <span class="badge badge-success">
+                                                    <f:translate key="{ll}:module.schedulerCli.library.schedulable" default="Schedulable" />
+                                                </span>
+                                            </f:then>
+                                            <f:else>
+                                                <span class="badge badge-default">
+                                                    <f:translate key="{ll}:module.schedulerCli.library.manualOnly" default="Manual only" />
+                                                </span>
+                                            </f:else>
+                                        </f:if>
+                                        <span class="aiu-scheduler-cli__command-chevron" aria-hidden="true">
+                                            <core:icon identifier="actions-chevron-down" size="small" />
+                                        </span>
+                                    </div>
+                                </button>
+
+                                <div class="aiu-scheduler-cli__command-panel-body" hidden>
+                                        <f:if condition="{command.description}">
+                                            <p class="text-variant small mb-3">{command.description}</p>
+                                        </f:if>
+
+                                        <div class="mb-3">
+                                            <div class="text-variant fw-bold mb-1"><f:translate key="{ll}:module.schedulerCli.library.cliCommand" default="CLI Command" /></div>
+                                            <div class="aiu-scheduler-cli__cli-block">
+                                                <code>{command.cliSnippet}</code>
+                                            </div>
+                                        </div>
+
+                                        <f:if condition="{command.arguments -> f:count()} > 0 || {command.options -> f:count()} > 0">
+                                            <div class="mb-3">
+                                                <div class="text-variant fw-bold mb-1"><f:translate key="{ll}:module.schedulerCli.library.arguments" default="Arguments &amp; Options" /></div>
+                                                <div class="card mb-0">
+                                                    <table class="table table-striped table-hover align-middle mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th scope="col"><f:translate key="{ll}:module.schedulerCli.library.paramName" default="Name" /></th>
+                                                                <th scope="col"><f:translate key="{ll}:module.schedulerCli.library.paramKind" default="Kind" /></th>
+                                                                <th scope="col"><f:translate key="{ll}:module.schedulerCli.library.paramRequired" default="Required" /></th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            <f:for each="{command.arguments}" as="arg">
+                                                                <tr>
+                                                                    <td><code>{arg.name}</code></td>
+                                                                    <td><f:translate key="{ll}:module.schedulerCli.library.kindArgument" default="argument" /></td>
+                                                                    <td>
+                                                                        <f:if condition="{arg.required} == 1">
+                                                                            <f:then><f:translate key="{ll}:module.schedulerCli.library.required" default="yes" /></f:then>
+                                                                            <f:else><f:translate key="{ll}:module.schedulerCli.library.optional" default="no" /></f:else>
+                                                                        </f:if>
+                                                                    </td>
+                                                                </tr>
+                                                            </f:for>
+                                                            <f:for each="{command.options}" as="opt">
+                                                                <tr>
+                                                                    <td><code>--{opt.name}</code></td>
+                                                                    <td><f:translate key="{ll}:module.schedulerCli.library.kindOption" default="option" /></td>
+                                                                    <td><f:translate key="{ll}:module.schedulerCli.library.optional" default="no" /></td>
+                                                                </tr>
+                                                            </f:for>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </f:if>
+
+                                        <div class="aiu-scheduler-cli__card-actions">
+                                            <div class="btn-group" role="group">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-default"
+                                                        data-scheduler-run
+                                                        data-command="{command.command}"
+                                                        data-name="{command.name}">
+                                                    <f:translate key="{ll}:module.schedulerCli.action.run" default="Run" />
+                                                </button>
+                                                <f:if condition="{command.schedulable} == 1">
+                                                    <a href="{schedulerManageAddUri}" class="btn btn-sm btn-default">
+                                                        <f:translate key="{ll}:module.schedulerCli.action.schedule" default="Schedule" />
+                                                    </a>
+                                                </f:if>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </f:for>
+                    </div>
+
+                    <div class="card-footer">
+                        <button type="button"
+                                class="btn btn-default"
+                                data-scheduler-cli-toggle
+                                aria-expanded="false">
+                            <f:translate key="{ll}:module.schedulerCli.library.viewCommands" default="View Commands" />
+                        </button>
+                    </div>
+                </div>
+            </f:for>
+        </div>
+    </f:else>
+</f:if>
+
+</html>

@@ -1,0 +1,34 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<section class="card card-size-small mb-0 w-100">
+    <div class="card-header d-flex align-items-center justify-content-between gap-2">
+        <h2 class="card-title mb-0"><f:translate key="{ll}:dashboard.moduleHealth.title" default="Module Health" /></h2>
+        <f:if condition="{moduleHealthSummary.total} > 0">
+            <span class="badge badge-success">{moduleHealthSummary.healthy}/{moduleHealthSummary.total} healthy</span>
+        </f:if>
+    </div>
+    <div class="card-body">
+        <ul class="aiu-module-health__list">
+            <f:for each="{moduleHealth}" as="item">
+                <li class="aiu-module-health__item aiu-module-health__item--{item.status}">
+                    <a href="{item.href}" class="aiu-module-health__link">
+                        <span class="aiu-module-health__icon aiu-module-health__icon--{item.status}" aria-hidden="true">
+                            <f:if condition="{item.status} == 'ok'">
+                                <f:then><core:icon identifier="actions-check" size="small" /></f:then>
+                                <f:else><core:icon identifier="actions-exclamation" size="small" /></f:else>
+                            </f:if>
+                        </span>
+                        <span class="aiu-module-health__content">
+                            <span class="aiu-module-health__label">{item.label}</span>
+                            <span class="aiu-module-health__detail">{item.detail}</span>
+                        </span>
+                        <span class="aiu-module-health__chevron" aria-hidden="true">›</span>
+                    </a>
+                </li>
+            </f:for>
+        </ul>
+    </div>
+</section>
+</html>

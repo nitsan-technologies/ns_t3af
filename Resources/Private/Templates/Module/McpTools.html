@@ -1,0 +1,134 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="HeaderBefore">
+    <f:be.pageRenderer includeJavaScriptModules="{
+        0: '@nitsan/nst3af/period-filter.js',
+        1: '@nitsan/nst3af/mcp-tools.js'
+    }" />
+</f:section>
+
+<f:section name="Content">
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+    <div class="aiu-providers aiu-mcp-tools"
+         data-mcp-tools
+         data-aiu-nav-replace="[data-mcp-tools]"
+         data-aiu-nav-replace-callback="aiuReinitMcpToolsRoot"
+         data-mcp-tools-period="{mcpToolsPeriod}"
+         data-mcp-tools-period-from="{mcpToolsPeriodFromDate}"
+         data-mcp-tools-period-to="{mcpToolsPeriodToDate}"
+         data-mcp-playground-config="{mcpPlaygroundConfigJson -> f:format.htmlspecialchars()}">
+
+        <div class="aiu-mcp-topbar aiu-tab-page-header">
+            <div class="aiu-tab-page-header__main min-w-0">
+                <div class="aiu-providers__heading aiu-mcp-topbar__text">
+                    <h1 class="mb-0">{tabHeading}</h1>
+                    <p class="text-variant mb-0">{tabIntro}</p>
+                </div>
+            </div>
+            <div class="aiu-tab-page-header__aside">
+                <f:render partial="Module/PageBreadcrumb" arguments="{_all}" />
+            </div>
+        </div>
+
+        <div class="aiu-mcp-status-bar aiu-mcp-tools__stats">
+            <div class="aiu-mcp-status-bar__cell">
+                <div class="aiu-mcp-status-bar__content">
+                    <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.mcpTools.stats.totalTools" /></h4>
+                    <span class="aiu-mcp-status-bar__value">{mcpToolsStats.totalTools}</span>
+                </div>
+            </div>
+            <div class="aiu-mcp-status-bar__cell">
+                <div class="aiu-mcp-status-bar__content">
+                    <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.mcpTools.stats.toolCalls" default="Tool Calls" /></h4>
+                    <span class="aiu-mcp-status-bar__value">{mcpToolsStats.toolCalls}</span>
+                </div>
+            </div>
+            <div class="aiu-mcp-status-bar__cell">
+                <div class="aiu-mcp-status-bar__content">
+                    <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.mcpTools.stats.successRate" default="Success Rate" /></h4>
+                    <span class="aiu-mcp-status-bar__value">{mcpToolsStats.avgSuccessRate -> f:format.number(decimals: '1')}%</span>
+                </div>
+            </div>
+            <div class="aiu-mcp-status-bar__cell">
+                <div class="aiu-mcp-status-bar__content">
+                    <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.mcpTools.stats.extensions" /></h4>
+                    <span class="aiu-mcp-status-bar__value">{mcpToolsStats.extensionCount}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="aiu-mcp-tools__toolbar">
+            <div class="btn-group" role="group" aria-label="{f:translate(key: '{ll}:module.mcpTools.mainTabs.aria')}">
+                <button type="button"
+                        class="btn btn-default active is-active"
+                        role="tab"
+                        aria-selected="true"
+                        data-mcp-tools-tab="tools-resources">
+                    <f:translate key="{ll}:module.mcpTools.tab.toolsResources" />
+                </button>
+                <button type="button"
+                        class="btn btn-default"
+                        role="tab"
+                        aria-selected="false"
+                        data-mcp-tools-tab="playground">
+                    <f:translate key="{ll}:module.mcpTools.tab.playground" />
+                </button>
+                <button type="button"
+                        class="btn btn-default"
+                        role="tab"
+                        aria-selected="false"
+                        data-mcp-tools-tab="skill-hub">
+                    <f:translate key="{ll}:module.mcpTools.tab.skillHub" />
+                </button>
+            </div>
+            <div class="aiu-mcp-tools__toolbar-actions">
+                <div class="input-group aiu-mcp-tools__search">
+                    <label class="visually-hidden" for="aiu-mcp-tools-search">
+                        <f:translate key="{ll}:module.mcpTools.search.placeholder" />
+                    </label>
+                    <input type="search"
+                           id="aiu-mcp-tools-search"
+                           class="form-control"
+                           data-mcp-tools-search
+                           autocomplete="off"
+                           autocorrect="off"
+                           autocapitalize="off"
+                           spellcheck="false"
+                           data-1p-ignore="true"
+                           data-lpignore="true"
+                           data-form-type="other"
+                           readonly="readonly"
+                           placeholder="{f:translate(key: '{ll}:module.mcpTools.search.placeholder')}" />
+                </div>
+                <f:render partial="Module/PeriodDropdown" arguments="{
+                    periodLabel: mcpToolsPeriodLabel,
+                    periodPresets: mcpToolsPeriodPresets,
+                    periodFromDate: mcpToolsPeriodFromDate,
+                    periodToDate: mcpToolsPeriodToDate,
+                    periodFormAction: mcpToolsPeriodFormAction,
+                    periodFormId: 'mcptools'
+                }" />
+            </div>
+        </div>
+
+        <div class="aiu-mcp-tools__panel is-active" data-mcp-tools-panel="tools-resources" role="tabpanel">
+            <f:render partial="McpTools/ToolsResourcesShell" arguments="{_all}" />
+        </div>
+
+        <div class="aiu-mcp-tools__panel" data-mcp-tools-panel="playground" role="tabpanel" hidden>
+            <f:render partial="McpTools/PlaygroundPanel" arguments="{_all}" />
+        </div>
+
+        <div class="aiu-mcp-tools__panel" data-mcp-tools-panel="skill-hub" role="tabpanel" hidden>
+            <f:render partial="McpTools/SkillHubPanel" arguments="{_all}" />
+        </div>
+
+        <f:render partial="McpTools/ToolDetailDrawer" section="Drawer" arguments="{_all}" />
+        <f:render partial="McpTools/CustomToolOverlay" arguments="{_all}" />
+    </div>
+</f:section>
+</html>

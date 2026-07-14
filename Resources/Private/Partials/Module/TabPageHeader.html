@@ -1,0 +1,16 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<div class="aiu-tab-page-header{f:if(condition: wrapperClass, then: ' {wrapperClass}', else: '')}">
+    <div class="aiu-tab-page-header__main min-w-0">
+        <div class="aiu-providers__heading{f:if(condition: headingClass, then: ' {headingClass}', else: '')}">
+            <h1 class="{f:if(condition: headingTagClass, then: headingTagClass, else: 'mb-0')}">{tabHeading}</h1>
+            <f:if condition="{tabIntro}">
+                <p class="{f:if(condition: introClass, then: introClass, else: 'text-variant mb-0')}">{tabIntro}</p>
+            </f:if>
+        </div>
+    </div>
+    <div class="aiu-tab-page-header__aside">
+        <f:render partial="Module/PageBreadcrumb" arguments="{_all}" />
+    </div>
+</div>
+</html>

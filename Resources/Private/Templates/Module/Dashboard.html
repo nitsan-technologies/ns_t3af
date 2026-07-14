@@ -1,0 +1,91 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="HeaderBefore">
+    <f:if condition="{showFullDashboardOverview} == 1">
+        <f:be.pageRenderer includeJavaScriptModules="{
+            0: '@nitsan/nst3af/period-filter.js',
+            1: '@nitsan/nst3af/credits-mode.js',
+            2: '@nitsan/nst3af/dashboard-charts.js',
+            3: '@nitsan/nst3af/provider-drawer.js'
+        }" />
+    </f:if>
+</f:section>
+
+<f:section name="Content">
+    <div class="aiu-dashboard"
+         data-aiu-dashboard-root
+         data-aiu-nav-replace="[data-aiu-dashboard-root]"
+         data-aiu-nav-replace-callback="aiuReinitDashboardRoot">
+
+        <div class="aiu-providers">
+        <f:render partial="Module/TabPageHeader" arguments="{headingClass: 'aiu-dashboard__heading', tabHeading: tabHeading, tabIntro: tabIntro, currentPageId: currentPageId, pagePathData: pagePathData, rootPageUid: rootPageUid, rootPageTitle: rootPageTitle}" />
+
+            <f:if condition="{showFullDashboardOverview} == 0">
+                <f:render partial="Module/Dashboard/AllowedTabsOverview" arguments="{allowedDashboardTabs: allowedDashboardTabs}" />
+            </f:if>
+
+            <f:if condition="{showFullDashboardOverview} == 1">
+                <f:if condition="{showDashboardChecklist} == 1">
+                    <f:render partial="Module/DashboardChecklistSlot" arguments="{_all}" />
+                </f:if>
+            </f:if>
+        </div>
+
+        <f:if condition="{showFullDashboardOverview} == 1">
+            <f:if condition="{showDashboardAnalytics} == 1">
+                <div class="aiu-providers">
+                    <f:render partial="Module/DashboardToolbar" arguments="{_all}" />
+
+                    <f:if condition="{hasRequestLogData} == 0">
+                        <div class="aiu-flash aiu-flash--info aiu-dashboard__period-hint" role="status">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:dashboard.noDataInPeriod"
+                                         arguments="{0: dashboardPeriodRangeLabel}"
+                                         default="No AI requests were logged between %s. Try Last 30 days or a custom range that includes earlier activity." />
+                        </div>
+                    </f:if>
+
+                    <div class="aiu-dashboard-view{f:if(condition: '{creditsModeEnabled} == 1', then: '', else: ' is-hidden')}"
+                         data-aiu-dashboard-view="credits"
+                         aria-hidden="{f:if(condition: '{creditsModeEnabled} == 1', then: 'false', else: 'true')}">
+                        <f:render partial="Module/Dashboard/InsightZoneCredits" arguments="{_all}" />
+                    </div>
+
+                    <div class="aiu-dashboard-view{f:if(condition: '{creditsModeEnabled} == 1', then: ' is-hidden', else: '')}"
+                         data-aiu-dashboard-view="ownkeys"
+                         aria-hidden="{f:if(condition: '{creditsModeEnabled} == 1', then: 'true', else: 'false')}">
+                        <f:render partial="Module/Dashboard/InsightZoneOwnKeys" arguments="{_all}" />
+                    </div>
+
+                    <f:render partial="Module/Dashboard/KpiStrip" arguments="{kpiStrip: kpiStrip}" />
+                </div>
+
+                <f:if condition="{showAiContextOverview} == 1">
+                    <f:render partial="Module/Dashboard/AiContextOverview" arguments="{aiContextOverview: aiContextOverview}" />
+                </f:if>
+
+                <f:if condition="{showMcpOverview} == 1">
+                    <f:render partial="Module/Dashboard/McpOverview" arguments="{_all}" />
+                </f:if>
+
+                <div class="aiu-providers">
+                    <f:render partial="Module/Dashboard/ChartsRow2" arguments="{_all}" />
+                    <f:render partial="Module/Dashboard/ChartsRow3" arguments="{_all}" />
+                    <f:render partial="Module/Dashboard/InsightsRow" arguments="{_all}" />
+                    <f:render partial="Module/Dashboard/ExtensionHealth" arguments="{extensionHealth: extensionHealth}" />
+                </div>
+            </f:if>
+            <f:if condition="{showDashboardAnalytics} == 0">
+                <f:if condition="{showAiContextOverview} == 1">
+                    <f:render partial="Module/Dashboard/AiContextOverview" arguments="{aiContextOverview: aiContextOverview}" />
+                </f:if>
+                <f:if condition="{showMcpOverview} == 1">
+                    <f:render partial="Module/Dashboard/McpOverview" arguments="{_all}" />
+                </f:if>
+            </f:if>
+        </f:if>
+
+    </div>
+</f:section>
+</html>

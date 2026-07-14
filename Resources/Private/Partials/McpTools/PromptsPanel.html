@@ -1,0 +1,229 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="callout callout-info mb-3 aiu-mcp-tools__banner">
+    <div class="callout-content flex-grow-1">
+        <div class="aiu-mcp-tools__banner-title">
+            <core:icon identifier="actions-message" size="small" alternativeMarkupIdentifier="inline" />
+            <div class="callout-title mb-0">
+                <f:translate key="{ll}:module.mcpTools.prompts.title" default="MCP Prompt Templates" />
+            </div>
+            <span class="badge badge-default ms-auto">{mcpPromptTemplates -> f:count()} <f:translate key="{ll}:module.mcpTools.sidebar.templatesMeta" default="templates" /></span>
+        </div>
+        <div class="callout-body">
+            <p class="mb-0">
+                <f:translate key="{ll}:module.mcpTools.prompts.bodyLong" default="Server-defined prompts the AI client can invoke by name via prompts/list and prompts/get. Served dynamically — no download required." />
+            </p>
+        </div>
+    </div>
+    <div class="aiu-mcp-tools__banner-badges d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-success btn-sm" data-mcp-tools-prompt-create>
+            <core:icon identifier="actions-plus" size="small" alternativeMarkupIdentifier="inline" />
+            <f:translate key="{ll}:module.mcpTools.prompts.create" default="Add Prompt Template" />
+        </button>
+    </div>
+</div>
+
+<f:if condition="{mcpPromptTemplates -> f:count()} == 0">
+    <f:then>
+        <div class="callout callout-notice mb-0">
+            <div class="callout-body"><f:translate key="{ll}:module.mcpTools.prompts.empty" default="No prompt templates yet." /></div>
+        </div>
+    </f:then>
+    <f:else>
+        <div class="card-container aiu-mcp-tools__cards" data-mcp-tools-prompts>
+            <f:for each="{mcpPromptTemplates}" as="prompt">
+                <f:variable name="argCount" value="{prompt.arguments -> f:count()}" />
+
+                <div class="card card-size-large aiu-mcp-prompt-card"
+                     data-mcp-tools-prompt-row
+                     data-prompt-uid="{prompt.uid}">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <core:icon identifier="actions-star" size="medium" alternativeMarkupIdentifier="inline" />
+                        </div>
+                        <div class="card-header-body">
+                            <div class="card-header-body__top d-flex align-items-start justify-content-between gap-2">
+                                <h2 class="card-title mb-0">{prompt.description}</h2>
+                                <div class="d-flex flex-wrap gap-1 flex-shrink-0">
+                                    <f:if condition="{prompt.isBuiltin}">
+                                        <span class="badge badge-info">
+                                            <f:translate key="{ll}:module.mcpTools.prompts.builtin" default="Built-in" />
+                                        </span>
+                                    </f:if>
+                                    <span class="badge badge-default">
+                                        {argCount}
+                                        <f:translate key="{ll}:module.mcpTools.prompts.args" default="args" />
+                                    </span>
+                                </div>
+                            </div>
+                            <span class="small d-block mt-1 mb-2">
+                                <code class="badge badge-default">{prompt.name}</code>
+                            </span>
+                        </div>
+                    </div>
+
+                    <textarea class="d-none" data-mcp-prompt-store-body readonly="readonly"><f:format.htmlspecialchars>{prompt.templateBody}</f:format.htmlspecialchars></textarea>
+                    <textarea class="d-none" data-mcp-prompt-store-args readonly="readonly">{prompt.argumentsJson}</textarea>
+
+                    <div class="aiu-mcp-prompt-row__body" id="mcp-prompt-body-{prompt.uid}" hidden>
+                        <f:if condition="{prompt.arguments -> f:count()} > 0">
+                            <div class="card-body">
+                                <div class="text-variant fw-bold mb-2">
+                                    <f:translate key="{ll}:module.mcpTools.prompts.sectionArguments" default="Arguments" />
+                                </div>
+                                <div class="card card-size-small mb-0 w-100 aiu-mcp-param-table">
+                                    <div class="table-fit border-top-0">
+                                        <table class="table table-striped table-hover table-sm mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col"><f:translate key="{ll}:module.mcpTools.prompts.argName" default="Name" /></th>
+                                                    <th scope="col"><f:translate key="{ll}:module.mcpTools.prompts.argRequired" default="Required" /></th>
+                                                    <th scope="col"><f:translate key="{ll}:module.mcpTools.prompts.description" default="Description" /></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <f:for each="{prompt.arguments}" as="argument">
+                                                    <tr>
+                                                        <td><code>&#123;&#123;{argument.name}&#125;&#125;</code></td>
+                                                        <td>
+                                                            <f:if condition="{argument.required}">
+                                                                <f:then><span class="badge badge-default"><f:translate key="{ll}:module.mcpTools.prompts.required" default="Required" /></span></f:then>
+                                                                <f:else><span class="text-variant small"><f:translate key="{ll}:module.mcpTools.prompts.optional" default="Optional" /></span></f:else>
+                                                            </f:if>
+                                                        </td>
+                                                        <td>{argument.description}</td>
+                                                    </tr>
+                                                </f:for>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </f:if>
+
+                        <div class="card-body">
+                            <div class="text-variant fw-bold mb-2">
+                                <f:translate key="{ll}:module.mcpTools.prompts.sectionTemplate" default="Prompt Template" />
+                            </div>
+                            <div class="aiu-mcp-code">
+                                <pre class="aiu-mcp-code__pre mb-0"><code><f:format.htmlspecialchars>{prompt.templateBody}</f:format.htmlspecialchars></code></pre>
+                            </div>
+                        </div>
+
+                        <div class="card-body">
+                            <div class="text-variant fw-bold mb-2">
+                                <f:translate key="{ll}:module.mcpTools.prompts.sectionInvocation" default="Invocation" />
+                            </div>
+                            <div class="aiu-mcp-code aiu-mcp-code--light">
+                                <div class="aiu-mcp-code__toolbar">
+                                    <span class="aiu-mcp-code__label">JSON-RPC</span>
+                                    <button type="button"
+                                            class="btn btn-link btn-sm p-0"
+                                            data-mcp-tools-copy-snippet
+                                            data-copy-text='{{ "method": "prompts/get", "params": {{ "name": "{prompt.name}" }} }}'>
+                                        <core:icon identifier="actions-clipboard" size="small" alternativeMarkupIdentifier="inline" />
+                                    </button>
+                                </div>
+                                <pre class="aiu-mcp-code__pre mb-0"><code>{{ "method": "prompts/get", "params": {{ "name": "{prompt.name}" }} }}</code></pre>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer d-flex flex-wrap align-items-center gap-2">
+                        <div class="btn-group" role="group">
+                            <button type="button"
+                                    class="btn btn-default d-inline-flex align-items-center gap-1"
+                                    data-mcp-tools-prompt-toggle
+                                    aria-expanded="false"
+                                    aria-controls="mcp-prompt-body-{prompt.uid}">
+                                <span data-mcp-tools-prompt-toggle-label>
+                                    <f:translate key="{ll}:module.mcpTools.prompts.showDetails" default="Show details" />
+                                </span>
+                                <span class="aiu-mcp-prompt-card__chevron" aria-hidden="true">
+                                    <core:icon identifier="actions-chevron-down" size="small" alternativeMarkupIdentifier="inline" />
+                                </span>
+                            </button>
+                            <f:if condition="!{prompt.isBuiltin}">
+                                <button type="button"
+                                        class="btn btn-default"
+                                        data-mcp-tools-prompt-edit
+                                        data-prompt-uid="{prompt.uid}"
+                                        data-prompt-name="{prompt.name}"
+                                        data-prompt-description="{prompt.description}">
+                                    <f:translate key="{ll}:module.mcpTools.prompts.edit" default="Edit" />
+                                </button>
+                                <button type="button"
+                                        class="btn btn-danger"
+                                        data-mcp-tools-prompt-delete
+                                        data-prompt-uid="{prompt.uid}"
+                                        data-prompt-name="{prompt.name}"
+                                        title="{f:translate(key: '{ll}:module.mcpTools.prompts.delete', default: 'Delete')}">
+                                    <core:icon identifier="actions-delete" size="small" alternativeMarkupIdentifier="inline" />
+                                    <f:translate key="{ll}:module.mcpTools.prompts.delete" default="Delete" />
+                                </button>
+                            </f:if>
+                        </div>
+                    </div>
+                </div>
+            </f:for>
+        </div>
+    </f:else>
+</f:if>
+
+<div class="callout callout-info mt-3 mb-0">
+    <div class="callout-body">
+        <p class="mb-0"><f:translate key="{ll}:module.mcpTools.prompts.footer" default="Prompt templates complement your skill files. Skill files require manual download and setup per client. MCP Prompts are served automatically to any connected client that calls prompts/list." /></p>
+    </div>
+</div>
+
+<div class="aiu-mcp-prompt-form card mt-4" data-mcp-tools-prompt-form hidden>
+    <div class="card-header">
+        <h2 class="card-title mb-0" data-mcp-tools-prompt-form-title>
+            <f:translate key="{ll}:module.mcpTools.prompts.formTitle" default="Prompt template" />
+        </h2>
+    </div>
+    <div class="card-body">
+        <input type="hidden" data-mcp-tools-prompt-form-uid value="0" />
+        <div class="mb-3">
+            <label class="form-label" for="mcp-prompt-name"><f:translate key="{ll}:module.mcpTools.prompts.name" default="Name" /></label>
+            <input type="text" id="mcp-prompt-name" class="form-control" data-mcp-tools-prompt-form-name placeholder="my_custom_workflow" />
+            <div class="form-text">
+                <f:translate key="{ll}:module.mcpTools.prompts.nameHelp" default="Unique snake_case identifier exposed via prompts/get (e.g. weekly_content_review)." />
+            </div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="mcp-prompt-description"><f:translate key="{ll}:module.mcpTools.prompts.description" default="Description" /></label>
+            <input type="text" id="mcp-prompt-description" class="form-control" data-mcp-tools-prompt-form-description />
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="mcp-prompt-body"><f:translate key="{ll}:module.mcpTools.prompts.templateBody" default="Template body" /></label>
+            <textarea id="mcp-prompt-body" class="form-control" rows="8" data-mcp-tools-prompt-form-body></textarea>
+            <div class="form-text">
+                <f:translate key="{ll}:module.mcpTools.prompts.templateBodyHelp" />
+            </div>
+        </div>
+        <div class="mb-0">
+            <label class="form-label" for="mcp-prompt-args"><f:translate key="{ll}:module.mcpTools.prompts.argumentsJson" default="Arguments (JSON)" /></label>
+            <textarea id="mcp-prompt-args" class="form-control font-monospace" rows="6" data-mcp-tools-prompt-form-arguments>[]</textarea>
+            <div class="form-text">
+                <f:translate key="{ll}:module.mcpTools.prompts.argumentsJsonHelp" />
+            </div>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-default btn-sm" data-mcp-tools-prompt-save>
+                <f:translate key="{ll}:module.mcpTools.table.save" />
+            </button>
+            <button type="button" class="btn btn-default btn-sm" data-mcp-tools-prompt-cancel>
+                <f:translate key="{ll}:module.mcpTools.table.cancel" />
+            </button>
+        </div>
+    </div>
+</div>
+
+</html>

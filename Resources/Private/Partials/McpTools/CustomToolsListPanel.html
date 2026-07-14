@@ -1,0 +1,90 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="callout callout-info mb-3 aiu-mcp-tools__banner">
+    <div class="callout-content flex-grow-1">
+        <div class="aiu-mcp-tools__banner-title">
+            <core:icon identifier="actions-cog" size="small" alternativeMarkupIdentifier="inline" />
+            <div class="callout-title mb-0">
+                <f:translate key="{ll}:module.mcpTools.customTools.title" default="Custom MCP Tools" />
+            </div>
+        </div>
+        <div class="callout-body">
+            <p class="mb-0">
+                <f:translate key="{ll}:module.mcpTools.customTools.body" default="Tools created via Create Custom Tool. Register PHP handlers in your extension or point to REST/webhook endpoints." />
+            </p>
+        </div>
+    </div>
+    <div class="aiu-mcp-tools__banner-badges d-flex flex-wrap gap-2">
+        <span class="badge badge-default">{mcpCustomTools -> f:count()} <f:translate key="{ll}:module.mcpTools.sidebar.customToolsMeta" default="created" /></span>
+    </div>
+</div>
+
+<f:if condition="{mcpCustomTools -> f:count()} == 0">
+    <f:then>
+        <div class="callout callout-notice mb-0">
+            <div class="callout-body">
+                <f:translate key="{ll}:module.mcpTools.customTools.empty" default="No custom tools yet. Use Create Custom Tool in the sidebar to add one." />
+            </div>
+        </div>
+    </f:then>
+    <f:else>
+        <div class="card card-size-large mb-0">
+            <table class="table table-striped table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col"><f:translate key="{ll}:module.mcpTools.customTool.label" default="Tool Label" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpTools.customTool.toolKey" default="Tool key" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpTools.customTool.handlerType" default="Handler" /></th>
+                        <th scope="col" class="col-control"><f:translate key="{ll}:module.mcpTools.table.actions" /></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <f:for each="{mcpCustomTools}" as="tool">
+                        <tr data-mcp-tools-custom-tool-row data-custom-tool-uid="{tool.uid}">
+                            <td>
+                                <strong>{tool.label}</strong>
+                                <f:if condition="{tool.description}">
+                                    <div class="small text-variant">{tool.description}</div>
+                                </f:if>
+                            </td>
+                            <td><code>{tool.toolKey}</code></td>
+                            <td>
+                                <span class="badge badge-info">{tool.handlerType}</span>
+                                <div class="small text-variant text-truncate aiu-mcp-custom-tool-handler">{tool.handlerValue}</div>
+                            </td>
+                            <td class="col-control">
+                                <div class="btn-group" role="group">
+                                    <button type="button"
+                                            class="btn btn-default btn-sm"
+                                            data-mcp-tools-custom-tool-edit
+                                            data-custom-tool-uid="{tool.uid}"
+                                            data-custom-tool-label="{tool.label}"
+                                            data-custom-tool-description="{tool.description}"
+                                            data-custom-tool-handler-type="{tool.handlerType}"
+                                            data-custom-tool-handler-value="{tool.handlerValue}"
+                                            data-custom-tool-parameters="{tool.parametersJson}"
+                                            title="{f:translate(key: '{ll}:module.mcpTools.customTools.edit', default: 'Edit')}">
+                                        <core:icon identifier="actions-open" size="small" alternativeMarkupIdentifier="inline" />
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-default btn-sm"
+                                            data-mcp-tools-custom-tool-delete
+                                            data-custom-tool-uid="{tool.uid}"
+                                            title="{f:translate(key: '{ll}:module.mcpTools.customTools.delete', default: 'Delete')}">
+                                        <core:icon identifier="actions-delete" size="small" alternativeMarkupIdentifier="inline" />
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </f:for>
+                </tbody>
+            </table>
+        </div>
+    </f:else>
+</f:if>
+
+</html>

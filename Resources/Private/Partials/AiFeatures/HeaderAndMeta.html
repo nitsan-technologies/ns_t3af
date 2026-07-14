@@ -1,0 +1,48 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<header class="aiu-ai-features__header aiu-tab-page-header">
+    <div class="aiu-tab-page-header__main min-w-0">
+        <div class="aiu-providers__heading">
+            <h1 class="mb-0">{tabHeading}</h1>
+            <p class="text-variant mb-0">{tabIntro}</p>
+        </div>
+    </div>
+    <div class="aiu-tab-page-header__aside">
+        <f:render partial="Module/PageBreadcrumb" arguments="{_all}" />
+    </div>
+</header>
+
+<div class="aiu-mcp-status-bar aiu-ai-features__meta">
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.aiFeatures.extensions" /></h4>
+            <span class="aiu-mcp-status-bar__value" data-aiu-features-meta-count aria-live="polite">{aiFeaturesTotal}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.aiFeatures.kpi.status" default="Status" /></h4>
+            <span class="aiu-mcp-status-bar__value">
+                <span class="badge badge-success">
+                    <core:icon identifier="actions-check-circle" size="small" alternativeMarkupIdentifier="inline" />
+                    <f:translate key="{ll}:module.aiFeatures.installedDetected" />
+                </span>
+            </span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.aiFeatures.kpi.extensions" default="Extensions" /></h4>
+            <span class="aiu-mcp-status-bar__value">{aiFeaturesExtensions -> f:count()}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell aiu-ai-features__meta-hint">
+        <div class="aiu-mcp-status-bar__content">
+            <span class="mb-0 text-variant"><f:translate key="{ll}:module.aiFeatures.hint" /></span>
+        </div>
+    </div>
+</div>
+</html>

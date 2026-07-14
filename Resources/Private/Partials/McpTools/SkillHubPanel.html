@@ -1,0 +1,173 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="card card-size-large mb-4 w-100 aiu-skill-import">
+    <div class="card-header">
+        <div class="card-header-body">
+            <h2 class="card-title mb-0">
+                <core:icon identifier="actions-plus" size="small" />
+                <f:translate key="{ll}:module.mcpTools.skillHub.addTitle" default="Add Skill" />
+            </h2>
+            <div class="card-subtitle text-variant mb-0">
+                <f:translate key="{ll}:module.mcpTools.skillHub.addSubtitle" default="paste a URL or upload a local file." />
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="aiu-skill-import-card aiu-skill-import-card--url h-100">
+                    <div class="aiu-skill-import-card__header">
+                        <span class="aiu-skill-import-card__icon aiu-skill-import-card__icon--url">
+                            <core:icon identifier="actions-link" size="medium" />
+                        </span>
+                        <h3 class="h6 mb-0">
+                            <f:translate key="{ll}:module.mcpTools.skillHub.fromUrl" default="From URL" />
+                        </h3>
+                    </div>
+                    <p class="small text-variant mb-3">
+                        <f:translate key="{ll}:module.mcpTools.skillHub.fromUrlHelp" default="Paste a raw GitHub URL or any direct link to a .md skill file. The skill will be validated and registered to your TYPO3 MCP server." />
+                    </p>
+                    <div class="input-group mb-0">
+                        <span class="input-group-text">
+                            <core:icon identifier="actions-link" size="small" />
+                        </span>
+                        <input type="url"
+                               id="mcp-skill-url"
+                               class="form-control"
+                               data-mcp-tools-skill-url
+                               placeholder="https://raw.githubusercontent.com/…" />
+                        <button type="button"
+                                class="btn btn-default"
+                                data-mcp-tools-skill-import-url>
+                            <core:icon identifier="actions-plus" size="small" />
+                            <f:translate key="{ll}:module.mcpTools.skillHub.import" default="Import" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="aiu-skill-import-card aiu-skill-import-card--file h-100">
+                    <div class="aiu-skill-import-card__header">
+                        <span class="aiu-skill-import-card__icon aiu-skill-import-card__icon--file">
+                            <core:icon identifier="actions-upload" size="medium" />
+                        </span>
+                        <h3 class="h6 mb-0">
+                            <f:translate key="{ll}:module.mcpTools.skillHub.uploadFile" default="Upload File" />
+                        </h3>
+                    </div>
+                    <p class="small text-variant mb-3">
+                        <f:translate key="{ll}:module.mcpTools.skillHub.uploadFileHelp" default="Upload a .md skill file from your computer. The file will be parsed and registered to your TYPO3 MCP server." />
+                    </p>
+                    <input type="file"
+                           id="mcp-skill-file"
+                           class="visually-hidden"
+                           data-mcp-tools-skill-file
+                           accept=".md,text/markdown,text/plain" />
+                    <div class="aiu-skill-import-dropzone"
+                         data-mcp-tools-skill-dropzone
+                         role="button"
+                         tabindex="0"
+                         aria-label="{f:translate(key: '{ll}:module.mcpTools.skillHub.chooseFile', default: 'Click to choose a skill file')}">
+                        <core:icon identifier="actions-upload" size="large" />
+                        <div class="aiu-skill-import-dropzone__title">
+                            <f:translate key="{ll}:module.mcpTools.skillHub.chooseFile" default="Click to choose a skill file" />
+                        </div>
+                        <div class="aiu-skill-import-dropzone__hint small text-variant">
+                            <f:translate key="{ll}:module.mcpTools.skillHub.mdOnly" default="Supports .md files only" />
+                        </div>
+                        <div class="aiu-skill-import-dropzone__filename small" data-mcp-tools-skill-filename hidden></div>
+                    </div>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button type="button"
+                                class="btn btn-default aiu-skill-import-install-btn"
+                                data-mcp-tools-skill-import-file
+                                disabled>
+                            <core:icon identifier="actions-upload" size="small" />
+                            <f:translate key="{ll}:module.mcpTools.skillHub.installSkill" default="Install Skill" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<f:comment>
+  <h2 class="h5 mb-3"><f:translate key="{ll}:module.mcpTools.skillHub.community" default="Community catalog" /></h2>
+  <div class="card-container mb-3">
+      <f:for each="{mcpSkillCatalog}" as="skill">
+          <div class="card card-size-small">
+              <div class="card-header">
+                  <div class="card-header-body">
+                      <h3 class="card-title">{skill.name}</h3>
+                      <span class="card-subtitle"><code>{skill.triggerKeyword}</code></span>
+                  </div>
+              </div>
+              <div class="card-body">
+                  <p class="card-text text-variant mb-0">{skill.description}</p>
+              </div>
+              <div class="card-footer">
+                  <f:if condition="{skill.installed}">
+                      <f:then><span class="badge badge-success"><f:translate key="{ll}:module.mcpTools.skillHub.installed" default="Installed" /></span></f:then>
+                      <f:else>
+                          <button type="button"
+                                  class="btn btn-default btn-sm"
+                                  data-mcp-tools-skill-install
+                                  data-skill-name="{skill.name}"
+                                  data-skill-trigger="{skill.triggerKeyword}"
+                                  data-skill-body="# {skill.name}\n\nTrigger: `{skill.triggerKeyword}`\n\n{skill.description}">
+                              <f:translate key="{ll}:module.mcpTools.skillHub.install" default="Install" />
+                          </button>
+                      </f:else>
+                  </f:if>
+              </div>
+          </div>
+      </f:for>
+  </div>
+</f:comment>
+
+<h2 class="h5 mb-3"><f:translate key="{ll}:module.mcpTools.skillHub.installedTitle" default="Installed skills" /></h2>
+<f:if condition="{mcpInstalledSkills -> f:count()} == 0">
+    <f:then>
+        <div class="callout callout-notice mb-0">
+            <div class="callout-body"><f:translate key="{ll}:module.mcpTools.skillHub.noneInstalled" default="No skills installed yet." /></div>
+        </div>
+    </f:then>
+    <f:else>
+        <div class="card card-size-large mb-0">
+            <table class="table table-striped table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col"><f:translate key="{ll}:module.mcpTools.skillHub.name" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpTools.trigger" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.mcpTools.skillHub.source" default="Source" /></th>
+                        <th scope="col" class="actions"><f:translate key="{ll}:module.mcpTools.table.actions" /></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <f:for each="{mcpInstalledSkills}" as="skill">
+                        <tr>
+                            <td>{skill.name}</td>
+                            <td><code>{skill.triggerKeyword}</code></td>
+                            <td>{skill.source}</td>
+                            <td class="actions">
+                                <button type="button"
+                                        class="btn btn-sm btn-default"
+                                        data-mcp-tools-skill-remove
+                                        data-skill-uid="{skill.uid}">
+                                    <f:translate key="{ll}:module.mcpTools.skillHub.remove" default="Remove" />
+                                </button>
+                            </td>
+                        </tr>
+                    </f:for>
+                </tbody>
+            </table>
+        </div>
+    </f:else>
+</f:if>
+
+</html>

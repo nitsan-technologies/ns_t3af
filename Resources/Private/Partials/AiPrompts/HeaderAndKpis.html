@@ -1,0 +1,44 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<header class="aiu-ai-prompts__header aiu-tab-page-header">
+    <div class="aiu-tab-page-header__main min-w-0">
+        <div class="aiu-providers__heading">
+            <h1 class="mb-0">{tabHeading}</h1>
+            <p class="text-variant mb-0">{tabIntro}</p>
+        </div>
+    </div>
+    <div class="aiu-tab-page-header__aside">
+        <f:render partial="Module/PageBreadcrumb" arguments="{_all}" />
+    </div>
+</header>
+
+<div class="aiu-mcp-status-bar aiu-ai-prompts__kpis">
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.aiPrompts.kpi.categories" default="Prompt categories" /></h4>
+            <span class="aiu-mcp-status-bar__value">{aiPromptsOverview.kpis.categoryCount}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.aiPrompts.kpi.prompts" default="Total prompts" /></h4>
+            <span class="aiu-mcp-status-bar__value">{aiPromptsOverview.kpis.totalPrompts}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.aiPrompts.kpi.extensions" default="Extensions covered" /></h4>
+            <span class="aiu-mcp-status-bar__value">{aiPromptsOverview.kpis.extensionCount}</span>
+        </div>
+    </div>
+    <div class="aiu-mcp-status-bar__cell">
+        <div class="aiu-mcp-status-bar__content">
+            <h4 class="aiu-mcp-status-bar__label mb-0"><f:translate key="{ll}:module.aiPrompts.kpi.custom" default="Custom prompts" /></h4>
+            <span class="aiu-mcp-status-bar__value">{aiPromptsOverview.kpis.customPrompts}</span>
+        </div>
+    </div>
+</div>
+</html>
+

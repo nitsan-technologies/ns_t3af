@@ -1,0 +1,34 @@
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<div class="aiu-mcp-client-token" data-client-token-panel="{clientKey}">
+    <f:if condition="{tokenState.active} == 1">
+        <f:then>
+            <div class="aiu-flash aiu-flash--success aiu-mcp-client-token__active">
+                <strong><f:translate key="{ll}:module.mcpServer.clientToken.active" arguments="{0: clientKey}" /></strong>
+            </div>
+            <div class="aiu-mcp-field-row">
+                <label class="aiu-field-label"><f:translate key="{ll}:module.mcpServer.clientToken.bearerLabel" /></label>
+                <div class="aiu-mcp-url-row">
+                    <code
+                        class="aiu-mcp-url-row__code aiu-mcp-client-token__value"
+                        data-copy-target="client-token-{clientKey}"
+                        data-client-token-value="{clientKey}"
+                    ><f:if condition="{tokenState.preview} != ''"><f:then>{tokenState.preview}</f:then><f:else>…</f:else></f:if></code>
+                    <button type="button" class="btn btn-sm btn-default" data-copy="client-token-{clientKey}">
+                        <f:translate key="{ll}:module.mcpServer.action.copyToken" />
+                    </button>
+                </div>
+            </div>
+        </f:then>
+        <f:else>
+            <div class="aiu-flash aiu-flash--info aiu-mcp-client-token__missing">
+                <p class="aiu-mcp-client-token__missing-text">
+                    <f:translate key="{ll}:module.mcpServer.clientToken.missing" arguments="{0: clientKey}" />
+                </p>
+                <button type="button" class="btn btn-primary aiu-mcp-client-token__create" data-action="issue-client-token" data-client="{clientKey}">
+                    <f:translate key="{ll}:module.mcpServer.clientToken.create" arguments="{0: clientKey}" />
+                </button>
+            </div>
+        </f:else>
+    </f:if>
+</div>

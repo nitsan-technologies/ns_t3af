@@ -1,0 +1,13 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:if condition="{quality.hasQuality} == 1">
+    <f:then>
+        <span class="aiu-quality-badge aiu-quality-badge--{quality.level}" title="{quality.title}">
+            <span class="aiu-quality-badge__ring" style="--aiu-ring-percent: {quality.dash}">{quality.score}</span>
+        </span>
+    </f:then>
+    <f:else>
+        <span class="text-variant">—</span>
+    </f:else>
+</f:if>
+</html>

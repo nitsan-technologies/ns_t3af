@@ -1,0 +1,120 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="card mb-3 aiu-ai-prompts__detail-head">
+    <div class="card-header">
+        <div class="card-header-body min-w-0">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                <h2 class="card-title h5 mb-0">{aiPromptsDetail.category.title}</h2>
+                <f:if condition="{aiPromptsDetail.category.providerExtensionTitle}">
+                    <span class="badge badge-default flex-shrink-0">{aiPromptsDetail.category.providerExtensionTitle}</span>
+                </f:if>
+            </div>
+            <span class="card-subtitle d-block">{aiPromptsDetail.category.description}</span>
+        </div>
+    </div>
+</div>
+
+<div class="aiu-toolbar aiu-ai-prompts__toolbar aiu-ai-prompts__detail-toolbar" data-aiu-prompt-detail-filters>
+    <div class="input-group aiu-ai-prompts__search flex-grow-1">
+        <input type="search"
+               id="aiu-ai-prompts-detail-search"
+               class="form-control"
+               data-aiu-prompt-detail-search
+               autocomplete="off"
+               autocorrect="off"
+               autocapitalize="off"
+               spellcheck="false"
+               data-1p-ignore="true"
+               data-lpignore="true"
+               data-form-type="other"
+               readonly="readonly"
+               placeholder="{f:translate(key: '{ll}:module.aiPrompts.filter.searchDetail', default:'Search prompts...')}" />
+    </div>
+    <button type="button" class="btn btn-default flex-shrink-0" data-aiu-prompt-detail-reset>
+        <f:translate key="{ll}:module.aiPrompts.filter.reset" default="Reset" />
+    </button>
+    <div class="aiu-ai-prompts__toolbar-actions">
+        <f:render partial="AiPrompts/BackLink" arguments="{_all}" />
+        <f:if condition="!{aiPromptsDetail.category.readOnly}">
+            <f:render partial="AiPrompts/AddPromptButton" arguments="{_all}" />
+        </f:if>
+    </div>
+</div>
+
+<div class="aiu-table-wrap aiu-ai-prompts__table-wrap table-fit table-responsive">
+    <table class="aiu-table aiu-table--compact table table-striped table-hover align-middle mb-0">
+        <thead>
+        <tr>
+            <th scope="col"><f:translate key="{ll}:module.aiPrompts.table.promptType" default="Prompt Type" /></th>
+            <th scope="col"><f:translate key="{ll}:module.aiPrompts.table.type" default="Type" /></th>
+            <th scope="col"><f:translate key="{ll}:module.aiPrompts.table.title" default="Prompt Title" /></th>
+            <th scope="col"><f:translate key="{ll}:module.aiPrompts.table.text" default="Prompt Text" /></th>
+            <th scope="col" class="actions"><f:translate key="{ll}:module.aiPrompts.table.actions" default="Actions" /></th>
+        </tr>
+        </thead>
+        <tbody>
+        <f:for each="{aiPromptsDetail.rows}" as="row">
+            <f:variable name="promptTextPlain" value="{row.promptText -> f:format.stripTags()}" />
+            <tr data-aiu-prompt-detail-row
+                data-row-search="{row.promptType} {f:if(condition: row.isBuiltin, then: 'system', else: 'custom')} {row.promptTitle} {promptTextPlain}">
+                <td>{row.promptType}</td>
+                <td>
+                    <f:if condition="{row.isBuiltin}">
+                        <f:then><f:translate key="{ll}:module.aiPrompts.type.system" default="System" /></f:then>
+                        <f:else><f:translate key="{ll}:module.aiPrompts.type.custom" default="Custom" /></f:else>
+                    </f:if>
+                </td>
+                <td>{row.promptTitle}</td>
+                <td>
+                    <div class="aiu-ai-prompts__prompt-text-preview">{promptTextPlain}</div>
+                </td>
+                <td class="actions">
+                    <div class="d-flex gap-2 flex-nowrap align-items-center">
+                        <button type="button"
+                                class="btn btn-sm btn-primary aiu-ai-prompts__view-text-btn"
+                                data-aiu-prompt-view-text
+                                data-prompt-title="{row.promptTitle}"
+                                data-prompt-text="{promptTextPlain}"
+                                title="{f:translate(key: '{ll}:module.aiPrompts.action.viewAllText', default: 'View all text')}"
+                                aria-label="{f:translate(key: '{ll}:module.aiPrompts.action.viewAllText', default: 'View all text')}">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16"><g fill="currentColor"><path d="M4.399 14H2V2h12v6.071c.348.119.684.253 1 .408V1.5a.5.5 0 0 0-.5-.5h-13a.5.5 0 0 0-.5.5v13a.5.5 0 0 0 .5.5h3.523a4.432 4.432 0 0 1-.624-1ZM3 3h10v2H3V3Zm0 3h10v1H3V6Zm0 3h3.165a7.645 7.645 0 0 1 2.08-1H3v1Zm0 2h1.413c.162-.352.382-.686.647-1H3v1Zm0 2h1.11a3.621 3.621 0 0 1 .001-1H3v1Zm8.2-4h-.1c-2.8 0-5 1.6-5 3.5S8.2 16 11 16c2.8 0 5-1.6 5-3.5S13.8 9.1 11.2 9Zm-.2 6c-2.2 0-4-1.1-4-2.5 0-.9.7-1.6 1.8-2.1-.2.3-.2.7-.2 1.1 0 1.4 1.1 2.5 2.5 2.5s2.5-1.1 2.5-2.5c0-.4-.1-.7-.2-1 1 .5 1.7 1.2 1.7 2C15 13.9 13.2 15 11 15Zm.1-5.2c.1 0 .3.1.3.2s-.1.2-.3.2c-.6 0-1.2.5-1.2 1.1 0 .1-.1.2-.3.2-.2 0-.3-.1-.3-.2.1-.8.9-1.5 1.8-1.5Z"/></g></svg>
+                        </button>
+                        <f:if condition="{row.isBuiltin}">
+                            <f:else>
+                                <div class="btn-group-actions d-flex gap-2 flex-nowrap" role="group">
+                                    <button type="button"
+                                            class="btn btn-sm btn-default"
+                                            data-aiu-prompt-edit
+                                            data-prompt-uid="{row.uid}">
+                                        <f:translate key="{ll}:module.aiPrompts.action.edit" default="Edit" />
+                                    </button>
+                                    <form method="post"
+                                          action="{aiPromptsDeleteUri}"
+                                          class="aiu-ai-prompts__delete-form">
+                                        <input type="hidden" name="id" value="{currentPageId}" />
+                                        <input type="hidden" name="uid" value="{row.uid}" />
+                                        <input type="hidden" name="category" value="{aiPromptsCategory}" />
+                                        <button type="button"
+                                                class="btn btn-sm btn-danger"
+                                                data-aiu-prompt-delete>
+                                            <f:translate key="{ll}:module.aiPrompts.action.delete" default="Delete" />
+                                        </button>
+                                    </form>
+                                </div>
+                            </f:else>
+                        </f:if>
+                    </div>
+                </td>
+            </tr>
+        </f:for>
+        <f:if condition="{aiPromptsDetail.rows -> f:count()} == 0">
+            <tr data-aiu-prompt-detail-empty-data><td colspan="5" class="aiu-empty"><f:translate key="{ll}:module.aiPrompts.empty.rows" default="No prompts found for this category." /></td></tr>
+        </f:if>
+        <tr data-aiu-prompt-detail-empty-filter hidden="hidden"><td colspan="5" class="aiu-empty"><f:translate key="{ll}:module.aiPrompts.empty.filteredRows" default="No prompts match your search." /></td></tr>
+        </tbody>
+    </table>
+    <div class="aiu-ai-prompts__table-footer"><span data-aiu-prompt-detail-count>{aiPromptsDetail.rows -> f:count()}</span> prompts shown</div>
+</div>
+</html>

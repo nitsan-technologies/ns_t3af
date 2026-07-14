@@ -1,0 +1,77 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<f:if condition="{aiContextOverview.siteResolved} == 1">
+    <section class="mb-4" aria-labelledby="aiu-ai-context-overview-heading">
+        <h2 id="aiu-ai-context-overview-heading" class="visually-hidden">
+            <f:translate key="{ll}:dashboard.aiContextOverview.kicker" />
+        </h2>
+        <div class="card mb-0">
+            <div class="card-header">
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="aiu-checklist__progress flex-shrink-0" aria-hidden="true">
+                        <div class="aiu-progress-ring aiu-progress-ring--checklist">
+                            <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true">
+                                <circle class="aiu-progress-ring__track" cx="22" cy="22" r="18" fill="none" stroke-width="3.5"/>
+                                <circle class="aiu-progress-ring__value"
+                                        cx="22" cy="22" r="18" fill="none"
+                                        stroke-width="3.5"
+                                        pathLength="100"
+                                        stroke-dasharray="{aiContextOverview.completenessPercent} 100"
+                                        stroke-linecap="round"
+                                        transform="rotate(-90 22 22)"/>
+                            </svg>
+                            <span class="aiu-progress-ring__label">
+                                <span>{aiContextOverview.completenessPercent}</span>
+                                <span class="small">%</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="min-w-0 flex-grow-1">
+                        <h2 class="h3 mb-0 text-uppercase">
+                            <f:translate key="{ll}:dashboard.aiContextOverview.kicker" />
+                        </h2>
+                        <span class="card-subtitle d-none d-sm-inline">
+                            <f:translate key="{ll}:dashboard.aiContextOverview.sectionsCount"
+                                         arguments="{0: aiContextOverview.completenessCompleted, 1: aiContextOverview.completenessTotal}" />
+                        </span>
+                        <f:if condition="{aiContextOverview.hasDefault} == 1">
+                            <f:then>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge badge-default">{aiContextOverview.brandName}</span>
+                                    <f:if condition="{aiContextOverview.industry}">
+                                        <span class="badge badge-default">{aiContextOverview.industry}</span>
+                                    </f:if>
+                                </div>
+                            </f:then>
+                            <f:else>
+                                <div class="h5 mb-0">
+                                    <f:translate key="{ll}:dashboard.aiContextOverview.noDefaultName" />
+                                </div>
+                            </f:else>
+                        </f:if>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <a href="{aiContextOverview.aiContextUri}" class="btn btn-default d-inline-flex align-items-center gap-1 flex-shrink-0">
+                            <f:translate key="{ll}:dashboard.aiContextOverview.manage" />
+                        </a>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-1">
+                    <f:for each="{aiContextOverview.sections}" as="section">
+                        <span class="badge{f:if(condition: section.complete, then: ' badge-success', else: ' badge-default')} d-inline-flex align-items-center gap-1">
+                            <f:if condition="{section.complete}">
+                                <core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" />
+                            </f:if>
+                            <f:translate key="{ll}:{section.labelKey}" />
+                        </span>
+                    </f:for>
+                </div>
+            </div>
+        </div>
+    </section>
+</f:if>
+</html>

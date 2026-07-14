@@ -1,0 +1,82 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="card card-size-small mb-0 w-100">
+    <div class="card-header">
+        <div class="card-header-body__top d-flex justify-content-between align-items-center gap-2">
+            <h2 class="card-title mb-0"><f:translate key="{ll}:dashboard.recentRequests" default="Recent Requests" /></h2>
+            <a href="{aiUsageUri}" class="btn btn-default btn-sm">
+                <f:translate key="{ll}:dashboard.openRequestLog" default="Open Request Log" />
+            </a>
+        </div>
+    </div>
+    <div class="table-fit">
+        <table class="table table-striped table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col"><f:translate key="{ll}:dashboard.col.time" /></th>
+                        <th scope="col"><f:translate key="{ll}:dashboard.col.extension" /></th>
+                        <th scope="col"><f:translate key="{ll}:dashboard.col.model" /></th>
+                        <th scope="col" class="text-end"><f:translate key="{ll}:dashboard.col.tokens" /></th>
+                        <th scope="col" class="text-end">
+                            <f:if condition="{activityColumnMode} == 'cost'">
+                                <f:then><f:translate key="{ll}:dashboard.col.cost" /></f:then>
+                                <f:else><f:translate key="{ll}:dashboard.col.credits" /></f:else>
+                            </f:if>
+                        </th>
+                        <th scope="col" class="text-end"><f:translate key="{ll}:dashboard.col.status" /></th>
+                        <th scope="col" class="text-center"><f:translate key="{ll}:dashboard.col.quality" default="Quality" /></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <f:for each="{recentRequests}" as="item">
+                        <tr class="{f:if(condition: item.success, then: '', else: 'table-danger')}">
+                            <td class="text-variant">{item.crdate -> f:format.date(format: 'Y-m-d H:i')}</td>
+                            <td><span class="badge badge-default">{item.extension_key}</span></td>
+                            <td><code class="small">{item.model_used}</code></td>
+                            <td class="text-end">{item.total_tokens}</td>
+                            <td class="text-end">
+                                <f:if condition="{activityColumnMode} == 'cost'">
+                                    <f:then>
+                                        <f:if condition="{item.success} == 1">
+                                            <f:then>${item.estimated_cost -> f:format.number(decimals: 4)}</f:then>
+                                            <f:else>—</f:else>
+                                        </f:if>
+                                    </f:then>
+                                    <f:else>
+                                        <f:if condition="{item.credits_used} > 0">
+                                            <f:then>{item.credits_used -> f:format.number(decimals: 3)}</f:then>
+                                            <f:else>—</f:else>
+                                        </f:if>
+                                    </f:else>
+                                </f:if>
+                            </td>
+                            <td class="text-end">
+                                <f:if condition="{item.success} == 1">
+                                    <f:then><span class="badge badge-success">OK</span></f:then>
+                                    <f:else><span class="badge badge-danger">Fail</span></f:else>
+                                </f:if>
+                            </td>
+                            <td class="text-center">
+                                <f:render partial="Module/Dashboard/QualityScoreBadge" arguments="{quality: item.qualityView}" />
+                            </td>
+                        </tr>
+                    </f:for>
+                    <f:if condition="{recentRequests -> f:count()} == 0">
+                        <tr>
+                            <td colspan="7" class="text-center text-variant py-4">
+                                <f:translate key="{ll}:dashboard.noActivity" />
+                            </td>
+                        </tr>
+                    </f:if>
+                </tbody>
+            </table>
+    </div>
+    <div class="card-footer small text-variant">
+        <f:variable name="recentRequestCount" value="{recentRequests -> f:count()}" />
+        <f:translate key="{ll}:dashboard.recentRequests.footer" arguments="{0: recentRequestCount}" default="%s most recent requests shown" />
+        · <a href="{aiUsageUri}" class="btn btn-default btn-sm"><f:translate key="{ll}:dashboard.viewFullLog" default="View full log" /></a>
+    </div>
+</div>
+</html>

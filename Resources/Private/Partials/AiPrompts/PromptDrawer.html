@@ -1,0 +1,102 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="aiu-ai-prompts__drawer-overlay" data-aiu-prompt-drawer-overlay hidden="hidden"></div>
+<aside class="aiu-ai-prompts__drawer" data-aiu-prompt-drawer hidden="hidden">
+    <div class="aiu-ai-prompts__drawer-head">
+        <h3 data-aiu-prompt-drawer-title><f:translate key="{ll}:module.aiPrompts.drawer.newTitle" default="New Prompt" /></h3>
+        <button type="button" class="aiu-mcp-action-btn aiu-mcp-action-btn--ghost" data-aiu-prompt-close>×</button>
+    </div>
+    <form method="post" action="{aiPromptsCreateUri}" data-aiu-prompt-form>
+        <div class="aiu-flash aiu-flash--warn mb-3" data-aiu-prompt-validation-error hidden="hidden" role="alert"></div>
+        <input type="hidden" name="id" value="{currentPageId}" />
+        <input type="hidden" name="uid" value="0" data-aiu-prompt-field-uid />
+        <f:if condition="{aiPromptsMode} == 'overview'">
+            <div class="form-group">
+                <label class="form-label"><f:translate key="{ll}:module.aiPrompts.drawer.category" default="Category" /></label>
+                <select class="form-select" name="category" required="required" data-aiu-prompt-field-category>
+                    <option value=""><f:translate key="{ll}:module.aiPrompts.drawer.selectCategory" default="Select category…" /></option>
+                    <f:for each="{aiPromptsOverview.categories}" as="promptCategory">
+                        <option value="{promptCategory.id}">{promptCategory.title}</option>
+                    </f:for>
+                </select>
+            </div>
+        </f:if>
+        <f:if condition="{aiPromptsMode} != 'overview'">
+            <input type="hidden" name="category" value="{aiPromptsCategory}" data-aiu-prompt-field-category />
+        </f:if>
+        <div class="form-group">
+            <label class="form-label"><f:translate key="{ll}:module.aiPrompts.drawer.promptTitle" default="Prompt Title" /></label>
+            <input type="text" class="form-control" name="promptTitle" required="required" data-aiu-prompt-field-title />
+        </div>
+        <f:if condition="{aiPromptsMode} == 'overview' || {aiPromptsCategory} != 'sidebar'">
+            <div data-aiu-prompt-catalog-fields>
+                <div class="form-group">
+                    <label class="form-label"><f:translate key="{ll}:module.aiPrompts.drawer.scope" default="Scope" /></label>
+                    <select class="form-select" name="scope" data-aiu-prompt-field-scope>
+                        <option value=""><f:translate key="{ll}:module.aiPrompts.drawer.selectScope" default="Select scope…" /></option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><f:translate key="{ll}:module.aiPrompts.drawer.promptType" default="Prompt Type" /></label>
+                    <select class="form-select" name="promptType" data-aiu-prompt-field-type>
+                        <option value=""><f:translate key="{ll}:module.aiPrompts.drawer.selectType" default="Select prompt type…" /></option>
+                    </select>
+                </div>
+                <div class="form-group" data-aiu-prompt-type-hints-wrap hidden="hidden">
+                    <div data-aiu-prompt-required-vars-section hidden="hidden">
+                        <label class="form-label"><f:translate key="{ll}:module.aiPrompts.drawer.requiredVariables" default="Required variables" /></label>
+                        <p class="form-text text-muted"><f:translate key="{ll}:module.aiPrompts.drawer.requiredVariablesHint" default="Include each variable in your prompt text using square brackets, e.g. [Content]." /></p>
+                        <div class="aiu-ai-prompts__drawer-required-vars" data-aiu-prompt-required-vars></div>
+                    </div>
+                </div>
+            </div>
+        </f:if>
+        <div class="form-group">
+            <div class="callout callout-notice mb-3" data-aiu-prompt-default-info hidden="hidden" aria-live="polite">
+                <div class="callout-icon">
+                    <core:icon identifier="actions-file" size="medium" />
+                </div>
+                <div class="callout-content flex-grow-1 min-w-0">
+                    <div class="callout-title">
+                        <f:translate key="{ll}:module.aiPrompts.drawer.defaultText" default="Built-in default prompt" />
+                    </div>
+                    <div class="callout-body">
+                        <p class="mb-2 small">
+                            <f:translate key="{ll}:module.aiPrompts.drawer.defaultTextHint" default="Reference only — your custom prompt replaces this at runtime when selected." />
+                        </p>
+                        <p class="mb-0 text-break" data-aiu-prompt-default-text></p>
+                    </div>
+                </div>
+            </div>
+            <label class="form-label"><f:translate key="{ll}:module.aiPrompts.drawer.promptText" default="Prompt Text" /></label>
+            <div class="callout callout-info mb-3" data-aiu-prompt-context-info hidden="hidden" aria-live="polite">
+                <div class="callout-icon">
+                    <core:icon identifier="actions-lightbulb" size="medium" />
+                </div>
+                <div class="callout-content flex-grow-1 min-w-0">
+                    <div class="d-flex align-items-start justify-content-between gap-2">
+                        <div class="callout-title mb-0">
+                            <f:translate key="{ll}:module.aiPrompts.drawer.brandContextTitle" default="AI Context" />
+                        </div>
+                        <span class="badge badge-default flex-shrink-0" data-aiu-prompt-context-profile></span>
+                    </div>
+                    <div class="callout-body">
+                        <p class="mb-2 text-variant small" data-aiu-prompt-context-hint></p>
+                        <a href="{aiContextUri}" class="btn btn-default btn-sm">
+                            <f:translate key="{ll}:module.aiPrompts.drawer.manageBrandContext" default="Manage in AI Context" />
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <textarea class="form-control" rows="8" name="promptText" required="required" data-aiu-prompt-field-text></textarea>
+        </div>
+        <div class="aiu-ai-prompts__drawer-actions">
+            <button type="button" class="btn btn-default" data-aiu-prompt-close><f:translate key="{ll}:module.aiPrompts.action.cancel" default="Cancel" /></button>
+            <button type="submit" class="btn btn-primary" data-aiu-prompt-submit><f:translate key="{ll}:module.aiPrompts.action.save" default="Save Prompt" /></button>
+        </div>
+    </form>
+</aside>
+</html>

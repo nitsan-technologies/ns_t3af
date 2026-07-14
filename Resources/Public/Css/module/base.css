@@ -1,0 +1,506 @@
+/*!
+ * AI Foundation backend module CSS — 01-base
+ * Design tokens, color scheme, module shell (nav/logo/credit badge/quick-setup). Loaded on every page.
+ *
+ */
+
+/*
+ * Color tokens bridge TYPO3 page/surface vars (v12–v14).
+ * Dark mode activates only via [data-color-scheme=dark] (v13+) or [data-bs-theme=dark] (v12),
+ * not OS preference. Do not use --typo3-component-* for page panels: on v12 those tokens
+ * follow prefers-color-scheme and stay dark even when the backend chrome is light.
+ */
+:root {
+    /*
+     * Links & semantic primary — TYPO3 core only (v12–v14).
+     * Do not hardcode extension blue (#1a56db); use for links / core primary surfaces.
+     */
+    --aiu-primary: var(--typo3-link-color, var(--typo3-state-primary-color, #205eb5));
+    --aiu-primary-hover: var(--typo3-link-hover-color, var(--typo3-state-primary-hover-color, #1a4a96));
+    --aiu-primary-soft: var(--typo3-surface-container-primary, var(--typo3-state-primary-bg, color-mix(in srgb, var(--typo3-link-color, #205eb5) 12%, transparent)));
+    --aiu-accent: var(--typo3-warning-color, #ff8700);
+
+    /* Selected UI chrome (chips, toggles, wizard picks) — core default state, not brand blue */
+    --aiu-selected-bg: var(--typo3-state-default-bg, #ebebeb);
+    --aiu-selected-border: var(--typo3-state-default-focus-border-color, var(--bs-border-color, #adadad));
+    --aiu-selected-fg: var(--typo3-text-color-base, var(--aiu-text-700));
+    --aiu-selected-hover-bg: var(--typo3-state-default-hover-bg, #dedede);
+
+    /* Surfaces — page body tokens (follow data-bs-theme / data-color-scheme), not component overlays */
+    --aiu-bg-white: var(--typo3-surface-base, var(--bs-body-bg, #fff));
+    --aiu-bg-soft: #fcfcfc;
+
+    /* Borders */
+    --aiu-border: var(--typo3-border-color, var(--bs-border-color, #d7d7d7));
+    --aiu-border-soft: #e3e2e2;
+
+    /* Text */
+    --aiu-text-900: var(--typo3-text-color-base, var(--bs-body-color, #000));
+    --aiu-text-800: var(--typo3-text-color-base, var(--bs-body-color, #111));
+    --aiu-text-700: var(--typo3-text-color-base, var(--bs-body-color, #1e1e1e));
+    --aiu-text-500: var(--typo3-text-color-variant, var(--bs-secondary-color, rgba(0, 0, 0, .75)));
+    --aiu-text-400: var(--typo3-text-color-variant, var(--bs-secondary-color, rgba(0, 0, 0, .5)));
+
+    /* Tints (badges / flashes / MCP tiles) — theme-aware */
+    --aiu-tint-neutral-bg: #f3f4f6;
+    --aiu-tint-neutral-border: #e5e7eb;
+    --aiu-tint-neutral-fg: #374151;
+
+    --aiu-tint-success-bg: #ecfdf5;
+    --aiu-tint-success-border: #a7f3d0;
+    --aiu-tint-success-fg: #065f46;
+
+    --aiu-tint-info-bg: var(--typo3-badge-info-bg, oklch(0.97 0.014 254.604));
+    --aiu-tint-info-border: var(--typo3-badge-info-border-color, oklch(0.882 0.059 254.128));
+    --aiu-tint-info-fg: var(--typo3-badge-info-color, oklch(0.488 0.243 264.376));
+
+    --aiu-tint-warn-bg: #fffbeb;
+    --aiu-tint-warn-border: #fde68a;
+    --aiu-tint-warn-fg: #92400e;
+
+    --aiu-tint-danger-bg: #fee2e2;
+    --aiu-tint-danger-border: #fecaca;
+    --aiu-tint-danger-fg: #991b1b;
+
+    /* Shape */
+    --aiu-radius-md: .75rem;
+    --aiu-radius-lg: 8px;
+    --aiu-radius-xl: 16px;
+    --aiu-shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+
+    /* MCP code blocks — readable in light + dark backend chrome */
+    --aiu-mcp-code-bg: #0f172a;
+    --aiu-mcp-code-fg: #e2e8f0;
+    --aiu-mcp-code-border: #334155;
+
+    /* MCP inline URL / snippet code (light panel, not terminal block) */
+    --aiu-mcp-url-code-bg: var(--typo3-surface-container-low, var(--aiu-bg-soft));
+    --aiu-mcp-url-code-fg: var(--typo3-text-color-base, var(--aiu-text-700));
+    --aiu-mcp-url-code-border: var(--typo3-border-color, var(--bs-border-color, var(--aiu-border-soft)));
+
+    /* Semantic status — fixed */
+    --aiu-status-ok:   #247554;
+    --aiu-status-bad:  #d13a2e;
+    --aiu-status-warn: #d97706;
+}
+
+/* Explicit dark — TYPO3 v13+ (data-color-scheme) and v12 (data-bs-theme) */
+[data-color-scheme=dark],
+[data-bs-theme=dark] {
+    --aiu-primary-soft: var(--typo3-surface-container-primary, var(--typo3-state-primary-bg, color-mix(in srgb, var(--typo3-link-color, #6b9fe8) 18%, transparent)));
+    --aiu-selected-bg: var(--typo3-state-default-bg, #333);
+    --aiu-selected-border: var(--typo3-state-default-focus-border-color, var(--bs-border-color, #5a5a5a));
+    --aiu-selected-fg: var(--typo3-text-color-base, var(--aiu-text-700));
+    --aiu-selected-hover-bg: var(--typo3-state-default-hover-bg, #3d3d3d);
+    --aiu-bg-white: var(--typo3-surface-base, var(--bs-body-bg, #1e1e1e));
+    --aiu-bg-soft: var(--typo3-surface-container-low, var(--bs-tertiary-bg, #292929));
+    --aiu-border: var(--typo3-border-color, var(--bs-border-color, #5a5a5a));
+    --aiu-border-soft: var(--typo3-border-color, var(--bs-border-color, #333));
+    --aiu-text-900: var(--typo3-text-color-base, var(--bs-body-color, #fff));
+    --aiu-text-800: var(--typo3-text-color-base, var(--bs-body-color, #f1f1f1));
+    --aiu-text-700: var(--typo3-text-color-base, var(--bs-body-color, #d7d7d7));
+    --aiu-text-500: var(--typo3-text-color-variant, var(--bs-secondary-color, hsla(0, 0%, 84%, .75)));
+    --aiu-text-400: var(--typo3-text-color-variant, var(--bs-secondary-color, hsla(0, 0%, 84%, .5)));
+    --aiu-shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+    --aiu-mcp-code-bg: #020617;
+    --aiu-mcp-code-fg: #f8fafc;
+    --aiu-mcp-code-border: #475569;
+
+    --aiu-mcp-url-code-bg: var(--typo3-surface-container-low, var(--aiu-bg-soft));
+    --aiu-mcp-url-code-fg: var(--typo3-text-color-base, var(--aiu-text-700));
+    --aiu-mcp-url-code-border: var(--typo3-border-color, var(--bs-border-color, var(--aiu-border-soft)));
+
+    /* Tints in dark: keep semantic hue, reduce glare */
+    --aiu-tint-neutral-bg: rgba(255,255,255,.06);
+    --aiu-tint-neutral-border: rgba(255,255,255,.10);
+    --aiu-tint-neutral-fg: var(--aiu-text-700);
+
+    --aiu-tint-success-bg: rgba(34,197,94,.12);
+    --aiu-tint-success-border: rgba(34,197,94,.25);
+    --aiu-tint-success-fg: #a7f3d0;
+
+    --aiu-tint-info-bg: var(--typo3-badge-info-bg, rgba(59, 130, 246, .12));
+    --aiu-tint-info-border: var(--typo3-badge-info-border-color, rgba(59, 130, 246, .25));
+    --aiu-tint-info-fg: var(--typo3-badge-info-color, #bfdbfe);
+
+    --aiu-tint-warn-bg: rgba(245,158,11,.14);
+    --aiu-tint-warn-border: rgba(245,158,11,.28);
+    --aiu-tint-warn-fg: #fde68a;
+
+    --aiu-tint-danger-bg: rgba(239,68,68,.14);
+    --aiu-tint-danger-border: rgba(239,68,68,.28);
+    --aiu-tint-danger-fg: #fecaca;
+}
+
+.aiu-module-page {
+    --aiu-module-inline: 1.25rem;
+}
+
+.aiu-tab-page-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 1rem;
+    row-gap: .5rem;
+    margin-bottom: .75rem;
+    width: 100%;
+}
+
+.aiu-tab-page-header__aside {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.aiu-tab-page-header__aside.d-flex {
+    justify-content: flex-end;
+}
+
+@media (max-width: 767.98px) {
+    .aiu-tab-page-header {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .aiu-tab-page-header__aside {
+        justify-content: flex-start;
+    }
+}
+
+.aiu-tab-page-header__main .aiu-providers__heading h1.mb-0 {
+    margin-bottom: 0;
+}
+
+.aiu-tab-page-header__main .aiu-providers__heading h1:not(.mb-0) + p,
+.aiu-tab-page-header__main .aiu-providers__heading h1:not(.mb-0) + .text-variant,
+.aiu-tab-page-header__main > h1.mb-0 + p,
+.aiu-tab-page-header__main > h1.mb-0 + .text-variant {
+    margin-top: .25rem;
+}
+
+.aiu-page-breadcrumb-row {
+    margin-bottom: .5rem;
+    min-height: 0;
+}
+
+.aiu-page-breadcrumb-row:empty {
+    display: none;
+    margin-bottom: 0;
+}
+
+.aiu-tab-page-header .aiu-providers__heading {
+    margin-bottom: 0;
+}
+
+.aiu-tab-page-header .aiu-dashboard__heading {
+    margin-bottom: 0;
+}
+
+.aiu-page-breadcrumb {
+    flex-shrink: 0;
+    font-size: .8125rem;
+    line-height: 1.35;
+    max-width: min(100%, 28rem);
+    text-align: end;
+}
+
+.aiu-page-breadcrumb .typo3-docheader-pagePath {
+    color: var(--typo3-text-color-variant, var(--aiu-text-400));
+    display: block;
+    line-height: 1.35;
+    margin-bottom: .125rem;
+}
+
+/* Child dashboards (ns_t3aa, ns_t3cs, …): isolate shared widgets from legacy Bootstrap in child CSS */
+.aiu-module-page--child-embed {
+    --aiu-module-inline: 1.25rem;
+}
+
+.aiu-module-page--child-embed .aiu-dashboard__checklist-slot--child {
+    margin-bottom: 1.25rem;
+}
+
+.aiu-module-page--child-embed .aiu-checklist.card {
+    --bs-card-border-radius: var(--typo3-card-border-radius, var(--typo3-component-border-radius, .375rem));
+    border: 1px solid var(--typo3-card-border-color, var(--aiu-border));
+    border-radius: var(--typo3-card-border-radius, var(--typo3-component-border-radius, .375rem));
+    box-shadow: var(--typo3-component-box-shadow, none);
+    overflow: hidden;
+}
+
+.aiu-module-page--child-embed .aiu-checklist .badge:not(.aiu-checklist__ico) {
+    border-radius: var(--typo3-badge-border-radius, var(--bs-badge-border-radius, .25em));
+}
+/*
+ * TYPO3 core soft badges: map Bootstrap text-bg-* on .badge to --typo3-badge-* tokens
+ * (light oklch tints + readable text/border). Bootstrap .text-bg-* alone forces solid
+ * RGBA fill and white text; this bridge matches .badge-success / .badge-primary in core.
+ */
+.aiu-module-page .badge[class*="badge-"] .t3js-icon,
+.aiu-module-page .badge[class*="text-bg-"] .t3js-icon {
+    margin-right: 5px;
+ }
+ .aiu-module-page .badge.badge-success,
+ .aiu-module-page .badge.badge-warning,
+ .aiu-module-page .badge.badge-danger,
+ .aiu-module-page .badge.badge-info,
+ .aiu-module-page .badge.badge-primary,
+ .aiu-module-page .badge.badge-secondary {
+    align-items: center;
+    border-radius: var(--typo3-badge-border-radius, var(--bs-badge-border-radius, .25em));
+    text-wrap: auto;
+}
+
+
+.aiu-module-page .badge.badge-primary {
+    background-color: var(--typo3-badge-primary-bg);
+    color: var(--typo3-badge-primary-color);
+    border: 1px solid var(--typo3-badge-primary-border-color);
+}
+
+.aiu-module-page .badge.badge-secondary {
+    background-color: var(--typo3-badge-secondary-bg, rgb(115, 115, 115));
+    color: var(--typo3-badge-secondary-color, #fff);
+    border: 1px solid var(--typo3-badge-secondary-border-color, #5a5a5a);
+}
+
+.aiu-module-page .badge.badge-success {
+    background-color: oklch(0.979 0.021 166.113);
+    color: oklch(0.596 0.145 163.225);
+    border: 1px solid oklch(0.905 0.093 164.15);
+}
+
+.aiu-mcp-transport-card__badge.badge-recommended,
+.aiu-mcp-transport-card__badge.badge-advanced,
+.aiu-module-page .callout.callout-warning,
+.aiu-module-page .badge.badge-warning {
+    background-color: oklch(0.987 0.022 95.277);
+    color: oklch(0.555 0.163 48.998);
+    border: 1px solid oklch(0.924 0.12 95.746);
+}
+
+.aiu-module-page .btn.btn-danger,
+.aiu-module-page .badge.badge-danger {
+    background-color: oklch(0.971 0.013 17.38);
+    color: oklch(0.577 0.245 27.325);
+    border-color: oklch(0.885 0.062 18.334);
+}
+
+.aiu-mcp-transport-card__badge.badge-enterprise,
+.aiu-module-page .badge.badge-info {
+    background: light-dark(oklch(0.97 0.014 254.604), #333333);
+    border-color: light-dark(oklch(0.932 0.032 255.585), #4b4b4b);
+    border: 1px solid var(--typo3-badge-info-border-color);
+}
+
+.aiu-module-page .btn.btn-danger:hover {
+    background-color: transparent;
+}
+
+/* Horizontal module navigation — TYPO3 core nav-tabs + module-docheader (v12–v14) */
+
+.aiu-module-docheader__inner {
+    padding-inline: var(--aiu-module-inline);
+}
+
+.aiu-module-docheader-actions .btn-default,
+.aiu-module-docheader__inner .btn-primary,
+.aiu-module-docheader__inner .dropdown-toggle {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: 0;
+    height: 34px;
+    min-height: 34px;
+    padding: 8px 6px;
+}
+
+.aiu-module-docheader__inner .aiu-module-docheader-actions {
+    margin-bottom: 0;
+}
+
+.aiu-module-docheader__row {
+    min-height: 2.75rem;
+}
+
+.aiu-module-docheader__aside {
+    flex-shrink: 0;
+    margin-bottom: .35rem;
+    margin-left: auto;
+}
+
+
+.aiu-module-nav-tabs {
+    flex-wrap: wrap;
+    margin-bottom: 0;
+    gap: 0.25rem !important;
+}
+
+.aiu-module-nav-tabs .nav-link {
+    align-items: center;
+    border: 1px solid light-dark(#d7d7d7, #404040);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    display: inline-flex;
+    margin-bottom: -1px;
+    padding: 8px 8px 6px 8px;
+    text-decoration: none;
+}
+
+.aiu-module-nav-tabs .nav-link.active {
+    color: var(--typo3-badge-primary-color, light-dark(#ffffff, #000000));
+}
+
+.aiu-module-nav-tabs .nav-link:not(.active):hover,
+.aiu-module-nav-tabs .nav-link:not(.active):focus {
+    background: light-dark(#f2f2f2, #181818);
+    color: light-dark(#000000, #ffffff);
+    text-decoration: none;
+}
+
+.aiu-module-docheader-actions {
+    flex-shrink: 0;
+    margin-bottom: .35rem;
+}
+
+.aiu-module-quick-setup {
+    align-items: center;
+    display: inline-flex;
+    gap: .35rem;
+}
+
+.card-header .card-title {
+    font-size: 15px;
+    line-height: 1.2;
+}
+
+/*
+ * Module footer — full-width bar after content (v12–v14).
+ *
+ * TYPO3 v13+ core .module is a 2-row CSS grid (docheader + body) with no footer
+ * track, so .module-footer auto-places between them unless we override.
+ *
+ * Footer is a direct child of .module (see Layouts/Module.html), not inside
+ * .module-body, so the border spans the full module width. The page scrolls
+ * naturally; the footer is not pinned to the viewport.
+ */
+.aiu-module-shell.module {
+    display: flex !important;
+    flex-direction: column;
+    grid-template-areas: unset !important;
+    grid-template-rows: unset !important;
+    grid-template-columns: unset !important;
+    min-height: 100%;
+    width: 100%;
+}
+
+body > .aiu-module-shell.module {
+    min-height: 100dvh;
+}
+
+.aiu-module-shell.module > .module-docheader,
+.aiu-module-shell.module > form > .module-docheader {
+    flex: 0 0 auto;
+    grid-area: unset !important;
+    order: 1;
+    width: 100%;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background-color: var(--module-docheader-bg, var(--typo3-surface-container-lowest, #fff));
+}
+
+.aiu-module-shell.module > .module-body,
+.aiu-module-shell.module > form > .module-body {
+    flex: 1 1 auto;
+    grid-area: unset !important;
+    order: 2;
+    width: 100%;
+}
+
+.aiu-module-shell.module > form {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.aiu-module-shell.module > .aiu-module-footer,
+.aiu-module-shell.module > .module-footer,
+.aiu-module-shell.module > form > .aiu-module-footer,
+.aiu-module-shell.module > form > .module-footer {
+    flex: 0 0 auto;
+    grid-area: unset !important;
+    grid-column: 1 / -1;
+    order: 3;
+    align-self: stretch;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: .75rem var(--module-body-padding-x, 1.5rem);
+    background: var(--module-bg, var(--aiu-bg-white));
+    border-top: 1px solid var(--aiu-border, var(--module-docheader-border-color, #cdcdcd));
+}
+
+.aiu-module-shell .aiu-module-footer__inner {
+    width: 100%;
+}
+
+.aiu-module-shell .aiu-module-footer .footer-links-left .btn-link {
+    border: 0;
+    color: var(--typo3-text-color-link, var(--typo3-link-color, #205eb5));
+    font-weight: 400;
+    padding: 0;
+    text-decoration: none;
+}
+
+.aiu-module-shell .aiu-module-footer .footer-links-left .btn-link:hover,
+.aiu-module-shell .aiu-module-footer .footer-links-left .btn-link:focus {
+    text-decoration: underline;
+}
+
+.aiu-module-shell .aiu-module-footer .footer-links {
+    gap: 0;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.aiu-module-shell .aiu-module-footer .footer-links li {
+    display: inline-flex;
+    align-items: center;
+    padding-left: 20px;
+    position: relative;
+}
+
+.aiu-module-shell .aiu-module-footer .footer-links li:not(:first-child)::before {
+    background-color: var(--typo3-component-border-color, #cdcdcd);
+    content: "";
+    height: 80%;
+    left: 10px;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+}
+
+.aiu-module-shell .aiu-module-footer .footer-links .btn-link {
+    border: 0;
+    color: var(--typo3-text-color-link, var(--typo3-link-color, #205eb5));
+    font-weight: 400;
+    padding: 0;
+    text-decoration: none;
+}
+
+.aiu-module-shell .aiu-module-footer .footer-links .btn-link:hover,
+.aiu-module-shell .aiu-module-footer .footer-links .btn-link:focus {
+    text-decoration: underline;
+}
+
+@media (max-width: 767.98px) {
+    .aiu-module-shell .aiu-module-footer__inner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .aiu-module-shell .aiu-module-footer .footer-links {
+        justify-content: flex-start;
+    }
+}

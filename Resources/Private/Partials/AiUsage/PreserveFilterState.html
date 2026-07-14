@@ -1,0 +1,14 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:render partial="AiUsage/PreserveFilterFields" arguments="{_all}" />
+<f:if condition="{aiUsagePeriod.key} == 'custom'">
+    <f:then>
+        <input type="hidden" name="period" value="custom" />
+        <input type="hidden" name="from" value="{aiUsagePeriod.fromDate}" />
+        <input type="hidden" name="to" value="{aiUsagePeriod.toDate}" />
+    </f:then>
+    <f:else>
+        <input type="hidden" name="period" value="{aiUsagePeriod.key}" />
+    </f:else>
+</f:if>
+<input type="hidden" name="mode" value="{aiUsageMode}" />
+</html>

@@ -1,0 +1,94 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+<nav class="pagination-wrap aiu-ai-logs__pagination" aria-label="{f:translate(key: '{ll}:module.aiLogs.pagination.label')}">
+    <ul class="pagination mb-0">
+        <f:if condition="{aiLogsPagination.pagination.previousPageNumber} && {aiLogsPagination.pagination.previousPageNumber} >= {aiLogsPagination.pagination.firstPageNumber}">
+            <f:then>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: 't3af_dashboard.ai_logs', parameters: {
+                        currentPage: aiLogsPagination.pagination.firstPageNumber,
+                        level: aiLogsFilters.level,
+                        search: aiLogsFilters.search,
+                        logChannel: aiLogsFilters.logChannel,
+                        extension: aiLogsFilters.extension,
+                        max: aiLogsFilters.max,
+                        period: aiLogsFilters.period,
+                        from: aiLogsFilters.from,
+                        to: aiLogsFilters.to
+                    })}" class="page-link" title="{f:translate(key: '{ll}:module.aiLogs.pagination.first')}">
+                        <core:icon identifier="actions-view-paging-first" />
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: 't3af_dashboard.ai_logs', parameters: {
+                        currentPage: aiLogsPagination.pagination.previousPageNumber,
+                        level: aiLogsFilters.level,
+                        search: aiLogsFilters.search,
+                        logChannel: aiLogsFilters.logChannel,
+                        extension: aiLogsFilters.extension,
+                        max: aiLogsFilters.max,
+                        period: aiLogsFilters.period,
+                        from: aiLogsFilters.from,
+                        to: aiLogsFilters.to
+                    })}" class="page-link" title="{f:translate(key: '{ll}:module.aiLogs.pagination.previous')}">
+                        <core:icon identifier="actions-view-paging-previous" />
+                    </a>
+                </li>
+            </f:then>
+            <f:else>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+            </f:else>
+        </f:if>
+        <li class="page-item">
+            <span class="page-link aiu-ai-logs__pagination-records">
+                <f:translate key="{ll}:module.aiLogs.pagination.records"
+                             arguments="{0: aiLogsPagination.pagination.startRecordNumber, 1: aiLogsPagination.pagination.endRecordNumber, 2: aiLogsTotalCount}" />
+                <span class="aiu-ai-logs__pagination-sep">|</span>
+                <f:translate key="{ll}:module.aiLogs.pagination.page" />
+                {aiLogsPagination.paginator.currentPageNumber} / {aiLogsPagination.pagination.lastPageNumber}
+            </span>
+        </li>
+        <f:if condition="{aiLogsPagination.pagination.nextPageNumber} && {aiLogsPagination.pagination.nextPageNumber} <= {aiLogsPagination.pagination.lastPageNumber}">
+            <f:then>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: 't3af_dashboard.ai_logs', parameters: {
+                        currentPage: aiLogsPagination.pagination.nextPageNumber,
+                        level: aiLogsFilters.level,
+                        search: aiLogsFilters.search,
+                        logChannel: aiLogsFilters.logChannel,
+                        extension: aiLogsFilters.extension,
+                        max: aiLogsFilters.max,
+                        period: aiLogsFilters.period,
+                        from: aiLogsFilters.from,
+                        to: aiLogsFilters.to
+                    })}" class="page-link" title="{f:translate(key: '{ll}:module.aiLogs.pagination.next')}">
+                        <core:icon identifier="actions-view-paging-next" />
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: 't3af_dashboard.ai_logs', parameters: {
+                        currentPage: aiLogsPagination.pagination.lastPageNumber,
+                        level: aiLogsFilters.level,
+                        search: aiLogsFilters.search,
+                        logChannel: aiLogsFilters.logChannel,
+                        extension: aiLogsFilters.extension,
+                        max: aiLogsFilters.max,
+                        period: aiLogsFilters.period,
+                        from: aiLogsFilters.from,
+                        to: aiLogsFilters.to
+                    })}" class="page-link" title="{f:translate(key: '{ll}:module.aiLogs.pagination.last')}">
+                        <core:icon identifier="actions-view-paging-last" />
+                    </a>
+                </li>
+            </f:then>
+            <f:else>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+            </f:else>
+        </f:if>
+    </ul>
+</nav>
+</html>

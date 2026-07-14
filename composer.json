@@ -1,0 +1,173 @@
+{
+    "name": "nitsan/ns-t3af",
+    "type": "typo3-cms-extension",
+    "title": "AI Foundation",
+    "description": "MCP-first AI foundation for TYPO3. T3AF turns your TYPO3 installation into a fully AI-ready platform. Complete AI-infrastructure for the whole TYPO3 team, zero setup. Manage every AI provider, MCP servers & tools, brand context, prompts, users permissions, and budget in one native backend module. You stay in control, your every TYPO3 team (editors, integrators, developers & administrator) works with AI on one governed, self-hosted foundation. Use it standalone — or as the foundation that powers the complete AI Universe. Open source. Free to build. A commercial license for production. See LICENSE and COMMERCIAL-LICENSE.md.",
+    "homepage": "https://t3planet.de",
+    "authors": [
+        {
+            "name": "Team T3Planet",
+            "role": "Developer",
+            "homepage": "https://t3planet.de",
+            "email": "support@t3planet.de"
+        }
+    ],
+    "license": "GPL-2.0-or-later",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "keywords": [
+        "TYPO3",
+        "AI",
+        "OpenAI",
+        "Gemini",
+        "Claude",
+        "MCP",
+        "MCP Tools",
+        "MCP Servers",
+        "Context",
+        "Providers",
+        "LLM",
+        "Credits",
+        "Logs",
+        "Access",
+        "Roles",
+        "Prompts",
+        "Scheduler",
+        "CLI",
+        "Commands",
+        "Dashboard"
+    ],
+    "support": {
+        "issues": "https://t3planet.de/support"
+    },
+    "require": {
+        "php": ">=8.2 <9",
+        "ext-curl": "*",
+        "ext-sodium": "*",
+        "mcp/sdk": "^0.6",
+        "symfony/ai-anthropic-platform": "^0.9",
+        "symfony/ai-azure-platform": "^0.9",
+        "symfony/ai-gemini-platform": "^0.9",
+        "symfony/ai-mistral-platform": "^0.9",
+        "symfony/ai-ollama-platform": "^0.9",
+        "symfony/ai-open-ai-platform": "^0.9",
+        "symfony/ai-open-router-platform": "^0.9",
+        "symfony/ai-platform": "^0.9",
+        "typo3/cms-backend": "^12.4 || ^13.4 || ^14.3",
+        "typo3/cms-core": "^12.4 || ^13.4 || ^14.3",
+        "typo3/cms-fluid": "^12.4 || ^13.4 || ^14.3",
+        "typo3/cms-workspaces": "^12.4 || ^13.4 || ^14.3",
+        "typo3/cms-scheduler": "^12.4 || ^13.4 || ^14.3",
+        "nitsan/ns-license": ">=14.3.1"
+    },
+    "conflict": {
+        "marekskopal/typo3-mcp-server": "*",
+        "hn/typo3-mcp-server": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "NITSAN\\NsT3AF\\": "Classes"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "NITSAN\\NsT3AF\\Tests\\": "Tests/"
+        }
+    },
+    "replace": {
+        "typo3-ter/ns-t3af": "self.version"
+    },
+    "config": {
+        "vendor-dir": ".Build/vendor",
+        "bin-dir": ".Build/bin",
+        "sort-packages": true,
+        "platform": {
+            "php": "8.2.0"
+        },
+        "allow-plugins": {
+            "composer/package-versions-deprecated": true,
+            "php-http/discovery": true,
+            "typo3/class-alias-loader": true,
+            "typo3/cms-cli": true,
+            "typo3/cms-composer-installers": true
+        },
+        "audit": {
+            "block-insecure": false
+        }
+    },
+    "extra": {
+        "typo3/cms": {
+            "web-dir": ".Build/public",
+            "extension-key": "ns_t3af",
+            "version": "1.0.0",
+            "Package": {
+                "providesPackages": {
+                  "mcp/sdk": ".Build/vendor",
+                  "symfony/ai-anthropic-platform": ".Build/vendor",
+                  "symfony/ai-azure-platform": ".Build/vendor",
+                  "symfony/ai-gemini-platform": ".Build/vendor",
+                  "symfony/ai-mistral-platform": ".Build/vendor",
+                  "symfony/ai-ollama-platform": ".Build/vendor",
+                  "symfony/ai-open-ai-platform": ".Build/vendor",
+                  "symfony/ai-open-router-platform": ".Build/vendor",
+                  "symfony/ai-platform": ".Build/vendor"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "cs:check": ".Build/bin/php-cs-fixer fix --dry-run --diff",
+        "cs:fix": ".Build/bin/php-cs-fixer fix",
+        "rector": ".Build/bin/rector process --dry-run",
+        "rector:fix": ".Build/bin/rector process",
+        "doc-watch": "docker run --rm -it --pull always -v ./Documentation:/project/Documentation -v ./Documentation-GENERATED-temp:/project/Documentation-GENERATED-temp -p 1337:1337 ghcr.io/typo3-documentation/render-guides:latest --config=Documentation --watch",
+        "stan": ".Build/bin/phpstan analyse --memory-limit=512M",
+        "test": ".Build/bin/phpunit -c Build/phpunit/UnitTests.xml",
+        "test:functional": ".Build/bin/phpunit -c Build/phpunit/FunctionalTests.xml",
+        "test:all": [
+            "@composer test",
+            "@composer test:functional"
+        ],
+        "ci": [
+            "@composer test",
+            "@composer test:functional",
+            "@composer stan",
+            "@composer cs:fix"
+        ],
+        "smoke:standalone": [
+            "@composer test",
+            "@composer stan"
+        ]
+    },
+    "scripts-descriptions": {
+        "cs:check": "Run PHP-CS-Fixer in dry-run mode",
+        "cs:fix": "Apply PHP-CS-Fixer fixes",
+        "rector": "Run Rector in dry-run mode",
+        "rector:fix": "Apply Rector refactors",
+        "doc-watch": "Render documentation with watcher",
+        "stan": "Run PHPStan static analysis",
+        "test": "Run unit tests (Build/phpunit/UnitTests.xml)",
+        "test:functional": "Run TYPO3 functional tests with SQLite (Build/phpunit/FunctionalTests.xml)",
+        "test:all": "Run unit tests then functional tests",
+        "smoke:standalone": "Run unit tests + PHPStan (foundation-only CI smoke)"
+    },
+    "require-dev": {
+        "doctrine/instantiator": "~2.0.0",
+        "friendsofphp/php-cs-fixer": "^3.94",
+        "phpat/phpat": "^0.11",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^10.5 || ^11.5",
+        "rector/rector": "^2.0",
+        "typo3/cms-frontend": "^12.4 || ^13.4 || ^14.3",
+        "typo3/cms-install": "^12.4 || ^13.4 || ^14.3",
+        "typo3/testing-framework": "^8.2 || ^9.0"
+    },
+    "suggest": {
+        "typo3/cms-dashboard": "Required for Chart.js import map (dashboard-charts.js uses EXT:dashboard/Resources/Public/JavaScript/Contrib/chartjs.js).",
+        "lochmueller/seal_ai": "Symfony AI bridge bundle for TYPO3 — recommended for OpenAI/Anthropic/Gemini/Mistral/Ollama/OpenRouter providers.",
+        "lochmueller/seal": "Vector store abstraction (consumed by upcoming RAG/Embeddings feature).",
+        "symfony/ai-platform": "Core Symfony AI runtime; required when using any symfony.* adapter type.",
+        "smalot/pdfparser": "Extract text from PDF brand documents in AI Context.",
+        "phpoffice/phpword": "Extract text from DOCX brand documents in AI Context."
+    }
+}

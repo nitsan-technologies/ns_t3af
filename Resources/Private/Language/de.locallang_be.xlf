@@ -1,0 +1,460 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<xliff version="1.0">
+    <file source-language="en" datatype="plaintext" original="messages" product-name="ns_t3af" target-language="de">
+        <header/>
+        <body>
+            <trans-unit id="extmng.model.default">
+                <source>Default AI Model Provider: Choose which AI provider is used by default across the extension.</source>
+                <target>Standard AI Model Provider: Wählen Sie aus, welcher AI Provider standardmäßig in der gesamten Erweiterung verwendet wird.</target>
+            </trans-unit>
+            <trans-unit id="extmng.defaultOpenAIModel">
+                <source>Default OpenAI Model: Select which OpenAI model is used by default.</source>
+                <target>Standard-OpenAI Model: Wählen Sie aus, welches OpenAI Model standardmäßig verwendet wird.</target>
+            </trans-unit>
+            <trans-unit id="extmng.defaultEmbeddingsModel">
+                <source>Default Embedding Model: Select the provider and model used for generating embeddings.</source>
+                <target>Standardmodell Embedding: Wählen Sie das Provider und das Modell aus, die zum Generieren von Embeddings verwendet werden.</target>
+            </trans-unit>
+            <trans-unit id="extmng.defaultGeminiModel">
+                <source>Default Gemini Model: Select which Gemini model is used by default.</source>
+                <target>Standardmodell Gemini: Wählen Sie aus, welches Gemini-Modell standardmäßig verwendet wird.</target>
+            </trans-unit>
+            <trans-unit id="extmng.defaultClaudeModel">
+                <source>Default Claude Model: Select which Claude model is used by default.</source>
+                <target>Standardmodell Claude: Wählen Sie aus, welches Claude-Modell standardmäßig verwendet wird.</target>
+            </trans-unit>
+            <trans-unit id="extmng.defaultCustomllmModel">
+                <source>Default Custom AI Model</source>
+                <target>Standardbenutzerdefiniert AI Model</target>
+            </trans-unit>
+            <trans-unit id="extmng.defaultDeepseekModel">
+                <source>Default DeepSeek Model: Select which DeepSeek model is used by default.</source>
+                <target>Standardmodell DeepSeek: Wählen Sie aus, welches DeepSeek-Modell standardmäßig verwendet wird.</target>
+            </trans-unit>
+            <trans-unit id="extmng.defaultXaiModel">
+                <source>Default xAI Model</source>
+                <target>Standard xAI Model</target>
+            </trans-unit>
+            <trans-unit id="extmng.defaultMistralModel">
+                <source>Default Mistral Model: Select the Mistral model.</source>
+                <target>Standardmodell Mistral: Wählen Sie das Modell Mistral aus.</target>
+            </trans-unit>
+            <trans-unit id="extmng.apiKey">
+                <source>OpenAI API Key: Enter your OpenAI API key. Used for ChatGPT and related models.</source>
+                <target>OpenAI API Schlüssel: Geben Sie Ihren OpenAI API Schlüssel ein. Wird für ChatGPT und verwandte Modelle verwendet.</target>
+            </trans-unit>
+            <trans-unit id="extmng.adminApiKey">
+                <source>OpenAI Admin API Key: Enter your OpenAI admin API key. Required for viewing usage statistics.</source>
+                <target>OpenAI Admin API Schlüssel: Geben Sie Ihren OpenAI Admin API Schlüssel ein. Erforderlich zum Anzeigen von Nutzungsstatistiken.</target>
+            </trans-unit>
+            <trans-unit id="extmng.model">
+                <source>Default ChatGPT Model: Select the default ChatGPT model. You can still switch models when using individual AI features.</source>
+                <target>Standardmodell ChatGPT: Wählen Sie das Standardmodell ChatGPT aus. Sie können weiterhin das Modell wechseln, wenn Sie einzelne AI Features verwenden.</target>
+            </trans-unit>
+            <trans-unit id="extmng.image_model">
+                <source>OpenAI Image Model: Select the OpenAI image model.</source>
+                <target>OpenAI-Bildmodell: Wählen Sie das OpenAI-Bildmodell aus.</target>
+            </trans-unit>
+            <trans-unit id="extmng.image_model.dall-e-3">
+                <source>DALL-E 3</source>
+                <target>DALL-E 3</target>
+            </trans-unit>
+            <trans-unit id="extmng.image_model.gpt-image-1">
+                <source>GPT Image 1</source>
+                <target>GPT-Bild 1</target>
+            </trans-unit>
+            <trans-unit id="extmng.temprature">
+                <source>Temperature: Controls response randomness (0–2). Lower values give focused answers; higher values give more creative outputs.</source>
+                <target>Temperatur: Steuert die Zufälligkeit der Reaktion (0–2). Niedrigere Werte liefern gezielte Antworten; Höhere Werte führen zu mehr kreativen Ergebnissen.</target>
+            </trans-unit>
+            <trans-unit id="extmng.max_tokens">
+                <source>Max Tokens</source>
+                <target>Max. Tokens</target>
+            </trans-unit>
+            <trans-unit id="extmng.max_tokens.description">
+                <source>Set the maximum length of the AI's response. Higher values allow longer replies but may increase cost and processing time.</source>
+                <target>Legen Sie die maximale Länge der Antwort der KI fest. Höhere Werte ermöglichen längere Antworten, können jedoch die Kosten und die Bearbeitungszeit erhöhen.</target>
+            </trans-unit>
+            <trans-unit id="extmng.openai_oss_api_url">
+                <source>OpenAI-Compatible API URL: Enter the endpoint URL for your self-hosted or open-source OpenAI-compatible model.</source>
+                <target>OpenAI-kompatibel API URL: Geben Sie den Endpunkt URL für Ihr selbstgehostetes oder Open-Source-OpenAI-kompatibles Modell ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.openai_oss_api_key">
+                <source>OpenAI-Compatible API Key: Enter the API key for your self-hosted or open-source model endpoint.</source>
+                <target>OpenAI-kompatibler API-Schlüssel: Geben Sie den API-Schlüssel für Ihren selbstgehosteten oder Open-Source-Modellendpunkt ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.openai_oss_api_model">
+                <source>OpenAI-Compatible Model Name: Enter the model name as defined in your self-hosted model endpoint.</source>
+                <target>OpenAI-kompatibler Modellname: Geben Sie den Modellnamen ein, wie er in Ihrem selbstgehosteten Modellendpunkt definiert ist.</target>
+            </trans-unit>
+            <trans-unit id="text.embedding.model">
+                <source>Text Embedding Model</source>
+                <target>Text Embedding Modell</target>
+            </trans-unit>
+            <trans-unit id="extmng.gemini_api_key">
+                <source>Gemini API Key: Enter your Gemini API key.</source>
+                <target>Gemini API Schlüssel: Geben Sie Ihren Gemini API Schlüssel ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.gemini_api_model">
+                <source>Gemini API Model: Select the Gemini API model.</source>
+                <target>Gemini API Modell: Wählen Sie das Modell Gemini API.</target>
+            </trans-unit>
+            <trans-unit id="extmng.anthropic_api_key">
+                <source>Anthropic API Key: Enter your API key from console.anthropic.com.</source>
+                <target>Anthropic API-Schlüssel: Geben Sie Ihren API-Schlüssel von console.anthropic.com ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.claude_api_model">
+                <source>Claude API Model: Select the Claude API model.</source>
+                <target>Modell Claude API: Wählen Sie das Modell Claude API aus.</target>
+            </trans-unit>
+            <trans-unit id="extmng.anthropic.api_key">
+                <source>Anthropic API Key: Enter your API key from console.anthropic.com.</source>
+                <target>Anthropic API-Schlüssel: Geben Sie Ihren API-Schlüssel von console.anthropic.com ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.anthropic.model">
+                <source>Claude Model: Select the Claude model you want to use as the default chat model.</source>
+                <target>Claude-Modell: Wählen Sie das Claude-Modell aus, das Sie als Standard-Chat-Modell verwenden möchten.</target>
+            </trans-unit>
+            <trans-unit id="extmng.anthropic.embedding_provider">
+                <source>Embedding Provider: Select the provider to use for embeddings (Claude does not provide native embeddings).</source>
+                <target>Embedding Provider: Wählen Sie den Provider aus, der für Embeddings verwendet werden soll (Claude stellt kein natives Embeddings bereit).</target>
+            </trans-unit>
+            <trans-unit id="extmng.anthropic.embedding_model">
+                <source>Embedding Model: Select the embedding model for your chosen provider. Options depend on the provider selected above.</source>
+                <target>Embedding-Modell: Wählen Sie das Embedding-Modell für Ihren gewählten Provider. Die Optionen hängen vom oben ausgewählten Provider ab.</target>
+            </trans-unit>
+            <trans-unit id="extmng.anthropic.temperature">
+                <source>Temperature: Controls response randomness (0–1). Lower values give more precise answers; higher values give more varied outputs.</source>
+                <target>Temperatur: Steuert die Zufälligkeit der Reaktion (0–1). Niedrigere Werte ergeben präzisere Antworten; Höhere Werte führen zu vielfältigeren Ergebnissen.</target>
+            </trans-unit>
+            <trans-unit id="extmng.azure_api_key">
+                <source>Azure API Key: Enter your Azure API key.</source>
+                <target>Azure API-Schlüssel: Geben Sie Ihren Azure API-Schlüssel ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.azure_api_endpoint">
+                <source>API Endpoint: Enter your Azure API endpoint.</source>
+                <target>API-Endpunkt: Geben Sie Ihren Azure-Endpunkt API ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.azure_api_model">
+                <source>Azure Deployment Name: Enter the deployment name you configured for your GPT model in Azure OpenAI Studio.</source>
+                <target>Azure-Bereitstellungsname: Geben Sie den Bereitstellungsnamen ein, den Sie für Ihr GPT-Modell in Azure OpenAI Studio konfiguriert haben.</target>
+            </trans-unit>
+            <trans-unit id="extmng.azure_api_version">
+                <source>API version: Enter your API version.</source>
+                <target>API-Version: Geben Sie Ihre API-Version ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.customllm_enable">
+                <source>Enable Custom AI Model: Activate a custom AI engine endpoint instead of a standard provider.</source>
+                <target>Benutzerdefiniertes AI Model aktivieren: Aktivieren Sie einen benutzerdefinierten AI Engine-Endpunkt anstelle eines Standard-Provider.</target>
+            </trans-unit>
+            <trans-unit id="extmng.customllm_endpoint">
+                <source>Custom AI Model API URL: Enter the base URL of your custom AI model API.</source>
+                <target>Benutzerdefiniert AI Model API URL: Geben Sie die Basis URL Ihres benutzerdefinierten AI Model API ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.custom_llm_api_key">
+                <source>Custom LLM API Key Backend: Enter your custom LLM API key for backend.</source>
+                <target>Benutzerdefinierter LLM-API-Schlüssel Backend: Geben Sie Ihren benutzerdefinierten LLM-API-Schlüssel für Backend ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.customllm_api_url_model_connect">
+                <source>Model List Endpoint URL: Enter the URL used to fetch available models from your custom AI endpoint.</source>
+                <target>Modelllisten-Endpunkt URL: Geben Sie den URL ein, der zum Abrufen verfügbarer Modelle von Ihrem benutzerdefinierten KI-Endpunkt verwendet wird.</target>
+            </trans-unit>
+            <trans-unit id="extmng.customllm_model_name">
+                <source>Custom LLM Model Name: Enter the name of the custom LLM model.</source>
+                <target>Name des benutzerdefinierten LLM-Modells: Geben Sie den Namen des benutzerdefinierten LLM-Modells ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.customllm_max_depth">
+                <source>Maximum Crawl Depth: Limit how many levels deep the custom AI engine will process content.</source>
+                <target>Maximale Crawling-Tiefe: Begrenzen Sie, wie viele Ebenen tief der benutzerdefinierte AI Engine Inhalte verarbeitet.</target>
+            </trans-unit>
+            <trans-unit id="deepseek.apiKey">
+                <source>DeepSeek API Key: Enter your DeepSeek API key.</source>
+                <target>DeepSeek API Schlüssel: Geben Sie Ihren DeepSeek API Schlüssel ein.</target>
+            </trans-unit>
+            <trans-unit id="deepseek.model">
+                <source>DeepSeek Model: Select the DeepSeek model.</source>
+                <target>Modell DeepSeek: Wählen Sie das Modell DeepSeek aus.</target>
+            </trans-unit>
+            <trans-unit id="extmng.deepseek_temperature">
+                <source>DeepSeek Temperature: Select temperature for DeepSeek model.</source>
+                <target>DeepSeek Temperatur: Wählen Sie die Temperatur für das Modell DeepSeek.</target>
+            </trans-unit>
+            <trans-unit id="extmng.response_format">
+                <source>Response Format: Select the response format.</source>
+                <target>Antwortformat: Wählen Sie das Antwortformat aus.</target>
+            </trans-unit>
+            <trans-unit id="extmng.deepseek_stop">
+                <source>DeepSeek Stop: Enter the stop sequence.</source>
+                <target>DeepSeek Stopp: Geben Sie die Stoppsequenz ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.deepseek_stream">
+                <source>DeepSeek Stream: Check to enable stream.</source>
+                <target>DeepSeek Stream: Aktivieren Sie diese Option, um den Stream zu aktivieren.</target>
+            </trans-unit>
+            <trans-unit id="extmng.deepseek_stream_options">
+                <source>DeepSeek Stream Options: Additional options for streamed responses. Only configure this if streaming is enabled.</source>
+                <target>DeepSeek Stream-Optionen: Zusätzliche Optionen für gestreamte Antworten. Konfigurieren Sie dies nur, wenn Streaming aktiviert ist.</target>
+            </trans-unit>
+            <trans-unit id="extmng.deepseek_tools">
+                <source>DeepSeek Tools: Enter tools.</source>
+                <target>DeepSeek Werkzeuge: Werkzeuge eingeben.</target>
+            </trans-unit>
+            <trans-unit id="extmng.deepseek_tool_choice">
+                <source>DeepSeek Tool Choice: Enter tool choice.</source>
+                <target>DeepSeek Werkzeugauswahl: Geben Sie die Werkzeugauswahl ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.deepseek_logprobs">
+                <source>DeepSeek Logprobs: Check to enable logprobs.</source>
+                <target>DeepSeek Logprobs: Aktivieren Sie diese Option, um Logprobs zu aktivieren.</target>
+            </trans-unit>
+            <trans-unit id="xai.apiKey">
+                <source>xAI API Key: Enter your xAI API key.</source>
+                <target>xAI API Schlüssel: Geben Sie Ihren xAI API Schlüssel ein.</target>
+            </trans-unit>
+            <trans-unit id="xai.model">
+                <source>xAI Model: Select the xAI model.</source>
+                <target>xAI Model: Wählen Sie xAI Model aus.</target>
+            </trans-unit>
+            <trans-unit id="extmng.xai_temperature">
+                <source>xAI Temperature: Select temperature for xAI model.</source>
+                <target>xAI Temperatur: Temperatur für xAI Model auswählen.</target>
+            </trans-unit>
+            <trans-unit id="extmng.xai_response_format">
+                <source>xAI Response Format: Select the response format for xAI.</source>
+                <target>xAI-Antwortformat: Wählen Sie das Antwortformat für xAI aus.</target>
+            </trans-unit>
+            <trans-unit id="extmng.mistral_api_key">
+                <source>Mistral API Key: Enter your Mistral API key.</source>
+                <target>Mistral API Schlüssel: Geben Sie Ihren Mistral API Schlüssel ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.mistral_model">
+                <source>Mistral Model: Select the Mistral model.</source>
+                <target>Modell Mistral: Wählen Sie das Modell Mistral aus.</target>
+            </trans-unit>
+            <trans-unit id="extmng.mistral_temperature">
+                <source>Mistral Temperature: Select temperature for Mistral model.</source>
+                <target>Mistral Temperatur: Wählen Sie die Temperatur für das Modell Mistral.</target>
+            </trans-unit>
+            <trans-unit id="extmng.mistral_max_tokens">
+                <source>Max Tokens: Set the maximum number of tokens the model can generate in a response.</source>
+                <target>Max. Tokens: Legen Sie die maximale Anzahl von Tokens fest, die das Modell in einer Antwort generieren kann.</target>
+            </trans-unit>
+            <trans-unit id="extmng.deepl_api_key">
+                <source>DeepL API Key: Enter your DeepL API key.</source>
+                <target>DeepL API-Schlüssel: Geben Sie Ihren DeepL API-Schlüssel ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.deeplKey">
+                <source>DeepL API URL: Enter your DeepL API URL.</source>
+                <target>DeepL API URL: Geben Sie Ihren DeepL API URL ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.google_api_key">
+                <source>Google Translate API Key: Enter your Google API key.</source>
+                <target>Google Translate API-Schlüssel: Geben Sie Ihren Google API-Schlüssel ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.googleUrl">
+                <source>Google Translate API URL: Enter your Google Translate API URL.</source>
+                <target>Google Translate API URL: Geben Sie Ihren Google Translate API URL ein.</target>
+            </trans-unit>
+            <trans-unit id="extConfiguration.basicAuthEnabled">
+                <source>Enable Basic Authentication Support: If your website is protected by HTTP Basic Authentication, enable this so the extension can still access it.</source>
+                <target>Aktivieren Sie die Basisauthentifizierungsunterstützung: Wenn Ihre Website durch die HTTP-Basisauthentifizierung geschützt ist, aktivieren Sie diese, damit die Erweiterung weiterhin darauf zugreifen kann.</target>
+            </trans-unit>
+            <trans-unit id="extConfiguration.basicAuthUsername">
+                <source>Basic Auth Username: Enter username for basic authentication.</source>
+                <target>Benutzername für die Basisauthentifizierung: Geben Sie den Benutzernamen für die Basisauthentifizierung ein.</target>
+            </trans-unit>
+            <trans-unit id="extConfiguration.basicAuthPassword">
+                <source>Basic Auth Password: Enter password for basic authentication.</source>
+                <target>Basic Auth Password: Geben Sie das Passwort für die Basic-Authentifizierung ein.</target>
+            </trans-unit>
+            <trans-unit id="extmng.t3planetApiBaseUrl">
+                <source>T3Planet Credits API base URL (e.g. https://composer.t3planet.cloud or your DDEV host).</source>
+                <target>T3Planet-Credits API Basis URL (z. B. HTTPS://composer.t3planet.cloud oder Ihr DDEV-Host).</target>
+            </trans-unit>
+            <trans-unit id="extmng.t3planetCreditsDomain">
+                <source>Optional hostname for T3Planet Credits when CLI/scheduler has no HTTP request and site base is path-only (e.g. t3af.ddev.site). Usually auto-filled at activation.</source>
+                <target>Optionaler Hostname für T3Planet-Credits, wenn CLI/Scheduler keine HTTP-Anfrage hat und die Site-Basis nur pfadbasiert ist (z. B. t3af.ddev.site). Wird normalerweise bei der Aktivierung automatisch ausgefüllt.</target>
+            </trans-unit>
+            <trans-unit id="extmng.t3planetApiToken">
+                <source>T3Planet Credits bearer token. Filled automatically when you activate Credits mode. Used for support diagnostics.</source>
+                <target>T3Planet-Credits-Inhaber Token. Wird automatisch ausgefüllt, wenn Sie den Credits-Modus aktivieren. Wird zur Support-Diagnose verwendet.</target>
+            </trans-unit>
+            <trans-unit id="extmng.mcpBasePath">
+                <source>MCP base path: HTTP path prefix for the MCP endpoint and OAuth routes (default /mcp).</source>
+                <target>MCP-Basispfad: HTTP Pfadpräfix für den MCP-Endpunkt und OAuth Routen (Standard /mcp).</target>
+            </trans-unit>
+            <trans-unit id="extmng.enableMcpServer">
+                <source>Enable MCP server: Master switch for the embedded MCP HTTP and OAuth endpoints.</source>
+                <target>Aktivieren Sie MCP Server: Hauptschalter für die eingebetteten MCP-Endpunkte HTTP und OAuth.</target>
+            </trans-unit>
+            <trans-unit id="extmng.mcpMode">
+                <source>MCP mode: Context = external AI generates and MCP tools save; Native = TYPO3-internal AI generates from tool instructions.</source>
+                <target>MCP-Modus: Kontext = externe KI generiert und MCP Tools speichert; Native = TYPO3-interne KI generiert aus Werkzeuganweisungen.</target>
+            </trans-unit>
+            <trans-unit id="extmng.mcpMode.context">
+                <source>Context</source>
+                <target>Kontext</target>
+            </trans-unit>
+            <trans-unit id="extmng.mcpMode.native">
+                <source>Native</source>
+                <target>Einheimisch</target>
+            </trans-unit>
+            <trans-unit id="extmng.requireAuth">
+                <source>Require authentication: Reject unauthenticated MCP requests unless anonymous read-only is enabled.</source>
+                <target>Authentifizierung erforderlich: Nicht authentifizierte MCP-Anfragen ablehnen, es sei denn, anonymer Lesezugriff ist aktiviert.</target>
+            </trans-unit>
+            <trans-unit id="extmng.rateLimitGlobal">
+                <source>Enable OAuth rate limiting: Apply IP-based rate limits on OAuth authorize, token, register, and revoke endpoints.</source>
+                <target>OAuth-Ratenbegrenzung aktivieren: Wenden Sie IP-basierte Ratenbegrenzungen auf OAuth-Autorisierungs-, Token-, Registrierungs- und Widerrufsendpunkte an.</target>
+            </trans-unit>
+            <trans-unit id="extmng.logAllToolCalls">
+                <source>Log all tool calls: Write MCP tool invocations to sys_log for auditing.</source>
+                <target>Protokollieren Sie alle Tool-Aufrufe: Schreiben Sie MCP Tool-Aufrufe zur Überwachung in sys_log.</target>
+            </trans-unit>
+            <trans-unit id="extmng.allowAnonymousReadOnly">
+                <source>Allow anonymous read-only access: Permit unauthenticated read-only MCP access when authentication is disabled (not recommended for production).</source>
+                <target>Anonymen schreibgeschützten Zugriff zulassen: Nicht authentifizierten schreibgeschützten MCP-Zugriff zulassen, wenn die Authentifizierung deaktiviert ist (nicht für die Produktion empfohlen).</target>
+            </trans-unit>
+            <trans-unit id="extmng.accessTokenLifetime">
+                <source>Access token lifetime (seconds): OAuth access token TTL.</source>
+                <target>Zugriffsdauer auf Token (Sekunden): OAuth Zugriff auf Token TTL.</target>
+            </trans-unit>
+            <trans-unit id="extmng.refreshTokenLifetime">
+                <source>Refresh token lifetime (seconds): OAuth refresh token TTL (default 30 days).</source>
+                <target>Lebensdauer der Aktualisierung Token (Sekunden): OAuth Aktualisierung Token TTL (Standard 30 Tage).</target>
+            </trans-unit>
+            <trans-unit id="extmng.codeLifetime">
+                <source>Authorization code lifetime (seconds): PKCE authorization code TTL.</source>
+                <target>Lebensdauer des Autorisierungscodes (Sekunden): PKCE-Autorisierungscode TTL.</target>
+            </trans-unit>
+            <trans-unit id="extmng.mcpRemoteTokenLifetime">
+                <source>MCP remote URL token lifetime (seconds): Lifetime for mcp-remote URL tokens.</source>
+                <target>MCP-Remote URL Token Lebensdauer (Sekunden): Lebensdauer für mcp-remote URL Tokens.</target>
+            </trans-unit>
+            <trans-unit id="extmng.sessionLifetime">
+                <source>Session lifetime (seconds): Sliding TTL for MCP session storage.</source>
+                <target>Sitzungslebensdauer (Sekunden): Gleitende TTL für MCP-Sitzungsspeicher.</target>
+            </trans-unit>
+            <trans-unit id="extmng.rateLimitEnabled">
+                <source>Enable per-endpoint rate limits: Apply detailed OAuth endpoint rate limit counters.</source>
+                <target>Aktivieren Sie die Ratenbegrenzungen pro Endpunkt: Wenden Sie detaillierte OAuth-Endpunkt-Ratenbegrenzungszähler an.</target>
+            </trans-unit>
+            <trans-unit id="extmng.rateLimitAuthorize">
+                <source>Authorize POST limit: Maximum OAuth authorize POST requests per window.</source>
+                <target>Autorisierungs-POST-Limit: Maximal OAuth Autorisierungs-POST-Anfragen pro Fenster.</target>
+            </trans-unit>
+            <trans-unit id="extmng.rateLimitAuthorizeWindow">
+                <source>Authorize POST window (seconds): Time window for authorize POST rate limiting.</source>
+                <target>Autorisierungs-POST-Fenster (Sekunden): Zeitfenster für die Autorisierungs-POST-Ratenbegrenzung.</target>
+            </trans-unit>
+            <trans-unit id="extmng.rateLimitAuthorizeGet">
+                <source>Authorize GET limit: Maximum OAuth authorize GET requests per window.</source>
+                <target>Autorisierungs-GET-Limit: Maximal OAuth autorisierte GET-Anfragen pro Fenster.</target>
+            </trans-unit>
+            <trans-unit id="extmng.rateLimitAuthorizeGetWindow">
+                <source>Authorize GET window (seconds): Time window for authorize GET rate limiting.</source>
+                <target>Autorisieren Sie das GET-Fenster (Sekunden): Zeitfenster für die Autorisierung der GET-Ratenbegrenzung.</target>
+            </trans-unit>
+            <trans-unit id="extmng.rateLimitToken">
+                <source>Token endpoint limit: Maximum token endpoint requests per window.</source>
+                <target>Token Endpunktlimit: Maximal Token Endpunktanfragen pro Fenster.</target>
+            </trans-unit>
+            <trans-unit id="extmng.rateLimitTokenWindow">
+                <source>Token endpoint window (seconds): Time window for token endpoint rate limiting.</source>
+                <target>Token-Endpunktfenster (Sekunden): Zeitfenster für die Token-Endpunktratenbegrenzung.</target>
+            </trans-unit>
+            <trans-unit id="extmng.rateLimitRegister">
+                <source>Register endpoint limit: Maximum dynamic client registration requests per window.</source>
+                <target>Endpunktlimit registrieren: Maximale dynamische Client-Registrierungsanfragen pro Fenster.</target>
+            </trans-unit>
+            <trans-unit id="extmng.rateLimitRegisterWindow">
+                <source>Register endpoint window (seconds): Time window for client registration rate limiting.</source>
+                <target>Endpunktfenster registrieren (Sekunden): Zeitfenster für die Begrenzung der Client-Registrierungsrate.</target>
+            </trans-unit>
+            <trans-unit id="extmng.rateLimitRevoke">
+                <source>Revoke endpoint limit: Maximum token revocation requests per window.</source>
+                <target>Limit für Widerrufsendpunkte: Maximal Token Widerrufsanfragen pro Fenster.</target>
+            </trans-unit>
+            <trans-unit id="extmng.rateLimitRevokeWindow">
+                <source>Revoke endpoint window (seconds): Time window for token revocation rate limiting.</source>
+                <target>Endpunktfenster widerrufen (Sekunden): Zeitfenster für die Begrenzung der Sperrrate Token.</target>
+            </trans-unit>
+            <trans-unit id="extmng.oauthDefaultClientId">
+                <source>Default OAuth client ID: Suggested client identifier for documentation and dynamic registration.</source>
+                <target>Standard-OAuth-Client-ID: Empfohlene Client-ID für Dokumentation und dynamische Registrierung.</target>
+            </trans-unit>
+            <trans-unit id="extmng.oauthDefaultRedirectUris">
+                <source>Default OAuth redirect URIs: One allowed redirect URI per line for OAuth clients.</source>
+                <target>Standardmäßige OAuth-Umleitungs-URIs: Ein zulässiger Umleitungs-URI pro Zeile für OAuth-Clients.</target>
+            </trans-unit>
+            <trans-unit id="extmng.oauthDefaultScopes">
+                <source>Default OAuth scopes: Space-separated default scopes (e.g. mcp:read mcp:write mcp:tools).</source>
+                <target>Standardbereiche OAuth: Durch Leerzeichen getrennte Standardbereiche (z. B. mcp:read mcp:write mcp:tools).</target>
+            </trans-unit>
+            <trans-unit id="extmng.oauthMaxActiveTokensPerUser">
+                <source>Max active tokens per user: Maximum non-revoked OAuth tokens per backend user.</source>
+                <target>Maximal aktive Tokens pro Benutzer: Maximale nicht widerrufene OAuth Tokens pro Backend-Benutzer.</target>
+            </trans-unit>
+            <trans-unit id="extmng.enableApiQuotaEmailNotification">
+                <source>Enable email notification on API quota or authentication errors</source>
+                <target>Aktivieren Sie die E-Mail-Benachrichtigung bei API-Kontingent- oder Authentifizierungsfehlern</target>
+            </trans-unit>
+            <trans-unit id="extmng.apiQuotaNotificationEmail">
+                <source>Notification email address (recipient for API quota exceeded or incorrect API key errors)</source>
+                <target>Benachrichtigungs-E-Mail-Adresse (Empfänger für API-Kontingent überschritten oder falsche API-Schlüsselfehler)</target>
+            </trans-unit>
+            <trans-unit id="brand_context.table.title">
+                <source>Brand Context Profile</source>
+                <target>Markenkontextprofil</target>
+            </trans-unit>
+            <trans-unit id="brand_context.brand_name">
+                <source>Brand Name</source>
+                <target>Markenname</target>
+            </trans-unit>
+            <trans-unit id="brand_context.industry">
+                <source>Industry</source>
+                <target>Industrie</target>
+            </trans-unit>
+            <trans-unit id="brand_context.website_url">
+                <source>Website URL</source>
+                <target>Website URL</target>
+            </trans-unit>
+            <trans-unit id="brand_context.tagline">
+                <source>One-line Description</source>
+                <target>Einzeilige Beschreibung</target>
+            </trans-unit>
+            <trans-unit id="brand_context.description">
+                <source>What the Brand Sells / Does</source>
+                <target>Was die Marke verkauft/macht</target>
+            </trans-unit>
+            <trans-unit id="brand_context.is_default">
+                <source>Default profile</source>
+                <target>Standardprofil</target>
+            </trans-unit>
+            <trans-unit id="access.tab.header">
+                <source>AI Universe module tabs</source>
+                <target>AI Universe-Modulregisterkarten</target>
+            </trans-unit>
+            <trans-unit id="access.t3ai.header">
+                <source>AI Foundation feature permissions</source>
+                <target>AI Foundation-Funktionsberechtigungen</target>
+            </trans-unit>
+            <trans-unit id="access.group_settings.title">
+                <source>AI Group Settings</source>
+                <target>AI-Gruppeneinstellungen</target>
+            </trans-unit>
+            <trans-unit id="access.group_settings.be_group">
+                <source>Backend user group</source>
+                <target>Backend Benutzergruppe</target>
+            </trans-unit>
+            <trans-unit id="access.group_settings.limits_json">
+                <source>Limits (JSON)</source>
+                <target>Grenzwerte (JSON)</target>
+            </trans-unit>
+            <trans-unit id="access.group_settings.configured">
+                <source>Configured via wizard</source>
+                <target>Per Assistent konfiguriert</target>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

@@ -1,0 +1,102 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:section name="ToolBody">
+    <f:if condition="{tool.description}">
+        <p class="card-text text-variant">{tool.description}</p>
+    </f:if>
+
+    <f:if condition="{tool.notes}">
+        <div class="callout callout-notice mb-3">
+            <div class="callout-body"><p class="mb-0 small">{tool.notes}</p></div>
+        </div>
+    </f:if>
+
+    <div class="d-flex flex-wrap gap-2 mb-3 small text-variant">
+        <span><f:translate key="{ll}:module.mcpTools.tool.calls" default="Calls" />: {tool.analytics.callsWeek}</span>
+        <span><f:translate key="{ll}:module.mcpTools.tool.successRate" default="Success" />: {tool.analytics.successRate -> f:format.number(decimals: '1')}%</span>
+        <span><f:translate key="{ll}:module.mcpTools.tool.latency" default="Avg latency" />: {tool.analytics.avgLatencyMs -> f:format.number(decimals: '0')} ms</span>
+    </div>
+
+    <f:if condition="{tool.params -> f:count()} > 0">
+        <div class="mb-3">
+            <h3 class="fw-bold mb-1">
+                <f:translate key="{ll}:module.mcpTools.tool.parameters" />
+            </h3>
+            <div class="card mb-0">
+                <table class="table table-striped table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th scope="col"><f:translate key="{ll}:module.mcpTools.tool.paramName" /></th>
+                            <th scope="col"><f:translate key="{ll}:module.mcpTools.tool.paramType" /></th>
+                            <th scope="col"><f:translate key="{ll}:module.mcpTools.tool.paramRequired" /></th>
+                            <th scope="col"><f:translate key="{ll}:module.mcpTools.tool.paramDescription" /></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <f:for each="{tool.params}" as="param">
+                            <tr>
+                                <td><code>{param.name}</code></td>
+                                <td><span class="text-variant">{param.type}</span></td>
+                                <td>
+                                    <f:if condition="{param.required}">
+                                        <f:then>
+                                            <span class="badge badge-default">
+                                                <f:translate key="{ll}:module.mcpTools.tool.required" />
+                                            </span>
+                                        </f:then>
+                                        <f:else>
+                                            <span class="text-variant small">
+                                                <f:translate key="{ll}:module.mcpTools.tool.optional" />
+                                            </span>
+                                        </f:else>
+                                    </f:if>
+                                </td>
+                                <td class="small">{param.description}</td>
+                            </tr>
+                        </f:for>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </f:if>
+
+    <f:if condition="{tool.examplePrompts -> f:count()} > 0">
+        <h3 class="fw-bold mb-2">
+            <f:translate key="{ll}:module.mcpTools.tool.examplePrompts" />
+        </h3>
+        <ul class="aiu-mcp-tool-prompts list-unstyled mb-3">
+            <f:for each="{tool.examplePrompts}" as="prompt">
+                <li class="aiu-mcp-tool-prompts__item">{prompt}</li>
+            </f:for>
+        </ul>
+    </f:if>
+</f:section>
+
+<f:section name="Drawer">
+    <div class="aiu-drawer aiu-mcp-tool-drawer" data-mcp-tools-drawer hidden aria-hidden="true">
+        <div class="aiu-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="aiu-mcp-tool-drawer-title">
+            <div class="aiu-drawer__header">
+                <h3 class="aiu-drawer__title" id="aiu-mcp-tool-drawer-title">
+                    <span class="aiu-mcp-tool-drawer__name" data-mcp-tools-drawer-name></span>
+                </h3>
+                <p class="aiu-drawer__desc" data-mcp-tools-drawer-subtitle></p>
+                <button type="button"
+                        class="aiu-drawer__close"
+                        data-mcp-tools-drawer-close
+                        aria-label="{f:translate(key: '{ll}:module.mcpTools.drawer.close', default: 'Close')}">
+                    <core:icon identifier="actions-close" size="small" alternativeMarkupIdentifier="inline" />
+                </button>
+            </div>
+            <div class="aiu-drawer__body" data-mcp-tools-drawer-body></div>
+            <div class="aiu-drawer__footer">
+                <button type="button" class="btn btn-default btn-sm" data-mcp-tools-drawer-playground>
+                    <f:translate key="{ll}:module.mcpTools.drawer.openPlayground" default="Open in Playground" />
+                </button>
+            </div>
+        </div>
+    </div>
+</f:section>
+
+</html>

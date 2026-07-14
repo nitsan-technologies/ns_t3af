@@ -1,0 +1,840 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<xliff version="1.0">
+    <file source-language="en" datatype="plaintext" original="messages" product-name="ns_t3af" target-language="de">
+        <header/>
+        <body>
+            <trans-unit id="credits.js.brand.t3planet">
+                <source>T3Planet Credits</source>
+                <target>T3Planet-Credits</target>
+            </trans-unit>
+            <trans-unit id="credits.js.section.providers">
+                <source>AI providers</source>
+                <target>AI Providers</target>
+            </trans-unit>
+            <trans-unit id="credits.js.error.missingAjaxRoute">
+                <source>Missing backend AJAX route &quot;%s&quot;. Flush all caches and reload.</source>
+                <target>Fehlende Backend AJAX-Route „%s“. Alle Caches leeren und neu laden.</target>
+            </trans-unit>
+            <trans-unit id="credits.js.error.httpRequestFailed">
+                <source>Request failed (HTTP %s).</source>
+                <target>Anfrage fehlgeschlagen (HTTP %s).</target>
+            </trans-unit>
+            <trans-unit id="credits.js.error.title.status">
+                <source>T3Planet Credits status</source>
+                <target>T3Planet-Credits-Status</target>
+            </trans-unit>
+            <trans-unit id="credits.js.error.title.enable">
+                <source>Enable T3Planet Credits</source>
+                <target>Aktivieren Sie T3Planet-Credits</target>
+            </trans-unit>
+            <trans-unit id="credits.js.error.title.switchOwnKeys">
+                <source>Switch to own API keys</source>
+                <target>Wechseln Sie zu eigenen API-Schlüsseln</target>
+            </trans-unit>
+            <trans-unit id="credits.js.error.title.activate">
+                <source>Activate T3Planet Credits</source>
+                <target>Aktivieren Sie T3Planet-Credits</target>
+            </trans-unit>
+            <trans-unit id="credits.js.checkout.hint.body">
+                <source>Complete the purchase in this window. Your balance updates after payment is confirmed.</source>
+                <target>Schließen Sie den Kauf in diesem Fenster ab. Ihr Kontostand wird aktualisiert, nachdem die Zahlung bestätigt wurde.</target>
+            </trans-unit>
+            <trans-unit id="credits.js.checkout.invalidUrl">
+                <source>This checkout link is not allowed.</source>
+                <target>Dieser Checkout-Link ist nicht zulässig.</target>
+            </trans-unit>
+            <trans-unit id="credits.js.checkout.openNewTab">
+                <source>Open in new tab</source>
+                <target>In neuem Tab öffnen</target>
+            </trans-unit>
+            <trans-unit id="credits.js.modal.switchTitle">
+                <source>Switch AI Provider Mode?</source>
+                <target>AI Provider-Modus wechseln?</target>
+            </trans-unit>
+            <trans-unit id="credits.js.modal.toCredits.body">
+                <source>Switch to T3Planet Credits? All AI requests will be routed through T3Planet Credits. You can switch back anytime.</source>
+                <target>Zu T3Planet-Credits wechseln? Alle KI-Anfragen werden über T3Planet-Credits weitergeleitet. Sie können jederzeit zurückwechseln.</target>
+            </trans-unit>
+            <trans-unit id="credits.js.modal.toCredits.ok">
+                <source>Switch to T3Planet Credits</source>
+                <target>Wechseln Sie zu T3Planet-Credits</target>
+            </trans-unit>
+            <trans-unit id="credits.js.modal.toOwnKeys.body">
+                <source>Switch to Your Own API Keys? All AI requests will use your configured providers and API keys.</source>
+                <target>Auf Ihre eigenen API-Schlüssel umsteigen? Alle AI-Anfragen verwenden Ihre konfigurierten Schlüssel Providers und API.</target>
+            </trans-unit>
+            <trans-unit id="credits.js.modal.toOwnKeys.ok">
+                <source>Switch to Your Own API Keys</source>
+                <target>Wechseln Sie zu Ihren eigenen API-Schlüsseln</target>
+            </trans-unit>
+            <trans-unit id="credits.js.notification.creditsActive">
+                <source>Credits mode is active.</source>
+                <target>Der Credits-Modus ist aktiv.</target>
+            </trans-unit>
+            <trans-unit id="credits.js.notification.creditsSelected">
+                <source>Credits mode selected. Click Activate to connect your license.</source>
+                <target>Credits-Modus ausgewählt. CLIck Aktivieren Sie diese Option, um Ihre Lizenz zu verbinden.</target>
+            </trans-unit>
+            <trans-unit id="credits.js.notification.ownKeysAgain">
+                <source>Using your own API keys again.</source>
+                <target>Verwenden Sie wieder Ihre eigenen API-Schlüssel.</target>
+            </trans-unit>
+            <trans-unit id="credits.js.notification.activateReload">
+                <source>Credits mode is active. Loading your dashboard…</source>
+                <target>Der Credits-Modus ist aktiv. Ihr Dashboard wird geladen…</target>
+            </trans-unit>
+            <trans-unit id="credits.js.notification.activateIncomplete">
+                <source>Mode enabled, but activation did not complete. Check license keys and API connectivity.</source>
+                <target>Modus aktiviert, aber die Aktivierung wurde nicht abgeschlossen. Überprüfen Sie die Lizenzschlüssel und die API-Konnektivität.</target>
+            </trans-unit>
+            <trans-unit id="provider.js.error.drawerLoadFailed">
+                <source>Drawer load failed</source>
+                <target>Das Laden der Schublade ist fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="provider.js.error.connectionFailed">
+                <source>Connection failed</source>
+                <target>Verbindung fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="provider.js.error.testFailed">
+                <source>Test failed</source>
+                <target>Test fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="provider.js.error.setDefaultFailed">
+                <source>Set default failed</source>
+                <target>Standardeinstellung fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="provider.js.message.unknown">
+                <source>unknown</source>
+                <target>unbekannt</target>
+            </trans-unit>
+            <trans-unit id="provider.js.notify.connectionOk">
+                <source>Connection OK</source>
+                <target>Verbindung ok</target>
+            </trans-unit>
+            <trans-unit id="provider.js.notify.modelsRefreshed">
+                <source>Models refreshed</source>
+                <target>Modelle aktualisiert</target>
+            </trans-unit>
+            <trans-unit id="provider.js.notify.modelsLoaded">
+                <source>%s model(s) loaded.</source>
+                <target>%s Modell(e) geladen.</target>
+            </trans-unit>
+            <trans-unit id="provider.js.warn.noModels.title">
+                <source>No models</source>
+                <target>Keine Modelle</target>
+            </trans-unit>
+            <trans-unit id="provider.js.warn.noModels.body">
+                <source>Live discovery returned 0 models. Check endpoint + API key, or enter the ID manually.</source>
+                <target>Die Live-Erkennung hat 0 Modelle zurückgegeben. Überprüfen Sie den Endpunkt + den Schlüssel API oder geben Sie die ID manuell ein.</target>
+            </trans-unit>
+            <trans-unit id="provider.js.hint.liveFetchFailed">
+                <source>Live model fetch failed. Enter ID manually.</source>
+                <target>Der Live-Modellabruf ist fehlgeschlagen. Geben Sie die ID manuell ein.</target>
+            </trans-unit>
+            <trans-unit id="provider.js.hint.noModelsDiscovered">
+                <source>No models discovered. Enter ID manually.</source>
+                <target>Keine Modelle entdeckt. Geben Sie die ID manuell ein.</target>
+            </trans-unit>
+            <trans-unit id="provider.js.hint.source">
+                <source>Source: %s</source>
+                <target>Quelle: %s</target>
+            </trans-unit>
+            <trans-unit id="provider.js.hint.latency">
+                <source>Latency %sms</source>
+                <target>Latenz %sms</target>
+            </trans-unit>
+            <trans-unit id="provider.js.reveal.show">
+                <source>Show</source>
+                <target>Zeigen</target>
+            </trans-unit>
+            <trans-unit id="provider.js.reveal.hide">
+                <source>Hide</source>
+                <target>Verstecken</target>
+            </trans-unit>
+            <trans-unit id="provider.js.delete.confirmDefault">
+                <source>Delete?</source>
+                <target>Löschen?</target>
+            </trans-unit>
+            <trans-unit id="wizard.step3.empty">
+                <source>No provider catalog entries are configured.</source>
+                <target>Es sind keine Provider-Katalogeinträge konfiguriert.</target>
+            </trans-unit>
+            <trans-unit id="wizard.error.adapterUnavailable">
+                <source>This provider adapter is not installed. Install the matching Symfony AI platform package first.</source>
+                <target>Dieser Provider-Adapter ist nicht installiert. Installieren Sie zunächst das passende Symfony AI-Plattformpaket.</target>
+            </trans-unit>
+            <trans-unit id="wizard.step5.opt.seo">
+                <source>SEO</source>
+                <target>SEO</target>
+            </trans-unit>
+            <trans-unit id="wizard.step5.opt.content">
+                <source>Content</source>
+                <target>Inhalt</target>
+            </trans-unit>
+            <trans-unit id="wizard.step5.opt.translation">
+                <source>Translation</source>
+                <target>Übersetzung</target>
+            </trans-unit>
+            <trans-unit id="wizard.step5.opt.media">
+                <source>Media</source>
+                <target>Medien</target>
+            </trans-unit>
+            <trans-unit id="wizard.error.selectProvider">
+                <source>Select a provider to continue.</source>
+                <target>Wählen Sie einen Provider aus, um fortzufahren.</target>
+            </trans-unit>
+            <trans-unit id="wizard.error.testMissingUid">
+                <source>Choose a provider before testing.</source>
+                <target>Wählen Sie vor dem Testen einen Provider.</target>
+            </trans-unit>
+            <trans-unit id="wizard.error.needApiTest">
+                <source>Run Test connection before continuing.</source>
+                <target>Führen Sie die Testverbindung aus, bevor Sie fortfahren.</target>
+            </trans-unit>
+            <trans-unit id="wizard.notify.testOk">
+                <source>Connection OK</source>
+                <target>Verbindung ok</target>
+            </trans-unit>
+            <trans-unit id="wizard.notify.testFail">
+                <source>Connection failed</source>
+                <target>Verbindung fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="wizard.notify.finalizeOk">
+                <source>Setup saved</source>
+                <target>Setup gespeichert</target>
+            </trans-unit>
+            <trans-unit id="wizard.notify.finalizeFail">
+                <source>Could not save setup</source>
+                <target>Das Setup konnte nicht gespeichert werden</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.labelMode">
+                <source>AI PROVIDER MODE</source>
+                <target>AI Provider MODUS</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.labelApi">
+                <source>API KEY</source>
+                <target>API SCHLÜSSEL</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.labelExtensions">
+                <source>EXTENSIONS</source>
+                <target>ERWEITERUNGEN</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.labelMcp">
+                <source>MCP SERVER</source>
+                <target>MCP Server</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.labelBrandContext">
+                <source>BRAND CONTEXT</source>
+                <target>Markenkontext</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.brandContextSkipped">
+                <source>Skipped — configure later in AI Context</source>
+                <target>Übersprungen – später in AI Context konfigurieren</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.brandContextConfigured">
+                <source>Basic profile saved</source>
+                <target>Basisprofil gespeichert</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.modeCredits">
+                <source>T3Planet Credits</source>
+                <target>T3Planet-Credits</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.modeOwn">
+                <source>Own API Keys</source>
+                <target>Eigene API-Schlüssel</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.apiManagedCredits">
+                <source>Managed by T3Planet</source>
+                <target>Verwaltet von T3Planet</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.apiPendingTest">
+                <source>Test pending — run Test connection</source>
+                <target>Test ausstehend – Testverbindung ausführen</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.apiVerified">
+                <source>Configured &amp; verified</source>
+                <target>Konfiguriert und verifiziert</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.apiStored">
+                <source>Using stored provider key</source>
+                <target>Verwendung des gespeicherten Schlüssels Provider</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.apiStoredUntested">
+                <source>Stored key (test recommended)</source>
+                <target>Gespeicherter Schlüssel (Test empfohlen)</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.extensionsNone">
+                <source>None selected</source>
+                <target>Keine ausgewählt</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.mcpOff">
+                <source>Disabled</source>
+                <target>Deaktiviert</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.mcpOn">
+                <source>Enabled · File System &amp; DB connectors ready</source>
+                <target>Aktiviert · Dateisystem und DB-Anschlüsse bereit</target>
+            </trans-unit>
+            <trans-unit id="wizard.summary.extensionsActivated">
+                <source>%1$s activated (%2$s)</source>
+                <target>%1$s aktiviert (%2$s)</target>
+            </trans-unit>
+            <trans-unit id="wizard.error.toneTagsInvalid">
+                <source>Pick 3–5 tone tags.</source>
+                <target>Wählen Sie 3–5 Ton-Tags aus.</target>
+            </trans-unit>
+            <trans-unit id="wizard.error.brandNameRequired">
+                <source>Enter a brand name to continue.</source>
+                <target>Geben Sie einen Markennamen ein, um fortzufahren.</target>
+            </trans-unit>
+            <trans-unit id="wizard.error.industryRequired">
+                <source>Select an industry to continue.</source>
+                <target>Wählen Sie eine Branche aus, um fortzufahren.</target>
+            </trans-unit>
+            <trans-unit id="wizard.step8.summaryLeadIntro">
+                <source>Your configuration has been saved. Here’s a summary:</source>
+                <target>Ihre Konfiguration wurde gespeichert. Hier ist eine Zusammenfassung:</target>
+            </trans-unit>
+            <trans-unit id="wizard.step7.summaryLeadIntro">
+                <source>Your configuration has been saved. Here’s a summary:</source>
+                <target>Ihre Konfiguration wurde gespeichert. Hier ist eine Zusammenfassung:</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.copied">
+                <source>Copied</source>
+                <target>Kopiert</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.copyFailed">
+                <source>Copy failed</source>
+                <target>Das Kopieren ist fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.refreshFailed">
+                <source>Refresh failed</source>
+                <target>Aktualisierung fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.revokeFailed">
+                <source>Revoke failed</source>
+                <target>Der Widerruf ist fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.revokeAllConfirm">
+                <source>Revoke all active MCP tokens?</source>
+                <target>Alle aktiven MCP Tokens widerrufen?</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.tokenCreated">
+                <source>mcp-remote token created</source>
+                <target>mcp-remote Token erstellt</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.tokenCopyUnavailable">
+                <source>Full token unavailable. Revoke and create a new token to copy it again.</source>
+                <target>Vollständiges Token nicht verfügbar. Widerrufen Sie und erstellen Sie ein neues Token, um es erneut zu kopieren.</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.clientTokenCreated">
+                <source>Client token created</source>
+                <target>CLI-Token erstellt</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.tokenCreateFailed">
+                <source>Failed to create token</source>
+                <target>Token konnte nicht erstellt werden</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.settingsSaved">
+                <source>Settings saved</source>
+                <target>Einstellungen gespeichert</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.settingsSaveFailed">
+                <source>Save failed</source>
+                <target>Speichern fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.showAdvanced">
+                <source>Show advanced</source>
+                <target>Erweitert anzeigen</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.hideAdvanced">
+                <source>Hide advanced</source>
+                <target>Erweitert ausblenden</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.workspaceCreating">
+                <source>Creating workspace…</source>
+                <target>Arbeitsbereich erstellen…</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.workspaceCreated">
+                <source>MCP workspace created. It is now selected for new tokens and CLI commands.</source>
+                <target>MCP-Arbeitsbereich erstellt. Es ist jetzt für die neuen Befehle Tokens und CLI ausgewählt.</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.workspaceCreateFailed">
+                <source>Workspace creation failed</source>
+                <target>Die Erstellung des Arbeitsbereichs ist fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.modeSaved">
+                <source>MCP mode saved.</source>
+                <target>MCP-Modus gespeichert.</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.modeSaveFailed">
+                <source>Could not save MCP mode.</source>
+                <target>Der MCP-Modus konnte nicht gespeichert werden.</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.exportDone">
+                <source>Export downloaded</source>
+                <target>Export heruntergeladen</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.exportFailed">
+                <source>Export failed</source>
+                <target>Der Export ist fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="mcpServer.js.pingDone">
+                <source>Ping complete</source>
+                <target>Ping abgeschlossen</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.discoverSuccess">
+                <source>Discovery complete. %s new table(s) added.</source>
+                <target>Entdeckung abgeschlossen. %s neue Tabelle(n) hinzugefügt.</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.discoverNone">
+                <source>No new extension tables found.</source>
+                <target>Keine neuen Erweiterungstabellen gefunden.</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.discoverFailed">
+                <source>Table discovery failed</source>
+                <target>Die Tabellenerkennung ist fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.toggleFailed">
+                <source>Could not update table status</source>
+                <target>Der Tabellenstatus konnte nicht aktualisiert werden</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.saveFailed">
+                <source>Could not save table configuration</source>
+                <target>Die Tabellenkonfiguration konnte nicht gespeichert werden</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.saveSuccess">
+                <source>Table configuration saved</source>
+                <target>Tabellenkonfiguration gespeichert</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.copySuccess">
+                <source>Snippet copied to clipboard</source>
+                <target>Snippet nach CLIpboard kopiert</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.downloadingSkill">
+                <source>Generating skill file…</source>
+                <target>Fertigkeitsdatei wird erstellt…</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.playgroundSelectTool">
+                <source>Select a tool first</source>
+                <target>Wählen Sie zunächst ein Werkzeug aus</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.playgroundSuccess">
+                <source>Completed in %s ms</source>
+                <target>Abgeschlossen in %s ms</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.playgroundFailed">
+                <source>Tool call failed</source>
+                <target>Der Werkzeugaufruf ist fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.promptSaveFailed">
+                <source>Could not save prompt</source>
+                <target>Prompt konnte nicht gespeichert werden</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.promptDeleteFailed">
+                <source>Could not delete prompt</source>
+                <target>Prompt konnte nicht gelöscht werden</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.promptNameInvalid">
+                <source>Name must be snake_case (lowercase, digits, underscores).</source>
+                <target>Der Name muss „snake_case“ (Kleinbuchstaben, Ziffern, Unterstriche) sein.</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.promptArgumentsInvalid">
+                <source>Arguments must be valid JSON array.</source>
+                <target>Argumente müssen ein gültiges JSON-Array sein.</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.promptArgumentNameInvalid">
+                <source>Argument #%s must have a snake_case name (e.g. page_id).</source>
+                <target>Argument #%s muss einen Snake_Case-Namen haben (z. B. page_id).</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.promptBodyRequired">
+                <source>Template body is required.</source>
+                <target>Vorlagentext ist erforderlich.</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.promptFormEdit">
+                <source>Edit prompt template</source>
+                <target>Bearbeiten Sie die Prompt-Vorlage</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.promptFormCreate">
+                <source>Add prompt template</source>
+                <target>Prompt-Vorlage hinzufügen</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.promptCreateSuccess">
+                <source>Prompt template created</source>
+                <target>Prompt-Vorlage erstellt</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.promptUpdateSuccess">
+                <source>Prompt template updated</source>
+                <target>Prompt-Vorlage aktualisiert</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.promptDeleteSuccess">
+                <source>Prompt template deleted</source>
+                <target>Prompt-Vorlage gelöscht</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.promptDeleteConfirm">
+                <source>Delete prompt template &quot;%s&quot;?</source>
+                <target>Prompt-Vorlage „%s“ löschen?</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.promptDeleteTitle">
+                <source>Delete prompt template</source>
+                <target>Vorlage Prompt löschen</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.promptDeleteAction">
+                <source>Delete</source>
+                <target>Löschen</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.skillImportFailed">
+                <source>Skill import failed</source>
+                <target>Der Skill-Import ist fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.skillRemoveFailed">
+                <source>Could not remove skill</source>
+                <target>Fertigkeit konnte nicht entfernt werden</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolModalTitle">
+                <source>New Custom Tool</source>
+                <target>Neues benutzerdefiniertes Tool</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolCreate">
+                <source>Create Tool</source>
+                <target>Werkzeug erstellen</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolValidation">
+                <source>Label and handler configuration are required</source>
+                <target>Label- und Handlerkonfiguration sind erforderlich</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolCreateFailed">
+                <source>Could not create custom tool</source>
+                <target>Das benutzerdefinierte Tool konnte nicht erstellt werden</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolCreateSuccess">
+                <source>Custom tool created</source>
+                <target>Benutzerdefiniertes Tool erstellt</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolDeleteFailed">
+                <source>Could not delete custom tool</source>
+                <target>Das benutzerdefinierte Tool konnte nicht gelöscht werden</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolDeleteSuccess">
+                <source>Custom tool deleted</source>
+                <target>Benutzerdefiniertes Tool gelöscht</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolUpdateFailed">
+                <source>Could not update custom tool</source>
+                <target>Das benutzerdefinierte Tool konnte nicht aktualisiert werden</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolUpdateSuccess">
+                <source>Custom tool updated</source>
+                <target>Benutzerdefiniertes Tool aktualisiert</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolDeleteConfirmTitle">
+                <source>Delete custom tool</source>
+                <target>Benutzerdefiniertes Tool löschen</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolDeleteConfirmBody">
+                <source>Do you want to delete this custom tool?</source>
+                <target>Möchten Sie dieses benutzerdefinierte Tool löschen?</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolDeleteButton">
+                <source>Delete</source>
+                <target>Löschen</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.cancel">
+                <source>Cancel</source>
+                <target>Abbrechen</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolTemplateMissing">
+                <source>Custom tool form could not be loaded.</source>
+                <target>Das benutzerdefinierte Werkzeugformular konnte nicht geladen werden.</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolLabel">
+                <source>Tool Label</source>
+                <target>Werkzeugetikett</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolLabelPlaceholder">
+                <source>e.g. Warm Up Cache</source>
+                <target>z.B. Aufwärm-Cache</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolCategory">
+                <source>Category</source>
+                <target>Kategorie</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolDescription">
+                <source>Description</source>
+                <target>Beschreibung</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolDescriptionPlaceholder">
+                <source>What does this tool do? This text is sent to the AI with the tool definition.</source>
+                <target>Was macht dieses Tool? Dieser Text wird mit der Werkzeugdefinition an die KI gesendet.</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolHandlerType">
+                <source>Handler Type</source>
+                <target>Handlertyp</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolHandlerPhp">
+                <source>PHP Class</source>
+                <target>PHP Klasse</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolHandlerRest">
+                <source>REST Endpoint</source>
+                <target>REST-Endpunkt</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolHandlerWebhook">
+                <source>Webhook</source>
+                <target>Webhook</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolPhpClass">
+                <source>PHP Class Name</source>
+                <target>PHP Klassenname</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolRestUrl">
+                <source>REST Endpoint URL</source>
+                <target>REST-Endpunkt URL</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolWebhookUrl">
+                <source>Webhook URL</source>
+                <target>Webhook URL</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolParameters">
+                <source>Parameters</source>
+                <target>Parameter</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolAddParameter">
+                <source>+ Add</source>
+                <target>+ Hinzufügen</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolParamName">
+                <source>Name</source>
+                <target>Name</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolParamType">
+                <source>Type</source>
+                <target>Typ</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolParamRequired">
+                <source>Req</source>
+                <target>Anf</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolParamDescription">
+                <source>Description...</source>
+                <target>Beschreibung...</target>
+            </trans-unit>
+            <trans-unit id="mcpTools.js.customToolRemoveParameter">
+                <source>Remove</source>
+                <target>Entfernen</target>
+            </trans-unit>
+            <trans-unit id="aiFeatures.js.metaCountFiltered">
+                <source>%1$s / %2$s</source>
+                <target>%1$s / %2$s</target>
+            </trans-unit>
+            <trans-unit id="aiFeatures.js.t3csAdapterUnavailableTitle">
+                <source>Provider adapter not installed</source>
+                <target>Provider-Adapter nicht installiert</target>
+            </trans-unit>
+            <trans-unit id="aiFeatures.js.t3csAdapterUnavailable">
+                <source>This provider adapter is not installed. Install the matching Symfony AI platform package first.</source>
+                <target>Dieser Provider-Adapter ist nicht installiert. Installieren Sie zunächst das passende Symfony AI-Plattformpaket.</target>
+            </trans-unit>
+            <trans-unit id="aiFeatures.js.t3csHfLlmCompatibilityTitle">
+                <source>Embedding compatibility</source>
+                <target>Embedding-Kompatibilität</target>
+            </trans-unit>
+            <trans-unit id="aiFeatures.js.t3csHfLlmCompatibility">
+                <source>With HuggingFace embedding we only support OpenAI and Mistral.</source>
+                <target>Mit HuggingFace Embedding unterstützen wir nur OpenAI und Mistral.</target>
+            </trans-unit>
+            <trans-unit id="aiFeatures.js.secretKey.revealShow">
+                <source>Show</source>
+                <target>Zeigen</target>
+            </trans-unit>
+            <trans-unit id="aiFeatures.js.secretKey.revealHide">
+                <source>Hide</source>
+                <target>Verstecken</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.modal.addTitle">
+                <source>Add Profile</source>
+                <target>Profil hinzufügen</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.modal.editTitle">
+                <source>Edit Profile</source>
+                <target>Profil bearbeiten</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.deleteConfirm">
+                <source>Delete this brand context profile?</source>
+                <target>Dieses Markenkontextprofil löschen?</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.personaName">
+                <source>Persona name</source>
+                <target>Persona-Name</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.personaUnnamed">
+                <source>Unnamed persona</source>
+                <target>Unbenannte Person</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.personaLabel">
+                <source>Persona Label</source>
+                <target>Persona-Label</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.personaLabelPlaceholder">
+                <source>e.g. TYPO3 Admin</source>
+                <target>z.B. TYPO3 Admin</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.personaRole">
+                <source>Role / Title</source>
+                <target>Rolle/Titel</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.personaRolePlaceholder">
+                <source>e.g. CMS Administrator</source>
+                <target>z.B. CMS-Administrator</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.personaExpertiseLevel">
+                <source>Expertise Level</source>
+                <target>Kompetenzniveau</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.personaPainPoints">
+                <source>Key Pain Points</source>
+                <target>Wichtige Schmerzpunkte</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.personaPainPointsPlaceholder">
+                <source>What challenges does this persona face?</source>
+                <target>Vor welchen Herausforderungen steht diese Persona?</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.personaCaresAbout">
+                <source>What They Care About</source>
+                <target>Was ihnen wichtig ist</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.personaCaresAboutPlaceholder">
+                <source>What outcomes matter most to them?</source>
+                <target>Welche Ergebnisse sind ihnen am wichtigsten?</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.personaLevel">
+                <source>Level</source>
+                <target>Ebene</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.removePersona">
+                <source>Remove persona</source>
+                <target>Persona entfernen</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.personaExpand">
+                <source>Expand persona</source>
+                <target>Persona erweitern</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.personaCollapse">
+                <source>Collapse persona</source>
+                <target>Persona reduzieren</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.ruleAlways">
+                <source>Always</source>
+                <target>Stets</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.ruleNever">
+                <source>Never</source>
+                <target>Niemals</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.ruleText">
+                <source>Rule text</source>
+                <target>Regeltext</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.removeRule">
+                <source>Remove rule</source>
+                <target>Regel entfernen</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.rulesPreviewEmpty">
+                <source>Add rules to preview them here.</source>
+                <target>Fügen Sie hier Regeln hinzu, um eine Vorschau anzuzeigen.</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.removeChip">
+                <source>Remove</source>
+                <target>Entfernen</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.chipLimit">
+                <source>Maximum reached</source>
+                <target>Maximum erreicht</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.researchUrlRequired">
+                <source>Enter a website URL first.</source>
+                <target>Geben Sie zuerst eine Website URL ein.</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.researchRouteMissing">
+                <source>Research endpoint is unavailable. Flush TYPO3 caches and reload the page.</source>
+                <target>Der Forschungsendpunkt ist nicht verfügbar. Leeren Sie die TYPO3-Caches und laden Sie die Seite neu.</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.researchRunning">
+                <source>Analyzing website…</source>
+                <target>Website wird analysiert…</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.researchFailed">
+                <source>Research failed.</source>
+                <target>Die Forschung ist gescheitert.</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.researchFailedTitle">
+                <source>Research failed</source>
+                <target>Die Forschung ist gescheitert</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.researchSuccess">
+                <source>Profile fields updated from website analysis.</source>
+                <target>Profilfelder wurden durch Website-Analyse aktualisiert.</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.researchSuccessTitle">
+                <source>Research complete</source>
+                <target>Recherche abgeschlossen</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.manual.contentRules">
+                <source>Content Rules</source>
+                <target>Inhaltsregeln</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.manual.forbiddenWords">
+                <source>Forbidden Words</source>
+                <target>Verbotene Worte</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.manual.sampleContent">
+                <source>Sample Content</source>
+                <target>Beispielinhalt</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.manual.complianceNotes">
+                <source>Compliance Notes</source>
+                <target>Compliance-Hinweise</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.manual.documentUpload">
+                <source>Brand Documents</source>
+                <target>Markendokumente</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.chars">
+                <source>chars</source>
+                <target>Zeichen</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.removeDocument">
+                <source>Remove document</source>
+                <target>Dokument entfernen</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.documentsLimitTitle">
+                <source>Too many files</source>
+                <target>Zu viele Dateien</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.documentsLimit">
+                <source>Maximum 3 documents allowed.</source>
+                <target>Maximal 3 Dokumente erlaubt.</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.documentsFailed">
+                <source>Document extraction failed.</source>
+                <target>Das Extrahieren des Dokuments ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.documentsFailedTitle">
+                <source>Upload failed</source>
+                <target>Der Upload ist fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.documentsSuccessTitle">
+                <source>Documents processed</source>
+                <target>Dokumente verarbeitet</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.documentsSuccess">
+                <source>Document text added to the profile.</source>
+                <target>Dokumenttext zum Profil hinzugefügt.</target>
+            </trans-unit>
+            <trans-unit id="aiContext.js.documentsWarningTitle">
+                <source>Document warnings</source>
+                <target>Dokumentwarnungen</target>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>
