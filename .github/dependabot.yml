@@ -1,0 +1,31 @@
+# Dependabot for nitsan/ns-t3af (AI Foundation)
+#
+# Ecosystems: composer (extension composer.json) and github-actions.
+# Do not add npm unless a package.json exists at the declared directory —
+# missing manifests make Dependabot fail with dependency_file_not_found.
+version: 2
+updates:
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    versioning-strategy: increase-if-necessary
+    groups:
+      composer:
+        patterns: ['*']
+    cooldown:
+      default-days: 7
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      github-actions:
+        patterns: ['*']
+    cooldown:
+      default-days: 7
