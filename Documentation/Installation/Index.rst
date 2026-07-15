@@ -7,28 +7,64 @@
 Installation
 ============
 
-Follow these steps in order. Install the license extension first, then
-AI Foundation (``EXT:ns_t3af``).
+.. _quickstart:
 
-Composer is the recommended method. Classic sites can use the
+Quick start
+===========
+
+The recommended way to install this extension is via Composer.
+
+Install the license extension first (if it is not already present), then
+AI Foundation (``EXT:ns_t3af``):
+
+..  code-block:: bash
+    :caption: Install via Composer
+
+    composer require nitsan/ns-license
+    composer require nitsan/ns-t3af
+    ./vendor/bin/typo3 extension:setup
+    ./vendor/bin/typo3 cache:flush
+
+Classic TYPO3 sites can also install from the
 `TYPO3 Extension Repository (TER) <https://extensions.typo3.org/extension/ns_t3af>`__.
+
+After installation:
+
+1. Activate the extensions in :guilabel:`Admin Tools > Extensions`.
+2. Open :guilabel:`AI Foundation > Dashboard` and confirm the module group is
+   available.
+3. Connect providers and API keys in :guilabel:`AI Foundation > AI Providers`.
+4. Complete guided options with :guilabel:`Quick Setup` in the AI Foundation
+   module header.
+5. Clear caches in :guilabel:`Admin Tools > Maintenance`.
+
+.. figure:: ../Images/quick-setups.png
+   :alt: AI Foundation Quick Setup wizard welcome step
+   :class: with-border with-shadow
+
+   Quick Setup wizard — guided first-time configuration in the AI Foundation module.
+
+Continue with :ref:`Configuration <configuration>` for providers, MCP, and
+day-to-day module setup.
+
+Composer installation
+=====================
 
 .. _system-requirements:
 
-Step 1 — Verify Prerequisites
-=============================
+Requirements
+------------
 
-Confirm your environment before you install:
+Ensure your system meets these requirements:
 
 * **TYPO3** — 12.4 LTS, 13.4 LTS, or 14.x
-* **PHP** — 8.2 or higher (8.3 recommended)
-* **PHP extensions** — ``ext-sodium`` (required for secure storage)
-* **Composer** — 2.x (recommended installation path)
+* **PHP** — 8.2 or higher (8.3 recommended), including ``ext-sodium``
+* **Composer** — 2.x
 * **Database** — MySQL 8.0+ or MariaDB 10.3+
 * **Network** — Outbound HTTPS for AI provider API calls
 
-Step 2 — Install Required Extensions
-====================================
+Required Extensions
+-------------------
 
 Install and activate these extensions before AI Foundation:
 
@@ -37,72 +73,91 @@ Install and activate these extensions before AI Foundation:
 * **workspaces** — Draft workspaces, MCP workflows, and safe content editing
 
 ``scheduler`` and ``workspaces`` ship with TYPO3. Activate them if they are
-not already enabled. Install ``ns_license`` as described in the next step.
+not already enabled.
 
-Step 3 — Install the License Extension
-======================================
+Install the license extension
+-----------------------------
 
 ``EXT:ns_license`` must be installed first. AI Foundation depends on it for
-license checks.
-
-The extension is free and available from the
+license checks. The extension is free on the
 `TYPO3 Extension Repository <https://extensions.typo3.org/extension/ns_license>`__.
 
-**Composer:**
+..  code-block:: bash
+    :caption: Install ns_license via Composer
 
-.. code-block:: bash
+    composer require nitsan/ns-license
 
-   composer require nitsan/ns-license
+Or use :guilabel:`Admin Tools > Extensions > Get Extensions`, search for
+``ns_license``, install and activate it, then flush caches.
 
-**Extension Manager:**
+Install AI Foundation
+---------------------
 
-1. Open **Admin Tools** → **Extensions** → **Get Extensions**.
-2. Search for ``ns_license``.
-3. Install and activate the extension.
-4. Flush caches.
+``EXT:ns_t3af`` must be installed after ``EXT:ns_license``. Find it on the
+`TYPO3 Extension Repository <https://extensions.typo3.org/extension/ns_t3af>`__.
 
-Step 4 — Install AI Foundation
-==============================
+..  code-block:: bash
+    :caption: Install AI Foundation via Composer
 
-**Composer (recommended):**
+    composer require nitsan/ns-t3af
 
-1. Install the package:
+Or use :guilabel:`Admin Tools > Extensions > Get Extensions`, search for
+``ns_t3af`` (or **T3AF**), install and activate it, then flush caches.
 
-   .. code-block:: bash
+Get your free license key
+-------------------------
 
-      composer require nitsan/ns-t3af
+A free license key is required to activate AI Foundation. After you install
+``EXT:ns_t3af``, get your free license key and enter it before you continue
+with configuration:
 
-2. Set up the extension and flush caches:
+https://t3planet.de/en/ai-foundation-for-typo3#c19775
 
-   .. code-block:: bash
+Activate the extension
+~~~~~~~~~~~~~~~~~~~~~~
 
-      ./vendor/bin/typo3 extension:setup
-      ./vendor/bin/typo3 cache:flush
+Confirm ``ns_t3af`` is active in :guilabel:`Admin Tools > Extensions`.
 
-3. Confirm ``ns_t3af`` is active in **Admin Tools** → **Extensions**.
+Set up the database and clear caches
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-**Extension Manager:**
+..  code-block:: bash
+    :caption: Extension setup and cache flush
 
-1. Open **Admin Tools** → **Extensions** → **Get Extensions**.
-2. Search for ``ns_t3af`` or **AI Foundation**.
-3. Install and activate the extension.
+    ./vendor/bin/typo3 extension:setup
+    ./vendor/bin/typo3 cache:flush
+
+Manual installation
+===================
+
+If you cannot use Composer, install both extensions from the TER in this order:
+
+1. Open :guilabel:`Admin Tools > Extensions > Get Extensions`.
+2. Search for ``ns_license``, install and activate it, then flush caches.
+3. Search for ``ns_t3af`` (or **T3AF**), install and activate it.
 4. Run **Analyze Database Structure**.
-5. Flush caches.
+5. Flush caches again.
 
-Step 5 — Verify the Installation
-================================
+.. warning::
+
+   Manual installation requires manual dependency management. Composer
+   installation is strongly recommended.
+
+Verify the installation
+=======================
 
 Confirm that:
 
-* ``ns_license`` and ``ns_t3af`` are listed as active in **Admin Tools** → **Extensions**
+* ``ns_license`` and ``ns_t3af`` are listed as active in
+  :guilabel:`Admin Tools > Extensions`
 * The **AI Foundation** module group appears in the backend sidebar
 * **Analyze Database Structure** reports no pending changes for ``ns_t3af``
 
 If the module is missing, flush caches and run
 ``./vendor/bin/typo3 extension:setup`` again.
 
-Step 6 — Continue with Configuration
-====================================
+Next steps
+==========
 
-Next, connect AI providers and complete first-time setup in
-:ref:`Configuration <configuration>`.
+Open :guilabel:`AI Foundation > AI Providers` to connect at least one provider,
+then review :ref:`Configuration <configuration>`.

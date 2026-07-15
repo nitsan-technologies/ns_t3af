@@ -11,7 +11,13 @@ Purpose
 
 Central **prompt templates** for AI Foundation and connected extensions. Same prompt quality for every user and every extension.
 
-**Path:** AI Foundation → AI Prompts
+**Path:** :guilabel:`AI Foundation > AI Prompts`
+
+.. figure:: ../../Images/ai-prompts.png
+   :alt: AI Prompts categories and prompt catalog overview
+   :class: with-border with-shadow
+
+   AI Prompts — prompt categories contributed by connected extensions.
 
 .. note::
 
@@ -53,20 +59,14 @@ Writing good prompts
 1. **Be specific** — length, format, language
 2. **Set tone** — formal, friendly, technical
 3. **Say what to avoid** — no emojis, no hype, no legal claims
-4. **Use placeholders** — ``{title}``, ``{content}``, ``{language}``
+4. **Include the page goal** — SEO, translation, rewriting, or summary
 
-Example template
-----------------
+Example prompt
+--------------
 
-.. code-block:: php
+.. code-block:: none
 
-   Write a meta description for this page.
-   Language: {language}
-   Max: 155 characters.
-   Tone: professional.
-   Keyword: include naturally.
-   Title: {title}
-   Content: {content}
+   Write a friendly greeting for [audience] mentioning [topic].
 
 Pair prompts with :ref:`AI Context <ai-context>` for brand voice. Context handles who you are; prompts handle what to do.
 

@@ -13,7 +13,7 @@ Use this when one feature should use a different model or provider than the glob
 How it works
 ------------
 
-AI Foundation owns the provider rows. The child extension exposes feature-specific provider fields in **AI Foundation → AI Features**. At runtime, the feature resolves the provider in this order:
+AI Foundation owns the provider rows. The child extension exposes feature-specific provider fields in :guilabel:`AI Foundation > AI Features`. At runtime, the feature resolves the provider in this order:
 
 1. Provider selected in the runtime modal, if the request includes one.
 2. Feature default saved in AI Features.
@@ -59,7 +59,7 @@ Configuration workflow
 3. Implement ``FeatureProviderFormOptionsInterface``.
 4. Tag the service with ``t3af.feature_provider_form_options``.
 5. Flush caches.
-6. Open **AI Foundation → AI Features** and verify the provider dropdown.
+6. Open :guilabel:`AI Foundation > AI Features` and verify the provider dropdown.
 7. Save a default provider and test the runtime feature.
 
 Best practices
@@ -74,8 +74,8 @@ Best practices
 Verification
 ------------
 
-1. Open **AI Foundation → AI Providers** and confirm at least one provider is enabled.
-2. Open **AI Foundation → AI Features**.
+1. Open :guilabel:`AI Foundation > AI Providers` and confirm at least one provider is enabled.
+2. Open :guilabel:`AI Foundation > AI Features`.
 3. Open the feature settings drawer.
 4. Confirm the provider dropdown contains enabled providers.
 5. Save a feature default.

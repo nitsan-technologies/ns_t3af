@@ -11,9 +11,27 @@ Purpose
 
 The Dashboard is your **control center** for AI health on this TYPO3 instance. Open it daily for a quick status check.
 
-**Path:** AI Foundation → Dashboard
+**Path:** :guilabel:`AI Foundation > Dashboard`
 
 `AI Foundation Dashboard Demo <https://app.supademo.com/embed/cmrbp02gg0dysqmo5wfd0olu1?utm_source=link>`__
+
+.. figure:: ../../Images/t3af-dashboard-01.png
+   :alt: AI Foundation Dashboard with setup checklist, provider status cards, and cost trend
+   :class: with-border with-shadow
+
+   Dashboard overview — setup progress, provider health, and API cost trend.
+
+.. figure:: ../../Images/t3af-dashboard-03.png
+   :alt: AI Foundation Dashboard analytics charts for requests, success rate, models, and providers
+   :class: with-border with-shadow
+
+   Usage analytics — requests over time, success rate, top models, and provider distribution.
+
+.. figure:: ../../Images/t3af-dashboard-04.png
+   :alt: AI Foundation Dashboard recent requests table and module health panel
+   :class: with-border with-shadow
+
+   Recent requests and module health — request log, costs, and subsystem status.
 
 What the dashboard shows
 ------------------------

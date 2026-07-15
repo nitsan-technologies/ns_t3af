@@ -7,8 +7,8 @@
 User Guide
 ==========
 
-Practical guidance for editors, administrators, and stakeholders using
-**AI Foundation** (``EXT:ns_t3af``) in daily workflows.
+Practical day-to-day guidance for people who use **AI Foundation** in the
+TYPO3 backend.
 
 ..  toctree::
    :maxdepth: 2

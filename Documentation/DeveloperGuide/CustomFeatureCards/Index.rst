@@ -6,7 +6,7 @@
 Custom Feature Cards
 ====================
 
-Use custom AI Features when your extension needs settings cards inside **AI Foundation → AI Features**. These cards are used for extension-specific AI configuration such as feature toggles, defaults, API-related options, and provider choices.
+Use custom AI Features when your extension needs settings cards inside :guilabel:`AI Foundation > AI Features`. These cards are used for extension-specific AI configuration such as feature toggles, defaults, API-related options, and provider choices.
 
 Purpose
 -------
@@ -41,7 +41,7 @@ Implementation steps
 3. Implement ``ExtensionSettingsScopeProviderInterface``.
 4. Tag both services in your extension.
 5. Read saved values at runtime through the AI Foundation settings service.
-6. Flush caches and verify the card in **AI Foundation → AI Features**.
+6. Flush caches and verify the card in :guilabel:`AI Foundation > AI Features`.
 
 Schema example
 --------------
@@ -111,7 +111,7 @@ Verification
 ------------
 
 1. Select a site in AI Foundation.
-2. Open **AI Foundation → AI Features**.
+2. Open :guilabel:`AI Foundation > AI Features`.
 3. Confirm your card appears.
 4. Open the drawer and verify fields from ``fields.typoscript``.
 5. Save settings and reopen the drawer.

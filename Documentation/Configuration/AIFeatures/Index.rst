@@ -11,7 +11,13 @@ Purpose
 
 Assign **different AI providers** per task type. Use a fast cheap model for bulk SEO work and a premium model for important pages.
 
-**Path:** AI Foundation → AI Features
+**Path:** :guilabel:`AI Foundation > AI Features`
+
+.. figure:: ../../Images/ai-feature.png
+   :alt: AI Features cards for extension-level AI settings
+   :class: with-border with-shadow
+
+   AI Features — extension cards for per-feature settings and provider overrides.
 
 .. note::
 
@@ -71,7 +77,7 @@ Without per-feature settings, every task uses the most expensive default. Routin
 How to configure
 ----------------
 
-1. Open AI Foundation → AI Features
+1. Open :guilabel:`AI Foundation > AI Features`
 2. For each feature row, select a provider (or leave empty for global default)
 3. Save
 4. Test one request per feature type from a connected extension

@@ -14,7 +14,7 @@ Purpose
 AI Usage
 --------
 
-**Path:** AI Foundation → AI Usage
+**Path:** :guilabel:`AI Foundation > AI Usage`
 
 `AI Foundation AI Usage Demo <https://app.supademo.com/embed/cmrbpqbgz0fn3qmo5oaq6j1t9?utm_source=link>`__
 
@@ -33,7 +33,7 @@ Compare usage trends on the :ref:`Dashboard <dashboard>`.
 AI Logs
 -------
 
-**Path:** AI Foundation → AI Logs
+**Path:** :guilabel:`AI Foundation > AI Logs`
 
 `AI Foundation AI Logs Demo <https://app.supademo.com/embed/cmrbpsdl20frlqmo521y5if8m?utm_source=link>`__
 
@@ -48,15 +48,22 @@ Per-request detail includes:
 Scheduler & CLI
 ---------------
 
-**Path:** AI Foundation → Scheduler & CLI
+**Path:** :guilabel:`AI Foundation > Scheduler & CLI`
 
 `AI Foundation Scheduler and CLI Demo <https://app.supademo.com/embed/cmrbpsi9d0frwqmo59f50ny8s?utm_source=link>`__
 
+.. figure:: ../../Images/scheduler.png
+   :alt: AI Foundation Scheduler and CLI with scheduled tasks and command list
+   :class: with-border with-shadow
+
+   Scheduler & CLI — background tasks and TYPO3 console commands for AI Foundation.
+
 Background jobs and CLI commands. Example:
 
-.. code-block:: python
+..  code-block:: bash
+    :caption: Flush AI Foundation caches
 
-   vendor/bin/typo3 ns_t3af:cache:flush
+    vendor/bin/typo3 ns_t3af:cache:flush
 
 Ensure **scheduler cron** runs every minute on production.
 
@@ -68,20 +75,22 @@ Set ``openai_admin_api_key`` in Extension Configuration for organization-level u
 Privacy
 -------
 
-Log detail depends on :ref:`AI Permissions <ai-permissions>` privacy level. Configure for GDPR needs before enabling **Full** logging.
+Log detail depends on provider privacy settings and group audit limits from
+:ref:`AI Permissions <ai-permissions>`. Configure carefully before enabling full
+prompt/response storage.
 
 Weekly admin habit
 ------------------
 
-1. Open AI Usage → check trend vs last week
-2. Scan AI Logs for repeated failures (same user, same feature)
+1. Open :guilabel:`AI Foundation > AI Usage` and compare the trend with last week
+2. Scan :guilabel:`AI Foundation > AI Logs` for repeated failures (same user, same feature)
 3. Escalate persistent errors to :ref:`Support <support>` with log details
 
 When logs show high usage
 -------------------------
 
 * Check :ref:`AI Features <ai-features>` — bulk tasks may need a cheaper model
-* Review :ref:`AI Permissions <ai-permissions>` budgets and rate limits
+* Review group limits in :ref:`AI Permissions <ai-permissions>`
 * Ask editors if a script or loop triggered many requests
 
 When logs show failures

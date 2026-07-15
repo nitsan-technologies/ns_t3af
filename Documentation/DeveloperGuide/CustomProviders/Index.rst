@@ -31,7 +31,7 @@ Implementation steps
 3. Implement ``NITSAN\NsT3AF\Provider\Contract\AdapterInterface``.
 4. Tag the service with ``nst3af.adapter`` in your extension.
 5. Flush TYPO3 caches.
-6. Create a provider row in **AI Foundation → AI Providers** and select your adapter.
+6. Create a provider row in :guilabel:`AI Foundation > AI Providers` and select your adapter.
 7. Run the connection test.
 
 Minimal adapter shape
@@ -115,7 +115,7 @@ Verification
 ------------
 
 1. Flush caches.
-2. Open **AI Foundation → AI Providers**.
+2. Open :guilabel:`AI Foundation > AI Providers`.
 3. Create or edit a provider row and select your adapter.
 4. Save the row.
 5. Run the connection test and confirm the status updates.

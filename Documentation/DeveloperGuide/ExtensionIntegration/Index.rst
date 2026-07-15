@@ -105,7 +105,7 @@ Troubleshooting
 
 **No provider is resolved**
 
-* Confirm a provider is connected in **AI Foundation → AI Providers**.
+* Confirm a provider is connected in :guilabel:`AI Foundation > AI Providers`.
 * Confirm your feature-level provider override, if used, points to an enabled provider.
 
 **Request is missing in logs**

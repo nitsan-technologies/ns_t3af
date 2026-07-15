@@ -6,7 +6,7 @@
 Custom Prompt Catalogs
 ======================
 
-Use a custom prompt catalog when your extension needs editable LLM instruction templates in **AI Foundation → AI Prompts**. Prompt catalogs let your extension ship built-in defaults while allowing editors to create project-specific overrides.
+Use a custom prompt catalog when your extension needs editable LLM instruction templates in :guilabel:`AI Foundation > AI Prompts`. Prompt catalogs let your extension ship built-in defaults while allowing editors to create project-specific overrides.
 
 Purpose
 -------
@@ -22,7 +22,7 @@ Architecture
    Your extension’s PHP source of truth for built-in prompt types, labels, default text, scopes, and required variables.
 
 ``PromptCatalogProviderInterface``
-   Connects your prompt contracts to **AI Foundation → AI Prompts**.
+   Connects your prompt contracts to :guilabel:`AI Foundation > AI Prompts`.
 
 ``tx_nst3af_ai_prompt``
    Shared table owned by AI Foundation for editor-created custom prompts.
@@ -38,7 +38,7 @@ Implementation steps
 3. Tag the provider with ``t3af.prompt_catalog_provider``.
 4. Add a runtime resolver that reads custom prompt rows through AI Foundation services.
 5. Use the resolved prompt when calling ``AiServiceInterface``.
-6. Flush caches and verify the category in **AI Foundation → AI Prompts**.
+6. Flush caches and verify the category in :guilabel:`AI Foundation > AI Prompts`.
 
 Prompt contract rules
 ---------------------
@@ -57,8 +57,8 @@ Minimal contract idea
        'product_summary' => [
            'scope' => 'catalog',
            'label' => 'Product summary',
-           'defaultText' => 'Summarize [productName] for a [language] product page.',
-           'requiredVariables' => ['productName', 'language'],
+           'defaultText' => 'Write a concise product summary for a TYPO3 catalog page. Focus on key benefits, keep it under 80 words, and use clear retail language.',
+           'requiredVariables' => [],
        ],
    ];
 
@@ -105,7 +105,7 @@ Verification
 ------------
 
 1. Flush TYPO3 caches.
-2. Open **AI Foundation → AI Prompts**.
+2. Open :guilabel:`AI Foundation > AI Prompts`.
 3. Confirm your category card appears.
 4. Open the category and verify built-in prompt rows.
 5. Add a custom prompt and save it.

@@ -19,7 +19,9 @@ Implement a provider when your extension:
 * defines AI feature areas checked with ``FeaturePermissionGate``
 * stores records that need ``tables_select`` or ``tables_modify`` enforcement
 
-Administrators assign the resulting permissions through **Backend Users** > **Groups** > **Access Lists**. The optional **AI Foundation → AI Access / Roles** wizard reads the same merged catalogs.
+Administrators assign the resulting permissions through
+:guilabel:`Backend Users > Backend usergroups > Access Lists`. The optional
+:guilabel:`AI Foundation > AI Permissions` wizard reads the same merged catalogs.
 
 Step 1 — Implement the provider
 -------------------------------
@@ -169,14 +171,15 @@ Step 4 — Assign permissions
 
 Administrators can assign permissions in two ways.
 
-**Option A — AI Access / Roles wizard**
+**Option A — AI Permissions wizard**
 
-Open **AI Foundation → AI Access / Roles**, select a backend group, and configure the wizard steps or permission matrix tabs.
+Open :guilabel:`AI Foundation > AI Permissions`, select a backend group, and configure the wizard steps or permission matrix tabs.
 
 **Option B — Native backend groups**
 
-1. Grant the custom feature bit under **Custom module options → AI Assistant**.
-2. Grant the backend module under **Modules**.
+1. Grant the custom feature bit under :guilabel:`Custom module options` (T3Ai
+   section).
+2. Grant the backend module under :guilabel:`Modules`.
 3. Grant ``tables_select`` and ``tables_modify`` for the relevant tables.
 
 Step 5 — Verify

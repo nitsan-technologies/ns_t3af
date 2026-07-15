@@ -9,9 +9,16 @@ Architecture
 Overview
 --------
 
+.. figure:: ../../Images/for-developers.png
+   :alt: For Developers tab showing AI Foundation architecture at a glance
+   :class: with-border with-shadow
+
+   Architecture at a glance — extensions call AI Foundation, which routes to
+   AI providers and MCP clients.
+
 AI Foundation is a shared foundation layer:
 
-.. code-block:: php
+..  code-block:: text
 
    Consuming Extension Code
            |
@@ -26,11 +33,10 @@ AI Foundation is a shared foundation layer:
 
 Parallel support:
 
-.. code-block:: php
+..  code-block:: text
 
    AiStatisticsService -> OpenAiOrganizationUsageService -> OpenAI Usage API
    HttpAuthUtility    -> Protected URL fetching with optional Basic Auth
-
 Main components
 ---------------
 
@@ -44,15 +50,17 @@ Main components
 Configuration model
 -------------------
 
-Runtime behavior is mostly driven by extension configuration keys from ``ext_conf_template.txt``.
+Runtime AI requests resolve through provider rows in
+:ref:`AI Providers <ai-providers>`. Optional extension settings cover
+translation helpers, Basic Auth, notifications, and MCP switches. See
+:ref:`Configuration <configuration>`.
 
 This includes:
 
-* provider keys and models
-* default engine selection
-* token/temperature values
-* basic auth settings
-
+* provider adapters, encrypted API keys, and model IDs
+* default provider selection
+* optional temperature and capability flags on provider rows
+* optional Basic Auth settings for protected URL fetching
 Caching
 -------
 

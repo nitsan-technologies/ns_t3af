@@ -11,9 +11,15 @@ Purpose
 
 Store your **brand profile** once. AI Foundation injects it into prompts for consistent, on-brand results across all connected extensions.
 
-**Path:** AI Foundation → AI Context
+**Path:** :guilabel:`AI Foundation > AI Context`
 
 `AI Foundation AI Context Demo <https://app.supademo.com/embed/cmrbp3jz80eaiqmo5zuj6gb0e?utm_source=link>`__
+
+.. figure:: ../../Images/ai-context-01.png
+   :alt: AI Context profiles list with default profile completeness checklist
+   :class: with-border with-shadow
+
+   AI Context — brand profiles, completeness, and prompt variables.
 
 What to store
 -------------
@@ -34,9 +40,15 @@ Without context, AI output sounds generic. With context, text matches your brand
 Setup (3 steps)
 ---------------
 
-1. Open AI Foundation → AI Context
+1. Open :guilabel:`AI Foundation > AI Context`
 2. Fill business identity fields
 3. Save — extensions use it automatically on the next AI request
+
+.. figure:: ../../Images/ai-context-02.png
+   :alt: Edit AI Context profile drawer with auto-research and business identity fields
+   :class: with-border with-shadow
+
+   Edit profile — auto-research and business identity fields.
 
 When to update AI Context
 -------------------------

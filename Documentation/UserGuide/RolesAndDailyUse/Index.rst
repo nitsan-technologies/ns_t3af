@@ -15,10 +15,10 @@ For administrators
 
 Daily responsibilities:
 
-* Keep provider API keys valid in **AI Foundation → AI Providers**.
+* Keep provider API keys valid in :guilabel:`AI Foundation > AI Providers`.
 * Maintain the default provider and model selections.
 * Monitor usage statistics across all configured AI providers in
-  **AI Foundation → AI Usage** and the Dashboard.
+  :guilabel:`AI Foundation > AI Usage` and the Dashboard.
 * Keep credentials and access permissions under control.
 
 Admin checklist

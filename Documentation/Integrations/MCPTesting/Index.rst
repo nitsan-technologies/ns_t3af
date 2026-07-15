@@ -6,7 +6,7 @@
 MCP Server — Testing guide
 ==========================
 
-This guide walks through **end-to-end testing** of all three connection methods and every client tab in the backend module (**AI Foundation → MCP Server**).
+This guide walks through **end-to-end testing** of all three connection methods and every client tab in the backend module (:guilabel:`AI Foundation > MCP Server`).
 
 Use it for QA, demos, or first-time setup on a local DDEV instance.
 
@@ -40,7 +40,7 @@ Optional tools
 Step 0 — Pre-flight checks (backend module)
 -------------------------------------------
 
-Open **AI Foundation → MCP Server**.
+Open :guilabel:`AI Foundation > MCP Server`.
 
 1. **Workspace** - Use the **WORKSPACE** dropdown (top right). - If you see a yellow “create workspace” notice, click **Create MCP workspace** (requires permission) or pick **Live** for read-only smoke tests.
 2. **Status bar** (top card) Verify:
@@ -124,7 +124,9 @@ Create or edit **``.cursor/mcp.json``** in the **project root** (same directory 
 
 Replace ``/absolute/path/to/aiuniverse`` with your checkout path (for example ``/Users/you/projects/aiuniverse``).
 
-**Verify in Cursor:** Settings → MCP → **TYPO3 DDEV** shows **Connected** and lists the v1 tools (``table_schema``, ``pages_get``, ``content_list``, ``write_table``).
+**Verify in Cursor:** Settings → MCP → **TYPO3 DDEV** shows **Connected** and
+lists Core tools from AI Foundation (for example ``table_schema``, ``pages_get``,
+``content_list``, ``write_table``, plus many others in the Core catalog).
 
 Method B — Global remote URL (OAuth)
 ------------------------------------
@@ -259,7 +261,8 @@ n8n (Bearer token)
 **Verify:**
 
 * Node connects without 401 errors.
-* Tool list includes ``table_schema``, ``pages_get``, ``content_list``, ``write_table``.
+* Tool list includes Core tools such as ``table_schema``, ``pages_get``,
+  ``content_list``, and ``write_table`` (the Core catalog contains many more).
 * **Active OAuth Tokens** table shows client **n8n token**.
 
 Manus (Bearer token)
@@ -308,7 +311,7 @@ MCP Inspector (OAuth)
 
 **Verify:**
 
-* ``tools/list`` returns four v1 tools.
+* ``tools/list`` returns the Core tool catalog (many tools, not a short fixed set).
 * ``table_schema`` returns JSON with ``pages`` field metadata.
 
 Other OAuth-capable clients
@@ -450,10 +453,14 @@ Step-by-step (DDEV)
 
    Restart the CLI server after PHP code changes. Long-running processes may accumulate memory — restart periodically during heavy testing.
 
-Step 4 — Test all v1 tools
---------------------------
+Step 4 — Test Core tools
+------------------------
 
-Use MCP Inspector, Claude, or any connected client.
+Use MCP Inspector, Claude, or any connected client. The **TYPO3 Core** tab
+contains many tools — do not assume only four exist. Browse the full catalog in
+:guilabel:`AI Foundation > MCP Tools`, then smoke-test a few representative calls.
+
+Starter checks:
 
 ``table_schema``
    Input: ``{ "tableName": "pages" }`` Expect: JSON with field definitions.
@@ -478,7 +485,8 @@ Use MCP Inspector, Claude, or any connected client.
 Workspace testing
    Select a non-live workspace in the module dropdown before issuing tokens. Repeat ``content_list`` / ``pages_get`` — draft overlays should differ from live.
 
-See :ref:`MCP Server <mcp-server>` for parameter details.
+See :ref:`MCP Tools <mcp-tools>` for the full Core catalog and
+:ref:`MCP Server <mcp-server>` for connection details.
 
 Step 5 — Active OAuth Tokens table
 ----------------------------------
@@ -535,7 +543,7 @@ Server Status **Offline**
    Enable MCP in **Show advanced**. Run ``ddev exec typo3 cache:flush``.
 
 ``/mcp`` returns **503**
-   ``enableMcpServer`` is off in extension configuration.
+   ``enableMcpServer`` is off (MCP Server → Advanced, or AI Foundation MCP settings).
 
 ``/mcp`` returns **401** without token
    **Expected** — proves middleware is reachable. Authenticate with OAuth or Bearer.

@@ -37,7 +37,7 @@ Providers
 
 **Provider request or Test connection fails**
 
-* Confirm the provider row exists and is **enabled** in **AI Foundation → AI Providers**.
+* Confirm the provider row exists and is **enabled** in :guilabel:`AI Foundation > AI Providers`.
 * Run **Test connection** from the provider drawer.
 * Check the API key, model ID, and endpoint URL (for custom/OpenAI-compatible rows).
 * Confirm outbound HTTPS to the provider API works from the server.
@@ -47,12 +47,12 @@ Providers
 
 * Confirm the **default** provider matches the feature you expect.
 * Confirm the model ID on the provider row.
-* Check feature-level provider overrides in **AI Foundation → AI Features**.
+* Check feature-level provider overrides in :guilabel:`AI Foundation > AI Features`.
 
 **No usage statistics shown**
 
 * Confirm an OpenAI admin/organization key is set where org usage charts are required.
-* Clear caches and open **AI Foundation → AI Usage & Logs** again.
+* Clear caches and open :guilabel:`AI Foundation > AI Usage` / :guilabel:`AI Foundation > AI Logs` again.
 * Confirm the dashboard analytics cache is available after ``extension:setup``.
 
 Configuration
@@ -79,7 +79,7 @@ MCP
 **MCP writes fail after a successful connect**
 
 Confirm the backend user has the required module, table, and workspace rights.
-See :ref:`Access and Governance <ai-permissions>`.
+See :ref:`AI Permissions <ai-permissions>`.
 
 Report an issue
 ---------------

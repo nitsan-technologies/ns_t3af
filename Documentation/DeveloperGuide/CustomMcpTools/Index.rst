@@ -8,7 +8,7 @@ Custom MCP Tools
 
 Use custom MCP tools when your extension should expose safe TYPO3 operations to MCP clients such as Cursor, Claude Desktop, MCP Inspector, or the AI Foundation backend MCP Tools area.
 
-MCP tools are callable through ``tools/list`` and ``tools/call``. They can also appear in **AI Foundation → MCP Tools** when the extension provides card metadata.
+MCP tools are callable through ``tools/list`` and ``tools/call``. They can also appear in :guilabel:`AI Foundation > MCP Tools` when the extension provides card metadata.
 
 Architecture
 ------------
@@ -104,7 +104,7 @@ Use:
 Backend MCP Tools card
 ----------------------
 
-If your extension should appear as its own group in **AI Foundation → MCP Tools**, provide extension card metadata through the supported MCP tools card provider path. Tools are grouped by ownership, namespace inference, or configured tool prefix.
+If your extension should appear as its own group in :guilabel:`AI Foundation > MCP Tools`, provide extension card metadata through the supported MCP tools card provider path. Tools are grouped by ownership, namespace inference, or configured tool prefix.
 
 Use stable tool names such as ``myext_action_name``. This keeps tools predictable for external clients and easier to find in the backend.
 
@@ -139,7 +139,7 @@ Debugging
 **Client cannot call the tool**
 
 * Verify the MCP Server connection first.
-* Test the same tool in **AI Foundation → MCP Tools**.
+* Test the same tool in :guilabel:`AI Foundation > MCP Tools`.
 * Check the input schema and required parameters.
 * Review TYPO3 logs for handler exceptions.
 

@@ -24,15 +24,19 @@ providers, context, prompts, features, usage, and access control.
    AIPrompts/Index
    AIFeatures/Index
    AIUsageAndLogs/Index
-   AccessAndGovernance/Index
+   AIPermissions/Index
 
 Two configuration areas
 -----------------------
 
-**AI Providers** — **Path:** AI Foundation → AI Providers. API keys, models, and defaults.
+**AI Providers** — **Path:** :guilabel:`AI Foundation > AI Providers`. API keys,
+models, and defaults.
 
-**Extension Configuration** — **Path:** Admin Tools → Settings → Extension Configuration → ``ns_t3af``.
-Translation APIs, MCP switches, basic auth, and notifications.
+**Extension settings** — Translation APIs, Basic Auth, notifications, and MCP
+switches (including ``enableMcpServer``). Prefer
+:guilabel:`AI Foundation > MCP Server > Advanced` for MCP options. These keys
+live in AI Foundation settings, not the classic TYPO3
+:guilabel:`Admin Tools > Settings > Extension Configuration` form.
 
 Minimum working setup
 ---------------------
@@ -46,21 +50,24 @@ Minimum working setup
 AI Providers (primary)
 ----------------------
 
-**Path:** AI Foundation → AI Providers
+**Path:** :guilabel:`AI Foundation > AI Providers`
 
-* **Title** — Friendly label for your team
-* **Vendor** — OpenAI, Anthropic, Gemini, Azure, Mistral, and others
-* **API key** — Encrypted after save
-* **Model** — For example ``gpt-4o-mini``, ``claude-sonnet-4``
-* **Default** — Exactly one active default provider
-* **Enabled** — On/off switch per provider
+Connect at least one provider, set a model, run :guilabel:`Test connection`,
+and mark exactly one row as :guilabel:`Default`.
 
-Full guide: :ref:`AI Providers <ai-providers>`
+Full field reference: :ref:`Provider fields <provider-fields>`. Guide:
+:ref:`AI Providers <ai-providers>`
 
-Extension Configuration keys
-----------------------------
+Extension settings
+------------------
 
-**Path:** Admin Tools → Settings → Extension Configuration → ``ns_t3af``
+AI Foundation stores translation helpers, Basic Auth, notifications, and MCP
+switches in extension settings (including ``enableMcpServer``). Prefer
+:guilabel:`AI Foundation > MCP Server > Advanced` for MCP options.
+
+Where a classic Extension Configuration form is still used for optional
+keys, open :guilabel:`Admin Tools > Settings > Extension Configuration` and
+select ``ns_t3af``.
 
 Translation (optional)
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -84,7 +91,7 @@ HTTP Basic Auth (optional)
 MCP Server
 ~~~~~~~~~~
 
-* ``enableMcpServer`` — Master switch (default: off)
+* ``enableMcpServer`` — Master switch (default: on)
 * ``mcpBasePath`` — HTTP endpoint (default: ``/mcp``)
 * ``requireAuth`` — Require login (default: on)
 * ``accessTokenLifetime`` — OAuth token TTL
@@ -94,7 +101,7 @@ Full guide: :ref:`MCP Server <mcp-server>`
 Per-feature providers
 ---------------------
 
-**Path:** AI Foundation → AI Features
+**Path:** :guilabel:`AI Foundation > AI Features`
 
 Override the default provider per task: SEO, Pages, Content, Translation.
 
