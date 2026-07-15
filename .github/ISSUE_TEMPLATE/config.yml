@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Support
+    url: https://t3planet.de/en/support
+    about: Product and license support from T3Planet
+  - name: Security Vulnerability
+    url: https://github.com/nitsan-technologies/ns_t3af/security/policy
+    about: Report security issues privately (see SECURITY.md / security@t3planet.de)
+  - name: Documentation
+    url: https://docs.t3planet.de/en/latest/
+    about: Check the documentation before opening an issue
