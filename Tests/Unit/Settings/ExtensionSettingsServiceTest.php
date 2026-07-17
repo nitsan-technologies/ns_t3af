@@ -224,6 +224,7 @@ final class ExtensionSettingsServiceTest extends TestCase
         $registry->method('getManagedExtensionKeys')->willReturn(['ns_t3ai', 'ns_t3aa']);
         $registry->method('isManaged')->willReturn(true);
 
+        /** @var array<string, array{extension_key: string, settings_json: string}> $storedRows */
         $storedRows = [];
         $repository = $this->createMock(ExtensionSettingsRepository::class);
         $repository->method('findByExtensionKey')->willReturnCallback(

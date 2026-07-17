@@ -48,8 +48,7 @@ final readonly class AiOptions
      * @param string|null  $contentEntityType  Optional domain object type (e.g. `pages`, `tt_content`).
      * @param int|null     $contentEntityUid   Optional domain object identifier.
      * @param string       $requestUuid        RFC 4122 idempotency key for T3Planet Credits Charge/Embed; empty string = auto UUID.
-     * @param array<string, scalar|array<int|string, scalar>|null> $extra
-     *                                         Adapter-specific extras (e.g. `top_p`, `frequency_penalty`).
+     * @param array<string, mixed> $extra      Adapter-specific extras (e.g. `top_p`, tools, `frequency_penalty`).
      *                                         Forwarded to the underlying SDK without validation.
      */
     public function __construct(

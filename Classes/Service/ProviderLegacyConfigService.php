@@ -197,7 +197,7 @@ final class ProviderLegacyConfigService
             $config['defaultModel'] = 'openai';
         }
 
-        $embeddingProvider = $this->resolveEmbeddingProvider($enabledProviders, $defaultProvider);
+        $embeddingProvider = $this->resolveEmbeddingProvider(array_values($enabledProviders), $defaultProvider);
         if ($embeddingProvider !== null) {
             $config['defaultEmbeddingsModel'] = ProviderSlugMapper::slugFromProvider($embeddingProvider);
         } elseif (!isset($config['defaultEmbeddingsModel'])) {

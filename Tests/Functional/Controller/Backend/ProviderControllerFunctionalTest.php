@@ -231,6 +231,9 @@ final class ProviderControllerFunctionalTest extends FunctionalTestCase
 
         $uid = (int) $connection->lastInsertId();
         self::assertGreaterThan(0, $uid);
+        if ($uid < 1) {
+            self::fail('Expected positive be_groups uid after insert.');
+        }
 
         return $uid;
     }
@@ -282,6 +285,9 @@ final class ProviderControllerFunctionalTest extends FunctionalTestCase
         $uid = (int) $connection->lastInsertId();
 
         self::assertGreaterThan(0, $uid);
+        if ($uid < 1) {
+            self::fail('Expected positive provider uid after insert.');
+        }
 
         return $uid;
     }

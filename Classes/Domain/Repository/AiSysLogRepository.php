@@ -168,7 +168,7 @@ final class AiSysLogRepository
     /**
      * @param array<string, mixed> $filters
      */
-    private function applyFilters($qb, array $filters): void
+    private function applyFilters(\TYPO3\CMS\Core\Database\Query\QueryBuilder $qb, array $filters): void
     {
         $channelValues = $this->resolveChannelConstraint($filters);
         $qb->where(
@@ -199,7 +199,7 @@ final class AiSysLogRepository
     /**
      * @param array<string, mixed> $filters
      */
-    private function applyPeriodFilter($qb, array $filters): void
+    private function applyPeriodFilter(\TYPO3\CMS\Core\Database\Query\QueryBuilder $qb, array $filters): void
     {
         $from = (int) ($filters['fromTimestamp'] ?? 0);
         $to = (int) ($filters['toTimestamp'] ?? 0);
@@ -218,7 +218,7 @@ final class AiSysLogRepository
     /**
      * @param array<string, mixed> $filters
      */
-    private function applyLevelFilter($qb, array $filters): void
+    private function applyLevelFilter(\TYPO3\CMS\Core\Database\Query\QueryBuilder $qb, array $filters): void
     {
         if (empty($filters['level'])) {
             return;
@@ -232,7 +232,7 @@ final class AiSysLogRepository
     /**
      * @param array<string, mixed> $filters
      */
-    private function applySearchFilter($qb, array $filters): void
+    private function applySearchFilter(\TYPO3\CMS\Core\Database\Query\QueryBuilder $qb, array $filters): void
     {
         if (empty($filters['search'])) {
             return;
@@ -260,7 +260,7 @@ final class AiSysLogRepository
         }
     }
 
-    private function createBaseQueryBuilder()
+    private function createBaseQueryBuilder(): \TYPO3\CMS\Core\Database\Query\QueryBuilder
     {
         $qb = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable(self::TABLE);
         $qb->getRestrictions()->removeAll();

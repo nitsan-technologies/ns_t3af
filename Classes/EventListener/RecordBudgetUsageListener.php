@@ -51,7 +51,7 @@ final class RecordBudgetUsageListener
         $period = $this->period($user);
         $response = $event->getResponse();
 
-        $tokens = $this->totalTokens($response->tokensInput, $response->tokensOutput, $response->credits?->tokensTotal ?? 0);
+        $tokens = $this->totalTokens($response->tokensInput, $response->tokensOutput, $response->credits !== null ? $response->credits->tokensTotal : 0);
         $cost = $this->cost($event->provider->pricingInputPer1m, $event->provider->pricingOutputPer1m, $response);
 
         $this->budgetService->recordUsage($userId, $period, $tokens, $cost);
@@ -68,7 +68,7 @@ final class RecordBudgetUsageListener
 
     private function cost(float $inputPer1m, float $outputPer1m, \NITSAN\NsT3AF\Api\AiResponse $response): float
     {
-        $charged = $response->credits?->charged ?? 0.0;
+        $charged = $response->credits !== null ? $response->credits->charged : 0.0;
         if ($charged > 0.0) {
             return round($charged, 6);
         }

@@ -97,7 +97,7 @@ readonly class McpToolLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(static function (array $row): array {
+        return array_values(array_map(static function (array $row): array {
             $calls = (int) ($row['calls'] ?? 0);
             $successCount = (int) ($row['success_count'] ?? 0);
 
@@ -108,7 +108,7 @@ readonly class McpToolLogRepository
                 'avgLatencyMs' => round((float) ($row['avg_latency_ms'] ?? 0.0), 1),
                 'successRate' => $calls > 0 ? round(($successCount / $calls) * 100, 2) : 0.0,
             ];
-        }, $rows);
+        }, $rows));
     }
 
     /**
@@ -130,7 +130,7 @@ readonly class McpToolLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(static function (array $row): array {
+        return array_values(array_map(static function (array $row): array {
             $calls = (int) ($row['calls'] ?? 0);
             $success = (int) ($row['success'] ?? 0);
 
@@ -140,7 +140,7 @@ readonly class McpToolLogRepository
                 'success' => $success,
                 'errors' => $calls - $success,
             ];
-        }, $rows);
+        }, $rows));
     }
 
     /**
@@ -159,13 +159,13 @@ readonly class McpToolLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(static fn(array $row): array => [
+        return array_values(array_map(static fn(array $row): array => [
             'crdate' => (int) ($row['crdate'] ?? 0),
             'clientLabel' => (string) ($row['client_label'] ?? ''),
             'toolName' => (string) ($row['tool_name'] ?? ''),
             'errorMessage' => (string) ($row['error_message'] ?? ''),
             'latencyMs' => (int) ($row['latency_ms'] ?? 0),
-        ], $rows);
+        ], $rows));
     }
 
     /**
@@ -348,11 +348,11 @@ readonly class McpToolLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(static fn(array $row): array => [
+        return array_values(array_map(static fn(array $row): array => [
             'clientLabel' => (string) ($row['client_label'] ?? ''),
             'used' => (int) ($row['used'] ?? 0),
             'limit' => $defaultLimit,
-        ], $rows);
+        ], $rows));
     }
 
     /**
@@ -369,7 +369,7 @@ readonly class McpToolLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return $rows;
+        return array_values($rows);
     }
 
     private function connection(): Connection

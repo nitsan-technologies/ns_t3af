@@ -56,7 +56,7 @@ final class T3PlanetHttpClientTest extends TestCase
         $factory = $this->createMock(RequestFactory::class);
         $factory->expects(self::once())
             ->method('request')
-            ->willReturn(new Response(new Stream(fopen('php://memory', 'r+')), 500, []));
+            ->willReturn(new Response(new Stream($this->memoryHandle('')), 500, []));
 
         $client = $this->createClient($factory);
 
@@ -130,11 +130,25 @@ final class T3PlanetHttpClientTest extends TestCase
      */
     private function jsonResponse(array $payload, int $statusCode): Response
     {
-        $handle = fopen('php://memory', 'r+');
-        self::assertIsResource($handle);
-        fwrite($handle, json_encode($payload, JSON_THROW_ON_ERROR));
-        rewind($handle);
+        $handle = $this->memoryHandle(json_encode($payload, JSON_THROW_ON_ERROR));
 
         return new Response(new Stream($handle), $statusCode, ['Content-Type' => 'application/json']);
+    }
+
+    /**
+     * @return resource
+     */
+    private function memoryHandle(string $contents = '')
+    {
+        $handle = fopen('php://memory', 'r+');
+        if (!is_resource($handle)) {
+            self::fail('Failed to open php://memory stream.');
+        }
+        if ($contents !== '') {
+            fwrite($handle, $contents);
+            rewind($handle);
+        }
+
+        return $handle;
     }
 }

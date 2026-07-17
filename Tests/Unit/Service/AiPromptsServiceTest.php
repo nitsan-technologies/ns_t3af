@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Service;
 
 use NITSAN\NsT3AF\Contract\PromptCatalogProviderInterface;
 use NITSAN\NsT3AF\Contract\PromptCategoryDescriptor;
+use NITSAN\NsT3AF\Contract\PromptDefaultsSyncProviderInterface;
 use NITSAN\NsT3AF\Prompt\AiPromptRepository;
 use NITSAN\NsT3AF\Registry\PromptCatalogProviderRegistry;
 use NITSAN\NsT3AF\Service\AiPromptsService;
@@ -241,6 +242,9 @@ final class AiPromptsServiceTest extends TestCase
         self::assertSame('ns_t3aa', $result['categories'][0]['providerExtension']);
     }
 
+    /**
+     * @param iterable<PromptDefaultsSyncProviderInterface> $defaultsSyncProviders
+     */
     private function createService(
         AiPromptRepository $repository,
         PromptCatalogProviderRegistry $registry,

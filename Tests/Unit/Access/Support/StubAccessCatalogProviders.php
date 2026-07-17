@@ -62,7 +62,7 @@ final class StubT3AiAccessCatalogProvider implements AiAccessCatalogProviderInte
         return 't3ai';
     }
 
-    public function getModuleAccess(): ?ModuleAccessDescriptor
+    public function getModuleAccess(): ModuleAccessDescriptor
     {
         return new ModuleAccessDescriptor(
             'T3AI',
@@ -160,7 +160,7 @@ final class StubT3AaAccessCatalogProvider implements AiAccessCatalogProviderInte
         return 't3aa';
     }
 
-    public function getModuleAccess(): ?ModuleAccessDescriptor
+    public function getModuleAccess(): ModuleAccessDescriptor
     {
         return new ModuleAccessDescriptor(
             'T3AA',
@@ -255,7 +255,7 @@ final class StubT3CsAccessCatalogProvider implements AiAccessCatalogProviderInte
         return 't3cs';
     }
 
-    public function getModuleAccess(): ?ModuleAccessDescriptor
+    public function getModuleAccess(): ModuleAccessDescriptor
     {
         return new ModuleAccessDescriptor(
             'T3AC / T3AS',

@@ -119,12 +119,18 @@ final class ExtensionSettingsSecretService
         return $values;
     }
 
+    /**
+     * @param array<string, mixed> $decryptedValues
+     */
     public function hasStoredSecret(string $extensionKey, string $fieldName, array $decryptedValues): bool
     {
         return $this->registry->isSecret($extensionKey, $fieldName)
             && trim((string) ($decryptedValues[$fieldName] ?? '')) !== '';
     }
 
+    /**
+     * @param array<string, mixed> $decryptedValues
+     */
     public function maskLabel(string $extensionKey, string $fieldName, array $decryptedValues): string
     {
         if (!$this->hasStoredSecret($extensionKey, $fieldName, $decryptedValues)) {

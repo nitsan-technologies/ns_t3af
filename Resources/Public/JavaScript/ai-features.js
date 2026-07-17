@@ -9,6 +9,22 @@ const getPageId = (root) => {
 
 const INIT_FLAG = 'aiuFeaturesInit';
 
+const DRAWER_FOCUSABLE = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+/**
+ * @param {ParentNode} root
+ * @returns {HTMLElement[]}
+ */
+const drawerFocusables = (root) => Array.from(root.querySelectorAll(DRAWER_FOCUSABLE))
+  .filter((el) => el instanceof HTMLElement && !el.hasAttribute('disabled') && el.getClientRects().length > 0);
+
 /**
  * Legacy fallback when the Fluid root does not expose data-aiu-features-managed-extensions.
  * Prefer the server-provided list (ExtensionSettingsRegistry) for third-party extensions.
@@ -303,6 +319,10 @@ function initAiFeatures(root) {
   const managedExtensionKeys = parseManagedExtensionKeys(root);
   const total = cards.length;
   const state = { search: '', extKey: 'all', activeScope: '', activeExtension: '' };
+  /** @type {HTMLElement|null} */
+  let drawerTrigger = null;
+  /** @type {((event: KeyboardEvent) => void)|null} */
+  let drawerKeyHandler = null;
   const metaCountNode = root.querySelector('[data-aiu-features-meta-count]');
 
   const isFiltered = () => state.search !== '' || state.extKey !== 'all';
@@ -315,6 +335,66 @@ function initAiFeatures(root) {
     }
   };
 
+  const deactivateDrawerFocus = () => {
+    if (drawerKeyHandler) {
+      document.removeEventListener('keydown', drawerKeyHandler);
+      drawerKeyHandler = null;
+    }
+  };
+
+  /**
+   * A11Y-01: move focus into the dialog, trap Tab, close on Escape, restore on close.
+   */
+  const activateDrawerFocus = () => {
+    if (!(drawer instanceof HTMLElement)) {
+      return;
+    }
+    deactivateDrawerFocus();
+    const panel = drawer.querySelector('.aiu-drawer__panel');
+    if (!(panel instanceof HTMLElement)) {
+      return;
+    }
+    if (!panel.hasAttribute('tabindex')) {
+      panel.setAttribute('tabindex', '-1');
+    }
+    const focusables = drawerFocusables(panel);
+    const initial = focusables[0] ?? panel;
+    window.requestAnimationFrame(() => {
+      initial.focus();
+    });
+
+    drawerKeyHandler = (event) => {
+      if (!(event instanceof KeyboardEvent) || !drawer.classList.contains('is-open')) {
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setDrawerOpen(false);
+        setDrawerLocalMode();
+        return;
+      }
+      if (event.key !== 'Tab') {
+        return;
+      }
+      const items = drawerFocusables(panel);
+      if (items.length === 0) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', drawerKeyHandler);
+  };
+
   const setDrawerOpen = (open) => {
     if (!(drawer instanceof HTMLElement)) {
       return;
@@ -323,11 +403,13 @@ function initAiFeatures(root) {
       drawer.classList.remove('is-closing');
       drawer.classList.add('is-open');
       drawer.setAttribute('aria-hidden', 'false');
+      activateDrawerFocus();
       return;
     }
     if (drawer.classList.contains('is-closing')) {
       return;
     }
+    deactivateDrawerFocus();
     drawer.classList.remove('is-open');
     drawer.classList.add('is-closing');
 
@@ -338,6 +420,11 @@ function initAiFeatures(root) {
       }
       drawer.classList.remove('is-closing');
       drawer.setAttribute('aria-hidden', 'true');
+      const trigger = drawerTrigger;
+      drawerTrigger = null;
+      if (trigger instanceof HTMLElement && document.contains(trigger)) {
+        trigger.focus();
+      }
     };
     if (!(panel instanceof HTMLElement)) {
       finish();
@@ -743,6 +830,7 @@ function initAiFeatures(root) {
   }
 
   const openFeatureCard = async (card) => {
+    drawerTrigger = card instanceof HTMLElement ? card : null;
     const displayExtKey = String(card.getAttribute('data-aiu-feature-extkey') || '');
     const configExtKey = resolveConfigExtensionKey(card);
     const settingsScope = resolveSettingsScope(card, featuresById);

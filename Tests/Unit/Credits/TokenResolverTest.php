@@ -126,6 +126,10 @@ final class TokenResolverTest extends TestCase
         $result = $resolver->syncLicensePool('KEY-A,KEY-B', 'example.org');
 
         self::assertSame('minted', $result['action']);
+        self::assertArrayHasKey('token', $result);
+        if (!isset($result['token'])) {
+            self::fail('Expected minted result to include token.');
+        }
         self::assertSame('bearer-new', $result['token']);
         self::assertSame('KEY-A,KEY-B', $result['license_keys']);
     }
@@ -175,6 +179,11 @@ final class TokenResolverTest extends TestCase
 
         self::assertSame('attached', $result['action']);
         self::assertSame('KEY-A,KEY-B', $result['license_keys']);
+        self::assertArrayHasKey('newly_attached', $result);
+        self::assertArrayHasKey('credits_added', $result);
+        if (!isset($result['newly_attached'], $result['credits_added'])) {
+            self::fail('Expected attached result to include newly_attached and credits_added.');
+        }
         self::assertSame(['KEY-B'], $result['newly_attached']);
         self::assertSame(100, $result['credits_added']);
     }
@@ -212,6 +221,10 @@ final class TokenResolverTest extends TestCase
         $result = $resolver->syncLicensePool('KEY-A,KEY-B', 'example.org');
 
         self::assertSame('unchanged', $result['action']);
+        self::assertArrayHasKey('already_bound', $result);
+        if (!isset($result['already_bound'])) {
+            self::fail('Expected unchanged result to include already_bound.');
+        }
         self::assertTrue($result['already_bound']);
     }
 

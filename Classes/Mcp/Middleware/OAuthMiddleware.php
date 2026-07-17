@@ -174,6 +174,8 @@ readonly class OAuthMiddleware implements MiddlewareInterface
 
         return $this->responseFactory->createResponse(200)
             ->withHeader('Content-Type', 'text/html; charset=utf-8')
+            ->withHeader('X-Frame-Options', 'DENY')
+            ->withHeader('Content-Security-Policy', "frame-ancestors 'none'")
             ->withHeader('Set-Cookie', sprintf(
                 'mcp_csrf=%s; Path=%s; HttpOnly; SameSite=Strict; Secure; Max-Age=600',
                 $csrfToken,
@@ -212,7 +214,7 @@ readonly class OAuthMiddleware implements MiddlewareInterface
             $clientName = $this->clientLabelResolver->resolve(
                 $clientId,
                 '',
-                $redirectUri !== '' ? $redirectUri : null,
+                $redirectUri,
             );
 
             $newCsrfToken = bin2hex(random_bytes(32));
@@ -229,6 +231,8 @@ readonly class OAuthMiddleware implements MiddlewareInterface
 
             return $this->responseFactory->createResponse(200)
                 ->withHeader('Content-Type', 'text/html; charset=utf-8')
+                ->withHeader('X-Frame-Options', 'DENY')
+                ->withHeader('Content-Security-Policy', "frame-ancestors 'none'")
                 ->withHeader('Set-Cookie', sprintf(
                     'mcp_csrf=%s; Path=%s; HttpOnly; SameSite=Strict; Secure; Max-Age=600',
                     $newCsrfToken,
@@ -442,7 +446,15 @@ readonly class OAuthMiddleware implements MiddlewareInterface
         return is_string($cookies['mcp_csrf'] ?? null) ? $cookies['mcp_csrf'] : '';
     }
 
-    /** @param array<string, mixed> $data */
+    /**
+     * OAuth JSON responses intentionally omit Access-Control-Allow-Origin.
+     *
+     * MCP OAuth clients are native/desktop (PKCE public clients), not browser
+     * SPAs. A wildcard ACAO on token/register/revoke widened the CSRF/abuse
+     * surface for dynamic registration and revocation (S-04).
+     *
+     * @param array<string, mixed> $data
+     */
     private function createJsonResponse(int $statusCode, array $data): ResponseInterface
     {
         $body = $this->streamFactory->createStream(json_encode($data, JSON_THROW_ON_ERROR));
@@ -450,7 +462,6 @@ readonly class OAuthMiddleware implements MiddlewareInterface
         return $this->responseFactory
             ->createResponse($statusCode)
             ->withHeader('Content-Type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
             ->withHeader('Cache-Control', 'no-store')
             ->withHeader('X-Content-Type-Options', 'nosniff')
             ->withBody($body);

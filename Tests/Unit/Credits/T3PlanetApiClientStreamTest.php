@@ -103,7 +103,7 @@ final class T3PlanetApiClientStreamTest extends TestCase
         self::assertSame('Hello', $capturedBody['meta_json']['prompt']);
     }
 
-    private function memoryHandle(string $contents)
+    private function memoryHandle(string $contents): mixed
     {
         $handle = fopen('php://memory', 'r+');
         self::assertIsResource($handle);

@@ -115,9 +115,6 @@ final class OpenAiCompatiblePlatform
         $this->assertOk($response, 'embeddings');
 
         $decoded = $this->decodeJsonBody($response);
-        if (!is_array($decoded)) {
-            return [];
-        }
 
         return $decoded;
     }
@@ -200,6 +197,9 @@ final class OpenAiCompatiblePlatform
         return $this->normalizeImageData($this->decodeJsonBody($response));
     }
 
+    /**
+     * @param array<string, mixed> $body
+     */
     private function postJson(string $path, array $body, bool $streamResponseBody = false): ResponseInterface
     {
         $url = $this->endpointUrl($path);
@@ -226,6 +226,9 @@ final class OpenAiCompatiblePlatform
         return $this->requestFactory->request($url, 'POST', $options);
     }
 
+    /**
+     * @param array<string, mixed> $body
+     */
     private function postBinary(string $path, array $body): ResponseInterface
     {
         $url = $this->endpointUrl($path);

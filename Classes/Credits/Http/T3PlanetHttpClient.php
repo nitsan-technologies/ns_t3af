@@ -125,6 +125,7 @@ final class T3PlanetHttpClient
     }
 
     /**
+     * @param array<string, mixed> $body
      * @return array{status:int, body:array<string,mixed>|null, etag:?string}
      */
     public function postJsonWithStatus(string $endpoint, array $body, #[\SensitiveParameter] ?string $bearerToken = null, ?string $ifNoneMatch = null): array

@@ -150,7 +150,7 @@ final class T3PlanetApiClientSpeakTest extends TestCase
         self::assertSame('text_to_speech', $capturedBody['feature_key']);
     }
 
-    private function memoryHandle(string $contents)
+    private function memoryHandle(string $contents): mixed
     {
         $handle = fopen('php://memory', 'r+');
         self::assertIsResource($handle);

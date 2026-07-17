@@ -152,7 +152,7 @@ final class T3PlanetHttpClientStreamTest extends TestCase
         );
     }
 
-    private function memoryHandle(string $contents)
+    private function memoryHandle(string $contents): mixed
     {
         $handle = fopen('php://memory', 'r+');
         self::assertIsResource($handle);

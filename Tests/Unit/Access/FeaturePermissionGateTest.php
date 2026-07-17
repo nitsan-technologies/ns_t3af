@@ -178,6 +178,9 @@ final class FeaturePermissionGateTest extends TestCase
         self::assertTrue($this->gate->grantsModuleCard($user, 't3aa', 'dashboard', 'aiFileMetaAltText'));
     }
 
+    /**
+     * @param list<string> $modules
+     */
     private function user(string $customOptions, array $modules = []): BackendUserAuthentication
     {
         $user = $this->createMock(BackendUserAuthentication::class);

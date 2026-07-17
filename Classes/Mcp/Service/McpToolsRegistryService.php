@@ -45,21 +45,7 @@ readonly class McpToolsRegistryService
     ) {}
 
     /**
-     * @return list<array{
-     *     id: string,
-     *     label: string,
-     *     icon: string,
-     *     iconBg: string,
-     *     color: string,
-     *     tagline: string,
-     *     skillName: string,
-     *     skillTrigger: string,
-     *     skillFile: string,
-     *     skillDesc: string,
-     *     toolCount: int,
-     *     tools: list<array{name: string, description: string, params: list<array{name: string, type: string, required: bool, default: string|null}>}>
-     * }>
-     *
+     * @return list<array<string, mixed>>
      * @param array<string, mixed>|string $periodQuery
      */
     public function getAiUniverseExtensions(array|string $periodQuery = '7d'): array
@@ -330,7 +316,7 @@ PHP;
     }
 
     /**
-     * @param list<array{name: string, description: string, params: list<array{name: string, type: string, required: bool, default: string|null}>, className: class-string, ownerExtensionKey: string|null}> $tools
+     * @param list<array{name: string, className: class-string, ownerExtensionKey: string|null, description?: string, params?: list<array{name: string, type: string, required: bool, default: string|null}>}> $tools
      * @return array<string, mixed>
      */
     private function buildAutoExtensionConfig(string $extensionId, array $tools): array
@@ -389,7 +375,10 @@ PHP;
      * }
      */
     /**
+     * @param array<string, mixed> $config
+     * @param list<array<string, mixed>> $tools
      * @param array<string, mixed>|string $periodQuery
+     * @return array<string, mixed>
      */
     private function buildExtensionCard(string $extensionId, array $config, array $tools, array|string $periodQuery = '7d'): array
     {
@@ -414,7 +403,7 @@ PHP;
 
     /**
      * @param array<string, mixed> $config
-     * @param list<array{name: string}> $tools
+     * @param list<array<string, mixed>> $tools
      */
     private function buildExtensionSearchText(string $extensionId, array $config, array $tools): string
     {
@@ -425,7 +414,7 @@ PHP;
         ];
 
         foreach ($tools as $tool) {
-            $parts[] = $tool['name'];
+            $parts[] = (string) ($tool['name'] ?? '');
         }
 
         return trim(implode(' ', array_filter($parts, static fn(string $part): bool => $part !== '')));
@@ -447,7 +436,9 @@ PHP;
      * }>
      */
     /**
+     * @param list<array<string, mixed>> $tools
      * @param array<string, mixed>|string $periodQuery
+     * @return list<array<string, mixed>>
      */
     private function enrichToolsForDisplay(array $tools, array|string $periodQuery = '7d'): array
     {
@@ -547,7 +538,9 @@ PHP;
      * }
      */
     /**
+     * @param list<array<string, mixed>> $tools
      * @param array<string, mixed>|string $periodQuery
+     * @return array<string, mixed>
      */
     private function buildCoreExtensionCard(array $tools, array|string $periodQuery = '7d'): array
     {

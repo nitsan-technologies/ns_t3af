@@ -59,8 +59,12 @@ final class ImageGenerationService implements ImageGenerationServiceInterface
 
         $start = (int) (microtime(true) * 1000);
         try {
+            $generateImages = [$platform, 'generateImages'];
+            if (!is_callable($generateImages)) {
+                throw new AdapterRuntimeException('Image platform generateImages method is not callable.');
+            }
             /** @var list<array{url?: string, b64_json?: string, revised_prompt?: string}> $images */
-            $images = $platform->generateImages($modelId, $prompt, $options);
+            $images = $generateImages($modelId, $prompt, $options);
         } catch (AdapterRuntimeException $e) {
             $latencyMs = (int) (microtime(true) * 1000) - $start;
             $this->events->dispatch(new ProviderRequestFailedEvent($provider, $e, 'image_generation'));
@@ -99,8 +103,12 @@ final class ImageGenerationService implements ImageGenerationServiceInterface
 
         $start = (int) (microtime(true) * 1000);
         try {
+            $createImageVariation = [$platform, 'createImageVariation'];
+            if (!is_callable($createImageVariation)) {
+                throw new AdapterRuntimeException('Image platform createImageVariation method is not callable.');
+            }
             /** @var list<array{url?: string, b64_json?: string, revised_prompt?: string}> $images */
-            $images = $platform->createImageVariation($modelId, $imagePath, $options);
+            $images = $createImageVariation($modelId, $imagePath, $options);
         } catch (AdapterRuntimeException $e) {
             $latencyMs = (int) (microtime(true) * 1000) - $start;
             $this->events->dispatch(new ProviderRequestFailedEvent($provider, $e, 'image_generation'));

@@ -22,7 +22,6 @@ namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Service\Backend;
 use NITSAN\NsT3AF\Mcp\Service\AdvancedSettingsService;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpIpAllowlistRepository;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpSecurityService;
-use NITSAN\NsT3AF\Settings\ExtensionSettingsService;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -36,7 +35,6 @@ final class McpSecurityServiceTest extends TestCase
         $service = new McpSecurityService(
             $repository,
             $this->createMock(AdvancedSettingsService::class),
-            $this->createMock(ExtensionSettingsService::class),
         );
 
         self::assertTrue($service->isIpAllowed('203.0.113.1'));
@@ -52,7 +50,6 @@ final class McpSecurityServiceTest extends TestCase
         $service = new McpSecurityService(
             $repository,
             $this->createMock(AdvancedSettingsService::class),
-            $this->createMock(ExtensionSettingsService::class),
         );
 
         self::assertFalse($service->isIpAllowed('203.0.113.1'));
@@ -61,13 +58,9 @@ final class McpSecurityServiceTest extends TestCase
 
     public function testSkipsMtlsWhenDisabled(): void
     {
-        $advanced = $this->createMock(AdvancedSettingsService::class);
-        $advanced->method('mtlsValidationEnabled')->willReturn(false);
-
         $service = new McpSecurityService(
             $this->createMock(McpIpAllowlistRepository::class),
-            $advanced,
-            $this->createMock(ExtensionSettingsService::class),
+            $this->createMock(AdvancedSettingsService::class),
         );
 
         $request = $this->createMock(ServerRequestInterface::class);

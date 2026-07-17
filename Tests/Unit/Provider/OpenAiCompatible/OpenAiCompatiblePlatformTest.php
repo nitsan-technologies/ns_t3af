@@ -23,6 +23,7 @@ use GuzzleHttp\Psr7\Response;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\OpenAiCompatible\OpenAiCompatibleAdapter;
+use NITSAN\NsT3AF\Provider\OpenAiCompatible\OpenAiCompatiblePlatform;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Http\RequestFactory;
@@ -70,7 +71,7 @@ final class OpenAiCompatiblePlatformTest extends TestCase
             apiKeyCipher: '',
         );
 
-        $chunks = iterator_to_array($adapter->platform($provider)->stream('llama3', 'hello'), false);
+        $chunks = iterator_to_array($this->platform($adapter, $provider)->stream('llama3', 'hello'), false);
 
         self::assertSame(['hi'], $chunks);
     }
@@ -95,7 +96,7 @@ final class OpenAiCompatiblePlatformTest extends TestCase
             apiKeyCipher: $cipher->encrypt('secret'),
         );
 
-        iterator_to_array($adapter->platform($provider)->stream('gpt-4o', 'hello'), false);
+        iterator_to_array($this->platform($adapter, $provider)->stream('gpt-4o', 'hello'), false);
     }
 
     public function testStreamUsesV1PrefixForSymfonyOllamaAdapterEvenWithout11434Port(): void
@@ -117,7 +118,7 @@ final class OpenAiCompatiblePlatformTest extends TestCase
             apiKeyCipher: '',
         );
 
-        iterator_to_array($adapter->platform($provider)->stream('llama3', 'hello'), false);
+        iterator_to_array($this->platform($adapter, $provider)->stream('llama3', 'hello'), false);
     }
 
     public function testSpeechBuildsCorrectPostBodyAndHeaders(): void
@@ -143,7 +144,7 @@ final class OpenAiCompatiblePlatformTest extends TestCase
         );
 
         $ttsOptions = new \NITSAN\NsT3AF\Api\TtsOptions(voice: 'nova', format: 'opus', speed: 1.25);
-        $audio = $adapter->platform($provider)->speech('tts-1', 'Hello world', $ttsOptions);
+        $audio = $this->platform($adapter, $provider)->speech('tts-1', 'Hello world', $ttsOptions);
 
         self::assertSame('binary-audio', $audio);
         self::assertStringContainsString('audio/speech', (string) $capturedUrl);
@@ -175,7 +176,7 @@ final class OpenAiCompatiblePlatformTest extends TestCase
 
         $this->expectException(\NITSAN\NsT3AF\Exception\AdapterRuntimeException::class);
         $this->expectExceptionMessage('invalid voice');
-        $adapter->platform($provider)->speech('tts-1', 'Hello', new \NITSAN\NsT3AF\Api\TtsOptions());
+        $this->platform($adapter, $provider)->speech('tts-1', 'Hello', new \NITSAN\NsT3AF\Api\TtsOptions());
     }
 
     public function testGenerateImagesUsesSymfonyOpenAiDefaultEndpointWhenProviderEndpointIsEmpty(): void
@@ -196,7 +197,7 @@ final class OpenAiCompatiblePlatformTest extends TestCase
         $adapter = new OpenAiCompatibleAdapter($cipher, $factory);
         $provider = $this->makeProvider('symfony.openai', '', $cipher->encrypt('sk-test'));
 
-        $images = $adapter->platform($provider)->generateImages(
+        $images = $this->platform($adapter, $provider)->generateImages(
             'gpt-image-1',
             'A red balloon',
             new \NITSAN\NsT3AF\Api\ImageGenerationOptions(size: '1024x1024', count: 1),
@@ -228,7 +229,7 @@ final class OpenAiCompatiblePlatformTest extends TestCase
             apiKeyCipher: $cipher->encrypt('sk-test'),
         );
 
-        $images = $adapter->platform($provider)->generateImages(
+        $images = $this->platform($adapter, $provider)->generateImages(
             'dall-e-3',
             'A red balloon',
             new \NITSAN\NsT3AF\Api\ImageGenerationOptions(size: '1024x1024', count: 1),
@@ -268,7 +269,7 @@ final class OpenAiCompatiblePlatformTest extends TestCase
             apiKeyCipher: $cipher->encrypt('sk-test'),
         );
 
-        $result = $adapter->platform($provider)->invoke('gpt-4o', [
+        $result = $this->platform($adapter, $provider)->invoke('gpt-4o', [
             'messages' => [['role' => 'user', 'content' => 'describe this image']],
         ]);
 
@@ -310,7 +311,7 @@ final class OpenAiCompatiblePlatformTest extends TestCase
             ['type' => 'image_url', 'image_url' => ['url' => 'https://example.com/dog.jpg']],
         ];
 
-        $result = $adapter->platform($provider)->invoke('gpt-4o', [
+        $result = $this->platform($adapter, $provider)->invoke('gpt-4o', [
             'messages' => [['role' => 'user', 'content' => $visionContent]],
         ]);
 
@@ -342,7 +343,7 @@ final class OpenAiCompatiblePlatformTest extends TestCase
             apiKeyCipher: $cipher->encrypt('sk-test'),
         );
 
-        $adapter->platform($provider)->invoke('gpt-4o', [
+        $this->platform($adapter, $provider)->invoke('gpt-4o', [
             'messages' => [['role' => 'user', 'content' => []]],
         ]);
 
@@ -352,6 +353,16 @@ final class OpenAiCompatiblePlatformTest extends TestCase
         foreach ($payloadMessages as $msg) {
             self::assertNotSame([], $msg['content'] ?? 'not-array');
         }
+    }
+
+    private function platform(OpenAiCompatibleAdapter $adapter, Provider $provider): OpenAiCompatiblePlatform
+    {
+        $platform = $adapter->platform($provider);
+        if (!$platform instanceof OpenAiCompatiblePlatform) {
+            self::fail('Expected OpenAiCompatiblePlatform from adapter.');
+        }
+
+        return $platform;
     }
 
     private function makeProvider(string $adapterType, string $endpointUrl, string $apiKeyCipher): Provider

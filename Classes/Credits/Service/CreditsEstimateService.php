@@ -81,9 +81,7 @@ final class CreditsEstimateService
             $options ?? new AiOptions(featureKey: $clientFeatureKey),
             $apiEndpoint,
         );
-        if ($clientFeatureKey !== '') {
-            $metaJson['client_feature_key'] = $clientFeatureKey;
-        }
+        $metaJson['client_feature_key'] = $clientFeatureKey;
 
         $domain = $this->domainResolver->resolve();
         $token = $this->tokenResolver->resolve();

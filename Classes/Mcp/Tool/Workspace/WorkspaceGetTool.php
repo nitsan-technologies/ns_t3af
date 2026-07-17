@@ -68,7 +68,7 @@ readonly class WorkspaceGetTool implements McpNonAiToolInterface
             return json_encode(['error' => 'Workspace not accessible to current user'], JSON_THROW_ON_ERROR);
         }
 
-        $accessLabel = is_array($access) ? (string) ($access['_ACCESS'] ?? '') : '';
+        $accessLabel = (string) ($access['_ACCESS'] ?? '');
 
         if ($workspaceId === 0) {
             return json_encode([

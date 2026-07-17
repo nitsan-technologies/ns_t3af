@@ -30,7 +30,9 @@ use NITSAN\NsT3AF\Provider\AdapterRegistry;
 use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
 use NITSAN\NsT3AF\Provider\Contract\VerifyResult;
+use NITSAN\NsT3AF\Provider\OpenAiCompatible\OpenAiCompatiblePlatform;
 use NITSAN\NsT3AF\Service\AiService;
+use NITSAN\NsT3AF\Service\CredentialCipher;
 use NITSAN\NsT3AF\Service\SiteStorageContext;
 use NITSAN\NsT3AF\Tests\Unit\Service\Fixture\CancellingDispatcher;
 use NITSAN\NsT3AF\Tests\Unit\Service\Fixture\CapturingDispatcher;
@@ -48,6 +50,8 @@ final class AiServiceTest extends TestCase
     {
         $provider = $this->makeProvider();
         $platform = new class {
+            /** @param array<string, mixed> $invokeOptions */
+
             public function invoke(string $model, mixed $payload, array $invokeOptions = []): string
             {
                 return 'reply for hello';
@@ -95,6 +99,8 @@ final class AiServiceTest extends TestCase
         $provider = $this->makeProvider();
         $platform = new class {
             public string $seenModel = '';
+            /** @param array<string, mixed> $invokeOptions */
+
             public function invoke(string $model, mixed $payload, array $invokeOptions = []): string
             {
                 $this->seenModel = $model;
@@ -119,6 +125,9 @@ final class AiServiceTest extends TestCase
         $provider = $this->makeProvider();
         $platform = new class {
             public mixed $seenPayload = null;
+
+            /** @param array<string, mixed> $invokeOptions */
+
 
             public function invoke(string $model, mixed $payload, array $invokeOptions = []): string
             {
@@ -152,6 +161,9 @@ final class AiServiceTest extends TestCase
 
             /** @var list<mixed> */
             public array $seenPayloads = [];
+
+            /** @param array<string, mixed> $invokeOptions */
+
 
             public function invoke(string $model, mixed $payload, array $invokeOptions = []): string
             {
@@ -297,6 +309,8 @@ final class AiServiceTest extends TestCase
                     public function getRawResult(): object
                     {
                         return new class {
+                            /** @return array<int|string, mixed> */
+
                             public function getData(): array
                             {
                                 return [
@@ -329,6 +343,8 @@ final class AiServiceTest extends TestCase
     {
         $provider = $this->makeProvider();
         $platform = new class {
+            /** @param array<string, mixed> $invokeOptions */
+
             public function invoke(string $model, mixed $payload, array $invokeOptions = []): string
             {
                 throw new \LogicException('boom');
@@ -437,9 +453,12 @@ final class AiServiceTest extends TestCase
     public function testStreamSymfonyInvokeTriesStringPromptBeforeInputPayload(): void
     {
         $provider = $this->makeProvider(adapterType: 'symfony.ollama');
-        $seenPayloads = [];
-        $platform = new class ($seenPayloads) {
-            public function __construct(private array &$seenPayloads) {}
+        $platform = new class {
+            /** @var list<mixed> */
+            public array $seenPayloads = [];
+
+            /** @param array<string, mixed> $options */
+
 
             public function invoke(string $model, mixed $payload, array $options = []): object
             {
@@ -467,10 +486,10 @@ final class AiServiceTest extends TestCase
         $chunks = iterator_to_array($service->stream('hi'), false);
 
         self::assertSame(['ok'], $chunks);
-        self::assertNotEmpty($seenPayloads);
-        $firstIsInputOnly = is_array($seenPayloads[0])
-            && array_key_exists('input', $seenPayloads[0])
-            && !array_key_exists('messages', $seenPayloads[0]);
+        self::assertNotEmpty($platform->seenPayloads);
+        $firstIsInputOnly = is_array($platform->seenPayloads[0])
+            && array_key_exists('input', $platform->seenPayloads[0])
+            && !array_key_exists('messages', $platform->seenPayloads[0]);
         self::assertFalse($firstIsInputOnly);
     }
 
@@ -478,6 +497,8 @@ final class AiServiceTest extends TestCase
     {
         $provider = $this->makeProvider(adapterType: 'symfony.ollama');
         $platform = new class {
+            /** @param array<string, mixed> $options */
+
             public function invoke(string $model, mixed $payload, array $options = []): object
             {
                 return new class {
@@ -571,6 +592,10 @@ final class AiServiceTest extends TestCase
         $platform = new class {
             public string $seenModel = '';
 
+            /**
+             * @param string|list<string> $text
+             * @return array<int|string, mixed>
+             */
             public function embed(string $model, string|array $text): array
             {
                 $this->seenModel = $model;
@@ -598,6 +623,10 @@ final class AiServiceTest extends TestCase
         $platform = new class {
             public string $seenModel = '';
 
+            /**
+             * @param string|list<string> $text
+             * @return array<int|string, mixed>
+             */
             public function embed(string $model, string|array $text): array
             {
                 $this->seenModel = $model;
@@ -618,6 +647,47 @@ final class AiServiceTest extends TestCase
         self::assertSame('gpt-4o', $platform->seenModel);
     }
 
+    /**
+     * CR-01 regression: OpenAiCompatiblePlatform implements both invoke() (chat)
+     * and embed() (embeddings). Embeddings must POST to /embeddings, never to
+     * /chat/completions.
+     */
+    public function testEmbedOnOpenAiCompatiblePlatformPostsToEmbeddingsEndpoint(): void
+    {
+        $capturedUrl = null;
+        $requestFactory = $this->createMock(\TYPO3\CMS\Core\Http\RequestFactory::class);
+        $requestFactory->expects(self::once())
+            ->method('request')
+            ->willReturnCallback(static function (string $url, string $method, array $options) use (&$capturedUrl): \GuzzleHttp\Psr7\Response {
+                $capturedUrl = $url;
+
+                return new \GuzzleHttp\Psr7\Response(200, [], json_encode([
+                    'data' => [['embedding' => [0.1, 0.2, 0.3]]],
+                    'usage' => ['prompt_tokens' => 3, 'total_tokens' => 3],
+                ]) ?: '');
+            });
+
+        $provider = $this->makeProvider(
+            embeddingModelId: 'text-embedding-3-small',
+            adapterType: Provider::ADAPTER_OPENAI_COMPATIBLE,
+        );
+        $platform = new OpenAiCompatiblePlatform($provider, new CredentialCipher(), $requestFactory);
+        $adapter = $this->makeAdapter(Provider::ADAPTER_OPENAI_COMPATIBLE, $platform);
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$adapter]),
+            new CapturingDispatcher(),
+            $this->makeSiteStorageContext(),
+        );
+
+        $response = $service->embed('hello');
+
+        self::assertIsString($capturedUrl);
+        self::assertStringContainsString('/embeddings', $capturedUrl);
+        self::assertStringNotContainsString('/chat/completions', $capturedUrl);
+        self::assertSame([[0.1, 0.2, 0.3]], $response->vectors);
+    }
+
     public function testEmbedUsesInvokeWhenEmbedMethodMissing(): void
     {
         $provider = $this->makeProvider(embeddingModelId: 'mistral-embed', adapterType: 'symfony.mistral');
@@ -631,9 +701,13 @@ final class AiServiceTest extends TestCase
                 $this->seenInput = $input;
 
                 return new class {
+                    /** @return list<mixed> */
+
                     public function asVectors(): array
                     {
                         return [new class {
+                            /** @return array<int|string, mixed> */
+
                             public function getData(): array
                             {
                                 return [0.1, 0.2, 0.3];
@@ -670,16 +744,22 @@ final class AiServiceTest extends TestCase
                 $this->seenInput = $input;
 
                 return new class {
+                    /** @return list<mixed> */
+
                     public function asVectors(): array
                     {
                         return [
                             new class {
+                                /** @return array<int|string, mixed> */
+
                                 public function getData(): array
                                 {
                                     return [0.1];
                                 }
                             },
                             new class {
+                                /** @return array<int|string, mixed> */
+
                                 public function getData(): array
                                 {
                                     return [0.2];
@@ -711,9 +791,13 @@ final class AiServiceTest extends TestCase
             public function invoke(string $model, mixed $input): object
             {
                 return new class {
+                    /** @return list<mixed> */
+
                     public function asVectors(): array
                     {
                         return [new class {
+                            /** @return array<int|string, mixed> */
+
                             public function getData(): array
                             {
                                 return [0.1, 0.2];
@@ -732,7 +816,7 @@ final class AiServiceTest extends TestCase
                                         return 42;
                                     }
 
-                                    public function getCompletionTokens(): ?int
+                                    public function getCompletionTokens(): null
                                     {
                                         return null;
                                     }
@@ -752,7 +836,7 @@ final class AiServiceTest extends TestCase
                             public function getMetadata(): object
                             {
                                 return new class {
-                                    public function get(string $key): ?object
+                                    public function get(string $key): null
                                     {
                                         return null;
                                     }
@@ -764,6 +848,8 @@ final class AiServiceTest extends TestCase
                     public function getRawResult(): object
                     {
                         return new class {
+                            /** @return array<int|string, mixed> */
+
                             public function getData(): array
                             {
                                 return [
@@ -797,6 +883,8 @@ final class AiServiceTest extends TestCase
             public function invoke(string $model, mixed $input): object
             {
                 return new class {
+                    /** @return list<mixed> */
+
                     public function asVectors(): array
                     {
                         return [[0.1, 0.2]];
@@ -805,7 +893,7 @@ final class AiServiceTest extends TestCase
                     public function getMetadata(): object
                     {
                         return new class {
-                            public function get(string $key): ?object
+                            public function get(string $key): null
                             {
                                 return null;
                             }
@@ -818,7 +906,7 @@ final class AiServiceTest extends TestCase
                             public function getMetadata(): object
                             {
                                 return new class {
-                                    public function get(string $key): ?object
+                                    public function get(string $key): null
                                     {
                                         return null;
                                     }
@@ -833,6 +921,8 @@ final class AiServiceTest extends TestCase
                             public function getTokenUsageExtractor(): object
                             {
                                 return new class {
+                                    /** @param array<string, mixed> $options */
+
                                     public function extract(object $rawResult, array $options = []): object
                                     {
                                         return new class {
@@ -841,7 +931,7 @@ final class AiServiceTest extends TestCase
                                                 return 31;
                                             }
 
-                                            public function getCompletionTokens(): ?int
+                                            public function getCompletionTokens(): null
                                             {
                                                 return null;
                                             }
@@ -860,6 +950,8 @@ final class AiServiceTest extends TestCase
                     public function getRawResult(): object
                     {
                         return new class {
+                            /** @return array<int|string, mixed> */
+
                             public function getData(): array
                             {
                                 return ['data' => [['embedding' => [0.1, 0.2]]]];
@@ -886,6 +978,10 @@ final class AiServiceTest extends TestCase
     {
         $provider = $this->makeProvider();
         $platform = new class {
+            /**
+             * @param string|list<string> $text
+             * @return array<int|string, mixed>
+             */
             public function embed(string $model, string|array $text): array
             {
                 return [
@@ -911,6 +1007,10 @@ final class AiServiceTest extends TestCase
     {
         $provider = $this->makeProvider();
         $platform = new class {
+            /**
+             * @param string|list<string> $text
+             * @return array<int|string, mixed>
+             */
             public function embed(string $model, string|array $text): array
             {
                 return [[0.1, 0.2, 0.3]];
@@ -935,14 +1035,13 @@ final class AiServiceTest extends TestCase
         // Vision array content must become MessageBag(Text + ImageUrl), not a raw `messages`
         // payload (OpenAI Responses rejects `messages`) and not the string "Array".
         $provider = $this->makeProvider();
-        $receivedPayloads = [];
-        $platform = new class ($receivedPayloads) {
-            /** @param list<mixed> $log */
-            public function __construct(private array &$log) {}
+        $platform = new class {
+            /** @var list<mixed> */
+            public array $receivedPayloads = [];
 
             public function invoke(string $model, mixed $payload): string
             {
-                $this->log[] = $payload;
+                $this->receivedPayloads[] = $payload;
 
                 return 'alt text for the image';
             }
@@ -969,9 +1068,9 @@ final class AiServiceTest extends TestCase
         );
 
         self::assertSame('alt text for the image', $response->content);
-        self::assertNotEmpty($receivedPayloads);
+        self::assertNotEmpty($platform->receivedPayloads);
 
-        $first = $receivedPayloads[0];
+        $first = $platform->receivedPayloads[0];
         self::assertInstanceOf(\Symfony\AI\Platform\Message\MessageBag::class, $first);
         $userMessage = $first->getUserMessage();
         self::assertInstanceOf(\Symfony\AI\Platform\Message\UserMessage::class, $userMessage);
@@ -982,7 +1081,7 @@ final class AiServiceTest extends TestCase
         self::assertInstanceOf(\Symfony\AI\Platform\Message\Content\ImageUrl::class, $parts[1]);
         self::assertSame('https://example.com/img.jpg', $parts[1]->getUrl());
 
-        foreach ($receivedPayloads as $payload) {
+        foreach ($platform->receivedPayloads as $payload) {
             self::assertNotSame('Array', $payload, 'Platform received the literal string "Array" — array cast bug regressed.');
             if (is_string($payload)) {
                 self::assertStringNotContainsString('Array', $payload);
@@ -993,14 +1092,13 @@ final class AiServiceTest extends TestCase
     public function testCompleteWithStringMessagesUnchangedForTextCallers(): void
     {
         $provider = $this->makeProvider();
-        $receivedPayloads = [];
-        $platform = new class ($receivedPayloads) {
-            /** @param list<mixed> $log */
-            public function __construct(private array &$log) {}
+        $platform = new class {
+            /** @var list<mixed> */
+            public array $receivedPayloads = [];
 
             public function invoke(string $model, mixed $payload): string
             {
-                $this->log[] = $payload;
+                $this->receivedPayloads[] = $payload;
 
                 return 'text reply';
             }
@@ -1024,8 +1122,8 @@ final class AiServiceTest extends TestCase
         );
 
         self::assertSame('text reply', $response->content);
-        self::assertNotEmpty($receivedPayloads);
-        $first = $receivedPayloads[0];
+        self::assertNotEmpty($platform->receivedPayloads);
+        $first = $platform->receivedPayloads[0];
         self::assertInstanceOf(\Symfony\AI\Platform\Message\MessageBag::class, $first);
         $userMessage = $first->getUserMessage();
         self::assertInstanceOf(\Symfony\AI\Platform\Message\UserMessage::class, $userMessage);

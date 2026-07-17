@@ -253,12 +253,13 @@ final class GroupConfigDeserializer
     }
 
     /**
+     * @param string|list<string|int> $value
      * @return list<string>
      */
     private function parseCsvField(string|array $value): array
     {
         if (is_array($value)) {
-            return array_values(array_filter(array_map('trim', $value)));
+            return array_values(array_filter(array_map(static fn(string|int $item): string => trim((string) $item), $value)));
         }
         if ($value === '') {
             return [];

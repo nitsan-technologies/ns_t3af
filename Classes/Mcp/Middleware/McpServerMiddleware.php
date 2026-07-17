@@ -138,6 +138,7 @@ readonly class McpServerMiddleware implements MiddlewareInterface
             || !class_exists($dnsMiddlewareClass)
             || !class_exists($protocolMiddlewareClass)
         ) {
+            // Older mcp/sdk (v0.5) uses the 3-argument constructor only.
             return new StreamableHttpTransport($request, $this->responseFactory, $this->streamFactory);
         }
 

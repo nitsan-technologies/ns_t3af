@@ -346,7 +346,8 @@ final class ProviderController extends AbstractAiUniverseModuleController
 
         $resolution = $this->resolveSiteStorage($request);
         $routeParams = $this->routeParamsForPage($request);
-        $uid = (int) (($request->getParsedBody()['uid'] ?? 0));
+        $body = $request->getParsedBody();
+        $uid = (int) (is_array($body) ? ($body['uid'] ?? 0) : 0);
 
         if ($uid > 0 && $resolution->isResolved()) {
             $provider = $this->providerRepository->findByUid($uid);
@@ -368,6 +369,11 @@ final class ProviderController extends AbstractAiUniverseModuleController
 
     public function testAction(ServerRequestInterface $request): ResponseInterface
     {
+        // testAction persists a verified draft API key — same guard as save/delete (S-03).
+        if ($denied = $this->denyJsonWhenProvidersReadOnly()) {
+            return $denied;
+        }
+
         $body = $request->getParsedBody();
         if (!is_array($body)) {
             $body = [];
@@ -422,12 +428,17 @@ final class ProviderController extends AbstractAiUniverseModuleController
 
     public function setDefaultAction(ServerRequestInterface $request): ResponseInterface
     {
+        if ($denied = $this->denyJsonWhenProvidersReadOnly()) {
+            return $denied;
+        }
+
         $resolution = $this->resolveSiteStorage($request);
         if (!$resolution->isResolved()) {
             return new JsonResponse(['ok' => false, 'message' => 'Select a page from the page tree first.'], 400);
         }
 
-        $uid = (int) (($request->getParsedBody()['uid'] ?? 0));
+        $body = $request->getParsedBody();
+        $uid = (int) (is_array($body) ? ($body['uid'] ?? 0) : 0);
         if ($uid <= 0) {
             return new JsonResponse(['ok' => false, 'message' => 'Missing uid.'], 400);
         }
@@ -470,6 +481,10 @@ final class ProviderController extends AbstractAiUniverseModuleController
 
     public function importExecuteAction(ServerRequestInterface $request): ResponseInterface
     {
+        if ($denied = $this->denyJsonWhenProvidersReadOnly()) {
+            return $denied;
+        }
+
         $resolution = $this->resolveSiteStorage($request);
         if (!$resolution->isResolved()) {
             return new JsonResponse(['ok' => false, 'message' => 'Select a page from the page tree first.'], 400);
@@ -653,11 +668,11 @@ final class ProviderController extends AbstractAiUniverseModuleController
             }
         }
 
-        $privacy = (string) ($submitted['privacy_level'] ?? $provider?->privacyLevel ?? PrivacyLevel::Standard->value);
+        $privacy = (string) ($submitted['privacy_level'] ?? ($provider !== null ? $provider->privacyLevel : PrivacyLevel::Standard->value));
 
         $noRerouting = array_key_exists('no_rerouting', $submitted)
             ? (bool) $submitted['no_rerouting']
-            : (bool) ($provider?->noRerouting ?? false);
+            : (bool) ($provider !== null ? $provider->noRerouting : false);
 
         return [
             'availableGroups' => $this->backendGroups(),
@@ -706,6 +721,9 @@ final class ProviderController extends AbstractAiUniverseModuleController
         return $out;
     }
 
+    /**
+     * @param array<string, mixed> $submitted
+     */
     private function shouldShowEndpointField(?Provider $provider, array $submitted = []): bool
     {
         $adapterType = $this->drawerAdapterType($provider, $submitted);
@@ -713,6 +731,9 @@ final class ProviderController extends AbstractAiUniverseModuleController
         return Provider::adapterRequiresEndpoint($adapterType);
     }
 
+    /**
+     * @param array<string, mixed> $submitted
+     */
     private function shouldShowApiKeyField(?Provider $provider, array $submitted = []): bool
     {
         return Provider::adapterRequiresApiKey($this->drawerAdapterType($provider, $submitted));
@@ -723,7 +744,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
      */
     private function drawerAdapterType(?Provider $provider, array $submitted = []): string
     {
-        $raw = (string) ($submitted['adapter_type'] ?? $provider?->adapterType ?? '');
+        $raw = (string) ($submitted['adapter_type'] ?? ($provider !== null ? $provider->adapterType : ''));
 
         return Provider::normalizeAdapterType($raw);
     }
@@ -839,5 +860,18 @@ final class ProviderController extends AbstractAiUniverseModuleController
                 array_merge($this->routeParamsForPage($request), ['flash' => 'access-denied']),
             ),
         );
+    }
+
+    /**
+     * JSON variant of {@see denyWhenProvidersReadOnly()} for AJAX actions that
+     * persist provider changes (test/setDefault/importExecute).
+     */
+    private function denyJsonWhenProvidersReadOnly(): ?ResponseInterface
+    {
+        if ($this->recordAccessGate->canModifyTable($this->getBackendUser(), 'tx_nst3af_provider')) {
+            return null;
+        }
+
+        return new JsonResponse(['ok' => false, 'message' => 'access-denied'], 403);
     }
 }

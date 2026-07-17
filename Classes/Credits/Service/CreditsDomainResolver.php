@@ -87,7 +87,8 @@ final class CreditsDomainResolver
             }
         }
 
-        $fromEnv = $this->hostFromConfiguredUrl(GeneralUtility::getIndpEnv('TYPO3_REQUEST_HOST'));
+        $requestHost = GeneralUtility::getIndpEnv('TYPO3_REQUEST_HOST');
+        $fromEnv = $this->hostFromConfiguredUrl(is_string($requestHost) ? $requestHost : '');
         if ($fromEnv !== '' && $fromEnv !== 'localhost') {
             return $fromEnv;
         }

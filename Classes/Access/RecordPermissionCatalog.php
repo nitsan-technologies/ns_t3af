@@ -57,6 +57,9 @@ final class RecordPermissionCatalog
         ));
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function findById(string $id): ?array
     {
         foreach ($this->all() as $row) {
@@ -77,6 +80,9 @@ final class RecordPermissionCatalog
         return $row !== null ? $row['tables'] : [];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function findByTable(string $table): ?array
     {
         foreach ($this->all() as $row) {
@@ -108,7 +114,17 @@ final class RecordPermissionCatalog
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<array{
+     *     id: string,
+     *     label: string,
+     *     tables: list<string>,
+     *     relevantModules: list<string>,
+     *     relevantFeatures: list<string>,
+     *     readHelp: string,
+     *     writeHelp: string,
+     *     extension: string|null,
+     *     readOnlyWrite: bool
+     * }>
      */
     private function providerRows(): array
     {
@@ -125,7 +141,17 @@ final class RecordPermissionCatalog
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<array{
+     *     id: string,
+     *     label: string,
+     *     tables: list<string>,
+     *     relevantModules: list<string>,
+     *     relevantFeatures: list<string>,
+     *     readHelp: string,
+     *     writeHelp: string,
+     *     extension: string|null,
+     *     readOnlyWrite: bool
+     * }>
      */
     private function foundationRows(): array
     {
@@ -148,7 +174,17 @@ final class RecordPermissionCatalog
      * @param list<string> $tables
      * @param list<string> $relevantModules
      * @param list<string> $relevantFeatures
-     * @return array<string, mixed>
+     * @return array{
+     *     id: string,
+     *     label: string,
+     *     tables: list<string>,
+     *     relevantModules: list<string>,
+     *     relevantFeatures: list<string>,
+     *     readHelp: string,
+     *     writeHelp: string,
+     *     extension: string|null,
+     *     readOnlyWrite: bool
+     * }
      */
     private function row(
         string $id,

@@ -52,6 +52,7 @@ final class McpDynamicPromptRegistrarTest extends TestCase
         $builder = Server::builder();
         $registrar->register($builder);
 
-        self::assertNotNull($builder->build());
+        $server = $builder->build();
+        self::assertInstanceOf(\Mcp\Server::class, $server);
     }
 }

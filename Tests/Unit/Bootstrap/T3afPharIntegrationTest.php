@@ -114,7 +114,7 @@ final class T3afPharIntegrationTest extends TestCase
             );
 
             $platform = self::createTestPlatform($factory, $bridge['type']);
-            self::assertIsObject($platform, $bridge['type'] . ' factory did not return a platform');
+            self::assertTrue(method_exists($platform, 'invoke') || method_exists($platform, 'request'), $bridge['type'] . ' factory did not return a usable platform');
         }
     }
 
@@ -179,7 +179,7 @@ final class T3afPharIntegrationTest extends TestCase
             self::instantiatePharScopedClass($text, 'hello'),
         );
 
-        $idProperty = new \ReflectionProperty($userMessage, 'id');
+        $idProperty = new \ReflectionProperty($message, 'id');
         $id = $idProperty->getValue($message);
 
         self::assertInstanceOf(
@@ -248,11 +248,14 @@ final class T3afPharIntegrationTest extends TestCase
     /**
      * Classes under {@see self::VENDOR_PREFIX} exist only inside t3af.phar at runtime.
      *
-     * @param non-empty-string $className
      * @param mixed ...$constructorArgs
      */
     private static function instantiatePharScopedClass(string $className, mixed ...$constructorArgs): object
     {
+        if (!class_exists($className)) {
+            throw new \InvalidArgumentException(sprintf('Class %s does not exist', $className));
+        }
+
         return (new \ReflectionClass($className))->newInstanceArgs($constructorArgs);
     }
 

@@ -1,3 +1,12 @@
+#
+# AI Logs reads sys_log filtered by channel + tstamp range, ordered by tstamp.
+# Core ships no index leading (channel, tstamp); without it every log-tab
+# render filesorts a shared, heavily-written table (PF-01).
+#
+CREATE TABLE sys_log (
+    KEY nst3af_channel_tstamp (channel, tstamp)
+);
+
 CREATE TABLE tx_nst3af_provider (
     identifier VARCHAR(64) NOT NULL DEFAULT '',
     title VARCHAR(255) NOT NULL DEFAULT '',
@@ -71,7 +80,8 @@ CREATE TABLE tx_nst3af_request_log (
     KEY req_success_time (success, crdate),
     KEY req_model_time (model_used, crdate),
     KEY req_extension_time (extension_key, crdate),
-    KEY req_feature_time (feature_key, crdate)
+    KEY req_feature_time (feature_key, crdate),
+    KEY req_provideruid_time (provider_uid, crdate)
 );
 
 CREATE TABLE tx_nst3af_extension_setting (

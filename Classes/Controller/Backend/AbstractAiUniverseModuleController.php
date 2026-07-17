@@ -93,6 +93,7 @@ abstract class AbstractAiUniverseModuleController
         $docHeader->disable();
         $docHeader->setMetaInformation([]);
 
+        // TYPO3 14+ only (Feature #108008). Keep the guard for 12.4 / 13.4.
         if (method_exists($docHeader, 'setShortcutContext')) {
             $docHeader->setShortcutContext(
                 't3af_dashboard',

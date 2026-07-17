@@ -133,16 +133,25 @@ trait LoadedExtensionsTestTrait
         );
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function defaultGroupModules(): array
     {
         return $this->createWizardBootstrapFactory()->defaultModules();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function defaultGroupFeatures(): array
     {
         return $this->createWizardBootstrapFactory()->defaultFeatures();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     protected function defaultGroupRecords(): array
     {
         return $this->createWizardBootstrapFactory()->defaultRecords();
@@ -165,10 +174,16 @@ trait LoadedExtensionsTestTrait
     {
         $expanders = [];
         if (class_exists(\NITSAN\NsT3Ai\Access\T3AiLegacyCustomOptionExpander::class)) {
-            $expanders[] = new \NITSAN\NsT3Ai\Access\T3AiLegacyCustomOptionExpander();
+            $candidate = new \NITSAN\NsT3Ai\Access\T3AiLegacyCustomOptionExpander();
+            if ($candidate instanceof \NITSAN\NsT3AF\Contract\LegacyCustomOptionExpanderInterface) {
+                $expanders[] = $candidate;
+            }
         }
         if (class_exists(\NITSAN\NsT3Aa\Access\T3AaLegacyCustomOptionExpander::class)) {
-            $expanders[] = new \NITSAN\NsT3Aa\Access\T3AaLegacyCustomOptionExpander();
+            $candidate = new \NITSAN\NsT3Aa\Access\T3AaLegacyCustomOptionExpander();
+            if ($candidate instanceof \NITSAN\NsT3AF\Contract\LegacyCustomOptionExpanderInterface) {
+                $expanders[] = $candidate;
+            }
         }
 
         return $expanders;

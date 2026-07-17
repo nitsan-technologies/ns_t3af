@@ -190,7 +190,6 @@ final class SymfonyAiBridgeAdapterTest extends TestCase
 
         $platform = $adapter->platform($provider);
 
-        self::assertIsObject($platform);
         self::assertTrue(method_exists($platform, 'invoke'));
     }
 

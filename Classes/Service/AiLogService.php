@@ -19,18 +19,14 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Service;
 
-use NITSAN\NsT3AF\Utility\AiUniverseUtilityHelper;
 use NITSAN\NsT3AF\Utility\SysLogWriterUtility;
 use Psr\Log\LoggerInterface;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
-use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 class AiLogService
 {
-    private array $extConf;
-    private Context $context;
     protected LoggerInterface $logger;
     private string $extensionKey;
 
@@ -40,11 +36,12 @@ class AiLogService
     public function __construct(string $extensionKey = 'ns_t3af')
     {
         $this->extensionKey = $extensionKey;
-        $this->extConf = AiUniverseUtilityHelper::getExtensionConf($this->extensionKey);
-        $this->context = GeneralUtility::makeInstance(Context::class);
         $this->logger = GeneralUtility::makeInstance(LogManager::class)->getLogger(__CLASS__);
     }
 
+    /**
+     * @param array<string, mixed> $extraData
+     */
     public function writeLog(
         string $logMessage,
         string $logLevel,

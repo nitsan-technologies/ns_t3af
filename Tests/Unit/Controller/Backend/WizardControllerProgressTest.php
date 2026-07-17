@@ -29,6 +29,7 @@ final class WizardControllerProgressTest extends TestCase
 {
     public function testProgressActionMethodExists(): void
     {
-        self::assertTrue(method_exists(WizardController::class, 'progressAction'));
+        $method = new \ReflectionMethod(WizardController::class, 'progressAction');
+        self::assertSame('progressAction', $method->getName());
     }
 }

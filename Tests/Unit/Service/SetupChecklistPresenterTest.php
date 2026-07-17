@@ -118,7 +118,7 @@ final class SetupChecklistPresenterTest extends TestCase
 final class V12FluidViewAdapterStub
 {
     public function __construct(
-        protected object $view,
+        protected TemplateView $view,
     ) {}
 
     public function assign(string $key, mixed $value): self

@@ -137,9 +137,11 @@ class McpToolIntrospectorService
             ];
         }
 
+        $attributeName = $attribute?->name;
+
         return [
-            'name' => $attribute?->name ?? $tool::class,
-            'description' => $this->toolDescriptionResolver->resolve($tool, $attribute?->description ?? ''),
+            'name' => is_string($attributeName) && $attributeName !== '' ? $attributeName : $tool::class,
+            'description' => $this->toolDescriptionResolver->resolve($tool, $attribute !== null ? $attribute->description : ''),
             'params' => $params,
             'className' => $tool::class,
             'ownerExtensionKey' => $this->resolveOwnerExtensionKey($reflection),

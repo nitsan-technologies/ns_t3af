@@ -123,9 +123,6 @@ final class BrandContextPromptInjectionListener
     private function extractMessages(AiOptions $options): ?array
     {
         $extra = $options->extra;
-        if (!is_array($extra)) {
-            return null;
-        }
         $messages = $extra['messages'] ?? null;
         if (!is_array($messages) || $messages === []) {
             return null;
@@ -176,7 +173,7 @@ final class BrandContextPromptInjectionListener
             }
         }
 
-        return $messages;
+        return array_values($messages);
     }
 
     /**
@@ -205,22 +202,17 @@ final class BrandContextPromptInjectionListener
                 $messages[$index]['content'] = $brandBlock;
             }
 
-            return $messages;
+            return array_values($messages);
         }
 
         array_unshift($messages, ['role' => 'system', 'content' => $brandBlock]);
 
-        return $messages;
+        return array_values($messages);
     }
 
     private function shouldSkip(AiOptions $options): bool
     {
-        $extra = $options->extra;
-        if (!is_array($extra)) {
-            return false;
-        }
-
-        return !empty($extra['skipBrandContext']);
+        return !empty($options->extra['skipBrandContext']);
     }
 
     /**
@@ -230,7 +222,7 @@ final class BrandContextPromptInjectionListener
     private function resolveScope(AiOptions $options): ?string
     {
         $extra = $options->extra;
-        if (is_array($extra) && isset($extra['brandContextScope']) && is_string($extra['brandContextScope'])) {
+        if (isset($extra['brandContextScope']) && is_string($extra['brandContextScope'])) {
             return $extra['brandContextScope'];
         }
 
@@ -263,7 +255,7 @@ final class BrandContextPromptInjectionListener
      */
     private function withMessages(AiOptions $options, array $messages): AiOptions
     {
-        $extra = is_array($options->extra) ? $options->extra : [];
+        $extra = $options->extra;
         $extra['messages'] = $messages;
 
         return new AiOptions(

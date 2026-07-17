@@ -549,7 +549,7 @@ final class RequestTelemetryService
 
     private function creditsCharged(?CreditsUsage $credits): float
     {
-        return $credits?->charged ?? 0.0;
+        return $credits !== null ? $credits->charged : 0.0;
     }
 
     private function totalTokensFromResponse(AiResponse $response): int

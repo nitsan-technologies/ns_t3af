@@ -133,7 +133,14 @@ readonly class AuthorizationService
             throw new \RuntimeException('Invalid refresh token', 1712100020);
         }
 
+        if ($token->clientId !== $clientId) {
+            throw new \RuntimeException('Client ID mismatch', 1712100023);
+        }
+
         if ($token->revoked) {
+            // Already-revoked refresh token presented again → treat as reuse and
+            // revoke the whole client+user family (S-05).
+            $this->tokenRepository->revokeAllForClientAndUser($token->clientId, $token->beUser);
             throw new \RuntimeException('Refresh token has been revoked', 1712100021);
         }
 
@@ -141,11 +148,10 @@ readonly class AuthorizationService
             throw new \RuntimeException('Refresh token has expired', 1712100022);
         }
 
-        if ($token->clientId !== $clientId) {
-            throw new \RuntimeException('Client ID mismatch', 1712100023);
+        // Atomic revoke: only the first concurrent refresh wins (S-05).
+        if (!$this->tokenRepository->revokeIfActive($token->uid)) {
+            throw new \RuntimeException('Refresh token has been revoked', 1712100021);
         }
-
-        $this->tokenRepository->revokeByUid($token->uid);
 
         $label = $this->clientLabelResolver->resolve($clientId, $token->label);
 

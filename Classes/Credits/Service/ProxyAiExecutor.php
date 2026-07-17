@@ -242,6 +242,9 @@ class ProxyAiExecutor
         return $response;
     }
 
+    /**
+     * @param string|list<string> $text
+     */
     public function embed(string|array $text, AiOptions $options): EmbeddingResponse
     {
         $provider = $this->creditsProvider();
@@ -404,9 +407,18 @@ class ProxyAiExecutor
      */
     private function mapEmbedToEmbeddingResponse(array $payload, string $requestUuid, int $latencyMs): EmbeddingResponse
     {
-        $vectors = $payload['vectors'] ?? $payload['embedding'] ?? [];
-        if (!is_array($vectors)) {
-            $vectors = [];
+        $rawVectors = $payload['vectors'] ?? $payload['embedding'] ?? [];
+        $vectors = [];
+        if (is_array($rawVectors)) {
+            foreach ($rawVectors as $rawVector) {
+                if (!is_array($rawVector)) {
+                    continue;
+                }
+                $vectors[] = array_values(array_map(
+                    static fn(mixed $value): float => is_numeric($value) ? (float) $value : 0.0,
+                    $rawVector,
+                ));
+            }
         }
         $credits = is_array($payload['credits'] ?? null) ? $payload['credits'] : [];
         $charged = is_array($payload['charged'] ?? null) ? $payload['charged'] : [];
@@ -424,7 +436,7 @@ class ProxyAiExecutor
 
     private function resolveCatalogFeatureKey(AiOptions $options, CreditsApiEndpoint $endpoint): string
     {
-        $clientFeatureKey = trim($options->featureKey);
+        $clientFeatureKey = trim($options->featureKey ?? '');
         if ($clientFeatureKey === '' && $endpoint === CreditsApiEndpoint::Charge) {
             throw new CreditsApiException(
                 CreditsApiErrorCodes::FEATURE_KEY_REQUIRED,
@@ -446,7 +458,7 @@ class ProxyAiExecutor
         array $embedInputs = [],
     ): array {
         $metaJson = CreditsMetaJsonBuilder::build($prompt, $options, $embedInputs);
-        $clientFeatureKey = trim($options->featureKey);
+        $clientFeatureKey = trim($options->featureKey ?? '');
         if ($clientFeatureKey !== '') {
             $metaJson['client_feature_key'] = $clientFeatureKey;
         }

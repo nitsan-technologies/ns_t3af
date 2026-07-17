@@ -37,6 +37,9 @@ final class CreditsReturnUrlBuilder
         private readonly CreditsDomainResolver $domainResolver,
     ) {}
 
+    /**
+     * @param array<string, mixed> $parameters
+     */
     public function fromRoute(string $routeName, array $parameters = []): string
     {
         return $this->stripBackendRouteToken(
@@ -130,7 +133,7 @@ final class CreditsReturnUrlBuilder
         $host = (string) ($parts['host'] ?? '');
         $port = isset($parts['port']) ? ':' . $parts['port'] : '';
         $path = (string) ($parts['path'] ?? '');
-        $query = isset($parts['query']) && $parts['query'] !== '' && $parts['query'] !== null
+        $query = isset($parts['query']) && $parts['query'] !== ''
             ? '?' . $parts['query']
             : '';
         $fragment = isset($parts['fragment']) ? '#' . $parts['fragment'] : '';

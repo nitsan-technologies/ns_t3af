@@ -111,7 +111,7 @@ final class McpToolSchemaAugmenterTest extends TestCase
 
         self::assertArrayNotHasKey('workspaceId', $falSchema['properties']);
         self::assertArrayNotHasKey('aiProvider', $falSchema['properties']);
-        self::assertTrue(is_subclass_of(DirectoryCreateTool::class, McpFalStorageToolInterface::class));
+        self::assertTrue((new \ReflectionClass(DirectoryCreateTool::class))->implementsInterface(McpFalStorageToolInterface::class));
 
         self::assertArrayHasKey('workspaceId', $referenceSchema['properties']);
         self::assertArrayNotHasKey('aiProvider', $referenceSchema['properties']);
@@ -136,7 +136,7 @@ final class McpToolSchemaAugmenterTest extends TestCase
 
         self::assertArrayHasKey('workspaceId', $schema['properties']);
         self::assertArrayNotHasKey('aiProvider', $schema['properties']);
-        self::assertTrue(is_subclass_of(WorkspaceListTool::class, McpNonAiToolInterface::class));
+        self::assertTrue((new \ReflectionClass(WorkspaceListTool::class))->implementsInterface(McpNonAiToolInterface::class));
     }
 
     #[Test]
@@ -155,7 +155,7 @@ final class McpToolSchemaAugmenterTest extends TestCase
             $schema = $augmenter->generateForHandler([$handlerClass, 'execute']);
 
             self::assertArrayNotHasKey('aiProvider', $schema['properties'], $handlerClass);
-            self::assertTrue(is_subclass_of($handlerClass, McpNonAiToolInterface::class), $handlerClass);
+            self::assertTrue((new \ReflectionClass($handlerClass))->implementsInterface(McpNonAiToolInterface::class), $handlerClass);
         }
     }
 
