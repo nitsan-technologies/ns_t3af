@@ -20,7 +20,6 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Utility;
 
 use TYPO3\CMS\Backend\Utility\BackendUtility;
-use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -81,6 +80,7 @@ final class PagePathUtility
 
     private static function iconSizeSmall(): IconSize|string
     {
-        return enum_exists(IconSize::class) ? IconSize::SMALL : Icon::SIZE_SMALL;
+        // IconSize enum (TYPO3 13+) vs legacy string accepted by IconFactory on TYPO3 12.
+        return enum_exists(IconSize::class) ? IconSize::SMALL : 'small';
     }
 }

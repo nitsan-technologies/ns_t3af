@@ -130,17 +130,12 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         $url = rtrim($endpoint, '/') . $config['path'];
         $headers = ['User-Agent' => 'ns_t3af/2.0', 'Accept' => 'application/json'];
 
-        switch ($config['auth']) {
-            case 'bearer':
-                $headers['Authorization'] = 'Bearer ' . $apiKey;
-                break;
-            case 'x-api-key':
-                $headers['x-api-key'] = $apiKey;
-                break;
-            case 'query-key':
-                $url .= (str_contains($url, '?') ? '&' : '?') . 'key=' . urlencode($apiKey);
-                break;
-        }
+        match ($config['auth']) {
+            'bearer' => $headers['Authorization'] = 'Bearer ' . $apiKey,
+            'x-api-key' => $headers['x-api-key'] = $apiKey,
+            'query-key' => $url .= (str_contains($url, '?') ? '&' : '?') . 'key=' . urlencode($apiKey),
+            default => null,
+        };
         if (isset($config['extraHeaders'])) {
             $headers = array_merge($headers, $config['extraHeaders']);
         }
@@ -654,7 +649,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         return method_exists($factoryClass, 'createPlatform') || method_exists($factoryClass, 'create');
     }
 
-    private function createPlatformFromFactory(string $factoryClass, Provider $provider, string $apiKey): object
+    private function createPlatformFromFactory(string $factoryClass, Provider $provider, #[\SensitiveParameter] string $apiKey): object
     {
         $method = method_exists($factoryClass, 'createPlatform') ? 'createPlatform' : 'create';
 

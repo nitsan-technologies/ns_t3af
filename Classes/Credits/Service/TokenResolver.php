@@ -179,7 +179,7 @@ final class TokenResolver
         return true;
     }
 
-    private function rememberToken(string $token): void
+    private function rememberToken(#[\SensitiveParameter] string $token): void
     {
         $this->cache->set(self::CACHE_IDENTIFIER, $token, [], 3600);
     }

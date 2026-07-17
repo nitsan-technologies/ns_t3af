@@ -1,0 +1,27 @@
+/.Build
+.cache
+/composer.lock
+/Documentation-GENERATED-temp
+/out.txt
+/Tests/Build/.phpunit.result.cache
+.DS_Store
+.idea/
+.fleet/
+/var/
+.php-cs-fixer.cache
+/packages/
+# Claude local settings (committed: skills symlinks under .claude/skills/)
+.claude/settings.local.json
+
+# Private agent skills
+.agents/skills-local/*
+!.agents/skills-local/.gitkeep
+
+# Ignore local agent/IDE configs, but keep committed skills symlinks
+.claude/*
+!.claude/skills/
+!.claude/skills/**
+
+.cursor/*
+!.cursor/skills/
+!.cursor/skills/**

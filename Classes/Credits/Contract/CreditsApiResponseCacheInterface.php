@@ -29,7 +29,7 @@ interface CreditsApiResponseCacheInterface
     /**
      * @return array<string, mixed>|null
      */
-    public function get(string $scope, string $domain, string $bearerToken): ?array;
+    public function get(string $scope, string $domain, #[\SensitiveParameter] string $bearerToken): ?array;
 
     /**
      * @param array<string, mixed> $payload
@@ -37,6 +37,7 @@ interface CreditsApiResponseCacheInterface
     public function set(
         string $scope,
         string $domain,
+        #[\SensitiveParameter]
         string $bearerToken,
         array $payload,
         int $lifetimeSeconds,

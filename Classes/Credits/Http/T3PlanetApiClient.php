@@ -36,7 +36,7 @@ class T3PlanetApiClient
     /**
      * @return array<string, mixed>
      */
-    public function issueToken(string $licenseKeys, string $domain): array
+    public function issueToken(#[\SensitiveParameter] string $licenseKeys, string $domain): array
     {
         return $this->http->postJson('Token', [
             'license_keys' => $licenseKeys,
@@ -49,7 +49,7 @@ class T3PlanetApiClient
      *
      * @return array<string, mixed>
      */
-    public function attachLicenses(string $domain, string $licenseKeys, string $bearerToken): array
+    public function attachLicenses(string $domain, #[\SensitiveParameter] string $licenseKeys, #[\SensitiveParameter] string $bearerToken): array
     {
         return $this->http->postJson('AttachLicenses', [
             'domain' => $domain,
@@ -60,7 +60,7 @@ class T3PlanetApiClient
     /**
      * @return array<string, mixed>
      */
-    public function balance(string $domain, string $bearerToken, ?string $ifNoneMatch = null): array
+    public function balance(string $domain, #[\SensitiveParameter] string $bearerToken, ?string $ifNoneMatch = null): array
     {
         $result = $this->http->postJsonWithStatus('Balance', ['domain' => $domain], $bearerToken, $ifNoneMatch);
         if ($result['status'] === 304) {
@@ -73,7 +73,7 @@ class T3PlanetApiClient
     /**
      * @return array<string, mixed>
      */
-    public function currentPlan(string $domain, string $bearerToken, ?string $ifNoneMatch = null): array
+    public function currentPlan(string $domain, #[\SensitiveParameter] string $bearerToken, ?string $ifNoneMatch = null): array
     {
         $result = $this->http->postJsonWithStatus('CurrentPlan', ['domain' => $domain], $bearerToken, $ifNoneMatch);
         if ($result['status'] === 304) {
@@ -86,7 +86,7 @@ class T3PlanetApiClient
     /**
      * @return array<string, mixed>
      */
-    public function features(string $domain, string $bearerToken, ?string $ifNoneMatch = null): array
+    public function features(string $domain, #[\SensitiveParameter] string $bearerToken, ?string $ifNoneMatch = null): array
     {
         $result = $this->http->postJsonWithStatus('Features', ['domain' => $domain], $bearerToken, $ifNoneMatch);
         if ($result['status'] === 304) {
@@ -101,6 +101,7 @@ class T3PlanetApiClient
      */
     public function products(
         string $domain,
+        #[\SensitiveParameter]
         string $bearerToken,
         string $redirectTo,
         ?string $ifNoneMatch = null,
@@ -129,6 +130,7 @@ class T3PlanetApiClient
         string $domain,
         string $featureKey,
         array $metaJson,
+        #[\SensitiveParameter]
         string $bearerToken,
         string $endpoint = 'charge',
     ): array {
@@ -149,6 +151,7 @@ class T3PlanetApiClient
         string $requestUuid,
         string $featureKey,
         array $metaJson,
+        #[\SensitiveParameter]
         string $bearerToken,
         ?AiOptions $options = null,
     ): array {
@@ -169,6 +172,7 @@ class T3PlanetApiClient
         string $requestUuid,
         string $featureKey,
         array $metaJson,
+        #[\SensitiveParameter]
         string $bearerToken,
         ?AiOptions $options = null,
     ): array {
@@ -192,6 +196,7 @@ class T3PlanetApiClient
         string $requestUuid,
         string $featureKey,
         array $metaJson,
+        #[\SensitiveParameter]
         string $bearerToken,
         ?string $extensionKey = null,
     ): array {
@@ -240,6 +245,7 @@ class T3PlanetApiClient
         string $requestUuid,
         string $featureKey,
         array $metaJson,
+        #[\SensitiveParameter]
         string $bearerToken,
         ?AiOptions $options = null,
     ): \Generator {
@@ -254,7 +260,7 @@ class T3PlanetApiClient
     /**
      * @return array<string, mixed>
      */
-    public function abort(string $domain, string $requestUuid, string $bearerToken): array
+    public function abort(string $domain, string $requestUuid, #[\SensitiveParameter] string $bearerToken): array
     {
         return $this->http->postJson('Abort', [
             'domain' => $domain,

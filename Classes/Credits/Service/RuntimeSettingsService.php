@@ -129,7 +129,7 @@ final class RuntimeSettingsService
     /**
      * Persists token to encrypted DB row and extension configuration (for support reference).
      */
-    public function storeToken(string $plainToken): void
+    public function storeToken(#[\SensitiveParameter] string $plainToken): void
     {
         $plainToken = trim($plainToken);
         if ($plainToken === '') {
@@ -203,7 +203,7 @@ final class RuntimeSettingsService
         }
     }
 
-    private function persistTokenToExtensionConfiguration(string $plainToken): void
+    private function persistTokenToExtensionConfiguration(#[\SensitiveParameter] string $plainToken): void
     {
         try {
             $configuration = $this->extensionConfiguration->get(self::EXTENSION_KEY);

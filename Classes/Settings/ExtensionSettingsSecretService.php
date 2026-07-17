@@ -134,7 +134,7 @@ final class ExtensionSettingsSecretService
         return $this->cipher->mask((string) $decryptedValues[$fieldName]);
     }
 
-    private function decryptValue(string $value): string
+    private function decryptValue(#[\SensitiveParameter] string $value): string
     {
         if ($value === '' || !$this->cipher->isEncrypted($value)) {
             return $value;

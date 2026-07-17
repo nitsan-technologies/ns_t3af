@@ -36,9 +36,10 @@ By signing off you agree to the DCO (https://developercertificate.org/).
 2. **Branch** from the default branch. Use a short, descriptive branch name.
 3. **Follow the coding standards.** Run the project's checks before pushing:
    ```
-   composer cs:fix      # coding standards (php-cs-fixer)
-   composer phpstan     # static analysis
-   composer test        # unit and functional tests
+   composer cs:fix      # coding standards (php-cs-fixer, @PER-CS)
+   composer stan        # static analysis
+   composer test        # unit tests
+   composer test:functional  # functional tests when DB paths touched
    ```
    (See `composer.json` scripts. CI runs the same checks on PHP 8.2 to 8.4 and TYPO3 v12 to v14.)
 4. **Add or update tests** for any behaviour you change.

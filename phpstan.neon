@@ -1,0 +1,19 @@
+includes:
+  - .Build/vendor/phpat/phpat/extension.neon
+
+parameters:
+  level: 3
+  paths:
+    - Classes
+    - Tests
+  scanDirectories:
+    - Build/phpstan-stubs
+  parallel:
+    maximumNumberOfProcesses: 4
+  tmpDir: .Build/phpstan
+  treatPhpDocTypesAsCertain: false
+  phpat:
+    show_rule_names: true
+  ignoreErrors:
+    - message: '#^.*T3AaLegacyCustomOptionExpander.*$#'
+      path: Tests/Unit/Access/T3AaLegacyCustomOptionExpanderTest.php
