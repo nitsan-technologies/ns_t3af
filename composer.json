@@ -157,7 +157,7 @@
         "friendsofphp/php-cs-fixer": "^3.94",
         "phpat/phpat": "^0.11",
         "phpstan/phpstan": "^2.1",
-        "phpunit/phpunit": "^11.5",
+        "phpunit/phpunit": "^10.5 || ^11.5",
         "rector/rector": "^2.0",
         "typo3/cms-frontend": "^12.4 || ^13.4 || ^14.3",
         "typo3/cms-install": "^12.4 || ^13.4 || ^14.3",
