@@ -102,14 +102,16 @@
                         </div>
                         <span class="badge badge-success flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" /></span>
                     </li>
-                    <li class="aiu-wizard__preview-item list-group-item d-flex align-items-center gap-3">
-                        <span class="flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-lightbulb-on" size="small" alternativeMarkupIdentifier="inline" /></span>
-                        <div class="aiu-wizard__preview-copy">
-                            <div class="fw-semibold"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.preview.extensions.title" /></div>
-                            <div class="text-variant small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.preview.extensions.desc" /></div>
-                        </div>
-                        <span class="badge badge-success flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" /></span>
-                    </li>
+                    <f:if condition="{nsT3aiLoaded} == 1">
+                        <li class="aiu-wizard__preview-item list-group-item d-flex align-items-center gap-3">
+                            <span class="flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-lightbulb-on" size="small" alternativeMarkupIdentifier="inline" /></span>
+                            <div class="aiu-wizard__preview-copy">
+                                <div class="fw-semibold"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.preview.extensions.title" /></div>
+                                <div class="text-variant small"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.preview.extensions.desc" /></div>
+                            </div>
+                            <span class="badge badge-success flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" /></span>
+                        </li>
+                    </f:if>
                     <li class="aiu-wizard__preview-item list-group-item d-flex align-items-center gap-3">
                         <span class="flex-shrink-0" aria-hidden="true"><core:icon identifier="actions-link" size="small" alternativeMarkupIdentifier="inline" /></span>
                         <div class="aiu-wizard__preview-copy">

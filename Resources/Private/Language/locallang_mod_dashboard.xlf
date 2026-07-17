@@ -117,6 +117,9 @@
 			<trans-unit id="module.aiContext.delete" resname="module.aiContext.delete">
 				<source>Delete</source>
 			</trans-unit>
+			<trans-unit id="module.aiContext.confirmDelete" resname="module.aiContext.confirmDelete">
+				<source>Do you really want to delete the profile "%s"?</source>
+			</trans-unit>
 			<trans-unit id="module.aiContext.cardActions" resname="module.aiContext.cardActions">
 				<source>Profile actions</source>
 			</trans-unit>

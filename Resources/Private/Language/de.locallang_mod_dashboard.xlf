@@ -155,6 +155,10 @@
                 <source>Delete</source>
                 <target>Löschen</target>
             </trans-unit>
+            <trans-unit id="module.aiContext.confirmDelete">
+                <source>Do you really want to delete the profile "%s"?</source>
+                <target>Möchten Sie das Profil „%s“ wirklich löschen?</target>
+            </trans-unit>
             <trans-unit id="module.aiContext.cardActions">
                 <source>Profile actions</source>
                 <target>Profilaktionen</target>

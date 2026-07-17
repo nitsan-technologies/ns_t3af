@@ -78,7 +78,7 @@
                 <input type="hidden" name="uid" value="{profile.uid}" />
                 <input type="hidden" name="enabled" value="{f:if(condition: profile.isEnabled, then: '0', else: '1')}" />
             </form>
-            <form method="post" action="{brandContextDeleteUri}" id="aiu-ctx-delete-{profile.uid}" class="d-none" data-aiu-context-delete-form>
+            <form method="post" action="{brandContextDeleteUri}" id="aiu-ctx-delete-{profile.uid}" class="d-none">
                 <input type="hidden" name="id" value="{currentPageId}" />
                 <input type="hidden" name="uid" value="{profile.uid}" />
             </form>
@@ -130,11 +130,15 @@
                     </f:else>
                 </f:if>
                 <button type="submit"
-                        form="aiu-ctx-delete-{profile.uid}"
-                        class="btn btn-default btn-sm"
-                        data-aiu-context-delete
+                        class="btn btn-default btn-sm t3js-modal-trigger"
+                        data-target-form="aiu-ctx-delete-{profile.uid}"
                         title="{f:translate(key: '{ll}:module.aiContext.delete', default: 'Delete')}"
-                        aria-label="{f:translate(key: '{ll}:module.aiContext.delete', default: 'Delete')}">
+                        aria-label="{f:translate(key: '{ll}:module.aiContext.delete', default: 'Delete')}"
+                        data-severity="warning"
+                        data-title="{f:translate(key: 'LLL:EXT:backend/Resources/Private/Language/locallang_alt_doc.xlf:label.confirm.delete_record.title')}"
+                        data-content="{f:translate(key: '{ll}:module.aiContext.confirmDelete', arguments: {0: profile.brandName}, default: 'Do you really want to delete the profile \"%s\"?')}"
+                        data-button-close-text="{f:translate(key: 'LLL:EXT:core/Resources/Private/Language/locallang_common.xlf:cancel')}"
+                        data-button-ok-text="{f:translate(key: 'LLL:EXT:backend/Resources/Private/Language/locallang_alt_doc.xlf:buttons.confirm.delete_record.yes')}">
                     <core:icon identifier="actions-delete" size="small" alternativeMarkupIdentifier="inline" />
                 </button>
             </div>
