@@ -45,6 +45,10 @@ final class SetupChecklistPresenterTest extends TestCase
 
     public function testConfigureExtbaseViewPartialsAddsAiUniversePartialRootOnFluidViewAdapter(): void
     {
+        if (!class_exists(FluidViewAdapter::class)) {
+            self::markTestSkipped('FluidViewAdapter is available from TYPO3 13+ only.');
+        }
+
         $renderingContext = new RenderingContext();
         $renderingContext->getTemplatePaths()->setPartialRootPaths(['/tmp/example-partials']);
         $fluidView = new TemplateView($renderingContext);
