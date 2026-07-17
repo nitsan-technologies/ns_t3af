@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<guides xmlns="https://www.phpdoc.org/guides"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="https://www.phpdoc.org/guides ../vendor/phpdocumentor/guides-cli/resources/schema/guides.xsd"
+        links-are-relative="true"
+        default-code-language="php"
+>
+    <extension class="\T3Docs\Typo3DocsTheme\DependencyInjection\Typo3DocsThemeExtension"
+               project-home="https://t3planet.de/ai-foundation-fur-typo3"
+               project-contact="https://t3planet.de/support"
+               project-repository="https://github.com/nitsan-technologies/ns_t3af_extended"
+               project-issues="https://github.com/nitsan-technologies/ns_t3af_extended/issues"
+               edit-on-github-branch="main"
+               edit-on-github="nitsan-technologies/ns_t3af"
+               typo3-core-preferred="13.4"
+               interlink-shortcode="nitsan/ns-t3af"
+    />
+    <project title="AI Foundation" release="1.0.0" version="1.0.0"
+             copyright="since 2026 by T3Planet // T3Planet"/>
+</guides>
