@@ -1479,30 +1479,51 @@ final class ModuleController extends AbstractAiUniverseModuleController
     private function renderCreditsCheckoutFrame(ServerRequestInterface $request, string $checkoutUrl): string
     {
         // ViewFactoryInterface is TYPO3 13+; StandaloneView covers TYPO3 12.
-        if (class_exists(\TYPO3\CMS\Core\View\ViewFactoryInterface::class)
-            && class_exists(\TYPO3\CMS\Core\View\ViewFactoryData::class)
-        ) {
-            return $this->renderCreditsCheckoutFrameWithCoreViewFactory($request, $checkoutUrl);
+        // Build FQNs dynamically so PHPStan (per CI TYPO3 matrix job) cannot
+        // prove class_exists() always true/false.
+        $viewFactoryInterface = implode('\\', ['TYPO3', 'CMS', 'Core', 'View', 'ViewFactoryInterface']);
+        $viewFactoryDataClass = implode('\\', ['TYPO3', 'CMS', 'Core', 'View', 'ViewFactoryData']);
+        if (class_exists($viewFactoryInterface) && class_exists($viewFactoryDataClass)) {
+            return $this->renderCreditsCheckoutFrameWithCoreViewFactory(
+                $request,
+                $checkoutUrl,
+                $viewFactoryInterface,
+                $viewFactoryDataClass,
+            );
         }
 
         return $this->renderCreditsCheckoutFrameWithStandaloneView($request, $checkoutUrl);
     }
 
-    private function renderCreditsCheckoutFrameWithCoreViewFactory(ServerRequestInterface $request, string $checkoutUrl): string
-    {
-        /** @var \TYPO3\CMS\Core\View\ViewFactoryInterface $viewFactory */
-        $viewFactory = GeneralUtility::makeInstance(\TYPO3\CMS\Core\View\ViewFactoryInterface::class);
-        $viewFactoryDataClass = \TYPO3\CMS\Core\View\ViewFactoryData::class;
-        /** @var \TYPO3\CMS\Core\View\ViewFactoryData $viewFactoryData */
-        $viewFactoryData = new $viewFactoryDataClass(
+    /**
+     * @param class-string $viewFactoryInterface
+     * @param class-string $viewFactoryDataClass
+     */
+    private function renderCreditsCheckoutFrameWithCoreViewFactory(
+        ServerRequestInterface $request,
+        string $checkoutUrl,
+        string $viewFactoryInterface,
+        string $viewFactoryDataClass,
+    ): string {
+        $viewFactory = GeneralUtility::makeInstance($viewFactoryInterface);
+        $create = [$viewFactory, 'create'];
+        if (!is_callable($create)) {
+            throw new \RuntimeException('ViewFactoryInterface::create() is not callable.');
+        }
+
+        $view = $create(new $viewFactoryDataClass(
             templateRootPaths: ['EXT:ns_t3af/Resources/Private/Templates/'],
             request: $request,
-        );
+        ));
+        $assign = [$view, 'assign'];
+        $render = [$view, 'render'];
+        if (!is_callable($assign) || !is_callable($render)) {
+            throw new \RuntimeException('ViewFactory view is missing assign()/render().');
+        }
 
-        return $viewFactory
-            ->create($viewFactoryData)
-            ->assign('checkoutUrl', $checkoutUrl)
-            ->render('Module/CreditsCheckoutFrame');
+        $assign('checkoutUrl', $checkoutUrl);
+
+        return $render('Module/CreditsCheckoutFrame');
     }
 
     private function renderCreditsCheckoutFrameWithStandaloneView(ServerRequestInterface $request, string $checkoutUrl): string

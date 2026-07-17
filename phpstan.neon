@@ -20,17 +20,3 @@ parameters:
     # Used by child extensions (ns_t3ai / ns_t3aa / ns_t3ac); not referenced inside this package paths.
     - identifier: trait.unused
       path: Classes/Contract/PromptCatalogPolicyTrait.php
-    # Multi-version runtime guards (TYPO3 12.4 / 13.4 / 14.3 + mcp/sdk variants).
-    # PHPStan analyses against one resolved core/SDK tree and wrongly treats these as always true/false.
-    -
-      message: '#method_exists\(\).*setShortcutContext.*always evaluate to true#'
-      path: Classes/Controller/Backend/AbstractAiUniverseModuleController.php
-      identifier: function.alreadyNarrowedType
-    -
-      message: '#class_exists\(\).*ViewFactoryInterface.*always evaluate to false#'
-      path: Classes/Controller/Backend/ModuleController.php
-      identifier: function.impossibleType
-    -
-      message: '#method_exists\(\).*defaultMiddleware.*always evaluate to true#'
-      path: Classes/Mcp/Middleware/McpServerMiddleware.php
-      identifier: function.alreadyNarrowedType

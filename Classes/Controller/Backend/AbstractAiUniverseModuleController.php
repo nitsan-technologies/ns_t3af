@@ -93,12 +93,16 @@ abstract class AbstractAiUniverseModuleController
         $docHeader->disable();
         $docHeader->setMetaInformation([]);
 
-        // TYPO3 14+ only (Feature #108008). Keep the guard for 12.4 / 13.4.
-        if (method_exists($docHeader, 'setShortcutContext')) {
-            $docHeader->setShortcutContext(
+        // TYPO3 14+ only (Feature #108008). Reflection keeps this safe on 12.4 / 13.4
+        // without version-specific PHPStan ignores that break the CI matrix.
+        try {
+            (new \ReflectionMethod($docHeader, 'setShortcutContext'))->invoke(
+                $docHeader,
                 't3af_dashboard',
                 $this->translateModule('module.title'),
             );
+        } catch (\ReflectionException) {
+            // Method absent on TYPO3 < 14.
         }
 
         $moduleTitle = $this->translateModule('module.title');
