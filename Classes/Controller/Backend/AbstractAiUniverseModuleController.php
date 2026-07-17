@@ -41,6 +41,7 @@ use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Information\Typo3Version;
 use TYPO3\CMS\Core\Page\PageRenderer;
+use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -263,6 +264,7 @@ abstract class AbstractAiUniverseModuleController
                 'wizardExtensionsJson' => $this->encodeWizardExtensionsJson(),
                 'wizardUiJson' => $this->encodeWizardUiJson(),
                 'wizardExtensionsAvailable' => self::fluidFlag($this->wizardExtensionCatalog->hasEligibleExtensions()),
+                'nsT3aiLoaded' => self::fluidFlag(ExtensionManagementUtility::isLoaded('ns_t3ai')),
                 'brandContextIndustries' => BrandContextProfile::INDUSTRIES,
                 'brandContextToneTags' => BrandContextProfile::TONE_TAGS,
                 'tabs' => $tabs,

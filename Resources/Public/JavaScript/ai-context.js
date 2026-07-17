@@ -946,15 +946,6 @@ const initAiContext = () => {
     }
   });
 
-  root.querySelectorAll('[data-aiu-context-delete-form]').forEach((deleteForm) => {
-    deleteForm.addEventListener('submit', (event) => {
-      const message = lang('aiContext.js.deleteConfirm', 'Delete this brand context profile?');
-      if (!window.confirm(message)) {
-        event.preventDefault();
-      }
-    });
-  });
-
   const resolveWebsiteUrl = () => {
     const fromResearch = fieldResearchUrl instanceof HTMLInputElement ? fieldResearchUrl.value.trim() : '';
     const fromWebsite = fieldWebsite instanceof HTMLInputElement ? fieldWebsite.value.trim() : '';
