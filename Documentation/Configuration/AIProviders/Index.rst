@@ -258,8 +258,10 @@ Optional configuration
     :type: string
     :default: ``standard``
 
-    Telemetry detail: ``standard``, ``reduced`` (no prompt content), or
-    ``none``.
+    **Logging privacy only** — controls how much is stored in the local request
+    log (``standard``, ``reduced`` without prompt fingerprint, or ``none``).
+    This setting does **not** redact, strip, or block prompts, brand context, or
+    documents sent to the AI provider.
 
 Governance and status
 ---------------------

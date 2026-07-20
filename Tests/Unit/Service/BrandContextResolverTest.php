@@ -82,6 +82,24 @@ final class BrandContextResolverTest extends TestCase
         self::assertSame('Default Brand', $result->brandName);
     }
 
+    public function testResolveForNullPageIdFallsBackToSiteRootLookupWithoutFailing(): void
+    {
+        // CTX-08: pageId-less callers (MCP/CLI/scheduler) trigger the first-site-root
+        // fallback. With no configured sites the resolver must return null gracefully
+        // and never query the profile repository with an invalid storage pid.
+        $profiles = $this->createMock(BrandContextProfileRepositoryInterface::class);
+        $profiles->expects(self::never())->method('findDefault');
+
+        $siteFinder = $this->createMock(SiteFinder::class);
+        $siteFinder->expects(self::once())->method('getAllSites')->willReturn([]);
+
+        $featureSettings = $this->createMock(BrandContextProfileOverrideReaderInterface::class);
+
+        $resolver = new BrandContextResolver($profiles, new SiteStorageContext($siteFinder), $featureSettings);
+
+        self::assertNull($resolver->resolveForPageId(null, 'ns_t3ai'));
+    }
+
     private function makeResolver(int $storagePid, int $pageId, BrandContextProfile $defaultProfile): BrandContextResolver
     {
         $profiles = $this->createMock(BrandContextProfileRepositoryInterface::class);

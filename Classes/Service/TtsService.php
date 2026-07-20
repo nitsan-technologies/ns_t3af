@@ -19,11 +19,15 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Service;
 
+use NITSAN\NsT3AF\Api\AiOptions;
+use NITSAN\NsT3AF\Api\AiResponse;
 use NITSAN\NsT3AF\Api\TtsOptions;
 use NITSAN\NsT3AF\Api\TtsResponse;
 use NITSAN\NsT3AF\Api\TtsServiceInterface;
 use NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface;
+use NITSAN\NsT3AF\Event\AfterProviderResponseEvent;
 use NITSAN\NsT3AF\Event\AfterTtsResponseEvent;
+use NITSAN\NsT3AF\Event\BeforeProviderRequestEvent;
 use NITSAN\NsT3AF\Event\BeforeTtsRequestEvent;
 use NITSAN\NsT3AF\Event\ProviderRequestFailedEvent;
 use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
@@ -98,6 +102,21 @@ final class TtsService implements TtsServiceInterface
 
         $adapter = $this->adapters->get($provider->adapterType);
 
+        // Governance choke point shared with chat/embed/image: ACL, budgets and
+        // rate limits gate TTS via BeforeProviderRequestEvent (CTX-14).
+        $governance = new BeforeProviderRequestEvent($provider, $text, $this->toAiOptions($options), 'tts');
+        $this->events->dispatch($governance);
+        if ($governance->isCancelled()) {
+            return new TtsResponse(
+                audio: '',
+                mimeType: self::FORMAT_MIME[$options->format] ?? 'audio/mpeg',
+                modelId: $options->modelId ?? $provider->modelId,
+                providerIdentifier: $provider->identifier,
+                latencyMs: 0,
+            );
+        }
+        $text = $governance->getPrompt();
+
         $before = new BeforeTtsRequestEvent($provider, $text, $options);
         $this->events->dispatch($before);
         if ($before->isCancelled()) {
@@ -151,8 +170,40 @@ final class TtsService implements TtsServiceInterface
         );
 
         $this->events->dispatch(new AfterTtsResponseEvent($response, $text));
-        $this->telemetry?->logTts($provider, $options, $text, $response);
+        // Budget/usage listeners bind to AfterProviderResponseEvent; BYO TTS has
+        // no token usage, but the request itself must reach those listeners (CTX-14).
+        $this->events->dispatch(new AfterProviderResponseEvent(
+            $provider,
+            new AiResponse(
+                content: '',
+                modelId: $modelId,
+                providerIdentifier: $provider->identifier,
+                latencyMs: $latencyMs,
+                raw: ['call' => 'tts'],
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($governance->getOptions()),
+            ),
+            $governance->getOptions(),
+            $text,
+        ));
+        $this->telemetry?->logTts(
+            $provider,
+            $options,
+            $text,
+            $response,
+            BrandContextLineage::profileUidFromOptions($governance->getOptions()),
+        );
 
         return $response;
+    }
+
+    private function toAiOptions(TtsOptions $options): AiOptions
+    {
+        return new AiOptions(
+            providerIdentifier: $options->providerIdentifier,
+            modelId: $options->modelId,
+            extensionKey: $options->extensionKey,
+            featureKey: $options->featureKey,
+            requestSource: $options->requestSource,
+        );
     }
 }

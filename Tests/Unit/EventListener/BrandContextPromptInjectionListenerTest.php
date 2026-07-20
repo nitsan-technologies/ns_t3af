@@ -216,7 +216,148 @@ final class BrandContextPromptInjectionListenerTest extends TestCase
         self::assertNull($event->getOptions()->systemPrompt);
     }
 
-    private function makeListener(BrandContextProfile $profile, int $storagePid, int $pageId): BrandContextPromptInjectionListener
+    public function testEmbedNeverGainsBrandSystemBlockInPromptOrMessages(): void
+    {
+        // CTX-10: embeddings get inline token substitution only — never the
+        // assembled system block, which would pollute the embedding input.
+        $listener = $this->makeListener($this->makeProfile(), storagePid: 10, pageId: 42);
+
+        $options = new AiOptions(
+            pageId: 42,
+            extra: [
+                'messages' => [
+                    ['role' => 'user', 'content' => 'Embed this about {brand_name}.'],
+                ],
+            ],
+        );
+        $event = new BeforeProviderRequestEvent(
+            $this->makeProvider(systemPrompt: 'You are helpful.'),
+            'Embed this about {brand_name}.',
+            $options,
+            'embed',
+        );
+
+        $listener($event);
+
+        // Plain prompt still gets inline token substitution...
+        self::assertStringContainsString('NITSAN Technologies', $event->getPrompt());
+        // ...but no brand system block is added anywhere for embed.
+        self::assertNull($event->getOptions()->systemPrompt);
+        self::assertStringNotContainsString('=== BRAND CONTEXT ===', $event->getPrompt());
+
+        $json = json_encode($event->getOptions()->extra['messages'] ?? null);
+        self::assertIsString($json);
+        self::assertStringNotContainsString('=== BRAND CONTEXT ===', $json);
+        self::assertStringNotContainsString('"role":"system"', $json);
+    }
+
+    public function testCallerSystemPromptGetsBrandBlockAndTokenResolution(): void
+    {
+        $listener = $this->makeListener($this->makeProfile(), storagePid: 10, pageId: 42);
+
+        $event = new BeforeProviderRequestEvent(
+            $this->makeProvider(systemPrompt: 'Provider default.'),
+            'Write a title.',
+            new AiOptions(systemPrompt: 'You are X for {brand_name}.', pageId: 42),
+            'complete',
+        );
+
+        $listener($event);
+
+        $systemPrompt = (string) $event->getOptions()->systemPrompt;
+        self::assertStringContainsString('=== BRAND CONTEXT ===', $systemPrompt);
+        self::assertStringContainsString('You are X for NITSAN Technologies.', $systemPrompt);
+        self::assertStringNotContainsString('{brand_name}', $systemPrompt);
+        self::assertSame(1, $event->getOptions()->extra['brandContextProfileUid'] ?? null);
+    }
+
+    public function testStampsBrandContextProfileUidOnOptionsForLineage(): void
+    {
+        $listener = $this->makeListener($this->makeProfile(uid: 7), storagePid: 10, pageId: 42);
+
+        $event = new BeforeProviderRequestEvent(
+            $this->makeProvider(),
+            'Hello',
+            new AiOptions(pageId: 42),
+            'complete',
+        );
+
+        $listener($event);
+
+        self::assertSame(7, $event->getOptions()->extra['brandContextProfileUid'] ?? null);
+    }
+
+    public function testStampsBrandContextProfileUidForEmbedCalls(): void
+    {
+        $listener = $this->makeListener($this->makeProfile(uid: 9), storagePid: 10, pageId: 42);
+
+        $event = new BeforeProviderRequestEvent(
+            $this->makeProvider(),
+            '{brand_name}',
+            new AiOptions(pageId: 42),
+            'embed',
+        );
+
+        $listener($event);
+
+        self::assertSame(9, $event->getOptions()->extra['brandContextProfileUid'] ?? null);
+        self::assertSame('NITSAN Technologies', $event->getPrompt());
+    }
+
+    public function testEmptyStringSystemPromptBehavesLikeNull(): void
+    {
+        $listener = $this->makeListener($this->makeProfile(), storagePid: 10, pageId: 42);
+
+        $event = new BeforeProviderRequestEvent(
+            $this->makeProvider(systemPrompt: 'Provider default.'),
+            'Write a title.',
+            new AiOptions(systemPrompt: '', pageId: 42),
+            'complete',
+        );
+
+        $listener($event);
+
+        $systemPrompt = (string) $event->getOptions()->systemPrompt;
+        self::assertStringContainsString('=== BRAND CONTEXT ===', $systemPrompt);
+        self::assertStringContainsString('Provider default.', $systemPrompt);
+    }
+
+    public function testStripsBrandTokensWhenNoProfileResolves(): void
+    {
+        $listener = $this->makeListener(null, storagePid: 10, pageId: 42);
+
+        $options = new AiOptions(
+            systemPrompt: 'System for {brand_name}.',
+            pageId: 42,
+            extra: [
+                'messages' => [
+                    ['role' => 'user', 'content' => 'Title for {brand_name} [brand_profile].'],
+                ],
+            ],
+        );
+        $event = new BeforeProviderRequestEvent(
+            $this->makeProvider(),
+            'Hi {brand_name} [brand_profile] {brand_context}',
+            $options,
+            'complete',
+        );
+
+        $listener($event);
+
+        self::assertStringNotContainsString('{brand_name}', $event->getPrompt());
+        self::assertStringNotContainsString('[brand_profile]', $event->getPrompt());
+        self::assertStringNotContainsString('{brand_context}', $event->getPrompt());
+
+        $json = json_encode($event->getOptions()->extra['messages'] ?? null);
+        self::assertIsString($json);
+        self::assertStringNotContainsString('{brand_name}', $json);
+        self::assertStringNotContainsString('[brand_profile]', $json);
+
+        $systemPrompt = (string) $event->getOptions()->systemPrompt;
+        self::assertStringNotContainsString('{brand_name}', $systemPrompt);
+    }
+
+    private function makeListener(?BrandContextProfile $profile, int $storagePid, int $pageId): BrandContextPromptInjectionListener
     {
         $profiles = $this->createMock(BrandContextProfileRepositoryInterface::class);
         $profiles->method('findDefault')->with($storagePid)->willReturn($profile);
@@ -242,10 +383,10 @@ final class BrandContextPromptInjectionListenerTest extends TestCase
         return $service;
     }
 
-    private function makeProfile(): BrandContextProfile
+    private function makeProfile(int $uid = 1): BrandContextProfile
     {
         return BrandContextProfile::fromRow([
-            'uid' => 1,
+            'uid' => $uid,
             'pid' => 10,
             'brand_name' => 'NITSAN Technologies',
             'industry' => 'Technology',

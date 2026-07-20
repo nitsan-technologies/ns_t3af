@@ -475,6 +475,14 @@
                 <source>Upload brand guidelines (PDF, DOCX, MD, TXT, CSV, JSON — max 3 × 10 MB).</source>
                 <target>Laden Sie Markenrichtlinien hoch (PDF, DOCX, MD, TXT, CSV, JSON – max. 3 × 10 MB).</target>
             </trans-unit>
+            <trans-unit id="module.aiContext.field.documentsEgressNotice">
+                <source>When enabled below, a short excerpt of uploaded document text is sent to your configured AI provider with every request. Leave the toggle off to keep documents stored locally for research only.</source>
+                <target>Wenn unten aktiviert, wird ein kurzer Auszug des hochgeladenen Dokumenttexts mit jeder Anfrage an Ihren konfigurierten KI-Anbieter gesendet. Lassen Sie die Option deaktiviert, um Dokumente nur lokal für die Recherche zu speichern.</target>
+            </trans-unit>
+            <trans-unit id="module.aiContext.field.includeDocumentInPrompt">
+                <source>Include uploaded document text in AI prompts</source>
+                <target>Hochgeladenen Dokumenttext in KI-Prompts einbeziehen</target>
+            </trans-unit>
             <trans-unit id="module.aiContext.field.documentsDrop">
                 <source>Select brand documents to extract text for AI context.</source>
                 <target>Wählen Sie Markendokumente aus, um Text für AI Context zu extrahieren.</target>
@@ -1956,12 +1964,12 @@
                 <target>Noch keine Backend-Gruppen definiert.</target>
             </trans-unit>
             <trans-unit id="provider.field.privacyLevel">
-                <source>Privacy level</source>
-                <target>Datenschutzstufe</target>
+                <source>Logging privacy</source>
+                <target>Protokoll-Datenschutz</target>
             </trans-unit>
             <trans-unit id="provider.field.privacyLevel.desc">
-                <source>Controls how much request telemetry is stored. The strictest of provider and user setting wins.</source>
-                <target>Steuert, wie viel Anfragetelemetrie gespeichert wird. Die strengste Einstellung aus Provider und Benutzereinstellung gewinnt.</target>
+                <source>Controls how much request telemetry is stored locally. Does not redact or block what is sent to the AI provider. The strictest of provider and user setting wins.</source>
+                <target>Steuert, wie viel Anfragetelemetrie lokal gespeichert wird. Ändert nicht, was an den KI-Anbieter gesendet wird. Die strengste Einstellung aus Provider und Benutzereinstellung gewinnt.</target>
             </trans-unit>
             <trans-unit id="provider.field.noRerouting">
                 <source>Prevent rerouting</source>

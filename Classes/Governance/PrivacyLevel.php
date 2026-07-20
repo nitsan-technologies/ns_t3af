@@ -22,10 +22,15 @@ namespace NITSAN\NsT3AF\Governance;
 /**
  * Telemetry fidelity for a request, resolved per call.
  *
+ * **Logging only** — this does not redact, block, or otherwise change what is
+ * sent to the AI provider (prompts, brand context, and documents still egress
+ * when a call is allowed). It only controls how much is stored in
+ * `tx_nst3af_request_log`.
+ *
  * Stored on `tx_nst3af_provider.privacy_level` and optionally overridden
  * by the backend user's TSconfig `nst3af.privacyLevel`. When both are
  * present the {@see self::strictest()} of the two applies — a user may only
- * tighten privacy, never loosen what the provider mandates.
+ * tighten logging privacy, never loosen what the provider mandates.
  *
  * @internal
  */
@@ -57,14 +62,14 @@ enum PrivacyLevel: string
     }
 
     /**
-     * Human-readable label for backend dropdowns.
+     * Human-readable label for backend dropdowns (logging scope, not egress).
      */
     public function label(): string
     {
         return match ($this) {
-            self::Standard => 'Standard (full logging)',
-            self::Reduced => 'Reduced (no prompt fingerprint)',
-            self::None => 'None (no logging)',
+            self::Standard => 'Standard (full request logging)',
+            self::Reduced => 'Reduced (log counters only, no fingerprint)',
+            self::None => 'None (no request logging)',
         };
     }
 

@@ -167,18 +167,18 @@ return [
             'description' => 'Restrict this provider to selected backend groups. Empty = available to all groups.',
         ],
         'privacy_level' => [
-            'label' => 'Privacy level',
+            'label' => 'Logging privacy',
             'config' => [
                 'type' => 'select',
                 'renderType' => 'selectSingle',
                 'items' => [
-                    ['label' => 'Standard (full logging)', 'value' => 'standard'],
-                    ['label' => 'Reduced (no prompt content)', 'value' => 'reduced'],
-                    ['label' => 'None (no logging)', 'value' => 'none'],
+                    ['label' => 'Standard (full request logging)', 'value' => 'standard'],
+                    ['label' => 'Reduced (log counters only, no fingerprint)', 'value' => 'reduced'],
+                    ['label' => 'None (no request logging)', 'value' => 'none'],
                 ],
                 'default' => 'standard',
             ],
-            'description' => 'Controls how much request telemetry is stored. The strictest of provider and user setting wins.',
+            'description' => 'Controls how much request telemetry is stored locally. Does not change what is sent to the AI provider. The strictest of provider and user setting wins.',
         ],
         'no_rerouting' => [
             'label' => 'Prevent rerouting',

@@ -426,6 +426,37 @@ final class AiServiceTest extends TestCase
         $service->complete('hi');
     }
 
+    public function testStreamYieldsChunksAndDispatchesAfterEvent(): void
+    {
+        $provider = $this->makeProvider();
+        $platform = new class {
+            public function stream(string $model, string $prompt): \Generator
+            {
+                yield 'a';
+                yield 'b';
+                yield 'c';
+            }
+        };
+        $adapter = $this->makeAdapter('symfony.openai', $platform);
+        $events = new CapturingDispatcher();
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$adapter]),
+            $events,
+            $this->makeSiteStorageContext(),
+        );
+
+        $chunks = iterator_to_array($service->stream('hi'), false);
+
+        self::assertSame(['a', 'b', 'c'], $chunks);
+        self::assertCount(2, $events->dispatched);
+        self::assertInstanceOf(BeforeProviderRequestEvent::class, $events->dispatched[0]);
+        self::assertInstanceOf(AfterProviderResponseEvent::class, $events->dispatched[1]);
+        /** @var AfterProviderResponseEvent $after */
+        $after = $events->dispatched[1];
+        self::assertSame('abc', $after->getResponse()->content);
+    }
+
     public function testStreamYieldsChunks(): void
     {
         $provider = $this->makeProvider();
@@ -1001,6 +1032,41 @@ final class AiServiceTest extends TestCase
         $response = $service->embed('hello');
 
         self::assertSame(17, $response->tokensInput);
+    }
+
+    public function testEmbedDispatchesAfterProviderResponseEventForBudgetTracking(): void
+    {
+        $provider = $this->makeProvider();
+        $platform = new class {
+            /**
+             * @param string|list<string> $text
+             * @return array<int|string, mixed>
+             */
+            public function embed(string $model, string|array $text): array
+            {
+                return [
+                    'data' => [['embedding' => [0.1, 0.2, 0.3]]],
+                    'usage' => ['total_tokens' => 17, 'prompt_tokens' => 17],
+                ];
+            }
+        };
+        $adapter = $this->makeAdapter('symfony.openai', $platform);
+        $events = new CapturingDispatcher();
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$adapter]),
+            $events,
+            $this->makeSiteStorageContext(),
+        );
+
+        $service->embed('hello');
+
+        $afterEvents = array_values(array_filter(
+            $events->dispatched,
+            static fn(object $e): bool => $e instanceof AfterProviderResponseEvent,
+        ));
+        self::assertCount(1, $afterEvents);
+        self::assertSame(17, $afterEvents[0]->getResponse()->tokensInput);
     }
 
     public function testEmbedNormalisesVectors(): void

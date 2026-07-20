@@ -21,7 +21,9 @@ namespace NITSAN\NsT3AF\Tests\Unit\Service;
 
 use NITSAN\NsT3AF\Api\TtsOptions;
 use NITSAN\NsT3AF\Domain\Model\Provider;
+use NITSAN\NsT3AF\Event\AfterProviderResponseEvent;
 use NITSAN\NsT3AF\Event\AfterTtsResponseEvent;
+use NITSAN\NsT3AF\Event\BeforeProviderRequestEvent;
 use NITSAN\NsT3AF\Event\BeforeTtsRequestEvent;
 use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 use NITSAN\NsT3AF\Exception\UnknownAdapterException;
@@ -62,8 +64,47 @@ final class TtsServiceTest extends TestCase
         self::assertSame('openai-prod', $response->providerIdentifier);
 
         $kinds = array_map(static fn(object $e): string => $e::class, $events->dispatched);
+        self::assertContains(BeforeProviderRequestEvent::class, $kinds);
         self::assertContains(BeforeTtsRequestEvent::class, $kinds);
         self::assertContains(AfterTtsResponseEvent::class, $kinds);
+        self::assertContains(AfterProviderResponseEvent::class, $kinds);
+    }
+
+    public function testSpeakHonorsGovernanceCancellation(): void
+    {
+        $provider = $this->makeProvider([Capability::TTS]);
+        $platform = new class {
+            public bool $called = false;
+
+            public function speech(string $modelId, string $text, TtsOptions $options): string
+            {
+                $this->called = true;
+
+                return 'binary-audio-data';
+            }
+        };
+        $events = new class implements \Psr\EventDispatcher\EventDispatcherInterface {
+            public function dispatch(object $event): object
+            {
+                if ($event instanceof BeforeProviderRequestEvent) {
+                    $event->cancelWithReason('Budget exhausted.');
+                }
+
+                return $event;
+            }
+        };
+        $service = new TtsService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$this->makeAdapter($platform)]),
+            $events,
+            new CredentialCipher(),
+            $this->createMock(RequestFactory::class),
+        );
+
+        $response = $service->speak('Hello world');
+
+        self::assertSame('', $response->audio);
+        self::assertFalse($platform->called);
     }
 
     public function testSpeakThrowsWhenProviderLacksTtsCapability(): void

@@ -60,6 +60,21 @@ final class BrandContextPlaceholderServiceTest extends TestCase
         self::assertStringContainsString('Never: synergy', $result);
     }
 
+    public function testReplaceIsSinglePassAndDoesNotCascade(): void
+    {
+        // CTX-05: a token value that itself contains another token string must not
+        // be re-scanned. With sequential str_replace, {brand_name} -> "{keywords}"
+        // would then be replaced by the keywords value. strtr() replaces in one pass.
+        $map = [
+            '{brand_name}' => '{keywords}',
+            '{keywords}' => 'TYPO3, Enterprise',
+        ];
+
+        $result = $this->service->replace('Brand: {brand_name}; Keywords: {keywords}', $map);
+
+        self::assertSame('Brand: {keywords}; Keywords: TYPO3, Enterprise', $result);
+    }
+
     public function testTargetPersonaUsesFirstPersonaOnly(): void
     {
         $map = $this->service->buildMap($this->makeProfile([

@@ -23,6 +23,7 @@ use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Api\AiResponse;
 use NITSAN\NsT3AF\Api\AiServiceInterface;
 use NITSAN\NsT3AF\Api\EmbeddingResponse;
+use NITSAN\NsT3AF\Api\StreamSummary;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
@@ -82,6 +83,7 @@ final class AiService implements AiServiceInterface
                 providerIdentifier: $provider->identifier,
                 cached: false,
                 raw: ['cancelled' => $before->getCancellationReason()],
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
             );
         }
 
@@ -121,6 +123,7 @@ final class AiService implements AiServiceInterface
             latencyMs: (int) (microtime(true) * 1000) - $start,
             cached: false,
             raw: $invocation['raw'],
+            appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
         );
 
         $after = new AfterProviderResponseEvent(
@@ -155,26 +158,64 @@ final class AiService implements AiServiceInterface
             return;
         }
 
+        $start = (int) (microtime(true) * 1000);
+        $content = '';
         try {
             $platform = $adapter->platform($provider);
             $modelId = $this->effectiveModel($provider, $before->getOptions());
 
             if (method_exists($platform, 'stream')) {
                 $payloads = $this->openAiCompatibleInvokePayloads($before->getPrompt(), $provider, $before->getOptions());
-                yield from $this->streamViaPlatformStreamMethod($platform, $modelId, $payloads, $adapter);
-                return;
-            }
-
-            if (method_exists($platform, 'invoke')) {
+                foreach ($this->streamViaPlatformStreamMethod($platform, $modelId, $payloads, $adapter) as $delta) {
+                    $content .= $delta;
+                    yield $delta;
+                }
+            } elseif (method_exists($platform, 'invoke')) {
                 $payloads = $this->symfonyPlatformInvokePayloads($before->getPrompt(), $provider, $modelId, $before->getOptions());
-                yield from $this->streamViaPlatformInvoke($platform, $modelId, $payloads, $adapter);
+                foreach ($this->streamViaPlatformInvoke($platform, $modelId, $payloads, $adapter) as $delta) {
+                    $content .= $delta;
+                    yield $delta;
+                }
+            } else {
+                throw new AdapterRuntimeException(sprintf(
+                    'Adapter "%s" platform exposes neither stream() nor invoke() for streaming.',
+                    $adapter->getType(),
+                ));
+            }
+
+            // Client disconnect mid-stream: skip telemetry / after-event / budget (CTX-12).
+            if (connection_aborted()) {
                 return;
             }
 
-            throw new AdapterRuntimeException(sprintf(
-                'Adapter "%s" platform exposes neither stream() nor invoke() for streaming.',
-                $adapter->getType(),
-            ));
+            $response = new AiResponse(
+                content: $content,
+                modelId: $modelId,
+                providerIdentifier: $provider->identifier,
+                latencyMs: (int) (microtime(true) * 1000) - $start,
+                cached: false,
+                raw: [],
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
+            );
+            $after = new AfterProviderResponseEvent(
+                $provider,
+                $response,
+                $before->getOptions(),
+                $before->getPrompt(),
+            );
+            $this->events->dispatch($after);
+
+            $finalResponse = $after->getResponse();
+            $this->telemetry?->logCompletion(
+                provider: $provider,
+                options: $before->getOptions(),
+                prompt: $before->getPrompt(),
+                response: $finalResponse,
+                requestType: self::CALL_STREAM,
+            );
+            $this->providerRepository?->updateStatus($provider->uid, ['last_used_at' => $GLOBALS['EXEC_TIME'] ?? time()]);
+
+            return new StreamSummary(content: $finalResponse->content);
         } catch (\Throwable $e) {
             $this->telemetry?->logFailure(
                 provider: $provider,
@@ -182,6 +223,7 @@ final class AiService implements AiServiceInterface
                 prompt: $before->getPrompt(),
                 requestType: self::CALL_STREAM,
                 error: $e,
+                latencyMs: (int) (microtime(true) * 1000) - $start,
             );
             $this->events->dispatch(new ProviderRequestFailedEvent($provider, $e, self::CALL_STREAM));
             if ($e instanceof AdapterRuntimeException) {
@@ -264,6 +306,22 @@ final class AiService implements AiServiceInterface
 
         $textForTelemetry = is_array($text) ? implode("\n", $text) : $text;
         $this->telemetry?->logEmbedding($provider, $before->getOptions(), $textForTelemetry, $response);
+        // Budget/usage listeners bind to AfterProviderResponseEvent; embedding
+        // token usage must count against per-user budgets too (CTX-14).
+        $this->events->dispatch(new AfterProviderResponseEvent(
+            $provider,
+            new AiResponse(
+                content: '',
+                modelId: $response->modelId,
+                providerIdentifier: $provider->identifier,
+                tokensInput: $response->tokensInput,
+                latencyMs: $response->latencyMs,
+                raw: ['call' => self::CALL_EMBED],
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
+            ),
+            $before->getOptions(),
+            $before->getPrompt(),
+        ));
         $this->providerRepository?->updateStatus($provider->uid, ['last_used_at' => $GLOBALS['EXEC_TIME'] ?? time()]);
 
         return $response;

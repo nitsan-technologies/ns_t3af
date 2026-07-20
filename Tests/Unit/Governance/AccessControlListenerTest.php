@@ -98,6 +98,38 @@ final class AccessControlListenerTest extends TestCase
         self::assertStringContainsString('nst3af:capability_embeddings', (string) $event->getCancellationReason());
     }
 
+    public function testDeniesImageGenerationWhenCapabilityPermissionMissing(): void
+    {
+        $GLOBALS['BE_USER'] = $this->makeUser(
+            isAdmin: false,
+            groups: [10],
+            customOptions: 'nst3af:capability_chat',
+            capabilityCheckResult: false,
+        );
+        $event = $this->makeEvent(callKind: 'image_generation');
+
+        ($this->makeListener())($event);
+
+        self::assertTrue($event->isCancelled());
+        self::assertStringContainsString('nst3af:capability_image_generation', (string) $event->getCancellationReason());
+    }
+
+    public function testDeniesTtsWhenCapabilityPermissionMissing(): void
+    {
+        $GLOBALS['BE_USER'] = $this->makeUser(
+            isAdmin: false,
+            groups: [10],
+            customOptions: 'nst3af:capability_chat',
+            capabilityCheckResult: false,
+        );
+        $event = $this->makeEvent(callKind: 'tts');
+
+        ($this->makeListener())($event);
+
+        self::assertTrue($event->isCancelled());
+        self::assertStringContainsString('nst3af:capability_tts', (string) $event->getCancellationReason());
+    }
+
     /**
      * TC-04 / CM-04: explicit budget 0 must cancel the provider request.
      */

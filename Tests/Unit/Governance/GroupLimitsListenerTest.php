@@ -59,6 +59,20 @@ final class GroupLimitsListenerTest extends TestCase
         self::assertFalse($event->isCancelled());
     }
 
+    public function testSkipsChecksWhenEventAlreadyCancelled(): void
+    {
+        $GLOBALS['BE_USER'] = $this->makeUser(isAdmin: false, groups: [10]);
+        $groups = $this->createMock(GroupSettingsRepository::class);
+        $groups->expects(self::never())->method('findByBeGroupUid');
+
+        $event = $this->makeEvent();
+        $event->cancelWithReason('denied by access control');
+
+        ($this->makeListener($groups))($event);
+
+        self::assertSame('denied by access control', $event->getCancellationReason());
+    }
+
     public function testAdminBypassesGroupLimits(): void
     {
         $GLOBALS['BE_USER'] = $this->makeUser(isAdmin: true, groups: [10]);

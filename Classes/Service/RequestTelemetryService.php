@@ -78,6 +78,7 @@ final class RequestTelemetryService
             ),
             'credits_used' => (float) $this->creditsCharged($response->credits),
             'currency' => $this->currency($provider->pricingCurrency),
+            'brand_context_profile_uid' => $this->brandContextProfileUid($options, $response->appliedBrandContextProfileUid),
             ...$this->qualityResolver->resolveForLog($response, $options),
             'raw_meta' => json_encode([
                 'adapter_type' => $provider->adapterType,
@@ -121,6 +122,7 @@ final class RequestTelemetryService
             ),
             'credits_used' => (float) $this->creditsCharged($response->credits),
             'currency' => $this->currency($provider->pricingCurrency),
+            'brand_context_profile_uid' => $this->brandContextProfileUid($options),
             'raw_meta' => json_encode([
                 'adapter_type' => $provider->adapterType,
                 'vector_count' => count($response->vectors),
@@ -133,6 +135,7 @@ final class RequestTelemetryService
         TtsOptions $options,
         string $text,
         TtsResponse $response,
+        ?int $brandContextProfileUid = null,
     ): void {
         $this->persist($provider, [
             'provider_uid'         => $provider->uid,
@@ -163,6 +166,7 @@ final class RequestTelemetryService
             ),
             'credits_used'         => (float) $this->creditsCharged($response->credits),
             'currency'             => $this->currency($provider->pricingCurrency),
+            'brand_context_profile_uid' => max(0, $brandContextProfileUid ?? 0),
             'raw_meta'             => json_encode([
                 'adapter_type' => $provider->adapterType,
                 'voice'        => $options->voice,
@@ -418,6 +422,7 @@ final class RequestTelemetryService
             'estimated_cost' => 0.0,
             'credits_used' => 0.0,
             'currency' => $this->currency($provider->pricingCurrency),
+            'brand_context_profile_uid' => $this->brandContextProfileUid($options),
             'raw_meta' => json_encode($this->failureMeta($provider, $error), JSON_THROW_ON_ERROR),
         ]);
     }
@@ -550,6 +555,15 @@ final class RequestTelemetryService
     private function creditsCharged(?CreditsUsage $credits): float
     {
         return $credits !== null ? $credits->charged : 0.0;
+    }
+
+    private function brandContextProfileUid(AiOptions $options, ?int $fromResponse = null): int
+    {
+        if ($fromResponse !== null && $fromResponse > 0) {
+            return $fromResponse;
+        }
+
+        return BrandContextLineage::profileUidFromOptions($options) ?? 0;
     }
 
     private function totalTokensFromResponse(AiResponse $response): int

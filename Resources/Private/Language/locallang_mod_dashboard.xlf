@@ -357,6 +357,12 @@
 			<trans-unit id="module.aiContext.field.documentsHint" resname="module.aiContext.field.documentsHint">
 				<source>Upload brand guidelines (PDF, DOCX, MD, TXT, CSV, JSON — max 3 × 10 MB).</source>
 			</trans-unit>
+			<trans-unit id="module.aiContext.field.documentsEgressNotice" resname="module.aiContext.field.documentsEgressNotice">
+				<source>When enabled below, a short excerpt of uploaded document text is sent to your configured AI provider with every request. Leave the toggle off to keep documents stored locally for research only.</source>
+			</trans-unit>
+			<trans-unit id="module.aiContext.field.includeDocumentInPrompt" resname="module.aiContext.field.includeDocumentInPrompt">
+				<source>Include uploaded document text in AI prompts</source>
+			</trans-unit>
 			<trans-unit id="module.aiContext.field.documentsDrop" resname="module.aiContext.field.documentsDrop">
 				<source>Select brand documents to extract text for AI context.</source>
 			</trans-unit>
@@ -1469,10 +1475,10 @@
 				<source>No backend groups defined yet.</source>
 			</trans-unit>
 			<trans-unit id="provider.field.privacyLevel" resname="provider.field.privacyLevel">
-				<source>Privacy level</source>
+				<source>Logging privacy</source>
 			</trans-unit>
 			<trans-unit id="provider.field.privacyLevel.desc" resname="provider.field.privacyLevel.desc">
-				<source>Controls how much request telemetry is stored. The strictest of provider and user setting wins.</source>
+				<source>Controls how much request telemetry is stored locally. Does not redact or block what is sent to the AI provider. The strictest of provider and user setting wins.</source>
 			</trans-unit>
 			<trans-unit id="provider.field.noRerouting" resname="provider.field.noRerouting">
 				<source>Prevent rerouting</source>

@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\EventListener;
 use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Event\BeforeProviderRequestEvent;
 use NITSAN\NsT3AF\Service\BrandContextAssembler;
+use NITSAN\NsT3AF\Service\BrandContextLineage;
 use NITSAN\NsT3AF\Service\BrandContextPlaceholderService;
 use NITSAN\NsT3AF\Service\BrandContextResolver;
 
@@ -56,8 +57,16 @@ final class BrandContextPromptInjectionListener
             $scope,
         );
         if ($profile === null) {
+            // No profile resolves: strip all known brand tokens so literal
+            // `{brand_*}` / `[brand_profile]` placeholders never reach the model.
+            $this->stripBrandTokens($event);
             return;
         }
+
+        // Lineage stamp for request log + AiResponse echo (CTX-13 / CTX-15).
+        // Applied for every call kind (complete/stream/embed/tts/image).
+        $options = $this->withBrandProfileUid($options, $profile->uid);
+        $event->setOptions($options);
 
         $brandBlock = $this->assembler->assemble($profile);
         $map = $this->placeholders->buildMap($profile);
@@ -76,7 +85,9 @@ final class BrandContextPromptInjectionListener
         // not pass chat messages via AiOptions->extra['messages'].
         $event->setPrompt($this->placeholders->replace($event->getPrompt(), $map));
 
-        if ($event->callKind === 'embed') {
+        // The system-block injection below only makes sense for chat-style calls;
+        // embed / tts / image_generation get token substitution only.
+        if (!in_array($event->callKind, ['complete', 'stream'], true)) {
             return;
         }
 
@@ -100,7 +111,17 @@ final class BrandContextPromptInjectionListener
             return;
         }
 
-        if ($options->systemPrompt !== null) {
+        // Caller-supplied systemPrompt (empty string treated like null): resolve
+        // brand tokens inside it and prepend the brand block, mirroring the
+        // messages path, so an explicit systemPrompt no longer silently drops
+        // brand context (CTX-03).
+        $callerSystem = trim((string) $options->systemPrompt);
+        if ($callerSystem !== '') {
+            $resolved = $this->placeholders->replace($callerSystem, $map);
+            if ($brandBlock !== '' && !str_contains($resolved, $brandBlock)) {
+                $resolved = $brandBlock . "\n\n" . $resolved;
+            }
+            $event->setOptions($this->withSystemPrompt($options, $resolved));
             return;
         }
 
@@ -112,6 +133,34 @@ final class BrandContextPromptInjectionListener
 
         $combined = $providerSystem !== '' ? $brandBlock . "\n\n" . $providerSystem : $brandBlock;
         $event->setOptions($this->withSystemPrompt($options, $combined));
+    }
+
+    /**
+     * Replaces every known brand token with an empty string in the prompt, the
+     * chat messages, and a caller-supplied systemPrompt (CTX-04).
+     */
+    private function stripBrandTokens(BeforeProviderRequestEvent $event): void
+    {
+        $map = $this->placeholders->buildEmptyMap();
+        $event->setPrompt($this->placeholders->replace($event->getPrompt(), $map));
+
+        $options = $event->getOptions();
+        $messages = $this->extractMessages($options);
+        if ($messages !== null) {
+            $options = $this->withMessages($options, $this->replaceInMessages($messages, $map));
+        }
+
+        $systemPrompt = $options->systemPrompt;
+        if (is_string($systemPrompt) && $systemPrompt !== '') {
+            $stripped = $this->placeholders->replace($systemPrompt, $map);
+            if ($stripped !== $systemPrompt) {
+                $options = $this->withSystemPrompt($options, $stripped);
+            }
+        }
+
+        if ($options !== $event->getOptions()) {
+            $event->setOptions($options);
+        }
     }
 
     /**
@@ -247,6 +296,27 @@ final class BrandContextPromptInjectionListener
             pageId: $options->pageId,
             requestUuid: $options->requestUuid,
             extra: $options->extra,
+        );
+    }
+
+    private function withBrandProfileUid(AiOptions $options, int $profileUid): AiOptions
+    {
+        return new AiOptions(
+            providerIdentifier: $options->providerIdentifier,
+            modelId: $options->modelId,
+            temperature: $options->temperature,
+            systemPrompt: $options->systemPrompt,
+            maxTokens: $options->maxTokens,
+            noCache: $options->noCache,
+            extensionKey: $options->extensionKey,
+            featureKey: $options->featureKey,
+            featureLabel: $options->featureLabel,
+            requestSource: $options->requestSource,
+            contentEntityType: $options->contentEntityType,
+            contentEntityUid: $options->contentEntityUid,
+            pageId: $options->pageId,
+            requestUuid: $options->requestUuid,
+            extra: BrandContextLineage::stampExtra($options->extra, $profileUid),
         );
     }
 

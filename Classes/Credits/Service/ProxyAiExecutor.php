@@ -35,6 +35,7 @@ use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Event\AfterProviderResponseEvent;
 use NITSAN\NsT3AF\Event\BeforeProviderRequestEvent;
 use NITSAN\NsT3AF\Event\ProviderRequestFailedEvent;
+use NITSAN\NsT3AF\Service\BrandContextLineage;
 use NITSAN\NsT3AF\Service\RequestTelemetryService;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Client\ClientExceptionInterface;
@@ -108,7 +109,7 @@ class ProxyAiExecutor
             $latencyMs = (int) (microtime(true) * 1000) - $start;
             $summary = $this->mapUsageToStreamSummary($payload, $requestUuid);
             $this->receiptCache->storeFromCharge($requestUuid, $featureKey, $payload);
-            $response = $this->mapChargeToAiResponse($payload, $requestUuid, $latencyMs);
+            $response = $this->mapChargeToAiResponse($payload, $requestUuid, $latencyMs, $before->getOptions());
             $this->persistCompletion($provider, $before->getOptions(), $before->getPrompt(), $response, self::CALL_STREAM);
             $this->events->dispatch(new AfterProviderResponseEvent(
                 $provider,
@@ -177,6 +178,7 @@ class ProxyAiExecutor
                 modelId: 't3planet',
                 providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
                 raw: ['cancelled' => $before->getCancellationReason()],
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
             );
         }
 
@@ -229,7 +231,7 @@ class ProxyAiExecutor
             throw $e;
         }
 
-        $response = $this->mapChargeToAiResponse($payload, $requestUuid, (int) (microtime(true) * 1000) - $start);
+        $response = $this->mapChargeToAiResponse($payload, $requestUuid, (int) (microtime(true) * 1000) - $start, $before->getOptions());
         $this->receiptCache->storeFromCharge($requestUuid, $featureKey, $payload);
         $this->persistCompletion($provider, $before->getOptions(), $before->getPrompt(), $response);
         $this->events->dispatch(new AfterProviderResponseEvent(
@@ -256,6 +258,16 @@ class ProxyAiExecutor
 
         $before = new BeforeProviderRequestEvent($provider, $prompt, $options, self::CALL_EMBED);
         $this->events->dispatch($before);
+        if ($before->isCancelled()) {
+            return new EmbeddingResponse(
+                vectors: [],
+                modelId: 't3planet',
+                providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
+                raw: [
+                    'error' => $before->getCancellationReason() ?? 'AI provider request was cancelled.',
+                ],
+            );
+        }
 
         $start = (int) (microtime(true) * 1000);
         try {
@@ -307,6 +319,23 @@ class ProxyAiExecutor
 
         $response = $this->mapEmbedToEmbeddingResponse($payload, $requestUuid, (int) (microtime(true) * 1000) - $start);
         $this->persistEmbedding($provider, $before->getOptions(), $before->getPrompt(), $response);
+        // Budget/usage listeners bind to AfterProviderResponseEvent; credits
+        // embedding usage must count against per-user budgets too (CTX-14).
+        $this->events->dispatch(new AfterProviderResponseEvent(
+            $provider,
+            new AiResponse(
+                content: '',
+                modelId: $response->modelId,
+                providerIdentifier: $response->providerIdentifier,
+                tokensInput: $response->tokensInput,
+                latencyMs: $response->latencyMs,
+                raw: ['call' => self::CALL_EMBED],
+                credits: $response->credits,
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
+            ),
+            $before->getOptions(),
+            $before->getPrompt(),
+        ));
 
         return $response;
     }
@@ -385,7 +414,7 @@ class ProxyAiExecutor
     /**
      * @param array<string, mixed> $payload
      */
-    private function mapChargeToAiResponse(array $payload, string $requestUuid, int $latencyMs): AiResponse
+    private function mapChargeToAiResponse(array $payload, string $requestUuid, int $latencyMs, AiOptions $options = new AiOptions()): AiResponse
     {
         $credits = is_array($payload['credits'] ?? null) ? $payload['credits'] : [];
         $charged = is_array($payload['charged'] ?? null) ? $payload['charged'] : [];
@@ -399,6 +428,7 @@ class ProxyAiExecutor
             latencyMs: $latencyMs,
             raw: $payload,
             credits: CreditsUsage::fromApiPayload($credits, $charged, $requestUuid, $payload),
+            appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($options),
         );
     }
 

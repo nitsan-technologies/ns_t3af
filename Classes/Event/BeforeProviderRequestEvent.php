@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Event;
 
 use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Domain\Model\Provider;
+use Psr\EventDispatcher\StoppableEventInterface;
 
 /**
  * Dispatched right before an adapter call is issued.
@@ -29,9 +30,12 @@ use NITSAN\NsT3AF\Domain\Model\Provider;
  * ACL (set {@see self::cancelWithReason()} to short-circuit), or merge extra
  * adapter-specific options.
  *
+ * Implements {@see StoppableEventInterface}: once cancelled, the dispatcher
+ * stops calling further listeners (CTX-18).
+ *
  * @api
  */
-final class BeforeProviderRequestEvent
+final class BeforeProviderRequestEvent implements StoppableEventInterface
 {
     private string $prompt;
 
@@ -72,6 +76,11 @@ final class BeforeProviderRequestEvent
     public function isCancelled(): bool
     {
         return $this->cancellationReason !== null;
+    }
+
+    public function isPropagationStopped(): bool
+    {
+        return $this->isCancelled();
     }
 
     public function getCancellationReason(): ?string

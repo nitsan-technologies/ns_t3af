@@ -125,6 +125,7 @@ const emptyState = () => ({
   sampleContent: '',
   complianceNotes: '',
   documentExtract: '',
+  includeDocumentInPrompt: false,
   uploadedDocuments: [],
 });
 
@@ -194,6 +195,7 @@ const initAiContext = () => {
   const hiddenKeywords = qs(root, '[data-aiu-context-field-keywords]');
   const hiddenCompetitors = qs(root, '[data-aiu-context-field-competitors]');
   const hiddenDocumentExtract = qs(root, '[data-aiu-context-field-document-extract]');
+  const fieldIncludeDocument = qs(root, '[data-aiu-context-field-include-document]');
 
   const fieldBrandName = qs(root, '[data-aiu-context-field-brand-name]');
   const fieldIndustry = qs(root, '[data-aiu-context-field-industry]');
@@ -280,6 +282,9 @@ const initAiContext = () => {
     state.languageCode = fieldLanguage instanceof HTMLSelectElement ? fieldLanguage.value.trim() : '';
     state.sampleContent = fieldSample instanceof HTMLTextAreaElement ? fieldSample.value.trim() : '';
     state.complianceNotes = fieldCompliance instanceof HTMLTextAreaElement ? fieldCompliance.value.trim() : '';
+    state.includeDocumentInPrompt = fieldIncludeDocument instanceof HTMLInputElement
+      ? fieldIncludeDocument.checked
+      : false;
   };
 
   const syncHiddenFields = () => {
@@ -793,6 +798,7 @@ const initAiContext = () => {
       keywords: Array.isArray(profile?.keywords) ? [...profile.keywords] : [],
       competitors: Array.isArray(profile?.competitors) ? [...profile.competitors] : [],
       documentExtract: profile?.documentExtract ?? '',
+      includeDocumentInPrompt: Boolean(profile?.includeDocumentInPrompt),
       uploadedDocuments: Array.isArray(profile?.uploadedDocuments) ? [...profile.uploadedDocuments] : [],
     };
 
@@ -814,6 +820,9 @@ const initAiContext = () => {
     setFieldValue(fieldSample, state.sampleContent);
     setFieldValue(fieldCompliance, state.complianceNotes);
     setFieldValue(fieldResearchUrl, state.websiteUrl);
+    if (fieldIncludeDocument instanceof HTMLInputElement) {
+      fieldIncludeDocument.checked = Boolean(state.includeDocumentInPrompt);
+    }
 
     renderAll();
   };
