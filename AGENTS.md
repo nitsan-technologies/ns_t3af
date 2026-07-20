@@ -25,7 +25,7 @@ Agent router for the master TYPO3 AI extension. Load only what your task needs.
 | Provider / adapter / cipher | `context/features/providers.md`, `tasks/implement-provider.md` |
 | `AiServiceInterface` / events / streaming | `context/features/public-api.md` |
 | Child ext (`ns_t3ai`, `ns_t3cs`, `ns_t3aa`, `ns_t3as`, `ns_t3ac`) | `context/features/child-extensions.md`, `context/features/public-api.md` |
-| T3Planet Credits / billing | `context/features/credits.md` |
+| T3Planet Credits / billing | `context/features/credits.md`, `context/features/credits-api-base-url.md` |
 | MCP server / OAuth / tools | `context/features/mcp-server.md` |
 | Dashboard / AI Features drawer | `context/features/backend-module.md` |
 | AI Logs tab / child log links / iframe filters | `context/features/ai-logs.md` |
@@ -52,7 +52,7 @@ Prefer `context/features/*.md` over `context/specs/FEATURE_*.md` unless implemen
 | Governance / telemetry | Done | `context/features/governance.md` | `Documentation/Governance/Index.rst` |
 | Child integration | Ongoing | `context/features/child-extensions.md` | `Documentation/Developer/ExtensionIntegration.rst` |
 | AI Access & Roles | Done | `context/features/ai-access-roles.md` | `Documentation/Developer/CustomAiAccess.rst` |
-| T3Planet Credits | Implemented (Coming soon gate) | `context/features/credits.md` | `context/specs/FEATURE_T3PlanetCredits_Client.md` |
+| T3Planet Credits | Done (publicly available) | `context/features/credits.md` | `context/specs/FEATURE_T3PlanetCredits_Client.md` |
 | MCP Server & tools | Done | `context/features/mcp-server.md` | `context/specs/FEATURE_McpServer.md` |
 
 ---

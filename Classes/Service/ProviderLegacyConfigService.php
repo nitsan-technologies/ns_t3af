@@ -49,7 +49,6 @@ final class ProviderLegacyConfigService
         'basicAuthPassword',
         'enableApiQuotaEmailNotification',
         'apiQuotaNotificationEmail',
-        't3planetApiBaseUrl',
         't3planetCreditsDomain',
         't3planetApiToken',
         'mcpBasePath',

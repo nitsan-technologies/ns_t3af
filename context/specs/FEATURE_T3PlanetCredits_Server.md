@@ -660,7 +660,9 @@ Hook into existing `NewOrderCreateLicense.php` + `CreateLicenseAfterOtp.php`:
 Do **not** auto-create `ns_ai_token` on license insert (client calls `Token.php` with full key list).
 
 Optional: when first AI license for a customer is created, ops may pre-provision via admin BE. Trial grant runs when `ns_ai_account` is first created (via `Token.php` or admin):
-- `INSERT ns_ai_account` + `INSERT ns_ai_transaction (event_id='trial-{token}', type='trial', credits_delta=100)`
+- Amount: **`AiTrialCreditsSettings`** — `ns_ai_settings.trial_credits` (DB, including `0`) → `API_AI_TRIAL_CREDITS` env → default **100** whole credits (×1000 units in ledger).
+- `INSERT ns_ai_account` + `INSERT ns_ai_transaction (event_id='trial-{token}', type='trial', credits_delta=<resolved units>)`
+- Ops edit: **AI Credits admin → Dashboard → trial_credits** (same key as `ns_ai_settings.trial_credits`).
 
 One-shot. Trial cannot be re-granted.
 
@@ -852,7 +854,7 @@ Phase D — Pabbly + public + customer client
 13. Pabbly webhook valid → balance + plan applied, email sent, event applied=1.
 14. Pabbly replay → idempotent, no double-credit.
 15. Pabbly bad HMAC → 401, no DB write.
-16. Trial auto-grant: new license_key insert → 100 free credits, second insert with same key (theoretical) → no re-grant (idempotent via `trial_credits_granted=1`).
+16. Trial auto-grant: first `Token.php` mint → configurable free credits (`ns_ai_settings.trial_credits`, env fallback); `AttachLicenses` per new key uses same resolver; `trial_granted` / attach ledger idempotency prevents double grant.
 17. Multi-license install: one `ns_ai_token` row with comma-separated keys; all child extensions share Bearer token and `ns_ai_account`.
 18. Substring domain check vuln does NOT regress legacy `LicenseRepository::getLicenseDetails` behaviour (out of scope).
 19. `Products.php` returns only `is_active=1` rows; deactivating a row in admin hides it on next cache cycle (≤1h or after flush).

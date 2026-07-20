@@ -19,7 +19,6 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Credits\Service;
 
-use NITSAN\NsT3AF\Credits\CreditsConstants;
 use NITSAN\NsT3AF\Credits\Domain\Repository\RuntimeSettingsRepository;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
@@ -36,10 +35,14 @@ final class RuntimeSettingsService
 
     private const EXT_CREDITS_DOMAIN_KEY = 't3planetCreditsDomain';
 
+    /** @deprecated since ns_t3af 1.x — migrated from ext_conf to runtime row on sync */
+    private const LEGACY_EXT_API_BASE_KEY = 't3planetApiBaseUrl';
+
     public function __construct(
         private readonly RuntimeSettingsRepository $repository,
         private readonly CredentialCipher $cipher,
         private readonly ExtensionConfiguration $extensionConfiguration,
+        private readonly CreditsApiBaseUrlResolver $apiBaseUrlResolver = new CreditsApiBaseUrlResolver(),
     ) {}
 
     public function isCreditModeEnabled(): bool
@@ -61,19 +64,14 @@ final class RuntimeSettingsService
 
     public function getApiBaseUrl(): string
     {
-        $row = $this->findSingleton();
+        $this->ensureRow();
+        $this->syncApiBaseUrlIfNeeded();
+        $row = $this->repository->findSingleton() ?? [];
         $fromRow = trim((string) ($row['t3planet_api_base_url'] ?? ''));
-        if ($fromRow !== '') {
-            return rtrim($fromRow, '/');
-        }
 
-        try {
-            $fromExt = trim((string) ($this->extensionConfiguration->get(self::EXTENSION_KEY, 't3planetApiBaseUrl') ?? ''));
-        } catch (\Throwable) {
-            $fromExt = '';
-        }
-
-        return $fromExt !== '' ? rtrim($fromExt, '/') : CreditsConstants::DEFAULT_API_BASE_URL;
+        return $fromRow !== ''
+            ? $this->apiBaseUrlResolver->normalize($fromRow)
+            : $this->apiBaseUrlResolver->resolve();
     }
 
     /**
@@ -236,5 +234,45 @@ final class RuntimeSettingsService
         if ($this->repository->findSingleton() === null) {
             $this->repository->insertSingleton();
         }
+    }
+
+    private function syncApiBaseUrlIfNeeded(): void
+    {
+        $row = $this->repository->findSingleton();
+        if ($row === null) {
+            return;
+        }
+
+        $stored = $this->apiBaseUrlResolver->normalize((string) ($row['t3planet_api_base_url'] ?? ''));
+        if ($stored === '') {
+            $stored = $this->readLegacyExtensionConfigApiBaseUrl();
+        }
+
+        $target = $this->apiBaseUrlResolver->resolve();
+
+        if ($stored !== '' && !$this->apiBaseUrlResolver->isKnownBuiltInUrl($stored)) {
+            return;
+        }
+
+        if ($stored === $target) {
+            return;
+        }
+
+        $this->repository->updateSingleton(['t3planet_api_base_url' => $target]);
+    }
+
+    private function readLegacyExtensionConfigApiBaseUrl(): string
+    {
+        try {
+            $url = trim((string) ($this->extensionConfiguration->get(self::EXTENSION_KEY, self::LEGACY_EXT_API_BASE_KEY) ?? ''));
+        } catch (\Throwable) {
+            return '';
+        }
+
+        if ($url === '' || !$this->apiBaseUrlResolver->isKnownBuiltInUrl($url)) {
+            return '';
+        }
+
+        return $this->apiBaseUrlResolver->normalize($url);
     }
 }

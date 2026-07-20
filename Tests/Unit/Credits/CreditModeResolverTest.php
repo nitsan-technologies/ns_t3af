@@ -47,9 +47,9 @@ final class CreditModeResolverTest extends TestCase
         self::assertTrue($resolver->isActive());
     }
 
-    public function testProductionGateIsOffByDefault(): void
+    public function testProductionGateIsOnByDefault(): void
     {
-        self::assertFalse((new CreditsReleaseGate())->isPubliclyAvailable());
+        self::assertTrue((new CreditsReleaseGate())->isPubliclyAvailable());
     }
 
     private function resolver(int $creditMode, string $plainToken = '', bool $gateAvailable = true): CreditModeResolver

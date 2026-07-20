@@ -69,8 +69,8 @@ Encrypted at rest: `tx_nst3af_runtime_setting.token_enc` via `CredentialCipher`.
 1. Admin opens dashboard, flips toggle ON.
 2. Modal: configure credits — pick **primary** license for display (drop-down via `LicenseKeyResolver::listAvailable()`).
 3. On Activate: `LicenseKeyResolver::buildLicenseKeysCsv()` → comma-separated valid AI keys; save to `runtime_setting.license_keys`.
-4. `TokenResolver::resolve()` → `POST /API/AI/Token.php` with `{ license_keys, domain }`.
-5. Cache `token_enc`, set `credit_mode=1`, toast from `/AI/Balance.php`.
+4. `TokenResolver::resolve()` → `POST /API/AI/Token.php` with `{ license_keys, domain }` — **server grants free trial credits here** (amount from `ns_ai_settings.trial_credits` on composer host; not client-configurable).
+5. Cache `token_enc`, set `credit_mode=1`, toast from `/AI/Balance.php` (balance reflects server grant).
 
 **Errors retired:** `credits.signature_invalid`, `credits.signature_expired`. **Errors added:** `credits.token_missing`, `credits.token_invalid`.
 
@@ -87,6 +87,7 @@ Encrypted at rest: `tx_nst3af_runtime_setting.token_enc` via `CredentialCipher`.
 
 - Tokens live in **`ns_ai_token`** only — **no** `ns_product_license.token`, **no** ns_license schema change for tokens.
 - Client persists **`license_keys`** (comma-separated) on runtime settings; `Token.php` receives that string.
+- **Trial credit amount:** server-only (`ns_ai_settings.trial_credits` → env → default 100). Client must not hardcode grant amounts; display balance from `Balance.php` and product cards from `Products.php`.
 - Server matches if **any** requested key appears in the row's `license_keys` column; returns one Bearer token for the shared pool.
 - Admin TYPO3 extension is on **`packages/<server-ai-ext>/`**, not on `composer.t3planet.cloud`.
 
