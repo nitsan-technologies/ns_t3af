@@ -305,7 +305,7 @@ final class T3PlanetHttpClient
     {
         $errorCode = (string) ($decoded['error_code'] ?? $decoded['error'] ?? CreditsApiErrorCodes::API_ERROR);
         $message = (string) ($decoded['message'] ?? '');
-        foreach (['upstream_message', 'upstream_error', 'detail'] as $detailKey) {
+        foreach (['upstream_message', 'upstream_error', 'upstream_body_snippet', 'detail'] as $detailKey) {
             $detail = trim((string) ($decoded[$detailKey] ?? ''));
             if ($detail !== '' && !str_contains($message, $detail)) {
                 $message = $message !== '' && $message !== $errorCode
