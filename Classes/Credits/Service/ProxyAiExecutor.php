@@ -56,7 +56,7 @@ class ProxyAiExecutor
         private readonly T3PlanetSseStreamParser $sseParser,
         private readonly TokenResolver $tokenResolver,
         private readonly CreditsDomainResolver $domainResolver,
-        private readonly LocalReceiptCache $receiptCache,
+        private readonly CreditsChargeRecorder $chargeRecorder,
         private readonly EventDispatcherInterface $events,
         private readonly RequestTelemetryService $telemetry,
         private readonly CreditsFeatureKeyMapper $featureKeyMapper,
@@ -108,7 +108,7 @@ class ProxyAiExecutor
             $settled = true;
             $latencyMs = (int) (microtime(true) * 1000) - $start;
             $summary = $this->mapUsageToStreamSummary($payload, $requestUuid);
-            $this->receiptCache->storeFromCharge($requestUuid, $featureKey, $payload);
+            $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
             $response = $this->mapChargeToAiResponse($payload, $requestUuid, $latencyMs, $before->getOptions());
             $this->persistCompletion($provider, $before->getOptions(), $before->getPrompt(), $response, self::CALL_STREAM);
             $this->events->dispatch(new AfterProviderResponseEvent(
@@ -232,7 +232,7 @@ class ProxyAiExecutor
         }
 
         $response = $this->mapChargeToAiResponse($payload, $requestUuid, (int) (microtime(true) * 1000) - $start, $before->getOptions());
-        $this->receiptCache->storeFromCharge($requestUuid, $featureKey, $payload);
+        $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
         $this->persistCompletion($provider, $before->getOptions(), $before->getPrompt(), $response);
         $this->events->dispatch(new AfterProviderResponseEvent(
             $provider,
@@ -304,7 +304,7 @@ class ProxyAiExecutor
             );
             throw $e;
         } catch (ClientExceptionInterface $e) {
-            $this->abortQuietly($domain, $requestUuid);
+            $this->abortQuietly($domain, $requestUuid, $featureKey);
             $this->dispatchFailure(
                 $provider,
                 $e,
@@ -318,6 +318,7 @@ class ProxyAiExecutor
         }
 
         $response = $this->mapEmbedToEmbeddingResponse($payload, $requestUuid, (int) (microtime(true) * 1000) - $start);
+        $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
         $this->persistEmbedding($provider, $before->getOptions(), $before->getPrompt(), $response);
         // Budget/usage listeners bind to AfterProviderResponseEvent; credits
         // embedding usage must count against per-user budgets too (CTX-14).
@@ -591,8 +592,8 @@ class ProxyAiExecutor
     {
         try {
             $payload = $this->apiClient->abort($domain, $requestUuid, $this->tokenResolver->resolve());
-            if ($featureKey !== null && ($payload['status'] ?? false) === true) {
-                $this->receiptCache->storeFromCharge($requestUuid, $featureKey, $payload);
+            if ($featureKey !== null) {
+                $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
             }
         } catch (\Throwable) {
         }

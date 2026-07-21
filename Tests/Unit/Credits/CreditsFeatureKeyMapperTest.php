@@ -157,6 +157,18 @@ final class CreditsFeatureKeyMapperTest extends TestCase
         );
     }
 
+    public function testImageEndpointAlwaysUsesImageGenerationCatalogKey(): void
+    {
+        self::assertSame(
+            CreditsFeatureKeyCatalog::IMAGE_GENERATION,
+            $this->mapper->map(
+                'media.dalle',
+                new AiOptions(extensionKey: 'ns_t3ai'),
+                CreditsApiEndpoint::Image,
+            ),
+        );
+    }
+
     public function testMapsMediaTtsToTextToSpeechForT3aa(): void
     {
         self::assertSame(
