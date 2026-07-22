@@ -31,7 +31,6 @@ use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
 use NITSAN\NsT3AF\Event\ProviderTestConnectionEvent;
 use NITSAN\NsT3AF\Exception\CipherException;
-use NITSAN\NsT3AF\Governance\PrivacyLevel;
 use NITSAN\NsT3AF\Provider\AdapterRegistry;
 use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\Contract\VerifyResult;
@@ -51,12 +50,9 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
-use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use TYPO3\CMS\Core\Http\RedirectResponse;
 use TYPO3\CMS\Core\Page\PageRenderer;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * AI providers: HTML list + drawer, and JSON AJAX endpoints for the same UI.
@@ -87,7 +83,6 @@ final class ProviderController extends AbstractAiUniverseModuleController
         private readonly CreditsDashboardService $creditsDashboardService,
         private readonly RuntimeSettingsService $runtimeSettings,
         private readonly CreditsReturnUrlBuilder $creditsReturnUrlBuilder,
-        private readonly ConnectionPool $connectionPool,
         PageRenderer $pageRenderer,
         CreditOverviewLineService $creditOverviewLine,
         ModuleStateService $moduleStateService,
@@ -233,7 +228,6 @@ final class ProviderController extends AbstractAiUniverseModuleController
             'saveUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.providers.save', $routeParams),
             'cancelUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.providers', $routeParams),
             'environmentRequirementAlerts' => $this->credentialEnvironmentAlerts(),
-            ...$this->governanceViewData(null),
             ...$this->embeddingModelFieldViewData(),
         ]);
 
@@ -271,7 +265,6 @@ final class ProviderController extends AbstractAiUniverseModuleController
             'saveUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.providers.save', $routeParams),
             'cancelUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.providers', $routeParams),
             'environmentRequirementAlerts' => $this->credentialEnvironmentAlerts(),
-            ...$this->governanceViewData($provider),
             ...$this->embeddingModelFieldViewData(),
         ]);
 
@@ -313,7 +306,6 @@ final class ProviderController extends AbstractAiUniverseModuleController
                 'saveUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.providers.save', $routeParams),
                 'cancelUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.providers', $routeParams),
                 'environmentRequirementAlerts' => $this->credentialEnvironmentAlerts(),
-                ...$this->governanceViewData($existingProvider, $body),
                 ...$this->embeddingModelFieldViewData(),
             ]);
 
@@ -647,78 +639,6 @@ final class ProviderController extends AbstractAiUniverseModuleController
         }
 
         return $ordered;
-    }
-
-    /**
-     * Extra view variables for the drawer Access / governance section.
-     *
-     * @param array<string, mixed> $submitted Repopulation body on a failed save.
-     * @return array<string, mixed>
-     */
-    private function governanceViewData(?Provider $provider, array $submitted = []): array
-    {
-        $selectedGroups = [];
-        if (array_key_exists('be_groups', $submitted)) {
-            foreach ((array) $submitted['be_groups'] as $id) {
-                $selectedGroups[(int) $id] = true;
-            }
-        } elseif ($provider !== null) {
-            foreach ($provider->beGroups as $id) {
-                $selectedGroups[(int) $id] = true;
-            }
-        }
-
-        $privacy = (string) ($submitted['privacy_level'] ?? ($provider !== null ? $provider->privacyLevel : PrivacyLevel::Standard->value));
-
-        $noRerouting = array_key_exists('no_rerouting', $submitted)
-            ? (bool) $submitted['no_rerouting']
-            : (bool) ($provider !== null ? $provider->noRerouting : false);
-
-        return [
-            'availableGroups' => $this->backendGroups(),
-            'selectedGroups' => $selectedGroups,
-            'privacyLevels' => $this->privacyLevelChoices(),
-            'selectedPrivacy' => $privacy,
-            'noReroutingChecked' => self::fluidFlag($noRerouting),
-        ];
-    }
-
-    /**
-     * @return list<array{uid:int, title:string}>
-     */
-    private function backendGroups(): array
-    {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('be_groups');
-        $queryBuilder->getRestrictions()
-            ->removeAll()
-            ->add(GeneralUtility::makeInstance(DeletedRestriction::class));
-
-        $rows = $queryBuilder
-            ->select('uid', 'title')
-            ->from('be_groups')
-            ->orderBy('title')
-            ->executeQuery()
-            ->fetchAllAssociative();
-
-        $out = [];
-        foreach ($rows as $row) {
-            $out[] = ['uid' => (int) $row['uid'], 'title' => (string) $row['title']];
-        }
-
-        return $out;
-    }
-
-    /**
-     * @return list<array{value:string, label:string}>
-     */
-    private function privacyLevelChoices(): array
-    {
-        $out = [];
-        foreach (PrivacyLevel::cases() as $case) {
-            $out[] = ['value' => $case->value, 'label' => $case->label()];
-        }
-
-        return $out;
     }
 
     /**
