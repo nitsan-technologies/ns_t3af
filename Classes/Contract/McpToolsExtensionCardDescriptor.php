@@ -21,6 +21,8 @@ namespace NITSAN\NsT3AF\Contract;
 
 /**
  * Metadata for one MCP Tools backend extension card.
+ *
+ * @api
  */
 final class McpToolsExtensionCardDescriptor
 {

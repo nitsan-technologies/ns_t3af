@@ -26,6 +26,8 @@ use NITSAN\NsT3AF\Access\Dto\RecordPermissionDescriptor;
 
 /**
  * Registers AI Access module cards, feature bits, record ACL rows, and runtime bindings.
+ *
+ * @api
  */
 interface AiAccessCatalogProviderInterface
 {

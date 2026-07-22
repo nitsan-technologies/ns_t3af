@@ -206,6 +206,8 @@ class AiUniverseUtilityHelper
      *
      * v13.1+ / v14: @typo3/backend/tree/page-tree-element
      * v12: @typo3/backend/page-tree/page-tree-element
+     *
+     * @api
      */
     public static function getPageTreeNavigationComponent(): string
     {
