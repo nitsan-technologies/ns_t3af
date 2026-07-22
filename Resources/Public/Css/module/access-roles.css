@@ -67,6 +67,16 @@
     background: var(--typo3-surface-container-lowest, #fff);
 }
 
+.aiu-ar-limit-tile--inactive {
+    opacity: 0.72;
+    background: var(--typo3-surface-container-low, #f5f5f5);
+}
+
+.aiu-ar-limit-tile--inactive .form-check-input:disabled,
+.aiu-ar-limit-tile--inactive .form-control:disabled {
+    cursor: not-allowed;
+}
+
 .aiu-ar-preset-card {
     cursor: pointer;
     transition: box-shadow 0.15s ease;

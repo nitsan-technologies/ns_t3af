@@ -99,6 +99,7 @@ function initAccessRolesRoot(root) {
   const recordsMeta = Array.isArray(bootstrap.records) ? bootstrap.records : [];
   const featureRecordDefaults = Array.isArray(bootstrap.featureRecordDefaults) ? bootstrap.featureRecordDefaults : [];
   const providers = Array.isArray(bootstrap.providers) ? bootstrap.providers : [];
+  const creditsModeEnabled = bootstrap.creditsModeEnabled === true;
   let matrix = bootstrap.matrix ?? { groups: [] };
   /** @type {Array<{id:string,label:string,accent?:string,moduleKeys?:string[],adminModuleKeys?:string[],featureIds?:string[],recordIds?:string[]}>} */
   const matrixScopes = Array.isArray(matrix.scopes) ? matrix.scopes : [];
@@ -887,10 +888,18 @@ function initAccessRolesRoot(root) {
 
   function renderStepLimits() {
     const l = wizardConfig.limits ?? {};
+    const creditCapInactive = !creditsModeEnabled;
+    const creditCapDisabled = creditCapInactive ? 'disabled' : '';
+    const creditCapTileClass = creditCapInactive
+      ? 'aiu-ar-limit-tile aiu-ar-limit-tile--inactive h-100'
+      : 'aiu-ar-limit-tile h-100';
+    const creditCapHelper = creditCapInactive
+      ? 'Only applies when T3Planet Credits mode is active. With Your Own API Keys, credits are not tracked and this limit has no effect.'
+      : 'Each member of this group may use up to this many T3Planet credits per calendar month. Counted per members';
     return `
       <h3 class="aiu-ar-section-title">Governance &amp; limits</h3>
       <div class="row g-3">
-        <div class="col-md-6">
+        <div class="col-md-12">
           <div class="aiu-ar-limit-tile h-100">
             <div class="form-check form-switch mb-2">
               <input class="form-check-input" type="checkbox" id="ws" data-limit-key="workspaceEnforcement" ${l.workspaceEnforcement ? 'checked' : ''} />
@@ -900,14 +909,14 @@ function initAccessRolesRoot(root) {
           </div>
         </div>
         <div class="col-md-6">
-          <div class="aiu-ar-limit-tile h-100">
+          <div class="${creditCapTileClass}"${creditCapInactive ? ' aria-disabled="true"' : ''}>
             <div class="form-check form-switch mb-2">
-              <input class="form-check-input" type="checkbox" id="cc" data-limit-enabled="creditCapEnabled" ${l.creditCapEnabled ? 'checked' : ''} />
+              <input class="form-check-input" type="checkbox" id="cc" data-limit-enabled="creditCapEnabled" ${l.creditCapEnabled ? 'checked' : ''} ${creditCapDisabled} />
               <label class="form-check-label" for="cc">Monthly credit cap</label>
             </div>
-            <span class="small text-variant d-block mb-2">Each member of this group may use up to this many T3Planet credits per calendar month. Counted per editor.</span>
+            <span class="small text-variant d-block mb-2">${creditCapHelper}</span>
             <div class="input-group">
-              <input type="number" min="0" class="form-control" data-limit-key="creditCapMonthly" value="${l.creditCapMonthly ?? 500}" aria-label="Monthly credit cap" />
+              <input type="number" min="0" class="form-control" data-limit-key="creditCapMonthly" value="${l.creditCapMonthly ?? 500}" aria-label="Monthly credit cap" ${creditCapDisabled} />
               <span class="input-group-text">credits / month</span>
             </div>
           </div>
@@ -918,7 +927,7 @@ function initAccessRolesRoot(root) {
               <input class="form-check-input" type="checkbox" id="dr" data-limit-enabled="dailyRequestCapEnabled" ${l.dailyRequestCapEnabled ? 'checked' : ''} />
               <label class="form-check-label" for="dr">Daily request limit</label>
             </div>
-            <span class="small text-variant d-block mb-2">Each member may make up to this many AI requests per calendar day. Counted per editor.</span>
+            <span class="small text-variant d-block mb-2">Each member may make up to this many AI requests per calendar day. Counted per members.</span>
             <div class="input-group">
               <input type="number" min="0" class="form-control" data-limit-key="dailyRequestCap" value="${l.dailyRequestCap ?? 100}" aria-label="Daily request limit" />
               <span class="input-group-text">requests / day</span>
