@@ -905,6 +905,7 @@ function initAccessRolesRoot(root) {
               <input class="form-check-input" type="checkbox" id="cc" data-limit-enabled="creditCapEnabled" ${l.creditCapEnabled ? 'checked' : ''} />
               <label class="form-check-label" for="cc">Monthly credit cap</label>
             </div>
+            <span class="small text-variant d-block mb-2">Each member of this group may use up to this many T3Planet credits per calendar month. Counted per editor.</span>
             <div class="input-group">
               <input type="number" min="0" class="form-control" data-limit-key="creditCapMonthly" value="${l.creditCapMonthly ?? 500}" aria-label="Monthly credit cap" />
               <span class="input-group-text">credits / month</span>
@@ -917,6 +918,7 @@ function initAccessRolesRoot(root) {
               <input class="form-check-input" type="checkbox" id="dr" data-limit-enabled="dailyRequestCapEnabled" ${l.dailyRequestCapEnabled ? 'checked' : ''} />
               <label class="form-check-label" for="dr">Daily request limit</label>
             </div>
+            <span class="small text-variant d-block mb-2">Each member may make up to this many AI requests per calendar day. Counted per editor.</span>
             <div class="input-group">
               <input type="number" min="0" class="form-control" data-limit-key="dailyRequestCap" value="${l.dailyRequestCap ?? 100}" aria-label="Daily request limit" />
               <span class="input-group-text">requests / day</span>
