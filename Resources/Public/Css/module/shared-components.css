@@ -270,15 +270,21 @@
 /* Provider default star — filled primary when active */
 .btn.btn-default.aiu-provider-default-btn.is-default,
 .aiu-provider-default-btn.is-default {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
     color: var(--typo3-state-primary-bg, var(--typo3-link-color, var(--aiu-primary, #205eb5)));
     opacity: 1;
 }
 
-.btn.btn-default.aiu-provider-default-btn.is-default .icon,
-.btn.btn-default.aiu-provider-default-btn.is-default typo3-backend-icon,
-.aiu-provider-default-btn.is-default .icon,
-.aiu-provider-default-btn.is-default typo3-backend-icon {
+.btn.btn-default.aiu-provider-default-btn.is-default .aiu-default-icon,
+.aiu-provider-default-btn.is-default .aiu-default-icon {
+    display: block;
+    width: 16px;
+    height: 16px;
     color: inherit;
+    pointer-events: none;
 }
 
 /* Provider test-connection wifi icon */
