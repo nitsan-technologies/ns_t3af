@@ -75,7 +75,6 @@ final class ProviderFormService
         'is_default',
         'is_enabled',
         'enabled_for_dashboard',
-        'no_rerouting',
     ];
 
     public function __construct(

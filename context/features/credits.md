@@ -14,11 +14,23 @@
 
 ## What it does
 
-- **Own API Keys** mode (default): `T3PlanetCreditAiService` forwards to inner `AiService` / local adapters.
-- **T3Planet Credits** mode (when gate open): `ProxyAiExecutor` routes `complete()`, `stream()`, `embed()` to composer API (`Charge.php`, `Stream.php`, `Embed.php`, `Abort.php`).
+- **Own API Keys** mode (default): decorators forward to inner services / local adapters.
+- **T3Planet Credits** mode (when gate open): proxy executors route billable calls to the composer API; every successful settlement writes a row to `tx_nst3af_credit_receipt` via `CreditsChargeRecorder` → `LocalReceiptCache` (Recent AI Usage dashboard).
 - Shared credit pool per install; token auth via `TokenResolver`.
 - Backend: mode toggle, credits dashboard, balance/plan/usage, buy credits, feature catalog.
-- Child extensions unchanged at call site — still use `AiServiceInterface`.
+- Child extensions unchanged at call site — still use `AiServiceInterface`, `TtsServiceInterface`, `ImageGenerationServiceInterface`.
+
+### Proxy + receipt matrix (credits mode ON)
+
+| Call | Decorator | Proxy executor | API endpoint | Local receipt |
+|---|---|---|---|---|
+| `complete()` | `T3PlanetCreditAiService` | `ProxyAiExecutor` | `Charge.php` | yes |
+| `stream()` | `T3PlanetCreditAiService` | `ProxyAiExecutor` | `Stream.php` / `Abort.php` | yes |
+| `embed()` | `T3PlanetCreditAiService` | `ProxyAiExecutor` | `Embed.php` | yes |
+| `speak()` | `T3PlanetCreditTtsService` | `ProxyTtsExecutor` | `Speak.php` | yes |
+| `generate()` / `variation()` | `T3PlanetCreditImageService` | `ProxyImageExecutor` | `Image.php` | yes |
+
+AI Logs (`RequestTelemetryService`) and Recent AI Usage (`LocalReceiptCache`) both update on every successful proxy call above.
 
 ---
 
@@ -26,8 +38,13 @@
 
 | Area | Path |
 |---|---|
-| Decorator | `Classes/Credits/Service/T3PlanetCreditAiService.php` |
-| Proxy executor | `Classes/Credits/Service/ProxyAiExecutor.php` |
+| AI decorator | `Classes/Credits/Service/T3PlanetCreditAiService.php` |
+| TTS decorator | `Classes/Credits/Service/T3PlanetCreditTtsService.php` |
+| Image decorator | `Classes/Credits/Service/T3PlanetCreditImageService.php` |
+| AI proxy | `Classes/Credits/Service/ProxyAiExecutor.php` |
+| TTS proxy | `Classes/Credits/Service/ProxyTtsExecutor.php` |
+| Image proxy | `Classes/Credits/Service/ProxyImageExecutor.php` |
+| Receipt mirror | `Classes/Credits/Service/CreditsChargeRecorder.php`, `LocalReceiptCache.php` |
 | Mode toggle | `CreditModeResolver`, `RuntimeSettingsService` |
 | Runtime DB | `tx_nst3af_runtime_setting` |
 | Token resolve | `Classes/Credits/Service/TokenResolver.php` |

@@ -122,8 +122,13 @@ services:
     alias: NITSAN\NsT3AF\Credits\Service\T3PlanetCreditTtsService
     public: true
 
+  NITSAN\NsT3AF\Credits\Service\T3PlanetCreditImageService:
+    decorates: NITSAN\NsT3AF\Service\ImageGenerationService
+    arguments:
+      $inner: '@.inner'
+
   NITSAN\NsT3AF\Api\ImageGenerationServiceInterface:
-    alias: NITSAN\NsT3AF\Service\ImageGenerationService
+    alias: NITSAN\NsT3AF\Credits\Service\T3PlanetCreditImageService
     public: true
 
   NITSAN\NsT3AF\Credits\Service\T3PlanetCreditAiService:

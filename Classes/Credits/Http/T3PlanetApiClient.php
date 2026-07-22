@@ -215,6 +215,36 @@ class T3PlanetApiClient
     }
 
     /**
+     * Image generation via Image.php. Returns a JSON envelope carrying image
+     * payloads plus the standard credits/charged fields.
+     *
+     * @param array<string, mixed> $metaJson
+     * @return array<string, mixed>
+     */
+    public function generateImage(
+        string $domain,
+        string $requestUuid,
+        string $featureKey,
+        array $metaJson,
+        #[\SensitiveParameter]
+        string $bearerToken,
+        ?string $extensionKey = null,
+    ): array {
+        $body = [
+            'domain' => $domain,
+            'request_uuid' => $requestUuid,
+            'feature_key' => $featureKey !== '' ? $featureKey : 'image_generation',
+            'meta_json' => $metaJson,
+        ];
+        $extensionKey = trim((string) ($extensionKey ?? ($metaJson['extension_key'] ?? '')));
+        if ($extensionKey !== '') {
+            $body['extension_key'] = $extensionKey;
+        }
+
+        return $this->http->postJson('Image', $body, $bearerToken);
+    }
+
+    /**
      * Duplicates caller `extension_key` at top level when present (server may persist it later).
      *
      * @param array<string, mixed>      $body

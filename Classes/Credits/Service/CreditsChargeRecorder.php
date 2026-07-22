@@ -17,27 +17,28 @@ declare(strict_types=1);
  * and COMMERCIAL-LICENSE.md files that were distributed with this source code.
  */
 
-namespace NITSAN\NsT3AF\Api;
+namespace NITSAN\NsT3AF\Credits\Service;
 
 /**
- * Result of an image generation call via {@see ImageGenerationServiceInterface}.
+ * Persists a successful T3Planet charge into the local receipt mirror.
  *
- * Each entry in {@see $images} may contain `url`, `b64_json`, and/or `revised_prompt`.
- *
- * @api
+ * @internal
  */
-final readonly class ImageGenerationResponse
+class CreditsChargeRecorder
 {
-    /**
-     * @param list<array{url?: string, b64_json?: string, revised_prompt?: string}> $images
-     */
     public function __construct(
-        public array $images,
-        public string $modelId,
-        public string $providerIdentifier,
-        public int $latencyMs = 0,
-        public int $tokensInput = 0,
-        public int $tokensTotal = 0,
-        public ?CreditsUsage $credits = null,
+        private readonly LocalReceiptCache $receiptCache,
     ) {}
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    public function record(string $requestUuid, string $featureKey, array $payload): void
+    {
+        if (($payload['status'] ?? false) !== true) {
+            return;
+        }
+
+        $this->receiptCache->storeFromCharge($requestUuid, $featureKey, $payload);
+    }
 }

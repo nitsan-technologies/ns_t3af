@@ -118,6 +118,10 @@ final class CreditsFeatureKeyMapper
             return CreditsFeatureKeyCatalog::TEXT_TO_SPEECH;
         }
 
+        if ($endpoint === CreditsApiEndpoint::Image) {
+            return CreditsFeatureKeyCatalog::IMAGE_GENERATION;
+        }
+
         if (CreditsFeatureKeyCatalog::isCatalogKey($clientFeatureKey)) {
             return $clientFeatureKey;
         }
@@ -146,6 +150,7 @@ final class CreditsFeatureKeyMapper
             CreditsApiEndpoint::Embed => CreditsFeatureKeyCatalog::EMBEDDING,
             CreditsApiEndpoint::Stream => CreditsFeatureKeyCatalog::STREAM,
             CreditsApiEndpoint::Speak => CreditsFeatureKeyCatalog::TEXT_TO_SPEECH,
+            CreditsApiEndpoint::Image => CreditsFeatureKeyCatalog::IMAGE_GENERATION,
             CreditsApiEndpoint::Charge => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
         };
     }

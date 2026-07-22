@@ -71,6 +71,7 @@ class ProxyTtsExecutor
         private readonly TokenResolver $tokenResolver,
         private readonly CreditsDomainResolver $domainResolver,
         private readonly CreditsFeatureKeyMapper $featureKeyMapper,
+        private readonly CreditsChargeRecorder $chargeRecorder,
         private readonly EventDispatcherInterface $events,
         private readonly RequestTelemetryService $telemetry,
         private readonly LoggerInterface $logger,
@@ -142,6 +143,8 @@ class ProxyTtsExecutor
         $credits = is_array($payload['credits'] ?? null) ? $payload['credits'] : [];
         $charged = is_array($payload['charged'] ?? null) ? $payload['charged'] : [];
         $usage = CreditsUsage::fromApiPayload($credits, $charged, $requestUuid, $payload);
+
+        $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
 
         $response = new TtsResponse(
             audio: $audio,
