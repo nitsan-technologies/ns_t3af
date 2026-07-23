@@ -83,6 +83,24 @@ Setting **`trial_credits=0`** on the server disables new grants; existing accoun
 
 ---
 
+## Post-checkout return (`flash=` contract)
+
+After Pabbly hosted checkout, the shop theme POSTs verifyhosted JSON to Composer `PabblyPurchaseComplete`, then redirects the browser to Composer’s `redirect_url` (TYPO3 backend URL from `cf_redirectto_*`).
+
+Append a `flash` query param so Overview / Providers / Buy Credits can show a banner:
+
+| Completer response | Redirect query |
+|---|---|
+| `pending: true` (bank transfer / offline) | `flash=credits-payment-pending` |
+| `applied: true` | `flash=credits-payment-applied` |
+| rejected / hard failure | `flash=credits-payment-failed` |
+
+Example: `{redirect_url}?flash=credits-payment-pending` (use `&` when the URL already has a query).
+
+UI: `Partials/Credits/PaymentFlash.html` — info banner for pending (“credits will be added once your bank transfer clears”), success for applied, warn for failed. Credits are granted later via Composer `PabblyWebhook` when Pabbly flips the order to `live`.
+
+---
+
 ## Billing model
 
 Server debits **after** upstream AI from actual token usage:

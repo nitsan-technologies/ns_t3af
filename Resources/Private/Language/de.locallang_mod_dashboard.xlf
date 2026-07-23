@@ -1807,6 +1807,18 @@
                 <source>Provider not found.</source>
                 <target>Provider nicht gefunden.</target>
             </trans-unit>
+            <trans-unit id="credits.flash.paymentPending">
+                <source>Payment pending — credits will be added once your bank transfer clears.</source>
+                <target>Zahlung ausstehend — Guthaben wird gutgeschrieben, sobald Ihre Banküberweisung eingegangen ist.</target>
+            </trans-unit>
+            <trans-unit id="credits.flash.paymentApplied">
+                <source>Credits purchase applied. Your balance will update shortly.</source>
+                <target>Guthabenkauf übernommen. Ihr Kontostand wird in Kürze aktualisiert.</target>
+            </trans-unit>
+            <trans-unit id="credits.flash.paymentFailed">
+                <source>Credits purchase could not be completed. Please try again or contact support.</source>
+                <target>Der Guthabenkauf konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut oder kontaktieren Sie den Support.</target>
+            </trans-unit>
             <trans-unit id="provider.drawer.titleNew">
                 <source>Add AI Provider</source>
                 <target>AI Provider hinzufügen</target>

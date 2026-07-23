@@ -1357,6 +1357,15 @@
 			<trans-unit id="provider.flash.notFound" resname="provider.flash.notFound">
 				<source>Provider not found.</source>
 			</trans-unit>
+			<trans-unit id="credits.flash.paymentPending" resname="credits.flash.paymentPending">
+				<source>Payment pending — credits will be added once your bank transfer clears.</source>
+			</trans-unit>
+			<trans-unit id="credits.flash.paymentApplied" resname="credits.flash.paymentApplied">
+				<source>Credits purchase applied. Your balance will update shortly.</source>
+			</trans-unit>
+			<trans-unit id="credits.flash.paymentFailed" resname="credits.flash.paymentFailed">
+				<source>Credits purchase could not be completed. Please try again or contact support.</source>
+			</trans-unit>
 			<trans-unit id="provider.drawer.titleNew" resname="provider.drawer.titleNew">
 				<source>Add AI Provider</source>
 			</trans-unit>
