@@ -251,6 +251,12 @@ services:
         identifier: 'nst3af/access/custom-options-bootstrap'
         event: TYPO3\CMS\Core\Core\Event\BootCompletedEvent
 
+  NITSAN\NsT3AF\Bootstrap\MailTemplatePathsBootstrapListener:
+    tags:
+      - name: event.listener
+        identifier: 'nst3af/mail/template-paths-bootstrap'
+        event: TYPO3\CMS\Core\Core\Event\BootCompletedEvent
+
   NITSAN\NsT3AF\EventListener\BackendUserLoginListener:
     tags:
       - name: event.listener

@@ -40,9 +40,6 @@ foreach ([
     }
 }
 
-$GLOBALS['TYPO3_CONF_VARS']['MAIL']['templateRootPaths'][1779278704] = 'EXT:ns_t3af/Resources/Private/Templates/Email/';
-$GLOBALS['TYPO3_CONF_VARS']['MAIL']['layoutRootPaths'][1779278704] = 'EXT:ns_t3af/Resources/Private/Layouts/Email/';
-
 // Governance: per-capability backend permissions. Assign to be_groups under
 // "Access Lists → Custom module options" to gate which AI capabilities a group
 // may invoke. When no nst3af:* option is granted to any group, the
