@@ -109,7 +109,17 @@ final class PromptContractCatalogSupport
     }
 
     /**
-     * @return list<array{uid:int,prompt_type:string,scope:string,prompt_title:string,prompt_text:string,isBuiltin:bool}>
+     * @return list<array{
+     *   uid: int,
+     *   prompt_type: string,
+     *   scope: string,
+     *   prompt_title: string,
+     *   prompt_text: string,
+     *   isBuiltin: bool,
+     *   engineProfile?: string,
+     *   resultStyle?: string,
+     *   dataSource?: string
+     * }>
      */
     public static function getBuiltinPromptRowsForScope(object $registry, string $scope): array
     {
@@ -121,7 +131,7 @@ final class PromptContractCatalogSupport
             $result = $registry->getCatalogRowsForScope($scope);
 
             return is_array($result)
-                ? array_map(static fn(array $row): array => [
+                ? array_values(array_map(static fn(array $row): array => [
                     'uid' => (int) $row['uid'],
                     'prompt_type' => (string) $row['prompt_type'],
                     'scope' => (string) $row['scope'],
@@ -131,7 +141,7 @@ final class PromptContractCatalogSupport
                     'engineProfile' => (string) ($row['engineProfile'] ?? ''),
                     'resultStyle' => (string) ($row['resultStyle'] ?? ''),
                     'dataSource' => (string) ($row['dataSource'] ?? ''),
-                ], $result)
+                ], $result))
                 : [];
         }
 

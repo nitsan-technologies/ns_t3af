@@ -1,3 +1,12 @@
+#
+# AI Logs reads sys_log filtered by channel + tstamp range, ordered by tstamp.
+# Core ships no index leading (channel, tstamp); without it every log-tab
+# render filesorts a shared, heavily-written table (PF-01).
+#
+CREATE TABLE sys_log (
+    KEY nst3af_channel_tstamp (channel, tstamp)
+);
+
 CREATE TABLE tx_nst3af_provider (
     identifier VARCHAR(64) NOT NULL DEFAULT '',
     title VARCHAR(255) NOT NULL DEFAULT '',
@@ -61,6 +70,7 @@ CREATE TABLE tx_nst3af_request_log (
     credits_used DECIMAL(12,6) DEFAULT 0.000000 NOT NULL,
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
     be_user_id INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    brand_context_profile_uid INT(11) UNSIGNED DEFAULT 0 NOT NULL,
     quality_score SMALLINT(5) UNSIGNED DEFAULT 0 NOT NULL,
     quality_dimensions JSON DEFAULT NULL,
     raw_meta MEDIUMTEXT,
@@ -71,7 +81,8 @@ CREATE TABLE tx_nst3af_request_log (
     KEY req_success_time (success, crdate),
     KEY req_model_time (model_used, crdate),
     KEY req_extension_time (extension_key, crdate),
-    KEY req_feature_time (feature_key, crdate)
+    KEY req_feature_time (feature_key, crdate),
+    KEY req_provideruid_time (provider_uid, crdate)
 );
 
 CREATE TABLE tx_nst3af_extension_setting (
@@ -356,6 +367,7 @@ CREATE TABLE tx_nst3af_brand_context_profile (
     sample_content VARCHAR(600) NOT NULL DEFAULT '',
     compliance_notes VARCHAR(400) NOT NULL DEFAULT '',
     document_extract MEDIUMTEXT,
+    include_document_in_prompt TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
     is_default TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
     completeness TINYINT(3) UNSIGNED DEFAULT 0 NOT NULL,
     crdate INT(11) UNSIGNED DEFAULT 0 NOT NULL,

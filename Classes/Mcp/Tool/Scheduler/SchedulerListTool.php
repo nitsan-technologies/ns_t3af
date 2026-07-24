@@ -115,11 +115,11 @@ readonly class SchedulerListTool implements McpNonAiToolInterface
         }
 
         if (preg_match('/O:\\d+:\"([^\"]+)\"/', $serializedTaskObject, $match) === 1) {
-            return (string) ($match[1] ?? '');
+            return $match[1];
         }
 
         if (preg_match('/commandIdentifier\";s:\\d+:\"([^\"]+)\"/', $serializedTaskObject, $match) === 1) {
-            return (string) ($match[1] ?? '');
+            return $match[1];
         }
 
         return '';

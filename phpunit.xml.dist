@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="Build/phpunit/UnitTestsBootstrap.php"
+         colors="true"
+         cacheDirectory=".Build/.phpunit.cache">
+    <testsuites>
+        <testsuite name="ns_t3af unit">
+            <directory>Tests/Unit</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <ini name="display_errors" value="1"/>
+        <env name="TYPO3_CONTEXT" value="Testing"/>
+    </php>
+</phpunit>

@@ -75,6 +75,7 @@ final class WizardFeatureToggleService
     }
 
     /**
+     * @param list<string> $childFields
      * @param array<string, mixed> $currentValues
      * @param array<string, string> $schemaDefaults
      */

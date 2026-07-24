@@ -74,7 +74,7 @@ final class LicenseKeyResolver
     /**
      * Keys present in $discoveredCommaSeparated but not yet in runtime storage.
      */
-    public function buildNewLicenseKeysCommaSeparated(string $discoveredCommaSeparated, string $storedCommaSeparated): string
+    public function buildNewLicenseKeysCommaSeparated(#[\SensitiveParameter] string $discoveredCommaSeparated, #[\SensitiveParameter] string $storedCommaSeparated): string
     {
         $new = array_diff(
             $this->parseLicenseKeySet($discoveredCommaSeparated),
@@ -88,7 +88,7 @@ final class LicenseKeyResolver
     /**
      * @return list<string>
      */
-    public function parseLicenseKeySet(string $commaSeparated): array
+    public function parseLicenseKeySet(#[\SensitiveParameter] string $commaSeparated): array
     {
         $commaSeparated = trim($commaSeparated);
         if ($commaSeparated === '') {

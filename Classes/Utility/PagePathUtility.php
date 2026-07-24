@@ -20,7 +20,6 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Utility;
 
 use TYPO3\CMS\Backend\Utility\BackendUtility;
-use TYPO3\CMS\Core\Imaging\Icon;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -46,15 +45,15 @@ final class PagePathUtility
         $dokType = 1;
         $overlay = $iconIdentifier = $pagePath = $iconHtml = '';
         $iconFactory = GeneralUtility::makeInstance(IconFactory::class);
-        $iconSize = self::iconSizeSmall();
-
         if (is_array($pageRecord) && isset($pageRecord['uid'])) {
             $pagePath = substr($pageRecord['_thePathFull'] ?? '', 0, -1);
             $pos = strrpos($pagePath, (string) ($pageRecord['title'] ?? ''));
             if ($pos !== false) {
                 $pagePath = substr($pagePath, 0, $pos);
             }
-            $pageIcon = $iconFactory->getIconForRecord('pages', $pageRecord, $iconSize);
+            $pageIcon = enum_exists(IconSize::class)
+                ? $iconFactory->getIconForRecord('pages', $pageRecord, IconSize::SMALL)
+                : self::legacyRecordIcon($iconFactory, $pageRecord);
             $iconIdentifier = $pageIcon->getIdentifier();
             $dokType = (int) ($pageRecord['doktype'] ?? 1);
             $iconHtml = $pageIcon->render();
@@ -64,7 +63,9 @@ final class PagePathUtility
         }
 
         if ($pageId === 0) {
-            $pageIcon = $iconFactory->getIcon('actions-brand-typo3', $iconSize);
+            $pageIcon = enum_exists(IconSize::class)
+                ? $iconFactory->getIcon('actions-brand-typo3', IconSize::SMALL)
+                : self::legacyIcon($iconFactory, 'actions-brand-typo3');
             $iconHtml = $pageIcon->render();
             $iconIdentifier = 'actions-brand-typo3';
         }
@@ -79,8 +80,30 @@ final class PagePathUtility
         ];
     }
 
-    private static function iconSizeSmall(): IconSize|string
+    /**
+     * TYPO3 12 accepts the legacy string size while TYPO3 13+ requires IconSize.
+     *
+     * @param array<string, mixed> $record
+     */
+    private static function legacyRecordIcon(IconFactory $iconFactory, array $record): \TYPO3\CMS\Core\Imaging\Icon
     {
-        return enum_exists(IconSize::class) ? IconSize::SMALL : Icon::SIZE_SMALL;
+        $icon = (new \ReflectionMethod($iconFactory, 'getIconForRecord'))
+            ->invoke($iconFactory, 'pages', $record, 'small');
+        if (!$icon instanceof \TYPO3\CMS\Core\Imaging\Icon) {
+            throw new \UnexpectedValueException('IconFactory::getIconForRecord() returned an invalid icon.');
+        }
+
+        return $icon;
+    }
+
+    private static function legacyIcon(IconFactory $iconFactory, string $identifier): \TYPO3\CMS\Core\Imaging\Icon
+    {
+        $icon = (new \ReflectionMethod($iconFactory, 'getIcon'))
+            ->invoke($iconFactory, $identifier, 'small');
+        if (!$icon instanceof \TYPO3\CMS\Core\Imaging\Icon) {
+            throw new \UnexpectedValueException('IconFactory::getIcon() returned an invalid icon.');
+        }
+
+        return $icon;
     }
 }

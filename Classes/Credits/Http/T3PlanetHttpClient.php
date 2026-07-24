@@ -44,7 +44,7 @@ final class T3PlanetHttpClient
      * @param array<string, mixed> $body
      * @return array<string, mixed>
      */
-    public function postJson(string $endpoint, array $body, ?string $bearerToken = null, ?string $ifNoneMatch = null): array
+    public function postJson(string $endpoint, array $body, #[\SensitiveParameter] ?string $bearerToken = null, ?string $ifNoneMatch = null): array
     {
         return $this->decodeResponse(
             $this->sendRequest($endpoint, $body, $bearerToken, $ifNoneMatch),
@@ -68,7 +68,7 @@ final class T3PlanetHttpClient
      * @param array<string, mixed> $body
      * @return \Generator<int, string, mixed, void>
      */
-    public function stream(string $endpoint, array $body, ?string $bearerToken = null): \Generator
+    public function stream(string $endpoint, array $body, #[\SensitiveParameter] ?string $bearerToken = null): \Generator
     {
         try {
             $response = $this->requestFactory->request(
@@ -125,9 +125,10 @@ final class T3PlanetHttpClient
     }
 
     /**
+     * @param array<string, mixed> $body
      * @return array{status:int, body:array<string,mixed>|null, etag:?string}
      */
-    public function postJsonWithStatus(string $endpoint, array $body, ?string $bearerToken = null, ?string $ifNoneMatch = null): array
+    public function postJsonWithStatus(string $endpoint, array $body, #[\SensitiveParameter] ?string $bearerToken = null, ?string $ifNoneMatch = null): array
     {
         $response = $this->sendRequest($endpoint, $body, $bearerToken, $ifNoneMatch);
         $status = $response->getStatusCode();
@@ -145,7 +146,7 @@ final class T3PlanetHttpClient
     /**
      * @param array<string, mixed> $body
      */
-    private function sendRequest(string $endpoint, array $body, ?string $bearerToken, ?string $ifNoneMatch): ResponseInterface
+    private function sendRequest(string $endpoint, array $body, #[\SensitiveParameter] ?string $bearerToken, ?string $ifNoneMatch): ResponseInterface
     {
         $headers = ['Content-Type' => 'application/json', 'Accept' => 'application/json'];
         if ($bearerToken !== null && $bearerToken !== '') {
@@ -234,7 +235,7 @@ final class T3PlanetHttpClient
     /**
      * @return array<string, string>
      */
-    private function streamRequestHeaders(?string $bearerToken): array
+    private function streamRequestHeaders(#[\SensitiveParameter] ?string $bearerToken): array
     {
         $headers = [
             'Content-Type' => 'application/json',
@@ -304,7 +305,7 @@ final class T3PlanetHttpClient
     {
         $errorCode = (string) ($decoded['error_code'] ?? $decoded['error'] ?? CreditsApiErrorCodes::API_ERROR);
         $message = (string) ($decoded['message'] ?? '');
-        foreach (['upstream_message', 'upstream_error', 'detail'] as $detailKey) {
+        foreach (['upstream_message', 'upstream_error', 'upstream_body_snippet', 'detail'] as $detailKey) {
             $detail = trim((string) ($decoded[$detailKey] ?? ''));
             if ($detail !== '' && !str_contains($message, $detail)) {
                 $message = $message !== '' && $message !== $errorCode

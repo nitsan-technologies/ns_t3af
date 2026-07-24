@@ -23,6 +23,7 @@ use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Api\AiResponse;
 use NITSAN\NsT3AF\Api\AiServiceInterface;
 use NITSAN\NsT3AF\Api\EmbeddingResponse;
+use NITSAN\NsT3AF\Api\StreamSummary;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
@@ -78,10 +79,11 @@ final class AiService implements AiServiceInterface
         if ($before->isCancelled()) {
             return new AiResponse(
                 content: '',
-                modelId: $this->effectiveModel($provider, $before->getOptions(), self::CALL_EMBED),
+                modelId: $this->effectiveModel($provider, $before->getOptions(), self::CALL_COMPLETE),
                 providerIdentifier: $provider->identifier,
                 cached: false,
                 raw: ['cancelled' => $before->getCancellationReason()],
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
             );
         }
 
@@ -121,6 +123,7 @@ final class AiService implements AiServiceInterface
             latencyMs: (int) (microtime(true) * 1000) - $start,
             cached: false,
             raw: $invocation['raw'],
+            appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
         );
 
         $after = new AfterProviderResponseEvent(
@@ -155,26 +158,64 @@ final class AiService implements AiServiceInterface
             return;
         }
 
+        $start = (int) (microtime(true) * 1000);
+        $content = '';
         try {
             $platform = $adapter->platform($provider);
             $modelId = $this->effectiveModel($provider, $before->getOptions());
 
             if (method_exists($platform, 'stream')) {
                 $payloads = $this->openAiCompatibleInvokePayloads($before->getPrompt(), $provider, $before->getOptions());
-                yield from $this->streamViaPlatformStreamMethod($platform, $modelId, $payloads, $adapter);
-                return;
-            }
-
-            if (method_exists($platform, 'invoke')) {
+                foreach ($this->streamViaPlatformStreamMethod($platform, $modelId, $payloads, $adapter) as $delta) {
+                    $content .= $delta;
+                    yield $delta;
+                }
+            } elseif (method_exists($platform, 'invoke')) {
                 $payloads = $this->symfonyPlatformInvokePayloads($before->getPrompt(), $provider, $modelId, $before->getOptions());
-                yield from $this->streamViaPlatformInvoke($platform, $modelId, $payloads, $adapter);
+                foreach ($this->streamViaPlatformInvoke($platform, $modelId, $payloads, $adapter) as $delta) {
+                    $content .= $delta;
+                    yield $delta;
+                }
+            } else {
+                throw new AdapterRuntimeException(sprintf(
+                    'Adapter "%s" platform exposes neither stream() nor invoke() for streaming.',
+                    $adapter->getType(),
+                ));
+            }
+
+            // Client disconnect mid-stream: skip telemetry / after-event / budget (CTX-12).
+            if (connection_aborted()) {
                 return;
             }
 
-            throw new AdapterRuntimeException(sprintf(
-                'Adapter "%s" platform exposes neither stream() nor invoke() for streaming.',
-                $adapter->getType(),
-            ));
+            $response = new AiResponse(
+                content: $content,
+                modelId: $modelId,
+                providerIdentifier: $provider->identifier,
+                latencyMs: (int) (microtime(true) * 1000) - $start,
+                cached: false,
+                raw: [],
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
+            );
+            $after = new AfterProviderResponseEvent(
+                $provider,
+                $response,
+                $before->getOptions(),
+                $before->getPrompt(),
+            );
+            $this->events->dispatch($after);
+
+            $finalResponse = $after->getResponse();
+            $this->telemetry?->logCompletion(
+                provider: $provider,
+                options: $before->getOptions(),
+                prompt: $before->getPrompt(),
+                response: $finalResponse,
+                requestType: self::CALL_STREAM,
+            );
+            $this->providerRepository?->updateStatus($provider->uid, ['last_used_at' => $GLOBALS['EXEC_TIME'] ?? time()]);
+
+            return new StreamSummary(content: $finalResponse->content);
         } catch (\Throwable $e) {
             $this->telemetry?->logFailure(
                 provider: $provider,
@@ -182,6 +223,7 @@ final class AiService implements AiServiceInterface
                 prompt: $before->getPrompt(),
                 requestType: self::CALL_STREAM,
                 error: $e,
+                latencyMs: (int) (microtime(true) * 1000) - $start,
             );
             $this->events->dispatch(new ProviderRequestFailedEvent($provider, $e, self::CALL_STREAM));
             if ($e instanceof AdapterRuntimeException) {
@@ -264,6 +306,22 @@ final class AiService implements AiServiceInterface
 
         $textForTelemetry = is_array($text) ? implode("\n", $text) : $text;
         $this->telemetry?->logEmbedding($provider, $before->getOptions(), $textForTelemetry, $response);
+        // Budget/usage listeners bind to AfterProviderResponseEvent; embedding
+        // token usage must count against per-user budgets too (CTX-14).
+        $this->events->dispatch(new AfterProviderResponseEvent(
+            $provider,
+            new AiResponse(
+                content: '',
+                modelId: $response->modelId,
+                providerIdentifier: $provider->identifier,
+                tokensInput: $response->tokensInput,
+                latencyMs: $response->latencyMs,
+                raw: ['call' => self::CALL_EMBED],
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
+            ),
+            $before->getOptions(),
+            $before->getPrompt(),
+        ));
         $this->providerRepository?->updateStatus($provider->uid, ['last_used_at' => $GLOBALS['EXEC_TIME'] ?? time()]);
 
         return $response;
@@ -317,6 +375,7 @@ final class AiService implements AiServiceInterface
     }
 
     /**
+     * @param string|list<string> $text
      * @return array{vectors: list<list<float>>, result: mixed}
      */
     private function embedPlatform(object $platform, Provider $provider, string $modelId, string|array $text): array
@@ -327,8 +386,13 @@ final class AiService implements AiServiceInterface
             $invokeOptions = ['task' => 'feature-extraction'];
         }
 
-        // Prefer invoke() for Symfony AI Platform (DeferredResult + TokenUsageExtractor metadata).
-        if (method_exists($platform, 'invoke')) {
+        // The built-in OpenAI-compatible platform implements both invoke() (chat)
+        // and embed() (embeddings); embeddings must never go through invoke(),
+        // which posts to /chat/completions and returns chat content.
+        if ($platform instanceof OpenAiCompatiblePlatform) {
+            $raw = $platform->embed($modelId, $text);
+        } elseif (method_exists($platform, 'invoke')) {
+            // Prefer invoke() for Symfony AI Platform (DeferredResult + TokenUsageExtractor metadata).
             $raw = $this->invokeWithPayloadFallbacks(
                 $platform,
                 'invoke',
@@ -361,7 +425,8 @@ final class AiService implements AiServiceInterface
     }
 
     /**
-     * @return list<array<string, mixed>|string|list<string>>
+     * @param string|list<string> $text
+     * @return list<array<int|string, mixed>|string>
      */
     private function embeddingPayloads(string|array $text): array
     {
@@ -410,10 +475,11 @@ final class AiService implements AiServiceInterface
                 }
                 $embedding = $item['embedding'] ?? null;
                 if (is_array($embedding)) {
-                    $vectors[] = array_map(
-                        static fn(mixed $v): float => is_numeric($v) ? (float) $v : 0.0,
-                        $embedding,
-                    );
+                    $row = [];
+                    foreach ($embedding as $value) {
+                        $row[] = is_numeric($value) ? (float) $value : 0.0;
+                    }
+                    $vectors[] = $row;
                 }
             }
             if ($vectors !== []) {
@@ -425,7 +491,7 @@ final class AiService implements AiServiceInterface
     }
 
     /**
-     * @param list<mixed> $vectors
+     * @param array<mixed, mixed> $vectors
      * @return list<list<float>>
      */
     private function normaliseVectorObjects(array $vectors): array
@@ -436,10 +502,11 @@ final class AiService implements AiServiceInterface
                 try {
                     $data = $vector->getData();
                     if (is_array($data)) {
-                        $out[] = array_map(
-                            static fn(mixed $v): float => is_numeric($v) ? (float) $v : 0.0,
-                            $data,
-                        );
+                        $row = [];
+                        foreach ($data as $value) {
+                            $row[] = is_numeric($value) ? (float) $value : 0.0;
+                        }
+                        $out[] = $row;
                     }
                 } catch (\Throwable) {
                     continue;
@@ -559,7 +626,7 @@ final class AiService implements AiServiceInterface
      * Vision (array content) uses MessageBag Text+ImageUrl; Symfony OpenAI maps that to Responses {@code input}.
      * Fallback order is unchanged so non-vision callers (Ollama, text chat) behave as before.
      *
-     * @return list<array<string, mixed>|string|object>
+     * @return list<array<int|string, mixed>|string|object>
      */
     private function symfonyPlatformInvokePayloads(string $prompt, Provider $provider, string $modelId, AiOptions $options): array
     {
@@ -606,9 +673,6 @@ final class AiService implements AiServiceInterface
     private function messagesFromOptionsExtra(AiOptions $options): array
     {
         $extra = $options->extra;
-        if (!is_array($extra)) {
-            return [];
-        }
         $raw = $extra['messages'] ?? null;
         if (!is_array($raw) || $raw === []) {
             return [];
@@ -819,7 +883,7 @@ final class AiService implements AiServiceInterface
     /**
      * OpenAI-compatible adapters expose stream() directly on the platform object.
      *
-     * @param list<array<string, mixed>|string> $payloads
+     * @param list<array<int|string, mixed>|object|string> $payloads
      */
     private function streamViaPlatformStreamMethod(
         object $platform,
@@ -845,7 +909,7 @@ final class AiService implements AiServiceInterface
      * Symfony AI Platform bridges stream via invoke(..., ['stream' => true]) and
      * DeferredResult::asTextStream() / asStream() — not platform->stream().
      *
-     * @param list<array<string, mixed>|string> $payloads
+     * @param list<array<int|string, mixed>|object|string> $payloads
      */
     private function streamViaPlatformInvoke(
         object $platform,
@@ -853,10 +917,18 @@ final class AiService implements AiServiceInterface
         array $payloads,
         AdapterInterface $adapter,
     ): \Generator {
+        $invoke = [$platform, 'invoke'];
+        if (!is_callable($invoke)) {
+            throw new AdapterRuntimeException(sprintf(
+                'Adapter "%s" platform invoke method is not callable.',
+                $adapter->getType(),
+            ));
+        }
+
         $lastException = null;
         foreach ($payloads as $payload) {
             try {
-                $result = $platform->invoke($modelId, $payload, ['stream' => true]);
+                $result = $invoke($modelId, $payload, ['stream' => true]);
                 yield from $this->yieldFromStreamResult($result, $adapter);
                 return;
             } catch (\Throwable $e) {
@@ -924,7 +996,8 @@ final class AiService implements AiServiceInterface
     }
 
     /**
-     * @param list<array<string, mixed>|string> $payloads
+     * @param list<array<int|string, mixed>|object|string> $payloads
+     * @param array<string, mixed> $invokeOptions
      */
     private function invokeWithPayloadFallbacks(
         object $platform,
@@ -1093,7 +1166,7 @@ final class AiService implements AiServiceInterface
 
         try {
             $converter = $result->getResultConverter();
-            if (!method_exists($converter, 'getTokenUsageExtractor')) {
+            if (!is_object($converter) || !method_exists($converter, 'getTokenUsageExtractor')) {
                 return [0, 0];
             }
             $extractor = $converter->getTokenUsageExtractor();

@@ -33,8 +33,10 @@ final readonly class McpToolDescriptionResolver
 
     public function resolve(object|string $handler, ?string $fallbackDescription = null): string
     {
-        $className = is_string($handler) ? $handler : $handler::class;
-        $reflection = new ReflectionClass($className);
+        if (is_string($handler) && !class_exists($handler)) {
+            return $fallbackDescription ?? '';
+        }
+        $reflection = new ReflectionClass($handler);
         $attributes = $reflection->getAttributes(McpDualModeTool::class);
         if ($attributes === []) {
             return $fallbackDescription ?? '';

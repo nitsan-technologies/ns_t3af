@@ -24,11 +24,14 @@ use NITSAN\NsT3AF\Domain\Repository\UsageBudgetRepository;
 /**
  * Evaluates per-user budget limits from UserTSconfig against recorded usage.
  *
- * TSconfig keys (all optional; a missing key means no limit on that axis):
+ * TSconfig keys (all optional):
  *   nst3af.budget.period      = daily | weekly | monthly   (default monthly)
  *   nst3af.budget.maxCost     = float   (in the provider's currency)
  *   nst3af.budget.maxTokens   = int
  *   nst3af.budget.maxRequests = int
+ *
+ * Limit semantics: a missing, empty, or negative value means "no limit" on
+ * that axis; an explicit `0` means "block all" (deny every request).
  *
  * @internal
  */
@@ -108,7 +111,8 @@ final class BudgetService
         }
         $float = (float) $value;
 
-        return $float > 0.0 ? $float : null;
+        // 0 is a real limit ("block all"); only negatives mean "no limit".
+        return $float >= 0.0 ? $float : null;
     }
 
     private function intOrNull(mixed $value): ?int
@@ -118,6 +122,7 @@ final class BudgetService
         }
         $int = (int) $value;
 
-        return $int > 0 ? $int : null;
+        // 0 is a real limit ("block all"); only negatives mean "no limit".
+        return $int >= 0 ? $int : null;
     }
 }

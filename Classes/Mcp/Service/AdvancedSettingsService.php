@@ -95,7 +95,7 @@ readonly class AdvancedSettingsService
             'mtlsCaCertificate' => $this->mtlsCaCertificate(),
             'mtlsValidationEnabled' => $this->mtlsValidationEnabled() ? 1 : 0,
             'mcpServerOnlineSince' => $this->mcpServerOnlineSince(),
-            'oauthDefaultClientId' => $this->string('oauthDefaultClientId', 'typo3-ai-universe-mcp-client'),
+            'oauthDefaultClientId' => $this->string('oauthDefaultClientId', 'typo3-ai-foundation-mcp-client'),
             'oauthDefaultRedirectUris' => $this->string('oauthDefaultRedirectUris', ''),
             'oauthDefaultScopes' => $this->oauthDefaultScopes(),
             'oauthMaxActiveTokensPerUser' => $this->int('oauthMaxActiveTokensPerUser', 5),
@@ -118,6 +118,9 @@ readonly class AdvancedSettingsService
         $this->extensionSettingsService->merge(self::EXTENSION_KEY, $normalized);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function config(): array
     {
         return $this->extensionSettingsService->getAll(self::EXTENSION_KEY);

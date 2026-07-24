@@ -62,7 +62,7 @@ final class BrandContextCompletenessCalculator
             $sections[] = [
                 'id' => $section['id'],
                 'labelKey' => $section['labelKey'],
-                'complete' => (bool) ($checks[$section['id']] ?? false),
+                'complete' => (bool) $checks[$section['id']],
             ];
         }
 

@@ -60,6 +60,7 @@ final class SetupChecklistPresenter
     /**
      * @param array<string, mixed>|null $analyticsCredits
      * @param array<string, mixed>|null $analyticsOwnKeys
+     * @param array<string, mixed>|null $creditsDashboard
      *
      * @return array{
      *   creditsModeEnabled: int,
@@ -110,6 +111,9 @@ final class SetupChecklistPresenter
     /**
      * Same as {@see buildAssigns()} but adds showSetupChecklist for child module dashboards.
      *
+     * @param array<string, mixed>|null $analyticsCredits
+     * @param array<string, mixed>|null $analyticsOwnKeys
+     * @param array<string, mixed>|null $creditsDashboard
      * @return array{
      *   creditsModeEnabled: int,
      *   setupChecklistCredits: array<string, mixed>,

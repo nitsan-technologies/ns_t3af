@@ -36,6 +36,10 @@ final class CreditsDashboardAssembler
     ) {}
 
     /**
+     * @param array<string, mixed> $balance
+     * @param array<string, mixed> $plan
+     * @param array<string, mixed> $productsPayload
+     * @param array<string, mixed> $featuresPayload
      * @param list<array<string, mixed>> $receipts
      * @param list<string>|array<string, string> $errors  Deduplicated user-facing messages for the UI (may be a list after {@see CreditsDashboardService::fetchAndAssemble}).
      * @return array<string, mixed>

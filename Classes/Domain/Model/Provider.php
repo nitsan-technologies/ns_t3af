@@ -108,7 +108,7 @@ final readonly class Provider
         if (str_starts_with($adapterType, 'symfony.')) {
             $vendor = substr($adapterType, strlen('symfony.'));
 
-            return 'symfony.' . str_replace('-', '', $vendor !== false ? $vendor : '');
+            return 'symfony.' . str_replace('-', '', $vendor);
         }
 
         return $adapterType;

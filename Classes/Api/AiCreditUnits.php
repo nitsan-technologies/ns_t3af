@@ -80,6 +80,7 @@ final class AiCreditUnits
     /**
      * @param array<string, mixed>      $payload  Charge/Embed body or nested pricing context.
      * @param array<string, mixed>      $charged  Optional `charged` block.
+     @return array<string, mixed>
      */
     public static function parseCost(array $payload, array $charged = []): array
     {

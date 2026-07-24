@@ -10,6 +10,7 @@
 <f:section name="Content">
     <div class="aiu-providers">
         <f:render partial="Module/TabPageHeader" arguments="{_all}" />
+        <f:render partial="Credits/PaymentFlash" arguments="{flash: flash}" />
         <f:if condition="{creditsModeActive} == 1">
             <f:then>
                 <f:if condition="{creditsDashboard.pricing.footnote} != ''">

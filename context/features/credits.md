@@ -1,11 +1,12 @@
 # Feature — T3Planet Credits
 
-**Status:** Implemented (client), **gated Coming soon** for public release  
-**Release gate:** `CreditsReleaseGate::PUBLICLY_AVAILABLE = false` — flip to `true` to enable selection.  
+**Status:** Publicly available (`CreditsReleaseGate::PUBLICLY_AVAILABLE = true`)  
+**Release gate:** `CreditsReleaseGate::PUBLICLY_AVAILABLE` — compile-time switch; currently **on**.
 **Deep specs:**
 - Client: [`FEATURE_T3PlanetCredits_Client.md`](../specs/FEATURE_T3PlanetCredits_Client.md)
 - Server: [`FEATURE_T3PlanetCredits_Server.md`](../specs/FEATURE_T3PlanetCredits_Server.md) (external commercial API on `composer.t3planet.cloud`)
 - Rollout: [`FEATURE_T3PlanetCredits_NsAiuniverse_Rollout.md`](../specs/FEATURE_T3PlanetCredits_NsAiuniverse_Rollout.md)
+- **API base URL (env / sync):** [`credits-api-base-url.md`](credits-api-base-url.md)
 
 **User docs:** `Documentation/Credits.rst`, `Documentation/Developer/T3PlanetCredits.rst`
 
@@ -13,11 +14,23 @@
 
 ## What it does
 
-- **Own API Keys** mode (default): `T3PlanetCreditAiService` forwards to inner `AiService` / local adapters.
-- **T3Planet Credits** mode (when gate open): `ProxyAiExecutor` routes `complete()`, `stream()`, `embed()` to composer API (`Charge.php`, `Stream.php`, `Embed.php`, `Abort.php`).
+- **Own API Keys** mode (default): decorators forward to inner services / local adapters.
+- **T3Planet Credits** mode (when gate open): proxy executors route billable calls to the composer API; every successful settlement writes a row to `tx_nst3af_credit_receipt` via `CreditsChargeRecorder` → `LocalReceiptCache` (Recent AI Usage dashboard).
 - Shared credit pool per install; token auth via `TokenResolver`.
-- Backend: mode toggle (disabled “Coming soon” while gated), credits dashboard, balance/plan/usage, buy credits, feature catalog.
-- Child extensions unchanged at call site — still use `AiServiceInterface`.
+- Backend: mode toggle, credits dashboard, balance/plan/usage, buy credits, feature catalog.
+- Child extensions unchanged at call site — still use `AiServiceInterface`, `TtsServiceInterface`, `ImageGenerationServiceInterface`.
+
+### Proxy + receipt matrix (credits mode ON)
+
+| Call | Decorator | Proxy executor | API endpoint | Local receipt |
+|---|---|---|---|---|
+| `complete()` | `T3PlanetCreditAiService` | `ProxyAiExecutor` | `Charge.php` | yes |
+| `stream()` | `T3PlanetCreditAiService` | `ProxyAiExecutor` | `Stream.php` / `Abort.php` | yes |
+| `embed()` | `T3PlanetCreditAiService` | `ProxyAiExecutor` | `Embed.php` | yes |
+| `speak()` | `T3PlanetCreditTtsService` | `ProxyTtsExecutor` | `Speak.php` | yes |
+| `generate()` / `variation()` | `T3PlanetCreditImageService` | `ProxyImageExecutor` | `Image.php` | yes |
+
+AI Logs (`RequestTelemetryService`) and Recent AI Usage (`LocalReceiptCache`) both update on every successful proxy call above.
 
 ---
 
@@ -25,8 +38,13 @@
 
 | Area | Path |
 |---|---|
-| Decorator | `Classes/Credits/Service/T3PlanetCreditAiService.php` |
-| Proxy executor | `Classes/Credits/Service/ProxyAiExecutor.php` |
+| AI decorator | `Classes/Credits/Service/T3PlanetCreditAiService.php` |
+| TTS decorator | `Classes/Credits/Service/T3PlanetCreditTtsService.php` |
+| Image decorator | `Classes/Credits/Service/T3PlanetCreditImageService.php` |
+| AI proxy | `Classes/Credits/Service/ProxyAiExecutor.php` |
+| TTS proxy | `Classes/Credits/Service/ProxyTtsExecutor.php` |
+| Image proxy | `Classes/Credits/Service/ProxyImageExecutor.php` |
+| Receipt mirror | `Classes/Credits/Service/CreditsChargeRecorder.php`, `LocalReceiptCache.php` |
 | Mode toggle | `CreditModeResolver`, `RuntimeSettingsService` |
 | Runtime DB | `tx_nst3af_runtime_setting` |
 | Token resolve | `Classes/Credits/Service/TokenResolver.php` |
@@ -43,6 +61,43 @@
 - Token resolution: in-memory cache → encrypted `tx_nst3af_runtime_setting` → `POST /AI/Token.php`.
 - `request_uuid` for idempotency only (not HMAC signing).
 - Active license keys: comma-separated list on runtime setting (from `LicenseKeyResolver`).
+
+---
+
+## Free trial credits (server-side only)
+
+Trial grant amount is **not configured in ns_t3af**. The server resolves it on mint/attach:
+
+```text
+ns_ai_settings.trial_credits (DB, ops admin) → API_AI_TRIAL_CREDITS env → default 100
+```
+
+| Trigger (server) | Client call | Idempotency |
+|---|---|---|
+| First pool mint | `TokenResolver::issueFreshToken()` → `POST /API/AI/Token.php` | `trial_granted=1` on account |
+| New license key on existing pool | `TokenResolver::syncLicensePool()` → `POST /API/AI/AttachLicenses.php` | Once per new key |
+
+Client reads balance from **`Balance.php`** / **`CurrentPlan.php`** only (`CreditsDashboardAssembler::summarizeBalance()`). Product cards use **`Products.php`** `credits` field — no hardcoded trial amount in PHP/Fluid grant paths.
+
+Setting **`trial_credits=0`** on the server disables new grants; existing accounts unchanged.
+
+---
+
+## Post-checkout return (`flash=` contract)
+
+After Pabbly hosted checkout, the shop theme POSTs verifyhosted JSON to Composer `PabblyPurchaseComplete`, then redirects the browser to Composer’s `redirect_url` (TYPO3 backend URL from `cf_redirectto_*`).
+
+Append a `flash` query param so Overview / Providers / Buy Credits can show a banner:
+
+| Completer response | Redirect query |
+|---|---|
+| `pending: true` (bank transfer / offline) | `flash=credits-payment-pending` |
+| `applied: true` | `flash=credits-payment-applied` |
+| rejected / hard failure | `flash=credits-payment-failed` |
+
+Example: `{redirect_url}?flash=credits-payment-pending` (use `&` when the URL already has a query).
+
+UI: `Partials/Credits/PaymentFlash.html` — info banner for pending (“credits will be added once your bank transfer clears”), success for applied, warn for failed. Credits are granted later via Composer `PabblyWebhook` when Pabbly flips the order to `live`.
 
 ---
 
@@ -76,7 +131,41 @@ Default 1 credit ≈ 1000 tokens. Read `AiResponse::$credits`, `StreamSummary::$
 cd packages/ns_t3af && composer test -- --filter Credits
 ```
 
-While gated: Providers / mode UI shows T3Planet Credits as **Coming soon** (not selectable).  
-When gate open: enable T3Planet Credits → verify dashboard balance and a test `complete()` returns `CreditsUsage`.
+When gate open (default): enable T3Planet Credits → verify dashboard balance and a test `complete()` returns `CreditsUsage`.
 
 See `context/specs/FEATURE_T3PlanetCredits_NsAiuniverse_Rollout.md` §10 checklist.
+
+### Dev reset — re-mint after server `trial_credits` change
+
+Trial amount applies only on **first** `ns_ai_account` creation (or AttachLicenses for new keys). To re-test a fresh grant:
+
+1. **Server:** set `ns_ai_settings.trial_credits` (AI Credits admin Dashboard) or delete/recreate the test `ns_ai_token` + `ns_ai_account` row for that license pool.
+2. **TYPO3 client:** clear stored bearer so the next activation calls `Token.php` again:
+   - `tx_nst3af_runtime_setting`: empty `token_enc`, optionally reset `credit_mode` / re-enable via wizard
+   - Or use backend flow that calls `TokenResolver::invalidate()` (clears cache + `token_enc` + API response cache)
+3. Enable credits mode → `CreditModeController` → `syncLicensePool()` / `issueFreshToken()` → dashboard **`Balance.free`** should match current server setting.
+
+**Smoke matrix (credits gate on):**
+
+| Server `trial_credits` | Expected after fresh mint |
+|---|---|
+| 50 | `Balance.free` ≈ 50 |
+| 0 | Empty free bucket; no client error |
+| 100 (default) | `Balance.free` ≈ 100 |
+
+Attach new license key → `AttachLicenses.credits_added` equals current server setting (once per key).
+
+---
+
+## Server readiness (ops checklist)
+
+Before enabling credits on customer sites, confirm on the composer API host:
+
+| Check | Notes |
+|-------|-------|
+| API base URL | Resolved via env / context — see [`credits-api-base-url.md`](credits-api-base-url.md); stored in `tx_nst3af_runtime_setting.t3planet_api_base_url` |
+| `API_AI_CREDITS_ALLOWLIST_ENABLED` | Must be **off** (unset or `0`) for GA — see `composer/API/.env.example` |
+| `ns_ai_settings.trial_credits` | Admin dashboard on server; overrides `API_AI_TRIAL_CREDITS` env |
+| Upstream AI keys | `API_OPENAI_API_KEY` etc. or `API_AI_UPSTREAM_MODE=stub` for QA only |
+| `ns_license` on customer TYPO3 | Required for `LicenseKeyResolver` (root distribution already requires `nitsan/ns-license`) |
+| Pabbly checkout | Optional for v1 — purchase webhooks still incomplete on server; activation + trial + Charge is MVP |

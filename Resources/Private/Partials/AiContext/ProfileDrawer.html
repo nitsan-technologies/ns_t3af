@@ -189,6 +189,18 @@
 
                 <f:render partial="AiContext/ModalSectionHead" arguments="{labelKey: 'module.aiContext.section.documents', ll: ll}"/>
                 <p class="mb-2 small"><f:translate key="{ll}:module.aiContext.field.documentsHint" /></p>
+                <div class="callout callout-warning mb-3">
+                    <div class="callout-body">
+                        <f:translate key="{ll}:module.aiContext.field.documentsEgressNotice" />
+                    </div>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" value="1" id="aiu-context-include-document"
+                           name="includeDocumentInPrompt" data-aiu-context-field-include-document />
+                    <label class="form-check-label" for="aiu-context-include-document">
+                        <f:translate key="{ll}:module.aiContext.field.includeDocumentInPrompt" />
+                    </label>
+                </div>
                 <div class="form-group mb-2">
                     <label class="form-label" for="aiu-context-documents"><f:translate key="{ll}:module.aiContext.field.documentsDrop" /></label>
                     <input type="file" class="form-control" id="aiu-context-documents" multiple="multiple"

@@ -47,7 +47,7 @@ readonly class McpIpAllowlistRepository
             ->executeQuery()
             ->fetchAllAssociative();
 
-        return array_map(fn(array $row): array => $this->mapRow($row), $rows);
+        return array_values(array_map(fn(array $row): array => $this->mapRow($row), $rows));
     }
 
     /**
@@ -61,6 +61,9 @@ readonly class McpIpAllowlistRepository
         ));
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function findByUid(int $uid): ?array
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE);

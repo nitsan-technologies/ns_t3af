@@ -21,6 +21,8 @@ namespace NITSAN\NsT3AF\Access\Dto;
 
 /**
  * Bulk-operation tab requires a core tab feature plus an extra feature bit (e.g. Pages).
+ *
+ * @api
  */
 final readonly class BulkTabBinding
 {

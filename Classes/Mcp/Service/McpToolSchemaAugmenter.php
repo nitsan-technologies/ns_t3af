@@ -103,8 +103,14 @@ readonly class McpToolSchemaAugmenter
         if (is_array($handler) && (is_string($handler[0]) || is_object($handler[0]))) {
             return $this->generateForClassHandler($handler);
         }
+        if (is_object($handler) && !$handler instanceof \Closure) {
+            return $this->generateForClassHandler([$handler, '__invoke']);
+        }
+        if ($handler instanceof \Closure || is_string($handler)) {
+            return $this->generateForDynamicCallable($handler);
+        }
 
-        return $this->generateForDynamicCallable($handler);
+        throw new \InvalidArgumentException('Unsupported MCP tool handler.');
     }
 
     /**
@@ -155,14 +161,12 @@ readonly class McpToolSchemaAugmenter
      *
      * Dynamic tools are pure TYPO3 record operations — workspace only, no aiProvider, no dual-mode attributes.
      *
-     * @param callable|string $handler Closure or global function name
+     * @param \Closure|string $handler Closure or global function name
      * @return array<string, mixed>
      */
-    public function generateForDynamicCallable(callable|string $handler): array
+    public function generateForDynamicCallable(\Closure|string $handler): array
     {
-        $reflection = is_string($handler) && function_exists($handler)
-            ? new ReflectionFunction($handler)
-            : new ReflectionFunction($handler);
+        $reflection = new ReflectionFunction($handler);
 
         $schema = $this->schemaGenerator()->generate($reflection);
 

@@ -39,7 +39,7 @@ class AiUniverseUtilityHelper
     /**
      * Get TYPO3 version data as array
      *
-     * @return array
+     * @return array<string, mixed>
      */
     public static function getVersionData(): array
     {
@@ -67,7 +67,7 @@ class AiUniverseUtilityHelper
      *
      * @param int $pageId
      * @param int $languageId
-     * @return array|null
+     * @return array<string, mixed>|null
      */
     public static function getCurrentPage(int $pageId, int $languageId): ?array
     {
@@ -97,7 +97,7 @@ class AiUniverseUtilityHelper
      * Get extension configuration
      *
      * @param string $extensionKey Extension key (default: 'ns_t3af')
-     * @return array
+     * @return array<string, mixed>
      */
     public static function getExtensionConf(string $extensionKey = 'ns_t3af', ?int $pageId = null): array
     {
@@ -148,6 +148,9 @@ class AiUniverseUtilityHelper
         }
     }
 
+    /**
+     * @param array<string, mixed> $value
+     */
     public static function setExtensionConf(array $value, string $extensionKey = 'ns_t3af', ?int $pageId = null): void
     {
         if (!self::isDependencyInjectionContainerAvailable()) {
@@ -203,6 +206,8 @@ class AiUniverseUtilityHelper
      *
      * v13.1+ / v14: @typo3/backend/tree/page-tree-element
      * v12: @typo3/backend/page-tree/page-tree-element
+     *
+     * @api
      */
     public static function getPageTreeNavigationComponent(): string
     {

@@ -130,17 +130,12 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         $url = rtrim($endpoint, '/') . $config['path'];
         $headers = ['User-Agent' => 'ns_t3af/2.0', 'Accept' => 'application/json'];
 
-        switch ($config['auth']) {
-            case 'bearer':
-                $headers['Authorization'] = 'Bearer ' . $apiKey;
-                break;
-            case 'x-api-key':
-                $headers['x-api-key'] = $apiKey;
-                break;
-            case 'query-key':
-                $url .= (str_contains($url, '?') ? '&' : '?') . 'key=' . urlencode($apiKey);
-                break;
-        }
+        match ($config['auth']) {
+            'bearer' => $headers['Authorization'] = 'Bearer ' . $apiKey,
+            'x-api-key' => $headers['x-api-key'] = $apiKey,
+            'query-key' => $url .= (str_contains($url, '?') ? '&' : '?') . 'key=' . urlencode($apiKey),
+            default => null,
+        };
         if (isset($config['extraHeaders'])) {
             $headers = array_merge($headers, $config['extraHeaders']);
         }
@@ -258,6 +253,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
     /**
      * HF router requires an explicit /pipeline/feature-extraction path; Symfony ModelClient does not.
      *
+     * @param string|list<string> $text
      * @return array{vectors: list<list<float>>, result: mixed}
      */
     public function embedFeatureExtraction(Provider $provider, string $modelId, string|array $text): array
@@ -314,6 +310,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
     }
 
     /**
+     * @param string|list<string> $inputs
      * @return array{status: int, body: string, decoded: mixed}
      */
     private function requestHuggingFaceFeatureExtraction(Provider $provider, string $modelId, string|array $inputs): array
@@ -355,6 +352,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
     }
 
     /**
+     * @param array<string, mixed> $responseData
      * @return list<list<float>>
      */
     private function parseHuggingFaceEmbeddingVectors(array $responseData): array
@@ -371,7 +369,12 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
 
         // Single flat vector: [0.1, 0.2, ...] (HF feature-extraction pipeline for one input).
         if (is_numeric($responseData[0] ?? null)) {
-            return [array_map('floatval', $responseData)];
+            $vector = [];
+            foreach ($responseData as $value) {
+                $vector[] = (float) $value;
+            }
+
+            return [$vector];
         }
 
         $first = $responseData[0] ?? null;
@@ -386,7 +389,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
                 if (!is_array($row)) {
                     continue;
                 }
-                $vectors[] = array_map('floatval', $row);
+                $vectors[] = array_values(array_map('floatval', $row));
             }
 
             return $vectors;
@@ -398,7 +401,14 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
             if (!is_array($sentenceTokens) || $sentenceTokens === []) {
                 continue;
             }
-            $vector = $this->meanPoolHuggingFaceTokenEmbeddings($sentenceTokens);
+            $tokens = [];
+            foreach ($sentenceTokens as $token) {
+                if (!is_array($token)) {
+                    continue 2;
+                }
+                $tokens[] = array_values(array_map('floatval', $token));
+            }
+            $vector = $this->meanPoolHuggingFaceTokenEmbeddings($tokens);
             if ($vector !== []) {
                 $vectors[] = $vector;
             }
@@ -408,6 +418,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
     }
 
     /**
+     * @param list<list<float>> $tokenEmbeddings
      * @return list<float>
      */
     private function meanPoolHuggingFaceTokenEmbeddings(array $tokenEmbeddings): array
@@ -433,7 +444,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
             }
         }
 
-        return array_map(static fn(float $value): float => $value / $tokenCount, $averaged);
+        return array_values(array_map(static fn(float $value): float => $value / $tokenCount, $averaged));
     }
 
     private function formatHuggingFaceInferenceProvidersError(string $message): string
@@ -548,34 +559,6 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
     }
 
     /**
-     * @return list<string>
-     */
-    private function collectModelsFromCatalog(object $platform): array
-    {
-        if (!method_exists($platform, 'getModelCatalog')) {
-            return [];
-        }
-        $catalog = $platform->getModelCatalog();
-        if (!is_iterable($catalog)) {
-            return [];
-        }
-        $models = [];
-        foreach ($catalog as $model) {
-            if (is_object($model) && method_exists($model, '__toString')) {
-                $models[] = (string) $model;
-                continue;
-            }
-            if (is_object($model)) {
-                $models[] = (string) ($model->name ?? get_debug_type($model));
-                continue;
-            }
-            $models[] = (string) $model;
-        }
-
-        return $models;
-    }
-
-    /**
      * Namespace prefix php-scoper applies to every class bundled in t3af.phar.
      * In classic mode the bridge factories live under this prefix; in Composer mode
      * they keep their original FQN. We probe both.
@@ -590,8 +573,13 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
             }
         }
 
-        return class_exists('Symfony\\AI\\Platform\\PlatformInterface')
-            || class_exists(self::VENDOR_PREFIX . 'Symfony\\AI\\Platform\\PlatformInterface');
+        // Factory classes may be absent while the PlatformInterface is still
+        // loadable (Composer/phar modes). Build FQNs dynamically so this stays
+        // a real runtime probe across install modes.
+        $platformInterface = implode('\\', ['Symfony', 'AI', 'Platform', 'PlatformInterface']);
+        $scopedPlatformInterface = self::VENDOR_PREFIX . $platformInterface;
+
+        return class_exists($platformInterface) || class_exists($scopedPlatformInterface);
     }
 
     private function expectedFactoryFqcn(): string
@@ -654,7 +642,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         return method_exists($factoryClass, 'createPlatform') || method_exists($factoryClass, 'create');
     }
 
-    private function createPlatformFromFactory(string $factoryClass, Provider $provider, string $apiKey): object
+    private function createPlatformFromFactory(string $factoryClass, Provider $provider, #[\SensitiveParameter] string $apiKey): object
     {
         $method = method_exists($factoryClass, 'createPlatform') ? 'createPlatform' : 'create';
 
@@ -747,9 +735,6 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         }
 
         $vendor = substr($type, strlen($prefix));
-        if ($vendor === false) {
-            return $type;
-        }
 
         return $prefix . str_replace('-', '', $vendor);
     }

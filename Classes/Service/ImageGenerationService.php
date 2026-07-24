@@ -19,10 +19,12 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Service;
 
+use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Api\ImageGenerationOptions;
 use NITSAN\NsT3AF\Api\ImageGenerationResponse;
 use NITSAN\NsT3AF\Api\ImageGenerationServiceInterface;
 use NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface;
+use NITSAN\NsT3AF\Event\BeforeProviderRequestEvent;
 use NITSAN\NsT3AF\Event\ProviderRequestFailedEvent;
 use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 use NITSAN\NsT3AF\Exception\UnknownAdapterException;
@@ -36,11 +38,15 @@ use TYPO3\CMS\Core\Http\RequestFactory;
  * Default {@see ImageGenerationServiceInterface} implementation.
  *
  * Duck-types `generateImages()` / `createImageVariation()` on the adapter platform.
+ * Dispatches {@see BeforeProviderRequestEvent} (`callKind: image_generation`) so
+ * governance / brand listeners run on the same choke point as chat (CTX-07).
  *
  * @internal
  */
 final class ImageGenerationService implements ImageGenerationServiceInterface
 {
+    private const CALL_KIND = 'image_generation';
+
     public function __construct(
         private readonly ProviderLookupInterface $providers,
         private readonly AdapterRegistry $adapters,
@@ -54,16 +60,21 @@ final class ImageGenerationService implements ImageGenerationServiceInterface
     {
         $provider = $this->resolveProvider($options);
         $adapter = $this->resolveAdapter($provider);
+        [$prompt, $options] = $this->dispatchBefore($provider, $prompt, $options);
         $modelId = $options->modelId ?? $provider->modelId;
         $platform = $this->resolveImagePlatform($adapter->platform($provider), $provider);
 
         $start = (int) (microtime(true) * 1000);
         try {
+            $generateImages = [$platform, 'generateImages'];
+            if (!is_callable($generateImages)) {
+                throw new AdapterRuntimeException('Image platform generateImages method is not callable.');
+            }
             /** @var list<array{url?: string, b64_json?: string, revised_prompt?: string}> $images */
-            $images = $platform->generateImages($modelId, $prompt, $options);
+            $images = $generateImages($modelId, $prompt, $options);
         } catch (AdapterRuntimeException $e) {
             $latencyMs = (int) (microtime(true) * 1000) - $start;
-            $this->events->dispatch(new ProviderRequestFailedEvent($provider, $e, 'image_generation'));
+            $this->events->dispatch(new ProviderRequestFailedEvent($provider, $e, self::CALL_KIND));
             $this->telemetry?->logImageGenerationFailure($provider, $options, $prompt, $e, $latencyMs, 'generate');
             throw $e;
         } catch (\Throwable $e) {
@@ -73,7 +84,7 @@ final class ImageGenerationService implements ImageGenerationServiceInterface
                 0,
                 $e,
             );
-            $this->events->dispatch(new ProviderRequestFailedEvent($provider, $rte, 'image_generation'));
+            $this->events->dispatch(new ProviderRequestFailedEvent($provider, $rte, self::CALL_KIND));
             $this->telemetry?->logImageGenerationFailure($provider, $options, $prompt, $rte, $latencyMs, 'generate');
             throw $rte;
         }
@@ -94,16 +105,21 @@ final class ImageGenerationService implements ImageGenerationServiceInterface
     {
         $provider = $this->resolveProvider($options);
         $adapter = $this->resolveAdapter($provider);
+        [$imagePath, $options] = $this->dispatchBefore($provider, $imagePath, $options);
         $modelId = $options->modelId ?? $provider->modelId;
         $platform = $this->resolveImagePlatform($adapter->platform($provider), $provider);
 
         $start = (int) (microtime(true) * 1000);
         try {
+            $createImageVariation = [$platform, 'createImageVariation'];
+            if (!is_callable($createImageVariation)) {
+                throw new AdapterRuntimeException('Image platform createImageVariation method is not callable.');
+            }
             /** @var list<array{url?: string, b64_json?: string, revised_prompt?: string}> $images */
-            $images = $platform->createImageVariation($modelId, $imagePath, $options);
+            $images = $createImageVariation($modelId, $imagePath, $options);
         } catch (AdapterRuntimeException $e) {
             $latencyMs = (int) (microtime(true) * 1000) - $start;
-            $this->events->dispatch(new ProviderRequestFailedEvent($provider, $e, 'image_generation'));
+            $this->events->dispatch(new ProviderRequestFailedEvent($provider, $e, self::CALL_KIND));
             $this->telemetry?->logImageGenerationFailure($provider, $options, $imagePath, $e, $latencyMs, 'variation');
             throw $e;
         } catch (\Throwable $e) {
@@ -113,7 +129,7 @@ final class ImageGenerationService implements ImageGenerationServiceInterface
                 0,
                 $e,
             );
-            $this->events->dispatch(new ProviderRequestFailedEvent($provider, $rte, 'image_generation'));
+            $this->events->dispatch(new ProviderRequestFailedEvent($provider, $rte, self::CALL_KIND));
             $this->telemetry?->logImageGenerationFailure($provider, $options, $imagePath, $rte, $latencyMs, 'variation');
             throw $rte;
         }
@@ -128,6 +144,64 @@ final class ImageGenerationService implements ImageGenerationServiceInterface
         $this->telemetry?->logImageGeneration($provider, $options, $imagePath, $response, 'variation');
 
         return $response;
+    }
+
+    /**
+     * @return array{0: string, 1: ImageGenerationOptions}
+     */
+    private function dispatchBefore(
+        \NITSAN\NsT3AF\Domain\Model\Provider $provider,
+        string $prompt,
+        ImageGenerationOptions $options,
+    ): array {
+        $before = new BeforeProviderRequestEvent(
+            $provider,
+            $prompt,
+            $this->toAiOptions($options),
+            self::CALL_KIND,
+        );
+        $this->events->dispatch($before);
+        if ($before->isCancelled()) {
+            throw new AdapterRuntimeException(
+                $before->getCancellationReason() ?? 'Image generation cancelled by governance.',
+            );
+        }
+
+        return [
+            $before->getPrompt(),
+            $this->fromAiOptions($options, $before->getOptions()),
+        ];
+    }
+
+    private function toAiOptions(ImageGenerationOptions $options): AiOptions
+    {
+        return new AiOptions(
+            providerIdentifier: $options->providerIdentifier,
+            modelId: $options->modelId,
+            extensionKey: $options->extensionKey,
+            featureKey: $options->featureKey,
+            requestSource: $options->requestSource,
+            extra: [
+                'imageSize' => $options->size,
+                'imageCount' => $options->count,
+            ],
+        );
+    }
+
+    private function fromAiOptions(ImageGenerationOptions $original, AiOptions $ai): ImageGenerationOptions
+    {
+        $size = $ai->extra['imageSize'] ?? $original->size;
+        $count = $ai->extra['imageCount'] ?? $original->count;
+
+        return new ImageGenerationOptions(
+            providerIdentifier: $ai->providerIdentifier ?? $original->providerIdentifier,
+            modelId: $ai->modelId ?? $original->modelId,
+            size: is_string($size) && $size !== '' ? $size : $original->size,
+            count: is_int($count) && $count > 0 ? $count : $original->count,
+            extensionKey: $ai->extensionKey ?? $original->extensionKey,
+            featureKey: $ai->featureKey ?? $original->featureKey,
+            requestSource: $ai->requestSource ?? $original->requestSource,
+        );
     }
 
     private function resolveProvider(ImageGenerationOptions $options): \NITSAN\NsT3AF\Domain\Model\Provider

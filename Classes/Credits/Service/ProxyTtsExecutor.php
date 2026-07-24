@@ -19,6 +19,8 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Credits\Service;
 
+use NITSAN\NsT3AF\Api\AiOptions;
+use NITSAN\NsT3AF\Api\AiResponse;
 use NITSAN\NsT3AF\Api\CreditsUsage;
 use NITSAN\NsT3AF\Api\TtsOptions;
 use NITSAN\NsT3AF\Api\TtsResponse;
@@ -28,10 +30,13 @@ use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
 use NITSAN\NsT3AF\Credits\Exception\InsufficientCreditsException;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
 use NITSAN\NsT3AF\Domain\Model\Provider;
+use NITSAN\NsT3AF\Event\AfterProviderResponseEvent;
 use NITSAN\NsT3AF\Event\AfterTtsResponseEvent;
+use NITSAN\NsT3AF\Event\BeforeProviderRequestEvent;
 use NITSAN\NsT3AF\Event\BeforeTtsRequestEvent;
 use NITSAN\NsT3AF\Event\ProviderRequestFailedEvent;
 use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
+use NITSAN\NsT3AF\Service\BrandContextLineage;
 use NITSAN\NsT3AF\Service\RequestTelemetryService;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Client\ClientExceptionInterface;
@@ -66,6 +71,7 @@ class ProxyTtsExecutor
         private readonly TokenResolver $tokenResolver,
         private readonly CreditsDomainResolver $domainResolver,
         private readonly CreditsFeatureKeyMapper $featureKeyMapper,
+        private readonly CreditsChargeRecorder $chargeRecorder,
         private readonly EventDispatcherInterface $events,
         private readonly RequestTelemetryService $telemetry,
         private readonly LoggerInterface $logger,
@@ -74,6 +80,20 @@ class ProxyTtsExecutor
     public function speak(string $text, TtsOptions $options): TtsResponse
     {
         $provider = $this->creditsProvider();
+
+        // Governance choke point shared with chat/embed/image: ACL, budgets and
+        // rate limits gate credits TTS via BeforeProviderRequestEvent (CTX-14).
+        $governance = new BeforeProviderRequestEvent($provider, $text, $this->toAiOptions($options), self::CALL_TTS);
+        $this->events->dispatch($governance);
+        if ($governance->isCancelled()) {
+            return new TtsResponse(
+                audio: '',
+                mimeType: self::FORMAT_MIME[$options->format] ?? 'audio/mpeg',
+                modelId: $options->modelId ?? 't3planet',
+                providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
+            );
+        }
+        $text = $governance->getPrompt();
 
         $before = new BeforeTtsRequestEvent($provider, $text, $options);
         $this->events->dispatch($before);
@@ -124,6 +144,8 @@ class ProxyTtsExecutor
         $charged = is_array($payload['charged'] ?? null) ? $payload['charged'] : [];
         $usage = CreditsUsage::fromApiPayload($credits, $charged, $requestUuid, $payload);
 
+        $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
+
         $response = new TtsResponse(
             audio: $audio,
             mimeType: (string) ($payload['mime_type'] ?? (self::FORMAT_MIME[$options->format] ?? 'audio/mpeg')),
@@ -136,9 +158,43 @@ class ProxyTtsExecutor
         );
 
         $this->events->dispatch(new AfterTtsResponseEvent($response, $text));
-        $this->logTtsQuietly($provider, $options, $text, $response);
+        // Budget/usage listeners bind to AfterProviderResponseEvent; credits TTS
+        // usage must count against per-user budgets too (CTX-14).
+        $this->events->dispatch(new AfterProviderResponseEvent(
+            $provider,
+            new AiResponse(
+                content: '',
+                modelId: $response->modelId,
+                providerIdentifier: $response->providerIdentifier,
+                tokensInput: $usage->tokensInput,
+                latencyMs: $latencyMs,
+                raw: ['call' => self::CALL_TTS],
+                credits: $usage,
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($governance->getOptions()),
+            ),
+            $governance->getOptions(),
+            $text,
+        ));
+        $this->logTtsQuietly(
+            $provider,
+            $options,
+            $text,
+            $response,
+            BrandContextLineage::profileUidFromOptions($governance->getOptions()),
+        );
 
         return $response;
+    }
+
+    private function toAiOptions(TtsOptions $options): AiOptions
+    {
+        return new AiOptions(
+            providerIdentifier: $options->providerIdentifier,
+            modelId: $options->modelId,
+            extensionKey: $options->extensionKey,
+            featureKey: $options->featureKey,
+            requestSource: $options->requestSource,
+        );
     }
 
     /**
@@ -259,10 +315,15 @@ class ProxyTtsExecutor
         ]);
     }
 
-    private function logTtsQuietly(Provider $provider, TtsOptions $options, string $text, TtsResponse $response): void
-    {
+    private function logTtsQuietly(
+        Provider $provider,
+        TtsOptions $options,
+        string $text,
+        TtsResponse $response,
+        ?int $brandContextProfileUid = null,
+    ): void {
         try {
-            $this->telemetry->logTts($provider, $options, $text, $response);
+            $this->telemetry->logTts($provider, $options, $text, $response, $brandContextProfileUid);
         } catch (\Throwable $throwable) {
             $this->logger->error(
                 'Failed to write AI usage request log for T3Planet Credits TTS: {message}',

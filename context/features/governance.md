@@ -10,8 +10,8 @@
 
 - **Access control** on `BeforeProviderRequestEvent`: `be_groups` restriction, capability permissions (`nst3af:capability_*`), UserTSconfig budgets, per-minute rate limits.
 - **Budget recording** on `AfterProviderResponseEvent` via `RecordBudgetUsageListener`.
-- **Privacy levels** (`standard` / `reduced` / `none`) on provider rows + UserTSconfig; strictest wins.
-- **Per-request telemetry** to `tx_nst3af_request_log` (tokens, cost, provider/model).
+- **Logging privacy** (`standard` / `reduced` / `none`) on provider rows + UserTSconfig; strictest wins. **Affects request-log fidelity only** — does not change provider egress (prompts/brand still leave when the call is allowed).
+- **Per-request telemetry** to `tx_nst3af_request_log` (tokens, cost, provider/model, optional applied brand profile uid).
 - **Dashboard analytics** from `DashboardAnalyticsService` (AI Usage tab).
 - **Operational sys_log UI** (AI Logs tab — filters, export, cleanup CLI). See `context/features/ai-logs.md` (distinct from request-log analytics).
 - **API quota email alerts** via `AiApiAlertNotificationService` (ext_conf notifications category).
@@ -24,7 +24,7 @@
 |---|---|
 | ACL gate | `Classes/Governance/AccessControlListener.php` |
 | Budget check/record | `Classes/Governance/BudgetService.php`, `Classes/EventListener/RecordBudgetUsageListener.php` |
-| Privacy | `Classes/Governance/PrivacyLevel.php` |
+| Privacy (logging) | `Classes/Governance/PrivacyLevel.php` |
 | Telemetry | `Classes/Service/RequestTelemetryService.php` |
 | Analytics | `Classes/Service/DashboardAnalyticsService.php` |
 | Request log | `Classes/Domain/Repository/RequestLogRepository.php` |

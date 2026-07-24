@@ -243,7 +243,7 @@ final class CreditModeController
         if (!is_array($metaJson)) {
             $metaJson = [];
         }
-        $endpoint = (string) ($body['endpoint'] ?? 'charge');
+        $endpoint = ($body['endpoint'] ?? 'charge') === 'embed' ? 'embed' : 'charge';
 
         try {
             $estimate = $this->estimateService->estimate(

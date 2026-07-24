@@ -122,8 +122,13 @@ services:
     alias: NITSAN\NsT3AF\Credits\Service\T3PlanetCreditTtsService
     public: true
 
+  NITSAN\NsT3AF\Credits\Service\T3PlanetCreditImageService:
+    decorates: NITSAN\NsT3AF\Service\ImageGenerationService
+    arguments:
+      $inner: '@.inner'
+
   NITSAN\NsT3AF\Api\ImageGenerationServiceInterface:
-    alias: NITSAN\NsT3AF\Service\ImageGenerationService
+    alias: NITSAN\NsT3AF\Credits\Service\T3PlanetCreditImageService
     public: true
 
   NITSAN\NsT3AF\Credits\Service\T3PlanetCreditAiService:
@@ -272,12 +277,14 @@ services:
         event: NITSAN\NsT3AF\Event\BeforeProviderRequestEvent
         after: 'nst3af/governance/access-control'
 
+  # Brand context assembles only after every governance gate has passed
+  # (access-control → group-limits → brand-injection).
   NITSAN\NsT3AF\EventListener\BrandContextPromptInjectionListener:
     tags:
       - name: event.listener
         identifier: 'nst3af/brand-context/prompt-injection'
         event: NITSAN\NsT3AF\Event\BeforeProviderRequestEvent
-        after: 'nst3af/governance/access-control'
+        after: 'nst3af/governance/group-limits'
 
   # Governance — record per-user budget usage after a successful response.
   NITSAN\NsT3AF\EventListener\RecordBudgetUsageListener:

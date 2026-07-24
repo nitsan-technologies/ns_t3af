@@ -63,6 +63,24 @@ const CAP_EMBEDDINGS = 'embeddings';
 const CAP_CHAT = 'chat';
 const CAP_COMPLETION = 'completion';
 
+const DRAWER_FOCUSABLE = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled]):not([type="hidden"])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
+
+/**
+ * @param {ParentNode} root
+ * @returns {HTMLElement[]}
+ */
+function drawerFocusables(root) {
+  return Array.from(root.querySelectorAll(DRAWER_FOCUSABLE))
+    .filter((el) => el instanceof HTMLElement && !el.hasAttribute('disabled') && el.getClientRects().length > 0);
+}
+
 /**
  * @param {{capabilities?: string[]}} model
  */
@@ -113,6 +131,10 @@ class ProviderDrawer {
     this.pageId = parseInt(root.dataset.aiuPageId || '0', 10) || 0;
     this.drawer = root.querySelector('[data-aiu-drawer]');
     this.panel = root.querySelector('[data-aiu-drawer-panel]');
+    /** @type {HTMLElement|null} */
+    this.triggerElement = null;
+    /** @type {((event: KeyboardEvent) => void)|null} */
+    this._drawerKeyHandler = null;
     this.bindTriggers();
     this.bindClose();
     this.bindRowActions();
@@ -143,6 +165,7 @@ class ProviderDrawer {
 
       evt.preventDefault();
       evt.stopPropagation();
+      this.triggerElement = trigger;
       await this.openWithUrl(url);
     }, { capture: true });
   }
@@ -211,6 +234,10 @@ class ProviderDrawer {
       return;
     }
     try {
+      if (!(this.triggerElement instanceof HTMLElement)) {
+        const active = document.activeElement;
+        this.triggerElement = active instanceof HTMLElement ? active : null;
+      }
       const html = await new AjaxRequest(url).get().then((r) => r.resolve('text/html'));
       this.panel.innerHTML = html;
       this.bindForm();
@@ -218,8 +245,67 @@ class ProviderDrawer {
       this.drawer.classList.remove('is-closing');
       this.drawer.classList.add('is-open');
       this.drawer.classList.add('aiu-drawer--open');
+      this.activateDrawerFocus();
     } catch (err) {
       Notification.error(ll(LL.drawerLoadFailed, 'Drawer load failed'), String(err));
+    }
+  }
+
+  /**
+   * A11Y-01: move focus into the dialog, trap Tab, close on Escape, restore on close.
+   */
+  activateDrawerFocus() {
+    if (!(this.drawer instanceof HTMLElement) || !(this.panel instanceof HTMLElement)) {
+      return;
+    }
+    this.deactivateDrawerFocus();
+
+    const panel = this.panel;
+    if (!panel.hasAttribute('tabindex')) {
+      panel.setAttribute('tabindex', '-1');
+    }
+
+    const focusables = drawerFocusables(panel);
+    const initial = focusables[0] ?? panel;
+    window.requestAnimationFrame(() => {
+      initial.focus();
+    });
+
+    this._drawerKeyHandler = (event) => {
+      if (!(event instanceof KeyboardEvent) || !this.drawer?.classList.contains('is-open')) {
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        this.close();
+        return;
+      }
+      if (event.key !== 'Tab') {
+        return;
+      }
+      const items = drawerFocusables(panel);
+      if (items.length === 0) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', this._drawerKeyHandler);
+  }
+
+  deactivateDrawerFocus() {
+    if (this._drawerKeyHandler) {
+      document.removeEventListener('keydown', this._drawerKeyHandler);
+      this._drawerKeyHandler = null;
     }
   }
 
@@ -227,6 +313,7 @@ class ProviderDrawer {
     if (!this.drawer || this.drawer.classList.contains('is-closing')) {
       return;
     }
+    this.deactivateDrawerFocus();
     this.drawer.classList.remove('is-open');
     this.drawer.classList.remove('aiu-drawer--open');
     this.drawer.classList.add('is-closing');
@@ -237,6 +324,11 @@ class ProviderDrawer {
       }
       this.drawer.classList.remove('is-closing');
       this.drawer.setAttribute('aria-hidden', 'true');
+      const trigger = this.triggerElement;
+      this.triggerElement = null;
+      if (trigger instanceof HTMLElement && document.contains(trigger)) {
+        trigger.focus();
+      }
     };
     const panel = this.panel || this.drawer.querySelector('[data-aiu-drawer-panel]');
     if (!panel) {
@@ -781,6 +873,7 @@ function openProviderEditFromQuery(drawer, root) {
   }
 
   requestAnimationFrame(() => {
+    drawer.triggerElement = trigger;
     drawer.openWithUrl(trigger.href);
   });
 }

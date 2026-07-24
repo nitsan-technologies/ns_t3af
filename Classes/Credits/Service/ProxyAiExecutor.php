@@ -35,6 +35,7 @@ use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Event\AfterProviderResponseEvent;
 use NITSAN\NsT3AF\Event\BeforeProviderRequestEvent;
 use NITSAN\NsT3AF\Event\ProviderRequestFailedEvent;
+use NITSAN\NsT3AF\Service\BrandContextLineage;
 use NITSAN\NsT3AF\Service\RequestTelemetryService;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Client\ClientExceptionInterface;
@@ -55,7 +56,7 @@ class ProxyAiExecutor
         private readonly T3PlanetSseStreamParser $sseParser,
         private readonly TokenResolver $tokenResolver,
         private readonly CreditsDomainResolver $domainResolver,
-        private readonly LocalReceiptCache $receiptCache,
+        private readonly CreditsChargeRecorder $chargeRecorder,
         private readonly EventDispatcherInterface $events,
         private readonly RequestTelemetryService $telemetry,
         private readonly CreditsFeatureKeyMapper $featureKeyMapper,
@@ -107,8 +108,8 @@ class ProxyAiExecutor
             $settled = true;
             $latencyMs = (int) (microtime(true) * 1000) - $start;
             $summary = $this->mapUsageToStreamSummary($payload, $requestUuid);
-            $this->receiptCache->storeFromCharge($requestUuid, $featureKey, $payload);
-            $response = $this->mapChargeToAiResponse($payload, $requestUuid, $latencyMs);
+            $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
+            $response = $this->mapChargeToAiResponse($payload, $requestUuid, $latencyMs, $before->getOptions());
             $this->persistCompletion($provider, $before->getOptions(), $before->getPrompt(), $response, self::CALL_STREAM);
             $this->events->dispatch(new AfterProviderResponseEvent(
                 $provider,
@@ -177,6 +178,7 @@ class ProxyAiExecutor
                 modelId: 't3planet',
                 providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
                 raw: ['cancelled' => $before->getCancellationReason()],
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
             );
         }
 
@@ -229,8 +231,8 @@ class ProxyAiExecutor
             throw $e;
         }
 
-        $response = $this->mapChargeToAiResponse($payload, $requestUuid, (int) (microtime(true) * 1000) - $start);
-        $this->receiptCache->storeFromCharge($requestUuid, $featureKey, $payload);
+        $response = $this->mapChargeToAiResponse($payload, $requestUuid, (int) (microtime(true) * 1000) - $start, $before->getOptions());
+        $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
         $this->persistCompletion($provider, $before->getOptions(), $before->getPrompt(), $response);
         $this->events->dispatch(new AfterProviderResponseEvent(
             $provider,
@@ -242,6 +244,9 @@ class ProxyAiExecutor
         return $response;
     }
 
+    /**
+     * @param string|list<string> $text
+     */
     public function embed(string|array $text, AiOptions $options): EmbeddingResponse
     {
         $provider = $this->creditsProvider();
@@ -253,6 +258,16 @@ class ProxyAiExecutor
 
         $before = new BeforeProviderRequestEvent($provider, $prompt, $options, self::CALL_EMBED);
         $this->events->dispatch($before);
+        if ($before->isCancelled()) {
+            return new EmbeddingResponse(
+                vectors: [],
+                modelId: 't3planet',
+                providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
+                raw: [
+                    'error' => $before->getCancellationReason() ?? 'AI provider request was cancelled.',
+                ],
+            );
+        }
 
         $start = (int) (microtime(true) * 1000);
         try {
@@ -289,7 +304,7 @@ class ProxyAiExecutor
             );
             throw $e;
         } catch (ClientExceptionInterface $e) {
-            $this->abortQuietly($domain, $requestUuid);
+            $this->abortQuietly($domain, $requestUuid, $featureKey);
             $this->dispatchFailure(
                 $provider,
                 $e,
@@ -303,7 +318,25 @@ class ProxyAiExecutor
         }
 
         $response = $this->mapEmbedToEmbeddingResponse($payload, $requestUuid, (int) (microtime(true) * 1000) - $start);
+        $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
         $this->persistEmbedding($provider, $before->getOptions(), $before->getPrompt(), $response);
+        // Budget/usage listeners bind to AfterProviderResponseEvent; credits
+        // embedding usage must count against per-user budgets too (CTX-14).
+        $this->events->dispatch(new AfterProviderResponseEvent(
+            $provider,
+            new AiResponse(
+                content: '',
+                modelId: $response->modelId,
+                providerIdentifier: $response->providerIdentifier,
+                tokensInput: $response->tokensInput,
+                latencyMs: $response->latencyMs,
+                raw: ['call' => self::CALL_EMBED],
+                credits: $response->credits,
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
+            ),
+            $before->getOptions(),
+            $before->getPrompt(),
+        ));
 
         return $response;
     }
@@ -382,7 +415,7 @@ class ProxyAiExecutor
     /**
      * @param array<string, mixed> $payload
      */
-    private function mapChargeToAiResponse(array $payload, string $requestUuid, int $latencyMs): AiResponse
+    private function mapChargeToAiResponse(array $payload, string $requestUuid, int $latencyMs, AiOptions $options = new AiOptions()): AiResponse
     {
         $credits = is_array($payload['credits'] ?? null) ? $payload['credits'] : [];
         $charged = is_array($payload['charged'] ?? null) ? $payload['charged'] : [];
@@ -396,6 +429,7 @@ class ProxyAiExecutor
             latencyMs: $latencyMs,
             raw: $payload,
             credits: CreditsUsage::fromApiPayload($credits, $charged, $requestUuid, $payload),
+            appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($options),
         );
     }
 
@@ -404,9 +438,18 @@ class ProxyAiExecutor
      */
     private function mapEmbedToEmbeddingResponse(array $payload, string $requestUuid, int $latencyMs): EmbeddingResponse
     {
-        $vectors = $payload['vectors'] ?? $payload['embedding'] ?? [];
-        if (!is_array($vectors)) {
-            $vectors = [];
+        $rawVectors = $payload['vectors'] ?? $payload['embedding'] ?? [];
+        $vectors = [];
+        if (is_array($rawVectors)) {
+            foreach ($rawVectors as $rawVector) {
+                if (!is_array($rawVector)) {
+                    continue;
+                }
+                $vectors[] = array_values(array_map(
+                    static fn(mixed $value): float => is_numeric($value) ? (float) $value : 0.0,
+                    $rawVector,
+                ));
+            }
         }
         $credits = is_array($payload['credits'] ?? null) ? $payload['credits'] : [];
         $charged = is_array($payload['charged'] ?? null) ? $payload['charged'] : [];
@@ -424,7 +467,7 @@ class ProxyAiExecutor
 
     private function resolveCatalogFeatureKey(AiOptions $options, CreditsApiEndpoint $endpoint): string
     {
-        $clientFeatureKey = trim($options->featureKey);
+        $clientFeatureKey = trim($options->featureKey ?? '');
         if ($clientFeatureKey === '' && $endpoint === CreditsApiEndpoint::Charge) {
             throw new CreditsApiException(
                 CreditsApiErrorCodes::FEATURE_KEY_REQUIRED,
@@ -446,7 +489,7 @@ class ProxyAiExecutor
         array $embedInputs = [],
     ): array {
         $metaJson = CreditsMetaJsonBuilder::build($prompt, $options, $embedInputs);
-        $clientFeatureKey = trim($options->featureKey);
+        $clientFeatureKey = trim($options->featureKey ?? '');
         if ($clientFeatureKey !== '') {
             $metaJson['client_feature_key'] = $clientFeatureKey;
         }
@@ -549,8 +592,8 @@ class ProxyAiExecutor
     {
         try {
             $payload = $this->apiClient->abort($domain, $requestUuid, $this->tokenResolver->resolve());
-            if ($featureKey !== null && ($payload['status'] ?? false) === true) {
-                $this->receiptCache->storeFromCharge($requestUuid, $featureKey, $payload);
+            if ($featureKey !== null) {
+                $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
             }
         } catch (\Throwable) {
         }

@@ -22,6 +22,8 @@
         <div class="aiu-providers">
         <f:render partial="Module/TabPageHeader" arguments="{headingClass: 'aiu-dashboard__heading', tabHeading: tabHeading, tabIntro: tabIntro, currentPageId: currentPageId, pagePathData: pagePathData, rootPageUid: rootPageUid, rootPageTitle: rootPageTitle}" />
 
+            <f:render partial="Credits/PaymentFlash" arguments="{flash: flash}" />
+
             <f:if condition="{showFullDashboardOverview} == 0">
                 <f:render partial="Module/Dashboard/AllowedTabsOverview" arguments="{allowedDashboardTabs: allowedDashboardTabs}" />
             </f:if>

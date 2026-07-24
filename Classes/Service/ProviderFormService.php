@@ -37,8 +37,6 @@ use NITSAN\NsT3AF\Provider\Capability;
  */
 final class ProviderFormService
 {
-    private const OPENAI_COMPATIBLE_ADAPTER_TYPE = Provider::ADAPTER_OPENAI_COMPATIBLE;
-
     /**
      * @var list<string>
      */
@@ -77,7 +75,6 @@ final class ProviderFormService
         'is_default',
         'is_enabled',
         'enabled_for_dashboard',
-        'no_rerouting',
     ];
 
     public function __construct(
@@ -219,13 +216,7 @@ final class ProviderFormService
         $embeddingModelId = trim((string) ($payload['embedding_model_id'] ?? ''));
         if ($embeddingModelId !== '') {
             $caps = $payload['capabilities'] ?? '';
-            if (is_string($caps)) {
-                $capList = Capability::fromCsv($caps);
-            } elseif (is_array($caps)) {
-                $capList = array_map('strval', array_values($caps));
-            } else {
-                $capList = [];
-            }
+            $capList = is_string($caps) ? Capability::fromCsv($caps) : [];
             if (!in_array(Capability::EMBEDDINGS, $capList, true)) {
                 $capList[] = Capability::EMBEDDINGS;
                 $payload['capabilities'] = Capability::toCsv($capList);
@@ -250,7 +241,7 @@ final class ProviderFormService
         return $input;
     }
 
-    private function coerceField(string $field, mixed $value): int|float|string|null
+    private function coerceField(string $field, mixed $value): int|float|string
     {
         return match ($field) {
             'is_default' => ((bool) $value) ? 1 : 0,

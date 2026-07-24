@@ -39,7 +39,7 @@ readonly class McpToolOwnershipResolver
     /**
      * @param array{
      *     name: string,
-     *     className: class-string,
+     *     className: string,
      *     ownerExtensionKey?: string|null
      * } $tool
      * @param array<string, array<string, mixed>> $extensionConfigs
@@ -69,7 +69,7 @@ readonly class McpToolOwnershipResolver
     }
 
     /**
-     * @param class-string $className
+     * @param string $className Fully-qualified class name (need not exist at analyse time).
      */
     public function inferFromClassName(string $className): ?string
     {

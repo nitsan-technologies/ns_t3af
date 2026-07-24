@@ -73,7 +73,7 @@ final readonly class CreditsUsage
         $cost = AiCreditUnits::parseCost($payload, $charged);
         $buckets = AiCreditUnits::parseBalanceBuckets(
             $credits,
-            $pricing?->creditUnitScale ?? AiCreditUnits::SCALE,
+            $pricing !== null ? $pricing->creditUnitScale : AiCreditUnits::SCALE,
         );
 
         return new self(

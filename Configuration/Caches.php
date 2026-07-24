@@ -18,13 +18,6 @@ declare(strict_types=1);
  */
 
 return [
-    'nst3af_responses' => [
-        'frontend' => \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend::class,
-        'options' => [
-            'defaultLifetime' => 3600,
-        ],
-        'groups' => ['system', 'nst3af'],
-    ],
     'nst3af_provider_models' => [
         'frontend' => \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend::class,
         'options' => [

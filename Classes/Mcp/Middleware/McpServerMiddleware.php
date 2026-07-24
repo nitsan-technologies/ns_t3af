@@ -132,12 +132,18 @@ readonly class McpServerMiddleware implements MiddlewareInterface
         $dnsMiddlewareClass = 'Mcp\\Server\\Transport\\Http\\Middleware\\DnsRebindingProtectionMiddleware';
         $protocolMiddlewareClass = 'Mcp\\Server\\Transport\\Http\\Middleware\\ProtocolVersionMiddleware';
 
+        // Reflection avoids PHPStan "always true" on one SDK version and
+        // "always false" on another across the CI matrix.
+        $supportsDefaultMiddleware = (new \ReflectionClass(StreamableHttpTransport::class))
+            ->hasMethod('defaultMiddleware');
+
         if (
-            !method_exists(StreamableHttpTransport::class, 'defaultMiddleware')
+            !$supportsDefaultMiddleware
             || !class_exists($corsMiddlewareClass)
             || !class_exists($dnsMiddlewareClass)
             || !class_exists($protocolMiddlewareClass)
         ) {
+            // Older mcp/sdk (v0.5) uses the 3-argument constructor only.
             return new StreamableHttpTransport($request, $this->responseFactory, $this->streamFactory);
         }
 

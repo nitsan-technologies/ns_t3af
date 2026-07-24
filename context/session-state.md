@@ -2,6 +2,22 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-07-20 — Credits API base URL resolver + DB sync
+
+**Done:** `CreditsApiBaseUrlResolver` (env `T3PLANET_CREDITS_API_BASE_URL` → Development → production `.cloud`). `RuntimeSettingsService` syncs known built-in URLs in `tx_nst3af_runtime_setting.t3planet_api_base_url` on boot. Removed ext_conf `t3planetApiBaseUrl`. Context: `context/features/credits-api-base-url.md`.
+
+**Last touched:** 2026-07-20
+
+---
+
+## 2026-07-20 — T3Planet Credits publicly available
+
+**Done:** Re-enabled T3Planet Credits for public selection. `CreditsReleaseGate::PUBLICLY_AVAILABLE = true` in `Classes/Credits/Service/CreditsReleaseGate.php`. Mode toggle, setup wizard, activate flow, buy/pricing/checkout routes, and child extensions via `CreditModeResolver` are unblocked. Updated `PRIVACY.md` for Credits-mode data path. API host remains ops-controlled via `tx_nst3af_runtime_setting.t3planet_api_base_url`.
+
+**Last touched:** 2026-07-20
+
+---
+
 ## 2026-07-15 — Context audit for public GitHub
 
 **Done:**

@@ -72,7 +72,16 @@ final class FeaturePermissionCatalog
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<array{
+     *     id: string,
+     *     label: string,
+     *     description: string,
+     *     permBase: string,
+     *     relevantModules: list<string>,
+     *     group: string,
+     *     type: string,
+     *     extension: string|null
+     * }>
      */
     private function providerFeatures(): array
     {

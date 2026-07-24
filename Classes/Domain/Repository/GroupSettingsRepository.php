@@ -22,7 +22,10 @@ namespace NITSAN\NsT3AF\Domain\Repository;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
-final class GroupSettingsRepository
+/**
+ * @internal Not final so unit tests can substitute doubles for governance listeners.
+ */
+class GroupSettingsRepository
 {
     public const TABLE = 'tx_nst3af_group_settings';
 

@@ -38,6 +38,7 @@ final class DashboardStatisticsCache
     ) {}
 
     /**
+     * @param array{fromTimestamp:int,toTimestamp:int,days:int,preset?:string} $period
      * @return array<string, mixed>|null
      */
     public function getAnalytics(
@@ -51,6 +52,7 @@ final class DashboardStatisticsCache
     }
 
     /**
+     * @param array{fromTimestamp:int,toTimestamp:int,days:int,preset?:string} $period
      * @param array<string, mixed> $payload
      */
     public function setAnalytics(
@@ -68,6 +70,8 @@ final class DashboardStatisticsCache
     }
 
     /**
+     * @param array{fromTimestamp:int,toTimestamp:int,days:int,preset?:string} $period
+     * @param list<int>|null $providerUids
      * @return array<string, mixed>|null
      */
     public function getTrends(
@@ -82,6 +86,8 @@ final class DashboardStatisticsCache
     }
 
     /**
+     * @param array{fromTimestamp:int,toTimestamp:int,days:int,preset?:string} $period
+     * @param list<int>|null $providerUids
      * @param array<string, mixed> $payload
      */
     public function setTrends(
@@ -100,13 +106,41 @@ final class DashboardStatisticsCache
     }
 
     /**
-     * @return array<string, mixed>|null
+     * @return array{
+     *   healthy:int,
+     *   total:int,
+     *   warnings:int,
+     *   items:list<array{id:string,label:string,version:string,status:string,detail:string,iconIdentifier:string}>
+     * }|null
      */
     public function getExtensionHealth(int $windowDays): ?array
     {
         $entry = $this->cache->get($this->extensionHealthKey($windowDays));
+        if (!is_array($entry) || !is_array($entry['items'] ?? null)) {
+            return null;
+        }
 
-        return is_array($entry) ? $entry : null;
+        $items = [];
+        foreach ($entry['items'] as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $items[] = [
+                'id' => (string) ($item['id'] ?? ''),
+                'label' => (string) ($item['label'] ?? ''),
+                'version' => (string) ($item['version'] ?? ''),
+                'status' => (string) ($item['status'] ?? ''),
+                'detail' => (string) ($item['detail'] ?? ''),
+                'iconIdentifier' => (string) ($item['iconIdentifier'] ?? ''),
+            ];
+        }
+
+        return [
+            'healthy' => (int) ($entry['healthy'] ?? 0),
+            'total' => (int) ($entry['total'] ?? count($items)),
+            'warnings' => (int) ($entry['warnings'] ?? 0),
+            'items' => $items,
+        ];
     }
 
     /**
@@ -128,8 +162,15 @@ final class DashboardStatisticsCache
     public function getScheduledTasks(): ?array
     {
         $entry = $this->cache->get('scheduled_tasks');
+        if (!is_array($entry)) {
+            return null;
+        }
 
-        return is_array($entry) ? $entry : null;
+        return [
+            'total' => (int) ($entry['total'] ?? 0),
+            'active' => (int) ($entry['active'] ?? 0),
+            'failing' => (int) ($entry['failing'] ?? 0),
+        ];
     }
 
     /**
@@ -159,6 +200,7 @@ final class DashboardStatisticsCache
     }
 
     /**
+     * @param array<string, mixed> $period
      * @param list<int>|null $providerUids
      */
     private function trendsKey(

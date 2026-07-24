@@ -31,9 +31,9 @@ use TYPO3\CMS\Core\Database\Query\QueryBuilder;
  * The dashboard reads from this repository only; callers should not query the
  * table directly to keep schema evolution isolated.
  *
- * @internal
+ * @internal Not final so unit tests can substitute doubles for governance listeners.
  */
-final class RequestLogRepository
+class RequestLogRepository
 {
     public const TABLE = 'tx_nst3af_request_log';
 
@@ -109,6 +109,7 @@ final class RequestLogRepository
 
     /**
      * @return array{totalRequests:int,totalTokens:int,totalCost:float,successRate:float}
+     * @param list<int> $providerUids
      */
     public function totals(
         int $fromTimestamp,
@@ -146,6 +147,7 @@ final class RequestLogRepository
 
     /**
      * @return list<array{day:string,requests:int,success:int,cost:float}>
+     * @param list<int> $providerUids
      */
     public function requestsByDay(
         int $fromTimestamp,
@@ -171,7 +173,7 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'day' => (string) ($row['day'] ?? ''),
                 'requests' => (int) ($row['requests'] ?? 0),
@@ -179,11 +181,12 @@ final class RequestLogRepository
                 'cost' => (float) ($row['cost'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{day:string,credits:float}>
+     * @param list<int> $providerUids
      */
     public function creditsByDay(
         int $fromTimestamp,
@@ -207,17 +210,18 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'day' => (string) ($row['day'] ?? ''),
                 'credits' => (float) ($row['credits'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
-     * @return list<array{extensionKey:string,requests:int,tokens:int,cost:float}>
+     * @return list<array{extensionKey:string,requests:int,tokens:int,cost:float,credits:float}>
+     * @param list<int> $providerUids
      */
     public function usageByExtension(
         int $fromTimestamp,
@@ -246,7 +250,7 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'extensionKey' => (string) ($row['extension_key'] ?? ''),
                 'requests' => (int) ($row['requests'] ?? 0),
@@ -255,11 +259,12 @@ final class RequestLogRepository
                 'credits' => (float) ($row['credits'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{extensionKey:string,featureKey:string,requests:int,tokens:int,cost:float}>
+     * @param list<int> $providerUids
      */
     public function usageByExtensionAndFeature(
         int $fromTimestamp,
@@ -288,7 +293,7 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'extensionKey' => (string) ($row['extension_key'] ?? ''),
                 'featureKey' => (string) ($row['feature_key'] ?? ''),
@@ -297,11 +302,12 @@ final class RequestLogRepository
                 'cost' => (float) ($row['cost'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{model:string,tokens:int,cost:float}>
+     * @param list<int> $providerUids
      */
     public function topModelsByTokens(
         int $fromTimestamp,
@@ -328,18 +334,19 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'model' => (string) ($row['model_used'] ?? ''),
                 'tokens' => (int) ($row['tokens'] ?? 0),
                 'cost' => (float) ($row['cost'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{provider:string,requests:int,cost:float}>
+     * @param list<int> $providerUids
      */
     public function providerDistribution(
         int $fromTimestamp,
@@ -364,18 +371,19 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'provider' => (string) ($row['provider_identifier'] ?? ''),
                 'requests' => (int) ($row['requests'] ?? 0),
                 'cost' => (float) ($row['cost'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array<string, scalar>>
+     * @param list<int> $providerUids
      */
     public function recent(
         int $limit = 10,
@@ -540,6 +548,7 @@ final class RequestLogRepository
      *   reqTypes:list<string>,
      *   users:list<string>
      * }
+     * @param list<int> $providerUids
      */
     public function usageFilterOptions(
         int $fromTimestamp,
@@ -559,6 +568,7 @@ final class RequestLogRepository
 
     /**
      * @return list<array{day:string,success:int,failed:int}>
+     * @param list<int> $providerUids
      */
     public function requestsByDaySuccessFail(
         int $fromTimestamp,
@@ -582,18 +592,19 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'day' => (string) ($row['day'] ?? ''),
                 'success' => (int) ($row['success'] ?? 0),
                 'failed' => (int) ($row['failed'] ?? 0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return array{success:int,failed:int}
+     * @param list<int> $providerUids
      */
     public function successFailTotals(
         int $fromTimestamp,
@@ -623,6 +634,7 @@ final class RequestLogRepository
 
     /**
      * @return list<array{day:string,extensionKey:string,credits:float}>
+     * @param list<int> $providerUids
      */
     public function creditsByDayAndExtension(
         int $fromTimestamp,
@@ -646,18 +658,19 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'day' => (string) ($row['day'] ?? ''),
                 'extensionKey' => (string) ($row['extension_key'] ?? ''),
                 'credits' => (float) ($row['credits'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{day:string,provider:string,cost:float}>
+     * @param list<int> $providerUids
      */
     public function costByDayAndProvider(
         int $fromTimestamp,
@@ -681,18 +694,19 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'day' => (string) ($row['day'] ?? ''),
                 'provider' => (string) ($row['provider_identifier'] ?? ''),
                 'cost' => (float) ($row['cost'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{extensionKey:string,credits:float,requests:int}>
+     * @param list<int> $providerUids
      */
     public function usageByExtensionCredits(
         int $fromTimestamp,
@@ -719,18 +733,19 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'extensionKey' => (string) ($row['extension_key'] ?? ''),
                 'credits' => (float) ($row['credits'] ?? 0.0),
                 'requests' => (int) ($row['requests'] ?? 0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{featureKey:string,featureLabel:string,creditsPerRequest:float,requests:int}>
+     * @param list<int> $providerUids
      */
     public function usageByFeatureCredits(
         int $fromTimestamp,
@@ -758,7 +773,7 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static function (array $row): array {
                 $requests = max(1, (int) ($row['requests'] ?? 0));
 
@@ -770,11 +785,12 @@ final class RequestLogRepository
                 ];
             },
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{provider:string,requests:int,failed:int,cost:float,tokens:int,lastCrdate:int}>
+     * @param list<int> $providerUids
      */
     public function providerStats(
         int $fromTimestamp,
@@ -801,7 +817,7 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'provider' => (string) ($row['provider_identifier'] ?? ''),
                 'requests' => (int) ($row['requests'] ?? 0),
@@ -811,7 +827,7 @@ final class RequestLogRepository
                 'lastCrdate' => (int) ($row['last_crdate'] ?? 0),
             ],
             $rows,
-        );
+        ));
     }
 
     public function softDeleteByUid(int $uid): int
@@ -1000,6 +1016,7 @@ final class RequestLogRepository
 
     /**
      * @return list<string>
+     * @param list<int> $providerUids
      */
     private function distinctColumnValues(
         string $column,

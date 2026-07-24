@@ -30,16 +30,17 @@ namespace NITSAN\NsT3AF\Api;
 final readonly class AiResponse
 {
     /**
-     * @param string                $content            Generated text from the provider.
-     * @param string                $modelId            Model that produced this response.
-     * @param string                $providerIdentifier Identifier of the provider record used.
-     * @param int                   $tokensInput        Prompt token count, when reported.
-     * @param int                   $tokensOutput       Completion token count, when reported.
-     * @param int                   $latencyMs          Round-trip time in milliseconds.
-     * @param bool                  $cached             True when served from `nst3af_responses` cache.
-     * @param array<string, mixed>  $raw                Adapter-specific response payload, useful for debugging.
-     * @param CreditsUsage|null     $credits            Set when T3Planet Credits mode handled the request.
-     * @param QualityScore|null     $quality            Optional response quality assessment for telemetry/UI.
+     * @param string                $content                         Generated text from the provider.
+     * @param string                $modelId                         Model that produced this response.
+     * @param string                $providerIdentifier              Identifier of the provider record used.
+     * @param int                   $tokensInput                     Prompt token count, when reported.
+     * @param int                   $tokensOutput                    Completion token count, when reported.
+     * @param int                   $latencyMs                       Round-trip time in milliseconds.
+     * @param bool                  $cached                          Reserved for a future response cache; currently always `false`.
+     * @param array<string, mixed>  $raw                             Adapter-specific response payload, useful for debugging.
+     * @param CreditsUsage|null     $credits                         Set when T3Planet Credits mode handled the request.
+     * @param QualityScore|null     $quality                         Optional response quality assessment for telemetry/UI.
+     * @param int|null              $appliedBrandContextProfileUid   Brand profile uid applied to this request, when any.
      */
     public function __construct(
         public string $content,
@@ -52,5 +53,6 @@ final readonly class AiResponse
         public array $raw = [],
         public ?CreditsUsage $credits = null,
         public ?QualityScore $quality = null,
+        public ?int $appliedBrandContextProfileUid = null,
     ) {}
 }
