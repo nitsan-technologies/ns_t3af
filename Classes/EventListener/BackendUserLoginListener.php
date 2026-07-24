@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\EventListener;
 
 use NITSAN\NsLicense\Service\LicenseService;
+use NITSAN\NsT3AF\Utility\LicenseUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Authentication\Event\AfterUserLoggedInEvent;
 use TYPO3\CMS\Core\Package\PackageManager;
@@ -35,6 +36,10 @@ final class BackendUserLoginListener
         }
 
         if (!GeneralUtility::makeInstance(PackageManager::class)->isPackageActive('ns_license')) {
+            return;
+        }
+
+        if (LicenseUtility::checkLicenseForModules()) {
             return;
         }
 
