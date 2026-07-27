@@ -555,44 +555,14 @@ final class AiService implements AiServiceInterface
         $raw = [];
         if (is_string($result)) {
             $content = $result;
-        }
-        if (is_object($result)) {
-            if (method_exists($result, 'asText')) {
-                try {
-                    /** @var mixed $text */
-                    $text = $result->asText();
-                    if (is_string($text)) {
-                        $content = $text;
-                    }
-                } catch (\Throwable) {
-                    // Fall through to other extraction strategies.
-                }
+        } elseif (is_array($result)) {
+            if (isset($result['content'])) {
+                $content = (string) $result['content'];
             }
-            if (method_exists($result, 'getResult')) {
-                try {
-                    /** @var mixed $nestedResult */
-                    $nestedResult = $result->getResult();
-                    if (is_object($nestedResult) && method_exists($nestedResult, 'getContent')) {
-                        $nestedContent = $nestedResult->getContent();
-                        if (is_string($nestedContent)) {
-                            $content = $nestedContent;
-                        }
-                    }
-                } catch (\Throwable) {
-                    // Fall through to other extraction strategies.
-                }
-            }
-            if (method_exists($result, 'getContent')) {
-                $content = (string) $result->getContent();
-            }
-            if (method_exists($result, '__toString')) {
-                $content = (string) $result;
-            }
-            $raw = $this->extractRawResponse($result);
-        }
-        if (is_array($result) && isset($result['content'])) {
-            $content = (string) $result['content'];
             $raw = $result;
+        } elseif (is_object($result)) {
+            $content = $this->extractContentFromInvokeResult($result);
+            $raw = $this->extractRawResponse($result);
         }
 
         return [
@@ -600,6 +570,49 @@ final class AiService implements AiServiceInterface
             'result' => $result,
             'raw' => $raw,
         ];
+    }
+
+    private function extractContentFromInvokeResult(object $result): string
+    {
+        if (method_exists($result, 'asText')) {
+            try {
+                /** @var mixed $text */
+                $text = $result->asText();
+                if (is_string($text) && $text !== '') {
+                    return $text;
+                }
+            } catch (\Throwable) {
+                // Fall through to other extraction strategies.
+            }
+        }
+
+        if (method_exists($result, 'getResult')) {
+            try {
+                /** @var mixed $nestedResult */
+                $nestedResult = $result->getResult();
+                if (is_object($nestedResult) && method_exists($nestedResult, 'getContent')) {
+                    $nestedContent = $nestedResult->getContent();
+                    if (is_string($nestedContent) && $nestedContent !== '') {
+                        return $nestedContent;
+                    }
+                }
+            } catch (\Throwable) {
+                // Fall through to other extraction strategies.
+            }
+        }
+
+        if (method_exists($result, 'getContent')) {
+            $directContent = $result->getContent();
+            if (is_string($directContent) && $directContent !== '') {
+                return $directContent;
+            }
+        }
+
+        if (method_exists($result, '__toString')) {
+            return (string) $result;
+        }
+
+        return '';
     }
 
     /**

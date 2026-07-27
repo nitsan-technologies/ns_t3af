@@ -1096,6 +1096,44 @@ final class AiServiceTest extends TestCase
         self::assertSame('gpt-4o', $response->modelId);
     }
 
+    /**
+     * CR-03 regression: asText() must win over getContent() when both exist;
+     * casting a non-scalar getContent() to string must not yield "Array".
+     */
+    public function testCompletePrefersAsTextOverArrayGetContent(): void
+    {
+        $provider = $this->makeProvider();
+        $platform = new class {
+            public function invoke(string $model, mixed $payload): object
+            {
+                return new class {
+                    public function asText(): string
+                    {
+                        return 'from asText';
+                    }
+
+                    /** @return array<int, string> */
+                    public function getContent(): array
+                    {
+                        return ['would', 'become', 'Array'];
+                    }
+                };
+            }
+        };
+        $adapter = $this->makeAdapter('symfony.openai', $platform);
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$adapter]),
+            new CapturingDispatcher(),
+            $this->makeSiteStorageContext(),
+        );
+
+        $response = $service->complete('hello');
+
+        self::assertSame('from asText', $response->content);
+        self::assertNotSame('Array', $response->content);
+    }
+
     public function testCompleteWithVisionExtraMessagesViaSymfonyBridgeSucceeds(): void
     {
         // Vision array content must become MessageBag(Text + ImageUrl), not a raw `messages`

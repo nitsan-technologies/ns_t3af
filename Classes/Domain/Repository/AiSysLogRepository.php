@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Domain\Repository;
 
 use NITSAN\NsT3AF\Service\AiLogChannelCatalog;
+use NITSAN\NsT3AF\Utility\ExportLimits;
 use NITSAN\NsT3AF\Utility\SysLogWriterUtility;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -116,9 +117,11 @@ final class AiSysLogRepository
      * @param array<string, mixed> $filters
      * @return list<array<string, mixed>>
      */
-    public function findForExport(array $filters = [], int $maxRows = 5000): array
+    public function findForExport(array $filters = [], int $maxRows = ExportLimits::MAX_ROWS): array
     {
-        return $this->findFiltered($filters, max(1, min($maxRows, 5000)), 0);
+        $cap = max(1, min($maxRows, ExportLimits::MAX_ROWS));
+
+        return $this->findFiltered($filters, $cap, 0);
     }
 
     /**

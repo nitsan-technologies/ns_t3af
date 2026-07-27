@@ -73,4 +73,29 @@ final class UsageBudgetFunctionalTest extends FunctionalTestCase
         ]);
         self::assertTrue($allowed->allowed);
     }
+
+    #[Test]
+    public function expiredPeriodResetsCountersOnNextRead(): void
+    {
+        $repository = $this->get(UsageBudgetRepository::class);
+        $userId = 99;
+        $now = (int) ($GLOBALS['EXEC_TIME'] ?? time());
+
+        $repository->recordUsage($userId, 'daily', 250, 1.5);
+        $afterUse = $repository->getCurrentUsage($userId, 'daily');
+        self::assertSame(1, $afterUse['requests_used']);
+        self::assertSame(250, $afterUse['tokens_used']);
+
+        $connection = $this->getConnectionPool()->getConnectionForTable(UsageBudgetRepository::TABLE);
+        $connection->update(
+            UsageBudgetRepository::TABLE,
+            ['period_start' => $now - 86400 * 2],
+            ['user_id' => $userId, 'period_type' => 'daily'],
+        );
+
+        $reset = $repository->getCurrentUsage($userId, 'daily');
+        self::assertSame(0, $reset['requests_used']);
+        self::assertSame(0, $reset['tokens_used']);
+        self::assertEqualsWithDelta(0.0, $reset['cost_used'], 0.0001);
+    }
 }

@@ -13,4 +13,14 @@
         <ini name="display_errors" value="1"/>
         <env name="TYPO3_CONTEXT" value="Testing"/>
     </php>
+    <source>
+        <include>
+            <directory suffix=".php">../../Classes</directory>
+        </include>
+        <exclude>
+            <directory>../../Classes/Contract</directory>
+            <directory>../../Classes/Enum</directory>
+            <directory>../../Classes/Dto</directory>
+        </exclude>
+    </source>
 </phpunit>

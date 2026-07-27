@@ -34,5 +34,17 @@ jobs:
         run: Build/Scripts/runTests.sh -t 14 -p ${{ matrix.php }} -d sqlite -s functional
 
       - if: matrix.php == '8.3'
+        name: Unit test coverage (Cobertura)
+        run: Build/Scripts/runTests.sh -t 14 -p ${{ matrix.php }} -s unitCoverage
+
+      - if: matrix.php == '8.3'
+        name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage-php8.3-core14
+          path: .Build/logs/clover.xml
+          if-no-files-found: error
+
+      - if: matrix.php == '8.3'
         name: PHPStan
         run: Build/Scripts/runTests.sh -t 14 -p ${{ matrix.php }} -s composer -- stan

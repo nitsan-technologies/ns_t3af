@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Domain\Repository;
 
 use NITSAN\NsT3AF\Credits\CreditsProviderIdentifier;
 use NITSAN\NsT3AF\Domain\RequestLog\RequestLogProviderScope;
+use NITSAN\NsT3AF\Utility\ExportLimits;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
@@ -536,7 +537,14 @@ class RequestLogRepository
         ?int $toTimestamp = null,
         ?RequestLogProviderScope $scope = null,
     ): array {
-        return $this->findFiltered($filters, $fromTimestamp, $toTimestamp, $scope, 0, 0);
+        return $this->findFiltered(
+            $filters,
+            $fromTimestamp,
+            $toTimestamp,
+            $scope,
+            ExportLimits::MAX_ROWS,
+            0,
+        );
     }
 
     /**

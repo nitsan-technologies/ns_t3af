@@ -664,6 +664,12 @@ case ${TEST_SUITE} in
         ${CONTAINER_BIN} run "${CONTAINER_COMMON_PARAMS[@]}" --name unit-${SUFFIX} ${XDEBUG_MODE} -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${IMAGE_PHP} "${COMMAND[@]}"
         SUITE_EXIT_CODE=$?
         ;;
+    unitCoverage)
+        mkdir -p .Build/logs
+        COMMAND=(.Build/bin/phpunit -c Build/phpunit/UnitTests.xml --exclude-group not-${DBMS} --coverage-clover=.Build/logs/clover.xml --coverage-text ${EXTRA_TEST_OPTIONS} "$@")
+        ${CONTAINER_BIN} run "${CONTAINER_COMMON_PARAMS[@]}" --name unit-coverage-${SUFFIX} -e XDEBUG_MODE=coverage -e XDEBUG_TRIGGER=foo -e XDEBUG_CONFIG="${XDEBUG_CONFIG}" ${IMAGE_PHP} "${COMMAND[@]}"
+        SUITE_EXIT_CODE=$?
+        ;;
     update)
         # pull typo3/core-testing-*:latest versions of those ones that exist locally
         echo "> pull ghcr.io/typo3/core-testing-*:latest versions of those ones that exist locally"

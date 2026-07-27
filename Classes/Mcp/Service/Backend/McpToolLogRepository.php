@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Service\Backend;
 
 use Doctrine\DBAL\ParameterType;
+use NITSAN\NsT3AF\Utility\ExportLimits;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
@@ -363,7 +364,8 @@ readonly class McpToolLogRepository
         $qb = $this->queryBuilder();
         $qb->select('*')
             ->from(self::TABLE)
-            ->orderBy('crdate', 'ASC');
+            ->orderBy('crdate', 'ASC')
+            ->setMaxResults(ExportLimits::MAX_ROWS);
         $this->applyPeriodConstraint($qb, $fromTimestamp, $toTimestamp);
 
         /** @var array<int, array<string, scalar|null>> $rows */

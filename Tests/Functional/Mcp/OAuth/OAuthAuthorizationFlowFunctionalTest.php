@@ -257,6 +257,35 @@ final class OAuthAuthorizationFlowFunctionalTest extends FunctionalTestCase
         );
     }
 
+    #[Test]
+    public function tokenEndpointReturnsGenericInvalidGrantWithoutInternalDetail(): void
+    {
+        $client = $this->clientRepository->registerClient('OAuth error test client', [self::REDIRECT_URI]);
+        $middleware = $this->get(\NITSAN\NsT3AF\Mcp\Middleware\OAuthMiddleware::class);
+        $tokenPath = $this->get(\NITSAN\NsT3AF\Mcp\Service\McpPathProvider::class)->getTokenPath();
+
+        $request = (new \TYPO3\CMS\Core\Http\ServerRequest($tokenPath, 'POST'))
+            ->withParsedBody([
+                'grant_type' => 'authorization_code',
+                'code' => 'totally-invalid-code',
+                'code_verifier' => str_repeat('a', 43),
+                'client_id' => $client['client_id'],
+                'redirect_uri' => self::REDIRECT_URI,
+            ]);
+
+        $response = $middleware->process($request, $this->createStub(\Psr\Http\Server\RequestHandlerInterface::class));
+        $payload = json_decode((string) $response->getBody(), true);
+
+        self::assertIsArray($payload);
+        self::assertSame(400, $response->getStatusCode());
+        self::assertSame('invalid_grant', $payload['error'] ?? null);
+        self::assertSame(
+            'The provided authorization grant or refresh token is invalid, expired, or revoked.',
+            $payload['error_description'] ?? null,
+        );
+        self::assertStringNotContainsString('authorization code', strtolower((string) ($payload['error_description'] ?? '')));
+    }
+
     /**
      * @return array{0: string, 1: string} [verifier, challenge]
      */
