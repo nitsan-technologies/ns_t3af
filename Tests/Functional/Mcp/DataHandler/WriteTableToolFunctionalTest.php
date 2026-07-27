@@ -8,6 +8,13 @@ declare(strict_types=1);
  * (c) T3Planet / NITSAN Technologies <support@t3planet.de>
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License, either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * For the full copyright and license information, please read the LICENSE
+ * and COMMERCIAL-LICENSE.md files that were distributed with this source code.
  */
 
 namespace NITSAN\NsT3AF\Tests\Functional\Mcp\DataHandler;
@@ -18,7 +25,6 @@ use PHPUnit\Framework\Attributes\Test;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Context\WorkspaceAspect;
-use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 
