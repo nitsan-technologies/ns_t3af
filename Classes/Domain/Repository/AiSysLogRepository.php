@@ -23,7 +23,6 @@ use NITSAN\NsT3AF\Service\AiLogChannelCatalog;
 use NITSAN\NsT3AF\Utility\SysLogWriterUtility;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Read, aggregate, and delete AI-related sys_log entries.
@@ -34,6 +33,7 @@ final class AiSysLogRepository
 
     public function __construct(
         private readonly AiLogChannelCatalog $channelCatalog,
+        private readonly ConnectionPool $connectionPool,
     ) {}
 
     /**
@@ -131,7 +131,7 @@ final class AiSysLogRepository
             return 0;
         }
 
-        $qb = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable(self::TABLE);
+        $qb = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
         $qb->getRestrictions()->removeAll();
         $qb->delete(self::TABLE)
             ->where(
@@ -151,7 +151,7 @@ final class AiSysLogRepository
             return 0;
         }
 
-        $qb = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable(self::TABLE);
+        $qb = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
         $qb->getRestrictions()->removeAll();
         $qb->delete(self::TABLE)
             ->where(
@@ -262,7 +262,7 @@ final class AiSysLogRepository
 
     private function createBaseQueryBuilder(): \TYPO3\CMS\Core\Database\Query\QueryBuilder
     {
-        $qb = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable(self::TABLE);
+        $qb = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
         $qb->getRestrictions()->removeAll();
         $qb->from(self::TABLE);
 

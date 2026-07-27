@@ -87,7 +87,10 @@
 
         <div class="aiu-toolbar">
             <div class="search-wrap w-100">
-                <input type="search" data-aiu-provider-search class="form-control"
+                <label class="visually-hidden" for="aiu-provider-search">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.search" default="Search providers..." />
+                </label>
+                <input type="search" id="aiu-provider-search" data-aiu-provider-search class="form-control"
                        autocomplete="off"
                        autocorrect="off"
                        autocapitalize="off"

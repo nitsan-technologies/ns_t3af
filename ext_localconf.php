@@ -17,7 +17,7 @@ declare(strict_types=1);
  * and COMMERCIAL-LICENSE.md files that were distributed with this source code.
  */
 
-defined('TYPO3_MODE') || defined('TYPO3') || die();
+defined('TYPO3') or die();
 
 // Caches used across the extension (provider models, credits token/API, MCP
 // OAuth, alerts, dashboard analytics). Configuration/Caches.php is the canonical

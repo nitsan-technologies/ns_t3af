@@ -76,6 +76,25 @@ final class OpenAiCompatiblePlatformTest extends TestCase
         self::assertSame(['hi'], $chunks);
     }
 
+    public function testStreamYieldsTrailingChunkWithoutFinalNewline(): void
+    {
+        $factory = $this->createMock(RequestFactory::class);
+        $factory->expects(self::once())
+            ->method('request')
+            ->willReturn(new Response(200, [], 'data: {"choices":[{"delta":{"content":"tail"}}]}'));
+
+        $adapter = new OpenAiCompatibleAdapter(new CredentialCipher(), $factory);
+        $provider = $this->makeProvider(
+            adapterType: Provider::ADAPTER_OPENAI_COMPATIBLE,
+            endpointUrl: 'https://api.example.com/v1',
+            apiKeyCipher: '',
+        );
+
+        $chunks = iterator_to_array($this->platform($adapter, $provider)->stream('gpt-4o', 'hello'), false);
+
+        self::assertSame(['tail'], $chunks);
+    }
+
     public function testStreamUsesStandardPathWhenBaseAlreadyEndsWithV1(): void
     {
         $factory = $this->createMock(RequestFactory::class);

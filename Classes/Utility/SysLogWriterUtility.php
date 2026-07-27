@@ -34,6 +34,12 @@ final class SysLogWriterUtility
 {
     private const TABLE = 'sys_log';
 
+    /** @var array<string, bool> */
+    private static array $legacySchemaCache = [];
+
+    /** @var array<string, list<string>> */
+    private static array $readableColumnsCache = [];
+
     /**
      * @param array<string, mixed> $extraData
      */
@@ -113,9 +119,15 @@ final class SysLogWriterUtility
     public static function usesLegacySchema(?Connection $connection = null): bool
     {
         $connection ??= GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable(self::TABLE);
-        $columns = $connection->createSchemaManager()->listTableColumns(self::TABLE);
+        $cacheKey = self::schemaCacheKey($connection);
+        if (array_key_exists($cacheKey, self::$legacySchemaCache)) {
+            return self::$legacySchemaCache[$cacheKey];
+        }
 
-        return isset($columns['details_nr']);
+        $columns = $connection->createSchemaManager()->listTableColumns(self::TABLE);
+        self::$legacySchemaCache[$cacheKey] = isset($columns['details_nr']);
+
+        return self::$legacySchemaCache[$cacheKey];
     }
 
     /**
@@ -124,13 +136,24 @@ final class SysLogWriterUtility
     public static function getReadableColumns(?Connection $connection = null): array
     {
         $connection ??= GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable(self::TABLE);
+        $cacheKey = self::schemaCacheKey($connection);
+        if (array_key_exists($cacheKey, self::$readableColumnsCache)) {
+            return self::$readableColumnsCache[$cacheKey];
+        }
+
         $available = array_keys($connection->createSchemaManager()->listTableColumns(self::TABLE));
         $wanted = [
             'uid', 'userid', 'type', 'channel', 'action', 'error', 'level',
             'details_nr', 'details', 'message', 'data', 'log_data', 'IP', 'tstamp', 'workspace', 'component',
         ];
+        self::$readableColumnsCache[$cacheKey] = array_values(array_intersect($wanted, $available));
 
-        return array_values(array_intersect($wanted, $available));
+        return self::$readableColumnsCache[$cacheKey];
+    }
+
+    private static function schemaCacheKey(Connection $connection): string
+    {
+        return $connection->getDatabase() . ':' . self::TABLE;
     }
 
     /**

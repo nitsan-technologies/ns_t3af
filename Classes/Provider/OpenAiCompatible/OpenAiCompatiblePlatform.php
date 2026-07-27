@@ -448,27 +448,39 @@ final class OpenAiCompatiblePlatform
             while (($pos = strpos($buffer, "\n")) !== false) {
                 $line = substr($buffer, 0, $pos);
                 $buffer = substr($buffer, $pos + 1);
-                $line = trim($line);
-                if ($line === '' || $line === 'data: [DONE]') {
-                    continue;
-                }
-                if (!str_starts_with($line, 'data:')) {
-                    continue;
-                }
-                $json = trim(substr($line, strlen('data:')));
-                $data = json_decode($json, true);
-                if (!is_array($data)) {
-                    continue;
-                }
-                $choices = $data['choices'] ?? null;
-                if (!is_array($choices) || !isset($choices[0]) || !is_array($choices[0])) {
-                    continue;
-                }
-                $delta = $choices[0]['delta'] ?? null;
-                if (is_array($delta) && isset($delta['content']) && is_string($delta['content']) && $delta['content'] !== '') {
-                    yield $delta['content'];
-                }
+                yield from $this->yieldSseChatDelta($line);
             }
+        }
+
+        if ($buffer !== '') {
+            yield from $this->yieldSseChatDelta($buffer);
+        }
+    }
+
+    /**
+     * @return Generator<string>
+     */
+    private function yieldSseChatDelta(string $line): Generator
+    {
+        $line = trim($line);
+        if ($line === '' || $line === 'data: [DONE]') {
+            return;
+        }
+        if (!str_starts_with($line, 'data:')) {
+            return;
+        }
+        $json = trim(substr($line, strlen('data:')));
+        $data = json_decode($json, true);
+        if (!is_array($data)) {
+            return;
+        }
+        $choices = $data['choices'] ?? null;
+        if (!is_array($choices) || !isset($choices[0]) || !is_array($choices[0])) {
+            return;
+        }
+        $delta = $choices[0]['delta'] ?? null;
+        if (is_array($delta) && isset($delta['content']) && is_string($delta['content']) && $delta['content'] !== '') {
+            yield $delta['content'];
         }
     }
 

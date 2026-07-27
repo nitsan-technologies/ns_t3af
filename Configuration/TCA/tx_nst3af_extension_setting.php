@@ -27,6 +27,7 @@ return [
         'adminOnly' => true,
         'hideTable' => true,
         'security' => ['ignorePageTypeRestriction' => true],
+        'searchFields' => 'extension_key,settings_json',
     ],
     'types' => [
         '0' => ['showitem' => 'extension_key, settings_json'],
