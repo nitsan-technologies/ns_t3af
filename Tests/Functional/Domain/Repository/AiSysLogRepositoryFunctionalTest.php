@@ -52,10 +52,11 @@ final class AiSysLogRepositoryFunctionalTest extends FunctionalTestCase
         SysLogWriterUtility::insert('Older provider event', 'warning', AiLogChannelCatalog::CHANNEL_PROVIDERS);
 
         $connection = $this->getConnectionPool()->getConnectionForTable('sys_log');
+        $messageColumn = SysLogWriterUtility::usesLegacySchema($connection) ? 'details' : 'message';
         $connection->update(
             'sys_log',
             ['tstamp' => $now - 86400 * 40],
-            ['message' => 'Older provider event'],
+            [$messageColumn => 'Older provider event'],
         );
 
         /** @var AiSysLogRepository $repository */
@@ -69,7 +70,8 @@ final class AiSysLogRepositoryFunctionalTest extends FunctionalTestCase
 
         $rows = $repository->findFiltered($filters);
         self::assertCount(1, $rows);
-        self::assertSame('Provider saved', $rows[0]['message'] ?? null);
+        $logText = (string) ($rows[0]['message'] ?? $rows[0]['details'] ?? '');
+        self::assertSame('Provider saved', $logText);
 
         $stats = $repository->getStatistics($filters);
         self::assertSame(1, $stats['total']);
