@@ -81,11 +81,28 @@ final class CreditsApiErrorMessageResolver
         return match ($errorCode) {
             'rate_limited' => sprintf(
                 $label,
-                max(1, (int) ($exception->extra['retry_after'] ?? 60)),
+                $this->formatRetryAfter(max(1, (int) ($exception->extra['retry_after'] ?? 60))),
             ),
             'insufficient_credits' => $this->appendTopupHint($label, $exception),
             default => $label,
         };
+    }
+
+    private function formatRetryAfter(int $seconds): string
+    {
+        if ($seconds < 60) {
+            return sprintf('%d seconds', $seconds);
+        }
+
+        if ($seconds < 3600) {
+            $minutes = (int) round($seconds / 60);
+
+            return $minutes === 1 ? '1 minute' : sprintf('%d minutes', $minutes);
+        }
+
+        $hours = (int) round($seconds / 3600);
+
+        return $hours === 1 ? '1 hour' : sprintf('%d hours', $hours);
     }
 
     private function appendTopupHint(string $label, CreditsApiException $exception): string

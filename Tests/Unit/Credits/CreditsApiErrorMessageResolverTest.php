@@ -35,7 +35,7 @@ final class CreditsApiErrorMessageResolverTest extends TestCase
             public function sL(string $label): string
             {
                 return match (true) {
-                    str_contains($label, 'rate_limited') => 'Wait %s seconds.',
+                    str_contains($label, 'rate_limited') => 'Wait %s.',
                     str_contains($label, 'api_error') => 'Generic API error.',
                     default => '',
                 };
@@ -63,6 +63,19 @@ final class CreditsApiErrorMessageResolverTest extends TestCase
         ));
 
         self::assertSame('Wait 45 seconds.', $message);
+    }
+
+    public function testResolveFormatsLongRetryAfterAsHours(): void
+    {
+        $resolver = new CreditsApiErrorMessageResolver();
+        $message = $resolver->resolve(new CreditsApiException(
+            'rate_limited',
+            429,
+            'rate_limited',
+            ['retry_after' => 72353],
+        ));
+
+        self::assertSame('Wait 20 hours.', $message);
     }
 
     public function testBuildErrorPayloadIncludesUserMessage(): void

@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Credits\Service;
 
+use NITSAN\NsT3AF\Credits\CreditsApiErrorCodes;
 use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
 
 /**
@@ -60,10 +61,12 @@ final class CreditsDashboardService
     public function fetchAndAssemble(string $returnUrl): array
     {
         $errors = [];
+        $abortFetches = false;
         try {
             $this->syncDiscoveredLicenseKeysIfNeeded();
         } catch (CreditsApiException $exception) {
-            $errors['attach'] = $this->errorMessages->resolve($exception);
+            $this->recordApiException($exception, $errors);
+            $abortFetches = $this->shouldAbortFurtherFetches($exception);
         }
 
         $balance = [];
@@ -72,51 +75,56 @@ final class CreditsDashboardService
         $features = [];
         $authRejected = false;
 
-        try {
-            $balance = $this->balanceService->fetch();
-            $this->pricingResolver->rememberFromPayload($balance);
-        } catch (CreditsApiException $exception) {
-            $authRejected = $this->recordApiException($exception, $errors, 'balance');
-        } catch (\Throwable $exception) {
-            $errors['balance'] = $exception->getMessage();
-        }
-
-        if (!$authRejected) {
+        if (!$abortFetches) {
             try {
-                $plan = $this->currentPlanService->fetch();
+                $balance = $this->balanceService->fetch();
+                $this->pricingResolver->rememberFromPayload($balance);
             } catch (CreditsApiException $exception) {
-                $authRejected = $this->recordApiException($exception, $errors, 'plan');
+                $authRejected = $this->recordApiException($exception, $errors);
+                $abortFetches = $abortFetches || $this->shouldAbortFurtherFetches($exception);
             } catch (\Throwable $exception) {
-                $errors['plan'] = $exception->getMessage();
+                $errors['balance:' . $exception->getMessage()] = $exception->getMessage();
             }
         }
 
-        if (!$authRejected) {
+        if (!$authRejected && !$abortFetches) {
+            try {
+                $plan = $this->currentPlanService->fetch();
+            } catch (CreditsApiException $exception) {
+                $authRejected = $this->recordApiException($exception, $errors);
+                $abortFetches = $abortFetches || $this->shouldAbortFurtherFetches($exception);
+            } catch (\Throwable $exception) {
+                $errors['plan:' . $exception->getMessage()] = $exception->getMessage();
+            }
+        }
+
+        if (!$authRejected && !$abortFetches) {
             try {
                 $products = $this->productCatalogService->fetch($returnUrl);
                 $this->pricingResolver->rememberFromPayload($products);
             } catch (CreditsApiException $exception) {
-                $authRejected = $this->recordApiException($exception, $errors, 'products');
+                $authRejected = $this->recordApiException($exception, $errors);
+                $abortFetches = $abortFetches || $this->shouldAbortFurtherFetches($exception);
             } catch (\Throwable $exception) {
-                $errors['products'] = $exception->getMessage();
+                $errors['products:' . $exception->getMessage()] = $exception->getMessage();
             }
         }
 
-        if (!$authRejected) {
+        if (!$authRejected && !$abortFetches) {
             try {
                 $features = $this->featureCatalogService->fetch();
                 $this->pricingResolver->rememberFromPayload($features);
             } catch (CreditsApiException $exception) {
-                $this->recordApiException($exception, $errors, 'features');
+                $this->recordApiException($exception, $errors);
             } catch (\Throwable $exception) {
-                $errors['features'] = $exception->getMessage();
+                $errors['features:' . $exception->getMessage()] = $exception->getMessage();
             }
         }
 
         $receipts = $this->localReceiptCache->listRecent(20);
 
-        // Same failure (e.g. network_error) hits Balance, Plan, Products, Features — show one banner.
-        $errors = array_values(array_unique($errors));
+        // Same remote failure (e.g. rate_limited with different retry_after) — show one banner.
+        $errors = array_values($errors);
 
         return $this->assembler->assemble(
             $balance,
@@ -153,10 +161,23 @@ final class CreditsDashboardService
     /**
      * @param array<string, string> $errors
      */
-    private function recordApiException(CreditsApiException $exception, array &$errors, string $section): bool
+    private function recordApiException(CreditsApiException $exception, array &$errors): bool
     {
-        $errors[$section] = $this->errorMessages->resolve($exception);
+        $errors[$exception->errorCode] = $this->errorMessages->resolve($exception);
 
         return $this->tokenResolver->invalidateOnUnauthorized($exception);
+    }
+
+    private function shouldAbortFurtherFetches(CreditsApiException $exception): bool
+    {
+        return match ($exception->errorCode) {
+            CreditsApiErrorCodes::RATE_LIMITED,
+            CreditsApiErrorCodes::NETWORK_ERROR,
+            CreditsApiErrorCodes::INVALID_RESPONSE,
+            CreditsApiErrorCodes::INTERNAL_ERROR,
+            CreditsApiErrorCodes::UPSTREAM_AI_ERROR,
+            CreditsApiErrorCodes::UPSTREAM_AI_TIMEOUT => true,
+            default => false,
+        };
     }
 }

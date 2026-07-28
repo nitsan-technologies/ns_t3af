@@ -489,14 +489,37 @@ function applyUiState(root, data) {
   }
 }
 
+const notificationDedupeMs = 5000;
+let lastNotificationKey = '';
+let lastNotificationAt = 0;
+
 /**
  * @param {unknown} err
  * @param {string} title
  */
 function handleError(err, title) {
   const message = err instanceof Error && err.message ? err.message : String(err);
-  if (typeof Notification !== 'undefined' && Notification.error) {
-    Notification.error(title, message);
+  const errorCode =
+    err && typeof err === 'object' && err.creditsError && typeof err.creditsError.errorCode === 'string'
+      ? err.creditsError.errorCode
+      : '';
+  const dedupeKey = `${title}|${errorCode}|${message}`;
+  const now = Date.now();
+  if (dedupeKey === lastNotificationKey && now - lastNotificationAt < notificationDedupeMs) {
+    return;
+  }
+  lastNotificationKey = dedupeKey;
+  lastNotificationAt = now;
+
+  const notify =
+    typeof Notification !== 'undefined' && err && typeof err === 'object' && err.httpStatus === 429 && Notification.warning
+      ? Notification.warning.bind(Notification)
+      : typeof Notification !== 'undefined' && Notification.error
+        ? Notification.error.bind(Notification)
+        : null;
+
+  if (notify) {
+    notify(title, message);
   } else {
     console.error(title, message);
   }

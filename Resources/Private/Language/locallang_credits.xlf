@@ -31,7 +31,7 @@
         <source>Your T3Planet Credits plan has expired. Renew or upgrade your plan.</source>
       </trans-unit>
       <trans-unit id="credits.api.error.rate_limited" resname="credits.api.error.rate_limited">
-        <source>Too many requests to T3Planet Credits. Please wait %s seconds and try again.</source>
+        <source>Too many requests to T3Planet Credits. Please wait %s and try again.</source>
       </trans-unit>
       <trans-unit id="credits.api.error.idempotency_conflict" resname="credits.api.error.idempotency_conflict">
         <source>This request was already processed with different data. Start a new AI request.</source>
