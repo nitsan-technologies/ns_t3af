@@ -81,7 +81,7 @@ final class CreditsDashboardService
                 $this->pricingResolver->rememberFromPayload($balance);
             } catch (CreditsApiException $exception) {
                 $authRejected = $this->recordApiException($exception, $errors);
-                $abortFetches = $abortFetches || $this->shouldAbortFurtherFetches($exception);
+                $abortFetches = $this->shouldAbortFurtherFetches($exception);
             } catch (\Throwable $exception) {
                 $errors['balance:' . $exception->getMessage()] = $exception->getMessage();
             }
@@ -92,7 +92,7 @@ final class CreditsDashboardService
                 $plan = $this->currentPlanService->fetch();
             } catch (CreditsApiException $exception) {
                 $authRejected = $this->recordApiException($exception, $errors);
-                $abortFetches = $abortFetches || $this->shouldAbortFurtherFetches($exception);
+                $abortFetches = $this->shouldAbortFurtherFetches($exception);
             } catch (\Throwable $exception) {
                 $errors['plan:' . $exception->getMessage()] = $exception->getMessage();
             }
@@ -104,7 +104,7 @@ final class CreditsDashboardService
                 $this->pricingResolver->rememberFromPayload($products);
             } catch (CreditsApiException $exception) {
                 $authRejected = $this->recordApiException($exception, $errors);
-                $abortFetches = $abortFetches || $this->shouldAbortFurtherFetches($exception);
+                $abortFetches = $this->shouldAbortFurtherFetches($exception);
             } catch (\Throwable $exception) {
                 $errors['products:' . $exception->getMessage()] = $exception->getMessage();
             }

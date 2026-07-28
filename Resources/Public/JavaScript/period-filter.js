@@ -3,14 +3,25 @@
  * Avoid native form submits — they can reload /typo3/main inside the module iframe.
  */
 
-import { navigateInModule } from './module-navigation.js';
+import { navigateFromForm, navigateInModule, preserveRouteParams } from './module-navigation.js';
 import { disableBrowserAutocomplete } from './disable-browser-autocomplete.js';
+
+const BOUND_ATTR = 'data-aiu-period-bound';
+
+/**
+ * @param {Element} element
+ * @param {Element|null} fallbackContext
+ * @returns {Element|null}
+ */
+function resolveNavContext(element, fallbackContext) {
+  return element.closest('[data-aiu-nav-replace]') ?? fallbackContext ?? null;
+}
 
 /**
  * @param {ParentNode} [scope]
  */
 export function initPeriodDropdownForms(scope = document) {
-  const context = scope instanceof Element
+  const fallbackContext = scope instanceof Element
     ? scope
     : scope.querySelector?.('[data-aiu-nav-replace]') ?? null;
 
@@ -18,12 +29,13 @@ export function initPeriodDropdownForms(scope = document) {
     if (!(form instanceof HTMLFormElement)) {
       return;
     }
+    if (form.getAttribute(BOUND_ATTR) === '1') {
+      return;
+    }
+    form.setAttribute(BOUND_ATTR, '1');
+
     form.addEventListener('submit', (event) => {
       event.preventDefault();
-      const action = form.getAttribute('action') || form.action;
-      if (!action) {
-        return;
-      }
       const fromInput = form.querySelector('[name="from"]');
       const toInput = form.querySelector('[name="to"]');
       const from = fromInput instanceof HTMLInputElement ? fromInput.value.trim() : '';
@@ -31,11 +43,7 @@ export function initPeriodDropdownForms(scope = document) {
       if (from === '' || to === '') {
         return;
       }
-      const url = new URL(action, window.location.href);
-      url.searchParams.set('period', 'custom');
-      url.searchParams.set('from', from);
-      url.searchParams.set('to', to);
-      navigateInModule(url.toString(), context ?? form.closest('[data-aiu-nav-replace]'));
+      navigateFromForm(form, resolveNavContext(form, fallbackContext));
     });
   });
 
@@ -43,9 +51,15 @@ export function initPeriodDropdownForms(scope = document) {
     if (!(anchor instanceof HTMLAnchorElement)) {
       return;
     }
+    if (anchor.getAttribute(BOUND_ATTR) === '1') {
+      return;
+    }
+    anchor.setAttribute(BOUND_ATTR, '1');
+
     anchor.addEventListener('click', (event) => {
       event.preventDefault();
-      navigateInModule(anchor.href, context ?? anchor.closest('[data-aiu-nav-replace]'));
+      const url = preserveRouteParams(anchor.href);
+      navigateInModule(url.toString(), resolveNavContext(anchor, fallbackContext));
     });
   });
 }

@@ -6,7 +6,29 @@
 const MODULE_ROUTER = 'typo3-backend-module-router';
 const IFRAME_MODULE = 'typo3-iframe-module';
 const CONTENT_IFRAME = '#typo3-contentIframe, .t3js-scaffold-content-module-iframe';
-const PRESERVED_ROUTE_PARAMS = ['token', 'id'];
+export const PRESERVED_ROUTE_PARAMS = ['token', 'id'];
+
+/**
+ * @param {string|URL} url
+ * @param {string|URL} [sourceUrl]
+ * @returns {URL}
+ */
+export function preserveRouteParams(url, sourceUrl = window.location.href) {
+  const target = url instanceof URL ? new URL(url.toString()) : new URL(url, window.location.href);
+  const source = new URL(sourceUrl, window.location.href);
+
+  for (const key of PRESERVED_ROUTE_PARAMS) {
+    if (target.searchParams.has(key)) {
+      continue;
+    }
+    const value = source.searchParams.get(key);
+    if (value !== null && value !== '') {
+      target.searchParams.set(key, value);
+    }
+  }
+
+  return target;
+}
 
 /**
  * @param {HTMLFormElement} form
@@ -18,15 +40,7 @@ function buildActionUrlFromForm(form) {
     return null;
   }
 
-  const actionUrl = new URL(action, window.location.href);
-  const url = new URL(actionUrl.pathname, window.location.href);
-
-  for (const key of PRESERVED_ROUTE_PARAMS) {
-    const value = actionUrl.searchParams.get(key);
-    if (value !== null && value !== '') {
-      url.searchParams.set(key, value);
-    }
-  }
+  const url = preserveRouteParams(new URL(action, window.location.href));
 
   new FormData(form).forEach((value, key) => {
     const normalized = value.toString();
@@ -45,7 +59,7 @@ function buildActionUrlFromForm(form) {
  * @returns {string}
  */
 function normalizeModuleTarget(url) {
-  const absolute = new URL(url, window.location.href);
+  const absolute = preserveRouteParams(url);
   return `${absolute.pathname}${absolute.search}${absolute.hash}`;
 }
 
@@ -149,7 +163,10 @@ function resolveReplaceOptions(context) {
  */
 export async function navigateInModule(url, context) {
   const target = normalizeModuleTarget(url);
-  const { selector, onReplace } = resolveReplaceOptions(context);
+  const navContext = context instanceof Element
+    ? context
+    : context?.closest?.('[data-aiu-nav-replace]') ?? null;
+  const { selector, onReplace } = resolveReplaceOptions(navContext);
   const inIframe = window.self !== window.top;
 
   if (inIframe && selector) {
@@ -162,10 +179,6 @@ export async function navigateInModule(url, context) {
 
   if (setTopModuleEndpoint(target)) {
     return true;
-  }
-
-  if (inIframe) {
-    return false;
   }
 
   window.location.assign(target);
@@ -183,7 +196,9 @@ export async function navigateFromForm(form, context) {
     return false;
   }
 
-  return navigateInModule(url.toString(), context ?? form.closest('[data-aiu-nav-replace]'));
+  const navContext = form.closest('[data-aiu-nav-replace]') ?? context ?? null;
+
+  return navigateInModule(url.toString(), navContext);
 }
 
 /**

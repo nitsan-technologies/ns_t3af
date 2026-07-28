@@ -269,14 +269,8 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $this->setupChecklistPresenter->registerAssets($this->pageRenderer);
         $period = $this->dashboardPeriodResolver->resolve($request);
 
-        if ($hasExplicitPeriod && $backendUser !== null) {
-            $isCustom = $period['preset'] === DashboardPeriodResolver::PRESET_CUSTOM;
-            $this->moduleStateService->setPeriod(
-                $backendUser,
-                $period['preset'],
-                $isCustom ? date('Y-m-d', (int) $period['fromTimestamp']) : '',
-                $isCustom ? date('Y-m-d', (int) $period['toTimestamp']) : '',
-            );
+        if ($hasExplicitPeriod) {
+            $this->persistModulePeriodFromResolved($request, $period);
         }
 
         $analyticsCredits = $this->dashboardAnalytics->forPeriod($period, RequestLogProviderScope::Credits);
@@ -444,7 +438,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 'moduleHealth' => $moduleHealth,
                 'trendsCredits' => $trendsCredits,
                 'trendsOwnKeys' => $trendsOwnKeys,
-                'dashboardPeriodPresets' => $this->buildDashboardPeriodPresets($period),
+                'dashboardPeriodPresets' => $this->buildDashboardPeriodPresets($period, $routeParams),
                 'dashboardPeriodRangeLabel' => $this->formatPeriodRangeLabel($period),
                 'dashboardPeriodFromDate' => date('Y-m-d', (int) $period['fromTimestamp']),
                 'dashboardPeriodToDate' => date('Y-m-d', (int) $period['toTimestamp']),
@@ -1077,8 +1071,12 @@ final class ModuleController extends AbstractAiUniverseModuleController
             $query,
             DashboardPeriodResolver::PRESET_7D,
         );
+        if (isset($query['period'])) {
+            $this->persistModulePeriodFromResolved($request, $periodResolved);
+        }
         $filters = $this->normalizeAiLogsFilters($query, $periodResolved);
         $routeContext = $this->buildAiLogsRouteContext($filters);
+        $routeParams = array_merge($this->routeParamsForPage($request), $routeContext);
         $perPage = (int) ($filters['max'] ?? 50);
         $currentPage = max(1, (int) ($filters['currentPage'] ?? 1));
 
@@ -1112,15 +1110,15 @@ final class ModuleController extends AbstractAiUniverseModuleController
             'aiLogsPeriodPresets' => $this->buildPeriodPresets(
                 't3af_dashboard.ai_logs',
                 $periodResolved,
-                $routeContext,
+                $routeParams,
             ),
             'aiLogsPeriodFromDate' => date('Y-m-d', (int) $periodResolved['fromTimestamp']),
             'aiLogsPeriodToDate' => date('Y-m-d', (int) $periodResolved['toTimestamp']),
             'aiLogsPeriodFormAction' => (string) $this->uriBuilder->buildUriFromRoute(
                 't3af_dashboard.ai_logs',
-                $routeContext,
+                $routeParams,
             ),
-            'aiLogsListUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_logs'),
+            'aiLogsListUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_logs', $routeParams),
         ]);
 
         return $view->renderResponse('Module/AiLogs');
@@ -1581,11 +1579,31 @@ final class ModuleController extends AbstractAiUniverseModuleController
 
     /**
      * @param array{preset:string,days:int,fromTimestamp:int,toTimestamp:int,labelKey:string} $period
+     * @param array<string, int|string> $routeParams
      * @return list<array{id:string,label:string,href:string,active:int}>
      */
-    private function buildDashboardPeriodPresets(array $period): array
+    private function buildDashboardPeriodPresets(array $period, array $routeParams = []): array
     {
-        return $this->buildPeriodPresets('t3af_dashboard.overview', $period);
+        return $this->buildPeriodPresets('t3af_dashboard.overview', $period, $routeParams);
+    }
+
+    /**
+     * @param array{preset:string,days:int,fromTimestamp:int,toTimestamp:int,labelKey:string} $periodResolved
+     */
+    private function persistModulePeriodFromResolved(ServerRequestInterface $request, array $periodResolved): void
+    {
+        $backendUser = $this->getBackendUser();
+        if ($backendUser === null) {
+            return;
+        }
+
+        $isCustom = $periodResolved['preset'] === DashboardPeriodResolver::PRESET_CUSTOM;
+        $this->moduleStateService->setPeriod(
+            $backendUser,
+            $periodResolved['preset'],
+            $isCustom ? date('Y-m-d', (int) $periodResolved['fromTimestamp']) : '',
+            $isCustom ? date('Y-m-d', (int) $periodResolved['toTimestamp']) : '',
+        );
     }
 
     /**
