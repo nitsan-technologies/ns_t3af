@@ -48,6 +48,7 @@ final class ProviderFormService
         'api_key',
         'model_id',
         'embedding_model_id',
+        'api_version',
         'capabilities',
         'temperature',
         'system_prompt',
@@ -134,9 +135,13 @@ final class ProviderFormService
                 $endpointUrl = trim($this->adapters->get($adapterType)->getDefaultEndpoint());
             }
             if ($endpointUrl === '') {
-                $errors['endpoint_url'] = $adapterType === Provider::ADAPTER_SYMFONY_OLLAMA
-                    ? 'Ollama base URL is required (e.g. http://host.docker.internal:11434 in DDEV).'
-                    : 'API base URL is required for Custom / Other.';
+                if ($adapterType === Provider::ADAPTER_SYMFONY_OLLAMA) {
+                    $errors['endpoint_url'] = 'Ollama base URL is required (e.g. http://host.docker.internal:11434 in DDEV).';
+                } elseif ($adapterType === Provider::ADAPTER_SYMFONY_AZURE) {
+                    $errors['endpoint_url'] = 'Azure OpenAI endpoint is required (e.g. https://myresource.openai.azure.com).';
+                } else {
+                    $errors['endpoint_url'] = 'API base URL is required for Custom / Other.';
+                }
             } elseif (filter_var($endpointUrl, FILTER_VALIDATE_URL) === false) {
                 $errors['endpoint_url'] = 'Enter a valid URL for the API base.';
             } elseif ($endpointUrl !== $this->stringValue($input, 'endpoint_url')) {

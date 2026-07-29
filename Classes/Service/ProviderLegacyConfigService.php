@@ -295,6 +295,10 @@ final class ProviderLegacyConfigService
             $config[$map['endpoint']] = $provider->endpointUrl;
         }
 
+        if (isset($map['endpoint_model'])) {
+            $config[$map['endpoint_model']] = $provider->effectiveApiVersion();
+        }
+
         if (isset($map['enable_flag'])) {
             $config[$map['enable_flag']] = 1;
         }

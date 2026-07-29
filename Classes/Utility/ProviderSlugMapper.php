@@ -37,6 +37,7 @@ final class ProviderSlugMapper
         'symfony.gemini' => 'gemini',
         'symfony.mistral' => 'mistral',
         Provider::ADAPTER_SYMFONY_OLLAMA => 'ollama',
+        Provider::ADAPTER_SYMFONY_AZURE => 'azure',
         'symfony.huggingface' => 'huggingface',
         'custom.deepseek' => 'deepseek',
         'custom.xai' => 'xai',
@@ -55,6 +56,7 @@ final class ProviderSlugMapper
         'customllm',
         'ollama',
         'huggingface',
+        'azure',
     ];
 
     public static function slugFromAdapterType(string $adapterType): string

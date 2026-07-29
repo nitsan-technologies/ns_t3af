@@ -312,6 +312,134 @@ final class SymfonyAiBridgeAdapterTest extends TestCase
         self::assertStringContainsString('Embedding probe OK', (string) $result->message);
     }
 
+    // --- Azure-specific tests ---
+
+    public function testAzureProbeFailsWhenEndpointMissing(): void
+    {
+        $adapter = $this->makeAzureAdapter();
+        $provider = $this->makeProviderWith(endpoint: '', apiKey: '', adapterType: 'symfony.azure');
+
+        $result = $adapter->testConnection($provider);
+
+        self::assertFalse($result->ok);
+        self::assertStringContainsString('endpoint', strtolower($result->message ?? ''));
+    }
+
+    public function testAzureProbeFailsWhenApiKeyMissing(): void
+    {
+        $adapter = $this->makeAzureAdapter();
+        $provider = $this->makeProviderWith(
+            endpoint: 'https://myresource.openai.azure.com',
+            apiKey: '',
+            adapterType: 'symfony.azure',
+        );
+
+        $result = $adapter->testConnection($provider);
+
+        self::assertFalse($result->ok);
+        self::assertStringContainsString('API key', $result->message ?? '');
+    }
+
+    public function testAzureProbeReturnsOkOn200(): void
+    {
+        $requestFactory = $this->createMock(RequestFactory::class);
+        $requestFactory->method('request')
+            ->willReturn(new Response('php://temp', 200, ['Content-Type' => 'application/json']));
+
+        $adapter = $this->makeAzureAdapter($requestFactory);
+        $cipher = new CredentialCipher();
+        $provider = $this->makeProviderWith(
+            endpoint: 'https://myresource.openai.azure.com',
+            apiKey: $cipher->encrypt('azure-key-123'),
+            adapterType: 'symfony.azure',
+        );
+
+        $result = $adapter->testConnection($provider);
+
+        self::assertTrue($result->ok);
+    }
+
+    public function testAzureProbeStripsProtocolForUrlBuilding(): void
+    {
+        $capturedUrl = '';
+
+        $requestFactory = $this->createMock(RequestFactory::class);
+        $requestFactory->method('request')->willReturnCallback(
+            function (string $url) use (&$capturedUrl): Response {
+                $capturedUrl = $url;
+                return new Response('php://temp', 200);
+            },
+        );
+
+        $adapter = $this->makeAzureAdapter($requestFactory);
+        $cipher = new CredentialCipher();
+        $provider = $this->makeProviderWith(
+            endpoint: 'https://myresource.openai.azure.com/some/path',
+            apiKey: $cipher->encrypt('key'),
+            adapterType: 'symfony.azure',
+        );
+
+        $adapter->testConnection($provider);
+
+        // The probe URL should use the host only (no /some/path) and correct api-version.
+        self::assertStringContainsString('myresource.openai.azure.com/openai/models', $capturedUrl);
+        self::assertStringNotContainsString('/some/path', $capturedUrl);
+    }
+
+    public function testAzureEffectiveApiVersionUsesDefault(): void
+    {
+        $provider = $this->makeProviderWith(
+            endpoint: 'https://myresource.openai.azure.com',
+            apiKey: '',
+            adapterType: 'symfony.azure',
+        );
+
+        self::assertSame(\NITSAN\NsT3AF\Domain\Model\Provider::AZURE_DEFAULT_API_VERSION, $provider->effectiveApiVersion());
+    }
+
+    public function testAzureEffectiveApiVersionUsesStored(): void
+    {
+        $provider = new Provider(
+            uid: 1,
+            pid: 0,
+            identifier: 'azure-test',
+            title: 'Test',
+            adapterType: 'symfony.azure',
+            endpointUrl: 'https://myresource.openai.azure.com',
+            apiKeyCipher: '',
+            modelId: 'gpt-4o-chat',
+            embeddingModelId: 'text-embedding-3-small',
+            capabilities: [Capability::CHAT],
+            temperature: 0.7,
+            systemPrompt: '',
+            isDefault: false,
+            priority: 50,
+            lastUsedAt: 0,
+            lastStatus: '',
+            lastStatusAt: 0,
+            lastStatusMessage: '',
+            apiVersion: '2025-01-01',
+        );
+
+        self::assertSame('2025-01-01', $provider->effectiveApiVersion());
+    }
+
+    private function makeAzureAdapter(?RequestFactory $requestFactory = null): SymfonyAiBridgeAdapter
+    {
+        return new SymfonyAiBridgeAdapter(
+            new BridgeDescriptor(
+                packageName: 'symfony/ai-azure-platform',
+                vendorKey: 'azure',
+                type: 'symfony.azure',
+                displayName: 'Azure (Symfony AI)',
+                defaultEndpoint: '',
+                defaultCapabilities: [Capability::CHAT, Capability::STREAMING, Capability::EMBEDDINGS],
+            ),
+            new CredentialCipher(),
+            $requestFactory ?? $this->createMock(RequestFactory::class),
+        );
+    }
+
     private function makeAdapter(): SymfonyAiBridgeAdapter
     {
         return new SymfonyAiBridgeAdapter(

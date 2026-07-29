@@ -31,11 +31,18 @@ final class ProviderSlugMapperTest extends TestCase
         self::assertSame('claude', ProviderSlugMapper::slugFromAdapterType('symfony.anthropic'));
         self::assertSame('customllm', ProviderSlugMapper::slugFromAdapterType(Provider::ADAPTER_OPENAI_COMPATIBLE));
         self::assertSame('ollama', ProviderSlugMapper::slugFromAdapterType(Provider::ADAPTER_SYMFONY_OLLAMA));
+        self::assertSame('azure', ProviderSlugMapper::slugFromAdapterType(Provider::ADAPTER_SYMFONY_AZURE));
     }
 
     public function testIsT3CsCompatible(): void
     {
         self::assertTrue(ProviderSlugMapper::isT3CsCompatible('openai'));
         self::assertFalse(ProviderSlugMapper::isT3CsCompatible('deepseek'));
+        self::assertTrue(ProviderSlugMapper::isT3CsCompatible('azure'));
+    }
+
+    public function testGetT3CsCompatibleSlugsIncludesAzure(): void
+    {
+        self::assertContains('azure', ProviderSlugMapper::getT3CsCompatibleSlugs());
     }
 }

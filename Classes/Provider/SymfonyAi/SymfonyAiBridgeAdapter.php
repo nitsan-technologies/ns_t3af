@@ -70,6 +70,9 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         'symfony.openrouter' => ['path' => '/models', 'auth' => 'bearer'],
     ];
 
+    private const AZURE_FACTORY_FQCN = 'Symfony\\AI\\Platform\\Bridge\\Azure\\OpenAi\\Factory';
+    private const AZURE_DEFAULT_API_VERSION = '2024-10-21';
+
     public function __construct(
         private readonly BridgeDescriptor $descriptor,
         private readonly CredentialCipher $cipher,
@@ -104,6 +107,9 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         if ($config === null) {
             if ($this->canonicalTypeKey($this->descriptor->type) === 'symfony.huggingface') {
                 return $this->probeHuggingFaceEmbeddings($provider, $start);
+            }
+            if ($this->canonicalTypeKey($this->descriptor->type) === 'symfony.azure') {
+                return $this->probeAzure($provider, $start);
             }
 
             return $this->fallbackProbe($provider, $start);
@@ -178,6 +184,250 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         $errorMessage = $this->extractApiError($body) ?? substr($body, 0, 200);
 
         return VerifyResult::failure(sprintf('HTTP %d: %s', $status, $errorMessage), $latency);
+    }
+
+    /**
+     * Azure OpenAI probe: hit the deployments REST endpoint with the stored API key.
+     *
+     * Azure exposes a simple GET on the base URL that returns 401/403 for bad credentials.
+     * We use the Models endpoint (Azure passes api-version as query param).
+     */
+    private function probeAzure(Provider $provider, int $start): VerifyResult
+    {
+        $endpoint = trim($provider->endpointUrl);
+        if ($endpoint === '') {
+            return VerifyResult::failure('Azure endpoint URL is required.', $this->elapsed($start));
+        }
+
+        try {
+            $apiKey = $this->resolveApiKey($provider);
+        } catch (AdapterRuntimeException $e) {
+            return VerifyResult::failure($e->getMessage(), $this->elapsed($start));
+        }
+
+        if ($apiKey === '') {
+            return VerifyResult::failure('API key is required.', $this->elapsed($start));
+        }
+
+        $apiVersion = $provider->apiVersion !== '' ? $provider->apiVersion : self::AZURE_DEFAULT_API_VERSION;
+        $baseUrl = $this->normalizeAzureHost($endpoint);
+        $url = 'https://' . $baseUrl . '/openai/models?api-version=' . urlencode($apiVersion);
+
+        try {
+            $response = $this->requestFactory->request($url, 'GET', [
+                'headers' => [
+                    'api-key' => $apiKey,
+                    'User-Agent' => 'ns_t3af/2.0',
+                    'Accept' => 'application/json',
+                ],
+                'timeout' => 5,
+                'connect_timeout' => 3,
+                'http_errors' => false,
+            ]);
+        } catch (\Throwable $e) {
+            return VerifyResult::failure(
+                sprintf('Cannot reach Azure endpoint: %s', $e->getMessage()),
+                $this->elapsed($start),
+            );
+        }
+
+        $status = $response->getStatusCode();
+        $latency = $this->elapsed($start);
+        $body = (string) $response->getBody();
+
+        if ($status >= 200 && $status < 300) {
+            return VerifyResult::ok(
+                sprintf('Connected (HTTP %d)', $status),
+                $this->extractModelsFromJson($body),
+                $latency,
+            );
+        }
+        if ($status === 401 || $status === 403) {
+            return VerifyResult::failure(sprintf('Invalid credentials (HTTP %d).', $status), $latency);
+        }
+
+        $errorMessage = $this->extractApiError($body) ?? substr($body, 0, 200);
+
+        return VerifyResult::failure(sprintf('HTTP %d: %s', $status, $errorMessage), $latency);
+    }
+
+    /**
+     * Strip protocol and trailing path from an Azure endpoint URL so we're left with host only.
+     * Example: https://myresource.openai.azure.com/path → myresource.openai.azure.com
+     */
+    private function normalizeAzureHost(string $endpointUrl): string
+    {
+        $url = trim($endpointUrl);
+        if (!str_contains($url, '://')) {
+            $url = 'https://' . $url;
+        }
+        $host = parse_url($url, PHP_URL_HOST);
+
+        return is_string($host) && $host !== '' ? $host : $url;
+    }
+
+    /**
+     * Build an Azure OpenAI platform using the Symfony Azure factory with dual deployments.
+     *
+     * The Symfony Azure factory's `createProvider()` accepts a single `$deployment` for all
+     * clients. To support separate chat and embedding deployments we instantiate the individual
+     * model clients directly and compose a platform from them — mirroring exactly what the
+     * factory does internally.
+     *
+     * @throws AdapterRuntimeException
+     */
+    private function buildAzurePlatform(Provider $provider, string $apiKey): object
+    {
+        $factoryClass = self::AZURE_FACTORY_FQCN;
+        $factoryClassScoped = self::VENDOR_PREFIX . self::AZURE_FACTORY_FQCN;
+
+        $resolvedFactory = null;
+        foreach ([$factoryClass, $factoryClassScoped] as $candidate) {
+            if (class_exists($candidate)) {
+                $resolvedFactory = $candidate;
+                break;
+            }
+        }
+
+        if ($resolvedFactory === null) {
+            throw new AdapterRuntimeException(sprintf(
+                'Azure factory class %s is not available. Ensure symfony/ai-azure-platform is installed.',
+                self::AZURE_FACTORY_FQCN,
+            ));
+        }
+
+        $endpoint = trim($provider->endpointUrl);
+        if ($endpoint === '') {
+            throw new AdapterRuntimeException(
+                'Azure endpoint URL is required (e.g. https://myresource.openai.azure.com).',
+            );
+        }
+
+        $baseUrl = $this->normalizeAzureHost($endpoint);
+        $chatDeployment = trim($provider->modelId);
+        $embeddingDeployment = trim($provider->embeddingModelId) !== ''
+            ? trim($provider->embeddingModelId)
+            : $chatDeployment;
+        $apiVersion = $provider->apiVersion !== '' ? $provider->apiVersion : self::AZURE_DEFAULT_API_VERSION;
+
+        // Try factory's createProvider with single deployment (uses chat deployment).
+        // This gives us a fully wired Symfony Platform object. For separate embedding
+        // deployments we need to rebuild the clients; however, the Provider returned
+        // by createProvider already has all three clients (Responses, Embeddings, Whisper)
+        // wired to the same deployment name. When embedding and chat deployments differ
+        // we rebuild using the individual ModelClient classes directly.
+        if ($chatDeployment === $embeddingDeployment) {
+            return $resolvedFactory::createProvider($baseUrl, $chatDeployment, $apiVersion, $apiKey);
+        }
+
+        // Dual-deployment: assemble platform manually using the Azure model client classes.
+        return $this->buildAzurePlatformDualDeployment(
+            $baseUrl,
+            $chatDeployment,
+            $embeddingDeployment,
+            $apiVersion,
+            $apiKey,
+        );
+    }
+
+    /**
+     * Assemble an Azure platform that uses distinct chat and embedding deployments.
+     *
+     * We instantiate each ModelClient directly and compose a Symfony `Provider` (platform
+     * object), exactly mirroring what `Factory::createProvider()` does internally.
+     *
+     * @throws AdapterRuntimeException
+     */
+    private function buildAzurePlatformDualDeployment(
+        string $baseUrl,
+        string $chatDeployment,
+        string $embeddingDeployment,
+        string $apiVersion,
+        #[\SensitiveParameter] string $apiKey,
+    ): object {
+        // FQCN of individual Azure model clients (same namespace as the factory).
+        $nsPrefix = 'Symfony\\AI\\Platform\\Bridge\\Azure\\OpenAi\\';
+        $scopedPrefix = self::VENDOR_PREFIX . $nsPrefix;
+
+        $responsesClientClass = null;
+        $embeddingsClientClass = null;
+        $platformProviderClass = null;
+        $httpClientClass = null;
+
+        foreach ([$nsPrefix, $scopedPrefix] as $prefix) {
+            if (class_exists($prefix . 'ModelClient\\ResponsesModelClient')) {
+                $responsesClientClass = $prefix . 'ModelClient\\ResponsesModelClient';
+                $embeddingsClientClass = $prefix . 'ModelClient\\EmbeddingsModelClient';
+                break;
+            }
+        }
+
+        // Resolve Symfony Platform Provider class (wraps model clients).
+        foreach (['Symfony\\AI\\Platform\\Provider', self::VENDOR_PREFIX . 'Symfony\\AI\\Platform\\Provider'] as $candidate) {
+            if (class_exists($candidate)) {
+                $platformProviderClass = $candidate;
+                break;
+            }
+        }
+
+        // Resolve Symfony HTTP client factory (Psr18Client or HttplugClient).
+        foreach (['Symfony\\AI\\Platform\\Bridge\\Azure\\OpenAi\\PsrClient', 'Symfony\\Component\\HttpClient\\Psr18Client'] as $candidate) {
+            if (class_exists($candidate)) {
+                $httpClientClass = $candidate;
+                break;
+            }
+        }
+
+        if ($responsesClientClass === null || $embeddingsClientClass === null) {
+            // Fall back: use factory with chat deployment (embeddings will use same deployment).
+            $factoryClass = class_exists(self::AZURE_FACTORY_FQCN)
+                ? self::AZURE_FACTORY_FQCN
+                : self::VENDOR_PREFIX . self::AZURE_FACTORY_FQCN;
+
+            return $factoryClass::createProvider($baseUrl, $chatDeployment, $apiVersion, $apiKey);
+        }
+
+        if ($platformProviderClass === null) {
+            throw new AdapterRuntimeException(
+                'Symfony AI Platform Provider class not found. Ensure symfony/ai-platform is installed.',
+            );
+        }
+
+        // Build the HTTP client used by the Azure model clients.
+        $httpClient = $this->buildSymfonyHttpClient($httpClientClass, $apiKey);
+
+        $responsesClient = new $responsesClientClass($httpClient, $baseUrl, $apiKey, $chatDeployment);
+        $embeddingsClient = new $embeddingsClientClass($httpClient, $baseUrl, $embeddingDeployment, $apiVersion, $apiKey);
+
+        return new $platformProviderClass(
+            'azure',
+            [$responsesClient, $embeddingsClient],
+        );
+    }
+
+    /**
+     * Build the HTTP client suitable for use with the Azure model clients.
+     *
+     * The Azure model clients accept any PSR-18 compatible HTTP client. We use
+     * Symfony HttpClient via its PSR-18 bridge when available, otherwise fall
+     * back to a simple Guzzle-based stub.
+     */
+    private function buildSymfonyHttpClient(?string $httpClientClass, #[\SensitiveParameter] string $apiKey): object
+    {
+        if ($httpClientClass !== null && class_exists($httpClientClass)) {
+            return new $httpClientClass();
+        }
+
+        // Symfony's NativeHttpClient as PSR-18 fallback.
+        $nativeClass = 'Symfony\\Component\\HttpClient\\NativeHttpClient';
+        $psr18Bridge = 'Symfony\\Component\\HttpClient\\Psr18Client';
+        if (class_exists($psr18Bridge) && class_exists($nativeClass)) {
+            return new $psr18Bridge(new $nativeClass());
+        }
+
+        throw new AdapterRuntimeException(
+            'No compatible HTTP client found for Azure dual-deployment mode. Ensure symfony/http-client is installed.',
+        );
     }
 
     /**
@@ -552,6 +802,12 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         }
 
         $apiKey = $this->resolveApiKey($provider);
+
+        // Azure has a bespoke dual-deployment wiring that bypasses the generic factory dispatch.
+        if ($this->canonicalTypeKey($this->descriptor->type) === 'symfony.azure') {
+            return $this->buildAzurePlatform($provider, $apiKey);
+        }
+
         /** @var object $platform */
         $platform = $this->createPlatformFromFactory($factoryClass, $provider, $apiKey);
 

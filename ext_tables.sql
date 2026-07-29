@@ -15,6 +15,7 @@ CREATE TABLE tx_nst3af_provider (
     api_key TEXT,
     model_id VARCHAR(128) NOT NULL DEFAULT '',
     embedding_model_id VARCHAR(128) NOT NULL DEFAULT '',
+    api_version VARCHAR(64) NOT NULL DEFAULT '',
     capabilities VARCHAR(255) NOT NULL DEFAULT '',
     temperature DECIMAL(3,2) DEFAULT 0.70,
     system_prompt TEXT,

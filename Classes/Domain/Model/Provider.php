@@ -38,16 +38,28 @@ final readonly class Provider
      */
     public const ADAPTER_OPENAI_COMPATIBLE = 'nst3af.openai_compatible';
 
+    /** Symfony AI bridge for Azure OpenAI (requires endpoint + deployment + api_version + api_key). */
+    public const ADAPTER_SYMFONY_AZURE = 'symfony.azure';
+
     /** Symfony AI bridge for local / remote Ollama (no API key). */
     public const ADAPTER_SYMFONY_OLLAMA = 'symfony.ollama';
 
     /** Persisted probe status before the first connection test. */
     public const LAST_STATUS_UNKNOWN = 'unknown';
 
+    /** Default Azure OpenAI API version when none is stored. */
+    public const AZURE_DEFAULT_API_VERSION = '2024-10-21';
+
     public static function adapterRequiresEndpoint(string $adapterType): bool
     {
         return $adapterType === self::ADAPTER_OPENAI_COMPATIBLE
-            || $adapterType === self::ADAPTER_SYMFONY_OLLAMA;
+            || $adapterType === self::ADAPTER_SYMFONY_OLLAMA
+            || $adapterType === self::ADAPTER_SYMFONY_AZURE;
+    }
+
+    public static function isAzureAdapter(string $adapterType): bool
+    {
+        return $adapterType === self::ADAPTER_SYMFONY_AZURE;
     }
 
     public static function adapterRequiresApiKey(string $adapterType): bool
@@ -95,6 +107,7 @@ final readonly class Provider
         public string $costCenter = '',
         public string $privacyLevel = 'standard',
         public bool $noRerouting = false,
+        public string $apiVersion = '',
     ) {}
 
     /**
@@ -154,6 +167,7 @@ final readonly class Provider
             costCenter: (string) ($row['cost_center'] ?? ''),
             privacyLevel: (string) ($row['privacy_level'] ?? 'standard'),
             noRerouting: (bool) ($row['no_rerouting'] ?? false),
+            apiVersion: (string) ($row['api_version'] ?? ''),
         );
     }
 
@@ -173,6 +187,14 @@ final readonly class Provider
     public function effectiveEmbeddingModel(): string
     {
         return $this->embeddingModelId !== '' ? $this->embeddingModelId : $this->modelId;
+    }
+
+    /**
+     * Azure API version, falling back to the published stable default.
+     */
+    public function effectiveApiVersion(): string
+    {
+        return $this->apiVersion !== '' ? $this->apiVersion : self::AZURE_DEFAULT_API_VERSION;
     }
 
     /**
@@ -209,6 +231,7 @@ final readonly class Provider
             costCenter: $this->costCenter,
             privacyLevel: $this->privacyLevel,
             noRerouting: $this->noRerouting,
+            apiVersion: $this->apiVersion,
         );
     }
 

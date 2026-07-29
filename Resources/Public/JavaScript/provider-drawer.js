@@ -59,6 +59,7 @@ function llFormat(key, fallback, ...args) {
 
 const OPENAI_COMPATIBLE_ADAPTER = 'nst3af.openai_compatible';
 const OLLAMA_ADAPTER = 'symfony.ollama';
+const AZURE_ADAPTER = 'symfony.azure';
 const CAP_EMBEDDINGS = 'embeddings';
 const CAP_CHAT = 'chat';
 const CAP_COMPLETION = 'completion';
@@ -382,7 +383,8 @@ class ProviderDrawer {
       const adapterType = adapterSelect?.value || '';
       const isCustom = adapterType === OPENAI_COMPATIBLE_ADAPTER;
       const isOllama = adapterType === OLLAMA_ADAPTER;
-      const showEndpoint = isCustom || isOllama;
+      const isAzure = adapterType === AZURE_ADAPTER;
+      const showEndpoint = isCustom || isOllama || isAzure;
       const endpointField = form.querySelector('[data-aiu-endpoint-field]');
       if (endpointField) {
         endpointField.hidden = !showEndpoint;
@@ -401,6 +403,9 @@ class ProviderDrawer {
             endpointInput.placeholder = defaultEndpoint;
           }
         }
+        if (isAzure) {
+          endpointInput.placeholder = 'https://myresource.openai.azure.com';
+        }
       }
       const optionalNote = form.querySelector('[data-aiu-endpoint-optional-note]');
       if (optionalNote) {
@@ -414,6 +419,14 @@ class ProviderDrawer {
       if (ollamaHint) {
         ollamaHint.hidden = !isOllama;
       }
+      const azureHint = form.querySelector('[data-aiu-endpoint-azure-hint]');
+      if (azureHint) {
+        azureHint.hidden = !isAzure;
+      }
+      const apiVersionField = form.querySelector('[data-aiu-api-version-field]');
+      if (apiVersionField) {
+        apiVersionField.hidden = !isAzure;
+      }
       const apiKeyField = form.querySelector('[data-aiu-api-key-field]');
       if (apiKeyField) {
         apiKeyField.hidden = isOllama;
@@ -424,6 +437,22 @@ class ProviderDrawer {
         apiKeyInput.required = !isOllama && !(isEdit && hasStoredApiKey);
         if (isOllama) {
           apiKeyInput.value = '';
+        }
+      }
+      // Azure: update model field labels to deployment-centric terminology.
+      const modelFieldLabel = form.querySelector('[data-aiu-model-field-label]');
+      if (modelFieldLabel) {
+        modelFieldLabel.textContent = isAzure ? 'Chat deployment' : (modelFieldLabel.dataset.defaultLabel || modelFieldLabel.textContent);
+        if (!modelFieldLabel.dataset.defaultLabel && !isAzure) {
+          // Store original label on first non-azure render.
+          modelFieldLabel.dataset.defaultLabel = modelFieldLabel.textContent;
+        }
+      }
+      const embeddingModelFieldLabel = form.querySelector('[data-aiu-embedding-model-field-label]');
+      if (embeddingModelFieldLabel) {
+        embeddingModelFieldLabel.textContent = isAzure ? 'Embedding deployment' : (embeddingModelFieldLabel.dataset.defaultLabel || embeddingModelFieldLabel.textContent);
+        if (!embeddingModelFieldLabel.dataset.defaultLabel && !isAzure) {
+          embeddingModelFieldLabel.dataset.defaultLabel = embeddingModelFieldLabel.textContent;
         }
       }
     };

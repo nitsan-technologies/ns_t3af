@@ -135,6 +135,9 @@
                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.endpoint.requiredOllama"
                                  default="Ollama base URL (no API key). In Docker/DDEV use http://host.docker.internal:11434 instead of localhost." />
                 </small>
+                <small class="aiu-field-subnote" data-aiu-endpoint-azure-hint hidden>
+                    Azure OpenAI resource endpoint, e.g. https://myresource.openai.azure.com
+                </small>
                 <input type="url" class="form-control" name="endpoint_url" maxlength="255"
                        data-aiu-endpoint-input
                        value="{provider.endpointUrl}{submitted.endpoint_url}" placeholder="https://api.openai.com/v1" />
@@ -182,7 +185,7 @@
             </div>
 
             <div class="aiu-field aiu-field--mono" data-aiu-model-field>
-                <span class="aiu-field-label">
+                <span class="aiu-field-label" data-aiu-model-field-label>
                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.chatModelId"
                                  default="Chat / completion model" />
                 </span>
@@ -213,7 +216,7 @@
 
             <f:if condition="{showEmbeddingModelField} == 1">
             <div class="aiu-field aiu-field--mono" data-aiu-embedding-model-field>
-                <span class="aiu-field-label">
+                <span class="aiu-field-label" data-aiu-embedding-model-field-label>
                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.embeddingModelId"
                                  default="Embedding model" />
                 </span>
@@ -239,6 +242,16 @@
                 <small class="aiu-field-subnote" data-aiu-embedding-model-hint hidden></small>
             </div>
             </f:if>
+
+            <label class="aiu-field aiu-field--mono" data-aiu-api-version-field hidden="hidden">
+                <span class="aiu-field-label">API Version</span>
+                <input type="text" class="form-control" name="api_version" maxlength="64"
+                       value="{provider.apiVersion}{submitted.api_version}"
+                       placeholder="2024-10-21" />
+                <small class="aiu-field-subnote">
+                    Azure OpenAI API version. Leave blank to use the built-in default (2024-10-21).
+                </small>
+            </label>
 
             <div class="aiu-field">
                 <span class="aiu-field-label">
