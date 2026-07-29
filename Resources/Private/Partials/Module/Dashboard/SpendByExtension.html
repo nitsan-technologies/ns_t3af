@@ -1,4 +1,5 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       data-namespace-typo3-fluid="true">
 <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
 
@@ -10,32 +11,49 @@
         </div>
     </div>
     <div class="card-body d-flex flex-column gap-2">
-        <ul class="list-unstyled mb-0 d-flex flex-column gap-2 flex-grow-1">
-            <f:for each="{extensionSpendRows}" as="row">
-                <li>
-                    <div class="d-flex justify-content-between small mb-1">
-                        <span>{row.extensionKey}</span>
-                        <span class="fw-semibold">{row.credits -> f:format.number(decimals: 0)} cr</span>
+        <f:if condition="{creditsModeActive} == 1">
+            <f:then>
+                <ul class="list-unstyled mb-0 d-flex flex-column gap-2 flex-grow-1">
+                    <f:for each="{extensionSpendRows}" as="row">
+                        <li>
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span>{row.extensionKey}</span>
+                                <span class="fw-semibold">{row.credits -> f:format.number(decimals: 0)} cr</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar" style="width: {row.percent}%"></div>
+                            </div>
+                        </li>
+                    </f:for>
+                </ul>
+                <f:if condition="{creditProjection.runOutDate} != ''">
+                    <div class="border-top pt-3 mt-2">
+                        <div class="small text-variant text-uppercase fw-semibold mb-1">
+                            <f:translate key="{ll}:dashboard.projection.title" default="Credit projection" />
+                        </div>
+                        <p class="small text-variant mb-1">
+                            <f:translate key="{ll}:dashboard.projection.runOut"
+                                         arguments="{0: creditProjection.runOutDate, 1: creditProjection.dailyAvgFormatted}" />
+                        </p>
+                        <a href="{providersUri}" class="btn btn-default btn-sm flex-shrink-0">
+                            <f:translate key="{ll}:dashboard.projection.buyMore" />
+                        </a>
                     </div>
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar" style="width: {row.percent}%"></div>
-                    </div>
-                </li>
-            </f:for>
-        </ul>
-        <f:if condition="{creditProjection.runOutDate} != ''">
-            <div class="border-top pt-3 mt-2">
-                <div class="small text-variant text-uppercase fw-semibold mb-1">
-                    <f:translate key="{ll}:dashboard.projection.title" default="Credit projection" />
+                </f:if>
+            </f:then>
+            <f:else>
+                <div class="aiu-credits-empty-state flex-grow-1" role="status">
+                    <core:icon identifier="actions-list" size="default" alternativeMarkupIdentifier="inline" />
+                    <p class="aiu-credits-empty-state__title mb-1">
+                        <f:translate key="{ll}:dashboard.credits.spend.inactive.title"
+                                     default="Spend breakdown unavailable" />
+                    </p>
+                    <p class="aiu-credits-empty-state__text text-variant mb-0">
+                        <f:translate key="{ll}:dashboard.credits.spend.inactive.body"
+                                     default="Activate T3Planet Credits to see spend by extension." />
+                    </p>
                 </div>
-                <p class="small text-variant mb-1">
-                    <f:translate key="{ll}:dashboard.projection.runOut"
-                                 arguments="{0: creditProjection.runOutDate, 1: creditProjection.dailyAvgFormatted}" />
-                </p>
-                <a href="{providersUri}" class="btn btn-default btn-sm flex-shrink-0">
-                    <f:translate key="{ll}:dashboard.projection.buyMore" />
-                </a>
-            </div>
+            </f:else>
         </f:if>
     </div>
 </div>

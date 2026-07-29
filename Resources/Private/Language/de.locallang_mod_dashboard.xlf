@@ -2015,6 +2015,18 @@
                 <source>Cost effective</source>
                 <target>Kosteneffektiv</target>
             </trans-unit>
+            <trans-unit id="provider.mode.credits.activate">
+                <source>Activate</source>
+                <target>Aktivieren</target>
+            </trans-unit>
+            <trans-unit id="provider.mode.credits.recommended">
+                <source>Recommended</source>
+                <target>Empfohlen</target>
+            </trans-unit>
+            <trans-unit id="provider.mode.ownKeys.advanced">
+                <source>Advanced</source>
+                <target>Erweitert</target>
+            </trans-unit>
             <trans-unit id="provider.mode.comingSoon">
                 <source>Coming soon</source>
                 <target>Kommt bald</target>
@@ -2262,6 +2274,58 @@
             <trans-unit id="dashboard.activateCreditsHint">
                 <source>Activate T3Planet Credits to see your balance and burn charts.</source>
                 <target>Aktivieren Sie T3Planet Credits, um Ihr Guthaben und Ihre Burn-Charts anzuzeigen.</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.title">
+                <source>Activate T3Planet Credits</source>
+                <target>T3Planet Credits aktivieren</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.intro">
+                <source>Connect your T3Planet license to load balance, bundles, and usage charts.</source>
+                <target>Verbinden Sie Ihre T3Planet-Lizenz, um Guthaben, Bundles und Nutzungsdiagramme zu laden.</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.step1.title">
+                <source>Credits mode selected</source>
+                <target>Credits-Modus ausgewählt</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.step1.body">
+                <source>AI requests will use T3Planet Credits once activation finishes.</source>
+                <target>KI-Anfragen nutzen T3Planet Credits, sobald die Aktivierung abgeschlossen ist.</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.step2.title">
+                <source>Activate with your license</source>
+                <target>Mit Ihrer Lizenz aktivieren</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.step2.body">
+                <source>Links this site to T3Planet using your extension license.</source>
+                <target>Verknüpft diese Website über Ihre Extension-Lizenz mit T3Planet.</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.step3.title">
+                <source>View balance and charts</source>
+                <target>Guthaben und Diagramme anzeigen</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.step3.body">
+                <source>Credit balance, burn charts, and bundles appear automatically.</source>
+                <target>Guthaben, Burn-Charts und Bundles erscheinen automatisch.</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.licenseHint">
+                <source>Requires an active T3Planet extension license on this installation.</source>
+                <target>Erfordert eine aktive T3Planet-Extension-Lizenz auf dieser Installation.</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.chart.inactive.title">
+                <source>Charts unlock after activation</source>
+                <target>Diagramme nach Aktivierung verfügbar</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.chart.inactive.body">
+                <source>Activate T3Planet Credits to load credit burn over time.</source>
+                <target>Aktivieren Sie T3Planet Credits, um den Credit-Verbrauch über die Zeit zu laden.</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.spend.inactive.title">
+                <source>Spend breakdown unavailable</source>
+                <target>Ausgabenaufschlüsselung nicht verfügbar</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.spend.inactive.body">
+                <source>Activate T3Planet Credits to see spend by extension.</source>
+                <target>Aktivieren Sie T3Planet Credits, um Ausgaben nach Extension zu sehen.</target>
             </trans-unit>
             <trans-unit id="dashboard.recentActivity">
                 <source>Recent Requests</source>

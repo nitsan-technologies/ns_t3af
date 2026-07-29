@@ -1513,6 +1513,15 @@
       <trans-unit id="provider.mode.credits.meta.costEffective" resname="provider.mode.credits.meta.costEffective">
         <source>Cost effective</source>
       </trans-unit>
+      <trans-unit id="provider.mode.credits.activate" resname="provider.mode.credits.activate">
+        <source>Activate</source>
+      </trans-unit>
+      <trans-unit id="provider.mode.credits.recommended" resname="provider.mode.credits.recommended">
+        <source>Recommended</source>
+      </trans-unit>
+      <trans-unit id="provider.mode.ownKeys.advanced" resname="provider.mode.ownKeys.advanced">
+        <source>Advanced</source>
+      </trans-unit>
       <trans-unit id="provider.mode.comingSoon" resname="provider.mode.comingSoon">
         <source>Coming soon</source>
       </trans-unit>
@@ -1698,6 +1707,45 @@
       </trans-unit>
       <trans-unit id="dashboard.activateCreditsHint" resname="dashboard.activateCreditsHint">
         <source>Activate T3Planet Credits to see your balance and burn charts.</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.activate.title" resname="dashboard.credits.activate.title">
+        <source>Activate T3Planet Credits</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.activate.intro" resname="dashboard.credits.activate.intro">
+        <source>Connect your T3Planet license to load balance, bundles, and usage charts.</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.activate.step1.title" resname="dashboard.credits.activate.step1.title">
+        <source>Credits mode selected</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.activate.step1.body" resname="dashboard.credits.activate.step1.body">
+        <source>AI requests will use T3Planet Credits once activation finishes.</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.activate.step2.title" resname="dashboard.credits.activate.step2.title">
+        <source>Activate with your license</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.activate.step2.body" resname="dashboard.credits.activate.step2.body">
+        <source>Links this site to T3Planet using your extension license.</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.activate.step3.title" resname="dashboard.credits.activate.step3.title">
+        <source>View balance and charts</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.activate.step3.body" resname="dashboard.credits.activate.step3.body">
+        <source>Credit balance, burn charts, and bundles appear automatically.</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.activate.licenseHint" resname="dashboard.credits.activate.licenseHint">
+        <source>Requires an active T3Planet extension license on this installation.</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.chart.inactive.title" resname="dashboard.credits.chart.inactive.title">
+        <source>Charts unlock after activation</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.chart.inactive.body" resname="dashboard.credits.chart.inactive.body">
+        <source>Activate T3Planet Credits to load credit burn over time.</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.spend.inactive.title" resname="dashboard.credits.spend.inactive.title">
+        <source>Spend breakdown unavailable</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.spend.inactive.body" resname="dashboard.credits.spend.inactive.body">
+        <source>Activate T3Planet Credits to see spend by extension.</source>
       </trans-unit>
       <trans-unit id="dashboard.recentActivity" resname="dashboard.recentActivity">
         <source>Recent Requests</source>

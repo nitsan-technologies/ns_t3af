@@ -9,7 +9,7 @@
 .aiu-credits-panel.is-hidden,
 .aiu-ownkeys-panel.is-hidden { display: none !important; }
 
-.aiu-credits-dashboard { display: flex; flex-direction: column; gap: 1.5rem; }
+.aiu-credits-dashboard { display: flex; flex-direction: column; }
 
 .aiu-credits-section__head {
     display: flex;

@@ -20,3 +20,10 @@ parameters:
     # Used by child extensions (ns_t3ai / ns_t3aa / ns_t3ac); not referenced inside this package paths.
     - identifier: trait.unused
       path: Classes/Contract/PromptCatalogPolicyTrait.php
+    # Azure OpenAI bridge: classes resolved at runtime via class_exists() — may not be installed.
+    - identifier: function.impossibleType
+      path: Classes/Provider/SymfonyAi/SymfonyAiBridgeAdapter.php
+    - identifier: class.notFound
+      path: Classes/Provider/SymfonyAi/SymfonyAiBridgeAdapter.php
+    - identifier: arguments.count
+      path: Classes/Provider/SymfonyAi/SymfonyAiBridgeAdapter.php

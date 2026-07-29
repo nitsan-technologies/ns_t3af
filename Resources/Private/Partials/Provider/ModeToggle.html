@@ -28,19 +28,34 @@
             <div class="aiu-mode__card aiu-mode__card--ownkeys{f:if(condition: '{creditsModeEnabled} == 1', then: '', else: ' is-active')}"
                  data-aiu-providers-mode="ownkeys"
                  data-credits-mode="ownkeys"
-                 role="button"
+                 role="radio"
                  tabindex="0"
-                 aria-pressed="{f:if(condition: '{creditsModeEnabled} == 1', then: 'false', else: 'true')}">
+                 aria-checked="{f:if(condition: '{creditsModeEnabled} == 1', then: 'false', else: 'true')}">
                 <div class="aiu-mode__content">
                     <div class="aiu-mode__title-row">
+                        <span class="form-check aiu-mode__radio mb-0">
+                            <input class="form-check-input"
+                                   type="radio"
+                                   name="aiu-provider-mode"
+                                   id="aiu-mode-radio-ownkeys"
+                                   value="ownkeys"
+                                   data-aiu-mode-radio="ownkeys"
+                                   <f:if condition="{creditsModeEnabled} != 1">checked="checked"</f:if> />
+                        </span>
                         <core:icon identifier="actions-key" size="small" />
                         <span class="aiu-mode__title">
                             <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.ownKeys.title"
                                          default="Your Own API Keys" />
                         </span>
-                        <span class="badge badge-default">Advanced</span>
+                        <span class="badge badge-default">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.ownKeys.advanced"
+                                         default="Advanced" />
+                        </span>
                         <span class="badge badge-success ms-auto{f:if(condition: '{creditsModeEnabled} == 1', then: ' is-hidden', else: '')}"
-                              data-ownkeys-active-badge>ACTIVE</span>
+                              data-ownkeys-active-badge>
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:dashboard.mode.active"
+                                         default="Active" />
+                        </span>
                     </div>
                     <p class="aiu-mode__desc">
                         <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.ownKeys.body"
@@ -62,12 +77,22 @@
             <div class="aiu-mode__card aiu-mode__card--credits{f:if(condition: '{creditsFeatureAvailable} == 0', then: ' is-disabled')}{f:if(condition: '{creditsModeEnabled} == 1', then: ' is-active')}"
                 data-aiu-providers-mode="credits"
                 data-credits-mode="credits"
-                role="button"
+                role="radio"
                 tabindex="{f:if(condition: '{creditsFeatureAvailable} == 0', then: '-1', else: '0')}"
                 aria-disabled="{f:if(condition: '{creditsFeatureAvailable} == 0', then: 'true', else: 'false')}"
-                aria-pressed="{f:if(condition: '{creditsModeEnabled} == 1', then: 'true', else: 'false')}">
+                aria-checked="{f:if(condition: '{creditsModeEnabled} == 1', then: 'true', else: 'false')}">
                 <div class="aiu-mode__content">
                     <div class="aiu-mode__title-row">
+                        <span class="form-check aiu-mode__radio mb-0">
+                            <input class="form-check-input"
+                                   type="radio"
+                                   name="aiu-provider-mode"
+                                   id="aiu-mode-radio-credits"
+                                   value="credits"
+                                   data-aiu-mode-radio="credits"
+                                   <f:if condition="{creditsFeatureAvailable} == 0">disabled="disabled"</f:if>
+                                   <f:if condition="{creditsModeEnabled} == 1">checked="checked"</f:if> />
+                        </span>
                         <core:icon identifier="actions-wallet" size="small" />
                         <span class="aiu-mode__title">
                             <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.credits.title"
@@ -81,14 +106,21 @@
                                 </span>
                             </f:then>
                             <f:else>
-                                <span class="badge badge-warning">Recommended</span>
+                                <span class="badge badge-warning">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.credits.recommended"
+                                                 default="Recommended" />
+                                </span>
                                 <span class="badge badge-success ms-auto{f:if(condition: '{creditsModeActive} == 1', then: '', else: ' is-hidden')}"
-                                        data-credits-active-badge>ACTIVE</span>
-                                <span class="badge badge-success ms-auto{f:if(condition: '{creditsModeEnabled} == 1', then: '', else: ' is-hidden')}{f:if(condition: '{creditsModeActive} == 1', then: ' is-hidden', else: '')}"
-                                        data-credits-activate role="button" tabindex="0">
+                                        data-credits-active-badge>
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:dashboard.mode.active"
+                                                 default="Active" />
+                                </span>
+                                <button type="button"
+                                        class="btn btn-primary btn-sm ms-auto{f:if(condition: '{creditsModeEnabled} == 1', then: '', else: ' is-hidden')}{f:if(condition: '{creditsModeActive} == 1', then: ' is-hidden', else: '')}"
+                                        data-credits-activate>
                                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.credits.activate"
                                                     default="Activate" />
-                                </span>
+                                </button>
                             </f:else>
                         </f:if>
                     </div>

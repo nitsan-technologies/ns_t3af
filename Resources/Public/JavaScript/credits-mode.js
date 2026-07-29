@@ -393,8 +393,12 @@ function bindCardSelect(card, onSelect) {
   if (!card) {
     return;
   }
+  const radio = card.querySelector('[data-aiu-mode-radio]');
   const handler = (event) => {
     if (event.target.closest('[data-credits-activate]')) {
+      return;
+    }
+    if (event.target.closest('[data-aiu-mode-radio]')) {
       return;
     }
     event.preventDefault();
@@ -405,11 +409,21 @@ function bindCardSelect(card, onSelect) {
     if (event.target.closest('[data-credits-activate]')) {
       return;
     }
+    if (event.target.closest('[data-aiu-mode-radio]')) {
+      return;
+    }
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       onSelect();
     }
   });
+  if (radio instanceof HTMLInputElement) {
+    radio.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onSelect();
+    });
+  }
 }
 
 /**
@@ -468,18 +482,51 @@ function applyUiState(root, data) {
   const creditsActiveBadge = qs(root, '[data-credits-active-badge]');
   const activatePill = qs(root, '[data-credits-activate]');
   const ownKeysActiveBadge = qs(root, '[data-ownkeys-active-badge]');
+  const creditsRadio = qs(root, '[data-aiu-mode-radio="credits"]');
+  const ownKeysRadio = qs(root, '[data-aiu-mode-radio="ownkeys"]');
 
   creditsCard?.classList.toggle('is-active', creditMode);
+  creditsCard?.classList.toggle('active', creditMode);
+  creditsCard?.setAttribute('aria-checked', creditMode ? 'true' : 'false');
   creditsCard?.setAttribute('aria-pressed', creditMode ? 'true' : 'false');
   ownKeysCard?.classList.toggle('is-active', !creditMode);
+  ownKeysCard?.classList.toggle('active', !creditMode);
+  ownKeysCard?.setAttribute('aria-checked', creditMode ? 'false' : 'true');
   ownKeysCard?.setAttribute('aria-pressed', creditMode ? 'false' : 'true');
+
+  if (creditsRadio instanceof HTMLInputElement) {
+    creditsRadio.checked = creditMode;
+  }
+  if (ownKeysRadio instanceof HTMLInputElement) {
+    ownKeysRadio.checked = !creditMode;
+  }
 
   root.dataset.creditsActive = active ? '1' : '0';
   root.dataset.creditMode = creditMode ? '1' : '0';
 
   creditsActiveBadge?.classList.toggle('is-hidden', !active);
   activatePill?.classList.toggle('is-hidden', !creditMode || active);
+  activatePill?.toggleAttribute('disabled', !creditMode || active);
   ownKeysActiveBadge?.classList.toggle('is-hidden', creditMode);
+
+  // Keep dashboard/provider Activate CTAs outside this root in sync.
+  document.querySelectorAll('[data-credits-activate]').forEach((el) => {
+    if (el === activatePill) {
+      return;
+    }
+    el.classList.toggle('is-hidden', !creditMode || active);
+    if (el instanceof HTMLButtonElement) {
+      el.disabled = !creditMode || active;
+    } else {
+      el.toggleAttribute('disabled', !creditMode || active);
+    }
+  });
+  document.querySelectorAll('[data-credits-active-badge]').forEach((el) => {
+    if (el === creditsActiveBadge) {
+      return;
+    }
+    el.classList.toggle('is-hidden', !active);
+  });
 
   applyContentPanels(creditMode);
   if (typeof data.creditsBearerToken === 'string') {
@@ -525,17 +572,105 @@ function handleError(err, title) {
   }
 }
 
+function runCreditsActivate(root) {
+  const creditsFeatureAvailable = !root || isCreditsFeatureAvailable(root);
+  if (!creditsFeatureAvailable) {
+    return;
+  }
+  post(routes.activate)
+    .then((data) => {
+      if (data.status === false || data.error || data.error_code) {
+        handleError(
+          new Error(data.userMessage || data.message || data.error_code || data.error),
+          ll(LL.errorTitleActivate, 'Activate T3Planet Credits'),
+        );
+        return;
+      }
+      if (data.active) {
+        document.querySelectorAll('[data-aiu-providers-credits-root]').forEach((creditsRoot) => {
+          if (creditsRoot instanceof HTMLElement) {
+            applyUiState(creditsRoot, {
+              creditMode: true,
+              active: true,
+              creditsBearerToken: data.creditsBearerToken,
+            });
+          }
+        });
+        Notification.success(
+          ll(LL.brandT3planet, 'T3Planet Credits'),
+          ll(
+            LL.notificationActivateReload,
+            'Credits mode is active. Loading your dashboard…',
+          ),
+        );
+        window.location.reload();
+        return;
+      }
+      Notification.warning(
+        ll(LL.brandT3planet, 'T3Planet Credits'),
+        ll(
+          LL.notificationActivateIncomplete,
+          'Mode enabled, but activation did not complete. Check license keys and API connectivity.',
+        ),
+      );
+    })
+    .catch((err) =>
+      handleError(err, ll(LL.errorTitleActivate, 'Activate T3Planet Credits')),
+    );
+}
+
+let activateDelegationBound = false;
+
+function bindActivateDelegation() {
+  if (activateDelegationBound) {
+    return;
+  }
+  activateDelegationBound = true;
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const activateEl = target.closest('[data-credits-activate]');
+    if (!activateEl) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const root =
+      activateEl.closest('[data-aiu-providers-credits-root]') ||
+      document.querySelector('[data-aiu-providers-credits-root]');
+    runCreditsActivate(root instanceof HTMLElement ? root : null);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const activateEl = target.closest('[data-credits-activate]');
+    if (!activateEl || activateEl !== target) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    activateEl.click();
+  });
+}
+
 function initCreditsMode(root) {
   if (!(root instanceof HTMLElement) || initializedRoots.has(root)) {
     return;
   }
   initializedRoots.add(root);
   observeBrowserAutocomplete(root);
+  bindActivateDelegation();
 
   const creditsFeatureAvailable = isCreditsFeatureAvailable(root);
   const creditsCard = qs(root, '[data-aiu-providers-mode="credits"]');
   const ownKeysCard = qs(root, '[data-aiu-providers-mode="ownkeys"]');
-  const activatePill = qs(root, '[data-credits-activate]');
 
   if (!creditsFeatureAvailable && creditsCard instanceof HTMLElement) {
     creditsCard.classList.add('is-disabled');
@@ -628,55 +763,6 @@ function initCreditsMode(root) {
           );
       },
     );
-  });
-
-  activatePill?.addEventListener('click', (event) => {
-    if (!creditsFeatureAvailable) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    post(routes.activate)
-      .then((data) => {
-        if (data.status === false || data.error || data.error_code) {
-          handleError(
-            new Error(data.userMessage || data.message || data.error_code || data.error),
-            ll(LL.errorTitleActivate, 'Activate T3Planet Credits'),
-          );
-          return;
-        }
-        if (data.active) {
-          Notification.success(
-            ll(LL.brandT3planet, 'T3Planet Credits'),
-            ll(
-              LL.notificationActivateReload,
-              'Credits mode is active. Loading your dashboard…',
-            ),
-          );
-          window.location.reload();
-          return;
-        }
-        Notification.warning(
-          ll(LL.brandT3planet, 'T3Planet Credits'),
-          ll(
-            LL.notificationActivateIncomplete,
-            'Mode enabled, but activation did not complete. Check license keys and API connectivity.',
-          ),
-        );
-      })
-      .catch((err) =>
-        handleError(err, ll(LL.errorTitleActivate, 'Activate T3Planet Credits')),
-      );
-  });
-
-  activatePill?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      event.stopPropagation();
-      activatePill.click();
-    }
   });
 
   bindCheckoutLinks();
