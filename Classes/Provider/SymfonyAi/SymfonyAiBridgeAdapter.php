@@ -343,7 +343,8 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         string $chatDeployment,
         string $embeddingDeployment,
         string $apiVersion,
-        #[\SensitiveParameter] string $apiKey,
+        #[\SensitiveParameter]
+        string $apiKey,
     ): object {
         // FQCN of individual Azure model clients (same namespace as the factory).
         $nsPrefix = 'Symfony\\AI\\Platform\\Bridge\\Azure\\OpenAi\\';
