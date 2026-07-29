@@ -64,6 +64,7 @@
 
 .aiu-period {
     position: relative;
+    z-index: 20;
 }
 
 .aiu-period__btn.dropdown-toggle::after {
@@ -72,7 +73,11 @@
 
 .aiu-period__menu.dropdown-menu {
     --typo3-dropdown-min-width: 14rem;
+    /* Keep menu fully visible on v12–v14 (Bootstrap 5 dropdown). */
     overflow-x: hidden;
+    overflow-y: auto;
+    max-height: min(70vh, 28rem);
+    z-index: var(--typo3-zindex-dropdown, 1000);
 }
 
 .aiu-period__option.dropdown-item.active {
@@ -217,7 +222,15 @@
 }
 
 .aiu-dashboard-mode-banner {
-    overflow: hidden;
+    /* Allow period dropdown to escape the card on TYPO3 v12–v14. */
+    overflow: visible;
+    position: relative;
+    z-index: 5;
+}
+
+.aiu-dashboard-mode-banner > .card-body,
+.aiu-dashboard-mode-banner .aiu-period {
+    overflow: visible;
 }
 .aiu-dashboard-mode-banner__icon {
     align-items: center;
