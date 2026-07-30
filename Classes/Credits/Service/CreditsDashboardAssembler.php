@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Credits\Service;
 
 use NITSAN\NsT3AF\Api\AiCreditUnits;
 use NITSAN\NsT3AF\Api\CreditsPricing;
+use NITSAN\NsT3AF\Credits\CreditsReceiptEntryType;
 
 /**
  * Normalizes T3Planet API payloads into a Fluid-friendly dashboard view model.
@@ -42,6 +43,9 @@ final class CreditsDashboardAssembler
      * @param array<string, mixed> $featuresPayload
      * @param list<array<string, mixed>> $receipts
      * @param list<string>|array<string, string> $errors  Deduplicated user-facing messages for the UI (may be a list after {@see CreditsDashboardService::fetchAndAssemble}).
+     * @param array<string, int> $usedUnitsByFeatureKey Lifetime cost_units per catalog feature_key (full local receipt history).
+     * @param int|null $statsLifetimeUnits When set, usage stats use these unit totals instead of summing $receipts (pagination-safe).
+     * @param int|null $statsWindowUnits 7-day window cost_units when $statsLifetimeUnits is set.
      * @return array<string, mixed>
      */
     public function assemble(
@@ -52,6 +56,9 @@ final class CreditsDashboardAssembler
         array $receipts,
         array $errors,
         string $returnUrl,
+        array $usedUnitsByFeatureKey = [],
+        ?int $statsLifetimeUnits = null,
+        ?int $statsWindowUnits = null,
     ): array {
         $balanceSummary = $this->summarizeBalance($balance, $plan);
         $stats = $this->buildUsageStats(
@@ -59,6 +66,8 @@ final class CreditsDashboardAssembler
             $balanceSummary['remainingUnits'],
             $balanceSummary['remaining'],
             $balanceSummary['planUsed'],
+            $statsLifetimeUnits,
+            $statsWindowUnits,
         );
         $pricing = $this->resolvePricing($balance, $featuresPayload, $productsPayload);
 
@@ -83,7 +92,7 @@ final class CreditsDashboardAssembler
             'plan' => $this->normalizePlan($plan, $balanceSummary['credits']),
             'stats' => $stats,
             'products' => $this->normalizeProducts($productsPayload, $returnUrl),
-            'features' => $this->normalizeFeatures($featuresPayload),
+            'features' => $this->normalizeFeatures($featuresPayload, $usedUnitsByFeatureKey),
             'transactions' => $this->normalizeTransactions($receipts),
             'currentPlanSku' => (string) ($productsPayload['current_plan_sku'] ?? $plan['plan_sku'] ?? $plan['sku'] ?? ''),
         ];
@@ -181,6 +190,10 @@ final class CreditsDashboardAssembler
             'products' => [],
             'features' => [],
             'transactions' => [],
+            'transactionsTotalCount' => 0,
+            'transactionsCurrentPage' => 1,
+            'transactionsPerPage' => 20,
+            'transactionsEntryType' => CreditsReceiptEntryType::ALL,
             'currentPlanSku' => '',
             'pricing' => $pricing->toArray(),
         ];
@@ -267,18 +280,29 @@ final class CreditsDashboardAssembler
      *   estimatedDaysLeft: int|null
      * }
      */
-    private function buildUsageStats(array $receipts, int $remainingUnits, float $remaining, float $fallbackUsed): array
-    {
-        $now = time();
-        $windowStart = $now - (7 * self::SECONDS_PER_DAY);
-        $windowUnits = 0;
-        $totalUnits = 0;
+    private function buildUsageStats(
+        array $receipts,
+        int $remainingUnits,
+        float $remaining,
+        float $fallbackUsed,
+        ?int $statsLifetimeUnits = null,
+        ?int $statsWindowUnits = null,
+    ): array {
+        if ($statsLifetimeUnits !== null) {
+            $totalUnits = max(0, $statsLifetimeUnits);
+            $windowUnits = max(0, $statsWindowUnits ?? 0);
+        } else {
+            $now = time();
+            $windowStart = $now - (7 * self::SECONDS_PER_DAY);
+            $windowUnits = 0;
+            $totalUnits = 0;
 
-        foreach ($receipts as $receipt) {
-            $parsed = AiCreditUnits::parseReceiptCost($receipt);
-            $totalUnits += $parsed['units'];
-            if ((int) ($receipt['crdate'] ?? 0) >= $windowStart) {
-                $windowUnits += $parsed['units'];
+            foreach ($receipts as $receipt) {
+                $parsed = AiCreditUnits::parseReceiptCost($receipt);
+                $totalUnits += $parsed['units'];
+                if ((int) ($receipt['crdate'] ?? 0) >= $windowStart) {
+                    $windowUnits += $parsed['units'];
+                }
             }
         }
 
@@ -329,7 +353,7 @@ final class CreditsDashboardAssembler
                 'type' => (string) ($item['type'] ?? 'topup'),
                 'title' => (string) ($item['title'] ?? $sku),
                 'subtitle' => (string) ($item['subtitle'] ?? ''),
-                'description' => (string) ($item['description'] ?? ''),
+                'description' => $this->normalizeProductDescription($item['description'] ?? null),
                 'credits' => (int) ($item['credits'] ?? 0),
                 'priceAmount' => (float) ($item['price_amount'] ?? 0),
                 'priceCurrency' => (string) ($item['price_currency'] ?? $payload['currency_default'] ?? 'EUR'),
@@ -353,10 +377,43 @@ final class CreditsDashboardAssembler
     }
 
     /**
+     * Products API returns description as string[] (server-side comma-split). Legacy string responses
+     * are treated as a single bullet.
+     *
+     * @return list<string>
+     */
+    private function normalizeProductDescription(mixed $description): array
+    {
+        if (is_array($description)) {
+            $lines = [];
+            foreach ($description as $line) {
+                if (!is_scalar($line) && $line !== null) {
+                    continue;
+                }
+                $trimmed = trim((string) $line);
+                if ($trimmed !== '') {
+                    $lines[] = $trimmed;
+                }
+            }
+
+            return $lines;
+        }
+
+        if (!is_scalar($description) && $description !== null) {
+            return [];
+        }
+
+        $trimmed = trim((string) $description);
+
+        return $trimmed !== '' ? [$trimmed] : [];
+    }
+
+    /**
      * @param array<string, mixed> $payload
+     * @param array<string, int> $usedUnitsByFeatureKey
      * @return list<array<string, mixed>>
      */
-    private function normalizeFeatures(array $payload): array
+    private function normalizeFeatures(array $payload, array $usedUnitsByFeatureKey = []): array
     {
         $features = $payload['features'] ?? $payload;
         if (!is_array($features)) {
@@ -369,16 +426,29 @@ final class CreditsDashboardAssembler
                 if (!is_array($item)) {
                     continue;
                 }
-                $rows[] = $this->normalizeFeatureRow($item);
+                $rows[] = $this->normalizeFeatureRow($item, $usedUnitsByFeatureKey);
             }
         } else {
             foreach ($features as $key => $value) {
                 if (!is_array($value)) {
                     continue;
                 }
-                $rows[] = $this->normalizeFeatureRow($value + ['key' => (string) $key]);
+                $rows[] = $this->normalizeFeatureRow($value + ['key' => (string) $key], $usedUnitsByFeatureKey);
             }
         }
+
+        $maxUsed = 0.0;
+        foreach ($rows as $row) {
+            $maxUsed = max($maxUsed, (float) ($row['usedCredits'] ?? 0.0));
+        }
+        if ($maxUsed <= 0.0) {
+            $maxUsed = 1.0;
+        }
+        foreach ($rows as &$row) {
+            $used = (float) ($row['usedCredits'] ?? 0.0);
+            $row['usedBarPercent'] = round(($used / $maxUsed) * 100, 1);
+        }
+        unset($row);
 
         usort(
             $rows,
@@ -390,11 +460,14 @@ final class CreditsDashboardAssembler
 
     /**
      * @param array<string, mixed> $item
+     * @param array<string, int> $usedUnitsByFeatureKey
      * @return array<string, mixed>
      */
-    private function normalizeFeatureRow(array $item): array
+    private function normalizeFeatureRow(array $item, array $usedUnitsByFeatureKey = []): array
     {
         $key = (string) ($item['key'] ?? $item['feature_key'] ?? '');
+        $usedUnits = (int) ($usedUnitsByFeatureKey[$key] ?? 0);
+        $usedCredits = $usedUnits > 0 ? AiCreditUnits::unitsToCredits($usedUnits) : 0.0;
 
         return [
             'key' => $key,
@@ -403,6 +476,10 @@ final class CreditsDashboardAssembler
             'defaultBackend' => (string) ($item['default_backend'] ?? ''),
             'sort' => (int) ($item['sort'] ?? $item['sort_order'] ?? 0),
             'description' => (string) ($item['description'] ?? ''),
+            'exampleCost' => trim((string) ($item['example_cost'] ?? '')),
+            'usedCredits' => $usedCredits,
+            'usedCreditsFormatted' => AiCreditUnits::formatCredits($usedCredits),
+            'usedBarPercent' => 0.0,
         ];
     }
 
@@ -424,6 +501,11 @@ final class CreditsDashboardAssembler
             $tokensInput = $tokenStats['tokensInput'];
             $tokensOutput = $tokenStats['tokensOutput'];
             $model = (string) ($receipt['model'] ?? '');
+            $entryType = CreditsReceiptEntryType::normalize(
+                $receipt['entry_type'] ?? null,
+                CreditsReceiptEntryType::DEBIT,
+            );
+            $isCredit = $entryType === CreditsReceiptEntryType::CREDIT;
             $detailParts = [];
             if ($model !== '') {
                 $detailParts[] = $model;
@@ -441,10 +523,11 @@ final class CreditsDashboardAssembler
                 'crdate' => (int) ($receipt['crdate'] ?? 0),
                 'label' => $this->humanizeFeatureKey($featureKey),
                 'detail' => implode(' · ', $detailParts),
-                'credits' => -$parsed['credits'],
+                'credits' => $isCredit ? $parsed['credits'] : -$parsed['credits'],
                 'creditsFormatted' => AiCreditUnits::formatCredits($parsed['credits']),
                 'tokensTotal' => $tokensTotal,
-                'isCredit' => false,
+                'entryType' => $entryType,
+                'isCredit' => $isCredit,
             ];
         }
 

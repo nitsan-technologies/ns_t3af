@@ -21,6 +21,10 @@
                                                  default="Feature" />
                                 </th>
                                 <th>
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.features.col.exampleCost"
+                                                 default="Example cost" />
+                                </th>
+                                <th>
                                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.pricing.col.routing"
                                                  default="Default routing" />
                                 </th>
@@ -32,6 +36,11 @@
                                     <td>
                                         <strong>{feature.label}</strong>
                                         <div class="text-muted small">{feature.key}</div>
+                                    </td>
+                                    <td>
+                                        <f:if condition="{feature.exampleCost} != ''">
+                                            <code class="small text-muted">{feature.exampleCost}</code>
+                                        </f:if>
                                     </td>
                                     <td>
                                         <f:if condition="{feature.defaultModel} != ''">

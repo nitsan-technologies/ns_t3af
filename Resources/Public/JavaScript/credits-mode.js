@@ -4,6 +4,7 @@ import Notification from '@typo3/backend/notification.js';
 import Severity from '@typo3/backend/severity.js';
 import { refreshCharts, initCharts } from './dashboard-charts.js';
 import { initPeriodDropdownForms } from './period-filter.js';
+import { navigateInModule, preserveRouteParams } from './module-navigation.js';
 import { mountProviderList } from './provider-drawer.js';
 import { observeBrowserAutocomplete } from './disable-browser-autocomplete.js';
 
@@ -808,8 +809,62 @@ function reinitDashboardRoot(root) {
   requestAnimationFrame(() => initCreditsHeroProgress(root));
 }
 
+/**
+ * Re-init Providers module after fetch-based partial refresh (entry-type filter / usage paging).
+ *
+ * @param {Element} root
+ */
+function reinitProvidersRoot(root) {
+  observeBrowserAutocomplete(root);
+  initPeriodDropdownForms(root);
+  initCreditsUsagePaginationLinks(root);
+  mountProviderList(root);
+  const creditsRoot = root.querySelector('[data-aiu-providers-credits-root]');
+  if (creditsRoot instanceof HTMLElement) {
+    initCreditsMode(creditsRoot);
+  }
+  requestAnimationFrame(() => initCreditsHeroProgress(root));
+}
+
 if (typeof window !== 'undefined') {
   window.aiuReinitDashboardRoot = reinitDashboardRoot;
+  window.aiuReinitProvidersRoot = reinitProvidersRoot;
+}
+
+/**
+ * Recent AI Usage pagination — in-module navigation (entry-type uses `.aiu-period__option`
+ * via period-filter.js, same as the date-range dropdown).
+ *
+ * @param {ParentNode} [scope]
+ */
+function initCreditsUsagePaginationLinks(scope = document) {
+  const boundAttr = 'data-aiu-credits-usage-nav-bound';
+  const fallbackContext = scope instanceof Element
+    ? scope.closest('[data-aiu-nav-replace]') ?? scope
+    : scope.querySelector?.('[data-aiu-nav-replace]') ?? null;
+
+  scope.querySelectorAll('.aiu-credits-usage__nav-link[href]').forEach((anchor) => {
+    if (!(anchor instanceof HTMLAnchorElement) || anchor.getAttribute(boundAttr) === '1') {
+      return;
+    }
+    anchor.setAttribute(boundAttr, '1');
+    anchor.addEventListener('click', (event) => {
+      event.preventDefault();
+      const url = preserveRouteParams(anchor.href);
+      const context = anchor.closest('[data-aiu-nav-replace]') ?? fallbackContext;
+      navigateInModule(url.toString(), context);
+    });
+  });
+}
+
+/**
+ * @param {ParentNode} [scope]
+ */
+function initProvidersRoots(scope = document) {
+  scope.querySelectorAll('[data-aiu-providers-root]').forEach((root) => {
+    initPeriodDropdownForms(root);
+    initCreditsUsagePaginationLinks(root);
+  });
 }
 
 function boot() {
@@ -817,11 +872,13 @@ function boot() {
     .querySelectorAll('[data-aiu-providers-credits-root]')
     .forEach((root) => initCreditsMode(root));
   initDashboardRoots(document);
+  initProvidersRoots(document);
   bindCheckoutLinks();
   bindScrollHelpers();
   requestAnimationFrame(() => initCreditsHeroProgress(document));
   document.addEventListener('typo3-module-loaded', () => {
     initDashboardRoots(document);
+    initProvidersRoots(document);
     requestAnimationFrame(() => initCreditsHeroProgress(document));
   });
   document.addEventListener('aiu-dashboard-view-changed', () => {

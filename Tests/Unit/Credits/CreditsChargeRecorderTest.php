@@ -35,7 +35,8 @@ final class CreditsChargeRecorderTest extends TestCase
             ->with(
                 'tx_nst3af_credit_receipt',
                 self::callback(static fn(array $row): bool => $row['request_uuid'] === 'uuid-1'
-                    && $row['feature_key'] === 'text_to_speech'),
+                    && $row['feature_key'] === 'text_to_speech'
+                    && ($row['entry_type'] ?? '') === 'debit'),
             );
 
         $connection->method('count')->willReturn(1);

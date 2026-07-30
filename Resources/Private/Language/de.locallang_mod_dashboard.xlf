@@ -2151,9 +2151,17 @@
                 <source>Key</source>
                 <target>Schlüssel</target>
             </trans-unit>
+            <trans-unit id="credits.dashboard.features.col.exampleCost">
+                <source>Example cost</source>
+                <target>Beispielkosten</target>
+            </trans-unit>
             <trans-unit id="credits.dashboard.features.col.model">
                 <source>Default model</source>
                 <target>Standardmodell</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.features.col.used">
+                <source>Used</source>
+                <target>Verbraucht</target>
             </trans-unit>
             <trans-unit id="credits.dashboard.history.title">
                 <source>Recent AI Usage</source>
@@ -2178,6 +2186,50 @@
             <trans-unit id="credits.dashboard.history.col.credits">
                 <source>Credits</source>
                 <target>Credits</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.pagination.label">
+                <source>Recent AI usage pagination</source>
+                <target>Seitennavigation der aktuellen AI-Nutzung</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.pagination.first">
+                <source>First page</source>
+                <target>Erste Seite</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.pagination.previous">
+                <source>Previous page</source>
+                <target>Vorherige Seite</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.pagination.next">
+                <source>Next page</source>
+                <target>Nächste Seite</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.pagination.last">
+                <source>Last page</source>
+                <target>Letzte Seite</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.pagination.page">
+                <source>Page</source>
+                <target>Seite</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.pagination.records">
+                <source>Records %1$s–%2$s of %3$s</source>
+                <target>Datensätze %1$s–%2$s von %3$s</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.filter.entryType">
+                <source>Entry type</source>
+                <target>Buchungstyp</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.filter.all">
+                <source>All</source>
+                <target>Alle</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.filter.debit">
+                <source>Debit</source>
+                <target>Belastung</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.filter.credit">
+                <source>Credit</source>
+                <target>Gutschrift</target>
             </trans-unit>
             <trans-unit id="credits.dashboard.prompt.title">
                 <source>Connect T3Planet Credits</source>

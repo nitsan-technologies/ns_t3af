@@ -120,6 +120,7 @@ CREATE TABLE tx_nst3af_credit_receipt (
     feature_key VARCHAR(64) NOT NULL DEFAULT '',
     model VARCHAR(96) NOT NULL DEFAULT '',
     bucket VARCHAR(16) NOT NULL DEFAULT '',
+    entry_type VARCHAR(16) NOT NULL DEFAULT 'debit',
     cost_units INT(11) UNSIGNED DEFAULT 0 NOT NULL,
     cost DECIMAL(12,6) DEFAULT 0.000000 NOT NULL,
     balance_free DECIMAL(12,6) DEFAULT 0.000000 NOT NULL,
@@ -130,7 +131,8 @@ CREATE TABLE tx_nst3af_credit_receipt (
     extra MEDIUMTEXT,
     PRIMARY KEY (uid),
     UNIQUE KEY request_uuid (request_uuid),
-    KEY crdate (crdate)
+    KEY crdate (crdate),
+    KEY entry_type (entry_type)
 );
 
 CREATE TABLE tx_nst3af_product_catalog (

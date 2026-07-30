@@ -8,7 +8,13 @@
 </f:section>
 
 <f:section name="Content">
-    <div class="aiu-providers aiu-providers--site" data-aiu-provider-list data-aiu-page-id="{currentPageId}" data-aiu-storage-pid="{siteStoragePid}">
+    <div class="aiu-providers aiu-providers--site"
+         data-aiu-providers-root
+         data-aiu-provider-list
+         data-aiu-nav-replace="[data-aiu-providers-root]"
+         data-aiu-nav-replace-callback="aiuReinitProvidersRoot"
+         data-aiu-page-id="{currentPageId}"
+         data-aiu-storage-pid="{siteStoragePid}">
 
         <f:render partial="Module/TabPageHeader" arguments="{_all}" />
 
@@ -24,7 +30,11 @@
             <f:render partial="Provider/CreditsDashboard" arguments="{
                 creditsModeActive: creditsModeActive,
                 creditsDashboard: creditsDashboard,
-                providersReturnUrl: providersReturnUrl
+                providersReturnUrl: providersReturnUrl,
+                creditsUsagePagination: creditsUsagePagination,
+                creditsUsageTotalCount: creditsUsageTotalCount,
+                creditsUsageFilters: creditsUsageFilters,
+                creditsUsageRouteParams: creditsUsageRouteParams
             }" />
         </div>
 

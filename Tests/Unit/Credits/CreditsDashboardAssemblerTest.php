@@ -61,6 +61,7 @@ final class CreditsDashboardAssemblerTest extends TestCase
                         'title' => 'Starter',
                         'credits' => 250,
                         'price_amount' => 6,
+                        'description' => ['Monthly credits', 'Priority support', 'All AI features'],
                         'checkout_url' => 'https://pay.example/pabbly/starter?token=set-by-server',
                         'checkout_embed_url' => 'https://payments.pabbly.com/api/checkout/embed.js?_p=test',
                         'sort_order' => 10,
@@ -69,8 +70,20 @@ final class CreditsDashboardAssemblerTest extends TestCase
             ],
             [
                 'features' => [
-                    ['feature_key' => 'seo_meta', 'label' => 'SEO meta', 'default_model' => 'gpt-4o', 'sort' => 10],
-                    ['feature_key' => 'image', 'label' => 'Image', 'default_model' => 'gpt-4o', 'sort' => 20],
+                    [
+                        'feature_key' => 'seo_meta',
+                        'label' => 'SEO meta',
+                        'default_model' => 'gpt-4o',
+                        'sort' => 10,
+                        'example_cost' => '(100k/1M)×1 + (50k/1M)×5 ≈ $0.35',
+                    ],
+                    [
+                        'feature_key' => 'image',
+                        'label' => 'Image',
+                        'default_model' => 'gpt-4o',
+                        'sort' => 20,
+                        'example_cost' => null,
+                    ],
                 ],
                 'pricing' => ['model' => 'token', 'tokens_per_credit' => 1000, 'credit_unit_scale' => 1000],
             ],
@@ -86,15 +99,62 @@ final class CreditsDashboardAssemblerTest extends TestCase
             ],
             [],
             'https://backend.example/return',
+            [
+                'seo_meta' => 5000,
+                'image' => 1500,
+            ],
         );
 
         self::assertSame(2392.0, $dashboard['balance']['remaining']);
         self::assertCount(1, $dashboard['products']);
         self::assertSame('https://pay.example/pabbly/starter?token=set-by-server', $dashboard['products'][0]['checkoutUrl']);
+        self::assertSame(
+            ['Monthly credits', 'Priority support', 'All AI features'],
+            $dashboard['products'][0]['description'],
+        );
         self::assertSame('seo_meta', $dashboard['features'][0]['key']);
         self::assertSame('gpt-4o', $dashboard['features'][0]['defaultModel']);
+        self::assertSame('(100k/1M)×1 + (50k/1M)×5 ≈ $0.35', $dashboard['features'][0]['exampleCost']);
+        self::assertSame('', $dashboard['features'][1]['exampleCost']);
+        self::assertSame(5.0, $dashboard['features'][0]['usedCredits']);
+        self::assertSame(1.5, $dashboard['features'][1]['usedCredits']);
+        self::assertSame(100.0, $dashboard['features'][0]['usedBarPercent']);
+        self::assertSame(30.0, $dashboard['features'][1]['usedBarPercent']);
         self::assertStringContainsString('1,000 billable tokens', (string) $dashboard['pricing']['footnote']);
         self::assertStringContainsString('450 tokens', (string) $dashboard['transactions'][0]['detail']);
+    }
+
+    public function testNormalizeProductsDescriptionAcceptsLegacyStringAndEmptyArray(): void
+    {
+        $dashboard = $this->createAssembler()->assemble(
+            [],
+            [],
+            [
+                'products' => [
+                    [
+                        'sku' => 'legacy',
+                        'title' => 'Legacy',
+                        'credits' => 100,
+                        'description' => 'Single line description',
+                        'sort_order' => 10,
+                    ],
+                    [
+                        'sku' => 'empty',
+                        'title' => 'Empty',
+                        'credits' => 50,
+                        'description' => [],
+                        'sort_order' => 20,
+                    ],
+                ],
+            ],
+            [],
+            [],
+            [],
+            'https://backend.example/return',
+        );
+
+        self::assertSame(['Single line description'], $dashboard['products'][0]['description']);
+        self::assertSame([], $dashboard['products'][1]['description']);
     }
 
     public function testSummarizeBalanceForModuleHeaderBadge(): void

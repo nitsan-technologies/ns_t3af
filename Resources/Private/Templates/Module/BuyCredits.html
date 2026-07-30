@@ -23,6 +23,13 @@
                                 <article class="aiu-credits-product">
                                     <h3 class="aiu-credits-product__title">{product.title}</h3>
                                     <p class="aiu-credits-product__credits">{product.credits} credits</p>
+                                    <f:if condition="{product.description -> f:count()} > 0">
+                                        <ul class="aiu-credits-product__features aiu-credits-product__description">
+                                            <f:for each="{product.description}" as="bullet">
+                                                <li>{bullet}</li>
+                                            </f:for>
+                                        </ul>
+                                    </f:if>
                                     <f:if condition="{product.checkoutUrl} != ''">
                                         <a class="btn btn-primary aiu-credits-product__cta"
                                            href="{product.checkoutUrl}"

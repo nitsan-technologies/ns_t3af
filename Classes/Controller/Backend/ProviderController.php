@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Controller\Backend;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use NITSAN\NsT3AF\Access\ExtensionAvailability;
 use NITSAN\NsT3AF\Access\RecordAccessGate;
+use NITSAN\NsT3AF\Credits\CreditsReceiptEntryType;
 use NITSAN\NsT3AF\Credits\Service\CreditModeResolver;
 use NITSAN\NsT3AF\Credits\Service\CreditOverviewLineService;
 use NITSAN\NsT3AF\Credits\Service\CreditsDashboardService;
@@ -31,6 +32,7 @@ use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
 use NITSAN\NsT3AF\Event\ProviderTestConnectionEvent;
 use NITSAN\NsT3AF\Exception\CipherException;
+use NITSAN\NsT3AF\Pagination\FixedTotalPaginator;
 use NITSAN\NsT3AF\Provider\AdapterRegistry;
 use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\Contract\VerifyResult;
@@ -53,6 +55,7 @@ use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use TYPO3\CMS\Core\Http\RedirectResponse;
 use TYPO3\CMS\Core\Page\PageRenderer;
+use TYPO3\CMS\Core\Pagination\SimplePagination;
 
 /**
  * AI providers: HTML list + drawer, and JSON AJAX endpoints for the same UI.
@@ -153,7 +156,27 @@ final class ProviderController extends AbstractAiUniverseModuleController
         }
 
         $providersUri = $this->creditsReturnUrlBuilder->fromRoute('t3af_dashboard.providers', $routeParams);
-        $creditsDashboard = $this->creditsDashboardService->buildForProvidersPage($providersUri);
+        $usagePaging = $this->normalizeCreditsUsagePaging($request->getQueryParams());
+        $creditsDashboard = $this->creditsDashboardService->buildForProvidersPage(
+            $providersUri,
+            $usagePaging['currentPage'],
+            $usagePaging['max'],
+            $usagePaging['entryType'],
+        );
+        $creditsUsagePagination = null;
+        $transactionsTotalCount = (int) ($creditsDashboard['transactionsTotalCount'] ?? 0);
+        if ($transactionsTotalCount > 0) {
+            $paginator = new FixedTotalPaginator(
+                $transactionsTotalCount,
+                is_array($creditsDashboard['transactions'] ?? null) ? $creditsDashboard['transactions'] : [],
+                (int) ($creditsDashboard['transactionsCurrentPage'] ?? 1),
+                (int) ($creditsDashboard['transactionsPerPage'] ?? $usagePaging['max']),
+            );
+            $creditsUsagePagination = [
+                'pagination' => new SimplePagination($paginator),
+                'paginator' => $paginator,
+            ];
+        }
 
         $importSites = $this->siteStorageContext->listConfiguredSites($storagePid);
         foreach ($importSites as &$site) {
@@ -193,6 +216,10 @@ final class ProviderController extends AbstractAiUniverseModuleController
             'providersReadOnly' => self::fluidFlag($this->creditModeResolver->isActive() || !$canModifyProviders),
             'canModifyProviders' => self::fluidFlag($canModifyProviders),
             'creditsDashboard' => $creditsDashboard,
+            'creditsUsagePagination' => $creditsUsagePagination,
+            'creditsUsageTotalCount' => $transactionsTotalCount,
+            'creditsUsageFilters' => $usagePaging,
+            'creditsUsageRouteParams' => $routeParams,
             'providersReturnUrl' => $providersUri,
             'creditsBearerToken' => $this->runtimeSettings->getTokenPlain() ?? '',
             'environmentRequirementAlerts' => $this->credentialEnvironmentAlerts(),
@@ -793,5 +820,27 @@ final class ProviderController extends AbstractAiUniverseModuleController
         }
 
         return new JsonResponse(['ok' => false, 'message' => 'access-denied'], 403);
+    }
+
+    /**
+     * @param array<string, mixed> $query
+     * @return array{currentPage: int, max: int, entryType: string}
+     */
+    private function normalizeCreditsUsagePaging(array $query): array
+    {
+        $maxRaw = trim((string) ($query['max'] ?? '20'));
+        $perPage = ctype_digit($maxRaw) ? (int) $maxRaw : 20;
+        if (!in_array($perPage, [20, 50, 100], true)) {
+            $perPage = 20;
+        }
+
+        $pageRaw = trim((string) ($query['currentPage'] ?? '1'));
+        $currentPage = ctype_digit($pageRaw) ? max(1, (int) $pageRaw) : 1;
+
+        return [
+            'currentPage' => $currentPage,
+            'max' => $perPage,
+            'entryType' => CreditsReceiptEntryType::normalizeFilter($query['entryType'] ?? CreditsReceiptEntryType::ALL),
+        ];
     }
 }

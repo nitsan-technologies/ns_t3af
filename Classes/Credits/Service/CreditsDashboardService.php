@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Credits\Service;
 
 use NITSAN\NsT3AF\Credits\CreditsApiErrorCodes;
+use NITSAN\NsT3AF\Credits\CreditsReceiptEntryType;
 use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
 
 /**
@@ -46,20 +47,28 @@ final class CreditsDashboardService
     /**
      * @return array<string, mixed>
      */
-    public function buildForProvidersPage(string $returnUrl): array
-    {
+    public function buildForProvidersPage(
+        string $returnUrl,
+        int $currentPage = 1,
+        int $perPage = 20,
+        string $entryTypeFilter = CreditsReceiptEntryType::ALL,
+    ): array {
         if (!$this->creditModeResolver->isActive()) {
             return $this->assembler->emptyPrompt();
         }
 
-        return $this->fetchAndAssemble($returnUrl);
+        return $this->fetchAndAssemble($returnUrl, $currentPage, $perPage, $entryTypeFilter);
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function fetchAndAssemble(string $returnUrl): array
-    {
+    public function fetchAndAssemble(
+        string $returnUrl,
+        int $currentPage = 1,
+        int $perPage = 20,
+        string $entryTypeFilter = CreditsReceiptEntryType::ALL,
+    ): array {
         $errors = [];
         $abortFetches = false;
         try {
@@ -121,12 +130,21 @@ final class CreditsDashboardService
             }
         }
 
-        $receipts = $this->localReceiptCache->listRecent(20);
+        $perPage = max(1, $perPage);
+        $entryTypeFilter = CreditsReceiptEntryType::normalizeFilter($entryTypeFilter);
+        $totalCount = $this->localReceiptCache->countBillable($entryTypeFilter);
+        $totalPages = max(1, (int) ceil($totalCount / $perPage));
+        $currentPage = min(max(1, $currentPage), $totalPages);
+        $offset = ($currentPage - 1) * $perPage;
+        $receipts = $this->localReceiptCache->listBillable($perPage, $offset, $entryTypeFilter);
+        $usedUnitsByFeatureKey = $this->localReceiptCache->sumCostUnitsByFeatureKey();
+        $lifetimeUnits = (int) array_sum($usedUnitsByFeatureKey);
+        $windowUnits = $this->localReceiptCache->sumCostUnitsSince(time() - (7 * 86400));
 
         // Same remote failure (e.g. rate_limited with different retry_after) — show one banner.
         $errors = array_values($errors);
 
-        return $this->assembler->assemble(
+        $dashboard = $this->assembler->assemble(
             $balance,
             $plan,
             $products,
@@ -134,7 +152,16 @@ final class CreditsDashboardService
             $receipts,
             $errors,
             $returnUrl,
+            $usedUnitsByFeatureKey,
+            $lifetimeUnits,
+            $windowUnits,
         );
+        $dashboard['transactionsTotalCount'] = $totalCount;
+        $dashboard['transactionsCurrentPage'] = $currentPage;
+        $dashboard['transactionsPerPage'] = $perPage;
+        $dashboard['transactionsEntryType'] = $entryTypeFilter;
+
+        return $dashboard;
     }
 
     private function syncDiscoveredLicenseKeysIfNeeded(): void

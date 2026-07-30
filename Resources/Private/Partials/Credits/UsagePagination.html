@@ -1,0 +1,75 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<nav class="pagination-wrap aiu-credits-usage__pagination" aria-label="{f:translate(key: '{ll}:credits.dashboard.history.pagination.label', default: 'Recent AI usage pagination')}">
+    <ul class="pagination mb-0">
+        <f:if condition="{creditsUsagePagination.pagination.previousPageNumber} && {creditsUsagePagination.pagination.previousPageNumber} >= {creditsUsagePagination.pagination.firstPageNumber}">
+            <f:then>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: 't3af_dashboard.providers', parameters: {
+                        id: creditsUsageRouteParams.id,
+                        currentPage: creditsUsagePagination.pagination.firstPageNumber,
+                        max: creditsUsageFilters.max,
+                        entryType: creditsUsageFilters.entryType
+                    })}#aiu-credits-usage" class="page-link aiu-credits-usage__nav-link" title="{f:translate(key: '{ll}:credits.dashboard.history.pagination.first', default: 'First page')}">
+                        <core:icon identifier="actions-view-paging-first" />
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: 't3af_dashboard.providers', parameters: {
+                        id: creditsUsageRouteParams.id,
+                        currentPage: creditsUsagePagination.pagination.previousPageNumber,
+                        max: creditsUsageFilters.max,
+                        entryType: creditsUsageFilters.entryType
+                    })}#aiu-credits-usage" class="page-link aiu-credits-usage__nav-link" title="{f:translate(key: '{ll}:credits.dashboard.history.pagination.previous', default: 'Previous page')}">
+                        <core:icon identifier="actions-view-paging-previous" />
+                    </a>
+                </li>
+            </f:then>
+            <f:else>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+            </f:else>
+        </f:if>
+        <li class="page-item">
+            <span class="page-link aiu-credits-usage__pagination-records">
+                <f:translate key="{ll}:credits.dashboard.history.pagination.records"
+                             arguments="{0: creditsUsagePagination.pagination.startRecordNumber, 1: creditsUsagePagination.pagination.endRecordNumber, 2: creditsUsageTotalCount}"
+                             default="Records %1$s–%2$s of %3$s" />
+                <span class="aiu-credits-usage__pagination-sep">|</span>
+                <f:translate key="{ll}:credits.dashboard.history.pagination.page" default="Page" />
+                {creditsUsagePagination.paginator.currentPageNumber} / {creditsUsagePagination.pagination.lastPageNumber}
+            </span>
+        </li>
+        <f:if condition="{creditsUsagePagination.pagination.nextPageNumber} && {creditsUsagePagination.pagination.nextPageNumber} <= {creditsUsagePagination.pagination.lastPageNumber}">
+            <f:then>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: 't3af_dashboard.providers', parameters: {
+                        id: creditsUsageRouteParams.id,
+                        currentPage: creditsUsagePagination.pagination.nextPageNumber,
+                        max: creditsUsageFilters.max,
+                        entryType: creditsUsageFilters.entryType
+                    })}#aiu-credits-usage" class="page-link aiu-credits-usage__nav-link" title="{f:translate(key: '{ll}:credits.dashboard.history.pagination.next', default: 'Next page')}">
+                        <core:icon identifier="actions-view-paging-next" />
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: 't3af_dashboard.providers', parameters: {
+                        id: creditsUsageRouteParams.id,
+                        currentPage: creditsUsagePagination.pagination.lastPageNumber,
+                        max: creditsUsageFilters.max,
+                        entryType: creditsUsageFilters.entryType
+                    })}#aiu-credits-usage" class="page-link aiu-credits-usage__nav-link" title="{f:translate(key: '{ll}:credits.dashboard.history.pagination.last', default: 'Last page')}">
+                        <core:icon identifier="actions-view-paging-last" />
+                    </a>
+                </li>
+            </f:then>
+            <f:else>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+            </f:else>
+        </f:if>
+    </ul>
+</nav>
+</html>
