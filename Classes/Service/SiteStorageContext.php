@@ -40,6 +40,24 @@ final class SiteStorageContext
         return self::extractPageIdFromRequest($request);
     }
 
+    /**
+     * Resolves a page id for global toolbar links: request query/body, referer, then first site root.
+     */
+    public function resolvePageIdForToolbarNavigation(ServerRequestInterface $request): int
+    {
+        $pageId = self::extractPageIdFromRequest($request);
+        if ($pageId > 0) {
+            return $pageId;
+        }
+
+        $pageId = self::extractPageIdFromReferer($request);
+        if ($pageId > 0) {
+            return $pageId;
+        }
+
+        return $this->resolveFirstRootStoragePid() ?? 0;
+    }
+
     public static function extractPageIdFromRequest(ServerRequestInterface $request): int
     {
         $query = $request->getQueryParams();
@@ -52,6 +70,23 @@ final class SiteStorageContext
         }
 
         return $pageId;
+    }
+
+    public static function extractPageIdFromReferer(ServerRequestInterface $request): int
+    {
+        $referer = $request->getServerParams()['HTTP_REFERER'] ?? '';
+        if (!is_string($referer) || $referer === '') {
+            return 0;
+        }
+
+        $query = parse_url($referer, PHP_URL_QUERY);
+        if (!is_string($query) || $query === '') {
+            return 0;
+        }
+
+        parse_str($query, $params);
+
+        return (int) ($params['id'] ?? $params['pageId'] ?? $params['pid'] ?? 0);
     }
 
     public function resolveStoragePidFromPageId(int $pageId): ?int

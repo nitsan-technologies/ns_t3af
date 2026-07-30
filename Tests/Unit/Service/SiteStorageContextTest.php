@@ -63,6 +63,40 @@ final class SiteStorageContextTest extends TestCase
         self::assertSame(42, $context->resolvePageIdFromRequest($request));
     }
 
+    public function testExtractPageIdFromReferer(): void
+    {
+        $request = new ServerRequest(
+            'http://localhost/typo3/main',
+            'GET',
+            'php://input',
+            [],
+            ['HTTP_REFERER' => 'https://example.test/typo3/module/web/list?id=77&token=abc'],
+        );
+
+        self::assertSame(77, SiteStorageContext::extractPageIdFromReferer($request));
+    }
+
+    public function testResolvePageIdForToolbarNavigationUsesReferer(): void
+    {
+        $request = new ServerRequest(
+            'http://localhost/typo3/main',
+            'GET',
+            'php://input',
+            [],
+            ['HTTP_REFERER' => 'https://example.test/typo3/module/t3af/dashboard/overview?id=55'],
+        );
+        $context = new SiteStorageContext($this->createMock(SiteFinder::class));
+
+        self::assertSame(55, $context->resolvePageIdForToolbarNavigation($request));
+    }
+
+    public function testResolvePageIdForToolbarNavigationWithoutContextReturnsZero(): void
+    {
+        $context = new SiteStorageContext($this->createMock(SiteFinder::class));
+
+        self::assertSame(0, $context->resolvePageIdForToolbarNavigation(new ServerRequest('http://localhost/typo3/main')));
+    }
+
     public function testResolveStoragePidFromPageId(): void
     {
         $site = $this->createMock(Site::class);

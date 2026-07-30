@@ -68,12 +68,20 @@ final class CreditBalanceToolbarItem implements ToolbarItemInterface, RequestAwa
 
     public function hasDropDown(): bool
     {
-        return false;
+        return true;
     }
 
     public function getDropDown(): string
     {
-        return '';
+        $badge = $this->creditOverviewLine->resolveBadge();
+        if ($badge === null) {
+            return '';
+        }
+
+        $view = $this->backendViewFactory->create($this->request, ['nitsan/ns-t3af']);
+        $view->assign('badge', $badge);
+
+        return $view->render('ToolbarItems/CreditBalanceToolbarItemDropDown');
     }
 
     /**
