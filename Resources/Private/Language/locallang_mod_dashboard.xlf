@@ -585,6 +585,9 @@
       <trans-unit id="module.aiUsage.kpi.totalTokens" resname="module.aiUsage.kpi.totalTokens">
         <source>Total Tokens</source>
       </trans-unit>
+      <trans-unit id="module.aiUsage.kpi.totalCredits" resname="module.aiUsage.kpi.totalCredits">
+        <source>Total Credits</source>
+      </trans-unit>
       <trans-unit id="module.aiUsage.kpi.totalCost" resname="module.aiUsage.kpi.totalCost">
         <source>Total Cost</source>
       </trans-unit>
@@ -690,6 +693,9 @@
       <trans-unit id="module.aiUsage.table.tokens" resname="module.aiUsage.table.tokens">
         <source>Tokens</source>
       </trans-unit>
+      <trans-unit id="module.aiUsage.table.credits" resname="module.aiUsage.table.credits">
+        <source>Credits</source>
+      </trans-unit>
       <trans-unit id="module.aiUsage.table.cost" resname="module.aiUsage.table.cost">
         <source>Cost</source>
       </trans-unit>
@@ -791,6 +797,9 @@
       </trans-unit>
       <trans-unit id="module.aiUsage.summary.models" resname="module.aiUsage.summary.models">
         <source>Top Models by Tokens</source>
+      </trans-unit>
+      <trans-unit id="module.aiUsage.summary.modelsCredits" resname="module.aiUsage.summary.modelsCredits">
+        <source>Top Models by Credits</source>
       </trans-unit>
       <trans-unit id="module.aiUsage.summary.extensions" resname="module.aiUsage.summary.extensions">
         <source>Usage by Extension</source>
@@ -1623,6 +1632,12 @@
       </trans-unit>
       <trans-unit id="credits.dashboard.features.col.used" resname="credits.dashboard.features.col.used">
         <source>Used</source>
+      </trans-unit>
+      <trans-unit id="credits.pricing.hint" resname="credits.pricing.hint">
+        <source>Call Estimate.php with the same meta_json as Charge/Embed to show “≈ X credits” before submit.</source>
+      </trans-unit>
+      <trans-unit id="credits.pricing.inactive" resname="credits.pricing.inactive">
+        <source>Activate T3Planet Credits to view the feature catalog and credit costs.</source>
       </trans-unit>
       <trans-unit id="credits.dashboard.history.title" resname="credits.dashboard.history.title">
         <source>Recent AI Usage</source>

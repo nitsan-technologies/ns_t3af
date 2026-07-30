@@ -77,4 +77,19 @@ final class DashboardViewModelBuilderTest extends TestCase
         self::assertSame(75.0, $legend[0]['percent']);
         self::assertSame(25.0, $legend[1]['percent']);
     }
+
+    public function testBuildKpiStripOmitsTokensInCreditsMode(): void
+    {
+        $strip = $this->builder->buildKpiStrip(
+            ['totals' => ['totalRequests' => 10, 'totalTokens' => 5000, 'successRate' => 90.0]],
+            ['totalRequests' => [], 'totalTokens' => [], 'cost' => [], 'successRate' => []],
+            true,
+            ['stats' => ['creditsUsedFormatted' => '12', 'estimatedDaysLeft' => 7]],
+            [],
+        );
+
+        $ids = array_column($strip, 'id');
+        self::assertNotContains('tokens', $ids);
+        self::assertContains('creditsUsed', $ids);
+    }
 }

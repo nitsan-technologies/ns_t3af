@@ -68,7 +68,12 @@
                                     <f:if condition="{entry.success} == 1"><f:then>success</f:then><f:else>failed</f:else></f:if>
                                 </span>
                             </td>
-                            <td>{entry.total_tokens}</td>
+                            <td>
+                                <f:if condition="{entry.provider_identifier} == 't3planet_credits'">
+                                    <f:then>—</f:then>
+                                    <f:else>{entry.total_tokens}</f:else>
+                                </f:if>
+                            </td>
                             <td>${entry.estimated_cost -> f:format.number(decimals: 4)}</td>
                             <td class="col-control">
                                 <div class="btn-group" role="group"
@@ -77,6 +82,7 @@
                                             class="btn btn-default"
                                             data-aiu-usage-open-detail
                                             data-uid="{entry.uid}"
+                                            data-mask-tokens="{f:if(condition: '{entry.provider_identifier} == \'t3planet_credits\'', then: '1', else: '0')}"
                                             data-provider="{entry.provider_identifier}"
                                             data-module="{entry.extension_key}"
                                             data-scope="{entry.feature_key}"

@@ -19,6 +19,56 @@ if (typeof window !== 'undefined') {
   window.aiuReinitAiUsageRoot = reinitAiUsageRoot;
 }
 
+/** @see NITSAN\NsT3AF\Credits\CreditsProviderIdentifier::IDENTIFIER */
+const T3PLANET_CREDITS_PROVIDER = 't3planet_credits';
+
+/** @type {Set<string>} */
+const TOKEN_META_KEYS = new Set([
+  'tokens',
+  'tokens_input',
+  'tokens_output',
+  'tokens_total',
+  'prompt_tokens',
+  'completion_tokens',
+  'total_tokens',
+  'input_tokens',
+  'output_tokens',
+  'estimated_tokens',
+  'usage',
+]);
+
+/**
+ * @param {HTMLElement} button
+ */
+function shouldMaskTokenMetrics(button) {
+  if (button.getAttribute('data-mask-tokens') === '1') {
+    return true;
+  }
+
+  return button.getAttribute('data-provider') === T3PLANET_CREDITS_PROVIDER;
+}
+
+/**
+ * @param {boolean} mask
+ * @param {string|null|undefined} value
+ */
+function maskedMetricValue(mask, value) {
+  if (mask) {
+    return '';
+  }
+
+  return String(value ?? '').trim();
+}
+
+/**
+ * @param {string} key
+ */
+function isTokenMetaKey(key) {
+  const normalized = String(key ?? '').trim().toLowerCase();
+
+  return TOKEN_META_KEYS.has(normalized) || normalized.includes('token');
+}
+
 function initInModuleLinks(root) {
   root.querySelectorAll('a[href]').forEach((anchor) => {
     if (!(anchor instanceof HTMLAnchorElement)) {
@@ -284,6 +334,7 @@ function buildDetailTable(rowsHtml) {
 function buildUsageDetailContent(scope, button) {
   const labels = detailLabels(scope);
   const empty = labels.empty;
+  const maskTokens = shouldMaskTokenMetrics(button);
   const meta = parseMetaObject(button.getAttribute('data-meta') || '') ?? {};
   const status = button.getAttribute('data-status') || '';
   const statusBadge = status
@@ -309,9 +360,9 @@ function buildUsageDetailContent(scope, button) {
   ].join('');
 
   const metricsRows = [
-    buildDetailRow(labels.tokens, button.getAttribute('data-tokens') || '', { empty }),
-    buildDetailRow(labels.promptTokens, button.getAttribute('data-prompt-tokens') || '', { empty }),
-    buildDetailRow(labels.completionTokens, button.getAttribute('data-completion-tokens') || '', { empty }),
+    buildDetailRow(labels.tokens, maskedMetricValue(maskTokens, button.getAttribute('data-tokens')), { empty }),
+    buildDetailRow(labels.promptTokens, maskedMetricValue(maskTokens, button.getAttribute('data-prompt-tokens')), { empty }),
+    buildDetailRow(labels.completionTokens, maskedMetricValue(maskTokens, button.getAttribute('data-completion-tokens')), { empty }),
     buildDetailRow(labels.latency, latencyDisplay, { empty }),
     buildDetailRow(labels.credits, button.getAttribute('data-credits') || '', { empty }),
     buildDetailRow(labels.cost, costDisplay, { empty }),
@@ -358,10 +409,13 @@ function buildUsageDetailContent(scope, button) {
   if (metaEntries.length > 0) {
     metaRows = buildSectionDividerRow(labels.sectionMeta)
       + metaEntries.map(([key, value]) => {
+        if (maskTokens && isTokenMetaKey(key)) {
+          return buildDetailRow(key, '', { mono: true, empty });
+        }
         const display = typeof value === 'object'
           ? JSON.stringify(value)
           : String(value);
-        return buildDetailRow(key, display, { mono: true });
+        return buildDetailRow(key, display, { mono: true, empty });
       }).join('');
   }
 

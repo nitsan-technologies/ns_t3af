@@ -1,4 +1,6 @@
-<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
 <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
 
 <div class="aiu-ai-usage__summary-head">
@@ -35,13 +37,29 @@
         </div>
         <div class="aiu-panel__body">
             <table class="aiu-table aiu-table--compact table table-striped table-hover align-middle mb-0">
-                <thead><tr><th scope="col">Provider</th><th scope="col">Requests</th><th scope="col">Cost</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th scope="col">Provider</th>
+                        <th scope="col">Requests</th>
+                        <th scope="col">
+                            <f:if condition="{hideTokenMetrics} == 1">
+                                <f:then><f:translate key="{ll}:module.aiUsage.table.credits" default="Credits" /></f:then>
+                                <f:else>Cost</f:else>
+                            </f:if>
+                        </th>
+                    </tr>
+                </thead>
                 <tbody>
                     <f:for each="{aiUsageSummary.providers}" as="item">
                         <tr>
                             <td class="aiu-table__mono">{item.provider}</td>
                             <td>{item.requests}</td>
-                            <td>${item.cost -> f:format.number(decimals: 4)}</td>
+                            <td>
+                                <f:if condition="{hideTokenMetrics} == 1">
+                                    <f:then>{item.credits -> f:format.number(decimals: 3)} cr</f:then>
+                                    <f:else>${item.cost -> f:format.number(decimals: 4)}</f:else>
+                                </f:if>
+                            </td>
                         </tr>
                     </f:for>
                     <f:if condition="{aiUsageSummary.providers -> f:count()} == 0">
@@ -53,21 +71,46 @@
     </div>
     <div class="aiu-panel">
         <div class="aiu-panel__head">
-            <h3 class="aiu-panel__title"><f:translate key="{ll}:module.aiUsage.summary.models" default="Top Models by Tokens" /></h3>
+            <h3 class="aiu-panel__title">
+                <f:if condition="{hideTokenMetrics} == 1">
+                    <f:then><f:translate key="{ll}:module.aiUsage.summary.modelsCredits" default="Top Models by Credits" /></f:then>
+                    <f:else><f:translate key="{ll}:module.aiUsage.summary.models" default="Top Models by Tokens" /></f:else>
+                </f:if>
+            </h3>
         </div>
         <div class="aiu-panel__body">
             <table class="aiu-table aiu-table--compact table table-striped table-hover align-middle mb-0">
-                <thead><tr><th scope="col">Model</th><th scope="col">Tokens</th><th scope="col">Cost</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th scope="col">Model</th>
+                        <th scope="col">
+                            <f:if condition="{hideTokenMetrics} == 1">
+                                <f:then><f:translate key="{ll}:module.aiUsage.table.credits" default="Credits" /></f:then>
+                                <f:else>Tokens</f:else>
+                            </f:if>
+                        </th>
+                        <f:if condition="{hideTokenMetrics} != 1">
+                            <th scope="col">Cost</th>
+                        </f:if>
+                    </tr>
+                </thead>
                 <tbody>
                     <f:for each="{aiUsageSummary.models}" as="item">
                         <tr>
                             <td class="aiu-table__mono">{item.model}</td>
-                            <td>{item.tokens}</td>
-                            <td>${item.cost -> f:format.number(decimals: 4)}</td>
+                            <td>
+                                <f:if condition="{hideTokenMetrics} == 1">
+                                    <f:then>{item.credits -> f:format.number(decimals: 3)}</f:then>
+                                    <f:else>{item.tokens}</f:else>
+                                </f:if>
+                            </td>
+                            <f:if condition="{hideTokenMetrics} != 1">
+                                <td>${item.cost -> f:format.number(decimals: 4)}</td>
+                            </f:if>
                         </tr>
                     </f:for>
                     <f:if condition="{aiUsageSummary.models -> f:count()} == 0">
-                        <tr><td colspan="3" class="aiu-empty">No model data.</td></tr>
+                        <tr><td colspan="{f:if(condition: '{hideTokenMetrics} == 1', then: '2', else: '3')}" class="aiu-empty">No model data.</td></tr>
                     </f:if>
                 </tbody>
             </table>
@@ -81,18 +124,39 @@
     </div>
     <div class="aiu-panel__body">
         <table class="aiu-table aiu-table--compact table table-striped table-hover align-middle mb-0">
-            <thead><tr><th scope="col">Extension</th><th scope="col">Requests</th><th scope="col">Tokens</th><th scope="col">Cost</th></tr></thead>
+            <thead>
+                <tr>
+                    <th scope="col">Extension</th>
+                    <th scope="col">Requests</th>
+                    <f:if condition="{hideTokenMetrics} != 1">
+                        <th scope="col">Tokens</th>
+                    </f:if>
+                    <th scope="col">
+                        <f:if condition="{hideTokenMetrics} == 1">
+                            <f:then><f:translate key="{ll}:module.aiUsage.table.credits" default="Credits" /></f:then>
+                            <f:else>Cost</f:else>
+                        </f:if>
+                    </th>
+                </tr>
+            </thead>
             <tbody>
                 <f:for each="{aiUsageSummary.extensions}" as="item">
                     <tr>
                         <td class="aiu-table__mono">{item.extensionKey}</td>
                         <td>{item.requests}</td>
-                        <td>{item.tokens}</td>
-                        <td>${item.cost -> f:format.number(decimals: 4)}</td>
+                        <f:if condition="{hideTokenMetrics} != 1">
+                            <td>{item.tokens}</td>
+                        </f:if>
+                        <td>
+                            <f:if condition="{hideTokenMetrics} == 1">
+                                <f:then>{item.credits -> f:format.number(decimals: 3)} cr</f:then>
+                                <f:else>${item.cost -> f:format.number(decimals: 4)}</f:else>
+                            </f:if>
+                        </td>
                     </tr>
                 </f:for>
                 <f:if condition="{aiUsageSummary.extensions -> f:count()} == 0">
-                    <tr><td colspan="4" class="aiu-empty">No extension data.</td></tr>
+                    <tr><td colspan="{f:if(condition: '{hideTokenMetrics} == 1', then: '3', else: '4')}" class="aiu-empty">No extension data.</td></tr>
                 </f:if>
             </tbody>
         </table>

@@ -83,28 +83,19 @@ final readonly class CreditsPricing
     }
 
     /**
-     * User-facing footnote for token-based fractional billing.
+     * User-facing footnote for credits-mode UI (no token metrics).
      */
     public function footnote(): string
     {
-        $tokens = number_format($this->tokensPerCredit, 0, '.', ',');
         $minCredit = AiCreditUnits::formatCredits(
             AiCreditUnits::unitsToCredits($this->minChargeUnits, $this->creditUnitScale),
             3,
         );
-        $parts = [
-            sprintf('1 credit ≈ %s billable tokens', $tokens),
-            sprintf('min %s credit per successful call', $minCredit),
-        ];
-        if ($this->inputTokenRate !== 1.0 || $this->outputTokenRate !== 1.0) {
-            $parts[] = sprintf(
-                'input×%s / output×%s token weighting',
-                rtrim(rtrim(number_format($this->inputTokenRate, 2, '.', ''), '0'), '.'),
-                rtrim(rtrim(number_format($this->outputTokenRate, 2, '.', ''), '0'), '.'),
-            );
-        }
 
-        return implode(' · ', $parts);
+        return sprintf(
+            'Minimum %s credit per successful call. Use Estimate before submit for an approximate cost.',
+            $minCredit,
+        );
     }
 
     /**

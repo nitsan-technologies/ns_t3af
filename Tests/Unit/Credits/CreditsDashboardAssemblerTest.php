@@ -120,8 +120,9 @@ final class CreditsDashboardAssemblerTest extends TestCase
         self::assertSame(1.5, $dashboard['features'][1]['usedCredits']);
         self::assertSame(100.0, $dashboard['features'][0]['usedBarPercent']);
         self::assertSame(30.0, $dashboard['features'][1]['usedBarPercent']);
-        self::assertStringContainsString('1,000 billable tokens', (string) $dashboard['pricing']['footnote']);
-        self::assertStringContainsString('450 tokens', (string) $dashboard['transactions'][0]['detail']);
+        self::assertStringContainsString('0.001', (string) $dashboard['pricing']['footnote']);
+        self::assertStringNotContainsString('450 tokens', (string) $dashboard['transactions'][0]['detail']);
+        self::assertSame('gpt-4o', (string) $dashboard['transactions'][0]['detail']);
     }
 
     public function testNormalizeProductsDescriptionAcceptsLegacyStringAndEmptyArray(): void
@@ -192,7 +193,8 @@ final class CreditsDashboardAssemblerTest extends TestCase
             'https://backend.example/return',
         );
 
-        self::assertStringContainsString('150 tokens', (string) $dashboard['transactions'][0]['detail']);
+        self::assertSame('gpt-4o', (string) $dashboard['transactions'][0]['detail']);
+        self::assertStringNotContainsString('tokens', (string) $dashboard['transactions'][0]['detail']);
     }
 
     public function testAssembleRecognizesActivePlanFromPlanSkuWithoutPlanName(): void

@@ -496,10 +496,6 @@ final class CreditsDashboardAssembler
                 continue;
             }
             $featureKey = (string) ($receipt['feature_key'] ?? '');
-            $tokenStats = $this->tokenStatsFromReceiptExtra((string) ($receipt['extra'] ?? ''));
-            $tokensTotal = $tokenStats['tokensTotal'];
-            $tokensInput = $tokenStats['tokensInput'];
-            $tokensOutput = $tokenStats['tokensOutput'];
             $model = (string) ($receipt['model'] ?? '');
             $entryType = CreditsReceiptEntryType::normalize(
                 $receipt['entry_type'] ?? null,
@@ -510,14 +506,6 @@ final class CreditsDashboardAssembler
             if ($model !== '') {
                 $detailParts[] = $model;
             }
-            if ($tokensTotal > 0) {
-                $detailParts[] = $tokensTotal . ' tokens';
-            } elseif ($tokensInput > 0) {
-                $detailParts[] = $tokensInput . ' tokens in';
-                if ($tokensOutput > 0) {
-                    $detailParts[] = $tokensOutput . ' out';
-                }
-            }
 
             $rows[] = [
                 'crdate' => (int) ($receipt['crdate'] ?? 0),
@@ -525,7 +513,6 @@ final class CreditsDashboardAssembler
                 'detail' => implode(' · ', $detailParts),
                 'credits' => $isCredit ? $parsed['credits'] : -$parsed['credits'],
                 'creditsFormatted' => AiCreditUnits::formatCredits($parsed['credits']),
-                'tokensTotal' => $tokensTotal,
                 'entryType' => $entryType,
                 'isCredit' => $isCredit,
             ];
@@ -550,51 +537,6 @@ final class CreditsDashboardAssembler
             'best_value' => 'Best Value',
             default => $badge !== '' ? ucfirst(str_replace('_', ' ', $badge)) : '',
         };
-    }
-
-    /**
-     * @return array{tokensTotal: int, tokensInput: int, tokensOutput: int}
-     */
-    private function tokenStatsFromReceiptExtra(string $extraRaw): array
-    {
-        $tokensInput = 0;
-        $tokensOutput = 0;
-        $tokensTotal = 0;
-
-        if ($extraRaw === '') {
-            return [
-                'tokensTotal' => 0,
-                'tokensInput' => 0,
-                'tokensOutput' => 0,
-            ];
-        }
-
-        $decoded = json_decode($extraRaw, true);
-        if (!is_array($decoded)) {
-            return [
-                'tokensTotal' => 0,
-                'tokensInput' => 0,
-                'tokensOutput' => 0,
-            ];
-        }
-
-        $tokensInput = (int) ($decoded['tokens_input'] ?? 0);
-        $tokensOutput = (int) ($decoded['tokens_output'] ?? 0);
-        $charged = is_array($decoded['charged'] ?? null) ? $decoded['charged'] : [];
-        $tokensTotal = (int) (
-            $decoded['tokens_total']
-            ?? $charged['tokens_total']
-            ?? 0
-        );
-        if ($tokensTotal <= 0 && ($tokensInput > 0 || $tokensOutput > 0)) {
-            $tokensTotal = $tokensInput + $tokensOutput;
-        }
-
-        return [
-            'tokensTotal' => $tokensTotal,
-            'tokensInput' => $tokensInput,
-            'tokensOutput' => $tokensOutput,
-        ];
     }
 
     /**

@@ -943,7 +943,8 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $period['label'] = $this->formatPeriodLabel($periodResolved);
         $filters = $this->aiUsageAnalyticsService->normalizeFilters($query);
         $mode = $this->resolveAiUsageMode($query);
-        $usageData = $this->aiUsageAnalyticsService->buildUsageData($period, $filters);
+        $creditsModeEnabled = $this->creditModeResolver->isEnabled();
+        $usageData = $this->aiUsageAnalyticsService->buildUsageData($period, $filters, $creditsModeEnabled);
         $routeContext = $this->buildAiUsageRouteContext($query, $mode, $filters);
 
         $logPage = $mode === 'log'
@@ -967,6 +968,8 @@ final class ModuleController extends AbstractAiUniverseModuleController
 
         $view->assignMultiple([
             'flash' => $this->flashFromQuery($request) ?? '',
+            'creditsModeEnabled' => self::fluidFlag($creditsModeEnabled),
+            'hideTokenMetrics' => self::fluidFlag($creditsModeEnabled),
             'aiUsageMode' => $mode,
             'aiUsagePeriod' => $period,
             'aiUsagePeriodLabel' => $period['label'],
@@ -1034,9 +1037,10 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $period = $this->aiUsageAnalyticsService->resolvePeriod($query);
         $filters = $this->aiUsageAnalyticsService->normalizeFilters($query);
         $format = strtolower(trim((string) ($query['format'] ?? 'json')));
+        $creditsModeEnabled = $this->creditModeResolver->isEnabled();
 
         if ($format === 'csv') {
-            $rows = $this->aiUsageAnalyticsService->buildLogCsvRows($period, $filters);
+            $rows = $this->aiUsageAnalyticsService->buildLogCsvRows($period, $filters, $creditsModeEnabled);
             $lines = array_map(
                 static fn(array $row): string => implode(',', array_map(
                     static fn(string $cell): string => '"' . str_replace('"', '""', $cell) . '"',
@@ -1051,7 +1055,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 ->withHeader('Content-Disposition', 'attachment; filename="ai-usage-' . date('Ymd-His') . '.csv"');
         }
 
-        $payload = $this->aiUsageAnalyticsService->buildExportPayload($period, $filters);
+        $payload = $this->aiUsageAnalyticsService->buildExportPayload($period, $filters, $creditsModeEnabled);
 
         $filename = sprintf('ai-usage-%s.json', date('Ymd-His'));
         $response = new JsonResponse($payload);

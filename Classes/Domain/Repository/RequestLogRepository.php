@@ -346,7 +346,44 @@ class RequestLogRepository
     }
 
     /**
-     * @return list<array{provider:string,requests:int,cost:float}>
+     * @return list<array{model:string,credits:float}>
+     * @param list<int> $providerUids
+     */
+    public function topModelsByCredits(
+        int $fromTimestamp,
+        ?int $toTimestamp = null,
+        int $limit = 10,
+        ?RequestLogProviderScope $scope = null,
+        ?array $providerUids = null,
+    ): array {
+        $qb = $this->queryBuilder();
+        $qb->selectLiteral(
+            'model_used',
+            'COALESCE(SUM(credits_used), 0) AS credits',
+        )
+            ->from(self::TABLE);
+        $this->applyVisibleConstraint($qb);
+        $this->applyProviderScopeConstraint($qb, $scope);
+        $this->applyProviderUidConstraint($qb, $providerUids);
+        $this->applyPeriodConstraint($qb, $fromTimestamp, $toTimestamp);
+        $qb->groupBy('model_used')
+            ->orderBy('credits', 'DESC')
+            ->setMaxResults($limit);
+
+        /** @var array<int, array<string, scalar|null>> $rows */
+        $rows = $qb->executeQuery()->fetchAllAssociative();
+
+        return array_values(array_map(
+            static fn(array $row): array => [
+                'model' => (string) ($row['model_used'] ?? ''),
+                'credits' => (float) ($row['credits'] ?? 0.0),
+            ],
+            $rows,
+        ));
+    }
+
+    /**
+     * @return list<array{provider:string,requests:int,cost:float,credits:float}>
      * @param list<int> $providerUids
      */
     public function providerDistribution(
@@ -360,6 +397,7 @@ class RequestLogRepository
             'provider_identifier',
             'COUNT(*) AS requests',
             'COALESCE(SUM(estimated_cost), 0) AS cost',
+            'COALESCE(SUM(credits_used), 0) AS credits',
         )
             ->from(self::TABLE);
         $this->applyVisibleConstraint($qb);
@@ -377,6 +415,7 @@ class RequestLogRepository
                 'provider' => (string) ($row['provider_identifier'] ?? ''),
                 'requests' => (int) ($row['requests'] ?? 0),
                 'cost' => (float) ($row['cost'] ?? 0.0),
+                'credits' => (float) ($row['credits'] ?? 0.0),
             ],
             $rows,
         ));

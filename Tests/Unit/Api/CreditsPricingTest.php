@@ -42,8 +42,8 @@ final class CreditsPricingTest extends TestCase
         self::assertSame(2000, $pricing->tokensPerCredit);
         self::assertSame(1000, $pricing->creditUnitScale);
         self::assertSame(1.5, $pricing->inputTokenRate);
-        self::assertStringContainsString('2,000', $pricing->footnote());
         self::assertStringContainsString('0.001', $pricing->footnote());
+        self::assertStringNotContainsString('billable tokens', $pricing->footnote());
     }
 
     public function testCreditsUsageMapsTokenFields(): void
