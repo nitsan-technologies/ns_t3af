@@ -38,9 +38,11 @@ final class CreditsDashboardService
         private readonly ProductCatalogService $productCatalogService,
         private readonly FeatureCatalogService $featureCatalogService,
         private readonly LocalReceiptCache $localReceiptCache,
+        private readonly CreditsHistorySyncService $historySyncService,
         private readonly CreditsDashboardAssembler $assembler,
         private readonly CreditsApiErrorMessageResolver $errorMessages,
         private readonly TokenResolver $tokenResolver,
+        private readonly CreditsDomainResolver $domainResolver,
         private readonly CreditsPricingResolver $pricingResolver,
     ) {}
 
@@ -132,9 +134,28 @@ final class CreditsDashboardService
 
         $perPage = max(1, $perPage);
         $entryTypeFilter = CreditsReceiptEntryType::normalizeFilter($entryTypeFilter);
+        $currentPage = max(1, $currentPage);
+
+        if (!$authRejected && !$abortFetches) {
+            try {
+                $this->historySyncService->syncPage(
+                    $this->domainResolver->resolve(),
+                    $this->tokenResolver->resolve(),
+                    $entryTypeFilter,
+                    $currentPage,
+                    $perPage,
+                );
+            } catch (CreditsApiException $exception) {
+                // History is best-effort; keep showing the local mirror.
+                $this->recordApiException($exception, $errors);
+            } catch (\Throwable $exception) {
+                $errors['history:' . $exception->getMessage()] = $exception->getMessage();
+            }
+        }
+
         $totalCount = $this->localReceiptCache->countBillable($entryTypeFilter);
         $totalPages = max(1, (int) ceil($totalCount / $perPage));
-        $currentPage = min(max(1, $currentPage), $totalPages);
+        $currentPage = min($currentPage, $totalPages);
         $offset = ($currentPage - 1) * $perPage;
         $receipts = $this->localReceiptCache->listBillable($perPage, $offset, $entryTypeFilter);
         $usedUnitsByFeatureKey = $this->localReceiptCache->sumCostUnitsByFeatureKey();

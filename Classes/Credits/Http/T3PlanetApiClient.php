@@ -121,6 +121,27 @@ class T3PlanetApiClient
     }
 
     /**
+     * Paginated ledger (debits + credits) for local receipt mirror sync.
+     *
+     * @return array<string, mixed>
+     */
+    public function history(
+        string $domain,
+        #[\SensitiveParameter]
+        string $bearerToken,
+        string $entryType = 'all',
+        int $page = 1,
+        int $perPage = 20,
+    ): array {
+        return $this->http->postJson('History', [
+            'domain' => $domain,
+            'entry_type' => $entryType,
+            'page' => max(1, $page),
+            'per_page' => max(1, $perPage),
+        ], $bearerToken);
+    }
+
+    /**
      * @param array<string, mixed> $metaJson
      * @param 'charge'|'embed'     $endpoint
      *

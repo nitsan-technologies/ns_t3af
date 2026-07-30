@@ -116,7 +116,7 @@ CREATE TABLE tx_nst3af_runtime_setting (
 
 CREATE TABLE tx_nst3af_credit_receipt (
     uid INT(11) NOT NULL AUTO_INCREMENT,
-    request_uuid VARCHAR(64) NOT NULL DEFAULT '',
+    request_uuid VARCHAR(191) NOT NULL DEFAULT '',
     feature_key VARCHAR(64) NOT NULL DEFAULT '',
     model VARCHAR(96) NOT NULL DEFAULT '',
     bucket VARCHAR(16) NOT NULL DEFAULT '',

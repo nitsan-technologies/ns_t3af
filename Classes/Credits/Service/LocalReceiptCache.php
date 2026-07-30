@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Credits\Service;
 
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use NITSAN\NsT3AF\Api\AiCreditUnits;
 use NITSAN\NsT3AF\Credits\CreditsReceiptEntryType;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -54,6 +55,44 @@ final class LocalReceiptCache
     }
 
     /**
+     * Upsert one History API entry into the local mirror.
+     *
+     * @param array<string, mixed> $entry
+     */
+    public function upsertFromHistoryEntry(array $entry): bool
+    {
+        $requestUuid = trim((string) ($entry['request_uuid'] ?? $entry['uuid'] ?? ''));
+        if ($requestUuid === '') {
+            return false;
+        }
+
+        $featureKey = trim((string) ($entry['feature_key'] ?? $entry['featureKey'] ?? ''));
+        if ($featureKey === '') {
+            $featureKey = 'unknown';
+        }
+
+        $defaultEntryType = CreditsReceiptEntryType::normalize(
+            $entry['entry_type'] ?? $entry['transaction_type'] ?? null,
+            CreditsReceiptEntryType::DEBIT,
+        );
+
+        $payload = $entry;
+        if (!isset($payload['charged']) || !is_array($payload['charged'])) {
+            $payload['charged'] = [
+                'model' => (string) ($entry['model'] ?? ''),
+                'bucket' => (string) ($entry['bucket'] ?? ''),
+            ];
+        }
+        if (!isset($payload['model'])) {
+            $payload['model'] = (string) ($entry['model'] ?? '');
+        }
+
+        $this->storeReceipt($requestUuid, $featureKey, $payload, $defaultEntryType);
+
+        return true;
+    }
+
+    /**
      * @param array<string, mixed> $payload
      */
     private function storeReceipt(
@@ -71,25 +110,33 @@ final class LocalReceiptCache
             $defaultEntryType,
         );
 
+        $crdateRaw = $payload['crdate'] ?? $payload['created_at'] ?? null;
+        $crdate = is_numeric($crdateRaw) ? max(0, (int) $crdateRaw) : time();
+
+        $row = [
+            'request_uuid' => $requestUuid,
+            'feature_key' => $featureKey,
+            'model' => (string) ($charged['model'] ?? $payload['model'] ?? ''),
+            'bucket' => (string) ($charged['bucket'] ?? $payload['bucket'] ?? ''),
+            'entry_type' => $entryType,
+            'cost_units' => $cost['units'],
+            'cost' => $cost['credits'],
+            'balance_free' => $buckets['freeCredits'],
+            'balance_paid' => $buckets['paidCredits'],
+            'plan_used' => $buckets['planUsedCredits'],
+            'plan_total' => $buckets['planTotalCredits'],
+            'crdate' => $crdate,
+            'extra' => json_encode($payload, JSON_THROW_ON_ERROR),
+        ];
+
         $connection = $this->connectionPool->getConnectionForTable(self::TABLE);
-        $connection->insert(
-            self::TABLE,
-            [
-                'request_uuid' => $requestUuid,
-                'feature_key' => $featureKey,
-                'model' => (string) ($charged['model'] ?? $payload['model'] ?? ''),
-                'bucket' => (string) ($charged['bucket'] ?? ''),
-                'entry_type' => $entryType,
-                'cost_units' => $cost['units'],
-                'cost' => $cost['credits'],
-                'balance_free' => $buckets['freeCredits'],
-                'balance_paid' => $buckets['paidCredits'],
-                'plan_used' => $buckets['planUsedCredits'],
-                'plan_total' => $buckets['planTotalCredits'],
-                'crdate' => time(),
-                'extra' => json_encode($payload, JSON_THROW_ON_ERROR),
-            ],
-        );
+        try {
+            $connection->insert(self::TABLE, $row);
+        } catch (UniqueConstraintViolationException) {
+            $uuid = $row['request_uuid'];
+            unset($row['request_uuid']);
+            $connection->update(self::TABLE, $row, ['request_uuid' => $uuid]);
+        }
     }
 
     /**
