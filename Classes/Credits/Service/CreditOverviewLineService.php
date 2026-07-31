@@ -31,6 +31,8 @@ final class CreditOverviewLineService
     public function __construct(
         private readonly CreditModeResolver $creditModeResolver,
         private readonly BalanceService $balanceService,
+        private readonly CurrentPlanService $currentPlanService,
+        private readonly ProductCatalogService $productCatalogService,
         private readonly CreditsDashboardAssembler $dashboardAssembler,
     ) {}
 
@@ -61,10 +63,24 @@ final class CreditOverviewLineService
         }
 
         try {
-            $summary = $this->dashboardAssembler->summarizeBalance($this->balanceService->fetch());
+            $balance = $this->balanceService->fetch();
         } catch (\Throwable) {
             return null;
         }
+
+        try {
+            $plan = $this->currentPlanService->fetch();
+        } catch (\Throwable) {
+            $plan = [];
+        }
+
+        try {
+            $products = $this->productCatalogService->fetch('');
+        } catch (\Throwable) {
+            $products = [];
+        }
+
+        $summary = $this->dashboardAssembler->summarizeBalance($balance, $plan, $products);
 
         if ($summary['remainingUnits'] <= 0 && $summary['remaining'] <= 0.0) {
             return null;

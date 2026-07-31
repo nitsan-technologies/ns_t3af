@@ -337,6 +337,39 @@ final class CreditsDashboardAssemblerTest extends TestCase
         self::assertSame(100.0, $summary['free']);
     }
 
+    public function testSummarizeBalanceUsesTrialCatalogTotalAfterPartialUsage(): void
+    {
+        $summary = $this->createAssembler()->summarizeBalance(
+            [
+                'status' => true,
+                'credits' => [
+                    'free_credits' => 99.61,
+                    'paid_credits' => 0,
+                    'plan_used' => 0,
+                    'plan_total' => 0,
+                    'plan_sku' => 'none',
+                ],
+            ],
+            [
+                'trial_granted' => true,
+            ],
+            [
+                'products' => [
+                    [
+                        'sku' => 'trial',
+                        'type' => 'trial',
+                        'title' => 'Free Trial',
+                        'credits' => 100,
+                    ],
+                ],
+            ],
+        );
+
+        self::assertSame(99.61, $summary['remaining']);
+        self::assertSame(100.0, $summary['total']);
+        self::assertSame(100, $summary['percentLeft']);
+    }
+
     private function createAssembler(): CreditsDashboardAssembler
     {
         $repository = $this->createMock(RuntimeSettingsRepository::class);

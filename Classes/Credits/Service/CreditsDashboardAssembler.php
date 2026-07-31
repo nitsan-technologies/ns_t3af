@@ -60,7 +60,7 @@ final class CreditsDashboardAssembler
         ?int $statsLifetimeUnits = null,
         ?int $statsWindowUnits = null,
     ): array {
-        $balanceSummary = $this->summarizeBalance($balance, $plan);
+        $balanceSummary = $this->summarizeBalance($balance, $plan, $productsPayload);
         $stats = $this->buildUsageStats(
             $receipts,
             $balanceSummary['remainingUnits'],
@@ -106,6 +106,7 @@ final class CreditsDashboardAssembler
     /**
      * @param array<string, mixed> $balance
      * @param array<string, mixed> $plan
+     * @param array<string, mixed> $productsPayload
      * @return array{
      *   remainingUnits: int,
      *   remaining: float,
@@ -120,7 +121,7 @@ final class CreditsDashboardAssembler
      *   credits: array<string, mixed>
      * }
      */
-    public function summarizeBalance(array $balance, array $plan = []): array
+    public function summarizeBalance(array $balance, array $plan = [], array $productsPayload = []): array
     {
         $credits = is_array($balance['credits'] ?? null) ? $balance['credits'] : $balance;
         $pricing = is_array($balance['pricing'] ?? null) ? $balance['pricing'] : [];
@@ -130,19 +131,24 @@ final class CreditsDashboardAssembler
         $remainingUnits = $buckets['availableUnits'];
         $remaining = $buckets['availableCredits'];
 
-        $poolTotalUnits = $buckets['planTotalUnits'] > 0
-            ? $buckets['planTotalUnits']
-            : max($remainingUnits, $buckets['freeUnits'] + $buckets['paidUnits']);
-        $poolTotal = $buckets['planTotalCredits'] > 0.0
-            ? $buckets['planTotalCredits']
-            : max($remaining, $buckets['freeCredits'] + $buckets['paidCredits']);
-        if ($poolTotalUnits <= 0 && $remainingUnits > 0) {
-            $poolTotalUnits = $remainingUnits;
-            $poolTotal = $remaining;
-        }
-        if ($poolTotal <= 0.0 && $remaining > 0.0) {
-            $poolTotal = $remaining;
-            $poolTotalUnits = $remainingUnits;
+        $sku = strtolower((string) (
+            $plan['plan_sku']
+            ?? $plan['sku']
+            ?? $credits['plan_sku']
+            ?? $credits['sku']
+            ?? ''
+        ));
+        $currentSku = strtolower((string) ($productsPayload['current_plan_sku'] ?? ''));
+
+        if ($buckets['planTotalCredits'] > 0.0) {
+            $poolTotal = $buckets['planTotalCredits'];
+            $poolTotalUnits = $buckets['planTotalUnits'];
+        } elseif ($this->isTrialAccount($plan, $credits, $sku, $currentSku, $buckets)) {
+            $poolTotal = $this->resolveTrialCreditsTotal($productsPayload, $remaining);
+            $poolTotalUnits = AiCreditUnits::creditsToUnits($poolTotal, $scale);
+        } else {
+            $poolTotalUnits = max($remainingUnits, $buckets['freeUnits'] + $buckets['paidUnits']);
+            $poolTotal = max($remaining, $buckets['freeCredits'] + $buckets['paidCredits']);
         }
 
         $percentLeft = $poolTotalUnits > 0
