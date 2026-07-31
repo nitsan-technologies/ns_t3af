@@ -24,7 +24,7 @@ Agent router for the master TYPO3 AI extension. Load only what your task needs.
 |---|---|
 | Provider / adapter / cipher | `context/features/providers.md`, `tasks/implement-provider.md` |
 | `AiServiceInterface` / events / streaming | `context/features/public-api.md` |
-| Child ext (`ns_t3ai`, `ns_t3cs`, `ns_t3aa`, `ns_t3as`, `ns_t3ac`) | `context/features/child-extensions.md`, `context/features/public-api.md` |
+| Child ext (`ns_t3ai`, `ns_t3cs`, `ns_t3aa`, `ns_t3as`, `ns_t3ac`) | `context/features/child-extensions.md`, `context/features/public-api.md`, `context/features/child-extensions-credits-api-migration.md` (credits API changes) |
 | T3Planet Credits / billing | `context/features/credits.md`, `context/features/credits-api-base-url.md` |
 | MCP server / OAuth / tools | `context/features/mcp-server.md` |
 | Dashboard / AI Features drawer | `context/features/backend-module.md` |
