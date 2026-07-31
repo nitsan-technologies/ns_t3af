@@ -62,9 +62,9 @@ final class TokenResolver
 
     public function issueFreshToken(?string $domain = null): string
     {
-        $licenseKeys = $this->runtimeSettings->getLicenseKeys();
+        $licenseKeys = $this->licenseKeyResolver->buildLicenseKeysCommaSeparated();
         if ($licenseKeys === '') {
-            throw new CreditsApiException('license_keys_missing', 400, 'No license keys configured for T3Planet Credits');
+            throw new CreditsApiException('license_keys_missing', 400, 'No ns_t3af license keys configured for T3Planet Credits');
         }
 
         $domain ??= $this->domainResolver->resolve();
@@ -104,6 +104,16 @@ final class TokenResolver
                 'No T3Planet license keys found',
             );
         }
+
+        $t3afKeys = $this->licenseKeyResolver->buildLicenseKeysCommaSeparated();
+        if ($t3afKeys === '') {
+            throw new CreditsApiException(
+                CreditsApiErrorCodes::LICENSE_INVALID,
+                403,
+                'No valid ns_t3af license key found for T3Planet Credits',
+            );
+        }
+        $discoveredLicenseKeys = $t3afKeys;
 
         $domain ??= $this->domainResolver->resolve();
         $stored = $this->runtimeSettings->getLicenseKeys();

@@ -60,8 +60,16 @@
                                     </span>
                                 </div>
                                 <h3 class="card-title h6">
-                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.plan.last"
-                                                 default="Last:" />
+                                    <f:if condition="{creditsDashboard.plan.isTrial} == 1">
+                                        <f:then>
+                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.plan.current"
+                                                         default="Current:" />
+                                        </f:then>
+                                        <f:else>
+                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.plan.last"
+                                                         default="Last:" />
+                                        </f:else>
+                                    </f:if>
                                     {creditsDashboard.plan.name}
                                 </h3>
                                 <f:if condition="{creditsDashboard.plan.purchasedAt} > 0">
@@ -165,78 +173,97 @@
                             <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.title"
                                          default="AI Credit Bundles" />
                         </h2>
-                        <p class="aiu-credits-section__sub">
-                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.sub"
+                        <p class="aiu-credits-section__sub" data-aiu-bundles-sub="plan">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.subPlans"
+                                         default="Subscription plans — credits renew each billing period" />
+                        </p>
+                        <p class="aiu-credits-section__sub" data-aiu-bundles-sub="topup" hidden>
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.subTopups"
                                          default="One-time purchases — credits never expire and stack with your balance" />
                         </p>
                     </div>
-                    <span class="aiu-pill aiu-pill--advanced">
-                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.badge"
-                                     default="No subscription · buy when you need" />
-                    </span>
                 </div>
 
                 <f:if condition="{creditsDashboard.products -> f:count()} > 0">
                     <f:then>
-                        <div class="aiu-credits-product-grid">
-                            <f:for each="{creditsDashboard.products}" as="product">
-                                <article class="aiu-credits-product{f:if(condition: '{product.isCurrentPlan} == 1', then: ' is-current')}">
-                                    <f:if condition="{product.badgeLabel} != ''">
-                                        <span class="aiu-credits-product__badge aiu-credits-product__badge--{product.badge}">
-                                            {product.badgeLabel}
-                                        </span>
-                                    </f:if>
-                                    <h3 class="aiu-credits-product__title">{product.title}</h3>
-                                    <f:if condition="{product.subtitle} != ''">
-                                        <p class="aiu-credits-product__subtitle">{product.subtitle}</p>
-                                    </f:if>
-                                    <div class="aiu-credits-product__price">
-                                        €{product.priceAmount -> f:format.number(decimals: 0)}
-                                        <span class="aiu-credits-product__price-note">
-                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.oneTime"
-                                                         default="one-time" />
-                                        </span>
-                                    </div>
-                                    <p class="aiu-credits-product__credits">
-                                        {product.credits}
-                                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.creditsLabel"
-                                                     default="credits" />
-                                    </p>
-                                    <f:if condition="{product.description -> f:count()} > 0">
-                                        <ul class="aiu-credits-product__features aiu-credits-product__description">
-                                            <f:for each="{product.description}" as="bullet">
-                                                <li>{bullet}</li>
-                                            </f:for>
-                                        </ul>
-                                    </f:if>
-                                    <f:if condition="{product.features -> f:count()} > 0">
-                                        <ul class="aiu-credits-product__features">
-                                            <f:for each="{product.features}" as="bullet">
-                                                <li>{bullet}</li>
-                                            </f:for>
-                                        </ul>
-                                    </f:if>
-                                    <f:if condition="{product.checkoutUrl} != ''">
-                                        <f:then>
-                                            <a class="btn btn-primary aiu-credits-product__cta"
-                                               href="{product.checkoutUrl}"
-                                               data-aiu-checkout
-                                               data-aiu-checkout-url="{product.checkoutUrl}"
-                                               data-aiu-checkout-title="{product.title}">
-                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.buy"
-                                                             default="Buy" />
-                                                {product.title}
-                                            </a>
-                                        </f:then>
-                                        <f:else>
-                                            <span class="aiu-credits-product__cta aiu-credits-product__cta--disabled">
-                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.unavailable"
-                                                             default="Checkout unavailable" />
-                                            </span>
-                                        </f:else>
-                                    </f:if>
-                                </article>
-                            </f:for>
+                        <div class="aiu-credits-bundles" data-aiu-credits-bundles-root>
+                            <div class="aiu-credits-bundles__toolbar mb-3">
+                                <div class="btn-group" role="group" aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.tabPlans', default: 'Plans')}">
+                                    <button type="button"
+                                            class="btn btn-default active is-active"
+                                            role="tab"
+                                            aria-selected="true"
+                                            data-aiu-bundle-tab="plan">
+                                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.tabPlans"
+                                                     default="Plans" />
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-default"
+                                            role="tab"
+                                            aria-selected="false"
+                                            data-aiu-bundle-tab="topup">
+                                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.tabTopups"
+                                                     default="Top-ups" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div data-aiu-bundle-panel="plan" role="tabpanel">
+                                <div class="btn-group mb-3" role="group" aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.periodMonthly', default: 'Monthly')}">
+                                    <button type="button"
+                                            class="btn btn-default btn-sm active is-active"
+                                            role="tab"
+                                            aria-selected="true"
+                                            data-aiu-plan-period="monthly">
+                                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.periodMonthly"
+                                                     default="Monthly" />
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-default btn-sm"
+                                            role="tab"
+                                            aria-selected="false"
+                                            data-aiu-plan-period="yearly">
+                                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.periodYearly"
+                                                     default="Yearly" />
+                                    </button>
+                                </div>
+                                <div class="aiu-credits-product-grid" data-aiu-plan-period-panel="monthly">
+                                    <f:for each="{creditsDashboard.products}" as="product">
+                                        <f:if condition="{product.type} == 'plan' && {product.renewalPeriod} == 'monthly'">
+                                            <f:render partial="Credits/ProductCard" arguments="{product: product}" />
+                                        </f:if>
+                                    </f:for>
+                                </div>
+                                <div class="aiu-credits-product-grid" data-aiu-plan-period-panel="yearly" hidden>
+                                    <f:for each="{creditsDashboard.products}" as="product">
+                                        <f:if condition="{product.type} == 'plan' && {product.renewalPeriod} == 'yearly'">
+                                            <f:render partial="Credits/ProductCard" arguments="{product: product}" />
+                                        </f:if>
+                                    </f:for>
+                                </div>
+                                <p class="aiu-credits-empty" data-aiu-bundles-empty="plan-monthly" hidden>
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.emptyPlansMonthly"
+                                                 default="No monthly plans available right now." />
+                                </p>
+                                <p class="aiu-credits-empty" data-aiu-bundles-empty="plan-yearly" hidden>
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.emptyPlansYearly"
+                                                 default="No yearly plans available right now." />
+                                </p>
+                            </div>
+
+                            <div data-aiu-bundle-panel="topup" role="tabpanel" hidden>
+                                <div class="aiu-credits-product-grid">
+                                    <f:for each="{creditsDashboard.products}" as="product">
+                                        <f:if condition="{product.type} == 'topup'">
+                                            <f:render partial="Credits/ProductCard" arguments="{product: product}" />
+                                        </f:if>
+                                    </f:for>
+                                </div>
+                                <p class="aiu-credits-empty" data-aiu-bundles-empty="topup" hidden>
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.emptyTopups"
+                                                 default="No top-up packs available right now." />
+                                </p>
+                            </div>
                         </div>
                     </f:then>
                     <f:else>

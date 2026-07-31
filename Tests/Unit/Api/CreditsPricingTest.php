@@ -46,7 +46,31 @@ final class CreditsPricingTest extends TestCase
         self::assertStringNotContainsString('billable tokens', $pricing->footnote());
     }
 
-    public function testCreditsUsageMapsTokenFields(): void
+    public function testFromArrayParsesMeteredRateCard(): void
+    {
+        $pricing = CreditsPricing::fromArray([
+            'pricing' => [
+                'model' => 'metered',
+                'credit_unit_scale' => 1000,
+                'min_charge_units' => 1,
+                'rate_card' => [
+                    [
+                        'feature_key' => 'content_generate',
+                        'typical_credits' => 1.244,
+                        'basis' => '4000 in + 1200 out tokens',
+                        'metered' => true,
+                    ],
+                ],
+            ],
+        ]);
+
+        self::assertSame('metered', $pricing->model);
+        self::assertCount(1, $pricing->rateCard);
+        self::assertSame(1.244, $pricing->typicalCreditsFor('content_generate'));
+        self::assertNull($pricing->typicalCreditsFor('missing'));
+    }
+
+    public function testCreditsUsageIgnoresRemovedTokenFields(): void
     {
         $usage = CreditsUsage::fromApiPayload(
             [
@@ -61,8 +85,7 @@ final class CreditsPricingTest extends TestCase
                 'amount_units' => 3000,
                 'amount' => 3.0,
                 'bucket' => 'free',
-                'feature_key' => 'seo_meta',
-                'tokens_total' => 2500,
+                'feature_key' => 'content_generate',
                 'model' => 'gpt-4o',
             ],
             'uuid-1',
@@ -70,30 +93,33 @@ final class CreditsPricingTest extends TestCase
                 'tokens_input' => 2000,
                 'tokens_output' => 500,
                 'tokens_total' => 2500,
-                'pricing' => ['tokens_per_credit' => 1000, 'credit_unit_scale' => 1000],
+                'pricing' => ['model' => 'metered', 'credit_unit_scale' => 1000],
             ],
         );
 
         self::assertSame(3000, $usage->chargedUnits);
         self::assertSame(3.0, $usage->charged);
-        self::assertSame(2500, $usage->tokensTotal);
-        self::assertSame(2000, $usage->tokensInput);
-        self::assertSame(500, $usage->tokensOutput);
+        self::assertSame(0, $usage->tokensTotal);
+        self::assertSame(0, $usage->tokensInput);
+        self::assertSame(0, $usage->tokensOutput);
         self::assertSame('gpt-4o', $usage->model);
         self::assertNotNull($usage->pricing);
     }
 
-    public function testCreditsEstimateLabel(): void
+    public function testCreditsEstimateLabelAndCanonicalFeatureKey(): void
     {
         $estimate = CreditsEstimate::fromApiPayload([
-            'feature_key' => 'seo_meta',
+            'feature_key' => 'content_generate',
+            'canonical_feature_key' => 'content_generate',
             'estimated_credit_units' => 2000,
             'estimated_credits' => 2.0,
-            'pricing' => ['tokens_per_credit' => 1000, 'credit_unit_scale' => 1000],
+            'pricing' => ['model' => 'metered', 'credit_unit_scale' => 1000],
         ]);
 
         self::assertStringContainsString('2', $estimate->label());
         self::assertStringContainsString('credits', $estimate->label());
+        self::assertSame('content_generate', $estimate->canonicalFeatureKey);
+        self::assertSame(0, $estimate->billableTokens);
     }
 
     public function testFormatEstimateUsesMinimumChargeWhenZero(): void

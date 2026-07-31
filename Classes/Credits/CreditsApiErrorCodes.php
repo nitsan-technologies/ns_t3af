@@ -36,6 +36,7 @@ final class CreditsApiErrorCodes
     public const PLAN_EXPIRED = 'plan_expired';
     public const RATE_LIMITED = 'rate_limited';
     public const IDEMPOTENCY_CONFLICT = 'idempotency_conflict';
+    public const CHARGE_IN_PROGRESS = 'charge_in_progress';
     public const STREAM_IN_PROGRESS = 'stream_in_progress';
     public const FEATURE_UNKNOWN = 'feature_unknown';
     public const REQUEST_NOT_FOUND = 'request_not_found';
@@ -45,6 +46,10 @@ final class CreditsApiErrorCodes
     public const REQUIRED_FIELD_MISSING = 'required_field_missing';
     public const METHOD_NOT_ALLOWED = 'method_not_allowed';
     public const INTERNAL_ERROR = 'internal_error';
+    public const DAILY_CAP_EXCEEDED = 'daily_cap_exceeded';
+    public const CONCURRENCY_LIMIT = 'concurrency_limit';
+    public const USAGE_ANOMALY = 'usage_anomaly';
+    public const BATCH_INVALID = 'batch_invalid';
 
     /** Client-side codes (not emitted by remote API). */
     public const NETWORK_ERROR = 'network_error';
@@ -63,13 +68,13 @@ final class CreditsApiErrorCodes
         return match ($code) {
             self::TOKEN_MISSING, self::TOKEN_INVALID, self::ADMIN_UNAUTHORIZED => 401,
             self::LICENSE_INVALID, self::LICENSE_EXPIRED, self::LICENSE_SUSPENDED, self::DOMAIN_MISMATCH => 403,
-            self::INSUFFICIENT_CREDITS, self::PLAN_EXPIRED => 402,
-            self::RATE_LIMITED => 429,
-            self::IDEMPOTENCY_CONFLICT => 409,
+            self::INSUFFICIENT_CREDITS, self::PLAN_EXPIRED, self::DAILY_CAP_EXCEEDED => 402,
+            self::RATE_LIMITED, self::CONCURRENCY_LIMIT, self::USAGE_ANOMALY => 429,
+            self::IDEMPOTENCY_CONFLICT, self::CHARGE_IN_PROGRESS, self::STREAM_IN_PROGRESS => 409,
             self::FEATURE_UNKNOWN, self::REQUIRED_FIELD_MISSING, self::REQUEST_NOT_FOUND => 422,
             self::UPSTREAM_AI_ERROR, self::UPSTREAM_AI_TIMEOUT => 502,
             self::METHOD_NOT_ALLOWED => 405,
-            self::LICENSE_KEYS_MISSING, self::NO_LICENSES, self::FEATURE_KEY_REQUIRED => 400,
+            self::LICENSE_KEYS_MISSING, self::NO_LICENSES, self::FEATURE_KEY_REQUIRED, self::BATCH_INVALID => 400,
             self::NETWORK_ERROR, self::INVALID_RESPONSE, self::API_ERROR => 502,
             default => 500,
         };

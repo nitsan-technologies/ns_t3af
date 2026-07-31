@@ -36,6 +36,7 @@ final readonly class CreditsEstimate
         public CreditsPricing $pricing,
         public string $defaultModel = '',
         public string $defaultBackend = '',
+        public string $canonicalFeatureKey = '',
     ) {}
 
     /**
@@ -62,16 +63,20 @@ final readonly class CreditsEstimate
             $estimatedCredits = (float) $legacyWhole;
         }
 
+        $featureKey = (string) ($payload['feature_key'] ?? '');
+        $canonical = trim((string) ($payload['canonical_feature_key'] ?? ''));
+
         return new self(
-            featureKey: (string) ($payload['feature_key'] ?? ''),
+            featureKey: $featureKey,
             endpoint: (string) ($payload['endpoint'] ?? 'charge'),
-            estimatedTokens: (int) ($payload['estimated_tokens'] ?? 0),
+            estimatedTokens: 0,
             estimatedCreditUnits: max(0, $estimatedCreditUnits),
             estimatedCredits: max(0.0, $estimatedCredits),
-            billableTokens: (int) ($payload['billable_tokens'] ?? 0),
+            billableTokens: 0,
             pricing: $pricing,
             defaultModel: (string) ($payload['default_model'] ?? ''),
             defaultBackend: (string) ($payload['default_backend'] ?? ''),
+            canonicalFeatureKey: $canonical !== '' ? $canonical : $featureKey,
         );
     }
 

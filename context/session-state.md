@@ -2,6 +2,22 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-07-31 — Credits dashboard trial plan + bundle tabs
+
+**Done:** Trial accounts show active plan (free-credits bucket + `trial_granted` / catalog lookup) instead of "No active plan". AI Credit Bundles section: Plans vs Top-ups tabs; Monthly/Yearly toggle under Plans. Shared `Credits/ProductCard.html` partial.
+
+**Last touched:** 2026-07-31
+
+---
+
+## 2026-07-31 — T3Planet Credits API client migration (Phases 2–7)
+
+**Done:** Migrated credits client to current composer API contract: 10 canonical `feature_key` values + compat shim (`fields[]` + single-field JSON unwrap for legacy SEO/metadata keys), T3AF-only license binding on Token/AttachLicenses, dropped token-field parsing from usage responses, metered `pricing.rate_card` support, new guardrail error codes + xlf labels, `renewal_period` on product cards (Buy Credits grouped by monthly/yearly/one-time), idempotency-conflict UUID retry in `ProxyAiExecutor`.
+
+**Last touched:** 2026-07-31
+
+---
+
 ## 2026-07-20 — Credits API base URL resolver + DB sync
 
 **Done:** `CreditsApiBaseUrlResolver` (env `T3PLANET_CREDITS_API_BASE_URL` → Development → production `.cloud`). `RuntimeSettingsService` syncs known built-in URLs in `tx_nst3af_runtime_setting.t3planet_api_base_url` on boot. Removed ext_conf `t3planetApiBaseUrl`. Context: `context/features/credits-api-base-url.md`.

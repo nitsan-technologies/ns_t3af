@@ -19,14 +19,16 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Credits;
 
-use NITSAN\NsT3AF\Api\ImageGenerationOptions;
+use NITSAN\NsT3AF\Api\AiOptions;
+use NITSAN\NsT3AF\Credits\CreditsFeatureKeyCatalog;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
-use NITSAN\NsT3AF\Credits\Service\ProxyImageExecutor;
+use NITSAN\NsT3AF\Credits\Http\T3PlanetSseStreamParser;
+use NITSAN\NsT3AF\Credits\Service\ProxyAiExecutor;
 use PHPUnit\Framework\TestCase;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 
-final class ProxyImageExecutorTest extends TestCase
+final class ProxyAiExecutorLegacyUnwrapTest extends TestCase
 {
     use CreditsProxyTestFixtures;
 
@@ -42,36 +44,44 @@ final class ProxyImageExecutorTest extends TestCase
         parent::tearDown();
     }
 
-    public function testGenerateSuccessRecordsReceipt(): void
+    public function testCompleteUnwrapsSingleFieldJsonForLegacySeoKey(): void
     {
         $apiClient = $this->createMock(T3PlanetApiClient::class);
         $apiClient->expects(self::once())
-            ->method('generateImage')
+            ->method('charge')
+            ->with(
+                self::anything(),
+                self::anything(),
+                CreditsFeatureKeyCatalog::SEO_PAGE_METADATA,
+                self::callback(static fn(array $meta): bool => ($meta['fields'] ?? []) === ['meta_description']),
+                self::anything(),
+                self::anything(),
+            )
             ->willReturn([
                 'status' => true,
-                'images' => [['b64_json' => base64_encode('png')]],
-                'model' => 'gpt-image-1',
-                'credits' => ['free' => 40],
-                'charged' => ['amount' => 50, 'model' => 'gpt-image-1'],
+                'model' => 'gpt-4o',
+                'content' => json_encode(['meta_description' => 'A concise summary'], JSON_THROW_ON_ERROR),
+                'credits' => ['free' => 10.0],
+                'charged' => ['amount' => 1, 'feature_key' => CreditsFeatureKeyCatalog::SEO_PAGE_METADATA],
             ]);
 
-        $executor = new ProxyImageExecutor(
+        $executor = new ProxyAiExecutor(
             $apiClient,
+            new T3PlanetSseStreamParser(),
             $this->tokenResolverWithBearer(),
             $this->domainResolver(),
-            $this->featureKeyMapper(),
-            $this->chargeRecorderExpectingInsert('image_generate'),
+            $this->chargeRecorderExpectingInsert(CreditsFeatureKeyCatalog::SEO_PAGE_METADATA),
             $this->createMock(EventDispatcherInterface::class),
             $this->telemetryService(),
+            $this->featureKeyMapper(),
             $this->createMock(LoggerInterface::class),
         );
 
-        $response = $executor->generate(
-            'A red balloon',
-            new ImageGenerationOptions(extensionKey: 'ns_t3ai', featureKey: 'media.dalle'),
+        $response = $executor->complete(
+            'Page about TYPO3',
+            new AiOptions(featureKey: 'seo.meta_description', extensionKey: 'ns_t3ai'),
         );
 
-        self::assertSame('gpt-image-1', $response->modelId);
-        self::assertCount(1, $response->images);
+        self::assertSame('A concise summary', $response->content);
     }
 }

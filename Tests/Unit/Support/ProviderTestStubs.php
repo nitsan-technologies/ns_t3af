@@ -230,8 +230,8 @@ final class T3AiCreditsAliasProviderStub implements CreditsFeatureKeyAliasProvid
     public function getAliases(): array
     {
         return [
-            'news.title' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
-            'tca.field_suggestion' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
+            'news.title' => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
+            'tca.field_suggestion' => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
             'media.tts' => CreditsFeatureKeyCatalog::TEXT_TO_SPEECH,
         ];
     }
@@ -252,9 +252,9 @@ final class T3AaCreditsAliasProviderStub implements CreditsFeatureKeyAliasProvid
     public function getAliases(): array
     {
         return [
-            'file.alt_text' => CreditsFeatureKeyCatalog::METADATA_ALT_TEXT,
-            'file.alt_text.alttext_ai' => CreditsFeatureKeyCatalog::METADATA_ALT_TEXT,
-            'file.meta_title_description' => CreditsFeatureKeyCatalog::METADATA_TITLE,
+            'file.alt_text' => CreditsFeatureKeyCatalog::SEO_IMAGE_METADATA,
+            'file.alt_text.alttext_ai' => CreditsFeatureKeyCatalog::SEO_IMAGE_METADATA,
+            'file.meta_title_description' => CreditsFeatureKeyCatalog::SEO_IMAGE_METADATA,
             'media.tts' => CreditsFeatureKeyCatalog::TEXT_TO_SPEECH,
         ];
     }

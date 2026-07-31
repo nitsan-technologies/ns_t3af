@@ -23,6 +23,7 @@ use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Contract\CreditsFeatureKeyAliasProviderInterface;
 use NITSAN\NsT3AF\Credits\CreditsApiEndpoint;
 use NITSAN\NsT3AF\Credits\CreditsFeatureKeyCatalog;
+use NITSAN\NsT3AF\Credits\CreditsFeatureMapping;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -41,51 +42,67 @@ final class CreditsFeatureKeyMapper
      * @var array<string, string>
      */
     private const GLOBAL_ALIASES = [
-        'content.generation' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
-        'content.generation.default' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
-        'content_generation' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
-        'content_translation' => CreditsFeatureKeyCatalog::CONTENT_TRANSLATION,
-        'content.topic' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
-        'content.outline' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
-        'content.page' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
-        'content.element' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
-        'content.rewrite' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
-        'translation.openai' => CreditsFeatureKeyCatalog::CONTENT_TRANSLATION,
-        'translation.simple' => CreditsFeatureKeyCatalog::CONTENT_TRANSLATION,
-        'translation.mistral' => CreditsFeatureKeyCatalog::CONTENT_TRANSLATION,
-        'translation.gemini' => CreditsFeatureKeyCatalog::CONTENT_TRANSLATION,
-        'translation.claude' => CreditsFeatureKeyCatalog::CONTENT_TRANSLATION,
-        'translation.xlf' => CreditsFeatureKeyCatalog::CONTENT_TRANSLATION,
-        'seo.page_title' => CreditsFeatureKeyCatalog::SEO_PAGE_TITLE,
-        'seo.title' => CreditsFeatureKeyCatalog::SEO_PAGE_TITLE,
-        'seo.meta_description' => CreditsFeatureKeyCatalog::SEO_META_DESCRIPTION,
-        'seo.og_title' => CreditsFeatureKeyCatalog::SEO_OG_TITLE,
-        'seo.og_description' => CreditsFeatureKeyCatalog::SEO_OG_DESCRIPTION,
-        'seo.keywords' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
-        'seo.meta' => CreditsFeatureKeyCatalog::SEO_META_DESCRIPTION,
-        'page.tree' => CreditsFeatureKeyCatalog::PAGE_STRUCTURE_GENERATION,
-        'page_structure_generation' => CreditsFeatureKeyCatalog::PAGE_STRUCTURE_GENERATION,
+        'content.generation' => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
+        'content.generation.default' => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
+        'content_generation' => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
+        'content_translation' => CreditsFeatureKeyCatalog::CONTENT_TRANSLATE,
+        'content.topic' => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
+        'content.outline' => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
+        'content.page' => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
+        'content.element' => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
+        'content.rewrite' => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
+        'translation.openai' => CreditsFeatureKeyCatalog::CONTENT_TRANSLATE,
+        'translation.simple' => CreditsFeatureKeyCatalog::CONTENT_TRANSLATE,
+        'translation.mistral' => CreditsFeatureKeyCatalog::CONTENT_TRANSLATE,
+        'translation.gemini' => CreditsFeatureKeyCatalog::CONTENT_TRANSLATE,
+        'translation.claude' => CreditsFeatureKeyCatalog::CONTENT_TRANSLATE,
+        'translation.xlf' => CreditsFeatureKeyCatalog::CONTENT_TRANSLATE,
+        'seo.keywords' => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
+        'page.tree' => CreditsFeatureKeyCatalog::CONTENT_PAGE_STRUCTURE,
+        'page_structure_generation' => CreditsFeatureKeyCatalog::CONTENT_PAGE_STRUCTURE,
         'easy_language' => CreditsFeatureKeyCatalog::EASY_LANGUAGE,
-        'image_generation' => CreditsFeatureKeyCatalog::IMAGE_GENERATION,
-        'media.dalle' => CreditsFeatureKeyCatalog::IMAGE_GENERATION,
-        'media.dalle_variation' => CreditsFeatureKeyCatalog::IMAGE_GENERATION,
-        'media.image' => CreditsFeatureKeyCatalog::IMAGE_GENERATION,
+        'image_generation' => CreditsFeatureKeyCatalog::IMAGE_GENERATE,
+        'media.dalle' => CreditsFeatureKeyCatalog::IMAGE_GENERATE,
+        'media.dalle_variation' => CreditsFeatureKeyCatalog::IMAGE_GENERATE,
+        'media.image' => CreditsFeatureKeyCatalog::IMAGE_GENERATE,
         'embedding' => CreditsFeatureKeyCatalog::EMBEDDING,
         'embed' => CreditsFeatureKeyCatalog::EMBEDDING,
-        'metadata.alt_text' => CreditsFeatureKeyCatalog::METADATA_ALT_TEXT,
-        'metadata.title' => CreditsFeatureKeyCatalog::METADATA_TITLE,
-        'metadata.description' => CreditsFeatureKeyCatalog::METADATA_DESCRIPTION,
-        'metadata_alt_text' => CreditsFeatureKeyCatalog::METADATA_ALT_TEXT,
-        'metadata_title' => CreditsFeatureKeyCatalog::METADATA_TITLE,
-        'metadata_description' => CreditsFeatureKeyCatalog::METADATA_DESCRIPTION,
-        'rte.content' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
-        'chat.response' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
-        'chat.assistance' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
-        'prompt.improve' => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
-        'stream' => CreditsFeatureKeyCatalog::STREAM,
+        'rte.content' => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
+        'chat.response' => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
+        'chat.assistance' => CreditsFeatureKeyCatalog::ASSISTANT_CHAT,
+        'prompt.improve' => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
+        'stream' => CreditsFeatureKeyCatalog::ASSISTANT_CHAT,
         'media.tts' => CreditsFeatureKeyCatalog::TEXT_TO_SPEECH,
         'tts' => CreditsFeatureKeyCatalog::TEXT_TO_SPEECH,
         'text_to_speech' => CreditsFeatureKeyCatalog::TEXT_TO_SPEECH,
+        'voiceover' => CreditsFeatureKeyCatalog::TEXT_TO_SPEECH,
+    ];
+
+    /**
+     * Legacy granular SEO/metadata keys → canonical feature + single meta_json field.
+     *
+     * @var array<string, array{0: string, 1: string}>
+     */
+    private const LEGACY_FIELD_ALIASES = [
+        'seo.page_title' => [CreditsFeatureKeyCatalog::SEO_PAGE_METADATA, 'page_title'],
+        'seo.title' => [CreditsFeatureKeyCatalog::SEO_PAGE_METADATA, 'page_title'],
+        'seo_page_title' => [CreditsFeatureKeyCatalog::SEO_PAGE_METADATA, 'page_title'],
+        'seo.meta_description' => [CreditsFeatureKeyCatalog::SEO_PAGE_METADATA, 'meta_description'],
+        'seo_meta_description' => [CreditsFeatureKeyCatalog::SEO_PAGE_METADATA, 'meta_description'],
+        'seo.meta' => [CreditsFeatureKeyCatalog::SEO_PAGE_METADATA, 'meta_description'],
+        'seo.og_title' => [CreditsFeatureKeyCatalog::SEO_PAGE_METADATA, 'og_title'],
+        'seo_og_title' => [CreditsFeatureKeyCatalog::SEO_PAGE_METADATA, 'og_title'],
+        'seo.og_description' => [CreditsFeatureKeyCatalog::SEO_PAGE_METADATA, 'og_description'],
+        'seo_og_description' => [CreditsFeatureKeyCatalog::SEO_PAGE_METADATA, 'og_description'],
+        'metadata.alt_text' => [CreditsFeatureKeyCatalog::SEO_IMAGE_METADATA, 'alt_text'],
+        'metadata_alt_text' => [CreditsFeatureKeyCatalog::SEO_IMAGE_METADATA, 'alt_text'],
+        'metadata.title' => [CreditsFeatureKeyCatalog::SEO_IMAGE_METADATA, 'title'],
+        'metadata_title' => [CreditsFeatureKeyCatalog::SEO_IMAGE_METADATA, 'title'],
+        'metadata.description' => [CreditsFeatureKeyCatalog::SEO_IMAGE_METADATA, 'description'],
+        'metadata_description' => [CreditsFeatureKeyCatalog::SEO_IMAGE_METADATA, 'description'],
+        'file.alt_text' => [CreditsFeatureKeyCatalog::SEO_IMAGE_METADATA, 'alt_text'],
+        'file.alt_text.alttext_ai' => [CreditsFeatureKeyCatalog::SEO_IMAGE_METADATA, 'alt_text'],
+        'file.meta_title_description' => [CreditsFeatureKeyCatalog::SEO_IMAGE_METADATA, 'title'],
     ];
 
     /**
@@ -101,39 +118,52 @@ final class CreditsFeatureKeyMapper
      */
     public function map(string $clientFeatureKey, AiOptions $options, CreditsApiEndpoint $endpoint): string
     {
+        return $this->mapWithMeta($clientFeatureKey, $options, $endpoint)->featureKey;
+    }
+
+    /**
+     * Returns canonical feature_key plus optional meta_json additions (e.g. fields[] for legacy SEO keys).
+     */
+    public function mapWithMeta(string $clientFeatureKey, AiOptions $options, CreditsApiEndpoint $endpoint): CreditsFeatureMapping
+    {
         $clientFeatureKey = trim($clientFeatureKey);
         if ($clientFeatureKey === '') {
-            return $this->defaultForEndpoint($endpoint);
+            return new CreditsFeatureMapping($this->defaultForEndpoint($endpoint));
         }
 
         if ($endpoint === CreditsApiEndpoint::Stream) {
-            return CreditsFeatureKeyCatalog::STREAM;
+            return new CreditsFeatureMapping(CreditsFeatureKeyCatalog::ASSISTANT_CHAT);
         }
 
         if ($endpoint === CreditsApiEndpoint::Embed) {
-            return CreditsFeatureKeyCatalog::EMBEDDING;
+            return new CreditsFeatureMapping(CreditsFeatureKeyCatalog::EMBEDDING);
         }
 
         if ($endpoint === CreditsApiEndpoint::Speak) {
-            return CreditsFeatureKeyCatalog::TEXT_TO_SPEECH;
+            return new CreditsFeatureMapping(CreditsFeatureKeyCatalog::TEXT_TO_SPEECH);
         }
 
         if ($endpoint === CreditsApiEndpoint::Image) {
-            return CreditsFeatureKeyCatalog::IMAGE_GENERATION;
+            return new CreditsFeatureMapping(CreditsFeatureKeyCatalog::IMAGE_GENERATE);
         }
 
         if (CreditsFeatureKeyCatalog::isCatalogKey($clientFeatureKey)) {
-            return $clientFeatureKey;
+            return new CreditsFeatureMapping($clientFeatureKey);
         }
 
         $extensionKey = trim((string) ($options->extensionKey ?? ''));
+        $legacyField = self::LEGACY_FIELD_ALIASES[$clientFeatureKey] ?? null;
+        if ($legacyField !== null) {
+            return $this->mappingWithField($legacyField[0], $legacyField[1]);
+        }
+
         $mapped = $this->resolveAlias($clientFeatureKey, $extensionKey);
         if ($mapped !== null) {
-            return $mapped;
+            return new CreditsFeatureMapping($mapped);
         }
 
         $this->logger?->warning(
-            'Unknown client feature_key for T3Planet Credits; falling back to content_generation. '
+            'Unknown client feature_key for T3Planet Credits; falling back to content_generate. '
             . 'Register $GLOBALS[\'TYPO3_CONF_VARS\'][\'EXTCONF\'][\'ns_t3af\'][\'creditsFeatureKeyAliases\'][your-extension].',
             [
                 'client_feature_key' => $clientFeatureKey,
@@ -141,18 +171,27 @@ final class CreditsFeatureKeyMapper
             ],
         );
 
-        return CreditsFeatureKeyCatalog::CONTENT_GENERATION;
+        return new CreditsFeatureMapping(CreditsFeatureKeyCatalog::CONTENT_GENERATE);
     }
 
     private function defaultForEndpoint(CreditsApiEndpoint $endpoint): string
     {
         return match ($endpoint) {
             CreditsApiEndpoint::Embed => CreditsFeatureKeyCatalog::EMBEDDING,
-            CreditsApiEndpoint::Stream => CreditsFeatureKeyCatalog::STREAM,
+            CreditsApiEndpoint::Stream => CreditsFeatureKeyCatalog::ASSISTANT_CHAT,
             CreditsApiEndpoint::Speak => CreditsFeatureKeyCatalog::TEXT_TO_SPEECH,
-            CreditsApiEndpoint::Image => CreditsFeatureKeyCatalog::IMAGE_GENERATION,
-            CreditsApiEndpoint::Charge => CreditsFeatureKeyCatalog::CONTENT_GENERATION,
+            CreditsApiEndpoint::Image => CreditsFeatureKeyCatalog::IMAGE_GENERATE,
+            CreditsApiEndpoint::Charge => CreditsFeatureKeyCatalog::CONTENT_GENERATE,
         };
+    }
+
+    private function mappingWithField(string $featureKey, string $field): CreditsFeatureMapping
+    {
+        return new CreditsFeatureMapping(
+            featureKey: $featureKey,
+            metaAdditions: ['fields' => [$field]],
+            legacyField: $field,
+        );
     }
 
     private function resolveAlias(string $clientFeatureKey, string $extensionKey): ?string

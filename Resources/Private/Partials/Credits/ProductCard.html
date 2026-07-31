@@ -1,0 +1,75 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<article class="aiu-credits-product{f:if(condition: '{product.isCurrentPlan} == 1', then: ' is-current')}">
+    <f:if condition="{product.badgeLabel} != ''">
+        <span class="aiu-credits-product__badge aiu-credits-product__badge--{product.badge}">
+            {product.badgeLabel}
+        </span>
+    </f:if>
+    <h3 class="aiu-credits-product__title">{product.title}</h3>
+    <f:if condition="{product.subtitle} != ''">
+        <p class="aiu-credits-product__subtitle">{product.subtitle}</p>
+    </f:if>
+    <div class="aiu-credits-product__price">
+        €{product.priceAmount -> f:format.number(decimals: 0)}
+        <span class="aiu-credits-product__price-note">
+            <f:if condition="{product.type} == 'plan'">
+                <f:then>
+                    <f:if condition="{product.renewalPeriod} == 'yearly'">
+                        <f:then>
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.perYear"
+                                         default="/ year" />
+                        </f:then>
+                        <f:else>
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.perMonth"
+                                         default="/ month" />
+                        </f:else>
+                    </f:if>
+                </f:then>
+                <f:else>
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.oneTime"
+                                 default="one-time" />
+                </f:else>
+            </f:if>
+        </span>
+    </div>
+    <p class="aiu-credits-product__credits">
+        {product.credits}
+        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.creditsLabel"
+                     default="credits" />
+    </p>
+    <f:if condition="{product.description -> f:count()} > 0">
+        <ul class="aiu-credits-product__features aiu-credits-product__description">
+            <f:for each="{product.description}" as="bullet">
+                <li>{bullet}</li>
+            </f:for>
+        </ul>
+    </f:if>
+    <f:if condition="{product.features -> f:count()} > 0">
+        <ul class="aiu-credits-product__features">
+            <f:for each="{product.features}" as="bullet">
+                <li>{bullet}</li>
+            </f:for>
+        </ul>
+    </f:if>
+    <f:if condition="{product.checkoutUrl} != ''">
+        <f:then>
+            <a class="btn btn-primary aiu-credits-product__cta"
+               href="{product.checkoutUrl}"
+               data-aiu-checkout
+               data-aiu-checkout-url="{product.checkoutUrl}"
+               data-aiu-checkout-title="{product.title}">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.buy"
+                             default="Buy" />
+                {product.title}
+            </a>
+        </f:then>
+        <f:else>
+            <span class="aiu-credits-product__cta aiu-credits-product__cta--disabled">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.unavailable"
+                             default="Checkout unavailable" />
+            </span>
+        </f:else>
+    </f:if>
+</article>
+</html>

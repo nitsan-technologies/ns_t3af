@@ -213,6 +213,10 @@
 .aiu-credits-prompt__text { font-size: .85rem; color: var(--aiu-text-500); max-width: 32rem; margin: 0 auto; }
 .aiu-credits-empty { font-size: .85rem; color: var(--aiu-text-500); margin: 0; }
 
+.aiu-credits-bundles__toolbar .btn-group {
+    flex-shrink: 0;
+}
+
 @media (max-width: 1200px) {
     .aiu-credits-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }}
 

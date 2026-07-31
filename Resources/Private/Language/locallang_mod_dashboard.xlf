@@ -1549,6 +1549,9 @@
       <trans-unit id="credits.dashboard.plan.last" resname="credits.dashboard.plan.last">
         <source>Last:</source>
       </trans-unit>
+      <trans-unit id="credits.dashboard.plan.current" resname="credits.dashboard.plan.current">
+        <source>Current:</source>
+      </trans-unit>
       <trans-unit id="credits.dashboard.plan.credits" resname="credits.dashboard.plan.credits">
         <source>credits</source>
       </trans-unit>
@@ -1584,6 +1587,39 @@
       </trans-unit>
       <trans-unit id="credits.dashboard.bundles.sub" resname="credits.dashboard.bundles.sub">
         <source>One-time purchases — credits never expire and stack with your balance</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.bundles.subPlans" resname="credits.dashboard.bundles.subPlans">
+        <source>Subscription plans — credits renew each billing period</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.bundles.subTopups" resname="credits.dashboard.bundles.subTopups">
+        <source>One-time purchases — credits never expire and stack with your balance</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.bundles.tabPlans" resname="credits.dashboard.bundles.tabPlans">
+        <source>Plans</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.bundles.tabTopups" resname="credits.dashboard.bundles.tabTopups">
+        <source>Top-ups</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.bundles.periodMonthly" resname="credits.dashboard.bundles.periodMonthly">
+        <source>Monthly</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.bundles.periodYearly" resname="credits.dashboard.bundles.periodYearly">
+        <source>Yearly</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.bundles.perMonth" resname="credits.dashboard.bundles.perMonth">
+        <source>/ month</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.bundles.perYear" resname="credits.dashboard.bundles.perYear">
+        <source>/ year</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.bundles.emptyPlansMonthly" resname="credits.dashboard.bundles.emptyPlansMonthly">
+        <source>No monthly plans available right now.</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.bundles.emptyPlansYearly" resname="credits.dashboard.bundles.emptyPlansYearly">
+        <source>No yearly plans available right now.</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.bundles.emptyTopups" resname="credits.dashboard.bundles.emptyTopups">
+        <source>No top-up packs available right now.</source>
       </trans-unit>
       <trans-unit id="credits.dashboard.bundles.badge" resname="credits.dashboard.bundles.badge">
         <source>No subscription · buy when you need</source>

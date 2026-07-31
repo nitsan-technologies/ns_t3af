@@ -20,16 +20,19 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Api;
 
 /**
- * Token-based billing parameters returned by T3Planet Credits API (`pricing` object).
+ * Billing parameters returned by T3Planet Credits API (`pricing` object).
  *
  * @api
  */
 final readonly class CreditsPricing
 {
-    public const DEFAULT_MODEL = 'token';
+    public const DEFAULT_MODEL = 'metered';
 
     public const DEFAULT_TOKENS_PER_CREDIT = 1000;
 
+    /**
+     * @param list<array{feature_key: string, typical_credits: float, basis: string, metered: bool}> $rateCard
+     */
     public function __construct(
         public string $model = self::DEFAULT_MODEL,
         public int $tokensPerCredit = self::DEFAULT_TOKENS_PER_CREDIT,
@@ -37,6 +40,7 @@ final readonly class CreditsPricing
         public int $minChargeUnits = AiCreditUnits::MIN_CHARGE_UNITS,
         public float $inputTokenRate = 1.0,
         public float $outputTokenRate = 1.0,
+        public array $rateCard = [],
     ) {}
 
     /**
@@ -74,12 +78,24 @@ final readonly class CreditsPricing
             minChargeUnits: $minChargeUnits,
             inputTokenRate: (float) ($pricing['input_token_rate'] ?? 1.0),
             outputTokenRate: (float) ($pricing['output_token_rate'] ?? 1.0),
+            rateCard: self::parseRateCard($pricing['rate_card'] ?? null),
         );
     }
 
     public static function default(): self
     {
         return new self();
+    }
+
+    public function typicalCreditsFor(string $featureKey): ?float
+    {
+        foreach ($this->rateCard as $entry) {
+            if (($entry['feature_key'] ?? '') === $featureKey) {
+                return (float) ($entry['typical_credits'] ?? 0.0);
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -119,14 +135,49 @@ final readonly class CreditsPricing
      */
     public function toArray(): array
     {
-        return [
+        $data = [
             'model' => $this->model,
-            'tokens_per_credit' => $this->tokensPerCredit,
             'credit_unit_scale' => $this->creditUnitScale,
             'min_charge_units' => $this->minChargeUnits,
-            'input_token_rate' => $this->inputTokenRate,
-            'output_token_rate' => $this->outputTokenRate,
             'footnote' => $this->footnote(),
         ];
+        if ($this->rateCard !== []) {
+            $data['rate_card'] = $this->rateCard;
+        } else {
+            $data['tokens_per_credit'] = $this->tokensPerCredit;
+            $data['input_token_rate'] = $this->inputTokenRate;
+            $data['output_token_rate'] = $this->outputTokenRate;
+        }
+
+        return $data;
+    }
+
+    /**
+     * @return list<array{feature_key: string, typical_credits: float, basis: string, metered: bool}>
+     */
+    private static function parseRateCard(mixed $raw): array
+    {
+        if (!is_array($raw)) {
+            return [];
+        }
+
+        $entries = [];
+        foreach ($raw as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $featureKey = trim((string) ($item['feature_key'] ?? ''));
+            if ($featureKey === '') {
+                continue;
+            }
+            $entries[] = [
+                'feature_key' => $featureKey,
+                'typical_credits' => (float) ($item['typical_credits'] ?? 0.0),
+                'basis' => (string) ($item['basis'] ?? ''),
+                'metered' => (bool) ($item['metered'] ?? true),
+            ];
+        }
+
+        return $entries;
     }
 }

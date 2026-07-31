@@ -89,7 +89,12 @@ final class CreditsDashboardAssembler
                 'planUsed' => $balanceSummary['planUsed'],
                 'planTotal' => $balanceSummary['planTotal'],
             ],
-            'plan' => $this->normalizePlan($plan, $balanceSummary['credits']),
+            'plan' => $this->normalizePlan(
+                $plan,
+                $balanceSummary['credits'],
+                $productsPayload,
+                $balanceSummary,
+            ),
             'stats' => $stats,
             'products' => $this->normalizeProducts($productsPayload, $returnUrl),
             'features' => $this->normalizeFeatures($featuresPayload, $usedUnitsByFeatureKey),
@@ -202,10 +207,16 @@ final class CreditsDashboardAssembler
     /**
      * @param array<string, mixed> $plan
      * @param array<string, mixed> $credits
+     * @param array<string, mixed> $productsPayload
+     * @param array<string, mixed> $balanceSummary
      * @return array<string, mixed>
      */
-    private function normalizePlan(array $plan, array $credits): array
-    {
+    private function normalizePlan(
+        array $plan,
+        array $credits,
+        array $productsPayload = [],
+        array $balanceSummary = [],
+    ): array {
         $sku = strtolower((string) (
             $plan['plan_sku']
             ?? $plan['sku']
@@ -213,12 +224,24 @@ final class CreditsDashboardAssembler
             ?? $credits['sku']
             ?? ''
         ));
+        $currentSku = strtolower((string) ($productsPayload['current_plan_sku'] ?? ''));
         $name = (string) ($plan['plan_name'] ?? $plan['title'] ?? $credits['plan_name'] ?? '');
         if ($name === '' && $sku !== '' && $sku !== 'none') {
             $name = ucfirst($sku);
         }
 
+        $scale = AiCreditUnits::scaleFromPricing(is_array($plan['pricing'] ?? null) ? $plan : $credits);
+        $buckets = AiCreditUnits::parseBalanceBuckets(array_merge($credits, $plan), $scale);
         $planActive = (bool) ($plan['plan_active'] ?? $credits['plan_active'] ?? false);
+        $hasSubscriptionPlan = $planActive
+            && $sku !== ''
+            && $sku !== 'none'
+            && $buckets['planTotalCredits'] > 0.0;
+
+        if (!$hasSubscriptionPlan && $this->isTrialAccount($plan, $credits, $sku, $currentSku, $buckets)) {
+            return $this->trialPlanView($plan, $credits, $productsPayload, $buckets);
+        }
+
         if ($name === '' || strtolower($name) === 'none') {
             if (!$planActive || $sku === '' || $sku === 'none') {
                 return $this->emptyPlanView();
@@ -226,14 +249,13 @@ final class CreditsDashboardAssembler
             $name = ucfirst($sku);
         }
 
-        $scale = AiCreditUnits::scaleFromPricing(is_array($plan['pricing'] ?? null) ? $plan : $credits);
-        $buckets = AiCreditUnits::parseBalanceBuckets(array_merge($credits, $plan), $scale);
         $total = $buckets['planTotalCredits'];
         $used = $buckets['planUsedCredits'];
         $remaining = max(0.0, $total - $used);
 
         return [
             'hasPlan' => 1,
+            'isTrial' => 0,
             'name' => $name,
             'sku' => $sku !== '' && $sku !== 'none' ? $sku : '',
             'subtitle' => (string) ($plan['subtitle'] ?? ''),
@@ -245,8 +267,119 @@ final class CreditsDashboardAssembler
             'creditsRemaining' => $remaining,
             'creditsRemainingFormatted' => AiCreditUnits::formatCredits($remaining),
             'progressPercent' => $total > 0.0 ? (int) round(($used / $total) * 100) : 0,
-            'expiresAt' => (int) ($plan['plan_expires_at'] ?? $credits['expires_at'] ?? 0),
+            'expiresAt' => (int) ($plan['plan_expires_at'] ?? $credits['plan_expires_at'] ?? $credits['expires_at'] ?? 0),
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     * @param array<string, mixed> $credits
+     * @param array<string, mixed> $productsPayload
+     * @param array{
+     *   freeCredits: float,
+     *   planTotalCredits: float,
+     *   planUsedCredits: float,
+     *   paidCredits: float
+     * } $buckets
+     * @return array<string, mixed>
+     */
+    private function trialPlanView(
+        array $plan,
+        array $credits,
+        array $productsPayload,
+        array $buckets,
+    ): array {
+        $remaining = max(0.0, $buckets['freeCredits']);
+        $total = $this->resolveTrialCreditsTotal($productsPayload, $remaining);
+        $used = max(0.0, $total - $remaining);
+        $trialProduct = $this->findTrialProduct($productsPayload);
+        $name = (string) ($trialProduct['title'] ?? 'Free Trial');
+
+        return [
+            'hasPlan' => 1,
+            'isTrial' => 1,
+            'name' => $name,
+            'sku' => 'trial',
+            'subtitle' => (string) ($plan['subtitle'] ?? ''),
+            'purchasedAt' => (int) ($plan['plan_renewed_at'] ?? $plan['purchased_at'] ?? $credits['crdate'] ?? 0),
+            'creditsTotal' => $total,
+            'creditsTotalFormatted' => AiCreditUnits::formatCredits($total),
+            'creditsUsed' => $used,
+            'creditsUsedFormatted' => AiCreditUnits::formatCredits($used),
+            'creditsRemaining' => $remaining,
+            'creditsRemainingFormatted' => AiCreditUnits::formatCredits($remaining),
+            'progressPercent' => $total > 0.0 ? (int) round(($used / $total) * 100) : 0,
+            'expiresAt' => 0,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $plan
+     * @param array<string, mixed> $credits
+     * @param array{
+     *   freeCredits: float,
+     *   planTotalCredits: float,
+     *   paidCredits: float
+     * } $buckets
+     */
+    private function isTrialAccount(
+        array $plan,
+        array $credits,
+        string $sku,
+        string $currentSku,
+        array $buckets,
+    ): bool {
+        if ((bool) ($plan['trial_granted'] ?? $credits['trial_granted'] ?? false)) {
+            return true;
+        }
+
+        if ($sku === 'trial' || $currentSku === 'trial') {
+            return true;
+        }
+
+        return $buckets['freeCredits'] > 0.0
+            && $buckets['planTotalCredits'] <= 0.0
+            && $buckets['paidCredits'] <= 0.0
+            && ($sku === '' || $sku === 'none');
+    }
+
+    /**
+     * @param array<string, mixed> $productsPayload
+     */
+    private function resolveTrialCreditsTotal(array $productsPayload, float $remaining): float
+    {
+        $trialProduct = $this->findTrialProduct($productsPayload);
+        $catalogCredits = (int) ($trialProduct['credits'] ?? 0);
+        if ($catalogCredits > 0) {
+            return (float) $catalogCredits;
+        }
+
+        return max($remaining, 1.0);
+    }
+
+    /**
+     * @param array<string, mixed> $productsPayload
+     * @return array<string, mixed>
+     */
+    private function findTrialProduct(array $productsPayload): array
+    {
+        $items = $productsPayload['products'] ?? [];
+        if (!is_array($items)) {
+            return [];
+        }
+
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $type = (string) ($item['type'] ?? '');
+            $sku = (string) ($item['sku'] ?? '');
+            if ($type === 'trial' || $sku === 'trial') {
+                return $item;
+            }
+        }
+
+        return [];
     }
 
     /**
@@ -256,6 +389,7 @@ final class CreditsDashboardAssembler
     {
         return [
             'hasPlan' => 0,
+            'isTrial' => 0,
             'name' => '',
             'sku' => '',
             'subtitle' => '',
@@ -361,6 +495,7 @@ final class CreditsDashboardAssembler
                 'badgeLabel' => $this->productBadgeLabel($badge),
                 'features' => is_array($item['features'] ?? null) ? $item['features'] : [],
                 'sortOrder' => (int) ($item['sort_order'] ?? 0),
+                'renewalPeriod' => (string) ($item['renewal_period'] ?? ''),
                 'checkoutUrl' => $this->checkoutUrlBuilder->normalize($checkoutUrl, $returnUrl),
                 'checkoutEmbedUrl' => (string) ($item['checkout_embed_url'] ?? ''),
                 'isCurrentPlan' => (int) ($currentSku !== '' && $sku === $currentSku),

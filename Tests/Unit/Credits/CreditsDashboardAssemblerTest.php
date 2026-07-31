@@ -232,6 +232,92 @@ final class CreditsDashboardAssemblerTest extends TestCase
         self::assertSame('starter', $dashboard['currentPlanSku']);
     }
 
+    public function testAssembleRecognizesTrialCreditsAsActivePlan(): void
+    {
+        $dashboard = $this->createAssembler()->assemble(
+            [
+                'status' => true,
+                'credits' => [
+                    'free_credits' => 97,
+                    'paid_credits' => 0,
+                    'plan_used' => 0,
+                    'plan_total' => 0,
+                    'plan_sku' => 'none',
+                ],
+            ],
+            [
+                'status' => true,
+                'plan_name' => 'none',
+                'plan_sku' => 'none',
+                'plan_active' => false,
+                'trial_granted' => true,
+            ],
+            [
+                'products' => [
+                    [
+                        'sku' => 'trial',
+                        'type' => 'trial',
+                        'title' => 'Free Trial',
+                        'credits' => 100,
+                        'is_active' => 1,
+                    ],
+                ],
+            ],
+            [],
+            [],
+            [],
+            'https://backend.example/return',
+        );
+
+        self::assertSame(1, $dashboard['plan']['hasPlan']);
+        self::assertSame(1, $dashboard['plan']['isTrial']);
+        self::assertSame('Free Trial', $dashboard['plan']['name']);
+        self::assertSame('trial', $dashboard['plan']['sku']);
+        self::assertSame(100.0, $dashboard['plan']['creditsTotal']);
+        self::assertSame(97.0, $dashboard['plan']['creditsRemaining']);
+        self::assertSame(3.0, $dashboard['plan']['creditsUsed']);
+    }
+
+    public function testAssembleRecognizesTrialFromFreeCreditsWhenTrialGrantedMissing(): void
+    {
+        $dashboard = $this->createAssembler()->assemble(
+            [
+                'status' => true,
+                'credits' => [
+                    'free_credits' => 100,
+                    'paid_credits' => 0,
+                    'plan_used' => 0,
+                    'plan_total' => 0,
+                    'plan_sku' => 'none',
+                ],
+            ],
+            [
+                'status' => true,
+                'plan_name' => 'none',
+                'plan_sku' => 'none',
+                'plan_active' => false,
+            ],
+            [
+                'products' => [
+                    [
+                        'sku' => 'trial',
+                        'type' => 'trial',
+                        'title' => 'Free Trial',
+                        'credits' => 100,
+                        'is_active' => 1,
+                    ],
+                ],
+            ],
+            [],
+            [],
+            [],
+            'https://backend.example/return',
+        );
+
+        self::assertSame(1, $dashboard['plan']['hasPlan']);
+        self::assertSame(1, $dashboard['plan']['isTrial']);
+    }
+
     public function testSummarizeBalanceReadsFreeCreditsFromBalanceApi(): void
     {
         $summary = $this->createAssembler()->summarizeBalance([

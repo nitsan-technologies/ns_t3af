@@ -46,9 +46,9 @@ final class CreditsFeatureKeyMapperTest extends TestCase
     public function testPassesThroughCatalogKeys(): void
     {
         self::assertSame(
-            CreditsFeatureKeyCatalog::CONTENT_TRANSLATION,
+            CreditsFeatureKeyCatalog::CONTENT_TRANSLATE,
             $this->mapper->map(
-                CreditsFeatureKeyCatalog::CONTENT_TRANSLATION,
+                CreditsFeatureKeyCatalog::CONTENT_TRANSLATE,
                 new AiOptions(extensionKey: 'ns_t3ai'),
                 CreditsApiEndpoint::Charge,
             ),
@@ -58,7 +58,7 @@ final class CreditsFeatureKeyMapperTest extends TestCase
     public function testMapsT3AiTranslationKeys(): void
     {
         self::assertSame(
-            CreditsFeatureKeyCatalog::CONTENT_TRANSLATION,
+            CreditsFeatureKeyCatalog::CONTENT_TRANSLATE,
             $this->mapper->map(
                 'translation.openai',
                 new AiOptions(extensionKey: 'ns_t3ai'),
@@ -67,22 +67,23 @@ final class CreditsFeatureKeyMapperTest extends TestCase
         );
     }
 
-    public function testMapsT3AiSeoKeys(): void
+    public function testMapWithMetaAddsFieldsForLegacySeoKey(): void
     {
-        self::assertSame(
-            CreditsFeatureKeyCatalog::SEO_META_DESCRIPTION,
-            $this->mapper->map(
-                'seo.meta_description',
-                new AiOptions(extensionKey: 'ns_t3ai'),
-                CreditsApiEndpoint::Charge,
-            ),
+        $mapping = $this->mapper->mapWithMeta(
+            'seo.meta_description',
+            new AiOptions(extensionKey: 'ns_t3ai'),
+            CreditsApiEndpoint::Charge,
         );
+
+        self::assertSame(CreditsFeatureKeyCatalog::SEO_PAGE_METADATA, $mapping->featureKey);
+        self::assertSame(['fields' => ['meta_description']], $mapping->metaAdditions);
+        self::assertSame('meta_description', $mapping->legacyField);
     }
 
     public function testMapsPageTreeToCatalogKey(): void
     {
         self::assertSame(
-            CreditsFeatureKeyCatalog::PAGE_STRUCTURE_GENERATION,
+            CreditsFeatureKeyCatalog::CONTENT_PAGE_STRUCTURE,
             $this->mapper->map(
                 'page.tree',
                 new AiOptions(extensionKey: 'ns_t3ai'),
@@ -91,10 +92,10 @@ final class CreditsFeatureKeyMapperTest extends TestCase
         );
     }
 
-    public function testStreamEndpointAlwaysUsesStreamCatalogKey(): void
+    public function testStreamEndpointAlwaysUsesAssistantChatCatalogKey(): void
     {
         self::assertSame(
-            CreditsFeatureKeyCatalog::STREAM,
+            CreditsFeatureKeyCatalog::ASSISTANT_CHAT,
             $this->mapper->map(
                 'translation.openai',
                 new AiOptions(extensionKey: 'ns_t3ai'),
@@ -133,10 +134,10 @@ final class CreditsFeatureKeyMapperTest extends TestCase
         );
     }
 
-    public function testUnknownKeyFallsBackToContentGeneration(): void
+    public function testUnknownKeyFallsBackToContentGenerate(): void
     {
         self::assertSame(
-            CreditsFeatureKeyCatalog::CONTENT_GENERATION,
+            CreditsFeatureKeyCatalog::CONTENT_GENERATE,
             $this->mapper->map(
                 'totally.unknown.feature',
                 new AiOptions(extensionKey: 'other_extension'),
@@ -157,10 +158,10 @@ final class CreditsFeatureKeyMapperTest extends TestCase
         );
     }
 
-    public function testImageEndpointAlwaysUsesImageGenerationCatalogKey(): void
+    public function testImageEndpointAlwaysUsesImageGenerateCatalogKey(): void
     {
         self::assertSame(
-            CreditsFeatureKeyCatalog::IMAGE_GENERATION,
+            CreditsFeatureKeyCatalog::IMAGE_GENERATE,
             $this->mapper->map(
                 'media.dalle',
                 new AiOptions(extensionKey: 'ns_t3ai'),
@@ -181,32 +182,24 @@ final class CreditsFeatureKeyMapperTest extends TestCase
         );
     }
 
-    public function testMapsT3AaFileMetadataKeys(): void
+    public function testMapsT3AaFileMetadataKeysWithFields(): void
     {
-        self::assertSame(
-            CreditsFeatureKeyCatalog::METADATA_ALT_TEXT,
-            $this->mapper->map(
-                'file.alt_text',
-                new AiOptions(extensionKey: 'ns_t3aa'),
-                CreditsApiEndpoint::Charge,
-            ),
+        $altText = $this->mapper->mapWithMeta(
+            'file.alt_text',
+            new AiOptions(extensionKey: 'ns_t3aa'),
+            CreditsApiEndpoint::Charge,
         );
-        self::assertSame(
-            CreditsFeatureKeyCatalog::METADATA_ALT_TEXT,
-            $this->mapper->map(
-                'file.alt_text.alttext_ai',
-                new AiOptions(extensionKey: 'ns_t3aa'),
-                CreditsApiEndpoint::Charge,
-            ),
+        self::assertSame(CreditsFeatureKeyCatalog::SEO_IMAGE_METADATA, $altText->featureKey);
+        self::assertSame(['fields' => ['alt_text']], $altText->metaAdditions);
+        self::assertSame('alt_text', $altText->legacyField);
+
+        $title = $this->mapper->mapWithMeta(
+            'file.meta_title_description',
+            new AiOptions(extensionKey: 'ns_t3aa'),
+            CreditsApiEndpoint::Charge,
         );
-        self::assertSame(
-            CreditsFeatureKeyCatalog::METADATA_TITLE,
-            $this->mapper->map(
-                'file.meta_title_description',
-                new AiOptions(extensionKey: 'ns_t3aa'),
-                CreditsApiEndpoint::Charge,
-            ),
-        );
+        self::assertSame(CreditsFeatureKeyCatalog::SEO_IMAGE_METADATA, $title->featureKey);
+        self::assertSame(['fields' => ['title']], $title->metaAdditions);
     }
 
     public function testMapsMediaTtsToTextToSpeechForT3ai(): void

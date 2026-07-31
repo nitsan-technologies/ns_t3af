@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Credits;
 
 use NITSAN\NsT3AF\Cache\Typo3CacheFacade;
 use NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface;
+use NITSAN\NsT3AF\Credits\Contract\LicenseDataRepositoryInterface;
 use NITSAN\NsT3AF\Credits\Domain\Repository\RuntimeSettingsRepository;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
 use NITSAN\NsT3AF\Credits\Service\CreditsChargeRecorder;
@@ -71,7 +72,7 @@ trait CreditsProxyTestFixtures
             $api,
             $this->runtimeSettings(),
             $this->domainResolver(),
-            new LicenseKeyResolver(null),
+            $this->licenseKeyResolver(),
             $this->tokenCache($token),
             $this->createMock(CreditsApiResponseCacheInterface::class),
         );
@@ -111,6 +112,21 @@ trait CreditsProxyTestFixtures
         $cache->set('t3planet_bearer_token', $token);
 
         return $cache;
+    }
+
+    protected function licenseKeyResolver(): LicenseKeyResolver
+    {
+        $repository = $this->createMock(LicenseDataRepositoryInterface::class);
+        $repository->method('fetchAllData')->willReturn([
+            [
+                'license_key' => 'KEY-A',
+                'is_life_time' => 1,
+                'expiration_date' => 0,
+                'extension_key' => 'ns_t3af',
+            ],
+        ]);
+
+        return new LicenseKeyResolver($repository);
     }
 
     protected function featureKeyMapper(): CreditsFeatureKeyMapper

@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Credits\Http;
 
 use NITSAN\NsT3AF\Api\AiOptions;
+use NITSAN\NsT3AF\Credits\CreditsFeatureKeyCatalog;
 use NITSAN\NsT3AF\Credits\Service\CreditsMetaJsonBuilder;
 
 /**
@@ -254,7 +255,7 @@ class T3PlanetApiClient
         $body = [
             'domain' => $domain,
             'request_uuid' => $requestUuid,
-            'feature_key' => $featureKey !== '' ? $featureKey : 'image_generation',
+            'feature_key' => $featureKey !== '' ? $featureKey : CreditsFeatureKeyCatalog::IMAGE_GENERATE,
             'meta_json' => $metaJson,
         ];
         $extensionKey = trim((string) ($extensionKey ?? ($metaJson['extension_key'] ?? '')));

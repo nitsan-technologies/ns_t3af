@@ -32,7 +32,7 @@ final class LicenseKeyResolverTest extends TestCase
         self::assertSame('', $resolver->buildLicenseKeysCommaSeparated());
     }
 
-    public function testBuildLicenseKeysCommaSeparatedIncludesAllLicensedExtensions(): void
+    public function testBuildLicenseKeysCommaSeparatedIncludesOnlyNsT3afLicenses(): void
     {
         $repository = $this->createMock(LicenseDataRepositoryInterface::class);
         $repository->method('fetchAllData')->willReturn([
@@ -43,7 +43,7 @@ final class LicenseKeyResolverTest extends TestCase
 
         $resolver = new LicenseKeyResolver($repository);
 
-        self::assertSame('KEY-A,KEY-B,KEY-C', $resolver->buildLicenseKeysCommaSeparated());
+        self::assertSame('KEY-A', $resolver->buildLicenseKeysCommaSeparated());
     }
 
     public function testBuildLicenseKeysCommaSeparatedDedupesSharedKeyAcrossExtensions(): void
@@ -57,7 +57,7 @@ final class LicenseKeyResolverTest extends TestCase
 
         $resolver = new LicenseKeyResolver($repository);
 
-        self::assertSame('KEY-A,KEY-B', $resolver->buildLicenseKeysCommaSeparated());
+        self::assertSame('KEY-A', $resolver->buildLicenseKeysCommaSeparated());
     }
 
     public function testBuildNewLicenseKeysCommaSeparatedReturnsOnlyMissingKeys(): void

@@ -103,13 +103,13 @@ UI: `Partials/Credits/PaymentFlash.html` — info banner for pending (“credits
 
 ## Billing model
 
-Server debits **after** upstream AI from actual token usage:
+Server debits **after** upstream AI from actual usage (metered accounts) or legacy flat token rules. Clients must not compute cost locally:
 
 ```text
-credits = max(1, ceil(total_tokens / tokens_per_credit))
+Use POST Estimate for preflight → read cost_units / cost from Charge response
 ```
 
-Default 1 credit ≈ 1000 tokens. Read `AiResponse::$credits`, `StreamSummary::$credits`, or `EmbeddingResponse::$credits` — do not hardcode per-feature prices in child extensions.
+Default pricing mode is server-side (`legacy` or `metered`). Read `AiResponse::$credits`, `StreamSummary::$credits`, or `EmbeddingResponse::$credits` — do not hardcode per-feature prices in child extensions.
 
 ---
 

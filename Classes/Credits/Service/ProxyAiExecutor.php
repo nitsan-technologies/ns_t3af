@@ -26,6 +26,7 @@ use NITSAN\NsT3AF\Api\EmbeddingResponse;
 use NITSAN\NsT3AF\Api\StreamSummary;
 use NITSAN\NsT3AF\Credits\CreditsApiEndpoint;
 use NITSAN\NsT3AF\Credits\CreditsApiErrorCodes;
+use NITSAN\NsT3AF\Credits\CreditsFeatureMapping;
 use NITSAN\NsT3AF\Credits\CreditsProviderIdentifier;
 use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
 use NITSAN\NsT3AF\Credits\Exception\InsufficientCreditsException;
@@ -69,7 +70,8 @@ class ProxyAiExecutor
     public function stream(string $prompt, AiOptions $options): \Generator
     {
         $provider = $this->creditsProvider();
-        $featureKey = $this->resolveCatalogFeatureKey($options, CreditsApiEndpoint::Stream);
+        $mapping = $this->resolveFeatureMapping($options, CreditsApiEndpoint::Stream);
+        $featureKey = $mapping->featureKey;
         $requestUuid = $this->requestUuid($options);
         $domain = $this->domainResolver->resolve();
 
@@ -87,7 +89,7 @@ class ProxyAiExecutor
         $events = null;
 
         try {
-            $metaJson = $this->buildApiMetaJson($before->getPrompt(), $before->getOptions());
+            $metaJson = $this->buildApiMetaJson($before->getPrompt(), $before->getOptions(), [], $mapping);
             $lines = $this->streamWithTokenRetry(
                 $this->buildStreamApiCall($domain, $requestUuid, $featureKey, $metaJson, $before->getOptions()),
             );
@@ -109,7 +111,7 @@ class ProxyAiExecutor
             $latencyMs = (int) (microtime(true) * 1000) - $start;
             $summary = $this->mapUsageToStreamSummary($payload, $requestUuid);
             $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
-            $response = $this->mapChargeToAiResponse($payload, $requestUuid, $latencyMs, $before->getOptions());
+            $response = $this->mapChargeToAiResponse($payload, $requestUuid, $latencyMs, $before->getOptions(), $mapping->legacyField);
             $this->persistCompletion($provider, $before->getOptions(), $before->getPrompt(), $response, self::CALL_STREAM);
             $this->events->dispatch(new AfterProviderResponseEvent(
                 $provider,
@@ -166,7 +168,8 @@ class ProxyAiExecutor
     public function complete(string $prompt, AiOptions $options): AiResponse
     {
         $provider = $this->creditsProvider();
-        $featureKey = $this->resolveCatalogFeatureKey($options, CreditsApiEndpoint::Charge);
+        $mapping = $this->resolveFeatureMapping($options, CreditsApiEndpoint::Charge);
+        $featureKey = $mapping->featureKey;
         $requestUuid = $this->requestUuid($options);
         $domain = $this->domainResolver->resolve();
 
@@ -184,15 +187,18 @@ class ProxyAiExecutor
 
         $start = (int) (microtime(true) * 1000);
         try {
-            $payload = $this->callWithTokenRetry(
-                fn(string $token): array => $this->apiClient->charge(
-                    $domain,
-                    $requestUuid,
-                    $featureKey,
-                    $this->buildApiMetaJson($before->getPrompt(), $before->getOptions()),
-                    $token,
-                    $before->getOptions(),
+            $payload = $this->postJsonWithRetries(
+                fn(string $uuid): array => $this->callWithTokenRetry(
+                    fn(string $token): array => $this->apiClient->charge(
+                        $domain,
+                        $uuid,
+                        $featureKey,
+                        $this->buildApiMetaJson($before->getPrompt(), $before->getOptions(), [], $mapping),
+                        $token,
+                        $before->getOptions(),
+                    ),
                 ),
+                $requestUuid,
             );
         } catch (InsufficientCreditsException $e) {
             $this->dispatchFailure(
@@ -231,7 +237,13 @@ class ProxyAiExecutor
             throw $e;
         }
 
-        $response = $this->mapChargeToAiResponse($payload, $requestUuid, (int) (microtime(true) * 1000) - $start, $before->getOptions());
+        $response = $this->mapChargeToAiResponse(
+            $payload,
+            $requestUuid,
+            (int) (microtime(true) * 1000) - $start,
+            $before->getOptions(),
+            $mapping->legacyField,
+        );
         $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
         $this->persistCompletion($provider, $before->getOptions(), $before->getPrompt(), $response);
         $this->events->dispatch(new AfterProviderResponseEvent(
@@ -250,7 +262,8 @@ class ProxyAiExecutor
     public function embed(string|array $text, AiOptions $options): EmbeddingResponse
     {
         $provider = $this->creditsProvider();
-        $featureKey = $this->resolveCatalogFeatureKey($options, CreditsApiEndpoint::Embed);
+        $mapping = $this->resolveFeatureMapping($options, CreditsApiEndpoint::Embed);
+        $featureKey = $mapping->featureKey;
         $requestUuid = $this->requestUuid($options);
         $domain = $this->domainResolver->resolve();
         $inputs = is_array($text) ? $text : [$text];
@@ -271,15 +284,18 @@ class ProxyAiExecutor
 
         $start = (int) (microtime(true) * 1000);
         try {
-            $payload = $this->callWithTokenRetry(
-                fn(string $token): array => $this->apiClient->embed(
-                    $domain,
-                    $requestUuid,
-                    $featureKey,
-                    $this->buildApiMetaJson($prompt, $before->getOptions(), $inputs),
-                    $token,
-                    $before->getOptions(),
+            $payload = $this->postJsonWithRetries(
+                fn(string $uuid): array => $this->callWithTokenRetry(
+                    fn(string $token): array => $this->apiClient->embed(
+                        $domain,
+                        $uuid,
+                        $featureKey,
+                        $this->buildApiMetaJson($prompt, $before->getOptions(), $inputs, $mapping),
+                        $token,
+                        $before->getOptions(),
+                    ),
                 ),
+                $requestUuid,
             );
         } catch (InsufficientCreditsException $e) {
             $this->dispatchFailure(
@@ -413,19 +429,40 @@ class ProxyAiExecutor
     }
 
     /**
+     * @param callable(string): array<string, mixed> $call Receives request_uuid (may be refreshed on idempotency conflict).
+     * @return array<string, mixed>
+     */
+    private function postJsonWithRetries(callable $call, string $requestUuid): array
+    {
+        try {
+            return $call($requestUuid);
+        } catch (CreditsApiException $e) {
+            if ($e->errorCode !== CreditsApiErrorCodes::IDEMPOTENCY_CONFLICT) {
+                throw $e;
+            }
+
+            return $call(Uuid::v4()->toRfc4122());
+        }
+    }
+
+    /**
      * @param array<string, mixed> $payload
      */
-    private function mapChargeToAiResponse(array $payload, string $requestUuid, int $latencyMs, AiOptions $options = new AiOptions()): AiResponse
-    {
+    private function mapChargeToAiResponse(
+        array $payload,
+        string $requestUuid,
+        int $latencyMs,
+        AiOptions $options = new AiOptions(),
+        ?string $legacyField = null,
+    ): AiResponse {
         $credits = is_array($payload['credits'] ?? null) ? $payload['credits'] : [];
         $charged = is_array($payload['charged'] ?? null) ? $payload['charged'] : [];
+        $content = $this->unwrapLegacyContent((string) ($payload['content'] ?? ''), $legacyField);
 
         return new AiResponse(
-            content: (string) ($payload['content'] ?? ''),
+            content: $content,
             modelId: (string) ($payload['model'] ?? 't3planet'),
             providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
-            tokensInput: (int) ($payload['tokens_input'] ?? 0),
-            tokensOutput: (int) ($payload['tokens_output'] ?? 0),
             latencyMs: $latencyMs,
             raw: $payload,
             credits: CreditsUsage::fromApiPayload($credits, $charged, $requestUuid, $payload),
@@ -458,14 +495,13 @@ class ProxyAiExecutor
             vectors: $vectors,
             modelId: (string) ($payload['model'] ?? 't3planet'),
             providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
-            tokensInput: (int) ($payload['tokens_input'] ?? 0),
             latencyMs: $latencyMs,
             raw: $payload,
             credits: CreditsUsage::fromApiPayload($credits, $charged, $requestUuid, $payload),
         );
     }
 
-    private function resolveCatalogFeatureKey(AiOptions $options, CreditsApiEndpoint $endpoint): string
+    private function resolveFeatureMapping(AiOptions $options, CreditsApiEndpoint $endpoint): CreditsFeatureMapping
     {
         $clientFeatureKey = trim($options->featureKey ?? '');
         if ($clientFeatureKey === '' && $endpoint === CreditsApiEndpoint::Charge) {
@@ -476,7 +512,23 @@ class ProxyAiExecutor
             );
         }
 
-        return $this->featureKeyMapper->map($clientFeatureKey, $options, $endpoint);
+        return $this->featureKeyMapper->mapWithMeta($clientFeatureKey, $options, $endpoint);
+    }
+
+    private function unwrapLegacyContent(string $content, ?string $legacyField): string
+    {
+        if ($legacyField === null || $legacyField === '') {
+            return $content;
+        }
+
+        $decoded = json_decode($content, true);
+        if (!is_array($decoded) || !array_key_exists($legacyField, $decoded)) {
+            return $content;
+        }
+
+        $value = $decoded[$legacyField];
+
+        return is_string($value) ? $value : $content;
     }
 
     /**
@@ -487,8 +539,12 @@ class ProxyAiExecutor
         string $prompt,
         AiOptions $options,
         array $embedInputs = [],
+        ?CreditsFeatureMapping $mapping = null,
     ): array {
         $metaJson = CreditsMetaJsonBuilder::build($prompt, $options, $embedInputs);
+        if ($mapping !== null && $mapping->metaAdditions !== []) {
+            $metaJson = array_merge($metaJson, $mapping->metaAdditions);
+        }
         $clientFeatureKey = trim($options->featureKey ?? '');
         if ($clientFeatureKey !== '') {
             $metaJson['client_feature_key'] = $clientFeatureKey;

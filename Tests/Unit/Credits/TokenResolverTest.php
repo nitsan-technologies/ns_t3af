@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Credits;
 
+use NITSAN\NsT3AF\Credits\Contract\LicenseDataRepositoryInterface;
 use NITSAN\NsT3AF\Credits\Domain\Repository\RuntimeSettingsRepository;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
 use NITSAN\NsT3AF\Credits\Service\CreditsDomainResolver;
@@ -76,7 +77,7 @@ final class TokenResolverTest extends TestCase
         $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
         $apiResponseCache->expects(self::never())->method('flush');
 
-        $licenseKeys = new LicenseKeyResolver(null);
+        $licenseKeys = $this->licenseKeyResolver(['KEY-A']);
         $resolver = new TokenResolver($api, $runtime, $domain, $licenseKeys, $cache, $apiResponseCache);
 
         self::assertSame('bearer-abc', $resolver->issueFreshToken('example.org'));
@@ -85,7 +86,7 @@ final class TokenResolverTest extends TestCase
     public function testSyncLicensePoolMintsWhenNoTokenExists(): void
     {
         $api = $this->createMock(T3PlanetApiClient::class);
-        $api->expects(self::once())->method('issueToken')->with('KEY-A,KEY-B', 'example.org')->willReturn([
+        $api->expects(self::once())->method('issueToken')->with('KEY-A', 'example.org')->willReturn([
             'token' => 'bearer-new',
         ]);
         $api->expects(self::never())->method('attachLicenses');
@@ -120,7 +121,7 @@ final class TokenResolverTest extends TestCase
         $cache = new \NITSAN\NsT3AF\Cache\Typo3CacheFacade(new NullFrontend('test'));
         $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
 
-        $licenseKeys = new LicenseKeyResolver(null);
+        $licenseKeys = $this->licenseKeyResolver(['KEY-A']);
         $resolver = new TokenResolver($api, $runtime, $domain, $licenseKeys, $cache, $apiResponseCache);
 
         $result = $resolver->syncLicensePool('KEY-A,KEY-B', 'example.org');
@@ -131,7 +132,7 @@ final class TokenResolverTest extends TestCase
             self::fail('Expected minted result to include token.');
         }
         self::assertSame('bearer-new', $result['token']);
-        self::assertSame('KEY-A,KEY-B', $result['license_keys']);
+        self::assertSame('KEY-A', $result['license_keys']);
     }
 
     public function testSyncLicensePoolAttachesOnlyNewKeys(): void
@@ -172,7 +173,7 @@ final class TokenResolverTest extends TestCase
         $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
         $apiResponseCache->expects(self::once())->method('flush');
 
-        $licenseKeys = new LicenseKeyResolver(null);
+        $licenseKeys = $this->licenseKeyResolver(['KEY-A', 'KEY-B']);
         $resolver = new TokenResolver($api, $runtime, $domain, $licenseKeys, $cache, $apiResponseCache);
 
         $result = $resolver->syncLicensePool('KEY-A,KEY-B', 'example.org');
@@ -215,7 +216,7 @@ final class TokenResolverTest extends TestCase
         $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
         $apiResponseCache->expects(self::never())->method('flush');
 
-        $licenseKeys = new LicenseKeyResolver(null);
+        $licenseKeys = $this->licenseKeyResolver(['KEY-A', 'KEY-B']);
         $resolver = new TokenResolver($api, $runtime, $domain, $licenseKeys, $cache, $apiResponseCache);
 
         $result = $resolver->syncLicensePool('KEY-A,KEY-B', 'example.org');
@@ -249,8 +250,29 @@ final class TokenResolverTest extends TestCase
         $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
         $apiResponseCache->expects(self::once())->method('flush');
 
-        $licenseKeys = new LicenseKeyResolver(null);
+        $licenseKeys = $this->licenseKeyResolver(['KEY-A']);
         $resolver = new TokenResolver($api, $runtime, $domain, $licenseKeys, $cache, $apiResponseCache);
         $resolver->invalidate();
+    }
+
+    /**
+     * @param list<string> $licenseKeys
+     */
+    private function licenseKeyResolver(array $licenseKeys): LicenseKeyResolver
+    {
+        $rows = [];
+        foreach ($licenseKeys as $licenseKey) {
+            $rows[] = [
+                'license_key' => $licenseKey,
+                'is_life_time' => 1,
+                'expiration_date' => 0,
+                'extension_key' => 'ns_t3af',
+            ];
+        }
+
+        $repository = $this->createMock(LicenseDataRepositoryInterface::class);
+        $repository->method('fetchAllData')->willReturn($rows);
+
+        return new LicenseKeyResolver($repository);
     }
 }

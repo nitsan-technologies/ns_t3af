@@ -390,6 +390,113 @@ function bindScrollHelpers() {
   });
 }
 
+/**
+ * Plans / top-ups tabs and monthly / yearly billing toggle on the credits dashboard.
+ *
+ * @param {ParentNode} [scope]
+ */
+function initCreditsBundleTabs(scope = document) {
+  scope.querySelectorAll('[data-aiu-credits-bundles-root]').forEach((root) => {
+    if (!(root instanceof HTMLElement) || root.dataset.aiuBundlesTabsBound === '1') {
+      return;
+    }
+    root.dataset.aiuBundlesTabsBound = '1';
+
+    const typeTabs = root.querySelectorAll('[data-aiu-bundle-tab]');
+    const typePanels = root.querySelectorAll('[data-aiu-bundle-panel]');
+    const subCopy = root.closest('[data-aiu-credits-bundles]')?.querySelectorAll('[data-aiu-bundles-sub]') ?? [];
+
+    const syncEmptyStates = () => {
+      root.querySelectorAll('[data-aiu-plan-period-panel]').forEach((panel) => {
+        if (!(panel instanceof HTMLElement)) {
+          return;
+        }
+        const period = panel.getAttribute('data-aiu-plan-period-panel') ?? '';
+        const empty = root.querySelector(`[data-aiu-bundles-empty="plan-${period}"]`);
+        const hasCards = panel.querySelector('.aiu-credits-product') instanceof HTMLElement;
+        if (empty instanceof HTMLElement) {
+          empty.hidden = hasCards || panel.hidden;
+        }
+      });
+
+      const topupPanel = root.querySelector('[data-aiu-bundle-panel="topup"]');
+      const topupEmpty = root.querySelector('[data-aiu-bundles-empty="topup"]');
+      if (topupPanel instanceof HTMLElement && topupEmpty instanceof HTMLElement) {
+        const hasTopups = topupPanel.querySelector('.aiu-credits-product') instanceof HTMLElement;
+        topupEmpty.hidden = hasTopups || topupPanel.hidden;
+      }
+    };
+
+    const activateType = (type) => {
+      typeTabs.forEach((tab) => {
+        if (!(tab instanceof HTMLElement)) {
+          return;
+        }
+        const active = tab.getAttribute('data-aiu-bundle-tab') === type;
+        tab.classList.toggle('is-active', active);
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      typePanels.forEach((panel) => {
+        if (!(panel instanceof HTMLElement)) {
+          return;
+        }
+        panel.hidden = panel.getAttribute('data-aiu-bundle-panel') !== type;
+      });
+      subCopy.forEach((node) => {
+        if (!(node instanceof HTMLElement)) {
+          return;
+        }
+        node.hidden = node.getAttribute('data-aiu-bundles-sub') !== type;
+      });
+    };
+
+    typeTabs.forEach((tab) => {
+      if (!(tab instanceof HTMLElement)) {
+        return;
+      }
+      tab.addEventListener('click', () => {
+        activateType(tab.getAttribute('data-aiu-bundle-tab') ?? 'plan');
+      });
+    });
+
+    const periodButtons = root.querySelectorAll('[data-aiu-plan-period]');
+    const periodPanels = root.querySelectorAll('[data-aiu-plan-period-panel]');
+
+    const activatePeriod = (period) => {
+      periodButtons.forEach((btn) => {
+        if (!(btn instanceof HTMLElement)) {
+          return;
+        }
+        const active = btn.getAttribute('data-aiu-plan-period') === period;
+        btn.classList.toggle('is-active', active);
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      periodPanels.forEach((panel) => {
+        if (!(panel instanceof HTMLElement)) {
+          return;
+        }
+        panel.hidden = panel.getAttribute('data-aiu-plan-period-panel') !== period;
+      });
+      syncEmptyStates();
+    };
+
+    periodButtons.forEach((btn) => {
+      if (!(btn instanceof HTMLElement)) {
+        return;
+      }
+      btn.addEventListener('click', () => {
+        activatePeriod(btn.getAttribute('data-aiu-plan-period') ?? 'monthly');
+      });
+    });
+
+    activateType('plan');
+    activatePeriod('monthly');
+    syncEmptyStates();
+  });
+}
+
 function bindCardSelect(card, onSelect) {
   if (!card) {
     return;
@@ -818,6 +925,7 @@ function reinitProvidersRoot(root) {
   observeBrowserAutocomplete(root);
   initPeriodDropdownForms(root);
   initCreditsUsagePaginationLinks(root);
+  initCreditsBundleTabs(root);
   mountProviderList(root);
   const creditsRoot = root.querySelector('[data-aiu-providers-credits-root]');
   if (creditsRoot instanceof HTMLElement) {
@@ -875,6 +983,7 @@ function boot() {
   initProvidersRoots(document);
   bindCheckoutLinks();
   bindScrollHelpers();
+  initCreditsBundleTabs(document);
   requestAnimationFrame(() => initCreditsHeroProgress(document));
   document.addEventListener('typo3-module-loaded', () => {
     initDashboardRoots(document);

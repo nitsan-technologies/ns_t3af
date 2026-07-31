@@ -108,7 +108,7 @@ final class AiCreditUnitsTest extends TestCase
 
         self::assertSame(31, $estimate->estimatedCreditUnits);
         self::assertSame(0.031, $estimate->estimatedCredits);
-        self::assertSame(31, $estimate->billableTokens);
+        self::assertSame(0, $estimate->billableTokens);
         self::assertStringContainsString('0.031', $estimate->label());
     }
 
