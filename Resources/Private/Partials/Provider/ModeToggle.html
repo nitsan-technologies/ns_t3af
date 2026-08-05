@@ -129,18 +129,22 @@
                                         default="T3Planet's hosted AI infrastructure — start in seconds, predictable billing, all features included." />
                     </p>
                     <f:if condition="{creditsFeatureAvailable} == 1">
-                        <p class="aiu-mode__token{f:if(condition: '{creditsBearerToken} != \'\'', else: ' is-hidden')}"
+                        <div class="aiu-mode__token{f:if(condition: '{creditsBearerToken} != \'\'', else: ' is-hidden')}"
                             data-credits-token-display>
-                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.credits.tokenReference"
-                                            default="Support reference token (quote this when contacting T3Planet):" />
-                            <code class="aiu-mode__token-value">{creditsBearerToken}</code>
-                            <button type="button"
-                                    class="btn btn-default btn-sm ms-2"
-                                    data-credits-refresh-token>
-                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.credits.refreshToken"
-                                              default="Refresh token" />
-                            </button>
-                        </p>
+                            <p class="aiu-mode__token-label mb-0">
+                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.credits.tokenReference"
+                                                default="Support reference token (quote this when contacting T3Planet):" />
+                            </p>
+                            <div class="aiu-mode__token-row">
+                                <code class="aiu-mode__token-value">{creditsBearerToken}</code>
+                                <button type="button"
+                                        class="btn btn-default btn-sm aiu-mode__token-refresh"
+                                        data-credits-refresh-token>
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.credits.refreshToken"
+                                                  default="Refresh token" />
+                                </button>
+                            </div>
+                        </div>
                     </f:if>
                     <div class="aiu-mode__meta">
                         <span class="ok"><core:icon identifier="actions-check" size="small" /> No setup</span>

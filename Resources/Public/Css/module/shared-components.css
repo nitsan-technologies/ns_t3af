@@ -171,11 +171,21 @@
     color: var(--typo3-text-color-variant, var(--aiu-text-500));
     margin: 0 0 .75rem;
     line-height: 1.45;
-    word-break: break-all;
+}
+.aiu-mode__token-label {
+    margin: 0 0 .35rem;
+}
+.aiu-mode__token-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: .5rem;
 }
 .aiu-mode__token-value {
     display: block;
-    margin-top: .25rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
     padding: .35rem .5rem;
     font-size: 11px;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -183,7 +193,13 @@
     border: 1px solid var(--typo3-card-border-color, var(--aiu-border-soft));
     border-radius: var(--typo3-component-border-radius, .35rem);
     color: var(--typo3-text-color-base, var(--aiu-text-700));
+    word-break: break-all;
     user-select: all;
+}
+.aiu-mode__token-refresh {
+    flex: 0 0 auto;
+    align-self: center;
+    white-space: nowrap;
 }
 .aiu-mode__meta {
     display: flex;
