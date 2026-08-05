@@ -9,6 +9,12 @@
       <trans-unit id="credits.api.error.token_invalid" resname="credits.api.error.token_invalid">
         <source>Your T3Planet Credits session is invalid or expired. Click Activate to sign in again.</source>
       </trans-unit>
+      <trans-unit id="credits.api.error.token_ip_mismatch" resname="credits.api.error.token_ip_mismatch">
+        <source>This T3Planet Credits token is registered to a different server IP. Activate again from this server or contact support.</source>
+      </trans-unit>
+      <trans-unit id="credits.api.error.token_refresh_not_allowed" resname="credits.api.error.token_refresh_not_allowed">
+        <source>This token type cannot be refreshed from the TYPO3 backend.</source>
+      </trans-unit>
       <trans-unit id="credits.api.error.license_invalid" resname="credits.api.error.license_invalid">
         <source>The selected license key is not valid for T3Planet Credits.</source>
       </trans-unit>

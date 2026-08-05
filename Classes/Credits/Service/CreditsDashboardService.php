@@ -32,7 +32,6 @@ final class CreditsDashboardService
 {
     public function __construct(
         private readonly CreditModeResolver $creditModeResolver,
-        private readonly LicenseKeyResolver $licenseKeyResolver,
         private readonly BalanceService $balanceService,
         private readonly CurrentPlanService $currentPlanService,
         private readonly ProductCatalogService $productCatalogService,
@@ -187,23 +186,7 @@ final class CreditsDashboardService
 
     private function syncDiscoveredLicenseKeysIfNeeded(): void
     {
-        if (!$this->creditModeResolver->isActive()) {
-            return;
-        }
-
-        $discovered = $this->licenseKeyResolver->buildLicenseKeysCommaSeparated();
-        if ($discovered === '') {
-            return;
-        }
-
-        try {
-            $this->tokenResolver->syncLicensePool($discovered);
-        } catch (CreditsApiException $exception) {
-            if (!$this->tokenResolver->invalidateOnUnauthorized($exception)) {
-                // Surface attach failures (domain_mismatch, license_invalid, …) on the dashboard.
-                throw $exception;
-            }
-        }
+        // IP-bound trial tokens: no license pool to attach.
     }
 
     /**

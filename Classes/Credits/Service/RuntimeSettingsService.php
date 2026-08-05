@@ -112,16 +112,16 @@ final class RuntimeSettingsService
 
     /**
      * Resolves bearer token without calling Token API.
-     * Order: extension configuration → encrypted database field.
+     * Order: encrypted database field → extension configuration (support mirror).
      */
     public function getTokenPlain(): ?string
     {
-        $fromExtension = $this->getTokenFromExtensionConfiguration();
-        if ($fromExtension !== null) {
-            return $fromExtension;
+        $fromDatabase = $this->getTokenFromDatabase();
+        if ($fromDatabase !== null && $fromDatabase !== '') {
+            return $fromDatabase;
         }
 
-        return $this->getTokenFromDatabase();
+        return $this->getTokenFromExtensionConfiguration();
     }
 
     /**

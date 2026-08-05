@@ -66,6 +66,21 @@
       <trans-unit id="credits.js.notification.activateIncomplete" resname="credits.js.notification.activateIncomplete">
         <source>Mode enabled, but activation did not complete. Check license keys and API connectivity.</source>
       </trans-unit>
+      <trans-unit id="credits.js.modal.refreshTitle" resname="credits.js.modal.refreshTitle">
+        <source>Refresh support token?</source>
+      </trans-unit>
+      <trans-unit id="credits.js.modal.refreshBody" resname="credits.js.modal.refreshBody">
+        <source>This generates a new token for this server. Anyone with the old token will no longer be able to use T3Planet Credits.</source>
+      </trans-unit>
+      <trans-unit id="credits.js.modal.refreshOk" resname="credits.js.modal.refreshOk">
+        <source>Refresh token</source>
+      </trans-unit>
+      <trans-unit id="credits.js.error.title.refresh" resname="credits.js.error.title.refresh">
+        <source>Refresh token</source>
+      </trans-unit>
+      <trans-unit id="credits.js.notification.tokenRefreshed" resname="credits.js.notification.tokenRefreshed">
+        <source>Support token refreshed. Use the new token when contacting support.</source>
+      </trans-unit>
       <trans-unit id="provider.js.error.drawerLoadFailed" resname="provider.js.error.drawerLoadFailed">
         <source>Drawer load failed</source>
       </trans-unit>

@@ -31,7 +31,6 @@ use NITSAN\NsT3AF\Credits\Service\CreditsPricingResolver;
 use NITSAN\NsT3AF\Credits\Service\CreditsReturnUrlBuilder;
 use NITSAN\NsT3AF\Credits\Service\CurrentPlanService;
 use NITSAN\NsT3AF\Credits\Service\FeatureCatalogService;
-use NITSAN\NsT3AF\Credits\Service\LicenseKeyResolver;
 use NITSAN\NsT3AF\Credits\Service\ProductCatalogService;
 use NITSAN\NsT3AF\Credits\Service\RuntimeSettingsService;
 use NITSAN\NsT3AF\Credits\Service\TokenResolver;
@@ -49,7 +48,6 @@ final class CreditModeController
     public function __construct(
         private readonly RuntimeSettingsService $runtimeSettings,
         private readonly CreditModeResolver $creditModeResolver,
-        private readonly LicenseKeyResolver $licenseKeyResolver,
         private readonly TokenResolver $tokenResolver,
         private readonly BalanceService $balanceService,
         private readonly CurrentPlanService $currentPlanService,
@@ -72,16 +70,7 @@ final class CreditModeController
             'creditsBearerToken' => $this->runtimeSettings->getTokenPlain() ?? '',
             'licenseKeys' => $this->runtimeSettings->getLicenseKeys(),
             'selectedLicenseExtKey' => $this->runtimeSettings->getSelectedLicenseExtKey(),
-            'licenses' => array_map(
-                static fn($ctx): array => [
-                    'licenseKey' => $ctx->licenseKey,
-                    'extensionKey' => $ctx->extensionKey,
-                    'orderId' => $ctx->orderId,
-                    'expiresAt' => $ctx->expiresAt,
-                    'isLifetime' => $ctx->isLifetime,
-                ],
-                $this->licenseKeyResolver->listAvailable(),
-            ),
+            'licenses' => [],
         ]);
     }
 
@@ -97,14 +86,11 @@ final class CreditModeController
         }
         $this->runtimeSettings->save(['credit_mode' => $enabled ? 1 : 0]);
 
-        if ($enabled) {
-            $licenseKeys = $this->licenseKeyResolver->buildLicenseKeysCommaSeparated();
-            if ($licenseKeys !== '' && $this->runtimeSettings->getTokenPlain() !== null) {
-                try {
-                    $this->tokenResolver->syncLicensePool($licenseKeys);
-                } catch (CreditsApiException) {
-                    // Toggle still succeeds; user can Activate or reload dashboard to retry attach.
-                }
+        if ($enabled && $this->runtimeSettings->getTokenPlain() === null) {
+            try {
+                $this->tokenResolver->activateTrialToken();
+            } catch (CreditsApiException) {
+                // Toggle still succeeds; user can Activate to retry mint.
             }
         }
 
@@ -116,30 +102,9 @@ final class CreditModeController
 
     public function saveLicenseAction(ServerRequestInterface $request): ResponseInterface
     {
-        $body = $this->parseRequestBody($request);
-        $selected = trim((string) ($body['selected_license_ext_key'] ?? ''));
-        $licenseKeys = trim((string) ($body['license_keys'] ?? ''));
-        if ($licenseKeys === '') {
-            $licenseKeys = $this->licenseKeyResolver->buildLicenseKeysCommaSeparated();
-        }
-
-        if ($selected !== '') {
-            $this->runtimeSettings->save(['selected_license_ext_key' => $selected]);
-        }
-
-        if ($this->runtimeSettings->getTokenPlain() !== null) {
-            try {
-                $this->tokenResolver->syncLicensePool($licenseKeys);
-            } catch (CreditsApiException) {
-                // Selection saved; attach can be retried via Activate or dashboard reload.
-            }
-        } else {
-            $this->runtimeSettings->save(['license_keys' => $licenseKeys]);
-        }
-
         return new JsonResponse([
-            'licenseKeys' => $this->runtimeSettings->getLicenseKeys(),
-            'selectedLicenseExtKey' => $this->runtimeSettings->getSelectedLicenseExtKey(),
+            'licenseKeys' => '',
+            'selectedLicenseExtKey' => 'ns_t3af',
         ]);
     }
 
@@ -153,17 +118,9 @@ final class CreditModeController
         }
 
         try {
-            $licenseKeys = $this->licenseKeyResolver->buildLicenseKeysCommaSeparated();
-            if ($licenseKeys === '') {
-                return $this->errorResponse(new CreditsApiException(
-                    CreditsApiErrorCodes::NO_LICENSES,
-                    400,
-                    'No T3Planet license keys found',
-                ));
-            }
             $this->runtimeSettings->save(['credit_mode' => 1]);
-            $this->tokenResolver->syncLicensePool($licenseKeys);
-            $balance = $this->balanceService->fetch();
+            $this->tokenResolver->activateTrialToken();
+            $balance = $this->fetchBalanceOrResync();
             $this->pricingResolver->rememberFromPayload($balance);
 
             return new JsonResponse([
@@ -175,6 +132,48 @@ final class CreditModeController
                 'pricing' => $this->serializePricing($this->pricingResolver->resolve()),
             ]);
         } catch (CreditsApiException $exception) {
+            return $this->errorResponse($exception);
+        } catch (\Throwable $exception) {
+            return $this->unexpectedErrorResponse($exception);
+        }
+    }
+
+    public function refreshTokenAction(ServerRequestInterface $request): ResponseInterface
+    {
+        if (!$this->creditModeResolver->isActive()) {
+            return new JsonResponse([
+                'status' => false,
+                'error_code' => 'not_active',
+                'userMessage' => 'Activate T3Planet Credits before refreshing the token.',
+            ], 400);
+        }
+
+        try {
+            $token = $this->tokenResolver->refreshBearerToken();
+            $this->fetchBalanceOrResync();
+
+            return new JsonResponse([
+                'status' => true,
+                'creditsBearerToken' => $token,
+            ]);
+        } catch (CreditsApiException $exception) {
+            if ($this->isRecoverableTokenAuthFailure($exception)) {
+                try {
+                    $token = $this->tokenResolver->resyncFromServer();
+                    $this->fetchBalanceOrResync();
+
+                    return new JsonResponse([
+                        'status' => true,
+                        'creditsBearerToken' => $token,
+                        'resynced' => true,
+                    ]);
+                } catch (CreditsApiException $resyncException) {
+                    return $this->errorResponse($resyncException);
+                } catch (\Throwable $resyncThrowable) {
+                    return $this->unexpectedErrorResponse($resyncThrowable);
+                }
+            }
+
             return $this->errorResponse($exception);
         } catch (\Throwable $exception) {
             return $this->unexpectedErrorResponse($exception);
@@ -269,6 +268,32 @@ final class CreditModeController
         } catch (\Throwable $exception) {
             return $this->unexpectedErrorResponse($exception);
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function fetchBalanceOrResync(): array
+    {
+        try {
+            return $this->balanceService->fetch();
+        } catch (CreditsApiException $exception) {
+            if (!$this->isRecoverableTokenAuthFailure($exception)) {
+                throw $exception;
+            }
+
+            $this->tokenResolver->resyncFromServer();
+
+            return $this->balanceService->fetch();
+        }
+    }
+
+    private function isRecoverableTokenAuthFailure(CreditsApiException $exception): bool
+    {
+        return in_array($exception->errorCode, [
+            CreditsApiErrorCodes::TOKEN_INVALID,
+            CreditsApiErrorCodes::TOKEN_MISSING,
+        ], true);
     }
 
     /**

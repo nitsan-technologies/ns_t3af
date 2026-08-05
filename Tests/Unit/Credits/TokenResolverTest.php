@@ -19,11 +19,8 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Credits;
 
-use NITSAN\NsT3AF\Credits\Contract\LicenseDataRepositoryInterface;
 use NITSAN\NsT3AF\Credits\Domain\Repository\RuntimeSettingsRepository;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
-use NITSAN\NsT3AF\Credits\Service\CreditsDomainResolver;
-use NITSAN\NsT3AF\Credits\Service\LicenseKeyResolver;
 use NITSAN\NsT3AF\Credits\Service\RuntimeSettingsService;
 use NITSAN\NsT3AF\Credits\Service\TokenResolver;
 use NITSAN\NsT3AF\Service\CredentialCipher;
@@ -53,180 +50,57 @@ final class TokenResolverTest extends TestCase
     public function testIssueFreshTokenStoresEncryptedToken(): void
     {
         $api = $this->createMock(T3PlanetApiClient::class);
-        $api->expects(self::once())->method('issueToken')->with('KEY-A', 'example.org')->willReturn([
+        $api->expects(self::once())->method('issueTrialToken')->willReturn([
             'token' => 'bearer-abc',
         ]);
 
-        $repository = $this->createMock(RuntimeSettingsRepository::class);
-        $repository->method('findSingleton')->willReturn([
-            'license_keys' => 'KEY-A',
-            'token_enc' => '',
-            't3planet_api_base_url' => 'https://composer.example',
-        ]);
+        [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
+        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache);
 
-        $runtime = new RuntimeSettingsService(
-            $repository,
-            new CredentialCipher(),
-            new \TYPO3\CMS\Core\Configuration\ExtensionConfiguration(),
-        );
-
-        $siteFinder = $this->createMock(\TYPO3\CMS\Core\Site\SiteFinder::class);
-        $siteFinder->method('getAllSites')->willReturn([]);
-        $domain = new CreditsDomainResolver($siteFinder, $runtime);
-        $cache = new \NITSAN\NsT3AF\Cache\Typo3CacheFacade(new NullFrontend('test'));
-        $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
-        $apiResponseCache->expects(self::never())->method('flush');
-
-        $licenseKeys = $this->licenseKeyResolver(['KEY-A']);
-        $resolver = new TokenResolver($api, $runtime, $domain, $licenseKeys, $cache, $apiResponseCache);
-
-        self::assertSame('bearer-abc', $resolver->issueFreshToken('example.org'));
+        self::assertSame('bearer-abc', $resolver->issueFreshToken());
     }
 
-    public function testSyncLicensePoolMintsWhenNoTokenExists(): void
+    public function testActivateTrialTokenMintsWhenNoTokenExists(): void
     {
         $api = $this->createMock(T3PlanetApiClient::class);
-        $api->expects(self::once())->method('issueToken')->with('KEY-A', 'example.org')->willReturn([
+        $api->expects(self::once())->method('issueTrialToken')->willReturn([
             'token' => 'bearer-new',
         ]);
-        $api->expects(self::never())->method('attachLicenses');
 
-        $storedLicenseKeys = '';
-        $repository = $this->createMock(RuntimeSettingsRepository::class);
-        $repository->method('findSingleton')->willReturnCallback(
-            static function () use (&$storedLicenseKeys): array {
-                return [
-                    'license_keys' => $storedLicenseKeys,
-                    'token_enc' => '',
-                    't3planet_api_base_url' => 'https://composer.example',
-                ];
-            },
-        );
-        $repository->method('updateSingleton')->willReturnCallback(
-            static function (array $fields) use (&$storedLicenseKeys): void {
-                if (isset($fields['license_keys'])) {
-                    $storedLicenseKeys = (string) $fields['license_keys'];
-                }
-            },
-        );
+        [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
+        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache);
 
-        $runtime = new RuntimeSettingsService(
-            $repository,
-            new CredentialCipher(),
-            new \TYPO3\CMS\Core\Configuration\ExtensionConfiguration(),
-        );
-
-        $siteFinder = $this->createMock(\TYPO3\CMS\Core\Site\SiteFinder::class);
-        $domain = new CreditsDomainResolver($siteFinder, $runtime);
-        $cache = new \NITSAN\NsT3AF\Cache\Typo3CacheFacade(new NullFrontend('test'));
-        $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
-
-        $licenseKeys = $this->licenseKeyResolver(['KEY-A']);
-        $resolver = new TokenResolver($api, $runtime, $domain, $licenseKeys, $cache, $apiResponseCache);
-
-        $result = $resolver->syncLicensePool('KEY-A,KEY-B', 'example.org');
+        $result = $resolver->activateTrialToken();
 
         self::assertSame('minted', $result['action']);
-        self::assertArrayHasKey('token', $result);
-        if (!isset($result['token'])) {
-            self::fail('Expected minted result to include token.');
-        }
         self::assertSame('bearer-new', $result['token']);
-        self::assertSame('KEY-A', $result['license_keys']);
     }
 
-    public function testSyncLicensePoolAttachesOnlyNewKeys(): void
+    public function testActivateTrialTokenSkipsApiWhenTokenExists(): void
     {
         $api = $this->createMock(T3PlanetApiClient::class);
-        $api->expects(self::never())->method('issueToken');
-        $api->expects(self::once())->method('attachLicenses')->with(
-            'example.org',
-            'KEY-B',
-            'existing-token',
-        )->willReturn([
-            'status' => true,
-            'license_keys' => 'KEY-A,KEY-B',
-            'newly_attached' => ['KEY-B'],
-            'credits_added' => 100,
-            'free_credits' => 197,
-            'already_bound' => false,
-        ]);
+        $api->expects(self::never())->method('issueTrialToken');
 
         $cipher = new CredentialCipher();
         $repository = $this->createMock(RuntimeSettingsRepository::class);
         $repository->method('findSingleton')->willReturn([
-            'license_keys' => 'KEY-A',
             'token_enc' => $cipher->encrypt('existing-token'),
             't3planet_api_base_url' => 'https://composer.example',
         ]);
-        $repository->expects(self::once())->method('updateSingleton')->with(['license_keys' => 'KEY-A,KEY-B']);
 
         $runtime = new RuntimeSettingsService(
             $repository,
             $cipher,
             new \TYPO3\CMS\Core\Configuration\ExtensionConfiguration(),
         );
-
-        $siteFinder = $this->createMock(\TYPO3\CMS\Core\Site\SiteFinder::class);
-        $domain = new CreditsDomainResolver($siteFinder, $runtime);
         $cache = new \NITSAN\NsT3AF\Cache\Typo3CacheFacade(new NullFrontend('test'));
         $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
-        $apiResponseCache->expects(self::once())->method('flush');
 
-        $licenseKeys = $this->licenseKeyResolver(['KEY-A', 'KEY-B']);
-        $resolver = new TokenResolver($api, $runtime, $domain, $licenseKeys, $cache, $apiResponseCache);
-
-        $result = $resolver->syncLicensePool('KEY-A,KEY-B', 'example.org');
-
-        self::assertSame('attached', $result['action']);
-        self::assertSame('KEY-A,KEY-B', $result['license_keys']);
-        self::assertArrayHasKey('newly_attached', $result);
-        self::assertArrayHasKey('credits_added', $result);
-        if (!isset($result['newly_attached'], $result['credits_added'])) {
-            self::fail('Expected attached result to include newly_attached and credits_added.');
-        }
-        self::assertSame(['KEY-B'], $result['newly_attached']);
-        self::assertSame(100, $result['credits_added']);
-    }
-
-    public function testSyncLicensePoolSkipsApiWhenAllKeysAlreadyStored(): void
-    {
-        $api = $this->createMock(T3PlanetApiClient::class);
-        $api->expects(self::never())->method('issueToken');
-        $api->expects(self::never())->method('attachLicenses');
-
-        $cipher = new CredentialCipher();
-        $repository = $this->createMock(RuntimeSettingsRepository::class);
-        $repository->method('findSingleton')->willReturn([
-            'license_keys' => 'KEY-A,KEY-B',
-            'token_enc' => $cipher->encrypt('existing-token'),
-            't3planet_api_base_url' => 'https://composer.example',
-        ]);
-        $repository->expects(self::never())->method('updateSingleton');
-
-        $runtime = new RuntimeSettingsService(
-            $repository,
-            $cipher,
-            new \TYPO3\CMS\Core\Configuration\ExtensionConfiguration(),
-        );
-
-        $siteFinder = $this->createMock(\TYPO3\CMS\Core\Site\SiteFinder::class);
-        $domain = new CreditsDomainResolver($siteFinder, $runtime);
-        $cache = new \NITSAN\NsT3AF\Cache\Typo3CacheFacade(new NullFrontend('test'));
-        $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
-        $apiResponseCache->expects(self::never())->method('flush');
-
-        $licenseKeys = $this->licenseKeyResolver(['KEY-A', 'KEY-B']);
-        $resolver = new TokenResolver($api, $runtime, $domain, $licenseKeys, $cache, $apiResponseCache);
-
-        $result = $resolver->syncLicensePool('KEY-A,KEY-B', 'example.org');
+        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache);
+        $result = $resolver->activateTrialToken();
 
         self::assertSame('unchanged', $result['action']);
-        self::assertArrayHasKey('already_bound', $result);
-        if (!isset($result['already_bound'])) {
-            self::fail('Expected unchanged result to include already_bound.');
-        }
-        self::assertTrue($result['already_bound']);
+        self::assertTrue($result['already_bound'] ?? false);
     }
 
     public function testInvalidateClearsTokenAndFlushesApiResponseCache(): void
@@ -241,38 +115,66 @@ final class TokenResolverTest extends TestCase
             new CredentialCipher(),
             new \TYPO3\CMS\Core\Configuration\ExtensionConfiguration(),
         );
-
-        $siteFinder = $this->createMock(\TYPO3\CMS\Core\Site\SiteFinder::class);
-        $siteFinder->method('getAllSites')->willReturn([]);
-        $domain = new CreditsDomainResolver($siteFinder, $runtime);
         $cache = new \NITSAN\NsT3AF\Cache\Typo3CacheFacade(new NullFrontend('test'));
-
         $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
         $apiResponseCache->expects(self::once())->method('flush');
 
-        $licenseKeys = $this->licenseKeyResolver(['KEY-A']);
-        $resolver = new TokenResolver($api, $runtime, $domain, $licenseKeys, $cache, $apiResponseCache);
+        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache);
         $resolver->invalidate();
     }
 
-    /**
-     * @param list<string> $licenseKeys
-     */
-    private function licenseKeyResolver(array $licenseKeys): LicenseKeyResolver
+    public function testRefreshBearerTokenStoresNewSecret(): void
     {
-        $rows = [];
-        foreach ($licenseKeys as $licenseKey) {
-            $rows[] = [
-                'license_key' => $licenseKey,
-                'is_life_time' => 1,
-                'expiration_date' => 0,
-                'extension_key' => 'ns_t3af',
-            ];
-        }
+        $cipher = new CredentialCipher();
+        $repository = $this->createMock(RuntimeSettingsRepository::class);
+        $repository->method('findSingleton')->willReturn([
+            'token_enc' => $cipher->encrypt('old-token-' . str_repeat('0', 54)),
+            't3planet_api_base_url' => 'https://composer.example',
+        ]);
+        $repository->expects(self::once())->method('updateSingleton')->with(self::callback(
+            static fn(array $fields): bool => isset($fields['token_enc']) && $fields['token_enc'] !== '',
+        ));
 
-        $repository = $this->createMock(LicenseDataRepositoryInterface::class);
-        $repository->method('fetchAllData')->willReturn($rows);
+        $runtime = new RuntimeSettingsService(
+            $repository,
+            $cipher,
+            new \TYPO3\CMS\Core\Configuration\ExtensionConfiguration(),
+        );
 
-        return new LicenseKeyResolver($repository);
+        $api = $this->createMock(T3PlanetApiClient::class);
+        $api->expects(self::once())->method('refreshBearerToken')->willReturn([
+            'token' => 'new-token-' . str_repeat('1', 54),
+        ]);
+
+        $cache = new \NITSAN\NsT3AF\Cache\Typo3CacheFacade(new NullFrontend('test'));
+        $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
+        $apiResponseCache->expects(self::once())->method('flush');
+
+        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache);
+        $token = $resolver->refreshBearerToken();
+
+        self::assertSame('new-token-' . str_repeat('1', 54), $token);
+    }
+
+    /**
+     * @return array{0: RuntimeSettingsService, 1: \NITSAN\NsT3AF\Cache\Typo3CacheFacade, 2: \NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface&\PHPUnit\Framework\MockObject\MockObject}
+     */
+    private function runtimeFixtures(): array
+    {
+        $repository = $this->createMock(RuntimeSettingsRepository::class);
+        $repository->method('findSingleton')->willReturn([
+            'token_enc' => '',
+            't3planet_api_base_url' => 'https://composer.example',
+        ]);
+
+        $runtime = new RuntimeSettingsService(
+            $repository,
+            new CredentialCipher(),
+            new \TYPO3\CMS\Core\Configuration\ExtensionConfiguration(),
+        );
+        $cache = new \NITSAN\NsT3AF\Cache\Typo3CacheFacade(new NullFrontend('test'));
+        $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
+
+        return [$runtime, $cache, $apiResponseCache];
     }
 }

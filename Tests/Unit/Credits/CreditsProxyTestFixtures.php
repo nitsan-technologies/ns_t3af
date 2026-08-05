@@ -66,13 +66,11 @@ trait CreditsProxyTestFixtures
     protected function tokenResolverWithBearer(string $token = 'bearer-test'): TokenResolver
     {
         $api = $this->createMock(T3PlanetApiClient::class);
-        $api->method('issueToken')->willReturn(['token' => $token]);
+        $api->method('issueTrialToken')->willReturn(['token' => $token]);
 
         $resolver = new TokenResolver(
             $api,
             $this->runtimeSettings(),
-            $this->domainResolver(),
-            $this->licenseKeyResolver(),
             $this->tokenCache($token),
             $this->createMock(CreditsApiResponseCacheInterface::class),
         );

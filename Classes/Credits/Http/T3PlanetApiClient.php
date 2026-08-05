@@ -35,6 +35,33 @@ class T3PlanetApiClient
     ) {}
 
     /**
+     * Instant IP-bound trial token (POST /API/AI/Token.php with no license_keys).
+     *
+     * @return array<string, mixed>
+     */
+    public function issueTrialToken(?string $declaredIp = null): array
+    {
+        $body = [];
+        if ($declaredIp !== null && trim($declaredIp) !== '') {
+            $body['declared_ip'] = trim($declaredIp);
+        }
+
+        return $this->http->postJson('Token', $body);
+    }
+
+    /**
+     * Rotate IP-bound Bearer secret; requires current token + same server IP.
+     *
+     * @return array<string, mixed>
+     */
+    public function refreshBearerToken(#[\SensitiveParameter] string $bearerToken): array
+    {
+        return $this->http->postJson('RefreshToken', [], $bearerToken);
+    }
+
+    /**
+     * @deprecated License-anchored mint; server still accepts this during rollout.
+     *
      * @return array<string, mixed>
      */
     public function issueToken(#[\SensitiveParameter] string $licenseKeys, string $domain): array

@@ -1519,6 +1519,9 @@
       <trans-unit id="provider.mode.credits.tokenReference" resname="provider.mode.credits.tokenReference">
         <source>Support reference token (quote this when contacting T3Planet):</source>
       </trans-unit>
+      <trans-unit id="provider.mode.credits.refreshToken" resname="provider.mode.credits.refreshToken">
+        <source>Refresh token</source>
+      </trans-unit>
       <trans-unit id="provider.mode.credits.meta.costEffective" resname="provider.mode.credits.meta.costEffective">
         <source>Cost effective</source>
       </trans-unit>

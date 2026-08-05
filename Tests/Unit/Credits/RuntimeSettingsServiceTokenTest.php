@@ -45,7 +45,7 @@ final class RuntimeSettingsServiceTokenTest extends TestCase
         }
     }
 
-    public function testGetTokenPlainPrefersExtensionConfiguration(): void
+    public function testGetTokenPlainPrefersDatabaseOverExtensionConfiguration(): void
     {
         $extensionConfiguration = $this->createMock(ExtensionConfiguration::class);
         $extensionConfiguration->method('get')
@@ -60,6 +60,32 @@ final class RuntimeSettingsServiceTokenTest extends TestCase
         $repository = $this->createMock(RuntimeSettingsRepository::class);
         $repository->method('findSingleton')->willReturn([
             'token_enc' => (new CredentialCipher())->encrypt('token-from-database'),
+        ]);
+
+        $service = new RuntimeSettingsService(
+            $repository,
+            new CredentialCipher(),
+            $extensionConfiguration,
+        );
+
+        self::assertSame('token-from-database', $service->getTokenPlain());
+    }
+
+    public function testGetTokenPlainFallsBackToExtensionConfigurationWhenDatabaseEmpty(): void
+    {
+        $extensionConfiguration = $this->createMock(ExtensionConfiguration::class);
+        $extensionConfiguration->method('get')
+            ->willReturnCallback(static function (string $extension, ?string $path = null): mixed {
+                if ($path === 't3planetApiToken') {
+                    return 'token-from-extension';
+                }
+
+                return [];
+            });
+
+        $repository = $this->createMock(RuntimeSettingsRepository::class);
+        $repository->method('findSingleton')->willReturn([
+            'token_enc' => '',
         ]);
 
         $service = new RuntimeSettingsService(

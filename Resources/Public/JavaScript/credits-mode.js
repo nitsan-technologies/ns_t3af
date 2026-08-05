@@ -12,6 +12,7 @@ const routes = {
   status: 'nst3af_credits_status',
   toggle: 'nst3af_credits_toggle',
   activate: 'nst3af_credits_activate',
+  refreshToken: 'nst3af_credits_refresh_token',
   dashboard: 'nst3af_credits_dashboard',
   estimate: 'nst3af_credits_estimate',
 };
@@ -38,6 +39,11 @@ const LL = {
   notificationOwnKeysAgain: 'credits.js.notification.ownKeysAgain',
   notificationActivateReload: 'credits.js.notification.activateReload',
   notificationActivateIncomplete: 'credits.js.notification.activateIncomplete',
+  modalRefreshTitle: 'credits.js.modal.refreshTitle',
+  modalRefreshBody: 'credits.js.modal.refreshBody',
+  modalRefreshOk: 'credits.js.modal.refreshOk',
+  errorTitleRefresh: 'credits.js.error.title.refresh',
+  notificationTokenRefreshed: 'credits.js.notification.tokenRefreshed',
 };
 
 /**
@@ -503,7 +509,7 @@ function bindCardSelect(card, onSelect) {
   }
   const radio = card.querySelector('[data-aiu-mode-radio]');
   const handler = (event) => {
-    if (event.target.closest('[data-credits-activate]')) {
+    if (event.target.closest('[data-credits-activate]') || event.target.closest('[data-credits-refresh-token]')) {
       return;
     }
     if (event.target.closest('[data-aiu-mode-radio]')) {
@@ -514,7 +520,7 @@ function bindCardSelect(card, onSelect) {
   };
   card.addEventListener('click', handler);
   card.addEventListener('keydown', (event) => {
-    if (event.target.closest('[data-credits-activate]')) {
+    if (event.target.closest('[data-credits-activate]') || event.target.closest('[data-credits-refresh-token]')) {
       return;
     }
     if (event.target.closest('[data-aiu-mode-radio]')) {
@@ -680,6 +686,65 @@ function handleError(err, title) {
   }
 }
 
+function runCreditsRefresh(root) {
+  confirmSwitch(
+    ll(LL.modalRefreshTitle, 'Refresh support token?'),
+    ll(
+      LL.modalRefreshBody,
+      'This generates a new token for this server. Anyone with the old token will no longer be able to use T3Planet Credits.',
+    ),
+    ll(LL.modalRefreshOk, 'Refresh token'),
+    () => {
+      post(routes.refreshToken)
+        .then((data) => {
+          if (data.status === false || data.error || data.error_code) {
+            handleError(
+              new Error(data.userMessage || data.message || data.error_code || data.error),
+              ll(LL.errorTitleRefresh, 'Refresh token'),
+            );
+            return;
+          }
+          document.querySelectorAll('[data-aiu-providers-credits-root]').forEach((creditsRoot) => {
+            if (creditsRoot instanceof HTMLElement) {
+              applyUiState(creditsRoot, {
+                creditMode: true,
+                active: true,
+                creditsBearerToken: data.creditsBearerToken,
+              });
+            }
+          });
+          Notification.success(
+            ll(LL.brandT3planet, 'T3Planet Credits'),
+            ll(LL.notificationTokenRefreshed, 'Support token refreshed. Use the new token when contacting support.'),
+          );
+        })
+        .catch((err) => handleError(err, ll(LL.errorTitleRefresh, 'Refresh token')));
+    },
+  );
+}
+
+let refreshDelegationBound = false;
+
+function bindRefreshDelegation() {
+  if (refreshDelegationBound) {
+    return;
+  }
+  refreshDelegationBound = true;
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const refreshEl = target.closest('[data-credits-refresh-token]');
+    if (!refreshEl) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    runCreditsRefresh(null);
+  });
+}
+
 function runCreditsActivate(root) {
   const creditsFeatureAvailable = !root || isCreditsFeatureAvailable(root);
   if (!creditsFeatureAvailable) {
@@ -775,6 +840,7 @@ function initCreditsMode(root) {
   initializedRoots.add(root);
   observeBrowserAutocomplete(root);
   bindActivateDelegation();
+  bindRefreshDelegation();
 
   const creditsFeatureAvailable = isCreditsFeatureAvailable(root);
   const creditsCard = qs(root, '[data-aiu-providers-mode="credits"]');

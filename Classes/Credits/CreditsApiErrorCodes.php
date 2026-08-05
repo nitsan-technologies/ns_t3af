@@ -28,6 +28,8 @@ final class CreditsApiErrorCodes
 {
     public const TOKEN_MISSING = 'token_missing';
     public const TOKEN_INVALID = 'token_invalid';
+    public const TOKEN_IP_MISMATCH = 'token_ip_mismatch';
+    public const TOKEN_REFRESH_NOT_ALLOWED = 'token_refresh_not_allowed';
     public const LICENSE_INVALID = 'license_invalid';
     public const LICENSE_EXPIRED = 'license_expired';
     public const LICENSE_SUSPENDED = 'license_suspended';
@@ -67,7 +69,7 @@ final class CreditsApiErrorCodes
 
         return match ($code) {
             self::TOKEN_MISSING, self::TOKEN_INVALID, self::ADMIN_UNAUTHORIZED => 401,
-            self::LICENSE_INVALID, self::LICENSE_EXPIRED, self::LICENSE_SUSPENDED, self::DOMAIN_MISMATCH => 403,
+            self::TOKEN_IP_MISMATCH, self::LICENSE_INVALID, self::LICENSE_EXPIRED, self::LICENSE_SUSPENDED, self::DOMAIN_MISMATCH => 403,
             self::INSUFFICIENT_CREDITS, self::PLAN_EXPIRED, self::DAILY_CAP_EXCEEDED => 402,
             self::RATE_LIMITED, self::CONCURRENCY_LIMIT, self::USAGE_ANOMALY => 429,
             self::IDEMPOTENCY_CONFLICT, self::CHARGE_IN_PROGRESS, self::STREAM_IN_PROGRESS => 409,
