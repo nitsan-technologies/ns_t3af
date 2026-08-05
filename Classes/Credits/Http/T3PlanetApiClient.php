@@ -54,9 +54,29 @@ class T3PlanetApiClient
      *
      * @return array<string, mixed>
      */
-    public function refreshBearerToken(#[\SensitiveParameter] string $bearerToken): array
+    public function refreshBearerToken(#[\SensitiveParameter] string $bearerToken, string $domain = ''): array
     {
-        return $this->http->postJson('RefreshToken', [], $bearerToken);
+        $body = [];
+        if ($domain !== '') {
+            $body['domain'] = $domain;
+        }
+
+        return $this->http->postJson('RefreshToken', $body, $bearerToken);
+    }
+
+    /**
+     * Write-once bind of server-observed IP onto the current Bearer (legacy migration).
+     *
+     * @return array<string, mixed>
+     */
+    public function bindIp(#[\SensitiveParameter] string $bearerToken, string $domain = ''): array
+    {
+        $body = [];
+        if ($domain !== '') {
+            $body['domain'] = $domain;
+        }
+
+        return $this->http->postJson('BindIp', $body, $bearerToken);
     }
 
     /**

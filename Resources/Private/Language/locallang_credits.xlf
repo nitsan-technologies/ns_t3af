@@ -15,6 +15,9 @@
       <trans-unit id="credits.api.error.token_refresh_not_allowed" resname="credits.api.error.token_refresh_not_allowed">
         <source>This token type cannot be refreshed from the TYPO3 backend.</source>
       </trans-unit>
+      <trans-unit id="credits.api.error.token_ip_conflict" resname="credits.api.error.token_ip_conflict">
+        <source>Another T3Planet Credits account is already bound to this server IP. Contact support.</source>
+      </trans-unit>
       <trans-unit id="credits.api.error.license_invalid" resname="credits.api.error.license_invalid">
         <source>The selected license key is not valid for T3Planet Credits.</source>
       </trans-unit>

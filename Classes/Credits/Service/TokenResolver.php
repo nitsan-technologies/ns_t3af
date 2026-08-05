@@ -37,6 +37,7 @@ final class TokenResolver
         private readonly RuntimeSettingsService $runtimeSettings,
         private readonly CacheFacadeInterface $cache,
         private readonly CreditsApiResponseCacheInterface $apiResponseCache,
+        private readonly CreditsDomainResolver $domainResolver,
     ) {}
 
     public function resolve(?string $domain = null): string
@@ -73,16 +74,19 @@ final class TokenResolver
     /**
      * Ensures a bearer exists for IP-bound trial credits (idempotent mint on the server).
      *
-     * @return array{action: 'minted'|'unchanged', token: string, already_bound?: bool}
+     * @return array{action: 'minted'|'unchanged', token: string, already_bound?: bool, bound_ip?: string}
      */
     public function activateTrialToken(): array
     {
         $token = $this->runtimeSettings->getTokenPlain();
         if ($token !== null && $token !== '') {
+            $bind = $this->ensureIpBound($token);
+
             return [
                 'action' => 'unchanged',
                 'token' => $token,
                 'already_bound' => true,
+                'bound_ip' => $bind['bound_ip'] ?? '',
             ];
         }
 
@@ -91,6 +95,31 @@ final class TokenResolver
         return [
             'action' => 'minted',
             'token' => $token,
+        ];
+    }
+
+    /**
+     * Write-once BindIp for legacy tokens missing bound_ip.
+     *
+     * @return array{bound_ip: string, already_bound: bool}
+     */
+    public function ensureIpBound(#[\SensitiveParameter] ?string $bearerToken = null): array
+    {
+        $token = $bearerToken ?? $this->runtimeSettings->getTokenPlain();
+        if ($token === null || $token === '') {
+            throw new CreditsApiException('token_missing', 401, 'No stored bearer token to bind IP');
+        }
+
+        $domain = $this->domainResolver->resolve();
+        $payload = $this->apiClient->bindIp($token, $domain);
+        $boundIp = trim((string) ($payload['bound_ip'] ?? ''));
+        if ($boundIp === '') {
+            throw new CreditsApiException('internal_error', 502, 'BindIp endpoint did not return bound_ip');
+        }
+
+        return [
+            'bound_ip' => $boundIp,
+            'already_bound' => (bool) ($payload['already_bound'] ?? false),
         ];
     }
 
@@ -104,7 +133,9 @@ final class TokenResolver
             throw new CreditsApiException('token_missing', 401, 'No stored bearer token to refresh');
         }
 
-        $payload = $this->apiClient->refreshBearerToken($current);
+        $this->ensureIpBound($current);
+        $domain = $this->domainResolver->resolve();
+        $payload = $this->apiClient->refreshBearerToken($current, $domain);
         $token = trim((string) ($payload['token'] ?? ''));
         if ($token === '') {
             throw new CreditsApiException('token_missing', 502, 'RefreshToken endpoint did not return a token');

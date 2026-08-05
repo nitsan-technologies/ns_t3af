@@ -73,6 +73,7 @@ trait CreditsProxyTestFixtures
             $this->runtimeSettings(),
             $this->tokenCache($token),
             $this->createMock(CreditsApiResponseCacheInterface::class),
+            $this->domainResolver(),
         );
         $resolver->resolve();
 

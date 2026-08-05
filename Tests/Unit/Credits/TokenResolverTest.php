@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Credits;
 
 use NITSAN\NsT3AF\Credits\Domain\Repository\RuntimeSettingsRepository;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
+use NITSAN\NsT3AF\Credits\Service\CreditsDomainResolver;
 use NITSAN\NsT3AF\Credits\Service\RuntimeSettingsService;
 use NITSAN\NsT3AF\Credits\Service\TokenResolver;
 use NITSAN\NsT3AF\Service\CredentialCipher;
@@ -55,7 +56,7 @@ final class TokenResolverTest extends TestCase
         ]);
 
         [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
-        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache);
+        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache, $this->domainResolver($runtime));
 
         self::assertSame('bearer-abc', $resolver->issueFreshToken());
     }
@@ -68,7 +69,7 @@ final class TokenResolverTest extends TestCase
         ]);
 
         [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
-        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache);
+        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache, $this->domainResolver($runtime));
 
         $result = $resolver->activateTrialToken();
 
@@ -76,10 +77,14 @@ final class TokenResolverTest extends TestCase
         self::assertSame('bearer-new', $result['token']);
     }
 
-    public function testActivateTrialTokenSkipsApiWhenTokenExists(): void
+    public function testActivateTrialTokenBindsIpWhenTokenExists(): void
     {
         $api = $this->createMock(T3PlanetApiClient::class);
         $api->expects(self::never())->method('issueTrialToken');
+        $api->expects(self::once())->method('bindIp')->willReturn([
+            'bound_ip' => '127.0.0.1',
+            'already_bound' => false,
+        ]);
 
         $cipher = new CredentialCipher();
         $repository = $this->createMock(RuntimeSettingsRepository::class);
@@ -96,11 +101,12 @@ final class TokenResolverTest extends TestCase
         $cache = new \NITSAN\NsT3AF\Cache\Typo3CacheFacade(new NullFrontend('test'));
         $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
 
-        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache);
+        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache, $this->domainResolver($runtime));
         $result = $resolver->activateTrialToken();
 
         self::assertSame('unchanged', $result['action']);
         self::assertTrue($result['already_bound'] ?? false);
+        self::assertSame('127.0.0.1', $result['bound_ip'] ?? '');
     }
 
     public function testInvalidateClearsTokenAndFlushesApiResponseCache(): void
@@ -119,7 +125,7 @@ final class TokenResolverTest extends TestCase
         $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
         $apiResponseCache->expects(self::once())->method('flush');
 
-        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache);
+        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache, $this->domainResolver($runtime));
         $resolver->invalidate();
     }
 
@@ -142,6 +148,10 @@ final class TokenResolverTest extends TestCase
         );
 
         $api = $this->createMock(T3PlanetApiClient::class);
+        $api->expects(self::once())->method('bindIp')->willReturn([
+            'bound_ip' => '127.0.0.1',
+            'already_bound' => true,
+        ]);
         $api->expects(self::once())->method('refreshBearerToken')->willReturn([
             'token' => 'new-token-' . str_repeat('1', 54),
         ]);
@@ -150,10 +160,18 @@ final class TokenResolverTest extends TestCase
         $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
         $apiResponseCache->expects(self::once())->method('flush');
 
-        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache);
+        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache, $this->domainResolver($runtime));
         $token = $resolver->refreshBearerToken();
 
         self::assertSame('new-token-' . str_repeat('1', 54), $token);
+    }
+
+    private function domainResolver(RuntimeSettingsService $runtime): CreditsDomainResolver
+    {
+        $siteFinder = $this->createMock(\TYPO3\CMS\Core\Site\SiteFinder::class);
+        $siteFinder->method('getAllSites')->willReturn([]);
+
+        return new CreditsDomainResolver($siteFinder, $runtime);
     }
 
     /**
