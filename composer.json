@@ -99,7 +99,7 @@
         "typo3/cms": {
             "web-dir": ".Build/public",
             "extension-key": "ns_t3af",
-            "version": "1.0.3",
+            "version": "1.0.5",
             "Package": {
                 "providesPackages": {
                   "mcp/sdk": ".Build/vendor",

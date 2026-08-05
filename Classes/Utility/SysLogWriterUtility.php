@@ -85,7 +85,7 @@ final class SysLogWriterUtility
                     'type' => 1,
                     'channel' => $channel,
                     'action' => 0,
-                    'error' => 1,
+                    'error' => $logLevel === 'error' ? 1 : 0,
                     'level' => $logLevel,
                     'details_nr' => 0,
                     'details' => $escapedMessage,
