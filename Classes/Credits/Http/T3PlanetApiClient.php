@@ -37,14 +37,17 @@ class T3PlanetApiClient
     /**
      * Instant IP-bound trial token (POST /API/AI/Token.php with no license_keys).
      *
+     * @param array{name?: string, email?: string} $contact
+     *
      * @return array<string, mixed>
      */
-    public function issueTrialToken(?string $declaredIp = null): array
+    public function issueTrialToken(?string $declaredIp = null, array $contact = []): array
     {
         $body = [];
         if ($declaredIp !== null && trim($declaredIp) !== '') {
             $body['declared_ip'] = trim($declaredIp);
         }
+        self::appendContactFields($body, $contact);
 
         return $this->http->postJson('Token', $body);
     }
@@ -52,14 +55,17 @@ class T3PlanetApiClient
     /**
      * Rotate IP-bound Bearer secret; requires current token + same server IP.
      *
+     * @param array{name?: string, email?: string} $contact
+     *
      * @return array<string, mixed>
      */
-    public function refreshBearerToken(#[\SensitiveParameter] string $bearerToken, string $domain = ''): array
+    public function refreshBearerToken(#[\SensitiveParameter] string $bearerToken, string $domain = '', array $contact = []): array
     {
         $body = [];
         if ($domain !== '') {
             $body['domain'] = $domain;
         }
+        self::appendContactFields($body, $contact);
 
         return $this->http->postJson('RefreshToken', $body, $bearerToken);
     }
@@ -366,5 +372,19 @@ class T3PlanetApiClient
             'domain' => $domain,
             'request_uuid' => $requestUuid,
         ], $bearerToken);
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @param array{name?: string, email?: string} $contact
+     */
+    private static function appendContactFields(array &$body, array $contact): void
+    {
+        if (isset($contact['name']) && trim((string) $contact['name']) !== '') {
+            $body['name'] = trim((string) $contact['name']);
+        }
+        if (isset($contact['email']) && trim((string) $contact['email']) !== '') {
+            $body['email'] = trim((string) $contact['email']);
+        }
     }
 }

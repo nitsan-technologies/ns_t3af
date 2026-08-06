@@ -27,6 +27,7 @@ use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
 use NITSAN\NsT3AF\Credits\Service\CreditsChargeRecorder;
 use NITSAN\NsT3AF\Credits\Service\CreditsDomainResolver;
 use NITSAN\NsT3AF\Credits\Service\CreditsFeatureKeyMapper;
+use NITSAN\NsT3AF\Credits\Service\LicenseContactResolver;
 use NITSAN\NsT3AF\Credits\Service\LicenseKeyResolver;
 use NITSAN\NsT3AF\Credits\Service\LocalReceiptCache;
 use NITSAN\NsT3AF\Credits\Service\RuntimeSettingsService;
@@ -74,6 +75,7 @@ trait CreditsProxyTestFixtures
             $this->tokenCache($token),
             $this->createMock(CreditsApiResponseCacheInterface::class),
             $this->domainResolver(),
+            new LicenseContactResolver(null),
         );
         $resolver->resolve();
 

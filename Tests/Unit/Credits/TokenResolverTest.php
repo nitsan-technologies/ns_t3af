@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Credits;
 use NITSAN\NsT3AF\Credits\Domain\Repository\RuntimeSettingsRepository;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
 use NITSAN\NsT3AF\Credits\Service\CreditsDomainResolver;
+use NITSAN\NsT3AF\Credits\Service\LicenseContactResolver;
 use NITSAN\NsT3AF\Credits\Service\RuntimeSettingsService;
 use NITSAN\NsT3AF\Credits\Service\TokenResolver;
 use NITSAN\NsT3AF\Service\CredentialCipher;
@@ -51,12 +52,19 @@ final class TokenResolverTest extends TestCase
     public function testIssueFreshTokenStoresEncryptedToken(): void
     {
         $api = $this->createMock(T3PlanetApiClient::class);
-        $api->expects(self::once())->method('issueTrialToken')->willReturn([
+        $api->expects(self::once())->method('issueTrialToken')->with(null, [])->willReturn([
             'token' => 'bearer-abc',
         ]);
 
         [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
-        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache, $this->domainResolver($runtime));
+        $resolver = new TokenResolver(
+            $api,
+            $runtime,
+            $cache,
+            $apiResponseCache,
+            $this->domainResolver($runtime),
+            $this->contactResolver(),
+        );
 
         self::assertSame('bearer-abc', $resolver->issueFreshToken());
     }
@@ -64,12 +72,19 @@ final class TokenResolverTest extends TestCase
     public function testActivateTrialTokenMintsWhenNoTokenExists(): void
     {
         $api = $this->createMock(T3PlanetApiClient::class);
-        $api->expects(self::once())->method('issueTrialToken')->willReturn([
+        $api->expects(self::once())->method('issueTrialToken')->with(null, [])->willReturn([
             'token' => 'bearer-new',
         ]);
 
         [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
-        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache, $this->domainResolver($runtime));
+        $resolver = new TokenResolver(
+            $api,
+            $runtime,
+            $cache,
+            $apiResponseCache,
+            $this->domainResolver($runtime),
+            $this->contactResolver(),
+        );
 
         $result = $resolver->activateTrialToken();
 
@@ -101,7 +116,14 @@ final class TokenResolverTest extends TestCase
         $cache = new \NITSAN\NsT3AF\Cache\Typo3CacheFacade(new NullFrontend('test'));
         $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
 
-        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache, $this->domainResolver($runtime));
+        $resolver = new TokenResolver(
+            $api,
+            $runtime,
+            $cache,
+            $apiResponseCache,
+            $this->domainResolver($runtime),
+            $this->contactResolver(),
+        );
         $result = $resolver->activateTrialToken();
 
         self::assertSame('unchanged', $result['action']);
@@ -125,8 +147,51 @@ final class TokenResolverTest extends TestCase
         $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
         $apiResponseCache->expects(self::once())->method('flush');
 
-        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache, $this->domainResolver($runtime));
+        $resolver = new TokenResolver(
+            $api,
+            $runtime,
+            $cache,
+            $apiResponseCache,
+            $this->domainResolver($runtime),
+            $this->contactResolver(),
+        );
         $resolver->invalidate();
+    }
+
+    public function testIssueFreshTokenForwardsResolvedContact(): void
+    {
+        $api = $this->createMock(T3PlanetApiClient::class);
+        $api->expects(self::once())->method('issueTrialToken')->with(null, [
+            'name' => 'Jane',
+            'email' => 'jane@example.com',
+        ])->willReturn(['token' => 'bearer-with-contact']);
+
+        [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
+        $licenses = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\LicenseDataRepositoryInterface::class);
+        $licenses->method('fetchData')->willReturnCallback(static function (string $extensionKey): array {
+            if ($extensionKey !== 'ns_t3af') {
+                return [];
+            }
+
+            return [[
+                'license_key' => 'T3AF-1',
+                'is_life_time' => 1,
+                'expiration_date' => 0,
+                'name' => 'Jane',
+                'email' => 'jane@example.com',
+            ]];
+        });
+
+        $resolver = new TokenResolver(
+            $api,
+            $runtime,
+            $cache,
+            $apiResponseCache,
+            $this->domainResolver($runtime),
+            new LicenseContactResolver($licenses),
+        );
+
+        self::assertSame('bearer-with-contact', $resolver->issueFreshToken());
     }
 
     public function testRefreshBearerTokenStoresNewSecret(): void
@@ -152,7 +217,11 @@ final class TokenResolverTest extends TestCase
             'bound_ip' => '127.0.0.1',
             'already_bound' => true,
         ]);
-        $api->expects(self::once())->method('refreshBearerToken')->willReturn([
+        $api->expects(self::once())->method('refreshBearerToken')->with(
+            'old-token-' . str_repeat('0', 54),
+            self::anything(),
+            [],
+        )->willReturn([
             'token' => 'new-token-' . str_repeat('1', 54),
         ]);
 
@@ -160,7 +229,14 @@ final class TokenResolverTest extends TestCase
         $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
         $apiResponseCache->expects(self::once())->method('flush');
 
-        $resolver = new TokenResolver($api, $runtime, $cache, $apiResponseCache, $this->domainResolver($runtime));
+        $resolver = new TokenResolver(
+            $api,
+            $runtime,
+            $cache,
+            $apiResponseCache,
+            $this->domainResolver($runtime),
+            $this->contactResolver(),
+        );
         $token = $resolver->refreshBearerToken();
 
         self::assertSame('new-token-' . str_repeat('1', 54), $token);
@@ -172,6 +248,11 @@ final class TokenResolverTest extends TestCase
         $siteFinder->method('getAllSites')->willReturn([]);
 
         return new CreditsDomainResolver($siteFinder, $runtime);
+    }
+
+    private function contactResolver(): LicenseContactResolver
+    {
+        return new LicenseContactResolver(null);
     }
 
     /**

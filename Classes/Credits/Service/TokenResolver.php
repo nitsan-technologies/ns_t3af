@@ -38,6 +38,7 @@ final class TokenResolver
         private readonly CacheFacadeInterface $cache,
         private readonly CreditsApiResponseCacheInterface $apiResponseCache,
         private readonly CreditsDomainResolver $domainResolver,
+        private readonly LicenseContactResolver $licenseContactResolver,
     ) {}
 
     public function resolve(?string $domain = null): string
@@ -59,7 +60,7 @@ final class TokenResolver
 
     public function issueFreshToken(): string
     {
-        $payload = $this->apiClient->issueTrialToken();
+        $payload = $this->apiClient->issueTrialToken(null, $this->licenseContactResolver->resolve());
         $token = trim((string) ($payload['token'] ?? ''));
         if ($token === '') {
             throw new CreditsApiException('token_missing', 502, 'Token endpoint did not return a token');
@@ -135,7 +136,7 @@ final class TokenResolver
 
         $this->ensureIpBound($current);
         $domain = $this->domainResolver->resolve();
-        $payload = $this->apiClient->refreshBearerToken($current, $domain);
+        $payload = $this->apiClient->refreshBearerToken($current, $domain, $this->licenseContactResolver->resolve());
         $token = trim((string) ($payload['token'] ?? ''));
         if ($token === '') {
             throw new CreditsApiException('token_missing', 502, 'RefreshToken endpoint did not return a token');

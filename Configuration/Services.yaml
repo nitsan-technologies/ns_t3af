@@ -304,6 +304,10 @@ services:
     arguments:
       $licenseRepository: '@?nst3af.ns_license_repository'
 
+  NITSAN\NsT3AF\Credits\Service\LicenseContactResolver:
+    arguments:
+      $licenseRepository: '@?nst3af.ns_license_repository'
+
   nst3af.cacheFrontend.credits_token:
     class: TYPO3\CMS\Core\Cache\Frontend\FrontendInterface
     factory: ['@TYPO3\CMS\Core\Cache\CacheManager', 'getCache']
