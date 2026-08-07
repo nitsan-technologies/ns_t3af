@@ -140,6 +140,10 @@ services:
     alias: NITSAN\NsT3AF\Credits\Service\T3PlanetCreditAiService
     public: true
 
+  # Public for child-ext makeInstance() (ViewHelpers, AiEngineConfiguration, ModulesUtility).
+  NITSAN\NsT3AF\Credits\Service\CreditModeResolver:
+    public: true
+
   NITSAN\NsT3AF\Registry\PromptCatalogProviderRegistry:
     arguments:
       $providers: !tagged_iterator t3af.prompt_catalog_provider
