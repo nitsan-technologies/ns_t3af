@@ -16,13 +16,16 @@ type, optional endpoint, encrypted credentials, models, and capability flags.
 `AI Foundation Providers Demo <https://app.supademo.com/embed/cmrbo0w7i0d96qmo57ifnabvz?utm_source=link>`__
 
 .. figure:: ../../Images/provider-01.png
-   :alt: AI Providers list with configured vendors, models, status, and actions
+   :alt: AI Providers with Own API Keys mode, provider list, models, and connection status
    :class: with-border with-shadow
 
-   AI Providers list — configured adapters, models, connection status, and
-   default provider.
+   AI Providers — :guilabel:`Your Own API Keys` mode, configured adapters,
+   models, connection status, and default provider.
 
 Without at least one working provider, no AI feature runs.
+
+Alternatively, use :ref:`T3Planet Credits <t3planet-credit-system>` when you
+want AI without configuring your own vendor API keys.
 
 Adding a provider
 =================

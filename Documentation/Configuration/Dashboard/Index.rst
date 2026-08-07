@@ -16,7 +16,7 @@ The Dashboard is your **control center** for AI health on this TYPO3 instance. O
 `AI Foundation Dashboard Demo <https://app.supademo.com/embed/cmrbp02gg0dysqmo5wfd0olu1?utm_source=link>`__
 
 .. figure:: ../../Images/t3af-dashboard-01.png
-   :alt: AI Foundation Dashboard with setup checklist, provider status cards, and cost trend
+   :alt: AI Foundation Dashboard with setup checklist, Own API Keys mode, provider status, and cost trend
    :class: with-border with-shadow
 
    Dashboard overview — setup progress, provider health, and API cost trend.
