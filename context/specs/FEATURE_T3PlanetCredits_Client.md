@@ -87,7 +87,7 @@ Encrypted at rest: `tx_nst3af_runtime_setting.token_enc` via `CredentialCipher`.
 
 - Tokens live in **`ns_ai_token`** only — **no** `ns_product_license.token`, **no** ns_license schema change for tokens.
 - Client persists **`license_keys`** (comma-separated) on runtime settings; `Token.php` receives that string.
-- **Trial credit amount:** server-only (`ns_ai_settings.trial_credits` → env → default 100). Client must not hardcode grant amounts; display balance from `Balance.php` and product cards from `Products.php`.
+- **Trial credit amount:** server-only (`ns_ai_settings.trial_credits` → env → default 50). Client must not hardcode grant amounts; display balance from `Balance.php` and product cards from `Products.php`.
 - Server matches if **any** requested key appears in the row's `license_keys` column; returns one Bearer token for the shared pool.
 - Admin TYPO3 extension is on **`packages/<server-ai-ext>/`**, not on `composer.t3planet.cloud`.
 

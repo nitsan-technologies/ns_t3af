@@ -36,7 +36,7 @@ T3Planet runs the AI work and reduces your **credit** balance. In
 What you get
 ============
 
-* You'll receive 100 free credits once upon signup
+* You'll receive 50 free credits once upon signup
 * AI features without configuring OpenAI, Anthropic, Gemini, Mistral, or similar
   keys
 * One shared credit balance for this installation

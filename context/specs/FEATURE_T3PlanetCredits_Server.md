@@ -400,7 +400,7 @@ Seed `ns_ai_product` (admin can edit/disable/reorder afterwards):
 
 | sku | type | title | credits | period | price (EUR) | pabbly_sku | badge |
 |---|---|---|---|---|---|---|---|
-| `trial` | trial | Free Trial | 100 | one_time | 0.00 | `t3p-ai-trial` | NULL |
+| `trial` | trial | Free Trial | 50 | one_time | 0.00 | `t3p-ai-trial` | NULL |
 | `starter` | plan | Starter | 2000 | monthly | 19.00 | `t3p-ai-starter` | NULL |
 | `pro` | plan | Pro | 10000 | monthly | 49.00 | `t3p-ai-pro` | `popular` |
 | `agency` | plan | Agency | 50000 | monthly | 149.00 | `t3p-ai-agency` | `best_value` |
@@ -660,7 +660,7 @@ Hook into existing `NewOrderCreateLicense.php` + `CreateLicenseAfterOtp.php`:
 Do **not** auto-create `ns_ai_token` on license insert (client calls `Token.php` with full key list).
 
 Optional: when first AI license for a customer is created, ops may pre-provision via admin BE. Trial grant runs when `ns_ai_account` is first created (via `Token.php` or admin):
-- Amount: **`AiTrialCreditsSettings`** — `ns_ai_settings.trial_credits` (DB, including `0`) → `API_AI_TRIAL_CREDITS` env → default **100** whole credits (×1000 units in ledger).
+- Amount: **`AiTrialCreditsSettings`** — `ns_ai_settings.trial_credits` (DB, including `0`) → `API_AI_TRIAL_CREDITS` env → default **50** whole credits (×1000 units in ledger).
 - `INSERT ns_ai_account` + `INSERT ns_ai_transaction (event_id='trial-{token}', type='trial', credits_delta=<resolved units>)`
 - Ops edit: **AI Credits admin → Dashboard → trial_credits** (same key as `ns_ai_settings.trial_credits`).
 

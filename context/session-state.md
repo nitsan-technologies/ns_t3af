@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-08-07 — Free trial default documented as 50
+
+**Done:** Agent docs + trial unit fixtures: Free Trial / `trial_credits` default **100 → 50**. Client still does not hardcode grant amount (Balance/Products). Server ops must set `ns_ai_settings.trial_credits` + Free Trial product to 50 separately.
+
+**Last touched:** 2026-08-07
+
+---
+
 ## 2026-07-31 — Credits dashboard trial plan + bundle tabs
 
 **Done:** Trial accounts show active plan (free-credits bucket + `trial_granted` / catalog lookup) instead of "No active plan". AI Credit Bundles section: Plans vs Top-ups tabs; Monthly/Yearly toggle under Plans. Shared `Credits/ProductCard.html` partial.
@@ -146,7 +154,7 @@
 - **Pool model:** keyed by primary `license_key`. Multi-product sharing via `ns_ai_pool_alias` (customer owning ns_t3af + ns_t3ai + ai_suite all map to one pool). Buckets debit order plan → free → paid.
 - **Mode:** server-proxy. composer.t3planet.cloud holds OpenAI/Anthropic/Gemini/Mistral/OpenRouter keys; client never sees provider keys. Outbound clients ported from `ns_t3af/Classes/Client/BaseClient.php` (attribution required).
 - **Atomic debit:** `BEGIN → SELECT pool FOR UPDATE → reserve → pre-log → COMMIT → call upstream OUTSIDE lock → settle in second tx`. Refund-on-upstream-failure mandatory v1.
-- **Pabbly:** `/webhook/pabbly-ai` adds top-up + plan; SKU map: trial 100, starter 2000/mo, pro 10000/mo, agency 50000/mo, topup 1000/5000. Trial auto-grant hooked into existing `NewOrderCreateLicense.php` + `CreateLicenseAfterOtp.php` (one-shot, gated by `trial_credits_granted=1`).
+- **Pabbly:** `/webhook/pabbly-ai` adds top-up + plan; SKU map: trial 50, starter 2000/mo, pro 10000/mo, agency 50000/mo, topup 1000/5000. Trial auto-grant hooked into existing `NewOrderCreateLicense.php` + `CreateLicenseAfterOtp.php` (one-shot, gated by `trial_credits_granted=1`).
 - **Full prompt logged server-side** (`ns_ai_credit_log.prompt_full`) — confirmed by user; GDPR disclosure in `Documentation/Privacy.rst`. Per-license hash-only opt-out deferred to v1.1.
 - **Client deltas to public API:** `AiOptions::$featureKey` (NEW required arg in credits mode), `AiResponse::?CreditsUsage $credits`, `EmbeddingResponse::?CreditsUsage`, `StreamSummary` (generator return for SSE).
 - **Decorator:** `T3PlanetCreditAiService decorates AiServiceInterface`; always wired; `CreditModeResolver` short-circuits to `$inner` when toggle OFF → zero HTTP traffic. phpat rule blocks `Classes/Credits/` from importing `Provider/*` adapters.

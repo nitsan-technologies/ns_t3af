@@ -262,7 +262,7 @@ final class CreditsDashboardAssemblerTest extends TestCase
             [
                 'status' => true,
                 'credits' => [
-                    'free_credits' => 97,
+                    'free_credits' => 47,
                     'paid_credits' => 0,
                     'plan_used' => 0,
                     'plan_total' => 0,
@@ -282,7 +282,7 @@ final class CreditsDashboardAssemblerTest extends TestCase
                         'sku' => 'trial',
                         'type' => 'trial',
                         'title' => 'Free Trial',
-                        'credits' => 100,
+                        'credits' => 50,
                         'is_active' => 1,
                     ],
                 ],
@@ -297,8 +297,8 @@ final class CreditsDashboardAssemblerTest extends TestCase
         self::assertSame(1, $dashboard['plan']['isTrial']);
         self::assertSame('Free Trial', $dashboard['plan']['name']);
         self::assertSame('trial', $dashboard['plan']['sku']);
-        self::assertSame(100.0, $dashboard['plan']['creditsTotal']);
-        self::assertSame(97.0, $dashboard['plan']['creditsRemaining']);
+        self::assertSame(50.0, $dashboard['plan']['creditsTotal']);
+        self::assertSame(47.0, $dashboard['plan']['creditsRemaining']);
         self::assertSame(3.0, $dashboard['plan']['creditsUsed']);
     }
 
@@ -308,7 +308,7 @@ final class CreditsDashboardAssemblerTest extends TestCase
             [
                 'status' => true,
                 'credits' => [
-                    'free_credits' => 100,
+                    'free_credits' => 50,
                     'paid_credits' => 0,
                     'plan_used' => 0,
                     'plan_total' => 0,
@@ -327,7 +327,7 @@ final class CreditsDashboardAssemblerTest extends TestCase
                         'sku' => 'trial',
                         'type' => 'trial',
                         'title' => 'Free Trial',
-                        'credits' => 100,
+                        'credits' => 50,
                         'is_active' => 1,
                     ],
                 ],
@@ -367,7 +367,7 @@ final class CreditsDashboardAssemblerTest extends TestCase
             [
                 'status' => true,
                 'credits' => [
-                    'free_credits' => 99.61,
+                    'free_credits' => 49.61,
                     'paid_credits' => 0,
                     'plan_used' => 0,
                     'plan_total' => 0,
@@ -383,15 +383,15 @@ final class CreditsDashboardAssemblerTest extends TestCase
                         'sku' => 'trial',
                         'type' => 'trial',
                         'title' => 'Free Trial',
-                        'credits' => 100,
+                        'credits' => 50,
                     ],
                 ],
             ],
         );
 
-        self::assertSame(99.61, $summary['remaining']);
-        self::assertSame(100.0, $summary['total']);
-        self::assertSame(100, $summary['percentLeft']);
+        self::assertSame(49.61, $summary['remaining']);
+        self::assertSame(50.0, $summary['total']);
+        self::assertSame(99, $summary['percentLeft']);
     }
 
     private function createAssembler(): CreditsDashboardAssembler

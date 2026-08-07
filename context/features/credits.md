@@ -69,7 +69,7 @@ AI Logs (`RequestTelemetryService`) and Recent AI Usage (`LocalReceiptCache`) bo
 Trial grant amount is **not configured in ns_t3af**. The server resolves it on mint/attach:
 
 ```text
-ns_ai_settings.trial_credits (DB, ops admin) → API_AI_TRIAL_CREDITS env → default 100
+ns_ai_settings.trial_credits (DB, ops admin) → API_AI_TRIAL_CREDITS env → default 50
 ```
 
 | Trigger (server) | Client call | Idempotency |
@@ -149,9 +149,9 @@ Trial amount applies only on **first** `ns_ai_account` creation (or AttachLicens
 
 | Server `trial_credits` | Expected after fresh mint |
 |---|---|
-| 50 | `Balance.free` ≈ 50 |
+| 50 (default) | `Balance.free` ≈ 50 |
 | 0 | Empty free bucket; no client error |
-| 100 (default) | `Balance.free` ≈ 100 |
+| 100 | `Balance.free` ≈ 100 (legacy override) |
 
 Attach new license key → `AttachLicenses.credits_added` equals current server setting (once per key).
 
