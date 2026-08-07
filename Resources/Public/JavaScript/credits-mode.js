@@ -401,15 +401,12 @@ function bindScrollHelpers() {
  * @param {ParentNode} [scope]
  */
 function initCreditsBundleTabs(scope = document) {
+  const bindVersion = '3';
   scope.querySelectorAll('[data-aiu-credits-bundles-root]').forEach((root) => {
-    if (!(root instanceof HTMLElement) || root.dataset.aiuBundlesTabsBound === '1') {
+    if (!(root instanceof HTMLElement) || root.dataset.aiuBundlesTabsBound === bindVersion) {
       return;
     }
-    root.dataset.aiuBundlesTabsBound = '1';
-
-    const typeTabs = root.querySelectorAll('[data-aiu-bundle-tab]');
-    const typePanels = root.querySelectorAll('[data-aiu-bundle-panel]');
-    const subCopy = root.closest('[data-aiu-credits-bundles]')?.querySelectorAll('[data-aiu-bundles-sub]') ?? [];
+    root.dataset.aiuBundlesTabsBound = bindVersion;
 
     const syncEmptyStates = () => {
       root.querySelectorAll('[data-aiu-plan-period-panel]').forEach((panel) => {
@@ -432,53 +429,56 @@ function initCreditsBundleTabs(scope = document) {
       }
     };
 
+    const setPeriodGroupVisible = (showPeriod) => {
+      root.querySelectorAll('[data-aiu-plan-period-group]').forEach((group) => {
+        if (!(group instanceof HTMLElement)) {
+          return;
+        }
+        group.hidden = !showPeriod;
+        group.classList.toggle('is-hidden', !showPeriod);
+        group.style.display = showPeriod ? '' : 'none';
+        group.setAttribute('aria-hidden', showPeriod ? 'false' : 'true');
+      });
+    };
+
     const activateType = (type) => {
-      typeTabs.forEach((tab) => {
+      root.dataset.aiuBundleType = type;
+      root.querySelectorAll('[data-aiu-bundle-tab]').forEach((tab) => {
         if (!(tab instanceof HTMLElement)) {
           return;
         }
         const active = tab.getAttribute('data-aiu-bundle-tab') === type;
         tab.classList.toggle('is-active', active);
         tab.classList.toggle('active', active);
-        tab.setAttribute('aria-selected', active ? 'true' : 'false');
+        tab.setAttribute('aria-pressed', active ? 'true' : 'false');
       });
-      typePanels.forEach((panel) => {
+      root.querySelectorAll('[data-aiu-bundle-panel]').forEach((panel) => {
         if (!(panel instanceof HTMLElement)) {
           return;
         }
         panel.hidden = panel.getAttribute('data-aiu-bundle-panel') !== type;
       });
-      subCopy.forEach((node) => {
+      root.querySelectorAll('[data-aiu-bundles-sub]').forEach((node) => {
         if (!(node instanceof HTMLElement)) {
           return;
         }
         node.hidden = node.getAttribute('data-aiu-bundles-sub') !== type;
       });
+      setPeriodGroupVisible(type === 'plan');
+      syncEmptyStates();
     };
 
-    typeTabs.forEach((tab) => {
-      if (!(tab instanceof HTMLElement)) {
-        return;
-      }
-      tab.addEventListener('click', () => {
-        activateType(tab.getAttribute('data-aiu-bundle-tab') ?? 'plan');
-      });
-    });
-
-    const periodButtons = root.querySelectorAll('[data-aiu-plan-period]');
-    const periodPanels = root.querySelectorAll('[data-aiu-plan-period-panel]');
-
     const activatePeriod = (period) => {
-      periodButtons.forEach((btn) => {
+      root.querySelectorAll('[data-aiu-plan-period]').forEach((btn) => {
         if (!(btn instanceof HTMLElement)) {
           return;
         }
         const active = btn.getAttribute('data-aiu-plan-period') === period;
         btn.classList.toggle('is-active', active);
         btn.classList.toggle('active', active);
-        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
       });
-      periodPanels.forEach((panel) => {
+      root.querySelectorAll('[data-aiu-plan-period-panel]').forEach((panel) => {
         if (!(panel instanceof HTMLElement)) {
           return;
         }
@@ -487,13 +487,22 @@ function initCreditsBundleTabs(scope = document) {
       syncEmptyStates();
     };
 
-    periodButtons.forEach((btn) => {
-      if (!(btn instanceof HTMLElement)) {
+    root.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) {
         return;
       }
-      btn.addEventListener('click', () => {
-        activatePeriod(btn.getAttribute('data-aiu-plan-period') ?? 'monthly');
-      });
+      const typeTab = target.closest('[data-aiu-bundle-tab]');
+      if (typeTab instanceof HTMLElement && root.contains(typeTab)) {
+        event.preventDefault();
+        activateType(typeTab.getAttribute('data-aiu-bundle-tab') ?? 'plan');
+        return;
+      }
+      const periodBtn = target.closest('[data-aiu-plan-period]');
+      if (periodBtn instanceof HTMLElement && root.contains(periodBtn)) {
+        event.preventDefault();
+        activatePeriod(periodBtn.getAttribute('data-aiu-plan-period') ?? 'monthly');
+      }
     });
 
     activateType('plan');
@@ -1057,6 +1066,7 @@ function boot() {
   document.addEventListener('typo3-module-loaded', () => {
     initDashboardRoots(document);
     initProvidersRoots(document);
+    initCreditsBundleTabs(document);
     requestAnimationFrame(() => initCreditsHeroProgress(document));
   });
   document.addEventListener('aiu-dashboard-view-changed', () => {

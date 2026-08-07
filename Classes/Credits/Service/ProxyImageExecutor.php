@@ -124,7 +124,12 @@ class ProxyImageExecutor
         $charged = is_array($payload['charged'] ?? null) ? $payload['charged'] : [];
         $usage = CreditsUsage::fromApiPayload($credits, $charged, $requestUuid, $payload);
 
-        $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
+        $this->chargeRecorder->record(
+            $requestUuid,
+            $featureKey,
+            $payload,
+            CreditsChargeRecorder::contextFromExtensionKey($options->extensionKey, $latencyMs),
+        );
 
         $response = new ImageGenerationResponse(
             images: $images,

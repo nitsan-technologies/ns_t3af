@@ -1155,4 +1155,157 @@ class RequestLogRepository
             'lastErrorCode' => $lastErrorCode,
         ];
     }
+
+    /**
+     * Map credit receipt UUIDs → extension / latency / page hints from AI Usage logs.
+     *
+     * Prefers `raw_meta.request_uuid`; falls back to nearest success log by time + credits.
+     *
+     * @param list<array<string, mixed>> $receipts
+     * @return array<string, array{extension_key: string, latency_ms: int, page_id: int, page_title: string, status: string}>
+     */
+    public function resolveCreditsClientContextByReceipts(array $receipts): array
+    {
+        if ($receipts === []) {
+            return [];
+        }
+
+        $uuidSet = [];
+        $minCrdate = PHP_INT_MAX;
+        $maxCrdate = 0;
+        foreach ($receipts as $receipt) {
+            $uuid = trim((string) ($receipt['request_uuid'] ?? ''));
+            if ($uuid !== '') {
+                $uuidSet[$uuid] = true;
+            }
+            $crdate = (int) ($receipt['crdate'] ?? 0);
+            if ($crdate > 0) {
+                $minCrdate = min($minCrdate, $crdate);
+                $maxCrdate = max($maxCrdate, $crdate);
+            }
+        }
+        if ($minCrdate === PHP_INT_MAX) {
+            $maxCrdate = time();
+            $minCrdate = $maxCrdate - 86400;
+        }
+        $minCrdate = max(0, $minCrdate - 120);
+        $maxCrdate += 120;
+
+        $qb = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
+        $qb->select(
+            'extension_key',
+            'latency_ms',
+            'credits_used',
+            'crdate',
+            'content_entity_type',
+            'content_entity_uid',
+            'raw_meta',
+            'success',
+        )
+            ->from(self::TABLE)
+            ->where(
+                $qb->expr()->eq(
+                    'provider_identifier',
+                    $qb->createNamedParameter(CreditsProviderIdentifier::IDENTIFIER),
+                ),
+                $qb->expr()->eq('success', $qb->createNamedParameter(1, Connection::PARAM_INT)),
+                $qb->expr()->gte('crdate', $qb->createNamedParameter($minCrdate, Connection::PARAM_INT)),
+                $qb->expr()->lte('crdate', $qb->createNamedParameter($maxCrdate, Connection::PARAM_INT)),
+            )
+            ->orderBy('crdate', 'DESC')
+            ->setMaxResults(200);
+
+        /** @var list<array<string, mixed>> $logs */
+        $logs = $qb->executeQuery()->fetchAllAssociative();
+
+        $byUuid = [];
+        $fuzzyCandidates = [];
+        foreach ($logs as $log) {
+            $ctx = $this->clientContextFromRequestLogRow($log);
+            $meta = [];
+            $rawMeta = $log['raw_meta'] ?? '';
+            if (is_string($rawMeta) && $rawMeta !== '') {
+                $decoded = json_decode($rawMeta, true);
+                if (is_array($decoded)) {
+                    $meta = $decoded;
+                }
+            }
+            $metaUuid = trim((string) ($meta['request_uuid'] ?? ''));
+            if ($metaUuid !== '' && isset($uuidSet[$metaUuid])) {
+                $byUuid[$metaUuid] = $ctx;
+                continue;
+            }
+            $fuzzyCandidates[] = [
+                'crdate' => (int) ($log['crdate'] ?? 0),
+                'credits' => (float) ($log['credits_used'] ?? 0.0),
+                'ctx' => $ctx,
+            ];
+        }
+
+        foreach ($receipts as $receipt) {
+            $uuid = trim((string) ($receipt['request_uuid'] ?? ''));
+            if ($uuid === '' || isset($byUuid[$uuid])) {
+                continue;
+            }
+            $crdate = (int) ($receipt['crdate'] ?? 0);
+            $cost = (float) ($receipt['cost'] ?? 0.0);
+            $bestIdx = null;
+            $bestScore = PHP_INT_MAX;
+            foreach ($fuzzyCandidates as $idx => $candidate) {
+                $dt = abs($candidate['crdate'] - $crdate);
+                if ($dt > 45) {
+                    continue;
+                }
+                $dc = abs($candidate['credits'] - $cost);
+                // Image telemetry may log credits_used=0; still allow time-only match.
+                if ($candidate['credits'] > 0.0 && $cost > 0.0 && $dc > 0.05) {
+                    continue;
+                }
+                $score = ($dt * 1000) + (int) round($dc * 1000);
+                if ($score < $bestScore) {
+                    $bestScore = $score;
+                    $bestIdx = $idx;
+                }
+            }
+            if ($bestIdx === null) {
+                continue;
+            }
+            $byUuid[$uuid] = $fuzzyCandidates[$bestIdx]['ctx'];
+            unset($fuzzyCandidates[$bestIdx]);
+        }
+
+        return $byUuid;
+    }
+
+    /**
+     * @param array<string, mixed> $log
+     * @return array{extension_key: string, latency_ms: int, page_id: int, page_title: string, status: string}
+     */
+    private function clientContextFromRequestLogRow(array $log): array
+    {
+        $meta = [];
+        $rawMeta = $log['raw_meta'] ?? '';
+        if (is_string($rawMeta) && $rawMeta !== '') {
+            $decoded = json_decode($rawMeta, true);
+            if (is_array($decoded)) {
+                $meta = $decoded;
+            }
+        }
+
+        $pageId = (int) ($meta['page_id'] ?? 0);
+        if ($pageId <= 0
+            && (string) ($log['content_entity_type'] ?? '') === 'pages'
+            && (int) ($log['content_entity_uid'] ?? 0) > 0
+        ) {
+            $pageId = (int) $log['content_entity_uid'];
+        }
+
+        return [
+            'extension_key' => trim((string) ($log['extension_key'] ?? '')),
+            'latency_ms' => max(0, (int) ($log['latency_ms'] ?? 0)),
+            'page_id' => max(0, $pageId),
+            'page_title' => '',
+            'status' => ((int) ($log['success'] ?? 0)) === 1 ? 'success' : 'failed',
+        ];
+    }
 }

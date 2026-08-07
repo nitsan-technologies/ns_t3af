@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Credits\Service;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use NITSAN\NsT3AF\Api\AiCreditUnits;
 use NITSAN\NsT3AF\Credits\CreditsReceiptEntryType;
+use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
@@ -133,10 +134,46 @@ final class LocalReceiptCache
         try {
             $connection->insert(self::TABLE, $row);
         } catch (UniqueConstraintViolationException) {
+            $existingClient = $this->loadExistingClientContext($connection, $requestUuid);
+            if ($existingClient !== [] && (!isset($payload['client']) || !is_array($payload['client']) || $payload['client'] === [])) {
+                $payload['client'] = $existingClient;
+                $row['extra'] = json_encode($payload, JSON_THROW_ON_ERROR);
+            } elseif ($existingClient !== [] && is_array($payload['client'] ?? null)) {
+                $payload['client'] = array_merge($existingClient, $payload['client']);
+                $row['extra'] = json_encode($payload, JSON_THROW_ON_ERROR);
+            }
             $uuid = $row['request_uuid'];
             unset($row['request_uuid']);
             $connection->update(self::TABLE, $row, ['request_uuid' => $uuid]);
         }
+    }
+
+    /**
+     * History sync replaces `extra`; keep locally stamped UI context (extension/page/latency).
+     *
+     * @return array<string, mixed>
+     */
+    private function loadExistingClientContext(Connection $connection, string $requestUuid): array
+    {
+        try {
+            $extra = $connection->select(
+                ['extra'],
+                self::TABLE,
+                ['request_uuid' => $requestUuid],
+            )->fetchOne();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        if (!is_string($extra) || $extra === '') {
+            return [];
+        }
+        $decoded = json_decode($extra, true);
+        if (!is_array($decoded) || !is_array($decoded['client'] ?? null)) {
+            return [];
+        }
+
+        return $decoded['client'];
     }
 
     /**

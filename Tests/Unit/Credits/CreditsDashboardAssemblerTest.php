@@ -75,13 +75,15 @@ final class CreditsDashboardAssemblerTest extends TestCase
                         'label' => 'SEO meta',
                         'default_model' => 'gpt-4o',
                         'sort' => 10,
-                        'example_cost' => '(100k/1M)×1 + (50k/1M)×5 ≈ $0.35',
+                        'description' => 'Generate SEO page metadata with AI',
+                        'example_cost' => '1,160 pages: SEO page metadata',
                     ],
                     [
                         'feature_key' => 'image',
                         'label' => 'Image',
                         'default_model' => 'gpt-4o',
                         'sort' => 20,
+                        'description' => null,
                         'example_cost' => null,
                     ],
                 ],
@@ -89,12 +91,26 @@ final class CreditsDashboardAssemblerTest extends TestCase
             ],
             [
                 [
+                    'request_uuid' => '1c239ffd-3abf-4e6a-9459-c11e3825825c',
                     'feature_key' => 'seo_meta',
                     'cost_units' => 2000,
                     'cost' => 2.0,
                     'crdate' => time(),
                     'model' => 'gpt-4o',
-                    'extra' => json_encode(['tokens_total' => 450, 'tokens_input' => 300, 'tokens_output' => 150], JSON_THROW_ON_ERROR),
+                    'entry_type' => 'debit',
+                    'extra' => json_encode([
+                        'status' => true,
+                        'tokens_total' => 450,
+                        'tokens_input' => 300,
+                        'tokens_output' => 150,
+                        'client' => [
+                            'extension_key' => 'ns_t3ai',
+                            'page_id' => 42,
+                            'page_title' => 'Home',
+                            'latency_ms' => 1840,
+                            'status' => 'success',
+                        ],
+                    ], JSON_THROW_ON_ERROR),
                 ],
             ],
             [],
@@ -114,7 +130,9 @@ final class CreditsDashboardAssemblerTest extends TestCase
         );
         self::assertSame('seo_meta', $dashboard['features'][0]['key']);
         self::assertSame('gpt-4o', $dashboard['features'][0]['defaultModel']);
-        self::assertSame('(100k/1M)×1 + (50k/1M)×5 ≈ $0.35', $dashboard['features'][0]['exampleCost']);
+        self::assertSame('Generate SEO page metadata with AI', $dashboard['features'][0]['description']);
+        self::assertSame('1,160 pages: SEO page metadata', $dashboard['features'][0]['exampleCost']);
+        self::assertSame('', $dashboard['features'][1]['description']);
         self::assertSame('', $dashboard['features'][1]['exampleCost']);
         self::assertSame(5.0, $dashboard['features'][0]['usedCredits']);
         self::assertSame(1.5, $dashboard['features'][1]['usedCredits']);
@@ -123,6 +141,12 @@ final class CreditsDashboardAssemblerTest extends TestCase
         self::assertStringContainsString('0.001', (string) $dashboard['pricing']['footnote']);
         self::assertStringNotContainsString('450 tokens', (string) $dashboard['transactions'][0]['detail']);
         self::assertSame('gpt-4o', (string) $dashboard['transactions'][0]['detail']);
+        self::assertSame('ns_t3ai', $dashboard['transactions'][0]['extensionKey']);
+        self::assertSame('Home', $dashboard['transactions'][0]['pageName']);
+        self::assertSame(1840, $dashboard['transactions'][0]['latencyMs']);
+        self::assertSame('1840 ms', $dashboard['transactions'][0]['latencyFormatted']);
+        self::assertSame('success', $dashboard['transactions'][0]['status']);
+        self::assertSame('1c239ffd-3abf-4e6a-9459-c11e3825825c', $dashboard['transactions'][0]['requestUuid']);
     }
 
     public function testNormalizeProductsDescriptionAcceptsLegacyStringAndEmptyArray(): void

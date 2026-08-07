@@ -34,9 +34,19 @@ final class CreditsChargeRecorderTest extends TestCase
             ->method('insert')
             ->with(
                 'tx_nst3af_credit_receipt',
-                self::callback(static fn(array $row): bool => $row['request_uuid'] === 'uuid-1'
-                    && $row['feature_key'] === 'text_to_speech'
-                    && ($row['entry_type'] ?? '') === 'debit'),
+                self::callback(static function (array $row): bool {
+                    if ($row['request_uuid'] !== 'uuid-1'
+                        || $row['feature_key'] !== 'text_to_speech'
+                        || ($row['entry_type'] ?? '') !== 'debit'
+                    ) {
+                        return false;
+                    }
+                    $extra = json_decode((string) $row['extra'], true);
+                    return is_array($extra)
+                        && ($extra['client']['extension_key'] ?? null) === 'ns_t3ai'
+                        && ($extra['client']['latency_ms'] ?? null) === 250
+                        && ($extra['client']['status'] ?? null) === 'success';
+                }),
             );
 
         $connection->method('count')->willReturn(1);
@@ -45,11 +55,20 @@ final class CreditsChargeRecorderTest extends TestCase
         $pool->method('getConnectionForTable')->willReturn($connection);
 
         $recorder = new CreditsChargeRecorder(new LocalReceiptCache($pool));
-        $recorder->record('uuid-1', 'text_to_speech', [
-            'status' => true,
-            'credits' => ['free' => 1],
-            'charged' => ['model' => 'tts-1'],
-        ]);
+        $recorder->record(
+            'uuid-1',
+            'text_to_speech',
+            [
+                'status' => true,
+                'credits' => ['free' => 1],
+                'charged' => ['model' => 'tts-1'],
+            ],
+            [
+                'extension_key' => 'ns_t3ai',
+                'latency_ms' => 250,
+                'status' => 'success',
+            ],
+        );
     }
 
     public function testRecordSkipsWhenStatusFalse(): void

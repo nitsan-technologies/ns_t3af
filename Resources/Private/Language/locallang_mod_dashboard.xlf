@@ -1664,7 +1664,7 @@
         <source>Key</source>
       </trans-unit>
       <trans-unit id="credits.dashboard.features.col.exampleCost" resname="credits.dashboard.features.col.exampleCost">
-        <source>Example cost</source>
+        <source>Example cost per 500 credits</source>
       </trans-unit>
       <trans-unit id="credits.dashboard.features.col.model" resname="credits.dashboard.features.col.model">
         <source>Default model</source>
@@ -1689,6 +1689,21 @@
       </trans-unit>
       <trans-unit id="credits.dashboard.history.col.description" resname="credits.dashboard.history.col.description">
         <source>Description</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.history.col.extension" resname="credits.dashboard.history.col.extension">
+        <source>Extension</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.history.col.page" resname="credits.dashboard.history.col.page">
+        <source>Page</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.history.col.latency" resname="credits.dashboard.history.col.latency">
+        <source>Latency</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.history.col.status" resname="credits.dashboard.history.col.status">
+        <source>Status</source>
+      </trans-unit>
+      <trans-unit id="credits.dashboard.history.col.requestUuid" resname="credits.dashboard.history.col.requestUuid">
+        <source>Request UUID</source>
       </trans-unit>
       <trans-unit id="credits.dashboard.history.col.date" resname="credits.dashboard.history.col.date">
         <source>Date</source>

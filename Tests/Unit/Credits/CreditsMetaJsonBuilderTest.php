@@ -38,6 +38,7 @@ final class CreditsMetaJsonBuilderTest extends TestCase
                 temperature: 0.7,
                 contentEntityType: 'tx_news_domain_model_news',
                 contentEntityUid: 42,
+                pageId: 15,
                 extra: ['custom_flag' => true],
             ),
         );
@@ -48,6 +49,7 @@ final class CreditsMetaJsonBuilderTest extends TestCase
         self::assertSame('backend_module', $meta['request_source']);
         self::assertSame('tx_news_domain_model_news', $meta['content_entity_type']);
         self::assertSame(42, $meta['content_entity_uid']);
+        self::assertSame(15, $meta['page_id']);
         self::assertSame(0.7, $meta['temperature']);
         self::assertTrue($meta['custom_flag']);
     }

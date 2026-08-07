@@ -38,6 +38,7 @@ final class CreditsDashboardService
         private readonly FeatureCatalogService $featureCatalogService,
         private readonly LocalReceiptCache $localReceiptCache,
         private readonly CreditsHistorySyncService $historySyncService,
+        private readonly CreditsReceiptUsageEnricher $receiptUsageEnricher,
         private readonly CreditsDashboardAssembler $assembler,
         private readonly CreditsApiErrorMessageResolver $errorMessages,
         private readonly TokenResolver $tokenResolver,
@@ -157,6 +158,7 @@ final class CreditsDashboardService
         $currentPage = min($currentPage, $totalPages);
         $offset = ($currentPage - 1) * $perPage;
         $receipts = $this->localReceiptCache->listBillable($perPage, $offset, $entryTypeFilter);
+        $receipts = $this->receiptUsageEnricher->enrich($receipts);
         $usedUnitsByFeatureKey = $this->localReceiptCache->sumCostUnitsByFeatureKey();
         $lifetimeUnits = (int) array_sum($usedUnitsByFeatureKey);
         $windowUnits = $this->localReceiptCache->sumCostUnitsSince(time() - (7 * 86400));

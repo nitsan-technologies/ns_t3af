@@ -616,7 +616,7 @@ final class CreditsDashboardAssembler
             'defaultModel' => (string) ($item['default_model'] ?? ''),
             'defaultBackend' => (string) ($item['default_backend'] ?? ''),
             'sort' => (int) ($item['sort'] ?? $item['sort_order'] ?? 0),
-            'description' => (string) ($item['description'] ?? ''),
+            'description' => trim((string) ($item['description'] ?? '')),
             'exampleCost' => trim((string) ($item['example_cost'] ?? '')),
             'usedCredits' => $usedCredits,
             'usedCreditsFormatted' => AiCreditUnits::formatCredits($usedCredits),
@@ -648,6 +648,8 @@ final class CreditsDashboardAssembler
                 $detailParts[] = $model;
             }
 
+            $clientFields = $this->extractReceiptClientFields($receipt);
+
             $rows[] = [
                 'crdate' => (int) ($receipt['crdate'] ?? 0),
                 'label' => $this->humanizeFeatureKey($featureKey),
@@ -656,10 +658,88 @@ final class CreditsDashboardAssembler
                 'creditsFormatted' => AiCreditUnits::formatCredits($parsed['credits']),
                 'entryType' => $entryType,
                 'isCredit' => $isCredit,
+                'extensionKey' => $clientFields['extensionKey'],
+                'pageName' => $clientFields['pageName'],
+                'latencyMs' => $clientFields['latencyMs'],
+                'latencyFormatted' => $clientFields['latencyFormatted'],
+                'status' => $clientFields['status'],
+                'requestUuid' => $clientFields['requestUuid'],
             ];
         }
 
         return $rows;
+    }
+
+    /**
+     * @param array<string, mixed> $receipt
+     * @return array{
+     *     extensionKey: string,
+     *     pageName: string,
+     *     latencyMs: int,
+     *     latencyFormatted: string,
+     *     status: string,
+     *     requestUuid: string
+     * }
+     */
+    private function extractReceiptClientFields(array $receipt): array
+    {
+        $requestUuid = trim((string) ($receipt['request_uuid'] ?? ''));
+        $extra = [];
+        $rawExtra = $receipt['extra'] ?? null;
+        if (is_string($rawExtra) && $rawExtra !== '') {
+            $decoded = json_decode($rawExtra, true);
+            if (is_array($decoded)) {
+                $extra = $decoded;
+            }
+        } elseif (is_array($rawExtra)) {
+            $extra = $rawExtra;
+        }
+
+        $client = is_array($extra['client'] ?? null) ? $extra['client'] : [];
+        $metaJson = is_array($extra['meta_json'] ?? null) ? $extra['meta_json'] : [];
+
+        $extensionKey = trim((string) (
+            $client['extension_key']
+            ?? $extra['extension_key']
+            ?? $metaJson['extension_key']
+            ?? ''
+        ));
+
+        $pageName = trim((string) ($client['page_title'] ?? $extra['page_title'] ?? ''));
+        if ($pageName === '') {
+            $pageId = (int) ($client['page_id'] ?? $metaJson['page_id'] ?? $extra['page_id'] ?? 0);
+            if ($pageId > 0) {
+                $pageName = 'Page ' . $pageId;
+            }
+        }
+
+        $latencyMs = max(0, (int) ($client['latency_ms'] ?? $extra['latency_ms'] ?? 0));
+        $latencyFormatted = $latencyMs > 0 ? $latencyMs . ' ms' : '';
+
+        $entryType = CreditsReceiptEntryType::normalize(
+            $receipt['entry_type'] ?? null,
+            CreditsReceiptEntryType::DEBIT,
+        );
+        $status = trim((string) ($client['status'] ?? ''));
+        if ($status === '') {
+            if ($entryType === CreditsReceiptEntryType::CREDIT) {
+                $status = 'credit';
+            } elseif (array_key_exists('status', $extra) && is_bool($extra['status'])) {
+                $status = $extra['status'] ? 'success' : 'failed';
+            } elseif ($requestUuid !== '') {
+                // Local debit mirror only stores successful settlements.
+                $status = 'success';
+            }
+        }
+
+        return [
+            'extensionKey' => $extensionKey,
+            'pageName' => $pageName,
+            'latencyMs' => $latencyMs,
+            'latencyFormatted' => $latencyFormatted,
+            'status' => $status,
+            'requestUuid' => $requestUuid,
+        ];
     }
 
     private function humanizeFeatureKey(string $key): string

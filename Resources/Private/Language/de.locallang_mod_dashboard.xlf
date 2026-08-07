@@ -2152,8 +2152,8 @@
                 <target>Schlüssel</target>
             </trans-unit>
             <trans-unit id="credits.dashboard.features.col.exampleCost">
-                <source>Example cost</source>
-                <target>Beispielkosten</target>
+                <source>Example cost per 500 credits</source>
+                <target>Beispielkosten pro 500 Credits</target>
             </trans-unit>
             <trans-unit id="credits.dashboard.features.col.model">
                 <source>Default model</source>
@@ -2178,6 +2178,26 @@
             <trans-unit id="credits.dashboard.history.col.description">
                 <source>Description</source>
                 <target>Beschreibung</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.col.extension">
+                <source>Extension</source>
+                <target>Extension</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.col.page">
+                <source>Page</source>
+                <target>Seite</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.col.latency">
+                <source>Latency</source>
+                <target>Latenz</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.col.status">
+                <source>Status</source>
+                <target>Status</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.col.requestUuid">
+                <source>Request UUID</source>
+                <target>Request-UUID</target>
             </trans-unit>
             <trans-unit id="credits.dashboard.history.col.date">
                 <source>Date</source>

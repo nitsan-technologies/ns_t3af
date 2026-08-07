@@ -110,7 +110,12 @@ class ProxyAiExecutor
             $settled = true;
             $latencyMs = (int) (microtime(true) * 1000) - $start;
             $summary = $this->mapUsageToStreamSummary($payload, $requestUuid);
-            $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
+            $this->chargeRecorder->record(
+                $requestUuid,
+                $featureKey,
+                $payload,
+                CreditsChargeRecorder::contextFromAiOptions($before->getOptions(), $latencyMs),
+            );
             $response = $this->mapChargeToAiResponse($payload, $requestUuid, $latencyMs, $before->getOptions(), $mapping->legacyField);
             $this->persistCompletion($provider, $before->getOptions(), $before->getPrompt(), $response, self::CALL_STREAM);
             $this->events->dispatch(new AfterProviderResponseEvent(
@@ -244,7 +249,12 @@ class ProxyAiExecutor
             $before->getOptions(),
             $mapping->legacyField,
         );
-        $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
+        $this->chargeRecorder->record(
+            $requestUuid,
+            $featureKey,
+            $payload,
+            CreditsChargeRecorder::contextFromAiOptions($before->getOptions(), $response->latencyMs),
+        );
         $this->persistCompletion($provider, $before->getOptions(), $before->getPrompt(), $response);
         $this->events->dispatch(new AfterProviderResponseEvent(
             $provider,
@@ -334,7 +344,12 @@ class ProxyAiExecutor
         }
 
         $response = $this->mapEmbedToEmbeddingResponse($payload, $requestUuid, (int) (microtime(true) * 1000) - $start);
-        $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
+        $this->chargeRecorder->record(
+            $requestUuid,
+            $featureKey,
+            $payload,
+            CreditsChargeRecorder::contextFromAiOptions($before->getOptions(), $response->latencyMs),
+        );
         $this->persistEmbedding($provider, $before->getOptions(), $before->getPrompt(), $response);
         // Budget/usage listeners bind to AfterProviderResponseEvent; credits
         // embedding usage must count against per-user budgets too (CTX-14).

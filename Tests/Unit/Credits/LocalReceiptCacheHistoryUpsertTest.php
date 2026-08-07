@@ -71,4 +71,55 @@ final class LocalReceiptCacheHistoryUpsertTest extends TestCase
             'cost_units' => 1,
         ]));
     }
+
+    public function testHistoryUpsertPreservesExistingClientContext(): void
+    {
+        $connection = $this->createMock(Connection::class);
+        $connection->expects(self::once())
+            ->method('insert')
+            ->willThrowException(new \Doctrine\DBAL\Exception\UniqueConstraintViolationException(
+                $this->createMock(\Doctrine\DBAL\Driver\Exception::class),
+                null,
+            ));
+
+        $connection->expects(self::once())
+            ->method('select')
+            ->with(['extra'], 'tx_nst3af_credit_receipt', ['request_uuid' => 'uuid-keep'])
+            ->willReturn(self::createConfiguredMock(\Doctrine\DBAL\Result::class, [
+                'fetchOne' => json_encode([
+                    'status' => true,
+                    'client' => [
+                        'extension_key' => 'ns_t3ai',
+                        'latency_ms' => 4472,
+                        'status' => 'success',
+                    ],
+                ], JSON_THROW_ON_ERROR),
+            ]));
+
+        $connection->expects(self::once())
+            ->method('update')
+            ->with(
+                'tx_nst3af_credit_receipt',
+                self::callback(static function (array $row): bool {
+                    $extra = json_decode((string) $row['extra'], true);
+                    return is_array($extra)
+                        && ($extra['client']['extension_key'] ?? null) === 'ns_t3ai'
+                        && ($extra['client']['latency_ms'] ?? null) === 4472;
+                }),
+                ['request_uuid' => 'uuid-keep'],
+            );
+
+        $pool = $this->createMock(ConnectionPool::class);
+        $pool->method('getConnectionForTable')->willReturn($connection);
+
+        $cache = new LocalReceiptCache($pool);
+        self::assertTrue($cache->upsertFromHistoryEntry([
+            'request_uuid' => 'uuid-keep',
+            'feature_key' => 'seo_page_metadata',
+            'entry_type' => 'debit',
+            'cost_units' => 130,
+            'cost' => 0.13,
+            'crdate' => 1710001000,
+        ]));
+    }
 }
