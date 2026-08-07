@@ -51,6 +51,8 @@ final class DashboardModuleHealthService
 
     /**
      * @param list<array{provider:string,requests:int,failed:int}> $providerStats
+     * @param array<string, string> $uris
+     * @param list<array<string, mixed>> $scheduledTasks
      * @return list<array{id:string,label:string,detail:string,status:string,href:string}>
      */
     public function build(

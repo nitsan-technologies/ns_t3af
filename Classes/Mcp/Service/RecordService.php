@@ -101,6 +101,7 @@ readonly class RecordService
         ?string $languageField = null,
     ): array {
         $limit = min(max($limit, 1), 500);
+        $offset = max(0, $offset);
 
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
         $queryBuilder->getRestrictions()->removeAll();
@@ -137,7 +138,7 @@ readonly class RecordService
         $records = $queryBuilder
             ->setMaxResults($limit)
             ->setFirstResult($offset)
-            ->orderBy('uid', 'ASC')
+            ->orderBy($this->defaultOrderByField($table), 'ASC')
             ->executeQuery()
             ->fetchAllAssociative();
 
@@ -147,6 +148,18 @@ readonly class RecordService
             'records' => $records,
             'total' => (int) $totalResult,
         ];
+    }
+
+    /**
+     * Sorted tables (pages, tt_content, …) must be listed in their TCA
+     * `sortby` order — listing by uid reports creation order, not the
+     * on-page/tree order the MCP client expects (CM-02).
+     */
+    private function defaultOrderByField(string $table): string
+    {
+        $sortby = $GLOBALS['TCA'][$table]['ctrl']['sortby'] ?? '';
+
+        return is_string($sortby) && $sortby !== '' ? $sortby : 'uid';
     }
 
     /**
@@ -165,10 +178,13 @@ readonly class RecordService
         string $orderDirection = 'ASC',
     ): array {
         $limit = min(max($limit, 1), 500);
+        $offset = max(0, $offset);
 
         if (!in_array($orderDirection, ['ASC', 'DESC'], true)) {
             $orderDirection = 'ASC';
         }
+
+        $resolvedOrderBy = $this->resolveOrderByField($table, $orderBy);
 
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
         $queryBuilder->getRestrictions()->removeAll();
@@ -200,7 +216,7 @@ readonly class RecordService
         $records = $queryBuilder
             ->setMaxResults($limit)
             ->setFirstResult($offset)
-            ->orderBy($orderBy ?? 'uid', $orderDirection)
+            ->orderBy($resolvedOrderBy, $orderDirection)
             ->executeQuery()
             ->fetchAllAssociative();
 
@@ -319,5 +335,31 @@ readonly class RecordService
             ],
             $rows,
         );
+    }
+
+    /**
+     * Defense-in-depth: callers should allowlist orderBy, but search() re-validates
+     * against the table's TCA columns before building ORDER BY (S-11).
+     */
+    private function resolveOrderByField(string $table, ?string $orderBy): string
+    {
+        if ($orderBy === null || $orderBy === '') {
+            return 'uid';
+        }
+
+        return in_array($orderBy, $this->allowedOrderByFields($table), true) ? $orderBy : 'uid';
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function allowedOrderByFields(string $table): array
+    {
+        $columns = array_map(
+            static fn(int|string $field): string => (string) $field,
+            array_keys($GLOBALS['TCA'][$table]['columns'] ?? []),
+        );
+
+        return array_values(array_unique(array_merge(['uid', 'pid'], $columns)));
     }
 }

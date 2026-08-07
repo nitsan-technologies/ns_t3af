@@ -49,7 +49,6 @@ final class ProviderLegacyConfigService
         'basicAuthPassword',
         'enableApiQuotaEmailNotification',
         'apiQuotaNotificationEmail',
-        't3planetApiBaseUrl',
         't3planetCreditsDomain',
         't3planetApiToken',
         'mcpBasePath',
@@ -197,7 +196,7 @@ final class ProviderLegacyConfigService
             $config['defaultModel'] = 'openai';
         }
 
-        $embeddingProvider = $this->resolveEmbeddingProvider($enabledProviders, $defaultProvider);
+        $embeddingProvider = $this->resolveEmbeddingProvider(array_values($enabledProviders), $defaultProvider);
         if ($embeddingProvider !== null) {
             $config['defaultEmbeddingsModel'] = ProviderSlugMapper::slugFromProvider($embeddingProvider);
         } elseif (!isset($config['defaultEmbeddingsModel'])) {
@@ -294,6 +293,10 @@ final class ProviderLegacyConfigService
 
         if (isset($map['endpoint']) && $provider->endpointUrl !== '') {
             $config[$map['endpoint']] = $provider->endpointUrl;
+        }
+
+        if (isset($map['endpoint_model'])) {
+            $config[$map['endpoint_model']] = $provider->effectiveApiVersion();
         }
 
         if (isset($map['enable_flag'])) {

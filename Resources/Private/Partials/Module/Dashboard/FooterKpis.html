@@ -8,11 +8,13 @@
         <div class="aiu-footer-kpi__value">{totals.totalRequests}</div>
         <f:render partial="Module/Dashboard/TrendBadge" arguments="{trend: trends.totalRequests}" />
     </article>
-    <article class="aiu-footer-kpi">
-        <div class="aiu-footer-kpi__label"><f:translate key="{ll}:dashboard.kpi.tokens" /></div>
-        <div class="aiu-footer-kpi__value">{totals.totalTokens}</div>
-        <f:render partial="Module/Dashboard/TrendBadge" arguments="{trend: trends.totalTokens}" />
-    </article>
+    <f:if condition="{hideTokenMetrics} != 1">
+        <article class="aiu-footer-kpi">
+            <div class="aiu-footer-kpi__label"><f:translate key="{ll}:dashboard.kpi.tokens" /></div>
+            <div class="aiu-footer-kpi__value">{totals.totalTokens}</div>
+            <f:render partial="Module/Dashboard/TrendBadge" arguments="{trend: trends.totalTokens}" />
+        </article>
+    </f:if>
     <article class="aiu-footer-kpi">
         <div class="aiu-footer-kpi__label">
             <f:translate key="{ll}:{costLabelKey}" default="API Cost" />

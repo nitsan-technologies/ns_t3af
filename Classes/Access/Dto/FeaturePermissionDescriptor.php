@@ -21,6 +21,8 @@ namespace NITSAN\NsT3AF\Access\Dto;
 
 /**
  * Feature permission row for AI Access catalogs (T3Ai:* custom_options).
+ *
+ * @api
  */
 final readonly class FeaturePermissionDescriptor
 {

@@ -234,7 +234,7 @@ final class McpServerController
             'token' => $plainToken,
             'url' => $url,
             'expiresIn' => $lifetime,
-            'uid' => $token?->uid ?? 0,
+            'uid' => $token !== null ? $token->uid : 0,
         ]);
     }
 
@@ -298,7 +298,7 @@ final class McpServerController
             'token' => $plainToken,
             'preview' => substr(hash('sha256', $plainToken), 0, 8) . '…',
             'expiresIn' => $accessLifetime,
-            'uid' => $token?->uid ?? 0,
+            'uid' => $token !== null ? $token->uid : 0,
         ]);
     }
 

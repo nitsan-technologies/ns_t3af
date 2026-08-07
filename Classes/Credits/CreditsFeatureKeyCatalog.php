@@ -27,21 +27,16 @@ namespace NITSAN\NsT3AF\Credits;
  */
 final class CreditsFeatureKeyCatalog
 {
-    public const CONTENT_GENERATION = 'content_generation';
-    public const CONTENT_TRANSLATION = 'content_translation';
+    public const SEO_PAGE_METADATA = 'seo_page_metadata';
+    public const SEO_IMAGE_METADATA = 'seo_image_metadata';
+    public const CONTENT_GENERATE = 'content_generate';
+    public const CONTENT_TRANSLATE = 'content_translate';
+    public const CONTENT_PAGE_STRUCTURE = 'content_page_structure';
     public const EASY_LANGUAGE = 'easy_language';
+    public const ASSISTANT_CHAT = 'assistant_chat';
     public const EMBEDDING = 'embedding';
-    public const IMAGE_GENERATION = 'image_generation';
-    public const METADATA_ALT_TEXT = 'metadata_alt_text';
-    public const METADATA_DESCRIPTION = 'metadata_description';
-    public const METADATA_TITLE = 'metadata_title';
-    public const PAGE_STRUCTURE_GENERATION = 'page_structure_generation';
-    public const SEO_META_DESCRIPTION = 'seo_meta_description';
-    public const SEO_OG_DESCRIPTION = 'seo_og_description';
-    public const SEO_OG_TITLE = 'seo_og_title';
-    public const SEO_PAGE_TITLE = 'seo_page_title';
-    public const STREAM = 'stream';
     public const TEXT_TO_SPEECH = 'text_to_speech';
+    public const IMAGE_GENERATE = 'image_generate';
 
     /**
      * @return list<string>
@@ -49,21 +44,16 @@ final class CreditsFeatureKeyCatalog
     public static function all(): array
     {
         return [
-            self::CONTENT_GENERATION,
-            self::CONTENT_TRANSLATION,
+            self::SEO_PAGE_METADATA,
+            self::SEO_IMAGE_METADATA,
+            self::CONTENT_GENERATE,
+            self::CONTENT_TRANSLATE,
+            self::CONTENT_PAGE_STRUCTURE,
             self::EASY_LANGUAGE,
+            self::ASSISTANT_CHAT,
             self::EMBEDDING,
-            self::IMAGE_GENERATION,
-            self::METADATA_ALT_TEXT,
-            self::METADATA_DESCRIPTION,
-            self::METADATA_TITLE,
-            self::PAGE_STRUCTURE_GENERATION,
-            self::SEO_META_DESCRIPTION,
-            self::SEO_OG_DESCRIPTION,
-            self::SEO_OG_TITLE,
-            self::SEO_PAGE_TITLE,
-            self::STREAM,
             self::TEXT_TO_SPEECH,
+            self::IMAGE_GENERATE,
         ];
     }
 

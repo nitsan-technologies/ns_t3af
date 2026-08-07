@@ -40,7 +40,7 @@ final readonly class AiOptions
      * @param float|null   $temperature        Override `temperature`. `null` keeps the row default.
      * @param string|null  $systemPrompt       Replace the provider row's system prompt for this call only.
      * @param int|null     $maxTokens          Per-call token cap; `null` lets the provider decide.
-     * @param bool         $noCache            Skip the response cache for this call (read AND write).
+     * @param bool         $noCache            Reserved: no response cache is currently active, so this has no effect yet.
      * @param string|null  $extensionKey       Calling extension key (e.g. `ns_t3ai`) for analytics attribution.
      * @param string|null  $featureKey         Stable feature key (e.g. `seo.meta_description`) for dashboard slicing.
      * @param string|null  $featureLabel       Optional human-readable feature title used by UI summaries.
@@ -48,9 +48,16 @@ final readonly class AiOptions
      * @param string|null  $contentEntityType  Optional domain object type (e.g. `pages`, `tt_content`).
      * @param int|null     $contentEntityUid   Optional domain object identifier.
      * @param string       $requestUuid        RFC 4122 idempotency key for T3Planet Credits Charge/Embed; empty string = auto UUID.
-     * @param array<string, scalar|array<int|string, scalar>|null> $extra
-     *                                         Adapter-specific extras (e.g. `top_p`, `frequency_penalty`).
-     *                                         Forwarded to the underlying SDK without validation.
+     * @param array<string, mixed> $extra      Adapter-specific extras forwarded to the SDK without validation
+     *                                         (e.g. `top_p`, tools, `frequency_penalty`).
+     *
+     *                                         Keys `ns_t3af` reads itself:
+     *                                         - `messages` (list): chat turns; the canonical provider input for chat calls.
+     *                                         - `skipBrandContext` (bool): disable brand-context injection for this call.
+     *                                         - `brandContextScope` (string): feature scope for per-feature brand-profile override.
+     *                                         - `brandContextProfileUid` (int): resolved brand profile uid (stamped at runtime; lineage).
+     *                                         - `imageSize` / `imageCount`: image generation variation overrides.
+     *                                         - `quality` (mixed): input to the response quality resolver.
      */
     public function __construct(
         public ?string $providerIdentifier = null,

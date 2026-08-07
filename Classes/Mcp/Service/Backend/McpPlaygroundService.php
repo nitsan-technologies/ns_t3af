@@ -235,6 +235,9 @@ readonly class McpPlaygroundService
         };
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function decodeJsonArray(mixed $value): array
     {
         if (!is_string($value) || trim($value) === '') {

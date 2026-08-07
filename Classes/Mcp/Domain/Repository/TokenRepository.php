@@ -328,6 +328,42 @@ readonly class TokenRepository
         $connection->update(self::TABLE, ['revoked' => 1], ['uid' => $uid]);
     }
 
+    /**
+     * Conditionally revoke an active token row (S-05).
+     *
+     * Returns true only when this call flipped `revoked` from 0 → 1, so concurrent
+     * refresh attempts cannot both succeed.
+     */
+    public function revokeIfActive(int $uid): bool
+    {
+        $connection = $this->connectionPool->getConnectionForTable(self::TABLE);
+        $affected = $connection->update(
+            self::TABLE,
+            ['revoked' => 1],
+            ['uid' => $uid, 'revoked' => 0],
+        );
+
+        return $affected > 0;
+    }
+
+    /**
+     * Revoke every active token for a client+user pair (refresh-token reuse family).
+     */
+    public function revokeAllForClientAndUser(string $clientId, int $beUserUid): int
+    {
+        $connection = $this->connectionPool->getConnectionForTable(self::TABLE);
+
+        return $connection->update(
+            self::TABLE,
+            ['revoked' => 1],
+            [
+                'client_id' => $clientId,
+                'be_user' => $beUserUid,
+                'revoked' => 0,
+            ],
+        );
+    }
+
     public function revokeByPlainToken(#[\SensitiveParameter] string $plainToken): void
     {
         $hash = hash('sha256', $plainToken);
@@ -365,9 +401,9 @@ readonly class TokenRepository
         $now = time();
         $connection = $this->connectionPool->getConnectionForTable(self::TABLE);
 
-        return $connection->delete(self::TABLE, [
+        return (int) $connection->delete(self::TABLE, [
             'revoked' => 1,
-        ]) + $connection->executeStatement(
+        ]) + (int) $connection->executeStatement(
             'DELETE FROM ' . self::TABLE . ' WHERE access_token_expires > 0 AND access_token_expires < ? AND refresh_token_expires > 0 AND refresh_token_expires < ?',
             [$now, $now],
         );

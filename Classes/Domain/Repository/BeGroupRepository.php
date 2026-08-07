@@ -46,7 +46,7 @@ final class BeGroupRepository
             ->executeQuery()
             ->fetchAllAssociative();
 
-        return is_array($rows) ? $rows : [];
+        return $rows;
     }
 
     /**

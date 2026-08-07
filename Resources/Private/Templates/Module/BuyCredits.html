@@ -10,6 +10,7 @@
 <f:section name="Content">
     <div class="aiu-providers">
         <f:render partial="Module/TabPageHeader" arguments="{_all}" />
+        <f:render partial="Credits/PaymentFlash" arguments="{flash: flash}" />
         <f:if condition="{creditsModeActive} == 1">
             <f:then>
                 <f:if condition="{creditsDashboard.pricing.footnote} != ''">
@@ -17,25 +18,7 @@
                 </f:if>
                 <f:if condition="{products -> f:count()} > 0">
                     <f:then>
-                        <div class="aiu-credits-product-grid">
-                            <f:for each="{products}" as="product">
-                                <article class="aiu-credits-product">
-                                    <h3 class="aiu-credits-product__title">{product.title}</h3>
-                                    <p class="aiu-credits-product__credits">{product.credits} credits</p>
-                                    <f:if condition="{product.checkoutUrl} != ''">
-                                        <a class="btn btn-primary aiu-credits-product__cta"
-                                           href="{product.checkoutUrl}"
-                                           data-aiu-checkout
-                                           data-aiu-checkout-url="{product.checkoutUrl}"
-                                           data-aiu-checkout-title="{product.title}">
-                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.buy"
-                                                         default="Buy" />
-                                            {product.title}
-                                        </a>
-                                    </f:if>
-                                </article>
-                            </f:for>
-                        </div>
+                        <f:render section="ProductSections" arguments="{products: products}" />
                     </f:then>
                     <f:else>
                         <p class="aiu-credits-empty">
@@ -53,5 +36,72 @@
             </f:else>
         </f:if>
     </div>
+</f:section>
+
+<f:section name="ProductSections">
+    <f:render section="ProductGroup" arguments="{products: products, renewalPeriod: 'monthly', title: 'Monthly plans'}" />
+    <f:render section="ProductGroup" arguments="{products: products, renewalPeriod: 'yearly', title: 'Yearly plans'}" />
+    <f:render section="ProductGroup" arguments="{products: products, renewalPeriod: 'one_time', title: 'Credit packs'}" />
+    <f:render section="ProductGroup" arguments="{products: products, renewalPeriod: '', title: 'Credit bundles', allowEmpty: 1}" />
+</f:section>
+
+<f:section name="ProductGroup">
+    <f:variable name="hasProducts" value="0" />
+    <f:for each="{products}" as="product">
+        <f:if condition="{allowEmpty} == 1">
+            <f:then>
+                <f:if condition="{product.renewalPeriod} == ''">
+                    <f:variable name="hasProducts" value="1" />
+                </f:if>
+            </f:then>
+            <f:else if="{product.renewalPeriod} == {renewalPeriod}">
+                <f:variable name="hasProducts" value="1" />
+            </f:else>
+        </f:if>
+    </f:for>
+    <f:if condition="{hasProducts} == 1">
+        <section class="aiu-credits-product-section">
+            <h2 class="aiu-credits-product-section__title">{title}</h2>
+            <div class="aiu-credits-product-grid">
+                <f:for each="{products}" as="product">
+                    <f:if condition="{allowEmpty} == 1">
+                        <f:then>
+                            <f:if condition="{product.renewalPeriod} == ''">
+                                <f:render section="ProductCard" arguments="{product: product}" />
+                            </f:if>
+                        </f:then>
+                        <f:else if="{product.renewalPeriod} == {renewalPeriod}">
+                            <f:render section="ProductCard" arguments="{product: product}" />
+                        </f:else>
+                    </f:if>
+                </f:for>
+            </div>
+        </section>
+    </f:if>
+</f:section>
+
+<f:section name="ProductCard">
+    <article class="aiu-credits-product">
+        <h3 class="aiu-credits-product__title">{product.title}</h3>
+        <p class="aiu-credits-product__credits">{product.credits} credits</p>
+        <f:if condition="{product.description -> f:count()} > 0">
+            <ul class="aiu-credits-product__features aiu-credits-product__description">
+                <f:for each="{product.description}" as="bullet">
+                    <li>{bullet}</li>
+                </f:for>
+            </ul>
+        </f:if>
+        <f:if condition="{product.checkoutUrl} != ''">
+            <a class="btn btn-primary aiu-credits-product__cta"
+               href="{product.checkoutUrl}"
+               data-aiu-checkout
+               data-aiu-checkout-url="{product.checkoutUrl}"
+               data-aiu-checkout-title="{product.title}">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.buy"
+                             default="Buy" />
+                {product.title}
+            </a>
+        </f:if>
+    </article>
 </f:section>
 </html>

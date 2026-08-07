@@ -2,8 +2,9 @@ import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
 import Modal from '@typo3/backend/modal.js';
 import Notification from '@typo3/backend/notification.js';
 import Severity from '@typo3/backend/severity.js';
-import { refreshCharts, initCharts } from './dashboard-charts.js';
+import { initCharts } from './dashboard-charts.js';
 import { initPeriodDropdownForms } from './period-filter.js';
+import { navigateInModule, preserveRouteParams } from './module-navigation.js';
 import { mountProviderList } from './provider-drawer.js';
 import { observeBrowserAutocomplete } from './disable-browser-autocomplete.js';
 
@@ -11,6 +12,7 @@ const routes = {
   status: 'nst3af_credits_status',
   toggle: 'nst3af_credits_toggle',
   activate: 'nst3af_credits_activate',
+  refreshToken: 'nst3af_credits_refresh_token',
   dashboard: 'nst3af_credits_dashboard',
   estimate: 'nst3af_credits_estimate',
 };
@@ -37,6 +39,11 @@ const LL = {
   notificationOwnKeysAgain: 'credits.js.notification.ownKeysAgain',
   notificationActivateReload: 'credits.js.notification.activateReload',
   notificationActivateIncomplete: 'credits.js.notification.activateIncomplete',
+  modalRefreshTitle: 'credits.js.modal.refreshTitle',
+  modalRefreshBody: 'credits.js.modal.refreshBody',
+  modalRefreshOk: 'credits.js.modal.refreshOk',
+  errorTitleRefresh: 'credits.js.error.title.refresh',
+  notificationTokenRefreshed: 'credits.js.notification.tokenRefreshed',
 };
 
 /**
@@ -214,7 +221,6 @@ function applyDashboardViews(creditMode) {
     panel.setAttribute('aria-hidden', show ? 'false' : 'true');
   });
   document.dispatchEvent(new CustomEvent('aiu-dashboard-view-changed', { detail: { creditMode } }));
-  refreshCharts();
 }
 
 /** @type {ReadonlySet<string>} */
@@ -389,12 +395,132 @@ function bindScrollHelpers() {
   });
 }
 
+/**
+ * Plans / top-ups tabs and monthly / yearly billing toggle on the credits dashboard.
+ *
+ * @param {ParentNode} [scope]
+ */
+function initCreditsBundleTabs(scope = document) {
+  const bindVersion = '3';
+  scope.querySelectorAll('[data-aiu-credits-bundles-root]').forEach((root) => {
+    if (!(root instanceof HTMLElement) || root.dataset.aiuBundlesTabsBound === bindVersion) {
+      return;
+    }
+    root.dataset.aiuBundlesTabsBound = bindVersion;
+
+    const syncEmptyStates = () => {
+      root.querySelectorAll('[data-aiu-plan-period-panel]').forEach((panel) => {
+        if (!(panel instanceof HTMLElement)) {
+          return;
+        }
+        const period = panel.getAttribute('data-aiu-plan-period-panel') ?? '';
+        const empty = root.querySelector(`[data-aiu-bundles-empty="plan-${period}"]`);
+        const hasCards = panel.querySelector('.aiu-credits-product') instanceof HTMLElement;
+        if (empty instanceof HTMLElement) {
+          empty.hidden = hasCards || panel.hidden;
+        }
+      });
+
+      const topupPanel = root.querySelector('[data-aiu-bundle-panel="topup"]');
+      const topupEmpty = root.querySelector('[data-aiu-bundles-empty="topup"]');
+      if (topupPanel instanceof HTMLElement && topupEmpty instanceof HTMLElement) {
+        const hasTopups = topupPanel.querySelector('.aiu-credits-product') instanceof HTMLElement;
+        topupEmpty.hidden = hasTopups || topupPanel.hidden;
+      }
+    };
+
+    const setPeriodGroupVisible = (showPeriod) => {
+      root.querySelectorAll('[data-aiu-plan-period-group]').forEach((group) => {
+        if (!(group instanceof HTMLElement)) {
+          return;
+        }
+        group.hidden = !showPeriod;
+        group.classList.toggle('is-hidden', !showPeriod);
+        group.style.display = showPeriod ? '' : 'none';
+        group.setAttribute('aria-hidden', showPeriod ? 'false' : 'true');
+      });
+    };
+
+    const activateType = (type) => {
+      root.dataset.aiuBundleType = type;
+      root.querySelectorAll('[data-aiu-bundle-tab]').forEach((tab) => {
+        if (!(tab instanceof HTMLElement)) {
+          return;
+        }
+        const active = tab.getAttribute('data-aiu-bundle-tab') === type;
+        tab.classList.toggle('is-active', active);
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+      root.querySelectorAll('[data-aiu-bundle-panel]').forEach((panel) => {
+        if (!(panel instanceof HTMLElement)) {
+          return;
+        }
+        panel.hidden = panel.getAttribute('data-aiu-bundle-panel') !== type;
+      });
+      root.querySelectorAll('[data-aiu-bundles-sub]').forEach((node) => {
+        if (!(node instanceof HTMLElement)) {
+          return;
+        }
+        node.hidden = node.getAttribute('data-aiu-bundles-sub') !== type;
+      });
+      setPeriodGroupVisible(type === 'plan');
+      syncEmptyStates();
+    };
+
+    const activatePeriod = (period) => {
+      root.querySelectorAll('[data-aiu-plan-period]').forEach((btn) => {
+        if (!(btn instanceof HTMLElement)) {
+          return;
+        }
+        const active = btn.getAttribute('data-aiu-plan-period') === period;
+        btn.classList.toggle('is-active', active);
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+      root.querySelectorAll('[data-aiu-plan-period-panel]').forEach((panel) => {
+        if (!(panel instanceof HTMLElement)) {
+          return;
+        }
+        panel.hidden = panel.getAttribute('data-aiu-plan-period-panel') !== period;
+      });
+      syncEmptyStates();
+    };
+
+    root.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+      const typeTab = target.closest('[data-aiu-bundle-tab]');
+      if (typeTab instanceof HTMLElement && root.contains(typeTab)) {
+        event.preventDefault();
+        activateType(typeTab.getAttribute('data-aiu-bundle-tab') ?? 'plan');
+        return;
+      }
+      const periodBtn = target.closest('[data-aiu-plan-period]');
+      if (periodBtn instanceof HTMLElement && root.contains(periodBtn)) {
+        event.preventDefault();
+        activatePeriod(periodBtn.getAttribute('data-aiu-plan-period') ?? 'monthly');
+      }
+    });
+
+    activateType('plan');
+    activatePeriod('monthly');
+    syncEmptyStates();
+  });
+}
+
 function bindCardSelect(card, onSelect) {
   if (!card) {
     return;
   }
+  const radio = card.querySelector('[data-aiu-mode-radio]');
   const handler = (event) => {
-    if (event.target.closest('[data-credits-activate]')) {
+    if (event.target.closest('[data-credits-activate]') || event.target.closest('[data-credits-refresh-token]')) {
+      return;
+    }
+    if (event.target.closest('[data-aiu-mode-radio]')) {
       return;
     }
     event.preventDefault();
@@ -402,7 +528,10 @@ function bindCardSelect(card, onSelect) {
   };
   card.addEventListener('click', handler);
   card.addEventListener('keydown', (event) => {
-    if (event.target.closest('[data-credits-activate]')) {
+    if (event.target.closest('[data-credits-activate]') || event.target.closest('[data-credits-refresh-token]')) {
+      return;
+    }
+    if (event.target.closest('[data-aiu-mode-radio]')) {
       return;
     }
     if (event.key === 'Enter' || event.key === ' ') {
@@ -410,6 +539,13 @@ function bindCardSelect(card, onSelect) {
       onSelect();
     }
   });
+  if (radio instanceof HTMLInputElement) {
+    radio.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onSelect();
+    });
+  }
 }
 
 /**
@@ -468,18 +604,51 @@ function applyUiState(root, data) {
   const creditsActiveBadge = qs(root, '[data-credits-active-badge]');
   const activatePill = qs(root, '[data-credits-activate]');
   const ownKeysActiveBadge = qs(root, '[data-ownkeys-active-badge]');
+  const creditsRadio = qs(root, '[data-aiu-mode-radio="credits"]');
+  const ownKeysRadio = qs(root, '[data-aiu-mode-radio="ownkeys"]');
 
   creditsCard?.classList.toggle('is-active', creditMode);
+  creditsCard?.classList.toggle('active', creditMode);
+  creditsCard?.setAttribute('aria-checked', creditMode ? 'true' : 'false');
   creditsCard?.setAttribute('aria-pressed', creditMode ? 'true' : 'false');
   ownKeysCard?.classList.toggle('is-active', !creditMode);
+  ownKeysCard?.classList.toggle('active', !creditMode);
+  ownKeysCard?.setAttribute('aria-checked', creditMode ? 'false' : 'true');
   ownKeysCard?.setAttribute('aria-pressed', creditMode ? 'false' : 'true');
+
+  if (creditsRadio instanceof HTMLInputElement) {
+    creditsRadio.checked = creditMode;
+  }
+  if (ownKeysRadio instanceof HTMLInputElement) {
+    ownKeysRadio.checked = !creditMode;
+  }
 
   root.dataset.creditsActive = active ? '1' : '0';
   root.dataset.creditMode = creditMode ? '1' : '0';
 
   creditsActiveBadge?.classList.toggle('is-hidden', !active);
   activatePill?.classList.toggle('is-hidden', !creditMode || active);
+  activatePill?.toggleAttribute('disabled', !creditMode || active);
   ownKeysActiveBadge?.classList.toggle('is-hidden', creditMode);
+
+  // Keep dashboard/provider Activate CTAs outside this root in sync.
+  document.querySelectorAll('[data-credits-activate]').forEach((el) => {
+    if (el === activatePill) {
+      return;
+    }
+    el.classList.toggle('is-hidden', !creditMode || active);
+    if (el instanceof HTMLButtonElement) {
+      el.disabled = !creditMode || active;
+    } else {
+      el.toggleAttribute('disabled', !creditMode || active);
+    }
+  });
+  document.querySelectorAll('[data-credits-active-badge]').forEach((el) => {
+    if (el === creditsActiveBadge) {
+      return;
+    }
+    el.classList.toggle('is-hidden', !active);
+  });
 
   applyContentPanels(creditMode);
   if (typeof data.creditsBearerToken === 'string') {
@@ -489,17 +658,191 @@ function applyUiState(root, data) {
   }
 }
 
+const notificationDedupeMs = 5000;
+let lastNotificationKey = '';
+let lastNotificationAt = 0;
+
 /**
  * @param {unknown} err
  * @param {string} title
  */
 function handleError(err, title) {
   const message = err instanceof Error && err.message ? err.message : String(err);
-  if (typeof Notification !== 'undefined' && Notification.error) {
-    Notification.error(title, message);
+  const errorCode =
+    err && typeof err === 'object' && err.creditsError && typeof err.creditsError.errorCode === 'string'
+      ? err.creditsError.errorCode
+      : '';
+  const dedupeKey = `${title}|${errorCode}|${message}`;
+  const now = Date.now();
+  if (dedupeKey === lastNotificationKey && now - lastNotificationAt < notificationDedupeMs) {
+    return;
+  }
+  lastNotificationKey = dedupeKey;
+  lastNotificationAt = now;
+
+  const notify =
+    typeof Notification !== 'undefined' && err && typeof err === 'object' && err.httpStatus === 429 && Notification.warning
+      ? Notification.warning.bind(Notification)
+      : typeof Notification !== 'undefined' && Notification.error
+        ? Notification.error.bind(Notification)
+        : null;
+
+  if (notify) {
+    notify(title, message);
   } else {
     console.error(title, message);
   }
+}
+
+function runCreditsRefresh(root) {
+  confirmSwitch(
+    ll(LL.modalRefreshTitle, 'Refresh support token?'),
+    ll(
+      LL.modalRefreshBody,
+      'This generates a new token for this server. Anyone with the old token will no longer be able to use T3Planet Credits.',
+    ),
+    ll(LL.modalRefreshOk, 'Refresh token'),
+    () => {
+      post(routes.refreshToken)
+        .then((data) => {
+          if (data.status === false || data.error || data.error_code) {
+            handleError(
+              new Error(data.userMessage || data.message || data.error_code || data.error),
+              ll(LL.errorTitleRefresh, 'Refresh token'),
+            );
+            return;
+          }
+          document.querySelectorAll('[data-aiu-providers-credits-root]').forEach((creditsRoot) => {
+            if (creditsRoot instanceof HTMLElement) {
+              applyUiState(creditsRoot, {
+                creditMode: true,
+                active: true,
+                creditsBearerToken: data.creditsBearerToken,
+              });
+            }
+          });
+          Notification.success(
+            ll(LL.brandT3planet, 'T3Planet Credits'),
+            ll(LL.notificationTokenRefreshed, 'Support token refreshed. Use the new token when contacting support.'),
+          );
+        })
+        .catch((err) => handleError(err, ll(LL.errorTitleRefresh, 'Refresh token')));
+    },
+  );
+}
+
+let refreshDelegationBound = false;
+
+function bindRefreshDelegation() {
+  if (refreshDelegationBound) {
+    return;
+  }
+  refreshDelegationBound = true;
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const refreshEl = target.closest('[data-credits-refresh-token]');
+    if (!refreshEl) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    runCreditsRefresh(null);
+  });
+}
+
+function runCreditsActivate(root) {
+  const creditsFeatureAvailable = !root || isCreditsFeatureAvailable(root);
+  if (!creditsFeatureAvailable) {
+    return;
+  }
+  post(routes.activate)
+    .then((data) => {
+      if (data.status === false || data.error || data.error_code) {
+        handleError(
+          new Error(data.userMessage || data.message || data.error_code || data.error),
+          ll(LL.errorTitleActivate, 'Activate T3Planet Credits'),
+        );
+        return;
+      }
+      if (data.active) {
+        try {
+          document.querySelectorAll('[data-aiu-providers-credits-root]').forEach((creditsRoot) => {
+            if (creditsRoot instanceof HTMLElement) {
+              applyUiState(creditsRoot, {
+                creditMode: true,
+                active: true,
+                creditsBearerToken: data.creditsBearerToken,
+              });
+            }
+          });
+        } catch (err) {
+          console.error('[ns_t3af] Credits activate UI update failed', err);
+        }
+        Notification.success(
+          ll(LL.brandT3planet, 'T3Planet Credits'),
+          ll(
+            LL.notificationActivateReload,
+            'Credits mode is active. Loading your dashboard…',
+          ),
+        );
+        window.location.reload();
+        return;
+      }
+      Notification.warning(
+        ll(LL.brandT3planet, 'T3Planet Credits'),
+        ll(
+          LL.notificationActivateIncomplete,
+          'Mode enabled, but activation did not complete. Check license keys and API connectivity.',
+        ),
+      );
+    })
+    .catch((err) =>
+      handleError(err, ll(LL.errorTitleActivate, 'Activate T3Planet Credits')),
+    );
+}
+
+let activateDelegationBound = false;
+
+function bindActivateDelegation() {
+  if (activateDelegationBound) {
+    return;
+  }
+  activateDelegationBound = true;
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const activateEl = target.closest('[data-credits-activate]');
+    if (!activateEl) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const root =
+      activateEl.closest('[data-aiu-providers-credits-root]') ||
+      document.querySelector('[data-aiu-providers-credits-root]');
+    runCreditsActivate(root instanceof HTMLElement ? root : null);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    const activateEl = target.closest('[data-credits-activate]');
+    if (!activateEl || activateEl !== target) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    activateEl.click();
+  });
 }
 
 function initCreditsMode(root) {
@@ -508,11 +851,12 @@ function initCreditsMode(root) {
   }
   initializedRoots.add(root);
   observeBrowserAutocomplete(root);
+  bindActivateDelegation();
+  bindRefreshDelegation();
 
   const creditsFeatureAvailable = isCreditsFeatureAvailable(root);
   const creditsCard = qs(root, '[data-aiu-providers-mode="credits"]');
   const ownKeysCard = qs(root, '[data-aiu-providers-mode="ownkeys"]');
-  const activatePill = qs(root, '[data-credits-activate]');
 
   if (!creditsFeatureAvailable && creditsCard instanceof HTMLElement) {
     creditsCard.classList.add('is-disabled');
@@ -607,55 +951,6 @@ function initCreditsMode(root) {
     );
   });
 
-  activatePill?.addEventListener('click', (event) => {
-    if (!creditsFeatureAvailable) {
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    post(routes.activate)
-      .then((data) => {
-        if (data.status === false || data.error || data.error_code) {
-          handleError(
-            new Error(data.userMessage || data.message || data.error_code || data.error),
-            ll(LL.errorTitleActivate, 'Activate T3Planet Credits'),
-          );
-          return;
-        }
-        if (data.active) {
-          Notification.success(
-            ll(LL.brandT3planet, 'T3Planet Credits'),
-            ll(
-              LL.notificationActivateReload,
-              'Credits mode is active. Loading your dashboard…',
-            ),
-          );
-          window.location.reload();
-          return;
-        }
-        Notification.warning(
-          ll(LL.brandT3planet, 'T3Planet Credits'),
-          ll(
-            LL.notificationActivateIncomplete,
-            'Mode enabled, but activation did not complete. Check license keys and API connectivity.',
-          ),
-        );
-      })
-      .catch((err) =>
-        handleError(err, ll(LL.errorTitleActivate, 'Activate T3Planet Credits')),
-      );
-  });
-
-  activatePill?.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      event.stopPropagation();
-      activatePill.click();
-    }
-  });
-
   bindCheckoutLinks();
   bindScrollHelpers();
   refreshStatus();
@@ -699,8 +994,63 @@ function reinitDashboardRoot(root) {
   requestAnimationFrame(() => initCreditsHeroProgress(root));
 }
 
+/**
+ * Re-init Providers module after fetch-based partial refresh (entry-type filter / usage paging).
+ *
+ * @param {Element} root
+ */
+function reinitProvidersRoot(root) {
+  observeBrowserAutocomplete(root);
+  initPeriodDropdownForms(root);
+  initCreditsUsagePaginationLinks(root);
+  initCreditsBundleTabs(root);
+  mountProviderList(root);
+  const creditsRoot = root.querySelector('[data-aiu-providers-credits-root]');
+  if (creditsRoot instanceof HTMLElement) {
+    initCreditsMode(creditsRoot);
+  }
+  requestAnimationFrame(() => initCreditsHeroProgress(root));
+}
+
 if (typeof window !== 'undefined') {
   window.aiuReinitDashboardRoot = reinitDashboardRoot;
+  window.aiuReinitProvidersRoot = reinitProvidersRoot;
+}
+
+/**
+ * Recent AI Usage pagination — in-module navigation (entry-type uses `.aiu-period__option`
+ * via period-filter.js, same as the date-range dropdown).
+ *
+ * @param {ParentNode} [scope]
+ */
+function initCreditsUsagePaginationLinks(scope = document) {
+  const boundAttr = 'data-aiu-credits-usage-nav-bound';
+  const fallbackContext = scope instanceof Element
+    ? scope.closest('[data-aiu-nav-replace]') ?? scope
+    : scope.querySelector?.('[data-aiu-nav-replace]') ?? null;
+
+  scope.querySelectorAll('.aiu-credits-usage__nav-link[href]').forEach((anchor) => {
+    if (!(anchor instanceof HTMLAnchorElement) || anchor.getAttribute(boundAttr) === '1') {
+      return;
+    }
+    anchor.setAttribute(boundAttr, '1');
+    anchor.addEventListener('click', (event) => {
+      event.preventDefault();
+      const url = preserveRouteParams(anchor.href);
+      const context = anchor.closest('[data-aiu-nav-replace]') ?? fallbackContext;
+      navigateInModule(url.toString(), context);
+    });
+  });
+}
+
+/**
+ * @param {ParentNode} [scope]
+ */
+function initProvidersRoots(scope = document) {
+  scope.querySelectorAll('[data-aiu-providers-root]').forEach((root) => {
+    initPeriodDropdownForms(root);
+    initCreditsUsagePaginationLinks(root);
+  });
 }
 
 function boot() {
@@ -708,11 +1058,15 @@ function boot() {
     .querySelectorAll('[data-aiu-providers-credits-root]')
     .forEach((root) => initCreditsMode(root));
   initDashboardRoots(document);
+  initProvidersRoots(document);
   bindCheckoutLinks();
   bindScrollHelpers();
+  initCreditsBundleTabs(document);
   requestAnimationFrame(() => initCreditsHeroProgress(document));
   document.addEventListener('typo3-module-loaded', () => {
     initDashboardRoots(document);
+    initProvidersRoots(document);
+    initCreditsBundleTabs(document);
     requestAnimationFrame(() => initCreditsHeroProgress(document));
   });
   document.addEventListener('aiu-dashboard-view-changed', () => {

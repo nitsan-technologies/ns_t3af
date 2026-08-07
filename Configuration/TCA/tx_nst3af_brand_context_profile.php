@@ -31,6 +31,7 @@ return [
         'adminOnly' => true,
         'hideTable' => true,
         'security' => ['ignorePageTypeRestriction' => true],
+        'searchFields' => 'brand_name,industry,website_url,tagline,description',
     ],
     'types' => [
         '0' => [

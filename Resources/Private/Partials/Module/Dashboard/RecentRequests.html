@@ -18,7 +18,9 @@
                         <th scope="col"><f:translate key="{ll}:dashboard.col.time" /></th>
                         <th scope="col"><f:translate key="{ll}:dashboard.col.extension" /></th>
                         <th scope="col"><f:translate key="{ll}:dashboard.col.model" /></th>
-                        <th scope="col" class="text-end"><f:translate key="{ll}:dashboard.col.tokens" /></th>
+                        <f:if condition="{activityColumnMode} == 'cost'">
+                            <th scope="col" class="text-end"><f:translate key="{ll}:dashboard.col.tokens" /></th>
+                        </f:if>
                         <th scope="col" class="text-end">
                             <f:if condition="{activityColumnMode} == 'cost'">
                                 <f:then><f:translate key="{ll}:dashboard.col.cost" /></f:then>
@@ -34,8 +36,17 @@
                         <tr class="{f:if(condition: item.success, then: '', else: 'table-danger')}">
                             <td class="text-variant">{item.crdate -> f:format.date(format: 'Y-m-d H:i')}</td>
                             <td><span class="badge badge-default">{item.extension_key}</span></td>
-                            <td><code class="small">{item.model_used}</code></td>
-                            <td class="text-end">{item.total_tokens}</td>
+                            <td>
+                                <f:if condition="{item.provider_identifier} == 't3planet_credits'">
+                                    <f:then>—</f:then>
+                                    <f:else>
+                                        <code class="small">{item.model_used}</code>
+                                    </f:else>
+                                </f:if>
+                            </td>
+                            <f:if condition="{activityColumnMode} == 'cost'">
+                                <td class="text-end">{item.total_tokens}</td>
+                            </f:if>
                             <td class="text-end">
                                 <f:if condition="{activityColumnMode} == 'cost'">
                                     <f:then>
@@ -65,7 +76,7 @@
                     </f:for>
                     <f:if condition="{recentRequests -> f:count()} == 0">
                         <tr>
-                            <td colspan="7" class="text-center text-variant py-4">
+                            <td colspan="{f:if(condition: '{activityColumnMode} == \'cost\'', then: '7', else: '6')}" class="text-center text-variant py-4">
                                 <f:translate key="{ll}:dashboard.noActivity" />
                             </td>
                         </tr>

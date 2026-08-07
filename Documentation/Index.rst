@@ -43,7 +43,7 @@ Configure providers, MCP, brand context, prompts, and permissions once —
 connected extensions and AI clients reuse them.
 
 .. figure:: Images/t3af-dashboard.png
-   :alt: AI Foundation Dashboard showing provider health, MCP status, usage overview, and quick actions
+   :alt: AI Foundation Dashboard with setup checklist, Own API Keys mode, provider status, and cost trend
    :class: with-border with-shadow
    :zoom: lightbox
 
@@ -84,7 +84,7 @@ Set up providers, backend modules, and MCP through the AI Foundation module.
 
 ..  card-grid::
    :columns: 1
-   :columns-md: 3
+   :columns-md: 2
    :gap: 4
    :class: pb-4
    :card-height: 100
@@ -94,6 +94,13 @@ Set up providers, backend modules, and MCP through the AI Foundation module.
       Dashboard, providers, context, prompts, features, usage, and access control.
 
       ..  card-footer:: :ref:`Read more <configuration>`
+         :button-style: btn btn-primary stretched-link
+
+   ..  card:: T3Planet Credits
+
+      Use AI without your own vendor API keys — shared credit balance and activation.
+
+      ..  card-footer:: :ref:`Read more <t3planet-credit-system>`
          :button-style: btn btn-primary stretched-link
 
    ..  card:: MCP Server
@@ -181,6 +188,7 @@ Help
    Introduction/Index
    Installation/Index
    Configuration/Index
+   T3Planet-Credit-System/Index
    Integrations/Index
    UserGuide/Index
    DeveloperGuide/Index

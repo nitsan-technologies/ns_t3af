@@ -116,7 +116,7 @@ class McpServeCommand extends Command
             $backendUser = $this->backendUserBootstrap->bootstrap($beUserUid, $workspaceId);
 
             if ($showStartup || $verbose) {
-                $groupCount = is_array($backendUser->userGroups ?? null) ? count($backendUser->userGroups) : 0;
+                $groupCount = count($backendUser->userGroups);
                 $this->logStderr($output, sprintf('  BE groups:  %d', $groupCount));
             }
 

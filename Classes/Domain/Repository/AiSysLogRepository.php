@@ -20,10 +20,10 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Domain\Repository;
 
 use NITSAN\NsT3AF\Service\AiLogChannelCatalog;
+use NITSAN\NsT3AF\Utility\ExportLimits;
 use NITSAN\NsT3AF\Utility\SysLogWriterUtility;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Read, aggregate, and delete AI-related sys_log entries.
@@ -34,6 +34,7 @@ final class AiSysLogRepository
 
     public function __construct(
         private readonly AiLogChannelCatalog $channelCatalog,
+        private readonly ConnectionPool $connectionPool,
     ) {}
 
     /**
@@ -116,9 +117,11 @@ final class AiSysLogRepository
      * @param array<string, mixed> $filters
      * @return list<array<string, mixed>>
      */
-    public function findForExport(array $filters = [], int $maxRows = 5000): array
+    public function findForExport(array $filters = [], int $maxRows = ExportLimits::MAX_ROWS): array
     {
-        return $this->findFiltered($filters, max(1, min($maxRows, 5000)), 0);
+        $cap = max(1, min($maxRows, ExportLimits::MAX_ROWS));
+
+        return $this->findFiltered($filters, $cap, 0);
     }
 
     /**
@@ -131,7 +134,7 @@ final class AiSysLogRepository
             return 0;
         }
 
-        $qb = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable(self::TABLE);
+        $qb = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
         $qb->getRestrictions()->removeAll();
         $qb->delete(self::TABLE)
             ->where(
@@ -151,7 +154,7 @@ final class AiSysLogRepository
             return 0;
         }
 
-        $qb = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable(self::TABLE);
+        $qb = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
         $qb->getRestrictions()->removeAll();
         $qb->delete(self::TABLE)
             ->where(
@@ -168,7 +171,7 @@ final class AiSysLogRepository
     /**
      * @param array<string, mixed> $filters
      */
-    private function applyFilters($qb, array $filters): void
+    private function applyFilters(\TYPO3\CMS\Core\Database\Query\QueryBuilder $qb, array $filters): void
     {
         $channelValues = $this->resolveChannelConstraint($filters);
         $qb->where(
@@ -199,7 +202,7 @@ final class AiSysLogRepository
     /**
      * @param array<string, mixed> $filters
      */
-    private function applyPeriodFilter($qb, array $filters): void
+    private function applyPeriodFilter(\TYPO3\CMS\Core\Database\Query\QueryBuilder $qb, array $filters): void
     {
         $from = (int) ($filters['fromTimestamp'] ?? 0);
         $to = (int) ($filters['toTimestamp'] ?? 0);
@@ -218,7 +221,7 @@ final class AiSysLogRepository
     /**
      * @param array<string, mixed> $filters
      */
-    private function applyLevelFilter($qb, array $filters): void
+    private function applyLevelFilter(\TYPO3\CMS\Core\Database\Query\QueryBuilder $qb, array $filters): void
     {
         if (empty($filters['level'])) {
             return;
@@ -232,7 +235,7 @@ final class AiSysLogRepository
     /**
      * @param array<string, mixed> $filters
      */
-    private function applySearchFilter($qb, array $filters): void
+    private function applySearchFilter(\TYPO3\CMS\Core\Database\Query\QueryBuilder $qb, array $filters): void
     {
         if (empty($filters['search'])) {
             return;
@@ -260,9 +263,9 @@ final class AiSysLogRepository
         }
     }
 
-    private function createBaseQueryBuilder()
+    private function createBaseQueryBuilder(): \TYPO3\CMS\Core\Database\Query\QueryBuilder
     {
-        $qb = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable(self::TABLE);
+        $qb = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
         $qb->getRestrictions()->removeAll();
         $qb->from(self::TABLE);
 

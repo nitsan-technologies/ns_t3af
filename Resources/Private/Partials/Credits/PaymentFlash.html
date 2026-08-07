@@ -1,0 +1,24 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:comment>
+    Post-checkout return banners. Shop theme appends ?flash=… to Composer redirect_url:
+    credits-payment-pending | credits-payment-applied | credits-payment-failed
+</f:comment>
+<f:if condition="{flash} == 'credits-payment-pending'">
+    <div class="aiu-flash aiu-flash--info" role="status" data-aiu-credits-payment-flash="pending">
+        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.flash.paymentPending"
+                     default="Payment pending — credits will be added once your bank transfer clears." />
+    </div>
+</f:if>
+<f:if condition="{flash} == 'credits-payment-applied'">
+    <div class="aiu-flash aiu-flash--success" role="status" data-aiu-credits-payment-flash="applied">
+        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.flash.paymentApplied"
+                     default="Credits purchase applied. Your balance will update shortly." />
+    </div>
+</f:if>
+<f:if condition="{flash} == 'credits-payment-failed'">
+    <div class="aiu-flash aiu-flash--warn" role="alert" data-aiu-credits-payment-flash="failed">
+        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.flash.paymentFailed"
+                     default="Credits purchase could not be completed. Please try again or contact support." />
+    </div>
+</f:if>
+</html>

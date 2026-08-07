@@ -135,6 +135,9 @@ final class DashboardAnalyticsService
         return $normalized;
     }
 
+    /**
+     * @param array<string, mixed> $totals
+     */
     private function averageCreditsPerRequest(array $totals): float
     {
         $requests = (int) ($totals['totalRequests'] ?? 0);

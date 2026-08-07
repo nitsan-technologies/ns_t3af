@@ -27,6 +27,7 @@ return [
         'adminOnly' => true,
         'rootLevel' => 1,
         'security' => ['ignorePageTypeRestriction' => true],
+        'searchFields' => 'be_group,limits_json',
     ],
     'types' => [
         '0' => ['showitem' => 'be_group, configured, limits_json'],

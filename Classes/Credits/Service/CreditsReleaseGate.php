@@ -21,13 +21,13 @@ namespace NITSAN\NsT3AF\Credits\Service;
 
 /**
  * Compile-time release switch for T3Planet Credits UI and runtime routing.
- * Flip {@see self::PUBLICLY_AVAILABLE} to true when credits ship in the next release.
+ * Flip {@see self::PUBLICLY_AVAILABLE} to false to hide credits before a release.
  *
  * @internal
  */
 final class CreditsReleaseGate implements CreditsReleaseGateInterface
 {
-    public const PUBLICLY_AVAILABLE = false;
+    public const PUBLICLY_AVAILABLE = true;
 
     public function isPubliclyAvailable(): bool
     {

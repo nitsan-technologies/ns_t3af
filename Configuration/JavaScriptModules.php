@@ -29,6 +29,7 @@ $javascriptModules = [
         '@nitsan/nst3af/credits-mode.js' => 'EXT:ns_t3af/Resources/Public/JavaScript/credits-mode.js',
         '@nitsan/nst3af/module-navigation.js' => 'EXT:ns_t3af/Resources/Public/JavaScript/module-navigation.js',
         '@nitsan/nst3af/module-page-context.js' => 'EXT:ns_t3af/Resources/Public/JavaScript/module-page-context.js',
+        '@nitsan/nst3af/toolbar-credit-menu.js' => 'EXT:ns_t3af/Resources/Public/JavaScript/toolbar-credit-menu.js',
         '@nitsan/nst3af/period-filter.js' => 'EXT:ns_t3af/Resources/Public/JavaScript/period-filter.js',
         '@nitsan/nst3af/dashboard-charts.js' => 'EXT:ns_t3af/Resources/Public/JavaScript/dashboard-charts.js',
         '@nitsan/nst3af/mcp-server.js' => 'EXT:ns_t3af/Resources/Public/JavaScript/mcp-server.js',

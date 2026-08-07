@@ -215,7 +215,6 @@ Per-group wizard + permission matrix for AI Foundation and child extensions. Thi
 
 | Name | Purpose |
 |---|---|
-| `nst3af_responses` | Completion cache (1h default) |
 | `nst3af_provider_models` | Discovered models (24h) |
 | `nst3af_dashboard_analytics` | Dashboard request-log charts (15m) |
 | `nst3af_api_alert` | Quota alert cooldown |

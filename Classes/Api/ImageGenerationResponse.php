@@ -36,5 +36,8 @@ final readonly class ImageGenerationResponse
         public string $modelId,
         public string $providerIdentifier,
         public int $latencyMs = 0,
+        public int $tokensInput = 0,
+        public int $tokensTotal = 0,
+        public ?CreditsUsage $credits = null,
     ) {}
 }

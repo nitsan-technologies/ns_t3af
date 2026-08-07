@@ -19,6 +19,8 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Credits\Service;
 
+use NITSAN\NsT3AF\Api\AiCreditUnits;
+
 /**
  * Formats the T3Planet credit balance for the backend toolbar and overview line.
  *
@@ -29,6 +31,8 @@ final class CreditOverviewLineService
     public function __construct(
         private readonly CreditModeResolver $creditModeResolver,
         private readonly BalanceService $balanceService,
+        private readonly CurrentPlanService $currentPlanService,
+        private readonly ProductCatalogService $productCatalogService,
         private readonly CreditsDashboardAssembler $dashboardAssembler,
     ) {}
 
@@ -39,16 +43,18 @@ final class CreditOverviewLineService
             return '';
         }
 
-        $line = $badge['creditsLabel'];
-        if ($badge['percentLeft'] > 0) {
-            $line .= ' · ' . $badge['percentLeft'] . '%';
-        }
-
-        return $line;
+        return $badge['creditsLabel'];
     }
 
     /**
-     * @return array{creditsLabel: string, percentLeft: int, showPercent: int, level: string}|null
+     * @return array{
+     *   creditsLabel: string,
+     *   usedFormatted: string,
+     *   totalFormatted: string,
+     *   remainingFormatted: string,
+     *   percentLeft: int,
+     *   level: string
+     * }|null
      */
     public function resolveBadge(): ?array
     {
@@ -57,31 +63,73 @@ final class CreditOverviewLineService
         }
 
         try {
-            $summary = $this->dashboardAssembler->summarizeBalance($this->balanceService->fetch());
+            $balance = $this->balanceService->fetch();
         } catch (\Throwable) {
             return null;
         }
+
+        try {
+            $plan = $this->currentPlanService->fetch();
+        } catch (\Throwable) {
+            $plan = [];
+        }
+
+        try {
+            $products = $this->productCatalogService->fetch('');
+        } catch (\Throwable) {
+            $products = [];
+        }
+
+        $summary = $this->dashboardAssembler->summarizeBalance($balance, $plan, $products);
 
         if ($summary['remainingUnits'] <= 0 && $summary['remaining'] <= 0.0) {
             return null;
         }
 
+        $remaining = (float) $summary['remaining'];
+        $total = (float) $summary['total'];
+        $used = max(0.0, $total - $remaining);
+        $usedFormatted = AiCreditUnits::formatCredits($used);
         $percentLeft = max(0, min(100, (int) $summary['percentLeft']));
 
+        return $this->mapSummaryToBadge($summary, $used, $usedFormatted, $percentLeft);
+    }
+
+    /**
+     * @param array<string, mixed> $summary
+     * @return array{
+     *   creditsLabel: string,
+     *   usedFormatted: string,
+     *   totalFormatted: string,
+     *   remainingFormatted: string,
+     *   percentLeft: int,
+     *   level: string
+     * }
+     */
+    private function mapSummaryToBadge(
+        array $summary,
+        float $used,
+        string $usedFormatted,
+        int $percentLeft,
+    ): array {
+        $totalFormatted = (string) ($summary['totalFormatted'] ?? '');
+
         return [
-            'creditsLabel' => $summary['remainingFormatted'] . ' cr',
+            'creditsLabel' => $usedFormatted . '/' . $totalFormatted . ' cr',
+            'usedFormatted' => $usedFormatted,
+            'totalFormatted' => $totalFormatted,
+            'remainingFormatted' => (string) ($summary['remainingFormatted'] ?? ''),
             'percentLeft' => $percentLeft,
-            'showPercent' => $percentLeft > 0 ? 1 : 0,
             'level' => $this->resolveLevel($percentLeft),
         ];
     }
 
     private function resolveLevel(int $percentLeft): string
     {
-        if ($percentLeft <= 20) {
+        if ($percentLeft <= 10) {
             return 'critical';
         }
-        if ($percentLeft <= 50) {
+        if ($percentLeft <= 40) {
             return 'low';
         }
 

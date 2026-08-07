@@ -26,6 +26,7 @@ use NITSAN\NsT3AF\Api\EmbeddingResponse;
 use NITSAN\NsT3AF\Api\StreamSummary;
 use NITSAN\NsT3AF\Credits\CreditsApiEndpoint;
 use NITSAN\NsT3AF\Credits\CreditsApiErrorCodes;
+use NITSAN\NsT3AF\Credits\CreditsFeatureMapping;
 use NITSAN\NsT3AF\Credits\CreditsProviderIdentifier;
 use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
 use NITSAN\NsT3AF\Credits\Exception\InsufficientCreditsException;
@@ -35,6 +36,7 @@ use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Event\AfterProviderResponseEvent;
 use NITSAN\NsT3AF\Event\BeforeProviderRequestEvent;
 use NITSAN\NsT3AF\Event\ProviderRequestFailedEvent;
+use NITSAN\NsT3AF\Service\BrandContextLineage;
 use NITSAN\NsT3AF\Service\RequestTelemetryService;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Client\ClientExceptionInterface;
@@ -55,7 +57,7 @@ class ProxyAiExecutor
         private readonly T3PlanetSseStreamParser $sseParser,
         private readonly TokenResolver $tokenResolver,
         private readonly CreditsDomainResolver $domainResolver,
-        private readonly LocalReceiptCache $receiptCache,
+        private readonly CreditsChargeRecorder $chargeRecorder,
         private readonly EventDispatcherInterface $events,
         private readonly RequestTelemetryService $telemetry,
         private readonly CreditsFeatureKeyMapper $featureKeyMapper,
@@ -68,7 +70,8 @@ class ProxyAiExecutor
     public function stream(string $prompt, AiOptions $options): \Generator
     {
         $provider = $this->creditsProvider();
-        $featureKey = $this->resolveCatalogFeatureKey($options, CreditsApiEndpoint::Stream);
+        $mapping = $this->resolveFeatureMapping($options, CreditsApiEndpoint::Stream);
+        $featureKey = $mapping->featureKey;
         $requestUuid = $this->requestUuid($options);
         $domain = $this->domainResolver->resolve();
 
@@ -86,7 +89,7 @@ class ProxyAiExecutor
         $events = null;
 
         try {
-            $metaJson = $this->buildApiMetaJson($before->getPrompt(), $before->getOptions());
+            $metaJson = $this->buildApiMetaJson($before->getPrompt(), $before->getOptions(), [], $mapping);
             $lines = $this->streamWithTokenRetry(
                 $this->buildStreamApiCall($domain, $requestUuid, $featureKey, $metaJson, $before->getOptions()),
             );
@@ -107,8 +110,13 @@ class ProxyAiExecutor
             $settled = true;
             $latencyMs = (int) (microtime(true) * 1000) - $start;
             $summary = $this->mapUsageToStreamSummary($payload, $requestUuid);
-            $this->receiptCache->storeFromCharge($requestUuid, $featureKey, $payload);
-            $response = $this->mapChargeToAiResponse($payload, $requestUuid, $latencyMs);
+            $this->chargeRecorder->record(
+                $requestUuid,
+                $featureKey,
+                $payload,
+                CreditsChargeRecorder::contextFromAiOptions($before->getOptions(), $latencyMs),
+            );
+            $response = $this->mapChargeToAiResponse($payload, $requestUuid, $latencyMs, $before->getOptions(), $mapping->legacyField);
             $this->persistCompletion($provider, $before->getOptions(), $before->getPrompt(), $response, self::CALL_STREAM);
             $this->events->dispatch(new AfterProviderResponseEvent(
                 $provider,
@@ -165,7 +173,8 @@ class ProxyAiExecutor
     public function complete(string $prompt, AiOptions $options): AiResponse
     {
         $provider = $this->creditsProvider();
-        $featureKey = $this->resolveCatalogFeatureKey($options, CreditsApiEndpoint::Charge);
+        $mapping = $this->resolveFeatureMapping($options, CreditsApiEndpoint::Charge);
+        $featureKey = $mapping->featureKey;
         $requestUuid = $this->requestUuid($options);
         $domain = $this->domainResolver->resolve();
 
@@ -177,20 +186,24 @@ class ProxyAiExecutor
                 modelId: 't3planet',
                 providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
                 raw: ['cancelled' => $before->getCancellationReason()],
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
             );
         }
 
         $start = (int) (microtime(true) * 1000);
         try {
-            $payload = $this->callWithTokenRetry(
-                fn(string $token): array => $this->apiClient->charge(
-                    $domain,
-                    $requestUuid,
-                    $featureKey,
-                    $this->buildApiMetaJson($before->getPrompt(), $before->getOptions()),
-                    $token,
-                    $before->getOptions(),
+            $payload = $this->postJsonWithRetries(
+                fn(string $uuid): array => $this->callWithTokenRetry(
+                    fn(string $token): array => $this->apiClient->charge(
+                        $domain,
+                        $uuid,
+                        $featureKey,
+                        $this->buildApiMetaJson($before->getPrompt(), $before->getOptions(), [], $mapping),
+                        $token,
+                        $before->getOptions(),
+                    ),
                 ),
+                $requestUuid,
             );
         } catch (InsufficientCreditsException $e) {
             $this->dispatchFailure(
@@ -229,8 +242,19 @@ class ProxyAiExecutor
             throw $e;
         }
 
-        $response = $this->mapChargeToAiResponse($payload, $requestUuid, (int) (microtime(true) * 1000) - $start);
-        $this->receiptCache->storeFromCharge($requestUuid, $featureKey, $payload);
+        $response = $this->mapChargeToAiResponse(
+            $payload,
+            $requestUuid,
+            (int) (microtime(true) * 1000) - $start,
+            $before->getOptions(),
+            $mapping->legacyField,
+        );
+        $this->chargeRecorder->record(
+            $requestUuid,
+            $featureKey,
+            $payload,
+            CreditsChargeRecorder::contextFromAiOptions($before->getOptions(), $response->latencyMs),
+        );
         $this->persistCompletion($provider, $before->getOptions(), $before->getPrompt(), $response);
         $this->events->dispatch(new AfterProviderResponseEvent(
             $provider,
@@ -242,10 +266,14 @@ class ProxyAiExecutor
         return $response;
     }
 
+    /**
+     * @param string|list<string> $text
+     */
     public function embed(string|array $text, AiOptions $options): EmbeddingResponse
     {
         $provider = $this->creditsProvider();
-        $featureKey = $this->resolveCatalogFeatureKey($options, CreditsApiEndpoint::Embed);
+        $mapping = $this->resolveFeatureMapping($options, CreditsApiEndpoint::Embed);
+        $featureKey = $mapping->featureKey;
         $requestUuid = $this->requestUuid($options);
         $domain = $this->domainResolver->resolve();
         $inputs = is_array($text) ? $text : [$text];
@@ -253,18 +281,31 @@ class ProxyAiExecutor
 
         $before = new BeforeProviderRequestEvent($provider, $prompt, $options, self::CALL_EMBED);
         $this->events->dispatch($before);
+        if ($before->isCancelled()) {
+            return new EmbeddingResponse(
+                vectors: [],
+                modelId: 't3planet',
+                providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
+                raw: [
+                    'error' => $before->getCancellationReason() ?? 'AI provider request was cancelled.',
+                ],
+            );
+        }
 
         $start = (int) (microtime(true) * 1000);
         try {
-            $payload = $this->callWithTokenRetry(
-                fn(string $token): array => $this->apiClient->embed(
-                    $domain,
-                    $requestUuid,
-                    $featureKey,
-                    $this->buildApiMetaJson($prompt, $before->getOptions(), $inputs),
-                    $token,
-                    $before->getOptions(),
+            $payload = $this->postJsonWithRetries(
+                fn(string $uuid): array => $this->callWithTokenRetry(
+                    fn(string $token): array => $this->apiClient->embed(
+                        $domain,
+                        $uuid,
+                        $featureKey,
+                        $this->buildApiMetaJson($prompt, $before->getOptions(), $inputs, $mapping),
+                        $token,
+                        $before->getOptions(),
+                    ),
                 ),
+                $requestUuid,
             );
         } catch (InsufficientCreditsException $e) {
             $this->dispatchFailure(
@@ -289,7 +330,7 @@ class ProxyAiExecutor
             );
             throw $e;
         } catch (ClientExceptionInterface $e) {
-            $this->abortQuietly($domain, $requestUuid);
+            $this->abortQuietly($domain, $requestUuid, $featureKey);
             $this->dispatchFailure(
                 $provider,
                 $e,
@@ -303,7 +344,30 @@ class ProxyAiExecutor
         }
 
         $response = $this->mapEmbedToEmbeddingResponse($payload, $requestUuid, (int) (microtime(true) * 1000) - $start);
+        $this->chargeRecorder->record(
+            $requestUuid,
+            $featureKey,
+            $payload,
+            CreditsChargeRecorder::contextFromAiOptions($before->getOptions(), $response->latencyMs),
+        );
         $this->persistEmbedding($provider, $before->getOptions(), $before->getPrompt(), $response);
+        // Budget/usage listeners bind to AfterProviderResponseEvent; credits
+        // embedding usage must count against per-user budgets too (CTX-14).
+        $this->events->dispatch(new AfterProviderResponseEvent(
+            $provider,
+            new AiResponse(
+                content: '',
+                modelId: $response->modelId,
+                providerIdentifier: $response->providerIdentifier,
+                tokensInput: $response->tokensInput,
+                latencyMs: $response->latencyMs,
+                raw: ['call' => self::CALL_EMBED],
+                credits: $response->credits,
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
+            ),
+            $before->getOptions(),
+            $before->getPrompt(),
+        ));
 
         return $response;
     }
@@ -380,22 +444,44 @@ class ProxyAiExecutor
     }
 
     /**
+     * @param callable(string): array<string, mixed> $call Receives request_uuid (may be refreshed on idempotency conflict).
+     * @return array<string, mixed>
+     */
+    private function postJsonWithRetries(callable $call, string $requestUuid): array
+    {
+        try {
+            return $call($requestUuid);
+        } catch (CreditsApiException $e) {
+            if ($e->errorCode !== CreditsApiErrorCodes::IDEMPOTENCY_CONFLICT) {
+                throw $e;
+            }
+
+            return $call(Uuid::v4()->toRfc4122());
+        }
+    }
+
+    /**
      * @param array<string, mixed> $payload
      */
-    private function mapChargeToAiResponse(array $payload, string $requestUuid, int $latencyMs): AiResponse
-    {
+    private function mapChargeToAiResponse(
+        array $payload,
+        string $requestUuid,
+        int $latencyMs,
+        AiOptions $options = new AiOptions(),
+        ?string $legacyField = null,
+    ): AiResponse {
         $credits = is_array($payload['credits'] ?? null) ? $payload['credits'] : [];
         $charged = is_array($payload['charged'] ?? null) ? $payload['charged'] : [];
+        $content = $this->unwrapLegacyContent((string) ($payload['content'] ?? ''), $legacyField);
 
         return new AiResponse(
-            content: (string) ($payload['content'] ?? ''),
+            content: $content,
             modelId: (string) ($payload['model'] ?? 't3planet'),
             providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
-            tokensInput: (int) ($payload['tokens_input'] ?? 0),
-            tokensOutput: (int) ($payload['tokens_output'] ?? 0),
             latencyMs: $latencyMs,
             raw: $payload,
             credits: CreditsUsage::fromApiPayload($credits, $charged, $requestUuid, $payload),
+            appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($options),
         );
     }
 
@@ -404,9 +490,18 @@ class ProxyAiExecutor
      */
     private function mapEmbedToEmbeddingResponse(array $payload, string $requestUuid, int $latencyMs): EmbeddingResponse
     {
-        $vectors = $payload['vectors'] ?? $payload['embedding'] ?? [];
-        if (!is_array($vectors)) {
-            $vectors = [];
+        $rawVectors = $payload['vectors'] ?? $payload['embedding'] ?? [];
+        $vectors = [];
+        if (is_array($rawVectors)) {
+            foreach ($rawVectors as $rawVector) {
+                if (!is_array($rawVector)) {
+                    continue;
+                }
+                $vectors[] = array_values(array_map(
+                    static fn(mixed $value): float => is_numeric($value) ? (float) $value : 0.0,
+                    $rawVector,
+                ));
+            }
         }
         $credits = is_array($payload['credits'] ?? null) ? $payload['credits'] : [];
         $charged = is_array($payload['charged'] ?? null) ? $payload['charged'] : [];
@@ -415,16 +510,15 @@ class ProxyAiExecutor
             vectors: $vectors,
             modelId: (string) ($payload['model'] ?? 't3planet'),
             providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
-            tokensInput: (int) ($payload['tokens_input'] ?? 0),
             latencyMs: $latencyMs,
             raw: $payload,
             credits: CreditsUsage::fromApiPayload($credits, $charged, $requestUuid, $payload),
         );
     }
 
-    private function resolveCatalogFeatureKey(AiOptions $options, CreditsApiEndpoint $endpoint): string
+    private function resolveFeatureMapping(AiOptions $options, CreditsApiEndpoint $endpoint): CreditsFeatureMapping
     {
-        $clientFeatureKey = trim($options->featureKey);
+        $clientFeatureKey = trim($options->featureKey ?? '');
         if ($clientFeatureKey === '' && $endpoint === CreditsApiEndpoint::Charge) {
             throw new CreditsApiException(
                 CreditsApiErrorCodes::FEATURE_KEY_REQUIRED,
@@ -433,7 +527,23 @@ class ProxyAiExecutor
             );
         }
 
-        return $this->featureKeyMapper->map($clientFeatureKey, $options, $endpoint);
+        return $this->featureKeyMapper->mapWithMeta($clientFeatureKey, $options, $endpoint);
+    }
+
+    private function unwrapLegacyContent(string $content, ?string $legacyField): string
+    {
+        if ($legacyField === null || $legacyField === '') {
+            return $content;
+        }
+
+        $decoded = json_decode($content, true);
+        if (!is_array($decoded) || !array_key_exists($legacyField, $decoded)) {
+            return $content;
+        }
+
+        $value = $decoded[$legacyField];
+
+        return is_string($value) ? $value : $content;
     }
 
     /**
@@ -444,9 +554,13 @@ class ProxyAiExecutor
         string $prompt,
         AiOptions $options,
         array $embedInputs = [],
+        ?CreditsFeatureMapping $mapping = null,
     ): array {
         $metaJson = CreditsMetaJsonBuilder::build($prompt, $options, $embedInputs);
-        $clientFeatureKey = trim($options->featureKey);
+        if ($mapping !== null && $mapping->metaAdditions !== []) {
+            $metaJson = array_merge($metaJson, $mapping->metaAdditions);
+        }
+        $clientFeatureKey = trim($options->featureKey ?? '');
         if ($clientFeatureKey !== '') {
             $metaJson['client_feature_key'] = $clientFeatureKey;
         }
@@ -549,8 +663,8 @@ class ProxyAiExecutor
     {
         try {
             $payload = $this->apiClient->abort($domain, $requestUuid, $this->tokenResolver->resolve());
-            if ($featureKey !== null && ($payload['status'] ?? false) === true) {
-                $this->receiptCache->storeFromCharge($requestUuid, $featureKey, $payload);
+            if ($featureKey !== null) {
+                $this->chargeRecorder->record($requestUuid, $featureKey, $payload);
             }
         } catch (\Throwable) {
         }

@@ -81,12 +81,25 @@ final class AiPromptRepository
                 $constraints[] = $qb->expr()->eq('is_default', $qb->createNamedParameter(0, Connection::PARAM_INT));
             }
 
-            return $qb->select('uid', 'prompt_title', 'prompt_text', 'prompt_type', 'scope', 'is_default')
+            /** @var array<int, array<string, mixed>> $rows */
+            $rows = $qb->select('uid', 'prompt_title', 'prompt_text', 'prompt_type', 'scope', 'is_default')
                 ->from(self::TABLE)
                 ->where(...$constraints)
                 ->orderBy('uid', 'ASC')
                 ->executeQuery()
                 ->fetchAllAssociative();
+
+            return array_values(array_map(
+                static fn(array $row): array => [
+                    'uid' => (int) ($row['uid'] ?? 0),
+                    'prompt_title' => (string) ($row['prompt_title'] ?? ''),
+                    'prompt_text' => (string) ($row['prompt_text'] ?? ''),
+                    'prompt_type' => (string) ($row['prompt_type'] ?? ''),
+                    'scope' => (string) ($row['scope'] ?? ''),
+                    'is_default' => (int) ($row['is_default'] ?? 0),
+                ],
+                $rows,
+            ));
         } catch (\Throwable) {
             return [];
         }
@@ -105,7 +118,8 @@ final class AiPromptRepository
             $qb = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
             $qb->getRestrictions()->removeAll();
 
-            return $qb->select('uid', 'prompt_title', 'prompt_text')
+            /** @var array<int, array<string, mixed>> $rows */
+            $rows = $qb->select('uid', 'prompt_title', 'prompt_text')
                 ->from(self::TABLE)
                 ->where(
                     $qb->expr()->eq('deleted', $qb->createNamedParameter(0, Connection::PARAM_INT)),
@@ -116,6 +130,15 @@ final class AiPromptRepository
                 ->orderBy('uid', 'ASC')
                 ->executeQuery()
                 ->fetchAllAssociative();
+
+            return array_values(array_map(
+                static fn(array $row): array => [
+                    'uid' => (int) ($row['uid'] ?? 0),
+                    'prompt_title' => (string) ($row['prompt_title'] ?? ''),
+                    'prompt_text' => (string) ($row['prompt_text'] ?? ''),
+                ],
+                $rows,
+            ));
         } catch (\Throwable) {
             return [];
         }
@@ -155,12 +178,25 @@ final class AiPromptRepository
                 $constraints[] = $qb->expr()->eq('is_default', $qb->createNamedParameter(0, Connection::PARAM_INT));
             }
 
-            return $qb->select('uid', 'prompt_title', 'prompt_text', 'prompt_type', 'scope', 'is_default')
+            /** @var array<int, array<string, mixed>> $rows */
+            $rows = $qb->select('uid', 'prompt_title', 'prompt_text', 'prompt_type', 'scope', 'is_default')
                 ->from(self::TABLE)
                 ->where(...$constraints)
                 ->orderBy('uid', 'ASC')
                 ->executeQuery()
                 ->fetchAllAssociative();
+
+            return array_values(array_map(
+                static fn(array $row): array => [
+                    'uid' => (int) ($row['uid'] ?? 0),
+                    'prompt_title' => (string) ($row['prompt_title'] ?? ''),
+                    'prompt_text' => (string) ($row['prompt_text'] ?? ''),
+                    'prompt_type' => (string) ($row['prompt_type'] ?? ''),
+                    'scope' => (string) ($row['scope'] ?? ''),
+                    'is_default' => (int) ($row['is_default'] ?? 0),
+                ],
+                $rows,
+            ));
         } catch (\Throwable) {
             return [];
         }
@@ -400,7 +436,8 @@ final class AiPromptRepository
             $qb->getRestrictions()->removeAll();
             $effectivePid = max(0, $storagePid);
 
-            return $qb->select('uid', 'prompt_title', 'prompt_text', 'prompt_type', 'scope', 'is_default')
+            /** @var array<int, array<string, mixed>> $rows */
+            $rows = $qb->select('uid', 'prompt_title', 'prompt_text', 'prompt_type', 'scope', 'is_default')
                 ->from(self::TABLE)
                 ->where(
                     $qb->expr()->eq('deleted', $qb->createNamedParameter(0, Connection::PARAM_INT)),
@@ -412,6 +449,18 @@ final class AiPromptRepository
                 ->orderBy('prompt_title', 'ASC')
                 ->executeQuery()
                 ->fetchAllAssociative();
+
+            return array_values(array_map(
+                static fn(array $row): array => [
+                    'uid' => (int) ($row['uid'] ?? 0),
+                    'prompt_title' => (string) ($row['prompt_title'] ?? ''),
+                    'prompt_text' => (string) ($row['prompt_text'] ?? ''),
+                    'prompt_type' => (string) ($row['prompt_type'] ?? ''),
+                    'scope' => (string) ($row['scope'] ?? ''),
+                    'is_default' => (int) ($row['is_default'] ?? 0),
+                ],
+                $rows,
+            ));
         } catch (\Throwable) {
             return [];
         }
@@ -444,9 +493,9 @@ final class AiPromptRepository
     }
 
     /**
-     * @return \TYPO3\CMS\Core\Database\Query\Expression\CompositeExpression|string
+     * @return string
      */
-    private function pidConstraint(\TYPO3\CMS\Core\Database\Query\QueryBuilder $qb, int $storagePid): \TYPO3\CMS\Core\Database\Query\Expression\CompositeExpression|string
+    private function pidConstraint(\TYPO3\CMS\Core\Database\Query\QueryBuilder $qb, int $storagePid): string
     {
         return $qb->expr()->eq('pid', $qb->createNamedParameter($storagePid, Connection::PARAM_INT));
     }

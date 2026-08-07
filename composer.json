@@ -99,7 +99,7 @@
         "typo3/cms": {
             "web-dir": ".Build/public",
             "extension-key": "ns_t3af",
-            "version": "1.0.5",
+            "version": "1.1.0",
             "Package": {
                 "providesPackages": {
                   "mcp/sdk": ".Build/vendor",
@@ -123,6 +123,7 @@
         "doc-watch": "docker run --rm -it --pull always -v ./Documentation:/project/Documentation -v ./Documentation-GENERATED-temp:/project/Documentation-GENERATED-temp -p 1337:1337 ghcr.io/typo3-documentation/render-guides:latest --config=Documentation --watch",
         "stan": ".Build/bin/phpstan analyse --memory-limit=512M",
         "test": ".Build/bin/phpunit -c Build/phpunit/UnitTests.xml",
+        "test:coverage": "mkdir -p .Build/logs && php -d xdebug.mode=coverage .Build/bin/phpunit -c Build/phpunit/UnitTests.xml --coverage-clover=.Build/logs/clover.xml --coverage-text",
         "test:functional": ".Build/bin/phpunit -c Build/phpunit/FunctionalTests.xml",
         "test:all": [
             "@composer test",
@@ -147,6 +148,7 @@
         "doc-watch": "Render documentation with watcher",
         "stan": "Run PHPStan static analysis",
         "test": "Run unit tests (Build/phpunit/UnitTests.xml)",
+        "test:coverage": "Run unit tests with Clover/text coverage (.Build/logs/clover.xml)",
         "test:functional": "Run TYPO3 functional tests with SQLite (Build/phpunit/FunctionalTests.xml)",
         "test:all": "Run unit tests then functional tests",
         "smoke:standalone": "Run unit tests + PHPStan (foundation-only CI smoke)"

@@ -585,7 +585,7 @@ function buildMcpRemoteConfigJson(tokenUrl) {
   return JSON.stringify(
     {
       mcpServers: {
-        'typo3-ai-universe': {
+        'typo3-ai-foundation': {
           command: 'npx',
           args: ['mcp-remote', tokenUrl],
         },

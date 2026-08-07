@@ -7,18 +7,19 @@
 <div class="module-docheader t3js-module-docheader module-docheader-navigation pb-0 aiu-module-docheader justify-content-end">
     <div class="container-fluid aiu-module-docheader__inner">
         <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 aiu-module-docheader__row">
-            <ul class="nav nav-pills aiu-module-nav-tabs aiu-module-nav-tabs--primary" role="tablist">
-                <f:for each="{primaryTabs}" as="tab">
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link{f:if(condition: '{tab.active} == 1', then: ' active')}"
-                           href="{tab.href}"
-                           role="tab"
-                           aria-selected="{f:if(condition: '{tab.active} == 1', then: 'true', else: 'false')}">
-                            {tab.title}
-                        </a>
-                    </li>
-                </f:for>
-            </ul>
+            <nav class="aiu-module-nav" aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:module.nav.sections', default: 'AI module sections')}">
+                <ul class="nav nav-pills aiu-module-nav-tabs aiu-module-nav-tabs--primary">
+                    <f:for each="{primaryTabs}" as="tab">
+                        <li class="nav-item">
+                            <a class="nav-link{f:if(condition: '{tab.active} == 1', then: ' active')}"
+                               href="{tab.href}"
+                               <f:if condition="{tab.active} == 1">aria-current="page"</f:if>>
+                                {tab.title}
+                            </a>
+                        </li>
+                    </f:for>
+                </ul>
+            </nav>
             <div class="d-flex flex-wrap align-items-end gap-2 aiu-module-docheader__aside mb-0">
                 <f:if condition="{utilityTabs}">
                     <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />

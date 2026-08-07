@@ -672,10 +672,7 @@ readonly class NsT3afDynamicToolRegistrar
         );
     }
 
-    /**
-     * @param callable|array{0: class-string|object, 1: string}|string $handler
-     */
-    private function addAugmentedTool(Builder $builder, callable|array|string $handler, string $name, string $description): void
+    private function addAugmentedTool(Builder $builder, \Closure|string $handler, string $name, string $description): void
     {
         $builder->addTool(
             handler: $handler,

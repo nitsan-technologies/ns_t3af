@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Credits\Http;
 
 use NITSAN\NsT3AF\Api\AiOptions;
+use NITSAN\NsT3AF\Credits\CreditsFeatureKeyCatalog;
 use NITSAN\NsT3AF\Credits\Service\CreditsMetaJsonBuilder;
 
 /**
@@ -34,9 +35,62 @@ class T3PlanetApiClient
     ) {}
 
     /**
+     * Instant IP-bound trial token (POST /API/AI/Token.php with no license_keys).
+     *
+     * @param array{name?: string, email?: string} $contact
+     *
      * @return array<string, mixed>
      */
-    public function issueToken(string $licenseKeys, string $domain): array
+    public function issueTrialToken(?string $declaredIp = null, array $contact = []): array
+    {
+        $body = [];
+        if ($declaredIp !== null && trim($declaredIp) !== '') {
+            $body['declared_ip'] = trim($declaredIp);
+        }
+        self::appendContactFields($body, $contact);
+
+        return $this->http->postJson('Token', $body);
+    }
+
+    /**
+     * Rotate IP-bound Bearer secret; requires current token + same server IP.
+     *
+     * @param array{name?: string, email?: string} $contact
+     *
+     * @return array<string, mixed>
+     */
+    public function refreshBearerToken(#[\SensitiveParameter] string $bearerToken, string $domain = '', array $contact = []): array
+    {
+        $body = [];
+        if ($domain !== '') {
+            $body['domain'] = $domain;
+        }
+        self::appendContactFields($body, $contact);
+
+        return $this->http->postJson('RefreshToken', $body, $bearerToken);
+    }
+
+    /**
+     * Write-once bind of server-observed IP onto the current Bearer (legacy migration).
+     *
+     * @return array<string, mixed>
+     */
+    public function bindIp(#[\SensitiveParameter] string $bearerToken, string $domain = ''): array
+    {
+        $body = [];
+        if ($domain !== '') {
+            $body['domain'] = $domain;
+        }
+
+        return $this->http->postJson('BindIp', $body, $bearerToken);
+    }
+
+    /**
+     * @deprecated License-anchored mint; server still accepts this during rollout.
+     *
+     * @return array<string, mixed>
+     */
+    public function issueToken(#[\SensitiveParameter] string $licenseKeys, string $domain): array
     {
         return $this->http->postJson('Token', [
             'license_keys' => $licenseKeys,
@@ -49,7 +103,7 @@ class T3PlanetApiClient
      *
      * @return array<string, mixed>
      */
-    public function attachLicenses(string $domain, string $licenseKeys, string $bearerToken): array
+    public function attachLicenses(string $domain, #[\SensitiveParameter] string $licenseKeys, #[\SensitiveParameter] string $bearerToken): array
     {
         return $this->http->postJson('AttachLicenses', [
             'domain' => $domain,
@@ -60,7 +114,7 @@ class T3PlanetApiClient
     /**
      * @return array<string, mixed>
      */
-    public function balance(string $domain, string $bearerToken, ?string $ifNoneMatch = null): array
+    public function balance(string $domain, #[\SensitiveParameter] string $bearerToken, ?string $ifNoneMatch = null): array
     {
         $result = $this->http->postJsonWithStatus('Balance', ['domain' => $domain], $bearerToken, $ifNoneMatch);
         if ($result['status'] === 304) {
@@ -73,7 +127,7 @@ class T3PlanetApiClient
     /**
      * @return array<string, mixed>
      */
-    public function currentPlan(string $domain, string $bearerToken, ?string $ifNoneMatch = null): array
+    public function currentPlan(string $domain, #[\SensitiveParameter] string $bearerToken, ?string $ifNoneMatch = null): array
     {
         $result = $this->http->postJsonWithStatus('CurrentPlan', ['domain' => $domain], $bearerToken, $ifNoneMatch);
         if ($result['status'] === 304) {
@@ -86,7 +140,7 @@ class T3PlanetApiClient
     /**
      * @return array<string, mixed>
      */
-    public function features(string $domain, string $bearerToken, ?string $ifNoneMatch = null): array
+    public function features(string $domain, #[\SensitiveParameter] string $bearerToken, ?string $ifNoneMatch = null): array
     {
         $result = $this->http->postJsonWithStatus('Features', ['domain' => $domain], $bearerToken, $ifNoneMatch);
         if ($result['status'] === 304) {
@@ -101,6 +155,7 @@ class T3PlanetApiClient
      */
     public function products(
         string $domain,
+        #[\SensitiveParameter]
         string $bearerToken,
         string $redirectTo,
         ?string $ifNoneMatch = null,
@@ -120,6 +175,27 @@ class T3PlanetApiClient
     }
 
     /**
+     * Paginated ledger (debits + credits) for local receipt mirror sync.
+     *
+     * @return array<string, mixed>
+     */
+    public function history(
+        string $domain,
+        #[\SensitiveParameter]
+        string $bearerToken,
+        string $entryType = 'all',
+        int $page = 1,
+        int $perPage = 20,
+    ): array {
+        return $this->http->postJson('History', [
+            'domain' => $domain,
+            'entry_type' => $entryType,
+            'page' => max(1, $page),
+            'per_page' => max(1, $perPage),
+        ], $bearerToken);
+    }
+
+    /**
      * @param array<string, mixed> $metaJson
      * @param 'charge'|'embed'     $endpoint
      *
@@ -129,6 +205,7 @@ class T3PlanetApiClient
         string $domain,
         string $featureKey,
         array $metaJson,
+        #[\SensitiveParameter]
         string $bearerToken,
         string $endpoint = 'charge',
     ): array {
@@ -149,6 +226,7 @@ class T3PlanetApiClient
         string $requestUuid,
         string $featureKey,
         array $metaJson,
+        #[\SensitiveParameter]
         string $bearerToken,
         ?AiOptions $options = null,
     ): array {
@@ -169,6 +247,7 @@ class T3PlanetApiClient
         string $requestUuid,
         string $featureKey,
         array $metaJson,
+        #[\SensitiveParameter]
         string $bearerToken,
         ?AiOptions $options = null,
     ): array {
@@ -192,6 +271,7 @@ class T3PlanetApiClient
         string $requestUuid,
         string $featureKey,
         array $metaJson,
+        #[\SensitiveParameter]
         string $bearerToken,
         ?string $extensionKey = null,
     ): array {
@@ -210,10 +290,41 @@ class T3PlanetApiClient
     }
 
     /**
+     * Image generation via Image.php. Returns a JSON envelope carrying image
+     * payloads plus the standard credits/charged fields.
+     *
+     * @param array<string, mixed> $metaJson
+     * @return array<string, mixed>
+     */
+    public function generateImage(
+        string $domain,
+        string $requestUuid,
+        string $featureKey,
+        array $metaJson,
+        #[\SensitiveParameter]
+        string $bearerToken,
+        ?string $extensionKey = null,
+    ): array {
+        $body = [
+            'domain' => $domain,
+            'request_uuid' => $requestUuid,
+            'feature_key' => $featureKey !== '' ? $featureKey : CreditsFeatureKeyCatalog::IMAGE_GENERATE,
+            'meta_json' => $metaJson,
+        ];
+        $extensionKey = trim((string) ($extensionKey ?? ($metaJson['extension_key'] ?? '')));
+        if ($extensionKey !== '') {
+            $body['extension_key'] = $extensionKey;
+        }
+
+        return $this->http->postImageJson($body, $bearerToken);
+    }
+
+    /**
      * Duplicates caller `extension_key` at top level when present (server may persist it later).
      *
      * @param array<string, mixed>      $body
      * @param array<string, mixed>      $metaJson
+     @return array<string, mixed>
      */
     private function withCallerAttribution(array $body, array $metaJson, ?AiOptions $options = null): array
     {
@@ -240,6 +351,7 @@ class T3PlanetApiClient
         string $requestUuid,
         string $featureKey,
         array $metaJson,
+        #[\SensitiveParameter]
         string $bearerToken,
         ?AiOptions $options = null,
     ): \Generator {
@@ -254,11 +366,25 @@ class T3PlanetApiClient
     /**
      * @return array<string, mixed>
      */
-    public function abort(string $domain, string $requestUuid, string $bearerToken): array
+    public function abort(string $domain, string $requestUuid, #[\SensitiveParameter] string $bearerToken): array
     {
         return $this->http->postJson('Abort', [
             'domain' => $domain,
             'request_uuid' => $requestUuid,
         ], $bearerToken);
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @param array{name?: string, email?: string} $contact
+     */
+    private static function appendContactFields(array &$body, array $contact): void
+    {
+        if (isset($contact['name']) && trim((string) $contact['name']) !== '') {
+            $body['name'] = trim((string) $contact['name']);
+        }
+        if (isset($contact['email']) && trim((string) $contact['email']) !== '') {
+            $body['email'] = trim((string) $contact['email']);
+        }
     }
 }

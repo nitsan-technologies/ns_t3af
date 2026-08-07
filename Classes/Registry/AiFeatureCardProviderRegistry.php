@@ -79,10 +79,7 @@ final class AiFeatureCardProviderRegistry
             }
         }
 
-        return array_values(array_unique(array_filter(
-            $keys,
-            static fn(string $key): bool => $key !== '',
-        )));
+        return array_values(array_unique($keys));
     }
 
     /**

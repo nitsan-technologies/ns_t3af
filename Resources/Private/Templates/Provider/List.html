@@ -8,9 +8,17 @@
 </f:section>
 
 <f:section name="Content">
-    <div class="aiu-providers aiu-providers--site" data-aiu-provider-list data-aiu-page-id="{currentPageId}" data-aiu-storage-pid="{siteStoragePid}">
+    <div class="aiu-providers aiu-providers--site"
+         data-aiu-providers-root
+         data-aiu-provider-list
+         data-aiu-nav-replace="[data-aiu-providers-root]"
+         data-aiu-nav-replace-callback="aiuReinitProvidersRoot"
+         data-aiu-page-id="{currentPageId}"
+         data-aiu-storage-pid="{siteStoragePid}">
 
         <f:render partial="Module/TabPageHeader" arguments="{_all}" />
+
+        <f:render partial="Credits/PaymentFlash" arguments="{flash: flash}" />
 
         <f:render partial="Module/EnvironmentRequirementBanner" arguments="{environmentRequirementAlerts: environmentRequirementAlerts}" />
 
@@ -22,7 +30,11 @@
             <f:render partial="Provider/CreditsDashboard" arguments="{
                 creditsModeActive: creditsModeActive,
                 creditsDashboard: creditsDashboard,
-                providersReturnUrl: providersReturnUrl
+                providersReturnUrl: providersReturnUrl,
+                creditsUsagePagination: creditsUsagePagination,
+                creditsUsageTotalCount: creditsUsageTotalCount,
+                creditsUsageFilters: creditsUsageFilters,
+                creditsUsageRouteParams: creditsUsageRouteParams
             }" />
         </div>
 
@@ -85,7 +97,10 @@
 
         <div class="aiu-toolbar">
             <div class="search-wrap w-100">
-                <input type="search" data-aiu-provider-search class="form-control"
+                <label class="visually-hidden" for="aiu-provider-search">
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.search" default="Search providers..." />
+                </label>
+                <input type="search" id="aiu-provider-search" data-aiu-provider-search class="form-control"
                        autocomplete="off"
                        autocorrect="off"
                        autocapitalize="off"

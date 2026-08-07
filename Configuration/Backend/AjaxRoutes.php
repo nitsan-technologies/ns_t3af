@@ -93,6 +93,11 @@ return [
         'target' => CreditModeController::class . '::activateAction',
         'methods' => ['POST'],
     ],
+    'nst3af_credits_refresh_token' => [
+        'path' => '/nst3af/credits/refresh-token',
+        'target' => CreditModeController::class . '::refreshTokenAction',
+        'methods' => ['POST'],
+    ],
     'nst3af_credits_dashboard' => [
         'path' => '/nst3af/credits/dashboard',
         'target' => CreditModeController::class . '::dashboardAction',

@@ -41,7 +41,7 @@ readonly class McpDynamicPromptRegistrar
             $name = $template['name'];
             $description = $template['description'];
             $body = $template['templateBody'];
-            $arguments = $template['arguments'];
+            $arguments = array_values($template['arguments']);
 
             $builder->addPrompt(
                 static function (array $params = []) use ($body, $arguments): array {

@@ -46,9 +46,12 @@ readonly class McpSkillRepository
             ->executeQuery()
             ->fetchAllAssociative();
 
-        return array_map(fn(array $row): array => $this->mapRow($row), $rows);
+        return array_values(array_map(fn(array $row): array => $this->mapRow($row), $rows));
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function findByTriggerKeyword(string $triggerKeyword): ?array
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE);

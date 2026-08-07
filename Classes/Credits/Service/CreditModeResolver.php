@@ -53,10 +53,6 @@ final class CreditModeResolver
             return false;
         }
 
-        if ($this->runtimeSettings->getLicenseKeys() === '') {
-            return false;
-        }
-
         $token = $this->runtimeSettings->getTokenPlain();
 
         return $token !== null && $token !== '';

@@ -185,7 +185,10 @@ readonly class WriteTableTool implements McpNonAiToolInterface
         ], JSON_THROW_ON_ERROR);
     }
 
-    /** @param array<string, mixed> $payload */
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
     private function filterWritableFields(string $tableName, array $payload): array
     {
         $writableFields = $this->tcaSchemaService->getWritableFields($tableName);

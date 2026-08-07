@@ -2,6 +2,46 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-08-07 — Free trial default documented as 50
+
+**Done:** Agent docs + trial unit fixtures: Free Trial / `trial_credits` default **100 → 50**. Client still does not hardcode grant amount (Balance/Products). Server ops must set `ns_ai_settings.trial_credits` + Free Trial product to 50 separately.
+
+**Last touched:** 2026-08-07
+
+---
+
+## 2026-07-31 — Credits dashboard trial plan + bundle tabs
+
+**Done:** Trial accounts show active plan (free-credits bucket + `trial_granted` / catalog lookup) instead of "No active plan". AI Credit Bundles section: Plans vs Top-ups tabs; Monthly/Yearly toggle under Plans. Shared `Credits/ProductCard.html` partial.
+
+**Last touched:** 2026-07-31
+
+---
+
+## 2026-07-31 — T3Planet Credits API client migration (Phases 2–7)
+
+**Done:** Migrated credits client to current composer API contract: 10 canonical `feature_key` values + compat shim (`fields[]` + single-field JSON unwrap for legacy SEO/metadata keys), T3AF-only license binding on Token/AttachLicenses, dropped token-field parsing from usage responses, metered `pricing.rate_card` support, new guardrail error codes + xlf labels, `renewal_period` on product cards (Buy Credits grouped by monthly/yearly/one-time), idempotency-conflict UUID retry in `ProxyAiExecutor`.
+
+**Last touched:** 2026-07-31
+
+---
+
+## 2026-07-20 — Credits API base URL resolver + DB sync
+
+**Done:** `CreditsApiBaseUrlResolver` (env `T3PLANET_CREDITS_API_BASE_URL` → Development → production `.cloud`). `RuntimeSettingsService` syncs known built-in URLs in `tx_nst3af_runtime_setting.t3planet_api_base_url` on boot. Removed ext_conf `t3planetApiBaseUrl`. Context: `context/features/credits-api-base-url.md`.
+
+**Last touched:** 2026-07-20
+
+---
+
+## 2026-07-20 — T3Planet Credits publicly available
+
+**Done:** Re-enabled T3Planet Credits for public selection. `CreditsReleaseGate::PUBLICLY_AVAILABLE = true` in `Classes/Credits/Service/CreditsReleaseGate.php`. Mode toggle, setup wizard, activate flow, buy/pricing/checkout routes, and child extensions via `CreditModeResolver` are unblocked. Updated `PRIVACY.md` for Credits-mode data path. API host remains ops-controlled via `tx_nst3af_runtime_setting.t3planet_api_base_url`.
+
+**Last touched:** 2026-07-20
+
+---
+
 ## 2026-07-15 — Context audit for public GitHub
 
 **Done:**
@@ -114,7 +154,7 @@
 - **Pool model:** keyed by primary `license_key`. Multi-product sharing via `ns_ai_pool_alias` (customer owning ns_t3af + ns_t3ai + ai_suite all map to one pool). Buckets debit order plan → free → paid.
 - **Mode:** server-proxy. composer.t3planet.cloud holds OpenAI/Anthropic/Gemini/Mistral/OpenRouter keys; client never sees provider keys. Outbound clients ported from `ns_t3af/Classes/Client/BaseClient.php` (attribution required).
 - **Atomic debit:** `BEGIN → SELECT pool FOR UPDATE → reserve → pre-log → COMMIT → call upstream OUTSIDE lock → settle in second tx`. Refund-on-upstream-failure mandatory v1.
-- **Pabbly:** `/webhook/pabbly-ai` adds top-up + plan; SKU map: trial 100, starter 2000/mo, pro 10000/mo, agency 50000/mo, topup 1000/5000. Trial auto-grant hooked into existing `NewOrderCreateLicense.php` + `CreateLicenseAfterOtp.php` (one-shot, gated by `trial_credits_granted=1`).
+- **Pabbly:** `/webhook/pabbly-ai` adds top-up + plan; SKU map: trial 50, starter 2000/mo, pro 10000/mo, agency 50000/mo, topup 1000/5000. Trial auto-grant hooked into existing `NewOrderCreateLicense.php` + `CreateLicenseAfterOtp.php` (one-shot, gated by `trial_credits_granted=1`).
 - **Full prompt logged server-side** (`ns_ai_credit_log.prompt_full`) — confirmed by user; GDPR disclosure in `Documentation/Privacy.rst`. Per-license hash-only opt-out deferred to v1.1.
 - **Client deltas to public API:** `AiOptions::$featureKey` (NEW required arg in credits mode), `AiResponse::?CreditsUsage $credits`, `EmbeddingResponse::?CreditsUsage`, `StreamSummary` (generator return for SSE).
 - **Decorator:** `T3PlanetCreditAiService decorates AiServiceInterface`; always wired; `CreditModeResolver` short-circuits to `$inner` when toggle OFF → zero HTTP traffic. phpat rule blocks `Classes/Credits/` from importing `Provider/*` adapters.

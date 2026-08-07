@@ -12,11 +12,6 @@
             <span class="card-title h4 mb-0">
                 <f:translate key="{ll}:{modeLabelKey}" />
             </span>
-            <f:if condition="{showActiveBadge} == 1">
-                <span class="badge badge-success">
-                    <f:translate key="{ll}:dashboard.mode.active" default="Active" />
-                </span>
-            </f:if>
             <f:if condition="{configuredCount} > 0">
                 <a href="{manageHref}" class="btn btn-default btn-sm">
                     {configuredCount}

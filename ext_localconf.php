@@ -17,14 +17,13 @@ declare(strict_types=1);
  * and COMMERCIAL-LICENSE.md files that were distributed with this source code.
  */
 
-defined('TYPO3_MODE') || defined('TYPO3') || die();
+defined('TYPO3') or die();
 
-// Response + provider-models caches consumed by AiService.
-// Configuration/Caches.php is the canonical declaration; the loop below keeps
-// the entries available even on hosts that load ext_localconf before the
-// Caches.php file (older v13 patch levels).
+// Caches used across the extension (provider models, credits token/API, MCP
+// OAuth, alerts, dashboard analytics). Configuration/Caches.php is the canonical
+// declaration; the loop below keeps the entries available even on hosts that
+// load ext_localconf before the Caches.php file (older v13 patch levels).
 foreach ([
-    'nst3af_responses' => 3600,
     'nst3af_provider_models' => 86400,
     'nst3af_credits_token' => 3600,
     'nst3af_credits_api' => 3600,

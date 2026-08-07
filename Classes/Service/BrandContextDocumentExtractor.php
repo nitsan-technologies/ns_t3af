@@ -148,11 +148,11 @@ final class BrandContextDocumentExtractor
         $text = '';
         foreach ($phpWord->getSections() as $section) {
             foreach ($section->getElements() as $element) {
-                if (method_exists($element, 'getText')) {
+                if (is_object($element) && method_exists($element, 'getText')) {
                     $text .= (string) $element->getText() . "\n";
-                } elseif (method_exists($element, 'getElements')) {
+                } elseif (is_object($element) && method_exists($element, 'getElements')) {
                     foreach ($element->getElements() as $child) {
-                        if (method_exists($child, 'getText')) {
+                        if (is_object($child) && method_exists($child, 'getText')) {
                             $text .= (string) $child->getText() . "\n";
                         }
                     }

@@ -75,15 +75,18 @@ final class SchedulerCliTaskService
                 ? (int) $execution->getInterval()
                 : 0;
             $meta = $this->catalog->findByCommand($command);
+            $getArguments = [$task, 'getArguments'];
+            $getOptions = [$task, 'getOptions'];
+            $getOptionValues = [$task, 'getOptionValues'];
             $record = [
                 'uid' => (int) $row['uid'],
                 'description' => (string) ($row['description'] ?? ''),
                 'command' => $command,
                 'commandName' => (string) ($meta['name'] ?? $command),
                 'category' => (string) ($meta['category'] ?? 'Custom'),
-                'arguments' => $task->getArguments(),
-                'options' => $task->getOptions(),
-                'optionValues' => $task->getOptionValues(),
+                'arguments' => is_callable($getArguments) ? $getArguments() : [],
+                'options' => is_callable($getOptions) ? $getOptions() : [],
+                'optionValues' => is_callable($getOptionValues) ? $getOptionValues() : [],
                 'disabled' => (int) ($row['disable'] ?? 0),
                 'nextexecution' => (int) ($row['nextexecution'] ?? 0),
                 'lastexecution' => (int) ($row['lastexecution_time'] ?? 0),
@@ -145,8 +148,12 @@ final class SchedulerCliTaskService
         if ($this->schedulerTaskRepository === null) {
             return null;
         }
+        $findByUid = [$this->schedulerTaskRepository, 'findByUid'];
+        if (!is_callable($findByUid)) {
+            return null;
+        }
         try {
-            $task = $this->schedulerTaskRepository->findByUid((int) ($row['uid'] ?? 0));
+            $task = $findByUid((int) ($row['uid'] ?? 0));
         } catch (\Throwable) {
             return null;
         }

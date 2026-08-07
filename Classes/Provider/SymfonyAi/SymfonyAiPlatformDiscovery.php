@@ -179,6 +179,7 @@ final class SymfonyAiPlatformDiscovery
             'mistral' => 'https://api.mistral.ai/v1',
             'ollama' => 'http://localhost:11434',
             'openrouter' => 'https://openrouter.ai/api/v1',
+            'azure' => '',
             'bedrock' => '',
             'meta' => '',
             'generic' => '',
@@ -195,6 +196,12 @@ final class SymfonyAiPlatformDiscovery
             'openai', 'anthropic', 'gemini', 'mistral', 'bedrock', 'meta' => [
                 Capability::CHAT,
                 Capability::STREAMING,
+                Capability::TOOL_USE,
+            ],
+            'azure' => [
+                Capability::CHAT,
+                Capability::STREAMING,
+                Capability::EMBEDDINGS,
                 Capability::TOOL_USE,
             ],
             'ollama' => [Capability::CHAT, Capability::STREAMING, Capability::EMBEDDINGS],

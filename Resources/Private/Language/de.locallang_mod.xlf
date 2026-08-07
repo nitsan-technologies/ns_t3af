@@ -691,6 +691,30 @@
                 <source>T3Planet Credits: %s · %s%% remaining</source>
                 <target>T3Planet Credits: %s · %s%% verbleibend</target>
             </trans-unit>
+            <trans-unit id="toolbar.credits.title">
+                <source>T3Planet Credits</source>
+                <target>T3Planet Credits</target>
+            </trans-unit>
+            <trans-unit id="toolbar.credits.dropdown.headline">
+                <source>T3Planet Credits</source>
+                <target>T3Planet Credits</target>
+            </trans-unit>
+            <trans-unit id="toolbar.credits.dropdown.usedTotal">
+                <source>Used / total</source>
+                <target>Verbraucht / gesamt</target>
+            </trans-unit>
+            <trans-unit id="toolbar.credits.dropdown.remaining">
+                <source>Remaining</source>
+                <target>Verbleibend</target>
+            </trans-unit>
+            <trans-unit id="toolbar.credits.dropdown.percentLeft">
+                <source>Remaining (percent)</source>
+                <target>Verbleibend (Prozent)</target>
+            </trans-unit>
+            <trans-unit id="toolbar.credits.dropdown.moreDetails">
+                <source>More details — AI Providers</source>
+                <target>Mehr Details — AI Providers</target>
+            </trans-unit>
             <trans-unit id="module.dashboard.heading">
                 <source>Dashboard</source>
                 <target>Dashboard</target>

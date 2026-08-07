@@ -104,14 +104,17 @@ final class DashboardViewModelBuilder
                 $trends['totalRequests'] ?? [],
                 $success . ' ok · ' . $failed . ' failed',
             ),
-            $this->kpiCard(
+        ];
+
+        if (!$creditsMode) {
+            $strip[] = $this->kpiCard(
                 'tokens',
                 'actions-database',
                 $this->formatTokenCount((int) ($totals['totalTokens'] ?? 0)),
                 $trends['totalTokens'] ?? [],
                 'cumulative all extensions',
-            ),
-        ];
+            );
+        }
 
         if ($creditsMode) {
             $stats = is_array($creditsDashboard['stats'] ?? null) ? $creditsDashboard['stats'] : [];

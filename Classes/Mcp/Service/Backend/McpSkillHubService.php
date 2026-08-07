@@ -47,9 +47,23 @@ readonly class McpSkillHubService
                 continue;
             }
 
+            $keywords = [(string) ($entry['triggerKeyword'] ?? '')];
+            $legacy = $entry['legacyTriggerKeywords'] ?? [];
+            if (is_array($legacy)) {
+                $keywords = array_merge($keywords, array_map('strval', $legacy));
+            }
+
+            $installed = false;
+            foreach ($keywords as $keyword) {
+                if ($this->isInstalled($keyword)) {
+                    $installed = true;
+                    break;
+                }
+            }
+
             $rows[] = array_merge($entry, [
                 'id' => $id,
-                'installed' => $this->isInstalled((string) ($entry['triggerKeyword'] ?? '')),
+                'installed' => $installed,
             ]);
         }
 

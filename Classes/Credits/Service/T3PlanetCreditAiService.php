@@ -56,9 +56,12 @@ final class T3PlanetCreditAiService implements AiServiceInterface
             return $stream->getReturn();
         }
 
-        yield from $this->inner->stream($prompt, $options);
+        // Propagate the delegated generator's return value (e.g. StreamSummary)
+        // so getReturn() behaves the same with credits on or off (CM-01).
+        $inner = $this->inner->stream($prompt, $options);
+        yield from $inner;
 
-        return;
+        return $inner->getReturn();
     }
 
     public function embed(string|array $text, AiOptions $options = new AiOptions()): EmbeddingResponse

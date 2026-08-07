@@ -83,7 +83,8 @@ readonly class McpServerFactory
         $names = [];
         foreach ($this->tools as $tool) {
             $attribute = $this->getMethodAttribute($tool, McpTool::class);
-            $names[] = $attribute?->name ?? $tool::class;
+            $name = $attribute?->name;
+            $names[] = is_string($name) && $name !== '' ? $name : $tool::class;
         }
 
         return $names;

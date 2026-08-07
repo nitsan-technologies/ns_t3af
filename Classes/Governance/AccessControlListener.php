@@ -50,6 +50,8 @@ final class AccessControlListener
         'complete' => 'nst3af:capability_chat',
         'stream' => 'nst3af:capability_streaming',
         'embed' => 'nst3af:capability_embeddings',
+        'image_generation' => 'nst3af:capability_image_generation',
+        'tts' => 'nst3af:capability_tts',
     ];
 
     public function __construct(

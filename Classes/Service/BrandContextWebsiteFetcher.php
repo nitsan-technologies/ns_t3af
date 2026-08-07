@@ -32,11 +32,11 @@ use Psr\Http\Message\RequestFactoryInterface;
 final class BrandContextWebsiteFetcher
 {
     private const MAX_CONTENT_CHARS = 12000;
-    private const TIMEOUT_SECONDS = 15;
 
     public function __construct(
         private readonly ClientInterface $client,
         private readonly RequestFactoryInterface $requestFactory,
+        private readonly PublicUrlValidator $publicUrlValidator = new PublicUrlValidator(),
     ) {}
 
     /**
@@ -53,9 +53,18 @@ final class BrandContextWebsiteFetcher
             ];
         }
 
+        // SSRF guard (S-01): never fetch URLs resolving to private/reserved IPs.
+        if (!$this->publicUrlValidator->isPublicUrl($normalizedUrl)) {
+            return [
+                'content' => '',
+                'fetched' => false,
+                'notice' => 'The website URL is not publicly reachable. Use a public http:// or https:// URL.',
+            ];
+        }
+
         try {
             $request = $this->requestFactory->createRequest('GET', $normalizedUrl)
-                ->withHeader('User-Agent', 'AI-Universe-BrandContext/1.0 (+https://t3planet.de)')
+                ->withHeader('User-Agent', 'AI-Foundation-BrandContext/1.0 (+https://t3planet.de)')
                 ->withHeader('Accept', 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.8');
 
             $response = $this->client->sendRequest($request);

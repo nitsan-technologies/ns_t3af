@@ -21,16 +21,26 @@
             <span class="aiu-mcp-status-bar__value">{aiUsageKpis.totalRequests}</span>
         </div>
     </div>
-    <div class="aiu-mcp-status-bar__cell">
-        <div class="aiu-mcp-status-bar__content">
-            <span class="aiu-mcp-status-bar__label"><f:translate key="{ll}:module.aiUsage.kpi.totalTokens" default="Total Tokens" /></span>
-            <span class="aiu-mcp-status-bar__value">{aiUsageKpis.totalTokens}</span>
+    <f:if condition="{hideTokenMetrics} != 1">
+        <div class="aiu-mcp-status-bar__cell">
+            <div class="aiu-mcp-status-bar__content">
+                <span class="aiu-mcp-status-bar__label"><f:translate key="{ll}:module.aiUsage.kpi.totalTokens" default="Total Tokens" /></span>
+                <span class="aiu-mcp-status-bar__value">{aiUsageKpis.totalTokens}</span>
+            </div>
         </div>
-    </div>
+    </f:if>
     <div class="aiu-mcp-status-bar__cell">
         <div class="aiu-mcp-status-bar__content">
-            <span class="aiu-mcp-status-bar__label"><f:translate key="{ll}:module.aiUsage.kpi.totalCost" default="Total Cost" /></span>
-            <span class="aiu-mcp-status-bar__value">${aiUsageKpis.totalCost -> f:format.number(decimals: 4)}</span>
+            <f:if condition="{hideTokenMetrics} == 1">
+                <f:then>
+                    <span class="aiu-mcp-status-bar__label"><f:translate key="{ll}:module.aiUsage.kpi.totalCredits" default="Total Credits" /></span>
+                    <span class="aiu-mcp-status-bar__value">{aiUsageKpis.totalCredits -> f:format.number(decimals: 3)} cr</span>
+                </f:then>
+                <f:else>
+                    <span class="aiu-mcp-status-bar__label"><f:translate key="{ll}:module.aiUsage.kpi.totalCost" default="Total Cost" /></span>
+                    <span class="aiu-mcp-status-bar__value">${aiUsageKpis.totalCost -> f:format.number(decimals: 4)}</span>
+                </f:else>
+            </f:if>
         </div>
     </div>
     <div class="aiu-mcp-status-bar__cell">

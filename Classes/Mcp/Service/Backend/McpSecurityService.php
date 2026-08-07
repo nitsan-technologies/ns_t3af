@@ -21,7 +21,6 @@ namespace NITSAN\NsT3AF\Mcp\Service\Backend;
 
 use NITSAN\NsT3AF\Mcp\Service\AdvancedSettingsService;
 use NITSAN\NsT3AF\Mcp\Utility\McpIpMatcher;
-use NITSAN\NsT3AF\Settings\ExtensionSettingsService;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
@@ -31,15 +30,12 @@ use Psr\Http\Message\ServerRequestInterface;
  */
 readonly class McpSecurityService
 {
-    private const EXTENSION_KEY = 'ns_t3af';
-
     /** mTLS UI and enforcement are not available until a future release. */
     private const MTLS_FEATURE_ENABLED = false;
 
     public function __construct(
         private McpIpAllowlistRepository $ipAllowlistRepository,
         private AdvancedSettingsService $advancedSettingsService,
-        private ExtensionSettingsService $extensionSettingsService,
     ) {}
 
     /**
@@ -179,11 +175,7 @@ readonly class McpSecurityService
 
     public function isMtlsValidationEnabled(): bool
     {
-        if (!self::MTLS_FEATURE_ENABLED) {
-            return false;
-        }
-
-        return $this->advancedSettingsService->mtlsValidationEnabled();
+        return false;
     }
 
     public function isMtlsFeatureAvailable(): bool
@@ -196,21 +188,7 @@ readonly class McpSecurityService
      */
     public function saveMtlsSettings(array $settings): void
     {
-        if (!self::MTLS_FEATURE_ENABLED) {
-            throw new \RuntimeException('Mutual TLS (mTLS) is not available yet.', 1712100200);
-        }
-
-        $payload = [];
-        if (array_key_exists('mtlsCaCertificate', $settings)) {
-            $payload['mtlsCaCertificate'] = (string) $settings['mtlsCaCertificate'];
-        }
-        if (array_key_exists('mtlsValidationEnabled', $settings)) {
-            $payload['mtlsValidationEnabled'] = (string) $settings['mtlsValidationEnabled'];
-        }
-
-        if ($payload !== []) {
-            $this->extensionSettingsService->merge(self::EXTENSION_KEY, $payload);
-        }
+        throw new \RuntimeException('Mutual TLS (mTLS) is not available yet.', 1712100200);
     }
 
     /**

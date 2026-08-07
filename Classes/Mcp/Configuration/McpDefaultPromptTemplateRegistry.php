@@ -55,7 +55,7 @@ final class McpDefaultPromptTemplateRegistry
             return [];
         }
 
-        /** @var list<array<string, mixed>> $defaults */
+        /** @var list<array{name: string, description: string, templateBody: string, arguments: list<array{name: string, required: bool, description: string, default?: string}>}> $defaults */
         $defaults = require $path;
 
         return array_values(array_filter(

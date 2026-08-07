@@ -475,6 +475,14 @@
                 <source>Upload brand guidelines (PDF, DOCX, MD, TXT, CSV, JSON — max 3 × 10 MB).</source>
                 <target>Laden Sie Markenrichtlinien hoch (PDF, DOCX, MD, TXT, CSV, JSON – max. 3 × 10 MB).</target>
             </trans-unit>
+            <trans-unit id="module.aiContext.field.documentsEgressNotice">
+                <source>When enabled below, a short excerpt of uploaded document text is sent to your configured AI provider with every request. Leave the toggle off to keep documents stored locally for research only.</source>
+                <target>Wenn unten aktiviert, wird ein kurzer Auszug des hochgeladenen Dokumenttexts mit jeder Anfrage an Ihren konfigurierten KI-Anbieter gesendet. Lassen Sie die Option deaktiviert, um Dokumente nur lokal für die Recherche zu speichern.</target>
+            </trans-unit>
+            <trans-unit id="module.aiContext.field.includeDocumentInPrompt">
+                <source>Include uploaded document text in AI prompts</source>
+                <target>Hochgeladenen Dokumenttext in KI-Prompts einbeziehen</target>
+            </trans-unit>
             <trans-unit id="module.aiContext.field.documentsDrop">
                 <source>Select brand documents to extract text for AI context.</source>
                 <target>Wählen Sie Markendokumente aus, um Text für AI Context zu extrahieren.</target>
@@ -1799,6 +1807,18 @@
                 <source>Provider not found.</source>
                 <target>Provider nicht gefunden.</target>
             </trans-unit>
+            <trans-unit id="credits.flash.paymentPending">
+                <source>Payment pending — credits will be added once your bank transfer clears.</source>
+                <target>Zahlung ausstehend — Guthaben wird gutgeschrieben, sobald Ihre Banküberweisung eingegangen ist.</target>
+            </trans-unit>
+            <trans-unit id="credits.flash.paymentApplied">
+                <source>Credits purchase applied. Your balance will update shortly.</source>
+                <target>Guthabenkauf übernommen. Ihr Kontostand wird in Kürze aktualisiert.</target>
+            </trans-unit>
+            <trans-unit id="credits.flash.paymentFailed">
+                <source>Credits purchase could not be completed. Please try again or contact support.</source>
+                <target>Der Guthabenkauf konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut oder kontaktieren Sie den Support.</target>
+            </trans-unit>
             <trans-unit id="provider.drawer.titleNew">
                 <source>Add AI Provider</source>
                 <target>AI Provider hinzufügen</target>
@@ -1956,12 +1976,12 @@
                 <target>Noch keine Backend-Gruppen definiert.</target>
             </trans-unit>
             <trans-unit id="provider.field.privacyLevel">
-                <source>Privacy level</source>
-                <target>Datenschutzstufe</target>
+                <source>Logging privacy</source>
+                <target>Protokoll-Datenschutz</target>
             </trans-unit>
             <trans-unit id="provider.field.privacyLevel.desc">
-                <source>Controls how much request telemetry is stored. The strictest of provider and user setting wins.</source>
-                <target>Steuert, wie viel Anfragetelemetrie gespeichert wird. Die strengste Einstellung aus Provider und Benutzereinstellung gewinnt.</target>
+                <source>Controls how much request telemetry is stored locally. Does not redact or block what is sent to the AI provider. The strictest of provider and user setting wins.</source>
+                <target>Steuert, wie viel Anfragetelemetrie lokal gespeichert wird. Ändert nicht, was an den KI-Anbieter gesendet wird. Die strengste Einstellung aus Provider und Benutzereinstellung gewinnt.</target>
             </trans-unit>
             <trans-unit id="provider.field.noRerouting">
                 <source>Prevent rerouting</source>
@@ -1994,6 +2014,18 @@
             <trans-unit id="provider.mode.credits.meta.costEffective">
                 <source>Cost effective</source>
                 <target>Kosteneffektiv</target>
+            </trans-unit>
+            <trans-unit id="provider.mode.credits.activate">
+                <source>Activate</source>
+                <target>Aktivieren</target>
+            </trans-unit>
+            <trans-unit id="provider.mode.credits.recommended">
+                <source>Recommended</source>
+                <target>Empfohlen</target>
+            </trans-unit>
+            <trans-unit id="provider.mode.ownKeys.advanced">
+                <source>Advanced</source>
+                <target>Erweitert</target>
             </trans-unit>
             <trans-unit id="provider.mode.comingSoon">
                 <source>Coming soon</source>
@@ -2119,9 +2151,17 @@
                 <source>Key</source>
                 <target>Schlüssel</target>
             </trans-unit>
+            <trans-unit id="credits.dashboard.features.col.exampleCost">
+                <source>Example cost per 500 credits</source>
+                <target>Beispielkosten pro 500 Credits</target>
+            </trans-unit>
             <trans-unit id="credits.dashboard.features.col.model">
                 <source>Default model</source>
                 <target>Standardmodell</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.features.col.used">
+                <source>Used</source>
+                <target>Verbraucht</target>
             </trans-unit>
             <trans-unit id="credits.dashboard.history.title">
                 <source>Recent AI Usage</source>
@@ -2139,6 +2179,26 @@
                 <source>Description</source>
                 <target>Beschreibung</target>
             </trans-unit>
+            <trans-unit id="credits.dashboard.history.col.extension">
+                <source>Extension</source>
+                <target>Extension</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.col.page">
+                <source>Page</source>
+                <target>Seite</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.col.latency">
+                <source>Latency</source>
+                <target>Latenz</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.col.status">
+                <source>Status</source>
+                <target>Status</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.col.requestUuid">
+                <source>Request UUID</source>
+                <target>Request-UUID</target>
+            </trans-unit>
             <trans-unit id="credits.dashboard.history.col.date">
                 <source>Date</source>
                 <target>Datum</target>
@@ -2146,6 +2206,50 @@
             <trans-unit id="credits.dashboard.history.col.credits">
                 <source>Credits</source>
                 <target>Credits</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.pagination.label">
+                <source>Recent AI usage pagination</source>
+                <target>Seitennavigation der aktuellen AI-Nutzung</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.pagination.first">
+                <source>First page</source>
+                <target>Erste Seite</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.pagination.previous">
+                <source>Previous page</source>
+                <target>Vorherige Seite</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.pagination.next">
+                <source>Next page</source>
+                <target>Nächste Seite</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.pagination.last">
+                <source>Last page</source>
+                <target>Letzte Seite</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.pagination.page">
+                <source>Page</source>
+                <target>Seite</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.pagination.records">
+                <source>Records %1$s–%2$s of %3$s</source>
+                <target>Datensätze %1$s–%2$s von %3$s</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.filter.entryType">
+                <source>Entry type</source>
+                <target>Buchungstyp</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.filter.all">
+                <source>All</source>
+                <target>Alle</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.filter.debit">
+                <source>Debit</source>
+                <target>Belastung</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.history.filter.credit">
+                <source>Credit</source>
+                <target>Gutschrift</target>
             </trans-unit>
             <trans-unit id="credits.dashboard.prompt.title">
                 <source>Connect T3Planet Credits</source>
@@ -2242,6 +2346,58 @@
             <trans-unit id="dashboard.activateCreditsHint">
                 <source>Activate T3Planet Credits to see your balance and burn charts.</source>
                 <target>Aktivieren Sie T3Planet Credits, um Ihr Guthaben und Ihre Burn-Charts anzuzeigen.</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.title">
+                <source>Activate T3Planet Credits</source>
+                <target>T3Planet Credits aktivieren</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.intro">
+                <source>Connect your T3Planet license to load balance, bundles, and usage charts.</source>
+                <target>Verbinden Sie Ihre T3Planet-Lizenz, um Guthaben, Bundles und Nutzungsdiagramme zu laden.</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.step1.title">
+                <source>Credits mode selected</source>
+                <target>Credits-Modus ausgewählt</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.step1.body">
+                <source>AI requests will use T3Planet Credits once activation finishes.</source>
+                <target>KI-Anfragen nutzen T3Planet Credits, sobald die Aktivierung abgeschlossen ist.</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.step2.title">
+                <source>Activate with your license</source>
+                <target>Mit Ihrer Lizenz aktivieren</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.step2.body">
+                <source>Links this site to T3Planet using your extension license.</source>
+                <target>Verknüpft diese Website über Ihre Extension-Lizenz mit T3Planet.</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.step3.title">
+                <source>View balance and charts</source>
+                <target>Guthaben und Diagramme anzeigen</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.step3.body">
+                <source>Credit balance, burn charts, and bundles appear automatically.</source>
+                <target>Guthaben, Burn-Charts und Bundles erscheinen automatisch.</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.activate.licenseHint">
+                <source>Requires an active T3Planet extension license on this installation.</source>
+                <target>Erfordert eine aktive T3Planet-Extension-Lizenz auf dieser Installation.</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.chart.inactive.title">
+                <source>Charts unlock after activation</source>
+                <target>Diagramme nach Aktivierung verfügbar</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.chart.inactive.body">
+                <source>Activate T3Planet Credits to load credit burn over time.</source>
+                <target>Aktivieren Sie T3Planet Credits, um den Credit-Verbrauch über die Zeit zu laden.</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.spend.inactive.title">
+                <source>Spend breakdown unavailable</source>
+                <target>Ausgabenaufschlüsselung nicht verfügbar</target>
+            </trans-unit>
+            <trans-unit id="dashboard.credits.spend.inactive.body">
+                <source>Activate T3Planet Credits to see spend by extension.</source>
+                <target>Aktivieren Sie T3Planet Credits, um Ausgaben nach Extension zu sehen.</target>
             </trans-unit>
             <trans-unit id="dashboard.recentActivity">
                 <source>Recent Requests</source>

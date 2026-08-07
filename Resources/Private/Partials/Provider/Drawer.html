@@ -135,6 +135,9 @@
                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.endpoint.requiredOllama"
                                  default="Ollama base URL (no API key). In Docker/DDEV use http://host.docker.internal:11434 instead of localhost." />
                 </small>
+                <small class="aiu-field-subnote" data-aiu-endpoint-azure-hint hidden>
+                    Azure OpenAI resource endpoint, e.g. https://myresource.openai.azure.com
+                </small>
                 <input type="url" class="form-control" name="endpoint_url" maxlength="255"
                        data-aiu-endpoint-input
                        value="{provider.endpointUrl}{submitted.endpoint_url}" placeholder="https://api.openai.com/v1" />
@@ -182,7 +185,7 @@
             </div>
 
             <div class="aiu-field aiu-field--mono" data-aiu-model-field>
-                <span class="aiu-field-label">
+                <span class="aiu-field-label" data-aiu-model-field-label>
                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.chatModelId"
                                  default="Chat / completion model" />
                 </span>
@@ -213,7 +216,7 @@
 
             <f:if condition="{showEmbeddingModelField} == 1">
             <div class="aiu-field aiu-field--mono" data-aiu-embedding-model-field>
-                <span class="aiu-field-label">
+                <span class="aiu-field-label" data-aiu-embedding-model-field-label>
                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.embeddingModelId"
                                  default="Embedding model" />
                 </span>
@@ -239,6 +242,16 @@
                 <small class="aiu-field-subnote" data-aiu-embedding-model-hint hidden></small>
             </div>
             </f:if>
+
+            <label class="aiu-field aiu-field--mono" data-aiu-api-version-field hidden="hidden">
+                <span class="aiu-field-label">API Version</span>
+                <input type="text" class="form-control" name="api_version" maxlength="64"
+                       value="{provider.apiVersion}{submitted.api_version}"
+                       placeholder="2024-10-21" />
+                <small class="aiu-field-subnote">
+                    Azure OpenAI API version. Leave blank to use the built-in default (2024-10-21).
+                </small>
+            </label>
 
             <div class="aiu-field">
                 <span class="aiu-field-label">
@@ -426,75 +439,6 @@
                             <input type="checkbox" name="enabled_for_dashboard" value="1" checked="checked" />
                         </f:else>
                     </f:if>
-                    <span class="slider"></span>
-                </label>
-            </div>
-        </section>
-
-        <section class="aiu-section">
-            <div class="aiu-section__label">
-                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.drawer.access"
-                             default="Access &amp; Governance" />
-            </div>
-
-            <div class="aiu-field">
-                <span class="aiu-field-label">
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.beGroups"
-                                 default="Allowed BE groups" />
-                </span>
-                <small class="aiu-field-subnote">
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.beGroups.desc"
-                                 default="Restrict to selected backend groups. Empty = available to all groups." />
-                </small>
-                <div class="form-grid aiu-form-grid--2">
-                    <f:for each="{availableGroups}" as="group">
-                        <div class="form-group">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="aiu-provider-be-group-{group.uid}" name="be_groups[]" value="{group.uid}"<f:if condition="{selectedGroups.{group.uid}}"> checked="checked"</f:if> />
-                                <label class="form-check-label" for="aiu-provider-be-group-{group.uid}">{group.title}</label>
-                            </div>
-                        </div>
-                    </f:for>
-                    <f:if condition="{availableGroups -> f:count()} == 0">
-                        <small class="aiu-field-subnote">
-                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.beGroups.empty"
-                                         default="No backend groups defined yet." />
-                        </small>
-                    </f:if>
-                </div>
-            </div>
-
-            <label class="aiu-field">
-                <span class="aiu-field-label">
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.privacyLevel"
-                                 default="Privacy level" />
-                </span>
-                <small class="aiu-field-subnote">
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.privacyLevel.desc"
-                                 default="Controls how much request telemetry is stored. The strictest of provider and user setting wins." />
-                </small>
-                <select class="form-select" name="privacy_level">
-                    <f:for each="{privacyLevels}" as="level">
-                        <option value="{level.value}" {f:if(condition:'{level.value} == {selectedPrivacy}', then:'selected="selected"')}>{level.label}</option>
-                    </f:for>
-                </select>
-            </label>
-
-            <div class="aiu-default-card">
-                <div class="aiu-default-card__content">
-                    <div class="aiu-default-card__title">
-                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.noRerouting"
-                                     default="Prevent rerouting" />
-                    </div>
-                    <div class="aiu-default-card__sub">
-                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.noRerouting.desc"
-                                     default="When enabled, smart routing may not redirect requests away from this provider." />
-                    </div>
-                </div>
-                <label class="aiu-toggle">
-                    <input type="hidden" name="no_rerouting" value="0" />
-                    <input type="checkbox" name="no_rerouting" value="1"
-                           {f:if(condition:noReroutingChecked, then:'checked="checked"')} />
                     <span class="slider"></span>
                 </label>
             </div>

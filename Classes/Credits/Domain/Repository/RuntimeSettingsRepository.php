@@ -69,7 +69,7 @@ class RuntimeSettingsRepository
                 'credit_mode' => 0,
                 'selected_license_ext_key' => 'ns_t3af',
                 'license_keys' => '',
-                't3planet_api_base_url' => CreditsConstants::DEFAULT_API_BASE_URL,
+                't3planet_api_base_url' => '',
             ],
         );
     }

@@ -322,12 +322,13 @@ final class SchedulerCliCommandCatalogService
                 continue;
             }
             $default = $option->getDefault();
+            $defaultLabel = is_scalar($default) ? (string) $default : '';
             $rows[] = [
                 'name' => $option->getName(),
                 'label' => $option->getDescription() !== '' ? $option->getDescription() : $option->getName(),
                 'hasValue' => $option->acceptValue() ? 1 : 0,
-                'default' => $default !== null ? (string) $default : '',
-                'placeholder' => $default !== null ? (string) $default : '',
+                'default' => $defaultLabel,
+                'placeholder' => $defaultLabel,
             ];
         }
 

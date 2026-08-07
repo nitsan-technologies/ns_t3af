@@ -14,7 +14,7 @@
 - **AI Features** tab: per-extension ext_conf scopes via `ExtensionExtConfCategoryService`.
 - **AI Usage** / analytics from request log.
 - **AI Logs** tab: centralized `sys_log` view for all AI extensions (filters, export, delete). See `context/features/ai-logs.md`.
-- **Credits** tab: mode toggle, dashboard, buy/history/pricing (T3Planet Credits — implemented but **Coming soon** via `CreditsReleaseGate`).
+- **Credits** tab: mode toggle, dashboard, buy/history/pricing (T3Planet Credits — publicly available via `CreditsReleaseGate`).
 - **MCP Tools** tab: extension tool catalog (`McpToolsController`).
 - **AI Permissions** tab (admin only): wizard + permission matrix — see `context/features/ai-access-roles.md`.
 

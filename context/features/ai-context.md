@@ -118,7 +118,11 @@ Declared in `BrandContextService::PLACEHOLDERS`:
 | `{competitors}` | Comma-separated |
 | `{compliance_notes}` | Plain text |
 
+**Special inline token — `[brand_profile]`** (CTX-06): not a field token and intentionally **not** in `BrandContextService::PLACEHOLDERS` (the editor placeholder bar). Wherever it appears in a prompt or chat message it expands **inline** to the full assembled `=== BRAND CONTEXT ===` block (same content as `{brand_context}`). When present, the separate system-block injection is suppressed to avoid duplication. Resolved in `BrandContextPromptInjectionListener` / `BrandContextPlaceholderService`.
+
 **Skip injection:** pass `extra: ['skipBrandContext' => true]` on `AiOptions` (used by brand research itself).
+
+**Lineage:** when a profile resolves, the listener stamps `extra['brandContextProfileUid']`. That uid is echoed on `AiResponse::$appliedBrandContextProfileUid` and persisted as `tx_nst3af_request_log.brand_context_profile_uid`.
 
 **Resolution order** (`BrandContextResolver::resolveForPageId($pageId, $extensionKey, $scope)`):
 
@@ -133,7 +137,11 @@ Declared in `BrandContextService::PLACEHOLDERS`:
 1. **System block (always).** The assembled `=== BRAND CONTEXT ===` block (`BrandContextAssembler`) is injected as a `system` message into `AiOptions->extra['messages']` — or, when no chat messages are present, prepended to `systemPrompt`. This is the canonical path and runs for every brand-eligible request.
 2. **Inline tokens (only where present).** `{brand_*}` / `{brand_context}` tokens are substituted in place wherever a prompt template contains them — both in the plain prompt string and inside `extra['messages']` contents.
 
-> **Known redundancy (cleanup deferred):** several ns_t3ai `PromptContractRegistry` templates embed inline brand tokens (e.g. `Brand: {brand_name}. Voice: {brand_voice}. …`) in the user prompt. Because mechanism 1 already injects the full block as a system message, brand details appear **twice** per request (system block + inline). This is functionally harmless — the model receives consistent data — but costs a few extra input tokens and can leave cosmetic fragments from empty fields (e.g. `Avoid: .` when `{forbidden_words}` is empty; the assembled block skips empty fields, the inline copy does not). **Planned cleanup:** strip the inline brand tokens from the ns_t3ai templates and rely solely on the system block. Deferred — not yet done.
+> **Duplicate system-prompt guard (CTX-11):** within `ns_t3af` the listener never double-injects the brand block — `injectBrandSystemMessage()` and the `systemPrompt` fallback both check `str_contains($existing, $brandBlock)` before prepending, and an inline `[brand_profile]` token suppresses the separate system block. So a single request cannot carry the brand block twice from this package.
+>
+> **Known cross-package redundancy (cleanup deferred, out of `ns_t3af` scope):** several ns_t3ai `PromptContractRegistry` templates embed inline brand tokens (e.g. `Brand: {brand_name}. Voice: {brand_voice}. …`) in the user prompt. Because the system block is also injected, brand details appear **twice** per request (system block + inline). Functionally harmless — the model receives consistent data — but costs a few extra input tokens and can leave cosmetic fragments from empty fields (e.g. `Avoid: .` when `{forbidden_words}` is empty; the assembled block skips empty fields, the inline copy does not). **Planned cleanup lives in the `ns_t3ai` package:** strip the inline brand tokens from those templates and rely solely on the system block. Deferred — not yet done.
+>
+> **Embeddings (CTX-10):** for `embed` (and `tts`/`image_generation`) the listener substitutes brand tokens in the **plain prompt string only** and returns early — the brand *system block* is never injected and `extra['messages']` is left untouched. Only chat-style `complete`/`stream` calls get the system block and message substitution. This keeps embedding inputs from being polluted with a large brand preamble.
 
 ---
 

@@ -66,7 +66,7 @@ final class CreditsApiResponseCache implements CreditsApiResponseCacheInterface
     /**
      * @return array<string, mixed>|null Cached JSON-decoded-style payload, or null on miss.
      */
-    public function get(string $scope, string $domain, string $bearerToken): ?array
+    public function get(string $scope, string $domain, #[\SensitiveParameter] string $bearerToken): ?array
     {
         $entry = $this->cache->get($this->entryIdentifier($scope, $domain, $bearerToken));
         if (!is_array($entry)) {
@@ -83,6 +83,7 @@ final class CreditsApiResponseCache implements CreditsApiResponseCacheInterface
     public function set(
         string $scope,
         string $domain,
+        #[\SensitiveParameter]
         string $bearerToken,
         array $payload,
         int $lifetimeSeconds,
@@ -103,7 +104,7 @@ final class CreditsApiResponseCache implements CreditsApiResponseCacheInterface
         $this->cache->flush();
     }
 
-    private function entryIdentifier(string $scope, string $domain, string $bearerToken): string
+    private function entryIdentifier(string $scope, string $domain, #[\SensitiveParameter] string $bearerToken): string
     {
         $token = trim($bearerToken);
         $domain = trim($domain);

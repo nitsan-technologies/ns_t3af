@@ -1,0 +1,54 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+
+<p class="dropdown-headline" id="aiu-credits-dropdown-headline">
+    <f:translate key="{ll}:toolbar.credits.dropdown.headline" default="T3Planet Credits" />
+</p>
+<nav class="aiu-toolbar-credit-dropdown" aria-labelledby="aiu-credits-dropdown-headline">
+    <div class="dropdown-item-text aiu-toolbar-credit-dropdown__summary px-3 pb-2">
+        <dl class="aiu-toolbar-credit-dropdown__stats mb-0">
+            <div class="aiu-toolbar-credit-dropdown__row">
+                <dt>
+                    <f:translate key="{ll}:toolbar.credits.dropdown.usedTotal" default="Used / total" />
+                </dt>
+                <dd>{badge.creditsLabel}</dd>
+            </div>
+            <div class="aiu-toolbar-credit-dropdown__row">
+                <dt>
+                    <f:translate key="{ll}:toolbar.credits.dropdown.remaining" default="Remaining" />
+                </dt>
+                <dd>{badge.remainingFormatted} cr</dd>
+            </div>
+            <div class="aiu-toolbar-credit-dropdown__row">
+                <dt>
+                    <f:translate key="{ll}:toolbar.credits.dropdown.percentLeft" default="Remaining" />
+                </dt>
+                <dd class="aiu-toolbar-credit-dropdown__percent aiu-toolbar-credit-dropdown__percent--{badge.level}">
+                    {badge.percentLeft}%
+                </dd>
+            </div>
+        </dl>
+    </div>
+    <ul class="dropdown-list" role="menu" aria-labelledby="aiu-credits-dropdown-headline">
+        <li>
+            <a href="#"
+               class="dropdown-item"
+               role="menuitem"
+               data-aiu-credits-module="t3af_dashboard"
+               data-aiu-credits-module-url="{f:be.uri(route: 't3af_dashboard.providers')}"
+               data-aiu-credits-module-params="">
+                <span class="dropdown-item-columns">
+                    <span class="dropdown-item-column dropdown-item-column-icon" aria-hidden="true">
+                        <core:icon identifier="actions-cog" size="small" alternativeMarkupIdentifier="inline" />
+                    </span>
+                    <span class="dropdown-item-column dropdown-item-column-title">
+                        <f:translate key="{ll}:toolbar.credits.dropdown.moreDetails" default="More details — AI Providers" />
+                    </span>
+                </span>
+            </a>
+        </li>
+    </ul>
+</nav>
+</html>

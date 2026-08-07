@@ -21,12 +21,14 @@ namespace NITSAN\NsT3AF\Credits\Service;
 
 use NITSAN\NsT3AF\Credits\Contract\LicenseDataRepositoryInterface;
 use NITSAN\NsT3AF\Credits\Domain\Model\LicenseContext;
+use NITSAN\NsT3AF\Utility\LicenseUtility;
 
 /**
  * @internal
  */
 final class LicenseKeyResolver
 {
+    public const T3AF_EXTENSION_KEY = LicenseUtility::EXTENSION_KEY;
     public function __construct(
         private readonly ?LicenseDataRepositoryInterface $licenseRepository,
     ) {}
@@ -43,7 +45,7 @@ final class LicenseKeyResolver
         $contexts = [];
         foreach ($this->licenseRepository->fetchAllData() as $row) {
             $key = trim((string) ($row['license_key'] ?? ''));
-            if ($key === '' || !$this->isValidRow($row)) {
+            if ($key === '' || !$this->isValidRow($row) || !$this->isT3AfLicense($row)) {
                 continue;
             }
             $contexts[] = $this->mapRow($row);
@@ -74,7 +76,7 @@ final class LicenseKeyResolver
     /**
      * Keys present in $discoveredCommaSeparated but not yet in runtime storage.
      */
-    public function buildNewLicenseKeysCommaSeparated(string $discoveredCommaSeparated, string $storedCommaSeparated): string
+    public function buildNewLicenseKeysCommaSeparated(#[\SensitiveParameter] string $discoveredCommaSeparated, #[\SensitiveParameter] string $storedCommaSeparated): string
     {
         $new = array_diff(
             $this->parseLicenseKeySet($discoveredCommaSeparated),
@@ -88,7 +90,7 @@ final class LicenseKeyResolver
     /**
      * @return list<string>
      */
-    public function parseLicenseKeySet(string $commaSeparated): array
+    public function parseLicenseKeySet(#[\SensitiveParameter] string $commaSeparated): array
     {
         $commaSeparated = trim($commaSeparated);
         if ($commaSeparated === '') {
@@ -107,6 +109,14 @@ final class LicenseKeyResolver
         sort($unique, SORT_STRING);
 
         return $unique;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function isT3AfLicense(array $row): bool
+    {
+        return (string) ($row['extension_key'] ?? '') === self::T3AF_EXTENSION_KEY;
     }
 
     /**

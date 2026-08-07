@@ -105,6 +105,16 @@ return [
                 'eval' => 'trim',
             ],
         ],
+        'api_version' => [
+            'label' => 'API version',
+            'config' => [
+                'type' => 'input',
+                'size' => 20,
+                'max' => 64,
+                'eval' => 'trim',
+            ],
+            'description' => 'Azure OpenAI API version (e.g. 2024-10-21). Leave empty to use the built-in default.',
+        ],
         'capabilities' => [
             'label' => 'Capabilities',
             'config' => [
@@ -167,18 +177,18 @@ return [
             'description' => 'Restrict this provider to selected backend groups. Empty = available to all groups.',
         ],
         'privacy_level' => [
-            'label' => 'Privacy level',
+            'label' => 'Logging privacy',
             'config' => [
                 'type' => 'select',
                 'renderType' => 'selectSingle',
                 'items' => [
-                    ['label' => 'Standard (full logging)', 'value' => 'standard'],
-                    ['label' => 'Reduced (no prompt content)', 'value' => 'reduced'],
-                    ['label' => 'None (no logging)', 'value' => 'none'],
+                    ['label' => 'Standard (full request logging)', 'value' => 'standard'],
+                    ['label' => 'Reduced (log counters only, no fingerprint)', 'value' => 'reduced'],
+                    ['label' => 'None (no request logging)', 'value' => 'none'],
                 ],
                 'default' => 'standard',
             ],
-            'description' => 'Controls how much request telemetry is stored. The strictest of provider and user setting wins.',
+            'description' => 'Controls how much request telemetry is stored locally. Does not change what is sent to the AI provider. The strictest of provider and user setting wins.',
         ],
         'no_rerouting' => [
             'label' => 'Prevent rerouting',
@@ -285,7 +295,7 @@ return [
         '0' => [
             'showitem' => '
                 --div--;Identity, identifier, title, adapter_type,
-                --div--;Connection, endpoint_url, api_key, model_id, embedding_model_id,
+                --div--;Connection, endpoint_url, api_key, model_id, embedding_model_id, api_version,
                 --div--;Configuration, capabilities, temperature, system_prompt, is_default, priority, is_enabled, enabled_for_dashboard,
                 --div--;Pricing, pricing_input_per_1m, pricing_output_per_1m, pricing_currency, cost_center, retention_days_override,
                 --div--;Access, be_groups, privacy_level, no_rerouting,

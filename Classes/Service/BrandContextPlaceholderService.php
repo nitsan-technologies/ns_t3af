@@ -29,6 +29,40 @@ use NITSAN\NsT3AF\Domain\Model\BrandContextProfile;
 final class BrandContextPlaceholderService
 {
     /**
+     * @var list<string> All tokens supported by {@see buildMap()}.
+     *
+     * `[brand_profile]` (CTX-06) is an inline full-block token: it expands to the
+     * whole assembled brand block, unlike the `{brand_*}` field tokens. It is
+     * intentionally excluded from {@see \NITSAN\NsT3AF\Service\BrandContextService::PLACEHOLDERS}
+     * (the editor placeholder bar) because it is a block expansion, not a field.
+     */
+    private const TOKENS = [
+        '{brand_context}',
+        '[brand_profile]',
+        '{brand_name}',
+        '{brand_voice}',
+        '{target_audience}',
+        '{target_persona}',
+        '{content_rules}',
+        '{keywords}',
+        '{forbidden_words}',
+        '{competitors}',
+        '{compliance_notes}',
+    ];
+
+    /**
+     * Map with every known token resolved to an empty string. Used to strip
+     * brand tokens from outgoing prompts when no profile resolves (CTX-04),
+     * so literal `{brand_*}` placeholders never leak to the model.
+     *
+     * @return array<string, string>
+     */
+    public function buildEmptyMap(): array
+    {
+        return array_fill_keys(self::TOKENS, '');
+    }
+
+    /**
      * @return array<string, string>
      */
     public function buildMap(BrandContextProfile $profile): array
@@ -49,6 +83,12 @@ final class BrandContextPlaceholderService
     }
 
     /**
+     * Replace every token in a single pass (CTX-05).
+     *
+     * `strtr()` scans the input once and replaces longest keys first, so a token
+     * value that happens to contain another token string is never re-scanned —
+     * unlike sequential `str_replace(array, array)`, which could cascade.
+     *
      * @param array<string, string> $map
      */
     public function replace(string $text, array $map): string
@@ -57,7 +97,7 @@ final class BrandContextPlaceholderService
             return $text;
         }
 
-        return str_replace(array_keys($map), array_values($map), $text);
+        return strtr($text, $map);
     }
 
     /**

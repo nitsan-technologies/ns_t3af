@@ -284,7 +284,7 @@ final class DashboardChartConfigurator
     }
 
     /**
-     * @param list<array{extensionKey:string,credits:float}> $rows
+     * @param list<array<string, mixed>> $rows
      */
     public function horizontalBarChart(array $rows, string $label, string $valueKey = 'credits'): string
     {

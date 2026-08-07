@@ -28,9 +28,9 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
  * One row per (user, period type). Counters reset lazily: when a period has
  * elapsed the row is rewound on the next read instead of via a scheduler.
  *
- * @internal
+ * @internal Not final so unit tests can substitute an in-memory double.
  */
-final class UsageBudgetRepository
+class UsageBudgetRepository
 {
     public const TABLE = 'tx_nst3af_usage_budget';
 

@@ -210,6 +210,7 @@ final class McpToolsController
         if (!is_array($arguments)) {
             $arguments = [];
         }
+        $arguments = array_values(array_filter($arguments, 'is_array'));
 
         try {
             $uid = $this->promptTemplateService->create($name, $description, $templateBody, $arguments);
@@ -245,6 +246,7 @@ final class McpToolsController
         if (!is_array($arguments)) {
             $arguments = [];
         }
+        $arguments = array_values(array_filter($arguments, 'is_array'));
 
         try {
             $this->promptTemplateService->update($uid, $name, $description, $templateBody, $arguments);
@@ -306,6 +308,7 @@ final class McpToolsController
         if (!is_array($parameters)) {
             $parameters = [];
         }
+        $parameters = array_values(array_filter($parameters, 'is_array'));
 
         try {
             $uid = $this->customToolService->create(
@@ -350,6 +353,7 @@ final class McpToolsController
         if (!is_array($parameters)) {
             $parameters = [];
         }
+        $parameters = array_values(array_filter($parameters, 'is_array'));
 
         try {
             $this->customToolService->update(

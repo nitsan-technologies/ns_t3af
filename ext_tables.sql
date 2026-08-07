@@ -1,3 +1,12 @@
+#
+# AI Logs reads sys_log filtered by channel + tstamp range, ordered by tstamp.
+# Core ships no index leading (channel, tstamp); without it every log-tab
+# render filesorts a shared, heavily-written table (PF-01).
+#
+CREATE TABLE sys_log (
+    KEY nst3af_channel_tstamp (channel, tstamp)
+);
+
 CREATE TABLE tx_nst3af_provider (
     identifier VARCHAR(64) NOT NULL DEFAULT '',
     title VARCHAR(255) NOT NULL DEFAULT '',
@@ -6,6 +15,7 @@ CREATE TABLE tx_nst3af_provider (
     api_key TEXT,
     model_id VARCHAR(128) NOT NULL DEFAULT '',
     embedding_model_id VARCHAR(128) NOT NULL DEFAULT '',
+    api_version VARCHAR(64) NOT NULL DEFAULT '',
     capabilities VARCHAR(255) NOT NULL DEFAULT '',
     temperature DECIMAL(3,2) DEFAULT 0.70,
     system_prompt TEXT,
@@ -61,6 +71,7 @@ CREATE TABLE tx_nst3af_request_log (
     credits_used DECIMAL(12,6) DEFAULT 0.000000 NOT NULL,
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
     be_user_id INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    brand_context_profile_uid INT(11) UNSIGNED DEFAULT 0 NOT NULL,
     quality_score SMALLINT(5) UNSIGNED DEFAULT 0 NOT NULL,
     quality_dimensions JSON DEFAULT NULL,
     raw_meta MEDIUMTEXT,
@@ -71,7 +82,8 @@ CREATE TABLE tx_nst3af_request_log (
     KEY req_success_time (success, crdate),
     KEY req_model_time (model_used, crdate),
     KEY req_extension_time (extension_key, crdate),
-    KEY req_feature_time (feature_key, crdate)
+    KEY req_feature_time (feature_key, crdate),
+    KEY req_provideruid_time (provider_uid, crdate)
 );
 
 CREATE TABLE tx_nst3af_extension_setting (
@@ -104,10 +116,11 @@ CREATE TABLE tx_nst3af_runtime_setting (
 
 CREATE TABLE tx_nst3af_credit_receipt (
     uid INT(11) NOT NULL AUTO_INCREMENT,
-    request_uuid VARCHAR(64) NOT NULL DEFAULT '',
+    request_uuid VARCHAR(191) NOT NULL DEFAULT '',
     feature_key VARCHAR(64) NOT NULL DEFAULT '',
     model VARCHAR(96) NOT NULL DEFAULT '',
     bucket VARCHAR(16) NOT NULL DEFAULT '',
+    entry_type VARCHAR(16) NOT NULL DEFAULT 'debit',
     cost_units INT(11) UNSIGNED DEFAULT 0 NOT NULL,
     cost DECIMAL(12,6) DEFAULT 0.000000 NOT NULL,
     balance_free DECIMAL(12,6) DEFAULT 0.000000 NOT NULL,
@@ -118,7 +131,8 @@ CREATE TABLE tx_nst3af_credit_receipt (
     extra MEDIUMTEXT,
     PRIMARY KEY (uid),
     UNIQUE KEY request_uuid (request_uuid),
-    KEY crdate (crdate)
+    KEY crdate (crdate),
+    KEY entry_type (entry_type)
 );
 
 CREATE TABLE tx_nst3af_product_catalog (
@@ -356,6 +370,7 @@ CREATE TABLE tx_nst3af_brand_context_profile (
     sample_content VARCHAR(600) NOT NULL DEFAULT '',
     compliance_notes VARCHAR(400) NOT NULL DEFAULT '',
     document_extract MEDIUMTEXT,
+    include_document_in_prompt TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
     is_default TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
     completeness TINYINT(3) UNSIGNED DEFAULT 0 NOT NULL,
     crdate INT(11) UNSIGNED DEFAULT 0 NOT NULL,

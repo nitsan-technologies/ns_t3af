@@ -53,7 +53,7 @@ final class ProviderRepository implements ProviderRepositoryInterface
         /** @var array<int, array<string, mixed>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(static fn(array $row): Provider => Provider::fromRow($row), $rows);
+        return array_values(array_map(static fn(array $row): Provider => Provider::fromRow($row), $rows));
     }
 
     /**
@@ -76,7 +76,7 @@ final class ProviderRepository implements ProviderRepositoryInterface
         /** @var array<int, array<string, mixed>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(static fn(array $row): Provider => Provider::fromRow($row), $rows);
+        return array_values(array_map(static fn(array $row): Provider => Provider::fromRow($row), $rows));
     }
 
     public function findByUid(int $uid): ?Provider

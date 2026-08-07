@@ -16,6 +16,21 @@ function appendQuery(url, params) {
   return `${url}${separator}${query}`;
 }
 
+/**
+ * Escape text before interpolating into innerHTML (S-06).
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 class ProviderImport {
   constructor(root) {
     this.root = root;
@@ -139,10 +154,10 @@ class ProviderImport {
       }
       this.list.innerHTML = json.providers.map((row) => `
         <label class="form-check d-block mb-2">
-          <input class="form-check-input" type="checkbox" value="${row.uid}" data-aiu-import-uid checked>
+          <input class="form-check-input" type="checkbox" value="${escapeHtml(row.uid)}" data-aiu-import-uid checked>
           <span class="form-check-label">
-            <strong>${row.title}</strong>
-            <span class="text-variant"> — ${row.identifier} · ${row.modelId || 'no model'}</span>
+            <strong>${escapeHtml(row.title)}</strong>
+            <span class="text-variant"> — ${escapeHtml(row.identifier)} · ${escapeHtml(row.modelId || 'no model')}</span>
           </span>
         </label>
       `).join('');

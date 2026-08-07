@@ -8,9 +8,7 @@
     font-size: var(--typo3-font-size-small, .875rem);
     font-weight: 600;
     gap: .5rem;
-    height: var(--scaffold-header-item-height, 2.75rem);
     line-height: 1;
-    padding: 0 .75rem;
     white-space: nowrap;
 }
 
@@ -20,20 +18,58 @@
     flex-shrink: 0;
 }
 
-.aiu-toolbar-credit-balance__sep {
-    color: var(--typo3-text-color-variant, #737373);
-    font-weight: 400;
-    user-select: none;
-}
-
-.aiu-toolbar-credit-balance__percent {
+.aiu-toolbar-credit-balance__amount {
     font-variant-numeric: tabular-nums;
 }
 
-.aiu-toolbar-credit-balance--low .aiu-toolbar-credit-balance__percent {
+.aiu-toolbar-credit-balance--healthy .aiu-toolbar-credit-balance__amount {
+    color: var(--typo3-text-color-base, inherit);
+}
+
+.aiu-toolbar-credit-balance--low .aiu-toolbar-credit-balance__amount {
     color: var(--typo3-state-warning-color, #d97706);
 }
 
-.aiu-toolbar-credit-balance--critical .aiu-toolbar-credit-balance__percent {
+.aiu-toolbar-credit-balance--critical .aiu-toolbar-credit-balance__amount {
     color: var(--typo3-state-danger-color, #dc2626);
+}
+
+.aiu-toolbar-credit-dropdown__stats {
+    display: grid;
+    gap: .35rem;
+}
+
+.aiu-toolbar-credit-dropdown__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.aiu-toolbar-credit-dropdown__row dt {
+    color: var(--typo3-text-color-variant, #737373);
+    font-size: var(--typo3-font-size-small, .875rem);
+    font-weight: 400;
+    margin: 0;
+}
+
+.aiu-toolbar-credit-dropdown__row dd {
+    font-size: var(--typo3-font-size-small, .875rem);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    margin: 0;
+    text-align: right;
+}
+
+.aiu-toolbar-credit-dropdown__percent--healthy {
+    /* --typo3-state-success-color is foreground ON success surfaces (white), not readable green text. */
+    color: var(--typo3-surface-container-success-text, var(--typo3-state-success-border-color, #059669));
+}
+
+.aiu-toolbar-credit-dropdown__percent--low {
+    color: var(--typo3-state-warning-border-color, #d97706);
+}
+
+.aiu-toolbar-credit-dropdown__percent--critical {
+    color: var(--typo3-state-danger-border-color, #dc2626);
 }

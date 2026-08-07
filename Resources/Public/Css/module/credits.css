@@ -9,7 +9,13 @@
 .aiu-credits-panel.is-hidden,
 .aiu-ownkeys-panel.is-hidden { display: none !important; }
 
-.aiu-credits-dashboard { display: flex; flex-direction: column; gap: 1.5rem; }
+.aiu-credits-dashboard { display: flex; flex-direction: column; gap: 0; }
+
+/* Match Bootstrap mb-3 (~1rem) between Credit Balance → Bundles → Features → Recent AI Usage */
+.aiu-credits-dashboard > .aiu-credits-section + .aiu-credits-section {
+    margin-top: 1.5rem;
+    padding-top: .25rem;
+}
 
 .aiu-credits-section__head {
     display: flex;
@@ -36,7 +42,36 @@
     display: grid;
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr);
     gap: 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0;
+}
+
+.aiu-credits-plan-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .75rem;
+    margin-top: .25rem;
+    padding-top: .85rem;
+    border-top: 1px solid var(--aiu-border-soft, var(--typo3-component-border-color, #e5e5e5));
+}
+.aiu-credits-plan-stats__item {
+    min-width: 0;
+}
+.aiu-credits-plan-stats__label {
+    font-size: .75rem;
+    color: var(--aiu-text-500);
+    margin-bottom: .2rem;
+}
+.aiu-credits-plan-stats__value {
+    font-size: .9rem;
+    font-weight: 700;
+    color: var(--aiu-text-900);
+    line-height: 1.3;
+}
+.aiu-credits-plan-stats__meta {
+    display: inline;
+    font-size: .75rem;
+    font-weight: 500;
+    color: var(--aiu-text-500);
 }
 .aiu-credits-ring {
     --aiu-ring-percent: 50;
@@ -88,7 +123,9 @@
 .aiu-credits-product-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, auto);
     gap: .75rem;
+    margin-bottom: 16px;
 }
 .aiu-credits-product {
     position: relative;
@@ -100,6 +137,7 @@
     flex-direction: column;
     gap: .35rem;
     min-height: 100%;
+    min-width: 0;
 }
 .aiu-credits-product.is-current {
     border-color: var(--aiu-selected-border);
@@ -132,6 +170,39 @@
     flex: 1;
 }
 .aiu-credits-product__features li + li { margin-top: .2rem; }
+.aiu-credits-feature-used {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: .25rem;
+    min-width: 7.5rem;
+}
+.aiu-credits-feature-used__value { font-size: .8125rem; line-height: 1.2; }
+.aiu-credits-feature-used__bar {
+    display: block;
+    width: 100%;
+    height: .35rem;
+    border-radius: 999px;
+    background: var(--typo3-component-border-color, rgba(0, 0, 0, .08));
+    overflow: hidden;
+}
+.aiu-credits-feature-used__bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--typo3-component-primary-bg, #007bff);
+}
+.aiu-credits-usage__pagination { margin: 0; }
+.aiu-credits-usage__pagination-sep { margin: 0 .35rem; opacity: .55; }
+.aiu-credits-usage__pagination-records { white-space: nowrap; }
+.aiu-credits-section__head--with-filter {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: .75rem;
+    flex-wrap: wrap;
+}
+.aiu-credits-entry-type { flex-shrink: 0; }
 .aiu-credits-product__cta { width: 100%; margin-top: auto; text-align: center; }
 .aiu-credits-product__cta--disabled {
     display: block;
@@ -179,9 +250,42 @@
 .aiu-credits-prompt__text { font-size: .85rem; color: var(--aiu-text-500); max-width: 32rem; margin: 0 auto; }
 .aiu-credits-empty { font-size: .85rem; color: var(--aiu-text-500); margin: 0; }
 
-@media (max-width: 1200px) {
-    .aiu-credits-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }}
+.aiu-credits-bundles__toolbar {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .5rem;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+.aiu-credits-bundles__toolbar .btn-group {
+    flex-shrink: 0;
+}
+.aiu-credits-bundles__period {
+    display: inline-flex;
+    flex-shrink: 0;
+}
+.aiu-credits-bundles__period[hidden],
+.aiu-credits-bundles__period.is-hidden,
+.aiu-credits-bundles[data-aiu-bundle-type="topup"] .aiu-credits-bundles__period {
+    display: none !important;
+}
+
+@media (max-width: 1400px) {
+    .aiu-credits-product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1100px) {
+    .aiu-credits-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 
 @media (max-width: 900px) {
     .aiu-credits-balance-grid { grid-template-columns: 1fr; }
-    .aiu-credits-product-grid { grid-template-columns: 1fr; }}
+    .aiu-credits-plan-stats { grid-template-columns: 1fr; }
+    .aiu-credits-product-grid { grid-template-columns: 1fr; }
+    .aiu-credits-bundles__toolbar { justify-content: stretch; width: 100%; }
+    .aiu-credits-bundles__toolbar .btn-group { flex: 1 1 auto; }
+    .aiu-credits-bundles__toolbar .btn-group .btn { flex: 1 1 auto; }
+}

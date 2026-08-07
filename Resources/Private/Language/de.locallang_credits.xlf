@@ -40,8 +40,8 @@
                 <target>Ihr T3Planet Credits-Plan ist abgelaufen. Erneuern oder aktualisieren Sie Ihren Plan.</target>
             </trans-unit>
             <trans-unit id="credits.api.error.rate_limited">
-                <source>Too many requests to T3Planet Credits. Please wait %s seconds and try again.</source>
-                <target>Zu viele Anfragen zu T3Planet-Credits. Bitte warten Sie %s Sekunden und versuchen Sie es erneut.</target>
+                <source>Too many requests to T3Planet Credits. Please wait %s and try again.</source>
+                <target>Zu viele Anfragen zu T3Planet-Credits. Bitte warten Sie %s und versuchen Sie es erneut.</target>
             </trans-unit>
             <trans-unit id="credits.api.error.idempotency_conflict">
                 <source>This request was already processed with different data. Start a new AI request.</source>

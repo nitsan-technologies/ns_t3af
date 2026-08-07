@@ -42,6 +42,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamFactoryInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
 use TYPO3\CMS\Core\Crypto\PasswordHashing\PasswordHashFactory;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Http\NormalizedParams;
@@ -61,6 +62,7 @@ readonly class OAuthMiddleware implements MiddlewareInterface
         private WorkspacePreferenceService $workspacePreferenceService,
         private ResponseFactoryInterface $responseFactory,
         private StreamFactoryInterface $streamFactory,
+        private LoggerInterface $logger,
     ) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
@@ -174,6 +176,8 @@ readonly class OAuthMiddleware implements MiddlewareInterface
 
         return $this->responseFactory->createResponse(200)
             ->withHeader('Content-Type', 'text/html; charset=utf-8')
+            ->withHeader('X-Frame-Options', 'DENY')
+            ->withHeader('Content-Security-Policy', "frame-ancestors 'none'")
             ->withHeader('Set-Cookie', sprintf(
                 'mcp_csrf=%s; Path=%s; HttpOnly; SameSite=Strict; Secure; Max-Age=600',
                 $csrfToken,
@@ -212,7 +216,7 @@ readonly class OAuthMiddleware implements MiddlewareInterface
             $clientName = $this->clientLabelResolver->resolve(
                 $clientId,
                 '',
-                $redirectUri !== '' ? $redirectUri : null,
+                $redirectUri,
             );
 
             $newCsrfToken = bin2hex(random_bytes(32));
@@ -229,6 +233,8 @@ readonly class OAuthMiddleware implements MiddlewareInterface
 
             return $this->responseFactory->createResponse(200)
                 ->withHeader('Content-Type', 'text/html; charset=utf-8')
+                ->withHeader('X-Frame-Options', 'DENY')
+                ->withHeader('Content-Security-Policy', "frame-ancestors 'none'")
                 ->withHeader('Set-Cookie', sprintf(
                     'mcp_csrf=%s; Path=%s; HttpOnly; SameSite=Strict; Secure; Max-Age=600',
                     $newCsrfToken,
@@ -248,7 +254,7 @@ readonly class OAuthMiddleware implements MiddlewareInterface
                 $workspaceId,
             );
         } catch (\RuntimeException $e) {
-            return $this->createJsonResponse(400, ['error' => 'server_error', 'error_description' => $e->getMessage()]);
+            return $this->oauthServerErrorResponse($e, 'authorize_code_creation');
         }
 
         $redirectTarget = $redirectUri . '?' . http_build_query(array_filter([
@@ -285,7 +291,7 @@ readonly class OAuthMiddleware implements MiddlewareInterface
                 default => throw new \RuntimeException('Unsupported grant type', 1712100040),
             };
         } catch (\RuntimeException $e) {
-            return $this->createJsonResponse(400, ['error' => 'invalid_grant', 'error_description' => $e->getMessage()]);
+            return $this->oauthInvalidGrantResponse($e, 'token_exchange');
         }
 
         return $this->createJsonResponse(200, [
@@ -442,7 +448,47 @@ readonly class OAuthMiddleware implements MiddlewareInterface
         return is_string($cookies['mcp_csrf'] ?? null) ? $cookies['mcp_csrf'] : '';
     }
 
-    /** @param array<string, mixed> $data */
+    private function oauthServerErrorResponse(\RuntimeException $exception, string $context): ResponseInterface
+    {
+        $correlationId = bin2hex(random_bytes(8));
+        $this->logger->warning('OAuth authorization server error.', [
+            'correlationId' => $correlationId,
+            'context' => $context,
+            'exception' => $exception->getMessage(),
+            'code' => $exception->getCode(),
+        ]);
+
+        return $this->createJsonResponse(400, [
+            'error' => 'server_error',
+            'error_description' => 'The authorization server encountered an unexpected error.',
+        ]);
+    }
+
+    private function oauthInvalidGrantResponse(\RuntimeException $exception, string $context): ResponseInterface
+    {
+        $correlationId = bin2hex(random_bytes(8));
+        $this->logger->info('OAuth token grant rejected.', [
+            'correlationId' => $correlationId,
+            'context' => $context,
+            'exception' => $exception->getMessage(),
+            'code' => $exception->getCode(),
+        ]);
+
+        return $this->createJsonResponse(400, [
+            'error' => 'invalid_grant',
+            'error_description' => 'The provided authorization grant or refresh token is invalid, expired, or revoked.',
+        ]);
+    }
+
+    /**
+     * OAuth JSON responses intentionally omit Access-Control-Allow-Origin.
+     *
+     * MCP OAuth clients are native/desktop (PKCE public clients), not browser
+     * SPAs. A wildcard ACAO on token/register/revoke widened the CSRF/abuse
+     * surface for dynamic registration and revocation (S-04).
+     *
+     * @param array<string, mixed> $data
+     */
     private function createJsonResponse(int $statusCode, array $data): ResponseInterface
     {
         $body = $this->streamFactory->createStream(json_encode($data, JSON_THROW_ON_ERROR));
@@ -450,7 +496,6 @@ readonly class OAuthMiddleware implements MiddlewareInterface
         return $this->responseFactory
             ->createResponse($statusCode)
             ->withHeader('Content-Type', 'application/json')
-            ->withHeader('Access-Control-Allow-Origin', '*')
             ->withHeader('Cache-Control', 'no-store')
             ->withHeader('X-Content-Type-Options', 'nosniff')
             ->withBody($body);

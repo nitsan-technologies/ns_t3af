@@ -66,9 +66,12 @@ readonly class McpCustomToolRepository
             ->executeQuery()
             ->fetchAllAssociative();
 
-        return array_map(fn(array $row): array => $this->mapRow($row), $rows);
+        return array_values(array_map(fn(array $row): array => $this->mapRow($row), $rows));
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function findByToolKey(string $toolKey): ?array
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
@@ -88,6 +91,9 @@ readonly class McpCustomToolRepository
         return $row !== false ? $this->mapRow($row) : null;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function findByUid(int $uid): ?array
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
@@ -203,13 +209,19 @@ readonly class McpCustomToolRepository
      */
     private function mapRow(array $row): array
     {
+        /** @var list<array<string, mixed>> $parameters */
         $parameters = [];
         $raw = (string) ($row['parameters_json'] ?? '');
         if ($raw !== '') {
             try {
                 $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
                 if (is_array($decoded)) {
-                    $parameters = $decoded;
+                    foreach (array_values($decoded) as $item) {
+                        if (is_array($item)) {
+                            /** @var array<string, mixed> $item */
+                            $parameters[] = $item;
+                        }
+                    }
                 }
             } catch (\JsonException) {
                 $parameters = [];

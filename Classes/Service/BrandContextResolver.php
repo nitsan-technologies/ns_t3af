@@ -42,11 +42,7 @@ final class BrandContextResolver
 
     public function resolveForPageId(?int $pageId, ?string $extensionKey, ?string $scope = null): ?BrandContextProfile
     {
-        if ($pageId === null || $pageId <= 0) {
-            return null;
-        }
-
-        $storagePid = $this->siteStorageContext->resolveStoragePidFromPageId($pageId);
+        $storagePid = $this->resolveStoragePid($pageId);
         if ($storagePid === null || $storagePid <= 0) {
             return null;
         }
@@ -63,5 +59,19 @@ final class BrandContextResolver
         }
 
         return $this->profiles->findDefault($storagePid);
+    }
+
+    /**
+     * Non-page callers (MCP, CLI, scheduler, child extensions omitting pageId)
+     * fall back to the first valid site root so they still receive the site
+     * default brand profile instead of silently getting no context (CTX-08).
+     */
+    private function resolveStoragePid(?int $pageId): ?int
+    {
+        if ($pageId !== null && $pageId > 0) {
+            return $this->siteStorageContext->resolveStoragePidFromPageId($pageId);
+        }
+
+        return $this->siteStorageContext->resolveFirstRootStoragePid();
     }
 }

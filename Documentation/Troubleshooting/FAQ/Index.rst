@@ -49,6 +49,11 @@ Providers and MCP
 Yes. Use the Ollama provider type or a custom OpenAI-compatible endpoint.
 See :ref:`AI Providers <ai-providers>`.
 
+**What is T3Planet Credits?**
+
+An optional mode that uses a shared T3Planet credit balance instead of your
+own vendor API keys. See :ref:`T3Planet Credits <t3planet-credit-system>`.
+
 **Test connection fails even with a valid key.**
 
 Check the model ID, outbound HTTPS, and provider status. See the provider
@@ -64,9 +69,11 @@ Privacy
 
 **Where does request data go?**
 
-AI Foundation is self-hosted. Prompts and responses go from your server to the
-AI provider you configure, using your API keys. T3Planet is not in the AI data
-path. License validation only sends the license key and domain.
+AI Foundation is self-hosted. With **Your Own API Keys**, prompts and responses
+go from your server to the AI provider you configure. T3Planet is not in that
+AI data path. With :ref:`T3Planet Credits <t3planet-credit-system>` active,
+billable AI calls go through T3Planet and use your credit balance. License
+validation only sends the license key and domain.
 
 Still stuck?
 ------------

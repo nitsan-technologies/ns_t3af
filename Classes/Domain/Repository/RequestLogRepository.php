@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Domain\Repository;
 
 use NITSAN\NsT3AF\Credits\CreditsProviderIdentifier;
 use NITSAN\NsT3AF\Domain\RequestLog\RequestLogProviderScope;
+use NITSAN\NsT3AF\Utility\ExportLimits;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
@@ -31,9 +32,9 @@ use TYPO3\CMS\Core\Database\Query\QueryBuilder;
  * The dashboard reads from this repository only; callers should not query the
  * table directly to keep schema evolution isolated.
  *
- * @internal
+ * @internal Not final so unit tests can substitute doubles for governance listeners.
  */
-final class RequestLogRepository
+class RequestLogRepository
 {
     public const TABLE = 'tx_nst3af_request_log';
 
@@ -109,6 +110,7 @@ final class RequestLogRepository
 
     /**
      * @return array{totalRequests:int,totalTokens:int,totalCost:float,successRate:float}
+     * @param list<int> $providerUids
      */
     public function totals(
         int $fromTimestamp,
@@ -146,6 +148,7 @@ final class RequestLogRepository
 
     /**
      * @return list<array{day:string,requests:int,success:int,cost:float}>
+     * @param list<int> $providerUids
      */
     public function requestsByDay(
         int $fromTimestamp,
@@ -171,7 +174,7 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'day' => (string) ($row['day'] ?? ''),
                 'requests' => (int) ($row['requests'] ?? 0),
@@ -179,11 +182,12 @@ final class RequestLogRepository
                 'cost' => (float) ($row['cost'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{day:string,credits:float}>
+     * @param list<int> $providerUids
      */
     public function creditsByDay(
         int $fromTimestamp,
@@ -207,17 +211,18 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'day' => (string) ($row['day'] ?? ''),
                 'credits' => (float) ($row['credits'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
-     * @return list<array{extensionKey:string,requests:int,tokens:int,cost:float}>
+     * @return list<array{extensionKey:string,requests:int,tokens:int,cost:float,credits:float}>
+     * @param list<int> $providerUids
      */
     public function usageByExtension(
         int $fromTimestamp,
@@ -246,7 +251,7 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'extensionKey' => (string) ($row['extension_key'] ?? ''),
                 'requests' => (int) ($row['requests'] ?? 0),
@@ -255,11 +260,12 @@ final class RequestLogRepository
                 'credits' => (float) ($row['credits'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{extensionKey:string,featureKey:string,requests:int,tokens:int,cost:float}>
+     * @param list<int> $providerUids
      */
     public function usageByExtensionAndFeature(
         int $fromTimestamp,
@@ -288,7 +294,7 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'extensionKey' => (string) ($row['extension_key'] ?? ''),
                 'featureKey' => (string) ($row['feature_key'] ?? ''),
@@ -297,11 +303,12 @@ final class RequestLogRepository
                 'cost' => (float) ($row['cost'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{model:string,tokens:int,cost:float}>
+     * @param list<int> $providerUids
      */
     public function topModelsByTokens(
         int $fromTimestamp,
@@ -328,18 +335,56 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'model' => (string) ($row['model_used'] ?? ''),
                 'tokens' => (int) ($row['tokens'] ?? 0),
                 'cost' => (float) ($row['cost'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
-     * @return list<array{provider:string,requests:int,cost:float}>
+     * @return list<array{model:string,credits:float}>
+     * @param list<int> $providerUids
+     */
+    public function topModelsByCredits(
+        int $fromTimestamp,
+        ?int $toTimestamp = null,
+        int $limit = 10,
+        ?RequestLogProviderScope $scope = null,
+        ?array $providerUids = null,
+    ): array {
+        $qb = $this->queryBuilder();
+        $qb->selectLiteral(
+            'model_used',
+            'COALESCE(SUM(credits_used), 0) AS credits',
+        )
+            ->from(self::TABLE);
+        $this->applyVisibleConstraint($qb);
+        $this->applyProviderScopeConstraint($qb, $scope);
+        $this->applyProviderUidConstraint($qb, $providerUids);
+        $this->applyPeriodConstraint($qb, $fromTimestamp, $toTimestamp);
+        $qb->groupBy('model_used')
+            ->orderBy('credits', 'DESC')
+            ->setMaxResults($limit);
+
+        /** @var array<int, array<string, scalar|null>> $rows */
+        $rows = $qb->executeQuery()->fetchAllAssociative();
+
+        return array_values(array_map(
+            static fn(array $row): array => [
+                'model' => (string) ($row['model_used'] ?? ''),
+                'credits' => (float) ($row['credits'] ?? 0.0),
+            ],
+            $rows,
+        ));
+    }
+
+    /**
+     * @return list<array{provider:string,requests:int,cost:float,credits:float}>
+     * @param list<int> $providerUids
      */
     public function providerDistribution(
         int $fromTimestamp,
@@ -352,6 +397,7 @@ final class RequestLogRepository
             'provider_identifier',
             'COUNT(*) AS requests',
             'COALESCE(SUM(estimated_cost), 0) AS cost',
+            'COALESCE(SUM(credits_used), 0) AS credits',
         )
             ->from(self::TABLE);
         $this->applyVisibleConstraint($qb);
@@ -364,18 +410,20 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'provider' => (string) ($row['provider_identifier'] ?? ''),
                 'requests' => (int) ($row['requests'] ?? 0),
                 'cost' => (float) ($row['cost'] ?? 0.0),
+                'credits' => (float) ($row['credits'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array<string, scalar>>
+     * @param list<int> $providerUids
      */
     public function recent(
         int $limit = 10,
@@ -528,7 +576,14 @@ final class RequestLogRepository
         ?int $toTimestamp = null,
         ?RequestLogProviderScope $scope = null,
     ): array {
-        return $this->findFiltered($filters, $fromTimestamp, $toTimestamp, $scope, 0, 0);
+        return $this->findFiltered(
+            $filters,
+            $fromTimestamp,
+            $toTimestamp,
+            $scope,
+            ExportLimits::MAX_ROWS,
+            0,
+        );
     }
 
     /**
@@ -540,6 +595,7 @@ final class RequestLogRepository
      *   reqTypes:list<string>,
      *   users:list<string>
      * }
+     * @param list<int> $providerUids
      */
     public function usageFilterOptions(
         int $fromTimestamp,
@@ -559,6 +615,7 @@ final class RequestLogRepository
 
     /**
      * @return list<array{day:string,success:int,failed:int}>
+     * @param list<int> $providerUids
      */
     public function requestsByDaySuccessFail(
         int $fromTimestamp,
@@ -582,18 +639,19 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'day' => (string) ($row['day'] ?? ''),
                 'success' => (int) ($row['success'] ?? 0),
                 'failed' => (int) ($row['failed'] ?? 0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return array{success:int,failed:int}
+     * @param list<int> $providerUids
      */
     public function successFailTotals(
         int $fromTimestamp,
@@ -623,6 +681,7 @@ final class RequestLogRepository
 
     /**
      * @return list<array{day:string,extensionKey:string,credits:float}>
+     * @param list<int> $providerUids
      */
     public function creditsByDayAndExtension(
         int $fromTimestamp,
@@ -646,18 +705,19 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'day' => (string) ($row['day'] ?? ''),
                 'extensionKey' => (string) ($row['extension_key'] ?? ''),
                 'credits' => (float) ($row['credits'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{day:string,provider:string,cost:float}>
+     * @param list<int> $providerUids
      */
     public function costByDayAndProvider(
         int $fromTimestamp,
@@ -681,18 +741,19 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'day' => (string) ($row['day'] ?? ''),
                 'provider' => (string) ($row['provider_identifier'] ?? ''),
                 'cost' => (float) ($row['cost'] ?? 0.0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{extensionKey:string,credits:float,requests:int}>
+     * @param list<int> $providerUids
      */
     public function usageByExtensionCredits(
         int $fromTimestamp,
@@ -719,18 +780,19 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'extensionKey' => (string) ($row['extension_key'] ?? ''),
                 'credits' => (float) ($row['credits'] ?? 0.0),
                 'requests' => (int) ($row['requests'] ?? 0),
             ],
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{featureKey:string,featureLabel:string,creditsPerRequest:float,requests:int}>
+     * @param list<int> $providerUids
      */
     public function usageByFeatureCredits(
         int $fromTimestamp,
@@ -758,7 +820,7 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static function (array $row): array {
                 $requests = max(1, (int) ($row['requests'] ?? 0));
 
@@ -770,11 +832,12 @@ final class RequestLogRepository
                 ];
             },
             $rows,
-        );
+        ));
     }
 
     /**
      * @return list<array{provider:string,requests:int,failed:int,cost:float,tokens:int,lastCrdate:int}>
+     * @param list<int> $providerUids
      */
     public function providerStats(
         int $fromTimestamp,
@@ -801,7 +864,7 @@ final class RequestLogRepository
         /** @var array<int, array<string, scalar|null>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(
+        return array_values(array_map(
             static fn(array $row): array => [
                 'provider' => (string) ($row['provider_identifier'] ?? ''),
                 'requests' => (int) ($row['requests'] ?? 0),
@@ -811,7 +874,7 @@ final class RequestLogRepository
                 'lastCrdate' => (int) ($row['last_crdate'] ?? 0),
             ],
             $rows,
-        );
+        ));
     }
 
     public function softDeleteByUid(int $uid): int
@@ -1000,6 +1063,7 @@ final class RequestLogRepository
 
     /**
      * @return list<string>
+     * @param list<int> $providerUids
      */
     private function distinctColumnValues(
         string $column,
@@ -1089,6 +1153,159 @@ final class RequestLogRepository
             'failed' => (int) ($row['failed'] ?? 0),
             'lastCrdate' => $lastCrdate,
             'lastErrorCode' => $lastErrorCode,
+        ];
+    }
+
+    /**
+     * Map credit receipt UUIDs → extension / latency / page hints from AI Usage logs.
+     *
+     * Prefers `raw_meta.request_uuid`; falls back to nearest success log by time + credits.
+     *
+     * @param list<array<string, mixed>> $receipts
+     * @return array<string, array{extension_key: string, latency_ms: int, page_id: int, page_title: string, status: string}>
+     */
+    public function resolveCreditsClientContextByReceipts(array $receipts): array
+    {
+        if ($receipts === []) {
+            return [];
+        }
+
+        $uuidSet = [];
+        $minCrdate = PHP_INT_MAX;
+        $maxCrdate = 0;
+        foreach ($receipts as $receipt) {
+            $uuid = trim((string) ($receipt['request_uuid'] ?? ''));
+            if ($uuid !== '') {
+                $uuidSet[$uuid] = true;
+            }
+            $crdate = (int) ($receipt['crdate'] ?? 0);
+            if ($crdate > 0) {
+                $minCrdate = min($minCrdate, $crdate);
+                $maxCrdate = max($maxCrdate, $crdate);
+            }
+        }
+        if ($minCrdate === PHP_INT_MAX) {
+            $maxCrdate = time();
+            $minCrdate = $maxCrdate - 86400;
+        }
+        $minCrdate = max(0, $minCrdate - 120);
+        $maxCrdate += 120;
+
+        $qb = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
+        $qb->select(
+            'extension_key',
+            'latency_ms',
+            'credits_used',
+            'crdate',
+            'content_entity_type',
+            'content_entity_uid',
+            'raw_meta',
+            'success',
+        )
+            ->from(self::TABLE)
+            ->where(
+                $qb->expr()->eq(
+                    'provider_identifier',
+                    $qb->createNamedParameter(CreditsProviderIdentifier::IDENTIFIER),
+                ),
+                $qb->expr()->eq('success', $qb->createNamedParameter(1, Connection::PARAM_INT)),
+                $qb->expr()->gte('crdate', $qb->createNamedParameter($minCrdate, Connection::PARAM_INT)),
+                $qb->expr()->lte('crdate', $qb->createNamedParameter($maxCrdate, Connection::PARAM_INT)),
+            )
+            ->orderBy('crdate', 'DESC')
+            ->setMaxResults(200);
+
+        /** @var list<array<string, mixed>> $logs */
+        $logs = $qb->executeQuery()->fetchAllAssociative();
+
+        $byUuid = [];
+        $fuzzyCandidates = [];
+        foreach ($logs as $log) {
+            $ctx = $this->clientContextFromRequestLogRow($log);
+            $meta = [];
+            $rawMeta = $log['raw_meta'] ?? '';
+            if (is_string($rawMeta) && $rawMeta !== '') {
+                $decoded = json_decode($rawMeta, true);
+                if (is_array($decoded)) {
+                    $meta = $decoded;
+                }
+            }
+            $metaUuid = trim((string) ($meta['request_uuid'] ?? ''));
+            if ($metaUuid !== '' && isset($uuidSet[$metaUuid])) {
+                $byUuid[$metaUuid] = $ctx;
+                continue;
+            }
+            $fuzzyCandidates[] = [
+                'crdate' => (int) ($log['crdate'] ?? 0),
+                'credits' => (float) ($log['credits_used'] ?? 0.0),
+                'ctx' => $ctx,
+            ];
+        }
+
+        foreach ($receipts as $receipt) {
+            $uuid = trim((string) ($receipt['request_uuid'] ?? ''));
+            if ($uuid === '' || isset($byUuid[$uuid])) {
+                continue;
+            }
+            $crdate = (int) ($receipt['crdate'] ?? 0);
+            $cost = (float) ($receipt['cost'] ?? 0.0);
+            $bestIdx = null;
+            $bestScore = PHP_INT_MAX;
+            foreach ($fuzzyCandidates as $idx => $candidate) {
+                $dt = abs($candidate['crdate'] - $crdate);
+                if ($dt > 45) {
+                    continue;
+                }
+                $dc = abs($candidate['credits'] - $cost);
+                // Image telemetry may log credits_used=0; still allow time-only match.
+                if ($candidate['credits'] > 0.0 && $cost > 0.0 && $dc > 0.05) {
+                    continue;
+                }
+                $score = ($dt * 1000) + (int) round($dc * 1000);
+                if ($score < $bestScore) {
+                    $bestScore = $score;
+                    $bestIdx = $idx;
+                }
+            }
+            if ($bestIdx === null) {
+                continue;
+            }
+            $byUuid[$uuid] = $fuzzyCandidates[$bestIdx]['ctx'];
+            unset($fuzzyCandidates[$bestIdx]);
+        }
+
+        return $byUuid;
+    }
+
+    /**
+     * @param array<string, mixed> $log
+     * @return array{extension_key: string, latency_ms: int, page_id: int, page_title: string, status: string}
+     */
+    private function clientContextFromRequestLogRow(array $log): array
+    {
+        $meta = [];
+        $rawMeta = $log['raw_meta'] ?? '';
+        if (is_string($rawMeta) && $rawMeta !== '') {
+            $decoded = json_decode($rawMeta, true);
+            if (is_array($decoded)) {
+                $meta = $decoded;
+            }
+        }
+
+        $pageId = (int) ($meta['page_id'] ?? 0);
+        if ($pageId <= 0
+            && (string) ($log['content_entity_type'] ?? '') === 'pages'
+            && (int) ($log['content_entity_uid'] ?? 0) > 0
+        ) {
+            $pageId = (int) $log['content_entity_uid'];
+        }
+
+        return [
+            'extension_key' => trim((string) ($log['extension_key'] ?? '')),
+            'latency_ms' => max(0, (int) ($log['latency_ms'] ?? 0)),
+            'page_id' => max(0, $pageId),
+            'page_title' => '',
+            'status' => ((int) ($log['success'] ?? 0)) === 1 ? 'success' : 'failed',
         ];
     }
 }

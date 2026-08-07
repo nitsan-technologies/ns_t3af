@@ -227,6 +227,9 @@ final class BrandContextService
             'sample_content' => $this->truncate(trim((string) ($payload['sampleContent'] ?? $payload['sample_content'] ?? '')), 600),
             'compliance_notes' => $this->truncate(trim((string) ($payload['complianceNotes'] ?? $payload['compliance_notes'] ?? '')), 400),
             'document_extract' => $this->truncate(trim((string) ($payload['documentExtract'] ?? $payload['document_extract'] ?? '')), 100000),
+            'include_document_in_prompt' => $this->normalizeCheckbox(
+                $payload['includeDocumentInPrompt'] ?? $payload['include_document_in_prompt'] ?? 0,
+            ),
         ];
 
         if ($includePid) {
@@ -311,6 +314,7 @@ final class BrandContextService
                 'sampleContent' => $profile->sampleContent,
                 'complianceNotes' => $profile->complianceNotes,
                 'documentExtract' => $profile->documentExtract,
+                'includeDocumentInPrompt' => $profile->includeDocumentInPrompt,
             ], JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE),
         ];
     }
@@ -451,6 +455,23 @@ final class BrandContextService
         }
 
         return $rules;
+    }
+
+    private function normalizeCheckbox(mixed $value): int
+    {
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+        if (is_int($value) || is_float($value)) {
+            return ((int) $value) === 1 ? 1 : 0;
+        }
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+
+            return in_array($normalized, ['1', 'true', 'yes', 'on'], true) ? 1 : 0;
+        }
+
+        return 0;
     }
 
     private function truncate(string $value, int $maxLength): string

@@ -21,6 +21,8 @@ namespace NITSAN\NsT3AF\Access\Dto;
 
 /**
  * Child backend module card for AI Access catalogs (wizard Step 1 / groupMods).
+ *
+ * @api
  */
 final readonly class ModuleAccessDescriptor
 {

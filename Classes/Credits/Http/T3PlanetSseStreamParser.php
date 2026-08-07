@@ -170,9 +170,6 @@ final class T3PlanetSseStreamParser
                 'cost_units',
                 'credits',
                 'charged',
-                'tokens_input',
-                'tokens_output',
-                'tokens_total',
                 'request_uuid',
                 'pricing',
             ] as $key

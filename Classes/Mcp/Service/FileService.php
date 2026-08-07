@@ -24,14 +24,13 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Service;
 
 use Doctrine\DBAL\ParameterType;
+use NITSAN\NsT3AF\Service\PublicUrlValidator;
 
-use const FILTER_FLAG_NO_PRIV_RANGE;
-use const FILTER_FLAG_NO_RES_RANGE;
-use const FILTER_VALIDATE_IP;
 use const PHP_URL_HOST;
 use const PHP_URL_PATH;
 use const PHP_URL_SCHEME;
 
+use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\Folder;
@@ -45,6 +44,7 @@ readonly class FileService
     public function __construct(
         private StorageRepository $storageRepository,
         private ConnectionPool $connectionPool,
+        private PublicUrlValidator $publicUrlValidator = new PublicUrlValidator(),
     ) {}
 
     /**
@@ -58,6 +58,7 @@ readonly class FileService
     public function listDirectory(int $storageUid, string $directoryPath, int $limit, int $offset): array
     {
         $limit = min(max($limit, 1), 500);
+        $offset = max(0, $offset);
 
         $storage = $this->getStorage($storageUid);
         $folder = $storage->getFolder($directoryPath);
@@ -162,11 +163,7 @@ readonly class FileService
             throw new \RuntimeException('Invalid URL: missing host', 1712002014);
         }
 
-        $resolvedIp = gethostbyname($host);
-        if (
-            $resolvedIp === $host
-            || filter_var($resolvedIp, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false
-        ) {
+        if (!$this->publicUrlValidator->isPublicUrl($url)) {
             throw new \RuntimeException('URL resolves to a private or reserved IP address', 1712002015);
         }
 
@@ -184,7 +181,7 @@ readonly class FileService
                 'max_redirects' => 5,
                 'follow_location' => 1,
                 'method' => 'GET',
-                'user_agent' => 'TYPO3-AI-Universe-MCP/1.0',
+                'user_agent' => 'TYPO3-AI-Foundation-MCP/1.0',
             ],
             'ssl' => [
                 'verify_peer' => true,
@@ -256,6 +253,7 @@ readonly class FileService
     public function searchFiles(int $storageUid, string $namePattern, string $extension, int $limit, int $offset): array
     {
         $limit = min(max($limit, 1), 500);
+        $offset = max(0, $offset);
 
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('sys_file');
         $queryBuilder->getRestrictions()->removeAll();
@@ -401,15 +399,31 @@ readonly class FileService
         $storage->deleteFolder($folder, $recursive);
     }
 
+    /**
+     * Resolve a FAL storage the acting backend user is allowed to use (S-02).
+     *
+     * Uses {@see BackendUserAuthentication::getFileStorages()} so non-admins are
+     * limited to their file mounts (with StoragePermissionAspect applied). Admins
+     * receive every storage via the same API.
+     */
     private function getStorage(int $storageUid): ResourceStorage
     {
-        $storage = $this->storageRepository->findByUid($storageUid);
+        $backendUser = $GLOBALS['BE_USER'] ?? null;
+        if (!$backendUser instanceof BackendUserAuthentication) {
+            throw new \RuntimeException('No authenticated backend user available', 1712002017);
+        }
 
-        if ($storage === null) {
+        $accessible = $backendUser->getFileStorages();
+        $storage = $accessible[$storageUid] ?? null;
+        if ($storage instanceof ResourceStorage) {
+            return $storage;
+        }
+
+        if ($this->storageRepository->findByUid($storageUid) === null) {
             throw new \RuntimeException('Storage not found: ' . $storageUid, 1712002000);
         }
 
-        return $storage;
+        throw new \RuntimeException('Access denied to storage: ' . $storageUid, 1712002018);
     }
 
     /** @return array{name: string, identifier: string, size: int, mimeType: string, extension: string, modificationTime: int} */

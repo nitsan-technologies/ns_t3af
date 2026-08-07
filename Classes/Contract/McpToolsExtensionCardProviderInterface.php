@@ -21,6 +21,8 @@ namespace NITSAN\NsT3AF\Contract;
 
 /**
  * Registers MCP Tools backend cards for AI Foundation → MCP Tools.
+ *
+ * @api
  */
 interface McpToolsExtensionCardProviderInterface
 {

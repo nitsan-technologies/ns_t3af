@@ -29,8 +29,11 @@ Chart.register(
   Filler,
 );
 
-/** @type {Map<HTMLCanvasElement, Chart>} */
+/** @type {Map<HTMLCanvasElement, import('chart.js').Chart>} */
 const chartInstances = new Map();
+
+/** @type {boolean} */
+let refreshScheduled = false;
 
 /**
  * @param {string} value
@@ -68,16 +71,47 @@ function readChartConfig(canvas) {
 }
 
 /**
+ * Destroy any Chart.js instance bound to this canvas (registry + local map).
+ *
+ * @param {HTMLCanvasElement} canvas
+ */
+function destroyChartForCanvas(canvas) {
+  const fromRegistry = Chart.getChart(canvas);
+  if (fromRegistry) {
+    fromRegistry.destroy();
+  }
+  const fromMap = chartInstances.get(canvas);
+  if (fromMap && fromMap !== fromRegistry) {
+    fromMap.destroy();
+  }
+  chartInstances.delete(canvas);
+}
+
+/**
+ * Drop chart instances for detached or hidden canvases so they can be recreated later.
+ */
+function pruneInactiveCharts() {
+  chartInstances.forEach((_chart, canvas) => {
+    if (!canvas.isConnected || canvas.closest('.is-hidden')) {
+      destroyChartForCanvas(canvas);
+    }
+  });
+}
+
+/**
  * @param {ParentNode} [root]
  */
 function initCharts(root = document) {
   const scope = root instanceof Document ? root : root;
+  pruneInactiveCharts();
+
   scope.querySelectorAll('.aiu-chart[data-aiu-chart]').forEach((canvas) => {
     if (!(canvas instanceof HTMLCanvasElement)) {
       return;
     }
     const hiddenPanel = canvas.closest('.is-hidden');
     if (hiddenPanel instanceof HTMLElement) {
+      destroyChartForCanvas(canvas);
       return;
     }
 
@@ -86,25 +120,36 @@ function initCharts(root = document) {
       return;
     }
 
-    const existing = chartInstances.get(canvas);
-    if (existing) {
-      existing.destroy();
-      chartInstances.delete(canvas);
-    }
+    destroyChartForCanvas(canvas);
 
-    chartInstances.set(canvas, new Chart(canvas.getContext('2d'), config));
+    try {
+      const chart = new Chart(canvas.getContext('2d'), config);
+      chartInstances.set(canvas, chart);
+    } catch (err) {
+      // Never let a chart failure break mode toggle / credits activate.
+      console.error('[ns_t3af] Failed to initialise dashboard chart', err);
+    }
   });
 }
 
 function refreshCharts() {
   initCharts(document);
   chartInstances.forEach((chart) => {
-    chart.resize();
+    try {
+      chart.resize();
+    } catch {
+      // Ignore resize on charts mid-destroy.
+    }
   });
 }
 
 function scheduleRefresh() {
+  if (refreshScheduled) {
+    return;
+  }
+  refreshScheduled = true;
   requestAnimationFrame(() => {
+    refreshScheduled = false;
     refreshCharts();
   });
 }

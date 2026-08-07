@@ -24,6 +24,7 @@ use NITSAN\NsT3AF\Access\GroupPresetRegistry;
 use NITSAN\NsT3AF\Access\ModuleAccessCatalog;
 use NITSAN\NsT3AF\Access\RecordPermissionCatalog;
 use NITSAN\NsT3AF\Access\WizardBootstrapFactory;
+use NITSAN\NsT3AF\Credits\Service\CreditModeResolver;
 use NITSAN\NsT3AF\Credits\Service\CreditOverviewLineService;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
 use NITSAN\NsT3AF\Registry\FeatureAccessBindingRegistry;
@@ -63,6 +64,7 @@ final class AccessRolesController extends AbstractAiUniverseModuleController
         private readonly RecordPermissionCatalog $recordCatalog,
         private readonly WizardBootstrapFactory $wizardBootstrapFactory,
         private readonly FeatureAccessBindingRegistry $bindingRegistry,
+        private readonly CreditModeResolver $creditModeResolver,
     ) {
         parent::__construct(
             $moduleTemplateFactory,
@@ -98,6 +100,7 @@ final class AccessRolesController extends AbstractAiUniverseModuleController
 
         try {
             $bootstrap = [
+                'creditsModeEnabled' => $this->creditModeResolver->isEnabled(),
                 'groups' => $this->beGroupAccessService->listGroupsSummary(),
                 'presets' => $this->presetRegistry->allForBootstrap(),
                 'defaultConfig' => $this->wizardBootstrapFactory->createDefaultConfig()->toArray(),

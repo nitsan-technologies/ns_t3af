@@ -55,7 +55,10 @@ final class BrandContextProfileRepository implements BrandContextProfileReposito
         /** @var array<int, array<string, mixed>> $rows */
         $rows = $qb->executeQuery()->fetchAllAssociative();
 
-        return array_map(static fn(array $row): BrandContextProfile => BrandContextProfile::fromRow($row), $rows);
+        return array_values(array_map(
+            static fn(array $row): BrandContextProfile => BrandContextProfile::fromRow($row),
+            $rows,
+        ));
     }
 
     public function findByUid(int $uid): ?BrandContextProfile

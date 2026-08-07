@@ -21,6 +21,8 @@ namespace NITSAN\NsT3AF\Access\Dto;
 
 /**
  * Record-level permission row for AI Access catalogs (tables_select / tables_modify).
+ *
+ * @api
  */
 final readonly class RecordPermissionDescriptor
 {

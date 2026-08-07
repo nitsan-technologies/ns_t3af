@@ -53,7 +53,7 @@ final readonly class CreditsUsage
     /**
      * @param array<string, mixed>      $credits
      * @param array<string, mixed>      $charged
-     * @param array<string, mixed>      $payload Full Charge/Embed response (tokens + pricing).
+     * @param array<string, mixed>      $payload Full Charge/Embed response (optional pricing on charge).
      */
     public static function fromApiPayload(
         array $credits,
@@ -61,19 +61,11 @@ final readonly class CreditsUsage
         string $requestUuid,
         array $payload = [],
     ): self {
-        $tokensInput = (int) ($payload['tokens_input'] ?? 0);
-        $tokensOutput = (int) ($payload['tokens_output'] ?? 0);
-        $tokensTotal = (int) (
-            $payload['tokens_total']
-            ?? $charged['tokens_total']
-            ?? ($tokensInput + $tokensOutput)
-        );
-
         $pricing = isset($payload['pricing']) ? CreditsPricing::fromArray($payload) : null;
         $cost = AiCreditUnits::parseCost($payload, $charged);
         $buckets = AiCreditUnits::parseBalanceBuckets(
             $credits,
-            $pricing?->creditUnitScale ?? AiCreditUnits::SCALE,
+            $pricing !== null ? $pricing->creditUnitScale : AiCreditUnits::SCALE,
         );
 
         return new self(
@@ -92,10 +84,6 @@ final readonly class CreditsUsage
             planTotal: $buckets['planTotalCredits'],
             planName: (string) ($credits['plan_name'] ?? 'none'),
             planExpiresAt: (int) ($credits['expires_at'] ?? 0),
-            tokensInput: $tokensInput,
-            tokensOutput: $tokensOutput,
-            tokensTotal: $tokensTotal,
-            chargedTokensTotal: (int) ($charged['tokens_total'] ?? $tokensTotal),
             model: (string) ($charged['model'] ?? $payload['model'] ?? ''),
             pricing: $pricing,
         );

@@ -35,10 +35,10 @@ final class TokenResolver
     public function __construct(
         private readonly T3PlanetApiClient $apiClient,
         private readonly RuntimeSettingsService $runtimeSettings,
-        private readonly CreditsDomainResolver $domainResolver,
-        private readonly LicenseKeyResolver $licenseKeyResolver,
         private readonly CacheFacadeInterface $cache,
         private readonly CreditsApiResponseCacheInterface $apiResponseCache,
+        private readonly CreditsDomainResolver $domainResolver,
+        private readonly LicenseContactResolver $licenseContactResolver,
     ) {}
 
     public function resolve(?string $domain = null): string
@@ -48,7 +48,6 @@ final class TokenResolver
             return $cached;
         }
 
-        // 1) Extension settings, 2) database (see RuntimeSettingsService::getTokenPlain).
         $stored = $this->runtimeSettings->getTokenPlain();
         if ($stored !== null && $stored !== '') {
             $this->rememberToken($stored);
@@ -56,106 +55,108 @@ final class TokenResolver
             return $stored;
         }
 
-        // 3) Issue via license keys + domain.
-        return $this->issueFreshToken($domain);
+        return $this->issueFreshToken();
     }
 
-    public function issueFreshToken(?string $domain = null): string
+    public function issueFreshToken(): string
     {
-        $licenseKeys = $this->runtimeSettings->getLicenseKeys();
-        if ($licenseKeys === '') {
-            throw new CreditsApiException('license_keys_missing', 400, 'No license keys configured for T3Planet Credits');
-        }
-
-        $domain ??= $this->domainResolver->resolve();
-        $payload = $this->apiClient->issueToken($licenseKeys, $domain);
+        $payload = $this->apiClient->issueTrialToken(null, $this->licenseContactResolver->resolve());
         $token = trim((string) ($payload['token'] ?? ''));
         if ($token === '') {
             throw new CreditsApiException('token_missing', 502, 'Token endpoint did not return a token');
         }
 
         $this->runtimeSettings->storeToken($token);
-        $this->runtimeSettings->storeCreditsDomain($domain);
         $this->rememberToken($token);
 
         return $token;
     }
 
     /**
-     * Mints a Bearer via Token.php when none exists; otherwise attaches only licence keys
-     * not yet stored in runtime (POST AttachLicenses).
+     * Ensures a bearer exists for IP-bound trial credits (idempotent mint on the server).
      *
-     * @return array{
-     *   action: 'minted'|'attached'|'unchanged',
-     *   license_keys: string,
-     *   token?: string,
-     *   newly_attached?: list<string>,
-     *   credits_added?: int,
-     *   already_bound?: bool
-     * }
+     * @return array{action: 'minted'|'unchanged', token: string, already_bound?: bool, bound_ip?: string}
      */
-    public function syncLicensePool(string $discoveredLicenseKeys, ?string $domain = null): array
+    public function activateTrialToken(): array
     {
-        $discoveredLicenseKeys = trim($discoveredLicenseKeys);
-        if ($discoveredLicenseKeys === '') {
-            throw new CreditsApiException(
-                CreditsApiErrorCodes::NO_LICENSES,
-                400,
-                'No T3Planet license keys found',
-            );
-        }
-
-        $domain ??= $this->domainResolver->resolve();
-        $stored = $this->runtimeSettings->getLicenseKeys();
         $token = $this->runtimeSettings->getTokenPlain();
-
-        if ($token === null || $token === '') {
-            $this->runtimeSettings->save(['license_keys' => $discoveredLicenseKeys]);
-            $token = $this->issueFreshToken($domain);
-
-            return [
-                'action' => 'minted',
-                'token' => $token,
-                'license_keys' => $discoveredLicenseKeys,
-            ];
-        }
-
-        $newKeys = $this->licenseKeyResolver->buildNewLicenseKeysCommaSeparated($discoveredLicenseKeys, $stored);
-        if ($newKeys === '') {
-            if ($stored !== $discoveredLicenseKeys) {
-                $this->runtimeSettings->save(['license_keys' => $discoveredLicenseKeys]);
-            }
+        if ($token !== null && $token !== '') {
+            $bind = $this->ensureIpBound($token);
 
             return [
                 'action' => 'unchanged',
-                'license_keys' => $this->runtimeSettings->getLicenseKeys(),
+                'token' => $token,
                 'already_bound' => true,
+                'bound_ip' => $bind['bound_ip'] ?? '',
             ];
         }
 
-        $payload = $this->apiClient->attachLicenses($domain, $newKeys, $token);
-        $canonical = trim((string) ($payload['license_keys'] ?? ''));
-        if ($canonical === '') {
-            $canonical = $discoveredLicenseKeys;
-        }
-        $this->runtimeSettings->save(['license_keys' => $canonical]);
+        $token = $this->issueFreshToken();
 
-        if ((int) ($payload['credits_added'] ?? 0) > 0) {
-            $this->apiResponseCache->flush();
+        return [
+            'action' => 'minted',
+            'token' => $token,
+        ];
+    }
+
+    /**
+     * Write-once BindIp for legacy tokens missing bound_ip.
+     *
+     * @return array{bound_ip: string, already_bound: bool}
+     */
+    public function ensureIpBound(#[\SensitiveParameter] ?string $bearerToken = null): array
+    {
+        $token = $bearerToken ?? $this->runtimeSettings->getTokenPlain();
+        if ($token === null || $token === '') {
+            throw new CreditsApiException('token_missing', 401, 'No stored bearer token to bind IP');
         }
 
-        $newlyAttached = $payload['newly_attached'] ?? [];
-        if (!is_array($newlyAttached)) {
-            $newlyAttached = [];
+        $domain = $this->domainResolver->resolve();
+        $payload = $this->apiClient->bindIp($token, $domain);
+        $boundIp = trim((string) ($payload['bound_ip'] ?? ''));
+        if ($boundIp === '') {
+            throw new CreditsApiException('internal_error', 502, 'BindIp endpoint did not return bound_ip');
         }
 
         return [
-            'action' => 'attached',
-            'license_keys' => $canonical,
-            'newly_attached' => array_values(array_map('strval', $newlyAttached)),
-            'credits_added' => (int) ($payload['credits_added'] ?? 0),
+            'bound_ip' => $boundIp,
             'already_bound' => (bool) ($payload['already_bound'] ?? false),
         ];
+    }
+
+    /**
+     * Replace exposed Bearer with a new secret on the same IP-bound account.
+     */
+    public function refreshBearerToken(): string
+    {
+        $current = $this->runtimeSettings->getTokenPlain();
+        if ($current === null || $current === '') {
+            throw new CreditsApiException('token_missing', 401, 'No stored bearer token to refresh');
+        }
+
+        $this->ensureIpBound($current);
+        $domain = $this->domainResolver->resolve();
+        $payload = $this->apiClient->refreshBearerToken($current, $domain, $this->licenseContactResolver->resolve());
+        $token = trim((string) ($payload['token'] ?? ''));
+        if ($token === '') {
+            throw new CreditsApiException('token_missing', 502, 'RefreshToken endpoint did not return a token');
+        }
+
+        $this->runtimeSettings->storeToken($token);
+        $this->rememberToken($token);
+        $this->apiResponseCache->flush();
+
+        return $token;
+    }
+
+    /**
+     * Drop cached/stored bearer and re-fetch the server token for this IP (idempotent).
+     */
+    public function resyncFromServer(): string
+    {
+        $this->invalidate();
+
+        return $this->issueFreshToken();
     }
 
     public function invalidate(): void
@@ -165,12 +166,20 @@ final class TokenResolver
         $this->apiResponseCache->flush();
     }
 
-    /**
-     * Clears a cached bearer token rejected by the T3Planet API (same rules as {@see ProxyAiExecutor}).
-     */
     public function invalidateOnUnauthorized(CreditsApiException $exception): bool
     {
-        if ($exception->httpStatus !== 401 && $exception->errorCode !== CreditsApiErrorCodes::TOKEN_INVALID) {
+        if (
+            $exception->httpStatus !== 401
+            && $exception->httpStatus !== 403
+            && !in_array($exception->errorCode, [
+                CreditsApiErrorCodes::TOKEN_INVALID,
+                CreditsApiErrorCodes::TOKEN_IP_MISMATCH,
+            ], true)
+        ) {
+            return false;
+        }
+
+        if ($exception->errorCode === CreditsApiErrorCodes::TOKEN_IP_MISMATCH) {
             return false;
         }
 
@@ -179,7 +188,7 @@ final class TokenResolver
         return true;
     }
 
-    private function rememberToken(string $token): void
+    private function rememberToken(#[\SensitiveParameter] string $token): void
     {
         $this->cache->set(self::CACHE_IDENTIFIER, $token, [], 3600);
     }

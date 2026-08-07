@@ -78,11 +78,11 @@ final class RequestTelemetryService
             ),
             'credits_used' => (float) $this->creditsCharged($response->credits),
             'currency' => $this->currency($provider->pricingCurrency),
+            'brand_context_profile_uid' => $this->brandContextProfileUid($options, $response->appliedBrandContextProfileUid),
             ...$this->qualityResolver->resolveForLog($response, $options),
-            'raw_meta' => json_encode([
-                'adapter_type' => $provider->adapterType,
+            'raw_meta' => json_encode($this->successMeta($provider, [
                 'no_cache' => $options->noCache,
-            ], JSON_THROW_ON_ERROR),
+            ], $options->pageId, $response->credits), JSON_THROW_ON_ERROR),
         ]);
     }
 
@@ -121,10 +121,10 @@ final class RequestTelemetryService
             ),
             'credits_used' => (float) $this->creditsCharged($response->credits),
             'currency' => $this->currency($provider->pricingCurrency),
-            'raw_meta' => json_encode([
-                'adapter_type' => $provider->adapterType,
+            'brand_context_profile_uid' => $this->brandContextProfileUid($options),
+            'raw_meta' => json_encode($this->successMeta($provider, [
                 'vector_count' => count($response->vectors),
-            ], JSON_THROW_ON_ERROR),
+            ], $options->pageId, $response->credits), JSON_THROW_ON_ERROR),
         ]);
     }
 
@@ -133,6 +133,7 @@ final class RequestTelemetryService
         TtsOptions $options,
         string $text,
         TtsResponse $response,
+        ?int $brandContextProfileUid = null,
     ): void {
         $this->persist($provider, [
             'provider_uid'         => $provider->uid,
@@ -163,12 +164,12 @@ final class RequestTelemetryService
             ),
             'credits_used'         => (float) $this->creditsCharged($response->credits),
             'currency'             => $this->currency($provider->pricingCurrency),
-            'raw_meta'             => json_encode([
-                'adapter_type' => $provider->adapterType,
+            'brand_context_profile_uid' => max(0, $brandContextProfileUid ?? 0),
+            'raw_meta'             => json_encode($this->successMeta($provider, [
                 'voice'        => $options->voice,
                 'format'       => $options->format,
                 'speed'        => $options->speed,
-            ], JSON_THROW_ON_ERROR),
+            ], null, $response->credits), JSON_THROW_ON_ERROR),
         ]);
     }
 
@@ -338,13 +339,12 @@ final class RequestTelemetryService
             'estimated_cost'       => 0.0,
             'credits_used'         => 0.0,
             'currency'             => $this->currency($provider->pricingCurrency),
-            'raw_meta'             => json_encode([
-                'adapter_type' => $provider->adapterType,
+            'raw_meta'             => json_encode($this->successMeta($provider, [
                 'operation'    => $operation,
                 'size'         => $options->size,
                 'count'        => $options->count,
                 'image_count'  => count($response->images),
-            ], JSON_THROW_ON_ERROR),
+            ], null, $response->credits), JSON_THROW_ON_ERROR),
         ]);
     }
 
@@ -418,8 +418,33 @@ final class RequestTelemetryService
             'estimated_cost' => 0.0,
             'credits_used' => 0.0,
             'currency' => $this->currency($provider->pricingCurrency),
+            'brand_context_profile_uid' => $this->brandContextProfileUid($options),
             'raw_meta' => json_encode($this->failureMeta($provider, $error), JSON_THROW_ON_ERROR),
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     * @return array<string, mixed>
+     */
+    private function successMeta(
+        Provider $provider,
+        array $extra = [],
+        ?int $pageId = null,
+        ?CreditsUsage $credits = null,
+    ): array {
+        $meta = array_merge([
+            'adapter_type' => $provider->adapterType,
+        ], $extra);
+
+        if ($credits !== null && $credits->serverRequestId !== '') {
+            $meta['request_uuid'] = $credits->serverRequestId;
+        }
+        if ($pageId !== null && $pageId > 0) {
+            $meta['page_id'] = $pageId;
+        }
+
+        return $meta;
     }
 
     /**
@@ -549,7 +574,16 @@ final class RequestTelemetryService
 
     private function creditsCharged(?CreditsUsage $credits): float
     {
-        return $credits?->charged ?? 0.0;
+        return $credits !== null ? $credits->charged : 0.0;
+    }
+
+    private function brandContextProfileUid(AiOptions $options, ?int $fromResponse = null): int
+    {
+        if ($fromResponse !== null && $fromResponse > 0) {
+            return $fromResponse;
+        }
+
+        return BrandContextLineage::profileUidFromOptions($options) ?? 0;
     }
 
     private function totalTokensFromResponse(AiResponse $response): int

@@ -11,6 +11,7 @@
 - Custom providers: implement `AdapterInterface` + tag in **child** `Services.yaml`.
 - MCP tools: tag `mcp.tool` in child extension.
 - Credits: shared pool when mode toggle is on (all children share one token).
+- **Credits API migration (2026-07):** `context/features/child-extensions-credits-api-migration.md` — canonical feature keys, license pool, token DTO changes; **no call-site changes** for most children.
 
 ---
 

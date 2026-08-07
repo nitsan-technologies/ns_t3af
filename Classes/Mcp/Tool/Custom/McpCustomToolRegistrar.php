@@ -110,12 +110,16 @@ readonly class McpCustomToolRegistrar
     }
 
     /**
-     * @param list<array{class: class-string, name: string, description: string, resolvable: bool}> $tools
+     * @param list<array{class: string, name: string, description: string, resolvable: bool}> $tools
      */
     public function registerCollected(Builder $builder, array $tools): void
     {
         foreach ($tools as $tool) {
-            $handler = [$tool['class'], 'execute'];
+            $className = $tool['class'];
+            if (!class_exists($className)) {
+                continue;
+            }
+            $handler = [$className, 'execute'];
 
             try {
                 $builder->addTool(
@@ -138,15 +142,16 @@ readonly class McpCustomToolRegistrar
      * Build the handler type map (class => "tool") for resolvable custom tools so the
      * {@see \NITSAN\NsT3AF\Mcp\Server\ErrorHandlingContainer} wraps them in the error proxy.
      *
-     * @param list<array{class: class-string, name: string, description: string, resolvable: bool}> $tools
+     * @param list<array{class: string, name: string, description: string, resolvable: bool}> $tools
      * @return array<class-string, 'tool'>
      */
     public function handlerTypeMap(array $tools): array
     {
         $map = [];
         foreach ($tools as $tool) {
-            if ($tool['resolvable']) {
-                $map[$tool['class']] = 'tool';
+            $className = $tool['class'];
+            if ($tool['resolvable'] && class_exists($className)) {
+                $map[$className] = 'tool';
             }
         }
 

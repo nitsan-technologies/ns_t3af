@@ -99,6 +99,7 @@ class ExtensionSettingsSchemaService
     }
 
     /**
+     * @param array<string, mixed> $values
      * @return array<string, array<string, mixed>>
      */
     public function getConstantsByFieldName(string $extensionKey, array $values): array

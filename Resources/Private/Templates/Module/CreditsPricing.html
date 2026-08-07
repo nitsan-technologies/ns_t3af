@@ -10,7 +10,7 @@
                 </f:if>
                 <p class="aiu-credits-pricing-hint">
                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.pricing.hint"
-                                 default="Call Estimate.php with the same meta_json as Charge/Embed to show “≈ X credits” before submit. Actual debit uses tokens_input + tokens_output after upstream." />
+                                 default="Call Estimate.php with the same meta_json as Charge/Embed to show “≈ X credits” before submit." />
                 </p>
                 <div class="aiu-table-wrap">
                     <table class="aiu-table">
@@ -21,8 +21,8 @@
                                                  default="Feature" />
                                 </th>
                                 <th>
-                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.pricing.col.routing"
-                                                 default="Default routing" />
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.features.col.exampleCost"
+                                                 default="Example cost per 500 credits" />
                                 </th>
                             </tr>
                         </thead>
@@ -31,11 +31,16 @@
                                 <tr>
                                     <td>
                                         <strong>{feature.label}</strong>
+                                        <f:if condition="{feature.description} != ''">
+                                            <div class="small text-muted">{feature.description}</div>
+                                        </f:if>
                                         <div class="text-muted small">{feature.key}</div>
                                     </td>
                                     <td>
-                                        <f:if condition="{feature.defaultModel} != ''">
-                                            <f:then>{feature.defaultModel} ({feature.defaultBackend})</f:then>
+                                        <f:if condition="{feature.exampleCost} != ''">
+                                            <f:then>
+                                                <span class="small">{feature.exampleCost}</span>
+                                            </f:then>
                                             <f:else>—</f:else>
                                         </f:if>
                                     </td>
@@ -48,7 +53,7 @@
             <f:else>
                 <p>
                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.pricing.inactive"
-                                 default="Activate T3Planet Credits to view the feature catalog and token billing model." />
+                                 default="Activate T3Planet Credits to view the feature catalog and credit costs." />
                 </p>
             </f:else>
         </f:if>

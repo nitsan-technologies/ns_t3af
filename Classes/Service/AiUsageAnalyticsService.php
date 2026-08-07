@@ -134,20 +134,23 @@ final class AiUsageAnalyticsService
      *   filterOptions:array<string,list<string>>
      * }
      */
-    public function buildUsageData(array $period, array $filters): array
+    public function buildUsageData(array $period, array $filters, bool $creditsMode = false): array
     {
         $from = (int) $period['fromTimestamp'];
         $to = (int) $period['toTimestamp'];
 
         $totals = $this->requestLogs->totals($from, $to);
         $providerUsage = $this->requestLogs->providerDistribution($from, $to);
-        $topModels = $this->requestLogs->topModelsByTokens($from, $to, 10);
+        $topModels = $creditsMode
+            ? $this->requestLogs->topModelsByCredits($from, $to, 10)
+            : $this->requestLogs->topModelsByTokens($from, $to, 10);
         $extensionUsage = $this->requestLogs->usageByExtension($from, $to, 12);
 
         return [
             'kpis' => [
                 'totalRequests' => (int) ($totals['totalRequests'] ?? 0),
                 'totalTokens' => (int) ($totals['totalTokens'] ?? 0),
+                'totalCredits' => (float) ($totals['totalCredits'] ?? 0.0),
                 'totalCost' => (float) ($totals['totalCost'] ?? 0.0),
                 'successRate' => (float) ($totals['successRate'] ?? 0.0),
             ],
@@ -157,6 +160,7 @@ final class AiUsageAnalyticsService
                 'extensions' => $extensionUsage,
             ],
             'filterOptions' => $this->requestLogs->usageFilterOptions($from, $to),
+            'creditsMode' => $creditsMode,
         ];
     }
 
@@ -196,20 +200,27 @@ final class AiUsageAnalyticsService
      *
      * @return array<string,mixed>
      */
-    public function buildExportPayload(array $period, array $filters): array
+    public function buildExportPayload(array $period, array $filters, bool $creditsMode = false): array
     {
         $from = (int) $period['fromTimestamp'];
         $to = (int) $period['toTimestamp'];
-        $usage = $this->buildUsageData($period, $filters);
+        $usage = $this->buildUsageData($period, $filters, $creditsMode);
         $entries = $this->requestLogs->findForExport($filters, $from, $to);
+        $kpis = $usage['kpis'];
+        if ($creditsMode) {
+            unset($kpis['totalTokens'], $kpis['totalCost']);
+        } else {
+            unset($kpis['totalCredits']);
+        }
 
         return [
             'generatedAt' => date(DATE_ATOM),
             'period' => $period,
             'filters' => $filters,
             'summary' => $usage['summary'],
-            'kpis' => $usage['kpis'],
+            'kpis' => $kpis,
             'requestLog' => $entries,
+            'creditsMode' => $creditsMode,
         ];
     }
 
@@ -219,25 +230,18 @@ final class AiUsageAnalyticsService
      *
      * @return list<list<string>>
      */
-    public function buildLogCsvRows(array $period, array $filters): array
+    public function buildLogCsvRows(array $period, array $filters, bool $creditsMode = false): array
     {
         $from = (int) $period['fromTimestamp'];
         $to = (int) $period['toTimestamp'];
         $rows = $this->requestLogs->findForExport($filters, $from, $to);
-        $lines = [[
-            'Time',
-            'Provider',
-            'Module',
-            'Scope',
-            'Model',
-            'Type',
-            'Status',
-            'Tokens',
-            'Cost',
-        ]];
+        $lines = [$creditsMode
+            ? ['Time', 'Provider', 'Module', 'Scope', 'Model', 'Type', 'Status', 'Credits']
+            : ['Time', 'Provider', 'Module', 'Scope', 'Model', 'Type', 'Status', 'Tokens', 'Cost'],
+        ];
 
         foreach ($rows as $row) {
-            $lines[] = [
+            $base = [
                 date('Y-m-d H:i:s', (int) ($row['crdate'] ?? 0)),
                 (string) ($row['provider_identifier'] ?? ''),
                 (string) ($row['extension_key'] ?? ''),
@@ -245,9 +249,16 @@ final class AiUsageAnalyticsService
                 (string) ($row['model_used'] ?? ''),
                 (string) ($row['request_type'] ?? ''),
                 ((int) ($row['success'] ?? 0)) === 1 ? 'success' : 'failed',
-                (string) ($row['total_tokens'] ?? 0),
-                (string) ($row['estimated_cost'] ?? 0),
             ];
+            if ($creditsMode) {
+                $lines[] = [...$base, (string) ($row['credits_used'] ?? 0)];
+            } else {
+                $lines[] = [
+                    ...$base,
+                    (string) ($row['total_tokens'] ?? 0),
+                    (string) ($row['estimated_cost'] ?? 0),
+                ];
+            }
         }
 
         return $lines;

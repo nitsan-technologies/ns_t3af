@@ -21,6 +21,8 @@ namespace NITSAN\NsT3AF\Access\Dto;
 
 /**
  * Runtime tab/card → feature bit bindings for a child extension backend module.
+ *
+ * @api
  */
 final readonly class FeatureAccessBindingsDescriptor
 {

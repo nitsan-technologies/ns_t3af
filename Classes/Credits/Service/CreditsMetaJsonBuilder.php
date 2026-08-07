@@ -120,6 +120,10 @@ final class CreditsMetaJsonBuilder
             $meta['content_entity_uid'] = $options->contentEntityUid;
         }
 
+        if ($options->pageId !== null && $options->pageId > 0) {
+            $meta['page_id'] = $options->pageId;
+        }
+
         return $meta;
     }
 

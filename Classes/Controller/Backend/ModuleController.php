@@ -34,7 +34,6 @@ use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
 use NITSAN\NsT3AF\Domain\Repository\RequestLogRepository;
 use NITSAN\NsT3AF\Domain\RequestLog\RequestLogProviderScope;
 use NITSAN\NsT3AF\Mcp\Domain\Repository\TokenRepository;
-use NITSAN\NsT3AF\Mcp\OAuth\OAuthClientLabelResolver;
 use NITSAN\NsT3AF\Mcp\Service\AdvancedSettingsService;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpAnalyticsService;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpCustomToolService;
@@ -79,7 +78,6 @@ use NITSAN\NsT3AF\Service\WizardExtensionCatalogService;
 use NITSAN\NsT3AF\Service\WizardProgressService;
 use NITSAN\NsT3AF\Service\WizardProviderCatalog;
 use NITSAN\NsT3AF\Settings\ExtensionSettingsRegistry;
-use NITSAN\NsT3AF\Settings\ExtensionSettingsService;
 use NITSAN\NsT3AF\Utility\AiUniverseUtilityHelper;
 use NITSAN\NsT3AF\Utility\ModuleTabUtility;
 use Psr\Http\Message\ResponseInterface;
@@ -115,7 +113,6 @@ final class ModuleController extends AbstractAiUniverseModuleController
         private readonly AiSysLogRepository $aiSysLogRepository,
         private readonly AiLogChannelCatalog $aiLogChannelCatalog,
         private readonly AiLogsStatisticsService $aiLogsStatisticsService,
-        private readonly ExtensionSettingsService $extensionSettingsService,
         private readonly AiPromptsService $aiPromptsService,
         private readonly AiPromptsBrandContextInfoService $aiPromptsBrandContextInfoService,
         private readonly AiUniverseActivityLogService $activityLogService,
@@ -151,7 +148,6 @@ final class ModuleController extends AbstractAiUniverseModuleController
         private readonly McpPlaygroundService $mcpPlaygroundService,
         private readonly McpSkillHubService $mcpSkillHubService,
         private readonly McpToolMetadataService $mcpToolMetadataService,
-        private readonly OAuthClientLabelResolver $oauthClientLabelResolver,
         private readonly DashboardPeriodComparisonService $dashboardPeriodComparison,
         private readonly DashboardModuleHealthService $dashboardModuleHealth,
         private readonly DashboardProviderCardBuilder $dashboardProviderCardBuilder,
@@ -273,14 +269,8 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $this->setupChecklistPresenter->registerAssets($this->pageRenderer);
         $period = $this->dashboardPeriodResolver->resolve($request);
 
-        if ($hasExplicitPeriod && $backendUser !== null) {
-            $isCustom = $period['preset'] === DashboardPeriodResolver::PRESET_CUSTOM;
-            $this->moduleStateService->setPeriod(
-                $backendUser,
-                $period['preset'],
-                $isCustom ? date('Y-m-d', (int) $period['fromTimestamp']) : '',
-                $isCustom ? date('Y-m-d', (int) $period['toTimestamp']) : '',
-            );
+        if ($hasExplicitPeriod) {
+            $this->persistModulePeriodFromResolved($request, $period);
         }
 
         $analyticsCredits = $this->dashboardAnalytics->forPeriod($period, RequestLogProviderScope::Credits);
@@ -353,13 +343,13 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $creditProjection = $this->buildCreditProjection($creditsDashboard);
         $ownKeysSpendTotal = $this->sumProviderCosts($analyticsOwnKeys['providerStats'] ?? []);
 
-        $activeProviderLabels = array_map(
+        $activeProviderLabels = array_values(array_map(
             static fn($provider): string => $provider->title !== '' ? $provider->title : $provider->identifier,
             array_filter(
                 $ownKeysProviders,
                 static fn($provider): bool => $provider->isEnabled,
             ),
-        );
+        ));
         $apiSpendSummary = $this->dashboardViewModelBuilder->buildApiSpendSummary($analyticsOwnKeys, $ownKeysSpendTotal);
         $creditsHero = $this->dashboardViewModelBuilder->buildCreditsHero($creditsDashboard, $analyticsCredits, $creditProjection);
         $kpiStripCredits = $this->dashboardViewModelBuilder->buildKpiStrip(
@@ -399,9 +389,9 @@ final class ModuleController extends AbstractAiUniverseModuleController
             $creditsDashboard,
         );
 
-        $showDashboardAnalytics = $this->shouldShowDashboardAnalytics($backendUser);
-        $showAiContextOverview = $this->shouldShowAiContextOverview($backendUser);
-        $showMcpOverview = $this->shouldShowMcpOverview($backendUser);
+        $showDashboardAnalytics = $backendUser !== null && $this->shouldShowDashboardAnalytics($backendUser);
+        $showAiContextOverview = $backendUser !== null && $this->shouldShowAiContextOverview($backendUser);
+        $showMcpOverview = $backendUser !== null && $this->shouldShowMcpOverview($backendUser);
 
         $mcpOverview = $showMcpOverview
             ? $this->mcpDashboardOverviewPresenter->build($request, '7d')
@@ -438,6 +428,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 'creditsFeatureAvailable' => self::fluidFlag($this->creditModeResolver->isPubliclyAvailable()),
                 'creditsBearerToken' => $this->runtimeSettings->getTokenPlain() ?? '',
                 'creditsDashboard' => $creditsDashboard,
+                'flash' => $this->flashFromQuery($request) ?? '',
                 'creditProjection' => $creditProjection,
                 'ownKeysSpendTotal' => $ownKeysSpendTotal,
                 'ownKeysSpendTotalFormatted' => '$' . number_format($ownKeysSpendTotal, 2),
@@ -447,7 +438,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 'moduleHealth' => $moduleHealth,
                 'trendsCredits' => $trendsCredits,
                 'trendsOwnKeys' => $trendsOwnKeys,
-                'dashboardPeriodPresets' => $this->buildDashboardPeriodPresets($period),
+                'dashboardPeriodPresets' => $this->buildDashboardPeriodPresets($period, $routeParams),
                 'dashboardPeriodRangeLabel' => $this->formatPeriodRangeLabel($period),
                 'dashboardPeriodFromDate' => date('Y-m-d', (int) $period['fromTimestamp']),
                 'dashboardPeriodToDate' => date('Y-m-d', (int) $period['toTimestamp']),
@@ -611,7 +602,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             'label' => $label,
             'active' => $token !== null ? 1 : 0,
             'preview' => $token?->preview() ?? '',
-            'uid' => $token?->uid ?? 0,
+            'uid' => $token !== null ? $token->uid : 0,
         ];
     }
 
@@ -941,7 +932,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $view = $this->createModuleView($request, 'aiUsage');
         $this->pageRenderer->loadJavaScriptModule('@nitsan/nst3af/ai-usage.js');
 
-        $params = $request->getQueryParams() ?? [];
+        $params = $request->getQueryParams();
         $body = $request->getParsedBody() ?? [];
         $query = array_merge($params, is_array($body) ? $body : []);
         $periodResolved = $this->dashboardPeriodResolver->resolveFromQueryParams(
@@ -952,7 +943,8 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $period['label'] = $this->formatPeriodLabel($periodResolved);
         $filters = $this->aiUsageAnalyticsService->normalizeFilters($query);
         $mode = $this->resolveAiUsageMode($query);
-        $usageData = $this->aiUsageAnalyticsService->buildUsageData($period, $filters);
+        $creditsModeEnabled = $this->creditModeResolver->isEnabled();
+        $usageData = $this->aiUsageAnalyticsService->buildUsageData($period, $filters, $creditsModeEnabled);
         $routeContext = $this->buildAiUsageRouteContext($query, $mode, $filters);
 
         $logPage = $mode === 'log'
@@ -976,6 +968,8 @@ final class ModuleController extends AbstractAiUniverseModuleController
 
         $view->assignMultiple([
             'flash' => $this->flashFromQuery($request) ?? '',
+            'creditsModeEnabled' => self::fluidFlag($creditsModeEnabled),
+            'hideTokenMetrics' => self::fluidFlag($creditsModeEnabled),
             'aiUsageMode' => $mode,
             'aiUsagePeriod' => $period,
             'aiUsagePeriodLabel' => $period['label'],
@@ -1028,7 +1022,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
         }
         $body = $request->getParsedBody();
         $raw = is_array($body) ? ($body['uids'] ?? []) : [];
-        $uids = is_array($raw) ? array_map('intval', $raw) : [];
+        $uids = is_array($raw) ? array_values(array_map('intval', $raw)) : [];
         $deleted = $this->requestLogRepository->softDeleteByUids($uids);
 
         return $this->redirectToAiUsage($request, $deleted > 0 ? 'bulk-deleted' : 'none-selected');
@@ -1043,9 +1037,10 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $period = $this->aiUsageAnalyticsService->resolvePeriod($query);
         $filters = $this->aiUsageAnalyticsService->normalizeFilters($query);
         $format = strtolower(trim((string) ($query['format'] ?? 'json')));
+        $creditsModeEnabled = $this->creditModeResolver->isEnabled();
 
         if ($format === 'csv') {
-            $rows = $this->aiUsageAnalyticsService->buildLogCsvRows($period, $filters);
+            $rows = $this->aiUsageAnalyticsService->buildLogCsvRows($period, $filters, $creditsModeEnabled);
             $lines = array_map(
                 static fn(array $row): string => implode(',', array_map(
                     static fn(string $cell): string => '"' . str_replace('"', '""', $cell) . '"',
@@ -1060,7 +1055,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 ->withHeader('Content-Disposition', 'attachment; filename="ai-usage-' . date('Ymd-His') . '.csv"');
         }
 
-        $payload = $this->aiUsageAnalyticsService->buildExportPayload($period, $filters);
+        $payload = $this->aiUsageAnalyticsService->buildExportPayload($period, $filters, $creditsModeEnabled);
 
         $filename = sprintf('ai-usage-%s.json', date('Ymd-His'));
         $response = new JsonResponse($payload);
@@ -1073,15 +1068,19 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $view = $this->createModuleView($request, 'aiLogs');
 
         $query = array_merge(
-            $request->getQueryParams() ?? [],
+            $request->getQueryParams(),
             is_array($request->getParsedBody()) ? $request->getParsedBody() : [],
         );
         $periodResolved = $this->dashboardPeriodResolver->resolveFromQueryParams(
             $query,
             DashboardPeriodResolver::PRESET_7D,
         );
+        if (isset($query['period'])) {
+            $this->persistModulePeriodFromResolved($request, $periodResolved);
+        }
         $filters = $this->normalizeAiLogsFilters($query, $periodResolved);
         $routeContext = $this->buildAiLogsRouteContext($filters);
+        $routeParams = array_merge($this->routeParamsForPage($request), $routeContext);
         $perPage = (int) ($filters['max'] ?? 50);
         $currentPage = max(1, (int) ($filters['currentPage'] ?? 1));
 
@@ -1115,15 +1114,15 @@ final class ModuleController extends AbstractAiUniverseModuleController
             'aiLogsPeriodPresets' => $this->buildPeriodPresets(
                 't3af_dashboard.ai_logs',
                 $periodResolved,
-                $routeContext,
+                $routeParams,
             ),
             'aiLogsPeriodFromDate' => date('Y-m-d', (int) $periodResolved['fromTimestamp']),
             'aiLogsPeriodToDate' => date('Y-m-d', (int) $periodResolved['toTimestamp']),
             'aiLogsPeriodFormAction' => (string) $this->uriBuilder->buildUriFromRoute(
                 't3af_dashboard.ai_logs',
-                $routeContext,
+                $routeParams,
             ),
-            'aiLogsListUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_logs'),
+            'aiLogsListUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_logs', $routeParams),
         ]);
 
         return $view->renderResponse('Module/AiLogs');
@@ -1131,7 +1130,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
 
     public function aiLogsExportAction(ServerRequestInterface $request): ResponseInterface
     {
-        $query = $request->getQueryParams() ?? [];
+        $query = $request->getQueryParams();
         $periodResolved = $this->dashboardPeriodResolver->resolveFromQueryParams(
             $query,
             DashboardPeriodResolver::PRESET_7D,
@@ -1160,7 +1159,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
     {
         $body = $request->getParsedBody();
         $raw = is_array($body) ? ($body['uids'] ?? []) : [];
-        $uids = is_array($raw) ? array_map('intval', $raw) : [];
+        $uids = is_array($raw) ? array_values(array_map('intval', $raw)) : [];
         if ($uids === [] && is_array($body) && isset($body['uid'])) {
             $uids = [(int) $body['uid']];
         }
@@ -1183,9 +1182,9 @@ final class ModuleController extends AbstractAiUniverseModuleController
 
         $this->pageRenderer->loadJavaScriptModule('@nitsan/nst3af/ai-prompts.js');
 
-        $params = $request->getQueryParams() ?? [];
+        $params = $request->getQueryParams();
         $body = $request->getParsedBody() ?? [];
-        $query = array_merge($params, $body);
+        $query = array_merge($params, is_array($body) ? $body : []);
         $routeParams = $this->routeParamsForPage($request);
         $storagePid = $resolution->storagePid;
         $mode = $this->resolveAiPromptsMode($query);
@@ -1430,6 +1429,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             'creditsDashboard' => $creditsDashboard,
             'products' => $creditsDashboard['products'] ?? [],
             'providersReturnUrl' => $returnUrl,
+            'flash' => $this->flashFromQuery($request) ?? '',
             'creditsModeEnabled' => self::fluidFlag($this->creditModeResolver->isEnabled()),
             'creditsModeActive' => self::fluidFlag($this->creditModeResolver->isActive()),
             'creditsFeatureAvailable' => self::fluidFlag($this->creditModeResolver->isPubliclyAvailable()),
@@ -1482,30 +1482,52 @@ final class ModuleController extends AbstractAiUniverseModuleController
 
     private function renderCreditsCheckoutFrame(ServerRequestInterface $request, string $checkoutUrl): string
     {
-        if (class_exists(\TYPO3\CMS\Core\View\ViewFactoryInterface::class)
-            && class_exists(\TYPO3\CMS\Core\View\ViewFactoryData::class)
-        ) {
-            return $this->renderCreditsCheckoutFrameWithCoreViewFactory($request, $checkoutUrl);
+        // ViewFactoryInterface is TYPO3 13+; StandaloneView covers TYPO3 12.
+        // Build FQNs dynamically so PHPStan (per CI TYPO3 matrix job) cannot
+        // prove class_exists() always true/false.
+        $viewFactoryInterface = implode('\\', ['TYPO3', 'CMS', 'Core', 'View', 'ViewFactoryInterface']);
+        $viewFactoryDataClass = implode('\\', ['TYPO3', 'CMS', 'Core', 'View', 'ViewFactoryData']);
+        if (class_exists($viewFactoryInterface) && class_exists($viewFactoryDataClass)) {
+            return $this->renderCreditsCheckoutFrameWithCoreViewFactory(
+                $request,
+                $checkoutUrl,
+                $viewFactoryInterface,
+                $viewFactoryDataClass,
+            );
         }
 
         return $this->renderCreditsCheckoutFrameWithStandaloneView($request, $checkoutUrl);
     }
 
-    private function renderCreditsCheckoutFrameWithCoreViewFactory(ServerRequestInterface $request, string $checkoutUrl): string
-    {
-        /** @var \TYPO3\CMS\Core\View\ViewFactoryInterface $viewFactory */
-        $viewFactory = GeneralUtility::makeInstance(\TYPO3\CMS\Core\View\ViewFactoryInterface::class);
-        $viewFactoryDataClass = \TYPO3\CMS\Core\View\ViewFactoryData::class;
-        /** @var \TYPO3\CMS\Core\View\ViewFactoryData $viewFactoryData */
-        $viewFactoryData = new $viewFactoryDataClass(
+    /**
+     * @param class-string $viewFactoryInterface
+     * @param class-string $viewFactoryDataClass
+     */
+    private function renderCreditsCheckoutFrameWithCoreViewFactory(
+        ServerRequestInterface $request,
+        string $checkoutUrl,
+        string $viewFactoryInterface,
+        string $viewFactoryDataClass,
+    ): string {
+        $viewFactory = GeneralUtility::makeInstance($viewFactoryInterface);
+        $create = [$viewFactory, 'create'];
+        if (!is_callable($create)) {
+            throw new \RuntimeException('ViewFactoryInterface::create() is not callable.');
+        }
+
+        $view = $create(new $viewFactoryDataClass(
             templateRootPaths: ['EXT:ns_t3af/Resources/Private/Templates/'],
             request: $request,
-        );
+        ));
+        $assign = [$view, 'assign'];
+        $render = [$view, 'render'];
+        if (!is_callable($assign) || !is_callable($render)) {
+            throw new \RuntimeException('ViewFactory view is missing assign()/render().');
+        }
 
-        return $viewFactory
-            ->create($viewFactoryData)
-            ->assign('checkoutUrl', $checkoutUrl)
-            ->render('Module/CreditsCheckoutFrame');
+        $assign('checkoutUrl', $checkoutUrl);
+
+        return $render('Module/CreditsCheckoutFrame');
     }
 
     private function renderCreditsCheckoutFrameWithStandaloneView(ServerRequestInterface $request, string $checkoutUrl): string
@@ -1561,11 +1583,31 @@ final class ModuleController extends AbstractAiUniverseModuleController
 
     /**
      * @param array{preset:string,days:int,fromTimestamp:int,toTimestamp:int,labelKey:string} $period
+     * @param array<string, int|string> $routeParams
      * @return list<array{id:string,label:string,href:string,active:int}>
      */
-    private function buildDashboardPeriodPresets(array $period): array
+    private function buildDashboardPeriodPresets(array $period, array $routeParams = []): array
     {
-        return $this->buildPeriodPresets('t3af_dashboard.overview', $period);
+        return $this->buildPeriodPresets('t3af_dashboard.overview', $period, $routeParams);
+    }
+
+    /**
+     * @param array{preset:string,days:int,fromTimestamp:int,toTimestamp:int,labelKey:string} $periodResolved
+     */
+    private function persistModulePeriodFromResolved(ServerRequestInterface $request, array $periodResolved): void
+    {
+        $backendUser = $this->getBackendUser();
+        if ($backendUser === null) {
+            return;
+        }
+
+        $isCustom = $periodResolved['preset'] === DashboardPeriodResolver::PRESET_CUSTOM;
+        $this->moduleStateService->setPeriod(
+            $backendUser,
+            $periodResolved['preset'],
+            $isCustom ? date('Y-m-d', (int) $periodResolved['fromTimestamp']) : '',
+            $isCustom ? date('Y-m-d', (int) $periodResolved['toTimestamp']) : '',
+        );
     }
 
     /**
@@ -1748,13 +1790,13 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 $this->translateModule('dashboard.chart.extensionUsage'),
             ),
             'chartTopModels' => $this->dashboardChartConfigurator->horizontalBarChart(
-                array_map(
+                array_values(array_map(
                     static fn(array $row): array => [
                         'extensionKey' => (string) ($row['model'] ?? ''),
                         'tokens' => (int) ($row['tokens'] ?? 0),
                     ],
                     $analyticsOwnKeys['topModels'] ?? [],
-                ),
+                )),
                 $this->translateModule('dashboard.chart.topModels'),
                 'tokens',
             ),
@@ -1826,6 +1868,9 @@ final class ModuleController extends AbstractAiUniverseModuleController
         return $view->renderResponse('Module/Tab');
     }
 
+    /**
+     * @param array<string, mixed> $query
+     */
     private function resolveAiUsageMode(array $query): string
     {
         $mode = (string) ($query['mode'] ?? 'log');
@@ -1833,6 +1878,9 @@ final class ModuleController extends AbstractAiUniverseModuleController
         return in_array($mode, ['log', 'summary'], true) ? $mode : 'log';
     }
 
+    /**
+     * @param array<string, mixed> $query
+     */
     private function resolveSchedulerCliMode(array $query): string
     {
         $mode = (string) ($query['mode'] ?? 'tasks');
@@ -1840,6 +1888,9 @@ final class ModuleController extends AbstractAiUniverseModuleController
         return in_array($mode, ['library', 'tasks'], true) ? $mode : 'tasks';
     }
 
+    /**
+     * @param array<string, mixed> $query
+     */
     private function resolveAiPromptsMode(array $query): string
     {
         $mode = trim((string) ($query['mode'] ?? 'overview'));
@@ -2112,7 +2163,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $query = $request->getQueryParams();
         $body = $request->getParsedBody();
         $source = array_merge(
-            is_array($query) ? $query : [],
+            $query,
             is_array($body) ? $body : [],
         );
         $routeParams = array_merge(

@@ -70,6 +70,7 @@ Build locally: `composer doc-watch` from package root.
 | Where are API keys stored? | Providers drawer + `tx_nst3af_provider` (not ext_conf) |
 | Migrate old ext_conf keys? | Configure providers in **AI Foundation → Providers** (keys live in `tx_nst3af_provider`) |
 | Credits mode / billing | `context/features/credits.md` |
+| Credits API changes for child extensions (2026-07) | `context/features/child-extensions-credits-api-migration.md` |
 | MCP OAuth / tools | `context/features/mcp-server.md`, `Documentation/McpServer/` |
 | Run tests / CI | `tasks/run-quality.md` |
 | Backend module markup / CSS conventions | `context/Typo3CoreBackendDesign.md` |

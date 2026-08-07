@@ -28,4 +28,5 @@ enum CreditsApiEndpoint: string
     case Embed = 'embed';
     case Stream = 'stream';
     case Speak = 'speak';
+    case Image = 'image';
 }

@@ -61,14 +61,24 @@
                             <td class="aiu-table__mono">{entry.provider_identifier}</td>
                             <td class="aiu-table__mono">{entry.extension_key}</td>
                             <td class="aiu-table__mono">{entry.feature_key}</td>
-                            <td class="aiu-table__mono">{entry.model_used}</td>
+                            <td class="aiu-table__mono">
+                                <f:if condition="{entry.provider_identifier} == 't3planet_credits'">
+                                    <f:then>—</f:then>
+                                    <f:else>{entry.model_used}</f:else>
+                                </f:if>
+                            </td>
                             <td><span class="badge {f:if(condition: '{entry.request_type} == complete', then: 'badge-success', else: 'badge-default')}">{entry.request_type}</span></td>
                             <td>
                                 <span class="badge {f:if(condition: '{entry.success} == 1', then: 'badge-success', else: 'badge-danger')}">
                                     <f:if condition="{entry.success} == 1"><f:then>success</f:then><f:else>failed</f:else></f:if>
                                 </span>
                             </td>
-                            <td>{entry.total_tokens}</td>
+                            <td>
+                                <f:if condition="{entry.provider_identifier} == 't3planet_credits'">
+                                    <f:then>—</f:then>
+                                    <f:else>{entry.total_tokens}</f:else>
+                                </f:if>
+                            </td>
                             <td>${entry.estimated_cost -> f:format.number(decimals: 4)}</td>
                             <td class="col-control">
                                 <div class="btn-group" role="group"
@@ -77,10 +87,11 @@
                                             class="btn btn-default"
                                             data-aiu-usage-open-detail
                                             data-uid="{entry.uid}"
+                                            data-mask-tokens="{f:if(condition: '{entry.provider_identifier} == \'t3planet_credits\'', then: '1', else: '0')}"
                                             data-provider="{entry.provider_identifier}"
                                             data-module="{entry.extension_key}"
                                             data-scope="{entry.feature_key}"
-                                            data-model="{entry.model_used}"
+                                            data-model="{f:if(condition: '{entry.provider_identifier} == \'t3planet_credits\'', then: '—', else: entry.model_used)}"
                                             data-type="{entry.request_type}"
                                             data-status="{f:if(condition: '{entry.success} == 1', then: 'success', else: 'failed')}"
                                             data-tokens="{entry.total_tokens}"

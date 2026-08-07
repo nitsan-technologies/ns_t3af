@@ -35,6 +35,9 @@ final class AiPromptsService implements AiPromptsMcpOperationsInterface, PromptO
         private readonly iterable $defaultsSyncProviders = [],
     ) {}
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getCatalogForUi(): array
     {
         $available = false;
@@ -400,6 +403,13 @@ final class AiPromptsService implements AiPromptsMcpOperationsInterface, PromptO
 
     /**
      * @return array{categories:list<array<string, mixed>>, kpis:array<string, int>, extensions:list<array{key:string,labelKey:string}>}
+     */
+    /**
+     * @return array{
+     *   categories:list<array<string, mixed>>,
+     *   kpis:array{categoryCount:int,totalPrompts:int,extensionCount:int,customPrompts:int},
+     *   extensions:list<array{key:string,labelKey:string}>
+     * }
      */
     private function emptyOverviewData(): array
     {

@@ -50,7 +50,8 @@
                     </div>
 
                     <div class="card card-size-small w-100">
-                        <div class="card-body">
+                        <div class="card-body d-flex flex-column gap-3">
+                        <div>
                         <f:if condition="{creditsDashboard.plan.hasPlan} == 1">
                             <f:then>
                                 <div class="mb-2">
@@ -60,8 +61,16 @@
                                     </span>
                                 </div>
                                 <h3 class="card-title h6">
-                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.plan.last"
-                                                 default="Last:" />
+                                    <f:if condition="{creditsDashboard.plan.isTrial} == 1">
+                                        <f:then>
+                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.plan.current"
+                                                         default="Current:" />
+                                        </f:then>
+                                        <f:else>
+                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.plan.last"
+                                                         default="Last:" />
+                                        </f:else>
+                                    </f:if>
                                     {creditsDashboard.plan.name}
                                 </h3>
                                 <f:if condition="{creditsDashboard.plan.purchasedAt} > 0">
@@ -86,72 +95,60 @@
                                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.plan.none"
                                                  default="No active plan" />
                                 </h3>
-                                <p class="card-text text-muted small">
+                                <p class="card-text text-muted small mb-0">
                                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.plan.noneHint"
                                                  default="Purchase a bundle below to add credits to your pool." />
                                 </p>
                             </f:else>
                         </f:if>
-                        <f:if condition="{creditsDashboard.stats.estimatedDaysLeft} > 0">
-                            <p class="card-text text-muted small mb-0 text-end">
-                                ~{creditsDashboard.stats.estimatedDaysLeft}
-                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.daysLeft"
-                                             default="days left at current rate" />
-                            </p>
-                        </f:if>
                         </div>
-                    </div>
-                </div>
 
-                <div class="card-container">
-                    <div class="card card-size-small">
-                        <div class="card-body">
-                        <div class="small text-muted mb-1">
-                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.used"
-                                         default="Credits used" />
-                        </div>
-                        <div class="fw-bold">
-                            {creditsDashboard.stats.creditsUsedFormatted}
-                            <f:if condition="{creditsDashboard.balance.total} > 0">
-                                <span class="small text-muted fw-normal">
-                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.ofTotal"
-                                                 arguments="{0: creditsDashboard.balance.total}"
-                                                 default="of %s purchased" />
-                                </span>
-                            </f:if>
-                        </div>
-                        </div>
-                    </div>
-                    <div class="card card-size-small">
-                        <div class="card-body">
-                        <div class="small text-muted mb-1">
-                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.daily"
-                                         default="Daily average" />
-                        </div>
-                        <div class="fw-bold">
-                            {creditsDashboard.stats.dailyAverage}
-                            <span class="small text-muted fw-normal">
-                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.perDay"
-                                             default="credits / day" />
-                            </span>
-                        </div>
-                        </div>
-                    </div>
-                    <div class="card card-size-small">
-                        <div class="card-body">
-                        <div class="small text-muted mb-1">
-                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.estimated"
-                                         default="Est. remaining days" />
-                        </div>
-                        <div class="fw-bold">
-                            <f:if condition="{creditsDashboard.stats.estimatedDaysLeft} > 0">
-                                <f:then>{creditsDashboard.stats.estimatedDaysLeft}</f:then>
-                                <f:else>—</f:else>
-                            </f:if>
-                            <span class="small text-muted fw-normal">
-                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.atRate"
-                                             default="at current usage rate" />
-                            </span>
+                        <div class="aiu-credits-plan-stats" role="group" aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.balance.title', default: 'Credit Balance')}">
+                            <div class="aiu-credits-plan-stats__item">
+                                <div class="aiu-credits-plan-stats__label">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.used"
+                                                 default="Credits used" />
+                                </div>
+                                <div class="aiu-credits-plan-stats__value">
+                                    {creditsDashboard.stats.creditsUsedFormatted}
+                                    <f:if condition="{creditsDashboard.balance.total} > 0">
+                                        <span class="aiu-credits-plan-stats__meta">
+                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.ofTotal"
+                                                         arguments="{0: creditsDashboard.balance.total}"
+                                                         default="of %s purchased" />
+                                        </span>
+                                    </f:if>
+                                </div>
+                            </div>
+                            <div class="aiu-credits-plan-stats__item">
+                                <div class="aiu-credits-plan-stats__label">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.daily"
+                                                 default="Daily average" />
+                                </div>
+                                <div class="aiu-credits-plan-stats__value">
+                                    {creditsDashboard.stats.dailyAverage}
+                                    <span class="aiu-credits-plan-stats__meta">
+                                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.perDay"
+                                                     default="credits / day" />
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="aiu-credits-plan-stats__item">
+                                <div class="aiu-credits-plan-stats__label">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.estimated"
+                                                 default="Est. remaining days" />
+                                </div>
+                                <div class="aiu-credits-plan-stats__value">
+                                    <f:if condition="{creditsDashboard.stats.estimatedDaysLeft} > 0">
+                                        <f:then>{creditsDashboard.stats.estimatedDaysLeft}</f:then>
+                                        <f:else>—</f:else>
+                                    </f:if>
+                                    <span class="aiu-credits-plan-stats__meta">
+                                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.atRate"
+                                                     default="at current usage rate" />
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                         </div>
                     </div>
@@ -159,80 +156,109 @@
             </section>
 
             <section class="aiu-credits-section" id="aiu-credits-bundles" data-aiu-credits-bundles>
-                <div class="aiu-credits-section__head">
-                    <div>
-                        <h2 class="aiu-credits-section__title">
-                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.title"
-                                         default="AI Credit Bundles" />
-                        </h2>
-                        <p class="aiu-credits-section__sub">
-                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.sub"
-                                         default="One-time purchases — credits never expire and stack with your balance" />
-                        </p>
-                    </div>
-                    <span class="aiu-pill aiu-pill--advanced">
-                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.badge"
-                                     default="No subscription · buy when you need" />
-                    </span>
-                </div>
-
                 <f:if condition="{creditsDashboard.products -> f:count()} > 0">
                     <f:then>
-                        <div class="aiu-credits-product-grid">
-                            <f:for each="{creditsDashboard.products}" as="product">
-                                <article class="aiu-credits-product{f:if(condition: '{product.isCurrentPlan} == 1', then: ' is-current')}">
-                                    <f:if condition="{product.badgeLabel} != ''">
-                                        <span class="aiu-credits-product__badge aiu-credits-product__badge--{product.badge}">
-                                            {product.badgeLabel}
-                                        </span>
-                                    </f:if>
-                                    <h3 class="aiu-credits-product__title">{product.title}</h3>
-                                    <f:if condition="{product.subtitle} != ''">
-                                        <p class="aiu-credits-product__subtitle">{product.subtitle}</p>
-                                    </f:if>
-                                    <div class="aiu-credits-product__price">
-                                        €{product.priceAmount -> f:format.number(decimals: 0)}
-                                        <span class="aiu-credits-product__price-note">
-                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.oneTime"
-                                                         default="one-time" />
-                                        </span>
-                                    </div>
-                                    <p class="aiu-credits-product__credits">
-                                        {product.credits}
-                                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.creditsLabel"
-                                                     default="credits" />
+                        <div class="aiu-credits-bundles" data-aiu-credits-bundles-root data-aiu-bundle-type="plan">
+                            <div class="aiu-credits-section__head aiu-credits-section__head--with-filter">
+                                <div>
+                                    <h2 class="aiu-credits-section__title">
+                                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.title"
+                                                     default="AI Credit Bundles" />
+                                    </h2>
+                                    <p class="aiu-credits-section__sub" data-aiu-bundles-sub="plan">
+                                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.subPlans"
+                                                     default="Subscription plans — credits renew each billing period" />
                                     </p>
-                                    <f:if condition="{product.features -> f:count()} > 0">
-                                        <ul class="aiu-credits-product__features">
-                                            <f:for each="{product.features}" as="bullet">
-                                                <li>{bullet}</li>
-                                            </f:for>
-                                        </ul>
-                                    </f:if>
-                                    <f:if condition="{product.checkoutUrl} != ''">
-                                        <f:then>
-                                            <a class="btn btn-primary aiu-credits-product__cta"
-                                               href="{product.checkoutUrl}"
-                                               data-aiu-checkout
-                                               data-aiu-checkout-url="{product.checkoutUrl}"
-                                               data-aiu-checkout-title="{product.title}">
-                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.buy"
-                                                             default="Buy" />
-                                                {product.title}
-                                            </a>
-                                        </f:then>
-                                        <f:else>
-                                            <span class="aiu-credits-product__cta aiu-credits-product__cta--disabled">
-                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.unavailable"
-                                                             default="Checkout unavailable" />
-                                            </span>
-                                        </f:else>
-                                    </f:if>
-                                </article>
-                            </f:for>
+                                    <p class="aiu-credits-section__sub" data-aiu-bundles-sub="topup" hidden>
+                                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.subTopups"
+                                                     default="One-time purchases — credits never expire and stack with your balance" />
+                                    </p>
+                                </div>
+                                <div class="aiu-credits-bundles__toolbar">
+                                    <div class="btn-group" role="group" aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.tabPlans', default: 'Plans')}">
+                                        <button type="button"
+                                                class="btn btn-default active is-active"
+                                                data-aiu-bundle-tab="plan">
+                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.tabPlans"
+                                                         default="Plans" />
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-default"
+                                                data-aiu-bundle-tab="topup">
+                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.tabTopups"
+                                                         default="Top-ups" />
+                                        </button>
+                                    </div>
+                                    <div class="aiu-credits-bundles__period" data-aiu-plan-period-group="1">
+                                        <div class="btn-group"
+                                             role="group"
+                                             aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.periodMonthly', default: 'Monthly')}">
+                                            <button type="button"
+                                                    class="btn btn-default active is-active"
+                                                    data-aiu-plan-period="monthly">
+                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.periodMonthly"
+                                                             default="Monthly" />
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-default"
+                                                    data-aiu-plan-period="yearly">
+                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.periodYearly"
+                                                             default="Yearly" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div data-aiu-bundle-panel="plan" role="tabpanel">
+                                <div class="aiu-credits-product-grid" data-aiu-plan-period-panel="monthly">
+                                    <f:for each="{creditsDashboard.products}" as="product">
+                                        <f:if condition="{product.type} == 'plan' && {product.renewalPeriod} == 'monthly'">
+                                            <f:render partial="Credits/ProductCard" arguments="{product: product}" />
+                                        </f:if>
+                                    </f:for>
+                                </div>
+                                <div class="aiu-credits-product-grid" data-aiu-plan-period-panel="yearly" hidden>
+                                    <f:for each="{creditsDashboard.products}" as="product">
+                                        <f:if condition="{product.type} == 'plan' && {product.renewalPeriod} == 'yearly'">
+                                            <f:render partial="Credits/ProductCard" arguments="{product: product}" />
+                                        </f:if>
+                                    </f:for>
+                                </div>
+                                <p class="aiu-credits-empty" data-aiu-bundles-empty="plan-monthly" hidden>
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.emptyPlansMonthly"
+                                                 default="No monthly plans available right now." />
+                                </p>
+                                <p class="aiu-credits-empty" data-aiu-bundles-empty="plan-yearly" hidden>
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.emptyPlansYearly"
+                                                 default="No yearly plans available right now." />
+                                </p>
+                            </div>
+
+                            <div data-aiu-bundle-panel="topup" role="tabpanel" hidden>
+                                <div class="aiu-credits-product-grid">
+                                    <f:for each="{creditsDashboard.products}" as="product">
+                                        <f:if condition="{product.type} == 'topup'">
+                                            <f:render partial="Credits/ProductCard" arguments="{product: product}" />
+                                        </f:if>
+                                    </f:for>
+                                </div>
+                                <p class="aiu-credits-empty" data-aiu-bundles-empty="topup" hidden>
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.emptyTopups"
+                                                 default="No top-up packs available right now." />
+                                </p>
+                            </div>
                         </div>
                     </f:then>
                     <f:else>
+                        <div class="aiu-credits-section__head">
+                            <div>
+                                <h2 class="aiu-credits-section__title">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.title"
+                                                 default="AI Credit Bundles" />
+                                </h2>
+                            </div>
+                        </div>
                         <p class="aiu-credits-empty">
                             <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.bundles.empty"
                                          default="No credit bundles available from T3Planet right now." />
@@ -246,11 +272,11 @@
                     <div>
                         <h2 class="aiu-credits-section__title">
                             <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.features.title"
-                                         default="AI features (token billing)" />
+                                         default="Credit Costs per Operation" />
                         </h2>
                         <p class="aiu-credits-section__sub">
                             <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.features.sub"
-                                         default="Credits vary by actual token usage (min 0.001 credit per successful call). Use Estimate before submit for an approximate cost." />
+                                         default="Know exactly what each AI action costs" />
                         </p>
                         <f:if condition="{creditsDashboard.pricing.footnote} != ''">
                             <p class="aiu-credits-section__pricing">{creditsDashboard.pricing.footnote}</p>
@@ -270,12 +296,16 @@
                                                              default="Feature" />
                                             </th>
                                             <th scope="col">
+                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.features.col.exampleCost"
+                                                             default="Example cost per 500 credits" />
+                                            </th>
+                                            <th scope="col">
                                                 <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.features.col.key"
                                                              default="Key" />
                                             </th>
-                                            <th scope="col">
-                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.features.col.model"
-                                                             default="Default model" />
+                                            <th scope="col" class="text-end">
+                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.features.col.used"
+                                                             default="Used" />
                                             </th>
                                         </tr>
                                     </thead>
@@ -289,13 +319,29 @@
                                                     </f:if>
                                                 </td>
                                                 <td class="text-variant">
-                                                    <code class="small">{feature.key}</code>
-                                                </td>
-                                                <td class="text-variant">
-                                                    <f:if condition="{feature.defaultModel} != ''">
-                                                        <f:then><code class="small">{feature.defaultModel}</code></f:then>
+                                                    <f:if condition="{feature.exampleCost} != ''">
+                                                        <f:then>
+                                                            <span class="small">{feature.exampleCost}</span>
+                                                        </f:then>
                                                         <f:else>—</f:else>
                                                     </f:if>
+                                                </td>
+                                                <td class="text-variant">
+                                                    <code class="small">{feature.key}</code>
+                                                </td>
+                                                <td class="text-end">
+                                                    <div class="aiu-credits-feature-used">
+                                                        <span class="fw-semibold font-monospace aiu-credits-feature-used__value">
+                                                            {feature.usedCreditsFormatted}
+                                                            <span class="text-muted fw-normal">
+                                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.features.credits"
+                                                                             default="credits" />
+                                                            </span>
+                                                        </span>
+                                                        <span class="aiu-credits-feature-used__bar" aria-hidden="true">
+                                                            <span class="aiu-credits-feature-used__bar-fill" style="width: {feature.usedBarPercent}%"></span>
+                                                        </span>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         </f:for>
@@ -313,8 +359,8 @@
                 </f:if>
             </section>
 
-            <section class="aiu-credits-section">
-                <div class="aiu-credits-section__head">
+            <section class="aiu-credits-section" id="aiu-credits-usage">
+                <div class="aiu-credits-section__head aiu-credits-section__head--with-filter">
                     <div>
                         <h2 class="aiu-credits-section__title">
                             <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.title"
@@ -325,6 +371,70 @@
                                          default="Charges on this installation (local mirror). Purchases appear after server sync." />
                         </p>
                     </div>
+                    <f:if condition="{creditsUsageFilters}">
+                        <div class="dropdown aiu-period aiu-credits-entry-type">
+                            <button type="button"
+                                    class="btn btn-default dropdown-toggle aiu-period__btn d-inline-flex align-items-center gap-2"
+                                    data-bs-toggle="dropdown"
+                                    data-bs-auto-close="outside"
+                                    aria-expanded="false">
+                                <core:icon identifier="actions-filter" size="small" />
+                                <span>
+                                    <f:if condition="{creditsUsageFilters.entryType} == 'debit'">
+                                        <f:then>
+                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.filter.debit"
+                                                         default="Debit" />
+                                        </f:then>
+                                        <f:else if="{creditsUsageFilters.entryType} == 'credit'">
+                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.filter.credit"
+                                                         default="Credit" />
+                                        </f:else>
+                                        <f:else>
+                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.filter.all"
+                                                         default="All" />
+                                        </f:else>
+                                    </f:if>
+                                </span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end aiu-period__menu"
+                                 role="menu"
+                                 aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.filter.entryType', default: 'Entry type')}">
+                                <a href="{f:be.uri(route: 't3af_dashboard.providers', parameters: {
+                                        id: creditsUsageRouteParams.id,
+                                        currentPage: 1,
+                                        max: creditsUsageFilters.max,
+                                        entryType: 'all'
+                                    })}#aiu-credits-usage"
+                                   class="dropdown-item aiu-period__option aiu-credits-entry-type__option{f:if(condition: '{creditsUsageFilters.entryType} == \'all\'', then: ' active')}"
+                                   role="menuitem">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.filter.all"
+                                                 default="All" />
+                                </a>
+                                <a href="{f:be.uri(route: 't3af_dashboard.providers', parameters: {
+                                        id: creditsUsageRouteParams.id,
+                                        currentPage: 1,
+                                        max: creditsUsageFilters.max,
+                                        entryType: 'debit'
+                                    })}#aiu-credits-usage"
+                                   class="dropdown-item aiu-period__option aiu-credits-entry-type__option{f:if(condition: '{creditsUsageFilters.entryType} == \'debit\'', then: ' active')}"
+                                   role="menuitem">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.filter.debit"
+                                                 default="Debit" />
+                                </a>
+                                <a href="{f:be.uri(route: 't3af_dashboard.providers', parameters: {
+                                        id: creditsUsageRouteParams.id,
+                                        currentPage: 1,
+                                        max: creditsUsageFilters.max,
+                                        entryType: 'credit'
+                                    })}#aiu-credits-usage"
+                                   class="dropdown-item aiu-period__option aiu-credits-entry-type__option{f:if(condition: '{creditsUsageFilters.entryType} == \'credit\'', then: ' active')}"
+                                   role="menuitem">
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.filter.credit"
+                                                 default="Credit" />
+                                </a>
+                            </div>
+                        </div>
+                    </f:if>
                 </div>
 
                 <f:if condition="{creditsDashboard.transactions -> f:count()} > 0">
@@ -337,6 +447,26 @@
                                             <th scope="col">
                                                 <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.col.description"
                                                              default="Description" />
+                                            </th>
+                                            <th scope="col">
+                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.col.extension"
+                                                             default="Extension" />
+                                            </th>
+                                            <th scope="col">
+                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.col.page"
+                                                             default="Page" />
+                                            </th>
+                                            <th scope="col" class="text-end">
+                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.col.latency"
+                                                             default="Latency" />
+                                            </th>
+                                            <th scope="col">
+                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.col.status"
+                                                             default="Status" />
+                                            </th>
+                                            <th scope="col">
+                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.col.requestUuid"
+                                                             default="Request UUID" />
                                             </th>
                                             <th scope="col" class="text-end">
                                                 <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.history.col.date"
@@ -353,21 +483,62 @@
                                             <tr>
                                                 <td>
                                                     <div class="fw-semibold">{tx.label}</div>
-                                                    <f:if condition="{tx.detail} != ''">
-                                                        <div class="small text-muted">{tx.detail}</div>
+                                                </td>
+                                                <td class="text-variant text-nowrap">
+                                                    <f:if condition="{tx.extensionKey} != ''">
+                                                        <f:then><code class="small">{tx.extensionKey}</code></f:then>
+                                                        <f:else>—</f:else>
+                                                    </f:if>
+                                                </td>
+                                                <td class="text-variant">
+                                                    <f:if condition="{tx.pageName} != ''">
+                                                        <f:then>{tx.pageName}</f:then>
+                                                        <f:else>—</f:else>
+                                                    </f:if>
+                                                </td>
+                                                <td class="text-end text-variant text-nowrap">
+                                                    <f:if condition="{tx.latencyFormatted} != ''">
+                                                        <f:then>{tx.latencyFormatted}</f:then>
+                                                        <f:else>—</f:else>
+                                                    </f:if>
+                                                </td>
+                                                <td>
+                                                    <f:if condition="{tx.status} != ''">
+                                                        <f:then>
+                                                            <span class="badge {f:if(condition: '{tx.status} == \'success\'', then: 'badge-success', else: 'badge-default')}">{tx.status}</span>
+                                                        </f:then>
+                                                        <f:else>—</f:else>
+                                                    </f:if>
+                                                </td>
+                                                <td class="text-variant">
+                                                    <f:if condition="{tx.requestUuid} != ''">
+                                                        <f:then><code class="small text-break">{tx.requestUuid}</code></f:then>
+                                                        <f:else>—</f:else>
                                                     </f:if>
                                                 </td>
                                                 <td class="text-end text-variant text-nowrap">
                                                     <f:format.date format="Y-m-d H:i">{tx.crdate}</f:format.date>
                                                 </td>
                                                 <td class="text-end text-nowrap">
-                                                    <span class="badge badge-default">-{tx.creditsFormatted} cr</span>
+                                                    <f:if condition="{tx.isCredit}">
+                                                        <f:then>
+                                                            <span class="badge badge-success">+{tx.creditsFormatted} cr</span>
+                                                        </f:then>
+                                                        <f:else>
+                                                            <span class="badge badge-default">-{tx.creditsFormatted} cr</span>
+                                                        </f:else>
+                                                    </f:if>
                                                 </td>
                                             </tr>
                                         </f:for>
                                     </tbody>
                                 </table>
                             </div>
+                            <f:if condition="{creditsUsagePagination}">
+                                <div class="card-footer border-top">
+                                    <f:render partial="Credits/UsagePagination" arguments="{_all}" />
+                                </div>
+                            </f:if>
                         </div>
                     </f:then>
                     <f:else>

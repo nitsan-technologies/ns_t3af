@@ -85,7 +85,7 @@ final class ProductCatalogService
     /**
      * @param array<string, mixed> $body
      */
-    private function rememberMemoryCache(string $domain, string $token, string $redirectTo, array $body): void
+    private function rememberMemoryCache(string $domain, #[\SensitiveParameter] string $token, string $redirectTo, array $body): void
     {
         $this->responseCache->set(
             CreditsApiResponseCache::scopeProducts($redirectTo),

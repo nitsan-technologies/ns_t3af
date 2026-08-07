@@ -54,9 +54,12 @@ readonly class McpPromptTemplateRepository
             ->executeQuery()
             ->fetchAllAssociative();
 
-        return array_map(fn(array $row): array => $this->mapRow($row), $rows);
+        return array_values(array_map(fn(array $row): array => $this->mapRow($row), $rows));
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function findByName(string $name): ?array
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
@@ -76,6 +79,9 @@ readonly class McpPromptTemplateRepository
         return $row !== false ? $this->mapRow($row) : null;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function findAnyByName(string $name): ?array
     {
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
@@ -96,6 +102,9 @@ readonly class McpPromptTemplateRepository
         return $row !== false ? $this->mapRow($row) : null;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function findByUid(int $uid): ?array
     {
         if ($uid <= 0) {

@@ -176,7 +176,7 @@ final class FeatureSettingsController
                 'module.aiFeatures.saveErrorTitle',
                 'Could not save settings: ' . $exception->getMessage(),
                 500,
-                is_string($exception->getMessage()) ? $exception->getMessage() : '',
+                $exception->getMessage(),
             );
         }
     }

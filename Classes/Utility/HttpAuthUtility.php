@@ -31,6 +31,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 class HttpAuthUtility
 {
+    /** @var array<string, mixed> */
     private array $extConf;
     private string $extensionKey;
     private ClientInterface $client;
@@ -116,7 +117,7 @@ class HttpAuthUtility
     /**
      * Get Basic Auth credentials
      *
-     * @return array|null Returns ['username' => ..., 'password' => ...] or null if not enabled
+     * @return array{username: string, password: string}|null Returns credentials or null if not enabled
      */
     public function getBasicAuthCredentials(): ?array
     {

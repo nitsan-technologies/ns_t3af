@@ -45,6 +45,9 @@ final class ExtensionExtConfCategoryService
      */
     private array $featureProviderFormOptionsByExtension = [];
 
+    /**
+     * @param iterable<FeatureProviderFormOptionsInterface> $featureProviderFormOptionsProviders
+     */
     public function __construct(
         private readonly ExtensionSettingsService $extensionSettingsService,
         private readonly ExtensionSettingsSchemaService $extensionSettingsSchemaService,
@@ -95,12 +98,18 @@ final class ExtensionExtConfCategoryService
     }
 
     /**
-     * @return array<string, array<string, mixed>>
+     * @return array<string, mixed>
      */
     public function getCategoryConfiguration(string $extensionKey, string $category, ?int $storagePid = null): array
     {
         $parsed = $this->parseExtensionConfiguration($extensionKey, $storagePid);
-        return $parsed[$category] ?? [];
+        $configuration = $parsed[$category] ?? [];
+        $normalized = [];
+        foreach ($configuration as $key => $value) {
+            $normalized[(string) $key] = $value;
+        }
+
+        return $normalized;
     }
 
     /**
@@ -409,6 +418,9 @@ final class ExtensionExtConfCategoryService
         return $resolution->isResolved() ? $resolution->storagePid : null;
     }
 
+    /**
+     * @param array<string, mixed> $submitted
+     */
     private function resolveStoragePidFromSubmitted(array $submitted): int
     {
         $pageId = (int) ($submitted['id'] ?? $submitted['pageId'] ?? 0);
@@ -470,6 +482,10 @@ final class ExtensionExtConfCategoryService
         return $extensionData;
     }
 
+    /**
+     * @param array<string, mixed> $extensionData
+     * @return array<string, mixed>
+     */
     private function prepareExtensionDataForRender(array $extensionData): array
     {
         foreach ($extensionData as &$subcategory) {
@@ -519,9 +535,12 @@ final class ExtensionExtConfCategoryService
             if (!$group instanceof \DOMElement) {
                 continue;
             }
-            $labelNode = $xpath->query('.//label[contains(@class,"form-label")]//span', $group)->item(0);
-            $checkbox = $xpath->query('.//input[@type="checkbox"]', $group)->item(0);
-            $hidden = $xpath->query('.//input[@type="hidden"]', $group)->item(0);
+            $labelNodes = $xpath->query('.//label[contains(@class,"form-label")]//span', $group);
+            $checkboxNodes = $xpath->query('.//input[@type="checkbox"]', $group);
+            $hiddenNodes = $xpath->query('.//input[@type="hidden"]', $group);
+            $labelNode = $labelNodes !== false ? $labelNodes->item(0) : null;
+            $checkbox = $checkboxNodes !== false ? $checkboxNodes->item(0) : null;
+            $hidden = $hiddenNodes !== false ? $hiddenNodes->item(0) : null;
             if (!$labelNode instanceof \DOMNode || !$checkbox instanceof \DOMElement) {
                 continue;
             }

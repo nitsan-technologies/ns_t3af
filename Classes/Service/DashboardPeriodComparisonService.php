@@ -38,6 +38,7 @@ final class DashboardPeriodComparisonService
     /**
      * @param array{fromTimestamp:int,toTimestamp:int,days:int} $period
      * @param array{totalRequests:int,totalTokens:int,totalCost:float,totalCredits?:float,successRate:float} $currentTotals
+     * @param list<int>|null $providerUids
      * @return array<string, array{value:float,changePercent:float,direction:string,sparkline:list<int>}>
      */
     public function buildTrends(

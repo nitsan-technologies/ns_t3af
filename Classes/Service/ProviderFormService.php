@@ -37,8 +37,6 @@ use NITSAN\NsT3AF\Provider\Capability;
  */
 final class ProviderFormService
 {
-    private const OPENAI_COMPATIBLE_ADAPTER_TYPE = Provider::ADAPTER_OPENAI_COMPATIBLE;
-
     /**
      * @var list<string>
      */
@@ -50,6 +48,7 @@ final class ProviderFormService
         'api_key',
         'model_id',
         'embedding_model_id',
+        'api_version',
         'capabilities',
         'temperature',
         'system_prompt',
@@ -77,7 +76,6 @@ final class ProviderFormService
         'is_default',
         'is_enabled',
         'enabled_for_dashboard',
-        'no_rerouting',
     ];
 
     public function __construct(
@@ -137,9 +135,13 @@ final class ProviderFormService
                 $endpointUrl = trim($this->adapters->get($adapterType)->getDefaultEndpoint());
             }
             if ($endpointUrl === '') {
-                $errors['endpoint_url'] = $adapterType === Provider::ADAPTER_SYMFONY_OLLAMA
-                    ? 'Ollama base URL is required (e.g. http://host.docker.internal:11434 in DDEV).'
-                    : 'API base URL is required for Custom / Other.';
+                if ($adapterType === Provider::ADAPTER_SYMFONY_OLLAMA) {
+                    $errors['endpoint_url'] = 'Ollama base URL is required (e.g. http://host.docker.internal:11434 in DDEV).';
+                } elseif ($adapterType === Provider::ADAPTER_SYMFONY_AZURE) {
+                    $errors['endpoint_url'] = 'Azure OpenAI endpoint is required (e.g. https://myresource.openai.azure.com).';
+                } else {
+                    $errors['endpoint_url'] = 'API base URL is required for Custom / Other.';
+                }
             } elseif (filter_var($endpointUrl, FILTER_VALIDATE_URL) === false) {
                 $errors['endpoint_url'] = 'Enter a valid URL for the API base.';
             } elseif ($endpointUrl !== $this->stringValue($input, 'endpoint_url')) {
@@ -219,13 +221,7 @@ final class ProviderFormService
         $embeddingModelId = trim((string) ($payload['embedding_model_id'] ?? ''));
         if ($embeddingModelId !== '') {
             $caps = $payload['capabilities'] ?? '';
-            if (is_string($caps)) {
-                $capList = Capability::fromCsv($caps);
-            } elseif (is_array($caps)) {
-                $capList = array_map('strval', array_values($caps));
-            } else {
-                $capList = [];
-            }
+            $capList = is_string($caps) ? Capability::fromCsv($caps) : [];
             if (!in_array(Capability::EMBEDDINGS, $capList, true)) {
                 $capList[] = Capability::EMBEDDINGS;
                 $payload['capabilities'] = Capability::toCsv($capList);
@@ -250,7 +246,7 @@ final class ProviderFormService
         return $input;
     }
 
-    private function coerceField(string $field, mixed $value): int|float|string|null
+    private function coerceField(string $field, mixed $value): int|float|string
     {
         return match ($field) {
             'is_default' => ((bool) $value) ? 1 : 0,

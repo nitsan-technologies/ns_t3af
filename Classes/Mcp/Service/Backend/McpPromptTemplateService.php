@@ -93,6 +93,9 @@ readonly class McpPromptTemplateService
         }
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
     public function findByUid(int $uid): ?array
     {
         foreach ($this->listTemplates() as $row) {
@@ -226,17 +229,40 @@ readonly class McpPromptTemplateService
     }
 
     /**
-     * @param array<string, mixed> $row
-     * @return array<string, mixed>
+     * @param array{
+     *   uid:int,
+     *   name:string,
+     *   description:string,
+     *   templateBody:string,
+     *   arguments:array<int, array<string, mixed>>,
+     *   hidden:bool,
+     *   deleted:bool,
+     *   crdate:int,
+     *   tstamp:int
+     * } $row
+     * @return array{
+     *   uid:int,
+     *   name:string,
+     *   description:string,
+     *   templateBody:string,
+     *   arguments:list<array<string, mixed>>,
+     *   argumentsJson:string,
+     *   isBuiltin:bool,
+     *   hidden:bool,
+     *   deleted:bool,
+     *   crdate:int,
+     *   tstamp:int
+     * }
      */
     private function enrichRow(array $row): array
     {
-        $arguments = is_array($row['arguments'] ?? null) ? $row['arguments'] : [];
+        $arguments = array_values($row['arguments']);
 
-        return array_merge($row, [
+        return [
+            ...$row,
             'arguments' => $arguments,
             'argumentsJson' => json_encode($arguments, JSON_THROW_ON_ERROR | JSON_PRETTY_PRINT),
-            'isBuiltin' => $this->defaultPromptTemplateRegistry->isBuiltinName((string) ($row['name'] ?? '')),
-        ]);
+            'isBuiltin' => $this->defaultPromptTemplateRegistry->isBuiltinName($row['name']),
+        ];
     }
 }

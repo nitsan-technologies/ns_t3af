@@ -33,7 +33,10 @@ final class T3AfMcpSkillHubEntryProvider implements McpSkillHubEntryProviderInte
         return [
             'typo3-core' => [
                 'name' => 'TYPO3 Core Assistant',
-                'triggerKeyword' => '/ai_universe',
+                'triggerKeyword' => '/ai_foundation',
+                // Pre-rebrand keyword; installs registered under it must still
+                // be detected as installed (extension already shipped).
+                'legacyTriggerKeywords' => ['/ai_universe'],
                 'description' => 'Navigate pages, inspect schema, list content, and write records via core MCP tools.',
                 'sourceUrl' => '',
                 'tags' => ['core', 'content', 'schema'],

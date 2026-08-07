@@ -40,6 +40,12 @@ final class GroupLimitsListener
 
     public function __invoke(BeforeProviderRequestEvent $event): void
     {
+        // A prior gate (AccessControlListener) may already have cancelled;
+        // skip the DB checks and never overwrite its cancellation reason.
+        if ($event->isCancelled()) {
+            return;
+        }
+
         $user = $GLOBALS['BE_USER'] ?? null;
         if (!$user instanceof BackendUserAuthentication || $user->isAdmin()) {
             return;
