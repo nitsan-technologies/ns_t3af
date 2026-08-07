@@ -97,7 +97,12 @@
                 <tbody>
                     <f:for each="{aiUsageSummary.models}" as="item">
                         <tr>
-                            <td class="aiu-table__mono">{item.model}</td>
+                            <td class="aiu-table__mono">
+                                <f:if condition="{creditsModeEnabled} == 1">
+                                    <f:then>—</f:then>
+                                    <f:else>{item.model}</f:else>
+                                </f:if>
+                            </td>
                             <td>
                                 <f:if condition="{hideTokenMetrics} == 1">
                                     <f:then>{item.credits -> f:format.number(decimals: 3)}</f:then>

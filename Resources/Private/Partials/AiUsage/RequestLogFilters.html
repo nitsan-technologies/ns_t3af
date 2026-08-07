@@ -50,7 +50,9 @@
 
     <div class="aiu-ai-usage__filter-grid">
         <f:render section="selectField" arguments="{labelKey: 'module.aiUsage.filter.engine', name: 'engine', value: aiUsageFilters.engine, options: aiUsageFilterOptions.engines, anyLabel: 'Any'}" />
-        <f:render section="selectField" arguments="{labelKey: 'module.aiUsage.filter.model', name: 'model', value: aiUsageFilters.model, options: aiUsageFilterOptions.models, anyLabel: 'Any'}" />
+        <f:if condition="{creditsModeEnabled} != 1">
+            <f:render section="selectField" arguments="{labelKey: 'module.aiUsage.filter.model', name: 'model', value: aiUsageFilters.model, options: aiUsageFilterOptions.models, anyLabel: 'Any'}" />
+        </f:if>
         <f:render section="selectField" arguments="{labelKey: 'module.aiUsage.filter.module', name: 'module', value: aiUsageFilters.module, options: aiUsageFilterOptions.modules, anyLabel: 'Any'}" />
         <f:render section="selectField" arguments="{labelKey: 'module.aiUsage.filter.scope', name: 'scope', value: aiUsageFilters.scope, options: aiUsageFilterOptions.scopes, anyLabel: 'Any'}" />
         <f:render section="selectField" arguments="{labelKey: 'module.aiUsage.filter.reqType', name: 'reqType', value: aiUsageFilters.reqType, options: aiUsageFilterOptions.reqTypes, anyLabel: 'Any'}" />

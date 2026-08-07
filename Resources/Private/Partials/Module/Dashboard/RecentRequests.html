@@ -36,7 +36,14 @@
                         <tr class="{f:if(condition: item.success, then: '', else: 'table-danger')}">
                             <td class="text-variant">{item.crdate -> f:format.date(format: 'Y-m-d H:i')}</td>
                             <td><span class="badge badge-default">{item.extension_key}</span></td>
-                            <td><code class="small">{item.model_used}</code></td>
+                            <td>
+                                <f:if condition="{activityColumnMode} == 'credits'">
+                                    <f:then>—</f:then>
+                                    <f:else>
+                                        <code class="small">{item.model_used}</code>
+                                    </f:else>
+                                </f:if>
+                            </td>
                             <f:if condition="{activityColumnMode} == 'cost'">
                                 <td class="text-end">{item.total_tokens}</td>
                             </f:if>

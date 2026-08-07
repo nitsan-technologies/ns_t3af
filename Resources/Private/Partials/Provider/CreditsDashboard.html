@@ -311,10 +311,6 @@
                                                 <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.features.col.key"
                                                              default="Key" />
                                             </th>
-                                            <th scope="col">
-                                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.features.col.model"
-                                                             default="Default model" />
-                                            </th>
                                             <th scope="col" class="text-end">
                                                 <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.features.col.used"
                                                              default="Used" />
@@ -337,12 +333,6 @@
                                                 </td>
                                                 <td class="text-variant">
                                                     <code class="small">{feature.key}</code>
-                                                </td>
-                                                <td class="text-variant">
-                                                    <f:if condition="{feature.defaultModel} != ''">
-                                                        <f:then><code class="small">{feature.defaultModel}</code></f:then>
-                                                        <f:else>—</f:else>
-                                                    </f:if>
                                                 </td>
                                                 <td class="text-end">
                                                     <div class="aiu-credits-feature-used">
@@ -478,9 +468,6 @@
                                             <tr>
                                                 <td>
                                                     <div class="fw-semibold">{tx.label}</div>
-                                                    <f:if condition="{tx.detail} != ''">
-                                                        <div class="small text-muted">{tx.detail}</div>
-                                                    </f:if>
                                                 </td>
                                                 <td class="text-end text-variant text-nowrap">
                                                     <f:format.date format="Y-m-d H:i">{tx.crdate}</f:format.date>
