@@ -32,6 +32,10 @@ use TYPO3\CMS\Core\Http\RequestFactory;
 final class T3PlanetHttpClient
 {
     private const TIMEOUT_SECONDS = 30;
+
+    /** Image gen + large b64_json can exceed upstream AI timeout (~120s); allow headroom for download. */
+    private const IMAGE_TIMEOUT_SECONDS = 180;
+
     private const STREAM_TIMEOUT_SECONDS = 120;
     private const STREAM_READ_CHUNK_BYTES = 8192;
 
@@ -44,11 +48,31 @@ final class T3PlanetHttpClient
      * @param array<string, mixed> $body
      * @return array<string, mixed>
      */
-    public function postJson(string $endpoint, array $body, #[\SensitiveParameter] ?string $bearerToken = null, ?string $ifNoneMatch = null): array
-    {
+    public function postJson(
+        string $endpoint,
+        array $body,
+        #[\SensitiveParameter]
+        ?string $bearerToken = null,
+        ?string $ifNoneMatch = null,
+        ?int $timeoutSeconds = null,
+    ): array {
         return $this->decodeResponse(
-            $this->sendRequest($endpoint, $body, $bearerToken, $ifNoneMatch),
+            $this->sendRequest($endpoint, $body, $bearerToken, $ifNoneMatch, $timeoutSeconds),
         );
+    }
+
+    /**
+     * Image.php — longer timeout than default JSON posts (upstream gen + large base64 body).
+     *
+     * @param array<string, mixed> $body
+     * @return array<string, mixed>
+     */
+    public function postImageJson(
+        array $body,
+        #[\SensitiveParameter]
+        ?string $bearerToken = null,
+    ): array {
+        return $this->postJson('Image', $body, $bearerToken, null, self::IMAGE_TIMEOUT_SECONDS);
     }
 
     public function buildUrl(string $endpoint): string
@@ -146,8 +170,14 @@ final class T3PlanetHttpClient
     /**
      * @param array<string, mixed> $body
      */
-    private function sendRequest(string $endpoint, array $body, #[\SensitiveParameter] ?string $bearerToken, ?string $ifNoneMatch): ResponseInterface
-    {
+    private function sendRequest(
+        string $endpoint,
+        array $body,
+        #[\SensitiveParameter]
+        ?string $bearerToken,
+        ?string $ifNoneMatch,
+        ?int $timeoutSeconds = null,
+    ): ResponseInterface {
         $headers = ['Content-Type' => 'application/json', 'Accept' => 'application/json'];
         if ($bearerToken !== null && $bearerToken !== '') {
             $headers['Authorization'] = 'Bearer ' . $bearerToken;
@@ -163,7 +193,7 @@ final class T3PlanetHttpClient
                 [
                     'headers' => $headers,
                     'json' => $body,
-                    'timeout' => self::TIMEOUT_SECONDS,
+                    'timeout' => $timeoutSeconds ?? self::TIMEOUT_SECONDS,
                     'http_errors' => false,
                 ],
             );

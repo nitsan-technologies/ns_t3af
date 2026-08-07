@@ -110,6 +110,30 @@ final class T3PlanetHttpClientTest extends TestCase
         }
     }
 
+    public function testPostImageJsonUsesExtendedTimeout(): void
+    {
+        $factory = $this->createMock(RequestFactory::class);
+        $factory->expects(self::once())
+            ->method('request')
+            ->with(
+                self::stringContains('API/AI/Image'),
+                'POST',
+                self::callback(static function (array $options): bool {
+                    return ($options['timeout'] ?? 0) === 180
+                        && ($options['http_errors'] ?? null) === false;
+                }),
+            )
+            ->willReturn($this->jsonResponse([
+                'status' => true,
+                'images' => [],
+            ], 200));
+
+        $client = $this->createClient($factory);
+        $payload = $client->postImageJson(['domain' => 'example.test'], 'token');
+
+        self::assertTrue($payload['status']);
+    }
+
     private function createClient(RequestFactory $factory): T3PlanetHttpClient
     {
         $repository = $this->createMock(RuntimeSettingsRepository::class);

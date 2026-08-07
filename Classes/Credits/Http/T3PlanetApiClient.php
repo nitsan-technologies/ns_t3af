@@ -316,7 +316,7 @@ class T3PlanetApiClient
             $body['extension_key'] = $extensionKey;
         }
 
-        return $this->http->postJson('Image', $body, $bearerToken);
+        return $this->http->postImageJson($body, $bearerToken);
     }
 
     /**
