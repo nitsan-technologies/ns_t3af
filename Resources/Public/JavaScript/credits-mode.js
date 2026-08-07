@@ -2,7 +2,7 @@ import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
 import Modal from '@typo3/backend/modal.js';
 import Notification from '@typo3/backend/notification.js';
 import Severity from '@typo3/backend/severity.js';
-import { refreshCharts, initCharts } from './dashboard-charts.js';
+import { initCharts } from './dashboard-charts.js';
 import { initPeriodDropdownForms } from './period-filter.js';
 import { navigateInModule, preserveRouteParams } from './module-navigation.js';
 import { mountProviderList } from './provider-drawer.js';
@@ -221,7 +221,6 @@ function applyDashboardViews(creditMode) {
     panel.setAttribute('aria-hidden', show ? 'false' : 'true');
   });
   document.dispatchEvent(new CustomEvent('aiu-dashboard-view-changed', { detail: { creditMode } }));
-  refreshCharts();
 }
 
 /** @type {ReadonlySet<string>} */
@@ -760,15 +759,19 @@ function runCreditsActivate(root) {
         return;
       }
       if (data.active) {
-        document.querySelectorAll('[data-aiu-providers-credits-root]').forEach((creditsRoot) => {
-          if (creditsRoot instanceof HTMLElement) {
-            applyUiState(creditsRoot, {
-              creditMode: true,
-              active: true,
-              creditsBearerToken: data.creditsBearerToken,
-            });
-          }
-        });
+        try {
+          document.querySelectorAll('[data-aiu-providers-credits-root]').forEach((creditsRoot) => {
+            if (creditsRoot instanceof HTMLElement) {
+              applyUiState(creditsRoot, {
+                creditMode: true,
+                active: true,
+                creditsBearerToken: data.creditsBearerToken,
+              });
+            }
+          });
+        } catch (err) {
+          console.error('[ns_t3af] Credits activate UI update failed', err);
+        }
         Notification.success(
           ll(LL.brandT3planet, 'T3Planet Credits'),
           ll(
