@@ -23,6 +23,19 @@
     flex-shrink: 0;
 }
 
+/* Allow period dropdown to escape the filter card on TYPO3 v13 (.module-body overflow). */
+.aiu-ai-logs__filter .card,
+.aiu-ai-logs__filter .card-body,
+.aiu-ai-logs__filter-actions,
+.aiu-ai-logs__filter .aiu-period {
+    overflow: visible;
+    position: relative;
+}
+
+.aiu-ai-logs__filter .aiu-period {
+    z-index: 20;
+}
+
 .aiu-ai-logs__toolbar {
     align-items: center;
     display: flex;
