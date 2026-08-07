@@ -26,7 +26,6 @@ use NITSAN\NsT3AF\Credits\Service\RuntimeSettingsService;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
-use TYPO3\CMS\Core\Core\ApplicationContext;
 
 final class RuntimeSettingsServiceApiBaseUrlTest extends TestCase
 {
@@ -38,24 +37,24 @@ final class RuntimeSettingsServiceApiBaseUrlTest extends TestCase
         't3planet_api_base_url' => '',
     ];
 
-    public function testSyncUpdatesBetaspaceToProductionOnProductionContext(): void
+    public function testSyncUpdatesEmptyDatabaseToResolvedDefault(): void
     {
-        $this->row['t3planet_api_base_url'] = CreditsConstants::STAGING_API_BASE_URL;
+        $this->row['t3planet_api_base_url'] = '';
 
-        $service = $this->createService(new ApplicationContext('Production'));
+        $service = $this->createService();
 
         self::assertSame(CreditsConstants::DEFAULT_API_BASE_URL, $service->getApiBaseUrl());
         self::assertSame(CreditsConstants::DEFAULT_API_BASE_URL, $this->row['t3planet_api_base_url']);
     }
 
-    public function testSyncUpdatesBetaspaceToStagingOnDevelopmentContext(): void
+    public function testSyncUpdatesLocalDdevBuiltInToDefaultWithoutEnvironment(): void
     {
-        $this->row['t3planet_api_base_url'] = CreditsConstants::DEFAULT_API_BASE_URL;
+        $this->row['t3planet_api_base_url'] = CreditsConstants::LOCAL_DDEV_API_BASE_URL;
 
-        $service = $this->createService(new ApplicationContext('Development'));
+        $service = $this->createService();
 
-        self::assertSame(CreditsConstants::STAGING_API_BASE_URL, $service->getApiBaseUrl());
-        self::assertSame(CreditsConstants::STAGING_API_BASE_URL, $this->row['t3planet_api_base_url']);
+        self::assertSame(CreditsConstants::DEFAULT_API_BASE_URL, $service->getApiBaseUrl());
+        self::assertSame(CreditsConstants::DEFAULT_API_BASE_URL, $this->row['t3planet_api_base_url']);
     }
 
     public function testEnvironmentOverrideSyncsDatabaseRow(): void
@@ -64,8 +63,8 @@ final class RuntimeSettingsServiceApiBaseUrlTest extends TestCase
         putenv(CreditsApiBaseUrlResolver::ENVIRONMENT_VARIABLE . '=' . CreditsConstants::LOCAL_DDEV_API_BASE_URL);
 
         try {
-            $this->row['t3planet_api_base_url'] = CreditsConstants::STAGING_API_BASE_URL;
-            $service = $this->createService(new ApplicationContext('Development'));
+            $this->row['t3planet_api_base_url'] = CreditsConstants::DEFAULT_API_BASE_URL;
+            $service = $this->createService();
 
             self::assertSame(CreditsConstants::LOCAL_DDEV_API_BASE_URL, $service->getApiBaseUrl());
             self::assertSame(CreditsConstants::LOCAL_DDEV_API_BASE_URL, $this->row['t3planet_api_base_url']);
@@ -83,35 +82,49 @@ final class RuntimeSettingsServiceApiBaseUrlTest extends TestCase
         $custom = 'https://credits-staging.customer.example';
         $this->row['t3planet_api_base_url'] = $custom;
 
-        $service = $this->createService(new ApplicationContext('Production'));
+        $service = $this->createService();
 
         self::assertSame($custom, $service->getApiBaseUrl());
         self::assertSame($custom, $this->row['t3planet_api_base_url']);
     }
 
-    public function testLegacyExtensionConfigMigratesWhenDatabaseFieldIsEmpty(): void
+    public function testLegacyBetaspaceExtensionConfigIsIgnoredAsUnknown(): void
     {
         $extensionConfiguration = $this->createMock(ExtensionConfiguration::class);
         $extensionConfiguration->method('get')
             ->willReturnCallback(static function (string $extension, ?string $path = null): mixed {
                 if ($path === 't3planetApiBaseUrl') {
-                    return CreditsConstants::STAGING_API_BASE_URL;
+                    return 'https://composer.thebetaspace.com';
                 }
 
                 return [];
             });
 
-        $service = $this->createService(
-            new ApplicationContext('Production'),
-            $extensionConfiguration,
-        );
+        $service = $this->createService($extensionConfiguration);
+
+        self::assertSame(CreditsConstants::DEFAULT_API_BASE_URL, $service->getApiBaseUrl());
+        self::assertSame(CreditsConstants::DEFAULT_API_BASE_URL, $this->row['t3planet_api_base_url']);
+    }
+
+    public function testLegacyLocalDdevExtensionConfigMigratesWhenDatabaseFieldIsEmpty(): void
+    {
+        $extensionConfiguration = $this->createMock(ExtensionConfiguration::class);
+        $extensionConfiguration->method('get')
+            ->willReturnCallback(static function (string $extension, ?string $path = null): mixed {
+                if ($path === 't3planetApiBaseUrl') {
+                    return CreditsConstants::LOCAL_DDEV_API_BASE_URL;
+                }
+
+                return [];
+            });
+
+        $service = $this->createService($extensionConfiguration);
 
         self::assertSame(CreditsConstants::DEFAULT_API_BASE_URL, $service->getApiBaseUrl());
         self::assertSame(CreditsConstants::DEFAULT_API_BASE_URL, $this->row['t3planet_api_base_url']);
     }
 
     private function createService(
-        ApplicationContext $context,
         ?ExtensionConfiguration $extensionConfiguration = null,
     ): RuntimeSettingsService {
         $repository = $this->createMock(RuntimeSettingsRepository::class);
@@ -126,7 +139,7 @@ final class RuntimeSettingsServiceApiBaseUrlTest extends TestCase
             $repository,
             new CredentialCipher(),
             $extensionConfiguration ?? new ExtensionConfiguration(),
-            new CreditsApiBaseUrlResolver($context),
+            new CreditsApiBaseUrlResolver(),
         );
     }
 }

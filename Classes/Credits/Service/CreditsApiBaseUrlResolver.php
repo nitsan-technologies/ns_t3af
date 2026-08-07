@@ -20,16 +20,13 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Credits\Service;
 
 use NITSAN\NsT3AF\Credits\CreditsConstants;
-use TYPO3\CMS\Core\Core\ApplicationContext;
-use TYPO3\CMS\Core\Core\Environment;
 
 /**
- * Resolves the T3Planet Credits API base URL for the current environment.
+ * Resolves the T3Planet Credits API base URL.
  *
  * Precedence:
- * 1. {@see self::ENVIRONMENT_VARIABLE} (e.g. DDEV web_environment)
- * 2. TYPO3 Development context → staging host (betaspace)
- * 3. {@see CreditsConstants::DEFAULT_API_BASE_URL} (production)
+ * 1. {@see self::ENVIRONMENT_VARIABLE} (staging, DDEV, or any custom host)
+ * 2. {@see CreditsConstants::DEFAULT_API_BASE_URL} (production)
  *
  * @internal
  */
@@ -37,19 +34,11 @@ final class CreditsApiBaseUrlResolver
 {
     public const ENVIRONMENT_VARIABLE = 'T3PLANET_CREDITS_API_BASE_URL';
 
-    public function __construct(
-        private readonly ?ApplicationContext $applicationContext = null,
-    ) {}
-
     public function resolve(): string
     {
         $fromEnvironment = $this->resolveFromEnvironmentVariable();
         if ($fromEnvironment !== '') {
             return $fromEnvironment;
-        }
-
-        if ($this->isDevelopmentContext()) {
-            return $this->normalize(CreditsConstants::STAGING_API_BASE_URL);
         }
 
         return $this->normalize(CreditsConstants::DEFAULT_API_BASE_URL);
@@ -63,7 +52,6 @@ final class CreditsApiBaseUrlResolver
         return [
             '',
             CreditsConstants::DEFAULT_API_BASE_URL,
-            CreditsConstants::STAGING_API_BASE_URL,
             CreditsConstants::LOCAL_DDEV_API_BASE_URL,
         ];
     }
@@ -95,16 +83,5 @@ final class CreditsApiBaseUrlResolver
         $trimmed = trim((string) $raw);
 
         return $trimmed !== '' ? $this->normalize($trimmed) : '';
-    }
-
-    private function isDevelopmentContext(): bool
-    {
-        try {
-            $context = $this->applicationContext ?? Environment::getContext();
-
-            return $context->isDevelopment();
-        } catch (\Throwable) {
-            return false;
-        }
     }
 }

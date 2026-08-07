@@ -62,7 +62,7 @@
                             <td class="aiu-table__mono">{entry.extension_key}</td>
                             <td class="aiu-table__mono">{entry.feature_key}</td>
                             <td class="aiu-table__mono">
-                                <f:if condition="{creditsModeEnabled} == 1">
+                                <f:if condition="{entry.provider_identifier} == 't3planet_credits'">
                                     <f:then>—</f:then>
                                     <f:else>{entry.model_used}</f:else>
                                 </f:if>
@@ -91,7 +91,7 @@
                                             data-provider="{entry.provider_identifier}"
                                             data-module="{entry.extension_key}"
                                             data-scope="{entry.feature_key}"
-                                            data-model="{f:if(condition: '{creditsModeEnabled} == 1', then: '—', else: entry.model_used)}"
+                                            data-model="{f:if(condition: '{entry.provider_identifier} == \'t3planet_credits\'', then: '—', else: entry.model_used)}"
                                             data-type="{entry.request_type}"
                                             data-status="{f:if(condition: '{entry.success} == 1', then: 'success', else: 'failed')}"
                                             data-tokens="{entry.total_tokens}"

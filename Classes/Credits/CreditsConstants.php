@@ -28,8 +28,6 @@ final class CreditsConstants
 {
     public const DEFAULT_API_BASE_URL = 'https://composer.t3planet.cloud';
 
-    public const STAGING_API_BASE_URL = 'https://composer.thebetaspace.com';
-
     public const LOCAL_DDEV_API_BASE_URL = 'https://composer.ddev.site';
 
     public const RUNTIME_SETTING_UID = 1;

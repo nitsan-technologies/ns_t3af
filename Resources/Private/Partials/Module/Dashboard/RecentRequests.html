@@ -37,7 +37,7 @@
                             <td class="text-variant">{item.crdate -> f:format.date(format: 'Y-m-d H:i')}</td>
                             <td><span class="badge badge-default">{item.extension_key}</span></td>
                             <td>
-                                <f:if condition="{activityColumnMode} == 'credits'">
+                                <f:if condition="{item.provider_identifier} == 't3planet_credits'">
                                     <f:then>—</f:then>
                                     <f:else>
                                         <code class="small">{item.model_used}</code>

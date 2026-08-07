@@ -22,7 +22,6 @@ namespace NITSAN\NsT3AF\Tests\Unit\Credits;
 use NITSAN\NsT3AF\Credits\CreditsConstants;
 use NITSAN\NsT3AF\Credits\Service\CreditsApiBaseUrlResolver;
 use PHPUnit\Framework\TestCase;
-use TYPO3\CMS\Core\Core\ApplicationContext;
 
 final class CreditsApiBaseUrlResolverTest extends TestCase
 {
@@ -43,42 +42,45 @@ final class CreditsApiBaseUrlResolverTest extends TestCase
         }
     }
 
-    public function testEnvironmentVariableWinsOverDevelopmentContext(): void
+    public function testEnvironmentVariableWinsOverDefault(): void
     {
         putenv(CreditsApiBaseUrlResolver::ENVIRONMENT_VARIABLE . '=' . CreditsConstants::LOCAL_DDEV_API_BASE_URL);
 
-        $resolver = new CreditsApiBaseUrlResolver(new ApplicationContext('Development'));
+        $resolver = new CreditsApiBaseUrlResolver();
 
         self::assertSame(CreditsConstants::LOCAL_DDEV_API_BASE_URL, $resolver->resolve());
     }
 
-    public function testDevelopmentContextUsesStagingWithoutEnvironmentOverride(): void
+    public function testStagingHostViaEnvironmentVariable(): void
     {
-        $resolver = new CreditsApiBaseUrlResolver(new ApplicationContext('Development'));
+        $staging = 'https://composer.thebetaspace.com';
+        putenv(CreditsApiBaseUrlResolver::ENVIRONMENT_VARIABLE . '=' . $staging);
 
-        self::assertSame(CreditsConstants::STAGING_API_BASE_URL, $resolver->resolve());
+        $resolver = new CreditsApiBaseUrlResolver();
+
+        self::assertSame($staging, $resolver->resolve());
     }
 
-    public function testProductionContextUsesProductionHost(): void
+    public function testFallsBackToProductionHostWithoutEnvironmentOverride(): void
     {
-        $resolver = new CreditsApiBaseUrlResolver(new ApplicationContext('Production'));
+        $resolver = new CreditsApiBaseUrlResolver();
 
         self::assertSame(CreditsConstants::DEFAULT_API_BASE_URL, $resolver->resolve());
     }
 
     public function testKnownBuiltInUrlsIncludeShippedDefaults(): void
     {
-        $resolver = new CreditsApiBaseUrlResolver(new ApplicationContext('Production'));
+        $resolver = new CreditsApiBaseUrlResolver();
 
-        self::assertTrue($resolver->isKnownBuiltInUrl(CreditsConstants::STAGING_API_BASE_URL));
         self::assertTrue($resolver->isKnownBuiltInUrl(CreditsConstants::DEFAULT_API_BASE_URL));
         self::assertTrue($resolver->isKnownBuiltInUrl(CreditsConstants::LOCAL_DDEV_API_BASE_URL));
+        self::assertFalse($resolver->isKnownBuiltInUrl('https://composer.thebetaspace.com'));
         self::assertFalse($resolver->isKnownBuiltInUrl('https://credits.example.org'));
     }
 
     public function testNormalizeStripsTrailingSlash(): void
     {
-        $resolver = new CreditsApiBaseUrlResolver(new ApplicationContext('Production'));
+        $resolver = new CreditsApiBaseUrlResolver();
 
         self::assertSame(
             CreditsConstants::DEFAULT_API_BASE_URL,
