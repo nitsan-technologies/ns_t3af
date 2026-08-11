@@ -336,8 +336,13 @@ final class RequestTelemetryService
             'total_tokens'         => 0,
             'latency_ms'           => max(0, $response->latencyMs),
             'cached'               => 0,
-            'estimated_cost'       => 0.0,
-            'credits_used'         => 0.0,
+            'estimated_cost'       => $this->loggedCost(
+                $provider,
+                0,
+                0,
+                $response->credits,
+            ),
+            'credits_used'         => (float) $this->creditsCharged($response->credits),
             'currency'             => $this->currency($provider->pricingCurrency),
             'raw_meta'             => json_encode($this->successMeta($provider, [
                 'operation'    => $operation,
