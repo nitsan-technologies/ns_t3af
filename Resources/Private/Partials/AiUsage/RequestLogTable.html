@@ -33,6 +33,7 @@
                         <th scope="col"><f:translate key="{ll}:module.aiUsage.table.time" default="Time" /></th>
                         <th scope="col"><f:translate key="{ll}:module.aiUsage.table.provider" default="Provider" /></th>
                         <th scope="col"><f:translate key="{ll}:module.aiUsage.table.module" default="Module" /></th>
+                        <th scope="col"><f:translate key="{ll}:module.aiUsage.table.source" default="Source" /></th>
                         <th scope="col"><f:translate key="{ll}:module.aiUsage.table.scope" default="Scope" /></th>
                         <th scope="col"><f:translate key="{ll}:module.aiUsage.table.model" default="Model" /></th>
                         <th scope="col"><f:translate key="{ll}:module.aiUsage.table.type" default="Type" /></th>
@@ -60,6 +61,7 @@
                             <td class="aiu-table__muted"><f:format.date format="Y-m-d H:i">@{entry.crdate}</f:format.date></td>
                             <td class="aiu-table__mono">{entry.provider_identifier}</td>
                             <td class="aiu-table__mono">{entry.extension_key}</td>
+                            <td class="aiu-table__mono">{entry.request_source}</td>
                             <td class="aiu-table__mono">{entry.feature_key}</td>
                             <td class="aiu-table__mono">
                                 <f:if condition="{entry.provider_identifier} == 't3planet_credits'">
@@ -90,6 +92,7 @@
                                             data-mask-tokens="{f:if(condition: '{entry.provider_identifier} == \'t3planet_credits\'', then: '1', else: '0')}"
                                             data-provider="{entry.provider_identifier}"
                                             data-module="{entry.extension_key}"
+                                            data-source="{entry.request_source}"
                                             data-scope="{entry.feature_key}"
                                             data-model="{f:if(condition: '{entry.provider_identifier} == \'t3planet_credits\'', then: '—', else: entry.model_used)}"
                                             data-type="{entry.request_type}"
