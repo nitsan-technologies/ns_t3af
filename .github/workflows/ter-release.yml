@@ -1,5 +1,4 @@
 name: TER release
-
 on:
   push:
     tags:
