@@ -80,9 +80,9 @@ final class RequestTelemetryService
             'currency' => $this->currency($provider->pricingCurrency),
             'brand_context_profile_uid' => $this->brandContextProfileUid($options, $response->appliedBrandContextProfileUid),
             ...$this->qualityResolver->resolveForLog($response, $options),
-            'raw_meta' => json_encode($this->successMeta($provider, [
+            'raw_meta' => json_encode($this->successMeta($provider, $this->telemetryMetaExtra($options, [
                 'no_cache' => $options->noCache,
-            ], $options->pageId, $response->credits), JSON_THROW_ON_ERROR),
+            ]), $options->pageId, $response->credits), JSON_THROW_ON_ERROR),
         ]);
     }
 
@@ -421,6 +421,20 @@ final class RequestTelemetryService
             'brand_context_profile_uid' => $this->brandContextProfileUid($options),
             'raw_meta' => json_encode($this->failureMeta($provider, $error), JSON_THROW_ON_ERROR),
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     * @return array<string, mixed>
+     */
+    private function telemetryMetaExtra(AiOptions $options, array $extra): array
+    {
+        $mcpMode = trim((string) ($options->extra['mcpMode'] ?? ''));
+        if ($mcpMode !== '') {
+            $extra['mcp_mode'] = $mcpMode;
+        }
+
+        return $extra;
     }
 
     /**

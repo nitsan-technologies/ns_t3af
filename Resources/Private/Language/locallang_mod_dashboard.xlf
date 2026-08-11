@@ -678,6 +678,9 @@
       <trans-unit id="module.aiUsage.table.module" resname="module.aiUsage.table.module">
         <source>Module</source>
       </trans-unit>
+      <trans-unit id="module.aiUsage.table.source" resname="module.aiUsage.table.source">
+        <source>Source</source>
+      </trans-unit>
       <trans-unit id="module.aiUsage.table.scope" resname="module.aiUsage.table.scope">
         <source>Scope</source>
       </trans-unit>
@@ -728,6 +731,9 @@
       </trans-unit>
       <trans-unit id="module.aiUsage.modal.section.meta" resname="module.aiUsage.modal.section.meta">
         <source>Metadata</source>
+      </trans-unit>
+      <trans-unit id="module.aiUsage.modal.mcpMode" resname="module.aiUsage.modal.mcpMode">
+        <source>MCP mode</source>
       </trans-unit>
       <trans-unit id="module.aiUsage.modal.field" resname="module.aiUsage.modal.field">
         <source>Field</source>

@@ -245,6 +245,8 @@ function detailLabels(scope) {
     time: labelText(scope, 'l10nDetailTime', 'Time'),
     provider: labelText(scope, 'l10nDetailProvider', 'Provider'),
     module: labelText(scope, 'l10nDetailModule', 'Module'),
+    source: labelText(scope, 'l10nDetailSource', 'Source'),
+    mcpMode: labelText(scope, 'l10nDetailMcpMode', 'MCP mode'),
     scope: labelText(scope, 'l10nDetailScope', 'Scope'),
     model: labelText(scope, 'l10nDetailModel', 'Model'),
     type: labelText(scope, 'l10nDetailType', 'Type'),
@@ -348,11 +350,14 @@ function buildUsageDetailContent(scope, button) {
   const errorClass = (button.getAttribute('data-error-class') || '').trim();
   const errorMessage = typeof meta.message === 'string' ? meta.message.trim() : '';
   const isFailed = status === 'failed' || errorClass !== '' || errorMessage !== '';
+  const mcpMode = typeof meta.mcp_mode === 'string' ? meta.mcp_mode.trim() : '';
 
   const requestRows = [
     buildDetailRow(labels.time, button.getAttribute('data-time') || '', { empty }),
     buildDetailRow(labels.provider, button.getAttribute('data-provider') || '', { mono: true, empty }),
     buildDetailRow(labels.module, button.getAttribute('data-module') || '', { mono: true, empty }),
+    buildDetailRow(labels.source, button.getAttribute('data-source') || '', { mono: true, empty }),
+    ...(mcpMode !== '' ? [buildDetailRow(labels.mcpMode, mcpMode, { mono: true, empty })] : []),
     buildDetailRow(labels.scope, button.getAttribute('data-scope') || '', { mono: true, empty }),
     buildDetailRow(labels.model, button.getAttribute('data-model') || '', { mono: true, empty }),
     buildDetailRow(labels.type, button.getAttribute('data-type') || '', { empty }),
@@ -395,7 +400,7 @@ function buildUsageDetailContent(scope, button) {
       + errorDetailRows.join('');
   }
 
-  const usedMetaKeys = new Set(['message']);
+  const usedMetaKeys = new Set(['message', 'mcp_mode']);
   let metaRows = '';
   const metaEntries = Object.entries(meta).filter(([key, value]) => {
     if (usedMetaKeys.has(key)) {
