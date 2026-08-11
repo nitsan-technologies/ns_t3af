@@ -286,7 +286,7 @@ class T3PlanetApiClient
             $body['extension_key'] = $extensionKey;
         }
 
-        return $this->http->postJson('Speak', $body, $bearerToken);
+        return $this->http->postSpeakJson($body, $bearerToken);
     }
 
     /**
