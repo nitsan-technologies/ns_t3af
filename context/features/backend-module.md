@@ -11,7 +11,7 @@
 - **Providers** tab: list + slide-in drawer CRUD.
 - **AI Context** tab: per-site Brand Context Profiles (CRUD, default, completeness, auto-research). See `context/features/ai-context.md`.
 - **MCP Server** tab: config + advanced OAuth/rate settings.
-- **AI Features** tab: per-extension ext_conf scopes via `ExtensionExtConfCategoryService`.
+- **AI Features** tab: per-extension ext_conf scopes via `ExtensionExtConfCategoryService`. Fields may redirect to site.yaml via `ExtensionSettingsFieldRedirectProviderInterface` (tag `t3af.extension_settings_field_redirect`).
 - **AI Usage** / analytics from request log.
 - **AI Logs** tab: centralized `sys_log` view for all AI extensions (filters, export, delete). See `context/features/ai-logs.md`.
 - **Credits** tab: mode toggle, dashboard, buy/history/pricing (T3Planet Credits — publicly available via `CreditsReleaseGate`).
