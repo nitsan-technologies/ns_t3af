@@ -65,7 +65,7 @@ final class DashboardPeriodResolver
      *   labelKey: string
      * }
      */
-    public function resolveFromQueryParams(array $query, string $defaultPreset = self::PRESET_7D): array
+    public function resolveFromQueryParams(array $query, string $defaultPreset = self::PRESET_30D): array
     {
         $preset = (string) ($query['period'] ?? $defaultPreset);
         if (!in_array($preset, $this->allowedPresets(), true)) {
@@ -102,16 +102,17 @@ final class DashboardPeriodResolver
 
                 return $this->buildResult($preset, $days, $fromTimestamp, $toTimestamp);
             }
-            $days = max(1, min(365, (int) ($query['days'] ?? 7)));
+            $days = max(1, min(365, (int) ($query['days'] ?? 30)));
             $fromTimestamp = $now - $days * 86400;
 
             return $this->buildResult($preset, $days, $fromTimestamp, $toTimestamp);
         }
 
         $days = match ($preset) {
+            self::PRESET_7D => 7,
             self::PRESET_14D => 14,
             self::PRESET_30D => 30,
-            default => 7,
+            default => 30,
         };
         $fromTimestamp = $now - $days * 86400;
 

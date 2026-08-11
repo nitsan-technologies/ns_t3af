@@ -2435,6 +2435,14 @@
                 <source>No AI requests were logged between %s. Try Last 30 days or a custom range that includes earlier activity.</source>
                 <target>Zwischen %s wurden keine AI-Anfragen protokolliert. Versuchen Sie es mit „Letzte 30 Tage“ oder einem benutzerdefinierten Bereich, der frühere Aktivitäten umfasst.</target>
             </trans-unit>
+            <trans-unit id="dashboard.chart.empty.title">
+                <source>No data for this period</source>
+                <target>Keine Daten für diesen Zeitraum</target>
+            </trans-unit>
+            <trans-unit id="dashboard.chart.empty.body">
+                <source>No AI requests were logged in the selected date range.</source>
+                <target>Im ausgewählten Zeitraum wurden keine AI-Anfragen protokolliert.</target>
+            </trans-unit>
             <trans-unit id="provider.default">
                 <source>default</source>
                 <target>Standard</target>
@@ -2564,8 +2572,8 @@
                 <target>Kaufen Sie mehr Credits</target>
             </trans-unit>
             <trans-unit id="dashboard.spend.title">
-                <source>7-day API spend</source>
-                <target>7 Tage API ausgeben</target>
+                <source>API spend</source>
+                <target>API-Ausgaben</target>
             </trans-unit>
             <trans-unit id="dashboard.spend.total">
                 <source>Total spend</source>

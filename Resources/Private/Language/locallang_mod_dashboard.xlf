@@ -1888,6 +1888,12 @@
       <trans-unit id="dashboard.noDataInPeriod" resname="dashboard.noDataInPeriod">
         <source>No AI requests were logged between %s. Try Last 30 days or a custom range that includes earlier activity.</source>
       </trans-unit>
+      <trans-unit id="dashboard.chart.empty.title" resname="dashboard.chart.empty.title">
+        <source>No data for this period</source>
+      </trans-unit>
+      <trans-unit id="dashboard.chart.empty.body" resname="dashboard.chart.empty.body">
+        <source>No AI requests were logged in the selected date range.</source>
+      </trans-unit>
       <trans-unit id="provider.default" resname="provider.default">
         <source>default</source>
       </trans-unit>
@@ -1985,7 +1991,7 @@
         <source>Buy more credits</source>
       </trans-unit>
       <trans-unit id="dashboard.spend.title" resname="dashboard.spend.title">
-        <source>7-day API spend</source>
+        <source>API spend</source>
       </trans-unit>
       <trans-unit id="dashboard.spend.total" resname="dashboard.spend.total">
         <source>Total spend</source>

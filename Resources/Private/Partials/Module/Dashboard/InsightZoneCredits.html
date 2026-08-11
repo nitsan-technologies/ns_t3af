@@ -38,7 +38,7 @@
                 <f:if condition="{creditsModeActive} == 1">
                     <f:then>
                         <div class="aiu-panel__chart aiu-panel__chart--medium flex-grow-1">
-                            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'credits-stacked', chartConfig: chartCreditsStackedBurn}" />
+                            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'credits-stacked', chartConfig: chartCreditsStackedBurn, hasChartData: hasRequestLogDataCredits}" />
                         </div>
                     </f:then>
                     <f:else>

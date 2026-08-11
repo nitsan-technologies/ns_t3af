@@ -43,7 +43,7 @@ final class ModuleStateService
      */
     public const DEFAULTS = [
         'lastTab' => 'dashboard',
-        'period' => '7d',
+        'period' => '30d',
         'from' => '',
         'to' => '',
     ];

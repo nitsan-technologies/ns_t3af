@@ -35,16 +35,39 @@ final class DashboardViewModelBuilderTest extends TestCase
     {
         $summary = $this->builder->buildApiSpendSummary([
             'periodDays' => 7,
+            'periodPreset' => '7d',
             'providerStats' => [
                 ['provider' => 'openai', 'cost' => 8.42],
                 ['provider' => 'anthropic', 'cost' => 2.47],
             ],
         ], 10.89);
 
+        self::assertSame('7-day API spend', $summary['title']);
         self::assertSame('$10.89', $summary['totalFormatted']);
         self::assertSame('$1.56/day avg', $summary['dailyAvgFormatted']);
         self::assertCount(2, $summary['rows']);
         self::assertSame(100.0, $summary['rows'][0]['barPercent']);
+    }
+
+    public function testBuildApiSpendSummaryUsesPeriodAwareTitleAndSubCentPrecision(): void
+    {
+        $summary = $this->builder->buildApiSpendSummary([
+            'periodDays' => 30,
+            'periodPreset' => '30d',
+            'providerStats' => [
+                ['provider' => 'openai', 'cost' => 0.004463],
+            ],
+        ], 0.004463);
+
+        self::assertSame('30-day API spend', $summary['title']);
+        self::assertSame('$0.0045', $summary['totalFormatted']);
+        self::assertSame('$0.0001/day avg', $summary['dailyAvgFormatted']);
+        self::assertSame('$0.0045', $summary['rows'][0]['costFormatted']);
+        self::assertSame("Today's API spend", $this->builder->buildApiSpendSummary([
+            'periodDays' => 1,
+            'periodPreset' => 'today',
+            'providerStats' => [],
+        ], 0.0)['title']);
     }
 
     public function testEnrichRecentRequestsAddsQualityView(): void

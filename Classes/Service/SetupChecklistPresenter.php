@@ -213,14 +213,14 @@ final class SetupChecklistPresenter
                 'title' => $this->translateModule('module.menu.aiUsage'),
                 'href' => (string) $this->uriBuilder->buildUriFromRoute(
                     't3af_dashboard.ai_usage',
-                    array_merge($routeParams, ['period' => DashboardPeriodResolver::PRESET_7D]),
+                    array_merge($routeParams, ['period' => DashboardPeriodResolver::PRESET_30D]),
                 ),
                 'active' => 0,
             ];
         }
 
         if ($this->tabAccessService->isTabVisible('aiLogs', $backendUser)) {
-            $logParams = array_merge($routeParams, ['period' => DashboardPeriodResolver::PRESET_7D]);
+            $logParams = array_merge($routeParams, ['period' => DashboardPeriodResolver::PRESET_30D]);
             if ($extensionKey !== '') {
                 $logParams['extension'] = $extensionKey;
             }
