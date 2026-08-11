@@ -36,6 +36,9 @@ final class T3PlanetHttpClient
     /** Image gen + large b64_json can exceed upstream AI timeout (~120s); allow headroom for download. */
     private const IMAGE_TIMEOUT_SECONDS = 180;
 
+    /** Long TTS + large audio_base64 JSON can exceed the default 30s client timeout mid-download. */
+    private const SPEAK_TIMEOUT_SECONDS = 180;
+
     private const STREAM_TIMEOUT_SECONDS = 120;
     private const STREAM_READ_CHUNK_BYTES = 8192;
 
@@ -73,6 +76,20 @@ final class T3PlanetHttpClient
         ?string $bearerToken = null,
     ): array {
         return $this->postJson('Image', $body, $bearerToken, null, self::IMAGE_TIMEOUT_SECONDS);
+    }
+
+    /**
+     * Speak.php — longer timeout than default JSON posts (upstream TTS + large audio_base64 body).
+     *
+     * @param array<string, mixed> $body
+     * @return array<string, mixed>
+     */
+    public function postSpeakJson(
+        array $body,
+        #[\SensitiveParameter]
+        ?string $bearerToken = null,
+    ): array {
+        return $this->postJson('Speak', $body, $bearerToken, null, self::SPEAK_TIMEOUT_SECONDS);
     }
 
     public function buildUrl(string $endpoint): string
