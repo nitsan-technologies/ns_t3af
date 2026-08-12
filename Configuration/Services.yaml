@@ -47,6 +47,8 @@ services:
       tags: ['t3af.wizard_suite_badge']
     NITSAN\NsT3AF\Contract\ExtensionSettingsStorageProbeProviderInterface:
       tags: ['t3af.extension_settings_storage_probe']
+    NITSAN\NsT3AF\Contract\ExtensionSettingsFieldRedirectProviderInterface:
+      tags: ['t3af.extension_settings_field_redirect']
     NITSAN\NsT3AF\Contract\AiLogChannelProviderInterface:
       tags: ['t3af.ai_log_channel']
     NITSAN\NsT3AF\Contract\FeatureHealthAreaProviderInterface:
@@ -163,6 +165,10 @@ services:
   NITSAN\NsT3AF\Registry\ExtensionSettingsScopeRegistry:
     arguments:
       $providers: !tagged_iterator t3af.extension_settings_scope
+
+  NITSAN\NsT3AF\Registry\ExtensionSettingsFieldRedirectRegistry:
+    arguments:
+      $providers: !tagged_iterator t3af.extension_settings_field_redirect
 
   NITSAN\NsT3AF\Settings\ExtensionSettingsSecretRegistry:
     arguments:

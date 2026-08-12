@@ -225,7 +225,7 @@
     /* Allow period dropdown to escape the card on TYPO3 v12–v14. */
     overflow: visible;
     position: relative;
-    z-index: 5;
+    z-index: 4;
 }
 
 .aiu-dashboard-mode-banner > .card-body,

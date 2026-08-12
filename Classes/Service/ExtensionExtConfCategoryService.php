@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Service;
 
 use NITSAN\NsT3AF\Contract\FeatureProviderFormOptionsInterface;
+use NITSAN\NsT3AF\Registry\ExtensionSettingsFieldRedirectRegistry;
 use NITSAN\NsT3AF\Registry\ExtensionSettingsScopeRegistry;
 use NITSAN\NsT3AF\Settings\ExtensionSettingsSchemaService;
 use NITSAN\NsT3AF\Settings\ExtensionSettingsSecretRegistry;
@@ -55,6 +56,7 @@ final class ExtensionExtConfCategoryService
         private readonly ExtensionSettingsSecretRegistry $secretRegistry,
         private readonly ExtensionSettingsSecretService $secretService,
         private readonly ExtensionSettingsScopeRegistry $scopeRegistry,
+        private readonly ExtensionSettingsFieldRedirectRegistry $fieldRedirectRegistry,
         iterable $featureProviderFormOptionsProviders = [],
     ) {
         foreach ($featureProviderFormOptionsProviders as $provider) {
@@ -282,10 +284,15 @@ final class ExtensionExtConfCategoryService
         }
 
         $extensionData = $this->prepareExtensionDataForRender(
-            $this->applyScopeMutations(
+            $this->applyFieldRedirectOverrides(
                 $extensionKey,
                 $category,
-                $this->getExtensionDataForScope($extensionKey, $category, $storagePid),
+                $this->applyScopeMutations(
+                    $extensionKey,
+                    $category,
+                    $this->getExtensionDataForScope($extensionKey, $category, $storagePid),
+                ),
+                $storagePid,
             ),
         );
         if ($extensionData === []) {
@@ -315,6 +322,7 @@ final class ExtensionExtConfCategoryService
      */
     public function saveSettings(string $extensionKey, array $submitted): array
     {
+        $scope = (string) ($submitted['scope'] ?? '');
         $storagePid = $this->resolveStoragePidFromSubmitted($submitted);
         unset($submitted['scope'], $submitted['extension'], $submitted['id'], $submitted['pageId']);
         $normalized = [];
@@ -335,6 +343,10 @@ final class ExtensionExtConfCategoryService
                 'message' => implode(' ', $validationErrors),
                 'severity' => 2,
             ];
+        }
+
+        if ($scope !== '' && $storagePid > 0) {
+            $normalized = $this->persistRedirectedFieldValues($extensionKey, $scope, $normalized, $storagePid);
         }
 
         $storagePidForSave = $storagePid > 0 ? $storagePid : null;
@@ -480,6 +492,68 @@ final class ExtensionExtConfCategoryService
         unset($subcategory);
 
         return $extensionData;
+    }
+
+    /**
+     * @param array<string, array<string, mixed>> $extensionData
+     * @return array<string, array<string, mixed>>
+     */
+    private function applyFieldRedirectOverrides(
+        string $extensionKey,
+        string $scope,
+        array $extensionData,
+        ?int $storagePid,
+    ): array {
+        if ($storagePid === null || $storagePid <= 0) {
+            return $extensionData;
+        }
+
+        foreach ($extensionData as &$subcategory) {
+            if (!is_array($subcategory['items'] ?? null)) {
+                continue;
+            }
+            foreach ($subcategory['items'] as &$item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $name = (string) ($item['name'] ?? '');
+                if ($name === '') {
+                    continue;
+                }
+                $handler = $this->fieldRedirectRegistry->findRedirectHandler($extensionKey, $scope, $name);
+                if ($handler === null) {
+                    continue;
+                }
+                $item['value'] = $handler->resolveFieldValue($scope, $name, $storagePid);
+            }
+            unset($item);
+        }
+        unset($subcategory);
+
+        return $extensionData;
+    }
+
+    /**
+     * @param array<string, string> $normalized
+     * @return array<string, string>
+     */
+    private function persistRedirectedFieldValues(
+        string $extensionKey,
+        string $scope,
+        array $normalized,
+        int $storagePid,
+    ): array {
+        foreach (array_keys($normalized) as $fieldName) {
+            $handler = $this->fieldRedirectRegistry->findRedirectHandler($extensionKey, $scope, $fieldName);
+            if ($handler === null) {
+                continue;
+            }
+            if ($handler->persistFieldValue($scope, $fieldName, $normalized[$fieldName], $storagePid)) {
+                unset($normalized[$fieldName]);
+            }
+        }
+
+        return $normalized;
     }
 
     /**

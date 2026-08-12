@@ -44,7 +44,7 @@ final class AiUsageAnalyticsService
     {
         $resolved = $this->dashboardPeriodResolver->resolveFromQueryParams(
             $queryParams,
-            DashboardPeriodResolver::PRESET_7D,
+            DashboardPeriodResolver::PRESET_30D,
         );
 
         return $this->mapResolvedPeriod($resolved);

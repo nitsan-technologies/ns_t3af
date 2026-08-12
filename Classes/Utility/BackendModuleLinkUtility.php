@@ -67,7 +67,7 @@ final class BackendModuleLinkUtility
         }
 
         $parameters = [
-            'period' => DashboardPeriodResolver::PRESET_7D,
+            'period' => DashboardPeriodResolver::PRESET_30D,
         ];
         if ($pageId > 0) {
             $parameters['id'] = $pageId;
@@ -108,7 +108,7 @@ final class BackendModuleLinkUtility
         }
 
         $parameters = [
-            'period' => DashboardPeriodResolver::PRESET_7D,
+            'period' => DashboardPeriodResolver::PRESET_30D,
         ];
         if ($pageId > 0) {
             $parameters['id'] = $pageId;

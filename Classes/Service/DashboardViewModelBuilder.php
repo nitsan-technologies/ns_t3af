@@ -35,13 +35,16 @@ final class DashboardViewModelBuilder
      *   totalFormatted:string,
      *   dailyAvg:float,
      *   dailyAvgFormatted:string,
+     *   periodDays:int,
      *   periodLabel:string,
+     *   title:string,
      *   rows:list<array{label:string,cost:float,costFormatted:string,barPercent:float}>
      * }
      */
     public function buildApiSpendSummary(array $analytics, float $totalSpend): array
     {
         $periodDays = max(1, (int) ($analytics['periodDays'] ?? 7));
+        $periodPreset = (string) ($analytics['periodPreset'] ?? '');
         $dailyAvg = $totalSpend / $periodDays;
         $rows = [];
         $distribution = is_array($analytics['providerStats'] ?? null) ? $analytics['providerStats'] : [];
@@ -61,19 +64,39 @@ final class DashboardViewModelBuilder
             $rows[] = [
                 'label' => $label,
                 'cost' => $cost,
-                'costFormatted' => '$' . number_format($cost, 2),
+                'costFormatted' => $this->formatUsd($cost),
                 'barPercent' => round(100 * $cost / $maxCost, 1),
             ];
         }
 
         return [
             'total' => $totalSpend,
-            'totalFormatted' => '$' . number_format($totalSpend, 2),
+            'totalFormatted' => $this->formatUsd($totalSpend),
             'dailyAvg' => $dailyAvg,
-            'dailyAvgFormatted' => '$' . number_format($dailyAvg, 2) . '/day avg',
+            'dailyAvgFormatted' => $this->formatUsd($dailyAvg) . '/day avg',
+            'periodDays' => $periodDays,
             'periodLabel' => (string) $periodDays . ' days',
+            'title' => $this->formatApiSpendTitle($periodDays, $periodPreset),
             'rows' => $rows,
         ];
+    }
+
+    private function formatApiSpendTitle(int $periodDays, string $periodPreset): string
+    {
+        return match ($periodPreset) {
+            DashboardPeriodResolver::PRESET_TODAY => "Today's API spend",
+            DashboardPeriodResolver::PRESET_YESTERDAY => "Yesterday's API spend",
+            default => sprintf('%d-day API spend', $periodDays),
+        };
+    }
+
+    private function formatUsd(float $amount): string
+    {
+        if ($amount > 0.0 && $amount < 0.01) {
+            return '$' . rtrim(rtrim(number_format($amount, 4, '.', ''), '0'), '.');
+        }
+
+        return '$' . number_format($amount, 2);
     }
 
     /**

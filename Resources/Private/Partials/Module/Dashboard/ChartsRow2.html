@@ -15,10 +15,10 @@
                 <div class="aiu-panel__chart aiu-panel__chart--medium flex-grow-1">
                     <f:if condition="{creditsModeEnabled} == 1">
                         <f:then>
-                            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'req-sf-credits', chartConfig: chartRequestsSuccessFail}" />
+                            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'req-sf-credits', chartConfig: chartRequestsSuccessFail, hasChartData: hasRequestLogDataCredits}" />
                         </f:then>
                         <f:else>
-                            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'req-sf-own', chartConfig: chartRequests}" />
+                            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'req-sf-own', chartConfig: chartRequests, hasChartData: hasRequestLogDataOwnKeys}" />
                         </f:else>
                     </f:if>
                 </div>
@@ -37,10 +37,10 @@
                 <div class="aiu-panel__chart aiu-panel__chart--donut flex-grow-1">
                     <f:if condition="{creditsModeEnabled} == 1">
                         <f:then>
-                            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'success-credits', chartConfig: chartSuccessRateCredits}" />
+                            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'success-credits', chartConfig: chartSuccessRateCredits, hasChartData: hasRequestLogDataCredits}" />
                         </f:then>
                         <f:else>
-                            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'success-own', chartConfig: chartSuccessRateOwnKeys}" />
+                            <f:render partial="Module/DashboardChart" arguments="{chartKey: 'success-own', chartConfig: chartSuccessRateOwnKeys, hasChartData: hasRequestLogDataOwnKeys}" />
                         </f:else>
                     </f:if>
                 </div>

@@ -286,7 +286,7 @@ class T3PlanetApiClient
             $body['extension_key'] = $extensionKey;
         }
 
-        return $this->http->postJson('Speak', $body, $bearerToken);
+        return $this->http->postSpeakJson($body, $bearerToken);
     }
 
     /**
@@ -324,7 +324,7 @@ class T3PlanetApiClient
      *
      * @param array<string, mixed>      $body
      * @param array<string, mixed>      $metaJson
-     @return array<string, mixed>
+     * @return array<string, mixed>
      */
     private function withCallerAttribution(array $body, array $metaJson, ?AiOptions $options = null): array
     {

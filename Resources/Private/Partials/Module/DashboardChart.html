@@ -1,10 +1,28 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       data-namespace-typo3-fluid="true">
-<canvas class="aiu-chart t3ai-chart"
-        data-aiu-chart="{chartKey}"
-        data-aiu-chart-config-id="aiu-chart-config-{chartKey}"
-        role="img"></canvas>
-<script type="application/json"
-        id="aiu-chart-config-{chartKey}"
-        class="aiu-chart-config">{chartConfig -> f:format.raw()}</script>
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<f:if condition="{hasChartData} == 0">
+    <f:then>
+        <div class="aiu-credits-empty-state aiu-chart-empty-state flex-grow-1" role="status">
+            <core:icon identifier="actions-info" size="default" alternativeMarkupIdentifier="inline" />
+            <p class="aiu-credits-empty-state__title mb-1">
+                <f:translate key="{ll}:dashboard.chart.empty.title" default="No data for this period" />
+            </p>
+            <p class="aiu-credits-empty-state__text text-variant mb-0">
+                <f:translate key="{ll}:dashboard.chart.empty.body"
+                             default="No AI requests were logged in the selected date range." />
+            </p>
+        </div>
+    </f:then>
+    <f:else>
+        <canvas class="aiu-chart t3ai-chart"
+                data-aiu-chart="{chartKey}"
+                data-aiu-chart-config-id="aiu-chart-config-{chartKey}"
+                role="img"></canvas>
+        <script type="application/json"
+                id="aiu-chart-config-{chartKey}"
+                class="aiu-chart-config">{chartConfig -> f:format.raw()}</script>
+    </f:else>
+</f:if>
 </html>

@@ -72,6 +72,18 @@ final class DashboardPeriodResolverTest extends TestCase
         $resolver = new DashboardPeriodResolver();
         $period = $resolver->resolveFromQueryParams(['period' => 'invalid']);
 
-        self::assertSame('7d', $period['preset']);
+        self::assertSame('30d', $period['preset']);
+        self::assertSame(30, $period['days']);
+    }
+
+    public function testResolveFromQueryParamsDefaultsToThirtyDays(): void
+    {
+        $resolver = new DashboardPeriodResolver();
+        $period = $resolver->resolveFromQueryParams([]);
+
+        self::assertSame('30d', $period['preset']);
+        self::assertSame(30, $period['days']);
+        self::assertSame(strtotime('2026-06-28 12:00:00'), $period['fromTimestamp']);
+        self::assertSame(strtotime('2026-07-28 12:00:00'), $period['toTimestamp']);
     }
 }

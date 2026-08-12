@@ -299,7 +299,9 @@ final class ModuleController extends AbstractAiUniverseModuleController
             : $this->translateModule($period['labelKey']);
         $creditsModeEnabled = $this->creditModeResolver->isEnabled();
         $activeAnalytics = $creditsModeEnabled ? $analyticsCredits : $analyticsOwnKeys;
-        $hasRequestLogData = ((int) ($activeAnalytics['totals']['totalRequests'] ?? 0)) > 0;
+        $hasRequestLogDataCredits = ((int) ($analyticsCredits['totals']['totalRequests'] ?? 0)) > 0;
+        $hasRequestLogDataOwnKeys = ((int) ($analyticsOwnKeys['totals']['totalRequests'] ?? 0)) > 0;
+        $hasRequestLogData = $creditsModeEnabled ? $hasRequestLogDataCredits : $hasRequestLogDataOwnKeys;
 
         $aiUsageUri = $this->buildAiUsageUriFromDashboardPeriod($period);
         $mcpServerUri = (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.mcp_server', $routeParams);
@@ -431,7 +433,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 'flash' => $this->flashFromQuery($request) ?? '',
                 'creditProjection' => $creditProjection,
                 'ownKeysSpendTotal' => $ownKeysSpendTotal,
-                'ownKeysSpendTotalFormatted' => '$' . number_format($ownKeysSpendTotal, 2),
+                'ownKeysSpendTotalFormatted' => (string) ($apiSpendSummary['totalFormatted'] ?? '$0.00'),
                 'creditsPricingUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.credits_pricing'),
                 'providersUri' => $providersUri,
                 'aiUsageUri' => $aiUsageUri,
@@ -442,7 +444,9 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 'dashboardPeriodRangeLabel' => $this->formatPeriodRangeLabel($period),
                 'dashboardPeriodFromDate' => date('Y-m-d', (int) $period['fromTimestamp']),
                 'dashboardPeriodToDate' => date('Y-m-d', (int) $period['toTimestamp']),
-                'hasRequestLogData' => $hasRequestLogData,
+                'hasRequestLogData' => self::fluidFlag($hasRequestLogData),
+                'hasRequestLogDataCredits' => self::fluidFlag($hasRequestLogDataCredits),
+                'hasRequestLogDataOwnKeys' => self::fluidFlag($hasRequestLogDataOwnKeys),
                 'activityColumnMode' => $creditsModeEnabled ? 'credits' : 'cost',
                 'creditsFooterCost' => number_format((float) ($analyticsCredits['totals']['totalCredits'] ?? 0.0), 1) . ' cr',
                 'creditsFooterExtra' => (string) (int) ($creditsDashboard['stats']['estimatedDaysLeft'] ?? 0),
@@ -456,7 +460,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 'moduleHealthSummary' => $moduleHealthSummary,
                 'extensionHealth' => $extensionHealth,
             ],
-            $this->buildDashboardChartAssignments($analyticsCredits, $analyticsOwnKeys),
+            $this->buildDashboardChartAssignments($analyticsCredits, $analyticsOwnKeys, $period),
             $checklistAssigns,
             [
                 'mcpOverview' => $mcpOverview,
@@ -937,7 +941,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $query = array_merge($params, is_array($body) ? $body : []);
         $periodResolved = $this->dashboardPeriodResolver->resolveFromQueryParams(
             $query,
-            DashboardPeriodResolver::PRESET_7D,
+            DashboardPeriodResolver::PRESET_30D,
         );
         $period = $this->aiUsageAnalyticsService->mapResolvedPeriod($periodResolved);
         $period['label'] = $this->formatPeriodLabel($periodResolved);
@@ -1073,7 +1077,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
         );
         $periodResolved = $this->dashboardPeriodResolver->resolveFromQueryParams(
             $query,
-            DashboardPeriodResolver::PRESET_7D,
+            DashboardPeriodResolver::PRESET_30D,
         );
         if (isset($query['period'])) {
             $this->persistModulePeriodFromResolved($request, $periodResolved);
@@ -1133,7 +1137,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $query = $request->getQueryParams();
         $periodResolved = $this->dashboardPeriodResolver->resolveFromQueryParams(
             $query,
-            DashboardPeriodResolver::PRESET_7D,
+            DashboardPeriodResolver::PRESET_30D,
         );
         $filters = $this->normalizeAiLogsFilters($query, $periodResolved);
         $rows = $this->aiSysLogRepository->findForExport($filters);
@@ -1707,7 +1711,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             ];
         }
 
-        return ['period' => (string) ($period['key'] ?? DashboardPeriodResolver::PRESET_7D)];
+        return ['period' => (string) ($period['key'] ?? DashboardPeriodResolver::PRESET_30D)];
     }
 
     /**
@@ -1725,7 +1729,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
      */
     private function buildAiUsageUriFromDashboardPeriod(array $period): string
     {
-        $params = ['period' => (string) ($period['preset'] ?? DashboardPeriodResolver::PRESET_7D)];
+        $params = ['period' => (string) ($period['preset'] ?? DashboardPeriodResolver::PRESET_30D)];
         if ($params['period'] === DashboardPeriodResolver::PRESET_CUSTOM) {
             $params['from'] = date('Y-m-d', (int) $period['fromTimestamp']);
             $params['to'] = date('Y-m-d', (int) $period['toTimestamp']);
@@ -1737,21 +1741,31 @@ final class ModuleController extends AbstractAiUniverseModuleController
     /**
      * @param array<string, mixed> $analyticsCredits
      * @param array<string, mixed> $analyticsOwnKeys
+     * @param array{fromTimestamp:int,toTimestamp:int} $period
+     *
      * @return array<string, string>
      */
-    private function buildDashboardChartAssignments(array $analyticsCredits, array $analyticsOwnKeys): array
+    private function buildDashboardChartAssignments(array $analyticsCredits, array $analyticsOwnKeys, array $period): array
     {
         $successLabel = $this->translateModule('dashboard.chart.success');
         $failedLabel = $this->translateModule('dashboard.chart.failed');
+        $from = (int) ($period['fromTimestamp'] ?? 0);
+        $to = (int) ($period['toTimestamp'] ?? 0);
+        $fromTs = $from > 0 ? $from : null;
+        $toTs = $to > 0 ? $to : null;
 
         return [
             'chartCreditsStackedBurn' => $this->dashboardChartConfigurator->creditsStackedBurnChart(
                 $analyticsCredits['creditsByDayAndExtension'] ?? [],
                 $this->translateModule('dashboard.chart.creditsBurn'),
+                $fromTs,
+                $toTs,
             ),
             'chartCreditsBurn' => $this->dashboardChartConfigurator->creditsBurnChart(
                 $analyticsCredits['creditsOverTime'] ?? [],
                 $this->translateModule('dashboard.chart.creditsBurn'),
+                $fromTs,
+                $toTs,
             ),
             'chartExtensionSpend' => $this->dashboardChartConfigurator->extensionDonutChart(
                 $analyticsCredits['extensionUsage'] ?? [],
@@ -1765,6 +1779,8 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 $analyticsCredits['requestsSuccessFailOverTime'] ?? [],
                 $successLabel,
                 $failedLabel,
+                $fromTs,
+                $toTs,
             ),
             'chartSuccessRateCredits' => $this->dashboardChartConfigurator->successRateDonutChart(
                 $analyticsCredits['successFail'] ?? [],
@@ -1779,6 +1795,8 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 $analyticsOwnKeys['requestsSuccessFailOverTime'] ?? [],
                 $successLabel,
                 $failedLabel,
+                $fromTs,
+                $toTs,
             ),
             'chartSuccessRateOwnKeys' => $this->dashboardChartConfigurator->successRateDonutChart(
                 $analyticsOwnKeys['successFail'] ?? [],
@@ -1806,6 +1824,8 @@ final class ModuleController extends AbstractAiUniverseModuleController
             ),
             'chartCostTrend' => $this->dashboardChartConfigurator->costTrendMultiLineChart(
                 $analyticsOwnKeys['costByDayAndProvider'] ?? [],
+                $fromTs,
+                $toTs,
             ),
         ];
     }
@@ -1842,7 +1862,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             $sum += (float) ($row['cost'] ?? 0.0);
         }
 
-        return round($sum, 2);
+        return round($sum, 6);
     }
 
     /**
@@ -2012,7 +2032,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             $context['from'] = (string) ($filters['from'] ?? '');
             $context['to'] = (string) ($filters['to'] ?? '');
         } else {
-            $context['period'] = (string) ($filters['period'] ?? DashboardPeriodResolver::PRESET_7D);
+            $context['period'] = (string) ($filters['period'] ?? DashboardPeriodResolver::PRESET_30D);
         }
 
         return $context;
@@ -2132,7 +2152,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
 
         $periodResolved = $this->dashboardPeriodResolver->resolveFromQueryParams(
             $source,
-            DashboardPeriodResolver::PRESET_7D,
+            DashboardPeriodResolver::PRESET_30D,
         );
         $filters = $this->normalizeAiLogsFilters($source, $periodResolved);
 

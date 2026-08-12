@@ -37,13 +37,20 @@ final class DashboardChartConfigurator
     /**
      * @param list<array{day:string,requests:int,success:int,cost:float}> $requestsOverTime
      */
-    public function requestsLineChart(array $requestsOverTime, string $label): string
+    public function requestsLineChart(array $requestsOverTime, string $label, ?int $fromTimestamp = null, ?int $toTimestamp = null): string
     {
-        $labels = [];
-        $values = [];
+        $byDay = [];
         foreach ($requestsOverTime as $row) {
-            $labels[] = (string) ($row['day'] ?? '');
-            $values[] = (int) ($row['requests'] ?? 0);
+            $day = (string) ($row['day'] ?? '');
+            if ($day === '') {
+                continue;
+            }
+            $byDay[$day] = (int) ($row['requests'] ?? 0);
+        }
+        $labels = $this->dayLabels($byDay, $fromTimestamp, $toTimestamp);
+        $values = [];
+        foreach ($labels as $day) {
+            $values[] = $byDay[$day] ?? 0;
         }
 
         return $this->encode([
@@ -65,13 +72,20 @@ final class DashboardChartConfigurator
     /**
      * @param list<array{day:string,credits:float}> $creditsOverTime
      */
-    public function creditsBurnChart(array $creditsOverTime, string $label): string
+    public function creditsBurnChart(array $creditsOverTime, string $label, ?int $fromTimestamp = null, ?int $toTimestamp = null): string
     {
-        $labels = [];
-        $values = [];
+        $byDay = [];
         foreach ($creditsOverTime as $row) {
-            $labels[] = (string) ($row['day'] ?? '');
-            $values[] = round((float) ($row['credits'] ?? 0.0), 2);
+            $day = (string) ($row['day'] ?? '');
+            if ($day === '') {
+                continue;
+            }
+            $byDay[$day] = round((float) ($row['credits'] ?? 0.0), 2);
+        }
+        $labels = $this->dayLabels($byDay, $fromTimestamp, $toTimestamp);
+        $values = [];
+        foreach ($labels as $day) {
+            $values[] = $byDay[$day] ?? 0.0;
         }
 
         return $this->encode([
@@ -137,15 +151,30 @@ final class DashboardChartConfigurator
     /**
      * @param list<array{day:string,success:int,failed:int}> $rows
      */
-    public function requestsSuccessFailChart(array $rows, string $successLabel, string $failedLabel): string
-    {
-        $labels = [];
+    public function requestsSuccessFailChart(
+        array $rows,
+        string $successLabel,
+        string $failedLabel,
+        ?int $fromTimestamp = null,
+        ?int $toTimestamp = null,
+    ): string {
+        $byDay = [];
+        foreach ($rows as $row) {
+            $day = (string) ($row['day'] ?? '');
+            if ($day === '') {
+                continue;
+            }
+            $byDay[$day] = [
+                'success' => (int) ($row['success'] ?? 0),
+                'failed' => (int) ($row['failed'] ?? 0),
+            ];
+        }
+        $labels = $this->dayLabels($byDay, $fromTimestamp, $toTimestamp);
         $success = [];
         $failed = [];
-        foreach ($rows as $row) {
-            $labels[] = (string) ($row['day'] ?? '');
-            $success[] = (int) ($row['success'] ?? 0);
-            $failed[] = (int) ($row['failed'] ?? 0);
+        foreach ($labels as $day) {
+            $success[] = $byDay[$day]['success'] ?? 0;
+            $failed[] = $byDay[$day]['failed'] ?? 0;
         }
 
         return $this->encode([
@@ -200,21 +229,27 @@ final class DashboardChartConfigurator
     /**
      * @param list<array{day:string,extensionKey:string,credits:float}> $rows
      */
-    public function creditsStackedBurnChart(array $rows, string $label): string
-    {
+    public function creditsStackedBurnChart(
+        array $rows,
+        string $label,
+        ?int $fromTimestamp = null,
+        ?int $toTimestamp = null,
+    ): string {
         $byDay = [];
         $extensions = [];
         foreach ($rows as $row) {
             $day = (string) ($row['day'] ?? '');
             $ext = (string) ($row['extensionKey'] ?? 'other');
+            if ($day === '') {
+                continue;
+            }
             if ($ext === '') {
                 $ext = 'other';
             }
             $extensions[$ext] = true;
             $byDay[$day][$ext] = ($byDay[$day][$ext] ?? 0.0) + (float) ($row['credits'] ?? 0.0);
         }
-        $labels = array_keys($byDay);
-        sort($labels);
+        $labels = $this->dayLabels($byDay, $fromTimestamp, $toTimestamp);
         $extKeys = array_keys($extensions);
         sort($extKeys);
         $palette = ['#16a34a', '#d97706', '#737373', '#7c3aed', '#0891b2', '#db2777'];
@@ -242,21 +277,20 @@ final class DashboardChartConfigurator
     /**
      * @param list<array{day:string,provider:string,cost:float}> $rows
      */
-    public function costTrendMultiLineChart(array $rows): string
+    public function costTrendMultiLineChart(array $rows, ?int $fromTimestamp = null, ?int $toTimestamp = null): string
     {
         $byDay = [];
         $providers = [];
         foreach ($rows as $row) {
             $day = (string) ($row['day'] ?? '');
             $provider = (string) ($row['provider'] ?? '');
-            if ($provider === '') {
+            if ($day === '' || $provider === '') {
                 continue;
             }
             $providers[$provider] = true;
             $byDay[$day][$provider] = ($byDay[$day][$provider] ?? 0.0) + (float) ($row['cost'] ?? 0.0);
         }
-        $labels = array_keys($byDay);
-        sort($labels);
+        $labels = $this->dayLabels($byDay, $fromTimestamp, $toTimestamp);
         $providerKeys = array_keys($providers);
         sort($providerKeys);
         $palette = self::CHART_PALETTE_LINE;
@@ -321,6 +355,46 @@ final class DashboardChartConfigurator
                 ],
             ],
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $byDay
+     * @return list<string>
+     */
+    private function dayLabels(array $byDay, ?int $fromTimestamp, ?int $toTimestamp): array
+    {
+        if ($fromTimestamp !== null && $toTimestamp !== null) {
+            return $this->enumerateDays($fromTimestamp, $toTimestamp);
+        }
+
+        $labels = array_keys($byDay);
+        sort($labels);
+
+        return array_map(static fn(string|int $day): string => (string) $day, $labels);
+    }
+
+    /**
+     * Inclusive calendar days from fromTimestamp through toTimestamp (Y-m-d).
+     *
+     * @return list<string>
+     */
+    private function enumerateDays(int $fromTimestamp, int $toTimestamp): array
+    {
+        $days = [];
+        $cursor = (int) strtotime(date('Y-m-d', $fromTimestamp) . ' 00:00:00');
+        $end = (int) strtotime(date('Y-m-d', $toTimestamp) . ' 00:00:00');
+        if ($cursor > $end) {
+            return $days;
+        }
+        // Cap at 366 days so a bad custom range cannot explode Chart.js payloads.
+        $guard = 0;
+        while ($cursor <= $end && $guard < 366) {
+            $days[] = date('Y-m-d', $cursor);
+            $cursor += 86400;
+            $guard++;
+        }
+
+        return $days;
     }
 
     /**
