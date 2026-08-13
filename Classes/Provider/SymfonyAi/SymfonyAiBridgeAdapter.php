@@ -920,10 +920,47 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
             return $platform;
         }
 
+        $endpoint = $this->resolveEndpoint($provider);
+        if ($endpoint !== null && $this->factoryAcceptsBaseUrl($factoryClass, $method)) {
+            /** @var object $platform */
+            $platform = $factoryClass::{$method}($apiKey, baseUrl: $this->normalizeFactoryBaseUrl($endpoint));
+
+            return $platform;
+        }
+
         /** @var object $platform */
         $platform = $factoryClass::{$method}($apiKey);
 
         return $platform;
+    }
+
+    /**
+     * Symfony AI 0.11+ factories accept a host-style {@see baseUrl} without the
+     * `/v1` suffix that T3AF stores on provider endpoints.
+     */
+    private function normalizeFactoryBaseUrl(string $endpoint): string
+    {
+        $endpoint = rtrim(trim($endpoint), '/');
+        if (str_ends_with($endpoint, '/v1')) {
+            return substr($endpoint, 0, -3);
+        }
+
+        return $endpoint;
+    }
+
+    private function factoryAcceptsBaseUrl(string $factoryClass, string $method): bool
+    {
+        if (!method_exists($factoryClass, $method)) {
+            return false;
+        }
+
+        foreach ((new \ReflectionMethod($factoryClass, $method))->getParameters() as $parameter) {
+            if ($parameter->getName() === 'baseUrl') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function resolveEndpoint(Provider $provider): ?string

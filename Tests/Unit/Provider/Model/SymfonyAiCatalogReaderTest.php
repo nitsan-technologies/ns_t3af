@@ -86,5 +86,25 @@ final class SymfonyAiCatalogReaderTest extends TestCase
         self::assertSame([Capability::EMBEDDINGS], $byId['text-embedding-3-small']->capabilities);
         self::assertArrayHasKey('gpt-4o', $byId);
         self::assertNotContains(Capability::EMBEDDINGS, $byId['gpt-4o']->capabilities);
+        self::assertContains(Capability::CHAT, $byId['gpt-4o']->capabilities);
+    }
+
+    public function testMistralCatalogMapsSymfonyCapabilityEnum(): void
+    {
+        if (!class_exists(\Symfony\AI\Platform\Bridge\Mistral\ModelCatalog::class)) {
+            self::markTestSkipped('symfony/ai-mistral-platform is not installed.');
+        }
+
+        $reader = new SymfonyAiCatalogReader();
+        $models = $reader->read('mistral');
+        $byId = [];
+        foreach ($models as $model) {
+            $byId[$model->id] = $model;
+        }
+
+        self::assertArrayHasKey('mistral-large-latest', $byId);
+        self::assertContains(Capability::CHAT, $byId['mistral-large-latest']->capabilities);
+        self::assertContains(Capability::STREAMING, $byId['mistral-large-latest']->capabilities);
+        self::assertContains(Capability::TOOL_USE, $byId['mistral-large-latest']->capabilities);
     }
 }
