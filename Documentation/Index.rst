@@ -14,7 +14,7 @@ AI Foundation
    nitsan/ns-t3af
 
 :Version:
-   1.0.0
+   1.1.2
 
 :Language:
    en
