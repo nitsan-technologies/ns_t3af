@@ -10,7 +10,7 @@
 .. |extension_version| replace:: 1.1.2
 .. |extension_state| replace:: stable
 .. |extension_license| replace:: GPL-2.0-or-later
-.. |extension_author| replace:: Team T3Planet // T3Planet
+.. |extension_author| replace:: Team NITSAN // T3Planet
 .. |extension_author_url| replace:: https://t3planet.de
 .. |extension_homepage| replace:: https://t3planet.de/ai-foundation-fur-typo3
 .. |github_repository| replace:: https://github.com/nitsan-technologies/ns_t3af_extended
