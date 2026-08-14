@@ -59,7 +59,7 @@ Community
 When to use which link
 ----------------------
 
-* **Installing premium** — License activation URL above
+* **Activating your OSS license key** — :guilabel:`T3Planet Shop` > :guilabel:`AI Universe` > :guilabel:`AI Foundation` > **Start**
 * **Getting API keys** — Provider portals above, then :ref:`AI Providers <ai-providers>`
 * **Developer integration** — :ref:`Developer Guide <developer-guide>` for ``AiServiceInterface``
 * **MCP client setup** — Model Context Protocol site plus :ref:`MCP Server <mcp-server>`

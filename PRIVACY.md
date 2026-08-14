@@ -34,7 +34,7 @@ API base URL is resolved per environment and cached in `tx_nst3af_runtime_settin
 
 ## License check (separate from Credits billing)
 
-To validate a commercial license, T3AF contacts the T3Planet license server and sends only:
+To validate a license key, T3AF contacts the T3Planet license server and sends only:
 
 - the license key
 - the domain the license is used on

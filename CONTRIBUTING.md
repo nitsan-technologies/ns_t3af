@@ -8,8 +8,6 @@ T3AF is licensed under **GPL-2.0-or-later** (see [LICENSE](LICENSE)). Contributi
 
 > By submitting a contribution (for example a pull request), you agree that it is licensed under GPL-2.0-or-later, the same license as this extension.
 
-Production / commercial entitlement terms are documented separately in [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md). They do not change the GPL for contributions.
-
 There is **no Contributor License Agreement (CLA)**. The TYPO3 Association's CLA applies to the TYPO3 Core, not to extensions, and we do not require one. You keep ownership of your work; you simply license it to the project under the same terms as the rest of the code.
 
 ## Sign your commits (DCO)

@@ -68,7 +68,7 @@ Required Extensions
 
 Install and activate these extensions before AI Foundation:
 
-* **ns_license** — License activation and premium feature validation
+* **ns_license** — License activation and license-key validation
 * **scheduler** — Background AI jobs and scheduled tasks
 * **workspaces** — Draft workspaces, MCP workflows, and safe content editing
 
@@ -104,14 +104,13 @@ Install AI Foundation
 Or use :guilabel:`Admin Tools > Extensions > Get Extensions`, search for
 ``ns_t3af`` (or **T3AF**), install and activate it, then flush caches.
 
-Get your free license key
--------------------------
+Activate your OSS license key
+-----------------------------
 
-A free license key is required to activate AI Foundation. After you install
-``EXT:ns_t3af``, get your free license key and enter it before you continue
-with configuration:
-
-https://t3planet.de/en/ai-foundation-for-typo3#c19775
+An OSS license key is required to activate AI Foundation. After you install
+``EXT:ns_t3af``, go to :guilabel:`T3Planet Shop` backend module >
+:guilabel:`AI Universe` > :guilabel:`AI Foundation` and click **Start** before
+you continue with configuration.
 
 Activate the extension
 ~~~~~~~~~~~~~~~~~~~~~~

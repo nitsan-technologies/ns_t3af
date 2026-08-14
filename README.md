@@ -44,8 +44,7 @@ It includes these features:
 | **Support:**          | https://t3planet.de/en/support                                      |
 | **Community:**        | https://typo3.slack.com                                             |
 | **Contribution:**     | [CONTRIBUTING.md](CONTRIBUTING.md)                                  |
-| **License (code):**   | [LICENSE](LICENSE) (GPL-2.0-or-later)                               |
-| **Commercial:**       | [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md)                      |
+| **License:**          | [LICENSE](LICENSE) (GPL-2.0-or-later)                               |
 
 ## Compatibility
 
@@ -57,14 +56,9 @@ It includes these features:
 
 T3AF is open source under GPL-2.0-or-later.
 
-A license key is required for all environments:
+An OSS license key is required for all environments (development, staging, and production).
 
-- **Free key** — development, staging and local environments (always free)
-- **Commercial license** — production use, annual per domain, includes updates, support and legal certainty
-
-Get your key: https://t3planet.de/ai-foundation-fur-typo3
-
-Immediate license delivery. Included with every AI Universe extension license.
+Activate via **T3Planet Shop** backend module > **AI Universe** > **AI Foundation** > **Start**.
 
 ## Compatible Extensions
 

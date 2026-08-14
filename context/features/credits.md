@@ -4,7 +4,7 @@
 **Release gate:** `CreditsReleaseGate::PUBLICLY_AVAILABLE` — compile-time switch; currently **on**.
 **Deep specs:**
 - Client: [`FEATURE_T3PlanetCredits_Client.md`](../specs/FEATURE_T3PlanetCredits_Client.md)
-- Server: [`FEATURE_T3PlanetCredits_Server.md`](../specs/FEATURE_T3PlanetCredits_Server.md) (external commercial API on `composer.t3planet.cloud`)
+- Server: [`FEATURE_T3PlanetCredits_Server.md`](../specs/FEATURE_T3PlanetCredits_Server.md) (external API on `composer.t3planet.cloud`)
 - Rollout: [`FEATURE_T3PlanetCredits_NsAiuniverse_Rollout.md`](../specs/FEATURE_T3PlanetCredits_NsAiuniverse_Rollout.md)
 - **API base URL (env / sync):** [`credits-api-base-url.md`](credits-api-base-url.md)
 

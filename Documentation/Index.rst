@@ -23,7 +23,7 @@ AI Foundation
    `T3Planet <https://t3planet.de>`__ & TYPO3 contributors
 
 :License:
-   See LICENSE file / COMMERCIAL_LICENSE at Github
+   GPL-2.0-or-later. See LICENSE.
 
 :Rendered:
    |today|
@@ -37,7 +37,7 @@ prompts, users permissions, and budget in one native backend module. You stay
 in control, your every TYPO3 team (editors, integrators, developers &
 administrator) works with AI on one governed, self-hosted foundation. Use it
 standalone — or as the foundation that powers the complete AI Universe.
-Open source. Free to build. A commercial license for production.
+Open source. Free for development and production.
 
 Configure providers, MCP, brand context, prompts, and permissions once —
 connected extensions and AI clients reuse them.
