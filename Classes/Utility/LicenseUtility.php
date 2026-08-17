@@ -14,7 +14,7 @@ declare(strict_types=1);
  * License, or (at your option) any later version.
  *
  * For the full copyright and license information, please read the LICENSE
- * and COMMERCIAL-LICENSE.md files that were distributed with this source code.
+ * file that was distributed with this source code.
  */
 
 namespace NITSAN\NsT3AF\Utility;
@@ -26,7 +26,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 /**
  * Local license checks for AI Foundation (no remote API calls).
  *
- * Standalone: valid free lifetime license on extension key {@see self::EXTENSION_KEY}.
+ * Standalone: valid OSS license on extension key {@see self::EXTENSION_KEY}.
  * Product shell: valid license on any loaded NITSAN product that registers
  * {@see self::LICENSE_DEPENDENT_EXTENSIONS_EXTCONF_KEY} (e.g. ns_t3ai).
  * Third-party / sample extensions must not register there.

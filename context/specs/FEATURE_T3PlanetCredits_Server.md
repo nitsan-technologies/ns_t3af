@@ -1,6 +1,6 @@
 > **Agent entry:** `context/features/credits.md` (external server spec)
 >
-> **Public note:** This document describes the **commercial** T3Planet composer/license API (`composer.t3planet.cloud`), not open-source PHP shipped in this repo. Treat host paths, hardening checklists, and leadership revision notes as internal product planning. Do not assume they describe a public server codebase in this GitHub package.
+> **Public note:** This document describes the T3Planet composer/license API (`composer.t3planet.cloud`), not open-source PHP shipped in this repo. Treat host paths, hardening checklists, and leadership revision notes as internal product planning. Do not assume they describe a public server codebase in this GitHub package.
 
 # Feature — T3Planet Credits (Server side, `composer.t3planet.cloud` + `ns_license`)
 

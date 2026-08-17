@@ -14,7 +14,7 @@ declare(strict_types=1);
  * License, or (at your option) any later version.
  *
  * For the full copyright and license information, please read the LICENSE
- * and COMMERCIAL-LICENSE.md files that were distributed with this source code.
+ * file that was distributed with this source code.
  */
 
 namespace NITSAN\NsT3AF\Mcp\Tool\Dynamic;

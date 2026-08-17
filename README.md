@@ -1,4 +1,4 @@
-[![Latest Stable Version](https://img.shields.io/badge/Stable-1.0.0-success)](https://extensions.typo3.org/extension/ns_t3af)
+[![Latest Stable Version](https://img.shields.io/badge/Stable-1.1.2-success)](https://extensions.typo3.org/extension/ns_t3af)
 [![AI Foundation Github](https://img.shields.io/badge/AI--Foundation-informational?logo=github)](https://github.com/nitsan-technologies/ns_t3af)
 [![TYPO3 14](https://img.shields.io/badge/TYPO3-14-important.svg?logo=typo3)](https://get.typo3.org/version/14)
 [![TYPO3 13](https://img.shields.io/badge/TYPO3-13-important.svg?logo=typo3)](https://get.typo3.org/version/13)
@@ -44,8 +44,7 @@ It includes these features:
 | **Support:**          | https://t3planet.de/en/support                                      |
 | **Community:**        | https://typo3.slack.com                                             |
 | **Contribution:**     | [CONTRIBUTING.md](CONTRIBUTING.md)                                  |
-| **License (code):**   | [LICENSE](LICENSE) (GPL-2.0-or-later)                               |
-| **Commercial:**       | [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md)                      |
+| **License:**          | [LICENSE](LICENSE) (GPL-2.0-or-later)                               |
 
 ## Compatibility
 
@@ -57,14 +56,9 @@ It includes these features:
 
 T3AF is open source under GPL-2.0-or-later.
 
-A license key is required for all environments:
+An OSS license key is required for all environments (development, staging, and production).
 
-- **Free key** — development, staging and local environments (always free)
-- **Commercial license** — production use, annual per domain, includes updates, support and legal certainty
-
-Get your key: https://t3planet.de/ai-foundation-fur-typo3
-
-Immediate license delivery. Included with every AI Universe extension license.
+Activate via **T3Planet Shop** backend module > **AI Universe** > **AI Foundation** > **Start**.
 
 ## Compatible Extensions
 
