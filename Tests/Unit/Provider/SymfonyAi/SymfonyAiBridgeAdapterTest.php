@@ -424,6 +424,46 @@ final class SymfonyAiBridgeAdapterTest extends TestCase
         self::assertSame('2025-01-01', $provider->effectiveApiVersion());
     }
 
+    public function testAzureDualDeploymentBuildsPlatformWhenAzureBridgeInstalled(): void
+    {
+        if (!class_exists(\Symfony\AI\Platform\Bridge\Azure\OpenAi\Factory::class)) {
+            self::markTestSkipped('symfony/ai-azure-platform is not installed.');
+        }
+
+        $adapter = $this->makeAzureAdapter();
+        $cipher = new CredentialCipher();
+        $provider = $this->makeProviderWith(
+            endpoint: 'https://myresource.openai.azure.com',
+            apiKey: $cipher->encrypt('azure-key-123'),
+            adapterType: 'symfony.azure',
+        );
+        $provider = new Provider(
+            uid: $provider->uid,
+            pid: $provider->pid,
+            identifier: $provider->identifier,
+            title: $provider->title,
+            adapterType: $provider->adapterType,
+            endpointUrl: $provider->endpointUrl,
+            apiKeyCipher: $provider->apiKeyCipher,
+            modelId: 'gpt-4o-chat',
+            embeddingModelId: 'text-embedding-3-small',
+            capabilities: $provider->capabilities,
+            temperature: $provider->temperature,
+            systemPrompt: $provider->systemPrompt,
+            isDefault: $provider->isDefault,
+            priority: $provider->priority,
+            lastUsedAt: $provider->lastUsedAt,
+            lastStatus: $provider->lastStatus,
+            lastStatusAt: $provider->lastStatusAt,
+            lastStatusMessage: $provider->lastStatusMessage,
+            apiVersion: '2024-10-21',
+        );
+
+        $platform = $adapter->platform($provider);
+
+        self::assertInstanceOf(\Symfony\AI\Platform\Provider::class, $platform);
+    }
+
     private function makeAzureAdapter(?RequestFactory $requestFactory = null): SymfonyAiBridgeAdapter
     {
         return new SymfonyAiBridgeAdapter(
@@ -434,6 +474,9 @@ final class SymfonyAiBridgeAdapterTest extends TestCase
                 displayName: 'Azure (Symfony AI)',
                 defaultEndpoint: '',
                 defaultCapabilities: [Capability::CHAT, Capability::STREAMING, Capability::EMBEDDINGS],
+                factoryClass: class_exists(\Symfony\AI\Platform\Bridge\Azure\OpenAi\Factory::class)
+                    ? \Symfony\AI\Platform\Bridge\Azure\OpenAi\Factory::class
+                    : null,
             ),
             new CredentialCipher(),
             $requestFactory ?? $this->createMock(RequestFactory::class),

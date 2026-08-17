@@ -15,7 +15,7 @@ Expose a TYPO3-native MCP server (OAuth 2.1 + PKCE, Streamable HTTP, stdio CLI, 
 | # | Decision |
 |---|---|
 | 1 | Full port into `ns_t3af`; conflicts with `marekskopal/typo3-mcp-server` and `hn/typo3-mcp-server` |
-| 2 | SDK: `mcp/sdk ^0.5` |
+| 2 | SDK: `mcp/sdk ^0.7` (lazy registry load by default; 4 MiB SDK default POST cap overridable via `mcpMaxBodyBytes`; strict `Mcp-Session-Id` UUID validation) |
 | 3 | Transports: HTTP/OAuth, `/mcp/r/{token}` URL bridge, stdio `nst3af:mcp:serve` |
 | 4 | Per-token `workspace_id` (default live); `typo3/cms-workspaces` hard dependency |
 | 5 | Core tools: `table_schema`, `pages_get`, `content_list`, `write_table`; dynamic per-table tools (9 each); child ext tools via `mcp.tool` |

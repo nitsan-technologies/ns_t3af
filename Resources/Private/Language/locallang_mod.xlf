@@ -1449,6 +1449,12 @@
       <trans-unit id="module.mcpServer.advanced.maxTokens" resname="module.mcpServer.advanced.maxTokens">
         <source>Max Active Tokens per User</source>
       </trans-unit>
+      <trans-unit id="module.mcpServer.advanced.maxBodyBytes" resname="module.mcpServer.advanced.maxBodyBytes">
+        <source>Max POST Body Size (bytes)</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.advanced.maxBodyBytesHint" resname="module.mcpServer.advanced.maxBodyBytesHint">
+        <source>Upper limit for Streamable HTTP request bodies. Default 16 MiB (16777216). Minimum 4 MiB (4194304).</source>
+      </trans-unit>
       <trans-unit id="module.mcpServer.advanced.enableServer" resname="module.mcpServer.advanced.enableServer">
         <source>Enable MCP Server</source>
       </trans-unit>
@@ -2611,7 +2617,7 @@
         <source>Best reasoning</source>
       </trans-unit>
       <trans-unit id="wizard.step3.catalog.anthropic.models" resname="wizard.step3.catalog.anthropic.models">
-        <source>claude-3-haiku · claude-3.5-sonnet</source>
+        <source>claude-haiku-4.5 · claude-sonnet-4.5</source>
       </trans-unit>
       <trans-unit id="wizard.step3.catalog.gemini.title" resname="wizard.step3.catalog.gemini.title">
         <source>Google Gemini</source>
@@ -2620,7 +2626,7 @@
         <source>Free tier</source>
       </trans-unit>
       <trans-unit id="wizard.step3.catalog.gemini.models" resname="wizard.step3.catalog.gemini.models">
-        <source>gemini-1.5-flash · gemini-1.5-pro</source>
+        <source>gemini-2.5-flash · gemini-2.5-pro</source>
       </trans-unit>
       <trans-unit id="wizard.step3.catalog.ollama.title" resname="wizard.step3.catalog.ollama.title">
         <source>Ollama (Local)</source>

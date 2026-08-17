@@ -62,6 +62,7 @@ final class ProviderLegacyConfigService
         'codeLifetime',
         'mcpRemoteTokenLifetime',
         'sessionLifetime',
+        'mcpMaxBodyBytes',
         'rateLimitEnabled',
         'rateLimitAuthorize',
         'rateLimitAuthorizeWindow',

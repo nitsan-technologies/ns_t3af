@@ -64,6 +64,9 @@ mcpRemoteTokenLifetime = 2592000
 # cat=MCP Server//34; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.sessionLifetime
 sessionLifetime = 86400
 
+# cat=MCP Server//35; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mcpMaxBodyBytes
+mcpMaxBodyBytes = 16777216
+
 # cat=MCP Server//40; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.rateLimitEnabled
 rateLimitEnabled = 1
 

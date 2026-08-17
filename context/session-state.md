@@ -2,6 +2,24 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-08-17 — Wizard model defaults + Composer stable pinning
+
+**Done:** Setup wizard step 4 derives `modelOptions` / `defaultModel` from `SymfonyAiCatalogReader` (static fallback when catalog empty). Updated EN/DE locallang catalog blurbs. Install + ExtensionIntegration docs: production must pin `nitsan/ns-t3af ^1.1` with `minimum-stability: stable`. Child-extensions note: no `|| @dev` in tagged releases.
+
+**Post-merge ops:** Delete remote `dep/mcp-sdk-1786623877776-ns_t3af` after merge to `master`; tag patch only if merged work exceeds current Packagist tag.
+
+**Last touched:** 2026-08-17
+
+---
+
+## 2026-08-17 — Post-upgrade hardening (Azure 0.12 + MCP 0.7)
+
+**Done:** Azure dual-deployment uses Symfony AI 0.12 `Responses\ModelClient` + `OpenAi\EmbeddingsModelClient` (throws on missing classes; no silent fallback). MCP Streamable HTTP: `mcpMaxBodyBytes` extension setting (default 16 MiB); transport code targets `mcp/sdk ^0.7` only. Agent context: `FEATURE_McpServer.md` + `mcp-server.md` updated to SDK `^0.7`.
+
+**Last touched:** 2026-08-17
+
+---
+
 ## 2026-08-07 — Free trial default documented as 50
 
 **Done:** Agent docs + trial unit fixtures: Free Trial / `trial_credits` default **100 → 50**. Client still does not hardcode grant amount (Balance/Products). Server ops must set `ns_ai_settings.trial_credits` + Free Trial product to 50 separately.

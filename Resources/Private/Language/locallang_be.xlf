@@ -279,6 +279,9 @@
       <trans-unit id="extmng.sessionLifetime" resname="extmng.sessionLifetime">
         <source>Session lifetime (seconds): Sliding TTL for MCP session storage.</source>
       </trans-unit>
+      <trans-unit id="extmng.mcpMaxBodyBytes" resname="extmng.mcpMaxBodyBytes">
+        <source>Max MCP POST body size (bytes): Upper limit for Streamable HTTP request bodies (default 16 MiB).</source>
+      </trans-unit>
       <trans-unit id="extmng.rateLimitEnabled" resname="extmng.rateLimitEnabled">
         <source>Enable per-endpoint rate limits: Apply detailed OAuth endpoint rate limit counters.</source>
       </trans-unit>

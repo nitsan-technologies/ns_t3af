@@ -23,6 +23,8 @@ use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
 use NITSAN\NsT3AF\Provider\AdapterRegistry;
 use NITSAN\NsT3AF\Provider\Capability;
+use NITSAN\NsT3AF\Provider\Model\ModelInfo;
+use NITSAN\NsT3AF\Provider\Model\SymfonyAiCatalogReader;
 
 /**
  * Preset AI vendors shown in setup wizard step 3 (own API keys mode).
@@ -63,7 +65,7 @@ final class WizardProviderCatalog
             'keyUrlKey' => 'wizard.step4.keyUrl.openai',
             'keyUrlHref' => 'https://platform.openai.com',
             'keyUrlHost' => 'platform.openai.com',
-            'modelOptions' => ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'],
+            'modelOptions' => ['gpt-4o-mini', 'gpt-4o'],
             'capabilities' => [Capability::CHAT, Capability::STREAMING, Capability::TOOL_USE, Capability::EMBEDDINGS],
         ],
         [
@@ -71,7 +73,7 @@ final class WizardProviderCatalog
             'adapterType' => 'symfony.anthropic',
             'identifier' => 'anthropic',
             'displayName' => 'Anthropic',
-            'defaultModel' => 'claude-3-5-sonnet-latest',
+            'defaultModel' => 'claude-sonnet-4-5-20250929',
             'badgeTone' => 'purple',
             'titleKey' => 'wizard.step3.catalog.anthropic.title',
             'badgeKey' => 'wizard.step3.catalog.anthropic.badge',
@@ -79,7 +81,7 @@ final class WizardProviderCatalog
             'keyUrlKey' => 'wizard.step4.keyUrl.anthropic',
             'keyUrlHref' => 'https://console.anthropic.com',
             'keyUrlHost' => 'console.anthropic.com',
-            'modelOptions' => ['claude-3-haiku-20240307', 'claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest'],
+            'modelOptions' => ['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929', 'claude-3-7-sonnet-20250219'],
             'capabilities' => [Capability::CHAT, Capability::STREAMING, Capability::TOOL_USE],
         ],
         [
@@ -87,7 +89,7 @@ final class WizardProviderCatalog
             'adapterType' => 'symfony.gemini',
             'identifier' => 'gemini',
             'displayName' => 'Google Gemini',
-            'defaultModel' => 'gemini-1.5-pro',
+            'defaultModel' => 'gemini-2.5-pro',
             'badgeTone' => 'green',
             'titleKey' => 'wizard.step3.catalog.gemini.title',
             'badgeKey' => 'wizard.step3.catalog.gemini.badge',
@@ -95,7 +97,7 @@ final class WizardProviderCatalog
             'keyUrlKey' => 'wizard.step4.keyUrl.gemini',
             'keyUrlHref' => 'https://aistudio.google.com',
             'keyUrlHost' => 'aistudio.google.com',
-            'modelOptions' => ['gemini-1.5-flash', 'gemini-1.5-pro'],
+            'modelOptions' => ['gemini-2.5-flash', 'gemini-2.5-pro'],
             'capabilities' => [Capability::CHAT, Capability::STREAMING, Capability::VISION],
         ],
         [
@@ -119,6 +121,7 @@ final class WizardProviderCatalog
     public function __construct(
         private readonly ProviderRepositoryInterface $repository,
         private readonly AdapterRegistry $adapters,
+        private readonly SymfonyAiCatalogReader $catalogReader,
     ) {}
 
     public function adapterDisplayLabel(string $adapterType): string
@@ -161,16 +164,21 @@ final class WizardProviderCatalog
     {
         $rows = [];
         foreach (self::DEFINITIONS as $def) {
+            $models = $this->resolveWizardModels(
+                $def['adapterType'],
+                $def['defaultModel'],
+                $def['modelOptions'],
+            );
             $rows[] = [
                 'id' => $def['id'],
                 'adapterType' => $def['adapterType'],
                 'identifier' => $def['identifier'],
-                'defaultModel' => $def['defaultModel'],
+                'defaultModel' => $models['defaultModel'],
                 'badgeTone' => $def['badgeTone'],
                 'title' => $translate($def['titleKey']),
                 'badge' => $translate($def['badgeKey']),
                 'models' => $translate($def['modelsKey']),
-                'modelOptions' => $def['modelOptions'],
+                'modelOptions' => $models['modelOptions'],
                 'keyUrl' => $translate($def['keyUrlKey']),
                 'keyUrlHref' => $def['keyUrlHref'],
                 'keyUrlHost' => $def['keyUrlHost'],
@@ -206,7 +214,12 @@ final class WizardProviderCatalog
             $endpoint = trim($this->adapters->get($def['adapterType'])->getDefaultEndpoint());
         }
 
-        $resolvedModel = trim($modelId) !== '' ? trim($modelId) : $def['defaultModel'];
+        $models = $this->resolveWizardModels(
+            $def['adapterType'],
+            $def['defaultModel'],
+            $def['modelOptions'],
+        );
+        $resolvedModel = trim($modelId) !== '' ? trim($modelId) : $models['defaultModel'];
 
         return $this->repository->save(0, [
             'pid' => $storagePid,
@@ -249,6 +262,7 @@ final class WizardProviderCatalog
      *     titleKey: string,
      *     badgeKey: string,
      *     modelsKey: string,
+     *     modelOptions: list<string>,
      *     capabilities: list<string>
      * }|null
      */
@@ -273,5 +287,215 @@ final class WizardProviderCatalog
         }
 
         return $candidate;
+    }
+
+    /**
+     * @param list<string> $fallbackOptions
+     *
+     * @return array{defaultModel: string, modelOptions: list<string>}
+     */
+    private function resolveWizardModels(string $adapterType, string $fallbackDefault, array $fallbackOptions): array
+    {
+        $vendorKey = $this->vendorKey($adapterType);
+        if ($vendorKey === '') {
+            return [
+                'defaultModel' => $fallbackDefault,
+                'modelOptions' => $fallbackOptions,
+            ];
+        }
+
+        $catalog = $this->catalogReader->read($vendorKey);
+        $chatIds = [];
+        foreach ($catalog as $model) {
+            if (!$this->isWizardChatModel($model)) {
+                continue;
+            }
+            $chatIds[] = $model->id;
+        }
+
+        if ($chatIds === []) {
+            return [
+                'defaultModel' => $fallbackDefault,
+                'modelOptions' => $fallbackOptions,
+            ];
+        }
+
+        $chatIds = $this->excludeStaleSnapshots($chatIds);
+        $options = $this->pickWizardOptions($chatIds);
+        if ($options === []) {
+            return [
+                'defaultModel' => $fallbackDefault,
+                'modelOptions' => $fallbackOptions,
+            ];
+        }
+
+        return [
+            'defaultModel' => $this->pickDefaultModel($options),
+            'modelOptions' => $options,
+        ];
+    }
+
+    private function isWizardChatModel(ModelInfo $model): bool
+    {
+        if (!$this->isSelectableWizardModelId($model->id)) {
+            return false;
+        }
+
+        $caps = $model->capabilities;
+        if ($caps === []) {
+            return true;
+        }
+
+        return in_array(Capability::CHAT, $caps, true)
+            || in_array(Capability::COMPLETION, $caps, true);
+    }
+
+    private function isSelectableWizardModelId(string $id): bool
+    {
+        $lower = strtolower($id);
+
+        return !str_contains($lower, 'embed')
+            && !str_contains($lower, 'whisper')
+            && !str_contains($lower, 'tts')
+            && !str_contains($lower, 'image')
+            && !str_contains($lower, 'audio')
+            && !str_contains($lower, 'realtime')
+            && !str_contains($lower, 'instruct')
+            && !str_contains($lower, 'deep-research')
+            && !str_contains($lower, 'codex')
+            && !str_contains($lower, 'fable');
+    }
+
+    /**
+     * @param list<string> $ids
+     *
+     * @return list<string>
+     */
+    private function excludeStaleSnapshots(array $ids): array
+    {
+        $hasNewerGeneration = false;
+        foreach ($ids as $id) {
+            if (preg_match('/(?:sonnet-4|haiku-4|opus-4|gpt-4o|gpt-5|gemini-2\\.)/', $id) === 1) {
+                $hasNewerGeneration = true;
+                break;
+            }
+        }
+
+        return array_values(array_filter(
+            $ids,
+            static function (string $id) use ($hasNewerGeneration): bool {
+                if (str_ends_with($id, '-latest')) {
+                    return false;
+                }
+                if ($hasNewerGeneration && preg_match('/-20240[23]\d{2}$/', $id) === 1) {
+                    return false;
+                }
+
+                return true;
+            },
+        ));
+    }
+
+    /**
+     * @param list<string> $ids
+     *
+     * @return list<string>
+     */
+    private function pickWizardOptions(array $ids): array
+    {
+        usort($ids, fn(string $a, string $b): int => $this->wizardModelScore($b) <=> $this->wizardModelScore($a));
+
+        $picked = [];
+        foreach (['haiku', 'mini', 'flash-lite', 'flash'] as $tier) {
+            $match = $this->findBestTierMatch($ids, $tier, $picked);
+            if ($match !== null) {
+                $picked[] = $match;
+            }
+        }
+
+        $sonnet = $this->findBestTierMatch($ids, 'sonnet', $picked);
+        if ($sonnet !== null) {
+            $picked[] = $sonnet;
+        }
+
+        foreach ($ids as $id) {
+            if (count($picked) >= 3) {
+                break;
+            }
+            if (!in_array($id, $picked, true)) {
+                $picked[] = $id;
+            }
+        }
+
+        return array_slice(array_values(array_unique($picked)), 0, 3);
+    }
+
+    /**
+     * @param list<string> $ids
+     * @param list<string> $picked
+     */
+    private function findBestTierMatch(array $ids, string $tier, array $picked): ?string
+    {
+        foreach ($ids as $id) {
+            if (in_array($id, $picked, true)) {
+                continue;
+            }
+            if (str_contains(strtolower($id), $tier)) {
+                return $id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<string> $options
+     */
+    private function pickDefaultModel(array $options): string
+    {
+        foreach ($options as $id) {
+            $lower = strtolower($id);
+            if (str_contains($lower, 'sonnet') && !str_contains($lower, 'haiku')) {
+                return $id;
+            }
+        }
+
+        foreach ($options as $id) {
+            if (str_contains(strtolower($id), 'pro') || str_contains(strtolower($id), 'gpt-4o')) {
+                return $id;
+            }
+        }
+
+        return $options[0];
+    }
+
+    private function wizardModelScore(string $id): int
+    {
+        $score = 0;
+        $lower = strtolower($id);
+
+        if (preg_match('/(?:sonnet-4|haiku-4|opus-4|gpt-5|gemini-2\\.5|gemini-3)/', $lower) === 1) {
+            $score += 100;
+        }
+        if (str_contains($lower, 'sonnet') && !str_contains($lower, 'haiku')) {
+            $score += 50;
+        }
+        if (preg_match('/-2025\d{4}$/', $lower) === 1) {
+            $score += 20;
+        }
+        if (preg_match('/-20240[23]\d{2}$/', $lower) === 1) {
+            $score -= 40;
+        }
+
+        return $score;
+    }
+
+    private function vendorKey(string $adapterType): string
+    {
+        if (str_starts_with($adapterType, 'symfony.')) {
+            return substr($adapterType, 8);
+        }
+
+        return '';
     }
 }

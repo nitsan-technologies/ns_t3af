@@ -1931,6 +1931,14 @@
                 <source>Max Active Tokens per User</source>
                 <target>Max. aktive Tokens pro Benutzer</target>
             </trans-unit>
+            <trans-unit id="module.mcpServer.advanced.maxBodyBytes">
+                <source>Max POST Body Size (bytes)</source>
+                <target>Max. POST-Body-Größe (Bytes)</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.advanced.maxBodyBytesHint">
+                <source>Upper limit for Streamable HTTP request bodies. Default 16 MiB (16777216). Minimum 4 MiB (4194304).</source>
+                <target>Obergrenze für Streamable-HTTP-Anfragekörper. Standard 16 MiB (16777216). Minimum 4 MiB (4194304).</target>
+            </trans-unit>
             <trans-unit id="module.mcpServer.advanced.enableServer">
                 <source>Enable MCP Server</source>
                 <target>MCP Server aktivieren</target>
@@ -3452,8 +3460,8 @@
                 <target>Beste Begründung</target>
             </trans-unit>
             <trans-unit id="wizard.step3.catalog.anthropic.models">
-                <source>claude-3-haiku · claude-3.5-sonnet</source>
-                <target>Claude-3-haiku · Claude-3.5-sonett</target>
+                <source>claude-haiku-4.5 · claude-sonnet-4.5</source>
+                <target>Claude-haiku-4.5 · Claude-sonnet-4.5</target>
             </trans-unit>
             <trans-unit id="wizard.step3.catalog.gemini.title">
                 <source>Google Gemini</source>
@@ -3464,8 +3472,8 @@
                 <target>Kostenloses Kontingent</target>
             </trans-unit>
             <trans-unit id="wizard.step3.catalog.gemini.models">
-                <source>gemini-1.5-flash · gemini-1.5-pro</source>
-                <target>Gemini-1,5-Flash · Gemini-1,5-Pro</target>
+                <source>gemini-2.5-flash · gemini-2.5-pro</source>
+                <target>Gemini-2.5-Flash · Gemini-2.5-Pro</target>
             </trans-unit>
             <trans-unit id="wizard.step3.catalog.ollama.title">
                 <source>Ollama (Local)</source>
