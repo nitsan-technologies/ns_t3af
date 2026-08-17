@@ -24,6 +24,7 @@ use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
 use NITSAN\NsT3AF\Domain\Repository\RequestLogRepository;
 use NITSAN\NsT3AF\Service\DashboardAnalyticsService;
 use NITSAN\NsT3AF\Service\DashboardStatisticsCache;
+use NITSAN\NsT3AF\Service\SchedulerCliTaskListInterface;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
@@ -32,11 +33,12 @@ final class DashboardAnalyticsServiceTest extends TestCase
     private function createService(
         ProviderRepositoryInterface $providers,
         ?DashboardStatisticsCache $statisticsCache = null,
+        ?SchedulerCliTaskListInterface $schedulerCliTaskService = null,
     ): DashboardAnalyticsService {
         return new DashboardAnalyticsService(
             new RequestLogRepository($this->createMock(ConnectionPool::class)),
             $providers,
-            $this->createMock(ConnectionPool::class),
+            $schedulerCliTaskService ?? $this->createMock(SchedulerCliTaskListInterface::class),
             $statisticsCache ?? new DashboardStatisticsCache($this->createMock(\NITSAN\NsT3AF\Cache\CacheFacadeInterface::class)),
         );
     }
@@ -84,5 +86,63 @@ final class DashboardAnalyticsServiceTest extends TestCase
         $service = $this->createService($providers);
 
         self::assertNull($service->resolveOwnKeysProviderUids(0));
+    }
+
+    public function testScheduledTaskStatsCountsCliTabTasks(): void
+    {
+        $scheduler = $this->createMock(SchedulerCliTaskListInterface::class);
+        $scheduler->method('listTasks')->with(['status' => 'all'])->willReturn([
+            ['disabled' => 0, 'hasFailure' => 0],
+            ['disabled' => 0, 'hasFailure' => 0],
+        ]);
+
+        $service = $this->createService(
+            $this->createMock(ProviderRepositoryInterface::class),
+            null,
+            $scheduler,
+        );
+
+        self::assertSame(
+            ['total' => 2, 'active' => 2, 'failing' => 0],
+            $service->scheduledTaskStats(),
+        );
+    }
+
+    public function testScheduledTaskStatsReturnsZerosWhenNoCliTasks(): void
+    {
+        $scheduler = $this->createMock(SchedulerCliTaskListInterface::class);
+        $scheduler->method('listTasks')->with(['status' => 'all'])->willReturn([]);
+
+        $service = $this->createService(
+            $this->createMock(ProviderRepositoryInterface::class),
+            null,
+            $scheduler,
+        );
+
+        self::assertSame(
+            ['total' => 0, 'active' => 0, 'failing' => 0],
+            $service->scheduledTaskStats(),
+        );
+    }
+
+    public function testScheduledTaskStatsCountsDisabledAndFailingTasks(): void
+    {
+        $scheduler = $this->createMock(SchedulerCliTaskListInterface::class);
+        $scheduler->method('listTasks')->with(['status' => 'all'])->willReturn([
+            ['disabled' => 0, 'hasFailure' => 1],
+            ['disabled' => 1, 'hasFailure' => 0],
+            ['disabled' => 0, 'hasFailure' => 0],
+        ]);
+
+        $service = $this->createService(
+            $this->createMock(ProviderRepositoryInterface::class),
+            null,
+            $scheduler,
+        );
+
+        self::assertSame(
+            ['total' => 3, 'active' => 2, 'failing' => 1],
+            $service->scheduledTaskStats(),
+        );
     }
 }

@@ -3116,8 +3116,8 @@
                 <target>Scheduler Aufgaben</target>
             </trans-unit>
             <trans-unit id="checklist.scheduler.descOk">
-                <source>No failing AI Universe scheduler tasks detected.</source>
-                <target>Es wurden keine fehlgeschlagenen AI Universe Scheduler Aufgaben erkannt.</target>
+                <source>%1$s active AI Universe scheduler task(s).</source>
+                <target>%1$s aktive AI Universe Scheduler Aufgabe(n).</target>
             </trans-unit>
             <trans-unit id="checklist.scheduler.descFailing">
                 <source>%1$s scheduler task(s) reported a failure — inspect Scheduler &amp; CLI.</source>

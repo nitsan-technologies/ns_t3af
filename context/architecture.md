@@ -221,6 +221,8 @@ Per-group wizard + permission matrix for AI Foundation and child extensions. Thi
 
 Declared in `Configuration/Caches.php` + `ext_localconf.php`.
 
+Dashboard / setup-checklist scheduler counts (`scheduledTasks`) are derived from `SchedulerCliTaskService::listTasks()` — the same `t3af:*` / legacy alias command tasks as the Scheduler & CLI tab. Do not query `tx_scheduler_task.classname` (command tasks use `ExecuteSchedulableCommandTask`).
+
 ---
 
 ## Architecture tests (phpat)

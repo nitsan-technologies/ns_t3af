@@ -24,7 +24,6 @@ use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
 use NITSAN\NsT3AF\Domain\Repository\RequestLogRepository;
 use NITSAN\NsT3AF\Domain\RequestLog\RequestLogProviderScope;
-use TYPO3\CMS\Core\Database\ConnectionPool;
 
 /**
  * Read model for the AI dashboard statistics.
@@ -36,7 +35,7 @@ final class DashboardAnalyticsService
     public function __construct(
         private readonly RequestLogRepository $requestLogs,
         private readonly ProviderRepositoryInterface $providers,
-        private readonly ConnectionPool $connectionPool,
+        private readonly SchedulerCliTaskListInterface $schedulerCliTaskService,
         private readonly DashboardStatisticsCache $statisticsCache,
     ) {}
 
@@ -227,21 +226,14 @@ final class DashboardAnalyticsService
     }
 
     /**
+     * Count the same AI Universe command tasks the Scheduler & CLI tab lists.
+     *
      * @return array{total:int,active:int,failing:int}
      */
     private function fetchScheduledTaskStats(): array
     {
-        $rows = [];
         try {
-            $table = 'tx_scheduler_task';
-            $qb = $this->connectionPool->getQueryBuilderForTable($table);
-            $qb->getRestrictions()->removeAll();
-            $qb->select('disable', 'lastexecution_failure')
-                ->from($table)
-                ->where($qb->expr()->like('classname', $qb->createNamedParameter('%NsT3AF%')));
-
-            /** @var array<int, array<string, scalar|null>> $rows */
-            $rows = $qb->executeQuery()->fetchAllAssociative();
+            $tasks = $this->schedulerCliTaskService->listTasks(['status' => 'all']);
         } catch (\Throwable) {
             return [
                 'total' => 0,
@@ -250,14 +242,14 @@ final class DashboardAnalyticsService
             ];
         }
 
-        $total = count($rows);
+        $total = count($tasks);
         $active = 0;
         $failing = 0;
-        foreach ($rows as $row) {
-            if ((int) ($row['disable'] ?? 1) === 0) {
+        foreach ($tasks as $task) {
+            if ((int) ($task['disabled'] ?? 1) === 0) {
                 $active++;
             }
-            if ((int) ($row['lastexecution_failure'] ?? 0) === 1) {
+            if ((int) ($task['hasFailure'] ?? 0) === 1) {
                 $failing++;
             }
         }

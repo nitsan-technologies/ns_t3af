@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-08-17 — Setup checklist scheduler stats use CLI tab source
+
+**Done:** Dashboard/checklist `scheduledTasks` now count `SchedulerCliTaskService::listTasks()` (command tasks `t3af:*` / legacy alias) instead of `classname LIKE '%NsT3AF%'`. Failing = `hasFailure`. Cache keys bumped (`scheduled_tasks_cli`, analytics/trends `cli_tasks`) so stale zeros expire immediately. OK copy: `%1$s active AI Universe scheduler task(s).`
+
+**Last touched:** 2026-08-17
+
+---
+
 ## 2026-08-17 — Model catalog filter (wizard + provider drawer)
 
 **Done:** Shared `ModelCatalogFilter` hides retired/preview/superseded ids from setup wizard pills and AI Providers drawer (`ModelDiscoveryService`, `WizardProviderCatalog`). Denylist: `claude-sonnet-4-20250514`, `gemini-2.5-flash-lite-preview-09-2025`; also `-preview`, `-latest`, dated Claude/Gemini/GPT superseded by newer gen. Wizard excludes non-chat ids. Step 3 catalog blurbs + static fallbacks updated to QA model set (GPT-5.6, Claude Sonnet 5, Gemini 3.x, Ollama qwen/deepseek/llama4). Unit tests + `composer run ci` green.

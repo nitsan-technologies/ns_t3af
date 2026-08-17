@@ -26,7 +26,7 @@ use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
-final class SchedulerCliTaskService
+final class SchedulerCliTaskService implements SchedulerCliTaskListInterface
 {
     private const SCHEDULER_REPOSITORY_CLASS = 'TYPO3\\CMS\\Scheduler\\Domain\\Repository\\SchedulerTaskRepository';
     private const SCHEDULABLE_TASK_CLASS = 'TYPO3\\CMS\\Scheduler\\Task\\ExecuteSchedulableCommandTask';
