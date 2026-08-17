@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-08-17 — Model catalog filter (wizard + provider drawer)
+
+**Done:** Shared `ModelCatalogFilter` hides retired/preview/superseded ids from setup wizard pills and AI Providers drawer (`ModelDiscoveryService`, `WizardProviderCatalog`). Denylist: `claude-sonnet-4-20250514`, `gemini-2.5-flash-lite-preview-09-2025`; also `-preview`, `-latest`, dated Claude/Gemini/GPT superseded by newer gen. Wizard excludes non-chat ids. Step 3 catalog blurbs + static fallbacks updated to QA model set (GPT-5.6, Claude Sonnet 5, Gemini 3.x, Ollama qwen/deepseek/llama4). Unit tests + `composer run ci` green.
+
+**Last touched:** 2026-08-17
+
+---
+
 ## 2026-08-17 — Wizard model defaults + Composer stable pinning
 
 **Done:** Setup wizard step 4 derives `modelOptions` / `defaultModel` from `SymfonyAiCatalogReader` (static fallback when catalog empty). Updated EN/DE locallang catalog blurbs. Install + ExtensionIntegration docs: production must pin `nitsan/ns-t3af ^1.1` with `minimum-stability: stable`. Child-extensions note: no `|| @dev` in tagged releases.

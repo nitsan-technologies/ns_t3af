@@ -2608,7 +2608,7 @@
         <source>Most popular</source>
       </trans-unit>
       <trans-unit id="wizard.step3.catalog.openai.models" resname="wizard.step3.catalog.openai.models">
-        <source>gpt-4o-mini · gpt-4o</source>
+        <source>gpt-5.6 · gpt-5.5 · gpt-5-mini</source>
       </trans-unit>
       <trans-unit id="wizard.step3.catalog.anthropic.title" resname="wizard.step3.catalog.anthropic.title">
         <source>Anthropic</source>
@@ -2617,7 +2617,7 @@
         <source>Best reasoning</source>
       </trans-unit>
       <trans-unit id="wizard.step3.catalog.anthropic.models" resname="wizard.step3.catalog.anthropic.models">
-        <source>claude-haiku-4.5 · claude-sonnet-4.5</source>
+        <source>claude-sonnet-5 · claude-opus-5 · claude-haiku-4-5</source>
       </trans-unit>
       <trans-unit id="wizard.step3.catalog.gemini.title" resname="wizard.step3.catalog.gemini.title">
         <source>Google Gemini</source>
@@ -2626,7 +2626,7 @@
         <source>Free tier</source>
       </trans-unit>
       <trans-unit id="wizard.step3.catalog.gemini.models" resname="wizard.step3.catalog.gemini.models">
-        <source>gemini-2.5-flash · gemini-2.5-pro</source>
+        <source>gemini-3.7-flash · gemini-3.1-pro · gemini-3.1-flash-lite</source>
       </trans-unit>
       <trans-unit id="wizard.step3.catalog.ollama.title" resname="wizard.step3.catalog.ollama.title">
         <source>Ollama (Local)</source>
@@ -2635,7 +2635,7 @@
         <source>Privacy-first</source>
       </trans-unit>
       <trans-unit id="wizard.step3.catalog.ollama.models" resname="wizard.step3.catalog.ollama.models">
-        <source>llama3.2 · mistral</source>
+        <source>qwen3.8 · deepseek-v4-pro · llama4</source>
       </trans-unit>
       <trans-unit id="wizard.step3.linkProviders" resname="wizard.step3.linkProviders">
         <source>Open AI Providers</source>

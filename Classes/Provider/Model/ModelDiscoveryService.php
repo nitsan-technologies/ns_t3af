@@ -44,6 +44,7 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
         private readonly SymfonyAiCatalogReader $catalogReader,
         private readonly CapabilityInferrer $inferrer,
         private readonly CacheFacadeInterface $cache,
+        private readonly ModelCatalogFilter $catalogFilter,
     ) {}
 
     public function discover(Provider $provider, bool $refresh = false): array
@@ -112,7 +113,12 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
 
         ksort($merged);
 
-        return array_values($merged);
+        $ids = array_keys($merged);
+
+        return array_values(array_filter(
+            $merged,
+            fn(ModelInfo $model): bool => $this->catalogFilter->isListedModelId($model->id, $ids),
+        ));
     }
 
     /**

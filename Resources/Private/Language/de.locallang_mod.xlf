@@ -3448,8 +3448,8 @@
                 <target>Am beliebtesten</target>
             </trans-unit>
             <trans-unit id="wizard.step3.catalog.openai.models">
-                <source>gpt-4o-mini · gpt-4o</source>
-                <target>gpt-4o-mini · gpt-4o</target>
+                <source>gpt-5.6 · gpt-5.5 · gpt-5-mini</source>
+                <target>gpt-5.6 · gpt-5.5 · gpt-5-mini</target>
             </trans-unit>
             <trans-unit id="wizard.step3.catalog.anthropic.title">
                 <source>Anthropic</source>
@@ -3460,8 +3460,8 @@
                 <target>Beste Begründung</target>
             </trans-unit>
             <trans-unit id="wizard.step3.catalog.anthropic.models">
-                <source>claude-haiku-4.5 · claude-sonnet-4.5</source>
-                <target>Claude-haiku-4.5 · Claude-sonnet-4.5</target>
+                <source>claude-sonnet-5 · claude-opus-5 · claude-haiku-4-5</source>
+                <target>claude-sonnet-5 · claude-opus-5 · claude-haiku-4-5</target>
             </trans-unit>
             <trans-unit id="wizard.step3.catalog.gemini.title">
                 <source>Google Gemini</source>
@@ -3472,8 +3472,8 @@
                 <target>Kostenloses Kontingent</target>
             </trans-unit>
             <trans-unit id="wizard.step3.catalog.gemini.models">
-                <source>gemini-2.5-flash · gemini-2.5-pro</source>
-                <target>Gemini-2.5-Flash · Gemini-2.5-Pro</target>
+                <source>gemini-3.7-flash · gemini-3.1-pro · gemini-3.1-flash-lite</source>
+                <target>gemini-3.7-flash · gemini-3.1-pro · gemini-3.1-flash-lite</target>
             </trans-unit>
             <trans-unit id="wizard.step3.catalog.ollama.title">
                 <source>Ollama (Local)</source>
@@ -3484,8 +3484,8 @@
                 <target>Datenschutz geht vor</target>
             </trans-unit>
             <trans-unit id="wizard.step3.catalog.ollama.models">
-                <source>llama3.2 · mistral</source>
-                <target>Lama3.2 · Mistral</target>
+                <source>qwen3.8 · deepseek-v4-pro · llama4</source>
+                <target>qwen3.8 · deepseek-v4-pro · llama4</target>
             </trans-unit>
             <trans-unit id="wizard.step3.linkProviders">
                 <source>Open AI Providers</source>

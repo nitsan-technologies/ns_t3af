@@ -74,12 +74,12 @@
                 <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.meta.active"
                              default="Active" arguments="{0: '{activeProviderCount}'}" />
             </span>
-            <f:if condition="{defaultIdentifier} != ''">
+            <f:if condition="{defaultTitle} != ''">
                 <span class="item">
                     <core:icon identifier="actions-star" size="small" />
                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.meta.default"
-                                 default="default" />
-                    ({defaultIdentifier})
+                                 default="Default" />:
+                    {defaultTitle}
                 </span>
             </f:if>
             <span class="sep"></span>
