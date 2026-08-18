@@ -20,7 +20,9 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\AiLabel;
 
 use NITSAN\NsT3AF\AiLabel\Event\CollectApplicableTablesEvent;
+use NITSAN\NsT3AF\AiLabel\Service\AiLabelSettingsService;
 use NITSAN\NsT3AF\AiLabel\Service\ApplicableTablesResolver;
+use NITSAN\NsT3AF\Settings\ExtensionSettingsService;
 use PHPUnit\Framework\TestCase;
 use Psr\EventDispatcher\EventDispatcherInterface;
 
@@ -28,14 +30,15 @@ final class ApplicableTablesResolverTest extends TestCase
 {
     protected function tearDown(): void
     {
-        unset($GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelApplicableTables']);
         parent::tearDown();
     }
 
     public function testDefaultsIncludeCoreTables(): void
     {
-        unset($GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelApplicableTables']);
-        $resolver = new ApplicableTablesResolver($this->passthroughDispatcher());
+        $resolver = new ApplicableTablesResolver(
+            $this->passthroughDispatcher(),
+            $this->settingsService([]),
+        );
 
         self::assertTrue($resolver->isApplicable('tt_content'));
         self::assertTrue($resolver->isApplicable('pages'));
@@ -45,7 +48,6 @@ final class ApplicableTablesResolverTest extends TestCase
 
     public function testEventCanAddATable(): void
     {
-        unset($GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelApplicableTables']);
         $dispatcher = $this->createMock(EventDispatcherInterface::class);
         $dispatcher->method('dispatch')->willReturnCallback(static function (object $event): object {
             if ($event instanceof CollectApplicableTablesEvent) {
@@ -55,7 +57,10 @@ final class ApplicableTablesResolverTest extends TestCase
             return $event;
         });
 
-        $resolver = new ApplicableTablesResolver($dispatcher);
+        $resolver = new ApplicableTablesResolver(
+            $dispatcher,
+            $this->settingsService([]),
+        );
 
         self::assertTrue($resolver->isApplicable('tx_myext_item'));
         self::assertContains('tx_myext_item', $resolver->getTables());
@@ -67,5 +72,18 @@ final class ApplicableTablesResolverTest extends TestCase
         $dispatcher->method('dispatch')->willReturnArgument(0);
 
         return $dispatcher;
+    }
+
+    /**
+     * @param list<string> $tables
+     */
+    private function settingsService(array $tables): AiLabelSettingsService
+    {
+        $extensionSettings = $this->createMock(ExtensionSettingsService::class);
+        $extensionSettings->method('getAllIgnorePid')->willReturn(
+            $tables === [] ? [] : ['ailabelApplicableTables' => implode(', ', $tables)],
+        );
+
+        return new AiLabelSettingsService($extensionSettings);
     }
 }

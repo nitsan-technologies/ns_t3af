@@ -88,7 +88,7 @@ final class AiLabelRecordEvaluator
                 $involvement,
                 $this->labellingMode($record),
                 $confirmed,
-                (int) ($record['crdate'] ?? 0),
+                $this->resolveCreationTimestamp($table, $record),
             );
         }
 
@@ -125,5 +125,16 @@ final class AiLabelRecordEvaluator
     {
         return (bool) ($record['tx_nst3af_ailabel_human_review'] ?? false)
             && trim((string) ($record['tx_nst3af_ailabel_responsible_person'] ?? '')) === '';
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     */
+    private function resolveCreationTimestamp(string $table, array $record): int
+    {
+        return match ($table) {
+            'sys_file_metadata' => (int) ($record['file_creation_date'] ?? $record['crdate'] ?? 0),
+            default => (int) ($record['crdate'] ?? 0),
+        };
     }
 }

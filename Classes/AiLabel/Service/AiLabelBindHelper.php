@@ -25,28 +25,36 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Helper for child extensions to bind captures at persistence points (T5).
+ *
+ * Child binds always store Involvement::AiGenerated. Editors change
+ * involvement in the AI Label module. Visitor badges still require confirm.
  */
 final class AiLabelBindHelper
 {
-    public static function bindPageRecord(int $uid, Involvement $involvement = Involvement::AiGenerated, string $source = 'ns_t3ai'): void
+    public static function bindPageRecord(int $uid, string $source = 'ns_t3ai'): void
     {
-        self::bind('pages', $uid, $involvement, $source);
+        self::bind('pages', $uid, $source);
     }
 
-    public static function bindContentRecord(int $uid, Involvement $involvement = Involvement::AiGenerated, string $source = 'ns_t3ai'): void
+    public static function bindContentRecord(int $uid, string $source = 'ns_t3ai'): void
     {
-        self::bind('tt_content', $uid, $involvement, $source);
+        self::bind('tt_content', $uid, $source);
     }
 
-    public static function bindFileMetadata(int $uid, Involvement $involvement = Involvement::Suggestion, string $source = 'ns_t3aa', bool $altTextOnly = false): void
+    public static function bindFileMetadata(int $uid, string $source = 'ns_t3aa', bool $altTextOnly = false): void
     {
         if ($altTextOnly) {
             return;
         }
-        self::bind('sys_file_metadata', $uid, $involvement, $source);
+        self::bind('sys_file_metadata', $uid, $source);
     }
 
-    private static function bind(string $table, int $uid, Involvement $involvement, string $source): void
+    public static function bindRecord(string $table, int $uid, string $source = 'api'): void
+    {
+        self::bind($table, $uid, $source);
+    }
+
+    private static function bind(string $table, int $uid, string $source): void
     {
         if ($uid <= 0 || !interface_exists(AiLabelRecorderInterface::class)) {
             return;
@@ -55,7 +63,7 @@ final class AiLabelBindHelper
         $recorder = GeneralUtility::makeInstance(AiLabelRecorderInterface::class);
         $correlationId = GenerationCorrelationRegistry::consume();
         if ($correlationId === null) {
-            $recorder->recordOrigin($table, $uid, $involvement, $source);
+            $recorder->recordOrigin($table, $uid, Involvement::AiGenerated, $source);
             return;
         }
 
@@ -63,7 +71,7 @@ final class AiLabelBindHelper
             $correlationId,
             $table,
             $uid,
-            $involvement,
+            Involvement::AiGenerated,
             $source,
         );
     }

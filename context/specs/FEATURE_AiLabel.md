@@ -131,12 +131,12 @@ Stored on every list row and in evidence export: `manual_exempt`, `pre_cutoff`, 
 `AiLabelBindHelper` (called from e.g. `ns_t3ai` after DataHandler save):
 
 ```php
-AiLabelBindHelper::bindContentRecord($uid); // default: Involvement::AiGenerated, source ns_t3ai
+AiLabelBindHelper::bindContentRecord($uid); // always Involvement::AiGenerated, source ns_t3ai
 ```
 
-Consumes correlation from registry → `OriginRecorder::bindGeneration()` → sets involvement + recording_source on target row → deletes generation queue row.
+Consumes correlation from registry → `OriginRecorder::bindGeneration()` → sets involvement + recording_source on target row → deletes generation queue row. Child binds always store `ai_generated` (page, content, file, or `bindRecord($table, $uid)`). Alt-text-only file binds are skipped.
 
-**ns_t3ai** binds: `pages`, `tt_content`. File save (`FileService::saveImageFromUrl`) calls `recordOrigin(..., AiGenerated, 'ns_t3ai')` directly because image-save is a second HTTP request (no capture correlation). Stock libraries (pixabay/pexels/unsplash/openverse) are skipped.  
+**ns_t3ai** binds: `pages`, `tt_content`, and DALL·E file save via `bindFileMetadata($uid, 'ns_t3ai')` (second HTTP request → `recordOrigin` fallback). Stock libraries (pixabay/pexels/unsplash/openverse) are skipped.  
 **ns_t3al:** no bind hooks yet.
 
 ### 3. Manual / editor path
@@ -269,7 +269,8 @@ Implement or call:
 
 ```php
 // Option A: bind after your save (if correlation active)
-\NITSAN\NsT3AF\AiLabel\Service\AiLabelBindHelper::bindContentRecord($uid, Involvement::AiGenerated, 'my_ext');
+\NITSAN\NsT3AF\AiLabel\Service\AiLabelBindHelper::bindContentRecord($uid, 'my_ext');
+\NITSAN\NsT3AF\AiLabel\Service\AiLabelBindHelper::bindRecord('tx_news_domain_model_news', $uid, 'my_ext');
 
 // Option B: direct origin report
 $recorder = GeneralUtility::makeInstance(\NITSAN\NsT3AF\Api\AiLabelRecorderInterface::class);

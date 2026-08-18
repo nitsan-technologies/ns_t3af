@@ -94,7 +94,13 @@ class ExtensionSettingsService
 
         $merged = $this->schemaService->getDefaults($extensionKey);
 
-        $rows = $this->repository->findAllByExtensionKey($extensionKey);
+        try {
+            $rows = $this->repository->findAllByExtensionKey($extensionKey);
+        } catch (\Throwable) {
+            // Database or table may be unavailable during early bootstrap (e.g. schema build).
+            return $merged;
+        }
+
         usort($rows, static fn(array $a, array $b): int => (int) ($a['pid'] ?? 0) <=> (int) ($b['pid'] ?? 0));
 
         foreach ($rows as $row) {

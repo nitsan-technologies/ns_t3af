@@ -21,20 +21,6 @@
                 <button type="submit" class="btn btn-default btn-sm" data-ailabel-undo><f:translate key="{ll}:module.aiLabel.action.undo" default="Undo last bulk action" /></button>
             </form>
         </div>
-        <div class="d-flex flex-wrap align-items-center gap-2">
-            <select class="form-select form-select-sm aiu-ailabel-per-page" data-ailabel-per-page aria-label="{f:translate(key: '{ll}:module.aiLabel.perPage', default: 'Records per page')}">
-                <option value="20" {f:if(condition: '{filters.max} == 20', then: 'selected="selected"')}>20</option>
-                <option value="50" {f:if(condition: '{filters.max} == 50', then: 'selected="selected"')}>50</option>
-            </select>
-            <a class="btn btn-success btn-sm" href="{exportUri}?format=csv">
-                <core:icon identifier="actions-download" size="small" alternativeMarkupIdentifier="inline" />
-                <f:translate key="{ll}:module.aiLabel.action.exportEvidence" default="Export evidence" />
-            </a>
-            <a class="btn btn-default btn-sm" href="{refreshUri}">
-                <core:icon identifier="actions-refresh" size="small" alternativeMarkupIdentifier="inline" />
-                <f:translate key="{ll}:module.aiLabel.action.refresh" default="Refresh" />
-            </a>
-        </div>
     </div>
 </div>
 

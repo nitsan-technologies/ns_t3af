@@ -19,7 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\AiLabel\Service;
 
-use TYPO3\CMS\Core\Database\Schema\Event\AlterTableDefinitionStatementsEvent;
+use TYPO3\CMS\Core\Database\Event\AlterTableDefinitionStatementsEvent;
 
 /**
  * R1.2 configurable applicable tables with plausibility check before DDL.
@@ -57,7 +57,7 @@ SQL;
 
             $columns = $this->columnNames();
             $ddl = sprintf(self::COLUMN_DDL, ...$columns);
-            $event->addSqlDataDefinition('ns_t3af', 'ALTER TABLE `' . $table . '` ADD ' . str_replace("\n", ', ADD ', trim($ddl)));
+            $event->addSqlData('ALTER TABLE `' . $table . '` ADD ' . str_replace("\n", ', ADD ', trim($ddl)));
         }
     }
 

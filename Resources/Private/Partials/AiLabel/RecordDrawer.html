@@ -96,15 +96,31 @@
         <div class="card">
             <div class="card-body">
                 <div class="aiu-ailabel-preview-stage mb-2">
-                    <f:if condition="{record.visitorPreview.showLabel}">
+                    <f:if condition="{record.visitorPreview.showLabel} == 0">
+                        <p class="text-variant small mb-2">
+                            <f:translate key="{ll}:module.aiLabel.drawer.noVisitorLabel" default="No label shown ({0})" arguments="{0: record.visitorPreview.reasonCode}" />
+                        </p>
+                    </f:if>
+                    <f:if condition="{record.visitorPreview.markup}">
                         <f:then>
-                            <div class="aiu-ailabel-preview-stage__label">
-                                <span class="badge badge-secondary">{record.visitorPreview.labelText}</span>
-                                <span class="badge badge-secondary">EU</span>
-                            </div>
+                            <f:if condition="{record.visitorPreview.isMediaOverlay}">
+                                <f:then>
+                                    <div class="{record.visitorPreview.mediaWrapperClass} aiu-ailabel-preview-stage__media">
+                                        <div class="aiu-ailabel-preview-stage__mock-image" aria-hidden="true"></div>
+                                        <f:format.raw>{record.visitorPreview.markup}</f:format.raw>
+                                    </div>
+                                </f:then>
+                                <f:else>
+                                    <div class="{f:if(condition: '{record.visitorPreview.showLabel} == 0', then: 'aiu-ailabel-preview-stage__sample')}">
+                                        <f:format.raw>{record.visitorPreview.markup}</f:format.raw>
+                                    </div>
+                                </f:else>
+                            </f:if>
                         </f:then>
                         <f:else>
-                            <span class="text-variant small"><f:translate key="{ll}:module.aiLabel.drawer.noVisitorLabel" default="No label shown ({0})" arguments="{0: record.visitorPreview.reasonCode}" /></span>
+                            <f:if condition="{record.visitorPreview.showLabel}">
+                                <span class="text-variant small"><f:translate key="{ll}:module.aiLabel.drawer.previewUnavailable" default="Preview unavailable for this involvement." /></span>
+                            </f:if>
                         </f:else>
                     </f:if>
                 </div>

@@ -34,7 +34,7 @@ final class AiLabelBulkActionServiceTest extends TestCase
     {
         $pool = $this->createMock(ConnectionPool::class);
         $cacheManager = $this->createMock(CacheManager::class);
-        $cache = new VariableFrontend('ailabel_undo_test', new \TYPO3\CMS\Core\Cache\Backend\NullBackend('ailabel', []));
+        $cache = new VariableFrontend('ailabel_undo_test', new \TYPO3\CMS\Core\Cache\Backend\NullBackend());
         $cacheManager->method('getCache')->willReturn($cache);
 
         $service = new AiLabelBulkActionService(
@@ -55,7 +55,7 @@ final class AiLabelBulkActionServiceTest extends TestCase
         $pool->method('getConnectionForTable')->willReturn($connection);
 
         $cacheManager = $this->createMock(CacheManager::class);
-        $cache = new VariableFrontend('ailabel_undo_test2', new \TYPO3\CMS\Core\Cache\Backend\NullBackend('ailabel2', []));
+        $cache = new VariableFrontend('ailabel_undo_test2', new \TYPO3\CMS\Core\Cache\Backend\NullBackend());
         $cacheManager->method('getCache')->willReturn($cache);
 
         $service = new AiLabelBulkActionService(

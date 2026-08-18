@@ -138,7 +138,27 @@ final class UndoCacheService
                 $cache->remove($key);
             }
 
-            return is_array($batch) ? $batch : [];
+            if (!is_array($batch)) {
+                return [];
+            }
+
+            $items = [];
+            foreach ($batch as $item) {
+                if (
+                    !is_array($item)
+                    || !isset($item['table'], $item['uid'], $item['values'])
+                    || !is_array($item['values'])
+                ) {
+                    continue;
+                }
+                $items[] = [
+                    'table' => (string) $item['table'],
+                    'uid' => (int) $item['uid'],
+                    'values' => $item['values'],
+                ];
+            }
+
+            return $items;
         } catch (NoSuchCacheException) {
             return [];
         }

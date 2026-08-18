@@ -68,27 +68,28 @@ record uid (after DataHandler or repository save):
 
 ..  code-block:: php
 
-    if (class_exists(\NITSAN\NsT3AF\AiLabel\Service\AiLabelBindHelper::class)) {
-        \NITSAN\NsT3AF\AiLabel\Service\AiLabelBindHelper::bindContentRecord($uid);
-        // or bindPageRecord($uid), bindFileMetadata($uid)
-    }
+    use NITSAN\NsT3AF\AiLabel\Service\AiLabelBindHelper;
+
+    // After DataHandler / repository save — pass your extension key as $source
+    AiLabelBindHelper::bindContentRecord($uid, 'my_extension');
+    AiLabelBindHelper::bindPageRecord($uid, 'my_extension');
+    AiLabelBindHelper::bindFileMetadata($metaUid, 'my_extension');
+    AiLabelBindHelper::bindRecord('tx_news_domain_model_news', $uid, 'my_extension');
+
+Every child bind stores involvement ``ai_generated``. Editors may change that
+later in the AI Label module. Visitor badges still require confirmation.
 
 Parameters:
 
-* ``$uid`` — live record uid
-* ``Involvement`` (optional) — default ``Involvement::AiGenerated`` for pages and
-  content; ``Involvement::Suggestion`` for file metadata from accessibility tools
-* ``$source`` (optional) — default ``ns_t3ai`` (pages/content) or ``ns_t3aa`` (files)
+* ``$uid`` — live record uid (file metadata uid for ``bindFileMetadata``)
+* ``$source`` — short extension identifier stored as recording source (use your
+  extension key, for example ``my_extension``)
+* ``$altTextOnly`` (``bindFileMetadata`` only) — skip bind when only alt text
+  was updated
 
-If no capture correlation id is in the current request (for example T3AI image
-save is a second HTTP request), the helper writes origin with ``recordOrigin()``
-instead of ``bindGeneration()``. Visitor badges still require confirmation.
-
-**Reference:** ``packages/ns_t3ai/Classes/Domain/Repository/PageRepository.php``,
-``packages/ns_t3ai/Classes/Service/FileService.php``.
-
-File metadata: pass ``$altTextOnly = true`` to skip bind for alt-text-only
-updates (accessibility metadata is not treated as generative media).
+If no capture correlation id is in the current request (for example a follow-up
+HTTP request after async file processing), the helper writes origin with
+``recordOrigin()`` instead of ``bindGeneration()``.
 
 Direct origin reporting
 -------------------------
@@ -208,35 +209,37 @@ Or inject ``FrontendLabelRenderer`` / ``FrontendLabelStateFactory`` in PHP.
 Auto-confirm
 ------------
 
-Administrators can allow auto-confirm for trusted sources via EXTCONF
-``ailabelAutoConfirmSources`` (for example ``ns_t3ai``). Hold rules in
-``AutoConfirmSettingsService`` may still block public-interest text until manual
-review.
+**Active today:** allow-list trusted recording sources via EXTCONF
+``ailabelAutoConfirmSources`` (array of source strings, for example
+``my_extension``). Hold rules in ``AutoConfirmSettingsService`` and
+``ailabelHoldList`` (default includes ``public_interest_text``) may still block
+auto-confirm for public-interest text until manual review.
+
+**Settings form (stored, wiring in progress):** ``ailabelAutoConfirmOwn``,
+``ailabelAutoConfirmDetected``, and ``ailabelAutoConfirmHold`` in the AI Label
+Settings tab are persisted but not yet read by ``AutoConfirmSettingsService``.
+Use EXTCONF for production auto-confirm until those settings are connected.
 
 Check ``AiLabelRuleMatrixTest`` and ``AutoConfirmSettingsService`` before relying
 on auto-confirm in production.
+
+Module settings consumed on the frontend
+----------------------------------------
+
+``AiLabelSettingsService`` drives visitor badge appearance:
+
+* ``labelSize``, ``labelWording`` — passed to ``FrontendLabelRenderer``
+* ``markImageFile === overlay`` — enables image partial wrapper and overlay badge
+* ``labelPosition`` — CSS position class on the image wrapper (overlay only)
+
+Settings stored but not yet used on the frontend: ``machineReadable``,
+``labelUnknownOrigin``, ``secondInfoLayer``.
 
 Deep links
 ----------
 
 File list module: ``ProcessFileListActionsListener`` adds **AI Label** link to
 the media tab with folder pre-selected.
-
-Extension coverage matrix
--------------------------
-
-..  list-table::
-   :header-rows: 1
-   :widths: 25 75
-
-   * - Extension
-     - AI Label status
-   * - ``ns_t3ai``
-     - Binds pages, content, file metadata on save
-   * - ``ns_t3al``
-     - Not integrated; translation binds planned separately
-   * - Custom
-     - Use ``AiLabelBindHelper`` or ``AiLabelRecorderInterface``
 
 Maintainer references
 ---------------------

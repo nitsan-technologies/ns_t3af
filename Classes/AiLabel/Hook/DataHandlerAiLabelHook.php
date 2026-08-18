@@ -34,6 +34,9 @@ final class DataHandlerAiLabelHook
     /** @var array<string, Involvement|null> */
     private array $previousInvolvement = [];
 
+    /**
+     * @param array<string, mixed> $incomingFieldArray
+     */
     public function processDatamap_preProcessFieldArray(
         array &$incomingFieldArray,
         string $table,
@@ -67,20 +70,24 @@ final class DataHandlerAiLabelHook
                 $table,
                 $uid,
                 1,
-                0,
+                null,
                 1,
                 'AI Label: responsible person required when human review is enabled',
-                0,
+                null,
                 ['tx_nst3af_ailabel_responsible_person'],
             );
             unset($incomingFieldArray['tx_nst3af_ailabel_human_review']);
         }
     }
 
+    /**
+     * @param int|string $id
+     * @param array<string, mixed> $fieldArray
+     */
     public function processDatamap_afterDatabaseOperations(
         string $status,
         string $table,
-        $id,
+        int|string $id,
         array $fieldArray,
         DataHandler $dataHandler,
     ): void {

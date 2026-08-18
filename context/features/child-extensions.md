@@ -53,7 +53,8 @@ When AI Assistant saves AI-generated pages, content, or media, call `AiLabelBind
 
 ```php
 \NITSAN\NsT3AF\AiLabel\Service\AiLabelBindHelper::bindContentRecord($uid);
-// bindPageRecord($uid), bindFileMetadata($uid)
+// bindPageRecord($uid), bindFileMetadata($uid), bindRecord($table, $uid, $source)
+// Child binds always store ai_generated. Alt-text-only file binds are skipped.
 ```
 
 Capture correlation ids are set automatically on every `AiServiceInterface` response. **ns_t3al** is not wired yet — see `context/features/ai-label.md`.

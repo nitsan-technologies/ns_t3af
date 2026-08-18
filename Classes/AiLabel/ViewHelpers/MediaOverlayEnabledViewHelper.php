@@ -17,19 +17,19 @@ declare(strict_types=1);
  * file that was distributed with this source code.
  */
 
-namespace NITSAN\NsT3AF\AiLabel\EventListener;
+namespace NITSAN\NsT3AF\AiLabel\ViewHelpers;
 
-use NITSAN\NsT3AF\AiLabel\Service\ApplicableTableSchemaListener;
-use TYPO3\CMS\Core\Database\Event\AlterTableDefinitionStatementsEvent;
+use NITSAN\NsT3AF\AiLabel\Service\AiLabelSettingsService;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3Fluid\Fluid\Core\ViewHelper\AbstractViewHelper;
 
-final class AlterTableDefinitionListener
+/**
+ * Whether the visitor badge is rendered on the image file (overlay mode).
+ */
+final class MediaOverlayEnabledViewHelper extends AbstractViewHelper
 {
-    public function __construct(
-        private readonly ApplicableTableSchemaListener $schemaListener,
-    ) {}
-
-    public function __invoke(AlterTableDefinitionStatementsEvent $event): void
+    public function render(): bool
     {
-        $this->schemaListener->appendStatements($event);
+        return GeneralUtility::makeInstance(AiLabelSettingsService::class)->isMediaOverlayEnabled();
     }
 }

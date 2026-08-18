@@ -34,6 +34,8 @@ final class AiLabelRecordDrawerService
         private readonly AiLabelRecordEvaluator $evaluator,
         private readonly UndoCacheService $undoCacheService,
         private readonly ApplicableTablesResolver $applicableTablesResolver,
+        private readonly FrontendLabelRenderer $frontendLabelRenderer,
+        private readonly AiLabelSettingsService $settingsService,
     ) {}
 
     public function isAllowedTable(string $table): bool
@@ -60,8 +62,13 @@ final class AiLabelRecordDrawerService
         $confirmedBy = (int) ($record['tx_nst3af_ailabel_confirmed_by'] ?? 0);
         $confirmedAt = (int) ($record['tx_nst3af_ailabel_confirmed_at'] ?? 0);
         $involvement = $this->evaluator->involvement($record);
+        $labellingMode = $this->evaluator->labellingMode($record);
         $decision = $this->evaluator->decide($table, $record);
+
         $isMedia = $table === 'sys_file_metadata';
+        $overlayPreview = $isMedia && $this->settingsService->isMediaOverlayEnabled();
+        $visitorMarkup = $this->frontendLabelRenderer->renderBadgeMarkup($involvement, $overlayPreview);
+        $showOverlay = $overlayPreview && $visitorMarkup !== '';
 
         return [
             'table' => $table,
@@ -70,7 +77,7 @@ final class AiLabelRecordDrawerService
             'title' => $title,
             'isMedia' => $isMedia,
             'involvement' => $involvement->value,
-            'labellingMode' => $this->evaluator->labellingMode($record)->value,
+            'labellingMode' => $labellingMode->value,
             'publicInterest' => (bool) ($record['tx_nst3af_ailabel_public_interest'] ?? false),
             'humanReview' => (bool) ($record['tx_nst3af_ailabel_human_review'] ?? false),
             'responsiblePerson' => (string) ($record['tx_nst3af_ailabel_responsible_person'] ?? ''),
@@ -83,8 +90,10 @@ final class AiLabelRecordDrawerService
             'detectionSummary' => $this->buildDetectionSummary($record, $isMedia),
             'visitorPreview' => [
                 'showLabel' => $decision->showLabel,
-                'labelText' => $this->visitorLabelText($involvement),
                 'reasonCode' => $decision->reasonCode->value,
+                'markup' => $visitorMarkup,
+                'isMediaOverlay' => $showOverlay,
+                'mediaWrapperClass' => $this->settingsService->mediaWrapperClass(),
             ],
             'involvementOptions' => $this->involvementOptions(),
             'labellingModeOptions' => $this->labellingModeOptions(),
@@ -117,7 +126,7 @@ final class AiLabelRecordDrawerService
         }
 
         $responsiblePerson = trim((string) ($data['responsible_person'] ?? ''));
-        $publicInterest = !empty($data['public_interest']) && (string) $data['public_interest'] !== '0';
+        $publicInterest = !empty($data['public_interest']);
         $exemptionReason = trim((string) ($data['exemption_reason'] ?? ''));
 
         $this->undoCacheService->remember($table, $uid, $this->extractAiLabelFields($record));
@@ -211,17 +220,6 @@ final class AiLabelRecordDrawerService
         $parts[] = 'Detection is only ever a suggestion; a person confirms it.';
 
         return implode(' ', $parts);
-    }
-
-    private function visitorLabelText(Involvement $involvement): string
-    {
-        return match ($involvement) {
-            Involvement::AiGenerated => 'AI generated',
-            Involvement::AiModified => 'AI modified',
-            Involvement::OriginUnknown => 'AI involvement unknown',
-            Involvement::Suggestion => 'AI suggestion',
-            default => 'AI generated',
-        };
     }
 
     /**

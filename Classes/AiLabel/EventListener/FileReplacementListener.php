@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\AiLabel\EventListener;
 
 use NITSAN\NsT3AF\AiLabel\Service\ConfirmationService;
 use TYPO3\CMS\Core\Resource\Event\AfterFileReplacedEvent;
+use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -31,12 +32,16 @@ final class FileReplacementListener
     public function __invoke(AfterFileReplacedEvent $event): void
     {
         $file = $event->getFile();
-        $metaData = $file->getMetaData();
-        if ($metaData === null) {
+        if (!$file instanceof File) {
+            return;
+        }
+
+        $uid = (int) ($file->getMetaData()->get()['uid'] ?? 0);
+        if ($uid <= 0) {
             return;
         }
 
         GeneralUtility::makeInstance(ConfirmationService::class)
-            ->clearConfirmation('sys_file_metadata', (int) $metaData->getUid());
+            ->clearConfirmation('sys_file_metadata', $uid);
     }
 }

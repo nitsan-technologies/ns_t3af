@@ -26,9 +26,9 @@ final class CaptureQueueSchemaTest extends TestCase
     public function testGenerationQueueStoresNoPromptOrContentColumns(): void
     {
         $ddl = (string) file_get_contents(dirname(__DIR__, 3) . '/ext_tables.sql');
-        preg_match('/CREATE TABLE tx_nst3af_ailabel_generation \((.*?)\);/s', $ddl, $matches);
-        self::assertArrayHasKey(1, $matches);
-        $tableDdl = strtolower($matches[1]);
+        self::assertSame(1, preg_match('/CREATE TABLE tx_nst3af_ailabel_generation \((.*?)\);/s', $ddl, $matches));
+        $tableDdl = strtolower((string) ($matches[1] ?? ''));
+        self::assertNotSame('', $tableDdl);
         self::assertStringNotContainsString('prompt', $tableDdl);
         self::assertStringNotContainsString('content', $tableDdl);
         self::assertStringNotContainsString('bodytext', $tableDdl);

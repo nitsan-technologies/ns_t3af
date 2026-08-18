@@ -58,14 +58,24 @@ final class AiLabelStatisticsService
         ];
 
         foreach ($this->fetchAllMediaRows() as $record) {
-            $this->accumulate($global, $media, self::MEDIA_TABLE, $record);
+            $delta = $this->tally(self::MEDIA_TABLE, $record);
+            $global = $this->addCounters($global, $delta);
+            $media['confirmed'] += $delta['confirmed'];
+            $media['awaiting'] += $delta['awaiting'];
+            $media['labelled'] += $delta['labelled'];
+            $media['notLabelled'] += $delta['notLabelled'];
             $this->accumulateOrigin($origins, $record);
             ++$media['total'];
         }
 
         foreach ($this->textTables() as $table) {
             foreach ($this->fetchTableRows($table) as $record) {
-                $this->accumulate($global, $texts, $table, $record);
+                $delta = $this->tally($table, $record);
+                $global = $this->addCounters($global, $delta);
+                $texts['confirmed'] += $delta['confirmed'];
+                $texts['awaiting'] += $delta['awaiting'];
+                $texts['labelled'] += $delta['labelled'];
+                $texts['notLabelled'] += $delta['notLabelled'];
                 $this->accumulateOrigin($origins, $record);
                 ++$texts['total'];
                 if ($this->evaluator->hasUnnamedReview($record)) {
@@ -99,31 +109,36 @@ final class AiLabelStatisticsService
     }
 
     /**
-     * @param array<string, int> $global
-     * @param array<string, int> $domain
      * @param array<string, mixed> $record
+     * @return array{confirmed: int, awaiting: int, labelled: int, notLabelled: int}
      */
-    private function accumulate(array &$global, array &$domain, string $table, array $record): void
+    private function tally(string $table, array $record): array
     {
         $confirmed = $this->evaluator->isConfirmed($record);
         $awaiting = $this->evaluator->isAwaitingReview($record);
-        $decision = $this->evaluator->decide($table, $record);
+        $showLabel = $this->evaluator->decide($table, $record)->showLabel;
 
-        if ($confirmed) {
-            ++$global['confirmed'];
-            ++$domain['confirmed'];
-        }
-        if ($awaiting) {
-            ++$global['awaiting'];
-            ++$domain['awaiting'];
-        }
-        if ($decision->showLabel) {
-            ++$global['labelled'];
-            ++$domain['labelled'];
-        } else {
-            ++$global['notLabelled'];
-            ++$domain['notLabelled'];
-        }
+        return [
+            'confirmed' => $confirmed ? 1 : 0,
+            'awaiting' => $awaiting ? 1 : 0,
+            'labelled' => $showLabel ? 1 : 0,
+            'notLabelled' => $showLabel ? 0 : 1,
+        ];
+    }
+
+    /**
+     * @param array{confirmed: int, awaiting: int, labelled: int, notLabelled: int} $counters
+     * @param array{confirmed: int, awaiting: int, labelled: int, notLabelled: int} $delta
+     * @return array{confirmed: int, awaiting: int, labelled: int, notLabelled: int}
+     */
+    private function addCounters(array $counters, array $delta): array
+    {
+        $counters['confirmed'] += $delta['confirmed'];
+        $counters['awaiting'] += $delta['awaiting'];
+        $counters['labelled'] += $delta['labelled'];
+        $counters['notLabelled'] += $delta['notLabelled'];
+
+        return $counters;
     }
 
     /**

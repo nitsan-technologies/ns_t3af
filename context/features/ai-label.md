@@ -78,9 +78,10 @@ Every decision stores a `ReasonCode` enum value (machine-readable, exported in e
 
 | Extension | Integration status |
 |---|---|
-| **ns_t3ai** | **Covered** — pages/content via `AiLabelBindHelper` (`AiGenerated`); DALL·E save via `recordOrigin` on `sys_file_metadata` |
+| **ns_t3ai** | **Covered** — pages/content/files via `AiLabelBindHelper` (always `ai_generated`); stock libraries skipped |
+| **ns_t3aa** | **Covered** — generated media via `bindFileMetadata` (`ai_generated`); alt-text-only updates skipped |
 | **ns_t3al** | **Not integrated** — blind spot in coverage when ext not loaded; dedicated translation workflows need future hooks |
-| **Third party** | `AiLabelRecorderInterface` (`bindGeneration`, `recordOrigin`, `markGenerated` / `markModified` / `clearInvolvement`) or `AiLabelBindHelper` at save time |
+| **Third party** | `AiLabelBindHelper` at save time (always `ai_generated`) or `AiLabelRecorderInterface` |
 
 Capture is automatic for all AI Foundation provider calls; bind must happen when content is saved.
 

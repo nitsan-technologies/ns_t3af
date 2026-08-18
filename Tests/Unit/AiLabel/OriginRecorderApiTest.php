@@ -19,8 +19,10 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\AiLabel;
 
+use NITSAN\NsT3AF\AiLabel\Service\AiLabelSettingsService;
 use NITSAN\NsT3AF\AiLabel\Service\ApplicableTablesResolver;
 use NITSAN\NsT3AF\AiLabel\Service\OriginRecorder;
+use NITSAN\NsT3AF\Settings\ExtensionSettingsService;
 use PHPUnit\Framework\TestCase;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -29,18 +31,18 @@ final class OriginRecorderApiTest extends TestCase
 {
     protected function tearDown(): void
     {
-        unset($GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelApplicableTables']);
         parent::tearDown();
     }
 
     public function testMarkGeneratedRejectsUnknownTable(): void
     {
-        unset($GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelApplicableTables']);
         $dispatcher = $this->createMock(EventDispatcherInterface::class);
         $dispatcher->method('dispatch')->willReturnArgument(0);
+        $extensionSettings = $this->createMock(ExtensionSettingsService::class);
+        $extensionSettings->method('getAllIgnorePid')->willReturn([]);
         $recorder = new OriginRecorder(
             $this->createMock(ConnectionPool::class),
-            new ApplicableTablesResolver($dispatcher),
+            new ApplicableTablesResolver($dispatcher, new AiLabelSettingsService($extensionSettings)),
         );
 
         $this->expectException(\InvalidArgumentException::class);

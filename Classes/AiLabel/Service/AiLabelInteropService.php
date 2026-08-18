@@ -37,7 +37,7 @@ final class AiLabelInteropService
         }
 
         if (class_exists(\NetThinks\NtAimark\Event\AiContentGeneratedEvent::class)) {
-            GeneralUtility::makeInstance(\Psr\EventDispatcher\EventDispatcherInterface::class)?->dispatch(
+            GeneralUtility::makeInstance(\Psr\EventDispatcher\EventDispatcherInterface::class)->dispatch(
                 new \NetThinks\NtAimark\Event\AiContentGeneratedEvent($table, $uid, 'generated'),
             );
         }

@@ -89,4 +89,19 @@ final class AiLabelFilters
 
         return $params;
     }
+
+    /**
+     * @return array<string, int|string>
+     */
+    public function routeParamsForPage(int $page): array
+    {
+        $params = $this->toRouteParams();
+        if ($page > 1) {
+            $params['page'] = $page;
+        } else {
+            unset($params['page']);
+        }
+
+        return $params;
+    }
 }

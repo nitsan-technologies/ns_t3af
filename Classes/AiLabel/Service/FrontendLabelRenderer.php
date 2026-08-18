@@ -31,8 +31,13 @@ final class FrontendLabelRenderer
     public function __construct(
         private readonly MediaRuleEngine $mediaRuleEngine,
         private readonly RivalsRendererGuard $rivalsRendererGuard,
+        private readonly AiLabelSettingsService $settingsService,
+        private readonly FrontendLabelTextService $labelTextService,
     ) {}
 
+    /**
+     * @param array<string, mixed> $record
+     */
     public function renderMediaBadge(
         Involvement $involvement,
         LabellingMode $mode,
@@ -40,7 +45,6 @@ final class FrontendLabelRenderer
         int $creationDate,
         string $table = 'tt_content',
         int $uid = 0,
-        /** @var array<string, mixed> $record */
         array $record = [],
     ): string {
         if ($record !== [] && $this->rivalsRendererGuard->shouldStandDown($table, $record)) {
@@ -52,34 +56,84 @@ final class FrontendLabelRenderer
             return '';
         }
 
-        $iconFile = $this->resolveIconPath($involvement);
-        $labelText = $this->labelText($involvement);
-        $iconUrl = htmlspecialchars(PathUtility::getAbsoluteWebPath($iconFile) . basename($iconFile), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $alt = htmlspecialchars($labelText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $moduleSettings = $this->settingsService->all();
+        $sizeClass = match ((string) ($moduleSettings['labelSize'] ?? 'medium')) {
+            'small' => 'nst3af-ailabel--size-small',
+            'large' => 'nst3af-ailabel--size-large',
+            default => 'nst3af-ailabel--size-medium',
+        };
+        $iconOnly = ((string) ($moduleSettings['labelWording'] ?? 'show_site_language')) === 'icon_only';
 
-        return '<aside class="nst3af-ailabel" role="note" aria-label="' . $alt . '" style="display:inline-flex;align-items:center;gap:6px;margin-top:8px">'
-            . '<img src="' . $iconUrl . '" width="32" height="32" alt="' . $alt . '" class="nst3af-ailabel__icon" />'
-            . '<span class="nst3af-ailabel__text" style="background-color:#000;color:#fff;padding:2px 6px;border-radius:4px;font-size:12px;line-height:1.4">'
-            . $alt . '</span></aside>';
+        $iconFile = $this->resolveIconPath($involvement);
+        $labelText = $this->labelTextService->forInvolvement($involvement);
+        $iconUrl = $this->publicIconUrl($iconFile);
+
+        return $this->buildMarkup($iconUrl, $labelText, $sizeClass, $iconOnly);
     }
 
-    private function resolveIconPath(Involvement $involvement): string
+    /**
+     * Backend drawer preview: badge markup only (no rule engine / rivals guard).
+     */
+    public function renderBadgeMarkup(Involvement $involvement, bool $onDarkBackground = false): string
     {
+        if (!in_array($involvement, [Involvement::AiGenerated, Involvement::AiModified, Involvement::OriginUnknown, Involvement::Suggestion], true)) {
+            return '';
+        }
+
+        $moduleSettings = $this->settingsService->all();
+        $sizeClass = match ((string) ($moduleSettings['labelSize'] ?? 'medium')) {
+            'small' => 'nst3af-ailabel--size-small',
+            'large' => 'nst3af-ailabel--size-large',
+            default => 'nst3af-ailabel--size-medium',
+        };
+        $iconOnly = ((string) ($moduleSettings['labelWording'] ?? 'show_site_language')) === 'icon_only';
+        $iconUrl = $this->publicIconUrl($this->resolveIconPath($involvement, $onDarkBackground));
+
+        return $this->buildMarkup($iconUrl, $this->labelTextService->forInvolvement($involvement), $sizeClass, $iconOnly);
+    }
+
+    private function publicIconUrl(string $iconFile): string
+    {
+        return $this->encodeWebPath(PathUtility::getPublicResourceWebPath($iconFile));
+    }
+
+    private function encodeWebPath(string $path): string
+    {
+        return implode('/', array_map(
+            static fn(string $segment): string => $segment === '' ? '' : rawurlencode($segment),
+            explode('/', $path),
+        ));
+    }
+
+    private function buildMarkup(string $iconUrl, string $labelText, string $sizeClass, bool $iconOnly): string
+    {
+        $iconUrl = htmlspecialchars($iconUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $alt = htmlspecialchars($labelText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+        $classes = 'nst3af-ailabel ' . $sizeClass;
+        if ($iconOnly) {
+            $classes .= ' nst3af-ailabel--icon-only';
+        }
+
+        $html = '<aside class="' . $classes . '" role="note" aria-label="' . $alt . '">'
+            . '<img src="' . $iconUrl . '" alt="' . $alt . '" class="nst3af-ailabel__icon" loading="lazy" decoding="async" />';
+
+        if (!$iconOnly) {
+            $html .= '<span class="nst3af-ailabel__text">' . $alt . '</span>';
+        }
+
+        return $html . '</aside>';
+    }
+
+    private function resolveIconPath(Involvement $involvement, bool $white = false): string
+    {
+        $tone = $white ? 'white' : 'black';
         $name = match ($involvement) {
-            Involvement::AiModified => 'LABEL_AI MODIFIED_black.svg',
-            Involvement::AiGenerated => 'LABEL_AI GENERATED_black.svg',
-            default => 'LABEL_AI_black.svg',
+            Involvement::AiModified => 'LABEL_AI MODIFIED_' . $tone . '.svg',
+            Involvement::AiGenerated => 'LABEL_AI GENERATED_' . $tone . '.svg',
+            default => 'LABEL_AI_' . $tone . '.svg',
         };
 
         return 'EXT:ns_t3af/Resources/Public/Icons/EuAiLabel/' . $name;
-    }
-
-    private function labelText(Involvement $involvement): string
-    {
-        return match ($involvement) {
-            Involvement::AiModified => 'AI modified',
-            Involvement::AiGenerated => 'AI generated',
-            default => 'AI',
-        };
     }
 }

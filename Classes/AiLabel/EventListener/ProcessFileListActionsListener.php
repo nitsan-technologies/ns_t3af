@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\AiLabel\EventListener;
 
 use TYPO3\CMS\Backend\Routing\UriBuilder;
+use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Filelist\Event\ProcessFileListActionsEvent;
 
@@ -35,12 +36,11 @@ final class ProcessFileListActionsListener
         }
 
         $file = $event->getResource();
-        $metaData = $file->getMetaData();
-        if ($metaData === null) {
+        if (!$file instanceof File) {
             return;
         }
 
-        $uid = (int) $metaData->getUid();
+        $uid = (int) ($file->getMetaData()->get()['uid'] ?? 0);
         if ($uid <= 0) {
             return;
         }

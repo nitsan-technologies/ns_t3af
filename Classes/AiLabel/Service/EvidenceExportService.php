@@ -52,6 +52,9 @@ final class EvidenceExportService
         return $rows;
     }
 
+    /**
+     * @param list<array<string, mixed>> $rows
+     */
     public function toCsv(array $rows): string
     {
         $handle = fopen('php://temp', 'r+');
@@ -80,6 +83,9 @@ final class EvidenceExportService
         return $csv;
     }
 
+    /**
+     * @param list<array<string, mixed>> $rows
+     */
     public function toHtml(array $rows): string
     {
         $caveat = htmlspecialchars($this->complianceStrings->get('caveat'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

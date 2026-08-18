@@ -1,0 +1,111 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<nav class="pagination-wrap aiu-ai-usage__pagination" aria-label="{f:translate(key: '{ll}:module.aiLabel.pagination.label', default: 'AI Label list pagination')}">
+    <ul class="pagination mb-0">
+        <f:if condition="{aiLabelPagination.pagination.previousPageNumber} && {aiLabelPagination.pagination.previousPageNumber} >= {aiLabelPagination.pagination.firstPageNumber}">
+            <f:then>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: listRoute, parameters: {
+                        search: filters.search,
+                        involvement: filters.involvement,
+                        labelState: filters.labelState,
+                        fileType: filters.fileType,
+                        publicInterest: filters.publicInterest,
+                        confirmedBy: filters.confirmedBy,
+                        dateFrom: filters.dateFrom,
+                        dateTo: filters.dateTo,
+                        recordingSource: filters.recordingSource,
+                        reasonCode: filters.reasonCode,
+                        max: filters.max,
+                        folder: filters.folder,
+                        page: aiLabelPagination.pagination.firstPageNumber
+                    })}" class="page-link" title="{f:translate(key: '{ll}:module.aiUsage.pagination.first', default: 'First page')}">
+                        <core:icon identifier="actions-view-paging-first" />
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: listRoute, parameters: {
+                        search: filters.search,
+                        involvement: filters.involvement,
+                        labelState: filters.labelState,
+                        fileType: filters.fileType,
+                        publicInterest: filters.publicInterest,
+                        confirmedBy: filters.confirmedBy,
+                        dateFrom: filters.dateFrom,
+                        dateTo: filters.dateTo,
+                        recordingSource: filters.recordingSource,
+                        reasonCode: filters.reasonCode,
+                        max: filters.max,
+                        folder: filters.folder,
+                        page: aiLabelPagination.pagination.previousPageNumber
+                    })}" class="page-link" title="{f:translate(key: '{ll}:module.aiUsage.pagination.previous', default: 'Previous page')}">
+                        <core:icon identifier="actions-view-paging-previous" />
+                    </a>
+                </li>
+            </f:then>
+            <f:else>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+            </f:else>
+        </f:if>
+        <li class="page-item">
+            <span class="page-link aiu-ai-usage__pagination-records">
+                <f:translate key="{ll}:module.aiUsage.pagination.records"
+                             arguments="{0: aiLabelPagination.pagination.startRecordNumber, 1: aiLabelPagination.pagination.endRecordNumber, 2: listTotalCount}"
+                             default="Records %1$s–%2$s of %3$s" />
+                <span class="aiu-ai-usage__pagination-sep">|</span>
+                <f:translate key="{ll}:module.aiUsage.pagination.page" default="Page" />
+                {aiLabelPagination.paginator.currentPageNumber} / {aiLabelPagination.pagination.lastPageNumber}
+            </span>
+        </li>
+        <f:if condition="{aiLabelPagination.pagination.nextPageNumber} && {aiLabelPagination.pagination.nextPageNumber} <= {aiLabelPagination.pagination.lastPageNumber}">
+            <f:then>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: listRoute, parameters: {
+                        search: filters.search,
+                        involvement: filters.involvement,
+                        labelState: filters.labelState,
+                        fileType: filters.fileType,
+                        publicInterest: filters.publicInterest,
+                        confirmedBy: filters.confirmedBy,
+                        dateFrom: filters.dateFrom,
+                        dateTo: filters.dateTo,
+                        recordingSource: filters.recordingSource,
+                        reasonCode: filters.reasonCode,
+                        max: filters.max,
+                        folder: filters.folder,
+                        page: aiLabelPagination.pagination.nextPageNumber
+                    })}" class="page-link" title="{f:translate(key: '{ll}:module.aiUsage.pagination.next', default: 'Next page')}">
+                        <core:icon identifier="actions-view-paging-next" />
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a href="{f:be.uri(route: listRoute, parameters: {
+                        search: filters.search,
+                        involvement: filters.involvement,
+                        labelState: filters.labelState,
+                        fileType: filters.fileType,
+                        publicInterest: filters.publicInterest,
+                        confirmedBy: filters.confirmedBy,
+                        dateFrom: filters.dateFrom,
+                        dateTo: filters.dateTo,
+                        recordingSource: filters.recordingSource,
+                        reasonCode: filters.reasonCode,
+                        max: filters.max,
+                        folder: filters.folder,
+                        page: aiLabelPagination.pagination.lastPageNumber
+                    })}" class="page-link" title="{f:translate(key: '{ll}:module.aiUsage.pagination.last', default: 'Last page')}">
+                        <core:icon identifier="actions-view-paging-last" />
+                    </a>
+                </li>
+            </f:then>
+            <f:else>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+                <li class="page-item disabled"><span class="page-link"><core:icon identifier="empty-empty" /></span></li>
+            </f:else>
+        </f:if>
+    </ul>
+</nav>
+</html>

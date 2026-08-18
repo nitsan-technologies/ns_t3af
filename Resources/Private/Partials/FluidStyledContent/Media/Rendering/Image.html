@@ -2,8 +2,15 @@
       xmlns:ail="http://typo3.org/ns/NITSAN/NsT3AF/AiLabel/ViewHelpers"
       data-namespace-typo3-fluid="true">
 <f:asset.css identifier="nst3af-ailabel" href="EXT:ns_t3af/Resources/Public/Css/frontend/ai-label.css" />
-<span class="nst3af-ailabel-media">
-    <f:media class="image-embed-item" file="{file}" width="{dimensions.width}" height="{dimensions.height}" alt="{file.alternative}" title="{file.title}" loading="{settings.media.lazyLoading}" decoding="{settings.media.imageDecoding}" />
-    <ail:label file="{file}" />
-</span>
+<f:if condition="{ail:mediaOverlayEnabled()}">
+    <f:then>
+        <span class="{ail:mediaWrapperClass()}">
+            <f:media class="image-embed-item" file="{file}" width="{dimensions.width}" height="{dimensions.height}" alt="{file.alternative}" title="{file.title}" loading="{settings.media.lazyLoading}" decoding="{settings.media.imageDecoding}" />
+            <ail:label file="{file}" />
+        </span>
+    </f:then>
+    <f:else>
+        <f:media class="image-embed-item" file="{file}" width="{dimensions.width}" height="{dimensions.height}" alt="{file.alternative}" title="{file.title}" loading="{settings.media.lazyLoading}" decoding="{settings.media.imageDecoding}" />
+    </f:else>
+</f:if>
 </html>

@@ -1,3 +1,53 @@
+.nst3af-ailabel {
+    align-items: center;
+    display: inline-flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.nst3af-ailabel__icon {
+    display: block;
+    height: auto;
+    max-width: 100%;
+    width: auto;
+}
+
+.nst3af-ailabel--size-small .nst3af-ailabel__icon {
+    height: 24px;
+}
+
+.nst3af-ailabel--size-medium .nst3af-ailabel__icon {
+    height: 32px;
+}
+
+.nst3af-ailabel--size-large .nst3af-ailabel__icon {
+    height: 48px;
+}
+
+.nst3af-ailabel__text {
+    background-color: #000;
+    border-radius: 4px;
+    color: #fff;
+    line-height: 1.4;
+    padding: 2px 6px;
+}
+
+.nst3af-ailabel--size-small .nst3af-ailabel__text {
+    font-size: 10px;
+}
+
+.nst3af-ailabel--size-medium .nst3af-ailabel__text {
+    font-size: 12px;
+}
+
+.nst3af-ailabel--size-large .nst3af-ailabel__text {
+    font-size: 14px;
+}
+
+.nst3af-ailabel--icon-only .nst3af-ailabel__text {
+    display: none;
+}
+
 .nst3af-ailabel-media {
     display: inline-block;
     max-width: 100%;
@@ -11,10 +61,36 @@
 }
 
 .nst3af-ailabel-media .nst3af-ailabel {
+    margin: 0;
+    margin-top: 0;
+    position: absolute;
+    z-index: 1;
+}
+
+.nst3af-ailabel-media--pos-bottom-right .nst3af-ailabel {
     bottom: 8px;
     left: auto;
-    margin: 0;
-    position: absolute;
     right: 8px;
-    z-index: 1;
+    top: auto;
+}
+
+.nst3af-ailabel-media--pos-bottom-left .nst3af-ailabel {
+    bottom: 8px;
+    left: 8px;
+    right: auto;
+    top: auto;
+}
+
+.nst3af-ailabel-media--pos-top-right .nst3af-ailabel {
+    bottom: auto;
+    left: auto;
+    right: 8px;
+    top: 8px;
+}
+
+.nst3af-ailabel-media--pos-top-left .nst3af-ailabel {
+    bottom: auto;
+    left: 8px;
+    right: auto;
+    top: 8px;
 }

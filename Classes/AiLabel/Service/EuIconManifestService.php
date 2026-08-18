@@ -75,7 +75,11 @@ final class EuIconManifestService
             if (!is_file($file)) {
                 continue;
             }
-            $hashes[] = hash_file('sha256', $file);
+            $hash = hash_file('sha256', $file);
+            if (!is_string($hash)) {
+                continue;
+            }
+            $hashes[] = $hash;
         }
 
         if (count($hashes) !== 12) {

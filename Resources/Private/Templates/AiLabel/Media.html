@@ -7,6 +7,10 @@
     <div class="aiu-mcp-tools-shell aiu-ailabel-media-shell">
         <f:render partial="AiLabel/FolderTree" arguments="{folderTree: folderTree}" />
         <div class="aiu-mcp-tools-shell__content">
+            <div class="aiu-ailabel-list"
+                 data-aiu-ailabel-list-root
+                 data-aiu-nav-replace="[data-aiu-ailabel-list-root]"
+                 data-aiu-nav-replace-callback="aiuReinitAiLabelListRoot">
             <f:render partial="AiLabel/ReviewBanner" arguments="{spotlight: mediaList.spotlight, bulkActionUri: bulkActionUri}" />
 
             <div class="callout callout-info mb-3">
@@ -30,11 +34,19 @@
                 variant: 'media',
                 returnTab: 'media',
                 bulkActionUri: bulkActionUri,
-                undoUri: undoUri,
+                undoUri: undoUri
+            }" />
+            <f:render partial="AiLabel/MediaTable" arguments="{
+                mediaList: mediaList,
+                bulkActionUri: bulkActionUri,
+                filters: filters,
+                filterRouteParams: filterRouteParams,
+                listRoute: listRoute,
+                aiLabelPagination: aiLabelPagination,
                 exportUri: exportUri,
                 refreshUri: refreshUri
             }" />
-            <f:render partial="AiLabel/MediaTable" arguments="{mediaList: mediaList, bulkActionUri: bulkActionUri}" />
+            </div>
         </div>
     </div>
 

@@ -23,7 +23,7 @@ use NITSAN\NsT3AF\AiLabel\Event\CollectApplicableTablesEvent;
 use Psr\EventDispatcher\EventDispatcherInterface;
 
 /**
- * Resolves tables that store AI Label fields (defaults, EXTCONF, then event).
+ * Resolves tables that store AI Label fields (defaults, module settings, then event).
  */
 final class ApplicableTablesResolver
 {
@@ -31,6 +31,7 @@ final class ApplicableTablesResolver
 
     public function __construct(
         private readonly EventDispatcherInterface $eventDispatcher,
+        private readonly AiLabelSettingsService $settingsService,
     ) {}
 
     /**
@@ -38,9 +39,9 @@ final class ApplicableTablesResolver
      */
     public function getTables(): array
     {
-        $configured = $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelApplicableTables'] ?? null;
-        $tables = is_array($configured) && $configured !== []
-            ? array_values(array_filter($configured, static fn(mixed $table): bool => is_string($table) && $table !== ''))
+        $configured = $this->settingsService->getConfiguredApplicableTables();
+        $tables = $configured !== []
+            ? $configured
             : self::DEFAULT_TABLES;
 
         $event = new CollectApplicableTablesEvent($tables);

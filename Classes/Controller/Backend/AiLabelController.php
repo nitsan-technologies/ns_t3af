@@ -34,10 +34,12 @@ use NITSAN\NsT3AF\AiLabel\Service\CoverageScoreService;
 use NITSAN\NsT3AF\AiLabel\Service\EuIconManifestService;
 use NITSAN\NsT3AF\AiLabel\Service\EvidenceExportService;
 use NITSAN\NsT3AF\AiLabel\Service\OriginRecorder;
+use NITSAN\NsT3AF\Pagination\FixedTotalPaginator;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Http\RedirectResponse;
 use TYPO3\CMS\Core\Http\Response;
+use TYPO3\CMS\Core\Pagination\SimplePagination;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 final class AiLabelController extends AbstractAiUniverseModuleController
@@ -122,6 +124,8 @@ final class AiLabelController extends AbstractAiUniverseModuleController
             [
                 'filters' => $filters,
                 'filterRouteParams' => $filters->toRouteParams(),
+                'listRoute' => 't3af_dashboard.ai_label.media',
+                'aiLabelPagination' => $this->buildListPagination($mediaList, $filters),
                 'folderTree' => $folderTree,
                 'mediaList' => $mediaList,
                 'bulkActionUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.bulk'),
@@ -151,6 +155,8 @@ final class AiLabelController extends AbstractAiUniverseModuleController
             [
                 'filters' => $filters,
                 'filterRouteParams' => $filters->toRouteParams(),
+                'listRoute' => 't3af_dashboard.ai_label.texts',
+                'aiLabelPagination' => $this->buildListPagination($textList, $filters),
                 'textList' => $textList,
                 'bulkActionUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.bulk'),
                 'undoUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.undo'),
@@ -199,7 +205,7 @@ final class AiLabelController extends AbstractAiUniverseModuleController
         $returnTab = (string) ($body['returnTab'] ?? 'media');
         $backendUserId = (int) ($this->getBackendUser()?->user['uid'] ?? 0);
 
-        $result = $this->bulkActionService->execute($action, array_map('strval', $refs), $backendUserId, $payload);
+        $result = $this->bulkActionService->execute($action, array_values(array_map('strval', $refs)), $backendUserId, $payload);
 
         return $this->redirectToSubTab($request, $returnTab, $result['processed'] > 0 ? 'bulk-done' : 'bulk-none');
     }
@@ -299,6 +305,25 @@ final class AiLabelController extends AbstractAiUniverseModuleController
         }
 
         return $this->redirectToSubTab($request, $returnTab, 'record-saved');
+    }
+
+    /**
+     * @param array{rows: list<array<string, mixed>>, total: int} $listResult
+     * @return array{pagination: SimplePagination, paginator: FixedTotalPaginator}
+     */
+    private function buildListPagination(array $listResult, AiLabelFilters $filters): array
+    {
+        $paginator = new FixedTotalPaginator(
+            (int) ($listResult['total'] ?? 0),
+            $listResult['rows'] ?? [],
+            $filters->page,
+            $filters->max,
+        );
+
+        return [
+            'pagination' => new SimplePagination($paginator),
+            'paginator' => $paginator,
+        ];
     }
 
     /**

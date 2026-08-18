@@ -73,12 +73,103 @@ or the drawer.
 Settings tab
 ~~~~~~~~~~~~
 
-* Label position, size, and wording on the frontend
-* Whether to mark image files at content-element level only
-* Machine-readable metadata (IPTC) preservation mode
-* Auto-confirm rules (own generations, detected uploads, hold list)
-* Applicable extension tables (comma-separated)
-* Per-folder defaults (media)
+Settings are saved in **AI Label → Settings** and stored in
+``tx_nst3af_extension_setting`` (extension key ``ns_t3af``). Defaults live in
+``Configuration/ExtensionSettings/fields.typoscript``.
+
+Frontend label appearance
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..  list-table::
+   :header-rows: 1
+   :widths: 22 28 50
+
+   * - Setting
+     - Options
+     - Effect
+   * - **Position on media**
+     - Bottom right (default), bottom left, top right, top left
+     - **Frontend (image overlay only).** Positions the badge inside the image
+       wrapper when **Mark the image file** is set to **Overlay on the image**.
+       Does not move text badges on content elements — those stay inline after
+       the element body.
+   * - **Size**
+     - Medium (default), small, large
+     - **Frontend.** CSS classes ``nst3af-ailabel--size-*``; icon height 32px
+       (medium), 24px (small), 48px (large). Applies to content-element badges
+       and image overlays.
+   * - **Wording beside the icon**
+     - Show in site language (default), icon only
+     - **Frontend.** **Icon only** hides the visible text span but keeps
+       ``alt`` / ``aria-label`` for accessibility. **Show in site language**
+       displays the short label next to the EU icon in the current site
+       language (``locallang.xlf`` overlays, for example ``de.locallang.xlf``).
+   * - **Mark the image file itself**
+     - Content element only (default), overlay on the image, written into the
+       image file
+     - **Frontend (partial).** **Content element only** — badge after the
+       content element only (no overlay on ``<img>``). **Overlay on the image**
+       — badge on each confirmed AI-generated file in Fluid Styled Content
+       image rendering. **Written into the image file** — stored only; not
+       implemented yet.
+
+Machine-readable marking and rules
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+..  list-table::
+   :header-rows: 1
+   :widths: 22 28 50
+
+   * - Setting
+     - Options
+     - Effect
+   * - **Machine-readable marking**
+     - IPTC digital source type (default), IPTC plus JSON-LD, off
+     - **Stored only.** Intended for IPTC/JSON-LD export on save; not wired on
+       the frontend yet.
+   * - **Label media of unknown origin**
+     - No (default), yes
+     - **Stored only.** Intended for rule engines; not applied to visitor badges
+       yet.
+   * - **Second information layer**
+     - Off (default), on
+     - **Stored only.** Planned expandable detail on the frontend; not
+       implemented yet.
+   * - **Also record on these tables**
+     - Comma-separated table names (empty by default)
+     - **Backend.** Registers extra tables for schema columns, module lists,
+       and bind/API validation (in addition to ``pages``, ``tt_content``,
+       ``sys_file_metadata``).
+
+Automatic confirmation
+^^^^^^^^^^^^^^^^^^^^^^
+
+..  list-table::
+   :header-rows: 1
+   :widths: 22 28 50
+
+   * - Setting
+     - Options
+     - Effect
+   * - **Confirm when OUR extension recorded it**
+     - Off (default), on for media, on for text, on for media and text
+     - **Stored only** in the Settings form. Production auto-confirm today uses
+       EXTCONF ``ailabelAutoConfirmSources`` (see developer guide).
+   * - **Confirm when DETECTED on upload**
+     - Off (default), on
+     - **Stored only.** Upload detection suggestions still require manual
+       confirm until this is wired.
+   * - **When auto-confirm is on, still hold for a person**
+     - Public-interest texts (default)
+     - **Backend (EXTCONF).** ``ailabelHoldList`` / ``AutoConfirmSettingsService``
+       blocks auto-confirm for public-interest text even when a source is
+       allow-listed.
+   * - **Automatically record human review and responsible person**
+     - (disabled checkbox)
+     - **Never available** by design — responsible person stays manual.
+
+Per-folder media defaults are configured via EXTCONF ``ailabelFolderDefaults``
+(not on the Settings form).
 
 Record drawer fields
 --------------------
@@ -127,23 +218,21 @@ How records get AI metadata
 
 1. **AI Foundation capture** — every provider response stores a generation
    correlation id.
-2. **Bind on save** — connected extensions (for example **AI Assistant /
-   ns_t3ai**) attach that generation to the saved page, content element, or
-   file when content is persisted.
+2. **Bind on save** — integrating extensions call ``AiLabelBindHelper`` (or
+   ``AiLabelRecorderInterface``) when a page, content element, file, or custom
+   table row is persisted after AI generation.
 3. **Upload detection** — optional signals on file import (suggestions only until
    a person confirms).
 4. **Manual** — editors set fields in the record drawer or TCA **AI Label** tab
    on pages, content, and file metadata.
 
-**ns_t3ai** content, page, and media generation is covered via automatic bind.
-
-**ns_t3al** (dedicated translation extension) is a separate product; translation
-workflows there are not yet wired into AI Label.
+See :ref:`AI Label integration <ai-label-integration>` for third-party bind
+patterns.
 
 Frontend labels
 ---------------
 
-Visitor badges render on **content elements** after the TypoScript in
+Visitor badges render after the TypoScript in
 ``EXT:ns_t3af/Configuration/TypoScript/setup.typoscript`` is included.
 
 **Site Set (TYPO3 v13.4+):** add ``nitsan/ns-t3af-label`` to your own set's
@@ -156,7 +245,16 @@ alone does not load TypoScript.
 When rules pass and a record is **confirmed**, visitors may see:
 
 * EU AI label icon (bundled SVG set)
-* Short text (for example “AI generated”, “AI modified”)
+* Short text (for example “AI generated”, “AI modified”) — unless **Wording**
+  is **Icon only** in Settings
+* Size and (for image overlays) position from Settings — see tables above
+
+**Two badge locations:**
+
+* **Content element** — drop-in partial after the element body (always when
+  labelling rules pass for text/media on that CE).
+* **Image overlay** — only when **Mark the image file** is **Overlay on the
+  image** and the file is confirmed AI-generated; position applies here.
 
 Media and text follow **different rules** — media labels are not suppressed by
 a named human reviewer; text labels require public interest and review rules.
@@ -165,9 +263,9 @@ Custom templates can use ``<ail:label record="{data}" />``,
 ``<ail:label file="{image}" />``, ``<ail:recordState>``, ``<ail:fileState>``,
 or the ``nst3af-label`` DataProcessor.
 
-Fluid Styled Content image rendering is overridden so a confirmed
-AI-generated **file** shows the badge on the image itself
-(``Partials/FluidStyledContent/Media/Rendering/Image.html``).
+Fluid Styled Content ships an image partial override
+(``Resources/Private/Partials/FluidStyledContent/Media/Rendering/Image.html``)
+that wraps the badge when overlay mode is enabled.
 
 TCA integration
 ---------------
