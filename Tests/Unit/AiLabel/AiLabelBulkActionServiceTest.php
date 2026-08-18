@@ -24,7 +24,6 @@ use NITSAN\NsT3AF\AiLabel\Service\ConfirmationService;
 use NITSAN\NsT3AF\AiLabel\Service\UndoCacheService;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Cache\CacheManager;
-use TYPO3\CMS\Core\Cache\Frontend\VariableFrontend;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
@@ -34,8 +33,6 @@ final class AiLabelBulkActionServiceTest extends TestCase
     {
         $pool = $this->createMock(ConnectionPool::class);
         $cacheManager = $this->createMock(CacheManager::class);
-        $cache = new VariableFrontend('ailabel_undo_test', new \TYPO3\CMS\Core\Cache\Backend\NullBackend());
-        $cacheManager->method('getCache')->willReturn($cache);
 
         $service = new AiLabelBulkActionService(
             $pool,
@@ -55,8 +52,6 @@ final class AiLabelBulkActionServiceTest extends TestCase
         $pool->method('getConnectionForTable')->willReturn($connection);
 
         $cacheManager = $this->createMock(CacheManager::class);
-        $cache = new VariableFrontend('ailabel_undo_test2', new \TYPO3\CMS\Core\Cache\Backend\NullBackend());
-        $cacheManager->method('getCache')->willReturn($cache);
 
         $service = new AiLabelBulkActionService(
             $pool,
