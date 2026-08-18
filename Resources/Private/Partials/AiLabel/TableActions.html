@@ -1,0 +1,30 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="btn-group-actions">
+    <button type="button"
+            class="btn btn-default btn-sm"
+            title="{f:translate(key: '{ll}:module.aiLabel.action.edit', default: 'Edit AI Label')}"
+            data-ailabel-drawer-trigger="1"
+            data-drawer-url="{editUri}">
+        <core:icon identifier="actions-open" size="small" alternativeMarkupIdentifier="inline" />
+    </button>
+    <form method="post" action="{bulkActionUri}" class="d-inline">
+        <input type="hidden" name="action" value="confirm" />
+        <input type="hidden" name="returnTab" value="{returnTab}" />
+        <input type="hidden" name="refs[]" value="{ref}" />
+        <button type="submit" class="btn btn-default btn-sm" title="{f:translate(key: '{ll}:module.aiLabel.action.confirm', default: 'Confirm')}">
+            <core:icon identifier="actions-check" size="small" alternativeMarkupIdentifier="inline" />
+        </button>
+    </form>
+    <form method="post" action="{bulkActionUri}" class="d-inline">
+        <input type="hidden" name="action" value="clear" />
+        <input type="hidden" name="returnTab" value="{returnTab}" />
+        <input type="hidden" name="refs[]" value="{ref}" />
+        <button type="submit" class="btn btn-default btn-sm" title="{f:translate(key: '{ll}:module.aiLabel.action.clear', default: 'Clear confirmation')}">
+            <core:icon identifier="actions-undo" size="small" alternativeMarkupIdentifier="inline" />
+        </button>
+    </form>
+</div>

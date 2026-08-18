@@ -19,7 +19,7 @@
 
 | Extension | Integration |
 |---|---|
-| `ns_t3ai` | `AbstractAIController` → `AiServiceInterface`; `T3AiAccessCatalogProvider` for ACL |
+| `ns_t3ai` | `AbstractAIController` → `AiServiceInterface`; `T3AiAccessCatalogProvider` for ACL; **AI Label** bind via `AiLabelBindHelper` on pages/content/files |
 | `ns_t3cs` | `ExtensionConfigurationHelper` → `ProviderLegacyConfigService`; `EmbeddingHelper` → `embed()`. Suite hub for T3AS/T3AC. `T3CsAccessCatalogProvider`. **Agent entry:** `packages/ns_t3cs/AGENTS.md` |
 | `ns_t3aa` | `AiServiceInterface` for vision/metadata; `T3AaAccessCatalogProvider`. **Agent entry:** `packages/ns_t3aa/AGENTS.md` |
 | `ns_t3as` | Search add-on for T3CS; `T3AsAccessCatalogProvider` (record ACL only, rides on `t3cs` module key) |
@@ -44,6 +44,21 @@ MyVendor\MyExt\Access\:
 
 Demo adapter: `packages/ns_t3ai/Classes/Provider/AcmeAdapter.php` (when present).  
 Demo access provider: see `Documentation/Developer/CustomAiAccess.rst` and shipped `T3*AccessCatalogProvider.php` classes.
+
+---
+
+## AI Label bind (ns_t3ai)
+
+When AI Assistant saves AI-generated pages, content, or media, call `AiLabelBindHelper` so records appear in **AI Foundation → AI Label**:
+
+```php
+\NITSAN\NsT3AF\AiLabel\Service\AiLabelBindHelper::bindContentRecord($uid);
+// bindPageRecord($uid), bindFileMetadata($uid)
+```
+
+Capture correlation ids are set automatically on every `AiServiceInterface` response. **ns_t3al** is not wired yet — see `context/features/ai-label.md`.
+
+Full guide: `Documentation/DeveloperGuide/AiLabelIntegration/Index.rst`.
 
 ---
 

@@ -376,6 +376,60 @@
       <trans-unit id="access.group_settings.configured" resname="access.group_settings.configured">
         <source>Configured via wizard</source>
       </trans-unit>
+      <trans-unit id="access.ailabel.header" resname="access.ailabel.header">
+        <source>AI Label capabilities</source>
+      </trans-unit>
+      <trans-unit id="ailabel.tab" resname="ailabel.tab">
+        <source>AI Label</source>
+      </trans-unit>
+      <trans-unit id="ailabel.involvement" resname="ailabel.involvement">
+        <source>AI involvement</source>
+      </trans-unit>
+      <trans-unit id="ailabel.involvement.not_reviewed" resname="ailabel.involvement.not_reviewed">
+        <source>Not reviewed</source>
+      </trans-unit>
+      <trans-unit id="ailabel.involvement.no_ai" resname="ailabel.involvement.no_ai">
+        <source>No AI involved</source>
+      </trans-unit>
+      <trans-unit id="ailabel.involvement.ai_generated" resname="ailabel.involvement.ai_generated">
+        <source>AI generated</source>
+      </trans-unit>
+      <trans-unit id="ailabel.involvement.ai_modified" resname="ailabel.involvement.ai_modified">
+        <source>AI modified</source>
+      </trans-unit>
+      <trans-unit id="ailabel.involvement.origin_unknown" resname="ailabel.involvement.origin_unknown">
+        <source>Origin unknown</source>
+      </trans-unit>
+      <trans-unit id="ailabel.involvement.suggestion" resname="ailabel.involvement.suggestion">
+        <source>Suggestion</source>
+      </trans-unit>
+      <trans-unit id="ailabel.labelling_mode" resname="ailabel.labelling_mode">
+        <source>Labelling mode</source>
+      </trans-unit>
+      <trans-unit id="ailabel.mode.automatic" resname="ailabel.mode.automatic">
+        <source>Automatic</source>
+      </trans-unit>
+      <trans-unit id="ailabel.mode.always" resname="ailabel.mode.always">
+        <source>Always label</source>
+      </trans-unit>
+      <trans-unit id="ailabel.mode.never" resname="ailabel.mode.never">
+        <source>Never label</source>
+      </trans-unit>
+      <trans-unit id="ailabel.public_interest" resname="ailabel.public_interest">
+        <source>Matter of public interest</source>
+      </trans-unit>
+      <trans-unit id="ailabel.human_review" resname="ailabel.human_review">
+        <source>Human review completed</source>
+      </trans-unit>
+      <trans-unit id="ailabel.responsible_person" resname="ailabel.responsible_person">
+        <source>Responsible person</source>
+      </trans-unit>
+      <trans-unit id="ailabel.internal_note" resname="ailabel.internal_note">
+        <source>Internal note</source>
+      </trans-unit>
+      <trans-unit id="ailabel.file_module.open" resname="ailabel.file_module.open">
+        <source>Open in AI Label</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

@@ -1,0 +1,43 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+<f:section name="Content">
+    <f:render partial="AiLabel/PageShell" arguments="{_all}" />
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+    <div class="aiu-mcp-tools-shell aiu-ailabel-media-shell">
+        <f:render partial="AiLabel/FolderTree" arguments="{folderTree: folderTree}" />
+        <div class="aiu-mcp-tools-shell__content">
+            <f:render partial="AiLabel/ReviewBanner" arguments="{spotlight: mediaList.spotlight, bulkActionUri: bulkActionUri}" />
+
+            <div class="callout callout-info mb-3">
+                <f:translate key="{ll}:module.aiLabel.media.folderCallout" arguments="{0: mediaList.folder.label, 1: mediaList.folder.openCount, 2: mediaList.folder.totalFiles}" default="Showing %1$s — %2$s of %3$s files are still waiting for a person." />
+            </div>
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <strong>{mediaList.folder.label}</strong>
+                    <span class="badge badge-secondary">{mediaList.folder.totalFiles} files</span>
+                    <f:if condition="{mediaList.folder.openCount} > 0">
+                        <span class="badge badge-warning">{mediaList.folder.openCount} open</span>
+                    </f:if>
+                </div>
+                <a class="btn btn-default btn-sm" href="{f:be.uri(route: 't3af_dashboard.ai_label.settings')}"><f:translate key="{ll}:module.aiLabel.media.folderDefaults" default="Folder defaults" /></a>
+            </div>
+
+            <f:render partial="AiLabel/FilterBar" arguments="{filters: filters, variant: 'media'}" />
+            <f:render partial="AiLabel/ActionBar" arguments="{
+                filters: filters,
+                variant: 'media',
+                returnTab: 'media',
+                bulkActionUri: bulkActionUri,
+                undoUri: undoUri,
+                exportUri: exportUri,
+                refreshUri: refreshUri
+            }" />
+            <f:render partial="AiLabel/MediaTable" arguments="{mediaList: mediaList, bulkActionUri: bulkActionUri}" />
+        </div>
+    </div>
+
+    <f:render partial="AiLabel/DrawerShell" />
+</f:section>
+</html>

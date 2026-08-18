@@ -1,0 +1,61 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="card mb-3">
+    <div class="table-fit">
+        <table class="table table-striped table-hover mb-0 aiu-ailabel-table" data-ailabel-table="texts">
+            <thead>
+                <tr>
+                    <th class="col-checkbox"><input type="checkbox" data-ailabel-select-all aria-label="{f:translate(key: '{ll}:module.aiLabel.table.selectAll', default: 'Select all')}" /></th>
+                    <th><f:translate key="{ll}:module.aiLabel.table.record" default="Record" /></th>
+                    <th><f:translate key="{ll}:module.aiLabel.table.type" default="Type" /></th>
+                    <th><f:translate key="{ll}:module.aiLabel.table.involvement" default="AI involvement" /></th>
+                    <th><f:translate key="{ll}:module.aiLabel.table.publicInterest" default="Public interest" /></th>
+                    <th><f:translate key="{ll}:module.aiLabel.table.reviewedBy" default="Reviewed by a named person" /></th>
+                    <th><f:translate key="{ll}:module.aiLabel.table.notice" default="Notice" /></th>
+                    <th><f:translate key="{ll}:module.aiLabel.table.why" default="Why" /></th>
+                    <th><f:translate key="{ll}:module.aiLabel.table.actions" default="Actions" /></th>
+                </tr>
+            </thead>
+            <tbody>
+                <f:if condition="{textList.rows}">
+                    <f:then>
+                        <f:for each="{textList.rows}" as="row">
+                            <tr>
+                                <td><input type="checkbox" form="aiu-ailabel-bulk-form" name="refs[]" value="{row.table}:{row.uid}" data-ailabel-row-checkbox /></td>
+                                <td>{row.title}</td>
+                                <td><span class="badge badge-secondary">{row.type}</span></td>
+                                <td><f:render partial="AiLabel/InvolvementBadge" arguments="{involvement: row.involvement}" /></td>
+                                <td>{row.publicInterest}</td>
+                                <td class="{f:if(condition: row.unnamedReview, then: 'text-danger fw-semibold')}">{row.reviewedLabel}</td>
+                                <td><f:render partial="AiLabel/LabelStateBadge" arguments="{state: row.noticeState}" /></td>
+                                <td><code title="{row.reasonCode}">{row.reasonCode}</code></td>
+                                <td>
+                                    <f:render partial="AiLabel/TableActions" arguments="{
+                                        ref: '{row.table}:{row.uid}',
+                                        editUri: row.editUri,
+                                        returnTab: 'texts',
+                                        bulkActionUri: bulkActionUri
+                                    }" />
+                                </td>
+                            </tr>
+                        </f:for>
+                    </f:then>
+                    <f:else>
+                        <tr><td colspan="9" class="text-variant"><f:translate key="{ll}:module.aiLabel.table.emptyTexts" default="No text records for current filters." /></td></tr>
+                    </f:else>
+                </f:if>
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer d-flex justify-content-between text-variant small">
+        <span><f:translate key="{ll}:module.aiLabel.table.rangeTexts" arguments="{0: textList.pagination.start, 1: textList.pagination.end, 2: textList.total}" default="Records %1$s–%2$s of %3$s" /></span>
+        <span><f:translate key="{ll}:module.aiLabel.table.page" arguments="{0: textList.pagination.page, 1: textList.pagination.totalPages}" default="Page %1$s / %2$s" /></span>
+    </div>
+</div>
+
+<div class="callout callout-warning">
+    <f:translate key="{ll}:module.aiLabel.texts.unnamedInfo" default="A person ticked reviewed and no name was recorded. Assign responsible person closes the gap." />
+</div>

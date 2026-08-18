@@ -39,6 +39,7 @@ final class ModuleTabAccessService
         'mcpTools' => 'mcp_tools',
         'aiFeatures' => 'ai_features',
         'aiPrompts' => 'ai_prompts',
+        'aiLabel' => 'ai_label',
         'schedulerCli' => 'scheduler_cli',
         'aiUsage' => 'ai_usage',
         'aiLogs' => 'ai_logs',

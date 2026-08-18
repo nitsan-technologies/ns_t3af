@@ -1,0 +1,20 @@
+.nst3af-ailabel-media {
+    display: inline-block;
+    max-width: 100%;
+    position: relative;
+}
+
+.nst3af-ailabel-media .image-embed-item {
+    display: block;
+    height: auto;
+    max-width: 100%;
+}
+
+.nst3af-ailabel-media .nst3af-ailabel {
+    bottom: 8px;
+    left: auto;
+    margin: 0;
+    position: absolute;
+    right: 8px;
+    z-index: 1;
+}

@@ -1,0 +1,10 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:variable name="badgeClass" value="badge-secondary" />
+<f:if condition="{involvement} == ai_generated"><f:variable name="badgeClass" value="badge-danger" /></f:if>
+<f:if condition="{involvement} == ai_modified"><f:variable name="badgeClass" value="badge-warning" /></f:if>
+<f:if condition="{involvement} == suggestion"><f:variable name="badgeClass" value="badge-primary" /></f:if>
+<f:if condition="{involvement} == no_ai"><f:variable name="badgeClass" value="badge-secondary" /></f:if>
+
+<span class="badge {badgeClass}">{involvement -> f:format.case(mode: 'capital')}</span>

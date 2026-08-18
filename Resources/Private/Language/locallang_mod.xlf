@@ -63,6 +63,15 @@
       <trans-unit id="module.menu.aiPrompts" resname="module.menu.aiPrompts">
         <source>AI Prompts</source>
       </trans-unit>
+      <trans-unit id="module.menu.aiLabel" resname="module.menu.aiLabel">
+        <source>AI Label</source>
+      </trans-unit>
+      <trans-unit id="module.aiLabel.heading" resname="module.aiLabel.heading">
+        <source>AI Label</source>
+      </trans-unit>
+      <trans-unit id="module.aiLabel.intro" resname="module.aiLabel.intro">
+        <source>Record, confirm and disclose AI-generated content for EU AI Act Article 50.</source>
+      </trans-unit>
       <trans-unit id="module.menu.schedulerCli" resname="module.menu.schedulerCli">
         <source>Scheduler &amp; CLI</source>
       </trans-unit>
@@ -2372,6 +2381,12 @@
       </trans-unit>
       <trans-unit id="checklist.prompts.descPlaceholder" resname="checklist.prompts.descPlaceholder">
         <source>Prompt library UI is upcoming — defaults apply until custom prompts ship.</source>
+      </trans-unit>
+      <trans-unit id="checklist.ailabel.title" resname="checklist.ailabel.title">
+        <source>AI Label reviews</source>
+      </trans-unit>
+      <trans-unit id="checklist.ailabel.descOpen" resname="checklist.ailabel.descOpen">
+        <source>Review unconfirmed AI origin records in the AI Label tab.</source>
       </trans-unit>
       <trans-unit id="checklist.credits.active.title" resname="checklist.credits.active.title">
         <source>Credits activated</source>

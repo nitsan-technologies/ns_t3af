@@ -1,0 +1,33 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<aside class="aiu-mcp-tools-shell__sidebar" aria-label="{f:translate(key: '{ll}:module.aiLabel.folderTree.aria', default: 'Media folders')}">
+    <div class="card card-size-small mb-0 w-100">
+        <div class="card-body p-2">
+            <div class="input-group input-group-sm mb-2">
+                <input type="search" class="form-control" placeholder="{f:translate(key: '{ll}:module.aiLabel.folderTree.search', default: 'Search folders')}" data-ailabel-folder-search />
+            </div>
+            <nav class="aiu-ailabel-folder-tree" aria-label="{f:translate(key: '{ll}:module.aiLabel.folderTree.aria', default: 'Media folders')}">
+                <a class="aiu-ailabel-folder-tree__node {f:if(condition: folderTree.root.active, then: 'is-active')}"
+                   href="{f:be.uri(route: 't3af_dashboard.ai_label.media', parameters: '{folder: folderTree.root.identifier}')}"
+                   data-ailabel-folder-label="{folderTree.root.label}">
+                    <span class="aiu-ailabel-folder-tree__label">{folderTree.root.label}</span>
+                    <span class="text-variant small">{folderTree.root.totalFiles}</span>
+                </a>
+                <f:for each="{folderTree.folders}" as="folder">
+                    <a class="aiu-ailabel-folder-tree__node aiu-ailabel-folder-tree__node--child {f:if(condition: folder.active, then: 'is-active')}"
+                       href="{f:be.uri(route: 't3af_dashboard.ai_label.media', parameters: '{folder: folder.identifier}')}"
+                       data-ailabel-folder-label="{folder.label}">
+                        <span class="aiu-ailabel-folder-tree__label">{folder.label}</span>
+                        <span class="text-variant small">{folder.totalFiles}</span>
+                        <f:if condition="{folder.openCount} > 0">
+                            <span class="badge badge-warning">{folder.openCount}</span>
+                        </f:if>
+                    </a>
+                </f:for>
+            </nav>
+            <p class="text-variant small mb-0 mt-2 px-1"><f:translate key="{ll}:module.aiLabel.folderTree.legend" default="Amber counts are items still awaiting a person." /></p>
+        </div>
+    </div>
+</aside>

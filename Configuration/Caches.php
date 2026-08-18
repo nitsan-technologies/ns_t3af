@@ -60,4 +60,11 @@ return [
         ],
         'groups' => ['system', 'nst3af'],
     ],
+    'nst3af_ailabel_undo' => [
+        'frontend' => \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend::class,
+        'options' => [
+            'defaultLifetime' => 600,
+        ],
+        'groups' => ['system', 'nst3af'],
+    ],
 ];

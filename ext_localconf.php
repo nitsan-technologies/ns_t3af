@@ -30,6 +30,7 @@ foreach ([
     'nst3af_mcp_oauth' => 300,
     'nst3af_api_alert' => 3600,
     'nst3af_dashboard_analytics' => 900,
+    'nst3af_ailabel_undo' => 600,
 ] as $cacheId => $defaultLifetime) {
     if (!is_array($GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations'][$cacheId] ?? null)) {
         $GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations'][$cacheId] = [
@@ -69,6 +70,7 @@ $GLOBALS['TYPO3_CONF_VARS']['BE']['customPermOptions']['nst3af_tab'] = [
         'ai_usage' => ['AI Usage', 'actions-document-info'],
         'ai_prompts' => ['AI Prompts', 'actions-message'],
         'ai_logs' => ['AI Logs', 'actions-notebook'],
+        'ai_label' => ['AI Label', 'actions-tag'],
         'scheduler_cli' => ['Scheduler & CLI', 'actions-refresh'],
     ],
 ];
@@ -79,6 +81,28 @@ $GLOBALS['TYPO3_CONF_VARS']['BE']['customPermOptions']['T3Ai'] = [
     // on BootCompletedEvent (child extensions own their feature bits).
     'items' => [],
 ];
+
+$GLOBALS['TYPO3_CONF_VARS']['BE']['customPermOptions']['nst3af_ailabel'] = [
+    'header' => 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:access.ailabel.header',
+    'items' => [
+        'confirm' => ['Confirm labels', 'actions-check'],
+        'bulk' => ['Bulk actions', 'actions-document-import'],
+        'clear' => ['Clear confirmation', 'actions-close'],
+        'folder_defaults' => ['Folder defaults', 'actions-folder'],
+        'run_audit' => ['Run audit', 'actions-search'],
+    ],
+];
+
+$GLOBALS['TYPO3_CONF_VARS']['SC_OPTIONS']['t3lib/class.t3lib_tcemain.php']['processDatamapClass']['ns_t3af_ailabel']
+    = \NITSAN\NsT3AF\AiLabel\Hook\DataHandlerAiLabelHook::class;
+
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['fluid']['namespaces']['ail'] = [
+    'NITSAN\\NsT3AF\\AiLabel\\ViewHelpers',
+];
+
+$GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelHoldList'] ??= ['public_interest_text'];
+$GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelAutoConfirmSources'] ??= [];
+$GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelFolderDefaults'] ??= [];
 
 // Classic-mode: load the bundled t3af.phar so Symfony AI bridges become
 // discoverable. No-op in Composer mode.

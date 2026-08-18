@@ -1,0 +1,51 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<f:variable name="badges" value="{statistics.coverageBadges}" />
+
+<div class="card mb-3">
+    <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <div class="aiu-ailabel-ring" style="--aiu-ring-percent: {coverage.score};" aria-hidden="true">
+                <span class="aiu-ailabel-ring__label">{coverage.score}%</span>
+            </div>
+            <div>
+                <h3 class="card-title mb-1"><f:translate key="{ll}:module.aiLabel.coverage.title" default="AI Label coverage" /></h3>
+                <p class="text-variant mb-1">
+                    <f:translate key="{ll}:module.aiLabel.coverage.subtitle" arguments="{0: badges.done, 1: badges.total}" default="%1$s of %2$s checks complete. This measures our checklist, not the law." />
+                </p>
+                <div class="d-flex flex-wrap gap-1">
+                    <span class="badge badge-success">{badges.done} <f:translate key="{ll}:module.aiLabel.coverage.done" default="done" /></span>
+                    <span class="badge badge-warning">{badges.needsPerson} <f:translate key="{ll}:module.aiLabel.coverage.needsPerson" default="need a person" /></span>
+                    <span class="badge badge-danger">{badges.blocked} <f:translate key="{ll}:module.aiLabel.coverage.blocked" default="blocked" /></span>
+                </div>
+            </div>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="btn btn-default btn-sm" data-bs-toggle="collapse" data-bs-target="#aiu-ailabel-coverage-details" aria-expanded="false" aria-controls="aiu-ailabel-coverage-details">
+                <f:translate key="{ll}:module.aiLabel.coverage.whatCounts" default="What this counts" />
+            </button>
+            <a class="btn btn-success btn-sm" href="{f:be.uri(route: 't3af_dashboard.ai_label.export', parameters: '{format: \'html\'}')}">
+                <core:icon identifier="actions-download" size="small" alternativeMarkupIdentifier="inline" />
+                <f:translate key="{ll}:module.aiLabel.coverage.exportReport" default="Export report" />
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="callout callout-warning mb-0">{coverageCaveat}</div>
+        <div class="collapse mt-3" id="aiu-ailabel-coverage-details">
+            <p class="mb-2"><em>{coverageClosingLine}</em></p>
+            <h4 class="h6"><f:translate key="{ll}:module.aiLabel.coverage.checks" default="Checks" /></h4>
+            <ul class="mb-0">
+                <f:for each="{coverage.checks}" as="check">
+                    <li>{check.label}: <f:if condition="{check.passed}"><f:then><f:translate key="{ll}:module.aiLabel.check.pass" default="pass" /></f:then><f:else><f:translate key="{ll}:module.aiLabel.check.fail" default="fail" /></f:else></f:if></li>
+                </f:for>
+            </ul>
+            <h4 class="h6 mt-3"><f:translate key="{ll}:module.aiLabel.coverage.blindSpots" default="What this number cannot see" /></h4>
+            <ul class="mb-0">
+                <f:for each="{coverage.blindSpots}" as="spot"><li>{spot}</li></f:for>
+            </ul>
+        </div>
+    </div>
+</div>

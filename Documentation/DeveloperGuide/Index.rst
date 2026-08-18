@@ -32,3 +32,4 @@ Reference extension
    FeatureProviderOverrides/Index
    CustomMcpTools/Index
    CustomAccessCatalogs/Index
+   AiLabelIntegration/Index

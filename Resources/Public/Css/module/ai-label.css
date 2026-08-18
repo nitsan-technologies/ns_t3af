@@ -1,0 +1,186 @@
+/*!
+ * AI Foundation backend module CSS — AI Label tab (layout only).
+ */
+
+.aiu-ailabel-scoreboard {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 992px) {
+    .aiu-ailabel-scoreboard {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 576px) {
+    .aiu-ailabel-scoreboard {
+        grid-template-columns: 1fr;
+    }
+}
+
+.aiu-ailabel-ring {
+    --aiu-ring-percent: 0;
+    --aiu-ring-fill: var(--typo3-state-primary-bg, var(--bs-primary, #5747ff));
+    --aiu-ring-track: var(--typo3-surface-container-high, #e9e6f8);
+    align-items: center;
+    background: conic-gradient(
+        var(--aiu-ring-fill) calc(var(--aiu-ring-percent) * 1%),
+        var(--aiu-ring-track) 0
+    );
+    border-radius: 50%;
+    display: flex;
+    flex-shrink: 0;
+    height: 4.5rem;
+    justify-content: center;
+    position: relative;
+    width: 4.5rem;
+}
+
+.aiu-ailabel-ring::before {
+    background: var(--typo3-component-bg, var(--bs-body-bg, #fff));
+    border-radius: 50%;
+    content: "";
+    height: 3.25rem;
+    position: absolute;
+    width: 3.25rem;
+}
+
+.aiu-ailabel-ring__label {
+    font-size: .95rem;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+}
+
+.aiu-ailabel-ring--warning {
+    --aiu-ring-fill: var(--typo3-state-warning-bg, var(--bs-warning, #e6a700));
+}
+
+.aiu-ailabel-kv dt {
+    font-weight: normal;
+    margin: 0;
+}
+
+.aiu-ailabel-kv dd {
+    font-weight: 600;
+    margin: 0;
+}
+
+.aiu-ailabel-media-shell {
+    margin-top: .25rem;
+}
+
+.aiu-ailabel-folder-tree {
+    display: flex;
+    flex-direction: column;
+    gap: .15rem;
+}
+
+.aiu-ailabel-folder-tree__node {
+    align-items: center;
+    border-radius: .35rem;
+    color: inherit;
+    display: flex;
+    gap: .35rem;
+    padding: .35rem .5rem;
+    text-decoration: none;
+}
+
+.aiu-ailabel-folder-tree__node:hover {
+    background: var(--typo3-surface-container-high, rgba(0, 0, 0, .04));
+    color: inherit;
+    text-decoration: none;
+}
+
+.aiu-ailabel-folder-tree__node.is-active {
+    background: var(--typo3-state-primary-bg-subtle, rgba(87, 71, 255, .12));
+}
+
+.aiu-ailabel-folder-tree__node--child {
+    padding-left: 1.35rem;
+}
+
+.aiu-ailabel-folder-tree__label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.aiu-ailabel-table .col-checkbox {
+    width: 2.5rem;
+}
+
+.aiu-ailabel-subnav .btn-group {
+    flex-wrap: wrap;
+}
+
+.aiu-module-page .card-container:not(.aiu-ailabel-scoreboard) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--typo3-spacing-4, 1rem);
+}
+
+.aiu-module-page .card-container:not(.aiu-ailabel-scoreboard) > .card {
+    width: 100%;
+    min-width: 0;
+}
+
+.aiu-module-page .card-container.aiu-ailabel-scoreboard {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--typo3-spacing-4, 1rem);
+}
+
+.aiu-module-page .card-container.aiu-ailabel-scoreboard > .card {
+    width: 100%;
+    min-width: 0;
+}
+
+@media (max-width: 992px) {
+    .aiu-module-page .card-container.aiu-ailabel-scoreboard {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .aiu-module-page .card-container:not(.aiu-ailabel-scoreboard) {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .aiu-module-page .card-container.aiu-ailabel-scoreboard {
+        grid-template-columns: 1fr;
+    }
+}
+
+.aiu-ailabel-table .btn-group-actions {
+    display: inline-flex;
+    gap: .15rem;
+}
+
+.aiu-ailabel-table .btn-group-actions .btn {
+    padding: .2rem .35rem;
+}
+
+.aiu-ailabel-action-bar .d-none[data-ailabel-bulk-btn].is-visible {
+    display: inline-block !important;
+}
+
+.aiu-ailabel-preview-stage {
+    background: var(--typo3-surface-container-high, #eef0f4);
+    border-radius: .35rem;
+    min-height: 6rem;
+    position: relative;
+}
+
+.aiu-ailabel-preview-stage__label {
+    align-items: center;
+    bottom: .5rem;
+    display: inline-flex;
+    gap: .35rem;
+    position: absolute;
+    right: .5rem;
+}

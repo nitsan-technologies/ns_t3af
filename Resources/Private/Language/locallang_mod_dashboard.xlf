@@ -2077,6 +2077,46 @@
       <trans-unit id="dashboard.restricted.empty" resname="dashboard.restricted.empty">
         <source>No AI Foundation sections are assigned to your backend user group yet. Contact an administrator.</source>
       </trans-unit>
+      <trans-unit id="module.aiLabel.scoreboard.confirmed" resname="module.aiLabel.scoreboard.confirmed"><source>Confirmed</source></trans-unit>
+      <trans-unit id="module.aiLabel.scoreboard.confirmedHint" resname="module.aiLabel.scoreboard.confirmedHint"><source>by a person</source></trans-unit>
+      <trans-unit id="module.aiLabel.scoreboard.awaiting" resname="module.aiLabel.scoreboard.awaiting"><source>Awaiting review</source></trans-unit>
+      <trans-unit id="module.aiLabel.scoreboard.awaitingHint" resname="module.aiLabel.scoreboard.awaitingHint"><source>nothing shown until confirmed</source></trans-unit>
+      <trans-unit id="module.aiLabel.scoreboard.labelled" resname="module.aiLabel.scoreboard.labelled"><source>Labelled in frontend</source></trans-unit>
+      <trans-unit id="module.aiLabel.scoreboard.labelledHint" resname="module.aiLabel.scoreboard.labelledHint"><source>visible to visitors</source></trans-unit>
+      <trans-unit id="module.aiLabel.scoreboard.notLabelled" resname="module.aiLabel.scoreboard.notLabelled"><source>Not labelled</source></trans-unit>
+      <trans-unit id="module.aiLabel.scoreboard.notLabelledHint" resname="module.aiLabel.scoreboard.notLabelledHint"><source>each with a recorded reason</source></trans-unit>
+      <trans-unit id="module.aiLabel.subnav.overview" resname="module.aiLabel.subnav.overview"><source>Overview</source></trans-unit>
+      <trans-unit id="module.aiLabel.subnav.media" resname="module.aiLabel.subnav.media"><source>Media</source></trans-unit>
+      <trans-unit id="module.aiLabel.subnav.texts" resname="module.aiLabel.subnav.texts"><source>Texts</source></trans-unit>
+      <trans-unit id="module.aiLabel.subnav.settings" resname="module.aiLabel.subnav.settings"><source>Settings</source></trans-unit>
+      <trans-unit id="module.aiLabel.action.confirm" resname="module.aiLabel.action.confirm"><source>Confirm</source></trans-unit>
+      <trans-unit id="module.aiLabel.action.edit" resname="module.aiLabel.action.edit"><source>Edit AI Label</source></trans-unit>
+      <trans-unit id="module.aiLabel.action.clear" resname="module.aiLabel.action.clear"><source>Clear confirmation</source></trans-unit>
+      <trans-unit id="module.aiLabel.action.exportEvidence" resname="module.aiLabel.action.exportEvidence"><source>Export evidence</source></trans-unit>
+      <trans-unit id="module.aiLabel.settings.saved" resname="module.aiLabel.settings.saved"><source>Settings saved.</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.loading" resname="module.aiLabel.drawer.loading"><source>Loading…</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.close" resname="module.aiLabel.drawer.close"><source>Close</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.titleSuffix" resname="module.aiLabel.drawer.titleSuffix"><source>AI Label</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.subtitle" resname="module.aiLabel.drawer.subtitle"><source>Proposed TCA tab on content elements, pages and files.</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.confirmedInfo" resname="module.aiLabel.drawer.confirmedInfo"><source>Confirmed by %1$s — this version only. Editing the content clears this confirmation, so a changed page is reviewed again before it counts as checked.</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.involvementHint" resname="module.aiLabel.drawer.involvementHint"><source>What is known about how this content came about. Everyday help such as spell-checking or colour correction does not count.</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.createdOn" resname="module.aiLabel.drawer.createdOn"><source>Created on</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.createdOnHint" resname="module.aiLabel.drawer.createdOnHint"><source>The moment the content was created, not uploaded. Content created before the cutoff needs no label.</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.publicInterestHint" resname="module.aiLabel.drawer.publicInterestHint"><source>Politics, public administration, justice, fundamental rights, public safety, health, environment, consumer protection and comparable topics. Only a person sets this.</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.reviewedByNamed" resname="module.aiLabel.drawer.reviewedByNamed"><source>Reviewed by a person, who is named</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.reviewedByNamedHint" resname="module.aiLabel.drawer.reviewedByNamedHint"><source>Required once reviewed is ticked. A named person who examined the substance and answers for publishing it. A tick with no name documents nothing.</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.labellingHint" resname="module.aiLabel.drawer.labellingHint"><source>Automatic follows the rules. Always label is a reinforcement, not a master key.</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.exemptionReason" resname="module.aiLabel.drawer.exemptionReason"><source>Reason for not labelling</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.exemptionReasonHint" resname="module.aiLabel.drawer.exemptionReasonHint"><source>The exemption vocabulary is deliberately not fixed in this prototype.</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.detectionTitle" resname="module.aiLabel.drawer.detectionTitle"><source>Detected on upload (read-only)</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.visitorPreview" resname="module.aiLabel.drawer.visitorPreview"><source>What a visitor will see</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.proposed" resname="module.aiLabel.drawer.proposed"><source>proposed</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.noVisitorLabel" resname="module.aiLabel.drawer.noVisitorLabel"><source>No label shown (%1$s)</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.visitorPreviewHint" resname="module.aiLabel.drawer.visitorPreviewHint"><source>Rendered with this site's current position, size and language settings.</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.cancel" resname="module.aiLabel.drawer.cancel"><source>Cancel</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.save" resname="module.aiLabel.drawer.save"><source>Save Changes</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.yes" resname="module.aiLabel.drawer.yes"><source>Yes</source></trans-unit>
+      <trans-unit id="module.aiLabel.drawer.no" resname="module.aiLabel.drawer.no"><source>No</source></trans-unit>
     </body>
   </file>
 </xliff>

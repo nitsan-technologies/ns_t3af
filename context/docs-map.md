@@ -31,6 +31,7 @@
 | Credits (server) | `context/specs/FEATURE_T3PlanetCredits_Server.md` | `context/features/credits.md` |
 | Credits rollout | `context/specs/FEATURE_T3PlanetCredits_NsAiuniverse_Rollout.md` | `context/features/credits.md` |
 | Credits plan (legacy) | `context/specs/FEATURE_T3PlanetCreditsPlan.md` | `context/features/credits.md` |
+| AI Label (EU Art. 50) | `context/specs/FEATURE_AiLabel.md` | `context/features/ai-label.md` |
 
 See `context/specs/README.md` for the full index.
 
@@ -54,6 +55,8 @@ See `context/specs/README.md` for the full index.
 | T3Planet Credits | `Documentation/Developer/T3PlanetCredits.rst` |
 | MCP Server | `Documentation/McpServer/Index.rst` |
 | Governance | `Documentation/Governance/Index.rst` |
+| AI Label (EU Art. 50) | `Documentation/Configuration/AiLabel/Index.rst` |
+| AI Label developer integration | `Documentation/DeveloperGuide/AiLabelIntegration/Index.rst` |
 | Troubleshooting | `Documentation/Troubleshooting/Index.rst` |
 | Privacy | `Documentation/Privacy.rst` |
 
@@ -81,3 +84,5 @@ Build locally: `composer doc-watch` from package root.
 | AI Context / brand profiles / dashboard bar / persona UI | `context/features/ai-context.md` |
 | Brand Context override in AI Features (SEO, Pages, …) | `context/features/ai-context.md` § AI Features — profile override |
 | Runtime `{brand_context}` placeholders | `context/features/ai-context.md`, `BrandContextPromptInjectionListener` |
+| AI Label / EU Art. 50 review dashboard | `context/features/ai-label.md`, `Documentation/Configuration/AiLabel/Index.rst` |
+| Bind child ext to AI Label | `Documentation/DeveloperGuide/AiLabelIntegration/Index.rst`, `AiLabelBindHelper` |

@@ -1,0 +1,72 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+<f:section name="Content">
+    <f:render partial="AiLabel/PageShell" arguments="{_all}" />
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+    <f:render partial="AiLabel/CoverageCard" arguments="{coverage: coverage, statistics: statistics, coverageCaveat: coverageCaveat, coverageClosingLine: coverageClosingLine}" />
+
+    <div class="card-container mb-3">
+        <f:render partial="AiLabel/DomainSummaryCard" arguments="{
+            title: 'Media',
+            domain: statistics.media,
+            kind: 'media',
+            ringVariant: 'primary',
+            primaryLabel: 'Review media',
+            primaryUri: '{f:be.uri(route: \'t3af_dashboard.ai_label.media\')}',
+            secondaryLabel: 'Open unconfirmed',
+            secondaryUri: '{f:be.uri(route: \'t3af_dashboard.ai_label.media\')}'
+        }" />
+        <f:render partial="AiLabel/DomainSummaryCard" arguments="{
+            title: 'Texts',
+            domain: statistics.texts,
+            kind: 'text',
+            ringVariant: 'warning',
+            primaryLabel: 'Review texts',
+            primaryUri: '{f:be.uri(route: \'t3af_dashboard.ai_label.texts\')}',
+            secondaryLabel: 'Fix unnamed reviews',
+            secondaryUri: '{f:be.uri(route: \'t3af_dashboard.ai_label.texts\')}'
+        }" />
+    </div>
+
+    <div class="callout callout-notice d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <span><f:translate key="{ll}:module.aiLabel.awaitingCallout" arguments="{0: statistics.global.awaiting}" default="%1$s items are waiting for a person." /></span>
+        <a class="btn btn-default btn-sm" href="{f:be.uri(route: 't3af_dashboard.ai_label.media')}"><f:translate key="{ll}:module.aiLabel.startReviewing" default="Start reviewing" /></a>
+    </div>
+
+    <div class="card-container">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0"><f:translate key="{ll}:module.aiLabel.origins.title" default="Where the records came from" /></h3>
+                <a class="btn btn-default btn-sm" href="{f:be.uri(route: 't3af_dashboard.ai_logs')}"><f:translate key="{ll}:module.aiLabel.origins.openLogs" default="Open AI Logs" /></a>
+            </div>
+            <div class="card-body">
+                <dl class="aiu-ailabel-kv mb-0">
+                    <div class="d-flex justify-content-between"><dt><f:translate key="{ll}:module.aiLabel.origins.aiUniverse" default="Recorded by AI Universe" /></dt><dd>{statistics.origins.ai_universe}</dd></div>
+                    <div class="d-flex justify-content-between"><dt><f:translate key="{ll}:module.aiLabel.origins.detected" default="Detected on upload" /></dt><dd>{statistics.origins.detected_upload}</dd></div>
+                    <div class="d-flex justify-content-between"><dt><f:translate key="{ll}:module.aiLabel.origins.editor" default="Entered by an editor" /></dt><dd>{statistics.origins.editor}</dd></div>
+                    <div class="d-flex justify-content-between"><dt><f:translate key="{ll}:module.aiLabel.origins.extension" default="Reported by another extension" /></dt><dd>{statistics.origins.extension}</dd></div>
+                </dl>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title mb-0"><f:translate key="{ll}:module.aiLabel.systemStatus.title" default="System status" /></h3>
+                <f:if condition="{systemWarningCount} > 0">
+                    <span class="badge badge-warning">{systemWarningCount}</span>
+                </f:if>
+            </div>
+            <div class="card-body">
+                <dl class="aiu-ailabel-kv mb-0">
+                    <f:for each="{systemStatus}" as="check">
+                        <div class="d-flex justify-content-between align-items-center py-1">
+                            <dt>{check.label}</dt>
+                            <dd class="mb-0"><span class="badge badge-{check.variant}">{check.status}</span></dd>
+                        </div>
+                    </f:for>
+                </dl>
+            </div>
+        </div>
+    </div>
+</f:section>
+</html>

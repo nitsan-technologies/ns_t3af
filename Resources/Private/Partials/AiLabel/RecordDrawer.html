@@ -1,0 +1,120 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<f:variable name="be" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf" />
+
+<form method="post" action="{saveUri}" data-ailabel-drawer-form autocomplete="off">
+    <input type="hidden" name="ref" value="{record.ref}" />
+    <input type="hidden" name="returnTab" value="{returnTab}" />
+
+    <div class="aiu-drawer__header">
+        <button type="button" class="aiu-drawer__close btn" data-ailabel-drawer-close aria-label="{f:translate(key: '{ll}:module.aiLabel.drawer.close', default: 'Close')}">
+            <core:icon identifier="actions-close" size="small" />
+        </button>
+        <h2 class="aiu-drawer__title">{record.title} — <f:translate key="{ll}:module.aiLabel.drawer.titleSuffix" default="AI Label" /></h2>
+        <p class="aiu-drawer__desc"><f:translate key="{ll}:module.aiLabel.drawer.subtitle" default="Proposed TCA tab on content elements, pages and files." /></p>
+    </div>
+
+    <div class="aiu-drawer__body">
+        <f:if condition="{record.confirmedByLabel}">
+            <div class="callout callout-info mb-3">
+                <f:translate key="{ll}:module.aiLabel.drawer.confirmedInfo" arguments="{0: record.confirmedByLabel}" default="Confirmed by %1$s — this version only. Editing the content clears this confirmation, so a changed page is reviewed again before it counts as checked." />
+            </div>
+        </f:if>
+
+        <label class="aiu-field">
+            <span class="aiu-field-label"><f:translate key="{be}:ailabel.involvement" default="AI involvement" /></span>
+            <select name="involvement" class="form-select">
+                <f:if condition="{submitted.involvement} != ''">
+                    <f:then><f:variable name="selectedInvolvement" value="{submitted.involvement}" /></f:then>
+                    <f:else><f:variable name="selectedInvolvement" value="{record.involvement}" /></f:else>
+                </f:if>
+                <f:for each="{record.involvementOptions}" as="option">
+                    <option value="{option.value}" {f:if(condition: '{selectedInvolvement} == {option.value}', then: 'selected="selected"')}>{option.label}</option>
+                </f:for>
+            </select>
+            <small class="form-text text-variant"><f:translate key="{ll}:module.aiLabel.drawer.involvementHint" default="What is known about how this content came about. Everyday help such as spell-checking or colour correction does not count." /></small>
+            <f:if condition="{errors.involvement}"><small class="aiu-error">{errors.involvement}</small></f:if>
+        </label>
+
+        <label class="aiu-field">
+            <span class="aiu-field-label"><f:translate key="{ll}:module.aiLabel.drawer.createdOn" default="Created on" /></span>
+            <input type="text" class="form-control" value="{record.createdOn}" readonly disabled />
+            <small class="form-text text-variant"><f:translate key="{ll}:module.aiLabel.drawer.createdOnHint" default="The moment the content was created, not uploaded. Content created before the cutoff needs no label." /></small>
+        </label>
+
+        <label class="aiu-field">
+            <span class="aiu-field-label"><f:translate key="{be}:ailabel.public_interest" default="Matter of public interest" /></span>
+            <f:if condition="{submitted.public_interest} != ''">
+                <f:then><f:variable name="selectedPublicInterest" value="{submitted.public_interest}" /></f:then>
+                <f:else><f:variable name="selectedPublicInterest" value="{f:if(condition: record.publicInterest, then: '1', else: '0')}" /></f:else>
+            </f:if>
+            <select name="public_interest" class="form-select">
+                <option value="0" {f:if(condition: '{selectedPublicInterest} == 0', then: 'selected="selected"')}><f:translate key="{ll}:module.aiLabel.drawer.no" default="No" /></option>
+                <option value="1" {f:if(condition: '{selectedPublicInterest} == 1', then: 'selected="selected"')}><f:translate key="{ll}:module.aiLabel.drawer.yes" default="Yes" /></option>
+            </select>
+            <small class="form-text text-variant"><f:translate key="{ll}:module.aiLabel.drawer.publicInterestHint" default="Politics, public administration, justice, fundamental rights, public safety, health, environment, consumer protection and comparable topics. Only a person sets this." /></small>
+        </label>
+
+        <label class="aiu-field">
+            <span class="aiu-field-label"><f:translate key="{ll}:module.aiLabel.drawer.reviewedByNamed" default="Reviewed by a person, who is named" /></span>
+            <input type="text" name="responsible_person" class="form-control" maxlength="255"
+                   value="{f:if(condition: submitted.responsible_person, then: submitted.responsible_person, else: record.responsiblePerson)}" />
+            <small class="form-text text-variant"><f:translate key="{ll}:module.aiLabel.drawer.reviewedByNamedHint" default="Required once reviewed is ticked. A named person who examined the substance and answers for publishing it. A tick with no name documents nothing." /></small>
+        </label>
+
+        <label class="aiu-field">
+            <span class="aiu-field-label"><f:translate key="{be}:ailabel.labelling_mode" default="Labelling" /></span>
+            <select name="labelling_mode" class="form-select">
+                <f:if condition="{submitted.labelling_mode} != ''">
+                    <f:then><f:variable name="selectedMode" value="{submitted.labelling_mode}" /></f:then>
+                    <f:else><f:variable name="selectedMode" value="{record.labellingMode}" /></f:else>
+                </f:if>
+                <f:for each="{record.labellingModeOptions}" as="option">
+                    <option value="{option.value}" {f:if(condition: '{selectedMode} == {option.value}', then: 'selected="selected"')}>{option.label}</option>
+                </f:for>
+            </select>
+            <small class="form-text text-variant"><f:translate key="{ll}:module.aiLabel.drawer.labellingHint" default="Automatic follows the rules. Always label is a reinforcement, not a master key." /></small>
+            <f:if condition="{errors.labelling_mode}"><small class="aiu-error">{errors.labelling_mode}</small></f:if>
+        </label>
+
+        <label class="aiu-field">
+            <span class="aiu-field-label"><f:translate key="{ll}:module.aiLabel.drawer.exemptionReason" default="Reason for not labelling" /></span>
+            <input type="text" name="exemption_reason" class="form-control" maxlength="64"
+                   value="{f:if(condition: submitted.exemption_reason, then: submitted.exemption_reason, else: record.exemptionReason)}" />
+            <small class="form-text text-variant"><f:translate key="{ll}:module.aiLabel.drawer.exemptionReasonHint" default="The exemption vocabulary is deliberately not fixed in this prototype." /></small>
+        </label>
+
+        <div class="aiu-section__label"><f:translate key="{ll}:module.aiLabel.drawer.detectionTitle" default="Detected on upload (read-only)" /></div>
+        <div class="callout callout-notice">{record.detectionSummary}</div>
+
+        <div class="aiu-section__label mt-3">
+            <f:translate key="{ll}:module.aiLabel.drawer.visitorPreview" default="What a visitor will see" />
+            <span class="badge badge-secondary ms-1"><f:translate key="{ll}:module.aiLabel.drawer.proposed" default="proposed" /></span>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <div class="aiu-ailabel-preview-stage mb-2">
+                    <f:if condition="{record.visitorPreview.showLabel}">
+                        <f:then>
+                            <div class="aiu-ailabel-preview-stage__label">
+                                <span class="badge badge-secondary">{record.visitorPreview.labelText}</span>
+                                <span class="badge badge-secondary">EU</span>
+                            </div>
+                        </f:then>
+                        <f:else>
+                            <span class="text-variant small"><f:translate key="{ll}:module.aiLabel.drawer.noVisitorLabel" default="No label shown ({0})" arguments="{0: record.visitorPreview.reasonCode}" /></span>
+                        </f:else>
+                    </f:if>
+                </div>
+                <p class="text-variant small mb-0"><f:translate key="{ll}:module.aiLabel.drawer.visitorPreviewHint" default="Rendered with this site's current position, size and language settings." /></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="aiu-drawer__footer d-flex justify-content-end gap-2">
+        <button type="button" class="btn btn-default" data-ailabel-drawer-close><f:translate key="{ll}:module.aiLabel.drawer.cancel" default="Cancel" /></button>
+        <button type="submit" class="btn btn-success"><f:translate key="{ll}:module.aiLabel.drawer.save" default="Save Changes" /></button>
+    </div>
+</form>

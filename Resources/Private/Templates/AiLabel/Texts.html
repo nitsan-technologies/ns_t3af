@@ -1,0 +1,23 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+<f:section name="Content">
+    <f:render partial="AiLabel/PageShell" arguments="{_all}" />
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+    <p class="text-variant mb-3"><f:translate key="{ll}:module.aiLabel.texts.intro" default="Texts are judged differently from media and get their own list." /></p>
+
+    <f:render partial="AiLabel/FilterBar" arguments="{filters: filters, variant: 'text'}" />
+    <f:render partial="AiLabel/ActionBar" arguments="{
+        filters: filters,
+        variant: 'text',
+        returnTab: 'texts',
+        bulkActionUri: bulkActionUri,
+        undoUri: undoUri,
+        exportUri: exportUri,
+        refreshUri: refreshUri
+    }" />
+    <f:render partial="AiLabel/TextsTable" arguments="{textList: textList, bulkActionUri: bulkActionUri}" />
+
+    <f:render partial="AiLabel/DrawerShell" />
+</f:section>
+</html>

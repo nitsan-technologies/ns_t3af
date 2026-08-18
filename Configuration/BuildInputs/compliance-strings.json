@@ -1,0 +1,43 @@
+{
+  "_README": "Build input for Feature 03 (AI Label). FAIL CLOSED: missing values fail the build.",
+  "_generated": "2026-08-18",
+  "typo3": {
+    "versionRange": "TYPO3 v12–v14"
+  },
+  "php": {
+    "versionRange": "PHP 8.2+"
+  },
+  "product": {
+    "key": "ns_t3af",
+    "name": "AI Foundation",
+    "editionStatus": "100% free and open source",
+    "licence": "GPL-2.0-or-later"
+  },
+  "article50": {
+    "applicationDate": "2026-08-02",
+    "applicationDateLabelEn": "2 August 2026",
+    "applicationDateLabelDe": "2. August 2026",
+    "markingDeadline": "2026-12-02"
+  },
+  "caveat": {
+    "en": "compliance-ready tooling, not a compliance guarantee",
+    "de": "AI Foundation stellt die technischen Voraussetzungen für Compliance bereit, ersetzt jedoch keine rechtliche Prüfung.",
+    "_note": "R11.5 restricts the score's own label and subline, not disclaimers that deny compliance."
+  },
+  "coverageCaveat": {
+    "en": "Coverage is not compliance. It counts the checks this extension can see.",
+    "de": "Abdeckung ist keine Rechtskonformität. Gezählt werden die Prüfungen, die diese Erweiterung sehen kann."
+  },
+  "coverageClosingLine": {
+    "en": "A high number here means our checks pass. It does not mean you are compliant, and nothing in this extension can tell you that.",
+    "de": "Ein hoher Wert bedeutet, dass unsere Prüfungen bestehen. Er bedeutet nicht, dass Sie rechtskonform sind, und diese Erweiterung kann Ihnen das nicht sagen."
+  },
+  "coverageScoreDescription": {
+    "en": "This number is a measure of our own checklist. It is deliberately not called a compliance score, a readiness score or a conformance rating, and it must never be presented as one.",
+    "de": "Diese Zahl misst unsere eigene Checkliste. Sie heißt bewusst weder Compliance-Score noch Readiness-Score noch Konformitätsbewertung und darf niemals als solche dargestellt werden."
+  },
+  "bannedOnRenderedSurfaces": {
+    "words": ["compliance score", "readiness score", "conformance", "certified", "compliant"],
+    "alwaysBanned": ["conformance", "certified"]
+  }
+}

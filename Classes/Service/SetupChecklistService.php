@@ -211,6 +211,13 @@ final class SetupChecklistService
         $items[] = $this->budgetChecklistItem();
         $items[] = $this->schedulerChecklistItem($analytics, true);
         $items[] = $this->promptsChecklistItem();
+        $items[] = [
+            'status' => 'warn',
+            'titleKey' => 'checklist.ailabel.title',
+            'descKey' => 'checklist.ailabel.descOpen',
+            'actionRoute' => 't3af_dashboard.ai_label',
+            'actionTabKey' => 'aiLabel',
+        ];
 
         return $items;
     }

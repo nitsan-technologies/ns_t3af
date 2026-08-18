@@ -156,8 +156,9 @@ final class SetupChecklistServiceTest extends TestCase
             $request,
         );
 
-        self::assertCount(8, $result['items']);
+        self::assertCount(9, $result['items']);
         self::assertSame('checklist.budget.title', $result['items'][5]['titleKey']);
+        self::assertSame('checklist.ailabel.title', $result['items'][8]['titleKey']);
     }
 
     public function testFailingEnvironmentRequirementsArePrepended(): void

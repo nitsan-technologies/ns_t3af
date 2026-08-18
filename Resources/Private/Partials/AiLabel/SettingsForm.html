@@ -1,0 +1,106 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="post" action="{settingsSaveUri}">
+            <h3 class="h6 text-uppercase text-variant"><f:translate key="{ll}:module.aiLabel.settings.frontend" default="Frontend label" /></h3>
+            <div class="mb-3">
+                <label class="form-label"><f:translate key="{ll}:module.aiLabel.settings.position" default="Position on media" /></label>
+                <select name="labelPosition" class="form-select">
+                    <option value="bottom_right" {f:if(condition: '{settings.labelPosition} == bottom_right', then: 'selected="selected"')}>Bottom right</option>
+                    <option value="bottom_left" {f:if(condition: '{settings.labelPosition} == bottom_left', then: 'selected="selected"')}>Bottom left</option>
+                    <option value="top_right" {f:if(condition: '{settings.labelPosition} == top_right', then: 'selected="selected"')}>Top right</option>
+                    <option value="top_left" {f:if(condition: '{settings.labelPosition} == top_left', then: 'selected="selected"')}>Top left</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label"><f:translate key="{ll}:module.aiLabel.settings.size" default="Size" /></label>
+                <select name="labelSize" class="form-select">
+                    <option value="medium" {f:if(condition: '{settings.labelSize} == medium', then: 'selected="selected"')}>Medium</option>
+                    <option value="small" {f:if(condition: '{settings.labelSize} == small', then: 'selected="selected"')}>Small</option>
+                    <option value="large" {f:if(condition: '{settings.labelSize} == large', then: 'selected="selected"')}>Large</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label"><f:translate key="{ll}:module.aiLabel.settings.wording" default="Wording beside the icon" /></label>
+                <select name="labelWording" class="form-select">
+                    <option value="show_site_language" {f:if(condition: '{settings.labelWording} == show_site_language', then: 'selected="selected"')}>Show, in the site language</option>
+                    <option value="icon_only" {f:if(condition: '{settings.labelWording} == icon_only', then: 'selected="selected"')}>Icon only</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label"><f:translate key="{ll}:module.aiLabel.settings.markFile" default="Mark the image file itself" /></label>
+                <select name="markImageFile" class="form-select">
+                    <option value="content_element_only" {f:if(condition: '{settings.markImageFile} == content_element_only', then: 'selected="selected"')}>No, mark the content element only</option>
+                    <option value="overlay" {f:if(condition: '{settings.markImageFile} == overlay', then: 'selected="selected"')}>Overlay on the image</option>
+                    <option value="written_in" {f:if(condition: '{settings.markImageFile} == written_in', then: 'selected="selected"')}>Written into the image file</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="form-label"><f:translate key="{ll}:module.aiLabel.settings.machineReadable" default="Machine-readable marking" /></label>
+                <select name="machineReadable" class="form-select">
+                    <option value="iptc" {f:if(condition: '{settings.machineReadable} == iptc', then: 'selected="selected"')}>IPTC digital source type</option>
+                    <option value="iptc_jsonld" {f:if(condition: '{settings.machineReadable} == iptc_jsonld', then: 'selected="selected"')}>IPTC plus JSON-LD in the page</option>
+                    <option value="off" {f:if(condition: '{settings.machineReadable} == off', then: 'selected="selected"')}>Off</option>
+                </select>
+            </div>
+
+            <h3 class="h6 text-uppercase text-variant"><f:translate key="{ll}:module.aiLabel.settings.autoConfirm" default="Automatic confirmation" /></h3>
+            <div class="callout callout-info mb-3"><f:translate key="{ll}:module.aiLabel.settings.autoConfirmHint" default="Two different things look the same here and only one of them is safe to automate." /></div>
+            <div class="mb-3">
+                <label class="form-label"><f:translate key="{ll}:module.aiLabel.settings.autoConfirmOwn" default="Confirm origin automatically when OUR OWN extension recorded it" /></label>
+                <select name="autoConfirmOwn" class="form-select">
+                    <option value="off" {f:if(condition: '{settings.autoConfirmOwn} == off', then: 'selected="selected"')}>Off, a person confirms everything</option>
+                    <option value="media" {f:if(condition: '{settings.autoConfirmOwn} == media', then: 'selected="selected"')}>On for media</option>
+                    <option value="text" {f:if(condition: '{settings.autoConfirmOwn} == text', then: 'selected="selected"')}>On for text</option>
+                    <option value="both" {f:if(condition: '{settings.autoConfirmOwn} == both', then: 'selected="selected"')}>On for media and text</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label"><f:translate key="{ll}:module.aiLabel.settings.autoConfirmDetected" default="Confirm origin automatically when it was DETECTED on upload" /></label>
+                <select name="autoConfirmDetected" class="form-select">
+                    <option value="off" {f:if(condition: '{settings.autoConfirmDetected} == off', then: 'selected="selected"')}>Off, a person confirms everything</option>
+                    <option value="on" {f:if(condition: '{settings.autoConfirmDetected} == on', then: 'selected="selected"')}>On</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label text-variant"><f:translate key="{ll}:module.aiLabel.settings.humanReviewAuto" default="Automatically record the human review and the responsible person" /></label>
+                <input type="checkbox" class="form-check-input" disabled="disabled" />
+                <div class="callout callout-info mt-2"><f:translate key="{ll}:module.aiLabel.settings.humanReviewNever" default="Never available. The field stays manual by design." /></div>
+            </div>
+            <div class="mb-4">
+                <label class="form-label"><f:translate key="{ll}:module.aiLabel.settings.autoConfirmHold" default="When auto-confirm is on, still hold these for a person" /></label>
+                <select name="autoConfirmHold" class="form-select">
+                    <option value="public_interest_text" {f:if(condition: '{settings.autoConfirmHold} == public_interest_text', then: 'selected="selected"')}>Public-interest texts</option>
+                </select>
+            </div>
+
+            <h3 class="h6 text-uppercase text-variant"><f:translate key="{ll}:module.aiLabel.settings.rules" default="Rules" /></h3>
+            <div class="mb-3">
+                <label class="form-label"><f:translate key="{ll}:module.aiLabel.settings.unknownOrigin" default="Label media of unknown origin" /></label>
+                <select name="labelUnknownOrigin" class="form-select">
+                    <option value="no" {f:if(condition: '{settings.labelUnknownOrigin} == no', then: 'selected="selected"')}>No</option>
+                    <option value="yes" {f:if(condition: '{settings.labelUnknownOrigin} == yes', then: 'selected="selected"')}>Yes</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label"><f:translate key="{ll}:module.aiLabel.settings.secondLayer" default="Second information layer" /></label>
+                <select name="secondInfoLayer" class="form-select">
+                    <option value="off" {f:if(condition: '{settings.secondInfoLayer} == off', then: 'selected="selected"')}>Off</option>
+                    <option value="on" {f:if(condition: '{settings.secondInfoLayer} == on', then: 'selected="selected"')}>On</option>
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="form-label"><f:translate key="{ll}:module.aiLabel.settings.applicableTables" default="Also record on these tables" /></label>
+                <input type="text" name="applicableTables" class="form-control" value="{settings.applicableTables}" />
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-success"><f:translate key="{ll}:module.aiLabel.settings.save" default="Save Changes" /></button>
+                <a class="btn btn-default" href="{f:be.uri(route: 't3af_dashboard.ai_label.settings')}"><f:translate key="{ll}:module.aiLabel.settings.cancel" default="Cancel" /></a>
+            </div>
+        </form>
+    </div>
+</div>

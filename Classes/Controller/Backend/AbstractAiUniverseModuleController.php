@@ -231,7 +231,7 @@ abstract class AbstractAiUniverseModuleController
                 'modulePath' => $this->moduleTabUtility->resolveActivePath($activeTabKey),
                 'creditOverview' => $this->resolveCreditOverviewLine(),
                 'creditsFeatureAvailable' => self::fluidFlag((new CreditsReleaseGate())->isPubliclyAvailable()),
-                'licenseBannerVisible' => self::fluidFlag(!$licenseValid),
+                'licenseBannerVisible' => self::fluidFlag(!$licenseValid && $activeTabKey !== 'aiLabel'),
                 'licenseBannerShowGetKeyLink' => self::fluidFlag(
                     ($licenseStatus['reason'] ?? '') !== LicenseUtility::REASON_NS_LICENSE_MISSING,
                 ),

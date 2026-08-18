@@ -1,0 +1,24 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<nav class="aiu-ailabel-subnav mb-3" aria-label="{f:translate(key: '{ll}:module.aiLabel.subnav.aria', default: 'AI Label sections')}">
+    <div class="btn-group" role="group">
+        <a class="btn btn-default {f:if(condition: '{activeSubTab} == overview', then: 'active is-active')}"
+           href="{f:be.uri(route: 't3af_dashboard.ai_label')}">
+            <f:translate key="{ll}:module.aiLabel.subnav.overview" default="Overview" />
+        </a>
+        <a class="btn btn-default {f:if(condition: '{activeSubTab} == media', then: 'active is-active')}"
+           href="{f:be.uri(route: 't3af_dashboard.ai_label.media')}">
+            <f:translate key="{ll}:module.aiLabel.subnav.media" default="Media" />
+        </a>
+        <a class="btn btn-default {f:if(condition: '{activeSubTab} == texts', then: 'active is-active')}"
+           href="{f:be.uri(route: 't3af_dashboard.ai_label.texts')}">
+            <f:translate key="{ll}:module.aiLabel.subnav.texts" default="Texts" />
+        </a>
+        <a class="btn btn-default {f:if(condition: '{activeSubTab} == settings', then: 'active is-active')}"
+           href="{f:be.uri(route: 't3af_dashboard.ai_label.settings')}">
+            <f:translate key="{ll}:module.aiLabel.subnav.settings" default="Settings" />
+        </a>
+    </div>
+</nav>
