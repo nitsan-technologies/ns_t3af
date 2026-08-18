@@ -132,6 +132,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
         $providers = $this->providerRepository->findAllByStoragePid($storagePid, includeHidden: true);
         $providerRows = [];
         $defaultIdentifier = null;
+        $defaultTitle = null;
         $activeProviderCount = 0;
         $adapterLabelMap = [];
         foreach ($this->adapters->all() as $type => $adapter) {
@@ -152,6 +153,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
             }
             if ($provider->isDefault) {
                 $defaultIdentifier = $provider->identifier;
+                $defaultTitle = $provider->title;
             }
         }
 
@@ -200,6 +202,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
             'adapters' => $this->adapterChoices(),
             'activeProviderCount' => $activeProviderCount,
             'defaultIdentifier' => $defaultIdentifier,
+            'defaultTitle' => $defaultTitle,
             'formErrors' => [],
             'flash' => $this->flashFromQuery($request),
             'newProviderUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.providers.new', $routeParams),

@@ -28,6 +28,9 @@ readonly class AdvancedSettingsService
 {
     private const EXTENSION_KEY = 'ns_t3af';
 
+    /** Default MCP Streamable HTTP POST body limit (16 MiB). */
+    public const DEFAULT_MAX_BODY_BYTES = 16 * 1024 * 1024;
+
     public function __construct(private ExtensionSettingsService $extensionSettingsService) {}
 
     public function isMcpServerEnabled(): bool
@@ -75,6 +78,16 @@ readonly class AdvancedSettingsService
         return $this->int('mcpServerOnlineSince', 0);
     }
 
+    public function maxBodyBytes(): int
+    {
+        $configured = $this->int('mcpMaxBodyBytes', self::DEFAULT_MAX_BODY_BYTES);
+        if ($configured < 1) {
+            return self::DEFAULT_MAX_BODY_BYTES;
+        }
+
+        return $configured;
+    }
+
     public function oauthDefaultScopes(): string
     {
         return $this->string('oauthDefaultScopes', 'mcp:read mcp:write mcp:tools');
@@ -100,6 +113,7 @@ readonly class AdvancedSettingsService
             'oauthDefaultScopes' => $this->oauthDefaultScopes(),
             'oauthMaxActiveTokensPerUser' => $this->int('oauthMaxActiveTokensPerUser', 5),
             'accessTokenLifetime' => $this->int('accessTokenLifetime', 3600),
+            'mcpMaxBodyBytes' => $this->maxBodyBytes(),
         ];
     }
 

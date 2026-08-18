@@ -161,7 +161,7 @@ final class DashboardStatisticsCache
      */
     public function getScheduledTasks(): ?array
     {
-        $entry = $this->cache->get('scheduled_tasks');
+        $entry = $this->cache->get('scheduled_tasks_cli');
         if (!is_array($entry)) {
             return null;
         }
@@ -178,7 +178,7 @@ final class DashboardStatisticsCache
      */
     public function setScheduledTasks(array $payload): void
     {
-        $this->cache->set('scheduled_tasks', $payload, [self::TAG], self::TTL_SECONDS);
+        $this->cache->set('scheduled_tasks_cli', $payload, [self::TAG], self::TTL_SECONDS);
     }
 
     /**
@@ -190,6 +190,7 @@ final class DashboardStatisticsCache
         int $storagePid,
     ): string {
         return 'analytics_' . $this->hash([
+            'cli_tasks',
             $scope->name,
             $storagePid,
             (int) ($period['fromTimestamp'] ?? 0),
@@ -213,6 +214,7 @@ final class DashboardStatisticsCache
         sort($uids);
 
         return 'trends_' . $this->hash([
+            'cli_tasks',
             $scope->name,
             $storagePid,
             (int) ($period['fromTimestamp'] ?? 0),

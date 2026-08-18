@@ -25,6 +25,9 @@ use NITSAN\NsT3AF\Provider\AdapterRegistry;
 use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
 use NITSAN\NsT3AF\Provider\Contract\VerifyResult;
+use NITSAN\NsT3AF\Provider\Model\ModelCatalogFilter;
+use NITSAN\NsT3AF\Provider\Model\ModelInfo;
+use NITSAN\NsT3AF\Provider\Model\SymfonyAiCatalogReader;
 use NITSAN\NsT3AF\Service\WizardProviderCatalog;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -76,7 +79,7 @@ final class WizardProviderCatalogTest extends TestCase
 
         $adapters = new AdapterRegistry([$this->fakeOpenAiAdapter()]);
 
-        $catalog = new WizardProviderCatalog($repo, $adapters);
+        $catalog = new WizardProviderCatalog($repo, $adapters, $this->emptyCatalogReader(), new ModelCatalogFilter());
 
         self::assertSame(42, $catalog->ensureProviderUid('openai', '', 1));
     }
@@ -106,7 +109,7 @@ final class WizardProviderCatalogTest extends TestCase
 
         $adapters = new AdapterRegistry([$this->fakeOpenAiAdapter()]);
 
-        $catalog = new WizardProviderCatalog($repo, $adapters);
+        $catalog = new WizardProviderCatalog($repo, $adapters, $this->emptyCatalogReader(), new ModelCatalogFilter());
 
         self::assertSame(99, $catalog->ensureProviderUid('openai', '', 1));
     }
@@ -118,9 +121,138 @@ final class WizardProviderCatalogTest extends TestCase
         $repo->expects(self::never())->method('findReusableWizardDraft');
         $repo->expects(self::never())->method('save');
 
-        $catalog = new WizardProviderCatalog($repo, new AdapterRegistry([$this->fakeOpenAiAdapter()]));
+        $catalog = new WizardProviderCatalog($repo, new AdapterRegistry([$this->fakeOpenAiAdapter()]), $this->emptyCatalogReader(), new ModelCatalogFilter());
 
         self::assertNull($catalog->ensureProviderUid('openai', '', 0));
+    }
+
+    #[Test]
+    public function listForWizardUsesCatalogModelsWhenAvailable(): void
+    {
+        $reader = $this->createMock(SymfonyAiCatalogReader::class);
+        $reader->method('read')->willReturnMap([
+            [
+                'anthropic',
+                [
+                    new ModelInfo('claude-haiku-4-5-20251001', 'claude-haiku-4-5-20251001', [Capability::CHAT], 'catalog'),
+                    new ModelInfo('claude-sonnet-4-5-20250929', 'claude-sonnet-4-5-20250929', [Capability::CHAT], 'catalog'),
+                    new ModelInfo('claude-3-haiku-20240307', 'claude-3-haiku-20240307', [Capability::CHAT], 'catalog'),
+                ],
+            ],
+            ['openai', []],
+            ['gemini', []],
+            ['ollama', []],
+        ]);
+
+        $catalog = new WizardProviderCatalog(
+            $this->createMock(ProviderRepositoryInterface::class),
+            new AdapterRegistry([]),
+            $reader,
+            new ModelCatalogFilter(),
+        );
+
+        $rows = $catalog->listForWizard(static fn(string $key): string => $key);
+        $anthropic = null;
+        foreach ($rows as $row) {
+            if ($row['id'] === 'anthropic') {
+                $anthropic = $row;
+                break;
+            }
+        }
+
+        self::assertNotNull($anthropic);
+        self::assertSame('claude-sonnet-4-5-20250929', $anthropic['defaultModel']);
+        self::assertContains('claude-sonnet-4-5-20250929', $anthropic['modelOptions']);
+        self::assertNotContains('claude-3-haiku-20240307', $anthropic['modelOptions']);
+    }
+
+    #[Test]
+    public function listForWizardFallsBackToStaticModelsWhenCatalogEmpty(): void
+    {
+        $catalog = new WizardProviderCatalog(
+            $this->createMock(ProviderRepositoryInterface::class),
+            new AdapterRegistry([]),
+            $this->emptyCatalogReader(),
+            new ModelCatalogFilter(),
+        );
+
+        $rows = $catalog->listForWizard(static fn(string $key): string => $key);
+        $openai = null;
+        $anthropic = null;
+        $gemini = null;
+        $ollama = null;
+        foreach ($rows as $row) {
+            match ($row['id']) {
+                'openai' => $openai = $row,
+                'anthropic' => $anthropic = $row,
+                'gemini' => $gemini = $row,
+                'ollama' => $ollama = $row,
+                default => null,
+            };
+        }
+
+        self::assertNotNull($openai);
+        self::assertSame('gpt-5.6', $openai['defaultModel']);
+        self::assertSame(['gpt-5.6', 'gpt-5.5', 'gpt-5-mini'], $openai['modelOptions']);
+
+        self::assertNotNull($anthropic);
+        self::assertSame('claude-sonnet-5', $anthropic['defaultModel']);
+        self::assertSame(['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5'], $anthropic['modelOptions']);
+
+        self::assertNotNull($gemini);
+        self::assertSame('gemini-3.1-pro', $gemini['defaultModel']);
+        self::assertSame(['gemini-3.7-flash', 'gemini-3.1-pro', 'gemini-3.1-flash-lite'], $gemini['modelOptions']);
+
+        self::assertNotNull($ollama);
+        self::assertSame('llama4', $ollama['defaultModel']);
+        self::assertSame(['qwen3.8', 'deepseek-v4-pro', 'llama4'], $ollama['modelOptions']);
+    }
+
+    #[Test]
+    public function listForWizardExcludesRetiredCatalogModels(): void
+    {
+        $reader = $this->createMock(SymfonyAiCatalogReader::class);
+        $reader->method('read')->willReturnMap([
+            [
+                'anthropic',
+                [
+                    new ModelInfo('claude-sonnet-4-20250514', 'retired', [Capability::CHAT], 'catalog'),
+                    new ModelInfo('claude-sonnet-4-5-20250929', 'current', [Capability::CHAT], 'catalog'),
+                    new ModelInfo('claude-haiku-4-5-20251001', 'haiku', [Capability::CHAT], 'catalog'),
+                ],
+            ],
+            ['openai', []],
+            ['gemini', []],
+            ['ollama', []],
+        ]);
+
+        $catalog = new WizardProviderCatalog(
+            $this->createMock(ProviderRepositoryInterface::class),
+            new AdapterRegistry([]),
+            $reader,
+            new ModelCatalogFilter(),
+        );
+
+        $rows = $catalog->listForWizard(static fn(string $key): string => $key);
+        $anthropic = null;
+        foreach ($rows as $row) {
+            if ($row['id'] === 'anthropic') {
+                $anthropic = $row;
+                break;
+            }
+        }
+
+        self::assertNotNull($anthropic);
+        self::assertNotContains('claude-sonnet-4-20250514', $anthropic['modelOptions']);
+        self::assertSame('claude-sonnet-4-5-20250929', $anthropic['defaultModel']);
+    }
+
+    private function emptyCatalogReader(): SymfonyAiCatalogReader
+    {
+        $reader = $this->createMock(SymfonyAiCatalogReader::class);
+        $reader->method('read')->willReturn([]);
+
+        return $reader;
     }
 
     private function fakeOpenAiAdapter(): AdapterInterface

@@ -117,40 +117,22 @@ readonly class McpServerMiddleware implements MiddlewareInterface
     }
 
     /**
-     * Builds the streamable HTTP transport.
+     * Builds the streamable HTTP transport (mcp/sdk ^0.7).
      *
-     * mcp/sdk v0.6+ enables a default DnsRebindingProtectionMiddleware whose
-     * allow-list is localhost-only, which rejects every real site host with
-     * "Forbidden: Invalid Host header.". We therefore pass an explicit middleware
-     * stack that allows this instance's hosts. Older SDKs (v0.5) lack that middleware
-     * and use a different constructor signature, so we keep the legacy 3-argument
-     * call for them.
+     * The SDK's default DnsRebindingProtectionMiddleware allow-list is localhost-only,
+     * which rejects real site hosts. We pass an explicit middleware stack with this
+     * instance's hosts via {@see buildAllowedHosts()}.
      */
     private function createTransport(ServerRequestInterface $request): StreamableHttpTransport
     {
-        $corsMiddlewareClass = 'Mcp\\Server\\Transport\\Http\\Middleware\\CorsMiddleware';
-        $dnsMiddlewareClass = 'Mcp\\Server\\Transport\\Http\\Middleware\\DnsRebindingProtectionMiddleware';
-        $protocolMiddlewareClass = 'Mcp\\Server\\Transport\\Http\\Middleware\\ProtocolVersionMiddleware';
-
-        // Reflection avoids PHPStan "always true" on one SDK version and
-        // "always false" on another across the CI matrix.
-        $supportsDefaultMiddleware = (new \ReflectionClass(StreamableHttpTransport::class))
-            ->hasMethod('defaultMiddleware');
-
-        if (
-            !$supportsDefaultMiddleware
-            || !class_exists($corsMiddlewareClass)
-            || !class_exists($dnsMiddlewareClass)
-            || !class_exists($protocolMiddlewareClass)
-        ) {
-            // Older mcp/sdk (v0.5) uses the 3-argument constructor only.
-            return new StreamableHttpTransport($request, $this->responseFactory, $this->streamFactory);
-        }
-
         $middleware = [
-            new $corsMiddlewareClass(),
-            new $dnsMiddlewareClass($this->buildAllowedHosts($request), $this->responseFactory, $this->streamFactory),
-            new $protocolMiddlewareClass(),
+            new \Mcp\Server\Transport\Http\Middleware\CorsMiddleware(),
+            new \Mcp\Server\Transport\Http\Middleware\DnsRebindingProtectionMiddleware(
+                $this->buildAllowedHosts($request),
+                $this->responseFactory,
+                $this->streamFactory,
+            ),
+            new \Mcp\Server\Transport\Http\Middleware\ProtocolVersionMiddleware(),
         ];
 
         return new StreamableHttpTransport(
@@ -159,6 +141,7 @@ readonly class McpServerMiddleware implements MiddlewareInterface
             $this->streamFactory,
             null,
             $middleware,
+            $this->settingsService->maxBodyBytes(),
         );
     }
 

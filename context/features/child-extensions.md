@@ -55,6 +55,8 @@ Demo access provider: see `Documentation/Developer/CustomAiAccess.rst` and shipp
 
 **Don't:** Assume `ns_t3af` ext_conf has `openai_api_key` — use provider DB.
 
+**Don't:** Require `nitsan/ns-t3af` with `|| @dev` in tagged child releases — use `"^1.1"` so production locks resolve stable Packagist tags.
+
 ---
 
 ## AI Foundation Logs button (child dashboards)

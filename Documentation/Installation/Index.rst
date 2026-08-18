@@ -155,6 +155,39 @@ Confirm that:
 If the module is missing, flush caches and run
 ``./vendor/bin/typo3 extension:setup`` again.
 
+Composer troubleshooting
+==========================
+
+Production installs must resolve a **stable Packagist tag** for ``nitsan/ns-t3af``.
+Do not ship a ``composer.lock`` that pins a disposable ``dev-dep/*`` branch or any
+``dev-*`` version string for this package.
+
+Recommended root ``composer.json`` settings:
+
+.. code-block:: json
+
+   {
+       "minimum-stability": "stable",
+       "prefer-stable": true,
+       "require": {
+           "nitsan/ns-t3af": "^1.1"
+       }
+   }
+
+If an audit or ``composer.lock`` review shows a dev branch reference, pin
+``^1.1`` explicitly and refresh the lock:
+
+.. code-block:: bash
+
+   composer update nitsan/ns-t3af --with-dependencies
+
+Verify the lock entry lists a ``1.1.x`` version and a tag commit reference,
+not ``dev-dep/...``.
+
+Local monorepo development may use path repositories with ``@dev``; that is
+fine for development only. Production deployments should install from Packagist
+tags.
+
 Next steps
 ==========
 

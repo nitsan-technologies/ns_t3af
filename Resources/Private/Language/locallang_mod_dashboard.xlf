@@ -1253,7 +1253,7 @@
         <source>%s active</source>
       </trans-unit>
       <trans-unit id="provider.meta.default" resname="provider.meta.default">
-        <source>default</source>
+        <source>Default</source>
       </trans-unit>
       <trans-unit id="provider.meta.encrypted" resname="provider.meta.encrypted">
         <source>API keys encrypted at rest</source>

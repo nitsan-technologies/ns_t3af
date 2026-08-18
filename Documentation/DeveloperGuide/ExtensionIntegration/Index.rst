@@ -99,6 +99,21 @@ Best practices
 * Do not log API keys, provider secrets, or sensitive prompt payloads.
 * Handle provider failures and empty responses in your feature code.
 * For CLI or Scheduler usage, configure an absolute TYPO3 site base URL when required by your environment.
+* In tagged child releases, require ``"nitsan/ns-t3af": "^1.1"`` — do not use ``|| @dev`` in production ``composer.json`` files.
+
+Composer dependency
+-------------------
+
+Child extensions should declare a stable constraint on AI Foundation:
+
+.. code-block:: json
+
+   "require": {
+       "nitsan/ns-t3af": "^1.1"
+   }
+
+See :ref:`installation` (Composer troubleshooting) if a project lock resolves a
+dev branch instead of a stable tag.
 
 Troubleshooting
 ---------------

@@ -101,6 +101,10 @@ final class SetupChecklistServiceTest extends TestCase
         );
 
         self::assertCount(7, $result['items']);
+        $schedulerItem = $this->findItemByTitleKey($result['items'], 'checklist.scheduler.title');
+        self::assertSame('ok', $schedulerItem['status']);
+        self::assertSame('checklist.scheduler.descOk', $schedulerItem['descKey']);
+        self::assertSame(['1'], $schedulerItem['descArgs'] ?? []);
     }
 
     public function testOwnKeysModeBuildsEightItemsIncludingBudget(): void
@@ -207,5 +211,20 @@ final class SetupChecklistServiceTest extends TestCase
         );
 
         return new CreditModeResolver($runtime, new StubCreditsReleaseGate($creditMode === 1));
+    }
+
+    /**
+     * @param list<array<string, mixed>> $items
+     * @return array<string, mixed>
+     */
+    private function findItemByTitleKey(array $items, string $titleKey): array
+    {
+        foreach ($items as $item) {
+            if (($item['titleKey'] ?? '') === $titleKey) {
+                return $item;
+            }
+        }
+
+        self::fail('Checklist item not found: ' . $titleKey);
     }
 }

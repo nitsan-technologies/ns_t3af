@@ -71,6 +71,21 @@
                         <f:translate key="{ll}:module.mcpServer.advanced.scopesHint" />
                     </p>
                 </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="aiu-mcp-max-body-bytes">
+                        <f:translate key="{ll}:module.mcpServer.advanced.maxBodyBytes" />
+                    </label>
+                    <input class="form-control"
+                           type="number"
+                           min="4194304"
+                           step="1"
+                           id="aiu-mcp-max-body-bytes"
+                           name="mcpMaxBodyBytes"
+                           value="{mcpAdvancedSettings.mcpMaxBodyBytes}" />
+                    <p class="form-text text-variant small mb-0">
+                        <f:translate key="{ll}:module.mcpServer.advanced.maxBodyBytesHint" />
+                    </p>
+                </div>
             </div>
 
             <div class="aiu-mcp-oauth-settings__options mt-4">

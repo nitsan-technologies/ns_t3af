@@ -305,6 +305,7 @@ final class SetupChecklistService
         $scheduledTasks = $analytics['scheduledTasks'] ?? ['total' => 0, 'active' => 0, 'failing' => 0];
         $schedulerFailing = (int) ($scheduledTasks['failing'] ?? 0);
         $schedulerTotal = (int) ($scheduledTasks['total'] ?? 0);
+        $schedulerActive = (int) ($scheduledTasks['active'] ?? 0);
 
         if ($schedulerFailing > 0) {
             $taskName = $withTaskName ? $this->firstFailingTaskLabel() : '';
@@ -324,6 +325,7 @@ final class SetupChecklistService
                 'status' => 'ok',
                 'titleKey' => 'checklist.scheduler.title',
                 'descKey' => 'checklist.scheduler.descOk',
+                'descArgs' => [(string) $schedulerActive],
                 'actionRoute' => 't3af_dashboard.scheduler_cli',
                 'actionTabKey' => 'schedulerCli',
             ];

@@ -24,6 +24,7 @@ use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\Model\CapabilityInferrer;
 use NITSAN\NsT3AF\Provider\Model\LiveModelProbe;
+use NITSAN\NsT3AF\Provider\Model\ModelCatalogFilter;
 use NITSAN\NsT3AF\Provider\Model\ModelDiscoveryService;
 use NITSAN\NsT3AF\Provider\Model\ModelInfo;
 use NITSAN\NsT3AF\Provider\Model\SymfonyAiCatalogReader;
@@ -47,7 +48,7 @@ final class ModelDiscoveryServiceTest extends TestCase
         $reader = $this->createMock(SymfonyAiCatalogReader::class);
         $reader->expects(self::never())->method('read');
 
-        $service = new ModelDiscoveryService($probe, $reader, new CapabilityInferrer(), $cache);
+        $service = new ModelDiscoveryService($probe, $reader, new CapabilityInferrer(), $cache, new ModelCatalogFilter());
         $models = $service->discover($this->provider('symfony.openai'));
 
         self::assertCount(1, $models);
@@ -65,7 +66,7 @@ final class ModelDiscoveryServiceTest extends TestCase
         $reader = $this->createMock(SymfonyAiCatalogReader::class);
         $reader->expects(self::once())->method('read')->willReturn([]);
 
-        $service = new ModelDiscoveryService($probe, $reader, new CapabilityInferrer(), $cache);
+        $service = new ModelDiscoveryService($probe, $reader, new CapabilityInferrer(), $cache, new ModelCatalogFilter());
         $models = $service->discover($this->provider('symfony.openai'), refresh: true);
 
         self::assertCount(1, $models);
@@ -87,7 +88,7 @@ final class ModelDiscoveryServiceTest extends TestCase
             new ModelInfo('text-embedding-3', 'Embedding v3', [Capability::EMBEDDINGS], 'catalog'),
         ]);
 
-        $service = new ModelDiscoveryService($probe, $reader, new CapabilityInferrer(), $cache);
+        $service = new ModelDiscoveryService($probe, $reader, new CapabilityInferrer(), $cache, new ModelCatalogFilter());
         $models = $service->discover($this->provider('symfony.openai'));
 
         $ids = array_map(static fn(ModelInfo $m): string => $m->id, $models);
@@ -114,10 +115,32 @@ final class ModelDiscoveryServiceTest extends TestCase
         $reader = $this->createMock(SymfonyAiCatalogReader::class);
         $reader->expects(self::never())->method('read');
 
-        $service = new ModelDiscoveryService($probe, $reader, new CapabilityInferrer(), $cache);
+        $service = new ModelDiscoveryService($probe, $reader, new CapabilityInferrer(), $cache, new ModelCatalogFilter());
         $models = $service->discover($this->provider('custom.azure'));
 
         self::assertSame([], $models);
+    }
+
+    public function testMergeFiltersRetiredCatalogModels(): void
+    {
+        $cache = $this->createMock(CacheFacadeInterface::class);
+        $cache->method('get')->willReturn(false);
+
+        $probe = $this->createMock(LiveModelProbe::class);
+        $probe->method('probe')->willReturn([]);
+        $reader = $this->createMock(SymfonyAiCatalogReader::class);
+        $reader->method('read')->willReturn([
+            new ModelInfo('claude-sonnet-4-20250514', 'retired', [Capability::CHAT], 'catalog'),
+            new ModelInfo('claude-sonnet-4-5-20250929', 'current', [Capability::CHAT], 'catalog'),
+            new ModelInfo('gemini-2.5-flash-lite-preview-09-2025', 'preview', [Capability::CHAT], 'catalog'),
+            new ModelInfo('gemini-2.5-pro', 'pro', [Capability::CHAT], 'catalog'),
+        ]);
+
+        $service = new ModelDiscoveryService($probe, $reader, new CapabilityInferrer(), $cache, new ModelCatalogFilter());
+        $models = $service->discover($this->provider('symfony.anthropic'));
+
+        $ids = array_map(static fn(ModelInfo $m): string => $m->id, $models);
+        self::assertSame(['claude-sonnet-4-5-20250929', 'gemini-2.5-pro'], $ids);
     }
 
     private function provider(string $adapterType): Provider

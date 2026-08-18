@@ -346,89 +346,68 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         #[\SensitiveParameter]
         string $apiKey,
     ): object {
-        // FQCN of individual Azure model clients (same namespace as the factory).
-        $nsPrefix = 'Symfony\\AI\\Platform\\Bridge\\Azure\\OpenAi\\';
-        $scopedPrefix = self::VENDOR_PREFIX . $nsPrefix;
+        $responsesClientClass = $this->resolveScopedClass('Symfony\\AI\\Platform\\Bridge\\Azure\\Responses\\ModelClient');
+        $embeddingsClientClass = $this->resolveScopedClass('Symfony\\AI\\Platform\\Bridge\\Azure\\OpenAi\\EmbeddingsModelClient');
+        $responsesConverterClass = $this->resolveScopedClass('Symfony\\AI\\Platform\\Bridge\\OpenResponses\\ResultConverter');
+        $embeddingsConverterClass = $this->resolveScopedClass('Symfony\\AI\\Platform\\Bridge\\Generic\\Embeddings\\ResultConverter');
+        $catalogClass = $this->resolveScopedClass('Symfony\\AI\\Platform\\Bridge\\Azure\\OpenAi\\ModelCatalog');
+        $contractClass = $this->resolveScopedClass('Symfony\\AI\\Platform\\Bridge\\OpenAi\\Contract\\OpenAiContract');
+        $providerClass = $this->resolveScopedClass('Symfony\\AI\\Platform\\Provider');
+        $eventSourceHttpClientClass = $this->resolveScopedClass('Symfony\\Component\\HttpClient\\EventSourceHttpClient');
 
-        $responsesClientClass = null;
-        $embeddingsClientClass = null;
-        $platformProviderClass = null;
-        $httpClientClass = null;
+        $missing = array_filter([
+            'Responses ModelClient' => $responsesClientClass,
+            'Embeddings ModelClient' => $embeddingsClientClass,
+            'Responses ResultConverter' => $responsesConverterClass,
+            'Embeddings ResultConverter' => $embeddingsConverterClass,
+            'ModelCatalog' => $catalogClass,
+            'OpenAiContract' => $contractClass,
+            'Provider' => $providerClass,
+            'EventSourceHttpClient' => $eventSourceHttpClientClass,
+        ], static fn(?string $class): bool => $class === null);
 
-        foreach ([$nsPrefix, $scopedPrefix] as $prefix) {
-            if (class_exists($prefix . 'ModelClient\\ResponsesModelClient')) {
-                $responsesClientClass = $prefix . 'ModelClient\\ResponsesModelClient';
-                $embeddingsClientClass = $prefix . 'ModelClient\\EmbeddingsModelClient';
-                break;
-            }
+        if ($missing !== []) {
+            throw new AdapterRuntimeException(sprintf(
+                'Azure dual-deployment requires symfony/ai-azure-platform 0.12+ classes; missing: %s.',
+                implode(', ', array_keys($missing)),
+            ));
         }
 
-        // Resolve Symfony Platform Provider class (wraps model clients).
-        foreach (['Symfony\\AI\\Platform\\Provider', self::VENDOR_PREFIX . 'Symfony\\AI\\Platform\\Provider'] as $candidate) {
-            if (class_exists($candidate)) {
-                $platformProviderClass = $candidate;
-                break;
-            }
-        }
+        /** @var class-string $eventSourceHttpClientClass */
+        $httpClient = new $eventSourceHttpClientClass(null);
 
-        // Resolve Symfony HTTP client factory (Psr18Client or HttplugClient).
-        foreach (['Symfony\\AI\\Platform\\Bridge\\Azure\\OpenAi\\PsrClient', 'Symfony\\Component\\HttpClient\\Psr18Client'] as $candidate) {
-            if (class_exists($candidate)) {
-                $httpClientClass = $candidate;
-                break;
-            }
-        }
-
-        if ($responsesClientClass === null || $embeddingsClientClass === null) {
-            // Fall back: use factory with chat deployment (embeddings will use same deployment).
-            $factoryClass = class_exists(self::AZURE_FACTORY_FQCN)
-                ? self::AZURE_FACTORY_FQCN
-                : self::VENDOR_PREFIX . self::AZURE_FACTORY_FQCN;
-
-            return $factoryClass::createProvider($baseUrl, $chatDeployment, $apiVersion, $apiKey);
-        }
-
-        if ($platformProviderClass === null) {
-            throw new AdapterRuntimeException(
-                'Symfony AI Platform Provider class not found. Ensure symfony/ai-platform is installed.',
-            );
-        }
-
-        // Build the HTTP client used by the Azure model clients.
-        $httpClient = $this->buildSymfonyHttpClient($httpClientClass, $apiKey);
-
+        /** @var class-string $responsesClientClass */
         $responsesClient = new $responsesClientClass($httpClient, $baseUrl, $apiKey, $chatDeployment);
+        /** @var class-string $embeddingsClientClass */
         $embeddingsClient = new $embeddingsClientClass($httpClient, $baseUrl, $embeddingDeployment, $apiVersion, $apiKey);
 
-        return new $platformProviderClass(
-            'azure',
+        /** @var class-string $contractClass */
+        $contract = $contractClass::create();
+
+        /** @var class-string $providerClass */
+        return new $providerClass(
+            'azure-openai',
             [$responsesClient, $embeddingsClient],
+            [new $responsesConverterClass(), new $embeddingsConverterClass()],
+            new $catalogClass(),
+            $contract,
+            null,
         );
     }
 
     /**
-     * Build the HTTP client suitable for use with the Azure model clients.
-     *
-     * The Azure model clients accept any PSR-18 compatible HTTP client. We use
-     * Symfony HttpClient via its PSR-18 bridge when available, otherwise fall
-     * back to a simple Guzzle-based stub.
+     * @param class-string|string $fqcn
+     * @return class-string|null
      */
-    private function buildSymfonyHttpClient(?string $httpClientClass, #[\SensitiveParameter] string $apiKey): object
+    private function resolveScopedClass(string $fqcn): ?string
     {
-        if ($httpClientClass !== null && class_exists($httpClientClass)) {
-            return new $httpClientClass();
+        if (class_exists($fqcn)) {
+            return $fqcn;
         }
 
-        // Symfony's NativeHttpClient as PSR-18 fallback.
-        $nativeClass = 'Symfony\\Component\\HttpClient\\NativeHttpClient';
-        $psr18Bridge = 'Symfony\\Component\\HttpClient\\Psr18Client';
-        if (class_exists($psr18Bridge) && class_exists($nativeClass)) {
-            return new $psr18Bridge(new $nativeClass());
-        }
+        $scoped = self::VENDOR_PREFIX . $fqcn;
 
-        throw new AdapterRuntimeException(
-            'No compatible HTTP client found for Azure dual-deployment mode. Ensure symfony/http-client is installed.',
-        );
+        return class_exists($scoped) ? $scoped : null;
     }
 
     /**
@@ -920,10 +899,47 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
             return $platform;
         }
 
+        $endpoint = $this->resolveEndpoint($provider);
+        if ($endpoint !== null && $this->factoryAcceptsBaseUrl($factoryClass, $method)) {
+            /** @var object $platform */
+            $platform = $factoryClass::{$method}($apiKey, baseUrl: $this->normalizeFactoryBaseUrl($endpoint));
+
+            return $platform;
+        }
+
         /** @var object $platform */
         $platform = $factoryClass::{$method}($apiKey);
 
         return $platform;
+    }
+
+    /**
+     * Symfony AI 0.11+ factories accept a host-style {@see baseUrl} without the
+     * `/v1` suffix that T3AF stores on provider endpoints.
+     */
+    private function normalizeFactoryBaseUrl(string $endpoint): string
+    {
+        $endpoint = rtrim(trim($endpoint), '/');
+        if (str_ends_with($endpoint, '/v1')) {
+            return substr($endpoint, 0, -3);
+        }
+
+        return $endpoint;
+    }
+
+    private function factoryAcceptsBaseUrl(string $factoryClass, string $method): bool
+    {
+        if (!method_exists($factoryClass, $method)) {
+            return false;
+        }
+
+        foreach ((new \ReflectionMethod($factoryClass, $method))->getParameters() as $parameter) {
+            if ($parameter->getName() === 'baseUrl') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function resolveEndpoint(Provider $provider): ?string

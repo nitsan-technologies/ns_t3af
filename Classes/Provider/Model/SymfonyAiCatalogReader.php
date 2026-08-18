@@ -182,6 +182,12 @@ class SymfonyAiCatalogReader
         if (is_string($cap)) {
             return strtolower($cap);
         }
+        if ($cap instanceof \BackedEnum) {
+            return strtolower((string) $cap->value);
+        }
+        if ($cap instanceof \UnitEnum) {
+            return strtolower($cap->name);
+        }
         if (is_object($cap)) {
             $class = $cap::class;
             $base = substr($class, (int) (strrpos($class, '\\') ?: -1) + 1);
@@ -199,7 +205,7 @@ class SymfonyAiCatalogReader
             str_contains($name, 'vision'), str_contains($name, 'image') => Capability::VISION,
             str_contains($name, 'tool'), str_contains($name, 'function') => Capability::TOOL_USE,
             str_contains($name, 'stream') => Capability::STREAMING,
-            str_contains($name, 'chat'), str_contains($name, 'conversation') => Capability::CHAT,
+            str_contains($name, 'chat'), str_contains($name, 'conversation'), str_contains($name, 'message') => Capability::CHAT,
             str_contains($name, 'completion'), str_contains($name, 'text') => Capability::COMPLETION,
             default => null,
         };

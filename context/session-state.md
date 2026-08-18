@@ -2,6 +2,48 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-08-18 — Release v1.1.3
+
+**Done:** Bump version to 1.1.3. Release notes with finalized changelog (Symfony AI ^0.12, mcp/sdk ^0.7, Azure 0.12 clients, scheduler CLI stats, default provider title).
+
+**Last touched:** 2026-08-18
+
+---
+
+## 2026-08-17 — Setup checklist scheduler stats use CLI tab source
+
+**Done:** Dashboard/checklist `scheduledTasks` now count `SchedulerCliTaskService::listTasks()` (command tasks `t3af:*` / legacy alias) instead of `classname LIKE '%NsT3AF%'`. Failing = `hasFailure`. Cache keys bumped (`scheduled_tasks_cli`, analytics/trends `cli_tasks`) so stale zeros expire immediately. OK copy: `%1$s active AI Universe scheduler task(s).`
+
+**Last touched:** 2026-08-17
+
+---
+
+## 2026-08-17 — Model catalog filter (wizard + provider drawer)
+
+**Done:** Shared `ModelCatalogFilter` hides retired/preview/superseded ids from setup wizard pills and AI Providers drawer (`ModelDiscoveryService`, `WizardProviderCatalog`). Denylist: `claude-sonnet-4-20250514`, `gemini-2.5-flash-lite-preview-09-2025`; also `-preview`, `-latest`, dated Claude/Gemini/GPT superseded by newer gen. Wizard excludes non-chat ids. Step 3 catalog blurbs + static fallbacks updated to QA model set (GPT-5.6, Claude Sonnet 5, Gemini 3.x, Ollama qwen/deepseek/llama4). Unit tests + `composer run ci` green.
+
+**Last touched:** 2026-08-17
+
+---
+
+## 2026-08-17 — Wizard model defaults + Composer stable pinning
+
+**Done:** Setup wizard step 4 derives `modelOptions` / `defaultModel` from `SymfonyAiCatalogReader` (static fallback when catalog empty). Updated EN/DE locallang catalog blurbs. Install + ExtensionIntegration docs: production must pin `nitsan/ns-t3af ^1.1` with `minimum-stability: stable`. Child-extensions note: no `|| @dev` in tagged releases.
+
+**Post-merge ops:** Delete remote `dep/mcp-sdk-1786623877776-ns_t3af` after merge to `master`; tag patch only if merged work exceeds current Packagist tag.
+
+**Last touched:** 2026-08-17
+
+---
+
+## 2026-08-17 — Post-upgrade hardening (Azure 0.12 + MCP 0.7)
+
+**Done:** Azure dual-deployment uses Symfony AI 0.12 `Responses\ModelClient` + `OpenAi\EmbeddingsModelClient` (throws on missing classes; no silent fallback). MCP Streamable HTTP: `mcpMaxBodyBytes` extension setting (default 16 MiB); transport code targets `mcp/sdk ^0.7` only. Agent context: `FEATURE_McpServer.md` + `mcp-server.md` updated to SDK `^0.7`.
+
+**Last touched:** 2026-08-17
+
+---
+
 ## 2026-08-07 — Free trial default documented as 50
 
 **Done:** Agent docs + trial unit fixtures: Free Trial / `trial_credits` default **100 → 50**. Client still does not hardcode grant amount (Balance/Products). Server ops must set `ns_ai_settings.trial_credits` + Free Trial product to 50 separately.

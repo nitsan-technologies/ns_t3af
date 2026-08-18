@@ -48,7 +48,10 @@
 ## ext_conf keys (Extension Configuration — not provider table)
 
 - `mcpBasePath`, `enableMcpServer`, `requireAuth`
+- `mcpMaxBodyBytes` — max Streamable HTTP POST body size in bytes (default 16 MiB; SDK floor 4 MiB)
 - OAuth lifetimes, rate limits, `oauthDefaultClientId`, redirect URIs
+
+**SDK:** `mcp/sdk ^0.7` (Composer require; no 0.5/0.6 compatibility path in transport code)
 
 ---
 
