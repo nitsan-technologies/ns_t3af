@@ -17,6 +17,7 @@ List of versions
    :maxdepth: 5
    :titlesonly:
 
+   1.1.3/Index
    1.1.2/Index
    1.1.1/Index
    1.1.0/Index

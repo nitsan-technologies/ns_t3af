@@ -7,7 +7,7 @@
 .. |extension_name| replace:: AI Foundation
 .. |extension_key| replace:: ns_t3af
 .. |package_name| replace:: nitsan/ns-t3af
-.. |extension_version| replace:: 1.1.2
+.. |extension_version| replace:: 1.1.3
 .. |extension_state| replace:: stable
 .. |extension_license| replace:: GPL-2.0-or-later
 .. |extension_author| replace:: Team NITSAN // T3Planet

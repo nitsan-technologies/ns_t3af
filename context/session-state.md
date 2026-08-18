@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-08-18 — Release v1.1.3
+
+**Done:** Bump version to 1.1.3. Release notes with finalized changelog (Symfony AI ^0.12, mcp/sdk ^0.7, Azure 0.12 clients, scheduler CLI stats, default provider title).
+
+**Last touched:** 2026-08-18
+
+---
+
 ## 2026-08-17 — Setup checklist scheduler stats use CLI tab source
 
 **Done:** Dashboard/checklist `scheduledTasks` now count `SchedulerCliTaskService::listTasks()` (command tasks `t3af:*` / legacy alias) instead of `classname LIKE '%NsT3AF%'`. Failing = `hasFailure`. Cache keys bumped (`scheduled_tasks_cli`, analytics/trends `cli_tasks`) so stale zeros expire immediately. OK copy: `%1$s active AI Universe scheduler task(s).`
