@@ -1,4 +1,4 @@
-[![Latest Stable Version](https://img.shields.io/badge/Stable-1.1.3-success)](https://extensions.typo3.org/extension/ns_t3af)
+[![Latest Stable Version](https://img.shields.io/badge/Stable-1.1.4-success)](https://extensions.typo3.org/extension/ns_t3af)
 [![AI Foundation Github](https://img.shields.io/badge/AI--Foundation-informational?logo=github)](https://github.com/nitsan-technologies/ns_t3af)
 [![TYPO3 14](https://img.shields.io/badge/TYPO3-14-important.svg?logo=typo3)](https://get.typo3.org/version/14)
 [![TYPO3 13](https://img.shields.io/badge/TYPO3-13-important.svg?logo=typo3)](https://get.typo3.org/version/13)
@@ -38,7 +38,7 @@ It includes these features:
 
 * **MCP Server:** TYPO3 becomes a native MCP endpoint. Claude Desktop, Cursor, n8n, Windsurf and VS Code Copilot can read and write TYPO3 content directly without custom middleware. Supports 7 transport methods, OAuth 2.1 with PKCE, IP allowlisting, MCP Gateway/Proxy mode for multi-site agencies, and a Webhook-to-MCP Bridge for external triggers.
 
-* **MCP Tools:** A full catalog of AI-usable tools across content, pages, SEO, translation, media and more. Auto-discovery registers any installed extension's database tables as tools automatically. Includes a live Playground to test tools and a Developer Kit to build your own.
+* **MCP Tools:** A full catalog of AI-usable tools across content, pages, SEO, translation, media and more. Generic `write_table` / `table_schema` cover any TCA table; richer per-table CRUD tools need Table Discovery (enable) or EXTCONF registration. Includes a live Playground to test tools and a Developer Kit to build your own.
 
 * **Multi-LLM Management:** Configure OpenAI, Anthropic, Gemini, Ollama and any OpenAI-compatible provider. Set priority and failover ordering per extension. Per-extension monthly budget caps with on/off toggles.
 
@@ -56,17 +56,6 @@ It includes these features:
 
 * **AI Prompts:** Centralized library of 63 editable prompt templates across 9 categories and 7+ extensions. Every AI instruction across SEO, content, translation, media and chat is inspectable and customizable.
 
-## What this does not do yet
-
-- **No RAG or retrieval.** Embedding generation is configurable per provider; retrieval,
-  chunking and reranking are not implemented. `composer.json` lists a vector-store
-  package under `suggest`, not `require`, for exactly this reason.
-- **Per-table MCP tooling needs opt-in.** The generic `write_table` and `table_schema`
-  tools work on any TCA table with no registration. The richer per-table tool set
-  requires Table Discovery or code registration first.
-- **mTLS for the MCP server is not shipped.** The fields exist; the feature does not.
-- **No SBOM, signed releases or supply-chain attestation.**
-
 |                       | URL                                                                 |
 |-----------------------|---------------------------------------------------------------------|
 | **Repository:**       | https://github.com/nitsan-technologies/ns_t3af                      |
@@ -76,7 +65,7 @@ It includes these features:
 | **Product Page:**     | https://t3planet.de/ai-foundation-fur-typo3                         |
 | **Documentation:**    | https://docs.t3planet.de/en/latest/                                 |
 | **Support:**          | https://t3planet.de/en/support                                      |
-| **Community:**        | https://typo3.slack.com                                             |
+| **Community:**        | https://app.slack.com/client/T024TUMLZ/C0BMHK5NGF7                  |
 | **Contribution:**     | [CONTRIBUTING.md](CONTRIBUTING.md)                                  |
 | **License:**          | [LICENSE](LICENSE) (GPL-2.0-or-later)                               |
 | **Licensing:**        | [LICENSING.md](LICENSING.md)                                        |

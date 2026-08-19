@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-08-19 — Release v1.1.4
+
+**Done:** Bump version to 1.1.4. LICENSING.md, README install/licence block, MCP Table Discovery wording, Slack community link, Packagist keywords, core 13/14 CI badges.
+
+**Last touched:** 2026-08-19
+
+---
+
 ## 2026-08-18 — Release v1.1.3
 
 **Done:** Bump version to 1.1.3. Release notes with finalized changelog (Symfony AI ^0.12, mcp/sdk ^0.7, Azure 0.12 clients, scheduler CLI stats, default provider title).
