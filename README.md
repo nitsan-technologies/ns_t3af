@@ -4,18 +4,41 @@
 [![TYPO3 13](https://img.shields.io/badge/TYPO3-13-important.svg?logo=typo3)](https://get.typo3.org/version/13)
 [![TYPO3 12](https://img.shields.io/badge/TYPO3-12-important.svg?logo=typo3)](https://get.typo3.org/version/12)
 [![PHP](https://img.shields.io/badge/PHP-8.2%20to%208.5-777BB4?logo=php&logoColor=white)](https://www.php.net/)
+[![core 13](https://github.com/nitsan-technologies/ns_t3af/actions/workflows/core13.yml/badge.svg)](https://github.com/nitsan-technologies/ns_t3af/actions/workflows/core13.yml)
+[![core 14](https://github.com/nitsan-technologies/ns_t3af/actions/workflows/core14.yml/badge.svg)](https://github.com/nitsan-technologies/ns_t3af/actions/workflows/core14.yml)
 
 # AI Foundation for TYPO3 Extension `ns_t3af`
 
 [![AI Foundation for TYPO3](Resources/Public/Images/Readme/readme.jpg)](https://t3planet.de/ai-foundation-fur-typo3)
 
-AI Foundation gives TYPO3 CMS a built-in MCP server, 100+ AI tools and multi-LLM management to connect Claude, Cursor, n8n and other AI agents while controlling providers, prompts, permissions and budgets from one backend module. Open source and self-hosted on your own infrastructure with your own keys; T3Planet never sits in your data path.
+AI Foundation gives TYPO3 CMS a built-in MCP server, AI tools and multi-LLM management to connect Claude, Cursor, n8n and other AI agents while controlling providers, prompts, permissions and budgets from one backend module. Open source and self-hosted on your own infrastructure with your own keys.
+
+## Installation
+
+```bash
+composer require nitsan/ns-t3af
+```
+
+Activate `ns_t3af` in the TYPO3 backend, then open **AI Foundation** (Admin Tools) and complete Quick Setup.
+
+## Free and open source, with a free licence key
+
+AI Foundation is GPL-2.0-or-later, on TER and public GitHub. No price, no domain limit,
+no time limit.
+
+It does need a **free licence key**. That is not a commercial gate: our licence manager
+`ns_license` is shared across the whole AI Universe and carries the AI Credits
+entitlement, and we have not separated AI Foundation from it. The key costs nothing and
+never expires. The check sends your key and your domain, and nothing else: no content,
+no prompts, no images, no IP addresses, no telemetry.
+
+Full detail, including where your AI content goes: [LICENSING.md](LICENSING.md).
 
 It includes these features:
 
-* **MCP Server:** TYPO3 becomes a native MCP endpoint. Claude Desktop, Cursor, n8n, Windsurf and VS Code Copilot can read and write TYPO3 content directly without custom middleware. Supports 7 transport methods, OAuth 2.1 with PKCE, IP allowlisting, mutual TLS, MCP Gateway/Proxy mode for multi-site agencies, and a Webhook-to-MCP Bridge for external triggers.
+* **MCP Server:** TYPO3 becomes a native MCP endpoint. Claude Desktop, Cursor, n8n, Windsurf and VS Code Copilot can read and write TYPO3 content directly without custom middleware. Supports 7 transport methods, OAuth 2.1 with PKCE, IP allowlisting, MCP Gateway/Proxy mode for multi-site agencies, and a Webhook-to-MCP Bridge for external triggers.
 
-* **100+ MCP Tools:** A full catalog of AI-usable tools across content, pages, SEO, translation, media and more. Auto-discovery registers any installed extension's database tables as tools automatically. Includes a live Playground to test tools and a Developer Kit to build your own.
+* **MCP Tools:** A full catalog of AI-usable tools across content, pages, SEO, translation, media and more. Auto-discovery registers any installed extension's database tables as tools automatically. Includes a live Playground to test tools and a Developer Kit to build your own.
 
 * **Multi-LLM Management:** Configure OpenAI, Anthropic, Gemini, Ollama and any OpenAI-compatible provider. Set priority and failover ordering per extension. Per-extension monthly budget caps with on/off toggles.
 
@@ -33,6 +56,17 @@ It includes these features:
 
 * **AI Prompts:** Centralized library of 63 editable prompt templates across 9 categories and 7+ extensions. Every AI instruction across SEO, content, translation, media and chat is inspectable and customizable.
 
+## What this does not do yet
+
+- **No RAG or retrieval.** Embedding generation is configurable per provider; retrieval,
+  chunking and reranking are not implemented. `composer.json` lists a vector-store
+  package under `suggest`, not `require`, for exactly this reason.
+- **Per-table MCP tooling needs opt-in.** The generic `write_table` and `table_schema`
+  tools work on any TCA table with no registration. The richer per-table tool set
+  requires Table Discovery or code registration first.
+- **mTLS for the MCP server is not shipped.** The fields exist; the feature does not.
+- **No SBOM, signed releases or supply-chain attestation.**
+
 |                       | URL                                                                 |
 |-----------------------|---------------------------------------------------------------------|
 | **Repository:**       | https://github.com/nitsan-technologies/ns_t3af                      |
@@ -45,20 +79,13 @@ It includes these features:
 | **Community:**        | https://typo3.slack.com                                             |
 | **Contribution:**     | [CONTRIBUTING.md](CONTRIBUTING.md)                                  |
 | **License:**          | [LICENSE](LICENSE) (GPL-2.0-or-later)                               |
+| **Licensing:**        | [LICENSING.md](LICENSING.md)                                        |
 
 ## Compatibility
 
 | T3AF Version | TYPO3 Compatibility | PHP Version | Support Level                          |
 |--------------|---------------------|-------------|----------------------------------------|
 | v1.x         | 12.4 - 14.x         | 8.2 - 8.5   | Features, Bugfixes, Security Updates   |
-
-## Licensing
-
-T3AF is open source under GPL-2.0-or-later.
-
-An OSS license key is required for all environments (development, staging, and production).
-
-Activate via **T3Planet Shop** backend module > **AI Universe** > **AI Foundation** > **Start**.
 
 ## Compatible Extensions
 
@@ -72,11 +99,3 @@ T3AF is the required foundation for six AI extensions by T3Planet. Install T3AF 
 | **T3AA**  | AI Accessibility for TYPO3           | https://t3planet.de/t3aa-typo3-erweiterung        |
 | **T3AL**  | AI XLIFF Localisation for TYPO3      | https://t3planet.de/t3al-typo3-erweiterung        |
 | **T3AB**  | AI Extension Builder for TYPO3       | https://t3planet.de/t3ab-typo3-erweiterung        |
-
-## Installation
-
-```bash
-composer require nitsan/ns-t3af
-```
-
-Activate `ns_t3af` in the TYPO3 backend, then open **AI Foundation** (Admin Tools) and complete Quick Setup.
