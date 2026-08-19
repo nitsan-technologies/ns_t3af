@@ -76,10 +76,28 @@ final class PageJsonLdListener
             ],
         ];
 
-        $content = $event->getContent();
         $script = '<script type="application/ld+json">'
             . json_encode($jsonLd, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)
             . '</script>';
-        $event->setContent($content . $script);
+        $this->appendContent($event, $script);
+    }
+
+    /**
+     * v13: $event->getController()->content. v14: $event->getContent()/setContent().
+     */
+    private function appendContent(object $event, string $script): void
+    {
+        if (method_exists($event, 'getContent') && method_exists($event, 'setContent')) {
+            $event->setContent($event->getContent() . $script);
+
+            return;
+        }
+
+        if (method_exists($event, 'getController')) {
+            $controller = $event->getController();
+            if (is_object($controller) && isset($controller->content) && is_string($controller->content)) {
+                $controller->content .= $script;
+            }
+        }
     }
 }
