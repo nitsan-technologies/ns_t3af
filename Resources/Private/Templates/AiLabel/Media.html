@@ -25,7 +25,17 @@
                         <span class="badge badge-warning">{mediaList.folder.openCount} open</span>
                     </f:if>
                 </div>
-                <a class="btn btn-default btn-sm" href="{f:be.uri(route: 't3af_dashboard.ai_label.settings')}"><f:translate key="{ll}:module.aiLabel.media.folderDefaults" default="Folder defaults" /></a>
+                <f:if condition="{isDefaultMediaFolder}">
+                    <f:then>
+                        <span class="badge badge-success"><f:translate key="{ll}:module.aiLabel.media.defaultFolder" default="Default folder" /></span>
+                    </f:then>
+                    <f:else>
+                        <form method="post" action="{setDefaultFolderUri}" class="d-inline">
+                            <input type="hidden" name="folder" value="{mediaList.folder.identifier}" />
+                            <button type="submit" class="btn btn-default btn-sm"><f:translate key="{ll}:module.aiLabel.media.makeDefaultFolder" default="Make this folder the Media default" /></button>
+                        </form>
+                    </f:else>
+                </f:if>
             </div>
 
             <f:render partial="AiLabel/FilterBar" arguments="{filters: filters, variant: 'media'}" />

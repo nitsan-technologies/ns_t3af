@@ -25,7 +25,7 @@ use TYPO3\CMS\Core\Resource\Event\AfterFileMetaDataUpdatedEvent;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * FAL path recorder (T3).
+ * Records origin from FAL metadata updates.
  */
 final class FileMetadataListener
 {

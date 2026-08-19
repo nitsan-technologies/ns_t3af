@@ -28,7 +28,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-#[AsCommand(name: 't3af:ailabel:audit', description: 'Report-only AI Label audit (R15, never writes labels)')]
+#[AsCommand(name: 't3af:ailabel:audit', description: 'Report-only AI Label audit (never writes labels)')]
 final class AiLabelAuditCommand extends Command
 {
     public function __construct(

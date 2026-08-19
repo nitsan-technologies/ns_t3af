@@ -22,31 +22,31 @@ namespace NITSAN\NsT3AF\AiLabel\Service;
 use TYPO3\CMS\Core\Database\Event\AlterTableDefinitionStatementsEvent;
 
 /**
- * R1.2 configurable applicable tables with plausibility check before DDL.
+ * Extra applicable tables: CREATE TABLE fragments TYPO3 merges like ext_tables.sql.
  */
 final class ApplicableTableSchemaListener
 {
+    private const COLUMN_DDL = <<<'SQL'
+    tx_nst3af_ailabel_involvement VARCHAR(32) NOT NULL DEFAULT 'not_reviewed',
+    tx_nst3af_ailabel_labelling_mode VARCHAR(16) NOT NULL DEFAULT 'automatic',
+    tx_nst3af_ailabel_exemption_reason VARCHAR(64) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_ai_system VARCHAR(128) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_ai_vendor VARCHAR(128) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_internal_note TEXT,
+    tx_nst3af_ailabel_confirmed_by INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_confirmed_at INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_exported_at INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_version_hash VARCHAR(64) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_recording_source VARCHAR(64) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_public_interest TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_human_review TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_responsible_person VARCHAR(255) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_generation_group VARCHAR(64) NOT NULL DEFAULT ''
+SQL;
+
     public function __construct(
         private readonly ApplicableTablesResolver $applicableTablesResolver,
     ) {}
-
-    private const COLUMN_DDL = <<<'SQL'
- `%s` VARCHAR(32) NOT NULL DEFAULT 'not_reviewed',
- `%s` VARCHAR(16) NOT NULL DEFAULT 'automatic',
- `%s` VARCHAR(64) NOT NULL DEFAULT '',
- `%s` VARCHAR(128) NOT NULL DEFAULT '',
- `%s` VARCHAR(128) NOT NULL DEFAULT '',
- `%s` TEXT,
- `%s` INT(11) UNSIGNED NOT NULL DEFAULT 0,
- `%s` INT(11) UNSIGNED NOT NULL DEFAULT 0,
- `%s` INT(11) UNSIGNED NOT NULL DEFAULT 0,
- `%s` VARCHAR(64) NOT NULL DEFAULT '',
- `%s` VARCHAR(64) NOT NULL DEFAULT '',
- `%s` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
- `%s` TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
- `%s` VARCHAR(255) NOT NULL DEFAULT '',
- `%s` VARCHAR(64) NOT NULL DEFAULT ''
-SQL;
 
     public function appendStatements(AlterTableDefinitionStatementsEvent $event): void
     {
@@ -55,33 +55,9 @@ SQL;
                 continue;
             }
 
-            $columns = $this->columnNames();
-            $ddl = sprintf(self::COLUMN_DDL, ...$columns);
-            $event->addSqlData('ALTER TABLE `' . $table . '` ADD ' . str_replace("\n", ', ADD ', trim($ddl)));
+            $event->addSqlData(
+                'CREATE TABLE `' . $table . '` (' . "\n" . self::COLUMN_DDL . "\n);",
+            );
         }
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function columnNames(): array
-    {
-        return [
-            'tx_nst3af_ailabel_involvement',
-            'tx_nst3af_ailabel_labelling_mode',
-            'tx_nst3af_ailabel_exemption_reason',
-            'tx_nst3af_ailabel_ai_system',
-            'tx_nst3af_ailabel_ai_vendor',
-            'tx_nst3af_ailabel_internal_note',
-            'tx_nst3af_ailabel_confirmed_by',
-            'tx_nst3af_ailabel_confirmed_at',
-            'tx_nst3af_ailabel_exported_at',
-            'tx_nst3af_ailabel_version_hash',
-            'tx_nst3af_ailabel_recording_source',
-            'tx_nst3af_ailabel_public_interest',
-            'tx_nst3af_ailabel_human_review',
-            'tx_nst3af_ailabel_responsible_person',
-            'tx_nst3af_ailabel_generation_group',
-        ];
     }
 }

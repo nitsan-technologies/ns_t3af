@@ -27,7 +27,7 @@ use TYPO3\CMS\Core\DataHandling\DataHandler;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * DataHandler hook for origin recording and R1.5 validation (T3).
+ * DataHandler hook for origin recording and involvement validation.
  */
 final class DataHandlerAiLabelHook
 {

@@ -20,7 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\AiLabel\Domain;
 
 /**
- * Machine-readable reason codes from R5/R6.
+ * Machine-readable reason codes for label decisions.
  */
 enum ReasonCode: string
 {

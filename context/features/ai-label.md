@@ -66,9 +66,9 @@ Configurable extension tables via `EXTCONF['ns_t3af']['ailabelApplicableTables']
 
 ## Rule engines (summary)
 
-**Media (`MediaRuleEngine`):** Human review does **not** suppress labels (Art. 50(4)). Respects pre-cutoff date (`ComplianceStringsService::applicationDate()`), labelling mode, confirmation.
+**Media (`MediaRuleEngine`):** Human review does **not** suppress labels (Art. 50(4)). Respects pre-cutoff date (`ComplianceStringsService::applicationDate()`), labelling mode, confirmation. Setting `labelUnknownOrigin=yes` shows a badge for confirmed `origin_unknown` media.
 
-**Text (`TextRuleEngine`):** Requires public interest. Named human reviewer suppresses label (`editorial_control`). Unnamed review → `editorial_control_incomplete`.
+**Text (`TextRuleEngine`):** Requires public interest. Named human reviewer suppresses label (`editorial_control`). Unnamed review → `editorial_control_incomplete`. Frontend state uses `AiLabelRecordEvaluator` (same split as the backend lists).
 
 Every decision stores a `ReasonCode` enum value (machine-readable, exported in evidence).
 
@@ -96,6 +96,8 @@ Capture is automatic for all AI Foundation provider calls; bind must happen when
 | List/statistics services | `Classes/AiLabel/Service/AiLabel*Service.php` |
 | Rule engines | `Classes/AiLabel/Service/MediaRuleEngine.php`, `TextRuleEngine.php` |
 | Origin / capture | `Classes/AiLabel/Service/OriginRecorder.php`, `GenerationCaptureListener.php` |
+| Auto-confirm | `Classes/AiLabel/Service/AutoConfirmSettingsService.php` (Settings + EXTCONF) |
+| IPTC / stamp | `IptcDigitalSourceTypeService.php`, `AfterFileProcessingListener.php`, `UploadAiSignalListener.php` |
 | Bind helper (children) | `Classes/AiLabel/Service/AiLabelBindHelper.php` |
 | Confirmation / undo | `Classes/AiLabel/Service/ConfirmationService.php`, `UndoCacheService.php` |
 | Record drawer | `Classes/AiLabel/Service/AiLabelRecordDrawerService.php` |
@@ -131,7 +133,7 @@ Undo cache keys use underscores (`bulk_1`, `sys_file_metadata_43`) — TYPO3 cac
 
 **Do:** Bind generations at every child-extension persistence point. Use `ComplianceStringsService` for user-facing compliance copy. Confirm labels in the module before treating records as reviewed.
 
-**Don't:** Present coverage % as legal compliance. Auto-confirm without checking `AutoConfirmSettingsService` hold rules. Tag alt-text-only file metadata binds (`bindFileMetadata` skips when `$altTextOnly`).
+**Don't:** Present coverage % as legal compliance. Auto-confirm without checking `AutoConfirmSettingsService` hold rules (public-interest text stays manual). Tag alt-text-only file metadata binds (`bindFileMetadata` skips when `$altTextOnly`).
 
 ---
 

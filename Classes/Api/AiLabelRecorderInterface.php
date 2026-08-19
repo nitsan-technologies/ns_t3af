@@ -22,12 +22,12 @@ namespace NITSAN\NsT3AF\Api;
 use NITSAN\NsT3AF\AiLabel\Domain\Involvement;
 
 /**
- * R18.4 inbound interface for third-party origin reporting.
+ * Inbound interface for third-party origin reporting.
  */
 interface AiLabelRecorderInterface
 {
     /**
-     * Bind a captured generation to a persisted subject (R2.6).
+     * Bind a captured generation to a persisted subject.
      */
     public function bindGeneration(
         string $correlationId,

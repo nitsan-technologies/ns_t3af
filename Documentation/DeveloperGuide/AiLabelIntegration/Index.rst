@@ -58,7 +58,9 @@ or listen to ``CollectApplicableTablesEvent``:
         }
     }
 
-Schema columns for extra tables are added by ``ApplicableTableSchemaListener``.
+Schema columns for extra tables are added by ``ApplicableTableSchemaListener``
+as ``CREATE TABLE`` fragments. After changing extra tables, run
+**Maintenance → Analyze Database Structure** so the columns exist.
 
 Bind after save (recommended)
 -----------------------------
@@ -209,19 +211,21 @@ Or inject ``FrontendLabelRenderer`` / ``FrontendLabelStateFactory`` in PHP.
 Auto-confirm
 ------------
 
-**Active today:** allow-list trusted recording sources via EXTCONF
-``ailabelAutoConfirmSources`` (array of source strings, for example
-``my_extension``). Hold rules in ``AutoConfirmSettingsService`` and
-``ailabelHoldList`` (default includes ``public_interest_text``) may still block
-auto-confirm for public-interest text until manual review.
+Settings tab drives auto-confirm via ``AutoConfirmSettingsService``:
 
-**Settings form (stored, wiring in progress):** ``ailabelAutoConfirmOwn``,
-``ailabelAutoConfirmDetected``, and ``ailabelAutoConfirmHold`` in the AI Label
-Settings tab are persisted but not yet read by ``AutoConfirmSettingsService``.
-Use EXTCONF for production auto-confirm until those settings are connected.
+* **Confirm when OUR extension recorded it** — ``ns_t3ai``, ``ns_t3aa``,
+  ``ns_t3af`` for media, text, or both.
+* **Confirm when DETECTED on upload** — recording source ``detected_upload``
+  (IPTC Digital Source Type already signals AI).
+* **Hold** — public-interest text stays manual (also EXTCONF
+  ``ailabelHoldList``).
 
-Check ``AiLabelRuleMatrixTest`` and ``AutoConfirmSettingsService`` before relying
-on auto-confirm in production.
+EXTCONF ``ailabelAutoConfirmSources`` remains an extra allow-list (used even
+when the Settings own-toggle is off). Auto-confirm never fills the responsible
+person field.
+
+Check ``AutoConfirmSettingsServiceTest`` and ``AiLabelRuleMatrixTest`` before
+relying on auto-confirm in production.
 
 Module settings consumed on the frontend
 ----------------------------------------
@@ -230,10 +234,11 @@ Module settings consumed on the frontend
 
 * ``labelSize``, ``labelWording`` — passed to ``FrontendLabelRenderer``
 * ``markImageFile === overlay`` — enables image partial wrapper and overlay badge
-* ``labelPosition`` — CSS position class on the image wrapper (overlay only)
-
-Settings stored but not yet used on the frontend: ``machineReadable``,
-``labelUnknownOrigin``, ``secondInfoLayer``.
+* ``markImageFile === written_in`` — stamps processed image copies (ImageMagick)
+* ``labelPosition`` — overlay CSS class and processed-file stamp corner
+* ``machineReadable`` — ``iptc`` / ``iptc_jsonld`` / ``off``
+* ``labelUnknownOrigin`` — visitor badge for confirmed unknown-origin media
+* ``secondInfoLayer`` — expandable ``<details>`` on the badge
 
 Deep links
 ----------

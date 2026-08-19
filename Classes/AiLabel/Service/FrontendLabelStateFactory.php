@@ -34,7 +34,7 @@ final class FrontendLabelStateFactory
 {
     public function __construct(
         private readonly ConfirmationService $confirmationService,
-        private readonly MediaRuleEngine $mediaRuleEngine,
+        private readonly AiLabelRecordEvaluator $evaluator,
     ) {}
 
     /**
@@ -47,9 +47,12 @@ final class FrontendLabelStateFactory
             ?? Involvement::NotReviewed;
         $mode = LabellingMode::tryFrom((string) ($record['tx_nst3af_ailabel_labelling_mode'] ?? 'automatic'))
             ?? LabellingMode::Automatic;
-        $created = (int) ($record['crdate'] ?? 0);
+        $created = (int) ($record['crdate'] ?? $record['file_creation_date'] ?? 0);
         $confirmed = $uid > 0 && $this->confirmationService->isConfirmed($table, $uid);
-        $decision = $this->mediaRuleEngine->decide($involvement, $mode, $confirmed, $created);
+        $record['tx_nst3af_ailabel_confirmed_at'] = $confirmed
+            ? (int) ($record['tx_nst3af_ailabel_confirmed_at'] ?? 1)
+            : 0;
+        $decision = $this->evaluator->decide($table, $record);
 
         return new FrontendLabelState(
             $table,

@@ -20,50 +20,68 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\AiLabel;
 
 use Doctrine\DBAL\Result;
+use NITSAN\NsT3AF\AiLabel\Service\AiLabelRecordEvaluator;
 use NITSAN\NsT3AF\AiLabel\Service\ComplianceStringsService;
 use NITSAN\NsT3AF\AiLabel\Service\ConfirmationService;
 use NITSAN\NsT3AF\AiLabel\Service\FrontendLabelStateFactory;
 use NITSAN\NsT3AF\AiLabel\Service\MediaRuleEngine;
+use NITSAN\NsT3AF\AiLabel\Service\TextRuleEngine;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
 final class FrontendLabelStateFactoryTest extends TestCase
 {
-    public function testGeneratedConfirmedRecordShowsLabel(): void
+    public function testTextWithoutPublicInterestDoesNotShow(): void
     {
-        $factory = new FrontendLabelStateFactory(
-            $this->confirmationService(true),
-            new MediaRuleEngine(new ComplianceStringsService()),
-        );
-
-        $state = $factory->fromRecord('tt_content', [
+        $state = $this->factory(true)->fromRecord('tt_content', [
             'uid' => 12,
+            'tx_nst3af_ailabel_involvement' => 'ai_generated',
+            'tx_nst3af_ailabel_labelling_mode' => 'automatic',
+            'tx_nst3af_ailabel_public_interest' => 0,
+            'crdate' => time(),
+        ]);
+
+        self::assertFalse($state->showLabel);
+        self::assertTrue($state->hasAiInvolvement());
+        self::assertSame('not_public_interest', $state->reasonCodeKey());
+    }
+
+    public function testMediaGeneratedConfirmedShowsLabel(): void
+    {
+        $state = $this->factory(true)->fromRecord('sys_file_metadata', [
+            'uid' => 9,
             'tx_nst3af_ailabel_involvement' => 'ai_generated',
             'tx_nst3af_ailabel_labelling_mode' => 'automatic',
             'crdate' => time(),
         ]);
 
         self::assertTrue($state->showLabel);
-        self::assertTrue($state->hasAiInvolvement());
         self::assertTrue($state->isAiGenerated());
-        self::assertSame('ai_generated', $state->involvementKey());
         self::assertSame('rule_default', $state->reasonCodeKey());
     }
 
     public function testUnknownFileYieldsEmptyState(): void
     {
-        $factory = new FrontendLabelStateFactory(
-            $this->confirmationService(false),
-            new MediaRuleEngine(new ComplianceStringsService()),
-        );
-
-        $state = $factory->fromFile(null);
+        $state = $this->factory(false)->fromFile(null);
 
         self::assertFalse($state->showLabel);
         self::assertFalse($state->hasAiInvolvement());
         self::assertSame(0, $state->uid);
         self::assertSame('sys_file_metadata', $state->table);
+    }
+
+    private function factory(bool $confirmed): FrontendLabelStateFactory
+    {
+        $strings = new ComplianceStringsService();
+
+        return new FrontendLabelStateFactory(
+            $this->confirmationService($confirmed),
+            new AiLabelRecordEvaluator(
+                new MediaRuleEngine($strings),
+                new TextRuleEngine(),
+            ),
+        );
     }
 
     private function confirmationService(bool $confirmed): ConfirmationService

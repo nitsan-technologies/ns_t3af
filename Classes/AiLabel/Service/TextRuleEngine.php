@@ -24,7 +24,7 @@ use NITSAN\NsT3AF\AiLabel\Domain\ReasonCode;
 use NITSAN\NsT3AF\AiLabel\Dto\LabelDecision;
 
 /**
- * R6 text rule engine. Human review with named person suppresses text labels.
+ * Text rule engine. Human review with a named person suppresses text labels.
  */
 final class TextRuleEngine
 {

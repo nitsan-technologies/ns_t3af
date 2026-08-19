@@ -78,13 +78,35 @@ final class AiLabelRuleMatrixTest extends TestCase
         self::assertSame(ReasonCode::ManualExempt, $decision->reasonCode);
     }
 
+    public function testMediaUnknownOriginLabelsWhenEnabled(): void
+    {
+        $decision = $this->media->decide(
+            Involvement::OriginUnknown,
+            LabellingMode::Automatic,
+            true,
+            strtotime('2026-09-01'),
+            true,
+        );
+        self::assertTrue($decision->showLabel);
+        self::assertSame(ReasonCode::UnknownOrigin, $decision->reasonCode);
+
+        $hidden = $this->media->decide(
+            Involvement::OriginUnknown,
+            LabellingMode::Automatic,
+            true,
+            strtotime('2026-09-01'),
+            false,
+        );
+        self::assertFalse($hidden->showLabel);
+    }
+
     public function testAutoConfirmRespectsHoldList(): void
     {
         $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelHoldList'] = ['public_interest_text'];
         $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelAutoConfirmSources'] = ['ns_t3ai'];
 
         $service = new AutoConfirmSettingsService();
-        self::assertFalse($service->isAutoConfirmAllowed('ns_t3ai', true));
-        self::assertTrue($service->isAutoConfirmAllowed('ns_t3ai', false));
+        self::assertFalse($service->isAutoConfirmAllowed('ns_t3ai', 'tt_content', true));
+        self::assertTrue($service->isAutoConfirmAllowed('ns_t3ai', 'tt_content', false));
     }
 }

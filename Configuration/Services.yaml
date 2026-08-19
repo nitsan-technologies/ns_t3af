@@ -593,5 +593,16 @@ services:
       - name: event.listener
         event: TYPO3\CMS\Frontend\Event\AfterCacheableContentIsGeneratedEvent
 
+  NITSAN\NsT3AF\AiLabel\EventListener\UploadAiSignalListener:
+    tags:
+      - name: event.listener
+        event: TYPO3\CMS\Core\Resource\Event\AfterFileAddedEvent
+
+  NITSAN\NsT3AF\AiLabel\Service\IptcDigitalSourceTypeService:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\AutoConfirmSettingsService:
+    public: true
+
   NITSAN\NsT3AF\Controller\Backend\AiLabelController:
     public: true

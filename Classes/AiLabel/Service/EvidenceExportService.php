@@ -22,7 +22,7 @@ namespace NITSAN\NsT3AF\AiLabel\Service;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
 /**
- * R14.3 evidence export (CSV + self-contained HTML).
+ * CSV/HTML evidence export of labelled records.
  */
 final class EvidenceExportService
 {

@@ -4,10 +4,6 @@
     <f:render partial="AiLabel/PageShell" arguments="{_all}" />
     <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
 
-    <f:if condition="{flash} == settings-saved">
-        <div class="callout callout-success mb-3"><f:translate key="{ll}:module.aiLabel.settings.saved" default="Settings saved." /></div>
-    </f:if>
-
     <div class="row g-3">
         <div class="col-lg-7">
             <f:render partial="AiLabel/SettingsForm" arguments="{settings: settings, settingsSaveUri: settingsSaveUri}" />

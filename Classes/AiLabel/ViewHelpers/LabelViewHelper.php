@@ -49,15 +49,7 @@ final class LabelViewHelper extends AbstractViewHelper
         }
 
         return GeneralUtility::makeInstance(FrontendLabelRenderer::class)
-            ->renderMediaBadge(
-                $state->involvement,
-                $state->labellingMode,
-                $state->confirmed,
-                $state->created,
-                $state->table,
-                $state->uid,
-                $state->record,
-            );
+            ->renderFromState($state);
     }
 
     private function resolveState(): ?FrontendLabelState

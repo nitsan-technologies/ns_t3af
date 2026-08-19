@@ -45,7 +45,7 @@
             <option value="100" {f:if(condition: '{filters.max} == 100', then: 'selected="selected"')}>100</option>
         </select>
         <div class="btn-group" role="group" aria-label="{f:translate(key: '{ll}:module.aiLabel.toolbar.aria', default: 'List actions')}">
-            <a class="btn btn-success btn-sm" href="{exportUri}?format=csv">
+            <a class="btn btn-success btn-sm" href="{exportUri}">
                 <core:icon identifier="actions-download" alternativeMarkupIdentifier="inline" size="small" />
                 <f:translate key="{ll}:module.aiLabel.action.exportEvidence" default="Export evidence" />
             </a>

@@ -24,7 +24,7 @@ use NITSAN\NsT3AF\Api\AiLabelRecorderInterface;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * Helper for child extensions to bind captures at persistence points (T5).
+ * Helper for child extensions to bind captures at persistence points.
  *
  * Child binds always store Involvement::AiGenerated. Editors change
  * involvement in the AI Label module. Visitor badges still require confirm.

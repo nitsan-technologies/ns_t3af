@@ -194,6 +194,10 @@ return [
                 'target' => AiLabelController::class . '::settingsSaveAction',
                 'methods' => ['POST'],
             ],
+            'ai_label.media_default' => [
+                'target' => AiLabelController::class . '::mediaDefaultFolderAction',
+                'methods' => ['POST'],
+            ],
             'ai_label.record_edit' => [
                 'target' => AiLabelController::class . '::recordEditAction',
             ],

@@ -22,7 +22,7 @@ namespace NITSAN\NsT3AF\AiLabel\Service;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
 /**
- * R18.3 duplicate suppression when a rival extension already renders the subject.
+ * Skip rendering when a rival extension already labelled the subject.
  */
 final class RivalsRendererGuard
 {

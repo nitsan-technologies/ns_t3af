@@ -131,6 +131,12 @@ final class AiLabelRecordDrawerService
 
         $this->undoCacheService->remember($table, $uid, $this->extractAiLabelFields($record));
 
+        if (!$this->hasAiLabelColumns($table)) {
+            return ['ok' => false, 'errors' => [
+                'schema' => 'AI Label columns are missing on this table. Open Maintenance → Analyze Database Structure, apply the AI Label fields, then save again.',
+            ]];
+        }
+
         $fields = [
             'tx_nst3af_ailabel_involvement' => $involvement->value,
             'tx_nst3af_ailabel_labelling_mode' => $labellingMode->value,
@@ -285,5 +291,15 @@ final class AiLabelRecordDrawerService
         }
 
         return $fields;
+    }
+
+    private function hasAiLabelColumns(string $table): bool
+    {
+        $columns = $this->connectionPool
+            ->getConnectionForTable($table)
+            ->createSchemaManager()
+            ->listTableColumns($table);
+
+        return isset($columns['tx_nst3af_ailabel_involvement']);
     }
 }

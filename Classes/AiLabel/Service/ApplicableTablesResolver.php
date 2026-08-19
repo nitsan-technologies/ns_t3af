@@ -40,9 +40,7 @@ final class ApplicableTablesResolver
     public function getTables(): array
     {
         $configured = $this->settingsService->getConfiguredApplicableTables();
-        $tables = $configured !== []
-            ? $configured
-            : self::DEFAULT_TABLES;
+        $tables = array_merge(self::DEFAULT_TABLES, $configured);
 
         $event = new CollectApplicableTablesEvent($tables);
         $this->eventDispatcher->dispatch($event);

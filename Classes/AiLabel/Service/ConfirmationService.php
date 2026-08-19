@@ -22,16 +22,20 @@ namespace NITSAN\NsT3AF\AiLabel\Service;
 use NITSAN\NsT3AF\AiLabel\Domain\Involvement;
 use NITSAN\NsT3AF\Service\AiLogService;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * R3 confirmation with version binding.
+ * Confirmation bound to a content version hash.
  */
 final class ConfirmationService
 {
     public function __construct(
         private readonly ConnectionPool $connectionPool,
         private readonly ?AiLogService $aiLogService = null,
+        private readonly ?IptcDigitalSourceTypeService $iptcDigitalSourceTypeService = null,
+        private readonly ?AiLabelSettingsService $settingsService = null,
+        private readonly ?ResourceFactory $resourceFactory = null,
     ) {}
 
     public function confirm(string $table, int $uid, int $backendUserId, string $contentFingerprint = ''): void
@@ -63,6 +67,8 @@ final class ConfirmationService
             ?? Involvement::NotReviewed;
         GeneralUtility::makeInstance(AiLabelInteropService::class)
             ->reportAfterConfirmation($table, $uid, $involvement);
+
+        $this->maybeWriteIptc($table, $uid);
     }
 
     public function clearConfirmation(string $table, int $uid): void
@@ -117,5 +123,32 @@ final class ConfirmationService
         unset($row['tx_nst3af_ailabel_confirmed_by'], $row['tx_nst3af_ailabel_confirmed_at'], $row['tx_nst3af_ailabel_version_hash']);
 
         return hash('sha256', serialize($row));
+    }
+
+    private function maybeWriteIptc(string $table, int $uid): void
+    {
+        if ($table !== 'sys_file_metadata' || $this->iptcDigitalSourceTypeService === null) {
+            return;
+        }
+
+        $mode = (string) ($this->settingsService?->all()['machineReadable'] ?? 'iptc');
+        if ($mode !== 'iptc' && $mode !== 'iptc_jsonld') {
+            return;
+        }
+
+        $fileUid = $this->connectionPool->getConnectionForTable('sys_file_metadata')
+            ->select(['file'], 'sys_file_metadata', ['uid' => $uid])
+            ->fetchOne();
+        if (!is_numeric($fileUid) || (int) $fileUid <= 0 || $this->resourceFactory === null) {
+            return;
+        }
+
+        try {
+            $file = $this->resourceFactory->getFileObject((int) $fileUid);
+        } catch (\Throwable) {
+            return;
+        }
+
+        $this->iptcDigitalSourceTypeService->writeTrainedAlgorithmicMedia($file);
     }
 }

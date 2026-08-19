@@ -25,7 +25,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Filelist\Event\ProcessFileListActionsEvent;
 
 /**
- * R16.2 file module row action deep link into AI Label tab.
+ * File module row action deep link into the AI Label media tab.
  */
 final class ProcessFileListActionsListener
 {

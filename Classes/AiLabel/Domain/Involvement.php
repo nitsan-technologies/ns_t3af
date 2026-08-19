@@ -20,7 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\AiLabel\Domain;
 
 /**
- * R1.1 mutually exclusive involvement values.
+ * Mutually exclusive AI involvement values.
  */
 enum Involvement: string
 {

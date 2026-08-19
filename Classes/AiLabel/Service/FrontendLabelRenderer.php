@@ -21,15 +21,17 @@ namespace NITSAN\NsT3AF\AiLabel\Service;
 
 use NITSAN\NsT3AF\AiLabel\Domain\Involvement;
 use NITSAN\NsT3AF\AiLabel\Domain\LabellingMode;
+use NITSAN\NsT3AF\AiLabel\Domain\ReasonCode;
+use NITSAN\NsT3AF\AiLabel\Dto\FrontendLabelState;
 use TYPO3\CMS\Core\Utility\PathUtility;
 
 /**
- * R7 frontend renderer with external EU icon reference.
+ * Visitor-facing EU icon + text badge markup.
  */
 final class FrontendLabelRenderer
 {
     public function __construct(
-        private readonly MediaRuleEngine $mediaRuleEngine,
+        private readonly AiLabelRecordEvaluator $evaluator,
         private readonly RivalsRendererGuard $rivalsRendererGuard,
         private readonly AiLabelSettingsService $settingsService,
         private readonly FrontendLabelTextService $labelTextService,
@@ -51,24 +53,32 @@ final class FrontendLabelRenderer
             return '';
         }
 
-        $decision = $this->mediaRuleEngine->decide($involvement, $mode, $confirmed, $creationDate);
+        $recordForDecision = $record;
+        $recordForDecision['tx_nst3af_ailabel_involvement'] = $involvement->value;
+        $recordForDecision['tx_nst3af_ailabel_labelling_mode'] = $mode->value;
+        $recordForDecision['tx_nst3af_ailabel_confirmed_at'] = $confirmed
+            ? (int) ($record['tx_nst3af_ailabel_confirmed_at'] ?? 1)
+            : 0;
+        $recordForDecision['crdate'] = $creationDate;
+        $decision = $this->evaluator->decide($table, $recordForDecision);
         if (!$decision->showLabel) {
             return '';
         }
 
-        $moduleSettings = $this->settingsService->all();
-        $sizeClass = match ((string) ($moduleSettings['labelSize'] ?? 'medium')) {
-            'small' => 'nst3af-ailabel--size-small',
-            'large' => 'nst3af-ailabel--size-large',
-            default => 'nst3af-ailabel--size-medium',
-        };
-        $iconOnly = ((string) ($moduleSettings['labelWording'] ?? 'show_site_language')) === 'icon_only';
+        return $this->buildBadge($involvement, $decision->reasonCode);
+    }
 
-        $iconFile = $this->resolveIconPath($involvement);
-        $labelText = $this->labelTextService->forInvolvement($involvement);
-        $iconUrl = $this->publicIconUrl($iconFile);
+    public function renderFromState(FrontendLabelState $state): string
+    {
+        if (!$state->showLabel) {
+            return '';
+        }
 
-        return $this->buildMarkup($iconUrl, $labelText, $sizeClass, $iconOnly);
+        if ($state->record !== [] && $this->rivalsRendererGuard->shouldStandDown($state->table, $state->record)) {
+            return '';
+        }
+
+        return $this->buildBadge($state->involvement, $state->reasonCode);
     }
 
     /**
@@ -80,6 +90,14 @@ final class FrontendLabelRenderer
             return '';
         }
 
+        return $this->buildBadge($involvement, onDarkBackground: $onDarkBackground);
+    }
+
+    private function buildBadge(
+        Involvement $involvement,
+        ?ReasonCode $reasonCode = null,
+        bool $onDarkBackground = false,
+    ): string {
         $moduleSettings = $this->settingsService->all();
         $sizeClass = match ((string) ($moduleSettings['labelSize'] ?? 'medium')) {
             'small' => 'nst3af-ailabel--size-small',
@@ -88,8 +106,18 @@ final class FrontendLabelRenderer
         };
         $iconOnly = ((string) ($moduleSettings['labelWording'] ?? 'show_site_language')) === 'icon_only';
         $iconUrl = $this->publicIconUrl($this->resolveIconPath($involvement, $onDarkBackground));
+        $detail = '';
+        if (((string) ($moduleSettings['secondInfoLayer'] ?? 'off')) === 'on' && $reasonCode !== null) {
+            $detail = $this->labelTextService->forInvolvement($involvement) . ' (' . $reasonCode->value . ')';
+        }
 
-        return $this->buildMarkup($iconUrl, $this->labelTextService->forInvolvement($involvement), $sizeClass, $iconOnly);
+        return $this->buildMarkup(
+            $iconUrl,
+            $this->labelTextService->forInvolvement($involvement),
+            $sizeClass,
+            $iconOnly,
+            $detail,
+        );
     }
 
     private function publicIconUrl(string $iconFile): string
@@ -105,8 +133,13 @@ final class FrontendLabelRenderer
         ));
     }
 
-    private function buildMarkup(string $iconUrl, string $labelText, string $sizeClass, bool $iconOnly): string
-    {
+    private function buildMarkup(
+        string $iconUrl,
+        string $labelText,
+        string $sizeClass,
+        bool $iconOnly,
+        string $detail = '',
+    ): string {
         $iconUrl = htmlspecialchars($iconUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $alt = htmlspecialchars($labelText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
@@ -122,7 +155,15 @@ final class FrontendLabelRenderer
             $html .= '<span class="nst3af-ailabel__text">' . $alt . '</span>';
         }
 
-        return $html . '</aside>';
+        $html .= '</aside>';
+        if ($detail === '') {
+            return $html;
+        }
+
+        $detailEscaped = htmlspecialchars($detail, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+        return '<details class="nst3af-ailabel-details"><summary>' . $html
+            . '</summary><p class="nst3af-ailabel-details__body">' . $detailEscaped . '</p></details>';
     }
 
     private function resolveIconPath(Involvement $involvement, bool $white = false): string

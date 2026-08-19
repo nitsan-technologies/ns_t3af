@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Controller\Backend;
 use NITSAN\NsT3AF\AiLabel\Dto\AiLabelFilters;
 use NITSAN\NsT3AF\AiLabel\Service\AiLabelBulkActionService;
 use NITSAN\NsT3AF\AiLabel\Service\AiLabelFolderTreeService;
+use NITSAN\NsT3AF\AiLabel\Service\AiLabelMediaFolderPreference;
 use NITSAN\NsT3AF\AiLabel\Service\AiLabelMediaListService;
 use NITSAN\NsT3AF\AiLabel\Service\AiLabelRecordDrawerService;
 use NITSAN\NsT3AF\AiLabel\Service\AiLabelSettingsService;
@@ -69,6 +70,7 @@ final class AiLabelController extends AbstractAiUniverseModuleController
         private readonly AiLabelSettingsService $settingsService,
         private readonly AiLabelRecordDrawerService $recordDrawerService,
         private readonly EvidenceExportService $evidenceExportService,
+        private readonly AiLabelMediaFolderPreference $mediaFolderPreference,
     ) {
         parent::__construct(
             $moduleTemplateFactory,
@@ -112,6 +114,11 @@ final class AiLabelController extends AbstractAiUniverseModuleController
     {
         $view = $this->createModuleView($request, 'aiLabel');
         $params = array_merge($request->getQueryParams(), is_array($request->getParsedBody()) ? $request->getParsedBody() : []);
+        $backendUser = $this->getBackendUser();
+        $savedFolder = $backendUser !== null ? $this->mediaFolderPreference->get($backendUser) : '';
+        if (trim((string) ($params['folder'] ?? '')) === '' && $savedFolder !== '') {
+            $params['folder'] = $savedFolder;
+        }
         $filters = AiLabelFilters::fromRequestParams($params);
         $folderTree = $this->folderTreeService->buildTree($filters->folder);
         $activeFolder = $this->folderTreeService->resolveActiveFolder($filters->folder);
@@ -123,6 +130,11 @@ final class AiLabelController extends AbstractAiUniverseModuleController
             $this->commonAssigns($request, 'media'),
             [
                 'filters' => $filters,
+                'isDefaultMediaFolder' => $this->mediaFolderPreference->isSame($savedFolder, $activeFolder),
+                'setDefaultFolderUri' => (string) $this->uriBuilder->buildUriFromRoute(
+                    't3af_dashboard.ai_label.media_default',
+                    $this->routeParamsForPage($request),
+                ),
                 'filterRouteParams' => $filters->toRouteParams(),
                 'listRoute' => 't3af_dashboard.ai_label.media',
                 'aiLabelPagination' => $this->buildListPagination($mediaList, $filters),
@@ -131,7 +143,10 @@ final class AiLabelController extends AbstractAiUniverseModuleController
                 'bulkActionUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.bulk'),
                 'undoUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.undo'),
                 'recordEditBaseUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.record_edit'),
-                'exportUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.export'),
+                'exportUri' => (string) $this->uriBuilder->buildUriFromRoute(
+                    't3af_dashboard.ai_label.export',
+                    ['format' => 'csv'],
+                ),
                 'refreshUri' => (string) $this->uriBuilder->buildUriFromRoute(
                     't3af_dashboard.ai_label.media',
                     array_merge($this->routeParamsForPage($request), $filters->toRouteParams()),
@@ -161,7 +176,10 @@ final class AiLabelController extends AbstractAiUniverseModuleController
                 'bulkActionUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.bulk'),
                 'undoUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.undo'),
                 'recordEditBaseUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.record_edit'),
-                'exportUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.export'),
+                'exportUri' => (string) $this->uriBuilder->buildUriFromRoute(
+                    't3af_dashboard.ai_label.export',
+                    ['format' => 'csv'],
+                ),
                 'refreshUri' => (string) $this->uriBuilder->buildUriFromRoute(
                     't3af_dashboard.ai_label.texts',
                     array_merge($this->routeParamsForPage($request), $filters->toRouteParams()),
@@ -185,8 +203,10 @@ final class AiLabelController extends AbstractAiUniverseModuleController
                 'autoConfirmSources' => $autoConfirm->autoConfirmSources(),
                 'folderDefaults' => $autoConfirm->folderDefaults(),
                 'settingsSaveUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.settings_save'),
-                'exportUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.export'),
-                'flash' => $this->flashFromQuery($request),
+                'exportUri' => (string) $this->uriBuilder->buildUriFromRoute(
+                    't3af_dashboard.ai_label.export',
+                    ['format' => 'csv'],
+                ),
             ],
         ));
 
@@ -224,26 +244,31 @@ final class AiLabelController extends AbstractAiUniverseModuleController
     {
         $body = is_array($request->getParsedBody()) ? $request->getParsedBody() : [];
         $this->settingsService->save($body);
+        $flash = $this->settingsService->getConfiguredApplicableTables() !== []
+            ? 'settings-saved-schema'
+            : 'settings-saved';
 
-        return $this->redirectToSubTab($request, 'settings', 'settings-saved');
+        return $this->redirectToSubTab($request, 'settings', $flash);
+    }
+
+    public function mediaDefaultFolderAction(ServerRequestInterface $request): ResponseInterface
+    {
+        $body = is_array($request->getParsedBody()) ? $request->getParsedBody() : [];
+        $folder = trim((string) ($body['folder'] ?? ''));
+        $backendUser = $this->getBackendUser();
+        if ($backendUser !== null && $folder !== '') {
+            $this->mediaFolderPreference->set(
+                $backendUser,
+                $this->folderTreeService->resolveActiveFolder($folder),
+            );
+        }
+
+        return $this->redirectToSubTab($request, 'media', 'media-folder-default');
     }
 
     public function exportAction(ServerRequestInterface $request): ResponseInterface
     {
-        $rows = $this->evidenceExportService->collectRows();
-        $format = (string) ($request->getQueryParams()['format'] ?? 'csv');
-
-        if ($format === 'html') {
-            $body = $this->evidenceExportService->toHtml($rows);
-            $response = new Response();
-            $response->getBody()->write($body);
-
-            return $response
-                ->withHeader('Content-Type', 'text/html; charset=utf-8')
-                ->withHeader('Content-Disposition', 'attachment; filename="ai-label-evidence.html"');
-        }
-
-        $csv = $this->evidenceExportService->toCsv($rows);
+        $csv = $this->evidenceExportService->toCsv($this->evidenceExportService->collectRows());
         $response = new Response();
         $response->getBody()->write($csv);
 
@@ -287,6 +312,9 @@ final class AiLabelController extends AbstractAiUniverseModuleController
         [$table, $uid] = $this->parseRef($ref);
 
         $result = $this->recordDrawerService->save($table, $uid, $body);
+        if (!$result['ok'] && isset($result['errors']['schema'])) {
+            return $this->redirectToSubTab($request, $returnTab, 'schema-missing');
+        }
         if (!$result['ok']) {
             $record = $this->recordDrawerService->load($table, $uid);
             $view = $this->createModuleView($request, 'aiLabel');
@@ -382,6 +410,7 @@ final class AiLabelController extends AbstractAiUniverseModuleController
             'tabIntro' => $tabContent['tabIntro'],
             'statistics' => $statistics,
             'currentPageId' => $this->siteStorageContext->resolvePageIdFromRequest($request),
+            'flash' => $this->flashFromQuery($request),
         ];
     }
 

@@ -26,7 +26,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
-#[AsCommand(name: 't3af:ailabel:export', description: 'Export AI Label evidence as CSV or HTML (R14.3)')]
+#[AsCommand(name: 't3af:ailabel:export', description: 'Export AI Label evidence as CSV or HTML')]
 final class AiLabelExportCommand extends Command
 {
     public function __construct(

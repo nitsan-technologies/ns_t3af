@@ -24,7 +24,7 @@ use TYPO3\CMS\Core\Cache\Exception\NoSuchCacheException;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
 /**
- * R10.6 cache-backed 10-minute undo for bulk label actions.
+ * Cache-backed 10-minute undo for bulk label actions.
  */
 final class UndoCacheService
 {

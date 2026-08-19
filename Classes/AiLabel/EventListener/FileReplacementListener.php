@@ -25,7 +25,7 @@ use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * T7: file replacement clears confirmation, retains origin.
+ * File replacement clears confirmation and retains origin.
  */
 final class FileReplacementListener
 {

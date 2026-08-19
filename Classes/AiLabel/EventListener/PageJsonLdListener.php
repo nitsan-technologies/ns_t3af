@@ -20,13 +20,14 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\AiLabel\EventListener;
 
 use NITSAN\NsT3AF\AiLabel\Domain\Involvement;
+use NITSAN\NsT3AF\AiLabel\Service\AiLabelSettingsService;
 use NITSAN\NsT3AF\AiLabel\Service\ConfirmationService;
 use NITSAN\NsT3AF\AiLabel\Service\TextRuleEngine;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Frontend\Event\AfterCacheableContentIsGeneratedEvent;
 
 /**
- * T16 page JSON-LD for AI-labelled public-interest text (Art. 50(2) surface).
+ * Page JSON-LD for AI-labelled public-interest text (Art. 50(2) surface).
  */
 final class PageJsonLdListener
 {
@@ -34,10 +35,15 @@ final class PageJsonLdListener
         private readonly ConnectionPool $connectionPool,
         private readonly TextRuleEngine $textRuleEngine,
         private readonly ConfirmationService $confirmationService,
+        private readonly AiLabelSettingsService $settingsService,
     ) {}
 
     public function __invoke(AfterCacheableContentIsGeneratedEvent $event): void
     {
+        if ((string) ($this->settingsService->all()['machineReadable'] ?? 'iptc') !== 'iptc_jsonld') {
+            return;
+        }
+
         $request = $event->getRequest();
         $pageId = (int) ($request->getAttribute('routing')?->getPageId() ?? 0);
         if ($pageId <= 0) {
@@ -47,6 +53,7 @@ final class PageJsonLdListener
         $page = $this->connectionPool->getConnectionForTable('pages')
             ->select(['*'], 'pages', ['uid' => $pageId])
             ->fetchAssociative();
+
         if (!is_array($page)) {
             return;
         }
@@ -83,12 +90,28 @@ final class PageJsonLdListener
     }
 
     /**
+     * Place JSON-LD inside the document (before </body>, else </html>).
+     * Appending after the full HTML string puts the script after </html>.
+     */
+    public static function insertIntoDocument(string $html, string $script): string
+    {
+        foreach (['</body>', '</html>'] as $needle) {
+            $pos = strripos($html, $needle);
+            if ($pos !== false) {
+                return substr($html, 0, $pos) . $script . substr($html, $pos);
+            }
+        }
+
+        return $html . $script;
+    }
+
+    /**
      * v13: $event->getController()->content. v14: $event->getContent()/setContent().
      */
     private function appendContent(object $event, string $script): void
     {
         if (method_exists($event, 'getContent') && method_exists($event, 'setContent')) {
-            $event->setContent($event->getContent() . $script);
+            $event->setContent(self::insertIntoDocument((string) $event->getContent(), $script));
 
             return;
         }
@@ -96,7 +119,7 @@ final class PageJsonLdListener
         if (method_exists($event, 'getController')) {
             $controller = $event->getController();
             if (is_object($controller) && isset($controller->content) && is_string($controller->content)) {
-                $controller->content .= $script;
+                $controller->content = self::insertIntoDocument($controller->content, $script);
             }
         }
     }

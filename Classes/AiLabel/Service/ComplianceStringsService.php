@@ -22,7 +22,7 @@ namespace NITSAN\NsT3AF\AiLabel\Service;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * Fail-closed injection point for compliance copy (R11.4, R11.5).
+ * Fail-closed injection point for compliance copy.
  */
 final class ComplianceStringsService
 {

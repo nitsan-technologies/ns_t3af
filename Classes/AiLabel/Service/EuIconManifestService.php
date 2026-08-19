@@ -22,7 +22,7 @@ namespace NITSAN\NsT3AF\AiLabel\Service;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * Asserts shipped EU icons match the source manifest hash multiset (R7.1).
+ * Asserts shipped EU icons match the source manifest hash.
  */
 final class EuIconManifestService
 {

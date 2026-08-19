@@ -94,3 +94,23 @@
     right: auto;
     top: 8px;
 }
+
+.nst3af-ailabel-details {
+    display: inline-block;
+    max-width: 100%;
+}
+
+.nst3af-ailabel-details > summary {
+    cursor: pointer;
+    display: inline-block;
+    list-style: none;
+}
+
+.nst3af-ailabel-details > summary::-webkit-details-marker {
+    display: none;
+}
+
+.nst3af-ailabel-details__body {
+    font-size: 12px;
+    margin: 4px 0 0;
+}

@@ -26,7 +26,7 @@ use NITSAN\NsT3AF\Event\AfterProviderResponseEvent;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * T4 capture layer: record generation in foundation service with zero child call sites.
+ * Record each provider response in the capture queue; children only bind on save.
  */
 final class GenerationCaptureListener
 {

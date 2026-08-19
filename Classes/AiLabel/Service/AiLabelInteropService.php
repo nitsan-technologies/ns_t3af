@@ -23,7 +23,7 @@ use NITSAN\NsT3AF\AiLabel\Domain\Involvement;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * R18 interop: report to b13 only after confirmation; dispatch nt_aimark when present.
+ * Report to b13 only after confirmation; dispatch nt_aimark when present.
  */
 final class AiLabelInteropService
 {

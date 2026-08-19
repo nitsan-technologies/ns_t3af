@@ -66,6 +66,19 @@ final class ApplicableTablesResolverTest extends TestCase
         self::assertContains('tx_myext_item', $resolver->getTables());
     }
 
+    public function testConfiguredTablesAreMergedWithDefaults(): void
+    {
+        $resolver = new ApplicableTablesResolver(
+            $this->passthroughDispatcher(),
+            $this->settingsService(['tx_news_domain_model_news']),
+        );
+
+        self::assertTrue($resolver->isApplicable('tt_content'));
+        self::assertTrue($resolver->isApplicable('pages'));
+        self::assertTrue($resolver->isApplicable('sys_file_metadata'));
+        self::assertTrue($resolver->isApplicable('tx_news_domain_model_news'));
+    }
+
     private function passthroughDispatcher(): EventDispatcherInterface
     {
         $dispatcher = $this->createMock(EventDispatcherInterface::class);

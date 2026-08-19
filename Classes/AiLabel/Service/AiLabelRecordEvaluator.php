@@ -31,6 +31,7 @@ final class AiLabelRecordEvaluator
     public function __construct(
         private readonly MediaRuleEngine $mediaRuleEngine,
         private readonly TextRuleEngine $textRuleEngine,
+        private readonly ?AiLabelSettingsService $settingsService = null,
     ) {}
 
     /**
@@ -89,6 +90,7 @@ final class AiLabelRecordEvaluator
                 $this->labellingMode($record),
                 $confirmed,
                 $this->resolveCreationTimestamp($table, $record),
+                ($this->settingsService?->all()['labelUnknownOrigin'] ?? 'no') === 'yes',
             );
         }
 

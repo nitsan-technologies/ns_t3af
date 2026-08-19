@@ -25,7 +25,7 @@ use NITSAN\NsT3AF\Service\AiLogService;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
 /**
- * Capture-and-bind queue (R2.6) plus unified origin recorder (R3, R14.1).
+ * Capture-and-bind queue plus origin recording on applicable tables.
  */
 final class OriginRecorder implements AiLabelRecorderInterface
 {
@@ -36,6 +36,8 @@ final class OriginRecorder implements AiLabelRecorderInterface
         private readonly ConnectionPool $connectionPool,
         private readonly ApplicableTablesResolver $applicableTablesResolver,
         private readonly ?AiLogService $aiLogService = null,
+        private readonly ?AutoConfirmSettingsService $autoConfirmSettings = null,
+        private readonly ?ConfirmationService $confirmationService = null,
     ) {}
 
     public function capture(
@@ -129,6 +131,7 @@ final class OriginRecorder implements AiLabelRecorderInterface
         );
 
         $this->writeLog($table, $uid, $involvement->value, $recordingSource, $previous?->value);
+        $this->maybeAutoConfirm($table, $uid, $involvement, $recordingSource);
     }
 
     public function markGenerated(string $table, int $uid, string $recordingSource = 'api'): void
@@ -158,6 +161,37 @@ final class OriginRecorder implements AiLabelRecorderInterface
             $recordingSource,
             previousInvolvement: $previous === $involvement ? Involvement::NotReviewed : $previous,
         );
+    }
+
+    private function maybeAutoConfirm(
+        string $table,
+        int $uid,
+        Involvement $involvement,
+        string $recordingSource,
+    ): void {
+        if ($this->autoConfirmSettings === null || $this->confirmationService === null) {
+            return;
+        }
+
+        $eligible = $involvement === Involvement::AiGenerated || $involvement === Involvement::AiModified
+            || ($involvement === Involvement::Suggestion && $this->autoConfirmSettings->isDetectedSource($recordingSource));
+        if (!$eligible) {
+            return;
+        }
+
+        $publicInterest = false;
+        if ($table !== 'sys_file_metadata') {
+            $value = $this->connectionPool->getConnectionForTable($table)
+                ->select(['tx_nst3af_ailabel_public_interest'], $table, ['uid' => $uid])
+                ->fetchOne();
+            $publicInterest = (bool) $value;
+        }
+
+        if (!$this->autoConfirmSettings->isAutoConfirmAllowed($recordingSource, $table, $publicInterest)) {
+            return;
+        }
+
+        $this->confirmationService->confirm($table, $uid, 0);
     }
 
     /**

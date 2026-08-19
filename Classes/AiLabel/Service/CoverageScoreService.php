@@ -20,7 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\AiLabel\Service;
 
 /**
- * R11 coverage score with published blind spots (R2.6, R2.7).
+ * Internal coverage checklist score with published blind spots.
  */
 final class CoverageScoreService
 {

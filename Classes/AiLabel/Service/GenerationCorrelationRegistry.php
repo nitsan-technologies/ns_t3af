@@ -20,7 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\AiLabel\Service;
 
 /**
- * Request-scoped last capture id for bind sites (T4/T5).
+ * Request-scoped last capture id for bind sites.
  */
 final class GenerationCorrelationRegistry
 {

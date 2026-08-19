@@ -37,6 +37,7 @@
                     <option value="overlay" {f:if(condition: '{settings.markImageFile} == overlay', then: 'selected="selected"')}>Overlay on the image</option>
                     <option value="written_in" {f:if(condition: '{settings.markImageFile} == written_in', then: 'selected="selected"')}>Written into the image file</option>
                 </select>
+                <p class="form-text text-muted mb-0">Written into the image stamps processed copies only (ImageMagick required). Originals are not rewritten.</p>
             </div>
             <div class="mb-4">
                 <label class="form-label"><f:translate key="{ll}:module.aiLabel.settings.machineReadable" default="Machine-readable marking" /></label>

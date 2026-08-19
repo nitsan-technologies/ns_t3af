@@ -38,7 +38,7 @@ Overview tab
 * **Scoreboard** — four KPI cards: Confirmed, Awaiting review, Labelled in
   frontend, Not labelled.
 * **AI Label coverage** — checklist score with collapsible details (what counts,
-  blind spots). Export HTML report from here.
+  blind spots). Export CSV report from here.
 * **Media / Texts cards** — domain progress rings and quick links.
 * **Where records came from** — counts by recording source (AI Universe, upload
   detection, editor, other extensions).
@@ -110,8 +110,9 @@ Frontend label appearance
      - **Frontend (partial).** **Content element only** — badge after the
        content element only (no overlay on ``<img>``). **Overlay on the image**
        — badge on each confirmed AI-generated file in Fluid Styled Content
-       image rendering. **Written into the image file** — stored only; not
-       implemented yet.
+       image rendering. **Written into the image file** — stamps the EU icon
+       onto **processed** image copies when ImageMagick is available. Originals
+       are not rewritten. Without ImageMagick, use overlay instead.
 
 Machine-readable marking and rules
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -125,21 +126,24 @@ Machine-readable marking and rules
      - Effect
    * - **Machine-readable marking**
      - IPTC digital source type (default), IPTC plus JSON-LD, off
-     - **Stored only.** Intended for IPTC/JSON-LD export on save; not wired on
-       the frontend yet.
+     - **Frontend / files.** **IPTC** writes Digital Source Type
+       (``trainedAlgorithmicMedia``) onto confirmed media when ImageMagick is
+       available. **IPTC plus JSON-LD** also injects page JSON-LD when text
+       rules show a label. **Off** skips both.
    * - **Label media of unknown origin**
      - No (default), yes
-     - **Stored only.** Intended for rule engines; not applied to visitor badges
-       yet.
+     - **Frontend.** When yes, confirmed media with involvement
+       ``origin_unknown`` shows a visitor badge (reason ``unknown_origin``).
    * - **Second information layer**
      - Off (default), on
-     - **Stored only.** Planned expandable detail on the frontend; not
-       implemented yet.
+     - **Frontend.** When on, the badge is wrapped in ``<details>`` with a
+       second line (involvement + reason code).
    * - **Also record on these tables**
      - Comma-separated table names (empty by default)
-     - **Backend.** Registers extra tables for schema columns, module lists,
-       and bind/API validation (in addition to ``pages``, ``tt_content``,
-       ``sys_file_metadata``).
+     - **Backend.** Extra tables are merged with the defaults ``pages``,
+       ``tt_content`` and ``sys_file_metadata`` (they are never replaced). After
+       save, run **Maintenance → Analyze Database Structure** so the AI Label
+       columns exist on those extra tables.
 
 Automatic confirmation
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -153,17 +157,19 @@ Automatic confirmation
      - Effect
    * - **Confirm when OUR extension recorded it**
      - Off (default), on for media, on for text, on for media and text
-     - **Stored only** in the Settings form. Production auto-confirm today uses
-       EXTCONF ``ailabelAutoConfirmSources`` (see developer guide).
+     - **Backend.** Auto-confirms bind from ``ns_t3ai`` / ``ns_t3aa`` /
+       ``ns_t3af`` for the chosen domain (media, text, or both). EXTCONF
+       ``ailabelAutoConfirmSources`` is still an extra allow-list.
    * - **Confirm when DETECTED on upload**
      - Off (default), on
-     - **Stored only.** Upload detection suggestions still require manual
-       confirm until this is wired.
+     - **Backend.** When on, recording source ``detected_upload`` (files whose
+       IPTC Digital Source Type already signals AI) is auto-confirmed. Hold
+       rules still apply.
    * - **When auto-confirm is on, still hold for a person**
      - Public-interest texts (default)
-     - **Backend (EXTCONF).** ``ailabelHoldList`` / ``AutoConfirmSettingsService``
-       blocks auto-confirm for public-interest text even when a source is
-       allow-listed.
+     - **Backend.** Settings ``autoConfirmHold`` plus EXTCONF
+       ``ailabelHoldList`` / ``AutoConfirmSettingsService`` block auto-confirm
+       for public-interest text even when a source is allow-listed.
    * - **Automatically record human review and responsible person**
      - (disabled checkbox)
      - **Never available** by design — responsible person stays manual.
@@ -207,8 +213,7 @@ Evidence export
 
 From the action bar or Overview coverage card:
 
-* **CSV** — all labelled records with reason codes and confirmation metadata
-* **HTML** — formatted report attachment
+* **CSV** — labelled records with reason codes and confirmation metadata
 
 Use for internal audits; reason codes are machine-readable (for example
 ``rule_default``, ``editorial_control``, ``unreviewed``).

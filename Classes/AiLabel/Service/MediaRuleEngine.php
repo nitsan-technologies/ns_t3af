@@ -25,7 +25,7 @@ use NITSAN\NsT3AF\AiLabel\Domain\ReasonCode;
 use NITSAN\NsT3AF\AiLabel\Dto\LabelDecision;
 
 /**
- * R5 media rule engine. Human review does NOT suppress media labels (Art. 50(4)).
+ * Media rule engine. Human review does not suppress media labels (Art. 50(4)).
  */
 final class MediaRuleEngine
 {
@@ -38,6 +38,7 @@ final class MediaRuleEngine
         LabellingMode $mode,
         bool $confirmed,
         ?int $creationDate = null,
+        bool $labelUnknownOrigin = false,
     ): LabelDecision {
         if ($mode === LabellingMode::Never) {
             return new LabelDecision(false, ReasonCode::ManualExempt);
@@ -67,7 +68,7 @@ final class MediaRuleEngine
         }
 
         if ($involvement === Involvement::OriginUnknown) {
-            return new LabelDecision(false, ReasonCode::UnknownOrigin);
+            return new LabelDecision($labelUnknownOrigin, ReasonCode::UnknownOrigin);
         }
 
         return new LabelDecision(false, ReasonCode::Unreviewed);
