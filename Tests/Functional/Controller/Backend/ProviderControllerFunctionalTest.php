@@ -43,7 +43,6 @@ final class ProviderControllerFunctionalTest extends FunctionalTestCase
         'frontend',
         'workspaces',
         'scheduler',
-        'extensionmanager',
     ];
 
     protected array $testExtensionsToLoad = [

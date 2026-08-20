@@ -35,7 +35,6 @@ final class AiSysLogRepositoryFunctionalTest extends FunctionalTestCase
         'frontend',
         'workspaces',
         'scheduler',
-        'extensionmanager',
     ];
 
     protected array $testExtensionsToLoad = [
