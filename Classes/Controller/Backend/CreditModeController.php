@@ -66,6 +66,7 @@ final class CreditModeController
             'featureAvailable' => $this->creditModeResolver->isPubliclyAvailable(),
             'creditMode' => $this->runtimeSettings->isCreditModeEnabled(),
             'active' => $this->creditModeResolver->isActive(),
+            'needsContact' => $this->tokenResolver->needsContactForActivation(),
             'pricing' => $this->serializePricing($this->pricingResolver->resolve()),
             'creditsBearerToken' => $this->runtimeSettings->getTokenPlain() ?? '',
             'licenseKeys' => $this->runtimeSettings->getLicenseKeys(),
@@ -118,8 +119,25 @@ final class CreditModeController
         }
 
         try {
+            $body = $this->parseRequestBody($request);
+            $contactOverride = null;
+            if ($this->tokenResolver->needsContactForActivation()) {
+                $contact = TokenResolver::normalizeContact([
+                    'name' => (string) ($body['name'] ?? ''),
+                    'email' => (string) ($body['email'] ?? ''),
+                ]);
+                if (!isset($contact['name'], $contact['email'])) {
+                    return new JsonResponse([
+                        'status' => false,
+                        'error_code' => CreditsApiErrorCodes::CONTACT_REQUIRED,
+                        'userMessage' => 'Name and a valid email are required to activate free credits.',
+                    ], 400);
+                }
+                $contactOverride = $contact;
+            }
+
             $this->runtimeSettings->save(['credit_mode' => 1]);
-            $this->tokenResolver->activateTrialToken();
+            $this->tokenResolver->activateTrialToken($contactOverride);
             $balance = $this->fetchBalanceOrResync();
             $this->pricingResolver->rememberFromPayload($balance);
 
@@ -127,6 +145,7 @@ final class CreditModeController
                 'status' => true,
                 'creditMode' => true,
                 'active' => $this->creditModeResolver->isActive(),
+                'needsContact' => false,
                 'creditsBearerToken' => $this->runtimeSettings->getTokenPlain() ?? '',
                 'balance' => $balance,
                 'pricing' => $this->serializePricing($this->pricingResolver->resolve()),

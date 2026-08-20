@@ -37,6 +37,9 @@ final class NsLicenseRepositoryFactory
         }
 
         $repository = GeneralUtility::makeInstance(self::NS_LICENSE_REPOSITORY_CLASS);
+        if (!method_exists($repository, 'fetchData')) {
+            return null;
+        }
 
         return new NsLicenseRepositoryAdapter($repository);
     }

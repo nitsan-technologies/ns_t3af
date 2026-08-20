@@ -60,6 +60,7 @@ final class CreditsApiErrorCodes
     public const LICENSE_KEYS_MISSING = 'license_keys_missing';
     public const NO_LICENSES = 'no_licenses';
     public const FEATURE_KEY_REQUIRED = 'feature_key_required';
+    public const CONTACT_REQUIRED = 'contact_required';
     public const API_ERROR = 'api_error';
 
     public static function httpStatus(string $code, int $responseStatus = 0): int
@@ -77,7 +78,7 @@ final class CreditsApiErrorCodes
             self::FEATURE_UNKNOWN, self::REQUIRED_FIELD_MISSING, self::REQUEST_NOT_FOUND => 422,
             self::UPSTREAM_AI_ERROR, self::UPSTREAM_AI_TIMEOUT => 502,
             self::METHOD_NOT_ALLOWED => 405,
-            self::LICENSE_KEYS_MISSING, self::NO_LICENSES, self::FEATURE_KEY_REQUIRED, self::BATCH_INVALID => 400,
+            self::LICENSE_KEYS_MISSING, self::NO_LICENSES, self::FEATURE_KEY_REQUIRED, self::CONTACT_REQUIRED, self::BATCH_INVALID => 400,
             self::NETWORK_ERROR, self::INVALID_RESPONSE, self::API_ERROR => 502,
             default => 500,
         };

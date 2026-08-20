@@ -28,6 +28,7 @@ use NITSAN\NsT3AF\Credits\Service\CreditsCheckoutUrlValidator;
 use NITSAN\NsT3AF\Credits\Service\CreditsDashboardService;
 use NITSAN\NsT3AF\Credits\Service\CreditsReturnUrlBuilder;
 use NITSAN\NsT3AF\Credits\Service\RuntimeSettingsService;
+use NITSAN\NsT3AF\Credits\Service\TokenResolver;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\AiSysLogRepository;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
@@ -126,6 +127,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
         private readonly CreditModeResolver $creditModeResolver,
         private readonly CreditsDashboardService $creditsDashboardService,
         private readonly RuntimeSettingsService $runtimeSettings,
+        private readonly TokenResolver $tokenResolver,
         private readonly CreditsCheckoutUrlValidator $checkoutUrlValidator,
         private readonly CreditsReturnUrlBuilder $creditsReturnUrlBuilder,
         PageRenderer $pageRenderer,
@@ -428,6 +430,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 'creditsModeEnabled' => self::fluidFlag($creditsModeEnabled),
                 'creditsModeActive' => self::fluidFlag($this->creditModeResolver->isActive()),
                 'creditsFeatureAvailable' => self::fluidFlag($this->creditModeResolver->isPubliclyAvailable()),
+                'creditsNeedsContact' => self::fluidFlag($this->tokenResolver->needsContactForActivation()),
                 'creditsBearerToken' => $this->runtimeSettings->getTokenPlain() ?? '',
                 'creditsDashboard' => $creditsDashboard,
                 'flash' => $this->flashFromQuery($request) ?? '',
@@ -1437,6 +1440,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             'creditsModeEnabled' => self::fluidFlag($this->creditModeResolver->isEnabled()),
             'creditsModeActive' => self::fluidFlag($this->creditModeResolver->isActive()),
             'creditsFeatureAvailable' => self::fluidFlag($this->creditModeResolver->isPubliclyAvailable()),
+            'creditsNeedsContact' => self::fluidFlag($this->tokenResolver->needsContactForActivation()),
         ]);
 
         return $view->renderResponse('Module/BuyCredits');
@@ -1459,6 +1463,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             'creditsModeEnabled' => self::fluidFlag($this->creditModeResolver->isEnabled()),
             'creditsModeActive' => self::fluidFlag($this->creditModeResolver->isActive()),
             'creditsFeatureAvailable' => self::fluidFlag($this->creditModeResolver->isPubliclyAvailable()),
+            'creditsNeedsContact' => self::fluidFlag($this->tokenResolver->needsContactForActivation()),
         ]);
 
         return $view->renderResponse('Module/CreditsPricing');

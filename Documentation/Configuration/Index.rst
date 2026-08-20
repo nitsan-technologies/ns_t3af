@@ -122,4 +122,3 @@ When to reconfigure
 * After key rotation — run **Test connection** again
 * When adding a new child extension — check :ref:`AI Features <ai-features>`
 * Before enabling MCP in production — read :ref:`MCP Server <mcp-server>` security section
-* After license renewal — confirm the extension license is still valid

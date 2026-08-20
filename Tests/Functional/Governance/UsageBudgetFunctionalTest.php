@@ -37,7 +37,6 @@ final class UsageBudgetFunctionalTest extends FunctionalTestCase
     ];
 
     protected array $testExtensionsToLoad = [
-        'ns_license',
         'ns_t3af',
     ];
 

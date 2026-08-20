@@ -38,7 +38,7 @@ Helpful Links
 
    * Product: https://t3planet.de/ai-foundation-fur-typo3
    * Get support: https://t3planet.de/support
-   * License activation: https://docs.t3planet.de/en/latest/License/Index.html
+   * Licensing: see ``LICENSING.md`` in the extension root
 
 .. _video-tutorials:
 

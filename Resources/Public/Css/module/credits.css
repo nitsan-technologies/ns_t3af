@@ -239,6 +239,97 @@
     border: 0;
 }
 
+.aiu-credits-contact-dialog {
+    --aiu-credits-contact-header-bg: var(--typo3-surface-container-info, #cce5ff);
+    --aiu-credits-contact-header-color: var(--typo3-surface-container-info-text, #004085);
+    border: var(--typo3-component-border-width, 1px) solid var(--typo3-component-border-color, #ced4da);
+    border-radius: var(--typo3-component-border-radius, .375rem);
+    box-shadow: var(--typo3-component-box-shadow-dialog, 0 20px 50px rgba(0, 0, 0, .35));
+    max-height: min(94vh, 640px);
+    max-width: min(500px, 96vw);
+    overflow: hidden;
+    padding: 0;
+    width: min(500px, 96vw);
+}
+.aiu-credits-contact-dialog::backdrop {
+    background: var(--typo3-overlay-bg, rgba(0, 0, 0, .45));
+    opacity: var(--typo3-overlay-opacity, 1);
+}
+.aiu-credits-contact {
+    background: var(--typo3-component-bg, #fff);
+    color: var(--typo3-component-color, inherit);
+    display: flex;
+    flex-direction: column;
+}
+/* Match TYPO3 .modal-header + .modal-severity-info */
+.aiu-credits-contact__header {
+    align-items: center;
+    background: var(--aiu-credits-contact-header-bg);
+    border-bottom: var(--typo3-component-border-width, 1px) solid var(--typo3-component-border-color, #ced4da);
+    color: var(--aiu-credits-contact-header-color);
+    display: flex;
+    flex-shrink: 0;
+    font-weight: 700;
+    gap: .5rem;
+    justify-content: space-between;
+    padding: 1rem;
+}
+.aiu-credits-contact__title {
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.4;
+    margin: 0;
+}
+.aiu-credits-contact__close {
+    background: transparent;
+    border: none;
+    border-radius: var(--typo3-input-border-radius, .25rem);
+    color: inherit;
+    cursor: pointer;
+    flex-shrink: 0;
+    line-height: 0;
+    margin: -.25rem -.25rem -.25rem auto;
+    opacity: .5;
+    padding: .25rem;
+}
+.aiu-credits-contact__close:hover,
+.aiu-credits-contact__close:focus {
+    background: transparent;
+    box-shadow: none;
+    opacity: 1;
+    outline: none;
+}
+.aiu-credits-contact__close:focus-visible {
+    outline: var(--typo3-outline-width, 2px) var(--typo3-outline-style, solid) color-mix(in srgb, currentColor, transparent 50%);
+}
+.aiu-credits-contact__body {
+    padding: 1rem;
+}
+.aiu-credits-contact__subtitle {
+    margin: 0 0 1rem;
+}
+.aiu-credits-contact__footer {
+    border-top: var(--typo3-component-border-width, 1px) solid var(--typo3-component-border-color, #ced4da);
+    display: flex;
+    flex-shrink: 0;
+    gap: .5rem;
+    justify-content: flex-end;
+    padding: 1rem;
+}
+.aiu-credits-contact-form .form-check-label a,
+.aiu-credits-contact-form__link {
+    color: var(--typo3-text-color-primary, #0d6efd);
+    font-weight: 600;
+    text-decoration: underline;
+}
+.aiu-credits-contact-form__link:hover {
+    opacity: .85;
+    text-decoration: underline;
+}
+.aiu-credits-contact-form .is-hidden {
+    display: none !important;
+}
+
 .aiu-credits-prompt {
     text-align: center;
     padding: 3rem 1.5rem;

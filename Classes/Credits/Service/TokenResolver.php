@@ -58,9 +58,25 @@ final class TokenResolver
         return $this->issueFreshToken();
     }
 
-    public function issueFreshToken(): string
+    /**
+     * True when Activate must collect name/email (no stored bearer and no license contact).
+     */
+    public function needsContactForActivation(): bool
     {
-        $payload = $this->apiClient->issueTrialToken(null, $this->licenseContactResolver->resolve());
+        $token = $this->runtimeSettings->getTokenPlain();
+        if ($token !== null && $token !== '') {
+            return false;
+        }
+
+        return !$this->licenseContactResolver->hasContact();
+    }
+
+    /**
+     * @param array{name?: string, email?: string}|null $contactOverride Form contact when no license; null = resolve from ns_license
+     */
+    public function issueFreshToken(?array $contactOverride = null): string
+    {
+        $payload = $this->apiClient->issueTrialToken(null, $this->resolveContact($contactOverride));
         $token = trim((string) ($payload['token'] ?? ''));
         if ($token === '') {
             throw new CreditsApiException('token_missing', 502, 'Token endpoint did not return a token');
@@ -75,9 +91,11 @@ final class TokenResolver
     /**
      * Ensures a bearer exists for IP-bound trial credits (idempotent mint on the server).
      *
+     * @param array{name?: string, email?: string}|null $contactOverride
+     *
      * @return array{action: 'minted'|'unchanged', token: string, already_bound?: bool, bound_ip?: string}
      */
-    public function activateTrialToken(): array
+    public function activateTrialToken(?array $contactOverride = null): array
     {
         $token = $this->runtimeSettings->getTokenPlain();
         if ($token !== null && $token !== '') {
@@ -91,12 +109,46 @@ final class TokenResolver
             ];
         }
 
-        $token = $this->issueFreshToken();
+        $token = $this->issueFreshToken($contactOverride);
 
         return [
             'action' => 'minted',
             'token' => $token,
         ];
+    }
+
+    /**
+     * @param array{name?: string, email?: string}|null $contactOverride
+     *
+     * @return array{name?: string, email?: string}
+     */
+    private function resolveContact(?array $contactOverride): array
+    {
+        if ($contactOverride !== null) {
+            return self::normalizeContact($contactOverride);
+        }
+
+        return $this->licenseContactResolver->resolve();
+    }
+
+    /**
+     * @param array{name?: string, email?: string} $contact
+     *
+     * @return array{name?: string, email?: string}
+     */
+    public static function normalizeContact(array $contact): array
+    {
+        $out = [];
+        $name = trim((string) ($contact['name'] ?? ''));
+        $email = trim((string) ($contact['email'] ?? ''));
+        if ($name !== '') {
+            $out['name'] = $name;
+        }
+        if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $out['email'] = $email;
+        }
+
+        return $out;
     }
 
     /**

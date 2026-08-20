@@ -30,6 +30,7 @@ final class LicenseContactResolverTest extends TestCase
         $resolver = new LicenseContactResolver(null);
 
         self::assertSame([], $resolver->resolve());
+        self::assertFalse($resolver->hasContact());
     }
 
     public function testResolvePrefersNsT3afLicense(): void

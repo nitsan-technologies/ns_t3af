@@ -67,6 +67,11 @@ final class LicenseContactResolver
         return [];
     }
 
+    public function hasContact(): bool
+    {
+        return $this->resolve() !== [];
+    }
+
     /**
      * @return array{name?: string, email?: string}
      */
