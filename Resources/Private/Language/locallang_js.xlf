@@ -55,7 +55,7 @@
         <source>Credits mode is active.</source>
       </trans-unit>
       <trans-unit id="credits.js.notification.creditsSelected" resname="credits.js.notification.creditsSelected">
-        <source>Credits mode selected. Click Activate to connect your license.</source>
+        <source>Credits mode selected. Click Activate to start free credits.</source>
       </trans-unit>
       <trans-unit id="credits.js.notification.ownKeysAgain" resname="credits.js.notification.ownKeysAgain">
         <source>Using your own API keys again.</source>
@@ -64,7 +64,7 @@
         <source>Credits mode is active. Loading your dashboard…</source>
       </trans-unit>
       <trans-unit id="credits.js.notification.activateIncomplete" resname="credits.js.notification.activateIncomplete">
-        <source>Mode enabled, but activation did not complete. Check license keys and API connectivity.</source>
+        <source>Mode enabled, but activation did not complete. Check API connectivity and try Activate again.</source>
       </trans-unit>
       <trans-unit id="credits.js.modal.refreshTitle" resname="credits.js.modal.refreshTitle">
         <source>Refresh support token?</source>
@@ -80,6 +80,42 @@
       </trans-unit>
       <trans-unit id="credits.js.notification.tokenRefreshed" resname="credits.js.notification.tokenRefreshed">
         <source>Support token refreshed. Use the new token when contacting support.</source>
+      </trans-unit>
+      <trans-unit id="credits.js.contactModal.title" resname="credits.js.contactModal.title">
+        <source>Activate T3Planet AI Credits</source>
+      </trans-unit>
+      <trans-unit id="credits.js.contactModal.subtitle" resname="credits.js.contactModal.subtitle">
+        <source>Start your free AI Credits, No card required.</source>
+      </trans-unit>
+      <trans-unit id="credits.js.contactModal.name" resname="credits.js.contactModal.name">
+        <source>Name</source>
+      </trans-unit>
+      <trans-unit id="credits.js.contactModal.email" resname="credits.js.contactModal.email">
+        <source>Email</source>
+      </trans-unit>
+      <trans-unit id="credits.js.contactModal.consent" resname="credits.js.contactModal.consent">
+        <source>I have read and agree to T3Planet’s %s and %s.</source>
+      </trans-unit>
+      <trans-unit id="credits.js.contactModal.privacy" resname="credits.js.contactModal.privacy">
+        <source>Privacy Policy</source>
+      </trans-unit>
+      <trans-unit id="credits.js.contactModal.terms" resname="credits.js.contactModal.terms">
+        <source>Terms &amp; Conditions</source>
+      </trans-unit>
+      <trans-unit id="credits.js.contactModal.privacyUrl" resname="credits.js.contactModal.privacyUrl">
+        <source>https://t3planet.de/en/privacy-policy</source>
+      </trans-unit>
+      <trans-unit id="credits.js.contactModal.termsUrl" resname="credits.js.contactModal.termsUrl">
+        <source>https://t3planet.de/en/terms-and-conditions</source>
+      </trans-unit>
+      <trans-unit id="credits.js.contactModal.continue" resname="credits.js.contactModal.continue">
+        <source>Continue</source>
+      </trans-unit>
+      <trans-unit id="credits.js.contactModal.validation" resname="credits.js.contactModal.validation">
+        <source>Please enter your name and a valid email address.</source>
+      </trans-unit>
+      <trans-unit id="credits.js.contactModal.consentRequired" resname="credits.js.contactModal.consentRequired">
+        <source>Please agree to the Privacy Policy and Terms &amp; Conditions to continue.</source>
       </trans-unit>
       <trans-unit id="provider.js.error.drawerLoadFailed" resname="provider.js.error.drawerLoadFailed">
         <source>Drawer load failed</source>

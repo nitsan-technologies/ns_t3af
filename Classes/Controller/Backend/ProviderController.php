@@ -28,6 +28,7 @@ use NITSAN\NsT3AF\Credits\Service\CreditOverviewLineService;
 use NITSAN\NsT3AF\Credits\Service\CreditsDashboardService;
 use NITSAN\NsT3AF\Credits\Service\CreditsReturnUrlBuilder;
 use NITSAN\NsT3AF\Credits\Service\RuntimeSettingsService;
+use NITSAN\NsT3AF\Credits\Service\TokenResolver;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
 use NITSAN\NsT3AF\Event\ProviderTestConnectionEvent;
@@ -85,6 +86,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
         private readonly CreditModeResolver $creditModeResolver,
         private readonly CreditsDashboardService $creditsDashboardService,
         private readonly RuntimeSettingsService $runtimeSettings,
+        private readonly TokenResolver $tokenResolver,
         private readonly CreditsReturnUrlBuilder $creditsReturnUrlBuilder,
         PageRenderer $pageRenderer,
         CreditOverviewLineService $creditOverviewLine,
@@ -216,6 +218,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
             'creditsModeEnabled' => self::fluidFlag($this->creditModeResolver->isEnabled()),
             'creditsModeActive' => self::fluidFlag($this->creditModeResolver->isActive()),
             'creditsFeatureAvailable' => self::fluidFlag($this->creditModeResolver->isPubliclyAvailable()),
+            'creditsNeedsContact' => self::fluidFlag($this->tokenResolver->needsContactForActivation()),
             'providersReadOnly' => self::fluidFlag($this->creditModeResolver->isActive() || !$canModifyProviders),
             'canModifyProviders' => self::fluidFlag($canModifyProviders),
             'creditsDashboard' => $creditsDashboard,

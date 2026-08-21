@@ -18,7 +18,7 @@ Product and documentation
    * T3Planet AI Foundation: https://t3planet.de/ai-foundation-fur-typo3
    * Model Context Protocol: https://modelcontextprotocol.io/
    * TYPO3 documentation: https://docs.typo3.org/
-   * License activation: https://docs.t3planet.de/en/latest/License/Index.html
+   * Licensing: see ``LICENSING.md`` in the extension root
 
 API key portals
 ---------------
@@ -59,7 +59,6 @@ Community
 When to use which link
 ----------------------
 
-* **Activating your OSS license key** — :guilabel:`T3Planet Shop` > :guilabel:`AI Universe` > :guilabel:`AI Foundation` > **Start**
 * **Getting API keys** — Provider portals above, then :ref:`AI Providers <ai-providers>`
 * **Developer integration** — :ref:`Developer Guide <developer-guide>` for ``AiServiceInterface``
 * **MCP client setup** — Model Context Protocol site plus :ref:`MCP Server <mcp-server>`

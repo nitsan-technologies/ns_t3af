@@ -2392,7 +2392,7 @@
         <source>Credits activated</source>
       </trans-unit>
       <trans-unit id="checklist.credits.active.descOk" resname="checklist.credits.active.descOk">
-        <source>T3Planet license and API token are connected.</source>
+        <source>T3Planet Credits are connected for this installation.</source>
       </trans-unit>
       <trans-unit id="checklist.credits.active.descMissing" resname="checklist.credits.active.descMissing">
         <source>Activate T3Planet Credits to load balance and pricing.</source>

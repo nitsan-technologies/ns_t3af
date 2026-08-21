@@ -1826,7 +1826,7 @@
         <source>Activate T3Planet Credits</source>
       </trans-unit>
       <trans-unit id="dashboard.credits.activate.intro" resname="dashboard.credits.activate.intro">
-        <source>Connect your T3Planet license to load balance, bundles, and usage charts.</source>
+        <source>Activate free AI Credits to load balance, bundles, and usage charts. No card required.</source>
       </trans-unit>
       <trans-unit id="dashboard.credits.activate.step1.title" resname="dashboard.credits.activate.step1.title">
         <source>Credits mode selected</source>
@@ -1835,10 +1835,10 @@
         <source>AI requests will use T3Planet Credits once activation finishes.</source>
       </trans-unit>
       <trans-unit id="dashboard.credits.activate.step2.title" resname="dashboard.credits.activate.step2.title">
-        <source>Activate with your license</source>
+        <source>Activate free credits</source>
       </trans-unit>
       <trans-unit id="dashboard.credits.activate.step2.body" resname="dashboard.credits.activate.step2.body">
-        <source>Links this site to T3Planet using your extension license.</source>
+        <source>Confirm your name and email to link this site to T3Planet Credits.</source>
       </trans-unit>
       <trans-unit id="dashboard.credits.activate.step3.title" resname="dashboard.credits.activate.step3.title">
         <source>View balance and charts</source>
@@ -1847,7 +1847,7 @@
         <source>Credit balance, burn charts, and bundles appear automatically.</source>
       </trans-unit>
       <trans-unit id="dashboard.credits.activate.licenseHint" resname="dashboard.credits.activate.licenseHint">
-        <source>Requires an active T3Planet extension license on this installation.</source>
+        <source>Start free AI Credits — no card required.</source>
       </trans-unit>
       <trans-unit id="dashboard.credits.chart.inactive.title" resname="dashboard.credits.chart.inactive.title">
         <source>Charts unlock after activation</source>

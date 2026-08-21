@@ -30,6 +30,7 @@ final class LicenseContactResolverTest extends TestCase
         $resolver = new LicenseContactResolver(null);
 
         self::assertSame([], $resolver->resolve());
+        self::assertFalse($resolver->hasContact());
     }
 
     public function testResolvePrefersNsT3afLicense(): void
@@ -109,11 +110,43 @@ final class LicenseContactResolverTest extends TestCase
                     'email' => 'partial@example.com',
                 ],
             ]],
+            ['ns_t3ai', []],
+            ['ns_t3aa', []],
+            ['ns_t3cs', []],
+            ['ns_t3as', []],
+            ['ns_t3ac', []],
         ]);
 
         $resolver = new LicenseContactResolver($repository);
 
-        self::assertSame(['email' => 'partial@example.com'], $resolver->resolve());
+        self::assertSame([], $resolver->resolve());
+        self::assertFalse($resolver->hasContact());
+    }
+
+    public function testIncompleteChildLicenseStillNeedsContactForm(): void
+    {
+        $repository = $this->createMock(LicenseDataRepositoryInterface::class);
+        $repository->method('fetchData')->willReturnMap([
+            ['ns_t3af', []],
+            ['ns_t3ai', [
+                [
+                    'license_key' => 'AI-1',
+                    'is_life_time' => 1,
+                    'expiration_date' => 0,
+                    'name' => 'AI User',
+                    'email' => '',
+                ],
+            ]],
+            ['ns_t3aa', []],
+            ['ns_t3cs', []],
+            ['ns_t3as', []],
+            ['ns_t3ac', []],
+        ]);
+
+        $resolver = new LicenseContactResolver($repository);
+
+        self::assertSame([], $resolver->resolve());
+        self::assertFalse($resolver->hasContact());
     }
 
     public function testResolveSkipsExpiredLicensesWithoutContact(): void

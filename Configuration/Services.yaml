@@ -269,12 +269,6 @@ services:
         identifier: 'nst3af/mail/template-paths-bootstrap'
         event: TYPO3\CMS\Core\Core\Event\BootCompletedEvent
 
-  NITSAN\NsT3AF\EventListener\BackendUserLoginListener:
-    tags:
-      - name: event.listener
-        identifier: 'nst3af/license/backend-user-login'
-        event: TYPO3\CMS\Core\Authentication\Event\AfterUserLoggedInEvent
-
   # Governance — access control gate on every provider request.
   NITSAN\NsT3AF\Governance\AccessControlListener:
     tags:

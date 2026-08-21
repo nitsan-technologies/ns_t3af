@@ -23,7 +23,11 @@ use NITSAN\NsT3AF\Credits\Contract\LicenseDataRepositoryInterface;
 use NITSAN\NsT3AF\Utility\LicenseUtility;
 
 /**
- * Resolve customer name/email from ns_license rows for Token / RefreshToken payloads.
+ * Resolve customer name/email from license rows (ns_t3af + AI Universe child
+ * extensions) for Token / RefreshToken payloads.
+ *
+ * Extension keys checked (in order): ns_t3af, ns_t3ai, ns_t3aa, ns_t3cs, ns_t3as, ns_t3ac.
+ * Activate shows the contact form unless a valid row has both name and email.
  *
  * @internal
  */
@@ -67,6 +71,15 @@ final class LicenseContactResolver
         return [];
     }
 
+    public function hasContact(): bool
+    {
+        $contact = $this->resolve();
+
+        return isset($contact['name'], $contact['email'])
+            && $contact['name'] !== ''
+            && $contact['email'] !== '';
+    }
+
     /**
      * @return array{name?: string, email?: string}
      */
@@ -81,20 +94,14 @@ final class LicenseContactResolver
 
             $name = trim((string) ($row['name'] ?? ''));
             $email = trim((string) ($row['email'] ?? ''));
-            if ($name === '' && $email === '') {
+            if ($name === '' || $email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 continue;
             }
 
-            $out = [];
-            if ($name !== '') {
-                $out['name'] = $name;
-            }
-            if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                $out['email'] = $email;
-            }
-            if ($out !== []) {
-                return $out;
-            }
+            return [
+                'name' => $name,
+                'email' => $email,
+            ];
         }
 
         return [];

@@ -2352,8 +2352,8 @@
                 <target>T3Planet Credits aktivieren</target>
             </trans-unit>
             <trans-unit id="dashboard.credits.activate.intro">
-                <source>Connect your T3Planet license to load balance, bundles, and usage charts.</source>
-                <target>Verbinden Sie Ihre T3Planet-Lizenz, um Guthaben, Bundles und Nutzungsdiagramme zu laden.</target>
+                <source>Activate free AI Credits to load balance, bundles, and usage charts. No card required.</source>
+                <target>Aktivieren Sie kostenlose AI Credits, um Guthaben, Bundles und Nutzungsdiagramme zu laden. Keine Karte erforderlich.</target>
             </trans-unit>
             <trans-unit id="dashboard.credits.activate.step1.title">
                 <source>Credits mode selected</source>
@@ -2364,12 +2364,12 @@
                 <target>KI-Anfragen nutzen T3Planet Credits, sobald die Aktivierung abgeschlossen ist.</target>
             </trans-unit>
             <trans-unit id="dashboard.credits.activate.step2.title">
-                <source>Activate with your license</source>
-                <target>Mit Ihrer Lizenz aktivieren</target>
+                <source>Activate free credits</source>
+                <target>Kostenlose Credits aktivieren</target>
             </trans-unit>
             <trans-unit id="dashboard.credits.activate.step2.body">
-                <source>Links this site to T3Planet using your extension license.</source>
-                <target>Verknüpft diese Website über Ihre Extension-Lizenz mit T3Planet.</target>
+                <source>Confirm your name and email to link this site to T3Planet Credits.</source>
+                <target>Bestätigen Sie Name und E-Mail, um diese Website mit T3Planet Credits zu verknüpfen.</target>
             </trans-unit>
             <trans-unit id="dashboard.credits.activate.step3.title">
                 <source>View balance and charts</source>
@@ -2380,8 +2380,8 @@
                 <target>Guthaben, Burn-Charts und Bundles erscheinen automatisch.</target>
             </trans-unit>
             <trans-unit id="dashboard.credits.activate.licenseHint">
-                <source>Requires an active T3Planet extension license on this installation.</source>
-                <target>Erfordert eine aktive T3Planet-Extension-Lizenz auf dieser Installation.</target>
+                <source>Start free AI Credits — no card required.</source>
+                <target>Starten Sie kostenlose AI Credits — keine Karte erforderlich.</target>
             </trans-unit>
             <trans-unit id="dashboard.credits.chart.inactive.title">
                 <source>Charts unlock after activation</source>

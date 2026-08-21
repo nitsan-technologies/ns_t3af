@@ -92,6 +92,50 @@ final class TokenResolverTest extends TestCase
         self::assertSame('bearer-new', $result['token']);
     }
 
+    public function testNeedsContactForActivationWhenNoLicenseAndNoToken(): void
+    {
+        [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
+        $resolver = new TokenResolver(
+            $this->createMock(T3PlanetApiClient::class),
+            $runtime,
+            $cache,
+            $apiResponseCache,
+            $this->domainResolver($runtime),
+            $this->contactResolver(),
+        );
+
+        self::assertTrue($resolver->needsContactForActivation());
+    }
+
+    public function testActivateTrialTokenForwardsContactOverride(): void
+    {
+        $api = $this->createMock(T3PlanetApiClient::class);
+        $api->expects(self::once())->method('issueTrialToken')->with(null, [
+            'name' => 'Alex',
+            'email' => 'alex@example.com',
+        ])->willReturn([
+            'token' => 'bearer-form',
+        ]);
+
+        [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
+        $resolver = new TokenResolver(
+            $api,
+            $runtime,
+            $cache,
+            $apiResponseCache,
+            $this->domainResolver($runtime),
+            $this->contactResolver(),
+        );
+
+        $result = $resolver->activateTrialToken([
+            'name' => 'Alex',
+            'email' => 'alex@example.com',
+        ]);
+
+        self::assertSame('minted', $result['action']);
+        self::assertSame('bearer-form', $result['token']);
+    }
+
     public function testActivateTrialTokenBindsIpWhenTokenExists(): void
     {
         $api = $this->createMock(T3PlanetApiClient::class);

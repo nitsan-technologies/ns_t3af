@@ -48,20 +48,14 @@
 
             <div class="aiu-module-page">
                 <div class="aiu-module-content">
-                    <f:if condition="{licenseBannerVisible} == 1">
-                        <f:then>
-                            <f:render partial="Module/LicenseRequired" arguments="{_all}" />
-                        </f:then>
-                        <f:else>
-                            <f:render partial="Module/AccessDenied" arguments="{_all}" />
-                            <f:if condition="{tabAccessDenied} != 1">
-                                <f:render section="Content" arguments="{_all}" />
-                            </f:if>
-                        </f:else>
+                    <f:render partial="Module/AccessDenied" arguments="{_all}" />
+                    <f:if condition="{tabAccessDenied} != 1">
+                        <f:render section="Content" arguments="{_all}" />
                     </f:if>
                 </div>
 
                 <f:render partial="Module/SetupWizard" arguments="{_all}" />
+                <f:render partial="Module/CreditsContactDialog" arguments="{_all}" />
             </div>
         </div>
     </div>

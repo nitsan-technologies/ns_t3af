@@ -20,10 +20,9 @@ Before digging into individual symptoms:
 Activation failed
 =================
 
-1. Check the T3Planet license is valid and assigned to this project
-2. Confirm the license domain matches the current site domain
-3. Check the server can reach the composer API
-4. Flush caches → retry :guilabel:`Activate`
+1. Confirm the server can reach the T3Planet Credits API
+2. If prompted, complete the free-credits name/email form and consent checkbox
+3. Flush caches → retry :guilabel:`Activate`
 
 Balance missing
 ===============

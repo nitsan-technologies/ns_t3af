@@ -30,7 +30,6 @@ use NITSAN\NsT3AF\Service\SiteStorageResolution;
 use NITSAN\NsT3AF\Service\WizardExtensionCatalogService;
 use NITSAN\NsT3AF\Service\WizardProgressService;
 use NITSAN\NsT3AF\Service\WizardProviderCatalog;
-use NITSAN\NsT3AF\Utility\LicenseUtility;
 use NITSAN\NsT3AF\Utility\ModuleTabUtility;
 use NITSAN\NsT3AF\Utility\PagePathUtility;
 use Psr\Http\Message\ServerRequestInterface;
@@ -220,8 +219,6 @@ abstract class AbstractAiUniverseModuleController
             : self::fluidFlag(!$this->moduleTabUtility->isTabVisible($activeTabKey, $backendUser));
 
         $wizardCompleted = $this->wizardProgress->isCompleted();
-        $licenseStatus = LicenseUtility::getModuleLicenseStatus();
-        $licenseValid = (bool) ($licenseStatus['valid'] ?? false);
 
         return array_merge(
             [
@@ -231,10 +228,6 @@ abstract class AbstractAiUniverseModuleController
                 'modulePath' => $this->moduleTabUtility->resolveActivePath($activeTabKey),
                 'creditOverview' => $this->resolveCreditOverviewLine(),
                 'creditsFeatureAvailable' => self::fluidFlag((new CreditsReleaseGate())->isPubliclyAvailable()),
-                'licenseBannerVisible' => self::fluidFlag(!$licenseValid && $activeTabKey !== 'aiLabel'),
-                'licenseBannerShowGetKeyLink' => self::fluidFlag(
-                    ($licenseStatus['reason'] ?? '') !== LicenseUtility::REASON_NS_LICENSE_MISSING,
-                ),
                 'quickSetupLabel' => $this->translateModule('module.quickSetup'),
                 'wizardCompleted' => self::fluidFlag($wizardCompleted),
                 'wizardAutoOpen' => self::fluidFlag(!$wizardCompleted && $tabAccessDenied === 0),

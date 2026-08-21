@@ -32,11 +32,16 @@ final class NsLicenseRepositoryFactory
 
     public function __invoke(): ?LicenseDataRepositoryInterface
     {
-        if (!class_exists(self::NS_LICENSE_REPOSITORY_CLASS)) {
+        $className = self::NS_LICENSE_REPOSITORY_CLASS;
+        if (!class_exists($className)) {
             return null;
         }
 
-        $repository = GeneralUtility::makeInstance(self::NS_LICENSE_REPOSITORY_CLASS);
+        /** @var class-string $className */
+        $repository = GeneralUtility::makeInstance($className);
+        if (!method_exists($repository, 'fetchData')) {
+            return null;
+        }
 
         return new NsLicenseRepositoryAdapter($repository);
     }

@@ -1,0 +1,98 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<dialog id="aiu-credits-contact-dialog"
+        class="aiu-credits-contact-dialog"
+        aria-labelledby="aiu-credits-contact-heading"
+        aria-describedby="aiu-credits-contact-subtitle">
+    <div class="aiu-credits-contact">
+        <header class="aiu-credits-contact__header">
+            <h2 class="aiu-credits-contact__title" id="aiu-credits-contact-heading">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_js.xlf:credits.js.contactModal.title" />
+            </h2>
+            <button type="button"
+                    class="aiu-credits-contact__close"
+                    data-credits-contact-close=""
+                    aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:wizard.close')}">
+                <core:icon identifier="actions-close" size="small" alternativeMarkupIdentifier="inline" />
+            </button>
+        </header>
+
+        <div class="aiu-credits-contact__body">
+            <p class="aiu-credits-contact__subtitle text-variant" id="aiu-credits-contact-subtitle">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_js.xlf:credits.js.contactModal.subtitle" />
+            </p>
+
+            <form id="aiu-credits-contact-form"
+                  class="aiu-credits-contact-form"
+                  data-credits-contact-form=""
+                  novalidate="">
+                <div class="row g-3 mb-3">
+                    <div class="col-12">
+                        <label class="form-label" for="aiu-credits-contact-name">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_js.xlf:credits.js.contactModal.name" />*
+                        </label>
+                        <input type="text"
+                               class="form-control"
+                               id="aiu-credits-contact-name"
+                               name="name"
+                               required=""
+                               autocomplete="name" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="aiu-credits-contact-email">
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_js.xlf:credits.js.contactModal.email" />*
+                        </label>
+                        <input type="email"
+                               class="form-control"
+                               id="aiu-credits-contact-email"
+                               name="email"
+                               required=""
+                               autocomplete="email" />
+                    </div>
+                </div>
+
+                <f:variable name="privacyLink">
+                    <a href="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_js.xlf:credits.js.contactModal.privacyUrl')}"
+                       class="aiu-credits-contact-form__link"
+                       target="_blank"
+                       rel="noopener noreferrer"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_js.xlf:credits.js.contactModal.privacy" /></a>
+                </f:variable>
+                <f:variable name="termsLink">
+                    <a href="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_js.xlf:credits.js.contactModal.termsUrl')}"
+                       class="aiu-credits-contact-form__link"
+                       target="_blank"
+                       rel="noopener noreferrer"><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_js.xlf:credits.js.contactModal.terms" /></a>
+                </f:variable>
+
+                <div class="form-check mb-0">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           value="1"
+                           id="aiu-credits-contact-consent"
+                           name="consent"
+                           required="" />
+                    <label class="form-check-label small" for="aiu-credits-contact-consent">
+                        <f:format.raw>
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_js.xlf:credits.js.contactModal.consent" arguments="{0: privacyLink, 1: termsLink}" />
+                        </f:format.raw>
+                    </label>
+                </div>
+
+                <div class="text-danger small mt-2 is-hidden" data-credits-contact-error="" role="alert"></div>
+            </form>
+        </div>
+
+        <footer class="aiu-credits-contact__footer">
+            <button type="button" class="btn btn-default" data-credits-contact-close="">
+                <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.cancel" />
+            </button>
+            <button type="submit" class="btn btn-primary" form="aiu-credits-contact-form" data-credits-contact-continue="">
+                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_js.xlf:credits.js.contactModal.continue" />
+            </button>
+        </footer>
+    </div>
+</dialog>
+
+</html>

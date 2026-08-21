@@ -43,11 +43,9 @@ final class WriteTableToolFunctionalTest extends FunctionalTestCase
         'frontend',
         'workspaces',
         'scheduler',
-        'extensionmanager',
     ];
 
     protected array $testExtensionsToLoad = [
-        'ns_license',
         'ns_t3af',
     ];
 

@@ -44,6 +44,18 @@ const LL = {
   modalRefreshOk: 'credits.js.modal.refreshOk',
   errorTitleRefresh: 'credits.js.error.title.refresh',
   notificationTokenRefreshed: 'credits.js.notification.tokenRefreshed',
+  contactModalTitle: 'credits.js.contactModal.title',
+  contactModalSubtitle: 'credits.js.contactModal.subtitle',
+  contactModalName: 'credits.js.contactModal.name',
+  contactModalEmail: 'credits.js.contactModal.email',
+  contactModalConsent: 'credits.js.contactModal.consent',
+  contactModalPrivacy: 'credits.js.contactModal.privacy',
+  contactModalTerms: 'credits.js.contactModal.terms',
+  contactModalPrivacyUrl: 'credits.js.contactModal.privacyUrl',
+  contactModalTermsUrl: 'credits.js.contactModal.termsUrl',
+  contactModalContinue: 'credits.js.contactModal.continue',
+  contactModalValidation: 'credits.js.contactModal.validation',
+  contactModalConsentRequired: 'credits.js.contactModal.consentRequired',
 };
 
 /**
@@ -625,6 +637,9 @@ function applyUiState(root, data) {
 
   root.dataset.creditsActive = active ? '1' : '0';
   root.dataset.creditMode = creditMode ? '1' : '0';
+  if (typeof data.needsContact === 'boolean') {
+    root.dataset.creditsNeedsContact = data.needsContact ? '1' : '0';
+  }
 
   creditsActiveBadge?.classList.toggle('is-hidden', !active);
   activatePill?.classList.toggle('is-hidden', !creditMode || active);
@@ -753,12 +768,23 @@ function bindRefreshDelegation() {
   });
 }
 
-function runCreditsActivate(root) {
+function runCreditsActivate(root, contact = null) {
   const creditsFeatureAvailable = !root || isCreditsFeatureAvailable(root);
   if (!creditsFeatureAvailable) {
     return;
   }
-  post(routes.activate)
+
+  const needsContact = root instanceof HTMLElement && root.dataset.creditsNeedsContact === '1';
+  if (needsContact && (!contact || !contact.name || !contact.email)) {
+    openFreeCreditsContactModal(root);
+    return;
+  }
+
+  const body = contact && contact.name && contact.email
+    ? { name: contact.name, email: contact.email }
+    : {};
+
+  post(routes.activate, body)
     .then((data) => {
       if (data.status === false || data.error || data.error_code) {
         handleError(
@@ -774,6 +800,7 @@ function runCreditsActivate(root) {
               applyUiState(creditsRoot, {
                 creditMode: true,
                 active: true,
+                needsContact: false,
                 creditsBearerToken: data.creditsBearerToken,
               });
             }
@@ -795,13 +822,158 @@ function runCreditsActivate(root) {
         ll(LL.brandT3planet, 'T3Planet Credits'),
         ll(
           LL.notificationActivateIncomplete,
-          'Mode enabled, but activation did not complete. Check license keys and API connectivity.',
+          'Mode enabled, but activation did not complete. Check API connectivity and try Activate again.',
         ),
       );
     })
     .catch((err) =>
       handleError(err, ll(LL.errorTitleActivate, 'Activate T3Planet Credits')),
     );
+}
+
+/**
+ * Collect name/email when no AI Universe license contact is available.
+ * Native <dialog> (same pattern as #aiu-setup-wizard-dialog) — not TYPO3 Lit Modal.
+ *
+ * @param {HTMLElement|null} root
+ */
+/** @type {HTMLElement|null} */
+let creditsContactActivateRoot = null;
+let creditsContactDialogBound = false;
+
+/**
+ * @param {HTMLDialogElement} dialog
+ */
+function closeCreditsContactDialog(dialog) {
+  if (dialog.open) {
+    dialog.close();
+  }
+  creditsContactActivateRoot = null;
+}
+
+/**
+ * @param {HTMLDialogElement} dialog
+ * @returns {boolean}
+ */
+function submitCreditsContactForm(dialog) {
+  const form = dialog.querySelector('[data-credits-contact-form]');
+  const nameInput = dialog.querySelector('#aiu-credits-contact-name');
+  const emailInput = dialog.querySelector('#aiu-credits-contact-email');
+  const consentInput = dialog.querySelector('#aiu-credits-contact-consent');
+  const errorEl = dialog.querySelector('[data-credits-contact-error]');
+
+  if (!(form instanceof HTMLFormElement)
+    || !(nameInput instanceof HTMLInputElement)
+    || !(emailInput instanceof HTMLInputElement)) {
+    Notification.error(
+      ll(LL.errorTitleActivate, 'Activate T3Planet Credits'),
+      'Credits activation form is not ready. Reload the module and try Activate again.',
+    );
+    return false;
+  }
+
+  const name = nameInput.value.trim();
+  const email = emailInput.value.trim();
+  const consented = consentInput instanceof HTMLInputElement && consentInput.checked;
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  if (errorEl instanceof HTMLElement) {
+    errorEl.classList.add('is-hidden');
+    errorEl.textContent = '';
+  }
+
+  if (!name || !emailOk) {
+    if (errorEl instanceof HTMLElement) {
+      errorEl.textContent = ll(
+        LL.contactModalValidation,
+        'Please enter your name and a valid email address.',
+      );
+      errorEl.classList.remove('is-hidden');
+    }
+    nameInput.focus();
+    return false;
+  }
+  if (!consented) {
+    if (errorEl instanceof HTMLElement) {
+      errorEl.textContent = ll(
+        LL.contactModalConsentRequired,
+        'Please agree to the Privacy Policy and Terms & Conditions to continue.',
+      );
+      errorEl.classList.remove('is-hidden');
+    }
+    consentInput instanceof HTMLInputElement && consentInput.focus();
+    return false;
+  }
+
+  const root = creditsContactActivateRoot;
+  closeCreditsContactDialog(dialog);
+  runCreditsActivate(root, { name, email });
+  return true;
+}
+
+/**
+ * @param {HTMLDialogElement} dialog
+ */
+function bindCreditsContactDialog(dialog) {
+  if (creditsContactDialogBound) {
+    return;
+  }
+  creditsContactDialogBound = true;
+  observeBrowserAutocomplete(dialog);
+
+  dialog.addEventListener('click', (evt) => {
+    if (evt.target === dialog) {
+      closeCreditsContactDialog(dialog);
+    }
+  });
+  dialog.addEventListener('cancel', (evt) => {
+    evt.preventDefault();
+    closeCreditsContactDialog(dialog);
+  });
+  dialog.querySelectorAll('[data-credits-contact-close]').forEach((el) => {
+    el.addEventListener('click', () => closeCreditsContactDialog(dialog));
+  });
+
+  const form = dialog.querySelector('[data-credits-contact-form]');
+  if (form instanceof HTMLFormElement) {
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      submitCreditsContactForm(dialog);
+    });
+  }
+}
+
+function openFreeCreditsContactModal(root) {
+  const dialog = document.getElementById('aiu-credits-contact-dialog');
+  if (!(dialog instanceof HTMLDialogElement) || typeof dialog.showModal !== 'function') {
+    Notification.error(
+      ll(LL.errorTitleActivate, 'Activate T3Planet Credits'),
+      'Credits activation form is not ready. Reload the module and try Activate again.',
+    );
+    return;
+  }
+
+  bindCreditsContactDialog(dialog);
+  creditsContactActivateRoot = root instanceof HTMLElement ? root : null;
+
+  const form = dialog.querySelector('[data-credits-contact-form]');
+  if (form instanceof HTMLFormElement) {
+    form.reset();
+  }
+  const errorEl = dialog.querySelector('[data-credits-contact-error]');
+  if (errorEl instanceof HTMLElement) {
+    errorEl.classList.add('is-hidden');
+    errorEl.textContent = '';
+  }
+
+  dialog.showModal();
+  window.requestAnimationFrame(() => {
+    const nameInput = dialog.querySelector('#aiu-credits-contact-name');
+    if (nameInput instanceof HTMLInputElement) {
+      nameInput.focus();
+    }
+  });
 }
 
 let activateDelegationBound = false;
@@ -909,7 +1081,7 @@ function initCreditsMode(root) {
                   ll(LL.brandT3planet, 'T3Planet Credits'),
                   ll(
                     LL.notificationCreditsSelected,
-                    'Credits mode selected. Click Activate to connect your license.',
+                    'Credits mode selected. Click Activate to start free credits.',
                   ),
                 );
               }
