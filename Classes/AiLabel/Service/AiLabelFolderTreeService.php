@@ -27,6 +27,16 @@ use TYPO3\CMS\Core\Resource\StorageRepository;
 
 /**
  * Nested FAL folder tree with total and open (awaiting review) counts.
+ *
+ * @phpstan-type FolderNode array{
+ *   identifier: string,
+ *   label: string,
+ *   totalFiles: int,
+ *   openCount: int,
+ *   active: bool,
+ *   expanded: bool,
+ *   children: list<array<string, mixed>>
+ * }
  */
 final class AiLabelFolderTreeService
 {
@@ -42,11 +52,7 @@ final class AiLabelFolderTreeService
     ) {}
 
     /**
-     * @return array{
-     *   storageUid: int,
-     *   root: array{identifier: string, label: string, totalFiles: int, openCount: int, active: bool, expanded: bool, children: list},
-     *   folders: list<array{identifier: string, label: string, totalFiles: int, openCount: int, active: bool, expanded: bool, children: list}>
-     * }
+     * @return array{storageUid: int, root: FolderNode, folders: list<FolderNode>}
      */
     public function buildTree(string $activeFolderIdentifier = ''): array
     {
@@ -188,8 +194,8 @@ final class AiLabelFolderTreeService
     }
 
     /**
-     * @param list<array{identifier: string, children?: list}> $folders
-     * @return list<array{identifier: string, active: bool, expanded: bool, children: list}>
+     * @param list<array<string, mixed>> $folders
+     * @return list<array<string, mixed>>
      */
     public static function markActiveAndExpanded(array $folders, string $activeIdentifier): array
     {
@@ -220,7 +226,7 @@ final class AiLabelFolderTreeService
     }
 
     /**
-     * @return list<array{identifier: string, label: string, totalFiles: int, openCount: int, active: bool, expanded: bool, children: list}>
+     * @return list<FolderNode>
      */
     private function buildChildren(int $storageUid, Folder $folder, string $activeIdentifier): array
     {
@@ -265,16 +271,19 @@ final class AiLabelFolderTreeService
             }
             $candidates[] = $subfolder;
         }
+        if ($candidates === []) {
+            return null;
+        }
         usort(
             $candidates,
             static fn(Folder $a, Folder $b): int => strcmp($a->getName(), $b->getName()),
         );
 
-        return $candidates[0]?->getIdentifier();
+        return $candidates[0]->getIdentifier();
     }
 
     /**
-     * @return array{identifier: string, label: string, totalFiles: int, openCount: int, active: bool, expanded: bool, children: list}
+     * @return FolderNode
      */
     private function emptyNode(string $identifier, string $label, bool $active, bool $expanded): array
     {

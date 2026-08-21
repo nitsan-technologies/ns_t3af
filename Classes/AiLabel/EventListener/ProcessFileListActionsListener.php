@@ -24,6 +24,7 @@ use TYPO3\CMS\Backend\Template\Components\ActionGroup;
 use TYPO3\CMS\Backend\Template\Components\ComponentFactory;
 use TYPO3\CMS\Core\Imaging\IconFactory;
 use TYPO3\CMS\Core\Imaging\IconSize;
+use TYPO3\CMS\Core\Information\Typo3Version;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -69,7 +70,8 @@ final class ProcessFileListActionsListener
         $title = $this->translate(self::LABEL);
 
         // v14+: Buttons API (breaking #107884). v12/v13: HTML action items.
-        if (method_exists($event, 'setAction') && class_exists(ComponentFactory::class) && class_exists(ActionGroup::class)) {
+        // Gate on major version — method_exists() is always true under T3 14 PHPStan.
+        if ((new Typo3Version())->getMajorVersion() >= 14) {
             $button = GeneralUtility::makeInstance(ComponentFactory::class)
                 ->createLinkButton()
                 ->setHref($url)
@@ -77,10 +79,6 @@ final class ProcessFileListActionsListener
                 ->setIcon($this->iconFactory->getIcon('actions-view', IconSize::SMALL));
             $event->setAction($button, self::ACTION_NAME, ActionGroup::secondary);
 
-            return;
-        }
-
-        if (!method_exists($event, 'getActionItems') || !method_exists($event, 'setActionItems')) {
             return;
         }
 
