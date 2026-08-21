@@ -54,32 +54,57 @@
     margin-top: .25rem;
 }
 
-/* Core fileadmin tree (.node) is absolute/virtualized; stack nodes in-flow here. */
+/* Core fileadmin tree (.node) is absolute/virtualized; stack nodes in-flow here.
+ * Specificity must beat backend.css `.node { position:absolute }` (load-order varies by TYPO3 version). */
 .aiu-ailabel-folder-tree {
     display: flex;
     flex-direction: column;
     gap: 1px;
+    overflow: visible;
     position: relative;
 }
 
-.aiu-ailabel-folder-tree > .node,
-.aiu-ailabel-folder-tree__row {
+.aiu-ailabel-folder-tree a.node,
+.aiu-ailabel-folder-tree .aiu-ailabel-folder-tree__row.node,
+.aiu-ailabel-folder-tree .aiu-ailabel-folder-tree__row {
     align-items: center;
     display: flex;
     gap: .15rem;
     height: 32px;
-    padding-left: calc(var(--aiu-tree-depth, 0) * 0.85rem);
+    inset: auto;
+    inset-inline-start: auto;
     position: relative;
     text-decoration: none;
+    top: auto;
     width: 100%;
 }
 
-.aiu-ailabel-folder-tree > .node .node-content,
-.aiu-ailabel-folder-tree__row .node-content {
+.aiu-ailabel-folder-tree .node-content,
+.aiu-ailabel-folder-tree__link .node-content {
     align-items: center;
     display: flex;
     flex: 1 1 auto;
+    /* Core tree uses padding-inline-start on .node-contentlabel (v13+); v12 often has none. */
+    gap: .35rem;
+    height: auto;
     min-width: 0;
+    position: relative;
+}
+
+.aiu-ailabel-folder-tree .node-contentlabel {
+    min-width: 0;
+    padding-inline-start: 0;
+}
+
+.aiu-ailabel-folder-tree .node-icon,
+.aiu-ailabel-folder-tree .node-information {
+    flex-shrink: 0;
+    height: auto;
+    position: relative;
+}
+
+.aiu-ailabel-media-shell .aiu-mcp-tools-shell__sidebar > .card {
+    overflow: visible;
 }
 
 .aiu-ailabel-folder-tree__link {
@@ -127,6 +152,7 @@
     display: flex;
     flex-direction: column;
     gap: 1px;
+    padding-inline-start: .85rem;
 }
 
 .aiu-ailabel-folder-tree__item[hidden],

@@ -26,7 +26,7 @@
                     <span class="node-information">{folderTree.root.totalFiles}</span>
                 </a>
                 <f:for each="{folderTree.folders}" as="folder" iteration="folderIteration">
-                    <f:render partial="AiLabel/FolderTreeNode" arguments="{folder: folder, depth: 1, isLast: folderIteration.isLast}" />
+                    <f:render partial="AiLabel/FolderTreeNode" arguments="{folder: folder, isLast: folderIteration.isLast}" />
                 </f:for>
             </nav>
         </div>

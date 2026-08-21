@@ -4,8 +4,7 @@
 <div class="aiu-ailabel-folder-tree__item"
      data-ailabel-folder-branch
      data-ailabel-folder-expanded="{f:if(condition: folder.expanded, then: '1', else: '0')}">
-    <div class="aiu-ailabel-folder-tree__row node {f:if(condition: folder.active, then: 'node-selected')}"
-         style="--aiu-tree-depth: {depth}">
+    <div class="aiu-ailabel-folder-tree__row node {f:if(condition: folder.active, then: 'node-selected')}">
         <f:if condition="{folder.children}">
             <f:then>
                 <button type="button"
@@ -47,10 +46,11 @@
         </a>
     </div>
     <f:if condition="{folder.children}">
-        <div class="aiu-ailabel-folder-tree__children" data-ailabel-folder-children{f:if(condition: folder.expanded, then: '', else: ' hidden="hidden"')}>
+        <div class="aiu-ailabel-folder-tree__children"
+             data-ailabel-folder-children
+             {f:if(condition: folder.expanded, then: '', else: 'hidden="hidden"')}>
             <f:for each="{folder.children}" as="child" iteration="childIteration">
-                <f:variable name="nextDepth" value="{depth + 1}" />
-                <f:render partial="AiLabel/FolderTreeNode" arguments="{folder: child, depth: nextDepth, isLast: childIteration.isLast}" />
+                <f:render partial="AiLabel/FolderTreeNode" arguments="{folder: child, isLast: childIteration.isLast}" />
             </f:for>
         </div>
     </f:if>
