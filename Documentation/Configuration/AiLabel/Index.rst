@@ -185,7 +185,8 @@ Each edit drawer shows:
 * **AI involvement** — not reviewed, no AI, AI generated, AI modified, origin
   unknown, suggestion
 * **Created on** (read-only) — content creation date vs legal cutoff
-* **Matter of public interest** — text records only; editor decision
+* **Matter of public interest** — text records only; editor decision (gate,
+  not a master switch — see :ref:`ai-label-activate`)
 * **Reviewed by a named person** — required when human review applies
 * **Labelling** — automatic / always / do not label
 * **Reason for not labelling** — exemption vocabulary (compliance-controlled)
@@ -194,6 +195,8 @@ Each edit drawer shows:
 
 Saving the drawer updates the record; it does not auto-confirm unless you also
 click **Confirm**.
+
+For a full text-vs-media activate path, see :ref:`ai-label-activate`.
 
 Bulk actions
 ------------
@@ -234,11 +237,101 @@ How records get AI metadata
 See :ref:`AI Label integration <ai-label-integration>` for third-party bind
 patterns.
 
+.. _ai-label-activate:
+
+Activate visitor labels (text vs media)
+---------------------------------------
+
+Visitor badges are **not** turned on by a single Settings toggle. Each record
+must pass its domain rules, and the site must include the frontend TypoScript
+(see :ref:`Frontend labels <ai-label-frontend>` below).
+
+**Common misconception:** setting **Matter of public interest** to **Yes** alone
+does **not** show a label. That field is only a **gate for text** (pages /
+content). It does nothing for media, and text still needs involvement,
+confirmation, and the review rules below.
+
+Prerequisite (both domains)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Include frontend TypoScript (Site Set ``nitsan/ns-t3af-label`` **and**
+   ``@import``, or classic static template “AI Foundation labels”).
+2. Flush caches after changing TypoScript or Site Sets.
+3. Open the record in the AI Label drawer and check **What a visitor will see**
+   before expecting anything on the live page.
+
+Media (files / ``sys_file_metadata``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Public interest does **not** apply.
+
+1. Set **AI involvement** to **AI generated** or **AI modified** (or
+   **Always** under Labelling).
+2. Click **Confirm** (unconfirmed media never shows a visitor label).
+3. Optional — Settings: **Mark the image file** (badge after CE vs overlay on
+   the image), stamp size/position.
+4. **Origin unknown** only labels when Settings **Label unknown origin** is
+   **Yes**.
+
+Named human review does **not** hide media labels (Art. 50(4)).
+
+Text (pages / content elements)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+1. Set **AI involvement** to **AI generated** or **AI modified** (not
+   “not reviewed” / “no AI”).
+2. Set **Matter of public interest** to **Yes** (required gate; **No** =
+   no visitor label).
+3. Human review:
+
+   * Leave **Reviewed by a named person** unchecked → label can show after
+     confirm, **or**
+   * Check it **and** enter a **responsible person** → label is **suppressed**
+     (editorial control), **or**
+   * Check it **without** a name → incomplete; treat as needing a name (see
+     Texts tab highlight).
+
+4. Click **Confirm** so the disclosure is intentional for that version.
+5. Verify **What a visitor will see** in the drawer, then check the frontend.
+
+Quick checklist
+~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 36 36
+
+   * - Step
+     - Media
+     - Text
+   * - Frontend TypoScript / Site Set
+     - Required
+     - Required
+   * - AI involvement (generated / modified)
+     - Required
+     - Required
+   * - Matter of public interest = Yes
+     - Not used
+     - Required gate
+   * - Confirm
+     - Required (no confirm → no label)
+     - Required for a deliberate disclosure
+   * - Named reviewer
+     - Does not hide label
+     - Hides label when name is set
+   * - Drawer preview
+     - Use before live check
+     - Use before live check
+
+.. _ai-label-frontend:
+
 Frontend labels
 ---------------
 
 Visitor badges render after the TypoScript in
 ``EXT:ns_t3af/Configuration/TypoScript/setup.typoscript`` is included.
+Use the checklist above to activate a record; this section covers **how**
+badges are rendered.
 
 **Site Set (TYPO3 v13.4+):** add ``nitsan/ns-t3af-label`` to your own set's
 ``dependencies`` **and** ``@import`` that setup file. A dependency listing

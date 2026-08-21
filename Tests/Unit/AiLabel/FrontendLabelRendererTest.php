@@ -90,6 +90,39 @@ final class FrontendLabelRendererTest extends TestCase
         self::assertSame('', $this->renderer()->renderBadgeMarkup(Involvement::NotReviewed));
     }
 
+    /**
+     * Composer `_assets` URLs are already percent-encoded; classic paths may
+     * contain literal spaces. Encoding must never produce `%2520`.
+     *
+     * @dataProvider encodeWebPathCases
+     */
+    public function testEncodeWebPathDoesNotDoubleEncode(string $input, string $expected): void
+    {
+        $method = new \ReflectionMethod(FrontendLabelRenderer::class, 'encodeWebPath');
+        $method->setAccessible(true);
+
+        self::assertSame($expected, (string) $method->invoke($this->renderer(), $input));
+    }
+
+    /**
+     * @return \Generator<string, array{string, string}>
+     */
+    public static function encodeWebPathCases(): \Generator
+    {
+        yield 'composer already encoded space' => [
+            '/_assets/abc123/Icons/EuAiLabel/LABEL_AI%20GENERATED_white.svg',
+            '/_assets/abc123/Icons/EuAiLabel/LABEL_AI%20GENERATED_white.svg',
+        ];
+        yield 'classic path with literal space' => [
+            '/typo3conf/ext/ns_t3af/Resources/Public/Icons/EuAiLabel/LABEL_AI GENERATED_white.svg',
+            '/typo3conf/ext/ns_t3af/Resources/Public/Icons/EuAiLabel/LABEL_AI%20GENERATED_white.svg',
+        ];
+        yield 'relative path with literal space' => [
+            'typo3conf/ext/ns_t3af/Resources/Public/Icons/EuAiLabel/LABEL_AI MODIFIED_black.svg',
+            'typo3conf/ext/ns_t3af/Resources/Public/Icons/EuAiLabel/LABEL_AI%20MODIFIED_black.svg',
+        ];
+    }
+
     private function renderer(): FrontendLabelRenderer
     {
         $extensionSettings = $this->createMock(ExtensionSettingsService::class);

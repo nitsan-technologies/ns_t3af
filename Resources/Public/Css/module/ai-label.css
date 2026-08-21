@@ -54,42 +54,26 @@
     margin-top: .25rem;
 }
 
+/* Core fileadmin tree (.node) is absolute/virtualized; stack nodes in-flow here. */
 .aiu-ailabel-folder-tree {
     display: flex;
     flex-direction: column;
-    gap: .15rem;
+    gap: 1px;
+    position: relative;
 }
 
-.aiu-ailabel-folder-tree__node {
+.aiu-ailabel-folder-tree > .node {
+    height: 32px;
+    position: relative;
+    text-decoration: none;
+    width: 100%;
+}
+
+.aiu-ailabel-folder-tree > .node .node-content {
     align-items: center;
-    border-radius: .35rem;
-    color: inherit;
     display: flex;
-    gap: .35rem;
-    padding: .35rem .5rem;
-    text-decoration: none;
-}
-
-.aiu-ailabel-folder-tree__node:hover {
-    background: var(--typo3-surface-container-high, rgba(0, 0, 0, .04));
-    color: inherit;
-    text-decoration: none;
-}
-
-.aiu-ailabel-folder-tree__node.is-active {
-    background: var(--typo3-state-primary-bg-subtle, rgba(87, 71, 255, .12));
-}
-
-.aiu-ailabel-folder-tree__node--child {
-    padding-left: 1.35rem;
-}
-
-.aiu-ailabel-folder-tree__label {
     flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
 }
 
 .aiu-ailabel-table .col-checkbox {
@@ -98,15 +82,6 @@
 
 .aiu-ailabel-subnav .btn-group {
     flex-wrap: wrap;
-}
-
-.aiu-ailabel-table .btn-group-actions {
-    display: inline-flex;
-    gap: .15rem;
-}
-
-.aiu-ailabel-table .btn-group-actions .btn {
-    padding: .2rem .35rem;
 }
 
 .aiu-ailabel-action-bar .d-none[data-ailabel-bulk-btn].is-visible {
@@ -162,6 +137,10 @@
 
 .aiu-ailabel-table-wrap {
     overflow-x: auto;
+}
+
+.aiu-ailabel-table__file {
+    max-width: 16rem;
 }
 
 .aiu-ailabel-table__col-select {

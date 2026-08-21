@@ -217,7 +217,7 @@ export default class AiLabelModule {
     input.addEventListener('input', () => {
       const query = input.value.trim().toLowerCase();
       nodes.forEach((node) => {
-        const link = node.closest('.aiu-ailabel-folder-tree__node');
+        const link = node.closest('.aiu-ailabel-folder-tree .node');
         if (!link) {
           return;
         }

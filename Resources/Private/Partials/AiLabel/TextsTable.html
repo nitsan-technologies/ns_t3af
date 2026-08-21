@@ -39,7 +39,7 @@
                                 <tr>
                                     <td><input type="checkbox" form="aiu-ailabel-bulk-form" name="refs[]" value="{row.table}:{row.uid}" data-ailabel-row-checkbox /></td>
                                     <td>{row.title}</td>
-                                    <td><span class="badge badge-secondary">{row.type}</span></td>
+                                    <td><span class="badge badge-default">{row.type}</span></td>
                                     <td><f:render partial="AiLabel/InvolvementBadge" arguments="{involvement: row.involvement}" /></td>
                                     <td>{row.publicInterest}</td>
                                     <td class="{f:if(condition: row.unnamedReview, then: 'text-danger fw-semibold')}">{row.reviewedLabel}</td>

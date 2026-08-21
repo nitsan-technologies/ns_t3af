@@ -780,7 +780,7 @@ function initDrawer(scope) {
 function initDeleteConfirm(scope) {
   scope.querySelectorAll('[data-aiu-prompt-delete]').forEach((button) => {
     button.addEventListener('click', () => {
-      const form = button.closest('form');
+      const form = button instanceof HTMLButtonElement ? button.form : null;
       if (!(form instanceof HTMLFormElement)) {
         return;
       }

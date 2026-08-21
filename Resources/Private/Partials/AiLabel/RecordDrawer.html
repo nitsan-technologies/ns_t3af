@@ -9,11 +9,16 @@
     <input type="hidden" name="returnTab" value="{returnTab}" />
 
     <div class="aiu-drawer__header">
-        <button type="button" class="aiu-drawer__close btn" data-ailabel-drawer-close aria-label="{f:translate(key: '{ll}:module.aiLabel.drawer.close', default: 'Close')}">
-            <core:icon identifier="actions-close" size="small" />
+        <div class="aiu-drawer__header-main">
+            <h2 class="aiu-drawer__title" title="{record.title}">{record.title} — <f:translate key="{ll}:module.aiLabel.drawer.titleSuffix" default="AI Label" /></h2>
+            <p class="aiu-drawer__desc"><f:translate key="{ll}:module.aiLabel.drawer.subtitle" default="Proposed TCA tab on content elements, pages and files." /></p>
+        </div>
+        <button type="button"
+                class="aiu-drawer__close btn btn-default btn-sm"
+                data-ailabel-drawer-close
+                aria-label="{f:translate(key: '{ll}:module.aiLabel.drawer.close', default: 'Close')}">
+            <core:icon identifier="actions-close" size="small" alternativeMarkupIdentifier="inline" />
         </button>
-        <h2 class="aiu-drawer__title">{record.title} — <f:translate key="{ll}:module.aiLabel.drawer.titleSuffix" default="AI Label" /></h2>
-        <p class="aiu-drawer__desc"><f:translate key="{ll}:module.aiLabel.drawer.subtitle" default="Proposed TCA tab on content elements, pages and files." /></p>
     </div>
 
     <div class="aiu-drawer__body">
@@ -91,7 +96,7 @@
 
         <div class="aiu-section__label mt-3">
             <f:translate key="{ll}:module.aiLabel.drawer.visitorPreview" default="What a visitor will see" />
-            <span class="badge badge-secondary ms-1"><f:translate key="{ll}:module.aiLabel.drawer.proposed" default="proposed" /></span>
+            <span class="badge badge-default ms-1"><f:translate key="{ll}:module.aiLabel.drawer.proposed" default="proposed" /></span>
         </div>
         <div class="card">
             <div class="card-body">

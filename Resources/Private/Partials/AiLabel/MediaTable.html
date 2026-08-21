@@ -39,8 +39,10 @@
                             <f:for each="{mediaList.rows}" as="row">
                                 <tr>
                                     <td><input type="checkbox" form="aiu-ailabel-bulk-form" name="refs[]" value="sys_file_metadata:{row.uid}" data-ailabel-row-checkbox /></td>
-                                    <td>{row.fileName}</td>
-                                    <td><span class="badge badge-secondary">{row.kind}</span></td>
+                                    <td>
+                                        <span class="text-truncate d-block aiu-ailabel-table__file" title="{row.fileName}">{row.fileName}</span>
+                                    </td>
+                                    <td><span class="badge badge-default">{row.kind}</span></td>
                                     <td><f:render partial="AiLabel/InvolvementBadge" arguments="{involvement: row.involvement}" /></td>
                                     <td><f:render partial="AiLabel/LabelStateBadge" arguments="{state: row.labelState}" /></td>
                                     <td><code title="{row.reasonCode}">{row.reasonCode}</code></td>

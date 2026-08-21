@@ -1,4 +1,5 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       data-namespace-typo3-fluid="true">
 <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
 
@@ -86,25 +87,29 @@
                         </button>
                         <f:if condition="{row.isBuiltin}">
                             <f:else>
-                                <div class="btn-group-actions d-flex gap-2 flex-nowrap" role="group">
+                                <form method="post"
+                                      action="{aiPromptsDeleteUri}"
+                                      id="aiu-ai-prompts-delete-{row.uid}"
+                                      class="hidden aiu-ai-prompts__delete-form">
+                                    <input type="hidden" name="id" value="{currentPageId}" />
+                                    <input type="hidden" name="uid" value="{row.uid}" />
+                                    <input type="hidden" name="category" value="{aiPromptsCategory}" />
+                                </form>
+                                <div class="btn-group" role="group" aria-label="{f:translate(key: '{ll}:module.aiPrompts.table.actions', default: 'Actions')}">
                                     <button type="button"
-                                            class="btn btn-sm btn-default"
+                                            class="btn btn-default btn-sm"
+                                            title="{f:translate(key: '{ll}:module.aiPrompts.action.edit', default: 'Edit')}"
                                             data-aiu-prompt-edit
                                             data-prompt-uid="{row.uid}">
-                                        <f:translate key="{ll}:module.aiPrompts.action.edit" default="Edit" />
+                                        <core:icon identifier="actions-open" size="small" alternativeMarkupIdentifier="inline" />
                                     </button>
-                                    <form method="post"
-                                          action="{aiPromptsDeleteUri}"
-                                          class="aiu-ai-prompts__delete-form">
-                                        <input type="hidden" name="id" value="{currentPageId}" />
-                                        <input type="hidden" name="uid" value="{row.uid}" />
-                                        <input type="hidden" name="category" value="{aiPromptsCategory}" />
-                                        <button type="button"
-                                                class="btn btn-sm btn-danger"
-                                                data-aiu-prompt-delete>
-                                            <f:translate key="{ll}:module.aiPrompts.action.delete" default="Delete" />
-                                        </button>
-                                    </form>
+                                    <button type="button"
+                                            class="btn btn-danger btn-sm"
+                                            form="aiu-ai-prompts-delete-{row.uid}"
+                                            title="{f:translate(key: '{ll}:module.aiPrompts.action.delete', default: 'Delete')}"
+                                            data-aiu-prompt-delete>
+                                        <core:icon identifier="actions-delete" size="small" alternativeMarkupIdentifier="inline" />
+                                    </button>
                                 </div>
                             </f:else>
                         </f:if>

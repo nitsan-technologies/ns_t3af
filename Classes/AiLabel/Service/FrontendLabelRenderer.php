@@ -125,10 +125,16 @@ final class FrontendLabelRenderer
         return $this->encodeWebPath(PathUtility::getPublicResourceWebPath($iconFile));
     }
 
+    /**
+     * Encode path segments exactly once for HTML src attributes.
+     *
+     */
     private function encodeWebPath(string $path): string
     {
         return implode('/', array_map(
-            static fn(string $segment): string => $segment === '' ? '' : rawurlencode($segment),
+            static fn(string $segment): string => $segment === ''
+                ? ''
+                : rawurlencode(rawurldecode($segment)),
             explode('/', $path),
         ));
     }
