@@ -255,18 +255,11 @@
     background: var(--typo3-overlay-bg, rgba(0, 0, 0, .45));
     opacity: var(--typo3-overlay-opacity, 1);
 }
-.aiu-credits-contact {
-    background: var(--typo3-component-bg, #fff);
-    color: var(--typo3-component-color, inherit);
-    display: flex;
-    flex-direction: column;
-}
+
 /* Match TYPO3 .modal-header + .modal-severity-info */
 .aiu-credits-contact__header {
     align-items: center;
-    background: var(--aiu-credits-contact-header-bg);
     border-bottom: var(--typo3-component-border-width, 1px) solid var(--typo3-component-border-color, #ced4da);
-    color: var(--aiu-credits-contact-header-color);
     display: flex;
     flex-shrink: 0;
     font-weight: 700;

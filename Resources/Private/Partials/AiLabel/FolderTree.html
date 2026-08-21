@@ -17,14 +17,7 @@
                    data-ailabel-folder-label="{folderTree.root.label}">
                     <div class="node-content">
                         <span class="node-icon">
-                            <f:if condition="{folderTree.root.active}">
-                                <f:then>
-                                    <core:icon identifier="apps-filetree-folder-opened" size="small" alternativeMarkupIdentifier="inline" />
-                                </f:then>
-                                <f:else>
-                                    <core:icon identifier="apps-filetree-folder-default" size="small" alternativeMarkupIdentifier="inline" />
-                                </f:else>
-                            </f:if>
+                            <core:icon identifier="apps-filetree-mount" size="small" alternativeMarkupIdentifier="inline" />
                         </span>
                         <div class="node-contentlabel">
                             <div class="node-name">{folderTree.root.label}</div>
@@ -33,37 +26,10 @@
                     <span class="node-information">{folderTree.root.totalFiles}</span>
                 </a>
                 <f:for each="{folderTree.folders}" as="folder" iteration="folderIteration">
-                    <a class="node {f:if(condition: folder.active, then: 'node-selected')}"
-                       href="{f:be.uri(route: 't3af_dashboard.ai_label.media', parameters: '{folder: folder.identifier}')}"
-                       role="treeitem"
-                       aria-selected="{f:if(condition: folder.active, then: 'true', else: 'false')}"
-                       data-ailabel-folder-label="{folder.label}">
-                        <div class="node-treelines" aria-hidden="true">
-                            <div class="node-treeline {f:if(condition: folderIteration.isLast, then: 'node-treeline--last', else: 'node-treeline--connect')}"></div>
-                        </div>
-                        <div class="node-content">
-                            <span class="node-icon">
-                                <f:if condition="{folder.active}">
-                                    <f:then>
-                                        <core:icon identifier="apps-filetree-folder-opened" size="small" alternativeMarkupIdentifier="inline" />
-                                    </f:then>
-                                    <f:else>
-                                        <core:icon identifier="apps-filetree-folder-default" size="small" alternativeMarkupIdentifier="inline" />
-                                    </f:else>
-                                </f:if>
-                            </span>
-                            <div class="node-contentlabel">
-                                <div class="node-name">{folder.label}</div>
-                            </div>
-                        </div>
-                        <span class="node-information">{folder.totalFiles}</span>
-                        <f:if condition="{folder.openCount} > 0">
-                            <span class="badge badge-warning">{folder.openCount}</span>
-                        </f:if>
-                    </a>
+                    <f:render partial="AiLabel/FolderTreeNode" arguments="{folder: folder, depth: 1, isLast: folderIteration.isLast}" />
                 </f:for>
             </nav>
-            <p class="text-variant small mb-0 mt-2 px-1"><f:translate key="{ll}:module.aiLabel.folderTree.legend" default="Amber counts are items still awaiting a person." /></p>
         </div>
     </div>
 </aside>
+</html>

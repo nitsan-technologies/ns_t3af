@@ -156,6 +156,35 @@ function initFolderTreeLinks() {
   });
 }
 
+/**
+ * Expand / collapse nested folder branches (T3AI filelist-tree style).
+ */
+function initFolderTreeToggles() {
+  document.querySelectorAll('[data-ailabel-folder-toggle]').forEach((button) => {
+    if (!(button instanceof HTMLButtonElement)) {
+      return;
+    }
+    if (button.dataset.aiuAilabelToggleBound === '1') {
+      return;
+    }
+    button.dataset.aiuAilabelToggleBound = '1';
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const branch = button.closest('[data-ailabel-folder-branch]');
+      const children = branch?.querySelector(':scope > [data-ailabel-folder-children]');
+      if (!(children instanceof HTMLElement) || !(branch instanceof HTMLElement)) {
+        return;
+      }
+      const expand = children.hasAttribute('hidden');
+      children.toggleAttribute('hidden', !expand);
+      button.classList.toggle('is-expanded', expand);
+      button.setAttribute('aria-expanded', expand ? 'true' : 'false');
+      branch.dataset.ailabelFolderExpanded = expand ? '1' : '0';
+    });
+  });
+}
+
 export default class AiLabelModule {
   constructor() {
     this.drawer = document.querySelector('[data-ailabel-drawer]');
@@ -209,20 +238,67 @@ export default class AiLabelModule {
 
   initFolderSearch() {
     const input = document.querySelector('[data-ailabel-folder-search]');
-    const nodes = document.querySelectorAll('[data-ailabel-folder-label]');
-    if (!input || nodes.length === 0) {
+    const branches = document.querySelectorAll('[data-ailabel-folder-branch]');
+    if (!input || branches.length === 0) {
       return;
     }
+    if (input.dataset.aiuAilabelSearchBound === '1') {
+      return;
+    }
+    input.dataset.aiuAilabelSearchBound = '1';
 
     input.addEventListener('input', () => {
       const query = input.value.trim().toLowerCase();
-      nodes.forEach((node) => {
-        const link = node.closest('.aiu-ailabel-folder-tree .node');
-        if (!link) {
+      branches.forEach((branch) => {
+        if (!(branch instanceof HTMLElement)) {
           return;
         }
-        const label = (node.getAttribute('data-ailabel-folder-label') ?? '').toLowerCase();
-        link.hidden = query !== '' && !label.includes(query);
+        const labelEl = branch.querySelector(':scope > .aiu-ailabel-folder-tree__row [data-ailabel-folder-label]');
+        const label = (labelEl?.getAttribute('data-ailabel-folder-label') ?? '').toLowerCase();
+        const selfMatch = query === '' || label.includes(query);
+        branch.hidden = false;
+        branch.dataset.ailabelSearchMatch = selfMatch ? '1' : '0';
+      });
+
+      if (query === '') {
+        branches.forEach((branch) => {
+          if (!(branch instanceof HTMLElement)) {
+            return;
+          }
+          const children = branch.querySelector(':scope > [data-ailabel-folder-children]');
+          const toggle = branch.querySelector(':scope > .aiu-ailabel-folder-tree__row [data-ailabel-folder-toggle]');
+          const preferExpanded = branch.dataset.ailabelFolderExpanded === '1';
+          if (children instanceof HTMLElement) {
+            children.toggleAttribute('hidden', !preferExpanded);
+          }
+          if (toggle instanceof HTMLElement) {
+            toggle.classList.toggle('is-expanded', preferExpanded);
+            toggle.setAttribute('aria-expanded', preferExpanded ? 'true' : 'false');
+          }
+        });
+        return;
+      }
+
+      branches.forEach((branch) => {
+        if (!(branch instanceof HTMLElement)) {
+          return;
+        }
+        const nestedMatch = Array.from(branch.querySelectorAll('[data-ailabel-folder-branch]'))
+          .some((child) => child instanceof HTMLElement && child.dataset.ailabelSearchMatch === '1');
+        const show = branch.dataset.ailabelSearchMatch === '1' || nestedMatch;
+        branch.hidden = !show;
+        if (!show) {
+          return;
+        }
+        const children = branch.querySelector(':scope > [data-ailabel-folder-children]');
+        const toggle = branch.querySelector(':scope > .aiu-ailabel-folder-tree__row [data-ailabel-folder-toggle]');
+        if (nestedMatch && children instanceof HTMLElement) {
+          children.removeAttribute('hidden');
+          if (toggle instanceof HTMLElement) {
+            toggle.classList.add('is-expanded');
+            toggle.setAttribute('aria-expanded', 'true');
+          }
+        }
       });
     });
   }
@@ -353,6 +429,7 @@ function bootAiLabelModule() {
 
   initSubNavLinks();
   initFolderTreeLinks();
+  initFolderTreeToggles();
   module.initFolderSearch();
   module.initDrawerOnce();
 }

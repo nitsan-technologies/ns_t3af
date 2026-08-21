@@ -20,15 +20,32 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\AiLabel\EventListener;
 
 use TYPO3\CMS\Backend\Routing\UriBuilder;
+use TYPO3\CMS\Backend\Template\Components\ActionGroup;
+use TYPO3\CMS\Backend\Template\Components\ComponentFactory;
+use TYPO3\CMS\Core\Imaging\IconFactory;
+use TYPO3\CMS\Core\Imaging\IconSize;
+use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Filelist\Event\ProcessFileListActionsEvent;
 
 /**
  * File module row action deep link into the AI Label media tab.
+ *
+ * TYPO3 v14+ uses Buttons API ({@see ProcessFileListActionsEvent::setAction()});
+ * v12/v13 still use HTML action-item arrays.
  */
 final class ProcessFileListActionsListener
 {
+    private const ACTION_NAME = 'nst3af-open-ai-label';
+
+    private const LABEL = 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:ailabel.file_module.open';
+
+    public function __construct(
+        private readonly UriBuilder $uriBuilder,
+        private readonly IconFactory $iconFactory,
+    ) {}
+
     public function __invoke(ProcessFileListActionsEvent $event): void
     {
         if (!$event->isFile()) {
@@ -45,19 +62,58 @@ final class ProcessFileListActionsListener
             return;
         }
 
-        $uriBuilder = GeneralUtility::makeInstance(UriBuilder::class);
-        $url = (string) $uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.media', [
+        $url = (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.media', [
             'fileMetadataUid' => $uid,
             'folder' => dirname($file->getIdentifier()) . '/',
         ]);
+        $title = $this->translate(self::LABEL);
+
+        // v14+: Buttons API (breaking #107884). v12/v13: HTML action items.
+        if (method_exists($event, 'setAction') && class_exists(ComponentFactory::class) && class_exists(ActionGroup::class)) {
+            $button = GeneralUtility::makeInstance(ComponentFactory::class)
+                ->createLinkButton()
+                ->setHref($url)
+                ->setTitle($title)
+                ->setIcon($this->iconFactory->getIcon('actions-view', IconSize::SMALL));
+            $event->setAction($button, self::ACTION_NAME, ActionGroup::secondary);
+
+            return;
+        }
+
+        if (!method_exists($event, 'getActionItems') || !method_exists($event, 'setActionItems')) {
+            return;
+        }
 
         $actions = $event->getActionItems();
-        $actions[] = [
-            'identifier' => 'nst3af-open-ai-label',
-            'label' => 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:ailabel.file_module.open',
-            'iconIdentifier' => 'actions-view',
-            'href' => $url,
-        ];
+        $actions[self::ACTION_NAME] = sprintf(
+            '<a href="%s" class="btn btn-default" title="%s">%s</a>',
+            htmlspecialchars($url, ENT_QUOTES | ENT_HTML5),
+            htmlspecialchars($title, ENT_QUOTES | ENT_HTML5),
+            $this->renderSmallIcon('actions-view'),
+        );
         $event->setActionItems($actions);
+    }
+
+    private function translate(string $key): string
+    {
+        $languageService = $GLOBALS['LANG'] ?? null;
+        if ($languageService instanceof LanguageService) {
+            return $languageService->sL($key);
+        }
+
+        return 'Open in AI Label';
+    }
+
+    private function renderSmallIcon(string $identifier): string
+    {
+        if (enum_exists(IconSize::class)) {
+            return $this->iconFactory->getIcon($identifier, IconSize::SMALL)->render();
+        }
+
+        // TYPO3 12: getIcon() still accepts legacy string size.
+        $icon = (new \ReflectionMethod($this->iconFactory, 'getIcon'))
+            ->invoke($this->iconFactory, $identifier, 'small');
+
+        return is_object($icon) && method_exists($icon, 'render') ? (string) $icon->render() : '';
     }
 }
