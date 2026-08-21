@@ -1,4 +1,4 @@
-[![Latest Stable Version](https://img.shields.io/badge/Stable-1.1.4-success)](https://extensions.typo3.org/extension/ns_t3af)
+[![Latest Stable Version](https://img.shields.io/badge/Stable-1.1.5-success)](https://extensions.typo3.org/extension/ns_t3af)
 [![AI Foundation Github](https://img.shields.io/badge/AI--Foundation-informational?logo=github)](https://github.com/nitsan-technologies/ns_t3af)
 [![TYPO3 14](https://img.shields.io/badge/TYPO3-14-important.svg?logo=typo3)](https://get.typo3.org/version/14)
 [![TYPO3 13](https://img.shields.io/badge/TYPO3-13-important.svg?logo=typo3)](https://get.typo3.org/version/13)
@@ -21,18 +21,17 @@ composer require nitsan/ns-t3af
 
 Activate `ns_t3af` in the TYPO3 backend, then open **AI Foundation** (Admin Tools) and complete Quick Setup.
 
-## Free and open source, with a free licence key
+## Free and open source
 
-AI Foundation is GPL-2.0-or-later, on TER and public GitHub. No price, no domain limit,
-no time limit.
+AI Foundation is GPL-2.0-or-later, on TER and public GitHub. No price, no licence
+key, no registration, no domain limit, no time limit. Install it and it runs.
 
-It does need a **free licence key**. That is not a commercial gate: our licence manager
-`ns_license` is shared across the whole AI Universe and carries the AI Credits
-entitlement, and we have not separated AI Foundation from it. The key costs nothing and
-never expires. The check sends your key and your domain, and nothing else: no content,
-no prompts, no images, no IP addresses, no telemetry.
+It makes no licence call and sends us nothing. In the default mode your content
+goes from your server straight to the AI provider you configured, on your own key,
+and no T3Planet server is in that path. You can also run it entirely locally
+through Ollama.
 
-Full detail, including where your AI content goes: [LICENSING.md](LICENSING.md).
+Detail: [LICENSING.md](LICENSING.md).
 
 It includes these features:
 

@@ -27,9 +27,6 @@ final class LicenseUtilityTest extends TestCase
     protected function tearDown(): void
     {
         unset($GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af'][LicenseUtility::LICENSE_DEPENDENT_EXTENSIONS_EXTCONF_KEY]);
-        unset($_SERVER['HTTP_HOST']);
-        LicenseUtility::setExtensionLoadedChecker(null);
-        LicenseUtility::setLicenseDataFetcher(null);
         parent::tearDown();
     }
 
@@ -53,75 +50,13 @@ final class LicenseUtilityTest extends TestCase
         self::assertSame('ns_t3af', LicenseUtility::EXTENSION_KEY);
     }
 
-    public function testGetModuleLicenseStatusWhenNsLicenseMissing(): void
+    public function testModuleLicenseGateAlwaysAllows(): void
     {
-        LicenseUtility::setExtensionLoadedChecker(static fn(string $key): bool => false);
-
-        $status = LicenseUtility::getModuleLicenseStatus();
-
-        self::assertFalse($status['valid']);
-        self::assertSame(LicenseUtility::REASON_NS_LICENSE_MISSING, $status['reason']);
-        self::assertFalse(LicenseUtility::checkLicenseForModules());
-        self::assertTrue(LicenseUtility::checkLicenseForViewHelper());
-    }
-
-    public function testGetModuleLicenseStatusValidWithNsT3afKey(): void
-    {
-        $_SERVER['HTTP_HOST'] = 'example.test';
-        LicenseUtility::setExtensionLoadedChecker(static fn(string $key): bool => $key === 'ns_license');
-        LicenseUtility::setLicenseDataFetcher(static function (string $key): ?array {
-            if ($key !== 'ns_t3af') {
-                return null;
-            }
-
-            return [
-                'license_key' => 'FREE-LIFETIME',
-                'domains' => 'example.test',
-            ];
-        });
-
         $status = LicenseUtility::getModuleLicenseStatus();
 
         self::assertTrue($status['valid']);
         self::assertSame(LicenseUtility::REASON_OK, $status['reason']);
-    }
-
-    public function testGetModuleLicenseStatusValidViaLicensedChildProduct(): void
-    {
-        $_SERVER['HTTP_HOST'] = 'shop.example.test';
-        $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af'][LicenseUtility::LICENSE_DEPENDENT_EXTENSIONS_EXTCONF_KEY] = [
-            'ns_t3ai',
-        ];
-        LicenseUtility::setExtensionLoadedChecker(static fn(string $key): bool => in_array($key, ['ns_license', 'ns_t3ai'], true));
-        LicenseUtility::setLicenseDataFetcher(static function (string $key): ?array {
-            if ($key === 'ns_t3ai') {
-                return [
-                    'license_key' => 'T3AI-KEY',
-                    'domains' => 'shop.example.test',
-                ];
-            }
-
-            return null;
-        });
-
-        $status = LicenseUtility::getModuleLicenseStatus();
-
-        self::assertTrue($status['valid']);
-        self::assertSame(LicenseUtility::REASON_OK, $status['reason']);
-    }
-
-    public function testGetModuleLicenseStatusInvalidWhenNoKeysMatch(): void
-    {
-        $_SERVER['HTTP_HOST'] = 'example.test';
-        $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af'][LicenseUtility::LICENSE_DEPENDENT_EXTENSIONS_EXTCONF_KEY] = [
-            'ns_t3ai',
-        ];
-        LicenseUtility::setExtensionLoadedChecker(static fn(string $key): bool => in_array($key, ['ns_license', 'ns_t3ai'], true));
-        LicenseUtility::setLicenseDataFetcher(static fn(string $key): ?array => null);
-
-        $status = LicenseUtility::getModuleLicenseStatus();
-
-        self::assertFalse($status['valid']);
-        self::assertSame(LicenseUtility::REASON_NO_VALID_KEY, $status['reason']);
+        self::assertTrue(LicenseUtility::checkLicenseForModules());
+        self::assertFalse(LicenseUtility::checkLicenseForViewHelper());
     }
 }

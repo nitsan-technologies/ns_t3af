@@ -15,7 +15,6 @@ Before you start
 ================
 
 * AI Foundation (``EXT:ns_t3af``) installed and active
-* Valid T3Planet license available (``EXT:ns_license``)
 * Server can reach the T3Planet API
 
 Activate Credits
@@ -25,7 +24,9 @@ Activate Credits
 2. Choose :guilabel:`T3Planet Credits`.
 3. Confirm if asked.
 4. Click :guilabel:`Activate` if shown.
-5. Wait for success → page reloads.
+5. If no AI Universe license contact is available, enter name and email in the
+   free-credits form, accept the privacy notice, then continue.
+6. Wait for success → page reloads.
 
 .. figure:: ../../Images/t3planet-credits-activate.png
    :alt: AI Providers with T3Planet Credits selected and Activate button
@@ -42,9 +43,10 @@ Activate Credits
 
 .. note::
 
-   If Activate fails, check that your T3Planet license is valid, the server can
-   reach the T3Planet API, and try again. See
-   :ref:`Troubleshooting <t3planet-credits-troubleshooting>` for common fixes.
+   If Activate fails, check that the server can reach the T3Planet API and try
+   again. When no license contact exists, complete the free-credits name/email
+   form. See :ref:`Troubleshooting <t3planet-credits-troubleshooting>` for
+   common fixes.
 
 After activation
 ================

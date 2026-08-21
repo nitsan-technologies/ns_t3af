@@ -72,8 +72,9 @@ Privacy
 AI Foundation is self-hosted. With **Your Own API Keys**, prompts and responses
 go from your server to the AI provider you configure. T3Planet is not in that
 AI data path. With :ref:`T3Planet Credits <t3planet-credit-system>` active,
-billable AI calls go through T3Planet and use your credit balance. License
-validation only sends the license key and domain.
+billable AI calls go through T3Planet and use your credit balance. AI Foundation
+makes no product licence call. See :ref:`Installation <installation>` and the
+extension ``LICENSING.md`` / ``PRIVACY.md``.
 
 Still stuck?
 ------------

@@ -19,16 +19,16 @@
         <source>Another T3Planet Credits account is already bound to this server IP. Contact support.</source>
       </trans-unit>
       <trans-unit id="credits.api.error.license_invalid" resname="credits.api.error.license_invalid">
-        <source>The selected license key is not valid for T3Planet Credits.</source>
+        <source>This Credits account is not valid. Click Activate again or contact support.</source>
       </trans-unit>
       <trans-unit id="credits.api.error.license_expired" resname="credits.api.error.license_expired">
-        <source>Your T3Planet license has expired. Renew the license to use Credits mode.</source>
+        <source>Your T3Planet Credits access has expired. Renew or activate again to continue.</source>
       </trans-unit>
       <trans-unit id="credits.api.error.license_suspended" resname="credits.api.error.license_suspended">
-        <source>Your T3Planet license is suspended. Contact T3Planet support.</source>
+        <source>Your T3Planet Credits account is suspended. Contact T3Planet support.</source>
       </trans-unit>
       <trans-unit id="credits.api.error.domain_mismatch" resname="credits.api.error.domain_mismatch">
-        <source>This TYPO3 installation domain is not authorized for the selected license.</source>
+        <source>This TYPO3 installation domain is not authorized for T3Planet Credits.</source>
       </trans-unit>
       <trans-unit id="credits.api.error.insufficient_credits" resname="credits.api.error.insufficient_credits">
         <source>Your T3Planet credit balance is too low for this request.</source>
@@ -91,13 +91,16 @@
         <source>T3Planet Credits returned an invalid response. Check the API base URL and server logs.</source>
       </trans-unit>
       <trans-unit id="credits.api.error.license_keys_missing" resname="credits.api.error.license_keys_missing">
-        <source>No T3Planet license keys are configured. Install ns_license or add license keys.</source>
+        <source>T3Planet Credits could not be activated for this installation. Click Activate to start free credits.</source>
       </trans-unit>
       <trans-unit id="credits.api.error.no_licenses" resname="credits.api.error.no_licenses">
-        <source>No T3Planet license keys were found. Activate a T3Planet extension license first.</source>
+        <source>No T3Planet Credits account was found for this installation. Click Activate to start free credits.</source>
       </trans-unit>
       <trans-unit id="credits.api.error.feature_key_required" resname="credits.api.error.feature_key_required">
         <source>An AI feature key is required when T3Planet Credits mode is active.</source>
+      </trans-unit>
+      <trans-unit id="credits.api.error.contact_required" resname="credits.api.error.contact_required">
+        <source>Name and a valid email are required to activate free credits.</source>
       </trans-unit>
       <trans-unit id="credits.api.error.api_error" resname="credits.api.error.api_error">
         <source>The T3Planet Credits service returned an error. Please try again.</source>

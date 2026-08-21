@@ -3,6 +3,9 @@
 T3AF is self-hosted. Your content, prompts, images, and visitor data stay on your TYPO3
 server unless you choose a mode that routes AI requests elsewhere (see below).
 
+AI Foundation makes **no licence call** and sends T3Planet nothing for product activation.
+See [LICENSING.md](LICENSING.md).
+
 ## AI Provider Mode — two data paths
 
 ### Your Own API Keys (default)
@@ -19,7 +22,7 @@ T3Planet may invoke upstream AI providers on your behalf and debit your credit b
 
 **What may be transmitted in Credits mode:**
 
-- License key(s) and site domain (for token identity and domain matching)
+- Site domain and optional contact name/email (for trial token identity)
 - `feature_key`, `request_uuid`, and request metadata required for billing
 - Prompts and model inputs may be stored server-side in billing records (`meta_json`) for
   support, fraud prevention, and cost reconciliation — see your T3Planet terms and DPA
@@ -32,19 +35,8 @@ T3Planet may invoke upstream AI providers on your behalf and debit your credit b
 API base URL is resolved per environment and cached in `tx_nst3af_runtime_setting.t3planet_api_base_url`
 (see `context/features/credits-api-base-url.md`). Optional override: env `T3PLANET_CREDITS_API_BASE_URL`.
 
-## License check (separate from Credits billing)
-
-To validate a license key, T3AF contacts the T3Planet license server and sends only:
-
-- the license key
-- the domain the license is used on
-
-No content, prompts, images, IP addresses, or usage telemetry are transmitted in this
-license validation call.
-
 ## Retention
 
-- **License server:** stores the key-to-domain association needed to validate the license.
 - **Credits billing (Credits mode only):** retention of billing records and optional prompt
   metadata is governed by T3Planet's credits service policies; configure Credits mode only
   if this processing is acceptable for your site and legal basis.

@@ -72,8 +72,8 @@
                 <target>Der Credits-Modus ist aktiv.</target>
             </trans-unit>
             <trans-unit id="credits.js.notification.creditsSelected">
-                <source>Credits mode selected. Click Activate to connect your license.</source>
-                <target>Credits-Modus ausgewählt. CLIck Aktivieren Sie diese Option, um Ihre Lizenz zu verbinden.</target>
+                <source>Credits mode selected. Click Activate to start free credits.</source>
+                <target>Credits-Modus ausgewählt. Klicken Sie auf Aktivieren, um kostenlose Credits zu starten.</target>
             </trans-unit>
             <trans-unit id="credits.js.notification.ownKeysAgain">
                 <source>Using your own API keys again.</source>
@@ -84,8 +84,56 @@
                 <target>Der Credits-Modus ist aktiv. Ihr Dashboard wird geladen…</target>
             </trans-unit>
             <trans-unit id="credits.js.notification.activateIncomplete">
-                <source>Mode enabled, but activation did not complete. Check license keys and API connectivity.</source>
-                <target>Modus aktiviert, aber die Aktivierung wurde nicht abgeschlossen. Überprüfen Sie die Lizenzschlüssel und die API-Konnektivität.</target>
+                <source>Mode enabled, but activation did not complete. Check API connectivity and try Activate again.</source>
+                <target>Modus aktiviert, aber die Aktivierung wurde nicht abgeschlossen. Prüfen Sie die API-Verbindung und versuchen Sie Activate erneut.</target>
+            </trans-unit>
+            <trans-unit id="credits.js.contactModal.title">
+                <source>Activate T3Planet AI Credits</source>
+                <target>T3Planet AI Credits aktivieren</target>
+            </trans-unit>
+            <trans-unit id="credits.js.contactModal.subtitle">
+                <source>Start your free AI Credits, No card required.</source>
+                <target>Starten Sie Ihre kostenlosen AI Credits. Keine Karte erforderlich.</target>
+            </trans-unit>
+            <trans-unit id="credits.js.contactModal.name">
+                <source>Name</source>
+                <target>Name</target>
+            </trans-unit>
+            <trans-unit id="credits.js.contactModal.email">
+                <source>Email</source>
+                <target>E-Mail</target>
+            </trans-unit>
+            <trans-unit id="credits.js.contactModal.consent">
+                <source>I have read and agree to T3Planet’s %s and %s.</source>
+                <target>Ich habe die %s und %s von T3Planet gelesen und stimme zu.</target>
+            </trans-unit>
+            <trans-unit id="credits.js.contactModal.privacy">
+                <source>Privacy Policy</source>
+                <target>Datenschutzerklärung</target>
+            </trans-unit>
+            <trans-unit id="credits.js.contactModal.terms">
+                <source>Terms &amp; Conditions</source>
+                <target>Allgemeine Geschäftsbedingungen</target>
+            </trans-unit>
+            <trans-unit id="credits.js.contactModal.privacyUrl">
+                <source>https://t3planet.de/en/privacy-policy</source>
+                <target>https://t3planet.de/de/privacy-policy</target>
+            </trans-unit>
+            <trans-unit id="credits.js.contactModal.termsUrl">
+                <source>https://t3planet.de/en/terms-and-conditions</source>
+                <target>https://t3planet.de/de/terms-and-conditions</target>
+            </trans-unit>
+            <trans-unit id="credits.js.contactModal.continue">
+                <source>Continue</source>
+                <target>Weiter</target>
+            </trans-unit>
+            <trans-unit id="credits.js.contactModal.validation">
+                <source>Please enter your name and a valid email address.</source>
+                <target>Bitte geben Sie Ihren Namen und eine gültige E-Mail-Adresse ein.</target>
+            </trans-unit>
+            <trans-unit id="credits.js.contactModal.consentRequired">
+                <source>Please agree to the Privacy Policy and Terms &amp; Conditions to continue.</source>
+                <target>Bitte stimmen Sie der Datenschutzerklärung und den AGB zu, um fortzufahren.</target>
             </trans-unit>
             <trans-unit id="provider.js.error.drawerLoadFailed">
                 <source>Drawer load failed</source>
