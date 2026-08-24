@@ -2675,6 +2675,22 @@
                 <source>Use site default profile</source>
                 <target>Verwenden Sie das Standardprofil der Website</target>
             </trans-unit>
+            <trans-unit id="module.aiLabel.flash.bulkDone">
+                <source>Bulk action completed.</source>
+                <target>Sammelaktion abgeschlossen.</target>
+            </trans-unit>
+            <trans-unit id="module.aiLabel.flash.bulkNone">
+                <source>Nothing was processed.</source>
+                <target>Es wurde nichts verarbeitet.</target>
+            </trans-unit>
+            <trans-unit id="module.aiLabel.flash.undoDone">
+                <source>Last bulk action undone.</source>
+                <target>Letzte Sammelaktion rückgängig gemacht.</target>
+            </trans-unit>
+            <trans-unit id="module.aiLabel.flash.undoNone">
+                <source>Nothing to undo (expired or already undone).</source>
+                <target>Nichts rückgängig zu machen (abgelaufen oder bereits rückgängig gemacht).</target>
+            </trans-unit>
             <trans-unit id="dashboard.restricted.intro">
                 <source>Your account has access to the following AI Foundation areas. Open a section below to get started.</source>
                 <target>Ihr Konto hat Zugriff auf die folgenden AI Foundation-Bereiche. Öffnen Sie unten einen Abschnitt, um zu beginnen.</target>

@@ -50,18 +50,26 @@ final class UndoCacheService
     ) {}
 
     /**
+     * Snapshot a single record (drawer / DataHandler). Does not replace last bulk undo.
+     *
      * @param array<string, mixed> $previousValues
      */
     public function remember(string $table, int $uid, array $previousValues): void
     {
-        $this->rememberBulk(0, [[
-            'table' => $table,
-            'uid' => $uid,
-            'values' => $this->extractAiLabelFields($previousValues),
-        ]]);
+        try {
+            $this->cacheManager->getCache(self::CACHE_IDENTIFIER)->set(
+                $this->cacheKey($table, $uid),
+                $this->extractAiLabelFields($previousValues),
+                [],
+                self::BULK_TTL,
+            );
+        } catch (NoSuchCacheException) {
+        }
     }
 
     /**
+     * Replace the last bulk snapshot for this backend user (10 minutes).
+     *
      * @param list<array{table: string, uid: int, values?: array<string, mixed>}> $batch
      */
     public function rememberBulk(int $backendUserId, array $batch): void
@@ -69,17 +77,15 @@ final class UndoCacheService
         try {
             $normalized = [];
             foreach ($batch as $item) {
-                $values = $item['values'] ?? [];
                 $normalized[] = [
                     'table' => $item['table'],
                     'uid' => $item['uid'],
-                    'values' => $this->extractAiLabelFields($values),
+                    'values' => $this->extractAiLabelFields($item['values'] ?? []),
                 ];
             }
-            $existing = $this->pullBulk($backendUserId);
             $this->cacheManager->getCache(self::CACHE_IDENTIFIER)->set(
                 $this->bulkKey($backendUserId),
-                array_merge($existing, $normalized),
+                $normalized,
                 [],
                 self::BULK_TTL,
             );
@@ -95,7 +101,7 @@ final class UndoCacheService
             $table = (string) ($item['table'] ?? '');
             $uid = (int) ($item['uid'] ?? 0);
             $values = $item['values'] ?? [];
-            if ($table === '' || $uid <= 0 || !is_array($values)) {
+            if ($table === '' || $uid <= 0 || !is_array($values) || $values === []) {
                 continue;
             }
             $this->connectionPool->getConnectionForTable($table)->update($table, $values, ['uid' => $uid]);

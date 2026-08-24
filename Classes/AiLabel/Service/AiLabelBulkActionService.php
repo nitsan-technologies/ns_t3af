@@ -28,6 +28,16 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
  */
 final class AiLabelBulkActionService
 {
+    /** @var list<string> */
+    private const ACTIONS = [
+        'confirm',
+        'clear',
+        'no_ai',
+        'do_not_label',
+        'set_public_interest',
+        'assign_responsible',
+    ];
+
     public function __construct(
         private readonly ConnectionPool $connectionPool,
         private readonly ConfirmationService $confirmationService,
@@ -40,6 +50,10 @@ final class AiLabelBulkActionService
      */
     public function execute(string $action, array $refs, int $backendUserId, string $payload = ''): array
     {
+        if (!in_array($action, self::ACTIONS, true)) {
+            return ['processed' => 0, 'action' => $action];
+        }
+
         $batch = [];
         $processed = 0;
 
@@ -71,7 +85,6 @@ final class AiLabelBulkActionService
                     'tx_nst3af_ailabel_responsible_person' => $payload,
                     'tx_nst3af_ailabel_human_review' => 1,
                 ]),
-                default => null,
             };
 
             ++$processed;

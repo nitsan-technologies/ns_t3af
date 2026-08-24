@@ -26,6 +26,16 @@
             <f:translate key="{ll}:module.aiLabel.flash.bulkNone" default="Nothing was processed." />
         </div>
     </f:if>
+    <f:if condition="{flash} == undo-done">
+        <div class="callout callout-success mb-3">
+            <f:translate key="{ll}:module.aiLabel.flash.undoDone" default="Last bulk action undone." />
+        </div>
+    </f:if>
+    <f:if condition="{flash} == undo-none">
+        <div class="callout callout-warning mb-3">
+            <f:translate key="{ll}:module.aiLabel.flash.undoNone" default="Nothing to undo (expired or already undone)." />
+        </div>
+    </f:if>
     <f:if condition="{flash} == settings-saved">
         <div class="callout callout-success mb-3"><f:translate key="{ll}:module.aiLabel.settings.saved" default="Settings saved." /></div>
     </f:if>

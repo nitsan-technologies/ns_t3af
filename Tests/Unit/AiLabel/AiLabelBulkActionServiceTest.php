@@ -24,6 +24,7 @@ use NITSAN\NsT3AF\AiLabel\Service\ConfirmationService;
 use NITSAN\NsT3AF\AiLabel\Service\UndoCacheService;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Cache\CacheManager;
+use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
@@ -62,5 +63,73 @@ final class AiLabelBulkActionServiceTest extends TestCase
         $result = $service->execute('confirm', ['invalid', 'bad:0'], 1);
 
         self::assertSame(0, $result['processed']);
+    }
+
+    public function testUnknownActionDoesNotTouchDatabase(): void
+    {
+        $pool = $this->createMock(ConnectionPool::class);
+        $pool->expects(self::never())->method('getConnectionForTable');
+        $cacheManager = $this->createMock(CacheManager::class);
+        $cacheManager->expects(self::never())->method('getCache');
+
+        $service = new AiLabelBulkActionService(
+            $pool,
+            new ConfirmationService($pool, null),
+            new UndoCacheService($cacheManager, $pool),
+        );
+
+        $result = $service->execute('not_a_real_action', ['sys_file_metadata:1'], 1);
+
+        self::assertSame(0, $result['processed']);
+    }
+
+    public function testRememberBulkKeepsOnlyTheLastBatch(): void
+    {
+        $store = [];
+        $cache = $this->createMock(FrontendInterface::class);
+        $cache->method('set')->willReturnCallback(
+            static function (string $key, mixed $data, array $tags = [], mixed $lifetime = null) use (&$store): void {
+                unset($tags, $lifetime);
+                $store[$key] = $data;
+            },
+        );
+        $cache->method('get')->willReturnCallback(
+            static function (string $key) use (&$store): mixed {
+                return $store[$key] ?? false;
+            },
+        );
+        $cache->method('remove')->willReturnCallback(
+            static function (string $key) use (&$store): bool {
+                unset($store[$key]);
+
+                return true;
+            },
+        );
+
+        $cacheManager = $this->createMock(CacheManager::class);
+        $cacheManager->method('getCache')->willReturn($cache);
+
+        $connection = $this->createMock(Connection::class);
+        $connection->expects(self::once())->method('update')->with(
+            'sys_file_metadata',
+            self::callback(static fn(array $fields): bool => ($fields['tx_nst3af_ailabel_involvement'] ?? '') === 'no_ai'),
+            ['uid' => 2],
+        );
+        $pool = $this->createMock(ConnectionPool::class);
+        $pool->method('getConnectionForTable')->willReturn($connection);
+
+        $undo = new UndoCacheService($cacheManager, $pool);
+        $undo->rememberBulk(5, [[
+            'table' => 'sys_file_metadata',
+            'uid' => 1,
+            'values' => ['tx_nst3af_ailabel_involvement' => 'ai_generated'],
+        ]]);
+        $undo->rememberBulk(5, [[
+            'table' => 'sys_file_metadata',
+            'uid' => 2,
+            'values' => ['tx_nst3af_ailabel_involvement' => 'no_ai'],
+        ]]);
+
+        self::assertSame(1, $undo->restoreBulk(5));
     }
 }

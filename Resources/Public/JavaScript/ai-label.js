@@ -204,6 +204,13 @@ export default class AiLabelModule {
       const countEl = root.querySelector('[data-ailabel-selected-count]');
       const bulkBtns = root.querySelectorAll('[data-ailabel-bulk-btn]');
 
+      if (table instanceof HTMLElement && table.dataset.aiuAilabelSelectBound === '1') {
+        return;
+      }
+      if (table instanceof HTMLElement) {
+        table.dataset.aiuAilabelSelectBound = '1';
+      }
+
       const sync = () => {
         const checked = table.querySelectorAll('[data-ailabel-row-checkbox]:checked').length;
         if (countEl) {
@@ -303,11 +310,17 @@ export default class AiLabelModule {
     });
   }
 
-  initUndoButtons(root) {
-    root.querySelectorAll('[data-ailabel-undo]').forEach((button) => {
-      button.addEventListener('click', () => {
-        button.setAttribute('disabled', 'disabled');
-      });
+  initBulkForm(root) {
+    const form = root.querySelector('#aiu-ailabel-bulk-form');
+    if (!(form instanceof HTMLFormElement) || form.dataset.aiuAilabelBulkBound === '1') {
+      return;
+    }
+    form.dataset.aiuAilabelBulkBound = '1';
+    form.addEventListener('submit', (event) => {
+      const selected = root.querySelectorAll('[data-ailabel-row-checkbox]:checked');
+      if (selected.length === 0) {
+        event.preventDefault();
+      }
     });
   }
 
@@ -411,7 +424,7 @@ export default class AiLabelModule {
 function initAiLabelListRoot(root) {
   const module = new AiLabelModule();
   module.initSelection(root);
-  module.initUndoButtons(root);
+  module.initBulkForm(root);
   initFilterForm(root);
   initInModuleLinks(root);
   initPerPageSelect(root);
