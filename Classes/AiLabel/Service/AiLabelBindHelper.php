@@ -43,6 +43,7 @@ final class AiLabelBindHelper
 
     public static function bindFileMetadata(int $uid, string $source = 'ns_t3aa', bool $altTextOnly = false): void
     {
+        // Metadata-only (alt/title/description): do not stamp the file as AI media.
         if ($altTextOnly) {
             return;
         }

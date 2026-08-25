@@ -26,7 +26,7 @@
             <div class="mb-3">
                 <label class="form-label"><f:translate key="{ll}:module.aiLabel.settings.wording" default="Wording beside the icon" /></label>
                 <select name="labelWording" class="form-select">
-                    <option value="show_site_language" {f:if(condition: '{settings.labelWording} == show_site_language', then: 'selected="selected"')}>Show, in the site language</option>
+                    <option value="show_site_language" {f:if(condition: '{settings.labelWording} == show_site_language', then: 'selected="selected"')}>Show text only, in the site language</option>
                     <option value="icon_only" {f:if(condition: '{settings.labelWording} == icon_only', then: 'selected="selected"')}>Icon only</option>
                 </select>
             </div>

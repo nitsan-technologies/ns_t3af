@@ -43,9 +43,15 @@ final class CompatibilitySmokeTest extends TestCase
         self::assertFileExists($this->extRoot . '/Configuration/TCA/Overrides/sys_template.php');
         self::assertFileExists($this->extRoot . '/Resources/Private/Partials/FluidStyledContent/DropIn/After/All.html');
         self::assertFileExists($this->extRoot . '/Resources/Private/Partials/FluidStyledContent/Media/Rendering/Image.html');
+        self::assertFileExists($this->extRoot . '/Resources/Private/Partials/FluidStyledContent/Media/Rendering/Audio.html');
+        self::assertFileExists($this->extRoot . '/Resources/Private/Partials/FluidStyledContent/Media/Rendering/Video.html');
         self::assertStringContainsString(
             'ail:label file="{file}"',
             (string) file_get_contents($this->extRoot . '/Resources/Private/Partials/FluidStyledContent/Media/Rendering/Image.html'),
+        );
+        self::assertStringContainsString(
+            'ail:label file="{file}"',
+            (string) file_get_contents($this->extRoot . '/Resources/Private/Partials/FluidStyledContent/Media/Rendering/Audio.html'),
         );
         self::assertFileExists($this->extRoot . '/Build/version-matrix.json');
         self::assertFileExists($this->extRoot . '/Configuration/BuildInputs/compliance-strings.json');

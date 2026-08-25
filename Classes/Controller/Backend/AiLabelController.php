@@ -145,7 +145,7 @@ final class AiLabelController extends AbstractAiUniverseModuleController
                 'recordEditBaseUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.record_edit'),
                 'exportUri' => (string) $this->uriBuilder->buildUriFromRoute(
                     't3af_dashboard.ai_label.export',
-                    ['format' => 'csv'],
+                    ['format' => 'csv', 'scope' => 'media'],
                 ),
                 'refreshUri' => (string) $this->uriBuilder->buildUriFromRoute(
                     't3af_dashboard.ai_label.media',
@@ -178,7 +178,7 @@ final class AiLabelController extends AbstractAiUniverseModuleController
                 'recordEditBaseUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.record_edit'),
                 'exportUri' => (string) $this->uriBuilder->buildUriFromRoute(
                     't3af_dashboard.ai_label.export',
-                    ['format' => 'csv'],
+                    ['format' => 'csv', 'scope' => 'texts'],
                 ),
                 'refreshUri' => (string) $this->uriBuilder->buildUriFromRoute(
                     't3af_dashboard.ai_label.texts',
@@ -205,7 +205,7 @@ final class AiLabelController extends AbstractAiUniverseModuleController
                 'settingsSaveUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.ai_label.settings_save'),
                 'exportUri' => (string) $this->uriBuilder->buildUriFromRoute(
                     't3af_dashboard.ai_label.export',
-                    ['format' => 'csv'],
+                    ['format' => 'csv', 'scope' => 'all'],
                 ),
             ],
         ));
@@ -268,13 +268,22 @@ final class AiLabelController extends AbstractAiUniverseModuleController
 
     public function exportAction(ServerRequestInterface $request): ResponseInterface
     {
-        $csv = $this->evidenceExportService->toCsv($this->evidenceExportService->collectRows());
+        $scope = (string) ($request->getQueryParams()['scope'] ?? 'all');
+        if (!in_array($scope, ['all', 'media', 'texts'], true)) {
+            $scope = 'all';
+        }
+        $csv = $this->evidenceExportService->toCsv($this->evidenceExportService->collectRows($scope));
         $response = new Response();
         $response->getBody()->write($csv);
+        $filename = match ($scope) {
+            'media' => 'ai-label-evidence-media.csv',
+            'texts' => 'ai-label-evidence-texts.csv',
+            default => 'ai-label-evidence.csv',
+        };
 
         return $response
             ->withHeader('Content-Type', 'text/csv; charset=utf-8')
-            ->withHeader('Content-Disposition', 'attachment; filename="ai-label-evidence.csv"');
+            ->withHeader('Content-Disposition', 'attachment; filename="' . $filename . '"');
     }
 
     public function recordEditAction(ServerRequestInterface $request): ResponseInterface

@@ -86,8 +86,11 @@ Parameters:
 * ``$uid`` — live record uid (file metadata uid for ``bindFileMetadata``)
 * ``$source`` — short extension identifier stored as recording source (use your
   extension key, for example ``my_extension``)
-* ``$altTextOnly`` (``bindFileMetadata`` only) — skip bind when only alt text
-  was updated
+* ``$altTextOnly`` (``bindFileMetadata`` only) — skip bind when only file
+  **metadata text** changed (alt / title / description). Do **not** use this
+  flag when the binary media itself was AI-generated (images, TTS audio).
+  ns_t3aa metadata writes always pass ``altTextOnly: true`` so photos are not
+  stamped as AI media when only accessibility text was generated.
 
 If no capture correlation id is in the current request (for example a follow-up
 HTTP request after async file processing), the helper writes origin with
@@ -233,12 +236,18 @@ Module settings consumed on the frontend
 ``AiLabelSettingsService`` drives visitor badge appearance:
 
 * ``labelSize``, ``labelWording`` — passed to ``FrontendLabelRenderer``
+  (``show_site_language`` = text only; ``icon_only`` = icon only)
 * ``markImageFile === overlay`` — enables image partial wrapper and overlay badge
 * ``markImageFile === written_in`` — stamps processed image copies (ImageMagick)
 * ``labelPosition`` — overlay CSS class and processed-file stamp corner
 * ``machineReadable`` — ``iptc`` / ``iptc_jsonld`` / ``off``
 * ``labelUnknownOrigin`` — visitor badge for confirmed unknown-origin media
-* ``secondInfoLayer`` — expandable ``<details>`` on the badge
+* ``secondInfoLayer`` — expandable ``<details>`` on the badge with
+  human-readable involvement wording only (machine reason codes stay in
+  evidence export / backend lists)
+* When ``markImageFile === overlay``, media CTypes (``image``, ``textmedia``,
+  ``textpic``) skip the content-element After/All drop-in badge so the image
+  overlay is the single visitor mark
 
 Deep links
 ----------

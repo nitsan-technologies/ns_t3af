@@ -38,12 +38,17 @@ final class AiLabelExportCommand extends Command
     protected function configure(): void
     {
         $this->addOption('format', 'f', InputOption::VALUE_REQUIRED, 'csv or html', 'csv');
+        $this->addOption('scope', null, InputOption::VALUE_REQUIRED, 'all, media, or texts', 'all');
         $this->addOption('output', 'o', InputOption::VALUE_REQUIRED, 'Output file path');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $rows = $this->exportService->collectRows();
+        $scope = (string) $input->getOption('scope');
+        if (!in_array($scope, ['all', 'media', 'texts'], true)) {
+            $scope = 'all';
+        }
+        $rows = $this->exportService->collectRows($scope);
         $format = (string) $input->getOption('format');
         $payload = $format === 'html' ? $this->exportService->toHtml($rows) : $this->exportService->toCsv($rows);
         $target = (string) ($input->getOption('output') ?: 'php://stdout');

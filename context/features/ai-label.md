@@ -79,7 +79,7 @@ Every decision stores a `ReasonCode` enum value (machine-readable, exported in e
 | Extension | Integration status |
 |---|---|
 | **ns_t3ai** | **Covered** — pages/content/files via `AiLabelBindHelper` (always `ai_generated`); stock libraries skipped |
-| **ns_t3aa** | **Covered** — generated media via `bindFileMetadata` (`ai_generated`); alt-text-only updates skipped |
+| **ns_t3aa** | **Covered** — TTS/binary media via `bindFileMetadata` (`ai_generated`); **metadata-only** alt/title/description writes always pass `$altTextOnly` and never stamp the file as AI media |
 | **ns_t3al** | **Not integrated** — blind spot in coverage when ext not loaded; dedicated translation workflows need future hooks |
 | **Third party** | `AiLabelBindHelper` at save time (always `ai_generated`) or `AiLabelRecorderInterface` |
 
@@ -102,7 +102,7 @@ Capture is automatic for all AI Foundation provider calls; bind must happen when
 | Confirmation / undo | `Classes/AiLabel/Service/ConfirmationService.php`, `UndoCacheService.php` |
 | Record drawer | `Classes/AiLabel/Service/AiLabelRecordDrawerService.php` |
 | Frontend render | `Classes/AiLabel/Service/FrontendLabelRenderer.php`, `ViewHelpers/LabelViewHelper.php`, `RecordStateViewHelper.php`, `FileStateViewHelper.php` |
-| Image overlay | `Resources/Private/Partials/FluidStyledContent/Media/Rendering/Image.html`, `Resources/Public/Css/frontend/ai-label.css` |
+| Image overlay | `Resources/Private/Partials/FluidStyledContent/Media/Rendering/Image.html`, `Audio.html`, `Video.html` (audio/video always get file badge when rules pass), `DropIn/After/All.html` (CE badge skipped for media CTypes when overlay on), `Resources/Public/Css/frontend/ai-label.css` |
 | Frontend state | `Classes/AiLabel/Dto/FrontendLabelState.php`, `FrontendLabelStateFactory.php`, `DataProcessing/RecordStateProcessor.php` (`nst3af-label`) |
 | TypoScript | `Configuration/TypoScript/setup.typoscript`, static template + site set `nitsan/ns-t3af-label` |
 | DataHandler hook | `Classes/AiLabel/Hook/DataHandlerAiLabelHook.php` |
@@ -123,7 +123,7 @@ Capture is automatic for all AI Foundation provider calls; bind must happen when
 | `ai_label.undo` | POST | Restore last bulk batch from cache |
 | `ai_label.record_edit` | GET | Drawer HTML (AJAX) |
 | `ai_label.record_save` | POST | Persist drawer fields |
-| `ai_label.export` | GET | CSV/HTML evidence export |
+| `ai_label.export` | GET | CSV evidence export (`scope=media\|texts\|all`; evidence-relevant rows only) |
 
 Undo cache keys use underscores (`bulk_1`, `sys_file_metadata_43`) — TYPO3 cache identifiers must not contain `:`.
 
@@ -133,7 +133,7 @@ Undo cache keys use underscores (`bulk_1`, `sys_file_metadata_43`) — TYPO3 cac
 
 **Do:** Bind generations at every child-extension persistence point. Use `ComplianceStringsService` for user-facing compliance copy. Confirm labels in the module before treating records as reviewed.
 
-**Don't:** Present coverage % as legal compliance. Auto-confirm without checking `AutoConfirmSettingsService` hold rules (public-interest text stays manual). Tag alt-text-only file metadata binds (`bindFileMetadata` skips when `$altTextOnly`).
+**Don't:** Present coverage % as legal compliance. Auto-confirm without checking `AutoConfirmSettingsService` hold rules (public-interest text stays manual). Tag file metadata text-only updates as AI media (`bindFileMetadata` skips when `$altTextOnly` — ns_t3aa alt/title/description always skips). Expose machine reason codes (`rule_default`, …) on the visitor second info layer (export/BE only). Render both CE DropIn and image-overlay badges for the same media CType.
 
 ---
 

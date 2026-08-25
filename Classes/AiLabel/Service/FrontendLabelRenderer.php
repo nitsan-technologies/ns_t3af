@@ -104,20 +104,37 @@ final class FrontendLabelRenderer
             'large' => 'nst3af-ailabel--size-large',
             default => 'nst3af-ailabel--size-medium',
         };
-        $iconOnly = ((string) ($moduleSettings['labelWording'] ?? 'show_site_language')) === 'icon_only';
+        $wording = (string) ($moduleSettings['labelWording'] ?? 'show_site_language');
+        $includeIcon = $wording === 'icon_only';
+        $includeText = !$includeIcon;
         $iconUrl = $this->publicIconUrl($this->resolveIconPath($involvement, $onDarkBackground));
-        $detail = '';
-        if (((string) ($moduleSettings['secondInfoLayer'] ?? 'off')) === 'on' && $reasonCode !== null) {
-            $detail = $this->labelTextService->forInvolvement($involvement) . ' (' . $reasonCode->value . ')';
-        }
 
         return $this->buildMarkup(
             $iconUrl,
             $this->labelTextService->forInvolvement($involvement),
             $sizeClass,
-            $iconOnly,
-            $detail,
+            $includeIcon,
+            $includeText,
+            $this->secondLayerDetail($involvement, $reasonCode, $moduleSettings),
         );
+    }
+
+    /**
+     * Visitor-facing second layer — human involvement wording only.
+     * Machine reason codes stay in evidence export / backend lists.
+     *
+     * @param array<string, mixed> $moduleSettings
+     */
+    private function secondLayerDetail(
+        Involvement $involvement,
+        ?ReasonCode $reasonCode,
+        array $moduleSettings,
+    ): string {
+        if (((string) ($moduleSettings['secondInfoLayer'] ?? 'off')) !== 'on' || $reasonCode === null) {
+            return '';
+        }
+
+        return $this->labelTextService->forInvolvement($involvement);
     }
 
     private function publicIconUrl(string $iconFile): string
@@ -143,24 +160,28 @@ final class FrontendLabelRenderer
         string $iconUrl,
         string $labelText,
         string $sizeClass,
-        bool $iconOnly,
+        bool $includeIcon,
+        bool $includeText,
         string $detail = '',
     ): string {
         $iconUrl = htmlspecialchars($iconUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $alt = htmlspecialchars($labelText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 
         $classes = 'nst3af-ailabel ' . $sizeClass;
-        if ($iconOnly) {
+        if ($includeIcon && !$includeText) {
             $classes .= ' nst3af-ailabel--icon-only';
         }
-
-        $html = '<aside class="' . $classes . '" role="note" aria-label="' . $alt . '">'
-            . '<img src="' . $iconUrl . '" alt="' . $alt . '" class="nst3af-ailabel__icon" loading="lazy" decoding="async" />';
-
-        if (!$iconOnly) {
-            $html .= '<span class="nst3af-ailabel__text">' . $alt . '</span>';
+        if ($includeText && !$includeIcon) {
+            $classes .= ' nst3af-ailabel--text-only';
         }
 
+        $html = '<aside class="' . $classes . '" role="note" aria-label="' . $alt . '">';
+        if ($includeIcon) {
+            $html .= '<img src="' . $iconUrl . '" alt="' . $alt . '" class="nst3af-ailabel__icon" loading="lazy" decoding="async" />';
+        }
+        if ($includeText) {
+            $html .= '<span class="nst3af-ailabel__text">' . $alt . '</span>';
+        }
         $html .= '</aside>';
         if ($detail === '') {
             return $html;

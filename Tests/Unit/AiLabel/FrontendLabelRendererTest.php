@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\AiLabel;
 
 use NITSAN\NsT3AF\AiLabel\Domain\Involvement;
+use NITSAN\NsT3AF\AiLabel\Domain\ReasonCode;
 use NITSAN\NsT3AF\AiLabel\Service\AiLabelRecordEvaluator;
 use NITSAN\NsT3AF\AiLabel\Service\AiLabelSettingsService;
 use NITSAN\NsT3AF\AiLabel\Service\ComplianceStringsService;
@@ -39,19 +40,22 @@ final class FrontendLabelRendererTest extends TestCase
 
         self::assertStringContainsString('nst3af-ailabel--icon-only', $html);
         self::assertStringContainsString('nst3af-ailabel--size-large', $html);
+        self::assertStringContainsString('nst3af-ailabel__icon', $html);
         self::assertStringNotContainsString('nst3af-ailabel__text', $html);
     }
 
-    public function testShowWordingIncludesTextSpan(): void
+    public function testShowWordingIsTextOnlyWithoutIcon(): void
     {
         $html = $this->buildMarkup('show_site_language', 'medium');
 
+        self::assertStringContainsString('nst3af-ailabel--text-only', $html);
         self::assertStringContainsString('nst3af-ailabel__text', $html);
         self::assertStringContainsString('AI generated', $html);
+        self::assertStringNotContainsString('nst3af-ailabel__icon', $html);
         self::assertStringNotContainsString('nst3af-ailabel--icon-only', $html);
     }
 
-    public function testSecondInfoLayerWrapsDetails(): void
+    public function testSecondInfoLayerWrapsDetailsWithoutReasonCode(): void
     {
         $extensionSettings = $this->createMock(ExtensionSettingsService::class);
         $extensionSettings->method('getAllIgnorePid')->willReturn([
@@ -70,19 +74,33 @@ final class FrontendLabelRendererTest extends TestCase
                 $this->createMock(\TYPO3\CMS\Core\Site\SiteFinder::class),
             ),
         );
-        $method = new \ReflectionMethod(FrontendLabelRenderer::class, 'buildMarkup');
-        $method->setAccessible(true);
-        $html = (string) $method->invoke(
+
+        $detailMethod = new \ReflectionMethod(FrontendLabelRenderer::class, 'secondLayerDetail');
+        $detailMethod->setAccessible(true);
+        $detail = (string) $detailMethod->invoke(
+            $renderer,
+            Involvement::AiGenerated,
+            ReasonCode::RuleDefault,
+            ['secondInfoLayer' => 'on'],
+        );
+        self::assertSame('AI generated', $detail);
+        self::assertStringNotContainsString('rule_default', $detail);
+
+        $markupMethod = new \ReflectionMethod(FrontendLabelRenderer::class, 'buildMarkup');
+        $markupMethod->setAccessible(true);
+        $html = (string) $markupMethod->invoke(
             $renderer,
             '/icon.svg',
             'AI generated',
             'nst3af-ailabel--size-medium',
             false,
-            'AI generated (rule_default)',
+            true,
+            $detail,
         );
 
         self::assertStringContainsString('nst3af-ailabel-details', $html);
-        self::assertStringContainsString('rule_default', $html);
+        self::assertStringContainsString('AI generated', $html);
+        self::assertStringNotContainsString('rule_default', $html);
     }
 
     public function testRenderBadgeMarkupSkipsNonLabelInvolvement(): void
@@ -165,6 +183,7 @@ final class FrontendLabelRendererTest extends TestCase
                 default => 'nst3af-ailabel--size-medium',
             },
             $wording === 'icon_only',
+            $wording !== 'icon_only',
         );
     }
 }

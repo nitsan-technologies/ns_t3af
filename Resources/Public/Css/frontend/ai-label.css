@@ -48,6 +48,10 @@
     display: none;
 }
 
+.nst3af-ailabel--text-only .nst3af-ailabel__icon {
+    display: none;
+}
+
 .nst3af-ailabel-media {
     display: inline-block;
     max-width: 100%;
@@ -113,4 +117,15 @@
 .nst3af-ailabel-details__body {
     font-size: 12px;
     margin: 4px 0 0;
+}
+
+/* Voice-over / audio player: inline badge (not image-overlay absolute) */
+.nst3af-ailabel-audio {
+    display: block;
+    margin-top: 8px;
+}
+
+.nst3af-ailabel-audio .nst3af-ailabel {
+    margin-top: 0;
+    position: static;
 }

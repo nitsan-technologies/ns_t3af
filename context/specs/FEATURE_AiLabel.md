@@ -134,9 +134,10 @@ Stored on every list row and in evidence export: `manual_exempt`, `pre_cutoff`, 
 AiLabelBindHelper::bindContentRecord($uid); // always Involvement::AiGenerated, source ns_t3ai
 ```
 
-Consumes correlation from registry → `OriginRecorder::bindGeneration()` → sets involvement + recording_source on target row → deletes generation queue row. Child binds always store `ai_generated` (page, content, file, or `bindRecord($table, $uid)`). Alt-text-only file binds are skipped.
+Consumes correlation from registry → `OriginRecorder::bindGeneration()` → sets involvement + recording_source on target row → deletes generation queue row. Child binds always store `ai_generated` (page, content, file, or `bindRecord($table, $uid)`). Metadata-only file binds (`$altTextOnly = true` — alt/title/description) are skipped so the EU media mark is not applied to a non-AI image.
 
 **ns_t3ai** binds: `pages`, `tt_content`, and DALL·E file save via `bindFileMetadata($uid, 'ns_t3ai')` (second HTTP request → `recordOrigin` fallback). Stock libraries (pixabay/pexels/unsplash/openverse) are skipped.  
+**ns_t3aa** binds: TTS/binary audio always via `bindFileMetadata` (module and FE paths). File metadata text (alt/title/description) always skips.  
 **ns_t3al:** no bind hooks yet.
 
 ### 3. Manual / editor path
@@ -252,14 +253,34 @@ Include `EXT:ns_t3af/Configuration/TypoScript/setup.typoscript` via:
 
 - Consults `MediaRuleEngine` + `RivalsRendererGuard` (stand down if rival ext renders).
 - Outputs EU SVG icon + text from `Resources/Public/Icons/EuAiLabel/`.
+- `labelWording`: `show_site_language` = **text only** (no icon); `icon_only` = icon only.
+- `secondInfoLayer`: expandable `<details>` with **human** involvement wording only (no machine reason codes on FE).
+- Overlay mode: image partial badge on media; CE `DropIn/After/All` skipped for `image` / `textmedia` / `textpic` (`ContentElementLabelEnabledViewHelper`) to avoid duplicates. Non-media CTypes still get the CE badge.
+- Audio/Video FSC partials always render `<ail:label file>` when rules pass (not gated on image-overlay setting).
 - Fluid: namespace `ail` → `<ail:label record="{data}" />` or `<ail:label file="{image}" />`.
 - State helpers: `<ail:recordState>`, `<ail:fileState>`, DataProcessor alias `nst3af-label` (`FrontendLabelState`).
+
+Texts list blank titles fall back to `Page {pid} · Content {uid}` (or `Page #{uid}` for pages).
 
 ---
 
 ## Evidence export
 
-`EvidenceExportService` collects labelled rows with reason codes, confirmation metadata, recording source. Formats: CSV (default), HTML (attachment from Overview coverage card).
+`EvidenceExportService` collects **evidence-relevant** rows only (not a full table dump):
+
+- `tx_nst3af_ailabel_recording_source` non-empty, **or**
+- involvement other than `not_reviewed`, **or**
+- `tx_nst3af_ailabel_confirmed_at` > 0
+
+**Scope** (`?scope=` / CLI `--scope`):
+
+| Scope | Tables | Used from |
+|---|---|---|
+| `media` | `sys_file_metadata` | Media tab |
+| `texts` | `tt_content`, `pages` | Texts tab |
+| `all` (default) | all three | Overview, Settings, CLI |
+
+Includes reason codes, confirmation metadata, recording source. Formats: CSV (default), HTML. Untouched rows are not stamped `exported_at`.
 
 ---
 

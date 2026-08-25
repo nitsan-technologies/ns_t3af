@@ -34,22 +34,58 @@ final class EvidenceExportService
     ) {}
 
     /**
+     * @param 'all'|'media'|'texts' $scope
      * @return list<array<string, mixed>>
      */
-    public function collectRows(): array
+    public function collectRows(string $scope = 'all'): array
     {
         $rows = [];
-        foreach (['tt_content', 'pages', 'sys_file_metadata'] as $table) {
+        foreach ($this->tablesForScope($scope) as $table) {
             $records = $this->connectionPool->getConnectionForTable($table)
                 ->select(['*'], $table)
                 ->fetchAllAssociative();
             foreach ($records as $record) {
+                if (!$this->isEvidenceRelevant($record)) {
+                    continue;
+                }
                 $rows[] = $this->buildRow($table, $record);
                 $this->stampExported($table, (int) $record['uid']);
             }
         }
 
         return $rows;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function tablesForScope(string $scope): array
+    {
+        return match ($scope) {
+            'media' => ['sys_file_metadata'],
+            'texts' => ['tt_content', 'pages'],
+            default => ['tt_content', 'pages', 'sys_file_metadata'],
+        };
+    }
+
+    /**
+     * Skip untouched rows so export matches labelled / reviewed evidence, not a full table dump.
+     *
+     * @param array<string, mixed> $record
+     */
+    private function isEvidenceRelevant(array $record): bool
+    {
+        $source = trim((string) ($record['tx_nst3af_ailabel_recording_source'] ?? ''));
+        if ($source !== '') {
+            return true;
+        }
+
+        $involvement = (string) ($record['tx_nst3af_ailabel_involvement'] ?? 'not_reviewed');
+        if ($involvement !== '' && $involvement !== 'not_reviewed') {
+            return true;
+        }
+
+        return (int) ($record['tx_nst3af_ailabel_confirmed_at'] ?? 0) > 0;
     }
 
     /**

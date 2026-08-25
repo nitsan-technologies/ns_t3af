@@ -143,10 +143,23 @@ final class AiLabelTextListService
     private function resolveTitle(string $table, array $record): string
     {
         return match ($table) {
-            'pages' => (string) ($record['title'] ?? 'Page #' . ($record['uid'] ?? '')),
-            'tt_content' => (string) ($record['header'] ?? $record['CType'] ?? 'Content #' . ($record['uid'] ?? '')),
+            'pages' => $this->nonEmptyString($record['title'] ?? null)
+                ?? ('Page #' . (int) ($record['uid'] ?? 0)),
+            'tt_content' => $this->nonEmptyString($record['header'] ?? null)
+                ?? sprintf(
+                    'Page %d · Content %d',
+                    (int) ($record['pid'] ?? 0),
+                    (int) ($record['uid'] ?? 0),
+                ),
             default => $table . ' #' . ($record['uid'] ?? ''),
         };
+    }
+
+    private function nonEmptyString(mixed $value): ?string
+    {
+        $trimmed = trim((string) $value);
+
+        return $trimmed !== '' ? $trimmed : null;
     }
 
     private function resolveType(string $table): string

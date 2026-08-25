@@ -100,10 +100,10 @@ Frontend label appearance
        and image overlays.
    * - **Wording beside the icon**
      - Show in site language (default), icon only
-     - **Frontend.** **Icon only** hides the visible text span but keeps
-       ``alt`` / ``aria-label`` for accessibility. **Show in site language**
-       displays the short label next to the EU icon in the current site
-       language (``locallang.xlf`` overlays, for example ``de.locallang.xlf``).
+     - **Frontend.** **Icon only** shows the EU icon (``alt`` / ``aria-label``
+       still carry the wording). **Show in site language** shows the short
+       label text only — no icon — in the current site language
+       (``locallang.xlf`` overlays, for example ``de.locallang.xlf``).
    * - **Mark the image file itself**
      - Content element only (default), overlay on the image, written into the
        image file
@@ -137,7 +137,9 @@ Machine-readable marking and rules
    * - **Second information layer**
      - Off (default), on
      - **Frontend.** When on, the badge is wrapped in ``<details>`` with a
-       second line (involvement + reason code).
+       second line of **visitor-facing** involvement wording only (machine
+       reason codes such as ``rule_default`` stay in evidence export and
+       backend lists).
    * - **Also record on these tables**
      - Comma-separated table names (empty by default)
      - **Backend.** Extra tables are merged with the defaults ``pages``,
@@ -216,7 +218,12 @@ Evidence export
 
 From the action bar or Overview coverage card:
 
-* **CSV** — labelled records with reason codes and confirmation metadata
+* **CSV** — **evidence-relevant** records only (recording source set, involvement
+  other than ``not_reviewed``, or confirmed), with reason codes and confirmation
+  metadata — not a dump of every ``pages`` / ``tt_content`` / ``sys_file_metadata``
+  row
+* **Scope by module tab** — Media exports ``sys_file_metadata`` only; Texts exports
+  ``tt_content`` + ``pages``; Overview and Settings export all three
 
 Use for internal audits; reason codes are machine-readable (for example
 ``rule_default``, ``editorial_control``, ``unreviewed``).
@@ -342,15 +349,17 @@ alone does not load TypoScript.
 
 When rules pass and a record is **confirmed**, visitors may see:
 
-* EU AI label icon (bundled SVG set)
-* Short text (for example “AI generated”, “AI modified”) — unless **Wording**
-  is **Icon only** in Settings
+* **Icon only** — EU AI label icon (bundled SVG set)
+* **Show in site language** — short text only (for example “AI generated”,
+  “AI modified”), no icon
 * Size and (for image overlays) position from Settings — see tables above
 
 **Two badge locations:**
 
-* **Content element** — drop-in partial after the element body (always when
-  labelling rules pass for text/media on that CE).
+* **Content element** — drop-in partial after the element body when labelling
+  rules pass. In **Overlay on the image** mode, media CTypes (``image``,
+  ``textmedia``, ``textpic``) **skip** this CE badge so visitors see a single
+  mark on the image; non-media CTypes still use the drop-in.
 * **Image overlay** — only when **Mark the image file** is **Overlay on the
   image** and the file is confirmed AI-generated; position applies here.
 
