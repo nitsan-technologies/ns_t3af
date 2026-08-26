@@ -42,6 +42,7 @@ $javascriptModules = [
         '@nitsan/nst3af/ai-context.js' => 'EXT:ns_t3af/Resources/Public/JavaScript/ai-context.js',
         '@nitsan/nst3af/access-roles.js' => 'EXT:ns_t3af/Resources/Public/JavaScript/access-roles.js',
         '@nitsan/nst3af/for-developers.js' => 'EXT:ns_t3af/Resources/Public/JavaScript/for-developers.js',
+        '@nitsan/nst3af/ai-label.js' => 'EXT:ns_t3af/Resources/Public/JavaScript/ai-label.js',
     ],
 ];
 

@@ -32,6 +32,7 @@ Agent router for the master TYPO3 AI extension. Load only what your task needs.
 | AI Context / brand profiles / placeholders / dashboard bar | `context/features/ai-context.md` |
 | ACL / logging / alerts | `context/features/governance.md` |
 | AI Access / Roles wizard / matrix / enforcement | `context/features/ai-access-roles.md`, `Documentation/Developer/CustomAiAccess.rst` |
+| AI Label / EU Art. 50 dashboard | `context/features/ai-label.md` |
 | Architecture / tables / caches | `context/architecture.md` |
 | Run tests / CI | `tasks/run-quality.md` |
 | Update agent context after a landing | `tasks/context-update.md` |
@@ -54,6 +55,7 @@ Prefer `context/features/*.md` over `context/specs/FEATURE_*.md` unless implemen
 | AI Access & Roles | Done | `context/features/ai-access-roles.md` | `Documentation/Developer/CustomAiAccess.rst` |
 | T3Planet Credits | Done (publicly available) | `context/features/credits.md` | `context/specs/FEATURE_T3PlanetCredits_Client.md` |
 | MCP Server & tools | Done | `context/features/mcp-server.md` | `context/specs/FEATURE_McpServer.md` |
+| AI Label (EU Art. 50) | Done | `context/features/ai-label.md` | `context/specs/FEATURE_AiLabel.md` |
 
 ---
 

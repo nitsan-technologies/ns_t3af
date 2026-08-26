@@ -397,3 +397,79 @@ CREATE TABLE tx_nst3af_group_settings (
     PRIMARY KEY (uid),
     UNIQUE KEY be_group (be_group)
 );
+
+#
+# AI Label origin columns (R1). Real columns for filtering, export and coverage score.
+#
+CREATE TABLE tt_content (
+    tx_nst3af_ailabel_involvement VARCHAR(32) NOT NULL DEFAULT 'not_reviewed',
+    tx_nst3af_ailabel_labelling_mode VARCHAR(16) NOT NULL DEFAULT 'automatic',
+    tx_nst3af_ailabel_exemption_reason VARCHAR(64) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_ai_system VARCHAR(128) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_ai_vendor VARCHAR(128) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_internal_note TEXT,
+    tx_nst3af_ailabel_confirmed_by INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_confirmed_at INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_exported_at INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_version_hash VARCHAR(64) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_recording_source VARCHAR(64) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_public_interest TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_human_review TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_responsible_person VARCHAR(255) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_generation_group VARCHAR(64) NOT NULL DEFAULT ''
+);
+
+CREATE TABLE pages (
+    tx_nst3af_ailabel_involvement VARCHAR(32) NOT NULL DEFAULT 'not_reviewed',
+    tx_nst3af_ailabel_labelling_mode VARCHAR(16) NOT NULL DEFAULT 'automatic',
+    tx_nst3af_ailabel_exemption_reason VARCHAR(64) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_ai_system VARCHAR(128) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_ai_vendor VARCHAR(128) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_internal_note TEXT,
+    tx_nst3af_ailabel_confirmed_by INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_confirmed_at INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_exported_at INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_version_hash VARCHAR(64) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_recording_source VARCHAR(64) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_public_interest TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_human_review TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_responsible_person VARCHAR(255) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_generation_group VARCHAR(64) NOT NULL DEFAULT ''
+);
+
+CREATE TABLE sys_file_metadata (
+    tx_nst3af_ailabel_involvement VARCHAR(32) NOT NULL DEFAULT 'not_reviewed',
+    tx_nst3af_ailabel_labelling_mode VARCHAR(16) NOT NULL DEFAULT 'automatic',
+    tx_nst3af_ailabel_exemption_reason VARCHAR(64) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_ai_system VARCHAR(128) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_ai_vendor VARCHAR(128) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_internal_note TEXT,
+    tx_nst3af_ailabel_confirmed_by INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_confirmed_at INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_exported_at INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_version_hash VARCHAR(64) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_recording_source VARCHAR(64) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_public_interest TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_human_review TINYINT(1) UNSIGNED NOT NULL DEFAULT 0,
+    tx_nst3af_ailabel_responsible_person VARCHAR(255) NOT NULL DEFAULT '',
+    tx_nst3af_ailabel_generation_group VARCHAR(64) NOT NULL DEFAULT ''
+);
+
+#
+# R2.6 capture queue: no prompts, no generated content. Rows deleted on bind.
+#
+CREATE TABLE tx_nst3af_ailabel_generation (
+    uid INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    correlation_id VARCHAR(64) NOT NULL DEFAULT '',
+    generation_group_id VARCHAR(64) NOT NULL DEFAULT '',
+    generating_extension VARCHAR(64) NOT NULL DEFAULT '',
+    adapter_type VARCHAR(64) NOT NULL DEFAULT '',
+    model_id VARCHAR(128) NOT NULL DEFAULT '',
+    target_table VARCHAR(64) NOT NULL DEFAULT '',
+    target_uid INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    crdate INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    tstamp INT(11) UNSIGNED NOT NULL DEFAULT 0,
+    PRIMARY KEY (uid),
+    KEY correlation_id (correlation_id),
+    KEY unbound (target_table, target_uid)
+);

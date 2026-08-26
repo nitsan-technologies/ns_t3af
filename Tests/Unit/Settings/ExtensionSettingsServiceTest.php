@@ -274,4 +274,27 @@ final class ExtensionSettingsServiceTest extends TestCase
         $service->initializeSiteSettings(68, 'ns_t3ai', ['enablePageSimple' => '0']);
         self::assertTrue($service->isSiteSettingsInitialized(68));
     }
+
+    public function testGetAllIgnorePidReturnsSchemaDefaultsWhenTableMissing(): void
+    {
+        $registry = $this->createMock(ExtensionSettingsRegistry::class);
+        $registry->method('isManaged')->with('ns_t3af')->willReturn(true);
+
+        $repository = $this->createMock(ExtensionSettingsRepository::class);
+        $repository->method('findAllByExtensionKey')
+            ->with('ns_t3af')
+            ->willThrowException(new \Doctrine\DBAL\Exception\TableNotFoundException(new \Doctrine\DBAL\Driver\PDO\Exception('no such table'), null));
+
+        $schemaService = $this->createMock(ExtensionSettingsSchemaService::class);
+        $schemaService->method('getDefaults')->with('ns_t3af')->willReturn([
+            'ailabelLabelWording' => 'show_site_language',
+        ]);
+
+        $service = $this->createService($registry, $repository, $schemaService);
+
+        self::assertSame(
+            ['ailabelLabelWording' => 'show_site_language'],
+            $service->getAllIgnorePid('ns_t3af'),
+        );
+    }
 }

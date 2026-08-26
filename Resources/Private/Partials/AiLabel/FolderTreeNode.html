@@ -1,0 +1,58 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<div class="aiu-ailabel-folder-tree__item"
+     data-ailabel-folder-branch
+     data-ailabel-folder-expanded="{f:if(condition: folder.expanded, then: '1', else: '0')}">
+    <div class="aiu-ailabel-folder-tree__row node {f:if(condition: folder.active, then: 'node-selected')}">
+        <f:if condition="{folder.children}">
+            <f:then>
+                <button type="button"
+                        class="aiu-ailabel-folder-tree__toggle {f:if(condition: folder.expanded, then: 'is-expanded')}"
+                        data-ailabel-folder-toggle
+                        aria-expanded="{f:if(condition: folder.expanded, then: 'true', else: 'false')}"
+                        title="Toggle folder">
+                    <core:icon identifier="actions-chevron-right" size="small" alternativeMarkupIdentifier="inline" />
+                </button>
+            </f:then>
+            <f:else>
+                <span class="aiu-ailabel-folder-tree__toggle-spacer" aria-hidden="true"></span>
+            </f:else>
+        </f:if>
+        <a class="aiu-ailabel-folder-tree__link"
+           href="{f:be.uri(route: 't3af_dashboard.ai_label.media', parameters: '{folder: folder.identifier}')}"
+           role="treeitem"
+           aria-selected="{f:if(condition: folder.active, then: 'true', else: 'false')}"
+           data-ailabel-folder-label="{folder.label}">
+            <div class="node-content">
+                <span class="node-icon">
+                    <f:if condition="{folder.active}">
+                        <f:then>
+                            <core:icon identifier="apps-filetree-folder-opened" size="small" alternativeMarkupIdentifier="inline" />
+                        </f:then>
+                        <f:else>
+                            <core:icon identifier="apps-filetree-folder-default" size="small" alternativeMarkupIdentifier="inline" />
+                        </f:else>
+                    </f:if>
+                </span>
+                <div class="node-contentlabel">
+                    <div class="node-name">{folder.label}</div>
+                </div>
+            </div>
+            <span class="node-information">{folder.totalFiles}</span>
+            <f:if condition="{folder.openCount} > 0">
+                <span class="badge badge-warning">{folder.openCount}</span>
+            </f:if>
+        </a>
+    </div>
+    <f:if condition="{folder.children}">
+        <div class="aiu-ailabel-folder-tree__children"
+             data-ailabel-folder-children
+             {f:if(condition: folder.expanded, then: '', else: 'hidden="hidden"')}>
+            <f:for each="{folder.children}" as="child" iteration="childIteration">
+                <f:render partial="AiLabel/FolderTreeNode" arguments="{folder: child, isLast: childIteration.isLast}" />
+            </f:for>
+        </div>
+    </f:if>
+</div>
+</html>

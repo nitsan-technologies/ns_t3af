@@ -20,3 +20,7 @@ parameters:
     # Used by child extensions (ns_t3ai / ns_t3aa / ns_t3ac); not referenced inside this package paths.
     - identifier: trait.unused
       path: Classes/Contract/PromptCatalogPolicyTrait.php
+    # TYPO3 14 Buttons API (ComponentFactory / ActionGroup) — missing when analysing v12/v13 vendor trees.
+    - identifier: class.notFound
+      path: Classes/AiLabel/EventListener/ProcessFileListActionsListener.php
+      reportUnmatched: false

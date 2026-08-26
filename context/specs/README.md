@@ -10,6 +10,7 @@ Long-form feature specifications (~400–900 lines). **Do not load by default** 
 | `FEATURE_T3PlanetCredits_Server.md` | `context/features/credits.md` (external server) |
 | `FEATURE_T3PlanetCredits_NsAiuniverse_Rollout.md` | `context/features/credits.md` |
 | `FEATURE_T3PlanetCreditsPlan.md` | `context/features/credits.md` (superseded) |
+| `FEATURE_AiLabel.md` | `context/features/ai-label.md` |
 
 Implementation plan (AI Context, implemented): `Documentation/Architecture/AiContextImplementationPlan.md` → agent entry `context/features/ai-context.md`.
 

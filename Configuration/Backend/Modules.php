@@ -18,6 +18,7 @@ declare(strict_types=1);
  */
 
 use NITSAN\NsT3AF\Controller\Backend\AccessRolesController;
+use NITSAN\NsT3AF\Controller\Backend\AiLabelController;
 use NITSAN\NsT3AF\Controller\Backend\BrandContextController;
 use NITSAN\NsT3AF\Controller\Backend\ModuleController;
 use NITSAN\NsT3AF\Controller\Backend\ProviderController;
@@ -164,6 +165,44 @@ return [
             ],
             'ai_prompts.delete' => [
                 'target' => ModuleController::class . '::aiPromptsDeleteAction',
+                'methods' => ['POST'],
+            ],
+            'ai_label' => [
+                'target' => AiLabelController::class . '::overviewAction',
+            ],
+            'ai_label.media' => [
+                'target' => AiLabelController::class . '::mediaAction',
+            ],
+            'ai_label.texts' => [
+                'target' => AiLabelController::class . '::textsAction',
+            ],
+            'ai_label.settings' => [
+                'target' => AiLabelController::class . '::settingsAction',
+            ],
+            'ai_label.export' => [
+                'target' => AiLabelController::class . '::exportAction',
+            ],
+            'ai_label.bulk' => [
+                'target' => AiLabelController::class . '::bulkAction',
+                'methods' => ['POST'],
+            ],
+            'ai_label.undo' => [
+                'target' => AiLabelController::class . '::undoAction',
+                'methods' => ['POST'],
+            ],
+            'ai_label.settings_save' => [
+                'target' => AiLabelController::class . '::settingsSaveAction',
+                'methods' => ['POST'],
+            ],
+            'ai_label.media_default' => [
+                'target' => AiLabelController::class . '::mediaDefaultFolderAction',
+                'methods' => ['POST'],
+            ],
+            'ai_label.record_edit' => [
+                'target' => AiLabelController::class . '::recordEditAction',
+            ],
+            'ai_label.record_save' => [
+                'target' => AiLabelController::class . '::recordSaveAction',
                 'methods' => ['POST'],
             ],
             'scheduler_cli' => [

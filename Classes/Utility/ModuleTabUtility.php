@@ -99,6 +99,14 @@ final class ModuleTabUtility
             'introKey' => 'module.aiPrompts.intro',
             'icon' => 'prompt',
         ],
+        'aiLabel' => [
+            'labelKey' => 'module.menu.aiLabel',
+            'route' => 't3af_dashboard.ai_label',
+            'path' => '/module/t3af/dashboard/ai-label',
+            'headingKey' => 'module.aiLabel.heading',
+            'introKey' => 'module.aiLabel.intro',
+            'icon' => 'label',
+        ],
         'schedulerCli' => [
             'labelKey' => 'module.menu.schedulerCli',
             'route' => 't3af_dashboard.scheduler_cli',
@@ -340,6 +348,7 @@ final class ModuleTabUtility
             'chart' => 'actions-document-info',
             'log' => 'actions-notebook',
             'prompt' => 'actions-message',
+            'label' => 'actions-tag',
             'terminal' => 'actions-refresh',
             'users' => 'actions-user',
             'code' => 'actions-code',

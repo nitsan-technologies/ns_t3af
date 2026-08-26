@@ -154,6 +154,9 @@ final class ProviderRepository implements ProviderRepositoryInterface
         $qb->select('*')
             ->from(self::TABLE)
             ->where($qb->expr()->eq('identifier', $qb->createNamedParameter($identifier)))
+            ->orderBy('is_default', 'DESC')
+            ->addOrderBy('priority', 'ASC')
+            ->addOrderBy('uid', 'DESC')
             ->setMaxResults(1);
 
         if ($storagePid !== null && $storagePid > 0) {
@@ -173,6 +176,7 @@ final class ProviderRepository implements ProviderRepositoryInterface
             ->from(self::TABLE)
             ->where($qb->expr()->eq('is_default', $qb->createNamedParameter(1, ParameterType::INTEGER)))
             ->orderBy('priority', 'ASC')
+            ->addOrderBy('uid', 'DESC')
             ->setMaxResults(1);
 
         if ($storagePid !== null && $storagePid > 0) {

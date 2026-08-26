@@ -1,0 +1,52 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="aiu-ailabel">
+    <f:render partial="Module/TabPageHeader" arguments="{tabHeading: tabHeading, tabIntro: tabIntro, currentPageId: currentPageId, pagePathData: pagePathData, rootPageUid: rootPageUid, rootPageTitle: rootPageTitle}" />
+    <f:render partial="AiLabel/Scoreboard" arguments="{statistics: statistics}" />
+    <f:render partial="AiLabel/SubNav" arguments="{activeSubTab: activeSubTab}" />
+    <f:if condition="{flash} == schema-missing">
+        <div class="callout callout-danger mb-3">
+            <f:translate key="{ll}:module.aiLabel.flash.schemaMissing" default="AI Label columns are missing on this table. Open Maintenance → Analyze Database Structure, apply the AI Label fields, then save again." />
+        </div>
+    </f:if>
+    <f:if condition="{flash} == record-saved">
+        <div class="callout callout-success mb-3">
+            <f:translate key="{ll}:module.aiLabel.flash.recordSaved" default="AI Label saved." />
+        </div>
+    </f:if>
+    <f:if condition="{flash} == bulk-done">
+        <div class="callout callout-success mb-3">
+            <f:translate key="{ll}:module.aiLabel.flash.bulkDone" default="Bulk action completed." />
+        </div>
+    </f:if>
+    <f:if condition="{flash} == bulk-none">
+        <div class="callout callout-warning mb-3">
+            <f:translate key="{ll}:module.aiLabel.flash.bulkNone" default="Nothing was processed." />
+        </div>
+    </f:if>
+    <f:if condition="{flash} == undo-done">
+        <div class="callout callout-success mb-3">
+            <f:translate key="{ll}:module.aiLabel.flash.undoDone" default="Last bulk action undone." />
+        </div>
+    </f:if>
+    <f:if condition="{flash} == undo-none">
+        <div class="callout callout-warning mb-3">
+            <f:translate key="{ll}:module.aiLabel.flash.undoNone" default="Nothing to undo (expired or already undone)." />
+        </div>
+    </f:if>
+    <f:if condition="{flash} == settings-saved">
+        <div class="callout callout-success mb-3"><f:translate key="{ll}:module.aiLabel.settings.saved" default="Settings saved." /></div>
+    </f:if>
+    <f:if condition="{flash} == settings-saved-schema">
+        <div class="callout callout-warning mb-3">
+            <f:translate key="{ll}:module.aiLabel.settings.savedSchema" default="Settings saved. Extra tables need AI Label columns: open Maintenance → Analyze Database Structure and apply the suggested fields, then reload this module." />
+        </div>
+    </f:if>
+    <f:if condition="{flash} == media-folder-default">
+        <div class="callout callout-success mb-3">
+            <f:translate key="{ll}:module.aiLabel.flash.mediaFolderDefault" default="This folder is now the default when you open the Media tab." />
+        </div>
+    </f:if>
+</div>

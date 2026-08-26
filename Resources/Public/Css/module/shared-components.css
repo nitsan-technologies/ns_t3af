@@ -524,14 +524,31 @@
 @keyframes aiu-fade-out { from { opacity: 1; } to { opacity: 0; }}
 
 .aiu-drawer__header {
-    padding: 1.25rem 1.5rem 1rem;
+    align-items: flex-start;
     border-bottom: 1px solid var(--typo3-card-border-color, var(--aiu-border));
+    display: flex;
+    gap: .75rem;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem 1rem;
     position: relative;
 }
-.aiu-drawer__title { font-family: var(--typo3-header-font-family, inherit); font-weight: 600; color: var(--typo3-text-color-base, var(--aiu-text-900)); margin: 0; }
+.aiu-drawer__header-main {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.aiu-drawer__title {
+    color: var(--typo3-text-color-base, var(--aiu-text-900));
+    font-family: var(--typo3-header-font-family, inherit);
+    font-weight: 600;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 .aiu-drawer__desc  { font-size: var(--typo3-font-size-small, .6875rem); color: var(--typo3-text-color-variant, var(--aiu-text-500)); margin: .15rem 0 0; }
 .aiu-drawer__close {
-    position: absolute; top: .75rem; right: .75rem;
+    flex: 0 0 auto;
+    margin-left: auto;
 }
 .aiu-drawer__close:not(.btn) {
     background: transparent; border: 0; cursor: pointer;

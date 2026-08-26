@@ -1,0 +1,12 @@
+{
+  "description": "Cross-version smoke matrix for AI Label (Stage 0)",
+  "typo3Versions": ["12.4", "13.4", "14.3"],
+  "phpVersions": ["8.2", "8.3"],
+  "checks": [
+    "event.listener tags in Services.yaml",
+    "static TypoScript template and site set",
+    "dual cache registration for nst3af_ailabel_undo",
+    "fluid DropIn partial exists",
+    "eu icon hash multiset verify"
+  ]
+}

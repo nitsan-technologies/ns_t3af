@@ -1,0 +1,101 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<f:variable name="route" value="{f:if(condition: '{variant} == text', then: 't3af_dashboard.ai_label.texts', else: 't3af_dashboard.ai_label.media')}" />
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" action="{f:be.uri(route: route)}" id="aiu-ailabel-filter" class="aiu-ailabel-filters">
+            <f:if condition="{filters.folder}">
+                <input type="hidden" name="folder" value="{filters.folder}" />
+            </f:if>
+            <div class="row g-2 mb-2">
+                <div class="col-md-10">
+                    <input type="search" name="search" class="form-control" value="{filters.search}"
+                           placeholder="{f:translate(key: '{ll}:module.aiLabel.filter.search.{variant}', default: 'Search…')}" />
+                </div>
+                <div class="col-md-2 d-grid">
+                    <button type="submit" class="btn btn-default"><f:translate key="{ll}:module.aiLabel.filter.searchButton" default="Search" /></button>
+                </div>
+            </div>
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <label class="form-label"><f:translate key="{ll}:module.aiLabel.filter.involvement" default="AI involvement" /></label>
+                    <select name="involvement" class="form-select form-select-sm">
+                        <option value=""><f:translate key="{ll}:module.aiLabel.filter.all" default="All" /></option>
+                        <option value="ai_generated" {f:if(condition: '{filters.involvement} == ai_generated', then: 'selected="selected"')}>AI generated</option>
+                        <option value="ai_modified" {f:if(condition: '{filters.involvement} == ai_modified', then: 'selected="selected"')}>AI modified</option>
+                        <option value="suggestion" {f:if(condition: '{filters.involvement} == suggestion', then: 'selected="selected"')}>Suggestion</option>
+                        <option value="no_ai" {f:if(condition: '{filters.involvement} == no_ai', then: 'selected="selected"')}>No AI involved</option>
+                        <option value="origin_unknown" {f:if(condition: '{filters.involvement} == origin_unknown', then: 'selected="selected"')}>Origin unknown</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><f:translate key="{ll}:module.aiLabel.filter.labelState" default="Label state" /></label>
+                    <select name="labelState" class="form-select form-select-sm">
+                        <option value=""><f:translate key="{ll}:module.aiLabel.filter.all" default="All" /></option>
+                        <option value="shown" {f:if(condition: '{filters.labelState} == shown', then: 'selected="selected"')}>Shown</option>
+                        <option value="held" {f:if(condition: '{filters.labelState} == held', then: 'selected="selected"')}>Held</option>
+                        <option value="not_shown" {f:if(condition: '{filters.labelState} == not_shown', then: 'selected="selected"')}>Not shown</option>
+                    </select>
+                </div>
+                <f:if condition="{variant} == media">
+                    <f:then>
+                        <div class="col-md-3">
+                            <label class="form-label"><f:translate key="{ll}:module.aiLabel.filter.fileType" default="File type" /></label>
+                            <select name="fileType" class="form-select form-select-sm">
+                                <option value=""><f:translate key="{ll}:module.aiLabel.filter.all" default="All" /></option>
+                                <option value="image" {f:if(condition: '{filters.fileType} == image', then: 'selected="selected"')}>Image</option>
+                                <option value="audio" {f:if(condition: '{filters.fileType} == audio', then: 'selected="selected"')}>Audio</option>
+                                <option value="video" {f:if(condition: '{filters.fileType} == video', then: 'selected="selected"')}>Video</option>
+                            </select>
+                        </div>
+                    </f:then>
+                    <f:else>
+                        <div class="col-md-3">
+                            <label class="form-label"><f:translate key="{ll}:module.aiLabel.filter.publicInterest" default="Public interest" /></label>
+                            <select name="publicInterest" class="form-select form-select-sm">
+                                <option value=""><f:translate key="{ll}:module.aiLabel.filter.all" default="All" /></option>
+                                <option value="yes" {f:if(condition: '{filters.publicInterest} == yes', then: 'selected="selected"')}>Yes</option>
+                                <option value="no" {f:if(condition: '{filters.publicInterest} == no', then: 'selected="selected"')}>No</option>
+                            </select>
+                        </div>
+                    </f:else>
+                </f:if>
+                <div class="col-md-3">
+                    <label class="form-label"><f:translate key="{ll}:module.aiLabel.filter.confirmedBy" default="Confirmed by" /></label>
+                    <select name="confirmedBy" class="form-select form-select-sm">
+                        <option value=""><f:translate key="{ll}:module.aiLabel.filter.anyone" default="Anyone" /></option>
+                        <option value="none" {f:if(condition: '{filters.confirmedBy} == none', then: 'selected="selected"')}>Not confirmed</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><f:translate key="{ll}:module.aiLabel.filter.dateFrom" default="From" /></label>
+                    <input type="date" name="dateFrom" class="form-control form-control-sm" value="{filters.dateFrom}" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><f:translate key="{ll}:module.aiLabel.filter.dateTo" default="To" /></label>
+                    <input type="date" name="dateTo" class="form-control form-control-sm" value="{filters.dateTo}" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><f:translate key="{ll}:module.aiLabel.filter.recordedBy" default="Recorded by" /></label>
+                    <select name="recordingSource" class="form-select form-select-sm">
+                        <option value=""><f:translate key="{ll}:module.aiLabel.filter.anySource" default="Any source" /></option>
+                        <option value="ns_" {f:if(condition: '{filters.recordingSource} == ns_', then: 'selected="selected"')}>AI Universe extension</option>
+                        <option value="detected" {f:if(condition: '{filters.recordingSource} == detected', then: 'selected="selected"')}>Detected on upload</option>
+                        <option value="editor" {f:if(condition: '{filters.recordingSource} == editor', then: 'selected="selected"')}>An editor</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><f:translate key="{ll}:module.aiLabel.filter.reasonCode" default="Reason code" /></label>
+                    <input type="text" name="reasonCode" class="form-control form-control-sm" value="{filters.reasonCode}" placeholder="Any" />
+                </div>
+            </div>
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                <button type="submit" class="btn btn-default btn-sm"><f:translate key="{ll}:module.aiLabel.filter.apply" default="Apply filters" /></button>
+                <a class="btn btn-default btn-sm" href="{f:be.uri(route: route, parameters: '{folder: filters.folder}')}"><f:translate key="{ll}:module.aiLabel.filter.reset" default="Reset" /></a>
+                <span class="text-variant small"><f:translate key="{ll}:module.aiLabel.filter.dateHint" default="The date filter is how you answer show me everything created since the cutoff." /></span>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,64 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2 aiu-ai-usage__log-toolbar">
+    <span class="text-variant mb-0">
+        <f:if condition="{listTotalCount} > 0">
+            <f:then>
+                <f:if condition="{variant} == media">
+                    <f:then>
+                        <f:translate key="{ll}:module.aiLabel.table.range"
+                                     arguments="{0: aiLabelPagination.pagination.startRecordNumber, 1: aiLabelPagination.pagination.endRecordNumber, 2: listTotalCount, 3: folderLabel}"
+                                     default="Records %1$s–%2$s of %3$s in %4$s" />
+                    </f:then>
+                    <f:else>
+                        <f:translate key="{ll}:module.aiLabel.table.rangeTexts"
+                                     arguments="{0: aiLabelPagination.pagination.startRecordNumber, 1: aiLabelPagination.pagination.endRecordNumber, 2: listTotalCount}"
+                                     default="Records %1$s–%2$s of %3$s" />
+                    </f:else>
+                </f:if>
+            </f:then>
+            <f:else>
+                <f:if condition="{variant} == media">
+                    <f:then>
+                        <f:translate key="{ll}:module.aiLabel.table.emptyMedia" default="No media records for current folder and filters." />
+                    </f:then>
+                    <f:else>
+                        <f:translate key="{ll}:module.aiLabel.table.emptyTexts" default="No text records for current filters." />
+                    </f:else>
+                </f:if>
+            </f:else>
+        </f:if>
+    </span>
+    <div class="d-flex flex-wrap align-items-center gap-2">
+        <label class="visually-hidden" for="aiu-ailabel-per-page">
+            <f:translate key="{ll}:module.aiLabel.perPage" default="Records per page" />
+        </label>
+        <select id="aiu-ailabel-per-page"
+                class="form-select form-select-sm aiu-ai-usage__per-page"
+                data-ailabel-per-page
+                aria-label="{f:translate(key: '{ll}:module.aiLabel.perPage', default: 'Records per page')}">
+            <option value="20" {f:if(condition: '{filters.max} == 20', then: 'selected="selected"')}>20</option>
+            <option value="50" {f:if(condition: '{filters.max} == 50', then: 'selected="selected"')}>50</option>
+            <option value="100" {f:if(condition: '{filters.max} == 100', then: 'selected="selected"')}>100</option>
+        </select>
+        <div class="btn-group" role="group" aria-label="{f:translate(key: '{ll}:module.aiLabel.toolbar.aria', default: 'List actions')}">
+            <a class="btn btn-success btn-sm" href="{exportUri}">
+                <core:icon identifier="actions-download" alternativeMarkupIdentifier="inline" size="small" />
+                <f:translate key="{ll}:module.aiLabel.action.exportEvidence" default="Export evidence" />
+            </a>
+            <a class="btn btn-default btn-sm"
+               data-aiu-ailabel-refresh
+               href="{refreshUri}">
+                <core:icon identifier="actions-refresh" alternativeMarkupIdentifier="inline" size="small" />
+                <f:translate key="{ll}:module.aiLabel.action.refresh" default="Refresh" />
+            </a>
+        </div>
+        <f:if condition="{aiLabelPagination}">
+            <f:render partial="AiLabel/Pagination" arguments="{_all}" />
+        </f:if>
+    </div>
+</div>
+</html>

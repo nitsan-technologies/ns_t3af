@@ -1,0 +1,43 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+<f:variable name="global" value="{statistics.global}" />
+
+<div class="row g-3 mb-3 aiu-ailabel-scoreboard">
+    <div class="col-12 col-sm-6 col-lg-3">
+        <div class="card card-size-small w-100">
+            <div class="card-body">
+                <div class="text-variant mb-1"><f:translate key="{ll}:module.aiLabel.scoreboard.confirmed" default="Confirmed" /></div>
+                <div class="h2 mb-0">{global.confirmed}</div>
+                <div class="text-variant small"><f:translate key="{ll}:module.aiLabel.scoreboard.confirmedHint" default="by a person" /></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-lg-3">
+        <div class="card card-size-small w-100">
+            <div class="card-body">
+                <div class="text-variant mb-1"><f:translate key="{ll}:module.aiLabel.scoreboard.awaiting" default="Awaiting review" /></div>
+                <div class="h2 mb-0 text-warning">{global.awaiting}</div>
+                <div class="text-variant small"><f:translate key="{ll}:module.aiLabel.scoreboard.awaitingHint" default="nothing shown until confirmed" /></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-lg-3">
+        <div class="card card-size-small w-100">
+            <div class="card-body">
+                <div class="text-variant mb-1"><f:translate key="{ll}:module.aiLabel.scoreboard.labelled" default="Labelled in frontend" /></div>
+                <div class="h2 mb-0">{global.labelled}</div>
+                <div class="text-variant small"><f:translate key="{ll}:module.aiLabel.scoreboard.labelledHint" default="visible to visitors" /></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-lg-3">
+        <div class="card card-size-small w-100">
+            <div class="card-body">
+                <div class="text-variant mb-1"><f:translate key="{ll}:module.aiLabel.scoreboard.notLabelled" default="Not labelled" /></div>
+                <div class="h2 mb-0">{global.notLabelled}</div>
+                <div class="text-variant small"><f:translate key="{ll}:module.aiLabel.scoreboard.notLabelledHint" default="each with a recorded reason" /></div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,16 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers" data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+<f:section name="Content">
+    <f:render partial="AiLabel/PageShell" arguments="{_all}" />
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <f:render partial="AiLabel/SettingsForm" arguments="{settings: settings, settingsSaveUri: settingsSaveUri}" />
+        </div>
+        <div class="col-lg-5">
+            <f:render partial="AiLabel/SettingsSidebar" arguments="{statistics: statistics, exportUri: exportUri}" />
+        </div>
+    </div>
+</f:section>
+</html>

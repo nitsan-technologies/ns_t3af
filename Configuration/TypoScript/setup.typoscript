@@ -1,0 +1,6 @@
+# AI Label frontend rendering (R7.4)
+lib.contentElement {
+  partialRootPaths {
+    1550 = EXT:ns_t3af/Resources/Private/Partials/FluidStyledContent/
+  }
+}

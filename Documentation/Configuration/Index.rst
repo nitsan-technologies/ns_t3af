@@ -24,6 +24,7 @@ providers, context, prompts, features, usage, and access control.
    AIPrompts/Index
    AIFeatures/Index
    AIUsageAndLogs/Index
+   AiLabel/Index
    AIPermissions/Index
 
 Two configuration areas

@@ -21,6 +21,18 @@
             <trans-unit id="email.apiAlert.timestamp" resname="email.apiAlert.timestamp">
                 <source>Time</source>
             </trans-unit>
+            <trans-unit id="ailabel.frontend.ai_generated" resname="ailabel.frontend.ai_generated">
+                <source>AI generated</source>
+            </trans-unit>
+            <trans-unit id="ailabel.frontend.ai_modified" resname="ailabel.frontend.ai_modified">
+                <source>AI modified</source>
+            </trans-unit>
+            <trans-unit id="ailabel.frontend.origin_unknown" resname="ailabel.frontend.origin_unknown">
+                <source>AI involvement unknown</source>
+            </trans-unit>
+            <trans-unit id="ailabel.frontend.suggestion" resname="ailabel.frontend.suggestion">
+                <source>AI suggestion</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>

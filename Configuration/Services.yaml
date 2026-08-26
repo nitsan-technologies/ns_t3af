@@ -64,6 +64,8 @@ services:
       - '../Classes/Api/*'
       - '../Classes/Domain/Model/*'
       - '../Classes/Event/*'
+      - '../Classes/AiLabel/Event/*'
+      - '../Classes/AiLabel/Dto/*'
       - '../Classes/Exception/*'
       - '../Classes/DependencyInjection/*'
       - '../Classes/Mcp/*'
@@ -489,3 +491,112 @@ services:
   NITSAN\NsT3AF\Settings\ExtensionSettingsDynamicDefaultsRegistry:
     arguments:
       $providers: !tagged_iterator t3af.extension_settings_dynamic_defaults
+
+  NITSAN\NsT3AF\Api\AiLabelRecorderInterface:
+    alias: NITSAN\NsT3AF\AiLabel\Service\OriginRecorder
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\OriginRecorder:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\ApplicableTablesResolver:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\FrontendLabelStateFactory:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\FrontendLabelRenderer:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\DataProcessing\RecordStateProcessor:
+    tags:
+      - name: data.processor
+        identifier: nst3af-label
+
+  NITSAN\NsT3AF\AiLabel\Service\ConfirmationService:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\UndoCacheService:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\AiLabelRecordEvaluator:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\AiLabelStatisticsService:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\AiLabelFolderTreeService:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\AiLabelMediaListService:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\AiLabelTextListService:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\AiLabelBulkActionService:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\AiLabelSystemStatusService:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\AiLabelSettingsService:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\AiLabelInteropService:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Hook\DataHandlerAiLabelHook:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Feature\AiLabelFeatureHealthAreaProvider:
+    tags: ['t3af.feature_health_area']
+
+  NITSAN\NsT3AF\AiLabel\EventListener\GenerationCaptureListener:
+    tags:
+      - name: event.listener
+        event: NITSAN\NsT3AF\Event\AfterProviderResponseEvent
+
+  NITSAN\NsT3AF\AiLabel\EventListener\FileMetadataListener:
+    tags:
+      - name: event.listener
+        event: TYPO3\CMS\Core\Resource\Event\AfterFileMetaDataUpdatedEvent
+
+  NITSAN\NsT3AF\AiLabel\EventListener\FileReplacementListener:
+    tags:
+      - name: event.listener
+        event: TYPO3\CMS\Core\Resource\Event\AfterFileReplacedEvent
+
+  NITSAN\NsT3AF\AiLabel\EventListener\AlterTableDefinitionListener:
+    tags:
+      - name: event.listener
+        event: TYPO3\CMS\Core\Database\Event\AlterTableDefinitionStatementsEvent
+
+  NITSAN\NsT3AF\AiLabel\EventListener\ProcessFileListActionsListener:
+    tags:
+      - name: event.listener
+        event: TYPO3\CMS\Filelist\Event\ProcessFileListActionsEvent
+
+  NITSAN\NsT3AF\AiLabel\EventListener\AfterFileProcessingListener:
+    tags:
+      - name: event.listener
+        event: TYPO3\CMS\Core\Resource\Event\AfterFileProcessingEvent
+
+  NITSAN\NsT3AF\AiLabel\EventListener\PageJsonLdListener:
+    tags:
+      - name: event.listener
+        event: TYPO3\CMS\Frontend\Event\AfterCacheableContentIsGeneratedEvent
+
+  NITSAN\NsT3AF\AiLabel\EventListener\UploadAiSignalListener:
+    tags:
+      - name: event.listener
+        event: TYPO3\CMS\Core\Resource\Event\AfterFileAddedEvent
+
+  NITSAN\NsT3AF\AiLabel\Service\IptcDigitalSourceTypeService:
+    public: true
+
+  NITSAN\NsT3AF\AiLabel\Service\AutoConfirmSettingsService:
+    public: true
+
+  NITSAN\NsT3AF\Controller\Backend\AiLabelController:
+    public: true

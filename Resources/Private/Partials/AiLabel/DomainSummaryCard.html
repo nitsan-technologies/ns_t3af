@@ -1,0 +1,39 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="card h-100">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0">{title}</h3>
+        <f:if condition="{domain.open} > 0">
+            <span class="badge badge-warning">{domain.open} <f:translate key="{ll}:module.aiLabel.domain.open" default="open" /></span>
+        </f:if>
+    </div>
+    <div class="card-body">
+        <div class="d-flex gap-3 align-items-start">
+            <div class="aiu-ailabel-ring aiu-ailabel-ring--{ringVariant}" style="--aiu-ring-percent: {domain.percent};" aria-hidden="true">
+                <span class="aiu-ailabel-ring__label">{domain.percent}%</span>
+            </div>
+            <dl class="flex-grow-1 mb-0 aiu-ailabel-kv">
+                <div class="d-flex justify-content-between"><dt><f:translate key="{ll}:module.aiLabel.domain.confirmed" default="Confirmed" /></dt><dd class="mb-1">{domain.confirmed}</dd></div>
+                <div class="d-flex justify-content-between"><dt><f:translate key="{ll}:module.aiLabel.domain.awaiting" default="Awaiting review" /></dt><dd class="mb-1">{domain.awaiting}</dd></div>
+                <f:if condition="{kind} == 'media'">
+                    <f:then>
+                        <div class="d-flex justify-content-between"><dt><f:translate key="{ll}:module.aiLabel.domain.labelled" default="Labelled in frontend" /></dt><dd class="mb-1">{domain.labelled}</dd></div>
+                        <div class="d-flex justify-content-between"><dt><f:translate key="{ll}:module.aiLabel.domain.notLabelledReason" default="Not labelled, with a reason" /></dt><dd class="mb-0">{domain.notLabelled}</dd></div>
+                    </f:then>
+                    <f:else>
+                        <div class="d-flex justify-content-between"><dt><f:translate key="{ll}:module.aiLabel.domain.noticeShown" default="Notice shown" /></dt><dd class="mb-1">{domain.noticeShown}</dd></div>
+                        <div class="d-flex justify-content-between"><dt class="text-danger"><f:translate key="{ll}:module.aiLabel.domain.unnamedReview" default="Reviewed but nobody named" /></dt><dd class="mb-0 text-danger">{domain.unnamedReview}</dd></div>
+                    </f:else>
+                </f:if>
+            </dl>
+        </div>
+    </div>
+    <div class="card-footer d-flex flex-wrap gap-2">
+        <a class="btn btn-default btn-sm" href="{primaryUri}">{primaryLabel}</a>
+        <f:if condition="{secondaryUri}">
+            <a class="btn btn-default btn-sm" href="{secondaryUri}">{secondaryLabel}</a>
+        </f:if>
+    </div>
+</div>

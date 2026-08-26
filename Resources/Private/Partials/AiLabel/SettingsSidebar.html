@@ -1,0 +1,45 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0"><f:translate key="{ll}:module.aiLabel.sidebar.audit" default="Scheduled audit" /></h3>
+        <span class="badge badge-success"><f:translate key="{ll}:module.aiLabel.sidebar.auditSchedule" default="Weekly, Mon 06:00" /></span>
+    </div>
+    <div class="card-body">
+        <p class="text-variant small"><f:translate key="{ll}:module.aiLabel.sidebar.auditIntro" default="Labelling is not a one-off project. The scheduled task re-checks the site and reports; it never labels anything on its own." /></p>
+        <dl class="aiu-ailabel-kv mb-3">
+            <div class="d-flex justify-content-between"><dt><f:translate key="{ll}:module.aiLabel.sidebar.newUnconfirmed" default="New content recorded but not yet confirmed" /></dt><dd>{statistics.global.awaiting} <f:translate key="{ll}:module.aiLabel.sidebar.foundLastRun" default="found last run" /></dd></div>
+            <div class="d-flex justify-content-between"><dt><f:translate key="{ll}:module.aiLabel.sidebar.unnamedReview" default="Reviewed texts with no responsible person named" /></dt><dd>{statistics.texts.unnamedReview}</dd></div>
+        </dl>
+        <div class="btn-group">
+            <a class="btn btn-default btn-sm" href="{f:be.uri(route: 't3af_dashboard.scheduler_cli')}"><f:translate key="{ll}:module.aiLabel.sidebar.openScheduler" default="Open Scheduler" /></a>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0"><f:translate key="{ll}:module.aiLabel.sidebar.fileModule" default="Inside the core file module" /></h3>
+        <span class="badge badge-success"><f:translate key="{ll}:module.aiLabel.sidebar.noConfigNeeded" default="no configuration needed" /></span>
+    </div>
+    <div class="card-body">
+        <p class="text-variant small"><f:translate key="{ll}:module.aiLabel.sidebar.fileModuleIntro" default="The fields live on sys_file_metadata, so the AI Label tab appears on every file edit in the core Media module." /></p>
+        <dl class="aiu-ailabel-kv mb-0">
+            <div class="d-flex justify-content-between mb-1"><dt><f:translate key="{ll}:module.aiLabel.sidebar.fileTab" default="AI Label tab on the file metadata record" /></dt><dd><span class="badge badge-success">on</span></dd></div>
+            <div class="d-flex justify-content-between"><dt><f:translate key="{ll}:module.aiLabel.sidebar.fileRowAction" default="Open in AI Label (jumps here, folder preselected)" /></dt><dd><span class="badge badge-success">on</span></dd></div>
+        </dl>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h3 class="card-title h6"><f:translate key="{ll}:module.aiLabel.sidebar.evidence" default="Evidence and history" /></h3>
+        <p class="text-variant small"><f:translate key="{ll}:module.aiLabel.sidebar.evidenceIntro" default="There is no separate audit table. Every status change is written to the shared AI Logs channel." /></p>
+        <div class="btn-group">
+            <a class="btn btn-default btn-sm" href="{f:be.uri(route: 't3af_dashboard.ai_logs')}"><f:translate key="{ll}:module.aiLabel.sidebar.openLogs" default="Open AI Logs" /></a>
+            <a class="btn btn-success btn-sm" href="{exportUri}"><f:translate key="{ll}:module.aiLabel.action.exportEvidence" default="Export evidence" /></a>
+        </div>
+    </div>
+</div>

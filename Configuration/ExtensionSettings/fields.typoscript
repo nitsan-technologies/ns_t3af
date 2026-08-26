@@ -124,3 +124,36 @@ mtlsValidationEnabled = 0
 
 # cat=MCP Server//75; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mcpServerOnlineSince
 mcpServerOnlineSince = 0
+
+# cat=AI Label//10; type=options[bottom_right=Bottom right,bottom_left=Bottom left,top_right=Top right,top_left=Top left]; label=AI Label position on media
+ailabelLabelPosition = bottom_right
+
+# cat=AI Label//20; type=options[medium=Medium,small=Small,large=Large]; label=AI Label size
+ailabelLabelSize = medium
+
+# cat=AI Label//30; type=options[show_site_language=Show in site language,icon_only=Icon only]; label=AI Label wording beside icon
+ailabelLabelWording = show_site_language
+
+# cat=AI Label//40; type=options[content_element_only=Content element only,overlay=Overlay on image,written_in=Written into image file]; label=Mark image file itself
+ailabelMarkImageFile = content_element_only
+
+# cat=AI Label//50; type=options[iptc=IPTC,iptc_jsonld=IPTC plus JSON-LD,off=Off]; label=Machine-readable marking
+ailabelMachineReadable = iptc
+
+# cat=AI Label//60; type=options[off=Off,media=Media,text=Text,both=Media and text]; label=Auto-confirm own extension recordings
+ailabelAutoConfirmOwn = off
+
+# cat=AI Label//70; type=options[off=Off,on=On]; label=Auto-confirm detected uploads
+ailabelAutoConfirmDetected = off
+
+# cat=AI Label//80; type=options[public_interest_text=Public-interest texts]; label=Auto-confirm hold list
+ailabelAutoConfirmHold = public_interest_text
+
+# cat=AI Label//90; type=options[no=No,yes=Yes]; label=Label unknown origin media
+ailabelLabelUnknownOrigin = no
+
+# cat=AI Label//100; type=options[off=Off,on=On]; label=Second information layer
+ailabelSecondInfoLayer = off
+
+# cat=AI Label//110; type=string; label=Additional applicable tables (comma-separated)
+ailabelApplicableTables =

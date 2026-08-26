@@ -1,0 +1,35 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<aside class="aiu-mcp-tools-shell__sidebar" aria-label="{f:translate(key: '{ll}:module.aiLabel.folderTree.aria', default: 'Media folders')}">
+    <div class="card card-size-small mb-0 w-100">
+        <div class="card-body p-2">
+            <div class="input-group input-group-sm mb-2">
+                <input type="search" class="form-control" placeholder="{f:translate(key: '{ll}:module.aiLabel.folderTree.search', default: 'Search folders')}" data-ailabel-folder-search />
+            </div>
+            <nav class="aiu-ailabel-folder-tree" role="tree" aria-label="{f:translate(key: '{ll}:module.aiLabel.folderTree.aria', default: 'Media folders')}">
+                <a class="node {f:if(condition: folderTree.root.active, then: 'node-selected')}"
+                   href="{f:be.uri(route: 't3af_dashboard.ai_label.media', parameters: '{folder: folderTree.root.identifier}')}"
+                   role="treeitem"
+                   aria-selected="{f:if(condition: folderTree.root.active, then: 'true', else: 'false')}"
+                   data-ailabel-folder-label="{folderTree.root.label}">
+                    <div class="node-content">
+                        <span class="node-icon">
+                            <core:icon identifier="apps-filetree-mount" size="small" alternativeMarkupIdentifier="inline" />
+                        </span>
+                        <div class="node-contentlabel">
+                            <div class="node-name">{folderTree.root.label}</div>
+                        </div>
+                    </div>
+                    <span class="node-information">{folderTree.root.totalFiles}</span>
+                </a>
+                <f:for each="{folderTree.folders}" as="folder" iteration="folderIteration">
+                    <f:render partial="AiLabel/FolderTreeNode" arguments="{folder: folder, isLast: folderIteration.isLast}" />
+                </f:for>
+            </nav>
+        </div>
+    </div>
+</aside>
+</html>

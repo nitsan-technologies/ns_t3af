@@ -17,6 +17,7 @@
 - **Credits** tab: mode toggle, dashboard, buy/history/pricing (T3Planet Credits — publicly available via `CreditsReleaseGate`).
 - **MCP Tools** tab: extension tool catalog (`McpToolsController`).
 - **AI Permissions** tab (admin only): wizard + permission matrix — see `context/features/ai-access-roles.md`.
+- **AI Label** tab: EU AI Act Article 50 review dashboard (overview, media, texts, settings) — see `context/features/ai-label.md`.
 
 ---
 

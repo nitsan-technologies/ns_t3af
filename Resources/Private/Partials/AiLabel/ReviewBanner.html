@@ -1,0 +1,21 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf" />
+
+<f:if condition="{spotlight}">
+    <div class="card mb-3">
+        <div class="card-header d-flex flex-wrap justify-content-between gap-2">
+            <strong><f:translate key="{ll}:module.aiLabel.reviewBanner.title" default="Recorded as created with AI" /></strong>
+            <span class="text-variant small">{spotlight.fileName} · {spotlight.aiSystem}</span>
+        </div>
+        <div class="card-body">
+            <p class="text-variant mb-2"><f:translate key="{ll}:module.aiLabel.reviewBanner.body" default="Nothing is shown to visitors until you confirm it. Confirming records you as responsible for this version." /></p>
+            <form method="post" action="{bulkActionUri}" class="d-flex flex-wrap gap-2">
+                <input type="hidden" name="action" value="confirm" />
+                <input type="hidden" name="returnTab" value="media" />
+                <input type="hidden" name="refs[]" value="sys_file_metadata:{spotlight.uid}" />
+                <button type="submit" class="btn btn-success btn-sm"><f:translate key="{ll}:module.aiLabel.action.confirm" default="Confirm" /></button>
+            </form>
+        </div>
+    </div>
+</f:if>

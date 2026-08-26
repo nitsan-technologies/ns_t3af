@@ -1,0 +1,9 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:ail="http://typo3.org/ns/NITSAN/NsT3AF/AiLabel/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:asset.css identifier="nst3af-ailabel" href="EXT:ns_t3af/Resources/Public/Css/frontend/ai-label.css" />
+<div class="nst3af-ailabel-audio">
+    <f:media class="audio-embed-item" file="{file}" width="{dimensions.width}" height="{dimensions.height}" alt="{file.alternative}" title="{file.title}" />
+    <ail:label file="{file}" />
+</div>
+</html>
