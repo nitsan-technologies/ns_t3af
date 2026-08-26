@@ -14,7 +14,6 @@ jobs:
       TYPO3_API_TOKEN: ${{ secrets.TYPO3_API_TOKEN }}
       TYPO3_API_USERNAME: ${{ secrets.TYPO3_API_USERNAME }}
       TYPO3_API_PASSWORD: ${{ secrets.TYPO3_API_PASSWORD }}
-      TYPO3_T3TERMINAL_PRODUCT: ${{ secrets.TYPO3_T3TERMINAL_PRODUCT }}
 
     steps:
       - name: Get the version
@@ -31,4 +30,4 @@ jobs:
         run: composer global require typo3/tailor --prefer-dist --no-progress --no-suggest
 
       - name: Upload EXT:${{ env.EXTENSION_KEY }} as ${{ steps.get_version.outputs.VERSION }} to TER
-        run: php ~/.composer/vendor/bin/tailor ter:publish ${{ steps.get_version.outputs.VERSION }} --artefact=${{ env.REPOSITORY_URL }}/archive/${{ steps.get_version.outputs.VERSION }}.zip --comment="New release of version ${{ steps.get_version.outputs.VERSION }} - see details, changelog and documentation on ${{ env.TYPO3_T3TERMINAL_PRODUCT }}"
+        run: php ~/.composer/vendor/bin/tailor ter:publish ${{ steps.get_version.outputs.VERSION }} --artefact=${{ env.REPOSITORY_URL }}/archive/${{ steps.get_version.outputs.VERSION }}.zip --comment="New release of version ${{ steps.get_version.outputs.VERSION }} - see details, changelog and documentation on https://github.com/${{ github.repository }}/releases/tag/${{ steps.get_version.outputs.VERSION }}"
