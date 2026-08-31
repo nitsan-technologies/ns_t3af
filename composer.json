@@ -50,7 +50,7 @@
         "php": ">=8.2 <9",
         "ext-curl": "*",
         "ext-sodium": "*",
-        "mcp/sdk": "^0.7",
+        "mcp/sdk": "^0.8",
         "symfony/ai-anthropic-platform": "^0.12",
         "symfony/ai-azure-platform": "^0.12",
         "symfony/ai-gemini-platform": "^0.12",
