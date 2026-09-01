@@ -165,16 +165,155 @@ function resolveModuleRoute() {
 }
 
 /**
- * @returns {{ pageId: number, module: string }}
+ * Read the active module iframe URL (Page / List) when same-origin.
+ * @returns {URL|null}
  */
-function resolveBackendContext() {
-  const state = ModuleStateStorage.current('web');
-  const pageId = Number.parseInt(state?.identifier || '0', 10);
+function resolveContentIframeUrl() {
+  try {
+    const backendDoc = getBackendDocument();
+    const iframe = backendDoc.querySelector('#typo3-contentIframe, [data-scaffold-content-iframe], iframe[name="list_frame"]');
+    if (iframe instanceof HTMLIFrameElement && iframe.contentWindow) {
+      return new URL(iframe.contentWindow.location.href);
+    }
+  } catch {
+    // iframe may be cross-origin or not ready.
+  }
+
+  try {
+    return new URL(window.location.href);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Language column ids selected in the Page module (e.g. languages[0]=0&languages[1]=2).
+ * @returns {number[]}
+ */
+function resolveSelectedLanguageIds() {
+  const url = resolveContentIframeUrl();
+  if (!url) {
+    return [];
+  }
+
+  const ids = [];
+  url.searchParams.forEach((value, key) => {
+    const match = key.match(/^languages\[(\d+)\]$/);
+    if (!match) {
+      return;
+    }
+    const id = Number.parseInt(value, 10);
+    if (Number.isFinite(id)) {
+      ids.push(id);
+    }
+  });
+
+  if (ids.length > 0) {
+    return ids;
+  }
+
+  url.searchParams.getAll('languages').forEach((value) => {
+    const id = Number.parseInt(value, 10);
+    if (Number.isFinite(id)) {
+      ids.push(id);
+    }
+  });
+
+  return ids;
+}
+
+/**
+ * Pick the translation target from Page module language columns (first non-default).
+ * @param {number[]} languageIds
+ * @returns {number}
+ */
+function resolveTargetLanguageId(languageIds) {
+  const targets = languageIds.filter((id) => id > 0);
+  return targets.length > 0 ? targets[0] : 0;
+}
+
+/**
+ * @param {string} module
+ * @returns {boolean}
+ */
+function isFileModuleRoute(module) {
+  const normalized = String(module ?? '').toLowerCase();
+
+  return normalized === 'media_management' || normalized.startsWith('file');
+}
+
+/**
+ * Parse FAL list module URL id param (e.g. 1:/user_upload/).
+ * @returns {{ storageUid: number, folderIdentifier: string }}
+ */
+function resolveFileListContext() {
+  const url = resolveContentIframeUrl();
+  if (!url) {
+    return { storageUid: 0, folderIdentifier: '' };
+  }
+
+  const rawId = url.searchParams.get('id') ?? '';
+  if (rawId === '') {
+    return { storageUid: 0, folderIdentifier: '' };
+  }
+
+  const id = decodeURIComponent(rawId);
+  const colon = id.indexOf(':');
+  if (colon <= 0) {
+    return { storageUid: 0, folderIdentifier: '' };
+  }
+
+  const storageUid = Number.parseInt(id.slice(0, colon), 10);
+  let folderIdentifier = id.slice(colon + 1).trim();
+  if (folderIdentifier !== '' && !folderIdentifier.startsWith('/')) {
+    folderIdentifier = `/${folderIdentifier}`;
+  }
 
   return {
-    pageId: Number.isFinite(pageId) && pageId > 0 ? pageId : 0,
-    module: resolveModuleRoute(),
+    storageUid: Number.isFinite(storageUid) && storageUid > 0 ? storageUid : 0,
+    folderIdentifier,
   };
+}
+
+/**
+ * @returns {{ pageId: number, module: string, languageId: number, storageUid: number, folderIdentifier: string }}
+ */
+function resolveBackendContext() {
+  const module = resolveModuleRoute();
+  const inFileModule = isFileModuleRoute(module);
+  const fileList = inFileModule ? resolveFileListContext() : { storageUid: 0, folderIdentifier: '' };
+
+  const state = ModuleStateStorage.current('web');
+  let pageId = Number.parseInt(state?.identifier || '0', 10);
+  if (!Number.isFinite(pageId) || pageId <= 0) {
+    pageId = 0;
+  }
+  if (inFileModule) {
+    pageId = 0;
+  }
+
+  const languageId = resolveTargetLanguageId(resolveSelectedLanguageIds());
+
+  return {
+    pageId,
+    module,
+    languageId,
+    storageUid: fileList.storageUid,
+    folderIdentifier: fileList.folderIdentifier,
+  };
+}
+
+/**
+ * @param {object} source
+ * @returns {string}
+ */
+function resolveToolDisplayLabel(source) {
+  const editorLabel = String(source?.editorLabel ?? source?.toolCallLabel ?? source?.label ?? '').trim();
+  if (editorLabel !== '') {
+    return editorLabel;
+  }
+
+  return String(source?.tool ?? source?.name ?? '').trim();
 }
 
 /**
@@ -239,6 +378,152 @@ function escapeHtml(text) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+/**
+ * @param {number} ms
+ * @returns {string}
+ */
+function formatWorkDuration(ms) {
+  const totalSeconds = Math.max(1, Math.round(ms / 1000));
+  if (totalSeconds < 60) {
+    return `${totalSeconds}s`;
+  }
+
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+}
+
+/**
+ * Compact Cursor-style work trace (Working… / Worked for 12s).
+ *
+ * @param {{
+ *   working?: boolean,
+ *   durationMs?: number,
+ *   toolName?: string,
+ *   summary?: string,
+ *   args?: Array<{key?: string, value?: string}>,
+ *   resultContent?: string,
+ *   facts?: Array<{label?: string, value?: string}>,
+ *   open?: boolean,
+ * }} config
+ * @returns {string}
+ */
+function renderWorkTraceHtml(config) {
+  const working = config.working === true;
+  const durationMs = Math.max(0, Number(config.durationMs ?? 0));
+  const open = config.open ?? working;
+  const toolName = String(config.toolName ?? '').trim();
+  const summary = String(config.summary ?? '').trim();
+
+  const label = working
+    ? lang('agent.work.working', 'Working…')
+    : lang('agent.work.workedFor', 'Worked for %1$s').replace('%1$s', formatWorkDuration(durationMs));
+
+  const args = Array.isArray(config.args) ? config.args : [];
+  const argRows = args.map((entry) => {
+    const key = escapeHtml(String(entry.key ?? ''));
+    const value = escapeHtml(String(entry.value ?? ''));
+    if (key === '') {
+      return '';
+    }
+
+    return `<div class="nst3af-agent-work-trace__arg"><dt>${key}</dt><dd>${value}</dd></div>`;
+  }).join('');
+
+  const argsSection = argRows !== ''
+    ? `<div class="nst3af-agent-work-trace__section"><div class="nst3af-agent-work-trace__section-label">${escapeHtml(lang('agent.draft.toolArguments', 'Parameters'))}</div>${argRows}</div>`
+    : '';
+
+  const stepLine = toolName !== ''
+    ? `<div class="nst3af-agent-work-trace__step">${working
+      ? escapeHtml(lang('agent.draft.runningTool', 'Running %1$s…').replace('%1$s', toolName))
+      : `<strong>${escapeHtml(toolName)}</strong>`}</div>`
+    : '';
+
+  const summaryLine = summary !== ''
+    ? `<div class="nst3af-agent-work-trace__detail">${escapeHtml(summary)}</div>`
+    : '';
+
+  const facts = Array.isArray(config.facts) ? config.facts : [];
+  const factsRows = facts.map((fact) => (
+    `<div class="nst3af-agent-work-trace__arg"><dt>${escapeHtml(String(fact.label ?? ''))}</dt><dd>${escapeHtml(String(fact.value ?? ''))}</dd></div>`
+  )).join('');
+  const factsSection = factsRows !== ''
+    ? `<div class="nst3af-agent-work-trace__section">${factsRows}</div>`
+    : '';
+
+  const resultContent = String(config.resultContent ?? '').trim();
+  const resultSection = resultContent !== ''
+    ? `<div class="nst3af-agent-work-trace__result">${renderMessageBody(resultContent)}</div>`
+    : '';
+
+  const spinner = working
+    ? '<span class="nst3af-agent-work-trace__spinner" aria-hidden="true"></span>'
+    : '';
+
+  const bodyHtml = `${stepLine}${summaryLine}${argsSection}${resultSection}${factsSection}`;
+
+  if (bodyHtml.trim() === '') {
+    return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant nst3af-agent-msg--work-trace">
+      <div class="nst3af-agent-work-trace nst3af-agent-work-trace--compact"${working ? ' data-nst3af-work-trace-active="1"' : ''}>
+        ${spinner}
+        <span class="nst3af-agent-work-trace__label" data-nst3af-work-trace-timer>${escapeHtml(label)}</span>
+      </div>
+    </div>`;
+  }
+
+  return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant nst3af-agent-msg--work-trace">
+    <details class="nst3af-agent-work-trace"${open ? ' open' : ''}${working ? ' data-nst3af-work-trace-active="1"' : ''}>
+      <summary class="nst3af-agent-work-trace__summary">
+        ${spinner}
+        <span class="nst3af-agent-work-trace__label" data-nst3af-work-trace-timer>${escapeHtml(label)}</span>
+      </summary>
+      <div class="nst3af-agent-work-trace__body">
+        ${stepLine}
+        ${summaryLine}
+        ${argsSection}
+        ${resultSection}
+        ${factsSection}
+      </div>
+    </details>
+  </div>`;
+}
+
+/**
+ * Work-trace fields are live UI only — not useful when reopening the modal.
+ *
+ * @param {object} meta
+ * @returns {object}
+ */
+function stripEphemeralWorkTraceMeta(meta) {
+  if (!meta || typeof meta !== 'object') {
+    return {};
+  }
+
+  const cleaned = { ...meta };
+  delete cleaned.fromDraftApply;
+  delete cleaned.workDurationMs;
+  delete cleaned.workSummary;
+  delete cleaned.workArguments;
+
+  return cleaned;
+}
+
+/**
+ * @param {Array<object>} messages
+ * @returns {Array<object>}
+ */
+function messagesForPersistence(messages) {
+  return messages.map((message) => {
+    const meta = message.meta ?? {};
+    return {
+      ...message,
+      meta: stripEphemeralWorkTraceMeta(meta),
+    };
+  });
 }
 
 /**
@@ -435,6 +720,7 @@ class AgentController {
     this.focusableSelector = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
     this.autocompleteIndex = -1;
     this.hotkey = readHotkeyPref();
+    this.workTraceTimer = 0;
 
     void ensureMessageRenderer().then(() => {
       if (this.stream && this.isOpen && !this.isLoadingSession) {
@@ -785,6 +1071,10 @@ class AgentController {
         return;
       }
       this.messages = Array.isArray(payload.messages) ? payload.messages : [];
+      this.messages = this.messages.map((message) => ({
+        ...message,
+        meta: stripEphemeralWorkTraceMeta(message.meta ?? {}),
+      }));
       this.context = payload.context ?? backendContext;
       this.starters = payload.starters ?? { executable: [], locked: [] };
       this.greeting = payload.greeting ?? null;
@@ -991,12 +1281,26 @@ class AgentController {
    */
   renderToolResultMessage(message) {
     const meta = message.meta ?? {};
+    const workDurationMs = Number(meta.workDurationMs ?? 0);
+    const showWorkHeader = meta.fromDraftApply === true || workDurationMs > 0;
+
+    const workHeaderHtml = showWorkHeader
+      ? renderWorkTraceHtml({
+        working: false,
+        durationMs: workDurationMs,
+        open: false,
+      })
+      : '';
+
     const success = meta.success !== false;
-    const toolLabel = escapeHtml(String(meta.toolCallLabel ?? meta.tool ?? ''));
+    const displayLabel = resolveToolDisplayLabel(meta);
+    const toolLabel = escapeHtml(displayLabel);
+    const technicalTool = String(meta.tool ?? '').trim();
     const severityLabel = escapeHtml(String(meta.severityLabel ?? meta.severity ?? 'read').toUpperCase());
     const autoRan = meta.autoRan === true;
     const facts = Array.isArray(meta.facts) ? meta.facts : [];
-    const factsHtml = facts.length
+    const hasEditorContent = String(message.content ?? '').trim() !== '';
+    const factsHtml = !hasEditorContent && facts.length
       ? `<dl class="nst3af-agent-facts">${facts.map((fact) => (
         `<div class="nst3af-agent-facts__row"><dt>${escapeHtml(String(fact.label ?? ''))}</dt><dd>${escapeHtml(String(fact.value ?? ''))}</dd></div>`
       )).join('')}</dl>`
@@ -1011,7 +1315,10 @@ class AgentController {
         detailsJson = String(meta.details);
       }
       if (detailsJson !== '' && detailsJson !== 'null') {
-        detailsHtml = `<details class="nst3af-agent-details"><summary>${escapeHtml(lang('agent.result.details', 'Details'))}</summary><pre><code>${escapeHtml(detailsJson)}</code></pre></details>`;
+        const detailsSummary = technicalTool !== '' && technicalTool !== displayLabel
+          ? `${lang('agent.result.details', 'Details')} (${technicalTool})`
+          : lang('agent.result.details', 'Details');
+        detailsHtml = `<details class="nst3af-agent-details"><summary>${escapeHtml(detailsSummary)}</summary><pre><code>${escapeHtml(detailsJson)}</code></pre></details>`;
       }
     }
 
@@ -1023,11 +1330,11 @@ class AgentController {
     }
 
     const autoHtml = autoRan
-      ? `<span class="nst3af-agent-tcall__auto">${escapeHtml(lang('agent.toolCall.autoRan', 'ran automatically'))}</span>`
+      ? `<span class="nst3af-agent-tcall__auto">${escapeHtml(lang('agent.toolCall.autoRan', 'completed'))}</span>`
       : '';
 
     const statusClass = success ? '' : ' nst3af-agent-msg--error';
-    return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant${statusClass}">
+    return workHeaderHtml + `<div class="nst3af-agent-msg nst3af-agent-msg--assistant${statusClass}">
       <div class="nst3af-agent-msg__who">AI Agent</div>
       <div class="nst3af-agent-tcall">
         <div class="nst3af-agent-tcall__head">
@@ -1076,23 +1383,15 @@ class AgentController {
     }
 
     if (draft.applying === true) {
-      const toolLabel = String(draft.tool ?? '');
-      const runningLabel = lang('agent.draft.runningTool', 'Running %1$s…').replace('%1$s', toolLabel);
-      const severityClass = isDestructive ? ' nst3af-agent-draft--destructive' : ' nst3af-agent-draft--write';
+      const toolLabel = resolveToolDisplayLabel(draft);
+      const severity = String(draft.severity ?? 'write');
 
-      return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant">
-      <div class="nst3af-agent-msg__who">AI Agent</div>
-      <div class="nst3af-agent-draft${severityClass} nst3af-agent-draft--running" data-nst3af-agent-draft="1" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}" data-message-index="${messageIndex}" aria-busy="true">
-        <div class="nst3af-agent-draft__header">
-          <span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(severity)}" aria-hidden="true"></span>
-          <span class="nst3af-agent-draft__title">${escapeHtml(toolLabel)}</span>
-        </div>
-        <div class="nst3af-agent-tool-confirm__running" role="status">
-          <span class="nst3af-agent-progress__spinner" aria-hidden="true"></span>
-          <span>${escapeHtml(runningLabel)}</span>
-        </div>
-      </div>
-    </div>`;
+      return renderWorkTraceHtml({
+        working: true,
+        toolName: toolLabel,
+        summary: lang('agent.draft.proposed', 'Review the proposed changes for %1$s before anything is written.').replace('%1$s', toolLabel),
+        open: true,
+      }) + `<span class="visually-hidden">${escapeHtml(severity)}</span>`;
     }
 
     const rows = fields.map((field) => {
@@ -1127,7 +1426,7 @@ class AgentController {
       <div class="nst3af-agent-draft${severityClass}${armedClass}" data-nst3af-agent-draft="1" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}" data-message-index="${messageIndex}" data-severity="${escapeHtml(severity)}">
         <div class="nst3af-agent-draft__header">
           <span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(severity)}" aria-hidden="true"></span>
-          <span class="nst3af-agent-draft__title">${escapeHtml(String(draft.tool ?? ''))}</span>
+          <span class="nst3af-agent-draft__title">${escapeHtml(resolveToolDisplayLabel(draft))}</span>
           <span class="nst3af-agent-draft__badge">${escapeHtml(lang('agent.draft.elicitation', 'MCP elicitation'))}</span>
         </div>
         <p class="nst3af-agent-draft__lead">${renderMessageBody(String(message.content ?? ''))}</p>
@@ -1153,7 +1452,7 @@ class AgentController {
     const armed = draft.destructiveArmed === true;
     const applied = draft.applied === true;
     const discarded = draft.discarded === true;
-    const toolName = String(draft.tool ?? '');
+    const displayLabel = resolveToolDisplayLabel(draft);
     const summary = String(draft.summary ?? message.content ?? '');
     const args = Array.isArray(draft.arguments) ? draft.arguments : [];
 
@@ -1176,25 +1475,13 @@ class AgentController {
     }
 
     if (draft.applying === true) {
-      const runningLabel = lang('agent.draft.runningTool', 'Running %1$s…').replace('%1$s', toolName);
-      const severityClass = isDestructive ? ' nst3af-agent-draft--destructive' : ' nst3af-agent-draft--write';
-
-      return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant">
-      <div class="nst3af-agent-msg__who">AI Agent</div>
-      <div class="nst3af-agent-draft nst3af-agent-tool-confirm nst3af-agent-tool-confirm--running${severityClass}" data-nst3af-agent-draft="1" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}" data-message-index="${messageIndex}" aria-busy="true">
-        <div class="nst3af-agent-draft__header">
-          <span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(severity)}" aria-hidden="true"></span>
-          <span class="nst3af-agent-draft__title">${escapeHtml(toolName)}</span>
-          <span class="nst3af-agent-draft__badge">${escapeHtml(lang('agent.draft.toolConfirmation', 'Tool confirmation'))}</span>
-        </div>
-        <p class="nst3af-agent-tool-confirm__summary">${escapeHtml(summary)}</p>
-        ${argsBlock}
-        <div class="nst3af-agent-tool-confirm__running" role="status">
-          <span class="nst3af-agent-progress__spinner" aria-hidden="true"></span>
-          <span>${escapeHtml(runningLabel)}</span>
-        </div>
-      </div>
-    </div>`;
+      return renderWorkTraceHtml({
+        working: true,
+        toolName: displayLabel,
+        summary,
+        args,
+        open: true,
+      });
     }
 
     const applyLabel = isDestructive
@@ -1209,7 +1496,7 @@ class AgentController {
       <div class="nst3af-agent-draft nst3af-agent-tool-confirm${severityClass}${armedClass}" data-nst3af-agent-draft="1" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}" data-message-index="${messageIndex}" data-severity="${escapeHtml(severity)}">
         <div class="nst3af-agent-draft__header">
           <span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(severity)}" aria-hidden="true"></span>
-          <span class="nst3af-agent-draft__title">${escapeHtml(toolName)}</span>
+          <span class="nst3af-agent-draft__title">${escapeHtml(displayLabel)}</span>
           <span class="nst3af-agent-draft__badge">${escapeHtml(lang('agent.draft.toolConfirmation', 'Tool confirmation'))}</span>
         </div>
         <p class="nst3af-agent-tool-confirm__summary">${escapeHtml(summary)}</p>
@@ -1343,8 +1630,10 @@ class AgentController {
 
     this.isRunning = true;
     draft.applying = true;
+    draft.applyStartedAt = Date.now();
     this.renderStream();
-    this.announce(lang('agent.draft.runningTool', 'Running %1$s…').replace('%1$s', String(draft.tool ?? '')));
+    this.startWorkTraceTimer();
+    this.announce(lang('agent.work.working', 'Working…'));
     try {
       const payload = await new AjaxRequest(url).post({
         draftId,
@@ -1358,15 +1647,17 @@ class AgentController {
       }
 
       draft.applied = true;
+      draft.applying = false;
       const result = payload.result ?? {};
 
       if (draft.kind === 'tool_confirmation') {
         const presented = result.presentation ?? {};
+        const workDurationMs = Date.now() - Number(draft.applyStartedAt ?? Date.now());
         message.content = messageContent(presented.content, messageContent(payload.message, lang('agent.draft.toolApplied', 'Tool ran successfully.')));
         message.meta = {
           type: 'tool_result',
           tool: String(result.tool ?? draft.tool ?? ''),
-          toolCallLabel: String(draft.tool ?? result.tool ?? ''),
+          toolCallLabel: resolveToolDisplayLabel({ ...draft, tool: String(result.tool ?? draft.tool ?? '') }),
           success: presented.success !== false,
           severity: String(draft.severity ?? 'write'),
           severityLabel: 'Write',
@@ -1375,6 +1666,10 @@ class AgentController {
           autoRan: false,
           correlationId: result.correlationId ?? message.meta?.correlationId ?? '',
           schedulerHandoff: payload.schedulerHandoff ?? null,
+          fromDraftApply: true,
+          workDurationMs,
+          workSummary: String(draft.summary ?? ''),
+          workArguments: Array.isArray(draft.arguments) ? draft.arguments : [],
         };
         this.renderStream();
         await this.persistSession();
@@ -1405,6 +1700,7 @@ class AgentController {
       this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
       this.renderStream();
     } finally {
+      this.clearWorkTraceTimer();
       this.isRunning = false;
       if (this.stream) {
         this.stream.removeAttribute('aria-busy');
@@ -1905,7 +2201,7 @@ class AgentController {
     }
 
     const body = {
-      messages: this.messages,
+      messages: messagesForPersistence(this.messages),
       context: this.context,
     };
     if (includeDisclosure || this.disclosureDismissed) {
@@ -2014,8 +2310,9 @@ class AgentController {
    */
   renderToolItem(tool, locked) {
     const severityText = this.severityLabel(tool.severity);
+    const displayLabel = resolveToolDisplayLabel(tool);
     const aria = this.buildToolAriaLabel(tool, locked);
-    return `<button type="button" class="nst3af-agent-autocomplete__item${locked ? ' nst3af-agent-autocomplete__item--locked' : ''}" data-nst3af-agent-ac-item="1" data-locked="${locked ? '1' : '0'}" data-insert="/${escapeHtml(String(tool.name ?? ''))} " aria-label="${escapeHtml(aria)}" role="option"><span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(String(tool.severity ?? 'read'))}" aria-hidden="true"></span><span><span class="nst3af-agent-autocomplete__item-title">${escapeHtml(String(tool.name ?? ''))}</span><span class="nst3af-agent-autocomplete__item-desc">${escapeHtml(String(tool.description ?? ''))} · ${escapeHtml(String(tool.ownerLabel ?? ''))} · ${escapeHtml(severityText)}</span></span></button>`;
+    return `<button type="button" class="nst3af-agent-autocomplete__item${locked ? ' nst3af-agent-autocomplete__item--locked' : ''}" data-nst3af-agent-ac-item="1" data-locked="${locked ? '1' : '0'}" data-insert="/${escapeHtml(String(tool.name ?? ''))} " aria-label="${escapeHtml(aria)}" role="option"><span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(String(tool.severity ?? 'read'))}" aria-hidden="true"></span><span><span class="nst3af-agent-autocomplete__item-title">${escapeHtml(displayLabel)}</span><span class="nst3af-agent-autocomplete__item-desc">${escapeHtml(String(tool.description ?? ''))} · ${escapeHtml(String(tool.ownerLabel ?? ''))} · ${escapeHtml(severityText)}</span></span></button>`;
   }
 
   /**
@@ -2113,7 +2410,7 @@ class AgentController {
    */
   buildToolAriaLabel(tool, locked) {
     const parts = [
-      String(tool.name ?? ''),
+      resolveToolDisplayLabel(tool),
       this.severityLabel(tool.severity),
     ];
     if (locked) {
@@ -2207,6 +2504,56 @@ class AgentController {
   }
 
   /**
+   * @param {string} text
+   */
+  announce(text) {
+    if (!this.stream) {
+      return;
+    }
+    this.stream.setAttribute('aria-label', text);
+  }
+
+  /**
+   * Live-update "Working…" duration labels while a draft/tool apply is in flight.
+   */
+  startWorkTraceTimer() {
+    this.clearWorkTraceTimer();
+    this.workTraceTimer = window.setInterval(() => {
+      const startedAt = this.findActiveApplyStartedAt();
+      if (!startedAt || !this.stream) {
+        return;
+      }
+
+      const elapsed = Date.now() - startedAt;
+      const label = lang('agent.work.workingFor', 'Working… %1$s').replace('%1$s', formatWorkDuration(elapsed));
+      this.stream.querySelectorAll('[data-nst3af-work-trace-active="1"] [data-nst3af-work-trace-timer]').forEach((node) => {
+        node.textContent = label;
+      });
+    }, 1000);
+  }
+
+  clearWorkTraceTimer() {
+    if (this.workTraceTimer) {
+      window.clearInterval(this.workTraceTimer);
+      this.workTraceTimer = 0;
+    }
+  }
+
+  /**
+   * @returns {number}
+   */
+  findActiveApplyStartedAt() {
+    for (let index = this.messages.length - 1; index >= 0; index -= 1) {
+      const draft = this.messages[index]?.meta?.draft;
+      if (draft?.applying === true && draft.applyStartedAt) {
+        return Number(draft.applyStartedAt);
+      }
+    }
+
+    return 0;
+  }
+
+  /**
    * @param {boolean} running
    */
   showProgress(running) {
@@ -2228,16 +2575,6 @@ class AgentController {
     this.stream.appendChild(node);
     this.stream.scrollTop = this.stream.scrollHeight;
     this.announce(lang('agent.live.running', 'Assistant is working…'));
-  }
-
-  /**
-   * @param {string} text
-   */
-  announce(text) {
-    if (!this.stream) {
-      return;
-    }
-    this.stream.setAttribute('aria-label', text);
   }
 }
 

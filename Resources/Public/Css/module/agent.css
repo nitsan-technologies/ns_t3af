@@ -787,6 +787,132 @@
   }
 }
 
+.nst3af-agent-msg--work-trace {
+  margin-top: 2px;
+}
+
+.nst3af-agent-work-trace {
+  margin: 0;
+}
+
+.nst3af-agent-work-trace--compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #5b6270;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+
+.nst3af-agent-msg--work-trace + .nst3af-agent-msg {
+  margin-top: 4px;
+}
+
+.nst3af-agent-work-trace__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: #5b6270;
+  font-size: 12px;
+  line-height: 1.4;
+  list-style: none;
+  user-select: none;
+}
+
+.nst3af-agent-work-trace__summary::-webkit-details-marker {
+  display: none;
+}
+
+.nst3af-agent-work-trace__summary::after {
+  content: '›';
+  margin-left: 2px;
+  color: #8a8f98;
+  transition: transform 0.15s ease;
+}
+
+.nst3af-agent-work-trace[open] > .nst3af-agent-work-trace__summary::after {
+  transform: rotate(90deg);
+}
+
+.nst3af-agent-work-trace__spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #d7d7d7;
+  border-top-color: #412aa2;
+  border-radius: 50%;
+  animation: nst3af-agent-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nst3af-agent-work-trace__spinner {
+    animation: none;
+  }
+}
+
+.nst3af-agent-work-trace__label {
+  font-weight: 500;
+}
+
+.nst3af-agent-work-trace__body {
+  margin: 6px 0 0 6px;
+  padding: 0 0 4px 12px;
+  border-left: 1px solid #e6e6e8;
+}
+
+.nst3af-agent-work-trace__step {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+
+.nst3af-agent-work-trace__detail {
+  font-size: 12px;
+  color: #5b6270;
+  margin-bottom: 8px;
+}
+
+.nst3af-agent-work-trace__section {
+  margin-top: 8px;
+}
+
+.nst3af-agent-work-trace__section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8a8f98;
+  margin-bottom: 4px;
+}
+
+.nst3af-agent-work-trace__arg {
+  display: grid;
+  grid-template-columns: minmax(0, 34%) minmax(0, 1fr);
+  gap: 4px 8px;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.nst3af-agent-work-trace__arg dt {
+  margin: 0;
+  color: #5b6270;
+  font-weight: 500;
+}
+
+.nst3af-agent-work-trace__arg dd {
+  margin: 0;
+  color: #1a1a1a;
+  word-break: break-word;
+}
+
+.nst3af-agent-work-trace__result {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #1a1a1a;
+}
+
 .nst3af-agent-msg__warn {
   margin-top: 8px;
   padding: 8px 10px;

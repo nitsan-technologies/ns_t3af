@@ -59,7 +59,7 @@ final class AgentConversationRepository
     }
 
     /**
-     * @param array{messages?: list<array<string, mixed>>, context?: array<string, mixed>, disclosure_dismissed?: bool} $payload
+     * @param array{messages?: list<array<string, mixed>>, context?: array<string, mixed>} $payload
      */
     public function save(int $beUserUid, string $moduleRoute, int $pageId, array $payload): void
     {
@@ -70,7 +70,6 @@ final class AgentConversationRepository
         $now = (int) ($GLOBALS['EXEC_TIME'] ?? time());
         $messagesJson = json_encode($payload['messages'] ?? [], JSON_THROW_ON_ERROR);
         $contextJson = json_encode($payload['context'] ?? [], JSON_THROW_ON_ERROR);
-        $disclosureDismissed = ($payload['disclosure_dismissed'] ?? false) === true ? 1 : 0;
 
         $existing = $this->findByScope($beUserUid, $moduleRoute, $pageId);
         if ($existing !== null) {
@@ -79,7 +78,6 @@ final class AgentConversationRepository
                 [
                     'messages' => $messagesJson,
                     'context' => $contextJson,
-                    'disclosure_dismissed' => $disclosureDismissed,
                     'tstamp' => $now,
                 ],
                 ['uid' => (int) $existing['uid']],
@@ -94,7 +92,6 @@ final class AgentConversationRepository
             'page_id' => max(0, $pageId),
             'messages' => $messagesJson,
             'context' => $contextJson,
-            'disclosure_dismissed' => $disclosureDismissed,
             'crdate' => $now,
             'tstamp' => $now,
         ]);

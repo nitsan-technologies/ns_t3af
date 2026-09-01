@@ -45,6 +45,7 @@ final readonly class AgentToolTurnProcessor
         private AgentToolResultPresenter $toolResultPresenter,
         private AgentSchedulerHandoff $schedulerHandoff,
         private AgentAuditLogger $auditLogger,
+        private AgentToolEditorLabelService $editorLabelService,
     ) {}
 
     /**
@@ -161,7 +162,7 @@ final readonly class AgentToolTurnProcessor
         $meta = [
             'type' => 'tool_result',
             'tool' => $tool['name'],
-            'toolCallLabel' => (string) ($tool['name'] ?? ''),
+            'toolCallLabel' => $this->editorLabelService->resolve($tool),
             'autoRan' => $severity === ToolSeverity::Read->value,
             'severity' => $severity,
             'severityLabel' => (string) ($tool['severityLabel'] ?? ''),
@@ -236,12 +237,14 @@ final readonly class AgentToolTurnProcessor
             ];
         }
 
+        $editorLabel = $this->editorLabelService->resolve($tool);
         $draftCard = $this->draftService->buildDraftCard($plan, $severity);
+        $draftCard['editorLabel'] = $editorLabel;
         $this->draftService->persistDraft($draftCard, $plan, $arguments, $this->draftSession);
 
         $content = ($draftCard['kind'] ?? '') === SatelliteToolPlanService::PLAN_KIND_TOOL_CONFIRMATION
-            ? (string) ($draftCard['summary'] ?? $this->translate('agent.draft.proposed', [$toolName]))
-            : $this->translate('agent.draft.proposed', [$toolName]);
+            ? (string) ($draftCard['summary'] ?? $this->translate('agent.draft.proposed', [$editorLabel]))
+            : $this->translate('agent.draft.proposed', [$editorLabel]);
 
         return [
             'role' => 'assistant',
@@ -249,6 +252,7 @@ final readonly class AgentToolTurnProcessor
             'meta' => [
                 'type' => 'inline_draft',
                 'tool' => $toolName,
+                'editorLabel' => $editorLabel,
                 'severity' => $severity,
                 'draft' => $draftCard,
                 'orchestratorPause' => true,
@@ -268,7 +272,11 @@ final readonly class AgentToolTurnProcessor
             $arguments['pageId'] ??= $pageId;
             $arguments['pid'] ??= $pageId;
             $arguments['uid'] ??= $pageId;
-            $arguments['parentPageId'] ??= $pageId;
+        }
+
+        $languageId = (int) ($context['languageId'] ?? 0);
+        if ($languageId > 0) {
+            $arguments['targetLanguageUid'] ??= $languageId;
         }
 
         $record = is_array($context['record'] ?? null) ? $context['record'] : null;
@@ -284,6 +292,11 @@ final readonly class AgentToolTurnProcessor
         $workspaceId = (int) ($context['workspaceId'] ?? 0);
         if ($workspaceId > 0) {
             $arguments['workspaceId'] ??= $workspaceId;
+        }
+
+        $storageUid = (int) ($context['storageUid'] ?? 0);
+        if ($storageUid > 0) {
+            $arguments['storageUid'] ??= $storageUid;
         }
 
         return $arguments;

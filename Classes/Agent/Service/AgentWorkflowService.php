@@ -281,7 +281,14 @@ final readonly class AgentWorkflowService
                 $recordAttachments,
                 $message,
             ),
-            'list_missing_alt_text' => $this->runReadTool('t3aa_list_files_missing_alt_text', [], $context, $body, $user, $correlationId),
+            'list_missing_alt_text' => $this->runReadTool(
+                't3aa_list_files_missing_alt_text',
+                ['storageUid' => (int) ($context['storageUid'] ?? 0)],
+                $context,
+                $body,
+                $user,
+                $correlationId,
+            ),
             'page_speed_check' => $this->runReadTool(
                 't3aa_get_page_speed',
                 ['pageId' => (int) ($context['pageId'] ?? 0)],

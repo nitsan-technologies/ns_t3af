@@ -58,9 +58,11 @@ use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Exception\SiteNotFoundException;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use TYPO3\CMS\Core\Http\Response;
 use TYPO3\CMS\Core\Localization\LanguageService;
+use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
 
 /**
@@ -102,6 +104,7 @@ final class AgentAjaxController
         private readonly AgentTargetPageResolver $targetPageResolver,
         private readonly AgentCompoundFlowService $compoundFlowService,
         private readonly AgentWorkflowService $workflowService,
+        private readonly SiteFinder $siteFinder,
     ) {}
 
     public function toolsAction(ServerRequestInterface $request): ResponseInterface
@@ -869,19 +872,6 @@ final class AgentAjaxController
         array $historyMessages,
         ?callable $emitEvent = null,
     ): array {
-        $readFastPath = $this->readFastPathService->resolve(
-            $message,
-            $context,
-            $body,
-            $user,
-            $correlationId,
-        );
-        if ($readFastPath !== []) {
-            $this->emitAssistantStreamMessages($emitEvent, $readFastPath);
-
-            return $readFastPath;
-        }
-
         $workflowMessages = $this->workflowService->tryExecute(
             $message,
             $context,
@@ -895,6 +885,19 @@ final class AgentAjaxController
             $this->emitAssistantStreamMessages($emitEvent, $workflowMessages);
 
             return $workflowMessages;
+        }
+
+        $readFastPath = $this->readFastPathService->resolve(
+            $message,
+            $context,
+            $body,
+            $user,
+            $correlationId,
+        );
+        if ($readFastPath !== []) {
+            $this->emitAssistantStreamMessages($emitEvent, $readFastPath);
+
+            return $readFastPath;
         }
 
         $attachmentMessages = $this->processRecordAttachmentTurns(
@@ -1274,6 +1277,8 @@ final class AgentAjaxController
             'languageId' => (int) ($clientContext['languageId'] ?? $body['languageId'] ?? 0),
             'siteIdentifier' => trim((string) ($clientContext['siteIdentifier'] ?? '')),
             'workspaceId' => (int) ($clientContext['workspaceId'] ?? 0),
+            'storageUid' => max(0, (int) ($clientContext['storageUid'] ?? 0)),
+            'folderIdentifier' => trim((string) ($clientContext['folderIdentifier'] ?? '')),
         ], $clientContext);
 
         $resolved = $this->agentContextResolver->resolve($merged, $this->resolveBackendUser());
@@ -1291,6 +1296,15 @@ final class AgentAjaxController
                 'key' => 'page',
                 'label' => $this->translate('agent.context.page'),
                 'value' => $this->resolvePageTitle($resolved->pageId) . ' [' . $resolved->pageId . ']',
+            ];
+        }
+        $storageUid = max(0, (int) ($merged['storageUid'] ?? 0));
+        $folderIdentifier = trim((string) ($merged['folderIdentifier'] ?? ''));
+        if ($storageUid > 0 && $folderIdentifier !== '') {
+            $chips[] = [
+                'key' => 'folder',
+                'label' => $this->translate('agent.context.folder'),
+                'value' => $folderIdentifier . ' [storage ' . $storageUid . ']',
             ];
         }
         if ($resolved->focusedRecord !== null) {
@@ -1313,7 +1327,7 @@ final class AgentAjaxController
             $chips[] = [
                 'key' => 'language',
                 'label' => $this->translate('agent.context.language'),
-                'value' => $this->resolveLanguageTitle($resolved->languageId),
+                'value' => $this->resolveLanguageTitle($resolved->languageId, $resolved->pageId),
             ];
         }
         $chips[] = [
@@ -1328,12 +1342,15 @@ final class AgentAjaxController
             'record' => $resolved->focusedRecord,
             'languageId' => $resolved->languageId,
             'workspaceId' => $resolved->workspaceId,
+            'storageUid' => $storageUid,
+            'folderIdentifier' => $folderIdentifier,
             'chips' => $chips,
             'contextAware' => $resolved->pageId > 0
                 || $resolved->focusedRecord !== null
                 || $resolved->module !== ''
                 || $resolved->languageId > 0
-                || $resolved->brandContextProfileUid !== null,
+                || $resolved->brandContextProfileUid !== null
+                || ($storageUid > 0 && $folderIdentifier !== ''),
         ];
     }
 
@@ -1444,23 +1461,35 @@ final class AgentAjaxController
         return is_string($title) && trim($title) !== '' ? $title : 'Page';
     }
 
-    private function resolveLanguageTitle(int $languageId): string
+    private function resolveLanguageTitle(int $languageId, int $pageId = 0): string
     {
         if ($languageId <= 0) {
             return '';
         }
 
-        $connection = $this->connectionPool->getConnectionForTable('sys_language');
-        $queryBuilder = $connection->createQueryBuilder();
-        $queryBuilder->getRestrictions()->removeAll();
-        $title = $queryBuilder
-            ->select('title')
-            ->from('sys_language')
-            ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($languageId, Connection::PARAM_INT)))
-            ->executeQuery()
-            ->fetchOne();
+        if ($pageId > 0) {
+            try {
+                $site = $this->siteFinder->getSiteByPageId($pageId);
+                $title = trim($site->getLanguageById($languageId)->getTitle());
 
-        return is_string($title) && trim($title) !== '' ? $title : ('Language #' . $languageId);
+                return $title !== '' ? $title : ('Language #' . $languageId);
+            } catch (SiteNotFoundException|\InvalidArgumentException) {
+                // Fall through to scan all sites.
+            }
+        }
+
+        foreach ($this->siteFinder->getAllSites() as $site) {
+            try {
+                $title = trim($site->getLanguageById($languageId)->getTitle());
+                if ($title !== '') {
+                    return $title;
+                }
+            } catch (\InvalidArgumentException) {
+                continue;
+            }
+        }
+
+        return 'Language #' . $languageId;
     }
 
     private function userCanReadPage(int $pageId): bool

@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
+use NITSAN\NsT3AF\Agent\Service\AgentToolEditorLabelService;
 use NITSAN\NsT3AF\Agent\Service\AgentToolResultPresenter;
 use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Api\AiResponse;
@@ -31,6 +32,13 @@ use PHPUnit\Framework\TestCase;
  */
 final class AgentToolResultPresenterTest extends TestCase
 {
+    private function createPresenter(?AiServiceInterface $ai = null): AgentToolResultPresenter
+    {
+        $ai ??= $this->createMock(AiServiceInterface::class);
+
+        return new AgentToolResultPresenter($ai, new AgentToolEditorLabelService());
+    }
+
     #[Test]
     public function presentDecodesJsonStringAndBuildsPageFacts(): void
     {
@@ -44,7 +52,7 @@ final class AgentToolResultPresenterTest extends TestCase
                 providerIdentifier: 'default',
             ));
 
-        $presenter = new AgentToolResultPresenter($ai);
+        $presenter = $this->createPresenter($ai);
         $payload = json_encode([
             'uid' => 1,
             'pid' => 0,
@@ -81,7 +89,7 @@ final class AgentToolResultPresenterTest extends TestCase
         $ai = $this->createMock(AiServiceInterface::class);
         $ai->expects(self::never())->method('complete');
 
-        $presenter = new AgentToolResultPresenter($ai);
+        $presenter = $this->createPresenter($ai);
 
         $errorPresented = $presenter->present(
             'pages_get',
@@ -104,7 +112,7 @@ final class AgentToolResultPresenterTest extends TestCase
         $ai = $this->createMock(AiServiceInterface::class);
         $ai->method('complete')->willThrowException(new \RuntimeException('no provider'));
 
-        $presenter = new AgentToolResultPresenter($ai);
+        $presenter = $this->createPresenter($ai);
         $presented = $presenter->present(
             'pages_get',
             ['uid' => 48, 'title' => 'About', 'slug' => '/about'],
@@ -123,7 +131,7 @@ final class AgentToolResultPresenterTest extends TestCase
         $ai = $this->createMock(AiServiceInterface::class);
         $ai->expects(self::never())->method('complete');
 
-        $presenter = new AgentToolResultPresenter($ai);
+        $presenter = $this->createPresenter($ai);
         $presented = $presenter->present('content_list', [
             ['uid' => 178, 'header' => 'The AI for problem solvers'],
             ['uid' => 179, 'header' => 'Keep thinking with Claude'],
@@ -131,8 +139,34 @@ final class AgentToolResultPresenterTest extends TestCase
 
         self::assertTrue($presented['success']);
         self::assertNull($presented['llmSummary']);
-        self::assertSame('Found 2 items — details below.', $presented['content']);
+        self::assertStringContainsString('Found 2 items', $presented['content']);
+        self::assertStringContainsString('The AI for problem solvers', $presented['content']);
         self::assertSame('2', $presented['facts'][0]['value']);
+    }
+
+    #[Test]
+    public function presentBuildsHumanSummaryForMissingAltFileList(): void
+    {
+        $ai = $this->createMock(AiServiceInterface::class);
+        $ai->expects(self::never())->method('complete');
+
+        $presenter = $this->createPresenter($ai);
+        $presented = $presenter->present('t3aa_list_files_missing_alt_text', [
+            'total' => 43,
+            'limit' => 50,
+            'offset' => 0,
+            'items' => [
+                ['file_uid' => 12, 'identifier' => '/user_upload/hero.png', 'storage' => 1],
+                ['file_uid' => 15, 'identifier' => '/user_upload/team.jpg', 'storage' => 1],
+            ],
+        ], true);
+
+        self::assertTrue($presented['success']);
+        self::assertStringContainsString('43 images missing alt text', $presented['content']);
+        self::assertStringContainsString('hero.png', $presented['content']);
+        self::assertStringContainsString('Generate file metadata', $presented['content']);
+        self::assertSame('43', $presented['facts'][0]['value']);
+        self::assertSame('Images missing alt text', $presented['facts'][0]['label']);
     }
 
     #[Test]
@@ -141,7 +175,7 @@ final class AgentToolResultPresenterTest extends TestCase
         $ai = $this->createMock(AiServiceInterface::class);
         $ai->method('complete')->willThrowException(new \RuntimeException('skip'));
 
-        $presenter = new AgentToolResultPresenter($ai);
+        $presenter = $this->createPresenter($ai);
         $presented = $presenter->present(
             'custom_lookup',
             ['name' => 'Acme', 'uid' => 9, 'description' => 'Widget'],

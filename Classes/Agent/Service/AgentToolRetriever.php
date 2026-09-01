@@ -192,19 +192,21 @@ final class AgentToolRetriever
 
         $pageId = (int) ($context['pageId'] ?? 0);
         if ($pageId <= 0) {
-            return $arguments;
+            return $this->applyTargetLanguageArgument($arguments, $context);
         }
 
         $parentPageParam = is_string($hints['parentPageParam'] ?? null) ? $hints['parentPageParam'] : null;
         if ($parentPageParam !== null) {
             $arguments[$parentPageParam] = $pageId;
-            return $arguments;
+
+            return $this->applyTargetLanguageArgument($arguments, $context);
         }
 
         $newsStorageParam = is_string($hints['newsStorageParam'] ?? null) ? $hints['newsStorageParam'] : null;
         if ($newsStorageParam !== null) {
             $arguments[$newsStorageParam] = $pageId;
-            return $arguments;
+
+            return $this->applyTargetLanguageArgument($arguments, $context);
         }
 
         $pageParam = is_string($hints['pageParam'] ?? null) ? $hints['pageParam'] : null;
@@ -213,6 +215,21 @@ final class AgentToolRetriever
             $arguments['pid'] ??= $pageId;
         } else {
             $arguments = $this->applyLegacyPageFallback(strtolower((string) ($tool['name'] ?? '')), $pageId, $arguments);
+        }
+
+        return $this->applyTargetLanguageArgument($arguments, $context);
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $context
+     * @return array<string, mixed>
+     */
+    private function applyTargetLanguageArgument(array $arguments, array $context): array
+    {
+        $languageId = (int) ($context['languageId'] ?? 0);
+        if ($languageId > 0) {
+            $arguments['targetLanguageUid'] ??= $languageId;
         }
 
         return $arguments;

@@ -29,6 +29,8 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
  */
 final class AgentConversationSession
 {
+    private const SESSION_DISCLOSURE_KEY = 'nst3af_agent_disclosure_dismissed';
+
     private string $moduleRoute = '';
 
     private int $pageId = 0;
@@ -105,15 +107,17 @@ final class AgentConversationSession
         $this->persistPayload($user, [
             'messages' => [],
             'context' => [],
-            'disclosure_dismissed' => false,
         ]);
     }
 
     public function isDisclosureDismissed(?BackendUserAuthentication $user = null): bool
     {
-        $payload = $this->readPayload($user);
+        $user ??= $this->resolveBackendUser();
+        if ($user === null) {
+            return false;
+        }
 
-        return ($payload['disclosure_dismissed'] ?? false) === true;
+        return (bool) ($user->getSessionData(self::SESSION_DISCLOSURE_KEY) ?? false);
     }
 
     public function setDisclosureDismissed(bool $dismissed, ?BackendUserAuthentication $user = null): void
@@ -123,9 +127,7 @@ final class AgentConversationSession
             return;
         }
 
-        $payload = $this->readPayload($user);
-        $payload['disclosure_dismissed'] = $dismissed;
-        $this->persistPayload($user, $payload);
+        $user->setAndSaveSessionData(self::SESSION_DISCLOSURE_KEY, $dismissed ? 1 : 0);
     }
 
     /**
@@ -162,7 +164,6 @@ final class AgentConversationSession
             [
                 'messages' => $this->normalizeMessages(is_array($payload['messages'] ?? null) ? $payload['messages'] : []),
                 'context' => is_array($payload['context'] ?? null) ? $payload['context'] : [],
-                'disclosure_dismissed' => ($payload['disclosure_dismissed'] ?? false) === true,
             ],
         );
     }
@@ -195,7 +196,6 @@ final class AgentConversationSession
         return [
             'messages' => is_array($messages) ? $messages : [],
             'context' => is_array($context) ? $context : [],
-            'disclosure_dismissed' => (int) ($row['disclosure_dismissed'] ?? 0) === 1,
         ];
     }
 

@@ -33,27 +33,10 @@ final readonly class AgentStarterBuilder
 
     private const FILE_METADATA_FLOW_ACTION = 'generate_file_metadata';
 
-    /** @var array<string, string> */
-    private const LABEL_KEYS = [
-        'pages_get' => 'agent.starter.inspectPage',
-        'pages_list' => 'agent.starter.listChildPages',
-        'pages_search' => 'agent.starter.searchPages',
-        'pages_tree' => 'agent.starter.pageTree',
-        'content_list' => 'agent.starter.listContent',
-        'record_search' => 'agent.starter.recordSearch',
-        'file_list' => 'agent.starter.fileList',
-        'file_get_info' => 'agent.starter.fileInfo',
-        'file_search' => 'agent.starter.fileSearch',
-        'file_upload' => 'agent.starter.fileUpload',
-        'redirect_list' => 'agent.starter.redirectList',
-        'redirect_get' => 'agent.starter.redirectGet',
-        'scheduler_list' => 'agent.starter.schedulerList',
-        'scheduler_get' => 'agent.starter.schedulerGet',
-    ];
-
     public function __construct(
         private PermittedActionProvider $permittedActionProvider,
         private AgentToolPlanResolver $toolPlanResolver,
+        private AgentToolEditorLabelService $editorLabelService,
     ) {}
 
     /**
@@ -360,11 +343,7 @@ final readonly class AgentStarterBuilder
      */
     private function enrichStarter(array $tool, array $arguments): array
     {
-        $name = (string) ($tool['name'] ?? '');
-        $labelKey = self::LABEL_KEYS[$name] ?? '';
-        $tool['label'] = $labelKey !== ''
-            ? $this->translate($labelKey)
-            : $this->humanizeToolName($name);
+        $tool['label'] = (string) ($tool['editorLabel'] ?? $this->editorLabelService->resolve($tool));
         if ($arguments !== []) {
             $tool['arguments'] = $arguments;
         }
@@ -389,13 +368,6 @@ final readonly class AgentStarterBuilder
             'executable' => true,
             'lockReason' => '',
         ];
-    }
-
-    private function humanizeToolName(string $name): string
-    {
-        $normalized = str_replace('_', ' ', strtolower(trim($name)));
-
-        return $normalized !== '' ? ucfirst($normalized) : $name;
     }
 
     private function translate(string $key): string

@@ -57,6 +57,14 @@ final class AgentNlIntentResolverTest extends TestCase
     }
 
     #[Test]
+    public function listImagesMissingAltIsNotPageContentQuery(): void
+    {
+        self::assertTrue($this->resolver->looksLikeFileAssetQuery('list images missing alt text'));
+        self::assertFalse($this->resolver->looksLikePageContentQuery('list images missing alt text'));
+        self::assertSame([], $this->resolver->extractContentSearchNeedles('list images missing alt text'));
+    }
+
+    #[Test]
     public function shortContentTitlePhraseIsPageContentQuery(): void
     {
         self::assertTrue($this->resolver->looksLikePageContentQuery('Claude models'));

@@ -154,8 +154,17 @@ final class AgentNlIntentResolver
         return $this->extractSearchNeedles($message);
     }
 
+    public function looksLikeFileAssetQuery(string $message): bool
+    {
+        return preg_match('/\b(image|images|file|files|fal|media|alt|caption|fileadmin|user_upload)\b/i', $message) === 1;
+    }
+
     public function looksLikePageContentQuery(string $message): bool
     {
+        if ($this->looksLikeFileAssetQuery($message)) {
+            return false;
+        }
+
         if (preg_match('/\b(seo|translate|translation|localize|localise|metadata|workspace|redirect|scheduler)\b/i', $message)) {
             return false;
         }

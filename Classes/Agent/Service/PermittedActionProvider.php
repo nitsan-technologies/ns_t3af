@@ -37,6 +37,7 @@ final readonly class PermittedActionProvider
         private McpToolIntrospectorService $toolIntrospector,
         private EntitlementResolver $entitlementResolver,
         private AgentToolPlanResolver $toolPlanResolver,
+        private AgentToolEditorLabelService $editorLabelService,
     ) {}
 
     /**
@@ -86,6 +87,7 @@ final readonly class PermittedActionProvider
             return [
                 'name' => $toolName,
                 'description' => (string) ($tool['description'] ?? ''),
+                'editorLabel' => $this->editorLabelService->resolve($tool),
                 'severity' => $severity?->value,
                 'severityLabel' => $severity?->label() ?? '',
                 'ownerExtensionKey' => $ownerKey,
@@ -116,6 +118,7 @@ final readonly class PermittedActionProvider
         return [
             'name' => (string) ($tool['name'] ?? ''),
             'description' => (string) ($tool['description'] ?? ''),
+            'editorLabel' => $this->editorLabelService->resolve($tool),
             'severity' => $severity?->value,
             'severityLabel' => $severity?->label() ?? '',
             'ownerExtensionKey' => $ownerKey,

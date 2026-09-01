@@ -486,6 +486,9 @@
       <trans-unit id="agent.context.page" resname="agent.context.page">
         <source>Page</source>
       </trans-unit>
+      <trans-unit id="agent.context.folder" resname="agent.context.folder">
+        <source>Folder</source>
+      </trans-unit>
       <trans-unit id="agent.context.record" resname="agent.context.record">
         <source>Record</source>
       </trans-unit>
@@ -514,7 +517,16 @@
         <source>Brand</source>
       </trans-unit>
       <trans-unit id="agent.toolCall.autoRan" resname="agent.toolCall.autoRan">
-        <source>ran automatically</source>
+        <source>completed</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.listFilesMissingAltText" resname="agent.tool.listFilesMissingAltText">
+        <source>List images missing alt text</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.updateFileMetadata" resname="agent.tool.updateFileMetadata">
+        <source>Update file metadata</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.getFileMetadata" resname="agent.tool.getFileMetadata">
+        <source>Inspect file metadata</source>
       </trans-unit>
       <trans-unit id="agent.upsell.title" resname="agent.upsell.title">
         <source>Extension required</source>
@@ -695,6 +707,15 @@
       </trans-unit>
       <trans-unit id="agent.live.running" resname="agent.live.running">
         <source>Assistant is working…</source>
+      </trans-unit>
+      <trans-unit id="agent.work.working" resname="agent.work.working">
+        <source>Working…</source>
+      </trans-unit>
+      <trans-unit id="agent.work.workingFor" resname="agent.work.workingFor">
+        <source>Working… %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.work.workedFor" resname="agent.work.workedFor">
+        <source>Worked for %1$s</source>
       </trans-unit>
       <trans-unit id="agent.live.opened" resname="agent.live.opened">
         <source>AI Agent opened.</source>

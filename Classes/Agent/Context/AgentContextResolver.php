@@ -22,6 +22,8 @@ namespace NITSAN\NsT3AF\Agent\Context;
 use NITSAN\NsT3AF\Service\BrandContextResolver;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Exception\SiteNotFoundException;
+use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
 
 /**
@@ -33,6 +35,7 @@ final readonly class AgentContextResolver
 {
     public function __construct(
         private BrandContextResolver $brandContextResolver,
+        private SiteFinder $siteFinder,
     ) {}
 
     /**
@@ -40,8 +43,13 @@ final readonly class AgentContextResolver
      */
     public function resolve(array $clientContext, ?BackendUserAuthentication $user = null): AgentContext
     {
+        $module = trim((string) ($clientContext['module'] ?? ''));
+        $isFileModule = $this->isFileModule($module);
+
         $pageId = (int) ($clientContext['pageId'] ?? 0);
-        if ($pageId > 0 && !$this->userCanReadPage($pageId, $user)) {
+        if ($isFileModule) {
+            $pageId = 0;
+        } elseif ($pageId > 0 && !$this->userCanReadPage($pageId, $user)) {
             $pageId = 0;
         }
 
@@ -67,15 +75,42 @@ final readonly class AgentContextResolver
         }
 
         return new AgentContext(
-            module: trim((string) ($clientContext['module'] ?? '')),
+            module: $module,
             pageId: $pageId,
             focusedRecord: $focusedRecord,
-            languageId: (int) ($clientContext['languageId'] ?? 0),
+            languageId: $this->resolveTargetLanguageId((int) ($clientContext['languageId'] ?? 0), $pageId, $user),
             siteIdentifier: trim((string) ($clientContext['siteIdentifier'] ?? '')),
             workspaceId: max(0, $workspaceId),
             brandContextProfileUid: $brandProfile?->uid,
             brandName: $brandProfile !== null ? $brandProfile->brandName : '',
         );
+    }
+
+    private function resolveTargetLanguageId(int $clientLanguageId, int $pageId, ?BackendUserAuthentication $user): int
+    {
+        if ($clientLanguageId > 0) {
+            return $clientLanguageId;
+        }
+
+        if ($pageId <= 0 || $user === null) {
+            return 0;
+        }
+
+        try {
+            $site = $this->siteFinder->getSiteByPageId($pageId);
+        } catch (SiteNotFoundException) {
+            return 0;
+        }
+
+        $nonDefault = [];
+        foreach ($site->getAvailableLanguages($user, false, $pageId) as $siteLanguage) {
+            $languageId = $siteLanguage->getLanguageId();
+            if ($languageId > 0) {
+                $nonDefault[] = $languageId;
+            }
+        }
+
+        return count($nonDefault) === 1 ? $nonDefault[0] : 0;
     }
 
     private function userCanReadPage(int $pageId, ?BackendUserAuthentication $user): bool
@@ -88,5 +123,12 @@ final readonly class AgentContextResolver
         }
 
         return BackendUtility::readPageAccess($pageId, $user->getPagePermsClause(Permission::PAGE_SHOW)) !== false;
+    }
+
+    private function isFileModule(string $module): bool
+    {
+        $normalized = strtolower(trim($module));
+
+        return str_starts_with($normalized, 'file') || $normalized === 'media_management';
     }
 }

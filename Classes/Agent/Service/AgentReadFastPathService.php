@@ -60,6 +60,10 @@ final readonly class AgentReadFastPathService
         BackendUserAuthentication $user,
         string $correlationId,
     ): array {
+        if ($this->isFileModule($context) || $this->nlIntentResolver->looksLikeFileAssetQuery($userMessage)) {
+            return [];
+        }
+
         $pageId = (int) ($context['pageId'] ?? 0);
         if ($pageId <= 0) {
             return [];
@@ -433,6 +437,16 @@ final readonly class AgentReadFastPathService
         $text = preg_replace("/\n{3,}/", "\n\n", $text) ?? $text;
 
         return trim($text);
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function isFileModule(array $context): bool
+    {
+        $module = strtolower(trim((string) ($context['module'] ?? '')));
+
+        return str_starts_with($module, 'file') || $module === 'media_management';
     }
 
     /**
