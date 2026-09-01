@@ -23,12 +23,12 @@ use NITSAN\NsT3AF\Agent\Service\AgentAvailabilityService;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Controller\Event\AfterBackendPageRenderEvent;
 use TYPO3\CMS\Backend\View\BackendViewFactory;
-use TYPO3\CMS\Core\Attribute\AsEventListener;
 use TYPO3\CMS\Core\Page\JavaScriptModuleInstruction;
 use TYPO3\CMS\Core\Page\PageRenderer;
 
 /**
  * Injects the AI Agent mount point and assets into every backend page.
+ * Registered via Services.yaml event.listener.
  *
  * @internal
  */
@@ -40,7 +40,6 @@ final readonly class AfterBackendPageRenderListener
         private PageRenderer $pageRenderer,
     ) {}
 
-    #[AsEventListener(event: AfterBackendPageRenderEvent::class)]
     public function __invoke(AfterBackendPageRenderEvent $event): void
     {
         if (!$this->agentAvailability->shouldRenderUi()) {

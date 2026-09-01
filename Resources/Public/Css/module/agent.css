@@ -684,6 +684,7 @@
   gap: 8px;
   min-width: 0;
   max-width: min(420px, 100%);
+  height: auto;
   padding: 6px 14px 6px 10px;
   border: 1px solid #f4623a;
   border-radius: 999px;
@@ -694,6 +695,13 @@
   line-height: 1.2;
   cursor: pointer;
   box-shadow: 0 1px 0 rgba(244, 98, 58, 0.12);
+}
+
+.scaffold-toolbar .nst3af-agent-launchbar.toolbar-item-link,
+.scaffold-toolbar .nst3af-agent-launchbar.toolbar-item-link:hover,
+.scaffold-toolbar .nst3af-agent-launchbar.toolbar-item-link:focus,
+.nst3af-agent-launchbar.toolbar-item-link {
+  color: #1f2937;
 }
 
 .nst3af-agent-launchbar:hover,

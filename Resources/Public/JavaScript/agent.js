@@ -11,8 +11,8 @@ const HOTKEY_OPT_IN_K = 'mod+k';
 
 /** @type {AgentController | null} */
 let controller = null;
-/** v12 fallback when @typo3/backend/hotkeys.js is unavailable (TYPO3 13+ only). */
-let useLegacyOpenHotkey = true;
+const OPEN_HOTKEY_BOUND = Symbol.for('nst3af.agent.openHotkey');
+const IFRAME_WATCHED = Symbol.for('nst3af.agent.iframeWatch');
 
 /**
  * @param {string} chord
@@ -736,24 +736,6 @@ class AgentController {
   }
 
   /**
-   * TYPO3 v12: top-document keydown only (no Hotkeys negotiator / iframe forwarding).
-   *
-   * @param {KeyboardEvent} event
-   */
-  tryOpenFromLegacyHotkey(event) {
-    if (!matchesAgentHotkey(event, this.hotkey)) {
-      return;
-    }
-    const target = event.target;
-    const tag = (target instanceof HTMLElement ? target.tagName : '').toLowerCase();
-    if (tag === 'input' || tag === 'textarea' || (target instanceof HTMLElement && target.isContentEditable)) {
-      return;
-    }
-    event.preventDefault();
-    this.open(getBackendDocument().querySelector('[data-nst3af-agent-open]'));
-  }
-
-  /**
    * Scope key for DB-backed conversation rows (module + page).
    * @returns {string}
    */
@@ -890,9 +872,6 @@ class AgentController {
 
     document.addEventListener('keydown', (event) => {
       if (!this.isOpen) {
-        if (useLegacyOpenHotkey) {
-          this.tryOpenFromLegacyHotkey(event);
-        }
         return;
       }
 
@@ -2596,40 +2575,15 @@ function getBackendDocument() {
 }
 
 /**
- * Register open shortcut via TYPO3 Hotkeys negotiator (iframe-safe, TYPO3 13+).
- * @returns {Promise<boolean>} true when Hotkeys registered; false → enable v12 fallback
- */
-async function registerAgentOpenHotkeys() {
-  try {
-    const hotkeysModule = await import('@typo3/backend/hotkeys.js');
-    const Hotkeys = hotkeysModule.default;
-    const ModifierKeys = hotkeysModule.ModifierKeys;
-    if (typeof Hotkeys?.register !== 'function' || ModifierKeys === undefined) {
-      return false;
-    }
-
-    Hotkeys.register(
-      [Hotkeys.normalizedCtrlModifierKey, ModifierKeys.SHIFT, 'k'],
-      (event) => openAgentFromHotkey(event),
-      { allowOnEditables: true, scope: 'all' },
-    );
-
-    Hotkeys.register(
-      [Hotkeys.normalizedCtrlModifierKey, 'k'],
-      (event) => openAgentFromHotkey(event),
-      { allowOnEditables: true, scope: 'all' },
-    );
-
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
+ * Open shortcut for TYPO3 12–14: bind keydown (capture) on the scaffold and every
+ * same-origin iframe. v12 Live Search treats Cmd+K and Cmd+Shift+K as the same
+ * chord; we stopImmediatePropagation so only Agent opens on Shift+K. v13/v14 Live
+ * Search uses an exact Hotkeys combo, so this is a no-op there except still
+ * opening Agent from the iframe.
+ *
  * @param {KeyboardEvent} event
  */
-function openAgentFromHotkey(event) {
+function handleOpenHotkey(event) {
   if (controller === null || controller.isOpen) {
     return;
   }
@@ -2637,7 +2591,68 @@ function openAgentFromHotkey(event) {
     return;
   }
   event.preventDefault();
+  event.stopImmediatePropagation();
   controller.open(getBackendDocument().querySelector('[data-nst3af-agent-open]'));
+}
+
+/**
+ * @param {Document|null|undefined} doc
+ */
+function bindOpenHotkeyOnDocument(doc) {
+  if (!doc || doc[OPEN_HOTKEY_BOUND]) {
+    return;
+  }
+  try {
+    doc[OPEN_HOTKEY_BOUND] = true;
+  } catch {
+    return;
+  }
+  doc.addEventListener('keydown', handleOpenHotkey, true);
+}
+
+/**
+ * @param {HTMLIFrameElement} iframe
+ */
+function watchIframeElement(iframe) {
+  if (iframe[IFRAME_WATCHED]) {
+    return;
+  }
+  iframe[IFRAME_WATCHED] = true;
+  iframe.addEventListener('load', () => {
+    try {
+      bindOpenHotkeyOnDocument(iframe.contentDocument);
+    } catch {
+      // Cross-origin module frame.
+    }
+  });
+  try {
+    bindOpenHotkeyOnDocument(iframe.contentDocument);
+  } catch {
+    // Cross-origin module frame.
+  }
+}
+
+function bindOpenHotkeyAcrossFrames() {
+  const backendDoc = getBackendDocument();
+  bindOpenHotkeyOnDocument(backendDoc);
+  if (document !== backendDoc) {
+    bindOpenHotkeyOnDocument(document);
+  }
+
+  backendDoc.querySelectorAll('iframe').forEach((node) => {
+    if (node instanceof HTMLIFrameElement) {
+      watchIframeElement(node);
+    }
+  });
+
+  const backendWin = backendDoc.defaultView ?? window;
+  try {
+    for (let i = 0; i < backendWin.frames.length; i++) {
+      bindOpenHotkeyOnDocument(backendWin.frames[i].document);
+    }
+  } catch {
+    // A frame may be cross-origin.
+  }
 }
 
 function scheduleMountLaunchBar() {
@@ -2699,11 +2714,11 @@ function mountLaunchBar(retry = 0) {
 
   let slot = topbar.querySelector('.nst3af-agent-launchbar-slot');
   if (!(slot instanceof HTMLElement)) {
-    slot = document.createElement('div');
+    slot = backendDoc.createElement('div');
     slot.className = 'nst3af-agent-launchbar-slot';
     const anchor = topbar.querySelector('.topbar-button-search, .t3js-topbar-button-search');
-    if (anchor instanceof HTMLElement) {
-      topbar.insertBefore(slot, anchor);
+    if (anchor instanceof HTMLElement && anchor.parentElement) {
+      anchor.parentElement.insertBefore(slot, anchor);
     } else {
       topbar.appendChild(slot);
     }
@@ -2727,9 +2742,10 @@ function initialize() {
   }
 
   controller = new AgentController(root);
-  void registerAgentOpenHotkeys().then((registered) => {
-    useLegacyOpenHotkey = !registered;
-  });
+  bindOpenHotkeyAcrossFrames();
+  const backendDoc = getBackendDocument();
+  backendDoc.addEventListener('typo3-iframe-loaded', bindOpenHotkeyAcrossFrames);
+  backendDoc.addEventListener('typo3-module-loaded', bindOpenHotkeyAcrossFrames);
   scheduleMountLaunchBar();
 
   window.addEventListener('storage', (event) => {

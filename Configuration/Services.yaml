@@ -395,6 +395,12 @@ services:
     tags:
       - name: backend.toolbar.item
 
+  NITSAN\NsT3AF\EventListener\AfterBackendPageRenderListener:
+    tags:
+      - name: event.listener
+        identifier: 'nst3af/agent/after-backend-page-render'
+        event: TYPO3\CMS\Backend\Controller\Event\AfterBackendPageRenderEvent
+
   NITSAN\NsT3AF\Agent\Service\AgentSettingsPresenter:
     arguments:
       $toolIntrospector: '@NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService'

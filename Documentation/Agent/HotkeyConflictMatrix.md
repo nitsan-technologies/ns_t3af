@@ -1,6 +1,6 @@
 # AI Agent hotkey conflict matrix (T6)
 
-The global agent opens from the orange **Ask AI Agent** launch bar (toolbar item, optionally cloned into the topbar center on v13+) on **Ctrl/Cmd+Shift+K** by default (`Resources/Public/JavaScript/agent.js`). Editors can opt into **Ctrl/Cmd+K** under AI Agent settings (stored in browser `localStorage`). On **TYPO3 13+**, the open shortcut is registered through core `@typo3/backend/hotkeys.js` and the scaffold `hotkeys/negotiator.js`, so keypresses inside module content iframes are forwarded to the top-level agent (same mechanism as Live Search). On **TYPO3 12**, `hotkeys.js` is unavailable; the extension falls back to a top-document `keydown` listener (shortcut works when focus is on the scaffold, not inside the content iframe). Escape, autocomplete, and focus-trap keys while the modal is open still use a top-document `keydown` listener on all supported versions.
+The global agent opens from the orange **Ask AI Agent** launch bar (toolbar item, optionally cloned into the topbar center on v13+) on **Ctrl/Cmd+Shift+K** by default (`Resources/Public/JavaScript/agent.js`). Editors can opt into **Ctrl/Cmd+K** under AI Agent settings (stored in browser `localStorage`). On **TYPO3 12–14**, the open shortcut is bound on the scaffold document **and** every same-origin iframe (`#typo3-contentIframe`, page tree, …), matching how Live Search reaches module content. Rebind on `typo3-iframe-loaded` / iframe `load`. Escape, autocomplete, and focus-trap keys while the modal is open still use a top-document `keydown` listener.
 
 | Browser / surface | Ctrl/Cmd+Shift+K (default) | Ctrl/Cmd+K (opt-in) | Ctrl/Cmd+J (rejected) |
 |---|---|---|---|
@@ -11,9 +11,9 @@ The global agent opens from the orange **Ask AI Agent** launch bar (toolbar item
 
 | TYPO3 major | Core LiveSearch on Ctrl/Cmd+K | Agent default behaviour | Notes |
 |---|---|---|---|
-| v12 | Yes (global shortcut) | Agent uses Shift+K; Live Search keeps K | Top-document listener only; no iframe forwarding |
-| v13 | Yes | Same | Hotkeys negotiator + `allowOnEditables` |
-| v14 | Yes | Same as v13 | Verified against current backend toolbar layout |
+| v12 | Yes (global shortcut) | Agent uses Shift+K; Live Search keeps K | Capture-phase bind + stopImmediatePropagation (v12 Live Search ignores Shift) |
+| v13 | Yes | Same | Exact Hotkeys combo on Live Search; same Agent capture bind |
+| v14 | Yes | Same as v13 | Same as v13 |
 
 ## Choosing Ctrl/Cmd+K instead
 
