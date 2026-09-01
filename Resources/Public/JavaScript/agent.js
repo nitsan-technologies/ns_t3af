@@ -11,13 +11,14 @@ const HOTKEY_OPT_IN_K = 'mod+k';
 
 /** @type {AgentController | null} */
 let controller = null;
+/** v12 fallback when @typo3/backend/hotkeys.js is unavailable (TYPO3 13+ only). */
+let useLegacyOpenHotkey = true;
 
 /**
  * @param {string} chord
  * @returns {string}
  */
 function hotkeyLabel(chord) {
-  console.log('chord:', chord);
   return chord === HOTKEY_OPT_IN_K ? 'Ctrl/Cmd+K' : 'Ctrl/Cmd+Shift+K';
 }
 
@@ -449,6 +450,24 @@ class AgentController {
   }
 
   /**
+   * TYPO3 v12: top-document keydown only (no Hotkeys negotiator / iframe forwarding).
+   *
+   * @param {KeyboardEvent} event
+   */
+  tryOpenFromLegacyHotkey(event) {
+    if (!matchesAgentHotkey(event, this.hotkey)) {
+      return;
+    }
+    const target = event.target;
+    const tag = (target instanceof HTMLElement ? target.tagName : '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || (target instanceof HTMLElement && target.isContentEditable)) {
+      return;
+    }
+    event.preventDefault();
+    this.open(getBackendDocument().querySelector('[data-nst3af-agent-open]'));
+  }
+
+  /**
    * Scope key for DB-backed conversation rows (module + page).
    * @returns {string}
    */
@@ -585,13 +604,8 @@ class AgentController {
 
     document.addEventListener('keydown', (event) => {
       if (!this.isOpen) {
-        if (matchesAgentHotkey(event, this.hotkey)) {
-          const tag = (event.target instanceof HTMLElement ? event.target.tagName : '').toLowerCase();
-          if (tag === 'input' || tag === 'textarea' || (event.target instanceof HTMLElement && event.target.isContentEditable)) {
-            return;
-          }
-          event.preventDefault();
-          this.open(document.querySelector('[data-nst3af-agent-open]'));
+        if (useLegacyOpenHotkey) {
+          this.tryOpenFromLegacyHotkey(event);
         }
         return;
       }
@@ -2194,6 +2208,51 @@ function getBackendDocument() {
   return document;
 }
 
+/**
+ * Register open shortcut via TYPO3 Hotkeys negotiator (iframe-safe, TYPO3 13+).
+ * @returns {Promise<boolean>} true when Hotkeys registered; false → enable v12 fallback
+ */
+async function registerAgentOpenHotkeys() {
+  try {
+    const hotkeysModule = await import('@typo3/backend/hotkeys.js');
+    const Hotkeys = hotkeysModule.default;
+    const ModifierKeys = hotkeysModule.ModifierKeys;
+    if (typeof Hotkeys?.register !== 'function' || ModifierKeys === undefined) {
+      return false;
+    }
+
+    Hotkeys.register(
+      [Hotkeys.normalizedCtrlModifierKey, ModifierKeys.SHIFT, 'k'],
+      (event) => openAgentFromHotkey(event),
+      { allowOnEditables: true, scope: 'all' },
+    );
+
+    Hotkeys.register(
+      [Hotkeys.normalizedCtrlModifierKey, 'k'],
+      (event) => openAgentFromHotkey(event),
+      { allowOnEditables: true, scope: 'all' },
+    );
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * @param {KeyboardEvent} event
+ */
+function openAgentFromHotkey(event) {
+  if (controller === null || controller.isOpen) {
+    return;
+  }
+  if (!matchesAgentHotkey(event, readHotkeyPref())) {
+    return;
+  }
+  event.preventDefault();
+  controller.open(getBackendDocument().querySelector('[data-nst3af-agent-open]'));
+}
+
 function scheduleMountLaunchBar() {
   const backendDoc = getBackendDocument();
   const attempt = () => mountLaunchBar();
@@ -2281,6 +2340,9 @@ function initialize() {
   }
 
   controller = new AgentController(root);
+  void registerAgentOpenHotkeys().then((registered) => {
+    useLegacyOpenHotkey = !registered;
+  });
   scheduleMountLaunchBar();
 
   window.addEventListener('storage', (event) => {
