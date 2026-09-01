@@ -60,6 +60,14 @@ final readonly class AgentToolTurnProcessor
         string $correlationId,
     ): array {
         $catalog = $this->permittedActionProvider->buildCatalog();
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $reroutedTool = $this->rerouteWriteTableTool($toolName, $arguments, $catalog);
+        if ($reroutedTool !== null) {
+            $body['arguments'] = $reroutedTool['arguments'];
+
+            return $this->execute($reroutedTool['tool'], $context, $body, $user, $correlationId);
+        }
+
         $tool = $this->findTool($catalog, $toolName);
         if ($tool === null) {
             return [
@@ -210,6 +218,7 @@ final readonly class AgentToolTurnProcessor
 
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
         $arguments = $this->mergeContextArguments($arguments, $context);
+        $arguments = $this->normalizeWriteToolArguments($toolName, $arguments);
 
         try {
             $plan = $this->toolPlanResolver->plan($toolName, $arguments);
@@ -259,6 +268,7 @@ final readonly class AgentToolTurnProcessor
             $arguments['pageId'] ??= $pageId;
             $arguments['pid'] ??= $pageId;
             $arguments['uid'] ??= $pageId;
+            $arguments['parentPageId'] ??= $pageId;
         }
 
         $record = is_array($context['record'] ?? null) ? $context['record'] : null;
@@ -274,6 +284,57 @@ final readonly class AgentToolTurnProcessor
         $workspaceId = (int) ($context['workspaceId'] ?? 0);
         if ($workspaceId > 0) {
             $arguments['workspaceId'] ??= $workspaceId;
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @param array{executable: list<array<string, mixed>>, locked: list<array<string, mixed>>} $catalog
+     * @return array{tool: string, arguments: array<string, mixed>}|null
+     */
+    private function rerouteWriteTableTool(string $toolName, array $arguments, array $catalog): ?array
+    {
+        if ($toolName !== 'write_table') {
+            return null;
+        }
+
+        $table = strtolower(trim((string) ($arguments['tableName'] ?? $arguments['table'] ?? '')));
+        if ($table !== 'sys_file_metadata') {
+            return null;
+        }
+
+        if ($this->findTool($catalog, 't3aa_update_file_metadata') === null) {
+            return null;
+        }
+
+        $fileUid = (int) ($arguments['uid'] ?? $arguments['fileUid'] ?? 0);
+
+        return [
+            'tool' => 't3aa_update_file_metadata',
+            'arguments' => $fileUid > 0 ? ['fileUid' => $fileUid] : [],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    private function normalizeWriteToolArguments(string $toolName, array $arguments): array
+    {
+        if ($toolName !== 'write_table') {
+            return $arguments;
+        }
+
+        $action = strtolower(trim((string) ($arguments['action'] ?? '')));
+        if ($action === 'write') {
+            $arguments['action'] = 'update';
+        }
+
+        $table = strtolower(trim((string) ($arguments['tableName'] ?? $arguments['table'] ?? '')));
+        if ($table !== '' && !isset($arguments['tableName'])) {
+            $arguments['tableName'] = $table;
         }
 
         return $arguments;

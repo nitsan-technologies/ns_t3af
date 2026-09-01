@@ -1075,6 +1075,26 @@ class AgentController {
       return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant"><div class="nst3af-agent-msg__who">AI Agent</div><div class="nst3af-agent-msg__body">${escapeHtml(appliedLabel)}</div></div>`;
     }
 
+    if (draft.applying === true) {
+      const toolLabel = String(draft.tool ?? '');
+      const runningLabel = lang('agent.draft.runningTool', 'Running %1$s…').replace('%1$s', toolLabel);
+      const severityClass = isDestructive ? ' nst3af-agent-draft--destructive' : ' nst3af-agent-draft--write';
+
+      return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant">
+      <div class="nst3af-agent-msg__who">AI Agent</div>
+      <div class="nst3af-agent-draft${severityClass} nst3af-agent-draft--running" data-nst3af-agent-draft="1" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}" data-message-index="${messageIndex}" aria-busy="true">
+        <div class="nst3af-agent-draft__header">
+          <span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(severity)}" aria-hidden="true"></span>
+          <span class="nst3af-agent-draft__title">${escapeHtml(toolLabel)}</span>
+        </div>
+        <div class="nst3af-agent-tool-confirm__running" role="status">
+          <span class="nst3af-agent-progress__spinner" aria-hidden="true"></span>
+          <span>${escapeHtml(runningLabel)}</span>
+        </div>
+      </div>
+    </div>`;
+    }
+
     const rows = fields.map((field) => {
       const kept = field.kept !== false;
       const dropClass = kept ? '' : ' nst3af-agent-draft__fld--dropped';
@@ -1137,14 +1157,6 @@ class AgentController {
     const summary = String(draft.summary ?? message.content ?? '');
     const args = Array.isArray(draft.arguments) ? draft.arguments : [];
 
-    if (discarded) {
-      return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant"><div class="nst3af-agent-msg__who">AI Agent</div><div class="nst3af-agent-msg__body">${escapeHtml(lang('agent.draft.discarded', 'Draft discarded. Nothing was written.'))}</div></div>`;
-    }
-
-    if (applied) {
-      return '';
-    }
-
     const argRows = args.map((entry) => {
       const key = escapeHtml(String(entry.key ?? ''));
       const value = escapeHtml(String(entry.value ?? ''));
@@ -1154,6 +1166,36 @@ class AgentController {
     const argsBlock = argRows !== ''
       ? `<div class="nst3af-agent-tool-confirm__args"><div class="nst3af-agent-tool-confirm__args-title">${escapeHtml(lang('agent.draft.toolArguments', 'Parameters'))}</div>${argRows}</div>`
       : '';
+
+    if (discarded) {
+      return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant"><div class="nst3af-agent-msg__who">AI Agent</div><div class="nst3af-agent-msg__body">${escapeHtml(lang('agent.draft.discarded', 'Draft discarded. Nothing was written.'))}</div></div>`;
+    }
+
+    if (applied) {
+      return '';
+    }
+
+    if (draft.applying === true) {
+      const runningLabel = lang('agent.draft.runningTool', 'Running %1$s…').replace('%1$s', toolName);
+      const severityClass = isDestructive ? ' nst3af-agent-draft--destructive' : ' nst3af-agent-draft--write';
+
+      return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant">
+      <div class="nst3af-agent-msg__who">AI Agent</div>
+      <div class="nst3af-agent-draft nst3af-agent-tool-confirm nst3af-agent-tool-confirm--running${severityClass}" data-nst3af-agent-draft="1" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}" data-message-index="${messageIndex}" aria-busy="true">
+        <div class="nst3af-agent-draft__header">
+          <span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(severity)}" aria-hidden="true"></span>
+          <span class="nst3af-agent-draft__title">${escapeHtml(toolName)}</span>
+          <span class="nst3af-agent-draft__badge">${escapeHtml(lang('agent.draft.toolConfirmation', 'Tool confirmation'))}</span>
+        </div>
+        <p class="nst3af-agent-tool-confirm__summary">${escapeHtml(summary)}</p>
+        ${argsBlock}
+        <div class="nst3af-agent-tool-confirm__running" role="status">
+          <span class="nst3af-agent-progress__spinner" aria-hidden="true"></span>
+          <span>${escapeHtml(runningLabel)}</span>
+        </div>
+      </div>
+    </div>`;
+    }
 
     const applyLabel = isDestructive
       ? (armed ? lang('agent.draft.confirmSecond', 'Apply (2 of 2)') : lang('agent.draft.confirmFirst', 'Confirm (1 of 2)'))
@@ -1300,6 +1342,9 @@ class AgentController {
     }
 
     this.isRunning = true;
+    draft.applying = true;
+    this.renderStream();
+    this.announce(lang('agent.draft.runningTool', 'Running %1$s…').replace('%1$s', String(draft.tool ?? '')));
     try {
       const payload = await new AjaxRequest(url).post({
         draftId,
@@ -1355,11 +1400,15 @@ class AgentController {
       this.renderStream();
       await this.persistSession();
     } catch (error) {
+      draft.applying = false;
       const text = errorMessage(error);
       this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
       this.renderStream();
     } finally {
       this.isRunning = false;
+      if (this.stream) {
+        this.stream.removeAttribute('aria-busy');
+      }
     }
   }
 
@@ -1646,7 +1695,6 @@ class AgentController {
     }
 
     this.isRunning = true;
-    this.showProgress(true);
     this.input.value = '';
     this.hideAutocomplete();
 
@@ -1666,6 +1714,8 @@ class AgentController {
 
     try {
       this.messages.push({ role: 'user', content: message, meta: {} });
+      this.renderStream();
+      this.showProgress(true);
       let payload = null;
       let streamed = false;
       if (preferStream) {

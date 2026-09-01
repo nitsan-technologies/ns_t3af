@@ -31,6 +31,8 @@ final readonly class AgentStarterBuilder
 {
     private const SEO_FLOW_ACTION = 'generate_seo_metadata';
 
+    private const FILE_METADATA_FLOW_ACTION = 'generate_file_metadata';
+
     /** @var array<string, string> */
     private const LABEL_KEYS = [
         'pages_get' => 'agent.starter.inspectPage',
@@ -158,6 +160,14 @@ final readonly class AgentStarterBuilder
     {
         unset($context);
         $executable = [];
+
+        if ($this->findExecutableTool($catalog, 't3aa_update_file_metadata') !== null) {
+            $executable[] = $this->actionStarter(
+                self::FILE_METADATA_FLOW_ACTION,
+                'agent.starter.generateFileMetadata',
+                ToolSeverity::Write,
+            );
+        }
 
         foreach (['file_list', 'file_search', 'file_get_info', 'file_upload'] as $toolName) {
             $tool = $this->findExecutableTool($catalog, $toolName);

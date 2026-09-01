@@ -41,6 +41,7 @@ use NITSAN\NsT3AF\Agent\Service\AgentToolTurnProcessor;
 use NITSAN\NsT3AF\Agent\Service\AgentTurnOrchestrator;
 use NITSAN\NsT3AF\Agent\Service\AgentTurnRepository;
 use NITSAN\NsT3AF\Agent\Service\AgentUndoService;
+use NITSAN\NsT3AF\Agent\Service\AgentWorkflowService;
 use NITSAN\NsT3AF\Agent\Service\AgentWriteService;
 use NITSAN\NsT3AF\Agent\Service\PermittedActionProvider;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
@@ -100,6 +101,7 @@ final class AgentAjaxController
         private readonly AgentReadFastPathService $readFastPathService,
         private readonly AgentTargetPageResolver $targetPageResolver,
         private readonly AgentCompoundFlowService $compoundFlowService,
+        private readonly AgentWorkflowService $workflowService,
     ) {}
 
     public function toolsAction(ServerRequestInterface $request): ResponseInterface
@@ -504,7 +506,7 @@ final class AgentAjaxController
             $selectedTool = '';
         }
         if ($starterAction === '') {
-            $starterAction = $this->nlIntentResolver->resolveStarterAction($message);
+            $starterAction = $this->workflowService->resolveStarterAction($message, $fileAttachments);
         }
 
         $messages = $this->conversationSession->getMessages();
@@ -529,6 +531,16 @@ final class AgentAjaxController
                 $correlationId,
             );
             $assistantMessages = $this->prependTranslateSkippedNotice($message, $assistantMessages, $correlationId);
+        } elseif (($workflowMessages = $this->workflowService->tryExecute(
+            $message,
+            $context,
+            $body,
+            $user,
+            $correlationId,
+            $recordAttachments,
+            $fileAttachments,
+        )) !== null) {
+            $assistantMessages = $workflowMessages;
         } elseif ($selectedTool !== '') {
             $body['arguments'] = $toolArguments;
             $assistantMessages[] = $this->processToolTurn($selectedTool, $context, $body, $user, $correlationId);
@@ -621,7 +633,7 @@ final class AgentAjaxController
             $selectedTool = '';
         }
         if ($starterAction === '') {
-            $starterAction = $this->nlIntentResolver->resolveStarterAction($message);
+            $starterAction = $this->workflowService->resolveStarterAction($message, $fileAttachments);
         }
         $body['arguments'] = $toolArguments;
         $compoundSteps = $this->nlIntentResolver->resolveCompoundSteps($message);
@@ -870,6 +882,21 @@ final class AgentAjaxController
             return $readFastPath;
         }
 
+        $workflowMessages = $this->workflowService->tryExecute(
+            $message,
+            $context,
+            $body,
+            $user,
+            $correlationId,
+            $recordAttachments,
+            $fileAttachments,
+        );
+        if ($workflowMessages !== null && $workflowMessages !== []) {
+            $this->emitAssistantStreamMessages($emitEvent, $workflowMessages);
+
+            return $workflowMessages;
+        }
+
         $attachmentMessages = $this->processRecordAttachmentTurns(
             $recordAttachments,
             $context,
@@ -889,6 +916,22 @@ final class AgentAjaxController
 
         $followUp = $this->messageParser->stripComposerTokens($message);
         if ($followUp !== '' && $attachmentMessages !== []) {
+            $followUpWorkflow = $this->workflowService->tryExecute(
+                $followUp,
+                $context,
+                $body,
+                $user,
+                $correlationId,
+                $recordAttachments,
+                $fileAttachments,
+            );
+            if ($followUpWorkflow !== null && $followUpWorkflow !== []) {
+                $merged = array_merge($attachmentMessages, $followUpWorkflow);
+                $this->emitAssistantStreamMessages($emitEvent, $merged);
+
+                return $merged;
+            }
+
             $history = $historyMessages;
             foreach ($attachmentMessages as $attachmentMessage) {
                 $history[] = $attachmentMessage;
@@ -977,6 +1020,18 @@ final class AgentAjaxController
                 ),
                 $correlationId,
             );
+        }
+
+        if (($workflowMessages = $this->workflowService->tryExecute(
+            $message,
+            $context,
+            $body,
+            $user,
+            $correlationId,
+            $attachments,
+            $fileAttachments,
+        )) !== null) {
+            return $workflowMessages;
         }
 
         if ($selectedTool !== '') {

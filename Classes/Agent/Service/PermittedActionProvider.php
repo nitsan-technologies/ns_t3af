@@ -123,6 +123,8 @@ final readonly class PermittedActionProvider
             'executable' => $executable,
             'lockReason' => $lockReason,
             'lockKind' => $lockKind,
+            'intent' => is_array($tool['intent'] ?? null) ? $tool['intent'] : null,
+            'contextHints' => is_array($tool['contextHints'] ?? null) ? $tool['contextHints'] : null,
         ];
     }
 

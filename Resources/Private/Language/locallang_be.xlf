@@ -531,6 +531,21 @@
       <trans-unit id="agent.starter.generateSeo" resname="agent.starter.generateSeo">
         <source>Generate SEO metadata</source>
       </trans-unit>
+      <trans-unit id="agent.starter.generateFileMetadata" resname="agent.starter.generateFileMetadata">
+        <source>Generate file metadata (alt, title)</source>
+      </trans-unit>
+      <trans-unit id="agent.workflow.fileMetadataNeedsFile" resname="agent.workflow.fileMetadataNeedsFile">
+        <source>Attach a file with @file or open the Media module so the agent knows which image to caption.</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.createNews" resname="agent.starter.createNews">
+        <source>Create news article</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.createNewsNeedsPage" resname="agent.starter.createNewsNeedsPage">
+        <source>Select a news storage folder page first, then ask to create a news article.</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.createNewsUnavailable" resname="agent.starter.createNewsUnavailable">
+        <source>News creation is not available. Install EXT:news and enable the T3AI news tools.</source>
+      </trans-unit>
       <trans-unit id="agent.starter.inspectPage" resname="agent.starter.inspectPage">
         <source>Inspect this page</source>
       </trans-unit>
@@ -635,6 +650,9 @@
       </trans-unit>
       <trans-unit id="agent.turn.emptyModelReply" resname="agent.turn.emptyModelReply">
         <source>I could not produce a reply. Try rephrasing or use / to run a specific tool.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.emptyModelReplyWithTools" resname="agent.turn.emptyModelReplyWithTools">
+        <source>I could not produce a reply. Closest tools: %1$s. Try rephrasing, pick a suggested action, or use / to run a specific tool.</source>
       </trans-unit>
       <trans-unit id="agent.turn.translateNotInCombinedFlow" resname="agent.turn.translateNotInCombinedFlow">
         <source>Translation is not run automatically in this combined request yet. This turn only prepares SEO metadata for the target page — run translation separately afterward.</source>
@@ -845,6 +863,9 @@
       </trans-unit>
       <trans-unit id="agent.draft.runTool" resname="agent.draft.runTool">
         <source>Run tool</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.runningTool" resname="agent.draft.runningTool">
+        <source>Running %1$s…</source>
       </trans-unit>
       <trans-unit id="agent.draft.toolApplied" resname="agent.draft.toolApplied">
         <source>Tool ran successfully.</source>

@@ -20,7 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 /**
- * Lightweight NL intent detection for fast-path routing before tool-calling.
+ * Lightweight NL intent detection for workflow fast-paths (not per-tool routing).
  *
  * @internal
  */
@@ -33,7 +33,7 @@ final class AgentNlIntentResolver
     public const STEP_SEO_OPTIMIZE = 'seo_optimize';
 
     /**
-     * Starter action id, e.g. generate_seo_metadata, or empty when none.
+     * Starter action id for multi-step workflows, e.g. generate_seo_metadata, or empty when none.
      */
     public function resolveStarterAction(string $message): string
     {

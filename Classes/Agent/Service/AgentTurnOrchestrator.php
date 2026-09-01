@@ -42,6 +42,7 @@ final readonly class AgentTurnOrchestrator
         private AiToolCallingServiceInterface $toolCallingService,
         private PermittedActionProvider $permittedActionProvider,
         private AgentToolDefinitionMapper $toolDefinitionMapper,
+        private AgentToolRetriever $toolRetriever,
         private AgentToolTurnProcessor $toolTurnProcessor,
         private AgentSettingsService $agentSettings,
         private BrandContextResolver $brandContextResolver,
@@ -91,8 +92,8 @@ final readonly class AgentTurnOrchestrator
         }
 
         $catalog = $this->permittedActionProvider->buildCatalog();
-        $tools = $this->toolDefinitionMapper->mapExecutableTools($catalog['executable']);
-        if ($tools === []) {
+        $executableTools = $catalog['executable'];
+        if ($executableTools === []) {
             $message = [
                 'role' => 'assistant',
                 'content' => $this->translate('agent.turn.noExecutableTools'),
@@ -105,6 +106,32 @@ final readonly class AgentTurnOrchestrator
                 'paused' => false,
                 'pauseReason' => null,
             ];
+        }
+
+        $shortlistLimit = AgentToolRetriever::DEFAULT_SHORTLIST;
+        $shortlistedTools = $this->toolRetriever->shortlist(
+            $userMessage,
+            $context,
+            $executableTools,
+            $shortlistLimit,
+        );
+        $tools = $this->toolDefinitionMapper->mapExecutableTools($shortlistedTools);
+        $retriedWithWidenedShortlist = false;
+
+        $preLlmAutoInvoke = $this->toolRetriever->buildAutoInvocation(
+            $userMessage,
+            $context,
+            $executableTools,
+        );
+        if ($preLlmAutoInvoke !== null) {
+            return $this->executeAutoInvocation(
+                $preLlmAutoInvoke,
+                $context,
+                $body,
+                $user,
+                $correlationId,
+                $emitEvent,
+            );
         }
 
         $maxReads = $this->agentSettings->getMaxReadToolsPerTurn();
@@ -169,15 +196,49 @@ final readonly class AgentTurnOrchestrator
                 if ($text === '' && $assistantMessages !== []) {
                     break;
                 }
+                if ($text === '' && !$retriedWithWidenedShortlist && $shortlistLimit < count($executableTools)) {
+                    $retriedWithWidenedShortlist = true;
+                    $shortlistLimit = min(AgentToolRetriever::WIDEN_SHORTLIST, count($executableTools));
+                    $shortlistedTools = $this->toolRetriever->shortlist(
+                        $userMessage,
+                        $context,
+                        $executableTools,
+                        $shortlistLimit,
+                    );
+                    $tools = $this->toolDefinitionMapper->mapExecutableTools($shortlistedTools);
+                    continue;
+                }
+                $fallbackAutoInvoke = $this->toolRetriever->buildAutoInvocation(
+                    $userMessage,
+                    $context,
+                    $executableTools,
+                    afterLlmFailure: true,
+                );
+                if ($fallbackAutoInvoke !== null) {
+                    return $this->executeAutoInvocation(
+                        $fallbackAutoInvoke,
+                        $context,
+                        $body,
+                        $user,
+                        $correlationId,
+                        $emitEvent,
+                    );
+                }
                 $message = [
                     'role' => 'assistant',
-                    'content' => $text !== '' ? $text : $this->translate('agent.turn.emptyModelReply'),
+                    'content' => $text !== ''
+                        ? $text
+                        : $this->buildEmptyModelReply($userMessage, $context, $executableTools),
                     'meta' => [
                         'type' => 'nl_reply',
                         'correlationId' => $correlationId,
                         'modelId' => $response->modelId,
                         'providerIdentifier' => $response->providerIdentifier,
                         'trace' => $trace,
+                        'shortlistedTools' => array_map(
+                            static fn(array $tool): string => (string) ($tool['name'] ?? ''),
+                            $shortlistedTools,
+                        ),
                     ],
                 ];
                 $assistantMessages[] = $message;
@@ -333,6 +394,8 @@ final readonly class AgentTurnOrchestrator
             'You are the TYPO3 backend AI Agent. Use the provided tools to answer questions and prepare changes.',
             'Read tools run immediately. Write tools produce drafts that require explicit editor approval.',
             'Prefer concise answers grounded in tool results. Never claim a change was saved unless the editor applied a draft.',
+            'When the user asks to create, update, translate, or generate content, prefer calling the most specific write tool instead of replying with text only.',
+            'Use pageId/pid/uid from context when a tool accepts a page or storage folder id.',
         ];
 
         if ($persona !== '') {
@@ -545,5 +608,64 @@ final readonly class AgentTurnOrchestrator
         }
 
         return sprintf($value, ...array_map(static fn(int|string $argument): string => (string) $argument, $arguments));
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @param list<array<string, mixed>> $executableTools
+     */
+    private function buildEmptyModelReply(string $userMessage, array $context, array $executableTools): string
+    {
+        $suggestions = $this->toolRetriever->topToolNames(
+            $userMessage,
+            $context,
+            $executableTools,
+            5,
+        );
+        if ($suggestions === []) {
+            return $this->translate('agent.turn.emptyModelReply');
+        }
+
+        return $this->translate('agent.turn.emptyModelReplyWithTools', [implode(', ', $suggestions)]);
+    }
+
+    /**
+     * @param array{tool: string, arguments: array<string, mixed>} $autoInvoke
+     * @param array<string, mixed> $context
+     * @param array<string, mixed> $body
+     * @return array{
+     *   messages: list<array{role: string, content: string, meta: array<string, mixed>}>,
+     *   paused: bool,
+     *   pauseReason: string|null
+     * }
+     */
+    private function executeAutoInvocation(
+        array $autoInvoke,
+        array $context,
+        array $body,
+        BackendUserAuthentication $user,
+        string $correlationId,
+        ?callable $emitEvent,
+    ): array {
+        $toolBody = $body;
+        $toolBody['arguments'] = $autoInvoke['arguments'];
+        $toolMessage = $this->toolTurnProcessor->execute(
+            $autoInvoke['tool'],
+            $context,
+            $toolBody,
+            $user,
+            $correlationId,
+        );
+        $toolMessage['meta']['autoInvoked'] = true;
+        $toolMessage['meta']['retrievalRouted'] = true;
+        $this->emit($emitEvent, 'message', ['message' => $toolMessage]);
+
+        $pause = $this->shouldPauseAfterTool($toolMessage);
+
+        return [
+            'messages' => [$toolMessage],
+            'paused' => $pause['pause'],
+            'pauseReason' => $pause['reason'],
+        ];
     }
 }

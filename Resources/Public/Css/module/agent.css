@@ -1107,6 +1107,25 @@
   word-break: break-word;
 }
 
+.nst3af-agent-tool-confirm__running,
+.nst3af-agent-draft--running .nst3af-agent-tool-confirm__running {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f4f6fb;
+  color: #5b6270;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.nst3af-agent-tool-confirm--running .nst3af-agent-draft__actions {
+  display: none;
+}
+
 .nst3af-agent-draft__fld-label {
   font-weight: 600;
   color: #374151;
