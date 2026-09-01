@@ -204,6 +204,28 @@ Per-group wizard + permission matrix for AI Foundation and child extensions. Thi
 
 ---
 
+## AI Agent (backend modal)
+
+Global toolbar assistant: NL + slash tools, workflow fast-paths, read auto-run, write drafts, conversation persistence.
+
+```
+Toolbar AgentToolbarItem → agent.js modal
+        │
+        ▼
+AgentAjaxController (turn / stream / tools / conversation / draft apply)
+        │
+   ┌────┴────┬──────────────┬─────────────────┐
+   ▼         ▼              ▼                 ▼
+Workflow  ReadFastPath  TurnOrchestrator  ToolTurnProcessor
+Service   (skip file)   + ToolRetriever   + ResultPresenter
+                                              + EditorLabelService
+```
+
+**Agent entry:** `context/features/ai-agent.md`  
+**Ops docs:** `Documentation/Agent/VerifySuite.md`, `Documentation/Agent/NonDataHandlerToolClassification.md`
+
+---
+
 ## Caches
 
 | Name | Purpose |
