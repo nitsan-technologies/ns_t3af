@@ -61,4 +61,9 @@ return [
             ? 'EXT:ns_t3af/Resources/Public/Icons/HeaderLogoV14.svg'
             : 'EXT:ns_t3af/Resources/Public/Icons/HeaderLogo.svg',
     ],
+    // AI Agent toolbar (replaces EXT:ns_t3ai sidebar mark)
+    'ns-t3af-agent' => [
+        'provider' => SvgIconProvider::class,
+        'source' => 'EXT:ns_t3af/Resources/Public/Icons/t3ai-grey.svg',
+    ],
 ];

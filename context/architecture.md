@@ -81,7 +81,6 @@ Prompt **defaults** live in code (`ns_t3ai`); prompt **management UI** lives in 
 │ Child extensions — runtime (catalog + resolver + providers)     │
 │  PromptContractRegistry      → built-in global prompt contracts │
 │  PromptResolver              → explicit → extConf title → DB  │
-│  SidebarPromptContractRegistry / SidebarPromptResolver          │
 │  PromptCatalogProviderInterface → categories for AI Prompts UI  │
 └────────────────────────────┬────────────────────────────────────┘
                              │
@@ -102,12 +101,6 @@ Prompt **defaults** live in code (`ns_t3ai`); prompt **management UI** lives in 
 3. **Built-in contract** — `PromptContractRegistry::getDefaultText($promptType)`.
 
 `is_default` on DB rows is **not** used at runtime. Features work on fresh install with an **empty** global prompts table.
-
-### Sidebar prompts (toolbar)
-
-Built-ins: `SidebarPromptContractRegistry` (5 actions: summarize, fix grammar, bulletize, elaborate, rewrite).  
-Runtime: `SidebarPromptResolver` merges builtins (negative synthetic `uid`) + custom DB rows at `pid=0`, deduped by title.  
-Toolbar: `NsT3AiSidebar` → `SidebarPromptResolver::getAllAsModels()`.
 
 ### Management UI (ns_t3af)
 

@@ -1,0 +1,19 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf" />
+
+<button type="button"
+        class="nst3af-agent-launchbar"
+        data-nst3af-agent-open
+        data-nst3af-agent-launchbar
+        title="{f:translate(key: '{ll}:agent.toolbar.title', default: 'AI Agent (Ctrl/Cmd+Shift+K)')}"
+        aria-label="{f:translate(key: '{ll}:agent.toolbar.title', default: 'AI Agent (Ctrl/Cmd+Shift+K)')}"
+        aria-haspopup="dialog"
+        aria-controls="nst3af-agent-dialog"
+        aria-keyshortcuts="Control+Shift+K">
+    <span class="nst3af-agent-launchbar__icon" aria-hidden="true">&#10022;</span>
+    <span class="nst3af-agent-launchbar__text">
+        <f:translate key="{ll}:agent.launch.label" default="Ask AI Agent" />
+    </span>
+    <kbd class="nst3af-agent-launchbar__kbd" data-nst3af-agent-hotkey-kbd>Ctrl/Cmd+Shift+K</kbd>
+</button>

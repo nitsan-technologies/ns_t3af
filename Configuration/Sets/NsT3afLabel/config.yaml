@@ -1,4 +1,2 @@
 name: nitsan/ns-t3af-label
 label: 'AI Foundation labels'
-dependencies:
-  - typo3/fluid-styled-content

@@ -93,6 +93,306 @@
       <trans-unit id="module.menu.forDevelopers" resname="module.menu.forDevelopers">
         <source>For Developers</source>
       </trans-unit>
+      <trans-unit id="module.menu.aiAgent" resname="module.menu.aiAgent">
+        <source>AI Agent</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.heading" resname="module.aiAgent.heading">
+        <source>AI Agent</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.intro" resname="module.aiAgent.intro">
+        <source>A chat in every backend module. It drafts, you approve, inside the conversation.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.tabs.aria" resname="module.aiAgent.tabs.aria">
+        <source>AI Agent settings sections</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.tab.overview" resname="module.aiAgent.tab.overview">
+        <source>Overview</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.tab.severity" resname="module.aiAgent.tab.severity">
+        <source>Severity policy</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.tab.governance" resname="module.aiAgent.tab.governance">
+        <source>Governance</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.tab.audit" resname="module.aiAgent.tab.audit">
+        <source>Audit</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.tab.demand" resname="module.aiAgent.tab.demand">
+        <source>Demand signals</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.overview.totalTools" resname="module.aiAgent.overview.totalTools">
+        <source>Registered tools</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.overview.executable" resname="module.aiAgent.overview.executable">
+        <source>Executable now</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.overview.locked" resname="module.aiAgent.overview.locked">
+        <source>Locked</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.overview.byOwner" resname="module.aiAgent.overview.byOwner">
+        <source>Tools by owning extension</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.overview.owners" resname="module.aiAgent.overview.owners">
+        <source>Contributing extensions</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.overview.availability" resname="module.aiAgent.overview.availability">
+        <source>Availability</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.overview.toolRegistration" resname="module.aiAgent.overview.toolRegistration">
+        <source>How tools register</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.overview.toolRegistration.lead" resname="module.aiAgent.overview.toolRegistration.lead">
+        <source>Extensions register MCP tools with a severity (read, write, destructive). AI Foundation introspects installed tools and applies entitlement rules from operational status providers.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.availability.agent" resname="module.aiAgent.availability.agent">
+        <source>AI Agent modal</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.availability.hotkey" resname="module.aiAgent.availability.hotkey">
+        <source>Keyboard shortcut</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.availability.suggestions" resname="module.aiAgent.availability.suggestions">
+        <source>Unsolicited suggestions</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.availability.status.enabled" resname="module.aiAgent.availability.status.enabled">
+        <source>Enabled for this user</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.availability.status.disabled" resname="module.aiAgent.availability.status.disabled">
+        <source>Disabled</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.availability.status.local" resname="module.aiAgent.availability.status.local">
+        <source>Per browser (localStorage)</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.availability.status.off" resname="module.aiAgent.availability.status.off">
+        <source>Off</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.availability.source.permission" resname="module.aiAgent.availability.source.permission">
+        <source>Backend user / module access</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.availability.source.browser" resname="module.aiAgent.availability.source.browser">
+        <source>Editor preference</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.availability.source.policy" resname="module.aiAgent.availability.source.policy">
+        <source>Product policy</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.control" resname="module.aiAgent.col.control">
+        <source>Control</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.status" resname="module.aiAgent.col.status">
+        <source>Status</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.source" resname="module.aiAgent.col.source">
+        <source>Source</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.effect" resname="module.aiAgent.col.effect">
+        <source>Agent effect</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.severity" resname="module.aiAgent.col.severity">
+        <source>Severity</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.behavior" resname="module.aiAgent.col.behavior">
+        <source>Behaviour in chat</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.tools" resname="module.aiAgent.col.tools">
+        <source>Tools</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.item" resname="module.aiAgent.col.item">
+        <source>Item</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.recorded" resname="module.aiAgent.col.recorded">
+        <source>Recorded</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.severity.policy" resname="module.aiAgent.severity.policy">
+        <source>Severity policy</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.severity.read" resname="module.aiAgent.severity.read">
+        <source>Read</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.severity.read.behavior" resname="module.aiAgent.severity.read.behavior">
+        <source>Runs automatically; results appear as tool-call cards.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.severity.write" resname="module.aiAgent.severity.write">
+        <source>Write</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.severity.write.behavior" resname="module.aiAgent.severity.write.behavior">
+        <source>Drafts inline diff rows; apply writes through DataHandler after approval.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.severity.destructive" resname="module.aiAgent.severity.destructive">
+        <source>Destructive</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.severity.destructive.behavior" resname="module.aiAgent.severity.destructive.behavior">
+        <source>Two-step confirm before apply; red draft styling.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.severity.unclassified" resname="module.aiAgent.severity.unclassified">
+        <source>Unclassified</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.severity.unclassified.behavior" resname="module.aiAgent.severity.unclassified.behavior">
+        <source>Treated as locked until a severity is declared.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.severity.elicitation" resname="module.aiAgent.severity.elicitation">
+        <source>Write and destructive tools use MCP elicitation: the agent proposes a draft card and waits for explicit approval before any database write.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.matrix" resname="module.aiAgent.governance.matrix">
+        <source>Control matrix</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.source.group" resname="module.aiAgent.governance.source.group">
+        <source>Backend user group (AI Permissions)</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.source.agent" resname="module.aiAgent.governance.source.agent">
+        <source>Agent runtime</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.row.creditCap" resname="module.aiAgent.governance.row.creditCap">
+        <source>Monthly credit cap</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.row.dailyCap" resname="module.aiAgent.governance.row.dailyCap">
+        <source>Daily request cap</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.row.allowlist" resname="module.aiAgent.governance.row.allowlist">
+        <source>Provider allowlist</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.row.modelOverride" resname="module.aiAgent.governance.row.modelOverride">
+        <source>Model override</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.row.piiMasking" resname="module.aiAgent.governance.row.piiMasking">
+        <source>PII masking</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.row.turnGuard" resname="module.aiAgent.governance.row.turnGuard">
+        <source>Turn guard</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.effect.creditCap" resname="module.aiAgent.governance.effect.creditCap">
+        <source>Blocks agent turns when monthly credits are exhausted.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.effect.dailyCap" resname="module.aiAgent.governance.effect.dailyCap">
+        <source>Blocks agent turns after the daily turn limit.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.effect.allowlist" resname="module.aiAgent.governance.effect.allowlist">
+        <source>Rejects turns that specify a disallowed provider.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.effect.modelOverride" resname="module.aiAgent.governance.effect.modelOverride">
+        <source>Rejects client-specified models when override is disabled.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.effect.piiMasking" resname="module.aiAgent.governance.effect.piiMasking">
+        <source>Redacts emails and phone numbers in agent output.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.effect.turnGuard" resname="module.aiAgent.governance.effect.turnGuard">
+        <source>Warns at %1$s tool calls; aborts the turn at %2$s.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.audit.coverage" resname="module.aiAgent.audit.coverage">
+        <source>What is recorded</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.audit.coverage.toolInvocations" resname="module.aiAgent.audit.coverage.toolInvocations">
+        <source>Tool invocations (metadata)</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.audit.coverage.turnCorrelation" resname="module.aiAgent.audit.coverage.turnCorrelation">
+        <source>Turn correlation IDs</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.audit.coverage.conversationTranscript" resname="module.aiAgent.audit.coverage.conversationTranscript">
+        <source>Full conversation transcript</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.audit.coverage.promptContent" resname="module.aiAgent.audit.coverage.promptContent">
+        <source>Raw LLM prompt/response bodies</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.audit.recorded.yes" resname="module.aiAgent.audit.recorded.yes">
+        <source>Yes</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.audit.recorded.no" resname="module.aiAgent.audit.recorded.no">
+        <source>No (session only)</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.demand.sharingOptIn" resname="module.aiAgent.demand.sharingOptIn">
+        <source>Share anonymized demand signals with T3Planet (not enabled)</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.demand.sharingDisabledReason" resname="module.aiAgent.demand.sharingDisabledReason">
+        <source>Telemetry is not shipped in this release. Signals stay on this instance for product planning only.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.hotkey.heading" resname="module.aiAgent.hotkey.heading">
+        <source>Keyboard shortcut</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.hotkey.lead" resname="module.aiAgent.hotkey.lead">
+        <source>Default is Ctrl/Cmd+Shift+K so TYPO3 Live Search keeps Ctrl/Cmd+K. Opt into Ctrl/Cmd+K only if this install prefers Agent over Live Search. Preference is stored in this browser.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.hotkey.option.shiftK" resname="module.aiAgent.hotkey.option.shiftK">
+        <source>Ctrl/Cmd+Shift+K (recommended)</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.hotkey.option.shiftK.help" resname="module.aiAgent.hotkey.option.shiftK.help">
+        <source>Free in Chrome, Safari, and Edge. Only overlaps Firefox Web Console.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.hotkey.option.k" resname="module.aiAgent.hotkey.option.k">
+        <source>Ctrl/Cmd+K (opt-in)</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.hotkey.option.k.help" resname="module.aiAgent.hotkey.option.k.help">
+        <source>Takes the Live Search chord. Use only when editors agree Agent should win.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.hotkey.saved" resname="module.aiAgent.hotkey.saved">
+        <source>Saved for this browser. Open or reopen the Agent (or reload other backend tabs) to apply.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.owner" resname="module.aiAgent.col.owner">
+        <source>Owner</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.total" resname="module.aiAgent.col.total">
+        <source>Total</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.executable" resname="module.aiAgent.col.executable">
+        <source>Executable</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.locked" resname="module.aiAgent.col.locked">
+        <source>Locked</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.tool" resname="module.aiAgent.col.tool">
+        <source>Tool</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.time" resname="module.aiAgent.col.time">
+        <source>Time</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.success" resname="module.aiAgent.col.success">
+        <source>Result</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.correlation" resname="module.aiAgent.col.correlation">
+        <source>Correlation</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.argsHash" resname="module.aiAgent.col.argsHash">
+        <source>Arguments hash</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.activations" resname="module.aiAgent.col.activations">
+        <source>Activations</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.col.lastActivated" resname="module.aiAgent.col.lastActivated">
+        <source>Last activated</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.status.ok" resname="module.aiAgent.status.ok">
+        <source>Success</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.status.error" resname="module.aiAgent.status.error">
+        <source>Failed</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.lead" resname="module.aiAgent.governance.lead">
+        <source>Agent governance is enforced on agent turns only. Configure limits per backend user group under AI Permissions.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.creditCap" resname="module.aiAgent.governance.creditCap">
+        <source>Monthly credit cap stops agent turns when the group limit is reached.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.dailyCap" resname="module.aiAgent.governance.dailyCap">
+        <source>Daily request cap counts agent turns per backend user.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.allowlist" resname="module.aiAgent.governance.allowlist">
+        <source>Provider allowlist blocks agent turns that specify a disallowed provider.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.modelOverride" resname="module.aiAgent.governance.modelOverride">
+        <source>Model override permission is enforced on agent requests.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.piiMasking" resname="module.aiAgent.governance.piiMasking">
+        <source>PII masking redacts emails and phone numbers in agent responses when enabled for the group.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.governance.turnGuard" resname="module.aiAgent.governance.turnGuard">
+        <source>Turn guard warns at %1$s tool calls and aborts at %2$s calls within one turn.</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.audit.toolLog" resname="module.aiAgent.audit.toolLog">
+        <source>Recent agent tool invocations (no payloads stored)</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.demand.signals" resname="module.aiAgent.demand.signals">
+        <source>Locked tool activation signals</source>
+      </trans-unit>
+      <trans-unit id="module.aiAgent.demand.sharingDisabled" resname="module.aiAgent.demand.sharingDisabled">
+        <source>Demand signal sharing with T3Planet is disabled. Counts remain on this installation only.</source>
+      </trans-unit>
       <trans-unit id="module.forDevelopers.heading" resname="module.forDevelopers.heading">
         <source>For Developers</source>
       </trans-unit>

@@ -26,16 +26,62 @@ namespace NITSAN\NsT3AF\Mcp\Tool\File;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 
-readonly class FileReferenceAddTool implements McpNonAiToolInterface
+#[McpToolSeverity(ToolSeverity::Write)]
+readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannableToolInterface
 {
     public function __construct(
         private DataHandlerService $dataHandlerService,
         private TcaSchemaService $tcaSchemaService,
+        private McpConfirmationPlanBuilder $confirmationPlanBuilder,
     ) {}
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public function plan(array $arguments): ToolPlan
+    {
+        $table = (string) ($arguments['table'] ?? '');
+        $uid = (int) ($arguments['uid'] ?? 0);
+        $fieldName = (string) ($arguments['fieldName'] ?? '');
+        $fileUids = (string) ($arguments['fileUids'] ?? '');
+
+        if ($table === '') {
+            throw new \InvalidArgumentException('table is required.');
+        }
+
+        if ($uid <= 0) {
+            throw new \InvalidArgumentException('uid must be > 0.');
+        }
+
+        if ($fieldName === '') {
+            throw new \InvalidArgumentException('fieldName is required.');
+        }
+
+        return $this->confirmationPlanBuilder->confirmation(
+            'update',
+            'file_reference_add',
+            '_reference',
+            $fieldName,
+            'attach file(s) ' . $fileUids,
+            [
+                'table' => $table,
+                'uid' => $uid,
+                'fieldName' => $fieldName,
+                'fileUids' => $fileUids,
+            ],
+            $table,
+            $uid,
+        );
+    }
 
     #[McpTool(
         name: 'file_reference_add',

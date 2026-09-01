@@ -1,3 +1,218 @@
+config {
+    doctype = html5
+    htmlTag_langKey = en
+}
+
+page = PAGE
+page {
+    typeNum = 0
+
+    config {
+        pageTitle = AI Universe
+        htmlTag_setParams = data-bs-theme="auto"
+    }
+
+    meta {
+        viewport = width=device-width, initial-scale=1
+    }
+
+    # =========================================================
+    # Bootstrap 5.3
+    # =========================================================
+
+    includeCSS.bootstrap = https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css
+    includeCSS.bootstrap {
+        external = 1
+        disableCompression = 1
+        excludeFromConcatenation = 1
+    }
+
+    # =========================================================
+    # Theme CSS - System Light / Dark
+    # =========================================================
+
+    headerData.10 = TEXT
+    headerData.10.value (
+        <style>
+            :root {
+                color-scheme: light dark;
+            }
+
+            body {
+                min-height: 100vh;
+                transition:
+                    background-color 0.2s ease,
+                    color 0.2s ease;
+            }
+
+            .welcome-content {
+                max-width: 600px;
+                margin: 0 auto;
+            }
+
+            header {
+                border-color: var(--bs-border-color) !important;
+            }
+
+            .nav-link {
+                transition:
+                    color 0.15s ease,
+                    background-color 0.15s ease;
+            }
+
+            /* System light theme */
+            @media (prefers-color-scheme: light) {
+                :root {
+                    color-scheme: light;
+                }
+
+                body {
+                    background-color: #fff;
+                    color: #212529;
+                }
+            }
+
+            /* System dark theme */
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    color-scheme: dark;
+                }
+
+                body {
+                    background-color: #121212;
+                    color: #f1f3f5;
+                }
+
+                header {
+                    border-color: rgba(255, 255, 255, 0.12) !important;
+                }
+
+                .nav-link {
+                    color: #dee2e6;
+                }
+
+                .nav-link:hover {
+                    color: #fff;
+                    background-color: rgba(255, 255, 255, 0.08);
+                }
+
+                .nav-pills .nav-link.active {
+                    color: #fff;
+                    background-color: #0d6efd;
+                }
+
+                .text-muted {
+                    color: #adb5bd !important;
+                }
+
+                .card {
+                    background-color: #1b1b1b;
+                    border-color: rgba(255, 255, 255, 0.12);
+                }
+
+                .form-control,
+                .form-select {
+                    background-color: #1b1b1b;
+                    color: #f1f3f5;
+                    border-color: #495057;
+                }
+
+                .form-control:focus,
+                .form-select:focus {
+                    background-color: #1b1b1b;
+                    color: #fff;
+                    border-color: #86b7fe;
+                }
+            }
+        </style>
+    )
+
+    # =========================================================
+    # Header: logo left | language right
+    # =========================================================
+
+    5 = COA
+    5 {
+        wrap = <header class="container py-3 mb-3 border-bottom"><div class="d-flex justify-content-between align-items-center gap-3">|</div></header>
+
+        # Logo
+        10 = TEXT
+        10 {
+            value = <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="b" data-name="Layer 2" width="76.49" height="76.49" viewBox="0 0 76.49 76.49"> <defs> <linearGradient id="AF" x1="68.52" y1="2.84" x2="21.85" y2="57.41" gradientUnits="userSpaceOnUse"> <stop offset=".02" stop-color="#00ffd9"></stop> <stop offset="1" stop-color="#000acc"></stop> </linearGradient> </defs> <g id="c" data-name="Layer 1"> <g> <rect y="0" width="76.49" height="76.49" rx="12.02" ry="12.02" fill="url(#AF)"></rect> <g> <path d="M33.79,31.88l8.79,23.3h-6.23l-1.15-3.31h-8.99l-1.15,3.31h-6.27l8.79-23.3h6.2ZM33.33,46.58l-2.66-7.61-2.63,7.61h5.28Z" style="fill: #fff;"></path> <path d="M44.16,31.88h13.52v5.28h-7.74v3.84h7.42v4.95h-7.42v9.22h-5.77v-23.3Z" style="fill: #fff;"></path> </g> <g> <path d="M65.1,18.09l-3.49.09c-3.28.08-6.23-2-7.25-5.12l-1.08-3.32c-.07-.23-.41-.17-.4.07l.09,3.49c.08,3.28-2,6.23-5.12,7.25l-3.32,1.08c-.23.07-.17.41.07.4l3.49-.09c3.28-.08,6.23,2,7.25,5.12l1.08,3.32c.07.23.41.17.4-.07l-.09-3.49c-.08-3.28,2-6.23,5.12-7.25l3.32-1.08c.23-.07.17-.41-.07-.4Z" style="fill: #fff;"></path> <path d="M63.41,28.82c.74-1.35,2.28-2.05,3.79-1.72l.71.15c.23.05.35-.27.14-.38l-.63-.35c-1.35-.74-2.04-2.28-1.72-3.79l.15-.71c.05-.23-.27-.35-.38-.14l-.35.63c-.74,1.35-2.28,2.04-3.79,1.72l-.71-.15c-.23-.05-.35.27-.14.38l.63.35c1.35.74,2.05,2.28,1.72,3.79l-.15.71c-.05.23.27.35.38.14l.35-.63Z" style="fill: #fff;"></path> <path d="M60.44,14.32c.91-.59,2.09-.52,2.92.18.18.15.44-.07.31-.27-.59-.91-.52-2.09.18-2.92.15-.18-.07-.44-.27-.31-.91.59-2.09.52-2.92-.18-.18-.15-.44.07-.31.27.59.91.52,2.09-.18,2.92-.15.18.07.44.27.31Z" style="fill: #fff;"></path> </g> </g> </g> </svg>
+
+            stdWrap.typolink {
+                parameter = 1
+                ATagParams = class="d-inline-block lh-1" aria-label="T3Planet home"
+            }
+        }
+
+        # Language menu
+        20 = HMENU
+        20 {
+            special = language
+            special.value = 0,1
+
+            1 = TMENU
+            1 {
+                wrap = <ul class="nav nav-pills align-items-center" aria-label="Language selection">|</ul>
+
+                NO {
+                    ATagParams = class="nav-link"
+                    linkWrap = <li class="nav-item">|</li>
+                }
+
+                ACT = 1
+                ACT {
+                    doNotLinkIt = 1
+                    stdWrap.wrap = <li class="nav-item"><span class="nav-link active" aria-current="page">|</span></li>
+                }
+
+                USERDEF1 = 1
+                USERDEF1 {
+                    doNotLinkIt = 1
+                    stdWrap.wrap = <li class="nav-item"><span class="nav-link disabled" aria-disabled="true">|</span></li>
+                }
+            }
+        }
+    }
+
+    # =========================================================
+    # Welcome block
+    # =========================================================
+
+    10 = TEXT
+    10 {
+        value = <div class="container py-5 text-center"><div class="welcome-content"><h4 class="fw-semibold mb-0">Welcome to AI Universe!</h4></div></div>
+    }
+
+    # =========================================================
+    # TYPO3 Content
+    # =========================================================
+
+    100 = CONTENT
+    100 {
+        table = tt_content
+
+        select {
+            orderBy = sorting
+            where = {#colPos}=0
+        }
+
+        wrap = <main class="container pb-5">|</main>
+    }
+
+    # =========================================================
+    # Bootstrap JS
+    # =========================================================
+
+    includeJSFooter.bootstrap = https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js
+    includeJSFooter.bootstrap {
+        external = 1
+        disableCompression = 1
+        excludeFromConcatenation = 1
+    }
+}
+
 # AI Label frontend rendering (R7.4)
 lib.contentElement {
   partialRootPaths {

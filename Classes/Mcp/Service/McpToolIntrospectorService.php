@@ -28,6 +28,7 @@ use NITSAN\NsT3AF\Mcp\Contract\McpDualModeContentToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpExternalContentToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpFalStorageToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use ReflectionMethod;
 use ReflectionNamedType;
 use ReflectionParameter;
@@ -45,7 +46,8 @@ class McpToolIntrospectorService
      *     description: string,
      *     params: list<array{name: string, type: string, required: bool, default: string|null, description: string}>,
      *     className: class-string,
-     *     ownerExtensionKey: string|null
+     *     ownerExtensionKey: string|null,
+     *     severity: string|null
      * }>|null
      */
     private ?array $listToolsCache = null;
@@ -58,6 +60,7 @@ class McpToolIntrospectorService
         private readonly McpToolSchemaAugmenter $toolSchemaAugmenter,
         private readonly McpModeResolver $mcpModeResolver,
         private readonly McpToolDescriptionResolver $toolDescriptionResolver,
+        private readonly McpToolSeverityResolver $toolSeverityResolver,
     ) {}
 
     /**
@@ -66,7 +69,8 @@ class McpToolIntrospectorService
      *     description: string,
      *     params: list<array{name: string, type: string, required: bool, default: string|null, description: string}>,
      *     className: class-string,
-     *     ownerExtensionKey: string|null
+     *     ownerExtensionKey: string|null,
+     *     severity: string|null
      * }>
      */
     public function listTools(): array
@@ -91,7 +95,8 @@ class McpToolIntrospectorService
      *     description: string,
      *     params: list<array{name: string, type: string, required: bool, default: string|null, description: string}>,
      *     className: class-string,
-     *     ownerExtensionKey: string|null
+     *     ownerExtensionKey: string|null,
+     *     severity: string|null
      * }
      */
     private function introspectTool(object $tool): array
@@ -138,6 +143,10 @@ class McpToolIntrospectorService
         }
 
         $attributeName = $attribute?->name;
+        $severity = $this->toolSeverityResolver->resolveForHandler($tool);
+        if ($severity === null && is_string($attributeName) && $attributeName !== '') {
+            $severity = $this->toolSeverityResolver->resolveForToolName($attributeName);
+        }
 
         return [
             'name' => is_string($attributeName) && $attributeName !== '' ? $attributeName : $tool::class,
@@ -145,6 +154,7 @@ class McpToolIntrospectorService
             'params' => $params,
             'className' => $tool::class,
             'ownerExtensionKey' => $this->resolveOwnerExtensionKey($reflection),
+            'severity' => $severity instanceof ToolSeverity ? $severity->value : null,
         ];
     }
 

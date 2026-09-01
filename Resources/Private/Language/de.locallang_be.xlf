@@ -459,6 +459,298 @@
                 <source>Configured via wizard</source>
                 <target>Per Assistent konfiguriert</target>
             </trans-unit>
+            <trans-unit id="access.agent_enabled">
+                <source>AI Agent access</source>
+                <target>AI-Agent-Zugriff</target>
+            </trans-unit>
+            <trans-unit id="agent.toolbar.title">
+                <source>AI Agent (Ctrl/Cmd+Shift+K)</source>
+                <target>AI Agent (Strg/Cmd+Shift+K)</target>
+            </trans-unit>
+            <trans-unit id="agent.toolbar.titlePrefix">
+                <source>AI Agent</source>
+                <target>AI Agent</target>
+            </trans-unit>
+            <trans-unit id="agent.launch.label">
+                <source>Ask AI Agent</source>
+                <target>AI Agent fragen</target>
+            </trans-unit>
+            <trans-unit id="agent.launch.title">
+                <source>Open AI Agent</source>
+                <target>AI Agent öffnen</target>
+            </trans-unit>
+            <trans-unit id="agent.modal.title">
+                <source>AI Agent</source>
+                <target>AI Agent</target>
+            </trans-unit>
+            <trans-unit id="agent.modal.subtitle">
+                <source>Ask for anything on this screen. It drafts, you approve, inside the conversation.</source>
+                <target>Fragen Sie alles zu diesem Bildschirm. Entwürfe werden erstellt, Sie genehmigen – in der Unterhaltung.</target>
+            </trans-unit>
+            <trans-unit id="agent.modal.settings">
+                <source>Settings</source>
+                <target>Einstellungen</target>
+            </trans-unit>
+            <trans-unit id="agent.modal.close">
+                <source>Close dialog</source>
+                <target>Dialog schließen</target>
+            </trans-unit>
+            <trans-unit id="agent.disclosure">
+                <source>You are interacting with an AI system (EU AI Act Art. 50(1)). Outputs may be inaccurate or incomplete. Review every suggestion before applying changes to your website.</source>
+                <target>Sie interagieren mit einem KI-System (EU-KI-Verordnung Art. 50(1)). Ausgaben können ungenau oder unvollständig sein. Prüfen Sie jeden Vorschlag, bevor Sie Änderungen auf Ihrer Website übernehmen.</target>
+            </trans-unit>
+            <trans-unit id="agent.disclosure.gotIt">
+                <source>Got it</source>
+                <target>Verstanden</target>
+            </trans-unit>
+            <trans-unit id="agent.composer.label">
+                <source>Message</source>
+                <target>Nachricht</target>
+            </trans-unit>
+            <trans-unit id="agent.composer.placeholder">
+                <source>Ask a question, / for tools, @ for records…</source>
+                <target>Frage stellen, / für Tools, @ für Datensätze…</target>
+            </trans-unit>
+            <trans-unit id="agent.composer.hint">
+                <source>/ tools · @ records ·</source>
+                <target>/ Tools · @ Datensätze ·</target>
+            </trans-unit>
+            <trans-unit id="agent.composer.send">
+                <source>Send message</source>
+                <target>Nachricht senden</target>
+            </trans-unit>
+            <trans-unit id="agent.autocomplete.label">
+                <source>Suggestions</source>
+                <target>Vorschläge</target>
+            </trans-unit>
+            <trans-unit id="agent.context.module">
+                <source>Module</source>
+                <target>Modul</target>
+            </trans-unit>
+            <trans-unit id="agent.context.page">
+                <source>Page</source>
+                <target>Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.context.record">
+                <source>Record</source>
+                <target>Datensatz</target>
+            </trans-unit>
+            <trans-unit id="agent.context.brand">
+                <source>Brand profile</source>
+                <target>Markenprofil</target>
+            </trans-unit>
+            <trans-unit id="agent.starters.executable">
+                <source>Suggested actions</source>
+                <target>Vorgeschlagene Aktionen</target>
+            </trans-unit>
+            <trans-unit id="agent.starters.locked">
+                <source>Needs another extension</source>
+                <target>Benötigt eine weitere Extension</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateSeo">
+                <source>Generate SEO metadata</source>
+                <target>SEO-Metadaten generieren</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.inspectPage">
+                <source>Inspect this page</source>
+                <target>Diese Seite ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.listChildPages">
+                <source>List child pages</source>
+                <target>Unterseiten auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.searchPages">
+                <source>Search pages</source>
+                <target>Seiten suchen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.pageTree">
+                <source>Browse page tree</source>
+                <target>Seitenbaum durchsuchen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.listContent">
+                <source>List page content</source>
+                <target>Seiteninhalte auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateSeoNeedsPage">
+                <source>Open a page in the backend first — SEO metadata needs page context.</source>
+                <target>Öffnen Sie zuerst eine Seite im Backend — SEO-Metadaten benötigen Seitenkontext.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateSeoDraft">
+                <source>Review the proposed SEO metadata before anything is written.</source>
+                <target>Prüfen Sie die vorgeschlagenen SEO-Metadaten, bevor etwas geschrieben wird.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateSeoNoFields">
+                <source>SEO fields on this page already look complete.</source>
+                <target>Die SEO-Felder dieser Seite wirken bereits vollständig.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateSeoDescription">
+                <source>Discover %1$s — concise summary for search results and social previews.</source>
+                <target>Entdecken Sie %1$s — kurze Zusammenfassung für Suchergebnisse und Social Previews.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateSeoAbstract">
+                <source>Learn more about %1$s on this site.</source>
+                <target>Erfahren Sie mehr über %1$s auf dieser Website.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateSeoKeywords">
+                <source>%1$s, TYPO3, website</source>
+                <target>%1$s, TYPO3, Website</target>
+            </trans-unit>
+            <trans-unit id="agent.owner.core">
+                <source>AI Foundation</source>
+                <target>AI Foundation</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.unclassified">
+                <source>Tool needs a severity declaration from its extension.</source>
+                <target>Tool benötigt eine Schweregrad-Deklaration von seiner Extension.</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.extensionUnavailable">
+                <source>Requires %1$s.</source>
+                <target>Erfordert %1$s.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.help">
+                <source>Pick a starter below, type / to run a tool, or attach a record with @table:uid (for example @tt_content:198).</source>
+                <target>Wählen Sie unten einen Starter, tippen Sie / für ein Tool oder hängen Sie einen Datensatz mit @tabelle:uid an (z. B. @tt_content:198).</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.noToolCalling">
+                <source>Your current AI provider cannot run tools for natural-language requests. Use / to pick a tool or @ to attach a record instead.</source>
+                <target>Ihr aktueller KI-Anbieter kann keine Tools für natürlichsprachliche Anfragen ausführen. Verwenden Sie / für ein Tool oder @, um einen Datensatz anzuhängen.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.noExecutableTools">
+                <source>No executable tools are available for your account. Use / to see what is locked or contact an administrator.</source>
+                <target>Für Ihr Konto sind keine ausführbaren Tools verfügbar. Verwenden Sie /, um gesperrte Tools zu sehen, oder wenden Sie sich an einen Administrator.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.orchestratorFailed">
+                <source>The agent could not complete this turn: %1$s</source>
+                <target>Der Agent konnte diese Runde nicht abschließen: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.emptyModelReply">
+                <source>I could not produce a reply. Try rephrasing or use / to run a specific tool.</source>
+                <target>Ich konnte keine Antwort erzeugen. Formulieren Sie um oder verwenden Sie / für ein bestimmtes Tool.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.loopLimit">
+                <source>This turn reached the orchestrator step limit. Review the results below or send a follow-up message.</source>
+                <target>Diese Runde hat das Schrittlimit des Orchestrators erreicht. Prüfen Sie die Ergebnisse unten oder senden Sie eine Folgenachricht.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.readBudgetExceeded">
+                <source>Read tool budget reached (%1$s per turn). Send another message to continue.</source>
+                <target>Lesetool-Budget erreicht (%1$s pro Runde). Senden Sie eine weitere Nachricht, um fortzufahren.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.writeBudgetExceeded">
+                <source>Write draft budget reached (%1$s per turn). Apply or discard drafts, then continue.</source>
+                <target>Schreibentwurf-Budget erreicht (%1$s pro Runde). Wenden Sie Entwürfe an oder verwerfen Sie sie, dann fahren Sie fort.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.unknownAttachment">
+                <source>No read tool is available for @%1$s:%2$s. Try /content_get %2$s for content elements or pick a tool with /.</source>
+                <target>Kein Lesetool für @%1$s:%2$s verfügbar. Versuchen Sie /content_get %2$s für Inhaltselemente oder wählen Sie ein Tool mit /.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.unknownTool">
+                <source>Unknown tool: %1$s</source>
+                <target>Unbekanntes Tool: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.lockedTool">
+                <source>%1$s is locked: %2$s</source>
+                <target>%1$s ist gesperrt: %2$s</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.writeRequiresApproval">
+                <source>Write and destructive tools require your approval before anything is saved. That workflow arrives in the next release.</source>
+                <target>Schreib- und destruktive Tools erfordern Ihre Freigabe, bevor etwas gespeichert wird. Dieser Workflow folgt in der nächsten Version.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.readExecuted">
+                <source>Read tool %1$s ran without confirmation.</source>
+                <target>Lese-Tool %1$s wurde ohne Bestätigung ausgeführt.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.readFailed">
+                <source>Read tool %1$s failed: %2$s</source>
+                <target>Lese-Tool %1$s fehlgeschlagen: %2$s</target>
+            </trans-unit>
+            <trans-unit id="agent.result.details">
+                <source>Details</source>
+                <target>Details</target>
+            </trans-unit>
+            <trans-unit id="agent.live.running">
+                <source>Assistant is working…</source>
+                <target>Assistent arbeitet…</target>
+            </trans-unit>
+            <trans-unit id="agent.live.opened">
+                <source>AI Agent opened.</source>
+                <target>AI Agent geöffnet.</target>
+            </trans-unit>
+            <trans-unit id="agent.live.closed">
+                <source>AI Agent closed.</source>
+                <target>AI Agent geschlossen.</target>
+            </trans-unit>
+            <trans-unit id="agent.severity.read">
+                <source>Read-only</source>
+                <target>Nur lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.severity.write">
+                <source>Write</source>
+                <target>Schreiben</target>
+            </trans-unit>
+            <trans-unit id="agent.severity.destructive">
+                <source>Destructive</source>
+                <target>Destruktiv</target>
+            </trans-unit>
+            <trans-unit id="agent.severity.unclassified">
+                <source>Unclassified</source>
+                <target>Nicht klassifiziert</target>
+            </trans-unit>
+            <trans-unit id="agent.governance.providerBlocked">
+                <source>Your group policy blocks this AI provider for agent use.</source>
+                <target>Ihre Gruppenrichtlinie blockiert diesen KI-Anbieter für die Agent-Nutzung.</target>
+            </trans-unit>
+            <trans-unit id="agent.governance.modelOverrideBlocked">
+                <source>Model override is disabled for your backend user group.</source>
+                <target>Modell-Override ist für Ihre Backend-Benutzergruppe deaktiviert.</target>
+            </trans-unit>
+            <trans-unit id="agent.governance.dailyCapReached">
+                <source>Daily agent request limit reached for your backend user group.</source>
+                <target>Tägliches Agent-Anfragelimit für Ihre Backend-Benutzergruppe erreicht.</target>
+            </trans-unit>
+            <trans-unit id="agent.governance.creditCapReached">
+                <source>Monthly AI credit cap reached for your backend user group.</source>
+                <target>Monatliches KI-Credit-Limit für Ihre Backend-Benutzergruppe erreicht.</target>
+            </trans-unit>
+            <trans-unit id="agent.governance.turnGuardWarn">
+                <source>Warning: this turn has reached %1$s tool calls (%2$s so far). The agent will stop at 40 calls.</source>
+                <target>Warnung: Dieser Turn hat %1$s Tool-Aufrufe erreicht (%2$s bisher). Der Agent stoppt bei 40 Aufrufen.</target>
+            </trans-unit>
+            <trans-unit id="agent.governance.turnGuardAbort">
+                <source>Turn stopped: the %1$s tool call limit was reached. Start a new message to continue.</source>
+                <target>Turn gestoppt: Das Limit von %1$s Tool-Aufrufen wurde erreicht. Starten Sie eine neue Nachricht, um fortzufahren.</target>
+            </trans-unit>
+            <trans-unit id="agent.entitlement.lockedLead">
+                <source>%1$s is provided by %2$s and is not available in your current setup.</source>
+                <target>%1$s wird von %2$s bereitgestellt und ist in Ihrer aktuellen Konfiguration nicht verfügbar.</target>
+            </trans-unit>
+            <trans-unit id="agent.entitlement.planLockedLead">
+                <source>%1$s is a %2$s tool that cannot be run from the agent yet. Draft planning (review before write) is not implemented for this tool — use a plannable tool such as write_table, or invoke it via MCP outside the agent.</source>
+                <target>%1$s ist ein %2$s-Tool, das noch nicht über den Agent ausgeführt werden kann. Entwurfsplanung (Prüfung vor dem Schreiben) ist für dieses Tool nicht implementiert — verwenden Sie ein planbares Tool wie write_table oder rufen Sie es über MCP außerhalb des Agents auf.</target>
+            </trans-unit>
+            <trans-unit id="agent.entitlement.severityLockedLead">
+                <source>%1$s is not classified for agent use yet.</source>
+                <target>%1$s ist für die Agent-Nutzung noch nicht klassifiziert.</target>
+            </trans-unit>
+            <trans-unit id="agent.entitlement.toolCount">
+                <source>%1$s tools from %2$s would become available once the extension is operational.</source>
+                <target>%1$s Tools von %2$s wären verfügbar, sobald die Extension betriebsbereit ist.</target>
+            </trans-unit>
+            <trans-unit id="agent.entitlement.settingsHint">
+                <source>Open AI Agent settings for details: %1$s</source>
+                <target>Öffnen Sie die AI-Agent-Einstellungen für Details: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.scheduler.handoffLabel">
+                <source>Schedule this action</source>
+                <target>Diese Aktion planen</target>
+            </trans-unit>
+            <trans-unit id="agent.scheduler.handoffBodySeo">
+                <source>%1$s pages in your site could use the same treatment. Schedule bulk SEO optimization when you are ready.</source>
+                <target>%1$s Seiten auf Ihrer Website könnten dieselbe Behandlung vertragen. Planen Sie die Bulk-SEO-Optimierung, wenn Sie bereit sind.</target>
+            </trans-unit>
+            <trans-unit id="agent.scheduler.handoffNote">
+                <source>Scheduler tasks still require per-change review before anything is published.</source>
+                <target>Scheduler-Aufgaben erfordern weiterhin eine Prüfung pro Änderung, bevor etwas veröffentlicht wird.</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

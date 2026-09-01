@@ -47,6 +47,65 @@ final class OpenAiCompatiblePlatform
     ) {}
 
     /**
+     * Chat completion with optional tools (POST …/chat/completions).
+     *
+     * @param list<array<string, mixed>> $messages
+     * @param list<array<string, mixed>> $tools Provider tool definitions
+     * @return array{content: string, toolCalls: list<array{id: string, name: string, arguments: array<string, mixed>}>, usage?: array<string, mixed>, raw: array<string, mixed>}
+     */
+    public function invokeWithTools(string $modelId, array $messages, array $tools): array
+    {
+        $body = [
+            'model' => $modelId,
+            'messages' => $messages,
+            'temperature' => $this->provider->temperature,
+        ];
+        if ($tools !== []) {
+            $body['tools'] = array_map(
+                static fn(array $tool): array => [
+                    'type' => 'function',
+                    'function' => $tool,
+                ],
+                $tools,
+            );
+        }
+
+        $response = $this->postJson($this->chatCompletionsPath(), $body);
+        $this->assertOk($response, 'chat/completions (tools)');
+
+        $decoded = $this->decodeJsonBody($response);
+        $choice = is_array($decoded['choices'][0] ?? null) ? $decoded['choices'][0] : [];
+        $message = is_array($choice['message'] ?? null) ? $choice['message'] : [];
+        $content = isset($message['content']) && is_string($message['content']) ? $message['content'] : '';
+        $toolCalls = [];
+        foreach (is_array($message['tool_calls'] ?? null) ? $message['tool_calls'] : [] as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $function = is_array($row['function'] ?? null) ? $row['function'] : [];
+            $name = isset($function['name']) && is_string($function['name']) ? $function['name'] : '';
+            if ($name === '') {
+                continue;
+            }
+            $argsJson = isset($function['arguments']) && is_string($function['arguments']) ? $function['arguments'] : '{}';
+            $args = json_decode($argsJson, true);
+            $toolCalls[] = [
+                'id' => isset($row['id']) && is_string($row['id']) ? $row['id'] : uniqid('call_', true),
+                'name' => $name,
+                'arguments' => is_array($args) ? $args : [],
+            ];
+        }
+        $usage = is_array($decoded['usage'] ?? null) ? $decoded['usage'] : [];
+
+        return [
+            'content' => $content,
+            'toolCalls' => $toolCalls,
+            'usage' => $usage,
+            'raw' => $decoded,
+        ];
+    }
+
+    /**
      * Non-streaming chat completion (POST …/chat/completions).
      *
      * @param mixed $payload {@see AiService} passes string | array with messages/input shape.
