@@ -80,7 +80,7 @@ readonly class McpServerMiddleware implements MiddlewareInterface
                 return $this->withCorsHeaders($this->createJsonResponse(['error' => 'Anonymous read-only not implemented in v1'], 501));
             }
 
-            return $this->withCorsHeaders($this->createUnauthorizedResponse($request, 'Missing or invalid Authorization header'));
+            return $this->withCorsHeaders($this->createUnauthorizedResponse($request, 'Missing authentication token'));
         }
 
         try {
