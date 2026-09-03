@@ -527,6 +527,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             'oauthTokenUrl' => $oauthTokenUrl,
             'scopes' => $defaultScopes,
             'clientTokens' => $clientTokens,
+            'customJsonSnippet' => $this->buildCustomJsonSnippet($serverUrl),
         ];
 
         $hasDraftWorkspace = $this->mcpWorkspaceProvisionService->hasDraftWorkspace();
@@ -648,6 +649,17 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 ],
             ],
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
+    }
+
+    private function buildCustomJsonSnippet(string $serverUrl): string
+    {
+        return trim(json_encode([
+            'mcpServers' => [
+                'typo3-ai-foundation' => [
+                    'url' => $serverUrl,
+                ],
+            ],
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}');
     }
 
     private function buildCliConfigJson(): string
