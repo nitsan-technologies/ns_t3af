@@ -26,12 +26,41 @@ namespace NITSAN\NsT3AF\Mcp\Tool\File;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpFalStorageToolInterface;
+use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
+use NITSAN\NsT3AF\Mcp\Service\McpFalPlanBuilder;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 
-readonly class DirectoryCreateTool implements McpFalStorageToolInterface
+#[McpToolSeverity(ToolSeverity::Write)]
+readonly class DirectoryCreateTool implements McpFalStorageToolInterface, McpPlannableToolInterface
 {
-    public function __construct(private FileService $fileService) {}
+    public function __construct(
+        private FileService $fileService,
+        private McpFalPlanBuilder $falPlanBuilder,
+    ) {}
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public function plan(array $arguments): ToolPlan
+    {
+        $storageUid = (int) ($arguments['storageUid'] ?? 1);
+        $directoryName = (string) ($arguments['directoryName'] ?? '');
+        $parentPath = (string) ($arguments['parentPath'] ?? '/');
+
+        return $this->falPlanBuilder->directoryPathChange(
+            'create',
+            'directory_create',
+            '_create',
+            $storageUid,
+            $parentPath,
+            'create ' . $directoryName . ' in ' . $parentPath,
+            ['directoryName' => $directoryName, 'parentPath' => $parentPath],
+        );
+    }
 
     #[McpTool(name: 'directory_create', description: 'Create a new directory in a storage.')]
     public function execute(string $directoryName, string $parentPath = '/', int $storageUid = 1): string

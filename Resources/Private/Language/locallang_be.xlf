@@ -430,6 +430,473 @@
       <trans-unit id="ailabel.file_module.open" resname="ailabel.file_module.open">
         <source>Open in AI Label</source>
       </trans-unit>
+
+      <!-- AI Agent -->
+      <trans-unit id="access.agent_enabled" resname="access.agent_enabled">
+        <source>AI Agent access</source>
+      </trans-unit>
+      <trans-unit id="agent.toolbar.title" resname="agent.toolbar.title">
+        <source>AI Agent (Ctrl/Cmd+Shift+K)</source>
+      </trans-unit>
+      <trans-unit id="agent.toolbar.titlePrefix" resname="agent.toolbar.titlePrefix">
+        <source>AI Agent</source>
+      </trans-unit>
+      <trans-unit id="agent.launch.label" resname="agent.launch.label">
+        <source>Ask AI Agent</source>
+      </trans-unit>
+      <trans-unit id="agent.launch.title" resname="agent.launch.title">
+        <source>Open AI Agent</source>
+      </trans-unit>
+      <trans-unit id="agent.modal.title" resname="agent.modal.title">
+        <source>AI Agent</source>
+      </trans-unit>
+      <trans-unit id="agent.modal.subtitle" resname="agent.modal.subtitle">
+        <source>Ask for anything on this screen. It drafts, you approve, inside the conversation.</source>
+      </trans-unit>
+      <trans-unit id="agent.modal.settings" resname="agent.modal.settings">
+        <source>Settings</source>
+      </trans-unit>
+      <trans-unit id="agent.modal.close" resname="agent.modal.close">
+        <source>Close dialog</source>
+      </trans-unit>
+      <trans-unit id="agent.disclosure" resname="agent.disclosure">
+        <source>You are interacting with an AI system (EU AI Act Art. 50(1)). Outputs may be inaccurate or incomplete. Review every suggestion before applying changes to your website.</source>
+      </trans-unit>
+      <trans-unit id="agent.disclosure.gotIt" resname="agent.disclosure.gotIt">
+        <source>Got it</source>
+      </trans-unit>
+      <trans-unit id="agent.composer.label" resname="agent.composer.label">
+        <source>Message</source>
+      </trans-unit>
+      <trans-unit id="agent.composer.placeholder" resname="agent.composer.placeholder">
+        <source>Ask a question, / for tools, @ for records…</source>
+      </trans-unit>
+      <trans-unit id="agent.composer.hint" resname="agent.composer.hint">
+        <source>/ tools · @ records ·</source>
+      </trans-unit>
+      <trans-unit id="agent.composer.send" resname="agent.composer.send">
+        <source>Send message</source>
+      </trans-unit>
+      <trans-unit id="agent.autocomplete.label" resname="agent.autocomplete.label">
+        <source>Suggestions</source>
+      </trans-unit>
+      <trans-unit id="agent.context.module" resname="agent.context.module">
+        <source>Module</source>
+      </trans-unit>
+      <trans-unit id="agent.context.page" resname="agent.context.page">
+        <source>Page</source>
+      </trans-unit>
+      <trans-unit id="agent.context.folder" resname="agent.context.folder">
+        <source>Folder</source>
+      </trans-unit>
+      <trans-unit id="agent.context.record" resname="agent.context.record">
+        <source>Record</source>
+      </trans-unit>
+      <trans-unit id="agent.context.brand" resname="agent.context.brand">
+        <source>Brand profile</source>
+      </trans-unit>
+      <trans-unit id="agent.context.language" resname="agent.context.language">
+        <source>Language</source>
+      </trans-unit>
+      <trans-unit id="agent.context.aware" resname="agent.context.aware">
+        <source>Knows what you are looking at</source>
+      </trans-unit>
+      <trans-unit id="agent.greeting.lead" resname="agent.greeting.lead">
+        <source>I can read this screen, draft changes, and run tools — you approve before anything is written.</source>
+      </trans-unit>
+      <trans-unit id="agent.greeting.page" resname="agent.greeting.page">
+        <source>Page</source>
+      </trans-unit>
+      <trans-unit id="agent.greeting.module" resname="agent.greeting.module">
+        <source>Module</source>
+      </trans-unit>
+      <trans-unit id="agent.greeting.language" resname="agent.greeting.language">
+        <source>Language</source>
+      </trans-unit>
+      <trans-unit id="agent.greeting.brand" resname="agent.greeting.brand">
+        <source>Brand</source>
+      </trans-unit>
+      <trans-unit id="agent.toolCall.autoRan" resname="agent.toolCall.autoRan">
+        <source>completed</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.listFilesMissingAltText" resname="agent.tool.listFilesMissingAltText">
+        <source>List images missing alt text</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.updateFileMetadata" resname="agent.tool.updateFileMetadata">
+        <source>Update file metadata</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.getFileMetadata" resname="agent.tool.getFileMetadata">
+        <source>Inspect file metadata</source>
+      </trans-unit>
+      <trans-unit id="agent.upsell.title" resname="agent.upsell.title">
+        <source>Extension required</source>
+      </trans-unit>
+      <trans-unit id="agent.applied.title" resname="agent.applied.title">
+        <source>Changes applied</source>
+      </trans-unit>
+      <trans-unit id="agent.starters.executable" resname="agent.starters.executable">
+        <source>Suggested actions</source>
+      </trans-unit>
+      <trans-unit id="agent.starters.locked" resname="agent.starters.locked">
+        <source>Needs another extension</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.generateSeo" resname="agent.starter.generateSeo">
+        <source>Generate SEO metadata</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.generateFileMetadata" resname="agent.starter.generateFileMetadata">
+        <source>Generate file metadata (alt, title)</source>
+      </trans-unit>
+      <trans-unit id="agent.workflow.fileMetadataNeedsFile" resname="agent.workflow.fileMetadataNeedsFile">
+        <source>Attach a file with @file or open the Media module so the agent knows which image to caption.</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.createNews" resname="agent.starter.createNews">
+        <source>Create news article</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.createNewsNeedsPage" resname="agent.starter.createNewsNeedsPage">
+        <source>Select a news storage folder page first, then ask to create a news article.</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.createNewsUnavailable" resname="agent.starter.createNewsUnavailable">
+        <source>News creation is not available. Install EXT:news and enable the T3AI news tools.</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.inspectPage" resname="agent.starter.inspectPage">
+        <source>Inspect this page</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.listChildPages" resname="agent.starter.listChildPages">
+        <source>List child pages</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.searchPages" resname="agent.starter.searchPages">
+        <source>Search pages</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.pageTree" resname="agent.starter.pageTree">
+        <source>Browse page tree</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.listContent" resname="agent.starter.listContent">
+        <source>List page content</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.recordSearch" resname="agent.starter.recordSearch">
+        <source>Search records</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.fileList" resname="agent.starter.fileList">
+        <source>Browse files</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.fileInfo" resname="agent.starter.fileInfo">
+        <source>Inspect file metadata</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.fileSearch" resname="agent.starter.fileSearch">
+        <source>Search files</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.fileUpload" resname="agent.starter.fileUpload">
+        <source>Upload a file</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.redirectList" resname="agent.starter.redirectList">
+        <source>List redirects</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.redirectGet" resname="agent.starter.redirectGet">
+        <source>Inspect redirect</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.schedulerList" resname="agent.starter.schedulerList">
+        <source>List scheduler tasks</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.schedulerGet" resname="agent.starter.schedulerGet">
+        <source>Inspect scheduler task</source>
+      </trans-unit>
+      <trans-unit id="agent.trace.title" resname="agent.trace.title">
+        <source>Tool trace</source>
+      </trans-unit>
+      <trans-unit id="agent.trace.request" resname="agent.trace.request">
+        <source>Request</source>
+      </trans-unit>
+      <trans-unit id="agent.trace.response" resname="agent.trace.response">
+        <source>Response</source>
+      </trans-unit>
+      <trans-unit id="extmng.agentMaxReadToolsPerTurn" resname="extmng.agentMaxReadToolsPerTurn">
+        <source>Maximum read tools per agent turn</source>
+      </trans-unit>
+      <trans-unit id="extmng.agentMaxWriteDraftsPerTurn" resname="extmng.agentMaxWriteDraftsPerTurn">
+        <source>Maximum write drafts per agent turn</source>
+      </trans-unit>
+      <trans-unit id="extmng.agentShowProviderThinking" resname="extmng.agentShowProviderThinking">
+        <source>Show provider thinking in agent responses</source>
+      </trans-unit>
+      <trans-unit id="extmng.agentConversationRetentionDays" resname="extmng.agentConversationRetentionDays">
+        <source>Agent conversation retention (days)</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.generateSeoNeedsPage" resname="agent.starter.generateSeoNeedsPage">
+        <source>Open a page in the backend first — SEO metadata needs page context.</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.generateSeoDraft" resname="agent.starter.generateSeoDraft">
+        <source>Review the proposed SEO metadata before anything is written.</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.generateSeoNoFields" resname="agent.starter.generateSeoNoFields">
+        <source>SEO fields on this page already look complete.</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.generateSeoDescription" resname="agent.starter.generateSeoDescription">
+        <source>Discover %1$s — concise summary for search results and social previews.</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.generateSeoAbstract" resname="agent.starter.generateSeoAbstract">
+        <source>Learn more about %1$s on this site.</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.generateSeoKeywords" resname="agent.starter.generateSeoKeywords">
+        <source>%1$s, TYPO3, website</source>
+      </trans-unit>
+      <trans-unit id="agent.owner.core" resname="agent.owner.core">
+        <source>AI Foundation</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.unclassified" resname="agent.tool.unclassified">
+        <source>Tool needs a severity declaration from its extension.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.extensionUnavailable" resname="agent.tool.extensionUnavailable">
+        <source>Requires %1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.help" resname="agent.turn.help">
+        <source>Pick a starter below, type / to run a tool, or attach a record with @table:uid (for example @tt_content:198).</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.noToolCalling" resname="agent.turn.noToolCalling">
+        <source>Your current AI provider cannot run tools for natural-language requests. Use / to pick a tool or @ to attach a record instead.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.noExecutableTools" resname="agent.turn.noExecutableTools">
+        <source>No executable tools are available for your account. Use / to see what is locked or contact an administrator.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.orchestratorFailed" resname="agent.turn.orchestratorFailed">
+        <source>The agent could not complete this turn: %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.emptyModelReply" resname="agent.turn.emptyModelReply">
+        <source>I could not produce a reply. Try rephrasing or use / to run a specific tool.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.emptyModelReplyWithTools" resname="agent.turn.emptyModelReplyWithTools">
+        <source>I could not produce a reply. Closest tools: %1$s. Try rephrasing, pick a suggested action, or use / to run a specific tool.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.translateNotInCombinedFlow" resname="agent.turn.translateNotInCombinedFlow">
+        <source>Translation is not run automatically in this combined request yet. This turn only prepares SEO metadata for the target page — run translation separately afterward.</source>
+      </trans-unit>
+      <trans-unit id="agent.compound.translateHandoff" resname="agent.compound.translateHandoff">
+        <source>Queue bulk translation for page %1$s via Scheduler. Choose target languages in the handoff below, run the job, then approve the SEO draft when ready.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.noContentMatch" resname="agent.turn.noContentMatch">
+        <source>No content element matched "%1$s" on this page. Content on this page:%2$s%3$s</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.loopLimit" resname="agent.turn.loopLimit">
+        <source>This turn reached the orchestrator step limit. Review the results below or send a follow-up message.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.readBudgetExceeded" resname="agent.turn.readBudgetExceeded">
+        <source>Read tool budget reached (%1$s per turn). Send another message to continue.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.writeBudgetExceeded" resname="agent.turn.writeBudgetExceeded">
+        <source>Write draft budget reached (%1$s per turn). Apply or discard drafts, then continue.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.unknownAttachment" resname="agent.turn.unknownAttachment">
+        <source>No read tool is available for @%1$s:%2$s. Try /content_get %2$s for content elements or pick a tool with /.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.unknownTool" resname="agent.turn.unknownTool">
+        <source>Unknown tool: %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.lockedTool" resname="agent.turn.lockedTool">
+        <source>%1$s is locked: %2$s</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.writeRequiresApproval" resname="agent.turn.writeRequiresApproval">
+        <source>Write and destructive tools require your approval before anything is saved. That workflow arrives in the next release.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.readExecuted" resname="agent.turn.readExecuted">
+        <source>Read tool %1$s ran without confirmation.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.readFailed" resname="agent.turn.readFailed">
+        <source>Read tool %1$s failed: %2$s</source>
+      </trans-unit>
+      <trans-unit id="agent.result.details" resname="agent.result.details">
+        <source>Details</source>
+      </trans-unit>
+      <trans-unit id="agent.live.running" resname="agent.live.running">
+        <source>Assistant is working…</source>
+      </trans-unit>
+      <trans-unit id="agent.work.working" resname="agent.work.working">
+        <source>Working…</source>
+      </trans-unit>
+      <trans-unit id="agent.work.workingFor" resname="agent.work.workingFor">
+        <source>Working… %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.work.workedFor" resname="agent.work.workedFor">
+        <source>Worked for %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.live.opened" resname="agent.live.opened">
+        <source>AI Agent opened.</source>
+      </trans-unit>
+      <trans-unit id="agent.live.closed" resname="agent.live.closed">
+        <source>AI Agent closed.</source>
+      </trans-unit>
+      <trans-unit id="agent.severity.read" resname="agent.severity.read">
+        <source>Read-only</source>
+      </trans-unit>
+      <trans-unit id="agent.severity.write" resname="agent.severity.write">
+        <source>Write</source>
+      </trans-unit>
+      <trans-unit id="agent.severity.destructive" resname="agent.severity.destructive">
+        <source>Destructive</source>
+      </trans-unit>
+      <trans-unit id="agent.severity.unclassified" resname="agent.severity.unclassified">
+        <source>Unclassified</source>
+      </trans-unit>
+      <trans-unit id="agent.governance.providerBlocked" resname="agent.governance.providerBlocked">
+        <source>Your group policy blocks this AI provider for agent use.</source>
+      </trans-unit>
+      <trans-unit id="agent.governance.modelOverrideBlocked" resname="agent.governance.modelOverrideBlocked">
+        <source>Model override is disabled for your backend user group.</source>
+      </trans-unit>
+      <trans-unit id="agent.governance.dailyCapReached" resname="agent.governance.dailyCapReached">
+        <source>Daily agent request limit reached for your backend user group.</source>
+      </trans-unit>
+      <trans-unit id="agent.governance.creditCapReached" resname="agent.governance.creditCapReached">
+        <source>Monthly AI credit cap reached for your backend user group.</source>
+      </trans-unit>
+      <trans-unit id="agent.governance.turnGuardWarn" resname="agent.governance.turnGuardWarn">
+        <source>Warning: this turn has reached %1$s tool calls (%2$s so far). The agent will stop at 40 calls.</source>
+      </trans-unit>
+      <trans-unit id="agent.governance.turnGuardAbort" resname="agent.governance.turnGuardAbort">
+        <source>Turn stopped: the %1$s tool call limit was reached. Start a new message to continue.</source>
+      </trans-unit>
+      <trans-unit id="agent.governance.workspaceEnforcementBlocked" resname="agent.governance.workspaceEnforcementBlocked">
+        <source>Your group policy requires workspace-only edits. Switch to a draft workspace before applying changes.</source>
+      </trans-unit>
+      <trans-unit id="agent.context.workspace" resname="agent.context.workspace">
+        <source>Workspace</source>
+      </trans-unit>
+      <trans-unit id="agent.attach.open" resname="agent.attach.open">
+        <source>Attach</source>
+      </trans-unit>
+      <trans-unit id="agent.attach.files" resname="agent.attach.files">
+        <source>Add files or photos</source>
+      </trans-unit>
+      <trans-unit id="agent.upload.success" resname="agent.upload.success">
+        <source>Uploaded %1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.upload.failed" resname="agent.upload.failed">
+        <source>Upload failed.</source>
+      </trans-unit>
+      <trans-unit id="agent.upload.missingFile" resname="agent.upload.missingFile">
+        <source>No file was uploaded.</source>
+      </trans-unit>
+      <trans-unit id="agent.upload.empty" resname="agent.upload.empty">
+        <source>The uploaded file is empty.</source>
+      </trans-unit>
+      <trans-unit id="agent.upload.tooLarge" resname="agent.upload.tooLarge">
+        <source>The file exceeds the maximum upload size (100 MB).</source>
+      </trans-unit>
+      <trans-unit id="agent.upload.invalidName" resname="agent.upload.invalidName">
+        <source>The file name is not allowed.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.uploadViaComposer" resname="agent.tool.uploadViaComposer">
+        <source>Upload files from the + button in the composer instead of running this tool.</source>
+      </trans-unit>
+      <trans-unit id="agent.entitlement.composerLockedLead" resname="agent.entitlement.composerLockedLead">
+        <source>%1$s is available from the composer attach menu (+), not as a slash command.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.applySafe" resname="agent.draft.applySafe">
+        <source>Apply safe fields</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.noSafeFields" resname="agent.draft.noSafeFields">
+        <source>No safe fields are selected for apply.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.unknownFileAttachment" resname="agent.turn.unknownFileAttachment">
+        <source>Could not read attached file %1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.entitlement.lockedLead" resname="agent.entitlement.lockedLead">
+        <source>%1$s is provided by %2$s and is not available in your current setup.</source>
+      </trans-unit>
+      <trans-unit id="agent.entitlement.planLockedLead" resname="agent.entitlement.planLockedLead">
+        <source>%1$s is a %2$s tool that cannot be run from the agent yet. Draft planning (review before write) is not implemented for this tool — use a plannable tool such as write_table, or invoke it via MCP outside the agent.</source>
+      </trans-unit>
+      <trans-unit id="agent.entitlement.severityLockedLead" resname="agent.entitlement.severityLockedLead">
+        <source>%1$s is not classified for agent use yet.</source>
+      </trans-unit>
+      <trans-unit id="agent.entitlement.toolCount" resname="agent.entitlement.toolCount">
+        <source>%1$s tools from %2$s would become available once the extension is operational.</source>
+      </trans-unit>
+      <trans-unit id="agent.entitlement.settingsHint" resname="agent.entitlement.settingsHint">
+        <source>Open AI Agent settings for details: %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.scheduler.handoffLabel" resname="agent.scheduler.handoffLabel">
+        <source>Open Scheduler &amp; CLI</source>
+      </trans-unit>
+      <trans-unit id="agent.scheduler.handoffTitle" resname="agent.scheduler.handoffTitle">
+        <source>Schedule for later?</source>
+      </trans-unit>
+      <trans-unit id="agent.scheduler.handoffBody" resname="agent.scheduler.handoffBody">
+        <source>Run the same kind of work in bulk via Scheduler &amp; CLI when you are ready.</source>
+      </trans-unit>
+      <trans-unit id="agent.scheduler.handoffBodySeo" resname="agent.scheduler.handoffBodySeo">
+        <source>%1$s pages in your site could use the same treatment. Schedule bulk SEO optimization when you are ready.</source>
+      </trans-unit>
+      <trans-unit id="agent.scheduler.handoffDismiss" resname="agent.scheduler.handoffDismiss">
+        <source>Not now</source>
+      </trans-unit>
+      <trans-unit id="agent.scheduler.handoffNote" resname="agent.scheduler.handoffNote">
+        <source>Scheduler tasks still require per-change review before anything is published.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.planUnsupported" resname="agent.tool.planUnsupported">
+        <source>This write tool does not yet support draft planning.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.planUnsupported" resname="agent.turn.planUnsupported">
+        <source>%1$s cannot be planned for approval yet.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.planFailed" resname="agent.turn.planFailed">
+        <source>Could not plan %1$s: %2$s</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.proposed" resname="agent.draft.proposed">
+        <source>Review the proposed changes for %1$s before anything is written.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.apply" resname="agent.draft.apply">
+        <source>Apply</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.discard" resname="agent.draft.discard">
+        <source>Discard</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.confirmFirst" resname="agent.draft.confirmFirst">
+        <source>Confirm (1 of 2)</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.confirmSecond" resname="agent.draft.confirmSecond">
+        <source>Apply (2 of 2)</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.destructiveArmed" resname="agent.draft.destructiveArmed">
+        <source>Destructive action armed. Click Apply again to proceed.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.applied" resname="agent.draft.applied">
+        <source>Applied %1$s of %2$s fields.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.discarded" resname="agent.draft.discarded">
+        <source>Draft discarded. Nothing was written.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.undone" resname="agent.draft.undone">
+        <source>Change undone. A new history entry was written.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.keep" resname="agent.draft.keep">
+        <source>Keep</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.drop" resname="agent.draft.drop">
+        <source>Drop</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.elicitation" resname="agent.draft.elicitation">
+        <source>MCP elicitation</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.toolConfirmation" resname="agent.draft.toolConfirmation">
+        <source>Tool confirmation</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.toolArguments" resname="agent.draft.toolArguments">
+        <source>Parameters</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.runTool" resname="agent.draft.runTool">
+        <source>Run tool</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.runningTool" resname="agent.draft.runningTool">
+        <source>Running %1$s…</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.toolApplied" resname="agent.draft.toolApplied">
+        <source>Tool ran successfully.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.readback" resname="agent.draft.readback">
+        <source>Written through DataHandler, then read back from the database. Workspace and publishing are untouched.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.undo" resname="agent.draft.undo">
+        <source>Undo</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

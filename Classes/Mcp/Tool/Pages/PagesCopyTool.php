@@ -26,12 +26,56 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Pages;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
 
-readonly class PagesCopyTool implements McpNonAiToolInterface
+#[McpToolSeverity(ToolSeverity::Write)]
+readonly class PagesCopyTool implements McpNonAiToolInterface, McpPlannableToolInterface
 {
-    public function __construct(private DataHandlerService $dataHandlerService) {}
+    public function __construct(
+        private DataHandlerService $dataHandlerService,
+        private RecordService $recordService,
+    ) {}
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public function plan(array $arguments): ToolPlan
+    {
+        $uid = (int) ($arguments['uid'] ?? 0);
+        $target = (int) ($arguments['target'] ?? 0);
+        $includeSubpages = (bool) ($arguments['includeSubpages'] ?? false);
+
+        if ($uid <= 0) {
+            throw new \InvalidArgumentException('Copy requires uid > 0.');
+        }
+
+        if ($this->recordService->findExistingUids('pages', [$uid]) === []) {
+            throw new \InvalidArgumentException('Page not found: uid ' . $uid);
+        }
+
+        $currentTitle = $this->recordService->findByUid('pages', $uid, ['title'])['title'] ?? ('Page ' . $uid);
+
+        return new ToolPlan('copy', 'pages_copy', [
+            new ToolPlanField(
+                ToolPlanField::buildKey('pages', $uid, '_copy'),
+                'pages',
+                $uid,
+                '_copy',
+                (string) $currentTitle,
+                'copy to target ' . $target . ($includeSubpages ? ' (with subpages)' : ''),
+            ),
+        ], [
+            'target' => $target,
+            'copyTreeDepth' => $includeSubpages ? 99 : 0,
+        ]);
+    }
 
     #[McpTool(
         name: 'pages_copy',

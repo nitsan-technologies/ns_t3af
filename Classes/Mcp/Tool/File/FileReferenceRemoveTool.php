@@ -26,12 +26,38 @@ namespace NITSAN\NsT3AF\Mcp\Tool\File;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 
-readonly class FileReferenceRemoveTool implements McpNonAiToolInterface
+#[McpToolSeverity(ToolSeverity::Write)]
+readonly class FileReferenceRemoveTool implements McpNonAiToolInterface, McpPlannableToolInterface
 {
-    public function __construct(private DataHandlerService $dataHandlerService) {}
+    public function __construct(
+        private DataHandlerService $dataHandlerService,
+        private McpConfirmationPlanBuilder $confirmationPlanBuilder,
+    ) {}
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public function plan(array $arguments): ToolPlan
+    {
+        $referenceUids = (string) ($arguments['referenceUids'] ?? '');
+
+        return $this->confirmationPlanBuilder->confirmation(
+            'delete',
+            'file_reference_remove',
+            '_reference',
+            'exists',
+            'remove reference(s) ' . $referenceUids,
+            ['referenceUids' => $referenceUids],
+        );
+    }
 
     #[McpTool(
         name: 'file_reference_remove',

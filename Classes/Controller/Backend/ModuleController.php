@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Controller\Backend;
 
 use NITSAN\NsT3AF\Access\AiUniverseRecordMap;
 use NITSAN\NsT3AF\Access\RecordAccessEnforcer;
+use NITSAN\NsT3AF\Agent\Service\AgentSettingsPresenter;
 use NITSAN\NsT3AF\Credits\CreditsProviderIdentifier;
 use NITSAN\NsT3AF\Credits\Service\CreditModeResolver;
 use NITSAN\NsT3AF\Credits\Service\CreditOverviewLineService;
@@ -157,6 +158,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
         private readonly FeatureExtensionHealthService $featureExtensionHealthService,
         private readonly AiFeatureCardProviderRegistry $aiFeatureCardProviderRegistry,
         private readonly ExtensionSettingsRegistry $extensionSettingsRegistry,
+        private readonly AgentSettingsPresenter $agentSettingsPresenter,
         ModuleStateService $moduleStateService,
         WizardProviderCatalog $wizardProviderCatalog,
         WizardExtensionCatalogService $wizardExtensionCatalog,
@@ -1352,6 +1354,15 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $this->pageRenderer->loadJavaScriptModule('@nitsan/nst3af/for-developers.js');
 
         return $view->renderResponse('Backend/ForDevelopers');
+    }
+
+    public function aiAgentAction(ServerRequestInterface $request): ResponseInterface
+    {
+        $view = $this->createModuleView($request, 'aiAgent');
+        $this->pageRenderer->loadJavaScriptModule('@nitsan/nst3af/ai-agent-settings.js');
+        $view->assignMultiple($this->agentSettingsPresenter->build());
+
+        return $view->renderResponse('Backend/AiAgent');
     }
 
     public function schedulerCliAction(ServerRequestInterface $request): ResponseInterface

@@ -23,11 +23,13 @@ use Mcp\Capability\Attribute\McpTool;
 use NITSAN\NsT3AF\Mcp\Attribute\McpContentParam;
 use NITSAN\NsT3AF\Mcp\Attribute\McpNewsStorageTarget;
 use NITSAN\NsT3AF\Mcp\Attribute\McpParentPageTarget;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolIntent;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolOwner;
 use NITSAN\NsT3AF\Mcp\Contract\McpDualModeContentToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpExternalContentToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpFalStorageToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use ReflectionMethod;
 use ReflectionNamedType;
 use ReflectionParameter;
@@ -45,7 +47,8 @@ class McpToolIntrospectorService
      *     description: string,
      *     params: list<array{name: string, type: string, required: bool, default: string|null, description: string}>,
      *     className: class-string,
-     *     ownerExtensionKey: string|null
+     *     ownerExtensionKey: string|null,
+     *     severity: string|null
      * }>|null
      */
     private ?array $listToolsCache = null;
@@ -58,6 +61,7 @@ class McpToolIntrospectorService
         private readonly McpToolSchemaAugmenter $toolSchemaAugmenter,
         private readonly McpModeResolver $mcpModeResolver,
         private readonly McpToolDescriptionResolver $toolDescriptionResolver,
+        private readonly McpToolSeverityResolver $toolSeverityResolver,
     ) {}
 
     /**
@@ -66,7 +70,8 @@ class McpToolIntrospectorService
      *     description: string,
      *     params: list<array{name: string, type: string, required: bool, default: string|null, description: string}>,
      *     className: class-string,
-     *     ownerExtensionKey: string|null
+     *     ownerExtensionKey: string|null,
+     *     severity: string|null
      * }>
      */
     public function listTools(): array
@@ -91,7 +96,8 @@ class McpToolIntrospectorService
      *     description: string,
      *     params: list<array{name: string, type: string, required: bool, default: string|null, description: string}>,
      *     className: class-string,
-     *     ownerExtensionKey: string|null
+     *     ownerExtensionKey: string|null,
+     *     severity: string|null
      * }
      */
     private function introspectTool(object $tool): array
@@ -138,6 +144,10 @@ class McpToolIntrospectorService
         }
 
         $attributeName = $attribute?->name;
+        $severity = $this->toolSeverityResolver->resolveForHandler($tool);
+        if ($severity === null && is_string($attributeName) && $attributeName !== '') {
+            $severity = $this->toolSeverityResolver->resolveForToolName($attributeName);
+        }
 
         return [
             'name' => is_string($attributeName) && $attributeName !== '' ? $attributeName : $tool::class,
@@ -145,6 +155,53 @@ class McpToolIntrospectorService
             'params' => $params,
             'className' => $tool::class,
             'ownerExtensionKey' => $this->resolveOwnerExtensionKey($reflection),
+            'severity' => $severity instanceof ToolSeverity ? $severity->value : null,
+            'intent' => $this->resolveToolIntent($reflection),
+            'contextHints' => $this->resolveContextHints($reflection),
+        ];
+    }
+
+    /**
+     * Agent runtime hints derived from execute() parameter attributes.
+     *
+     * @return array{
+     *     parentPageParam: string|null,
+     *     newsStorageParam: string|null,
+     *     pageParam: string|null,
+     *     subjectParam: string|null
+     * }
+     */
+    private function resolveContextHints(ReflectionMethod $reflection): array
+    {
+        $parentPageParam = null;
+        $newsStorageParam = null;
+        $pageParam = null;
+        $subjectParam = null;
+
+        foreach ($reflection->getParameters() as $parameter) {
+            $name = $parameter->getName();
+
+            if ($parameter->getAttributes(McpParentPageTarget::class) !== [] && $name === 'parentPageId') {
+                $parentPageParam = $name;
+            }
+            if ($parameter->getAttributes(McpNewsStorageTarget::class) !== [] && $name === 'pageId') {
+                $newsStorageParam = $name;
+            }
+            if ($name === 'topic') {
+                $subjectParam = 'topic';
+            } elseif ($name === 'prompt' && $subjectParam === null) {
+                $subjectParam = 'prompt';
+            }
+            if ($name === 'pageId' && $newsStorageParam === null && $parameter->getAttributes(McpParentPageTarget::class) === []) {
+                $pageParam = $name;
+            }
+        }
+
+        return [
+            'parentPageParam' => $parentPageParam,
+            'newsStorageParam' => $newsStorageParam,
+            'pageParam' => $pageParam,
+            'subjectParam' => $subjectParam,
         ];
     }
 
@@ -161,6 +218,27 @@ class McpToolIntrospectorService
         }
 
         return null;
+    }
+
+    /**
+     * @return array{verbs: list<string>, nouns: list<string>, modules: list<string>, requiresPage: bool}|null
+     */
+    private function resolveToolIntent(ReflectionMethod $reflection): ?array
+    {
+        $class = $reflection->getDeclaringClass();
+        $attributes = $class->getAttributes(McpToolIntent::class);
+        if ($attributes === []) {
+            return null;
+        }
+
+        $intent = $attributes[0]->newInstance();
+
+        return [
+            'verbs' => $intent->verbs,
+            'nouns' => $intent->nouns,
+            'modules' => $intent->modules,
+            'requiresPage' => $intent->requiresPage,
+        ];
     }
 
     private function resolveMcpToolAttribute(ReflectionMethod $reflection): ?McpTool

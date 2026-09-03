@@ -26,12 +26,45 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Cache;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\CacheService;
+use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 
-readonly class CacheClearTool implements McpNonAiToolInterface
+#[McpToolSeverity(ToolSeverity::Destructive)]
+readonly class CacheClearTool implements McpNonAiToolInterface, McpPlannableToolInterface
 {
-    public function __construct(private CacheService $cacheService) {}
+    public function __construct(
+        private CacheService $cacheService,
+        private McpConfirmationPlanBuilder $confirmationPlanBuilder,
+    ) {}
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public function plan(array $arguments): ToolPlan
+    {
+        $scope = (string) ($arguments['scope'] ?? 'pages');
+        $pageId = (int) ($arguments['pageId'] ?? 0);
+
+        $proposed = match ($scope) {
+            'all' => 'clear all caches',
+            'page' => 'clear cache for page ' . $pageId,
+            default => 'clear page caches',
+        };
+
+        return $this->confirmationPlanBuilder->confirmation(
+            'update',
+            'cache_clear',
+            '_cache',
+            'active',
+            $proposed,
+            ['scope' => $scope, 'pageId' => $pageId],
+        );
+    }
 
     #[McpTool(
         name: 'cache_clear',

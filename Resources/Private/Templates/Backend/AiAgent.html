@@ -1,0 +1,354 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:layout name="Module" />
+
+<f:section name="Content">
+    <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
+    <f:variable name="llBe" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf" />
+
+    <div class="page-header d-flex justify-content-between align-items-center gap-3 mb-4">
+        <div class="min-w-0 flex-grow-1">
+            <h1 class="mb-1">{tabHeading}</h1>
+            <p class="text-variant mb-0">{tabIntro}</p>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2 flex-shrink-0">
+            <f:render partial="Module/PageBreadcrumb" arguments="{_all}" />
+        </div>
+    </div>
+
+    <div class="aiu-module-content" data-ai-agent-settings>
+        <div class="aiu-mcp-subtabs-bar mb-3">
+            <div class="aiu-mcp-subtabs">
+                <div class="btn-group" role="tablist" aria-label="{f:translate(key: '{ll}:module.aiAgent.tabs.aria')}">
+                    <button type="button" class="btn btn-default active is-active" role="tab" aria-selected="true" data-ai-agent-tab="overview">
+                        <f:translate key="{ll}:module.aiAgent.tab.overview" />
+                    </button>
+                    <button type="button" class="btn btn-default" role="tab" aria-selected="false" data-ai-agent-tab="severity">
+                        <f:translate key="{ll}:module.aiAgent.tab.severity" />
+                    </button>
+                    <button type="button" class="btn btn-default" role="tab" aria-selected="false" data-ai-agent-tab="governance">
+                        <f:translate key="{ll}:module.aiAgent.tab.governance" />
+                    </button>
+                    <button type="button" class="btn btn-default" role="tab" aria-selected="false" data-ai-agent-tab="audit">
+                        <f:translate key="{ll}:module.aiAgent.tab.audit" />
+                    </button>
+                    <button type="button" class="btn btn-default" role="tab" aria-selected="false" data-ai-agent-tab="demand">
+                        <f:translate key="{ll}:module.aiAgent.tab.demand" />
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="aiu-mcp-tab-panel is-active" data-ai-agent-panel="overview" role="tabpanel">
+            <div class="row g-3 mb-3">
+                <div class="col-md-3 col-sm-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="text-variant small"><f:translate key="{ll}:module.aiAgent.overview.totalTools" /></div>
+                            <div class="h3 mb-0">{overview.totalTools}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="text-variant small"><f:translate key="{ll}:module.aiAgent.overview.executable" /></div>
+                            <div class="h3 mb-0">{overview.executableTools}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="text-variant small"><f:translate key="{ll}:module.aiAgent.overview.locked" /></div>
+                            <div class="h3 mb-0">{overview.lockedTools}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="text-variant small"><f:translate key="{ll}:module.aiAgent.overview.owners" /></div>
+                            <div class="h3 mb-0">{overview.ownerCount}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3" data-ai-agent-hotkey-form>
+                <div class="card-header"><f:translate key="{ll}:module.aiAgent.hotkey.heading" /></div>
+                <div class="card-body">
+                    <p class="text-variant mb-3"><f:translate key="{ll}:module.aiAgent.hotkey.lead" /></p>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="nst3af_agent_hotkey" id="nst3af-agent-hotkey-shift-k" value="mod+shift+k" checked="checked" />
+                        <label class="form-check-label" for="nst3af-agent-hotkey-shift-k">
+                            <strong><f:translate key="{ll}:module.aiAgent.hotkey.option.shiftK" /></strong>
+                            <span class="d-block text-variant small"><f:translate key="{ll}:module.aiAgent.hotkey.option.shiftK.help" /></span>
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="nst3af_agent_hotkey" id="nst3af-agent-hotkey-k" value="mod+k" />
+                        <label class="form-check-label" for="nst3af-agent-hotkey-k">
+                            <strong><f:translate key="{ll}:module.aiAgent.hotkey.option.k" /></strong>
+                            <span class="d-block text-variant small"><f:translate key="{ll}:module.aiAgent.hotkey.option.k.help" /></span>
+                        </label>
+                    </div>
+                    <p class="text-success small mt-3 mb-0" data-ai-agent-hotkey-status hidden="hidden"
+                       data-saved-label="{f:translate(key: '{ll}:module.aiAgent.hotkey.saved')}">
+                        <f:translate key="{ll}:module.aiAgent.hotkey.saved" />
+                    </p>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header"><f:translate key="{ll}:module.aiAgent.overview.availability" /></div>
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th><f:translate key="{ll}:module.aiAgent.col.control" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.status" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.source" /></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <f:for each="{overview.availability}" as="row">
+                                <tr>
+                                    <td><f:translate key="{ll}:{row.item}" /></td>
+                                    <td><f:translate key="{ll}:{row.status}" /></td>
+                                    <td><f:translate key="{ll}:{row.source}" /></td>
+                                </tr>
+                            </f:for>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header"><f:translate key="{ll}:module.aiAgent.overview.toolRegistration" /></div>
+                <div class="card-body">
+                    <p class="mb-0 text-variant"><f:translate key="{ll}:module.aiAgent.overview.toolRegistration.lead" /></p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><f:translate key="{ll}:module.aiAgent.overview.byOwner" /></div>
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th><f:translate key="{ll}:module.aiAgent.col.owner" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.total" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.executable" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.locked" /></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <f:for each="{overview.owners}" as="owner">
+                                <tr>
+                                    <td>{owner.ownerLabel}</td>
+                                    <td>{owner.total}</td>
+                                    <td>{owner.executable}</td>
+                                    <td>{owner.locked}</td>
+                                </tr>
+                            </f:for>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="aiu-mcp-tab-panel is-hidden" data-ai-agent-panel="severity" role="tabpanel" hidden="hidden">
+            <div class="card mb-3">
+                <div class="card-header"><f:translate key="{ll}:module.aiAgent.severity.policy" /></div>
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th><f:translate key="{ll}:module.aiAgent.col.severity" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.behavior" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.tools" /></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <f:for each="{severityPolicyTable}" as="row">
+                                <tr>
+                                    <td><f:translate key="{ll}:{row.label}" /></td>
+                                    <td><f:translate key="{ll}:{row.behavior}" /></td>
+                                    <td>{row.count}</td>
+                                </tr>
+                            </f:for>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="callout callout-info mb-3">
+                <p class="mb-0"><f:translate key="{ll}:module.aiAgent.severity.elicitation" /></p>
+            </div>
+
+            <f:for each="{severityPolicy}" as="tools" key="severityKey">
+                <f:if condition="{tools -> f:count()} > 0">
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <f:switch expression="{severityKey}">
+                                <f:case value="read"><f:translate key="{llBe}:agent.severity.read" /></f:case>
+                                <f:case value="write"><f:translate key="{llBe}:agent.severity.write" /></f:case>
+                                <f:case value="destructive"><f:translate key="{llBe}:agent.severity.destructive" /></f:case>
+                                <f:defaultCase><f:translate key="{llBe}:agent.severity.unclassified" /></f:defaultCase>
+                            </f:switch>
+                            ({tools -> f:count()})
+                        </div>
+                        <ul class="list-group list-group-flush">
+                            <f:for each="{tools}" as="tool">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <span>{tool.name}</span>
+                                    <span class="badge bg-secondary">{tool.ownerLabel}</span>
+                                </li>
+                            </f:for>
+                        </ul>
+                    </div>
+                </f:if>
+            </f:for>
+        </div>
+
+        <div class="aiu-mcp-tab-panel is-hidden" data-ai-agent-panel="governance" role="tabpanel" hidden="hidden">
+            <div class="callout callout-info mb-3">
+                <p class="mb-0"><f:translate key="{ll}:module.aiAgent.governance.lead" /></p>
+            </div>
+            <div class="card">
+                <div class="card-header"><f:translate key="{ll}:module.aiAgent.governance.matrix" /></div>
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th><f:translate key="{ll}:module.aiAgent.col.control" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.source" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.effect" /></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <f:for each="{governanceMatrix}" as="row">
+                                <tr>
+                                    <td><f:translate key="{ll}:{row.control}" /></td>
+                                    <td><f:translate key="{ll}:{row.source}" /></td>
+                                    <td>
+                                        <f:if condition="{row.effectArguments}">
+                                            <f:then><f:translate key="{ll}:{row.effect}" arguments="{row.effectArguments}" /></f:then>
+                                            <f:else><f:translate key="{ll}:{row.effect}" /></f:else>
+                                        </f:if>
+                                    </td>
+                                </tr>
+                            </f:for>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="aiu-mcp-tab-panel is-hidden" data-ai-agent-panel="audit" role="tabpanel" hidden="hidden">
+            <div class="card mb-3">
+                <div class="card-header"><f:translate key="{ll}:module.aiAgent.audit.coverage" /></div>
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th><f:translate key="{ll}:module.aiAgent.col.item" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.recorded" /></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <f:for each="{audit.coverage}" as="row">
+                                <tr>
+                                    <td><f:translate key="{ll}:{row.item}" /></td>
+                                    <td>
+                                        <f:if condition="{row.recorded}">
+                                            <f:then><f:translate key="{ll}:module.aiAgent.audit.recorded.yes" /></f:then>
+                                            <f:else><f:translate key="{ll}:module.aiAgent.audit.recorded.no" /></f:else>
+                                        </f:if>
+                                    </td>
+                                </tr>
+                            </f:for>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header"><f:translate key="{ll}:module.aiAgent.audit.toolLog" /></div>
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th><f:translate key="{ll}:module.aiAgent.col.time" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.tool" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.success" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.correlation" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.argsHash" /></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <f:for each="{audit.recentLogs}" as="log">
+                                <tr>
+                                    <td><f:format.date format="Y-m-d H:i:s">{log.crdate}</f:format.date></td>
+                                    <td>{log.tool_name}</td>
+                                    <td>
+                                        <f:if condition="{log.success} == 1">
+                                            <f:then><f:translate key="{ll}:module.aiAgent.status.ok" /></f:then>
+                                            <f:else><f:translate key="{ll}:module.aiAgent.status.error" /></f:else>
+                                        </f:if>
+                                    </td>
+                                    <td><code class="small">{log.correlation_id}</code></td>
+                                    <td><code class="small">{log.arguments_hash -> f:format.crop(maxCharacters: 12, append: '…')}</code></td>
+                                </tr>
+                            </f:for>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="aiu-mcp-tab-panel is-hidden" data-ai-agent-panel="demand" role="tabpanel" hidden="hidden">
+            <div class="callout callout-warning mb-3">
+                <p class="mb-0"><f:translate key="{ll}:module.aiAgent.demand.sharingDisabled" /></p>
+            </div>
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="nst3af-agent-demand-sharing" disabled="disabled" />
+                        <label class="form-check-label text-variant" for="nst3af-agent-demand-sharing">
+                            <f:translate key="{ll}:module.aiAgent.demand.sharingOptIn" />
+                        </label>
+                    </div>
+                    <p class="text-variant small mb-0 mt-2"><f:translate key="{ll}:module.aiAgent.demand.sharingDisabledReason" /></p>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header"><f:translate key="{ll}:module.aiAgent.demand.signals" /> ({demand.totalActivations})</div>
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th><f:translate key="{ll}:module.aiAgent.col.owner" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.tool" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.activations" /></th>
+                                <th><f:translate key="{ll}:module.aiAgent.col.lastActivated" /></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <f:for each="{demand.signals}" as="signal">
+                                <tr>
+                                    <td>{signal.owner_extension_key}</td>
+                                    <td>{signal.tool_name}</td>
+                                    <td>{signal.activation_count}</td>
+                                    <td><f:format.date format="Y-m-d H:i:s">{signal.last_activated}</f:format.date></td>
+                                </tr>
+                            </f:for>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</f:section>
+</html>

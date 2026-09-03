@@ -28,13 +28,19 @@ use const JSON_THROW_ON_ERROR;
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Schema\ToolAnnotations;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
-readonly class WriteTableTool implements McpNonAiToolInterface
+#[McpToolSeverity(ToolSeverity::Write)]
+readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableToolInterface
 {
     private const ALLOWED_ACTIONS = ['create', 'update', 'delete'];
 
@@ -43,6 +49,38 @@ readonly class WriteTableTool implements McpNonAiToolInterface
         private RecordService $recordService,
         private TcaSchemaService $tcaSchemaService,
     ) {}
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public function plan(array $arguments): ToolPlan
+    {
+        $action = (string) ($arguments['action'] ?? '');
+        $tableName = (string) ($arguments['tableName'] ?? ($arguments['table'] ?? ''));
+        $uid = (int) ($arguments['uid'] ?? 0);
+        $dataRaw = $arguments['data'] ?? '{}';
+        $dataRaw = is_string($dataRaw) ? $dataRaw : json_encode($dataRaw, JSON_THROW_ON_ERROR);
+
+        if (!in_array($action, self::ALLOWED_ACTIONS, true)) {
+            throw new \InvalidArgumentException('Invalid action. Use create, update, or delete.');
+        }
+
+        if (!$this->tableExists($tableName)) {
+            throw new \InvalidArgumentException('Table not found: ' . $tableName);
+        }
+
+        /** @var array<string, mixed> $payload */
+        $payload = json_decode($dataRaw, true, 512, JSON_THROW_ON_ERROR);
+        if (!is_array($payload)) {
+            throw new \InvalidArgumentException('Data must be a JSON object.');
+        }
+
+        return match ($action) {
+            'create' => $this->planCreate($tableName, $payload),
+            'update' => $this->planUpdate($tableName, $uid, $payload),
+            'delete' => $this->planDelete($tableName, $uid),
+        };
+    }
 
     #[McpTool(
         name: 'write_table',
@@ -94,6 +132,84 @@ readonly class WriteTableTool implements McpNonAiToolInterface
             'update' => $this->update($tableName, $uid, $payload),
             'delete' => $this->delete($tableName, $uid),
         };
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function planCreate(string $tableName, array $payload): ToolPlan
+    {
+        if (!isset($payload['pid']) || !is_numeric($payload['pid'])) {
+            throw new \InvalidArgumentException('Create requires numeric "pid" in data.');
+        }
+
+        $pid = (int) $payload['pid'];
+        unset($payload['pid']);
+        $filteredData = $this->filterWritableFields($tableName, $payload);
+
+        $fields = [];
+        foreach ($filteredData as $fieldName => $value) {
+            $fields[] = new ToolPlanField(
+                ToolPlanField::buildKey($tableName, 0, $fieldName),
+                $tableName,
+                0,
+                $fieldName,
+                null,
+                $value,
+            );
+        }
+
+        return new ToolPlan('create', 'write_table', $fields, ['pid' => $pid]);
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function planUpdate(string $tableName, int $uid, array $payload): ToolPlan
+    {
+        if ($uid <= 0) {
+            throw new \InvalidArgumentException('Update requires uid > 0.');
+        }
+
+        if ($this->recordService->findExistingUids($tableName, [$uid]) === []) {
+            throw new \InvalidArgumentException('Record not found: ' . $tableName . ' uid ' . $uid);
+        }
+
+        $filteredData = $this->filterWritableFields($tableName, $payload);
+        $fieldNames = array_keys($filteredData);
+        $current = $this->recordService->findByUid($tableName, $uid, $fieldNames) ?? [];
+
+        $fields = [];
+        foreach ($filteredData as $fieldName => $value) {
+            $fields[] = new ToolPlanField(
+                ToolPlanField::buildKey($tableName, $uid, $fieldName),
+                $tableName,
+                $uid,
+                $fieldName,
+                $current[$fieldName] ?? null,
+                $value,
+            );
+        }
+
+        return new ToolPlan('update', 'write_table', $fields);
+    }
+
+    private function planDelete(string $tableName, int $uid): ToolPlan
+    {
+        if ($uid <= 0) {
+            throw new \InvalidArgumentException('Delete requires uid > 0.');
+        }
+
+        if ($this->recordService->findExistingUids($tableName, [$uid]) === []) {
+            throw new \InvalidArgumentException('Record not found: ' . $tableName . ' uid ' . $uid);
+        }
+
+        return new ToolPlan('delete', 'write_table', [
+            new ToolPlanField(
+                ToolPlanField::buildKey($tableName, $uid, '_record'),
+                $tableName,
+                $uid,
+                '_record',
+                'exists',
+                'delete',
+            ),
+        ]);
     }
 
     /** @param array<string, mixed> $payload */

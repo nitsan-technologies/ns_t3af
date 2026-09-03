@@ -57,6 +57,8 @@ services:
       tags: ['t3af.credits_feature_key_alias']
     NITSAN\NsT3AF\Contract\McpSkillHubEntryProviderInterface:
       tags: ['t3af.mcp_skill_hub_entry']
+    NITSAN\NsT3AF\Contract\ExtensionOperationalStatusInterface:
+      tags: ['t3af.operational_status']
 
   NITSAN\NsT3AF\:
     resource: '../Classes/*'
@@ -142,6 +144,13 @@ services:
 
   NITSAN\NsT3AF\Api\AiServiceInterface:
     alias: NITSAN\NsT3AF\Credits\Service\T3PlanetCreditAiService
+    public: true
+
+  NITSAN\NsT3AF\Api\AiToolCallingServiceInterface:
+    alias: NITSAN\NsT3AF\Service\AiToolCallingService
+    public: true
+
+  NITSAN\NsT3AF\Service\AiToolCallingService:
     public: true
 
   # Public for child-ext makeInstance() (ViewHelpers, AiEngineConfiguration, ModulesUtility).
@@ -382,6 +391,35 @@ services:
     tags:
       - name: backend.toolbar.item
 
+  NITSAN\NsT3AF\Agent\Backend\ToolbarItems\AgentToolbarItem:
+    tags:
+      - name: backend.toolbar.item
+
+  NITSAN\NsT3AF\EventListener\AfterBackendPageRenderListener:
+    tags:
+      - name: event.listener
+        identifier: 'nst3af/agent/after-backend-page-render'
+        event: TYPO3\CMS\Backend\Controller\Event\AfterBackendPageRenderEvent
+
+  NITSAN\NsT3AF\Agent\Service\AgentSettingsPresenter:
+    arguments:
+      $toolIntrospector: '@NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService'
+
+  NITSAN\NsT3AF\Agent\Controller\AgentAjaxController:
+    public: true
+
+  NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver:
+    arguments:
+      $operationalStatusProviders: !tagged_iterator t3af.operational_status
+
+  NITSAN\NsT3AF\Agent\Operational\T3afOperationalStatusProvider:
+    arguments:
+      $coreTools: !tagged_iterator mcp.tool
+
+  NITSAN\NsT3AF\Agent\Service\AgentToolPlanResolver:
+    arguments:
+      $tools: !tagged_iterator mcp.tool
+
   NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface:
     alias: NITSAN\NsT3AF\Domain\Repository\ProviderRepository
     public: true
@@ -541,6 +579,9 @@ services:
     public: true
 
   NITSAN\NsT3AF\AiLabel\Service\AiLabelSettingsService:
+    public: true
+
+  NITSAN\NsT3AF\Agent\Service\AgentSettingsService:
     public: true
 
   NITSAN\NsT3AF\AiLabel\Service\AiLabelInteropService:

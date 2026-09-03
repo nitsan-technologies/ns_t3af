@@ -26,13 +26,41 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Workspace;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
-readonly class WorkspaceSwitchTool implements McpNonAiToolInterface
+#[McpToolSeverity(ToolSeverity::Write)]
+readonly class WorkspaceSwitchTool implements McpNonAiToolInterface, McpPlannableToolInterface
 {
-    public function __construct() {}
+    public function __construct(private McpConfirmationPlanBuilder $confirmationPlanBuilder) {}
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public function plan(array $arguments): ToolPlan
+    {
+        $workspaceId = (int) ($arguments['workspaceId'] ?? 0);
+        $currentWorkspaceId = 0;
+        $backendUser = $GLOBALS['BE_USER'] ?? null;
+        if ($backendUser instanceof BackendUserAuthentication) {
+            $currentWorkspaceId = (int) $backendUser->workspace;
+        }
+
+        return $this->confirmationPlanBuilder->confirmation(
+            'update',
+            'workspace_switch',
+            '_switch',
+            (string) $currentWorkspaceId,
+            'switch to workspace ' . $workspaceId,
+            ['workspaceId' => $workspaceId],
+        );
+    }
 
     #[McpTool(
         name: 'workspace_switch',

@@ -26,12 +26,50 @@ namespace NITSAN\NsT3AF\Mcp\Tool\File;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpFalStorageToolInterface;
+use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
+use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 
-readonly class FileUploadFromUrlTool implements McpFalStorageToolInterface
+#[McpToolSeverity(ToolSeverity::Write)]
+readonly class FileUploadFromUrlTool implements McpFalStorageToolInterface, McpPlannableToolInterface
 {
-    public function __construct(private FileService $fileService) {}
+    public function __construct(
+        private FileService $fileService,
+        private McpConfirmationPlanBuilder $confirmationPlanBuilder,
+    ) {}
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public function plan(array $arguments): ToolPlan
+    {
+        $storageUid = (int) ($arguments['storageUid'] ?? 1);
+        $url = (string) ($arguments['url'] ?? '');
+        $directoryPath = (string) ($arguments['directoryPath'] ?? '/');
+        $fileName = (string) ($arguments['fileName'] ?? '');
+
+        $proposed = $fileName !== ''
+            ? 'upload from ' . $url . ' as ' . $fileName . ' to ' . $directoryPath
+            : 'upload from ' . $url . ' to ' . $directoryPath;
+
+        return $this->confirmationPlanBuilder->confirmation(
+            'create',
+            'file_upload_from_url',
+            '_upload',
+            '',
+            $proposed,
+            [
+                'url' => $url,
+                'directoryPath' => $directoryPath,
+                'storageUid' => $storageUid,
+                'fileName' => $fileName,
+            ],
+        );
+    }
 
     #[McpTool(
         name: 'file_upload_from_url',
