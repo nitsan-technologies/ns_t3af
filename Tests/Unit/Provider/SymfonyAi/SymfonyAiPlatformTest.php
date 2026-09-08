@@ -132,6 +132,38 @@ final class SymfonyAiPlatformTest extends TestCase
         self::assertSame('Summary text', $result->asText());
     }
 
+    #[Test]
+    public function embedPassesRawStringWithoutMessageBagOrTemperature(): void
+    {
+        $inner = new class {
+            public mixed $receivedInput = null;
+            /** @var array<string, mixed>|null */
+            public ?array $receivedOptions = null;
+
+            /**
+             * @param array<string, mixed> $options
+             */
+            public function invoke(string $modelId, mixed $input, array $options = []): SymfonyAiTextResultStub
+            {
+                $this->receivedInput = $input;
+                $this->receivedOptions = $options;
+
+                return new SymfonyAiTextResultStub('unused');
+            }
+        };
+
+        $service = new SymfonyAiPlatform(
+            $inner,
+            $this->makeProvider(),
+            new SymfonyAiMessageBagFactory(),
+        );
+
+        $service->embed('text-embedding-3-large', 'Unable to search query');
+
+        self::assertSame('Unable to search query', $inner->receivedInput);
+        self::assertSame([], $inner->receivedOptions);
+    }
+
     private function makeProvider(): Provider
     {
         return new Provider(

@@ -235,6 +235,20 @@ final class AiService implements AiServiceInterface
 
     public function embed(string|array $text, AiOptions $options = new AiOptions()): EmbeddingResponse
     {
+        if (is_string($text) && trim($text) === '') {
+            throw new AdapterRuntimeException('Empty embedding input: expected a non-empty string.');
+        }
+        if (is_array($text)) {
+            $filtered = array_values(array_filter(
+                $text,
+                static fn (mixed $item): bool => is_string($item) && trim($item) !== ''
+            ));
+            if ($filtered === []) {
+                throw new AdapterRuntimeException('Empty embedding input: expected a non-empty string or token array.');
+            }
+            $text = count($text) === 1 ? $filtered[0] : $filtered;
+        }
+
         $provider = $this->provider($options->providerIdentifier, $options->pageId);
         $adapter = $this->resolveAdapter($provider);
 
@@ -386,13 +400,15 @@ final class AiService implements AiServiceInterface
             $invokeOptions = ['task' => 'feature-extraction'];
         }
 
-        // The built-in OpenAI-compatible platform implements both invoke() (chat)
-        // and embed() (embeddings); embeddings must never go through invoke(),
-        // which posts to /chat/completions and returns chat content.
-        if ($platform instanceof OpenAiCompatiblePlatform) {
+        // Prefer embed() when present. OpenAiCompatiblePlatform posts to /embeddings
+        // (invoke would hit /chat/completions). SymfonyAiPlatform::embed() passes the
+        // raw string through; its invoke() wraps strings as MessageBag and OpenAI
+        // embeddings reject that with: Invalid 'input': expected a string or token array.
+        if (method_exists($platform, 'embed')) {
             $raw = $platform->embed($modelId, $text);
         } elseif (method_exists($platform, 'invoke')) {
-            // Prefer invoke() for Symfony AI Platform (DeferredResult + TokenUsageExtractor metadata).
+            // Platforms without a dedicated embed() still use invoke() + payload fallbacks
+            // (DeferredResult + TokenUsageExtractor metadata on Symfony AI).
             $raw = $this->invokeWithPayloadFallbacks(
                 $platform,
                 'invoke',
@@ -400,8 +416,6 @@ final class AiService implements AiServiceInterface
                 $payloads,
                 $invokeOptions,
             );
-        } elseif (method_exists($platform, 'embed')) {
-            $raw = $platform->embed($modelId, $text);
         } elseif (method_exists($platform, 'request')) {
             $raw = $this->invokeWithPayloadFallbacks(
                 $platform,
@@ -430,11 +444,14 @@ final class AiService implements AiServiceInterface
      */
     private function embeddingPayloads(string|array $text): array
     {
+        // OpenAI Embeddings\ModelClient sets JSON `input` to $payload as-is.
+        // Never pass ['input' => $text] — that becomes input: {input: "..."} and
+        // OpenAI rejects with: Invalid 'input': expected a string or token array.
         if (is_array($text)) {
-            return [$text, ['input' => $text]];
+            return [$text];
         }
 
-        return [$text, ['input' => $text], [$text]];
+        return [$text, [$text]];
     }
 
     /**
@@ -964,19 +981,45 @@ final class AiService implements AiServiceInterface
     private function yieldFromStreamResult(mixed $result, AdapterInterface $adapter): \Generator
     {
         if (is_object($result) && method_exists($result, 'asTextStream')) {
-            foreach ($result->asTextStream() as $delta) {
-                yield $this->coerceStreamChunk($delta);
-            }
+            try {
+                foreach ($result->asTextStream() as $delta) {
+                    yield $this->coerceStreamChunk($delta);
+                }
 
-            return;
+                return;
+            } catch (\Throwable $e) {
+                // Some bridges ignore stream:true and return TextResult; fall back below.
+                if (!$this->isUnexpectedStreamTypeError($e)) {
+                    throw $e;
+                }
+            }
         }
 
         if (is_object($result) && method_exists($result, 'asStream')) {
-            foreach ($result->asStream() as $delta) {
-                yield $this->coerceStreamChunk($delta);
-            }
+            try {
+                foreach ($result->asStream() as $delta) {
+                    yield $this->coerceStreamChunk($delta);
+                }
 
-            return;
+                return;
+            } catch (\Throwable $e) {
+                if (!$this->isUnexpectedStreamTypeError($e)) {
+                    throw $e;
+                }
+            }
+        }
+
+        if (is_object($result) && method_exists($result, 'asText')) {
+            try {
+                $text = trim((string) $result->asText());
+                if ($text !== '') {
+                    yield $text;
+                }
+
+                return;
+            } catch (\Throwable) {
+                // Continue to iterable / error paths.
+            }
         }
 
         if (is_iterable($result)) {
@@ -991,6 +1034,14 @@ final class AiService implements AiServiceInterface
             'Adapter "%s" invoke(stream) did not return a streamable result.',
             $adapter->getType(),
         ));
+    }
+
+    private function isUnexpectedStreamTypeError(\Throwable $throwable): bool
+    {
+        $message = $throwable->getMessage();
+
+        return str_contains($message, 'Unexpected response type:')
+            && str_contains($message, 'StreamResult');
     }
 
     private function coerceStreamChunk(mixed $chunk): string
@@ -1043,7 +1094,9 @@ final class AiService implements AiServiceInterface
             || str_contains($message, 'string given')
             || str_contains($message, 'array given')
             || str_contains($message, 'could not normalize object of type')
-            || str_contains($message, 'no supporting normalizer found');
+            || str_contains($message, 'no supporting normalizer found')
+            || str_contains($message, "invalid 'input'")
+            || str_contains($message, 'expected a string or token array');
     }
 
     private function mapRuntimeException(Provider $provider, string $callType, \Throwable $error): AdapterRuntimeException

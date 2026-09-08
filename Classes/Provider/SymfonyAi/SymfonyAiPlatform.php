@@ -70,16 +70,37 @@ final class SymfonyAiPlatform
     }
 
     /**
-     * Plain completion entry point for {@see \NITSAN\NsT3AF\Service\AiService} duck typing.
+     * Embeddings entry point for {@see \NITSAN\NsT3AF\Service\AiService} duck typing.
+     *
+     * Must pass the raw string / list of strings through to the bridge. Chat-oriented
+     * {@see invoke()} wraps strings as MessageBag, which Symfony normalizes into a
+     * messages structure; OpenAI Embeddings then rejects that as:
+     * Invalid 'input': expected a string or token array.
+     *
+     * @param string|list<string> $text
      */
-    public function invoke(string $modelId, mixed $payload): mixed
+    public function embed(string $modelId, string|array $text): mixed
     {
         if (!method_exists($this->platform, 'invoke')) {
             throw new AdapterRuntimeException('Symfony AI platform does not support invoke().');
         }
 
-        $options = [];
-        if (!$this->isReasoningModel($modelId)) {
+        // No chat temperature / tools options — embeddings only accept model + input.
+        return $this->platform->invoke($modelId, $text, []);
+    }
+
+    /**
+     * Plain completion entry point for {@see \NITSAN\NsT3AF\Service\AiService} duck typing.
+     *
+     * @param array<string, mixed> $options
+     */
+    public function invoke(string $modelId, mixed $payload, array $options = []): mixed
+    {
+        if (!method_exists($this->platform, 'invoke')) {
+            throw new AdapterRuntimeException('Symfony AI platform does not support invoke().');
+        }
+
+        if (!$this->isReasoningModel($modelId) && !array_key_exists('temperature', $options)) {
             $options['temperature'] = $this->provider->temperature;
         }
 
