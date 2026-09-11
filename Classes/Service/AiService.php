@@ -241,7 +241,7 @@ final class AiService implements AiServiceInterface
         if (is_array($text)) {
             $filtered = array_values(array_filter(
                 $text,
-                static fn (mixed $item): bool => is_string($item) && trim($item) !== ''
+                static fn(mixed $item): bool => is_string($item) && trim($item) !== '',
             ));
             if ($filtered === []) {
                 throw new AdapterRuntimeException('Empty embedding input: expected a non-empty string or token array.');

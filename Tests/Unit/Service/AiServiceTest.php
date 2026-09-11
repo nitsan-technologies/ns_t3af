@@ -777,6 +777,9 @@ final class AiServiceTest extends TestCase
             public bool $invokeCalled = false;
             public mixed $seenInput = null;
 
+            /**
+             * @param string|list<string> $text
+             */
             public function embed(string $model, string|array $text): object
             {
                 $this->embedCalled = true;
