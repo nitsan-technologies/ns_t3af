@@ -131,6 +131,14 @@ final class ModuleTabUtility
             'introKey' => 'module.forDevelopers.intro',
             'icon' => 'code',
         ],
+        'aiAgent' => [
+            'labelKey' => 'module.menu.aiAgent',
+            'route' => 't3af_dashboard.ai_agent',
+            'path' => '/module/t3af/dashboard/ai-agent',
+            'headingKey' => 'module.aiAgent.heading',
+            'introKey' => 'module.aiAgent.intro',
+            'icon' => 'sparkles',
+        ],
         'aiUsage' => [
             'labelKey' => 'module.menu.aiUsage',
             'route' => 't3af_dashboard.ai_usage',

@@ -26,10 +26,13 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Permission;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\PermissionService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 
+#[McpToolSeverity(ToolSeverity::Read)]
 readonly class PermissionCheckPageTool implements McpNonAiToolInterface
 {
     public function __construct(

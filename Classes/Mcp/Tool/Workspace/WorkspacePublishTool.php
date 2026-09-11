@@ -26,17 +26,62 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Workspace;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
 use NITSAN\NsT3AF\Mcp\Service\WorkspaceVersionService;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
-readonly class WorkspacePublishTool implements McpNonAiToolInterface
+#[McpToolSeverity(ToolSeverity::Write)]
+readonly class WorkspacePublishTool implements McpNonAiToolInterface, McpPlannableToolInterface
 {
     public function __construct(
         private DataHandlerService $dataHandlerService,
         private WorkspaceVersionService $workspaceVersionService,
+        private McpConfirmationPlanBuilder $confirmationPlanBuilder,
     ) {}
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public function plan(array $arguments): ToolPlan
+    {
+        $table = (string) ($arguments['table'] ?? '');
+        $workspaceVersionUid = (int) ($arguments['workspaceVersionUid'] ?? 0);
+
+        if ($table === '') {
+            throw new \InvalidArgumentException('table is required.');
+        }
+
+        if ($workspaceVersionUid <= 0) {
+            throw new \InvalidArgumentException('workspaceVersionUid must be > 0.');
+        }
+
+        $row = $this->workspaceVersionService->loadVersionRow($table, $workspaceVersionUid);
+        if ($row === null) {
+            throw new \InvalidArgumentException(
+                'Workspace version not found: ' . $table . ' uid ' . $workspaceVersionUid,
+            );
+        }
+
+        return $this->confirmationPlanBuilder->confirmation(
+            'update',
+            'workspace_publish',
+            '_publish',
+            'unpublished',
+            'publish to live',
+            [
+                'table' => $table,
+                'workspaceVersionUid' => $workspaceVersionUid,
+            ],
+            $table,
+            $workspaceVersionUid,
+        );
+    }
 
     #[McpTool(
         name: 'workspace_publish',

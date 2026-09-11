@@ -56,6 +56,7 @@ $GLOBALS['TYPO3_CONF_VARS']['BE']['customPermOptions']['nst3af'] = [
         'capability_completion' => ['Raw completion', 'actions-bolt'],
         'capability_tts' => ['Text-to-speech', 'actions-volume-up'],
         'capability_image_generation' => ['Image generation', 'actions-image'],
+        'agent_enabled' => ['LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:access.agent_enabled', 'actions-star'],
     ],
 ];
 

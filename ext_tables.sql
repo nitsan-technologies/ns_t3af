@@ -267,13 +267,60 @@ CREATE TABLE tx_nst3af_mcp_tool_log (
     success TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
     error_message TEXT,
     latency_ms INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    correlation_id VARCHAR(64) NOT NULL DEFAULT '',
+    arguments_hash VARCHAR(64) NOT NULL DEFAULT '',
     crdate INT(11) UNSIGNED DEFAULT 0 NOT NULL,
     PRIMARY KEY (uid),
     KEY tool_log_crdate (crdate),
     KEY tool_log_tool_time (tool_name, crdate),
     KEY tool_log_token_time (token_uid, crdate),
     KEY tool_log_success_time (success, crdate),
-    KEY tool_log_client_time (client_label, crdate)
+    KEY tool_log_client_time (client_label, crdate),
+    KEY tool_log_correlation (correlation_id)
+);
+
+CREATE TABLE tx_nst3af_agent_demand (
+    uid INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    pid INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    owner_extension_key VARCHAR(64) NOT NULL DEFAULT '',
+    tool_name VARCHAR(128) NOT NULL DEFAULT '',
+    activation_count INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    last_activated INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    be_user INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    crdate INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    tstamp INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    PRIMARY KEY (uid),
+    UNIQUE KEY demand_owner_tool (owner_extension_key, tool_name),
+    KEY demand_count (activation_count, last_activated)
+);
+
+CREATE TABLE tx_nst3af_agent_conversation (
+    uid INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    be_user_uid INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    module_route VARCHAR(128) NOT NULL DEFAULT '',
+    page_id INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    messages MEDIUMTEXT,
+    context MEDIUMTEXT,
+    disclosure_dismissed TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
+    tstamp INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    crdate INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    PRIMARY KEY (uid),
+    UNIQUE KEY agent_conv_scope (be_user_uid, module_route, page_id),
+    KEY agent_conv_tstamp (tstamp)
+);
+
+CREATE TABLE tx_nst3af_agent_turn (
+    uid INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    pid INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    correlation_id VARCHAR(64) NOT NULL DEFAULT '',
+    be_user INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    tool_call_count INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    guard_state VARCHAR(16) NOT NULL DEFAULT 'ok',
+    crdate INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    tstamp INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    PRIMARY KEY (uid),
+    UNIQUE KEY agent_turn_correlation (correlation_id),
+    KEY agent_turn_user_time (be_user, crdate)
 );
 
 CREATE TABLE tx_nst3af_mcp_ip_allowlist (
@@ -293,6 +340,7 @@ CREATE TABLE tx_nst3af_mcp_custom_tool (
     description TEXT,
     handler_type VARCHAR(16) NOT NULL DEFAULT 'php',
     handler_value VARCHAR(512) NOT NULL DEFAULT '',
+    severity VARCHAR(16) NOT NULL DEFAULT '',
     parameters_json MEDIUMTEXT,
     hidden TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
     deleted TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,

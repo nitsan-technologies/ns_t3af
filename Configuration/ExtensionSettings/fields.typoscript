@@ -157,3 +157,15 @@ ailabelSecondInfoLayer = off
 
 # cat=AI Label//110; type=string; label=Additional applicable tables (comma-separated)
 ailabelApplicableTables =
+
+# cat=AI Agent//10; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentMaxReadToolsPerTurn
+agentMaxReadToolsPerTurn = 5
+
+# cat=AI Agent//20; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentMaxWriteDraftsPerTurn
+agentMaxWriteDraftsPerTurn = 2
+
+# cat=AI Agent//30; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentShowProviderThinking
+agentShowProviderThinking = 1
+
+# cat=AI Agent//40; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentConversationRetentionDays
+agentConversationRetentionDays = 90

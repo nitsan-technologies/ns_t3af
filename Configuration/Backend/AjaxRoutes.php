@@ -17,6 +17,7 @@ declare(strict_types=1);
  * file that was distributed with this source code.
  */
 
+use NITSAN\NsT3AF\Agent\Controller\AgentAjaxController;
 use NITSAN\NsT3AF\Controller\Backend\AccessRolesAjaxController;
 use NITSAN\NsT3AF\Controller\Backend\BrandContextAjaxController;
 use NITSAN\NsT3AF\Controller\Backend\CreditModeController;
@@ -312,6 +313,62 @@ return [
     'nst3af_access_roles_preview' => [
         'path' => '/nst3af/access-roles/preview',
         'target' => AccessRolesAjaxController::class . '::previewAction',
+        'methods' => ['POST'],
+    ],
+    'nst3af_agent_turn' => [
+        'path' => '/nst3af/agent/turn',
+        'target' => AgentAjaxController::class . '::turnAction',
+        'methods' => ['POST'],
+    ],
+    'nst3af_agent_turn_stream' => [
+        'path' => '/nst3af/agent/turn/stream',
+        'target' => AgentAjaxController::class . '::streamAction',
+        'methods' => ['POST'],
+    ],
+    'nst3af_agent_tools' => [
+        'path' => '/nst3af/agent/tools',
+        'target' => AgentAjaxController::class . '::toolsAction',
+    ],
+    'nst3af_agent_records' => [
+        'path' => '/nst3af/agent/records',
+        'target' => AgentAjaxController::class . '::recordsAction',
+    ],
+    'nst3af_agent_conversation' => [
+        'path' => '/nst3af/agent/conversation',
+        'target' => AgentAjaxController::class . '::conversationAction',
+    ],
+    'nst3af_agent_conversation_save' => [
+        'path' => '/nst3af/agent/conversation/save',
+        'target' => AgentAjaxController::class . '::conversationSaveAction',
+        'methods' => ['POST'],
+    ],
+    'nst3af_agent_settings_link' => [
+        'path' => '/nst3af/agent/settings-link',
+        'target' => AgentAjaxController::class . '::settingsLinkAction',
+    ],
+    'nst3af_agent_apply_draft' => [
+        'path' => '/nst3af/agent/apply-draft',
+        'target' => AgentAjaxController::class . '::applyDraftAction',
+        'methods' => ['POST'],
+    ],
+    'nst3af_agent_discard_draft' => [
+        'path' => '/nst3af/agent/discard-draft',
+        'target' => AgentAjaxController::class . '::discardDraftAction',
+        'methods' => ['POST'],
+    ],
+    'nst3af_agent_confirm_destructive' => [
+        'path' => '/nst3af/agent/confirm-destructive',
+        'target' => AgentAjaxController::class . '::confirmDestructiveAction',
+        'methods' => ['POST'],
+    ],
+    'nst3af_agent_undo_change' => [
+        'path' => '/nst3af/agent/undo-change',
+        'target' => AgentAjaxController::class . '::undoChangeAction',
+        'methods' => ['POST'],
+    ],
+    'nst3af_agent_upload' => [
+        'path' => '/nst3af/agent/upload',
+        'target' => AgentAjaxController::class . '::uploadAction',
         'methods' => ['POST'],
     ],
 ];

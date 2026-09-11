@@ -25,6 +25,8 @@ namespace NITSAN\NsT3AF\Mcp\Service;
 
 use const JSON_THROW_ON_ERROR;
 
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
@@ -268,6 +270,162 @@ readonly class DataHandlerService
         }
 
         return $originalRequest;
+    }
+
+    /**
+     * Apply only the kept fields from a tool plan (R28: server-side filtering).
+     *
+     * @param list<string> $keptFieldKeys
+     * @return array{
+     *     correlationId: string,
+     *     action: string,
+     *     appliedFieldKeys: list<string>,
+     *     affected: list<array{table: string, uid: int}>
+     * }
+     */
+    public function applyFilteredPlan(ToolPlan $plan, array $keptFieldKeys, string $correlationId): array
+    {
+        $keptFields = $plan->keptFields($keptFieldKeys);
+        if ($keptFields === []) {
+            throw new \RuntimeException('No fields selected for apply.', 1712003100);
+        }
+
+        $appliedFieldKeys = array_map(static fn(ToolPlanField $field): string => $field->key, $keptFields);
+        $affected = [];
+
+        switch ($plan->action) {
+            case 'create':
+                $affected[] = $this->applyPlanCreate($plan, $keptFields);
+                break;
+            case 'update':
+                $affected = array_merge($affected, $this->applyPlanUpdate($keptFields));
+                break;
+            case 'delete':
+                $affected[] = $this->applyPlanDelete($keptFields);
+                break;
+            case 'move':
+                $affected[] = $this->applyPlanMove($keptFields, $plan->context);
+                break;
+            case 'copy':
+                $affected[] = $this->applyPlanCopy($keptFields, $plan->context);
+                break;
+            default:
+                throw new \RuntimeException('Unsupported plan action: ' . $plan->action, 1712003101);
+        }
+
+        return [
+            'correlationId' => $correlationId,
+            'action' => $plan->action,
+            'appliedFieldKeys' => $appliedFieldKeys,
+            'affected' => $affected,
+        ];
+    }
+
+    /**
+     * @param list<ToolPlanField> $keptFields
+     * @return array{table: string, uid: int}
+     */
+    private function applyPlanCreate(ToolPlan $plan, array $keptFields): array
+    {
+        $table = '';
+        foreach ($keptFields as $field) {
+            $table = $field->table;
+            break;
+        }
+        if ($table === '') {
+            throw new \RuntimeException('Create plan is missing table context.', 1712003102);
+        }
+
+        $pid = (int) ($plan->context['pid'] ?? 0);
+        if ($pid <= 0) {
+            throw new \RuntimeException('Create plan is missing pid.', 1712003103);
+        }
+
+        $fields = [];
+        foreach ($keptFields as $field) {
+            if ($field->field === '_record') {
+                continue;
+            }
+            $fields[$field->field] = $field->proposedValue;
+        }
+
+        if ($fields === []) {
+            throw new \RuntimeException('Create plan has no writable fields kept.', 1712003104);
+        }
+
+        $newUid = $this->createRecord($table, $pid, $fields);
+
+        return ['table' => $table, 'uid' => $newUid];
+    }
+
+    /**
+     * @param list<ToolPlanField> $keptFields
+     * @return list<array{table: string, uid: int}>
+     */
+    private function applyPlanUpdate(array $keptFields): array
+    {
+        /** @var array<string, array<int, array<string, mixed>>> $grouped */
+        $grouped = [];
+        foreach ($keptFields as $field) {
+            if ($field->field === '_record') {
+                continue;
+            }
+            $grouped[$field->table][$field->uid][$field->field] = $field->proposedValue;
+        }
+
+        $affected = [];
+        foreach ($grouped as $table => $records) {
+            foreach ($records as $uid => $fields) {
+                if ($fields === []) {
+                    continue;
+                }
+                $this->updateRecord($table, (int) $uid, $fields);
+                $affected[] = ['table' => $table, 'uid' => (int) $uid];
+            }
+        }
+
+        return $affected;
+    }
+
+    /**
+     * @param list<ToolPlanField> $keptFields
+     * @return array{table: string, uid: int}
+     */
+    private function applyPlanDelete(array $keptFields): array
+    {
+        $field = $keptFields[0];
+        $this->deleteRecord($field->table, $field->uid);
+
+        return ['table' => $field->table, 'uid' => $field->uid];
+    }
+
+    /**
+     * @param list<ToolPlanField> $keptFields
+     * @param array<string, mixed> $context
+     * @return array{table: string, uid: int}
+     */
+    private function applyPlanMove(array $keptFields, array $context): array
+    {
+        $field = $keptFields[0];
+        $target = (int) ($context['target'] ?? $field->proposedValue ?? 0);
+        $this->moveRecord($field->table, $field->uid, $target);
+
+        return ['table' => $field->table, 'uid' => $field->uid];
+    }
+
+    /**
+     * @param list<ToolPlanField> $keptFields
+     * @param array<string, mixed> $context
+     * @return array{table: string, uid: int}
+     */
+    private function applyPlanCopy(array $keptFields, array $context): array
+    {
+        $field = $keptFields[0];
+        $target = (int) ($context['target'] ?? $field->proposedValue ?? 0);
+        $copyTreeDepth = (int) ($context['copyTreeDepth'] ?? 0);
+        $newUid = $this->copyRecord($field->table, $field->uid, $target, $copyTreeDepth);
+
+        return ['table' => $field->table, 'uid' => $newUid];
     }
 
     /**

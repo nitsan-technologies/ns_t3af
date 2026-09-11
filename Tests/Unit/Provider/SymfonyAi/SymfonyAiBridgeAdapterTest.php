@@ -24,6 +24,7 @@ use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\SymfonyAi\BridgeDescriptor;
 use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiBridgeAdapter;
+use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiPlatform;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Http\JsonResponse;
@@ -190,7 +191,7 @@ final class SymfonyAiBridgeAdapterTest extends TestCase
 
         $platform = $adapter->platform($provider);
 
-        self::assertTrue(method_exists($platform, 'invoke'));
+        self::assertInstanceOf(SymfonyAiPlatform::class, $platform);
     }
 
     public function testOllamaPlatformThrowsWhenEndpointMissing(): void
@@ -461,7 +462,7 @@ final class SymfonyAiBridgeAdapterTest extends TestCase
 
         $platform = $adapter->platform($provider);
 
-        self::assertInstanceOf(\Symfony\AI\Platform\Provider::class, $platform);
+        self::assertInstanceOf(SymfonyAiPlatform::class, $platform);
     }
 
     private function makeAzureAdapter(?RequestFactory $requestFactory = null): SymfonyAiBridgeAdapter

@@ -2,6 +2,16 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-09-01 — AI Agent editor answers + file-module routing
+
+**Done:** `context/features/ai-agent.md` (new agent entry). Editor-facing tool labels (`AgentToolEditorLabelService`), human result presenter, workflow-before-fast-path on stream NL, file module context (`pageId=0`, `storageUid`/`folderIdentifier`), Cursor-style work trace, hide redundant facts when prose present. Tests under `Tests/Unit/Agent/`.
+
+**Agent context:** `context/features/ai-agent.md`; architecture § AI Agent; router rows in `AGENTS.md`, `context/docs-map.md`, `tasks/context-update.md`.
+
+**Last touched:** 2026-09-01
+
+---
+
 ## 2026-08-19 — Release v1.1.4
 
 **Done:** Bump version to 1.1.4. LICENSING.md, README install/licence block, MCP Table Discovery wording, Slack community link, Packagist keywords, core 13/14 CI badges.

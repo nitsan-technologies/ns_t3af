@@ -22,7 +22,9 @@ namespace NITSAN\NsT3AF\Provider\SymfonyAi;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 use NITSAN\NsT3AF\Exception\CipherException;
+use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
+use NITSAN\NsT3AF\Provider\Contract\ToolCallingCapableInterface;
 use NITSAN\NsT3AF\Provider\Contract\VerifyResult;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use TYPO3\CMS\Core\Http\RequestFactory;
@@ -42,7 +44,7 @@ use TYPO3\CMS\Core\Http\RequestFactory;
  *
  * @internal
  */
-final class SymfonyAiBridgeAdapter implements AdapterInterface
+final class SymfonyAiBridgeAdapter implements AdapterInterface, ToolCallingCapableInterface
 {
     private const HUGGINGFACE_INFERENCE_URL = 'https://router.huggingface.co/hf-inference/models/';
 
@@ -97,6 +99,16 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
     public function getDefaultCapabilities(): array
     {
         return $this->descriptor->defaultCapabilities;
+    }
+
+    public function supportsToolCalling(Provider $provider): bool
+    {
+        $caps = array_merge(
+            $provider->capabilities,
+            $this->descriptor->defaultCapabilities,
+        );
+
+        return in_array(Capability::TOOL_USE, $caps, true);
     }
 
     public function testConnection(Provider $provider): VerifyResult
@@ -785,13 +797,13 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
 
         // Azure has a bespoke dual-deployment wiring that bypasses the generic factory dispatch.
         if ($this->canonicalTypeKey($this->descriptor->type) === 'symfony.azure') {
-            return $this->buildAzurePlatform($provider, $apiKey);
+            return new SymfonyAiPlatform($this->buildAzurePlatform($provider, $apiKey), $provider, new SymfonyAiMessageBagFactory());
         }
 
         /** @var object $platform */
         $platform = $this->createPlatformFromFactory($factoryClass, $provider, $apiKey);
 
-        return $platform;
+        return new SymfonyAiPlatform($platform, $provider, new SymfonyAiMessageBagFactory());
     }
 
     /**

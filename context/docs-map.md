@@ -77,6 +77,7 @@ Build locally: `composer doc-watch` from package root.
 | MCP OAuth / tools | `context/features/mcp-server.md`, `Documentation/McpServer/` |
 | Run tests / CI | `tasks/run-quality.md` |
 | Backend module markup / CSS conventions | `context/Typo3CoreBackendDesign.md` |
+| Backend AI Agent (modal, NL, drafts, file context) | `context/features/ai-agent.md` |
 | Shared checklist in child ext (ns_t3aa, ns_t3ai, ns_t3cs) | `SetupChecklistPresenter`, `ChildSetupChecklistSlot.html`, design guide § Shared UI |
 | AI Logs tab / filter navigation / child “AI Foundation Logs” button | `context/features/ai-logs.md`, `BackendModuleLinkUtility`, `module-navigation.js` |
 | AI Permissions wizard / matrix / editor enforcement | `context/features/ai-access-roles.md`, `access-roles.js` |
@@ -85,4 +86,5 @@ Build locally: `composer doc-watch` from package root.
 | Brand Context override in AI Features (SEO, Pages, …) | `context/features/ai-context.md` § AI Features — profile override |
 | Runtime `{brand_context}` placeholders | `context/features/ai-context.md`, `BrandContextPromptInjectionListener` |
 | AI Label / EU Art. 50 review dashboard | `context/features/ai-label.md`, `Documentation/Configuration/AiLabel/Index.rst` |
+| Backend AI Agent / tool routing / editor answers | `context/features/ai-agent.md`, `Documentation/Agent/` |
 | Bind child ext to AI Label | `Documentation/DeveloperGuide/AiLabelIntegration/Index.rst`, `AiLabelBindHelper` |
