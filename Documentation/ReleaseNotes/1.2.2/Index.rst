@@ -3,7 +3,7 @@
 .. _release-notes-1-2-2:
 
 ========================
-1.2.2  10 September 2026
+1.2.2  15 September 2026
 ========================
 
 Here is the list of features and updates introduced in this release:
@@ -12,7 +12,7 @@ Here is the list of features and updates introduced in this release:
 
    10-09-2026 [BUGFIX] AI Label: stop leaking fal-tempfile copies on every FE image process
    10-09-2026 [BUGFIX] AI Label: persist IPTC DigitalSourceType via storage replaceFile
-   10-09-2026 [RELEASE] Release patch version 1.2.2
+   15-09-2026 [RELEASE] Release patch version 1.2.2
 
 Upgrade notes
 =============
