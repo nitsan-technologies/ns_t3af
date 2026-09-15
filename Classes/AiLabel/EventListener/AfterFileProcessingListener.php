@@ -29,6 +29,9 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Preserve IPTC DigitalSourceType on processed files; optional EU stamp when written_in.
+ *
+ * Writable FAL temps (`getForLocalProcessing(true)`) are created only when IPTC restore
+ * or baked stamp can apply — otherwise every FE image process leaked fal-tempfile copies.
  */
 final class AfterFileProcessingListener
 {
@@ -50,22 +53,36 @@ final class AfterFileProcessingListener
             return;
         }
 
-        try {
-            $path = $processed->getForLocalProcessing(true);
-        } catch (\Throwable) {
+        $needsStamp = $this->needsStamp($original);
+        $digitalSourceType = $this->iptcDigitalSourceTypeService->readDigitalSourceType($original);
+        $needsIptcCopy = $this->iptcDigitalSourceTypeService->isAiGeneratedSource($digitalSourceType);
+        if (!$needsStamp && !$needsIptcCopy) {
             return;
         }
 
-        $touched = $this->iptcDigitalSourceTypeService->copyDigitalSourceType($original, $path);
-        $touched = $this->maybeStamp($original, $path) || $touched;
+        $path = null;
+        try {
+            $path = $processed->getForLocalProcessing(true);
+            $touched = false;
+            if ($needsIptcCopy) {
+                $touched = $this->iptcDigitalSourceTypeService->copyDigitalSourceType($original, $path);
+            }
+            if ($needsStamp) {
+                $touched = $this->applyStamp($original, $path) || $touched;
+            }
 
-        if ($touched) {
-            $processed->updateWithLocalFile($path);
-            $event->setProcessedFile($processed);
+            if ($touched) {
+                $processed->updateWithLocalFile($path);
+                $event->setProcessedFile($processed);
+            }
+        } catch (\Throwable) {
+            return;
+        } finally {
+            $this->iptcDigitalSourceTypeService->unlinkFalTemporaryFile($path);
         }
     }
 
-    private function maybeStamp(File $original, string $targetPath): bool
+    private function needsStamp(File $original): bool
     {
         $settings = $this->settingsService->all();
         if (($settings['markImageFile'] ?? '') !== 'written_in' || !$this->iptcDigitalSourceTypeService->imagickAvailable()) {
@@ -80,9 +97,16 @@ final class AfterFileProcessingListener
 
         $involvement = Involvement::tryFrom((string) ($meta['tx_nst3af_ailabel_involvement'] ?? ''))
             ?? Involvement::NotReviewed;
-        if ($involvement !== Involvement::AiGenerated && $involvement !== Involvement::AiModified) {
-            return false;
-        }
+
+        return $involvement === Involvement::AiGenerated || $involvement === Involvement::AiModified;
+    }
+
+    private function applyStamp(File $original, string $targetPath): bool
+    {
+        $settings = $this->settingsService->all();
+        $meta = $original->getMetaData()->get();
+        $involvement = Involvement::tryFrom((string) ($meta['tx_nst3af_ailabel_involvement'] ?? ''))
+            ?? Involvement::NotReviewed;
 
         $iconRel = $involvement === Involvement::AiModified
             ? 'EXT:ns_t3af/Resources/Public/Icons/EuAiLabel/LABEL_AI MODIFIED_white.svg'
