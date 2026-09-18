@@ -37,6 +37,7 @@ final class AgentWriteService
         private readonly AgentDraftSession $draftSession,
         private readonly McpPlaygroundService $playgroundService,
         private readonly AgentToolResultPresenter $toolResultPresenter,
+        private readonly AgentTranslator $translator,
     ) {}
 
     public function generateCorrelationId(): string
@@ -52,12 +53,12 @@ final class AgentWriteService
     {
         $stored = $this->draftSession->getDraft($draftId);
         if ($stored === null) {
-            throw new \RuntimeException('Draft not found or expired.', 1712003200);
+            throw new \RuntimeException($this->translator->translate('agent.write.draftNotFound'), 1712003200);
         }
 
         $severity = (string) ($stored['severity'] ?? '');
         if ($severity === 'destructive' && ($stored['destructiveArmed'] ?? false) !== true) {
-            throw new \RuntimeException('Destructive draft requires confirmation first.', 1712003201);
+            throw new \RuntimeException($this->translator->translate('agent.write.destructiveNeedsConfirmation'), 1712003201);
         }
 
         $plan = ToolPlan::fromArray(is_array($stored['plan'] ?? null) ? $stored['plan'] : []);
@@ -160,7 +161,7 @@ final class AgentWriteService
     {
         $toolName = $plan->toolName;
         if ($toolName === '') {
-            throw new \RuntimeException('Tool confirmation plan is missing a tool name.', 1712003210);
+            throw new \RuntimeException($this->translator->translate('agent.write.missingToolName'), 1712003210);
         }
 
         $arguments = is_array($stored['arguments'] ?? null) ? $stored['arguments'] : [];
@@ -171,7 +172,7 @@ final class AgentWriteService
         $invokeResult = $this->playgroundService->invoke($toolName, $arguments);
         if (($invokeResult['success'] ?? false) !== true) {
             throw new \RuntimeException(
-                (string) ($invokeResult['message'] ?? 'Tool invocation failed.'),
+                (string) ($invokeResult['message'] ?? $this->translator->translate('agent.write.toolInvocationFailed')),
                 1712003211,
             );
         }

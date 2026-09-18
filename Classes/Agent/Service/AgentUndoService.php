@@ -31,6 +31,7 @@ final class AgentUndoService
     public function __construct(
         private readonly DataHandlerService $dataHandlerService,
         private readonly AgentDraftSession $draftSession,
+        private readonly AgentTranslator $translator,
     ) {}
 
     /**
@@ -40,7 +41,7 @@ final class AgentUndoService
     {
         $stored = $this->draftSession->getChange($changeId);
         if ($stored === null) {
-            throw new \RuntimeException('Change not found or already undone.', 1712003300);
+            throw new \RuntimeException($this->translator->translate('agent.undo.changeNotFound'), 1712003300);
         }
 
         $undoFields = is_array($stored['undoFields'] ?? null) ? $stored['undoFields'] : [];
@@ -69,7 +70,7 @@ final class AgentUndoService
 
             if ($action === 'delete') {
                 // ponytail: undelete not supported via DataHandler cmdmap; ceiling is manual restore from recycle bin.
-                throw new \RuntimeException('Undo of delete is not supported.', 1712003301);
+                throw new \RuntimeException($this->translator->translate('agent.undo.deleteUnsupported'), 1712003301);
             }
 
             if ($field === '_record' || str_starts_with($field, '_')) {

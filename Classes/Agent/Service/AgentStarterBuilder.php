@@ -20,7 +20,6 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
-use TYPO3\CMS\Core\Localization\LanguageService;
 
 /**
  * Context-aware suggested actions for the agent greeting (prototype parity).
@@ -37,6 +36,7 @@ final readonly class AgentStarterBuilder
         private PermittedActionProvider $permittedActionProvider,
         private AgentToolPlanResolver $toolPlanResolver,
         private AgentToolEditorLabelService $editorLabelService,
+        private AgentTranslator $translator,
     ) {}
 
     /**
@@ -359,25 +359,15 @@ final readonly class AgentStarterBuilder
         return [
             'name' => $action,
             'action' => $action,
-            'label' => $this->translate($labelKey),
-            'description' => $this->translate($labelKey),
+            'label' => $this->translator->translate($labelKey),
+            'description' => $this->translator->translate($labelKey),
             'severity' => $severity->value,
             'severityLabel' => $severity->label(),
             'ownerExtensionKey' => 'ns_t3af',
-            'ownerLabel' => $this->translate('agent.owner.core'),
+            'ownerLabel' => $this->translator->translate('agent.owner.core'),
             'executable' => true,
             'lockReason' => '',
         ];
     }
 
-    private function translate(string $key): string
-    {
-        $languageService = $GLOBALS['LANG'] ?? null;
-        $label = 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:' . $key;
-        $value = $languageService instanceof LanguageService
-            ? (string) $languageService->sL($label)
-            : $key;
-
-        return $value !== '' ? $value : $key;
-    }
 }

@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
+use NITSAN\NsT3AF\Agent\Service\AgentLanguageResolver;
 use NITSAN\NsT3AF\Agent\Service\AgentToolEditorLabelService;
 use NITSAN\NsT3AF\Agent\Service\AgentToolResultPresenter;
 use NITSAN\NsT3AF\Api\AiOptions;
@@ -26,17 +27,32 @@ use NITSAN\NsT3AF\Api\AiResponse;
 use NITSAN\NsT3AF\Api\AiServiceInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use TYPO3\CMS\Core\Site\SiteFinder;
 
 /**
  * @internal
  */
 final class AgentToolResultPresenterTest extends TestCase
 {
+    use AgentTranslatorTrait;
+
+    protected function tearDown(): void
+    {
+        $this->releaseAgentTranslator();
+    }
+
     private function createPresenter(?AiServiceInterface $ai = null): AgentToolResultPresenter
     {
         $ai ??= $this->createMock(AiServiceInterface::class);
 
-        return new AgentToolResultPresenter($ai, new AgentToolEditorLabelService());
+        $translator = $this->createAgentTranslator();
+
+        return new AgentToolResultPresenter(
+            $ai,
+            new AgentToolEditorLabelService($translator),
+            new AgentLanguageResolver($this->createMock(SiteFinder::class)),
+            $translator,
+        );
     }
 
     #[Test]
@@ -70,12 +86,12 @@ final class AgentToolResultPresenterTest extends TestCase
         self::assertStringContainsString('Home', $presented['summary']);
         self::assertSame(
             [
-                ['label' => 'Title', 'value' => 'Home'],
-                ['label' => 'UID', 'value' => '1'],
-                ['label' => 'Parent', 'value' => '0'],
-                ['label' => 'Slug', 'value' => '/'],
-                ['label' => 'Type', 'value' => 'Standard page'],
-                ['label' => 'Visibility', 'value' => 'Visible'],
+                ['key' => 'title', 'label' => 'Title', 'value' => 'Home'],
+                ['key' => 'uid', 'label' => 'UID', 'value' => '1'],
+                ['key' => 'pid', 'label' => 'Parent', 'value' => '0'],
+                ['key' => 'slug', 'label' => 'Slug', 'value' => '/'],
+                ['key' => 'doktype', 'label' => 'Type', 'value' => 'Standard page'],
+                ['key' => 'hidden', 'label' => 'Visibility', 'value' => 'Visible'],
             ],
             $presented['facts'],
         );
@@ -184,9 +200,9 @@ final class AgentToolResultPresenterTest extends TestCase
 
         self::assertSame(
             [
-                ['label' => 'Name', 'value' => 'Acme'],
-                ['label' => 'Uid', 'value' => '9'],
-                ['label' => 'Description', 'value' => 'Widget'],
+                ['key' => 'name', 'label' => 'Name', 'value' => 'Acme'],
+                ['key' => 'uid', 'label' => 'UID', 'value' => '9'],
+                ['key' => 'description', 'label' => 'Description', 'value' => 'Widget'],
             ],
             $presented['facts'],
         );

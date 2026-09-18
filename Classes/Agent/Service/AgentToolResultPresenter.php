@@ -47,9 +47,69 @@ final readonly class AgentToolResultPresenter
         'total',
     ];
 
+    /**
+     * Facts carry a stable key for lookups and a translated label for the editor.
+     *
+     * @var array<string, string>
+     */
+    private const FACT_LABEL_KEYS = [
+        'result' => 'agent.fact.result',
+        'file' => 'agent.fact.file',
+        'files' => 'agent.fact.files',
+        'folders' => 'agent.fact.folders',
+        'examples' => 'agent.fact.examples',
+        'includes' => 'agent.fact.includes',
+        'items' => 'agent.fact.items',
+        'missingAltText' => 'agent.fact.missingAltText',
+        'matchingFiles' => 'agent.fact.matchingFiles',
+        'matchingPages' => 'agent.fact.matchingPages',
+        'matchingContentElements' => 'agent.fact.matchingContentElements',
+        'matchingRecords' => 'agent.fact.matchingRecords',
+        'pages' => 'agent.fact.pages',
+        'contentElements' => 'agent.fact.contentElements',
+        'redirects' => 'agent.fact.redirects',
+        'scheduledTasks' => 'agent.fact.scheduledTasks',
+        'records' => 'agent.fact.records',
+        'altText' => 'agent.fact.altText',
+        'title' => 'agent.fact.title',
+        'header' => 'agent.fact.header',
+        'name' => 'agent.fact.name',
+        'uid' => 'agent.fact.uid',
+        'pid' => 'agent.fact.parent',
+        'page' => 'agent.fact.page',
+        'slug' => 'agent.fact.slug',
+        'doktype' => 'agent.fact.type',
+        'hidden' => 'agent.fact.visibility',
+        'deleted' => 'agent.fact.deleted',
+        'description' => 'agent.fact.description',
+        'subtitle' => 'agent.fact.subtitle',
+        'error' => 'agent.fact.error',
+        'message' => 'agent.fact.message',
+        'count' => 'agent.fact.count',
+        'total' => 'agent.fact.total',
+    ];
+
+    /** Fact keys whose value is a collection size. */
+    private const COUNT_FACT_KEYS = [
+        'missingAltText',
+        'items',
+        'files',
+        'matchingFiles',
+        'matchingPages',
+        'matchingContentElements',
+        'matchingRecords',
+        'pages',
+        'contentElements',
+        'redirects',
+        'scheduledTasks',
+        'records',
+    ];
+
     public function __construct(
         private AiServiceInterface $aiService,
         private AgentToolEditorLabelService $editorLabelService,
+        private AgentLanguageResolver $languageResolver,
+        private AgentTranslator $translator,
     ) {}
 
     /**
@@ -58,7 +118,7 @@ final readonly class AgentToolResultPresenter
      *     success: bool,
      *     summary: string,
      *     llmSummary: string|null,
-     *     facts: list<array{label: string, value: string}>,
+     *     facts: list<array{key: string, label: string, value: string}>,
      *     details: mixed,
      *     error: string|null
      * }
@@ -119,33 +179,32 @@ final readonly class AgentToolResultPresenter
         if (!$invokeSuccess) {
             $message = trim($invokeMessage);
 
-            return $message !== '' ? $message : 'The tool failed.';
+            return $message !== '' ? $message : $this->translator->translate('agent.result.toolFailed');
         }
 
         if (is_array($details) && isset($details['error']) && is_scalar($details['error'])) {
             $error = trim((string) $details['error']);
 
-            return $error !== '' ? $error : 'The tool reported an error.';
+            return $error !== '' ? $error : $this->translator->translate('agent.result.toolError');
         }
 
         if ($details === null) {
-            return 'The tool returned no data.';
+            return $this->translator->translate('agent.result.toolNoData');
         }
 
         return null;
     }
 
     /**
-     * @return list<array{label: string, value: string}>
+     * @return list<array{key: string, label: string, value: string}>
      */
     private function buildFacts(string $toolName, mixed $details): array
     {
         if (!is_array($details)) {
-            if (is_scalar($details)) {
-                return [['label' => 'Result', 'value' => (string) $details]];
-            }
+            $facts = [];
+            $this->pushFact($facts, 'result', $details);
 
-            return [];
+            return $facts;
         }
 
         if ($toolName === 'file_list') {
@@ -174,7 +233,7 @@ final readonly class AgentToolResultPresenter
 
     /**
      * @param array<string, mixed> $details
-     * @return list<array{label: string, value: string}>
+     * @return list<array{key: string, label: string, value: string}>
      */
     private function factsForFileDirectoryListing(array $details): array
     {
@@ -184,46 +243,42 @@ final readonly class AgentToolResultPresenter
         $folderCount = (int) ($details['totalDirectories'] ?? count($directories));
 
         $facts = [
-            ['label' => 'Files', 'value' => (string) $fileCount],
-            ['label' => 'Folders', 'value' => (string) $folderCount],
+            $this->fact('files', (string) $fileCount),
+            $this->fact('folders', (string) $folderCount),
         ];
 
         /** @var list<array<string, mixed>> $fileRows */
         $fileRows = array_values(array_filter($files, 'is_array'));
         $examples = $this->extractRowLabels($fileRows);
 
-        return $examples === [] ? $facts : array_merge($facts, [['label' => 'Examples', 'value' => implode(', ', $examples)]]);
+        return $examples === [] ? $facts : array_merge($facts, [$this->fact('examples', implode(', ', $examples))]);
     }
 
     /**
      * @param array{rows: list<array<string, mixed>>, total: int, kind: string} $collection
-     * @return list<array{label: string, value: string}>
+     * @return list<array{key: string, label: string, value: string}>
      */
     private function factsForCollection(string $toolName, array $collection): array
     {
         $total = max(0, (int) ($collection['total'] ?? count($collection['rows'])));
         $rows = $collection['rows'];
-        $countLabel = match ($toolName) {
-            't3aa_list_files_missing_alt_text' => 'Images missing alt text',
-            'file_search' => 'Matching files',
-            'pages_search' => 'Matching pages',
-            'content_search' => 'Matching content elements',
-            'record_search' => 'Matching records',
-            'pages_list' => 'Pages',
-            'content_list' => 'Content elements',
-            'redirect_list' => 'Redirects',
-            'scheduler_list' => 'Scheduled tasks',
-            default => match ($collection['kind']) {
-                'files' => 'Files',
-                'records', 'results', 'rows', 'items' => 'Items',
-                default => 'Items',
-            },
+        $countKey = match ($toolName) {
+            't3aa_list_files_missing_alt_text' => 'missingAltText',
+            'file_search' => 'matchingFiles',
+            'pages_search' => 'matchingPages',
+            'content_search' => 'matchingContentElements',
+            'record_search' => 'matchingRecords',
+            'pages_list' => 'pages',
+            'content_list' => 'contentElements',
+            'redirect_list' => 'redirects',
+            'scheduler_list' => 'scheduledTasks',
+            default => $collection['kind'] === 'files' ? 'files' : 'items',
         };
 
-        $facts = [['label' => $countLabel, 'value' => (string) $total]];
+        $facts = [$this->fact($countKey, (string) $total)];
         $examples = $this->extractRowLabels($rows);
         if ($examples !== []) {
-            $facts[] = ['label' => 'Examples', 'value' => implode(', ', $examples)];
+            $facts[] = $this->fact('examples', implode(', ', $examples));
         }
 
         return $facts;
@@ -276,39 +331,41 @@ final readonly class AgentToolResultPresenter
 
     /**
      * @param array<string, mixed> $row
-     * @return list<array{label: string, value: string}>
+     * @return list<array{key: string, label: string, value: string}>
      */
     private function factsForFileMetadata(array $row): array
     {
         $facts = [];
         if (isset($row['identifier']) && is_string($row['identifier'])) {
             $path = str_replace('\\', '/', trim($row['identifier']));
-            $this->pushFact($facts, 'File', basename($path));
+            $this->pushFact($facts, 'file', basename($path));
         }
-        $this->pushFact($facts, 'Alt text', $row['alternative'] ?? ($row['alt'] ?? null));
-        $this->pushFact($facts, 'Title', $row['title'] ?? null);
-        $this->pushFact($facts, 'Description', $row['description'] ?? null);
-        $this->pushFact($facts, 'UID', $row['file_uid'] ?? ($row['uid'] ?? null));
+        $this->pushFact($facts, 'altText', $row['alternative'] ?? ($row['alt'] ?? null));
+        $this->pushFact($facts, 'title', $row['title'] ?? null);
+        $this->pushFact($facts, 'description', $row['description'] ?? null);
+        $this->pushFact($facts, 'uid', $row['file_uid'] ?? ($row['uid'] ?? null));
 
         return $facts;
     }
 
     /**
      * @param array<string, mixed> $row
-     * @return list<array{label: string, value: string}>
+     * @return list<array{key: string, label: string, value: string}>
      */
     private function factsForPage(array $row): array
     {
         $facts = [];
-        $this->pushFact($facts, 'Title', $row['title'] ?? null);
-        $this->pushFact($facts, 'UID', $row['uid'] ?? null);
-        $this->pushFact($facts, 'Parent', $row['pid'] ?? null);
-        $this->pushFact($facts, 'Slug', $row['slug'] ?? null);
+        $this->pushFact($facts, 'title', $row['title'] ?? null);
+        $this->pushFact($facts, 'uid', $row['uid'] ?? null);
+        $this->pushFact($facts, 'pid', $row['pid'] ?? null);
+        $this->pushFact($facts, 'slug', $row['slug'] ?? null);
         if (isset($row['doktype'])) {
-            $this->pushFact($facts, 'Type', $this->doktypeLabel((int) $row['doktype']));
+            $this->pushFact($facts, 'doktype', $this->doktypeLabel((int) $row['doktype']));
         }
         if (isset($row['hidden'])) {
-            $this->pushFact($facts, 'Visibility', ((int) $row['hidden'] === 1) ? 'Hidden' : 'Visible');
+            $this->pushFact($facts, 'hidden', $this->translator->translate(
+                ((int) $row['hidden'] === 1) ? 'agent.value.hidden' : 'agent.value.visible',
+            ));
         }
 
         return $facts;
@@ -316,33 +373,33 @@ final readonly class AgentToolResultPresenter
 
     /**
      * @param array<string, mixed> $row
-     * @return list<array{label: string, value: string}>
+     * @return list<array{key: string, label: string, value: string}>
      */
     private function factsForContent(array $row): array
     {
         $facts = [];
         $header = trim((string) ($row['header'] ?? ''));
-        $this->pushFact($facts, 'Header', $header !== '' ? $header : null);
-        $this->pushFact($facts, 'UID', $row['uid'] ?? null);
-        $this->pushFact($facts, 'Page', $row['pid'] ?? null);
-        $this->pushFact($facts, 'Type', $row['CType'] ?? ($row['ctype'] ?? null));
+        $this->pushFact($facts, 'header', $header !== '' ? $header : null);
+        $this->pushFact($facts, 'uid', $row['uid'] ?? null);
+        $this->pushFact($facts, 'page', $row['pid'] ?? null);
+        $this->pushFact($facts, 'doktype', $row['CType'] ?? ($row['ctype'] ?? null));
 
         return $facts;
     }
 
     /**
      * @param list<mixed> $rows
-     * @return list<array{label: string, value: string}>
+     * @return list<array{key: string, label: string, value: string}>
      */
     private function factsForList(string $toolName, array $rows): array
     {
         $facts = [
-            ['label' => 'Items', 'value' => (string) count($rows)],
+            $this->fact('items', (string) count($rows)),
         ];
 
         $examples = $this->extractRowLabels($rows);
         if ($examples !== []) {
-            $facts[] = ['label' => 'Examples', 'value' => implode(', ', $examples)];
+            $facts[] = $this->fact('examples', implode(', ', $examples));
         }
 
         return $facts;
@@ -392,7 +449,7 @@ final readonly class AgentToolResultPresenter
 
     /**
      * @param array<string, mixed> $row
-     * @return list<array{label: string, value: string}>
+     * @return list<array{key: string, label: string, value: string}>
      */
     private function factsGeneric(array $row): array
     {
@@ -401,7 +458,14 @@ final readonly class AgentToolResultPresenter
             if (!array_key_exists($key, $row)) {
                 continue;
             }
-            $this->pushFact($facts, $this->humanizeKey($key), $row[$key]);
+            $value = match ($key) {
+                'doktype' => $this->doktypeLabel((int) $row[$key]),
+                'hidden' => $this->translator->translate(
+                    ((int) $row[$key] === 1) ? 'agent.value.hidden' : 'agent.value.visible',
+                ),
+                default => $row[$key],
+            };
+            $this->pushFact($facts, $key, $value);
             if (count($facts) >= 6) {
                 break;
             }
@@ -411,7 +475,7 @@ final readonly class AgentToolResultPresenter
     }
 
     /**
-     * @param list<array{label: string, value: string}> $facts
+     * @param list<array{key: string, label: string, value: string}> $facts
      */
     private function buildDeterministicSummary(string $editorLabel, array $facts, mixed $details): string
     {
@@ -420,28 +484,28 @@ final readonly class AgentToolResultPresenter
                 return (string) $details;
             }
 
-            $label = $editorLabel !== '' ? $editorLabel : 'Action';
+            $label = $editorLabel !== '' ? $editorLabel : $this->translator->translate('agent.result.action');
 
-            return sprintf('%s completed successfully.', $label);
+            return $this->translator->translate('agent.result.completed', [$label]);
         }
 
         $titleFact = null;
         foreach ($facts as $fact) {
-            if (in_array($fact['label'], ['Title', 'Header', 'Name'], true)) {
+            if (in_array($fact['key'], ['title', 'header', 'name'], true)) {
                 $titleFact = $fact['value'];
                 break;
             }
         }
 
         if ($titleFact !== null) {
-            $uid = $this->factValue($facts, 'UID');
+            $uid = $this->factValue($facts, 'uid');
             $line = $titleFact;
             if ($uid !== null) {
                 $line .= ' · uid ' . $uid;
             }
             $extras = [];
             foreach ($facts as $fact) {
-                if (in_array($fact['label'], ['Title', 'Header', 'Name', 'UID'], true)) {
+                if (in_array($fact['key'], ['title', 'header', 'name', 'uid'], true)) {
                     continue;
                 }
                 $extras[] = $fact['label'] . ': ' . $fact['value'];
@@ -475,6 +539,7 @@ final readonly class AgentToolResultPresenter
 
         $prompt = implode("\n", [
             'You are the TYPO3 AI Agent speaking to a backend editor.',
+            $this->languageResolver->backendLanguageInstruction(),
             'Summarize the following tool result in 2-4 short sentences.',
             'Highlight the important fields (title, uid, status, errors).',
             'Do not invent data. Do not use markdown — no asterisks, bullet lists, or headings. Plain sentences only.',
@@ -506,17 +571,17 @@ final readonly class AgentToolResultPresenter
     }
 
     /**
-     * @param list<array{label: string, value: string}> $facts
+     * @param list<array{key: string, label: string, value: string}> $facts
      */
     private function shouldSkipLlmSummary(array $facts): bool
     {
-        $hasExamples = $this->hasFact($facts, 'Examples') || $this->hasFact($facts, 'Includes');
+        $hasExamples = $this->hasFact($facts, 'examples') || $this->hasFact($facts, 'includes');
         if (!$hasExamples) {
             return false;
         }
 
-        foreach (['Items', 'Images missing alt text', 'Files', 'Matching files', 'Matching pages', 'Matching content elements', 'Matching records', 'Pages', 'Content elements', 'Redirects', 'Scheduled tasks', 'Records'] as $label) {
-            if ($this->hasFact($facts, $label)) {
+        foreach (self::COUNT_FACT_KEYS as $key) {
+            if ($this->hasFact($facts, $key)) {
                 return true;
             }
         }
@@ -525,7 +590,7 @@ final readonly class AgentToolResultPresenter
     }
 
     /**
-     * @param list<array{label: string, value: string}> $facts
+     * @param list<array{key: string, label: string, value: string}> $facts
      */
     private function buildListLeadSummary(string $toolName, array $facts, mixed $details): ?string
     {
@@ -538,16 +603,16 @@ final readonly class AgentToolResultPresenter
             return $this->emptyCollectionMessage($toolName);
         }
 
-        $examples = $this->factValue($facts, 'Examples') ?? $this->factValue($facts, 'Includes');
+        $examples = $this->factValue($facts, 'examples') ?? $this->factValue($facts, 'includes');
         $subject = $this->collectionSubjectLabel($toolName, $facts);
         $lead = $count === 1
-            ? sprintf('Found 1 %s.', rtrim($subject, 's'))
-            : sprintf('Found %d %s.', $count, $subject);
+            ? $this->translator->translate('agent.result.foundOne', [$subject])
+            : $this->translator->translate('agent.result.foundMany', [$count, $subject]);
 
         if ($examples !== null && $examples !== '') {
-            $lead .= "\n\nExamples: " . $examples;
+            $lead .= "\n\n" . $this->translator->translate('agent.result.examplesLead', [$examples]);
             if ($count > 5) {
-                $lead .= sprintf("\n\nOpen Details for the full list (%d total).", $count);
+                $lead .= "\n\n" . $this->translator->translate('agent.result.openDetails', [$count]);
             }
         }
 
@@ -555,30 +620,35 @@ final readonly class AgentToolResultPresenter
     }
 
     /**
-     * @param list<array{label: string, value: string}> $facts
+     * @param list<array{key: string, label: string, value: string}> $facts
      */
     private function buildToolSpecificContent(string $toolName, array $facts, mixed $details): ?string
     {
         if ($toolName === 't3aa_list_files_missing_alt_text') {
             $total = $this->primaryCountFromFacts($facts) ?? 0;
             if ($total === 0) {
-                return 'Good news — no images are missing alt text in this storage.';
+                return $this->translator->translate('agent.result.noMissingAltText');
             }
 
-            $lead = $this->buildListLeadSummary($toolName, $facts, $details) ?? sprintf('Found %d images missing alt text.', $total);
+            $lead = $this->buildListLeadSummary($toolName, $facts, $details)
+                ?? $this->translator->translate('agent.result.foundMany', [
+                    $total,
+                    $this->translator->translate('agent.subject.missingAltText'),
+                ]);
 
-            return $lead . "\n\nNext: use “Generate file metadata (alt, title)” or ask to write alt text for a specific file.";
+            return $lead . "\n\n" . $this->translator->translate('agent.result.nextAltTextHint');
         }
 
         if ($toolName === 'file_list' && is_array($details)) {
             $files = (int) ($details['totalFiles'] ?? 0);
             $folders = (int) ($details['totalDirectories'] ?? 0);
             $path = trim((string) ($details['directoryPath'] ?? $details['path'] ?? ''));
-            $location = $path !== '' ? ' in ' . $path : '';
-            $lead = sprintf('This folder%s contains %d file(s) and %d subfolder(s).', $location, $files, $folders);
-            $examples = $this->factValue($facts, 'Examples');
+            $lead = $path !== ''
+                ? $this->translator->translate('agent.result.folderContentsIn', [$path, $files, $folders])
+                : $this->translator->translate('agent.result.folderContents', [$files, $folders]);
+            $examples = $this->factValue($facts, 'examples');
             if ($examples !== null && $examples !== '') {
-                $lead .= "\n\nExamples: " . $examples;
+                $lead .= "\n\n" . $this->translator->translate('agent.result.examplesLead', [$examples]);
             }
 
             return $lead;
@@ -598,20 +668,20 @@ final readonly class AgentToolResultPresenter
             return null;
         }
 
-        $messages = [
-            'deleted' => 'Done — the item was deleted.',
-            'published' => 'Done — the workspace change was published.',
-            'discarded' => 'Done — the workspace change was discarded.',
-            'cleared' => 'Done — the cache was cleared.',
-            'copied' => 'Done — the copy was created.',
-            'moved' => 'Done — the item was moved.',
-            'created' => 'Done — the item was created.',
-            'updated' => 'Done — the changes were saved.',
+        $labelKeys = [
+            'deleted' => 'agent.result.doneDeleted',
+            'published' => 'agent.result.donePublished',
+            'discarded' => 'agent.result.doneDiscarded',
+            'cleared' => 'agent.result.doneCacheCleared',
+            'copied' => 'agent.result.doneCopied',
+            'moved' => 'agent.result.doneMoved',
+            'created' => 'agent.result.doneCreated',
+            'updated' => 'agent.result.doneUpdated',
         ];
 
-        foreach ($messages as $key => $message) {
+        foreach ($labelKeys as $key => $labelKey) {
             if (($details[$key] ?? false) === true) {
-                return $message;
+                return $this->translator->translate($labelKey);
             }
         }
 
@@ -619,8 +689,8 @@ final readonly class AgentToolResultPresenter
             $count = count($details['updatedFields']);
 
             return $count === 1
-                ? 'Done — 1 field was updated.'
-                : sprintf('Done — %d fields were updated.', $count);
+                ? $this->translator->translate('agent.result.doneOneFieldUpdated')
+                : $this->translator->translate('agent.result.doneFieldsUpdated', [$count]);
         }
 
         if (($details['success'] ?? false) === true && isset($details['message']) && is_scalar($details['message'])) {
@@ -634,12 +704,12 @@ final readonly class AgentToolResultPresenter
     }
 
     /**
-     * @param list<array{label: string, value: string}> $facts
+     * @param list<array{key: string, label: string, value: string}> $facts
      */
     private function primaryCountFromFacts(array $facts): ?int
     {
-        foreach (['Images missing alt text', 'Items', 'Files', 'Matching files', 'Matching pages', 'Matching content elements', 'Matching records', 'Pages', 'Content elements', 'Redirects', 'Scheduled tasks', 'Records'] as $label) {
-            $value = $this->factValue($facts, $label);
+        foreach (self::COUNT_FACT_KEYS as $key) {
+            $value = $this->factValue($facts, $key);
             if ($value !== null && is_numeric($value)) {
                 return (int) $value;
             }
@@ -649,57 +719,51 @@ final readonly class AgentToolResultPresenter
     }
 
     /**
-     * @param list<array{label: string, value: string}> $facts
+     * @param list<array{key: string, label: string, value: string}> $facts
      */
     private function collectionSubjectLabel(string $toolName, array $facts): string
     {
         if ($toolName === 't3aa_list_files_missing_alt_text') {
-            return 'images missing alt text';
+            return $this->translator->translate('agent.subject.missingAltText');
         }
 
         foreach ($facts as $fact) {
-            if (in_array($fact['label'], ['Images missing alt text', 'Matching files', 'Matching pages', 'Matching content elements', 'Matching records', 'Pages', 'Content elements', 'Redirects', 'Scheduled tasks'], true)) {
-                return strtolower($fact['label']);
+            if (in_array($fact['key'], self::COUNT_FACT_KEYS, true) && $fact['key'] !== 'items') {
+                return $this->translator->translate('agent.subject.' . $fact['key']);
             }
         }
 
-        return 'items';
+        return $this->translator->translate('agent.subject.items');
     }
 
     private function emptyCollectionMessage(string $toolName): string
     {
-        return match ($toolName) {
-            't3aa_list_files_missing_alt_text' => 'No images are missing alt text in this storage.',
-            'file_search' => 'No matching files were found.',
-            'pages_search' => 'No matching pages were found.',
-            'content_search' => 'No matching content elements were found.',
-            'record_search' => 'No matching records were found.',
-            'pages_list' => 'No child pages were found.',
-            'content_list' => 'No content elements were found on this page.',
-            'redirect_list' => 'No redirects were found.',
-            'scheduler_list' => 'No scheduled tasks were found.',
-            default => 'No items found.',
-        };
+        return $this->translator->translate(match ($toolName) {
+            't3aa_list_files_missing_alt_text' => 'agent.result.emptyMissingAltText',
+            'file_search' => 'agent.result.emptyMatchingFiles',
+            'pages_search' => 'agent.result.emptyMatchingPages',
+            'content_search' => 'agent.result.emptyMatchingContentElements',
+            'record_search' => 'agent.result.emptyMatchingRecords',
+            'pages_list' => 'agent.result.emptyChildPages',
+            'content_list' => 'agent.result.emptyContentElements',
+            'redirect_list' => 'agent.result.emptyRedirects',
+            'scheduler_list' => 'agent.result.emptyScheduledTasks',
+            default => 'agent.result.emptyItems',
+        });
     }
 
     /**
-     * @param list<array{label: string, value: string}> $facts
+     * @param list<array{key: string, label: string, value: string}> $facts
      */
-    private function hasFact(array $facts, string $label): bool
+    private function hasFact(array $facts, string $key): bool
     {
-        foreach ($facts as $fact) {
-            if ($fact['label'] === $label) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->factValue($facts, $key) !== null;
     }
 
     /**
-     * @param list<array{label: string, value: string}> $facts
+     * @param list<array{key: string, label: string, value: string}> $facts
      */
-    private function pushFact(array &$facts, string $label, mixed $value): void
+    private function pushFact(array &$facts, string $key, mixed $value): void
     {
         if ($value === null || is_array($value) || is_object($value)) {
             return;
@@ -708,16 +772,31 @@ final readonly class AgentToolResultPresenter
         if ($string === '') {
             return;
         }
-        $facts[] = ['label' => $label, 'value' => $string];
+        $facts[] = $this->fact($key, $string);
     }
 
     /**
-     * @param list<array{label: string, value: string}> $facts
+     * @return array{key: string, label: string, value: string}
      */
-    private function factValue(array $facts, string $label): ?string
+    private function fact(string $key, string $value): array
+    {
+        return ['key' => $key, 'label' => $this->factLabel($key), 'value' => $value];
+    }
+
+    private function factLabel(string $key): string
+    {
+        $labelKey = self::FACT_LABEL_KEYS[$key] ?? '';
+
+        return $labelKey !== '' ? $this->translator->translate($labelKey) : $this->humanizeKey($key);
+    }
+
+    /**
+     * @param list<array{key: string, label: string, value: string}> $facts
+     */
+    private function factValue(array $facts, string $key): ?string
     {
         foreach ($facts as $fact) {
-            if ($fact['label'] === $label) {
+            if ($fact['key'] === $key) {
                 return $fact['value'];
             }
         }
@@ -732,17 +811,21 @@ final readonly class AgentToolResultPresenter
 
     private function doktypeLabel(int $doktype): string
     {
-        return match ($doktype) {
-            1 => 'Standard page',
-            3 => 'Link to external URL',
-            4 => 'Shortcut',
-            6 => 'Backend user section',
-            7 => 'Mount point',
-            199 => 'Menu separator',
-            254 => 'Folder',
-            255 => 'Recycler',
-            default => 'Doktype ' . $doktype,
+        $labelKey = match ($doktype) {
+            1 => 'agent.doktype.standard',
+            3 => 'agent.doktype.externalUrl',
+            4 => 'agent.doktype.shortcut',
+            6 => 'agent.doktype.backendUserSection',
+            7 => 'agent.doktype.mountPoint',
+            199 => 'agent.doktype.separator',
+            254 => 'agent.doktype.folder',
+            255 => 'agent.doktype.recycler',
+            default => '',
         };
+
+        return $labelKey !== ''
+            ? $this->translator->translate($labelKey)
+            : $this->translator->translate('agent.doktype.unknown', [$doktype]);
     }
 
     /**

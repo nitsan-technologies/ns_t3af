@@ -38,6 +38,7 @@ use NITSAN\NsT3AF\Agent\Service\AgentSeoMetadataFlow;
 use NITSAN\NsT3AF\Agent\Service\AgentStarterBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentTargetPageResolver;
 use NITSAN\NsT3AF\Agent\Service\AgentToolTurnProcessor;
+use NITSAN\NsT3AF\Agent\Service\AgentTranslator;
 use NITSAN\NsT3AF\Agent\Service\AgentTurnOrchestrator;
 use NITSAN\NsT3AF\Agent\Service\AgentTurnRepository;
 use NITSAN\NsT3AF\Agent\Service\AgentUndoService;
@@ -61,7 +62,6 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use TYPO3\CMS\Core\Http\Response;
-use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
 
@@ -105,6 +105,7 @@ final class AgentAjaxController
         private readonly AgentCompoundFlowService $compoundFlowService,
         private readonly AgentWorkflowService $workflowService,
         private readonly SiteFinder $siteFinder,
+        private readonly AgentTranslator $translator,
     ) {}
 
     public function toolsAction(ServerRequestInterface $request): ResponseInterface
@@ -182,7 +183,7 @@ final class AgentAjaxController
         $body = $this->parseRequestBody($request);
         $messages = $body['messages'] ?? [];
         if (!is_array($messages)) {
-            return new JsonResponse(['ok' => false, 'message' => 'Invalid payload'], 400);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.invalidPayload')], 400);
         }
 
         $context = is_array($body['context'] ?? null) ? $body['context'] : [];
@@ -232,7 +233,7 @@ final class AgentAjaxController
             'ok' => true,
             'route' => $route,
             'href' => (string) $this->uriBuilder->buildUriFromRoute($route, $parameters),
-            'label' => $this->translate('agent.modal.settings'),
+            'label' => $this->translator->translate('agent.modal.settings'),
         ]);
     }
 
@@ -244,7 +245,7 @@ final class AgentAjaxController
 
         $user = $this->resolveBackendUser();
         if ($user === null) {
-            return new JsonResponse(['ok' => false, 'message' => 'Forbidden'], 403);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.forbidden')], 403);
         }
 
         $body = $this->parseRequestBody($request);
@@ -255,7 +256,7 @@ final class AgentAjaxController
         $correlationId = trim((string) ($body['correlationId'] ?? ''));
 
         if ($draftId === '') {
-            return new JsonResponse(['ok' => false, 'message' => 'Missing draftId'], 400);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.missingDraftId')], 400);
         }
 
         $workspaceBlock = $this->governanceGuard->assertDraftApplyAllowed($user, $workspaceId);
@@ -265,14 +266,14 @@ final class AgentAjaxController
 
         $storedDraft = $this->draftSession->getDraft($draftId);
         if ($storedDraft === null) {
-            return new JsonResponse(['ok' => false, 'message' => 'Draft not found'], 404);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.draftNotFound')], 404);
         }
 
         if ($applyMode === 'safe') {
             $plan = ToolPlan::fromArray(is_array($storedDraft['plan'] ?? null) ? $storedDraft['plan'] : []);
             $keptFieldKeys = $this->lowRiskFieldMatrix->filterSafeFieldKeys($plan, $keptFieldKeys);
             if ($keptFieldKeys === []) {
-                return new JsonResponse(['ok' => false, 'message' => $this->translate('agent.draft.noSafeFields')], 400);
+                return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.draft.noSafeFields')], 400);
             }
         }
 
@@ -307,8 +308,8 @@ final class AgentAjaxController
             'ok' => true,
             'result' => $result,
             'message' => ($result['toolConfirmation'] ?? false) === true
-                ? $this->translate('agent.draft.toolApplied')
-                : $this->translate('agent.draft.applied', [
+                ? $this->translator->translate('agent.draft.toolApplied')
+                : $this->translator->translate('agent.draft.applied', [
                     (string) ($result['appliedCount'] ?? 0),
                     (string) ($result['totalCount'] ?? 0),
                 ]),
@@ -324,24 +325,24 @@ final class AgentAjaxController
 
         $user = $this->resolveBackendUser();
         if ($user === null) {
-            return new JsonResponse(['ok' => false, 'message' => 'Forbidden'], 403);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.forbidden')], 403);
         }
 
         $upload = $this->resolveUploadedFile($request);
         if ($upload === null) {
-            return new JsonResponse(['ok' => false, 'message' => $this->translate('agent.upload.missingFile')], 400);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.upload.missingFile')], 400);
         }
 
         if ($upload->getError() !== UPLOAD_ERR_OK) {
-            return new JsonResponse(['ok' => false, 'message' => $this->translate('agent.upload.failed')], 400);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.upload.failed')], 400);
         }
 
         $size = (int) $upload->getSize();
         if ($size <= 0) {
-            return new JsonResponse(['ok' => false, 'message' => $this->translate('agent.upload.empty')], 400);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.upload.empty')], 400);
         }
         if ($size > self::UPLOAD_MAX_BYTES) {
-            return new JsonResponse(['ok' => false, 'message' => $this->translate('agent.upload.tooLarge')], 400);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.upload.tooLarge')], 400);
         }
 
         $parsedBody = $request->getParsedBody();
@@ -357,12 +358,12 @@ final class AgentAjaxController
         $clientName = (string) $upload->getClientFilename();
         $fileName = $this->sanitizeUploadFileName($clientName);
         if ($fileName === '') {
-            return new JsonResponse(['ok' => false, 'message' => $this->translate('agent.upload.invalidName')], 400);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.upload.invalidName')], 400);
         }
 
         $content = (string) $upload->getStream()->getContents();
         if ($content === '') {
-            return new JsonResponse(['ok' => false, 'message' => $this->translate('agent.upload.empty')], 400);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.upload.empty')], 400);
         }
 
         try {
@@ -373,14 +374,14 @@ final class AgentAjaxController
 
         $identifier = (string) ($result['identifier'] ?? '');
         if ($identifier === '') {
-            return new JsonResponse(['ok' => false, 'message' => $this->translate('agent.upload.failed')], 500);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.upload.failed')], 500);
         }
 
         return new JsonResponse([
             'ok' => true,
             'file' => $result,
             'attachment' => $this->recordAttachmentResolver->formatFileAttachmentToken($storageUid, $identifier),
-            'message' => $this->translate('agent.upload.success', [$fileName]),
+            'message' => $this->translator->translate('agent.upload.success', [$fileName]),
         ]);
     }
 
@@ -393,14 +394,14 @@ final class AgentAjaxController
         $body = $this->parseRequestBody($request);
         $draftId = trim((string) ($body['draftId'] ?? ''));
         if ($draftId === '') {
-            return new JsonResponse(['ok' => false, 'message' => 'Missing draftId'], 400);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.missingDraftId')], 400);
         }
 
         $this->draftSession->removeDraft($draftId);
 
         return new JsonResponse([
             'ok' => true,
-            'message' => $this->translate('agent.draft.discarded'),
+            'message' => $this->translator->translate('agent.draft.discarded'),
         ]);
     }
 
@@ -413,12 +414,12 @@ final class AgentAjaxController
         $body = $this->parseRequestBody($request);
         $draftId = trim((string) ($body['draftId'] ?? ''));
         if ($draftId === '') {
-            return new JsonResponse(['ok' => false, 'message' => 'Missing draftId'], 400);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.missingDraftId')], 400);
         }
 
         $draft = $this->draftSession->getDraft($draftId);
         if ($draft === null) {
-            return new JsonResponse(['ok' => false, 'message' => 'Draft not found'], 404);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.draftNotFound')], 404);
         }
 
         $this->draftSession->setDestructiveArmed($draftId, true);
@@ -426,7 +427,7 @@ final class AgentAjaxController
         return new JsonResponse([
             'ok' => true,
             'destructiveArmed' => true,
-            'message' => $this->translate('agent.draft.destructiveArmed'),
+            'message' => $this->translator->translate('agent.draft.destructiveArmed'),
         ]);
     }
 
@@ -439,7 +440,7 @@ final class AgentAjaxController
         $body = $this->parseRequestBody($request);
         $changeId = trim((string) ($body['changeId'] ?? ''));
         if ($changeId === '') {
-            return new JsonResponse(['ok' => false, 'message' => 'Missing changeId'], 400);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.missingChangeId')], 400);
         }
 
         try {
@@ -451,7 +452,7 @@ final class AgentAjaxController
         return new JsonResponse([
             'ok' => true,
             'result' => $result,
-            'message' => $this->translate('agent.draft.undone'),
+            'message' => $this->translator->translate('agent.draft.undone'),
         ]);
     }
 
@@ -464,12 +465,12 @@ final class AgentAjaxController
         $body = $this->parseRequestBody($request);
         $message = trim((string) ($body['message'] ?? ''));
         if ($message === '') {
-            return new JsonResponse(['ok' => false, 'message' => 'Empty message'], 400);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.emptyMessage')], 400);
         }
 
         $user = $this->resolveBackendUser();
         if ($user === null) {
-            return new JsonResponse(['ok' => false, 'message' => 'Forbidden'], 403);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.forbidden')], 403);
         }
 
         $governanceBlock = $this->governanceGuard->assertTurnAllowed($user, $body);
@@ -585,12 +586,12 @@ final class AgentAjaxController
         $body = $this->parseRequestBody($request);
         $message = trim((string) ($body['message'] ?? ''));
         if ($message === '') {
-            return new JsonResponse(['ok' => false, 'message' => 'Empty message'], 400);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.emptyMessage')], 400);
         }
 
         $user = $this->resolveBackendUser();
         if ($user === null) {
-            return new JsonResponse(['ok' => false, 'message' => 'Forbidden'], 403);
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.forbidden')], 403);
         }
 
         $governanceBlock = $this->governanceGuard->assertTurnAllowed($user, $body);
@@ -765,7 +766,7 @@ final class AgentAjaxController
             if ($invocation === null) {
                 $messages[] = [
                     'role' => 'assistant',
-                    'content' => $this->translate('agent.turn.unknownAttachment', [$table, (string) $uid]),
+                    'content' => $this->translator->translate('agent.turn.unknownAttachment', [$table, (string) $uid]),
                     'meta' => [
                         'type' => 'error',
                         'correlationId' => $correlationId,
@@ -817,7 +818,7 @@ final class AgentAjaxController
             if ($invocation === null) {
                 $messages[] = [
                     'role' => 'assistant',
-                    'content' => $this->translate('agent.turn.unknownFileAttachment', [$identifier]),
+                    'content' => $this->translator->translate('agent.turn.unknownFileAttachment', [$identifier]),
                     'meta' => [
                         'type' => 'error',
                         'correlationId' => $correlationId,
@@ -1182,7 +1183,7 @@ final class AgentAjaxController
 
         array_unshift($messages, [
             'role' => 'assistant',
-            'content' => $this->translate('agent.turn.translateNotInCombinedFlow'),
+            'content' => $this->translator->translate('agent.turn.translateNotInCombinedFlow'),
             'meta' => [
                 'type' => 'info',
                 'correlationId' => $correlationId,
@@ -1287,14 +1288,14 @@ final class AgentAjaxController
         if ($resolved->module !== '') {
             $chips[] = [
                 'key' => 'module',
-                'label' => $this->translate('agent.context.module'),
+                'label' => $this->translator->translate('agent.context.module'),
                 'value' => $resolved->module,
             ];
         }
         if ($resolved->pageId > 0) {
             $chips[] = [
                 'key' => 'page',
-                'label' => $this->translate('agent.context.page'),
+                'label' => $this->translator->translate('agent.context.page'),
                 'value' => $this->resolvePageTitle($resolved->pageId) . ' [' . $resolved->pageId . ']',
             ];
         }
@@ -1303,21 +1304,21 @@ final class AgentAjaxController
         if ($storageUid > 0 && $folderIdentifier !== '') {
             $chips[] = [
                 'key' => 'folder',
-                'label' => $this->translate('agent.context.folder'),
+                'label' => $this->translator->translate('agent.context.folder'),
                 'value' => $folderIdentifier . ' [storage ' . $storageUid . ']',
             ];
         }
         if ($resolved->focusedRecord !== null) {
             $chips[] = [
                 'key' => 'record',
-                'label' => $this->translate('agent.context.record'),
+                'label' => $this->translator->translate('agent.context.record'),
                 'value' => $resolved->focusedRecord['table'] . ':' . $resolved->focusedRecord['uid'],
             ];
         }
         if ($resolved->brandContextProfileUid !== null) {
             $chips[] = [
                 'key' => 'brand',
-                'label' => $this->translate('agent.context.brand'),
+                'label' => $this->translator->translate('agent.context.brand'),
                 'value' => $resolved->brandName !== ''
                     ? $resolved->brandName
                     : ('Profile #' . $resolved->brandContextProfileUid),
@@ -1326,13 +1327,13 @@ final class AgentAjaxController
         if ($resolved->languageId > 0) {
             $chips[] = [
                 'key' => 'language',
-                'label' => $this->translate('agent.context.language'),
+                'label' => $this->translator->translate('agent.context.language'),
                 'value' => $this->resolveLanguageTitle($resolved->languageId, $resolved->pageId),
             ];
         }
         $chips[] = [
             'key' => 'workspace',
-            'label' => $this->translate('agent.context.workspace'),
+            'label' => $this->translator->translate('agent.context.workspace'),
             'value' => $this->workspaceListService->resolveTitle($resolved->workspaceId),
         ];
 
@@ -1511,7 +1512,7 @@ final class AgentAjaxController
             return null;
         }
 
-        return new JsonResponse(['ok' => false, 'message' => 'Forbidden'], 403);
+        return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.forbidden')], 403);
     }
 
     /**
@@ -1580,26 +1581,4 @@ final class AgentAjaxController
         return $baseName;
     }
 
-    /**
-     * @param list<int|string> $arguments
-     */
-    private function translate(string $key, array $arguments = []): string
-    {
-        $languageService = $GLOBALS['LANG'] ?? null;
-        $label = 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:' . $key;
-        $value = $languageService instanceof LanguageService
-            ? (string) $languageService->sL($label)
-            : $key;
-
-        if ($value === '' || $value === $label) {
-            $value = $key;
-        }
-
-        if ($arguments === []) {
-            return $value;
-        }
-
-        // Labels use sprintf placeholders (%1$s / %2$s).
-        return sprintf($value, ...array_map(static fn(int|string $argument): string => (string) $argument, $arguments));
-    }
 }

@@ -105,7 +105,7 @@ function errorMessage(error) {
   if (error && typeof error === 'object' && 'message' in error) {
     return String(error.message);
   }
-  return 'Something went wrong.';
+  return lang('agent.error.generic', 'Something went wrong.');
 }
 
 /**
@@ -1575,7 +1575,7 @@ class AgentController {
       try {
         const payload = await new AjaxRequest(url).post({ draftId }).then((r) => r.resolve());
         if (!payload?.ok) {
-          throw new Error(payload?.message ?? 'Confirm failed');
+          throw new Error(payload?.message ?? lang('agent.error.confirmFailed', 'Confirm failed'));
         }
         draft.destructiveArmed = true;
         this.renderStream();
@@ -1622,7 +1622,7 @@ class AgentController {
         correlationId: message.meta?.correlationId ?? '',
       }).then((r) => r.resolve());
       if (!payload?.ok) {
-        throw new Error(payload?.message ?? 'Apply failed');
+        throw new Error(payload?.message ?? lang('agent.error.applyFailed', 'Apply failed'));
       }
 
       draft.applied = true;
@@ -1822,7 +1822,7 @@ class AgentController {
     try {
       const payload = await new AjaxRequest(url).post({ changeId }).then((r) => r.resolve());
       if (!payload?.ok) {
-        throw new Error(payload?.message ?? 'Undo failed');
+        throw new Error(payload?.message ?? lang('agent.error.undoFailed', 'Undo failed'));
       }
       this.messages.push({
         role: 'assistant',
@@ -2005,7 +2005,7 @@ class AgentController {
         payload = await new AjaxRequest(url).post(body).then((r) => r.resolve());
       }
       if (!payload?.ok) {
-        throw new Error(payload?.message ?? 'Turn failed');
+        throw new Error(payload?.message ?? lang('agent.error.turnFailed', 'Turn failed'));
       }
 
       if (!streamed) {
@@ -2139,7 +2139,7 @@ class AgentController {
       }
 
       if (eventName === 'error') {
-        throw new Error(data.message ?? 'Stream failed');
+        throw new Error(data.message ?? lang('agent.error.streamFailed', 'Stream failed'));
       }
     };
 

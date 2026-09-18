@@ -52,6 +52,11 @@ final readonly class AfterBackendPageRenderListener
         }
 
         $this->pageRenderer->addCssFile('EXT:ns_t3af/Resources/Public/Css/module/agent.css');
+        // agent.js reads every label from TYPO3.lang['agent.*'].
+        $this->pageRenderer->addInlineLanguageLabelFile(
+            'EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf',
+            'agent.',
+        );
         $this->pageRenderer->getJavaScriptRenderer()->addJavaScriptModuleInstruction(
             JavaScriptModuleInstruction::create('@nitsan/nst3af/agent.js')->invoke('boot'),
         );

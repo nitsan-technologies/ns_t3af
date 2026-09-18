@@ -21,7 +21,6 @@ namespace NITSAN\NsT3AF\Agent\Service;
 
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPlaygroundService;
-use TYPO3\CMS\Core\Localization\LanguageService;
 
 /**
  * Multi-step "Generate SEO metadata" starter: pages_get read card → write_table draft.
@@ -40,6 +39,7 @@ final readonly class AgentSeoMetadataFlow
         private AgentDraftService $draftService,
         private AgentDraftSession $draftSession,
         private AgentAuditLogger $auditLogger,
+        private AgentTranslator $translator,
     ) {}
 
     /**
@@ -54,7 +54,7 @@ final readonly class AgentSeoMetadataFlow
         if ($pageId <= 0) {
             return [[
                 'role' => 'assistant',
-                'content' => $this->translate('agent.starter.generateSeoNeedsPage'),
+                'content' => $this->translator->translate('agent.starter.generateSeoNeedsPage'),
                 'meta' => ['type' => 'info', 'correlationId' => $correlationId],
             ]];
         }
@@ -86,7 +86,7 @@ final readonly class AgentSeoMetadataFlow
                 'meta' => [
                     'type' => 'tool_result',
                     'tool' => 'pages_get',
-                    'toolCallLabel' => $this->translate('agent.starter.inspectPage'),
+                    'toolCallLabel' => $this->translator->translate('agent.starter.inspectPage'),
                     'autoRan' => true,
                     'severity' => ToolSeverity::Read->value,
                     'severityLabel' => ToolSeverity::Read->label(),
@@ -106,7 +106,7 @@ final readonly class AgentSeoMetadataFlow
             $messages[] = [
                 'role' => 'assistant',
                 'content' => (string) $presented['content'],
-                'meta' => $this->buildReadMeta('pages_get', $this->translate('agent.starter.inspectPage'), $presented, $correlationId),
+                'meta' => $this->buildReadMeta('pages_get', $this->translator->translate('agent.starter.inspectPage'), $presented, $correlationId),
             ];
         }
 
@@ -128,7 +128,7 @@ final readonly class AgentSeoMetadataFlow
         if (!$this->toolPlanResolver->supportsPlanning('write_table')) {
             $messages[] = [
                 'role' => 'assistant',
-                'content' => $this->translate('agent.turn.planUnsupported', ['write_table']),
+                'content' => $this->translator->translate('agent.turn.planUnsupported', ['write_table']),
                 'meta' => ['type' => 'error', 'tool' => 'write_table', 'correlationId' => $correlationId],
             ];
 
@@ -147,7 +147,7 @@ final readonly class AgentSeoMetadataFlow
         } catch (\Throwable $exception) {
             $messages[] = [
                 'role' => 'assistant',
-                'content' => $this->translate('agent.turn.planFailed', ['write_table', $exception->getMessage()]),
+                'content' => $this->translator->translate('agent.turn.planFailed', ['write_table', $exception->getMessage()]),
                 'meta' => ['type' => 'error', 'tool' => 'write_table', 'correlationId' => $correlationId],
             ];
 
@@ -157,7 +157,7 @@ final readonly class AgentSeoMetadataFlow
         if ($plan->fields === []) {
             $messages[] = [
                 'role' => 'assistant',
-                'content' => $this->translate('agent.starter.generateSeoNoFields'),
+                'content' => $this->translator->translate('agent.starter.generateSeoNoFields'),
                 'meta' => ['type' => 'info', 'correlationId' => $correlationId],
             ];
 
@@ -169,7 +169,7 @@ final readonly class AgentSeoMetadataFlow
 
         $messages[] = [
             'role' => 'assistant',
-            'content' => $this->translate('agent.starter.generateSeoDraft'),
+            'content' => $this->translator->translate('agent.starter.generateSeoDraft'),
             'meta' => [
                 'type' => 'inline_draft',
                 'tool' => 'write_table',
@@ -230,16 +230,16 @@ final readonly class AgentSeoMetadataFlow
                 continue;
             }
             if ($field === 'description') {
-                $payload[$field] = $this->translate('agent.starter.generateSeoDescription', [$title]);
+                $payload[$field] = $this->translator->translate('agent.starter.generateSeoDescription', [$title]);
             } elseif ($field === 'abstract') {
-                $payload[$field] = $this->translate('agent.starter.generateSeoAbstract', [$title]);
+                $payload[$field] = $this->translator->translate('agent.starter.generateSeoAbstract', [$title]);
             } elseif ($field === 'keywords') {
-                $payload[$field] = $this->translate('agent.starter.generateSeoKeywords', [$title]);
+                $payload[$field] = $this->translator->translate('agent.starter.generateSeoKeywords', [$title]);
             }
         }
 
         if ($payload === [] && isset($pageRecord['description'])) {
-            $payload['description'] = $this->translate('agent.starter.generateSeoDescription', [$title]);
+            $payload['description'] = $this->translator->translate('agent.starter.generateSeoDescription', [$title]);
         }
 
         return $payload;
@@ -266,21 +266,4 @@ final readonly class AgentSeoMetadataFlow
         return is_array($decoded) ? $decoded : [];
     }
 
-    /**
-     * @param list<int|string> $arguments
-     */
-    private function translate(string $key, array $arguments = []): string
-    {
-        $languageService = $GLOBALS['LANG'] ?? null;
-        $label = 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:' . $key;
-        $value = $languageService instanceof LanguageService
-            ? (string) $languageService->sL($label)
-            : $key;
-
-        if ($arguments !== [] && $value !== '') {
-            return vsprintf($value, $arguments);
-        }
-
-        return $value !== '' ? $value : $key;
-    }
 }

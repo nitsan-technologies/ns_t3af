@@ -20,7 +20,6 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
-use TYPO3\CMS\Core\Localization\LanguageService;
 
 /**
  * Deterministic read fast-paths for NL turns (no LLM required).
@@ -46,6 +45,7 @@ final readonly class AgentReadFastPathService
         private AgentToolTurnProcessor $toolTurnProcessor,
         private AgentFieldExtractor $fieldExtractor,
         private AgentNlIntentResolver $nlIntentResolver,
+        private AgentTranslator $translator,
     ) {}
 
     /**
@@ -117,14 +117,14 @@ final readonly class AgentReadFastPathService
             return $fallback !== '' ? $this->nlReply($fallback, $toolMessage, $correlationId, 'pages_get') : null;
         }
 
-        $lines = ['SEO-related fields on this page (' . $pageId . '):'];
+        $lines = [$this->translator->translate('agent.readFastPath.seoFields', [$pageId])];
         foreach (self::SEO_FIELD_KEYS as $key) {
             if (!array_key_exists($key, $record)) {
                 continue;
             }
             $value = trim(strip_tags((string) $record[$key]));
             if ($value === '') {
-                $lines[] = '- ' . $key . ': (empty)';
+                $lines[] = '- ' . $key . ': ' . $this->translator->translate('agent.value.empty');
                 continue;
             }
             if (strlen($value) > 200) {
@@ -211,7 +211,7 @@ final readonly class AgentReadFastPathService
                 return null;
             }
 
-            $content = $this->translate(
+            $content = $this->translator->translate(
                 'agent.turn.noContentMatch',
                 [
                     implode(', ', $needles),
@@ -399,7 +399,7 @@ final readonly class AgentReadFastPathService
     {
         $uid = (int) ($record['uid'] ?? 0);
         $header = trim((string) ($record['header'] ?? ''));
-        $label = $header !== '' ? $header : '(no header)';
+        $label = $header !== '' ? $header : $this->translator->translate('agent.value.noHeader');
         $parts = [sprintf('tt_content:%d — %s', $uid, $label)];
 
         $subheader = $this->htmlToPlainText((string) ($record['subheader'] ?? ''));
@@ -449,21 +449,4 @@ final readonly class AgentReadFastPathService
         return str_starts_with($module, 'file') || $module === 'media_management';
     }
 
-    /**
-     * @param list<int|string> $arguments
-     */
-    private function translate(string $key, array $arguments = []): string
-    {
-        $languageService = $GLOBALS['LANG'] ?? null;
-        if (!$languageService instanceof LanguageService) {
-            return $key;
-        }
-
-        $value = $languageService->sL('LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:' . $key);
-        if ($arguments === []) {
-            return $value;
-        }
-
-        return sprintf($value, ...array_map(static fn(int|string $argument): string => (string) $argument, $arguments));
-    }
 }

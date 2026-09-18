@@ -23,7 +23,6 @@ use NITSAN\NsT3AF\Access\Dto\LimitsConfig;
 use NITSAN\NsT3AF\Domain\Repository\GroupSettingsRepository;
 use NITSAN\NsT3AF\Domain\Repository\RequestLogRepository;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
-use TYPO3\CMS\Core\Localization\LanguageService;
 
 /**
  * Agent-only governance: group limits, model override, PII masking, turn guard (T15/T16).
@@ -39,6 +38,7 @@ final readonly class AgentGovernanceGuard
         private GroupSettingsRepository $groupSettingsRepository,
         private RequestLogRepository $requestLogRepository,
         private AgentTurnRepository $agentTurnRepository,
+        private AgentTranslator $translator,
     ) {}
 
     /**
@@ -61,21 +61,21 @@ final readonly class AgentGovernanceGuard
         if ($limits->providerAllowlistEnabled && $limits->allowedProviders !== []) {
             $provider = trim((string) ($body['provider'] ?? $body['providerId'] ?? ''));
             if ($provider !== '' && !in_array($provider, $limits->allowedProviders, true)) {
-                return $this->translate('agent.governance.providerBlocked');
+                return $this->translator->translate('agent.governance.providerBlocked');
             }
         }
 
         if (!$limits->allowModelOverride) {
             $model = trim((string) ($body['model'] ?? $body['modelId'] ?? ''));
             if ($model !== '') {
-                return $this->translate('agent.governance.modelOverrideBlocked');
+                return $this->translator->translate('agent.governance.modelOverrideBlocked');
             }
         }
 
         if ($limits->dailyRequestCapEnabled && $limits->dailyRequestCap > 0 && $userId > 0) {
             $used = $this->agentTurnRepository->countTurnsToday($userId);
             if ($used >= $limits->dailyRequestCap) {
-                return $this->translate('agent.governance.dailyCapReached');
+                return $this->translator->translate('agent.governance.dailyCapReached');
             }
         }
 
@@ -85,7 +85,7 @@ final readonly class AgentGovernanceGuard
                 (int) strtotime('first day of this month 00:00:00', $now),
             );
             if ($usedCredits >= $limits->creditCapMonthly) {
-                return $this->translate('agent.governance.creditCapReached');
+                return $this->translator->translate('agent.governance.creditCapReached');
             }
         }
 
@@ -101,7 +101,7 @@ final readonly class AgentGovernanceGuard
             return [
                 'allowed' => false,
                 'level' => 'abort',
-                'message' => $this->translate('agent.governance.turnGuardAbort', [self::TURN_GUARD_ABORT]),
+                'message' => $this->translator->translate('agent.governance.turnGuardAbort', [self::TURN_GUARD_ABORT]),
             ];
         }
 
@@ -109,7 +109,7 @@ final readonly class AgentGovernanceGuard
             return [
                 'allowed' => true,
                 'level' => 'warn',
-                'message' => $this->translate('agent.governance.turnGuardWarn', [self::TURN_GUARD_WARN, $toolCallCount]),
+                'message' => $this->translator->translate('agent.governance.turnGuardWarn', [self::TURN_GUARD_WARN, $toolCallCount]),
             ];
         }
 
@@ -181,7 +181,7 @@ final readonly class AgentGovernanceGuard
             return null;
         }
 
-        return $this->translate('agent.governance.workspaceEnforcementBlocked');
+        return $this->translator->translate('agent.governance.workspaceEnforcementBlocked');
     }
 
     private function resolveStrictestLimits(BackendUserAuthentication $user): ?LimitsConfig
@@ -281,25 +281,4 @@ final readonly class AgentGovernanceGuard
         return ['enabled' => true, 'value' => min($candidates)];
     }
 
-    /**
-     * @param list<int|string> $arguments
-     */
-    private function translate(string $key, array $arguments = []): string
-    {
-        $languageService = $GLOBALS['LANG'] ?? null;
-        $label = 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:' . $key;
-        $value = $languageService instanceof LanguageService
-            ? (string) $languageService->sL($label)
-            : $key;
-
-        if ($value === '' || $value === $label) {
-            $value = $key;
-        }
-
-        if ($arguments === []) {
-            return $value;
-        }
-
-        return sprintf($value, ...array_map(static fn(int|string $argument): string => (string) $argument, $arguments));
-    }
 }

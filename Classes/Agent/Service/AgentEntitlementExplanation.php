@@ -22,7 +22,6 @@ namespace NITSAN\NsT3AF\Agent\Service;
 use NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver;
 use NITSAN\NsT3AF\Utility\ModuleTabUtility;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
-use TYPO3\CMS\Core\Localization\LanguageService;
 
 /**
  * In-conversation explanation when a locked tool is activated (T18).
@@ -40,6 +39,7 @@ final readonly class AgentEntitlementExplanation
         private EntitlementResolver $entitlementResolver,
         private ModuleTabUtility $moduleTabUtility,
         private UriBuilder $uriBuilder,
+        private AgentTranslator $translator,
     ) {}
 
     /**
@@ -80,7 +80,7 @@ final readonly class AgentEntitlementExplanation
             'ownerLabel' => (string) ($tool['ownerLabel'] ?? $ownerKey),
             'toolCount' => $this->entitlementResolver->getToolCount($ownerKey),
             'settingsHref' => $this->settingsHref(),
-            'settingsLabel' => $this->translate('agent.modal.settings'),
+            'settingsLabel' => $this->translator->translate('agent.modal.settings'),
             'lockKind' => $lockKind,
         ];
     }
@@ -97,18 +97,18 @@ final readonly class AgentEntitlementExplanation
         $lockReason = trim((string) ($tool['lockReason'] ?? ''));
 
         $parts = [
-            $this->translate('agent.entitlement.lockedLead', [$toolName, $ownerLabel]),
+            $this->translator->translate('agent.entitlement.lockedLead', [$toolName, $ownerLabel]),
         ];
 
         if ($toolCount > 0) {
-            $parts[] = $this->translate('agent.entitlement.toolCount', [$toolCount, $ownerLabel]);
+            $parts[] = $this->translator->translate('agent.entitlement.toolCount', [$toolCount, $ownerLabel]);
         }
 
         if ($lockReason !== '') {
             $parts[] = $lockReason;
         }
 
-        $parts[] = $this->translate('agent.entitlement.settingsHint', [$this->settingsHref()]);
+        $parts[] = $this->translator->translate('agent.entitlement.settingsHint', [$this->settingsHref()]);
 
         return implode("\n\n", $parts);
     }
@@ -121,7 +121,7 @@ final readonly class AgentEntitlementExplanation
         $toolName = (string) ($tool['name'] ?? '');
         $severityLabel = strtolower((string) ($tool['severityLabel'] ?? $tool['severity'] ?? 'write'));
 
-        return $this->translate('agent.entitlement.planLockedLead', [$toolName, $severityLabel]);
+        return $this->translator->translate('agent.entitlement.planLockedLead', [$toolName, $severityLabel]);
     }
 
     /**
@@ -132,7 +132,7 @@ final readonly class AgentEntitlementExplanation
         $toolName = (string) ($tool['name'] ?? '');
         $lockReason = trim((string) ($tool['lockReason'] ?? ''));
 
-        $parts = [$this->translate('agent.entitlement.composerLockedLead', [$toolName])];
+        $parts = [$this->translator->translate('agent.entitlement.composerLockedLead', [$toolName])];
         if ($lockReason !== '') {
             $parts[] = $lockReason;
         }
@@ -148,7 +148,7 @@ final readonly class AgentEntitlementExplanation
         $toolName = (string) ($tool['name'] ?? '');
         $lockReason = trim((string) ($tool['lockReason'] ?? ''));
 
-        $parts = [$this->translate('agent.entitlement.severityLockedLead', [$toolName])];
+        $parts = [$this->translator->translate('agent.entitlement.severityLockedLead', [$toolName])];
         if ($lockReason !== '') {
             $parts[] = $lockReason;
         }
@@ -176,25 +176,4 @@ final readonly class AgentEntitlementExplanation
         return (string) $this->uriBuilder->buildUriFromRoute($route);
     }
 
-    /**
-     * @param list<int|string> $arguments
-     */
-    private function translate(string $key, array $arguments = []): string
-    {
-        $languageService = $GLOBALS['LANG'] ?? null;
-        $label = 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:' . $key;
-        $value = $languageService instanceof LanguageService
-            ? (string) $languageService->sL($label)
-            : $key;
-
-        if ($value === '' || $value === $label) {
-            $value = $key;
-        }
-
-        if ($arguments === []) {
-            return $value;
-        }
-
-        return sprintf($value, ...array_map(static fn(int|string $argument): string => (string) $argument, $arguments));
-    }
 }

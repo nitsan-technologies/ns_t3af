@@ -23,7 +23,6 @@ use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Exception\UnsupportedPlanException;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPlaygroundService;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
-use TYPO3\CMS\Core\Localization\LanguageService;
 
 /**
  * Shared tool-turn execution for slash/@ fast paths and NL orchestration.
@@ -46,6 +45,7 @@ final readonly class AgentToolTurnProcessor
         private AgentSchedulerHandoff $schedulerHandoff,
         private AgentAuditLogger $auditLogger,
         private AgentToolEditorLabelService $editorLabelService,
+        private AgentTranslator $translator,
     ) {}
 
     /**
@@ -73,7 +73,7 @@ final readonly class AgentToolTurnProcessor
         if ($tool === null) {
             return [
                 'role' => 'assistant',
-                'content' => $this->translate('agent.turn.unknownTool', [$toolName]),
+                'content' => $this->translator->translate('agent.turn.unknownTool', [$toolName]),
                 'meta' => ['type' => 'error', 'correlationId' => $correlationId],
             ];
         }
@@ -212,7 +212,7 @@ final readonly class AgentToolTurnProcessor
         if (!$this->toolPlanResolver->supportsPlanning($toolName)) {
             return [
                 'role' => 'assistant',
-                'content' => $this->translate('agent.turn.planUnsupported', [$toolName]),
+                'content' => $this->translator->translate('agent.turn.planUnsupported', [$toolName]),
                 'meta' => ['type' => 'error', 'tool' => $toolName, 'orchestratorPause' => true],
             ];
         }
@@ -232,7 +232,7 @@ final readonly class AgentToolTurnProcessor
         } catch (\Throwable $exception) {
             return [
                 'role' => 'assistant',
-                'content' => $this->translate('agent.turn.planFailed', [$toolName, $exception->getMessage()]),
+                'content' => $this->translator->translate('agent.turn.planFailed', [$toolName, $exception->getMessage()]),
                 'meta' => ['type' => 'error', 'tool' => $toolName, 'orchestratorPause' => true],
             ];
         }
@@ -243,8 +243,8 @@ final readonly class AgentToolTurnProcessor
         $this->draftService->persistDraft($draftCard, $plan, $arguments, $this->draftSession);
 
         $content = ($draftCard['kind'] ?? '') === SatelliteToolPlanService::PLAN_KIND_TOOL_CONFIRMATION
-            ? (string) ($draftCard['summary'] ?? $this->translate('agent.draft.proposed', [$editorLabel]))
-            : $this->translate('agent.draft.proposed', [$editorLabel]);
+            ? (string) ($draftCard['summary'] ?? $this->translator->translate('agent.draft.proposed', [$editorLabel]))
+            : $this->translator->translate('agent.draft.proposed', [$editorLabel]);
 
         return [
             'role' => 'assistant',
@@ -452,25 +452,4 @@ final readonly class AgentToolTurnProcessor
         }
     }
 
-    /**
-     * @param list<int|string> $arguments
-     */
-    private function translate(string $key, array $arguments = []): string
-    {
-        $languageService = $GLOBALS['LANG'] ?? null;
-        $label = 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:' . $key;
-        $value = $languageService instanceof LanguageService
-            ? (string) $languageService->sL($label)
-            : $key;
-
-        if ($value === '' || $value === $label) {
-            $value = $key;
-        }
-
-        if ($arguments === []) {
-            return $value;
-        }
-
-        return sprintf($value, ...array_map(static fn(int|string $argument): string => (string) $argument, $arguments));
-    }
 }

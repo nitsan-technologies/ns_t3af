@@ -897,6 +897,376 @@
       <trans-unit id="agent.draft.undo" resname="agent.draft.undo">
         <source>Undo</source>
       </trans-unit>
+      <!-- AI Agent: language-agnostic routing (Phase 1) -->
+      <trans-unit id="agent.error.invalidPayload" resname="agent.error.invalidPayload">
+        <source>The request payload could not be read.</source>
+      </trans-unit>
+      <trans-unit id="agent.error.forbidden" resname="agent.error.forbidden">
+        <source>You are not allowed to do this.</source>
+      </trans-unit>
+      <trans-unit id="agent.error.missingDraftId" resname="agent.error.missingDraftId">
+        <source>The draft reference is missing.</source>
+      </trans-unit>
+      <trans-unit id="agent.error.draftNotFound" resname="agent.error.draftNotFound">
+        <source>This draft was not found or has expired.</source>
+      </trans-unit>
+      <trans-unit id="agent.error.missingChangeId" resname="agent.error.missingChangeId">
+        <source>The change reference is missing.</source>
+      </trans-unit>
+      <trans-unit id="agent.error.emptyMessage" resname="agent.error.emptyMessage">
+        <source>Please enter a message.</source>
+      </trans-unit>
+      <trans-unit id="agent.error.generic" resname="agent.error.generic">
+        <source>Something went wrong.</source>
+      </trans-unit>
+      <trans-unit id="agent.error.turnFailed" resname="agent.error.turnFailed">
+        <source>The request failed.</source>
+      </trans-unit>
+      <trans-unit id="agent.error.applyFailed" resname="agent.error.applyFailed">
+        <source>Applying the draft failed.</source>
+      </trans-unit>
+      <trans-unit id="agent.error.confirmFailed" resname="agent.error.confirmFailed">
+        <source>The confirmation failed.</source>
+      </trans-unit>
+      <trans-unit id="agent.error.undoFailed" resname="agent.error.undoFailed">
+        <source>Undo failed.</source>
+      </trans-unit>
+      <trans-unit id="agent.error.streamFailed" resname="agent.error.streamFailed">
+        <source>The live connection failed.</source>
+      </trans-unit>
+      <trans-unit id="agent.value.empty" resname="agent.value.empty">
+        <source>(empty)</source>
+      </trans-unit>
+      <trans-unit id="agent.value.noHeader" resname="agent.value.noHeader">
+        <source>(no header)</source>
+      </trans-unit>
+      <trans-unit id="agent.value.hidden" resname="agent.value.hidden">
+        <source>Hidden</source>
+      </trans-unit>
+      <trans-unit id="agent.value.visible" resname="agent.value.visible">
+        <source>Visible</source>
+      </trans-unit>
+      <trans-unit id="agent.readFastPath.seoFields" resname="agent.readFastPath.seoFields">
+        <source>SEO-related fields on this page (%1$s):</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.result" resname="agent.fact.result">
+        <source>Result</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.file" resname="agent.fact.file">
+        <source>File</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.files" resname="agent.fact.files">
+        <source>Files</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.folders" resname="agent.fact.folders">
+        <source>Folders</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.examples" resname="agent.fact.examples">
+        <source>Examples</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.includes" resname="agent.fact.includes">
+        <source>Includes</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.items" resname="agent.fact.items">
+        <source>Items</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.missingAltText" resname="agent.fact.missingAltText">
+        <source>Images missing alt text</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.matchingFiles" resname="agent.fact.matchingFiles">
+        <source>Matching files</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.matchingPages" resname="agent.fact.matchingPages">
+        <source>Matching pages</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.matchingContentElements" resname="agent.fact.matchingContentElements">
+        <source>Matching content elements</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.matchingRecords" resname="agent.fact.matchingRecords">
+        <source>Matching records</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.pages" resname="agent.fact.pages">
+        <source>Pages</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.contentElements" resname="agent.fact.contentElements">
+        <source>Content elements</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.redirects" resname="agent.fact.redirects">
+        <source>Redirects</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.scheduledTasks" resname="agent.fact.scheduledTasks">
+        <source>Scheduled tasks</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.records" resname="agent.fact.records">
+        <source>Records</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.altText" resname="agent.fact.altText">
+        <source>Alt text</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.title" resname="agent.fact.title">
+        <source>Title</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.header" resname="agent.fact.header">
+        <source>Header</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.name" resname="agent.fact.name">
+        <source>Name</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.uid" resname="agent.fact.uid">
+        <source>UID</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.parent" resname="agent.fact.parent">
+        <source>Parent</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.page" resname="agent.fact.page">
+        <source>Page</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.slug" resname="agent.fact.slug">
+        <source>Slug</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.type" resname="agent.fact.type">
+        <source>Type</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.visibility" resname="agent.fact.visibility">
+        <source>Visibility</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.deleted" resname="agent.fact.deleted">
+        <source>Deleted</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.description" resname="agent.fact.description">
+        <source>Description</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.subtitle" resname="agent.fact.subtitle">
+        <source>Subtitle</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.error" resname="agent.fact.error">
+        <source>Error</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.message" resname="agent.fact.message">
+        <source>Message</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.count" resname="agent.fact.count">
+        <source>Count</source>
+      </trans-unit>
+      <trans-unit id="agent.fact.total" resname="agent.fact.total">
+        <source>Total</source>
+      </trans-unit>
+      <trans-unit id="agent.subject.items" resname="agent.subject.items">
+        <source>items</source>
+      </trans-unit>
+      <trans-unit id="agent.subject.files" resname="agent.subject.files">
+        <source>files</source>
+      </trans-unit>
+      <trans-unit id="agent.subject.missingAltText" resname="agent.subject.missingAltText">
+        <source>images missing alt text</source>
+      </trans-unit>
+      <trans-unit id="agent.subject.matchingFiles" resname="agent.subject.matchingFiles">
+        <source>matching files</source>
+      </trans-unit>
+      <trans-unit id="agent.subject.matchingPages" resname="agent.subject.matchingPages">
+        <source>matching pages</source>
+      </trans-unit>
+      <trans-unit id="agent.subject.matchingContentElements" resname="agent.subject.matchingContentElements">
+        <source>matching content elements</source>
+      </trans-unit>
+      <trans-unit id="agent.subject.matchingRecords" resname="agent.subject.matchingRecords">
+        <source>matching records</source>
+      </trans-unit>
+      <trans-unit id="agent.subject.pages" resname="agent.subject.pages">
+        <source>pages</source>
+      </trans-unit>
+      <trans-unit id="agent.subject.contentElements" resname="agent.subject.contentElements">
+        <source>content elements</source>
+      </trans-unit>
+      <trans-unit id="agent.subject.redirects" resname="agent.subject.redirects">
+        <source>redirects</source>
+      </trans-unit>
+      <trans-unit id="agent.subject.scheduledTasks" resname="agent.subject.scheduledTasks">
+        <source>scheduled tasks</source>
+      </trans-unit>
+      <trans-unit id="agent.subject.records" resname="agent.subject.records">
+        <source>records</source>
+      </trans-unit>
+      <trans-unit id="agent.result.toolFailed" resname="agent.result.toolFailed">
+        <source>The tool failed.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.toolError" resname="agent.result.toolError">
+        <source>The tool reported an error.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.toolNoData" resname="agent.result.toolNoData">
+        <source>The tool returned no data.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.action" resname="agent.result.action">
+        <source>Action</source>
+      </trans-unit>
+      <trans-unit id="agent.result.completed" resname="agent.result.completed">
+        <source>%1$s completed successfully.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.foundOne" resname="agent.result.foundOne">
+        <source>Found 1 %1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.foundMany" resname="agent.result.foundMany">
+        <source>Found %1$s %2$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.examplesLead" resname="agent.result.examplesLead">
+        <source>Examples: %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.result.openDetails" resname="agent.result.openDetails">
+        <source>Open Details for the full list (%1$s total).</source>
+      </trans-unit>
+      <trans-unit id="agent.result.noMissingAltText" resname="agent.result.noMissingAltText">
+        <source>Good news — no images are missing alt text in this storage.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.nextAltTextHint" resname="agent.result.nextAltTextHint">
+        <source>Next: use “Generate file metadata (alt, title)” or ask to write alt text for a specific file.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.folderContents" resname="agent.result.folderContents">
+        <source>This folder contains %1$s file(s) and %2$s subfolder(s).</source>
+      </trans-unit>
+      <trans-unit id="agent.result.folderContentsIn" resname="agent.result.folderContentsIn">
+        <source>This folder in %1$s contains %2$s file(s) and %3$s subfolder(s).</source>
+      </trans-unit>
+      <trans-unit id="agent.result.emptyMissingAltText" resname="agent.result.emptyMissingAltText">
+        <source>No images are missing alt text in this storage.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.emptyMatchingFiles" resname="agent.result.emptyMatchingFiles">
+        <source>No matching files were found.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.emptyMatchingPages" resname="agent.result.emptyMatchingPages">
+        <source>No matching pages were found.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.emptyMatchingContentElements" resname="agent.result.emptyMatchingContentElements">
+        <source>No matching content elements were found.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.emptyMatchingRecords" resname="agent.result.emptyMatchingRecords">
+        <source>No matching records were found.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.emptyChildPages" resname="agent.result.emptyChildPages">
+        <source>No child pages were found.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.emptyContentElements" resname="agent.result.emptyContentElements">
+        <source>No content elements were found on this page.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.emptyRedirects" resname="agent.result.emptyRedirects">
+        <source>No redirects were found.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.emptyScheduledTasks" resname="agent.result.emptyScheduledTasks">
+        <source>No scheduled tasks were found.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.emptyItems" resname="agent.result.emptyItems">
+        <source>No items found.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.doneDeleted" resname="agent.result.doneDeleted">
+        <source>Done — the item was deleted.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.donePublished" resname="agent.result.donePublished">
+        <source>Done — the workspace change was published.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.doneDiscarded" resname="agent.result.doneDiscarded">
+        <source>Done — the workspace change was discarded.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.doneCacheCleared" resname="agent.result.doneCacheCleared">
+        <source>Done — the cache was cleared.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.doneCopied" resname="agent.result.doneCopied">
+        <source>Done — the copy was created.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.doneMoved" resname="agent.result.doneMoved">
+        <source>Done — the item was moved.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.doneCreated" resname="agent.result.doneCreated">
+        <source>Done — the item was created.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.doneUpdated" resname="agent.result.doneUpdated">
+        <source>Done — the changes were saved.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.doneOneFieldUpdated" resname="agent.result.doneOneFieldUpdated">
+        <source>Done — 1 field was updated.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.doneFieldsUpdated" resname="agent.result.doneFieldsUpdated">
+        <source>Done — %1$s fields were updated.</source>
+      </trans-unit>
+      <trans-unit id="agent.doktype.standard" resname="agent.doktype.standard">
+        <source>Standard page</source>
+      </trans-unit>
+      <trans-unit id="agent.doktype.externalUrl" resname="agent.doktype.externalUrl">
+        <source>Link to external URL</source>
+      </trans-unit>
+      <trans-unit id="agent.doktype.shortcut" resname="agent.doktype.shortcut">
+        <source>Shortcut</source>
+      </trans-unit>
+      <trans-unit id="agent.doktype.backendUserSection" resname="agent.doktype.backendUserSection">
+        <source>Backend user section</source>
+      </trans-unit>
+      <trans-unit id="agent.doktype.mountPoint" resname="agent.doktype.mountPoint">
+        <source>Mount point</source>
+      </trans-unit>
+      <trans-unit id="agent.doktype.separator" resname="agent.doktype.separator">
+        <source>Menu separator</source>
+      </trans-unit>
+      <trans-unit id="agent.doktype.folder" resname="agent.doktype.folder">
+        <source>Folder</source>
+      </trans-unit>
+      <trans-unit id="agent.doktype.recycler" resname="agent.doktype.recycler">
+        <source>Recycler</source>
+      </trans-unit>
+      <trans-unit id="agent.doktype.unknown" resname="agent.doktype.unknown">
+        <source>Doktype %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.write.draftNotFound" resname="agent.write.draftNotFound">
+        <source>Draft not found or expired.</source>
+      </trans-unit>
+      <trans-unit id="agent.write.destructiveNeedsConfirmation" resname="agent.write.destructiveNeedsConfirmation">
+        <source>This destructive draft has to be confirmed first.</source>
+      </trans-unit>
+      <trans-unit id="agent.write.missingToolName" resname="agent.write.missingToolName">
+        <source>The tool confirmation is missing a tool name.</source>
+      </trans-unit>
+      <trans-unit id="agent.write.toolInvocationFailed" resname="agent.write.toolInvocationFailed">
+        <source>Running the tool failed.</source>
+      </trans-unit>
+      <trans-unit id="agent.undo.changeNotFound" resname="agent.undo.changeNotFound">
+        <source>Change not found or already undone.</source>
+      </trans-unit>
+      <trans-unit id="agent.undo.deleteUnsupported" resname="agent.undo.deleteUnsupported">
+        <source>Undoing a deletion is not supported.</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.pageHint" resname="agent.plan.pageHint">
+        <source> for page %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.generateAllSeo" resname="agent.plan.generateAllSeo">
+        <source>Generate and apply all SEO metadata%1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.generateMetaDescription" resname="agent.plan.generateMetaDescription">
+        <source>Generate a meta description%1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.translateContent" resname="agent.plan.translateContent">
+        <source>Translate page content%1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.translateNews" resname="agent.plan.translateNews">
+        <source>Translate a news record%1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.updateFileMetadata" resname="agent.plan.updateFileMetadata">
+        <source>Update file metadata (alt text, title).</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.saveDatasource" resname="agent.plan.saveDatasource">
+        <source>Save a content source configuration.</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.syncDatasource" resname="agent.plan.syncDatasource">
+        <source>Sync a content source.</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.runTool" resname="agent.plan.runTool">
+        <source>Run this tool%1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.satelliteUnsupported" resname="agent.plan.satelliteUnsupported">
+        <source>This tool does not support draft planning: %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.unknownDynamicTool" resname="agent.plan.unknownDynamicTool">
+        <source>Unknown dynamic tool: %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.unsupportedDynamicOperation" resname="agent.plan.unsupportedDynamicOperation">
+        <source>Unsupported dynamic operation: %1$s</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

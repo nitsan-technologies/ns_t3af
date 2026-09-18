@@ -25,7 +25,6 @@ use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Service\BrandContextAssembler;
 use NITSAN\NsT3AF\Service\BrandContextResolver;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
-use TYPO3\CMS\Core\Localization\LanguageService;
 
 /**
  * NL turn orchestrator: tool-calling loop with budgets, persona, and smart gating.
@@ -49,6 +48,8 @@ final readonly class AgentTurnOrchestrator
         private BrandContextAssembler $brandContextAssembler,
         private AgentFieldExtractor $fieldExtractor,
         private AgentLowRiskFieldMatrix $lowRiskFieldMatrix,
+        private AgentTranslator $translator,
+        private AgentLanguageResolver $languageResolver,
     ) {}
 
     /**
@@ -75,7 +76,7 @@ final readonly class AgentTurnOrchestrator
         if (!$this->toolCallingService->supportsToolCalling(null, $pageId > 0 ? $pageId : null)) {
             $message = [
                 'role' => 'assistant',
-                'content' => $this->translate('agent.turn.noToolCalling'),
+                'content' => $this->translator->translate('agent.turn.noToolCalling'),
                 'meta' => [
                     'type' => 'info',
                     'correlationId' => $correlationId,
@@ -96,7 +97,7 @@ final readonly class AgentTurnOrchestrator
         if ($executableTools === []) {
             $message = [
                 'role' => 'assistant',
-                'content' => $this->translate('agent.turn.noExecutableTools'),
+                'content' => $this->translator->translate('agent.turn.noExecutableTools'),
                 'meta' => ['type' => 'info', 'correlationId' => $correlationId],
             ];
             $this->emit($emitEvent, 'message', ['message' => $message]);
@@ -160,7 +161,7 @@ final readonly class AgentTurnOrchestrator
             } catch (\Throwable $exception) {
                 $message = [
                     'role' => 'assistant',
-                    'content' => $this->translate('agent.turn.orchestratorFailed', [$exception->getMessage()]),
+                    'content' => $this->translator->translate('agent.turn.orchestratorFailed', [$exception->getMessage()]),
                     'meta' => [
                         'type' => 'error',
                         'correlationId' => $correlationId,
@@ -330,7 +331,7 @@ final readonly class AgentTurnOrchestrator
 
         $message = [
             'role' => 'assistant',
-            'content' => $this->translate('agent.turn.loopLimit'),
+            'content' => $this->translator->translate('agent.turn.loopLimit'),
             'meta' => [
                 'type' => 'info',
                 'correlationId' => $correlationId,
@@ -392,11 +393,17 @@ final readonly class AgentTurnOrchestrator
 
         $lines = [
             'You are the TYPO3 backend AI Agent. Use the provided tools to answer questions and prepare changes.',
+            $this->languageResolver->backendLanguageInstruction(),
             'Read tools run immediately. Write tools produce drafts that require explicit editor approval.',
             'Prefer concise answers grounded in tool results. Never claim a change was saved unless the editor applied a draft.',
             'When the user asks to create, update, translate, or generate content, prefer calling the most specific write tool instead of replying with text only.',
             'Use pageId/pid/uid from context when a tool accepts a page or storage folder id.',
         ];
+
+        if ($pageId > 0) {
+            $languageId = isset($context['languageId']) ? (int) $context['languageId'] : null;
+            $lines[] = $this->languageResolver->contentLanguageInstruction($pageId, $languageId);
+        }
 
         if ($persona !== '') {
             $lines[] = 'Brand context (persona):';
@@ -555,7 +562,7 @@ final readonly class AgentTurnOrchestrator
 
         return [
             'role' => 'assistant',
-            'content' => $this->translate($key, [(string) $limit]),
+            'content' => $this->translator->translate($key, [(string) $limit]),
             'meta' => [
                 'type' => 'budget_exceeded',
                 'correlationId' => $correlationId,
@@ -589,28 +596,6 @@ final readonly class AgentTurnOrchestrator
     }
 
     /**
-     * @param list<int|string> $arguments
-     */
-    private function translate(string $key, array $arguments = []): string
-    {
-        $languageService = $GLOBALS['LANG'] ?? null;
-        $label = 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:' . $key;
-        $value = $languageService instanceof LanguageService
-            ? (string) $languageService->sL($label)
-            : $key;
-
-        if ($value === '' || $value === $label) {
-            $value = $key;
-        }
-
-        if ($arguments === []) {
-            return $value;
-        }
-
-        return sprintf($value, ...array_map(static fn(int|string $argument): string => (string) $argument, $arguments));
-    }
-
-    /**
      * @param array<string, mixed> $context
      * @param list<array<string, mixed>> $executableTools
      */
@@ -623,10 +608,10 @@ final readonly class AgentTurnOrchestrator
             5,
         );
         if ($suggestions === []) {
-            return $this->translate('agent.turn.emptyModelReply');
+            return $this->translator->translate('agent.turn.emptyModelReply');
         }
 
-        return $this->translate('agent.turn.emptyModelReplyWithTools', [implode(', ', $suggestions)]);
+        return $this->translator->translate('agent.turn.emptyModelReplyWithTools', [implode(', ', $suggestions)]);
     }
 
     /**

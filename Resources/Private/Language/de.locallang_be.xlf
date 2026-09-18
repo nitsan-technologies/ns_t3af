@@ -751,6 +751,811 @@
                 <source>Scheduler tasks still require per-change review before anything is published.</source>
                 <target>Scheduler-Aufgaben erfordern weiterhin eine Prüfung pro Änderung, bevor etwas veröffentlicht wird.</target>
             </trans-unit>
+            <!-- AI Agent: language-agnostic routing (Phase 1) -->
+            <trans-unit id="agent.context.folder">
+                <source>Folder</source>
+                <target>Ordner</target>
+            </trans-unit>
+            <trans-unit id="agent.context.language">
+                <source>Language</source>
+                <target>Sprache</target>
+            </trans-unit>
+            <trans-unit id="agent.context.aware">
+                <source>Knows what you are looking at</source>
+                <target>Weiß, was Sie gerade ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.greeting.lead">
+                <source>I can read this screen, draft changes, and run tools — you approve before anything is written.</source>
+                <target>Ich kann diesen Bildschirm lesen, Änderungen entwerfen und Tools ausführen – Sie geben frei, bevor etwas geschrieben wird.</target>
+            </trans-unit>
+            <trans-unit id="agent.greeting.page">
+                <source>Page</source>
+                <target>Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.greeting.module">
+                <source>Module</source>
+                <target>Modul</target>
+            </trans-unit>
+            <trans-unit id="agent.greeting.language">
+                <source>Language</source>
+                <target>Sprache</target>
+            </trans-unit>
+            <trans-unit id="agent.greeting.brand">
+                <source>Brand</source>
+                <target>Marke</target>
+            </trans-unit>
+            <trans-unit id="agent.toolCall.autoRan">
+                <source>completed</source>
+                <target>abgeschlossen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.listFilesMissingAltText">
+                <source>List images missing alt text</source>
+                <target>Bilder ohne Alt-Text auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.updateFileMetadata">
+                <source>Update file metadata</source>
+                <target>Datei-Metadaten aktualisieren</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.getFileMetadata">
+                <source>Inspect file metadata</source>
+                <target>Datei-Metadaten ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.upsell.title">
+                <source>Extension required</source>
+                <target>Erweiterung erforderlich</target>
+            </trans-unit>
+            <trans-unit id="agent.applied.title">
+                <source>Changes applied</source>
+                <target>Änderungen angewendet</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateFileMetadata">
+                <source>Generate file metadata (alt, title)</source>
+                <target>Datei-Metadaten erzeugen (Alt, Titel)</target>
+            </trans-unit>
+            <trans-unit id="agent.workflow.fileMetadataNeedsFile">
+                <source>Attach a file with @file or open the Media module so the agent knows which image to caption.</source>
+                <target>Hängen Sie eine Datei mit @file an oder öffnen Sie das Medien-Modul, damit der Agent weiß, welches Bild beschriftet werden soll.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.createNews">
+                <source>Create news article</source>
+                <target>News-Artikel erstellen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.createNewsNeedsPage">
+                <source>Select a news storage folder page first, then ask to create a news article.</source>
+                <target>Wählen Sie zuerst einen News-Ordner als Seite aus und bitten Sie dann um das Erstellen eines News-Artikels.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.createNewsUnavailable">
+                <source>News creation is not available. Install EXT:news and enable the T3AI news tools.</source>
+                <target>Das Erstellen von News ist nicht verfügbar. Installieren Sie EXT:news und aktivieren Sie die T3AI-News-Tools.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.recordSearch">
+                <source>Search records</source>
+                <target>Datensätze suchen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.fileList">
+                <source>Browse files</source>
+                <target>Dateien durchsuchen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.fileInfo">
+                <source>Inspect file metadata</source>
+                <target>Datei-Metadaten ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.fileSearch">
+                <source>Search files</source>
+                <target>Dateien suchen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.fileUpload">
+                <source>Upload a file</source>
+                <target>Datei hochladen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.redirectList">
+                <source>List redirects</source>
+                <target>Weiterleitungen auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.redirectGet">
+                <source>Inspect redirect</source>
+                <target>Weiterleitung ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.schedulerList">
+                <source>List scheduler tasks</source>
+                <target>Scheduler-Aufgaben auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.schedulerGet">
+                <source>Inspect scheduler task</source>
+                <target>Scheduler-Aufgabe ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.trace.title">
+                <source>Tool trace</source>
+                <target>Tool-Protokoll</target>
+            </trans-unit>
+            <trans-unit id="agent.trace.request">
+                <source>Request</source>
+                <target>Anfrage</target>
+            </trans-unit>
+            <trans-unit id="agent.trace.response">
+                <source>Response</source>
+                <target>Antwort</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.emptyModelReplyWithTools">
+                <source>I could not produce a reply. Closest tools: %1$s. Try rephrasing, pick a suggested action, or use / to run a specific tool.</source>
+                <target>Ich konnte keine Antwort erzeugen. Passende Tools: %1$s. Formulieren Sie die Anfrage neu, wählen Sie eine vorgeschlagene Aktion oder nutzen Sie /, um ein bestimmtes Tool auszuführen.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.translateNotInCombinedFlow">
+                <source>Translation is not run automatically in this combined request yet. This turn only prepares SEO metadata for the target page — run translation separately afterward.</source>
+                <target>Die Übersetzung wird in dieser kombinierten Anfrage noch nicht automatisch ausgeführt. Dieser Schritt bereitet nur die SEO-Metadaten für die Zielseite vor – führen Sie die Übersetzung danach separat aus.</target>
+            </trans-unit>
+            <trans-unit id="agent.compound.translateHandoff">
+                <source>Queue bulk translation for page %1$s via Scheduler. Choose target languages in the handoff below, run the job, then approve the SEO draft when ready.</source>
+                <target>Massenübersetzung für Seite %1$s über den Scheduler einplanen. Wählen Sie unten die Zielsprachen, starten Sie den Job und geben Sie anschließend den SEO-Entwurf frei.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.noContentMatch">
+                <source>No content element matched &quot;%1$s&quot; on this page. Content on this page:%2$s%3$s</source>
+                <target>Kein Inhaltselement auf dieser Seite passt zu „%1$s“. Inhalte auf dieser Seite:%2$s%3$s</target>
+            </trans-unit>
+            <trans-unit id="agent.work.working">
+                <source>Working…</source>
+                <target>Arbeite…</target>
+            </trans-unit>
+            <trans-unit id="agent.work.workingFor">
+                <source>Working… %1$s</source>
+                <target>Arbeite… %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.work.workedFor">
+                <source>Worked for %1$s</source>
+                <target>Dauer: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.governance.workspaceEnforcementBlocked">
+                <source>Your group policy requires workspace-only edits. Switch to a draft workspace before applying changes.</source>
+                <target>Ihre Gruppenrichtlinie erlaubt nur Änderungen in einem Workspace. Wechseln Sie in einen Draft-Workspace, bevor Sie Änderungen anwenden.</target>
+            </trans-unit>
+            <trans-unit id="agent.context.workspace">
+                <source>Workspace</source>
+                <target>Workspace</target>
+            </trans-unit>
+            <trans-unit id="agent.attach.open">
+                <source>Attach</source>
+                <target>Anhängen</target>
+            </trans-unit>
+            <trans-unit id="agent.attach.files">
+                <source>Add files or photos</source>
+                <target>Dateien oder Fotos hinzufügen</target>
+            </trans-unit>
+            <trans-unit id="agent.upload.success">
+                <source>Uploaded %1$s.</source>
+                <target>%1$s hochgeladen.</target>
+            </trans-unit>
+            <trans-unit id="agent.upload.failed">
+                <source>Upload failed.</source>
+                <target>Upload fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.upload.missingFile">
+                <source>No file was uploaded.</source>
+                <target>Es wurde keine Datei hochgeladen.</target>
+            </trans-unit>
+            <trans-unit id="agent.upload.empty">
+                <source>The uploaded file is empty.</source>
+                <target>Die hochgeladene Datei ist leer.</target>
+            </trans-unit>
+            <trans-unit id="agent.upload.tooLarge">
+                <source>The file exceeds the maximum upload size (100 MB).</source>
+                <target>Die Datei überschreitet die maximale Upload-Größe (100 MB).</target>
+            </trans-unit>
+            <trans-unit id="agent.upload.invalidName">
+                <source>The file name is not allowed.</source>
+                <target>Der Dateiname ist nicht erlaubt.</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.uploadViaComposer">
+                <source>Upload files from the + button in the composer instead of running this tool.</source>
+                <target>Laden Sie Dateien über die Schaltfläche + im Eingabefeld hoch, statt dieses Tool auszuführen.</target>
+            </trans-unit>
+            <trans-unit id="agent.entitlement.composerLockedLead">
+                <source>%1$s is available from the composer attach menu (+), not as a slash command.</source>
+                <target>%1$s ist über das Anhang-Menü (+) im Eingabefeld verfügbar, nicht als Slash-Befehl.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.applySafe">
+                <source>Apply safe fields</source>
+                <target>Sichere Felder anwenden</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.noSafeFields">
+                <source>No safe fields are selected for apply.</source>
+                <target>Es sind keine sicheren Felder zum Anwenden ausgewählt.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.unknownFileAttachment">
+                <source>Could not read attached file %1$s.</source>
+                <target>Die angehängte Datei %1$s konnte nicht gelesen werden.</target>
+            </trans-unit>
+            <trans-unit id="agent.scheduler.handoffTitle">
+                <source>Schedule for later?</source>
+                <target>Für später einplanen?</target>
+            </trans-unit>
+            <trans-unit id="agent.scheduler.handoffBody">
+                <source>Run the same kind of work in bulk via Scheduler &amp; CLI when you are ready.</source>
+                <target>Führen Sie die gleiche Arbeit später als Massenvorgang über Scheduler &amp; CLI aus.</target>
+            </trans-unit>
+            <trans-unit id="agent.scheduler.handoffDismiss">
+                <source>Not now</source>
+                <target>Jetzt nicht</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.planUnsupported">
+                <source>This write tool does not yet support draft planning.</source>
+                <target>Dieses Schreib-Tool unterstützt noch keine Entwurfsplanung.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.planUnsupported">
+                <source>%1$s cannot be planned for approval yet.</source>
+                <target>%1$s kann noch nicht zur Freigabe geplant werden.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.planFailed">
+                <source>Could not plan %1$s: %2$s</source>
+                <target>%1$s konnte nicht geplant werden: %2$s</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.proposed">
+                <source>Review the proposed changes for %1$s before anything is written.</source>
+                <target>Prüfen Sie die vorgeschlagenen Änderungen für %1$s, bevor etwas geschrieben wird.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.apply">
+                <source>Apply</source>
+                <target>Anwenden</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.discard">
+                <source>Discard</source>
+                <target>Verwerfen</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.confirmFirst">
+                <source>Confirm (1 of 2)</source>
+                <target>Bestätigen (1 von 2)</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.confirmSecond">
+                <source>Apply (2 of 2)</source>
+                <target>Anwenden (2 von 2)</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.destructiveArmed">
+                <source>Destructive action armed. Click Apply again to proceed.</source>
+                <target>Destruktive Aktion vorbereitet. Klicken Sie erneut auf Anwenden, um fortzufahren.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.applied">
+                <source>Applied %1$s of %2$s fields.</source>
+                <target>%1$s von %2$s Feldern angewendet.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.discarded">
+                <source>Draft discarded. Nothing was written.</source>
+                <target>Entwurf verworfen. Es wurde nichts geschrieben.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.undone">
+                <source>Change undone. A new history entry was written.</source>
+                <target>Änderung zurückgenommen. Ein neuer Verlaufseintrag wurde geschrieben.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.keep">
+                <source>Keep</source>
+                <target>Übernehmen</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.drop">
+                <source>Drop</source>
+                <target>Weglassen</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.elicitation">
+                <source>MCP elicitation</source>
+                <target>MCP-Rückfrage</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.toolConfirmation">
+                <source>Tool confirmation</source>
+                <target>Tool-Bestätigung</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.toolArguments">
+                <source>Parameters</source>
+                <target>Parameter</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.runTool">
+                <source>Run tool</source>
+                <target>Tool ausführen</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.runningTool">
+                <source>Running %1$s…</source>
+                <target>%1$s wird ausgeführt…</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.toolApplied">
+                <source>Tool ran successfully.</source>
+                <target>Das Tool wurde erfolgreich ausgeführt.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.readback">
+                <source>Written through DataHandler, then read back from the database. Workspace and publishing are untouched.</source>
+                <target>Über den DataHandler geschrieben und anschließend aus der Datenbank zurückgelesen. Workspace und Veröffentlichung bleiben unberührt.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.undo">
+                <source>Undo</source>
+                <target>Zurücknehmen</target>
+            </trans-unit>
+            <trans-unit id="agent.error.invalidPayload">
+                <source>The request payload could not be read.</source>
+                <target>Die Anfrage konnte nicht gelesen werden.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.forbidden">
+                <source>You are not allowed to do this.</source>
+                <target>Sie dürfen das nicht tun.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.missingDraftId">
+                <source>The draft reference is missing.</source>
+                <target>Die Entwurfs-Referenz fehlt.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.draftNotFound">
+                <source>This draft was not found or has expired.</source>
+                <target>Dieser Entwurf wurde nicht gefunden oder ist abgelaufen.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.missingChangeId">
+                <source>The change reference is missing.</source>
+                <target>Die Änderungs-Referenz fehlt.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.emptyMessage">
+                <source>Please enter a message.</source>
+                <target>Bitte geben Sie eine Nachricht ein.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.generic">
+                <source>Something went wrong.</source>
+                <target>Etwas ist schiefgelaufen.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.turnFailed">
+                <source>The request failed.</source>
+                <target>Die Anfrage ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.applyFailed">
+                <source>Applying the draft failed.</source>
+                <target>Das Anwenden des Entwurfs ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.confirmFailed">
+                <source>The confirmation failed.</source>
+                <target>Die Bestätigung ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.undoFailed">
+                <source>Undo failed.</source>
+                <target>Das Zurücknehmen ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.streamFailed">
+                <source>The live connection failed.</source>
+                <target>Die Live-Verbindung ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.value.empty">
+                <source>(empty)</source>
+                <target>(leer)</target>
+            </trans-unit>
+            <trans-unit id="agent.value.noHeader">
+                <source>(no header)</source>
+                <target>(keine Überschrift)</target>
+            </trans-unit>
+            <trans-unit id="agent.value.hidden">
+                <source>Hidden</source>
+                <target>Versteckt</target>
+            </trans-unit>
+            <trans-unit id="agent.value.visible">
+                <source>Visible</source>
+                <target>Sichtbar</target>
+            </trans-unit>
+            <trans-unit id="agent.readFastPath.seoFields">
+                <source>SEO-related fields on this page (%1$s):</source>
+                <target>SEO-relevante Felder auf dieser Seite (%1$s):</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.result">
+                <source>Result</source>
+                <target>Ergebnis</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.file">
+                <source>File</source>
+                <target>Datei</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.files">
+                <source>Files</source>
+                <target>Dateien</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.folders">
+                <source>Folders</source>
+                <target>Ordner</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.examples">
+                <source>Examples</source>
+                <target>Beispiele</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.includes">
+                <source>Includes</source>
+                <target>Enthält</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.items">
+                <source>Items</source>
+                <target>Einträge</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.missingAltText">
+                <source>Images missing alt text</source>
+                <target>Bilder ohne Alt-Text</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.matchingFiles">
+                <source>Matching files</source>
+                <target>Passende Dateien</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.matchingPages">
+                <source>Matching pages</source>
+                <target>Passende Seiten</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.matchingContentElements">
+                <source>Matching content elements</source>
+                <target>Passende Inhaltselemente</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.matchingRecords">
+                <source>Matching records</source>
+                <target>Passende Datensätze</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.pages">
+                <source>Pages</source>
+                <target>Seiten</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.contentElements">
+                <source>Content elements</source>
+                <target>Inhaltselemente</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.redirects">
+                <source>Redirects</source>
+                <target>Weiterleitungen</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.scheduledTasks">
+                <source>Scheduled tasks</source>
+                <target>Geplante Aufgaben</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.records">
+                <source>Records</source>
+                <target>Datensätze</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.altText">
+                <source>Alt text</source>
+                <target>Alt-Text</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.title">
+                <source>Title</source>
+                <target>Titel</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.header">
+                <source>Header</source>
+                <target>Überschrift</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.name">
+                <source>Name</source>
+                <target>Name</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.uid">
+                <source>UID</source>
+                <target>UID</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.parent">
+                <source>Parent</source>
+                <target>Übergeordnet</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.page">
+                <source>Page</source>
+                <target>Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.slug">
+                <source>Slug</source>
+                <target>Slug</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.type">
+                <source>Type</source>
+                <target>Typ</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.visibility">
+                <source>Visibility</source>
+                <target>Sichtbarkeit</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.deleted">
+                <source>Deleted</source>
+                <target>Gelöscht</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.description">
+                <source>Description</source>
+                <target>Beschreibung</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.subtitle">
+                <source>Subtitle</source>
+                <target>Untertitel</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.error">
+                <source>Error</source>
+                <target>Fehler</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.message">
+                <source>Message</source>
+                <target>Meldung</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.count">
+                <source>Count</source>
+                <target>Anzahl</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.total">
+                <source>Total</source>
+                <target>Gesamt</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.items">
+                <source>items</source>
+                <target>Einträge</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.files">
+                <source>files</source>
+                <target>Dateien</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.missingAltText">
+                <source>images missing alt text</source>
+                <target>Bilder ohne Alt-Text</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.matchingFiles">
+                <source>matching files</source>
+                <target>passende Dateien</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.matchingPages">
+                <source>matching pages</source>
+                <target>passende Seiten</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.matchingContentElements">
+                <source>matching content elements</source>
+                <target>passende Inhaltselemente</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.matchingRecords">
+                <source>matching records</source>
+                <target>passende Datensätze</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.pages">
+                <source>pages</source>
+                <target>Seiten</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.contentElements">
+                <source>content elements</source>
+                <target>Inhaltselemente</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.redirects">
+                <source>redirects</source>
+                <target>Weiterleitungen</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.scheduledTasks">
+                <source>scheduled tasks</source>
+                <target>geplante Aufgaben</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.records">
+                <source>records</source>
+                <target>Datensätze</target>
+            </trans-unit>
+            <trans-unit id="agent.result.toolFailed">
+                <source>The tool failed.</source>
+                <target>Das Tool ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.toolError">
+                <source>The tool reported an error.</source>
+                <target>Das Tool hat einen Fehler gemeldet.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.toolNoData">
+                <source>The tool returned no data.</source>
+                <target>Das Tool hat keine Daten zurückgegeben.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.action">
+                <source>Action</source>
+                <target>Aktion</target>
+            </trans-unit>
+            <trans-unit id="agent.result.completed">
+                <source>%1$s completed successfully.</source>
+                <target>%1$s wurde erfolgreich abgeschlossen.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.foundOne">
+                <source>Found 1 %1$s.</source>
+                <target>1 %1$s gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.foundMany">
+                <source>Found %1$s %2$s.</source>
+                <target>%1$s %2$s gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.examplesLead">
+                <source>Examples: %1$s</source>
+                <target>Beispiele: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.result.openDetails">
+                <source>Open Details for the full list (%1$s total).</source>
+                <target>Öffnen Sie Details für die vollständige Liste (%1$s insgesamt).</target>
+            </trans-unit>
+            <trans-unit id="agent.result.noMissingAltText">
+                <source>Good news — no images are missing alt text in this storage.</source>
+                <target>Gute Nachricht – in diesem Speicher fehlt bei keinem Bild der Alt-Text.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.nextAltTextHint">
+                <source>Next: use “Generate file metadata (alt, title)” or ask to write alt text for a specific file.</source>
+                <target>Weiter: Nutzen Sie „Datei-Metadaten erzeugen (Alt, Titel)“ oder bitten Sie um Alt-Text für eine bestimmte Datei.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.folderContents">
+                <source>This folder contains %1$s file(s) and %2$s subfolder(s).</source>
+                <target>Dieser Ordner enthält %1$s Datei(en) und %2$s Unterordner.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.folderContentsIn">
+                <source>This folder in %1$s contains %2$s file(s) and %3$s subfolder(s).</source>
+                <target>Der Ordner in %1$s enthält %2$s Datei(en) und %3$s Unterordner.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyMissingAltText">
+                <source>No images are missing alt text in this storage.</source>
+                <target>In diesem Speicher fehlt bei keinem Bild der Alt-Text.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyMatchingFiles">
+                <source>No matching files were found.</source>
+                <target>Es wurden keine passenden Dateien gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyMatchingPages">
+                <source>No matching pages were found.</source>
+                <target>Es wurden keine passenden Seiten gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyMatchingContentElements">
+                <source>No matching content elements were found.</source>
+                <target>Es wurden keine passenden Inhaltselemente gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyMatchingRecords">
+                <source>No matching records were found.</source>
+                <target>Es wurden keine passenden Datensätze gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyChildPages">
+                <source>No child pages were found.</source>
+                <target>Es wurden keine Unterseiten gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyContentElements">
+                <source>No content elements were found on this page.</source>
+                <target>Auf dieser Seite wurden keine Inhaltselemente gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyRedirects">
+                <source>No redirects were found.</source>
+                <target>Es wurden keine Weiterleitungen gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyScheduledTasks">
+                <source>No scheduled tasks were found.</source>
+                <target>Es wurden keine geplanten Aufgaben gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyItems">
+                <source>No items found.</source>
+                <target>Keine Einträge gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneDeleted">
+                <source>Done — the item was deleted.</source>
+                <target>Fertig – der Eintrag wurde gelöscht.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.donePublished">
+                <source>Done — the workspace change was published.</source>
+                <target>Fertig – die Workspace-Änderung wurde veröffentlicht.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneDiscarded">
+                <source>Done — the workspace change was discarded.</source>
+                <target>Fertig – die Workspace-Änderung wurde verworfen.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneCacheCleared">
+                <source>Done — the cache was cleared.</source>
+                <target>Fertig – der Cache wurde geleert.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneCopied">
+                <source>Done — the copy was created.</source>
+                <target>Fertig – die Kopie wurde erstellt.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneMoved">
+                <source>Done — the item was moved.</source>
+                <target>Fertig – der Eintrag wurde verschoben.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneCreated">
+                <source>Done — the item was created.</source>
+                <target>Fertig – der Eintrag wurde erstellt.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneUpdated">
+                <source>Done — the changes were saved.</source>
+                <target>Fertig – die Änderungen wurden gespeichert.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneOneFieldUpdated">
+                <source>Done — 1 field was updated.</source>
+                <target>Fertig – 1 Feld wurde aktualisiert.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneFieldsUpdated">
+                <source>Done — %1$s fields were updated.</source>
+                <target>Fertig – %1$s Felder wurden aktualisiert.</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.standard">
+                <source>Standard page</source>
+                <target>Standardseite</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.externalUrl">
+                <source>Link to external URL</source>
+                <target>Link zu externer URL</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.shortcut">
+                <source>Shortcut</source>
+                <target>Verweis</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.backendUserSection">
+                <source>Backend user section</source>
+                <target>Backend-Benutzerbereich</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.mountPoint">
+                <source>Mount point</source>
+                <target>Mount-Point</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.separator">
+                <source>Menu separator</source>
+                <target>Menütrenner</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.folder">
+                <source>Folder</source>
+                <target>Ordner</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.recycler">
+                <source>Recycler</source>
+                <target>Papierkorb</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.unknown">
+                <source>Doktype %1$s</source>
+                <target>Seitentyp %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.write.draftNotFound">
+                <source>Draft not found or expired.</source>
+                <target>Entwurf nicht gefunden oder abgelaufen.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.destructiveNeedsConfirmation">
+                <source>This destructive draft has to be confirmed first.</source>
+                <target>Dieser destruktive Entwurf muss zuerst bestätigt werden.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.missingToolName">
+                <source>The tool confirmation is missing a tool name.</source>
+                <target>Der Tool-Bestätigung fehlt ein Tool-Name.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.toolInvocationFailed">
+                <source>Running the tool failed.</source>
+                <target>Das Ausführen des Tools ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.undo.changeNotFound">
+                <source>Change not found or already undone.</source>
+                <target>Änderung nicht gefunden oder bereits zurückgenommen.</target>
+            </trans-unit>
+            <trans-unit id="agent.undo.deleteUnsupported">
+                <source>Undoing a deletion is not supported.</source>
+                <target>Das Zurücknehmen einer Löschung wird nicht unterstützt.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.pageHint">
+                <source> for page %1$s</source>
+                <target> für Seite %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.generateAllSeo">
+                <source>Generate and apply all SEO metadata%1$s.</source>
+                <target>Alle SEO-Metadaten%1$s erzeugen und anwenden.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.generateMetaDescription">
+                <source>Generate a meta description%1$s.</source>
+                <target>Eine Meta-Beschreibung%1$s erzeugen.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.translateContent">
+                <source>Translate page content%1$s.</source>
+                <target>Seiteninhalt%1$s übersetzen.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.translateNews">
+                <source>Translate a news record%1$s.</source>
+                <target>Einen News-Datensatz%1$s übersetzen.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.updateFileMetadata">
+                <source>Update file metadata (alt text, title).</source>
+                <target>Datei-Metadaten aktualisieren (Alt-Text, Titel).</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.saveDatasource">
+                <source>Save a content source configuration.</source>
+                <target>Eine Inhaltsquellen-Konfiguration speichern.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.syncDatasource">
+                <source>Sync a content source.</source>
+                <target>Eine Inhaltsquelle synchronisieren.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.runTool">
+                <source>Run this tool%1$s.</source>
+                <target>Dieses Tool%1$s ausführen.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.satelliteUnsupported">
+                <source>This tool does not support draft planning: %1$s</source>
+                <target>Dieses Tool unterstützt keine Entwurfsplanung: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.unknownDynamicTool">
+                <source>Unknown dynamic tool: %1$s</source>
+                <target>Unbekanntes dynamisches Tool: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.unsupportedDynamicOperation">
+                <source>Unsupported dynamic operation: %1$s</source>
+                <target>Nicht unterstützte dynamische Operation: %1$s</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

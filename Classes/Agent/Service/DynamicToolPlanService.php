@@ -34,6 +34,7 @@ final class DynamicToolPlanService
     public function __construct(
         private readonly McpRecordPlanService $recordPlanService,
         private readonly DiscoveredTableRepository $discoveredTableRepository,
+        private readonly AgentTranslator $translator,
     ) {}
 
     public function supports(string $toolName): bool
@@ -48,7 +49,7 @@ final class DynamicToolPlanService
     {
         $resolved = $this->resolve($toolName);
         if ($resolved === null) {
-            throw new UnsupportedPlanException('Unknown dynamic tool: ' . $toolName);
+            throw new UnsupportedPlanException($this->translator->translate('agent.plan.unknownDynamicTool', [$toolName]));
         }
 
         ['table' => $tableName, 'operation' => $operation] = $resolved;
@@ -79,7 +80,7 @@ final class DynamicToolPlanService
             'delete_batch' => $this->planBatchDelete($tableName, $arguments, $toolName),
             'update_batch' => $this->planBatchUpdate($tableName, $arguments, $toolName),
             'move_batch' => $this->planBatchMove($tableName, $arguments, $toolName),
-            default => throw new UnsupportedPlanException('Unsupported dynamic operation: ' . $operation),
+            default => throw new UnsupportedPlanException($this->translator->translate('agent.plan.unsupportedDynamicOperation', [$operation])),
         };
     }
 

@@ -26,7 +26,6 @@ use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Information\Typo3Version;
-use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -42,6 +41,7 @@ final readonly class AgentSchedulerHandoff
         private UriBuilder $uriBuilder,
         private SchedulerCliCommandCatalogService $commandCatalog,
         private ConnectionPool $connectionPool,
+        private AgentTranslator $translator,
     ) {}
 
     /**
@@ -126,8 +126,8 @@ final readonly class AgentSchedulerHandoff
             ? 'agent.scheduler.handoffBodySeo'
             : 'agent.scheduler.handoffBody';
         $body = $isSeoFlow && $pageCount > 1
-            ? $this->translate($bodyKey, [$pageCount])
-            : $this->translate($bodyKey);
+            ? $this->translator->translate($bodyKey, [$pageCount])
+            : $this->translator->translate($bodyKey);
 
         return [
             'available' => true,
@@ -135,11 +135,11 @@ final readonly class AgentSchedulerHandoff
             'href' => (string) $this->uriBuilder->buildUriFromRoute($route),
             'scheduleHref' => (string) $this->uriBuilder->buildUriFromRoute($route, $scheduleParams),
             'schedulerHref' => (string) $this->uriBuilder->buildUriFromRoute($schedulerRoute),
-            'label' => $this->translate('agent.scheduler.handoffLabel'),
-            'title' => $this->translate('agent.scheduler.handoffTitle'),
+            'label' => $this->translator->translate('agent.scheduler.handoffLabel'),
+            'title' => $this->translator->translate('agent.scheduler.handoffTitle'),
             'body' => $body,
-            'dismissLabel' => $this->translate('agent.scheduler.handoffDismiss'),
-            'note' => $this->translate('agent.scheduler.handoffNote'),
+            'dismissLabel' => $this->translator->translate('agent.scheduler.handoffDismiss'),
+            'note' => $this->translator->translate('agent.scheduler.handoffNote'),
             'batchLimit' => $batchLimit,
             'tool' => $toolName,
             'cliCommand' => $cliCommand,
@@ -192,21 +192,4 @@ final readonly class AgentSchedulerHandoff
             ->fetchOne();
     }
 
-    /**
-     * @param list<int|string> $arguments
-     */
-    private function translate(string $key, array $arguments = []): string
-    {
-        $languageService = $GLOBALS['LANG'] ?? null;
-        $label = 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:' . $key;
-        $value = $languageService instanceof LanguageService
-            ? (string) $languageService->sL($label)
-            : $key;
-
-        if ($arguments !== [] && $value !== '') {
-            return vsprintf($value, $arguments);
-        }
-
-        return $value !== '' ? $value : $key;
-    }
 }

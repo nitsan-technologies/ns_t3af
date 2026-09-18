@@ -30,6 +30,8 @@ use PHPUnit\Framework\TestCase;
  */
 final class SatelliteToolPlanServiceTest extends TestCase
 {
+    use AgentTranslatorTrait;
+
     private SatelliteToolPlanService $service;
 
     protected function setUp(): void
@@ -37,7 +39,13 @@ final class SatelliteToolPlanServiceTest extends TestCase
         $this->service = new SatelliteToolPlanService(
             new McpToolSeverityResolver(),
             new McpConfirmationPlanBuilder(),
+            $this->createAgentTranslator(),
         );
+    }
+
+    protected function tearDown(): void
+    {
+        $this->releaseAgentTranslator();
     }
 
     #[Test]

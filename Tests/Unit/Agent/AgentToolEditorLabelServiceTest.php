@@ -28,13 +28,21 @@ use PHPUnit\Framework\TestCase;
  */
 final class AgentToolEditorLabelServiceTest extends TestCase
 {
+    use AgentTranslatorTrait;
+
+    protected function tearDown(): void
+    {
+        $this->releaseAgentTranslator();
+    }
+
     #[Test]
     public function resolveHumanizesPrefixedToolNames(): void
     {
-        $service = new AgentToolEditorLabelService();
+        $service = new AgentToolEditorLabelService($this->createAgentTranslator());
 
+        // Mapped tools use their translated label, unmapped ones are humanized.
         self::assertSame(
-            'List files missing alt text',
+            'List images missing alt text',
             $service->resolveByName('t3aa_list_files_missing_alt_text'),
         );
         self::assertSame(
@@ -46,23 +54,23 @@ final class AgentToolEditorLabelServiceTest extends TestCase
     #[Test]
     public function resolveUsesEditorFriendlyDescription(): void
     {
-        $service = new AgentToolEditorLabelService();
+        $service = new AgentToolEditorLabelService($this->createAgentTranslator());
 
         self::assertSame(
-            'Get a single page by its uid',
-            $service->resolveByName('pages_get', 'Get a single page by its uid.'),
+            'Generate the SEO title for a page',
+            $service->resolveByName('t3ai_generate_all_seo', 'Generate the SEO title for a page.'),
         );
     }
 
     #[Test]
     public function resolveSkipsTechnicalDescriptions(): void
     {
-        $service = new AgentToolEditorLabelService();
+        $service = new AgentToolEditorLabelService($this->createAgentTranslator());
 
         self::assertSame(
-            'List files missing alt text',
+            'Generate all seo',
             $service->resolveByName(
-                't3aa_list_files_missing_alt_text',
+                't3ai_generate_all_seo',
                 'Find image files in sys_file_metadata where alt text is empty.',
             ),
         );

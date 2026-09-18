@@ -20,7 +20,6 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
-use TYPO3\CMS\Core\Localization\LanguageService;
 
 /**
  * Ordered compound agent flows (translate + SEO, optional page inspect).
@@ -32,6 +31,7 @@ final readonly class AgentCompoundFlowService
     public function __construct(
         private AgentSeoMetadataFlow $seoMetadataFlow,
         private AgentSchedulerHandoff $schedulerHandoff,
+        private AgentTranslator $translator,
     ) {}
 
     /**
@@ -47,7 +47,7 @@ final readonly class AgentCompoundFlowService
         if ($pageId <= 0) {
             return [[
                 'role' => 'assistant',
-                'content' => $this->translate('agent.starter.generateSeoNeedsPage'),
+                'content' => $this->translator->translate('agent.starter.generateSeoNeedsPage'),
                 'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'flow' => 'compound'],
             ]];
         }
@@ -79,7 +79,7 @@ final readonly class AgentCompoundFlowService
                 }
                 $messages[] = [
                     'role' => 'assistant',
-                    'content' => $this->translate('agent.compound.translateHandoff', [$pageId]),
+                    'content' => $this->translator->translate('agent.compound.translateHandoff', [$pageId]),
                     'meta' => $meta,
                 ];
                 continue;
@@ -123,21 +123,4 @@ final readonly class AgentCompoundFlowService
         return false;
     }
 
-    /**
-     * @param list<int|string> $arguments
-     */
-    private function translate(string $key, array $arguments = []): string
-    {
-        $languageService = $GLOBALS['LANG'] ?? null;
-        if (!$languageService instanceof LanguageService) {
-            return $key;
-        }
-
-        $value = $languageService->sL('LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:' . $key);
-        if ($arguments === []) {
-            return $value;
-        }
-
-        return sprintf($value, ...array_map(static fn(int|string $argument): string => (string) $argument, $arguments));
-    }
 }

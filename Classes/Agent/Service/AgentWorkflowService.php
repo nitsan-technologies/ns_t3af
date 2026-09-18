@@ -22,7 +22,6 @@ namespace NITSAN\NsT3AF\Agent\Service;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
-use TYPO3\CMS\Core\Localization\LanguageService;
 
 /**
  * Data-driven NL workflow dispatcher for all ns_t3* satellite and core tools.
@@ -40,6 +39,7 @@ final readonly class AgentWorkflowService
         private PermittedActionProvider $permittedActionProvider,
         private AgentMessageParser $messageParser,
         private FileService $fileService,
+        private AgentTranslator $translator,
     ) {}
 
     /**
@@ -421,7 +421,7 @@ final readonly class AgentWorkflowService
         if ($fileUid <= 0) {
             return [[
                 'role' => 'assistant',
-                'content' => $this->translate('agent.workflow.fileMetadataNeedsFile'),
+                'content' => $this->translator->translate('agent.workflow.fileMetadataNeedsFile'),
                 'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'workflow' => 'generate_file_metadata'],
             ]];
         }
@@ -429,7 +429,7 @@ final readonly class AgentWorkflowService
         if (!$this->toolIsExecutable('t3aa_update_file_metadata')) {
             return [[
                 'role' => 'assistant',
-                'content' => $this->translate('agent.turn.planUnsupported', ['t3aa_update_file_metadata']),
+                'content' => $this->translator->translate('agent.turn.planUnsupported', ['t3aa_update_file_metadata']),
                 'meta' => ['type' => 'error', 'correlationId' => $correlationId, 'workflow' => 'generate_file_metadata'],
             ]];
         }
@@ -541,7 +541,7 @@ final readonly class AgentWorkflowService
         if (!$this->toolIsExecutable($toolName)) {
             return [[
                 'role' => 'assistant',
-                'content' => $this->translate('agent.turn.planUnsupported', [$toolName]),
+                'content' => $this->translator->translate('agent.turn.planUnsupported', [$toolName]),
                 'meta' => ['type' => 'error', 'tool' => $toolName, 'workflow' => $workflowId, 'correlationId' => $correlationId],
             ]];
         }
@@ -636,18 +636,4 @@ final readonly class AgentWorkflowService
         return false;
     }
 
-    /**
-     * @param list<int|string> $arguments
-     */
-    private function translate(string $key, array $arguments = []): string
-    {
-        $languageService = $GLOBALS['LANG'] ?? null;
-        if (!$languageService instanceof LanguageService) {
-            return $key;
-        }
-
-        $value = $languageService->sL('LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:' . $key) ?: $key;
-
-        return $arguments !== [] ? sprintf($value, ...array_map(static fn(int|string $arg): string => (string) $arg, $arguments)) : $value;
-    }
 }

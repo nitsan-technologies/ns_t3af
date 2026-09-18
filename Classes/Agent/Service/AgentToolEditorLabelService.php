@@ -19,8 +19,6 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Service;
 
-use TYPO3\CMS\Core\Localization\LanguageService;
-
 /**
  * Editor-facing labels for MCP tools (human titles, not snake_case ids).
  *
@@ -57,6 +55,10 @@ final readonly class AgentToolEditorLabelService
         't3as_',
     ];
 
+    public function __construct(
+        private AgentTranslator $translator,
+    ) {}
+
     /**
      * @param array<string, mixed> $tool
      */
@@ -77,7 +79,7 @@ final readonly class AgentToolEditorLabelService
 
         $labelKey = self::LABEL_KEYS[$toolName] ?? '';
         if ($labelKey !== '') {
-            $translated = $this->translate($labelKey);
+            $translated = $this->translator->translate($labelKey);
             if ($translated !== '' && $translated !== $labelKey) {
                 return $translated;
             }
@@ -149,15 +151,4 @@ final readonly class AgentToolEditorLabelService
         return $normalized !== '' ? ucfirst($normalized) : $name;
     }
 
-    private function translate(string $key): string
-    {
-        $languageService = $GLOBALS['LANG'] ?? null;
-        if (!$languageService instanceof LanguageService) {
-            return $key;
-        }
-
-        $value = $languageService->sL('LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:' . $key);
-
-        return $value !== '' ? $value : $key;
-    }
 }

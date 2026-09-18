@@ -49,6 +49,7 @@ final readonly class SatelliteToolPlanService
     public function __construct(
         private McpToolSeverityResolver $severityResolver,
         private McpConfirmationPlanBuilder $confirmationPlanBuilder,
+        private AgentTranslator $translator,
     ) {}
 
     public function supports(string $toolName): bool
@@ -68,7 +69,7 @@ final readonly class SatelliteToolPlanService
     public function plan(string $toolName, array $arguments): ToolPlan
     {
         if (!$this->supports($toolName)) {
-            throw new UnsupportedPlanException('Satellite tool does not support planning: ' . $toolName);
+            throw new UnsupportedPlanException($this->translator->translate('agent.plan.satelliteUnsupported', [$toolName]));
         }
 
         $severity = $this->severityResolver->resolveForToolName($toolName);
@@ -142,18 +143,20 @@ final readonly class SatelliteToolPlanService
     private function buildSummary(string $toolName, array $arguments): string
     {
         $pageId = (int) ($arguments['pageId'] ?? 0);
-        $pageHint = $pageId > 0 ? ' for page ' . $pageId : '';
+        $pageHint = $pageId > 0 ? $this->translator->translate('agent.plan.pageHint', [$pageId]) : '';
 
-        return match ($toolName) {
-            't3ai_generate_all_seo' => 'Generate and apply all SEO metadata' . $pageHint . '.',
-            't3ai_generate_meta_description' => 'Generate a meta description' . $pageHint . '.',
-            't3ai_translate_content' => 'Translate page content' . $pageHint . '.',
-            't3ai_translate_news' => 'Translate a news record' . $pageHint . '.',
-            't3aa_update_file_metadata' => 'Update file metadata (alt text, title).',
-            't3cs_save_datasource' => 'Save a content source configuration.',
-            't3cs_sync_datasource' => 'Sync a content source.',
-            default => 'Run this tool' . $pageHint . '.',
+        $labelKey = match ($toolName) {
+            't3ai_generate_all_seo' => 'agent.plan.generateAllSeo',
+            't3ai_generate_meta_description' => 'agent.plan.generateMetaDescription',
+            't3ai_translate_content' => 'agent.plan.translateContent',
+            't3ai_translate_news' => 'agent.plan.translateNews',
+            't3aa_update_file_metadata' => 'agent.plan.updateFileMetadata',
+            't3cs_save_datasource' => 'agent.plan.saveDatasource',
+            't3cs_sync_datasource' => 'agent.plan.syncDatasource',
+            default => 'agent.plan.runTool',
         };
+
+        return $this->translator->translate($labelKey, [$pageHint]);
     }
 
     private function formatArgumentValue(mixed $value): string

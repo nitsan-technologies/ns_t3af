@@ -33,6 +33,8 @@ use PHPUnit\Framework\TestCase;
  */
 final class DynamicToolPlanServiceTest extends TestCase
 {
+    use AgentTranslatorTrait;
+
     /** @var array<string, mixed> */
     private array $originalExtConf;
 
@@ -51,6 +53,7 @@ final class DynamicToolPlanServiceTest extends TestCase
         } else {
             $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af'] = $this->originalExtConf;
         }
+        $this->releaseAgentTranslator();
         parent::tearDown();
     }
 
@@ -77,6 +80,7 @@ final class DynamicToolPlanServiceTest extends TestCase
         $service = new DynamicToolPlanService(
             $recordPlanService,
             $this->createMock(DiscoveredTableRepository::class),
+            $this->createAgentTranslator(),
         );
 
         $plan = $service->plan('tx_news_update', [
@@ -100,6 +104,7 @@ final class DynamicToolPlanServiceTest extends TestCase
         return new DynamicToolPlanService(
             $recordPlanService,
             $this->createMock(DiscoveredTableRepository::class),
+            $this->createAgentTranslator(),
         );
     }
 }

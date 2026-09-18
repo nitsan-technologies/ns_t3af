@@ -22,7 +22,6 @@ namespace NITSAN\NsT3AF\Agent\Service;
 use NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
-use TYPO3\CMS\Core\Localization\LanguageService;
 
 /**
  * Permitted tool catalog for the AI Agent (T4).
@@ -38,6 +37,7 @@ final readonly class PermittedActionProvider
         private EntitlementResolver $entitlementResolver,
         private AgentToolPlanResolver $toolPlanResolver,
         private AgentToolEditorLabelService $editorLabelService,
+        private AgentTranslator $translator,
     ) {}
 
     /**
@@ -93,7 +93,7 @@ final readonly class PermittedActionProvider
                 'ownerExtensionKey' => $ownerKey,
                 'ownerLabel' => $this->formatOwnerLabel($ownerKey),
                 'executable' => false,
-                'lockReason' => $this->translate('agent.tool.uploadViaComposer'),
+                'lockReason' => $this->translator->translate('agent.tool.uploadViaComposer'),
                 'lockKind' => 'composer',
             ];
         }
@@ -101,18 +101,18 @@ final readonly class PermittedActionProvider
         if ($severity === null) {
             $executable = false;
             $lockKind = 'severity';
-            $lockReason = $this->translate('agent.tool.unclassified');
+            $lockReason = $this->translator->translate('agent.tool.unclassified');
         } elseif (!$this->entitlementResolver->isExecutable($ownerKey)) {
             $executable = false;
             $lockKind = 'extension';
-            $lockReason = $this->translate('agent.tool.extensionUnavailable', [$this->formatOwnerLabel($ownerKey)]);
+            $lockReason = $this->translator->translate('agent.tool.extensionUnavailable', [$this->formatOwnerLabel($ownerKey)]);
         } elseif (
             ($severity === ToolSeverity::Write || $severity === ToolSeverity::Destructive)
             && !$this->toolPlanResolver->supportsPlanning((string) ($tool['name'] ?? ''))
         ) {
             $executable = false;
             $lockKind = 'plan';
-            $lockReason = $this->translate('agent.tool.planUnsupported');
+            $lockReason = $this->translator->translate('agent.tool.planUnsupported');
         }
 
         return [
@@ -134,23 +134,10 @@ final readonly class PermittedActionProvider
     private function formatOwnerLabel(string $ownerKey): string
     {
         if ($ownerKey === self::CORE_EXTENSION_KEY || $ownerKey === '') {
-            return $this->translate('agent.owner.core');
+            return $this->translator->translate('agent.owner.core');
         }
 
         return $ownerKey;
     }
 
-    /**
-     * @param list<int|string> $arguments
-     */
-    private function translate(string $key, array $arguments = []): string
-    {
-        $languageService = $GLOBALS['LANG'] ?? null;
-        if (!$languageService instanceof LanguageService) {
-            return $key;
-        }
-
-        return $languageService->sL('LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:' . $key)
-            ?: $key;
-    }
 }
