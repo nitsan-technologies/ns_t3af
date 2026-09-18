@@ -240,6 +240,11 @@ final class AgentAjaxController
         $applyMode = trim((string) ($body['applyMode'] ?? 'all'));
         $workspaceId = (int) ($body['workspaceId'] ?? 0);
         $correlationId = trim((string) ($body['correlationId'] ?? ''));
+        $selections = is_array($body['selections'] ?? null) ? $body['selections'] : [];
+        $edits = is_array($body['edits'] ?? null) ? $body['edits'] : [];
+        $editedByEditor = ($body['editedByEditor'] ?? false) === true
+            || ($body['editedByEditor'] ?? '') === '1'
+            || ($body['editedByEditor'] ?? 0) === 1;
 
         if ($draftId === '') {
             return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.missingDraftId')], 400);
@@ -255,7 +260,10 @@ final class AgentAjaxController
             return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.draftNotFound')], 404);
         }
 
-        if ($applyMode === 'safe') {
+        $flow = (string) ($storedDraft['flow'] ?? '');
+        $isPreviewDraft = $flow === 'agent_preview';
+
+        if (!$isPreviewDraft && $applyMode === 'safe') {
             $plan = ToolPlan::fromArray(is_array($storedDraft['plan'] ?? null) ? $storedDraft['plan'] : []);
             $keptFieldKeys = $this->lowRiskFieldMatrix->filterSafeFieldKeys($plan, $keptFieldKeys);
             if ($keptFieldKeys === []) {
@@ -263,14 +271,33 @@ final class AgentAjaxController
             }
         }
 
+        if ($isPreviewDraft && $edits !== []) {
+            $previewResult = is_array($storedDraft['previewResult'] ?? null) ? $storedDraft['previewResult'] : [];
+            $previewTarget = is_array($previewResult['target'] ?? null) ? $previewResult['target'] : [];
+            $table = (string) ($previewTarget['table'] ?? '');
+            if ($table !== '' && !$this->recordAccessGate->canModifyTable($user, $table)) {
+                return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.forbidden')], 403);
+            }
+            $editedByEditor = true;
+        }
+
         $this->applyWorkspaceContext($user, $workspaceId);
 
         try {
-            $result = $this->writeService->apply(
-                $draftId,
-                $keptFieldKeys,
-                $correlationId !== '' ? $correlationId : null,
-            );
+            $result = $isPreviewDraft
+                ? $this->writeService->applySuggestions(
+                    $draftId,
+                    $selections,
+                    $this->normalizeStringMap($edits),
+                    $editedByEditor,
+                    $applyMode,
+                    $correlationId !== '' ? $correlationId : null,
+                )
+                : $this->writeService->apply(
+                    $draftId,
+                    $keptFieldKeys,
+                    $correlationId !== '' ? $correlationId : null,
+                );
         } catch (\Throwable $exception) {
             return new JsonResponse(['ok' => false, 'message' => $exception->getMessage()], 400);
         }
@@ -278,27 +305,37 @@ final class AgentAjaxController
         $this->auditLogger->logToolInvocation(
             (string) ($result['correlationId'] ?? $correlationId),
             (string) ($result['tool'] ?? 'agent_draft_apply'),
-            ['draftId' => $draftId, 'keptFieldKeys' => $keptFieldKeys],
+            [
+                'draftId' => $draftId,
+                'keptFieldKeys' => $keptFieldKeys,
+                'selections' => $selections,
+                'suggestionsApply' => $isPreviewDraft,
+            ],
             true,
-            0,
+            (int) ($result['latencyMs'] ?? 0),
         );
 
         $user = $this->resolveBackendUser();
-        $storedDraft = $this->draftSession->getDraft($draftId);
-        $flow = is_array($storedDraft) ? (string) ($storedDraft['flow'] ?? '') : '';
         $handoff = $user !== null
             ? $this->schedulerHandoff->buildHandoffForApplyResult($result, [], $user, $flow !== '' ? $flow : null)
             : null;
 
+        $message = ($result['toolConfirmation'] ?? false) === true
+            ? $this->translator->translate('agent.draft.toolApplied')
+            : $this->translator->translate('agent.draft.applied', [
+                (string) ($result['appliedCount'] ?? 0),
+                (string) ($result['totalCount'] ?? 0),
+            ]);
+        if (($result['suggestionsApply'] ?? false) === true) {
+            $message = $this->translator->translate('agent.suggestions.applied', [
+                (string) ($result['appliedCount'] ?? 0),
+            ]);
+        }
+
         return new JsonResponse([
             'ok' => true,
             'result' => $result,
-            'message' => ($result['toolConfirmation'] ?? false) === true
-                ? $this->translator->translate('agent.draft.toolApplied')
-                : $this->translator->translate('agent.draft.applied', [
-                    (string) ($result['appliedCount'] ?? 0),
-                    (string) ($result['totalCount'] ?? 0),
-                ]),
+            'message' => $message,
             'schedulerHandoff' => $handoff,
         ]);
     }
@@ -1020,6 +1057,23 @@ final class AgentAjaxController
         }
 
         return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.forbidden')], 403);
+    }
+
+    /**
+     * @param array<mixed> $map
+     * @return array<string, string>
+     */
+    private function normalizeStringMap(array $map): array
+    {
+        $normalized = [];
+        foreach ($map as $key => $value) {
+            if (!is_string($key) || $key === '' || !is_scalar($value)) {
+                continue;
+            }
+            $normalized[$key] = (string) $value;
+        }
+
+        return $normalized;
     }
 
     /**

@@ -1291,6 +1291,39 @@
       <trans-unit id="agent.suggestions.ready" resname="agent.suggestions.ready">
         <source>Here are %2$s suggestion variants for %1$s. Review them below and apply the ones you want.</source>
       </trans-unit>
+      <trans-unit id="agent.suggestions.title" resname="agent.suggestions.title">
+        <source>Suggestions</source>
+      </trans-unit>
+      <trans-unit id="agent.suggestions.apply" resname="agent.suggestions.apply">
+        <source>Apply selected</source>
+      </trans-unit>
+      <trans-unit id="agent.suggestions.applied" resname="agent.suggestions.applied">
+        <source>Applied %1$s suggestion field(s).</source>
+      </trans-unit>
+      <trans-unit id="agent.suggestions.creditHint" resname="agent.suggestions.creditHint">
+        <source>This preview used %1$s AI call(s). Regenerating will use credits again.</source>
+      </trans-unit>
+      <trans-unit id="agent.suggestions.current" resname="agent.suggestions.current">
+        <source>Current</source>
+      </trans-unit>
+      <trans-unit id="agent.suggestions.custom" resname="agent.suggestions.custom">
+        <source>Custom</source>
+      </trans-unit>
+      <trans-unit id="agent.suggestions.editPlaceholder" resname="agent.suggestions.editPlaceholder">
+        <source>Edit before applying…</source>
+      </trans-unit>
+      <trans-unit id="agent.write.previewNeedsSelections" resname="agent.write.previewNeedsSelections">
+        <source>This draft needs variant selections. Use the suggestions card to apply.</source>
+      </trans-unit>
+      <trans-unit id="agent.write.notPreviewDraft" resname="agent.write.notPreviewDraft">
+        <source>This draft is not a preview suggestions draft.</source>
+      </trans-unit>
+      <trans-unit id="agent.write.noSuggestionSelections" resname="agent.write.noSuggestionSelections">
+        <source>Select at least one suggestion variant to apply.</source>
+      </trans-unit>
+      <trans-unit id="agent.write.editsNeedEditorFlag" resname="agent.write.editsNeedEditorFlag">
+        <source>Inline edits require editedByEditor confirmation.</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

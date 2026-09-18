@@ -30,8 +30,32 @@ final readonly class AgentLowRiskFieldMatrix
 {
     /** @var array<string, list<string>> */
     private const SAFE_FIELDS = [
-        'pages' => ['description', 'abstract', 'keywords'],
+        'pages' => [
+            'seo_title',
+            'description',
+            'abstract',
+            'keywords',
+            'og_title',
+            'og_description',
+        ],
         'sys_file_metadata' => ['alternative', 'description', 'title'],
+    ];
+
+    /**
+     * Preview / DualMode content-param aliases → TCA column names used in SAFE_FIELDS.
+     *
+     * @var array<string, string>
+     */
+    private const FIELD_ALIASES = [
+        'metatitle' => 'seo_title',
+        'seo_title' => 'seo_title',
+        'metadescription' => 'description',
+        'ogtitle' => 'og_title',
+        'og_title' => 'og_title',
+        'ogdescription' => 'og_description',
+        'og_description' => 'og_description',
+        'alttext' => 'alternative',
+        'alternative' => 'alternative',
     ];
 
     public function isSafeField(string $table, string $field): bool
@@ -40,9 +64,43 @@ final readonly class AgentLowRiskFieldMatrix
             return false;
         }
 
+        $normalized = $this->normalizeFieldName($field);
         $allowed = self::SAFE_FIELDS[strtolower(trim($table))] ?? [];
 
-        return in_array(strtolower(trim($field)), $allowed, true);
+        return in_array($normalized, $allowed, true);
+    }
+
+    /**
+     * Keep preview field keys that map to low-risk columns for the target table.
+     *
+     * Namespaced batch keys (`123:metaTitle`) are evaluated on the field segment only.
+     *
+     * @param list<string> $fieldKeys
+     * @return list<string>
+     */
+    public function filterSafePreviewFieldKeys(string $table, array $fieldKeys): array
+    {
+        $safe = [];
+        foreach ($fieldKeys as $fieldKey) {
+            if (!is_string($fieldKey) || $fieldKey === '') {
+                continue;
+            }
+            $segment = str_contains($fieldKey, ':')
+                ? (string) substr($fieldKey, (int) strrpos($fieldKey, ':') + 1)
+                : $fieldKey;
+            if ($this->isSafeField($table, $segment)) {
+                $safe[] = $fieldKey;
+            }
+        }
+
+        return $safe;
+    }
+
+    private function normalizeFieldName(string $field): string
+    {
+        $normalized = strtolower(trim($field));
+
+        return self::FIELD_ALIASES[$normalized] ?? $normalized;
     }
 
     /**

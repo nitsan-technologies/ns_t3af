@@ -1320,3 +1320,124 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Suggestions card (preview → apply) */
+.nst3af-agent-suggestions {
+  border: 1px solid #e6e6e8;
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 8px;
+  background: #fafafa;
+}
+
+.nst3af-agent-suggestions__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.nst3af-agent-suggestions__title {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.nst3af-agent-suggestions__lead {
+  font-size: 12px;
+  color: #5b6270;
+  margin: 0 0 6px;
+}
+
+.nst3af-agent-suggestions__credits {
+  font-size: 11px;
+  color: #6b7280;
+  margin: 0 0 10px;
+}
+
+.nst3af-agent-suggestions__fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.nst3af-agent-suggestions__field {
+  border: 1px solid #ececf0;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+.nst3af-agent-suggestions__field-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: baseline;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.nst3af-agent-suggestions__current {
+  color: #5b6270;
+}
+
+.nst3af-agent-suggestions__options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nst3af-agent-suggestions__option {
+  display: grid;
+  grid-template-columns: auto minmax(72px, max-content) 1fr;
+  gap: 8px;
+  align-items: start;
+  font-size: 12px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.nst3af-agent-suggestions__option--edit {
+  grid-template-columns: auto minmax(72px, max-content) 1fr;
+}
+
+.nst3af-agent-suggestions__option-label {
+  font-weight: 600;
+  color: #374151;
+}
+
+.nst3af-agent-suggestions__option-text {
+  color: #111827;
+  word-break: break-word;
+}
+
+.nst3af-agent-suggestions__option textarea {
+  width: 100%;
+  min-height: 48px;
+}
+
+.nst3af-agent-suggestions__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nst3af-agent-suggestions--running {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .nst3af-agent-suggestions__option {
+    grid-template-columns: auto 1fr;
+  }
+
+  .nst3af-agent-suggestions__option-label {
+    grid-column: 2;
+  }
+
+  .nst3af-agent-suggestions__option-text,
+  .nst3af-agent-suggestions__option textarea {
+    grid-column: 1 / -1;
+  }
+}

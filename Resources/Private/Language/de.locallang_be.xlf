@@ -1589,6 +1589,50 @@
                 <source>Here are %2$s suggestion variants for %1$s. Review them below and apply the ones you want.</source>
                 <target>Hier sind %2$s Vorschlagsvarianten für %1$s. Prüfen Sie sie unten und wenden Sie die gewünschten an.</target>
             </trans-unit>
+            <trans-unit id="agent.suggestions.title">
+                <source>Suggestions</source>
+                <target>Vorschläge</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.apply">
+                <source>Apply selected</source>
+                <target>Auswahl anwenden</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.applied">
+                <source>Applied %1$s suggestion field(s).</source>
+                <target>%1$s vorgeschlagene Feld(er) angewendet.</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.creditHint">
+                <source>This preview used %1$s AI call(s). Regenerating will use credits again.</source>
+                <target>Diese Vorschau hat %1$s KI-Aufruf(e) verbraucht. Erneutes Generieren verbraucht wieder Credits.</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.current">
+                <source>Current</source>
+                <target>Aktuell</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.custom">
+                <source>Custom</source>
+                <target>Eigene</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.editPlaceholder">
+                <source>Edit before applying…</source>
+                <target>Vor dem Anwenden bearbeiten…</target>
+            </trans-unit>
+            <trans-unit id="agent.write.previewNeedsSelections">
+                <source>This draft needs variant selections. Use the suggestions card to apply.</source>
+                <target>Dieser Entwurf benötigt Variantenauswahl. Nutzen Sie die Vorschlagskarte zum Anwenden.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.notPreviewDraft">
+                <source>This draft is not a preview suggestions draft.</source>
+                <target>Dieser Entwurf ist kein Vorschau-Vorschlagsentwurf.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.noSuggestionSelections">
+                <source>Select at least one suggestion variant to apply.</source>
+                <target>Wählen Sie mindestens eine Vorschlagsvariante zum Anwenden.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.editsNeedEditorFlag">
+                <source>Inline edits require editedByEditor confirmation.</source>
+                <target>Inline-Bearbeitungen erfordern die Bestätigung editedByEditor.</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

@@ -41,7 +41,37 @@ final class AgentLowRiskFieldMatrixTest extends TestCase
     public function recognizesSafePageSeoFields(): void
     {
         self::assertTrue($this->matrix->isSafeField('pages', 'description'));
+        self::assertTrue($this->matrix->isSafeField('pages', 'seo_title'));
+        self::assertTrue($this->matrix->isSafeField('pages', 'keywords'));
+        self::assertTrue($this->matrix->isSafeField('pages', 'og_title'));
+        self::assertTrue($this->matrix->isSafeField('pages', 'og_description'));
+        self::assertTrue($this->matrix->isSafeField('pages', 'metaTitle'));
+        self::assertTrue($this->matrix->isSafeField('pages', 'ogTitle'));
         self::assertFalse($this->matrix->isSafeField('pages', 'slug'));
+    }
+
+    #[Test]
+    public function recognizesSafeFileMetadataFields(): void
+    {
+        self::assertTrue($this->matrix->isSafeField('sys_file_metadata', 'alternative'));
+        self::assertTrue($this->matrix->isSafeField('sys_file_metadata', 'altText'));
+        self::assertTrue($this->matrix->isSafeField('sys_file_metadata', 'title'));
+        self::assertTrue($this->matrix->isSafeField('sys_file_metadata', 'description'));
+        self::assertFalse($this->matrix->isSafeField('sys_file_metadata', 'copyright'));
+    }
+
+    #[Test]
+    public function filterSafePreviewFieldKeysKeepsSeoAliases(): void
+    {
+        self::assertSame(
+            ['metaTitle', 'keywords', 'ogDescription'],
+            $this->matrix->filterSafePreviewFieldKeys('pages', [
+                'metaTitle',
+                'keywords',
+                'ogDescription',
+                'nav_title',
+            ]),
+        );
     }
 
     #[Test]

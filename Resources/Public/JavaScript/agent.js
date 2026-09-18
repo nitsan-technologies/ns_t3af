@@ -32,6 +32,38 @@ function hasTurnGuardWarning(meta) {
 }
 
 /**
+ * Mirror of AgentLowRiskFieldMatrix for suggestion "Apply safe" UX.
+ *
+ * @param {string} table
+ * @param {string} fieldKey
+ * @returns {boolean}
+ */
+function isSuggestionFieldSafe(table, fieldKey) {
+  const normalizedTable = String(table ?? '').toLowerCase().trim();
+  let field = String(fieldKey ?? '').toLowerCase().trim();
+  if (field.includes(':')) {
+    field = field.slice(field.lastIndexOf(':') + 1);
+  }
+  const aliases = {
+    metatitle: 'seo_title',
+    seo_title: 'seo_title',
+    metadescription: 'description',
+    ogtitle: 'og_title',
+    og_title: 'og_title',
+    ogdescription: 'og_description',
+    og_description: 'og_description',
+    alttext: 'alternative',
+    alternative: 'alternative',
+  };
+  field = aliases[field] ?? field;
+  const safe = {
+    pages: ['seo_title', 'description', 'abstract', 'keywords', 'og_title', 'og_description'],
+    sys_file_metadata: ['alternative', 'description', 'title'],
+  };
+  return (safe[normalizedTable] ?? []).includes(field);
+}
+
+/**
  * @returns {string}
  */
 function readHotkeyPref() {
@@ -847,6 +879,24 @@ class AgentController {
         event.preventDefault();
         this.discardDraft(target.closest('[data-nst3af-agent-draft-discard]'));
       }
+      if (target.closest('[data-nst3af-agent-suggestions-apply]')) {
+        event.preventDefault();
+        this.applySuggestions(target.closest('[data-nst3af-agent-suggestions-apply]'), 'all');
+      }
+      if (target.closest('[data-nst3af-agent-suggestions-apply-safe]')) {
+        event.preventDefault();
+        this.applySuggestions(target.closest('[data-nst3af-agent-suggestions-apply-safe]'), 'safe');
+      }
+      if (target.closest('[data-nst3af-agent-suggestions-discard]')) {
+        event.preventDefault();
+        this.discardSuggestions(target.closest('[data-nst3af-agent-suggestions-discard]'));
+      }
+      if (target.closest('[data-nst3af-agent-suggestions-select]')) {
+        this.selectSuggestionVariant(target.closest('[data-nst3af-agent-suggestions-select]'));
+      }
+      if (target.closest('[data-nst3af-agent-suggestions-edit-toggle]')) {
+        this.enableSuggestionEdit(target.closest('[data-nst3af-agent-suggestions-edit-toggle]'));
+      }
       if (target.closest('[data-nst3af-agent-undo]')) {
         event.preventDefault();
         this.undoChange(target.closest('[data-nst3af-agent-undo]'));
@@ -891,6 +941,14 @@ class AgentController {
 
     this.input?.addEventListener('input', () => {
       this.handleComposerInput();
+    });
+
+    document.addEventListener('input', (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target?.closest?.('[data-nst3af-agent-suggestions-edit]')) {
+        return;
+      }
+      this.updateSuggestionEdit(target.closest('[data-nst3af-agent-suggestions-edit]'));
     });
 
     this.input?.addEventListener('keydown', (event) => {
@@ -1120,6 +1178,9 @@ class AgentController {
       if (meta.type === 'inline_draft' && meta.draft) {
         return this.renderInlineDraftMessage(message, index);
       }
+      if (meta.type === 'suggestions') {
+        return this.renderSuggestionsMessage(message, index);
+      }
       if (meta.type === 'readback_result') {
         return this.renderReadbackMessage(message);
       }
@@ -1327,6 +1388,112 @@ class AgentController {
         ${traceHtml}
         ${detailsHtml}
         ${extra}
+      </div>
+    </div>`;
+  }
+
+  /**
+   * @param {object} message
+   * @param {number} messageIndex
+   * @returns {string}
+   */
+  renderSuggestionsMessage(message, messageIndex) {
+    const meta = message.meta ?? {};
+    if (meta.discarded === true) {
+      return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant"><div class="nst3af-agent-msg__who">AI Agent</div><div class="nst3af-agent-msg__body">${escapeHtml(lang('agent.draft.discarded', 'Draft discarded. Nothing was written.'))}</div></div>`;
+    }
+    if (meta.applied === true) {
+      const appliedLabel = lang('agent.suggestions.applied', 'Applied %1$s suggestion field(s).')
+        .replace('%1$s', String(meta.appliedCount ?? 0));
+      return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant"><div class="nst3af-agent-msg__who">AI Agent</div><div class="nst3af-agent-msg__body">${escapeHtml(appliedLabel)}</div></div>`;
+    }
+
+    const suggestions = meta.suggestions && typeof meta.suggestions === 'object' ? meta.suggestions : {};
+    const fields = Array.isArray(suggestions.fields) ? suggestions.fields : [];
+    const variants = Array.isArray(suggestions.variants) ? suggestions.variants : [];
+    const draftId = String(meta.draftId ?? '');
+    const toolLabel = resolveToolDisplayLabel({
+      editorLabel: meta.editorLabel,
+      tool: meta.tool,
+    });
+    const callCount = Math.max(1, Number(meta.callCount ?? suggestions.callCount ?? 1));
+    const creditHint = lang('agent.suggestions.creditHint', 'This preview used %1$s AI call(s). Regenerating will use credits again.')
+      .replace('%1$s', String(callCount));
+
+    if (!meta.selections || typeof meta.selections !== 'object') {
+      meta.selections = {};
+      fields.forEach((field) => {
+        const key = String(field.key ?? '');
+        if (key !== '') {
+          meta.selections[key] = 0;
+        }
+      });
+    }
+    if (!meta.edits || typeof meta.edits !== 'object') {
+      meta.edits = {};
+    }
+
+    const safeFieldCount = fields.filter((field) => {
+      const key = String(field.key ?? '');
+      const table = String(suggestions.target?.table ?? '');
+      return isSuggestionFieldSafe(table, key);
+    }).length;
+
+    const fieldRows = fields.map((field) => {
+      const key = String(field.key ?? '');
+      const label = String(field.label ?? key);
+      const current = String(field.current ?? '');
+      const selectedIndex = Number(meta.selections[key] ?? 0);
+      const editValue = Object.prototype.hasOwnProperty.call(meta.edits, key)
+        ? String(meta.edits[key] ?? '')
+        : null;
+      const variantOptions = variants.map((variant, index) => {
+        const values = variant?.values && typeof variant.values === 'object' ? variant.values : {};
+        const text = String(values[key] ?? '');
+        const variantLabel = String(variant.label ?? `Variant ${index + 1}`);
+        const checked = selectedIndex === index && editValue === null ? ' checked' : '';
+        return `<label class="nst3af-agent-suggestions__option">
+          <input type="radio" name="nst3af-sug-${messageIndex}-${escapeHtml(key)}" value="${index}" data-nst3af-agent-suggestions-select="1" data-message-index="${messageIndex}" data-field-key="${escapeHtml(key)}" data-variant-index="${index}"${checked}>
+          <span class="nst3af-agent-suggestions__option-label">${escapeHtml(variantLabel)}</span>
+          <span class="nst3af-agent-suggestions__option-text">${escapeHtml(text)}</span>
+        </label>`;
+      }).join('');
+
+      const editChecked = editValue !== null ? ' checked' : '';
+      const editBox = `<label class="nst3af-agent-suggestions__option nst3af-agent-suggestions__option--edit">
+        <input type="radio" name="nst3af-sug-${messageIndex}-${escapeHtml(key)}" value="edit" data-nst3af-agent-suggestions-edit-toggle="1" data-message-index="${messageIndex}" data-field-key="${escapeHtml(key)}"${editChecked}>
+        <span class="nst3af-agent-suggestions__option-label">${escapeHtml(lang('agent.suggestions.custom', 'Custom'))}</span>
+        <textarea class="form-control form-control-sm" rows="2" data-nst3af-agent-suggestions-edit="1" data-message-index="${messageIndex}" data-field-key="${escapeHtml(key)}" placeholder="${escapeHtml(lang('agent.suggestions.editPlaceholder', 'Edit before applying…'))}">${escapeHtml(editValue ?? '')}</textarea>
+      </label>`;
+
+      return `<div class="nst3af-agent-suggestions__field" data-field-key="${escapeHtml(key)}">
+        <div class="nst3af-agent-suggestions__field-head">
+          <strong>${escapeHtml(label)}</strong>
+          <span class="nst3af-agent-suggestions__current">${escapeHtml(lang('agent.suggestions.current', 'Current'))}: ${escapeHtml(current || '—')}</span>
+        </div>
+        <div class="nst3af-agent-suggestions__options">${variantOptions}${editBox}</div>
+      </div>`;
+    }).join('');
+
+    const applyingClass = meta.applying === true ? ' nst3af-agent-suggestions--running' : '';
+    const safeBtn = safeFieldCount > 0
+      ? `<button type="button" class="btn btn-default btn-sm" data-nst3af-agent-suggestions-apply-safe="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(draftId)}">${escapeHtml(lang('agent.draft.applySafe', 'Apply safe fields'))}</button>`
+      : '';
+
+    return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant">
+      <div class="nst3af-agent-msg__who">AI Agent</div>
+      <div class="nst3af-agent-suggestions${applyingClass}" data-nst3af-agent-suggestions="1" data-draft-id="${escapeHtml(draftId)}" data-message-index="${messageIndex}">
+        <div class="nst3af-agent-suggestions__header">
+          <div class="nst3af-agent-suggestions__title">${escapeHtml(lang('agent.suggestions.title', 'Suggestions'))}: ${escapeHtml(toolLabel)}</div>
+        </div>
+        <p class="nst3af-agent-suggestions__lead">${escapeHtml(String(message.content ?? ''))}</p>
+        <p class="nst3af-agent-suggestions__credits" role="note">${escapeHtml(creditHint)}</p>
+        <div class="nst3af-agent-suggestions__fields">${fieldRows}</div>
+        <div class="nst3af-agent-suggestions__actions">
+          <button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-suggestions-apply="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(draftId)}">${escapeHtml(lang('agent.suggestions.apply', 'Apply selected'))}</button>
+          ${safeBtn}
+          <button type="button" class="btn btn-default btn-sm" data-nst3af-agent-suggestions-discard="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(draftId)}">${escapeHtml(lang('agent.draft.discard', 'Discard'))}</button>
+        </div>
       </div>
     </div>`;
   }
@@ -1708,6 +1875,200 @@ class AgentController {
     }
 
     message.meta.draft.discarded = true;
+    message.content = lang('agent.draft.discarded', 'Draft discarded. Nothing was written.');
+    this.renderStream();
+    await this.persistSession();
+  }
+
+  /**
+   * @param {Element|null} input
+   */
+  selectSuggestionVariant(input) {
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+    const messageIndex = Number.parseInt(input.dataset.messageIndex ?? '-1', 10);
+    const fieldKey = input.dataset.fieldKey ?? '';
+    const variantIndex = Number.parseInt(input.dataset.variantIndex ?? '0', 10);
+    const message = this.messages[messageIndex];
+    if (!message?.meta || fieldKey === '') {
+      return;
+    }
+    message.meta.selections = { ...(message.meta.selections ?? {}), [fieldKey]: variantIndex };
+    if (message.meta.edits && Object.prototype.hasOwnProperty.call(message.meta.edits, fieldKey)) {
+      delete message.meta.edits[fieldKey];
+    }
+    this.persistSession();
+  }
+
+  /**
+   * @param {Element|null} input
+   */
+  enableSuggestionEdit(input) {
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+    const messageIndex = Number.parseInt(input.dataset.messageIndex ?? '-1', 10);
+    const fieldKey = input.dataset.fieldKey ?? '';
+    const message = this.messages[messageIndex];
+    if (!message?.meta || fieldKey === '') {
+      return;
+    }
+    const textarea = this.stream?.querySelector(
+      `textarea[data-nst3af-agent-suggestions-edit][data-message-index="${messageIndex}"][data-field-key="${CSS.escape(fieldKey)}"]`,
+    );
+    const current = textarea instanceof HTMLTextAreaElement ? textarea.value : '';
+    message.meta.edits = { ...(message.meta.edits ?? {}), [fieldKey]: current };
+    this.persistSession();
+  }
+
+  /**
+   * @param {Element|null} textarea
+   */
+  updateSuggestionEdit(textarea) {
+    if (!(textarea instanceof HTMLTextAreaElement)) {
+      return;
+    }
+    const messageIndex = Number.parseInt(textarea.dataset.messageIndex ?? '-1', 10);
+    const fieldKey = textarea.dataset.fieldKey ?? '';
+    const message = this.messages[messageIndex];
+    if (!message?.meta || fieldKey === '') {
+      return;
+    }
+    message.meta.edits = { ...(message.meta.edits ?? {}), [fieldKey]: textarea.value };
+    this.persistSession();
+  }
+
+  /**
+   * @param {Element|null} button
+   * @param {'all'|'safe'} [applyMode]
+   */
+  async applySuggestions(button, applyMode = 'all') {
+    if (!(button instanceof HTMLButtonElement) || this.isRunning) {
+      return;
+    }
+
+    const messageIndex = Number.parseInt(button.dataset.messageIndex ?? '-1', 10);
+    const draftId = button.dataset.draftId ?? '';
+    const message = this.messages[messageIndex];
+    const meta = message?.meta;
+    if (!meta || meta.type !== 'suggestions' || draftId === '') {
+      return;
+    }
+
+    const suggestions = meta.suggestions && typeof meta.suggestions === 'object' ? meta.suggestions : {};
+    const fields = Array.isArray(suggestions.fields) ? suggestions.fields : [];
+    const table = String(suggestions.target?.table ?? '');
+    const selections = {};
+    const edits = {};
+    let editedByEditor = false;
+
+    fields.forEach((field) => {
+      const key = String(field.key ?? '');
+      if (key === '') {
+        return;
+      }
+      if (applyMode === 'safe' && !isSuggestionFieldSafe(table, key)) {
+        return;
+      }
+      if (meta.edits && Object.prototype.hasOwnProperty.call(meta.edits, key)) {
+        edits[key] = String(meta.edits[key] ?? '');
+        editedByEditor = true;
+        return;
+      }
+      selections[key] = Number(meta.selections?.[key] ?? 0);
+    });
+
+    if (Object.keys(selections).length === 0 && Object.keys(edits).length === 0) {
+      this.messages.push({
+        role: 'assistant',
+        content: lang('agent.draft.noSafeFields', 'No low-risk fields to apply.'),
+        meta: { type: 'error' },
+      });
+      this.renderStream();
+      return;
+    }
+
+    const url = ajaxUrl('nst3af_agent_apply_draft');
+    if (url === '') {
+      return;
+    }
+
+    this.isRunning = true;
+    meta.applying = true;
+    this.renderStream();
+    this.announce(lang('agent.work.working', 'Working…'));
+    try {
+      const payload = await new AjaxRequest(url).post({
+        draftId,
+        selections,
+        edits,
+        editedByEditor,
+        applyMode,
+        workspaceId: Number(this.context?.workspaceId ?? 0),
+        correlationId: meta.correlationId ?? '',
+      }).then((r) => r.resolve());
+      if (!payload?.ok) {
+        throw new Error(payload?.message ?? lang('agent.error.applyFailed', 'Apply failed'));
+      }
+
+      const result = payload.result ?? {};
+      meta.applied = true;
+      meta.applying = false;
+      meta.appliedCount = Number(result.appliedCount ?? Object.keys(selections).length + Object.keys(edits).length);
+      meta.changeId = result.changeId ?? '';
+
+      this.messages.push({
+        role: 'assistant',
+        content: messageContent(
+          payload.message,
+          lang('agent.suggestions.applied', 'Applied %1$s suggestion field(s).', [String(meta.appliedCount)]),
+        ),
+        meta: {
+          type: 'readback_result',
+          readback: result.readback ?? [],
+          changeId: result.changeId ?? '',
+          correlationId: result.correlationId ?? meta.correlationId ?? '',
+          schedulerHandoff: payload.schedulerHandoff ?? null,
+          appliedValues: result.appliedValues ?? {},
+        },
+      });
+      this.renderStream();
+      await this.persistSession();
+    } catch (error) {
+      meta.applying = false;
+      const text = errorMessage(error);
+      this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
+      this.renderStream();
+    } finally {
+      this.isRunning = false;
+      if (this.stream) {
+        this.stream.removeAttribute('aria-busy');
+      }
+    }
+  }
+
+  /**
+   * @param {Element|null} button
+   */
+  async discardSuggestions(button) {
+    if (!(button instanceof HTMLButtonElement) || this.isRunning) {
+      return;
+    }
+
+    const messageIndex = Number.parseInt(button.dataset.messageIndex ?? '-1', 10);
+    const draftId = button.dataset.draftId ?? '';
+    const message = this.messages[messageIndex];
+    if (!message?.meta || message.meta.type !== 'suggestions' || draftId === '') {
+      return;
+    }
+
+    const url = ajaxUrl('nst3af_agent_discard_draft');
+    if (url !== '') {
+      await new AjaxRequest(url).post({ draftId });
+    }
+
+    message.meta.discarded = true;
     message.content = lang('agent.draft.discarded', 'Draft discarded. Nothing was written.');
     this.renderStream();
     await this.persistSession();
