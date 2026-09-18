@@ -19,8 +19,10 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: min(760px, calc(100vw - 56px));
-  height: min(680px, calc(100vh - 84px));
+  /* Match ns_t3ai--modal-large (1600px / 90vh) */
+  width: min(1600px, calc(100dvw - 3rem));
+  height: 90dvh;
+  max-height: 90vh;
   background: #fff;
   border: 1px solid #d7d7d7;
   border-radius: 16px;
