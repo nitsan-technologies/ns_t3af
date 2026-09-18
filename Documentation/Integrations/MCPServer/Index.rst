@@ -134,6 +134,8 @@ Security
 * Limit which backend users can authorize OAuth
 * Test in draft workspace before live writes
 * Enable :ref:`AI Permissions <ai-permissions>` for multi-user sites
+* Schedule ``t3af:mcp:cleanup`` for expired OAuth tokens and stale sessions
+  (not created automatically). See :ref:`DPA & GDPR <data-processing-agreement>`.
 
 When to enable MCP
 ------------------

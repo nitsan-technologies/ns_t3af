@@ -264,7 +264,8 @@ Optional configuration
     **Logging privacy only** — controls how much is stored in the local request
     log (``standard``, ``reduced`` without prompt fingerprint, or ``none``).
     This setting does **not** redact, strip, or block prompts, brand context, or
-    documents sent to the AI provider.
+    documents sent to the AI provider. Full table and GDPR notes:
+    :ref:`DPA & GDPR <data-processing-agreement>`.
 
 Governance and status
 ---------------------
