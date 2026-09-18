@@ -37,11 +37,15 @@ readonly class ContentGetTool implements McpNonAiToolInterface
         private TcaSchemaService $tcaSchemaService,
     ) {}
 
-    #[McpTool(name: 'content_get', description: 'Get a single content element by its uid.')]
-    public function execute(int $uid): string
+    #[McpTool(
+        name: 'content_get',
+        description: 'Get a single content element by its uid.'
+            . ' Use selectFields (comma-separated) to choose which fields to return.',
+    )]
+    public function execute(int $uid, string $selectFields = ''): string
     {
         $translationConfig = $this->tcaSchemaService->getTranslationConfig('tt_content');
-        $fields = $this->tcaSchemaService->getReadFields('tt_content');
+        $fields = $this->resolveSelectFields($selectFields);
 
         $languageField = $translationConfig['languageField'];
         if ($languageField !== null && !in_array($languageField, $fields, true)) {
@@ -75,5 +79,24 @@ readonly class ContentGetTool implements McpNonAiToolInterface
         }
 
         return json_encode($record, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function resolveSelectFields(string $selectFields): array
+    {
+        if ($selectFields === '') {
+            return $this->tcaSchemaService->getReadFields('tt_content');
+        }
+
+        $requested = array_map('trim', explode(',', $selectFields));
+        $readable = $this->tcaSchemaService->getReadFields('tt_content');
+        $allowed = array_merge(['uid', 'pid'], $readable);
+        $valid = array_values(array_intersect($requested, $allowed));
+
+        return $valid !== []
+            ? array_values(array_unique(array_merge(['uid', 'pid'], $valid)))
+            : $this->tcaSchemaService->getReadFields('tt_content');
     }
 }

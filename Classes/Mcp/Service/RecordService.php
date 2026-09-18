@@ -31,7 +31,11 @@ use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
 readonly class RecordService
 {
-    public function __construct(private ConnectionPool $connectionPool, private WorkspaceContextService $workspaceContext) {}
+    public function __construct(
+        private ConnectionPool $connectionPool,
+        private WorkspaceContextService $workspaceContext,
+        private RelationUidListResolver $relationUidListResolver,
+    ) {}
 
     /**
      * @param list<string> $fields
@@ -54,7 +58,12 @@ readonly class RecordService
             return null;
         }
 
-        return $this->workspaceContext->overlay($table, $row);
+        $row = $this->workspaceContext->overlay($table, $row);
+        if ($row === null) {
+            return null;
+        }
+
+        return $this->relationUidListResolver->enrichRecord($table, $row);
     }
 
     /**
@@ -143,6 +152,7 @@ readonly class RecordService
             ->fetchAllAssociative();
 
         $records = $this->workspaceContext->overlayMany($table, $records);
+        $records = $this->relationUidListResolver->enrichRecords($table, $records);
 
         return [
             'records' => $records,
@@ -221,6 +231,7 @@ readonly class RecordService
             ->fetchAllAssociative();
 
         $records = $this->workspaceContext->overlayMany($table, $records);
+        $records = $this->relationUidListResolver->enrichRecords($table, $records);
 
         return [
             'records' => $records,

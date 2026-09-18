@@ -129,6 +129,9 @@ final class TcaSchemaServiceRelationFieldsTest extends TestCase
 
         $relations = $this->service->getRelationUidListFields('pages');
         self::assertSame(['categories', 'authors', 'tags'], $relations);
+
+        $readable = $this->service->getReadableRelationUidListFields('pages');
+        self::assertSame(['categories', 'authors', 'tags'], $readable);
     }
 
     #[Test]

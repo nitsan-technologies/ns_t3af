@@ -39,12 +39,13 @@ tools:
     category: Content
     status: ready
     tagline: Fetch a single TYPO3 page by UID
-    notes: Returns page fields and language overlays when available.
+    notes: 'Optional selectFields (comma-separated). Category/MM fields return UID lists ("126" or "8,12"), not counts.'
     examplePrompts:
       - 'Show me the page with UID 1 including its translations'
       - 'What are all the fields of pages record 5?'
       - 'Read the homepage page record'
       - 'Get page details for the About Us page'
+      - 'Get pages 1739 with only title, categories, authors, tags'
 
   content_list:
     category: Content
@@ -172,7 +173,7 @@ tools:
     category: Content
     status: ready
     tagline: Fetch a single tt_content element by UID
-    notes: Includes translations when the default-language record is requested.
+    notes: 'Optional selectFields (comma-separated). Includes translations when the default-language record is requested.'
 
   file_list:
     category: Files

@@ -228,6 +228,46 @@ readonly class TcaSchemaService
      */
     public function getRelationUidListFields(string $tableName): array
     {
+        return $this->collectRelationUidListFields($tableName, requireWritable: true);
+    }
+
+    /**
+     * Relation fields readable as UID lists (includes read-only category / MM select).
+     *
+     * @return list<string>
+     */
+    public function getReadableRelationUidListFields(string $tableName): array
+    {
+        return $this->collectRelationUidListFields($tableName, requireWritable: false);
+    }
+
+    /**
+     * TCA `config` array for a column, or null if missing.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function getColumnFieldConfig(string $tableName, string $fieldName): ?array
+    {
+        $tca = $this->getTca($tableName);
+        if ($tca === null) {
+            return null;
+        }
+
+        $columnConfig = $tca['columns'][$fieldName] ?? null;
+        if (!is_array($columnConfig)) {
+            return null;
+        }
+
+        $config = $columnConfig['config'] ?? null;
+
+        return is_array($config) ? $config : null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function collectRelationUidListFields(string $tableName, bool $requireWritable): array
+    {
         $tca = $this->getTca($tableName);
         if ($tca === null) {
             return [];
@@ -248,9 +288,13 @@ readonly class TcaSchemaService
             if (in_array($fieldName, $systemFields, true)) {
                 continue;
             }
-            if ($this->isRelationUidListField($columnConfig) && $this->isWritableField($columnConfig)) {
-                $fields[] = $fieldName;
+            if (!$this->isRelationUidListField($columnConfig)) {
+                continue;
             }
+            if ($requireWritable && !$this->isWritableField($columnConfig)) {
+                continue;
+            }
+            $fields[] = $fieldName;
         }
 
         return $fields;
