@@ -473,3 +473,22 @@ CREATE TABLE tx_nst3af_ailabel_generation (
     KEY correlation_id (correlation_id),
     KEY unbound (target_table, target_uid)
 );
+
+#
+# Pre-signed single-use MCP upload tokens
+#
+CREATE TABLE tx_nst3af_upload_tokens (
+    uid int(11) NOT NULL auto_increment,
+    token varchar(64) DEFAULT '' NOT NULL,
+    be_user_uid int(11) DEFAULT 0 NOT NULL,
+    storage_uid int(11) DEFAULT 1 NOT NULL,
+    target_folder varchar(255) DEFAULT '' NOT NULL,
+    file_name varchar(255) DEFAULT '' NOT NULL,
+    expires int(11) DEFAULT 0 NOT NULL,
+    used int(11) DEFAULT 0 NOT NULL,
+    tstamp int(11) DEFAULT 0 NOT NULL,
+    crdate int(11) DEFAULT 0 NOT NULL,
+    PRIMARY KEY (uid),
+    KEY token (token),
+    KEY expires (expires)
+);

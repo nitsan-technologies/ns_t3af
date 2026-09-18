@@ -38,6 +38,9 @@ readonly class WriteTableTool implements McpNonAiToolInterface
 {
     private const ALLOWED_ACTIONS = ['create', 'update', 'delete'];
 
+    /** @var list<string> */
+    private const FILE_REF_META_KEYS = ['alternative', 'title', 'description', 'link', 'crop'];
+
     public function __construct(
         private DataHandlerService $dataHandlerService,
         private RecordService $recordService,
@@ -48,7 +51,13 @@ readonly class WriteTableTool implements McpNonAiToolInterface
         name: 'write_table',
         description: 'Create, update, or delete records in a TYPO3 table via DataHandler.'
             . ' Use table_schema first to discover valid field names and types.'
-            . ' For create, include "pid" in the JSON data object. For update/delete, pass the record uid.',
+            . ' For create, include "pid" in the JSON data object (negative pid = insert after that uid for sorting).'
+            . ' For update/delete, pass the record uid.'
+            . ' Category/MM relations (categories, authors, tags, …) accept a comma-separated UID string, e.g. "126" or "8,12".'
+            . ' File/image fields accept [{"uid_local": <sys_file uid>, "alternative": "..."}]'
+            . ' (full replace on update; empty array clears attachments).'
+            . ' Content Blocks collections: write child rows in the collection table with foreign_table_parent_uid,'
+            . ' not the parent counter field.',
         annotations: new ToolAnnotations(
             readOnlyHint: false,
             destructiveHint: true,
@@ -106,27 +115,41 @@ readonly class WriteTableTool implements McpNonAiToolInterface
         $pid = (int) $payload['pid'];
         unset($payload['pid']);
 
+        [$payload, $fileFields] = $this->extractInlineFileFields($tableName, $payload);
+        $payload = $this->normalizeRelationUidListFields($tableName, $payload);
         $filteredData = $this->filterWritableFields($tableName, $payload);
         $ignoredFields = $this->ignoredFields($payload, $filteredData);
 
-        if ($filteredData === []) {
-            return $this->encodeError('No valid writable fields provided.', ['ignoredFields' => $ignoredFields]);
+        if ($filteredData === [] && $fileFields === []) {
+            return $this->encodeError(
+                'No valid writable fields provided.',
+                $this->ignoredFieldsContext($tableName, $ignoredFields),
+            );
         }
 
         try {
             $newUid = $this->dataHandlerService->createRecord($tableName, $pid, $filteredData);
+            $fileFieldUids = $this->applyFileFields($tableName, $newUid, $fileFields);
         } catch (\Throwable $exception) {
             return $this->encodeError($exception->getMessage());
         }
 
-        return json_encode([
+        $response = [
             'action' => 'create',
             'table' => $tableName,
             'uid' => $newUid,
             'pid' => $pid,
             'fields' => array_keys($filteredData),
             'ignoredFields' => $ignoredFields,
-        ], JSON_THROW_ON_ERROR);
+        ];
+        if ($ignoredFields !== []) {
+            $response['ignoredFieldDetails'] = $this->ignoredFieldDetails($tableName, $ignoredFields);
+        }
+        if ($fileFieldUids !== []) {
+            $response['fileFields'] = $fileFieldUids;
+        }
+
+        return json_encode($response, JSON_THROW_ON_ERROR);
     }
 
     /** @param array<string, mixed> $payload */
@@ -140,26 +163,42 @@ readonly class WriteTableTool implements McpNonAiToolInterface
             return $this->encodeError('Record not found: ' . $tableName . ' uid ' . $uid);
         }
 
+        [$payload, $fileFields] = $this->extractInlineFileFields($tableName, $payload);
+        $payload = $this->normalizeRelationUidListFields($tableName, $payload);
         $filteredData = $this->filterWritableFields($tableName, $payload);
         $ignoredFields = $this->ignoredFields($payload, $filteredData);
 
-        if ($filteredData === []) {
-            return $this->encodeError('No valid writable fields provided.', ['ignoredFields' => $ignoredFields]);
+        if ($filteredData === [] && $fileFields === []) {
+            return $this->encodeError(
+                'No valid writable fields provided.',
+                $this->ignoredFieldsContext($tableName, $ignoredFields),
+            );
         }
 
         try {
-            $this->dataHandlerService->updateRecord($tableName, $uid, $filteredData);
+            if ($filteredData !== []) {
+                $this->dataHandlerService->updateRecord($tableName, $uid, $filteredData);
+            }
+            $fileFieldUids = $this->applyFileFields($tableName, $uid, $fileFields);
         } catch (\Throwable $exception) {
             return $this->encodeError($exception->getMessage());
         }
 
-        return json_encode([
+        $response = [
             'action' => 'update',
             'table' => $tableName,
             'uid' => $uid,
             'fields' => array_keys($filteredData),
             'ignoredFields' => $ignoredFields,
-        ], JSON_THROW_ON_ERROR);
+        ];
+        if ($ignoredFields !== []) {
+            $response['ignoredFieldDetails'] = $this->ignoredFieldDetails($tableName, $ignoredFields);
+        }
+        if ($fileFieldUids !== []) {
+            $response['fileFields'] = $fileFieldUids;
+        }
+
+        return json_encode($response, JSON_THROW_ON_ERROR);
     }
 
     private function delete(string $tableName, int $uid): string
@@ -183,6 +222,143 @@ readonly class WriteTableTool implements McpNonAiToolInterface
             'table' => $tableName,
             'uid' => $uid,
         ], JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * Pull TCA file fields shaped as [{"uid_local": N, ...}] (or []) out of the payload.
+     *
+     * @param array<string, mixed> $payload
+     * @return array{
+     *     0: array<string, mixed>,
+     *     1: array<string, list<array{uid_local: int, alternative?: string, title?: string, description?: string, link?: string, crop?: string}>>
+     * }
+     */
+    private function extractInlineFileFields(string $tableName, array $payload): array
+    {
+        $extracted = [];
+        foreach ($this->tcaSchemaService->getFileFields($tableName) as $fieldName) {
+            if (!array_key_exists($fieldName, $payload)) {
+                continue;
+            }
+
+            $value = $payload[$fieldName];
+            if (!is_array($value) || !$this->isUidLocalReferenceList($value)) {
+                continue;
+            }
+
+            $normalized = [];
+            foreach ($value as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $uidLocal = (int) ($item['uid_local'] ?? 0);
+                if ($uidLocal <= 0) {
+                    continue;
+                }
+                $ref = ['uid_local' => $uidLocal];
+                foreach (self::FILE_REF_META_KEYS as $metaKey) {
+                    if (isset($item[$metaKey]) && is_string($item[$metaKey])) {
+                        $ref[$metaKey] = $item[$metaKey];
+                    }
+                }
+                $normalized[] = $ref;
+            }
+
+            $extracted[$fieldName] = $normalized;
+            unset($payload[$fieldName]);
+        }
+
+        return [$payload, $extracted];
+    }
+
+    /** @param array<mixed> $value */
+    private function isUidLocalReferenceList(array $value): bool
+    {
+        if ($value === []) {
+            return true;
+        }
+
+        foreach ($value as $item) {
+            if (!is_array($item) || !array_key_exists('uid_local', $item)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param array<string, list<array{uid_local: int, alternative?: string, title?: string, description?: string, link?: string, crop?: string}>> $fileFields
+     * @return array<string, list<int>>
+     */
+    private function applyFileFields(string $tableName, int $recordUid, array $fileFields): array
+    {
+        $result = [];
+        foreach ($fileFields as $fieldName => $references) {
+            $result[$fieldName] = $this->dataHandlerService->replaceFileFieldReferences(
+                $tableName,
+                $recordUid,
+                $fieldName,
+                $references,
+            );
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function normalizeRelationUidListFields(string $tableName, array $payload): array
+    {
+        foreach ($this->tcaSchemaService->getRelationUidListFields($tableName) as $fieldName) {
+            if (!array_key_exists($fieldName, $payload)) {
+                continue;
+            }
+            $value = $payload[$fieldName];
+            if (is_int($value) || is_float($value)) {
+                $payload[$fieldName] = (string) (int) $value;
+                continue;
+            }
+            if (is_array($value)) {
+                $uids = [];
+                foreach ($value as $item) {
+                    if (is_int($item) || (is_string($item) && ctype_digit($item))) {
+                        $uids[] = (string) (int) $item;
+                    }
+                }
+                $payload[$fieldName] = implode(',', $uids);
+            }
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @param list<string> $ignoredFields
+     * @return array{ignoredFields: list<string>, ignoredFieldDetails: list<array<string, mixed>>}
+     */
+    private function ignoredFieldsContext(string $tableName, array $ignoredFields): array
+    {
+        return [
+            'ignoredFields' => $ignoredFields,
+            'ignoredFieldDetails' => $this->ignoredFieldDetails($tableName, $ignoredFields),
+        ];
+    }
+
+    /**
+     * @param list<string> $ignoredFields
+     * @return list<array<string, mixed>>
+     */
+    private function ignoredFieldDetails(string $tableName, array $ignoredFields): array
+    {
+        $details = [];
+        foreach ($ignoredFields as $fieldName) {
+            $details[] = $this->tcaSchemaService->describeIgnoredField($tableName, $fieldName);
+        }
+
+        return $details;
     }
 
     /**

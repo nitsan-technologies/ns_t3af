@@ -61,7 +61,7 @@ tools:
     category: Schema
     status: ready
     tagline: Inspect available tables and their fields
-    notes: Call before write_table to discover valid field names and types.
+    notes: Call before write_table. Surfaces category/MM relations, file fields, and Content Blocks collections (type=collection with foreignTable/writeHint).
     examplePrompts:
       - 'What fields does the tx_news_domain_model_news table have?'
       - 'Which tables can the AI write to?'
@@ -72,7 +72,7 @@ tools:
     category: Records
     status: ready
     tagline: Create, update, or delete records in any workspace-capable table
-    notes: All writes go through DataHandler. Review staged changes in Workspaces before publishing.
+    notes: 'All writes go through DataHandler. Category/MM fields accept "126" or "8,12". File fields accept [{"uid_local": N, "alternative": "..."}] (replace on update; [] clears). Collections: write child table rows with foreign_table_parent_uid (see ignoredFieldDetails).'
     examplePrompts:
       - 'Create a news article titled Summer Sale 2026 on the News page'
       - 'Add a new text content element to the homepage'
@@ -105,18 +105,29 @@ tools:
     category: Files
     status: ready
     tagline: Download a file from a URL into FAL storage
-    notes: Returns sys_file UID for use with file_reference_add.
+    notes: Preferred for remote images/PDFs. YouTube/Vimeo page URLs become online media. Returns sys_file uid + nextStep for file_reference_add or write_table inline uid_local.
     examplePrompts:
       - 'Upload an image from https://example.com/banner.jpg to /uploads/'
       - 'Download and store a PDF from an external URL'
       - 'Upload a logo file from URL into the media folder'
       - 'Fetch a hero image from the web and save it to fileadmin'
 
+  file_upload_prepare:
+    category: Files
+    status: ready
+    tagline: Get a one-time URL for large binary uploads
+    notes: 'Call this first for chat/desktop binaries. Client PUTs raw bytes to uploadUrl with the token, then attach via file_reference_add or write_table [{"uid_local": N}].'
+    examplePrompts:
+      - 'Prepare an upload slot for hero.png in fileadmin/user_upload/'
+      - 'I have a local image to attach — give me a pre-signed upload URL'
+      - 'Start a large PDF upload into the media folder'
+      - 'Create an upload token for banner.jpg'
+
   file_reference_add:
     category: Files
     status: ready
     tagline: Attach uploaded files to a record file or image field
-    notes: Pass comma-separated sys_file UIDs from file_upload_from_url.
+    notes: Pass comma-separated sys_file UIDs from file_upload_from_url, file_upload, or file_upload_prepare.
     examplePrompts:
       - 'Attach file UID 88 to the hero image field on content element 45'
       - 'Link the uploaded banner image to this news record'
@@ -185,7 +196,7 @@ tools:
     category: Files
     status: ready
     tagline: Upload file content to a FAL directory
-    notes: Provide content (text) or base64Content (binary), not both.
+    notes: 'Prefer file_upload_prepare for binaries. Use content for text (SVG/CSV/VTT). base64Content only for tiny files under mcpMaxBase64UploadBytes. expectedSha1/expectedSize validate the inbound payload; SVG sanitizer may rewrite stored bytes (response then sets rewritten: true).'
 
   record_search:
     category: Search

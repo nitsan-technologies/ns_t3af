@@ -33,11 +33,15 @@ readonly class FileRenameTool implements McpFalStorageToolInterface
 {
     public function __construct(private FileService $fileService) {}
 
-    #[McpTool(name: 'file_rename', description: 'Rename a file. Provide the file identifier and the new file name.')]
+    #[McpTool(name: 'file_rename', description: 'Rename a file. Provide the file identifier and the new file name. Requires mcpAllowDestructiveFileOps.')]
     public function execute(string $fileIdentifier, string $newName, int $storageUid = 1): string
     {
-        $this->fileService->renameFile($storageUid, $fileIdentifier, $newName);
+        try {
+            $this->fileService->renameFile($storageUid, $fileIdentifier, $newName);
 
-        return json_encode(['fileIdentifier' => $fileIdentifier, 'newName' => $newName, 'renamed' => true], JSON_THROW_ON_ERROR);
+            return json_encode(['fileIdentifier' => $fileIdentifier, 'newName' => $newName, 'renamed' => true], JSON_THROW_ON_ERROR);
+        } catch (\Throwable $exception) {
+            return json_encode(['error' => $exception->getMessage()], JSON_THROW_ON_ERROR);
+        }
     }
 }

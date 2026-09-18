@@ -1760,8 +1760,8 @@
                 <target>Priorität</target>
             </trans-unit>
             <trans-unit id="provider.col.status">
-                <source>Status</source>
-                <target>Status</target>
+                <source>Connection</source>
+                <target>Verbindung</target>
             </trans-unit>
             <trans-unit id="provider.col.actions">
                 <source>Actions</source>

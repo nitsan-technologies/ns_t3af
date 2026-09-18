@@ -35,15 +35,20 @@ readonly class DirectoryDeleteTool implements McpFalStorageToolInterface
 
     #[McpTool(
         name: 'directory_delete',
-        description: 'Delete a directory from a storage. Set recursive to true for non-empty directories.',
+        description: 'Delete a directory from a storage. Set recursive to true for non-empty directories.'
+            . ' Requires mcpAllowDestructiveFileOps.',
     )]
     public function execute(string $directoryIdentifier, bool $recursive = false, int $storageUid = 1): string
     {
-        $this->fileService->deleteDirectory($storageUid, $directoryIdentifier, $recursive);
+        try {
+            $this->fileService->deleteDirectory($storageUid, $directoryIdentifier, $recursive);
 
-        return json_encode(
-            ['directoryIdentifier' => $directoryIdentifier, 'recursive' => $recursive, 'deleted' => true],
-            JSON_THROW_ON_ERROR,
-        );
+            return json_encode(
+                ['directoryIdentifier' => $directoryIdentifier, 'recursive' => $recursive, 'deleted' => true],
+                JSON_THROW_ON_ERROR,
+            );
+        } catch (\Throwable $exception) {
+            return json_encode(['error' => $exception->getMessage()], JSON_THROW_ON_ERROR);
+        }
     }
 }

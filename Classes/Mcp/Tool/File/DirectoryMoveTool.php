@@ -35,15 +35,19 @@ readonly class DirectoryMoveTool implements McpFalStorageToolInterface
 
     #[McpTool(
         name: 'directory_move',
-        description: 'Move a directory to a different parent directory within the same storage.',
+        description: 'Move a directory to a different parent directory within the same storage. Requires mcpAllowDestructiveFileOps.',
     )]
     public function execute(string $directoryIdentifier, string $targetDirectory, int $storageUid = 1): string
     {
-        $this->fileService->moveDirectory($storageUid, $directoryIdentifier, $targetDirectory);
+        try {
+            $this->fileService->moveDirectory($storageUid, $directoryIdentifier, $targetDirectory);
 
-        return json_encode(
-            ['directoryIdentifier' => $directoryIdentifier, 'targetDirectory' => $targetDirectory, 'moved' => true],
-            JSON_THROW_ON_ERROR,
-        );
+            return json_encode(
+                ['directoryIdentifier' => $directoryIdentifier, 'targetDirectory' => $targetDirectory, 'moved' => true],
+                JSON_THROW_ON_ERROR,
+            );
+        } catch (\Throwable $exception) {
+            return json_encode(['error' => $exception->getMessage()], JSON_THROW_ON_ERROR);
+        }
     }
 }

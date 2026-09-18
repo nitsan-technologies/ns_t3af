@@ -28,6 +28,7 @@ use const JSON_THROW_ON_ERROR;
 use Mcp\Capability\Attribute\McpTool;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 
 readonly class FileReferenceAddTool implements McpNonAiToolInterface
@@ -35,12 +36,14 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface
     public function __construct(
         private DataHandlerService $dataHandlerService,
         private TcaSchemaService $tcaSchemaService,
+        private RecordService $recordService,
     ) {}
 
     #[McpTool(
         name: 'file_reference_add',
         description: 'Attach uploaded files to a record file/image field.'
-            . ' Pass sys_file UIDs from file_upload_from_url (comma-separated).',
+            . ' Pass sys_file UIDs from file_upload_from_url, file_upload, or file_upload_prepare (comma-separated).'
+            . ' Updates the parent FAL counter column (e.g. og_image) so SEO generators see the attachment.',
     )]
     public function execute(string $table, int $uid, string $fieldName, string $fileUids): string
     {
@@ -63,6 +66,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface
 
         try {
             $referenceUids = $this->dataHandlerService->createFileReferences($table, $uid, $fieldName, $parsedUids);
+            $parentCount = count($this->recordService->findFileReferences($table, $uid, $fieldName));
 
             return json_encode([
                 'table' => $table,
@@ -70,6 +74,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface
                 'fieldName' => $fieldName,
                 'referencesCreated' => count($referenceUids),
                 'referenceUids' => $referenceUids,
+                'parentFieldCount' => $parentCount,
             ], JSON_THROW_ON_ERROR);
         } catch (\Throwable $exception) {
             return $this->encodeError($exception->getMessage());

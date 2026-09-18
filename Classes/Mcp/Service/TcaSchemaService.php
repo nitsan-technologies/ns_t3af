@@ -44,12 +44,21 @@ readonly class TcaSchemaService
         'language',
         'flex',
         'passthrough',
+        'category',
     ];
 
-    /** TCA types that may store simple values depending on configuration (no MM table). */
+    /** TCA types that may store simple values depending on configuration. */
     private const CONDITIONAL_TYPES = [
         'select',
         'group',
+    ];
+
+    /** Discoverable relation containers (schema only; write path varies). */
+    private const RELATION_CONTAINER_TYPES = [
+        'file',
+        'inline',
+        'folder',
+        'imageManipulation',
     ];
 
     /** @return array{languageField: string|null, transOrigPointerField: string|null, translationSource: string|null} */
@@ -213,6 +222,148 @@ readonly class TcaSchemaService
     }
 
     /**
+     * Relation fields writable as a comma-separated list of UIDs (category / MM select / MM group).
+     *
+     * @return list<string>
+     */
+    public function getRelationUidListFields(string $tableName): array
+    {
+        $tca = $this->getTca($tableName);
+        if ($tca === null) {
+            return [];
+        }
+
+        $columns = $tca['columns'] ?? [];
+        if (!is_array($columns)) {
+            return [];
+        }
+
+        $systemFields = $this->getSystemFields($tca);
+        $fields = [];
+
+        foreach ($columns as $fieldName => $columnConfig) {
+            if (!is_string($fieldName) || !is_array($columnConfig)) {
+                continue;
+            }
+            if (in_array($fieldName, $systemFields, true)) {
+                continue;
+            }
+            if ($this->isRelationUidListField($columnConfig) && $this->isWritableField($columnConfig)) {
+                $fields[] = $fieldName;
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
+     * Non-file inline/collection fields (e.g. Content Blocks collections).
+     *
+     * @return list<string>
+     */
+    public function getCollectionFields(string $tableName): array
+    {
+        $tca = $this->getTca($tableName);
+        if ($tca === null) {
+            return [];
+        }
+
+        $columns = $tca['columns'] ?? [];
+        if (!is_array($columns)) {
+            return [];
+        }
+
+        $fields = [];
+        foreach ($columns as $fieldName => $columnConfig) {
+            if (!is_string($fieldName) || !is_array($columnConfig)) {
+                continue;
+            }
+            if ($this->isCollectionField($columnConfig)) {
+                $fields[] = $fieldName;
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
+     * Explain how to write an ignored field (collection / file / unknown).
+     *
+     * @return array{field: string, reason: string, hint: string, foreignTable?: string, foreignField?: string}
+     */
+    public function describeIgnoredField(string $tableName, string $fieldName): array
+    {
+        $tca = $this->getTca($tableName);
+        $columnConfig = is_array($tca) ? ($tca['columns'][$fieldName] ?? null) : null;
+        if (is_array($columnConfig)) {
+            if ($this->isCollectionField($columnConfig)) {
+                $config = is_array($columnConfig['config'] ?? null) ? $columnConfig['config'] : [];
+                $foreignTable = is_string($config['foreign_table'] ?? null) ? $config['foreign_table'] : $fieldName;
+                $foreignField = is_string($config['foreign_field'] ?? null) && $config['foreign_field'] !== ''
+                    ? $config['foreign_field']
+                    : 'foreign_table_parent_uid';
+
+                return $this->collectionIgnoreInfo($fieldName, $foreignTable, $foreignField);
+            }
+
+            if ($this->isFileField($columnConfig)) {
+                return [
+                    'field' => $fieldName,
+                    'reason' => 'file_field',
+                    'hint' => 'Use file_reference_add, or write_table with '
+                        . $fieldName . ' as [{"uid_local": <sys_file uid>, "alternative": "..."}] '
+                        . '(full replace on update; [] clears). Do not set a bare integer counter.',
+                ];
+            }
+
+            if ($this->isRelationUidListField($columnConfig)) {
+                return [
+                    'field' => $fieldName,
+                    'reason' => 'relation',
+                    'hint' => 'Pass a comma-separated list of UIDs as a string, e.g. "126" or "8,12".',
+                ];
+            }
+
+            return [
+                'field' => $fieldName,
+                'reason' => 'not_writable',
+                'hint' => 'Field exists in TCA but is not writable through write_table (readOnly or unsupported type).',
+            ];
+        }
+
+        // Content Blocks convention: collection child table is often named like the parent column.
+        $childTca = $this->getTca($fieldName);
+        if ($childTca !== null) {
+            $childColumns = $childTca['columns'] ?? [];
+            if (is_array($childColumns) && isset($childColumns['foreign_table_parent_uid'])) {
+                return $this->collectionIgnoreInfo($fieldName, $fieldName, 'foreign_table_parent_uid');
+            }
+        }
+
+        return [
+            'field' => $fieldName,
+            'reason' => 'unknown_or_not_in_tca',
+            'hint' => 'Field is not in TCA for ' . $tableName . ', or is a system field.',
+        ];
+    }
+
+    /**
+     * @return array{field: string, reason: string, hint: string, foreignTable: string, foreignField: string}
+     */
+    private function collectionIgnoreInfo(string $fieldName, string $foreignTable, string $foreignField): array
+    {
+        return [
+            'field' => $fieldName,
+            'reason' => 'collection',
+            'foreignTable' => $foreignTable,
+            'foreignField' => $foreignField,
+            'hint' => 'This is a Content Blocks / inline collection. Do not write the parent counter. '
+                . 'Create/update child rows in table "' . $foreignTable . '" with "' . $foreignField . '" '
+                . 'set to this record uid. For order: first child pid=<pageUid>, later children pid=-<previousChildUid>.',
+        ];
+    }
+
+    /**
      * Returns detailed schema information for all readable fields of a table.
      *
      * @return array{table: string, fields: list<array<string, mixed>>}
@@ -291,8 +442,56 @@ readonly class TcaSchemaService
 
         $this->addConstraints($schema, $config, $type);
         $this->addItems($schema, $config, $type);
+        $this->addRelationMetadata($schema, $config, $type, $columnConfig);
 
         return $schema;
+    }
+
+    /**
+     * @param array<string, mixed> &$schema
+     * @param array<mixed> $config
+     * @param array<mixed> $columnConfig
+     */
+    private function addRelationMetadata(array &$schema, array $config, string $type, array $columnConfig): void
+    {
+        if ($type === 'category' || $this->hasMMTable($config)) {
+            $schema['writableAs'] = 'uid_list';
+            $schema['writeHint'] = 'Comma-separated UIDs, e.g. "126" or "8,12".';
+            $mm = $config['MM'] ?? null;
+            if (is_string($mm) && $mm !== '') {
+                $schema['mm'] = $mm;
+            }
+            $foreignTable = $config['foreign_table'] ?? null;
+            if (is_string($foreignTable) && $foreignTable !== '') {
+                $schema['foreignTable'] = $foreignTable;
+            }
+            if ($type === 'category') {
+                $schema['relationKind'] = 'category';
+            }
+        }
+
+        if ($this->isFileField($columnConfig)) {
+            $schema['writableAs'] = 'file_references';
+            $schema['writeHint'] = 'Use file_reference_add or write_table value '
+                . '[{"uid_local":N,"alternative":"..."}] (replace on update; [] clears). '
+                . 'Parent column stores the relation count.';
+            $schema['relationKind'] = 'file';
+        }
+
+        if ($this->isCollectionField($columnConfig)) {
+            $foreignTable = is_string($config['foreign_table'] ?? null) ? $config['foreign_table'] : $schema['name'];
+            $foreignField = is_string($config['foreign_field'] ?? null) && $config['foreign_field'] !== ''
+                ? $config['foreign_field']
+                : 'foreign_table_parent_uid';
+            $schema['type'] = 'collection';
+            $schema['tcaType'] = $type;
+            $schema['foreignTable'] = $foreignTable;
+            $schema['foreignField'] = $foreignField;
+            $schema['writable'] = false;
+            $schema['relationKind'] = 'collection';
+            $schema['writeHint'] = 'Write child rows in "' . $foreignTable . '" with "' . $foreignField
+                . '" = parent uid. Order with pid=<page> then pid=-<previousChildUid>.';
+        }
     }
 
     /**
@@ -481,6 +680,51 @@ readonly class TcaSchemaService
     }
 
     /** @param array<mixed> $columnConfig */
+    private function isCollectionField(array $columnConfig): bool
+    {
+        $config = $columnConfig['config'] ?? [];
+        if (!is_array($config)) {
+            return false;
+        }
+
+        $type = $config['type'] ?? null;
+        if ($type !== 'inline') {
+            return false;
+        }
+
+        $foreignTable = $config['foreign_table'] ?? null;
+        if (!is_string($foreignTable) || $foreignTable === '' || $foreignTable === 'sys_file_reference') {
+            return false;
+        }
+
+        return true;
+    }
+
+    /** @param array<mixed> $columnConfig */
+    private function isRelationUidListField(array $columnConfig): bool
+    {
+        $config = $columnConfig['config'] ?? [];
+        if (!is_array($config)) {
+            return false;
+        }
+
+        $type = $config['type'] ?? null;
+        if (!is_string($type)) {
+            return false;
+        }
+
+        if ($type === 'category') {
+            return true;
+        }
+
+        if (in_array($type, self::CONDITIONAL_TYPES, true) && $this->hasMMTable($config)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /** @param array<mixed> $columnConfig */
     private function isReadableField(array $columnConfig): bool
     {
         $config = $columnConfig['config'] ?? [];
@@ -498,7 +742,12 @@ readonly class TcaSchemaService
         }
 
         if (in_array($type, self::CONDITIONAL_TYPES, true)) {
-            return !$this->hasMMTable($config);
+            // Include MM-backed select/group so categories/authors/tags are discoverable and writable.
+            return true;
+        }
+
+        if (in_array($type, self::RELATION_CONTAINER_TYPES, true)) {
+            return true;
         }
 
         return false;
@@ -507,18 +756,26 @@ readonly class TcaSchemaService
     /** @param array<mixed> $columnConfig */
     private function isWritableField(array $columnConfig): bool
     {
-        if (!$this->isReadableField($columnConfig)) {
-            return false;
-        }
-
         $config = $columnConfig['config'] ?? [];
         if (!is_array($config)) {
             return false;
         }
 
         $readOnly = $config['readOnly'] ?? false;
+        if ($readOnly === true) {
+            return false;
+        }
 
-        return $readOnly !== true;
+        // File / collection parents are not scalar writes; handled via dedicated APIs / child tables.
+        if ($this->isFileField($columnConfig) || $this->isCollectionField($columnConfig)) {
+            return false;
+        }
+
+        if (!$this->isReadableField($columnConfig)) {
+            return false;
+        }
+
+        return true;
     }
 
     /** @param array<mixed> $config */

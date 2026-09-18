@@ -36,8 +36,12 @@ readonly class FileDeleteTool implements McpFalStorageToolInterface
     #[McpTool(name: 'file_delete', description: 'Delete a file by its identifier from a storage.')]
     public function execute(string $fileIdentifier, int $storageUid = 1): string
     {
-        $this->fileService->deleteFile($storageUid, $fileIdentifier);
+        try {
+            $this->fileService->deleteFile($storageUid, $fileIdentifier);
 
-        return json_encode(['fileIdentifier' => $fileIdentifier, 'deleted' => true], JSON_THROW_ON_ERROR);
+            return json_encode(['fileIdentifier' => $fileIdentifier, 'deleted' => true], JSON_THROW_ON_ERROR);
+        } catch (\Throwable $exception) {
+            return json_encode(['error' => $exception->getMessage()], JSON_THROW_ON_ERROR);
+        }
     }
 }

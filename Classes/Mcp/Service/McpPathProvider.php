@@ -72,6 +72,15 @@ readonly class McpPathProvider
     }
 
     /**
+     * Pre-signed binary upload endpoint (out-of-band from MCP JSON-RPC).
+     * Default base `/mcp` → `/mcp_upload`; custom base `/foo` → `/foo/upload`.
+     */
+    public function getUploadPath(): string
+    {
+        return $this->basePath === '/mcp' ? '/mcp_upload' : rtrim($this->basePath, '/') . '/upload';
+    }
+
+    /**
      * RFC 8414 §3.1: the well-known URI is inserted between the host and the
      * issuer's path component, so the metadata for issuer `https://host/<path>`
      * lives at `/.well-known/oauth-authorization-server/<path>`.
