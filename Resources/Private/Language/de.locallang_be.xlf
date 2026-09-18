@@ -751,6 +751,27 @@
                 <source>Scheduler tasks still require per-change review before anything is published.</source>
                 <target>Scheduler-Aufgaben erfordern weiterhin eine Prüfung pro Änderung, bevor etwas veröffentlicht wird.</target>
             </trans-unit>
+            <!-- AI Agent: embedding shortlist settings (Phase 3) -->
+            <trans-unit id="extmng.agentEmbeddingSource">
+                <source>Agent tool routing embeddings (auto / provider / transformers / none)</source>
+                <target>Embeddings für Agent-Tool-Routing (auto / provider / transformers / none)</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentEmbeddingProvider">
+                <source>Embedding provider identifier (empty = default provider)</source>
+                <target>Embedding-Provider-Identifier (leer = Standard-Provider)</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentTransformersModel">
+                <source>Local transformers embedding model id</source>
+                <target>Lokale Transformers-Embedding-Modell-ID</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentShortlistSize">
+                <source>Agent semantic tool shortlist size</source>
+                <target>Größe der semantischen Agent-Tool-Shortlist</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentMinSimilarity">
+                <source>Minimum embedding similarity for shortlisted tools (0.0–1.0)</source>
+                <target>Minimale Embedding-Ähnlichkeit für Shortlist-Tools (0.0–1.0)</target>
+            </trans-unit>
             <!-- AI Agent: language-agnostic routing (Phase 1) -->
             <trans-unit id="agent.context.folder">
                 <source>Folder</source>

@@ -5,6 +5,8 @@ services:
     public: false
 
   _instanceof:
+    NITSAN\NsT3AF\Agent\Contract\EmbeddingSourceInterface:
+      tags: ['nst3af.agent.embedding_source']
     NITSAN\NsT3AF\Provider\Contract\AdapterInterface:
       tags: ['nst3af.adapter']
     NITSAN\NsT3AF\Contract\FeatureProviderFormOptionsInterface:
@@ -73,6 +75,7 @@ services:
       - '../Classes/Mcp/*'
       - '../Classes/Provider/Capability.php'
       - '../Classes/Provider/Contract/*'
+      - '../Classes/Agent/Contract/*'
       - '../Classes/Provider/Model/ModelInfo.php'
       - '../Classes/Provider/Model/ModelDiscoveryServiceInterface.php'
       - '../Classes/Provider/SymfonyAi/BridgeDescriptor.php'
@@ -343,6 +346,11 @@ services:
     factory: ['@TYPO3\CMS\Core\Cache\CacheManager', 'getCache']
     arguments: ['nst3af_dashboard_analytics']
 
+  nst3af.cacheFrontend.agent_tool_index:
+    class: TYPO3\CMS\Core\Cache\Frontend\FrontendInterface
+    factory: ['@TYPO3\CMS\Core\Cache\CacheManager', 'getCache']
+    arguments: ['nst3af_agent_tool_index']
+
   nst3af.cacheFacade.credits_token:
     class: NITSAN\NsT3AF\Cache\Typo3CacheFacade
     arguments:
@@ -362,6 +370,11 @@ services:
     class: NITSAN\NsT3AF\Cache\Typo3CacheFacade
     arguments:
       $cache: '@nst3af.cacheFrontend.dashboard_analytics'
+
+  nst3af.cacheFacade.agent_tool_index:
+    class: NITSAN\NsT3AF\Cache\Typo3CacheFacade
+    arguments:
+      $cache: '@nst3af.cacheFrontend.agent_tool_index'
 
   NITSAN\NsT3AF\Service\DashboardStatisticsCache:
     arguments:
@@ -583,6 +596,17 @@ services:
 
   NITSAN\NsT3AF\Agent\Service\AgentSettingsService:
     public: true
+
+  NITSAN\NsT3AF\Agent\Contract\AgentToolIndexInterface:
+    alias: NITSAN\NsT3AF\Agent\Service\AgentToolIndexService
+
+  NITSAN\NsT3AF\Agent\Service\AgentToolIndexService:
+    arguments:
+      $cache: '@nst3af.cacheFacade.agent_tool_index'
+
+  NITSAN\NsT3AF\Agent\Embedding\EmbeddingSourceResolver:
+    arguments:
+      $sources: !tagged_iterator nst3af.agent.embedding_source
 
   NITSAN\NsT3AF\AiLabel\Service\AiLabelInteropService:
     public: true

@@ -29,6 +29,14 @@ final class AgentSettingsService
 {
     public const DEFAULT_CONVERSATION_RETENTION_DAYS = 90;
 
+    public const DEFAULT_SHORTLIST_SIZE = 12;
+
+    public const DEFAULT_MIN_SIMILARITY = 0.0;
+
+    public const DEFAULT_EMBEDDING_SOURCE = 'auto';
+
+    public const DEFAULT_TRANSFORMERS_MODEL = 'Xenova/all-MiniLM-L6-v2';
+
     private const EXTENSION_KEY = 'ns_t3af';
 
     /**
@@ -39,6 +47,11 @@ final class AgentSettingsService
         'agentMaxWriteDraftsPerTurn' => 'agentMaxWriteDraftsPerTurn',
         'agentShowProviderThinking' => 'agentShowProviderThinking',
         'agentConversationRetentionDays' => 'agentConversationRetentionDays',
+        'agentEmbeddingSource' => 'agentEmbeddingSource',
+        'agentEmbeddingProvider' => 'agentEmbeddingProvider',
+        'agentTransformersModel' => 'agentTransformersModel',
+        'agentShortlistSize' => 'agentShortlistSize',
+        'agentMinSimilarity' => 'agentMinSimilarity',
     ];
 
     public function __construct(
@@ -46,7 +59,7 @@ final class AgentSettingsService
     ) {}
 
     /**
-     * @return array<string, int|bool>
+     * @return array<string, int|bool|string|float>
      */
     public function all(): array
     {
@@ -57,6 +70,11 @@ final class AgentSettingsService
             'agentMaxWriteDraftsPerTurn' => (int) $stored['agentMaxWriteDraftsPerTurn'],
             'agentShowProviderThinking' => (int) $stored['agentShowProviderThinking'] === 1,
             'agentConversationRetentionDays' => (int) $stored['agentConversationRetentionDays'],
+            'agentEmbeddingSource' => (string) $stored['agentEmbeddingSource'],
+            'agentEmbeddingProvider' => (string) $stored['agentEmbeddingProvider'],
+            'agentTransformersModel' => (string) $stored['agentTransformersModel'],
+            'agentShortlistSize' => (int) $stored['agentShortlistSize'],
+            'agentMinSimilarity' => (float) $stored['agentMinSimilarity'],
         ];
     }
 
@@ -80,6 +98,37 @@ final class AgentSettingsService
         $days = (int) ($this->all()['agentConversationRetentionDays'] ?? self::DEFAULT_CONVERSATION_RETENTION_DAYS);
 
         return $days > 0 ? $days : self::DEFAULT_CONVERSATION_RETENTION_DAYS;
+    }
+
+    public function getEmbeddingSource(): string
+    {
+        $value = strtolower(trim((string) ($this->all()['agentEmbeddingSource'] ?? self::DEFAULT_EMBEDDING_SOURCE)));
+
+        return $value !== '' ? $value : self::DEFAULT_EMBEDDING_SOURCE;
+    }
+
+    public function getEmbeddingProvider(): string
+    {
+        return trim((string) ($this->all()['agentEmbeddingProvider'] ?? ''));
+    }
+
+    public function getTransformersModel(): string
+    {
+        $value = trim((string) ($this->all()['agentTransformersModel'] ?? self::DEFAULT_TRANSFORMERS_MODEL));
+
+        return $value !== '' ? $value : self::DEFAULT_TRANSFORMERS_MODEL;
+    }
+
+    public function getShortlistSize(): int
+    {
+        $size = (int) ($this->all()['agentShortlistSize'] ?? self::DEFAULT_SHORTLIST_SIZE);
+
+        return $size > 0 ? $size : self::DEFAULT_SHORTLIST_SIZE;
+    }
+
+    public function getMinSimilarity(): float
+    {
+        return (float) ($this->all()['agentMinSimilarity'] ?? self::DEFAULT_MIN_SIMILARITY);
     }
 
     /**

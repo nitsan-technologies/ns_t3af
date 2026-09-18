@@ -59,11 +59,12 @@
         "symfony/ai-open-ai-platform": "^0.12",
         "symfony/ai-open-router-platform": "^0.12",
         "symfony/ai-platform": "^0.12",
+        "symfony/ai-store": "^0.12",
         "typo3/cms-backend": "^12.4 || ^13.4 || ^14.3",
         "typo3/cms-core": "^12.4 || ^13.4 || ^14.3",
         "typo3/cms-fluid": "^12.4 || ^13.4 || ^14.3",
-        "typo3/cms-workspaces": "^12.4 || ^13.4 || ^14.3",
-        "typo3/cms-scheduler": "^12.4 || ^13.4 || ^14.3"
+        "typo3/cms-scheduler": "^12.4 || ^13.4 || ^14.3",
+        "typo3/cms-workspaces": "^12.4 || ^13.4 || ^14.3"
     },
     "conflict": {
         "marekskopal/typo3-mcp-server": "*",
@@ -115,7 +116,8 @@
                   "symfony/ai-ollama-platform": ".Build/vendor",
                   "symfony/ai-open-ai-platform": ".Build/vendor",
                   "symfony/ai-open-router-platform": ".Build/vendor",
-                  "symfony/ai-platform": ".Build/vendor"
+                  "symfony/ai-platform": ".Build/vendor",
+                  "symfony/ai-store": ".Build/vendor"
                 }
             }
         }
@@ -175,6 +177,7 @@
         "lochmueller/seal": "Vector store abstraction (consumed by upcoming RAG/Embeddings feature).",
         "symfony/ai-platform": "Core Symfony AI runtime; required when using any symfony.* adapter type.",
         "smalot/pdfparser": "Extract text from PDF brand documents in AI Context.",
-        "phpoffice/phpword": "Extract text from DOCX brand documents in AI Context."
+        "phpoffice/phpword": "Extract text from DOCX brand documents in AI Context.",
+        "codewithkyrian/transformers": "Optional local embedding models for AI Agent tool routing (requires ext-ffi)."
     }
 }

@@ -42,6 +42,7 @@ final readonly class AgentTurnOrchestrator
         private PermittedActionProvider $permittedActionProvider,
         private AgentToolDefinitionMapper $toolDefinitionMapper,
         private AgentToolRetriever $toolRetriever,
+        private AgentToolShortlistService $toolShortlist,
         private AgentToolTurnProcessor $toolTurnProcessor,
         private AgentSettingsService $agentSettings,
         private BrandContextResolver $brandContextResolver,
@@ -109,13 +110,16 @@ final readonly class AgentTurnOrchestrator
             ];
         }
 
-        $shortlistLimit = AgentToolRetriever::DEFAULT_SHORTLIST;
-        $shortlistedTools = $this->toolRetriever->shortlist(
+        $shortlistLimit = $this->agentSettings->getShortlistSize();
+        $shortlistResult = $this->toolShortlist->shortlist(
             $userMessage,
             $context,
             $executableTools,
+            $historyMessages,
             $shortlistLimit,
         );
+        $shortlistedTools = $shortlistResult['tools'];
+        $routingSource = $shortlistResult['routingSource'];
         $tools = $this->toolDefinitionMapper->mapExecutableTools($shortlistedTools);
         $retriedWithWidenedShortlist = false;
 
@@ -200,12 +204,15 @@ final readonly class AgentTurnOrchestrator
                 if ($text === '' && !$retriedWithWidenedShortlist && $shortlistLimit < count($executableTools)) {
                     $retriedWithWidenedShortlist = true;
                     $shortlistLimit = min(AgentToolRetriever::WIDEN_SHORTLIST, count($executableTools));
-                    $shortlistedTools = $this->toolRetriever->shortlist(
+                    $shortlistResult = $this->toolShortlist->shortlist(
                         $userMessage,
                         $context,
                         $executableTools,
+                        $historyMessages,
                         $shortlistLimit,
                     );
+                    $shortlistedTools = $shortlistResult['tools'];
+                    $routingSource = $shortlistResult['routingSource'];
                     $tools = $this->toolDefinitionMapper->mapExecutableTools($shortlistedTools);
                     continue;
                 }
@@ -240,6 +247,7 @@ final readonly class AgentTurnOrchestrator
                             static fn(array $tool): string => (string) ($tool['name'] ?? ''),
                             $shortlistedTools,
                         ),
+                        'routingSource' => $routingSource,
                     ],
                 ];
                 $assistantMessages[] = $message;

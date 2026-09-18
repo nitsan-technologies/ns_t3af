@@ -169,3 +169,18 @@ agentShowProviderThinking = 1
 
 # cat=AI Agent//40; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentConversationRetentionDays
 agentConversationRetentionDays = 90
+
+# cat=AI Agent//50; type=options[auto=Auto,provider=Provider,transformers=Transformers (local),none=None]; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentEmbeddingSource
+agentEmbeddingSource = auto
+
+# cat=AI Agent//60; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentEmbeddingProvider
+agentEmbeddingProvider =
+
+# cat=AI Agent//70; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentTransformersModel
+agentTransformersModel = Xenova/all-MiniLM-L6-v2
+
+# cat=AI Agent//80; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentShortlistSize
+agentShortlistSize = 12
+
+# cat=AI Agent//90; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentMinSimilarity
+agentMinSimilarity = 0.0

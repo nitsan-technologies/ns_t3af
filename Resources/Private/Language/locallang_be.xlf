@@ -621,6 +621,21 @@
       <trans-unit id="extmng.agentConversationRetentionDays" resname="extmng.agentConversationRetentionDays">
         <source>Agent conversation retention (days)</source>
       </trans-unit>
+      <trans-unit id="extmng.agentEmbeddingSource" resname="extmng.agentEmbeddingSource">
+        <source>Agent tool routing embeddings (auto / provider / transformers / none)</source>
+      </trans-unit>
+      <trans-unit id="extmng.agentEmbeddingProvider" resname="extmng.agentEmbeddingProvider">
+        <source>Embedding provider identifier (empty = default provider)</source>
+      </trans-unit>
+      <trans-unit id="extmng.agentTransformersModel" resname="extmng.agentTransformersModel">
+        <source>Local transformers embedding model id</source>
+      </trans-unit>
+      <trans-unit id="extmng.agentShortlistSize" resname="extmng.agentShortlistSize">
+        <source>Agent semantic tool shortlist size</source>
+      </trans-unit>
+      <trans-unit id="extmng.agentMinSimilarity" resname="extmng.agentMinSimilarity">
+        <source>Minimum embedding similarity for shortlisted tools (0.0–1.0)</source>
+      </trans-unit>
       <trans-unit id="agent.starter.generateSeoNeedsPage" resname="agent.starter.generateSeoNeedsPage">
         <source>Open a page in the backend first — SEO metadata needs page context.</source>
       </trans-unit>
