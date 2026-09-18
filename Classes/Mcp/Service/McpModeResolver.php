@@ -32,10 +32,16 @@ final readonly class McpModeResolver
 
     public function __construct(
         private ExtensionSettingsService $extensionSettingsService,
+        private McpModeOverride $modeOverride,
     ) {}
 
     public function getMode(): string
     {
+        $override = $this->modeOverride->current();
+        if ($override !== null) {
+            return $override;
+        }
+
         $mode = strtolower(trim((string) ($this->extensionSettingsService->getAllIgnorePid('ns_t3af')['mcpMode'] ?? self::MODE_CONTEXT)));
 
         return in_array($mode, [self::MODE_CONTEXT, self::MODE_NATIVE], true)

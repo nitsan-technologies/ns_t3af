@@ -20,15 +20,27 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use NITSAN\NsT3AF\Api\AiToolDefinition;
+use NITSAN\NsT3AF\Mcp\Attribute\McpContentParam;
+use NITSAN\NsT3AF\Mcp\Attribute\McpDualModeTool;
+use NITSAN\NsT3AF\Mcp\Contract\McpPreviewableToolInterface;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
+use ReflectionMethod;
+use ReflectionNamedType;
+use ReflectionParameter;
 
 /**
  * Maps permitted MCP tools to provider-facing AiToolDefinition schemas.
+ *
+ * Agent schemas are built from attributes (not global mcpMode): content params,
+ * aiProvider and workspaceId are hidden; previewable tools expose variants.
  *
  * @internal
  */
 final readonly class AgentToolDefinitionMapper
 {
+    /** @var list<string> */
+    private const HIDDEN_PARAM_NAMES = ['aiProvider', 'workspaceId'];
+
     public function __construct(
         private McpToolIntrospectorService $toolIntrospector,
     ) {}
@@ -53,12 +65,37 @@ final readonly class AgentToolDefinitionMapper
             $source = $introspected[$name] ?? null;
             $definitions[] = new AiToolDefinition(
                 name: $name,
-                description: (string) ($tool['description'] ?? ($source['description'] ?? $name)),
+                description: $this->resolveDescription($tool, is_array($source) ? $source : []),
                 parameters: $this->buildParametersSchema(is_array($source) ? $source : []),
             );
         }
 
         return $definitions;
+    }
+
+    /**
+     * @param array<string, mixed> $tool
+     * @param array<string, mixed> $source
+     */
+    private function resolveDescription(array $tool, array $source): string
+    {
+        $className = (string) ($source['className'] ?? '');
+        if ($className !== '' && class_exists($className)) {
+            $attributes = (new \ReflectionClass($className))->getAttributes(McpDualModeTool::class);
+            if ($attributes !== []) {
+                $dual = $attributes[0]->newInstance();
+                if (trim($dual->nativeDescription) !== '') {
+                    return $dual->nativeDescription;
+                }
+            }
+        }
+
+        $intent = is_array($tool['intent'] ?? null) ? $tool['intent'] : (is_array($source['intent'] ?? null) ? $source['intent'] : null);
+        if (is_array($intent) && trim((string) ($intent['summary'] ?? '')) !== '') {
+            return (string) $intent['summary'];
+        }
+
+        return (string) ($tool['description'] ?? ($source['description'] ?? ''));
     }
 
     /**
@@ -69,22 +106,61 @@ final readonly class AgentToolDefinitionMapper
     {
         $properties = [];
         $required = [];
-        $params = is_array($tool['params'] ?? null) ? $tool['params'] : [];
+        $className = (string) ($tool['className'] ?? '');
+        $previewable = ($tool['previewable'] ?? false) === true
+            || ($className !== '' && is_subclass_of($className, McpPreviewableToolInterface::class));
 
-        foreach ($params as $param) {
-            if (!is_array($param)) {
-                continue;
+        if ($className !== '' && class_exists($className) && method_exists($className, 'execute')) {
+            $reflection = new ReflectionMethod($className, 'execute');
+            foreach ($reflection->getParameters() as $parameter) {
+                if ($parameter->getAttributes(McpContentParam::class) !== []) {
+                    continue;
+                }
+                $name = $parameter->getName();
+                if (in_array($name, self::HIDDEN_PARAM_NAMES, true)) {
+                    continue;
+                }
+                $properties[$name] = [
+                    'type' => $this->mapJsonType($this->parameterTypeName($parameter)),
+                    'description' => '',
+                ];
+                if (!$parameter->isOptional() && !$parameter->isDefaultValueAvailable()) {
+                    $required[] = $name;
+                }
             }
-            $name = (string) ($param['name'] ?? '');
-            if ($name === '') {
-                continue;
+        } else {
+            $params = is_array($tool['params'] ?? null) ? $tool['params'] : [];
+            foreach ($params as $param) {
+                if (!is_array($param)) {
+                    continue;
+                }
+                $name = (string) ($param['name'] ?? '');
+                if ($name === '' || in_array($name, self::HIDDEN_PARAM_NAMES, true)) {
+                    continue;
+                }
+                $properties[$name] = [
+                    'type' => $this->mapJsonType((string) ($param['type'] ?? 'string')),
+                    'description' => (string) ($param['description'] ?? ''),
+                ];
+                if (($param['required'] ?? false) === true) {
+                    $required[] = $name;
+                }
             }
-            $properties[$name] = [
-                'type' => $this->mapJsonType((string) ($param['type'] ?? 'string')),
-                'description' => (string) ($param['description'] ?? ''),
-            ];
-            if (($param['required'] ?? false) === true) {
-                $required[] = $name;
+        }
+
+        if ($previewable) {
+            if (!isset($properties['variants'])) {
+                $properties['variants'] = [
+                    'type' => 'number',
+                    'description' => 'Number of suggestion variants to generate (1–5, default 3).',
+                ];
+            }
+            if ((string) ($tool['name'] ?? '') === 't3ai_generate_all_seo' && !isset($properties['fieldKeys'])) {
+                $properties['fieldKeys'] = [
+                    'type' => 'array',
+                    'description' => 'Optional SEO field subset (metaTitle, metaDescription, keywords, ogTitle, ogDescription). Empty = all five. Aliases seo_title→metaTitle accepted.',
+                    'items' => ['type' => 'string'],
+                ];
             }
         }
 
@@ -99,9 +175,20 @@ final readonly class AgentToolDefinitionMapper
         return $schema;
     }
 
+    private function parameterTypeName(ReflectionParameter $parameter): string
+    {
+        $type = $parameter->getType();
+        if ($type instanceof ReflectionNamedType) {
+            return $type->getName();
+        }
+
+        return 'string';
+    }
+
     private function mapJsonType(string $phpType): string
     {
         $normalized = strtolower(trim(explode('|', $phpType)[0]));
+
         return match ($normalized) {
             'int', 'float' => 'number',
             'bool' => 'boolean',

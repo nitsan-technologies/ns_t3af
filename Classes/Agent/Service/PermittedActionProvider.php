@@ -32,6 +32,19 @@ final readonly class PermittedActionProvider
 {
     private const CORE_EXTENSION_KEY = 'ns_t3af';
 
+    /**
+     * Explicit denylist (also covered by DualMode∧¬Previewable Write, kept for clarity).
+     *
+     * @var list<string>
+     */
+    private const AGENT_HIDDEN_TOOL_NAMES = [
+        't3ai_generate_meta_description',
+        't3ai_generate_keywords',
+        't3ai_generate_og_title',
+        't3ai_generate_og_description',
+        't3aa_get_file_for_metadata',
+    ];
+
     public function __construct(
         private McpToolIntrospectorService $toolIntrospector,
         private EntitlementResolver $entitlementResolver,
@@ -49,6 +62,9 @@ final readonly class PermittedActionProvider
         $locked = [];
 
         foreach ($this->toolIntrospector->listTools() as $tool) {
+            if ($this->isHiddenFromAgent($tool)) {
+                continue;
+            }
             $entry = $this->normalizeToolEntry($tool);
             if (($entry['executable'] ?? false) === true) {
                 $executable[] = $entry;
@@ -64,6 +80,33 @@ final readonly class PermittedActionProvider
             'executable' => $executable,
             'locked' => $locked,
         ];
+    }
+
+    /**
+     * DualMode Write without Previewable stays MCP-visible but agent-hidden.
+     * Read DualMode (e.g. summarize) stays visible — native execute, no card.
+     *
+     * @param array<string, mixed> $tool
+     */
+    public function isHiddenFromAgent(array $tool): bool
+    {
+        if (($tool['agentHidden'] ?? false) === true) {
+            return true;
+        }
+
+        $name = (string) ($tool['name'] ?? '');
+        if (in_array($name, self::AGENT_HIDDEN_TOOL_NAMES, true)) {
+            return true;
+        }
+
+        if (($tool['dualMode'] ?? false) !== true || ($tool['previewable'] ?? false) === true) {
+            return false;
+        }
+
+        $severity = ToolSeverity::tryFromString((string) ($tool['severity'] ?? ''));
+
+        // Read DualMode: native execute as a read — keep in catalog.
+        return $severity !== ToolSeverity::Read;
     }
 
     /**
@@ -108,6 +151,7 @@ final readonly class PermittedActionProvider
             $lockReason = $this->translator->translate('agent.tool.extensionUnavailable', [$this->formatOwnerLabel($ownerKey)]);
         } elseif (
             ($severity === ToolSeverity::Write || $severity === ToolSeverity::Destructive)
+            && ($tool['previewable'] ?? false) !== true
             && !$this->toolPlanResolver->supportsPlanning((string) ($tool['name'] ?? ''))
         ) {
             $executable = false;
@@ -128,6 +172,8 @@ final readonly class PermittedActionProvider
             'lockKind' => $lockKind,
             'intent' => is_array($tool['intent'] ?? null) ? $tool['intent'] : null,
             'contextHints' => is_array($tool['contextHints'] ?? null) ? $tool['contextHints'] : null,
+            'dualMode' => ($tool['dualMode'] ?? false) === true,
+            'previewable' => ($tool['previewable'] ?? false) === true,
         ];
     }
 

@@ -158,6 +158,9 @@ class McpToolIntrospectorService
             'severity' => $severity instanceof ToolSeverity ? $severity->value : null,
             'intent' => $this->resolveToolIntent($reflection),
             'contextHints' => $this->resolveContextHints($reflection),
+            'dualMode' => $tool instanceof McpDualModeContentToolInterface,
+            'previewable' => $tool instanceof \NITSAN\NsT3AF\Mcp\Contract\McpPreviewableToolInterface,
+            'agentHidden' => $reflection->getDeclaringClass()->getAttributes(\NITSAN\NsT3AF\Mcp\Attribute\McpAgentHidden::class) !== [],
         ];
     }
 
@@ -221,7 +224,15 @@ class McpToolIntrospectorService
     }
 
     /**
-     * @return array{verbs: list<string>, nouns: list<string>, modules: list<string>, requiresPage: bool}|null
+     * @return array{
+     *     verbs: list<string>,
+     *     nouns: list<string>,
+     *     modules: list<string>,
+     *     requiresPage: bool,
+     *     summary: string,
+     *     examples: list<string>,
+     *     category: string
+     * }|null
      */
     private function resolveToolIntent(ReflectionMethod $reflection): ?array
     {
@@ -238,6 +249,9 @@ class McpToolIntrospectorService
             'nouns' => $intent->nouns,
             'modules' => $intent->modules,
             'requiresPage' => $intent->requiresPage,
+            'summary' => $intent->summary,
+            'examples' => $intent->examples,
+            'category' => $intent->category,
         ];
     }
 

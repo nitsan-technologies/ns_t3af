@@ -22,20 +22,29 @@ namespace NITSAN\NsT3AF\Mcp\Attribute;
 use Attribute;
 
 /**
- * Retrieval metadata for agent NL tool shortlisting (verbs, nouns, module hints).
+ * Retrieval metadata for agent tool shortlisting (embeddings + category pick).
+ *
+ * `$verbs` / `$nouns` are deprecated for scoring — kept for BC and folded into
+ * the embedded text. Prefer `$summary`, `$examples`, and `$category`.
  */
 #[Attribute(Attribute::TARGET_CLASS)]
 final class McpToolIntent
 {
     /**
-     * @param list<string> $verbs Action verbs, e.g. create, translate, list
-     * @param list<string> $nouns Domain nouns, e.g. news, page, seo
-     * @param list<string> $modules Backend module hints, e.g. records, web_layout, file
+     * @param list<string> $verbs      @deprecated Kept for BC; folded into embeddings, not scored
+     * @param list<string> $nouns      @deprecated Kept for BC; folded into embeddings, not scored
+     * @param list<string> $modules    Backend module hints, e.g. records, web_layout, file
+     * @param list<string> $examples   Short example requests (mixed languages) for embeddings only
+     * @param string       $summary    One-line English summary for the LLM / embeddings
+     * @param string       $category   content|pages|seo|media_files|translation|…|general
      */
     public function __construct(
         public readonly array $verbs = [],
         public readonly array $nouns = [],
         public readonly array $modules = [],
         public readonly bool $requiresPage = false,
+        public readonly string $summary = '',
+        public readonly array $examples = [],
+        public readonly string $category = '',
     ) {}
 }

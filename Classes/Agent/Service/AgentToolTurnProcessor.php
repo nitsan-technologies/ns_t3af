@@ -19,9 +19,12 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Service;
 
+use NITSAN\NsT3AF\Mcp\Dto\PreviewResult;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Exception\UnsupportedPlanException;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPlaygroundService;
+use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
+use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
@@ -46,6 +49,7 @@ final readonly class AgentToolTurnProcessor
         private AgentAuditLogger $auditLogger,
         private AgentToolEditorLabelService $editorLabelService,
         private AgentTranslator $translator,
+        private McpToolIntrospectorService $toolIntrospector,
     ) {}
 
     /**
@@ -67,6 +71,20 @@ final readonly class AgentToolTurnProcessor
             $body['arguments'] = $reroutedTool['arguments'];
 
             return $this->execute($reroutedTool['tool'], $context, $body, $user, $correlationId);
+        }
+
+        $rawTool = $this->findRawTool($toolName);
+        if ($rawTool !== null && $this->permittedActionProvider->isHiddenFromAgent($rawTool)) {
+            return [
+                'role' => 'assistant',
+                'content' => $this->translator->translate('agent.turn.notAvailableInAgent', [$toolName]),
+                'meta' => [
+                    'type' => 'error',
+                    'tool' => $toolName,
+                    'correlationId' => $correlationId,
+                    'agentHidden' => true,
+                ],
+            ];
         }
 
         $tool = $this->findTool($catalog, $toolName);
@@ -112,6 +130,23 @@ final readonly class AgentToolTurnProcessor
         }
 
         $severity = (string) ($tool['severity'] ?? '');
+        $isDualMode = ($tool['dualMode'] ?? false) === true || ($rawTool['dualMode'] ?? false) === true;
+        $isPreviewable = ($tool['previewable'] ?? false) === true || ($rawTool['previewable'] ?? false) === true;
+
+        // Read DualMode: native execute, no suggestions card.
+        if ($isDualMode && $severity === ToolSeverity::Read->value) {
+            return $this->processNativeReadTurn($tool, $context, $body, $user, $correlationId, $toolCallCount, $guard);
+        }
+
+        // Write DualMode + Previewable: native preview → suggestions meta (apply in Phase 5).
+        if ($isDualMode && $isPreviewable && ($severity === ToolSeverity::Write->value || $severity === ToolSeverity::Destructive->value)) {
+            $previewMessage = $this->processPreviewToolTurn($tool, $context, $body, $severity, $correlationId);
+            $this->applyTurnGuardMeta($previewMessage['meta'], $guard['message']);
+            $previewMessage['meta']['toolCallCount'] = $toolCallCount;
+
+            return $previewMessage;
+        }
+
         if ($severity === ToolSeverity::Write->value || $severity === ToolSeverity::Destructive->value) {
             $draftMessage = $this->processWriteToolTurn($tool, $context, $body, $severity);
             $draftMessage['meta']['correlationId'] = $correlationId;
@@ -197,6 +232,175 @@ final readonly class AgentToolTurnProcessor
             'role' => 'assistant',
             'content' => $content,
             'meta' => $meta,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function findRawTool(string $toolName): ?array
+    {
+        foreach ($this->toolIntrospector->listTools() as $tool) {
+            if ((string) ($tool['name'] ?? '') === $toolName) {
+                return $tool;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $tool
+     * @param array<string, mixed> $context
+     * @param array<string, mixed> $body
+     * @param array{allowed: bool, level: string, message: string|null} $guard
+     * @return array{role: string, content: string, meta: array<string, mixed>}
+     */
+    private function processNativeReadTurn(
+        array $tool,
+        array $context,
+        array $body,
+        BackendUserAuthentication $user,
+        string $correlationId,
+        int $toolCallCount,
+        array $guard,
+    ): array {
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $arguments = $this->mergeContextArguments($arguments, $context);
+
+        $result = $this->playgroundService->invokeWithMode(
+            (string) $tool['name'],
+            $arguments,
+            McpModeResolver::MODE_NATIVE,
+        );
+        $invokeSuccess = (bool) ($result['success'] ?? false);
+        $this->auditLogger->logToolInvocation(
+            $correlationId,
+            (string) $tool['name'],
+            $arguments,
+            $invokeSuccess,
+            (int) ($result['latencyMs'] ?? 0),
+            $invokeSuccess ? null : 'tool_failed',
+        );
+
+        $pageId = (int) ($context['pageId'] ?? 0);
+        $presented = $this->toolResultPresenter->present(
+            (string) $tool['name'],
+            $result['result'] ?? null,
+            $invokeSuccess,
+            (string) ($result['message'] ?? ''),
+            $pageId > 0 ? $pageId : null,
+        );
+
+        $meta = [
+            'type' => 'tool_result',
+            'tool' => $tool['name'],
+            'toolCallLabel' => $this->editorLabelService->resolve($tool),
+            'autoRan' => true,
+            'severity' => ToolSeverity::Read->value,
+            'severityLabel' => (string) ($tool['severityLabel'] ?? ''),
+            'success' => (bool) $presented['success'],
+            'summary' => (string) $presented['summary'],
+            'llmSummary' => $presented['llmSummary'],
+            'facts' => $presented['facts'],
+            'error' => $presented['error'],
+            'latencyMs' => (int) ($result['latencyMs'] ?? 0),
+            'readWithoutConfirmation' => true,
+            'correlationId' => $correlationId,
+            'toolCallCount' => $toolCallCount,
+            'routingMode' => McpModeResolver::MODE_NATIVE,
+        ];
+        $this->applyTurnGuardMeta($meta, $guard['message']);
+        if ($presented['details'] !== null) {
+            $meta['details'] = $presented['details'];
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => (string) $presented['content'],
+            'meta' => $meta,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $tool
+     * @param array<string, mixed> $context
+     * @param array<string, mixed> $body
+     * @return array{role: string, content: string, meta: array<string, mixed>}
+     */
+    private function processPreviewToolTurn(
+        array $tool,
+        array $context,
+        array $body,
+        string $severity,
+        string $correlationId,
+    ): array {
+        $toolName = (string) ($tool['name'] ?? '');
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $arguments = $this->mergeContextArguments($arguments, $context);
+
+        $variants = max(1, min(5, (int) ($arguments['variants'] ?? 3)));
+        unset($arguments['variants']);
+
+        $result = $this->playgroundService->preview($toolName, $arguments, $variants);
+        if (($result['success'] ?? false) !== true || !$result['preview'] instanceof PreviewResult) {
+            return [
+                'role' => 'assistant',
+                'content' => $this->translator->translate(
+                    'agent.turn.previewFailed',
+                    [$toolName, (string) ($result['message'] ?? '')],
+                ),
+                'meta' => [
+                    'type' => 'error',
+                    'tool' => $toolName,
+                    'correlationId' => $correlationId,
+                    'orchestratorPause' => true,
+                ],
+            ];
+        }
+
+        $preview = $result['preview'];
+        $editorLabel = $this->editorLabelService->resolve($tool);
+        $draftId = bin2hex(random_bytes(8));
+        $this->draftSession->storeDraft($draftId, [
+            'previewResult' => $preview->toArray(),
+            'arguments' => $arguments,
+            'severity' => $severity,
+            'tool' => $toolName,
+            'destructiveArmed' => false,
+            'createdAt' => time(),
+            'flow' => 'agent_preview',
+        ]);
+
+        $this->auditLogger->logToolInvocation(
+            $correlationId,
+            $toolName,
+            array_merge($arguments, ['variants' => $variants, '_preview' => true]),
+            true,
+            (int) ($result['latencyMs'] ?? 0),
+            null,
+        );
+
+        $summary = $preview->llmSummary !== ''
+            ? $preview->llmSummary
+            : $this->translator->translate('agent.suggestions.ready', [$editorLabel, (string) count($preview->variants)]);
+
+        return [
+            'role' => 'assistant',
+            'content' => $summary,
+            'meta' => [
+                'type' => 'suggestions',
+                'tool' => $toolName,
+                'editorLabel' => $editorLabel,
+                'severity' => $severity,
+                'draftId' => $draftId,
+                'suggestions' => $preview->toArray(),
+                'callCount' => $preview->callCount,
+                'generationPath' => $preview->generationPath,
+                'correlationId' => $correlationId,
+                'latencyMs' => (int) ($result['latencyMs'] ?? 0),
+                'orchestratorPause' => true,
+            ],
         ];
     }
 

@@ -1267,6 +1267,15 @@
       <trans-unit id="agent.plan.unsupportedDynamicOperation" resname="agent.plan.unsupportedDynamicOperation">
         <source>Unsupported dynamic operation: %1$s</source>
       </trans-unit>
+      <trans-unit id="agent.turn.notAvailableInAgent" resname="agent.turn.notAvailableInAgent">
+        <source>%1$s is not available in the AI Agent yet. Use the MCP Playground or the extension backend module instead.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.previewFailed" resname="agent.turn.previewFailed">
+        <source>Could not generate a preview for %1$s: %2$s</source>
+      </trans-unit>
+      <trans-unit id="agent.suggestions.ready" resname="agent.suggestions.ready">
+        <source>Here are %2$s suggestion variants for %1$s. Review them below and apply the ones you want.</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

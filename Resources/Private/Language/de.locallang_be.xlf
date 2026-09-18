@@ -1556,6 +1556,18 @@
                 <source>Unsupported dynamic operation: %1$s</source>
                 <target>Nicht unterstützte dynamische Operation: %1$s</target>
             </trans-unit>
+            <trans-unit id="agent.turn.notAvailableInAgent">
+                <source>%1$s is not available in the AI Agent yet. Use the MCP Playground or the extension backend module instead.</source>
+                <target>%1$s ist im AI Agent noch nicht verfügbar. Nutzen Sie stattdessen den MCP Playground oder das Backend-Modul der Erweiterung.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.previewFailed">
+                <source>Could not generate a preview for %1$s: %2$s</source>
+                <target>Vorschau für %1$s konnte nicht erzeugt werden: %2$s</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.ready">
+                <source>Here are %2$s suggestion variants for %1$s. Review them below and apply the ones you want.</source>
+                <target>Hier sind %2$s Vorschlagsvarianten für %1$s. Prüfen Sie sie unten und wenden Sie die gewünschten an.</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>
