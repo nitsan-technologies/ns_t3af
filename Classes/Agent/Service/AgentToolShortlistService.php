@@ -31,6 +31,8 @@ use NITSAN\NsT3AF\Api\AiServiceInterface;
  */
 final class AgentToolShortlistService
 {
+    public const WIDEN_SHORTLIST = 25;
+
     /** @var list<string> */
     private const ALWAYS_ON = [
         'ask_clarification',

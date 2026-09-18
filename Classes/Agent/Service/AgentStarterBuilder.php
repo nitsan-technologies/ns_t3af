@@ -24,17 +24,18 @@ use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 /**
  * Context-aware suggested actions for the agent greeting (prototype parity).
  *
+ * Starter chips emit real MCP tool names + args (no legacy NL flow action ids).
+ *
  * @internal
  */
 final readonly class AgentStarterBuilder
 {
-    private const SEO_FLOW_ACTION = 'generate_seo_metadata';
+    private const SEO_TOOL = 't3ai_generate_all_seo';
 
-    private const FILE_METADATA_FLOW_ACTION = 'generate_file_metadata';
+    private const FILE_METADATA_TOOL = 't3aa_update_file_metadata';
 
     public function __construct(
         private PermittedActionProvider $permittedActionProvider,
-        private AgentToolPlanResolver $toolPlanResolver,
         private AgentToolEditorLabelService $editorLabelService,
         private AgentTranslator $translator,
     ) {}
@@ -80,12 +81,13 @@ final readonly class AgentStarterBuilder
         $pageId = (int) ($context['pageId'] ?? 0);
         $executable = [];
 
-        if ($pageId > 0 && $this->canRunSeoFlow($catalog)) {
-            $executable[] = $this->actionStarter(
-                self::SEO_FLOW_ACTION,
-                'agent.starter.generateSeo',
-                ToolSeverity::Write,
-            );
+        $seoTool = $this->findExecutableTool($catalog, self::SEO_TOOL);
+        if ($pageId > 0 && $seoTool !== null) {
+            $executable[] = $this->enrichStarter($seoTool, [
+                'pageId' => $pageId,
+                'pid' => $pageId,
+                'uid' => $pageId,
+            ], 'agent.starter.generateSeo');
         }
 
         foreach (['pages_get', 'content_list', 'pages_tree', 'pages_list'] as $toolName) {
@@ -141,14 +143,15 @@ final readonly class AgentStarterBuilder
      */
     private function buildFileStarters(array $catalog, array $context): array
     {
-        unset($context);
         $executable = [];
 
-        if ($this->findExecutableTool($catalog, 't3aa_update_file_metadata') !== null) {
-            $executable[] = $this->actionStarter(
-                self::FILE_METADATA_FLOW_ACTION,
+        $fileMetaTool = $this->findExecutableTool($catalog, self::FILE_METADATA_TOOL);
+        if ($fileMetaTool !== null) {
+            $arguments = $this->fileMetadataArgumentsFromContext($context);
+            $executable[] = $this->enrichStarter(
+                $fileMetaTool,
+                $arguments,
                 'agent.starter.generateFileMetadata',
-                ToolSeverity::Write,
             );
         }
 
@@ -219,12 +222,13 @@ final readonly class AgentStarterBuilder
         $executable = [];
 
         if ($pageId > 0) {
-            if ($this->canRunSeoFlow($catalog)) {
-                $executable[] = $this->actionStarter(
-                    self::SEO_FLOW_ACTION,
-                    'agent.starter.generateSeo',
-                    ToolSeverity::Write,
-                );
+            $seoTool = $this->findExecutableTool($catalog, self::SEO_TOOL);
+            if ($seoTool !== null) {
+                $executable[] = $this->enrichStarter($seoTool, [
+                    'pageId' => $pageId,
+                    'pid' => $pageId,
+                    'uid' => $pageId,
+                ], 'agent.starter.generateSeo');
             }
 
             foreach (['pages_get', 'content_list', 'pages_list'] as $toolName) {
@@ -312,16 +316,6 @@ final readonly class AgentStarterBuilder
 
     /**
      * @param array{executable: list<array<string, mixed>>, locked: list<array<string, mixed>>} $catalog
-     */
-    private function canRunSeoFlow(array $catalog): bool
-    {
-        return $this->findExecutableTool($catalog, 'pages_get') !== null
-            && $this->findExecutableTool($catalog, 'write_table') !== null
-            && $this->toolPlanResolver->supportsPlanning('write_table');
-    }
-
-    /**
-     * @param array{executable: list<array<string, mixed>>, locked: list<array<string, mixed>>} $catalog
      * @return array<string, mixed>|null
      */
     private function findExecutableTool(array $catalog, string $toolName): ?array
@@ -337,37 +331,45 @@ final readonly class AgentStarterBuilder
     }
 
     /**
+     * @param array<string, mixed> $context
+     * @return array<string, mixed>
+     */
+    private function fileMetadataArgumentsFromContext(array $context): array
+    {
+        $fileUid = (int) ($context['fileUid'] ?? 0);
+        if ($fileUid > 0) {
+            return ['fileUid' => $fileUid];
+        }
+
+        $record = is_array($context['record'] ?? null) ? $context['record'] : null;
+        if ($record !== null
+            && in_array(strtolower((string) ($record['table'] ?? '')), ['sys_file', 'sys_file_metadata'], true)
+            && (int) ($record['uid'] ?? 0) > 0
+        ) {
+            return ['fileUid' => (int) $record['uid']];
+        }
+
+        return [];
+    }
+
+    /**
      * @param array<string, mixed> $tool
      * @param array<string, mixed> $arguments
      * @return array<string, mixed>
      */
-    private function enrichStarter(array $tool, array $arguments): array
+    private function enrichStarter(array $tool, array $arguments, string $labelKey = ''): array
     {
-        $tool['label'] = (string) ($tool['editorLabel'] ?? $this->editorLabelService->resolve($tool));
+        if ($labelKey !== '') {
+            $tool['label'] = $this->translator->translate($labelKey);
+            $tool['description'] = $this->translator->translate($labelKey);
+        } else {
+            $tool['label'] = (string) ($tool['editorLabel'] ?? $this->editorLabelService->resolve($tool));
+        }
         if ($arguments !== []) {
             $tool['arguments'] = $arguments;
         }
+        unset($tool['action']);
 
         return $tool;
     }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function actionStarter(string $action, string $labelKey, ToolSeverity $severity): array
-    {
-        return [
-            'name' => $action,
-            'action' => $action,
-            'label' => $this->translator->translate($labelKey),
-            'description' => $this->translator->translate($labelKey),
-            'severity' => $severity->value,
-            'severityLabel' => $severity->label(),
-            'ownerExtensionKey' => 'ns_t3af',
-            'ownerLabel' => $this->translator->translate('agent.owner.core'),
-            'executable' => true,
-            'lockReason' => '',
-        ];
-    }
-
 }

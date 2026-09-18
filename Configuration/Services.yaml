@@ -421,6 +421,12 @@ services:
   NITSAN\NsT3AF\Agent\Controller\AgentAjaxController:
     public: true
 
+  NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface:
+    alias: NITSAN\NsT3AF\Agent\Service\AgentToolTurnProcessor
+
+  NITSAN\NsT3AF\Agent\Contract\AgentTurnRunnerInterface:
+    alias: NITSAN\NsT3AF\Agent\Service\AgentTurnOrchestrator
+
   NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver:
     arguments:
       $operationalStatusProviders: !tagged_iterator t3af.operational_status

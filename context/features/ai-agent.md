@@ -15,24 +15,21 @@
 - **Read tools** — auto-run; results shown as **editor-facing prose** (not raw snake_case ids).
 - **Write / destructive tools** — inline MCP elicitation draft; apply via DataHandler or confirmed tool invoke (`AgentWriteService`).
 - **NL orchestration** — `AgentTurnOrchestrator` + `AiToolCallingServiceInterface` loop with budgets and brand context.
-- **Workflow shortcuts** — `AgentWorkflowService` (e.g. list missing alt text, SEO metadata, file metadata flows).
+- **Structural routing** — `AgentTurnRouter` (slash / `@` / UI tool chips); free-text NL goes only to the orchestrator.
 - **Conversation persistence** — `tx_nst3af_agent_conversation` via `AgentConversationRepository` / session API.
 
 ---
 
 ## Turn resolution order
 
-Non-stream `turnAction` and stream `resolveNaturalLanguageTurn` must stay aligned:
+Non-stream `turnAction` and stream turns both call `AgentTurnRouter::route()`:
 
 | Step | Service | Notes |
 |---|---|---|
-| 1 | `AgentWorkflowService` | Keyword workflows (file alt-text list, SEO, …) |
-| 2 | `AgentReadFastPathService` | Cheap deterministic reads; **skipped** in file module / file-like NL |
-| 3 | `AgentTurnOrchestrator` | Tool-calling loop; uses `AgentToolRetriever` shortlist |
+| 1 | Structural | Slash commands, UI `tool`/`action` (legacy SEO/file-metadata action ids mapped once to MCP tools), `@` attachment reads |
+| 2 | `AgentTurnOrchestrator` | Free-text NL only — embedding shortlist + LLM tool-calling; **no** keyword workflows / SEO flow / read fast-path |
 
-**Do not** run read fast-path before workflow on streaming NL — file queries like “list images missing alt text” misroute to `tt_content` search.
-
-Slash/`@` fast paths go directly to `AgentToolTurnProcessor::execute()`.
+Slash/`@` / starter chips go to `AgentToolTurnProcessor::execute()`. Meaning for free-text lives in the LLM + `AgentToolShortlistService`.
 
 ---
 
@@ -88,9 +85,9 @@ Draft cards carry `editorLabel` for UI; destructive = two-step confirm.
 
 ## NL tool selection
 
-- Child tools declare `#[McpToolIntent(verbs, nouns, modules)]` on tool classes (`ns_t3af` attribute; consumed by introspector).
-- `AgentToolRetriever` scores catalog tools by keywords + module context; orchestrator uses shortlist before tool-calling.
-- `AgentNlIntentResolver` — page vs file vs content heuristics; file asset queries excluded from page content fast-path.
+- Child tools declare `#[McpToolIntent(verbs, nouns, modules)]` on tool classes (`ns_t3af` attribute; consumed by introspector / embedding index).
+- `AgentToolShortlistService` ranks catalog tools via embeddings (with category/module fallback); orchestrator uses that shortlist before tool-calling.
+- Starter chips emit MCP tool names + args (`t3ai_generate_all_seo`, `t3aa_update_file_metadata`, …) — not legacy NL flow action ids.
 
 ---
 
@@ -101,10 +98,10 @@ Draft cards carry `editorLabel` for UI; destructive = two-step confirm.
 | AJAX controller | `Classes/Agent/Controller/AgentAjaxController.php` |
 | Routes | `Configuration/Backend/AjaxRoutes.php` (`nst3af_agent_*`) |
 | Context | `Classes/Agent/Context/{AgentContext,AgentContextResolver}.php` |
+| Turn router | `Classes/Agent/Service/AgentTurnRouter.php` |
 | Turn processor | `Classes/Agent/Service/AgentToolTurnProcessor.php` |
 | Orchestrator | `Classes/Agent/Service/AgentTurnOrchestrator.php` |
-| Workflows | `Classes/Agent/Service/AgentWorkflowService.php` |
-| Read fast-path | `Classes/Agent/Service/AgentReadFastPathService.php` |
+| Tool shortlist | `Classes/Agent/Service/AgentToolShortlistService.php` |
 | Tool catalog | `Classes/Agent/Service/PermittedActionProvider.php` |
 | Editor labels | `Classes/Agent/Service/AgentToolEditorLabelService.php` |
 | Result presenter | `Classes/Agent/Service/AgentToolResultPresenter.php` |

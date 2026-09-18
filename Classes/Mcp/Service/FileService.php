@@ -118,6 +118,24 @@ readonly class FileService
     }
 
     /**
+     * Resolve sys_file uid from storage + identifier; 0 when missing or inaccessible.
+     */
+    public function resolveFileUid(int $storageUid, string $identifier): int
+    {
+        if ($storageUid <= 0 || trim($identifier) === '') {
+            return 0;
+        }
+
+        try {
+            $info = $this->getFileInfo($storageUid, $identifier);
+
+            return (int) ($info['uid'] ?? 0);
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    /**
      * @return array{uid: int, name: string, identifier: string, size: int, mimeType: string}
      */
     public function uploadFile(int $storageUid, string $directoryPath, string $fileName, string $content): array

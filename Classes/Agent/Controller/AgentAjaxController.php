@@ -24,25 +24,18 @@ use NITSAN\NsT3AF\Access\RecordAccessGate;
 use NITSAN\NsT3AF\Agent\Context\AgentContextResolver;
 use NITSAN\NsT3AF\Agent\Service\AgentAuditLogger;
 use NITSAN\NsT3AF\Agent\Service\AgentAvailabilityService;
-use NITSAN\NsT3AF\Agent\Service\AgentCompoundFlowService;
 use NITSAN\NsT3AF\Agent\Service\AgentConversationSession;
 use NITSAN\NsT3AF\Agent\Service\AgentDraftSession;
 use NITSAN\NsT3AF\Agent\Service\AgentGovernanceGuard;
 use NITSAN\NsT3AF\Agent\Service\AgentLowRiskFieldMatrix;
-use NITSAN\NsT3AF\Agent\Service\AgentMessageParser;
-use NITSAN\NsT3AF\Agent\Service\AgentNlIntentResolver;
-use NITSAN\NsT3AF\Agent\Service\AgentReadFastPathService;
 use NITSAN\NsT3AF\Agent\Service\AgentRecordAttachmentResolver;
 use NITSAN\NsT3AF\Agent\Service\AgentSchedulerHandoff;
-use NITSAN\NsT3AF\Agent\Service\AgentSeoMetadataFlow;
 use NITSAN\NsT3AF\Agent\Service\AgentStarterBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentTargetPageResolver;
-use NITSAN\NsT3AF\Agent\Service\AgentToolTurnProcessor;
 use NITSAN\NsT3AF\Agent\Service\AgentTranslator;
-use NITSAN\NsT3AF\Agent\Service\AgentTurnOrchestrator;
 use NITSAN\NsT3AF\Agent\Service\AgentTurnRepository;
+use NITSAN\NsT3AF\Agent\Service\AgentTurnRouter;
 use NITSAN\NsT3AF\Agent\Service\AgentUndoService;
-use NITSAN\NsT3AF\Agent\Service\AgentWorkflowService;
 use NITSAN\NsT3AF\Agent\Service\AgentWriteService;
 use NITSAN\NsT3AF\Agent\Service\PermittedActionProvider;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
@@ -86,7 +79,6 @@ final class AgentAjaxController
         private readonly AgentSchedulerHandoff $schedulerHandoff,
         private readonly PermittedActionProvider $permittedActionProvider,
         private readonly AgentStarterBuilder $starterBuilder,
-        private readonly AgentSeoMetadataFlow $seoMetadataFlow,
         private readonly AgentRecordAttachmentResolver $recordAttachmentResolver,
         private readonly AgentLowRiskFieldMatrix $lowRiskFieldMatrix,
         private readonly AgentContextResolver $agentContextResolver,
@@ -96,14 +88,8 @@ final class AgentAjaxController
         private readonly RecordAccessGate $recordAccessGate,
         private readonly UriBuilder $uriBuilder,
         private readonly ConnectionPool $connectionPool,
-        private readonly AgentToolTurnProcessor $toolTurnProcessor,
-        private readonly AgentTurnOrchestrator $turnOrchestrator,
-        private readonly AgentMessageParser $messageParser,
-        private readonly AgentNlIntentResolver $nlIntentResolver,
-        private readonly AgentReadFastPathService $readFastPathService,
+        private readonly AgentTurnRouter $turnRouter,
         private readonly AgentTargetPageResolver $targetPageResolver,
-        private readonly AgentCompoundFlowService $compoundFlowService,
-        private readonly AgentWorkflowService $workflowService,
         private readonly SiteFinder $siteFinder,
         private readonly AgentTranslator $translator,
     ) {}
@@ -490,28 +476,6 @@ final class AgentAjaxController
         $context = $this->resolveContext($request, is_array($body['context'] ?? null) ? $body['context'] : []);
         $context = $this->applyTargetPageFromMessage($message, $context, $user);
         $this->bindConversationScope($context);
-        $selectedTool = trim((string) ($body['tool'] ?? ''));
-        $toolArguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
-        $starterAction = trim((string) ($body['action'] ?? ''));
-        if ($selectedTool === '') {
-            $parsed = $this->messageParser->extractSlashCommand($message);
-            $selectedTool = $parsed['name'];
-            if ($toolArguments === [] && $parsed['arguments'] !== []) {
-                $toolArguments = $parsed['arguments'];
-            }
-        }
-        $recordAttachments = $this->recordAttachmentResolver->extractAttachments($message);
-        $fileAttachments = $this->recordAttachmentResolver->extractFileAttachments($message);
-        if ($selectedTool !== '' && $toolArguments === [] && $recordAttachments !== []) {
-            $toolArguments = $this->recordAttachmentResolver->mergeUidFromAttachments($selectedTool, $recordAttachments);
-        }
-        if ($starterAction === '' && $selectedTool === 'generate_seo_metadata') {
-            $starterAction = 'generate_seo_metadata';
-            $selectedTool = '';
-        }
-        if ($starterAction === '') {
-            $starterAction = $this->workflowService->resolveStarterAction($message, $fileAttachments);
-        }
 
         $messages = $this->conversationSession->getMessages();
         $messages[] = [
@@ -520,46 +484,14 @@ final class AgentAjaxController
             'meta' => ['correlationId' => $correlationId],
         ];
 
-        $assistantMessages = [];
-        $compoundSteps = $this->nlIntentResolver->resolveCompoundSteps($message);
-        if ($this->nlIntentResolver->isCompoundTranslateSeoFlow($compoundSteps)) {
-            $assistantMessages = $this->compoundFlowService->execute(
-                $compoundSteps,
-                (int) ($context['pageId'] ?? 0),
-                $correlationId,
-                $user,
-            );
-        } elseif ($starterAction === 'generate_seo_metadata') {
-            $assistantMessages = $this->seoMetadataFlow->execute(
-                (int) ($context['pageId'] ?? 0),
-                $correlationId,
-            );
-            $assistantMessages = $this->prependTranslateSkippedNotice($message, $assistantMessages, $correlationId);
-        } elseif (($workflowMessages = $this->workflowService->tryExecute(
+        $assistantMessages = $this->turnRouter->route(
             $message,
             $context,
             $body,
             $user,
             $correlationId,
-            $recordAttachments,
-            $fileAttachments,
-        )) !== null) {
-            $assistantMessages = $workflowMessages;
-        } elseif ($selectedTool !== '') {
-            $body['arguments'] = $toolArguments;
-            $assistantMessages[] = $this->processToolTurn($selectedTool, $context, $body, $user, $correlationId);
-        } else {
-            $assistantMessages = $this->resolveNaturalLanguageTurn(
-                $message,
-                $recordAttachments,
-                $fileAttachments,
-                $context,
-                $body,
-                $user,
-                $correlationId,
-                $messages,
-            );
-        }
+            $messages,
+        );
 
         foreach ($assistantMessages as $assistantMessage) {
             $messages[] = $assistantMessage;
@@ -617,46 +549,13 @@ final class AgentAjaxController
             'meta' => ['correlationId' => $correlationId],
         ];
 
-        $selectedTool = trim((string) ($body['tool'] ?? ''));
-        $toolArguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
-        $starterAction = trim((string) ($body['action'] ?? ''));
-        if ($selectedTool === '') {
-            $parsed = $this->messageParser->extractSlashCommand($message);
-            $selectedTool = $parsed['name'];
-            if ($toolArguments === [] && $parsed['arguments'] !== []) {
-                $toolArguments = $parsed['arguments'];
-            }
-        }
-        $recordAttachments = $this->recordAttachmentResolver->extractAttachments($message);
-        $fileAttachments = $this->recordAttachmentResolver->extractFileAttachments($message);
-        if ($selectedTool !== '' && $toolArguments === [] && $recordAttachments !== []) {
-            $toolArguments = $this->recordAttachmentResolver->mergeUidFromAttachments($selectedTool, $recordAttachments);
-        }
-        if ($starterAction === '' && $selectedTool === 'generate_seo_metadata') {
-            $starterAction = 'generate_seo_metadata';
-            $selectedTool = '';
-        }
-        if ($starterAction === '') {
-            $starterAction = $this->workflowService->resolveStarterAction($message, $fileAttachments);
-        }
-        $body['arguments'] = $toolArguments;
-        $compoundSteps = $this->nlIntentResolver->resolveCompoundSteps($message);
-        $useCompoundFlow = $this->nlIntentResolver->isCompoundTranslateSeoFlow($compoundSteps);
-        $useFastPathOnly = $selectedTool !== '' || $starterAction !== '' || $useCompoundFlow;
-
         $streamBody = new PumpStream(function () use (
-            $useFastPathOnly,
-            $compoundSteps,
             $message,
             $messages,
             $context,
             $body,
             $user,
             $correlationId,
-            $selectedTool,
-            $starterAction,
-            $recordAttachments,
-            $fileAttachments,
         ): string|false {
             static $emitted = false;
             if ($emitted) {
@@ -668,37 +567,17 @@ final class AgentAjaxController
             $assistantMessages = [];
 
             try {
-                if ($useFastPathOnly) {
-                    $assistantMessages = $this->resolveFastPathMessages(
-                        $message,
-                        $context,
-                        $body,
-                        $user,
-                        $correlationId,
-                        $selectedTool,
-                        $starterAction,
-                        $recordAttachments,
-                        $fileAttachments,
-                        $compoundSteps,
-                    );
-                    foreach ($assistantMessages as $assistantMessage) {
-                        $this->emitSseEvent('message', ['message' => $assistantMessage]);
-                    }
-                } else {
-                    $assistantMessages = $this->resolveNaturalLanguageTurn(
-                        $message,
-                        $recordAttachments,
-                        $fileAttachments,
-                        $context,
-                        $body,
-                        $user,
-                        $correlationId,
-                        $messages,
-                        function (string $event, array $payload): void {
-                            $this->emitSseEvent($event, $payload);
-                        },
-                    );
-                }
+                $assistantMessages = $this->turnRouter->route(
+                    $message,
+                    $context,
+                    $body,
+                    $user,
+                    $correlationId,
+                    $messages,
+                    function (string $event, array $payload): void {
+                        $this->emitSseEvent($event, $payload);
+                    },
+                );
 
                 foreach ($assistantMessages as $assistantMessage) {
                     $messages[] = $assistantMessage;
@@ -734,334 +613,6 @@ final class AgentAjaxController
         );
     }
 
-    /**
-     * @param list<array{table: string, uid: int}> $attachments
-     * @param array<string, mixed> $context
-     * @param array<string, mixed> $body
-     * @return list<array{role: string, content: string, meta: array<string, mixed>}>
-     */
-    private function processRecordAttachmentTurns(
-        array $attachments,
-        array $context,
-        array $body,
-        BackendUserAuthentication $user,
-        string $correlationId,
-    ): array {
-        if ($attachments === []) {
-            return [];
-        }
-
-        $catalog = $this->buildToolCatalog();
-        $messages = [];
-
-        foreach ($attachments as $attachment) {
-            $table = (string) ($attachment['table'] ?? '');
-            $uid = (int) ($attachment['uid'] ?? 0);
-            $invocation = $this->recordAttachmentResolver->resolveReadInvocation(
-                $table,
-                $uid,
-                fn(string $tool): bool => $this->findTool($catalog, $tool) !== null,
-            );
-
-            if ($invocation === null) {
-                $messages[] = [
-                    'role' => 'assistant',
-                    'content' => $this->translator->translate('agent.turn.unknownAttachment', [$table, (string) $uid]),
-                    'meta' => [
-                        'type' => 'error',
-                        'correlationId' => $correlationId,
-                        'attachedRecord' => $attachment,
-                    ],
-                ];
-                continue;
-            }
-
-            $body['arguments'] = $invocation['arguments'];
-            $message = $this->processToolTurn($invocation['tool'], $context, $body, $user, $correlationId);
-            $message['meta']['attachedRecord'] = $attachment;
-            $message['meta']['triggeredByAttachment'] = true;
-            $messages[] = $message;
-        }
-
-        return $messages;
-    }
-
-    /**
-     * @param list<array{storageUid: int, identifier: string}> $attachments
-     * @param array<string, mixed> $context
-     * @param array<string, mixed> $body
-     * @return list<array{role: string, content: string, meta: array<string, mixed>}>
-     */
-    private function processFileAttachmentTurns(
-        array $attachments,
-        array $context,
-        array $body,
-        BackendUserAuthentication $user,
-        string $correlationId,
-    ): array {
-        if ($attachments === []) {
-            return [];
-        }
-
-        $catalog = $this->buildToolCatalog();
-        $messages = [];
-
-        foreach ($attachments as $attachment) {
-            $storageUid = (int) ($attachment['storageUid'] ?? 0);
-            $identifier = (string) ($attachment['identifier'] ?? '');
-            $invocation = $this->recordAttachmentResolver->resolveFileReadInvocation(
-                $storageUid,
-                $identifier,
-                fn(string $tool): bool => $this->findTool($catalog, $tool) !== null,
-            );
-
-            if ($invocation === null) {
-                $messages[] = [
-                    'role' => 'assistant',
-                    'content' => $this->translator->translate('agent.turn.unknownFileAttachment', [$identifier]),
-                    'meta' => [
-                        'type' => 'error',
-                        'correlationId' => $correlationId,
-                        'attachedFile' => $attachment,
-                    ],
-                ];
-                continue;
-            }
-
-            $body['arguments'] = $invocation['arguments'];
-            $message = $this->processToolTurn($invocation['tool'], $context, $body, $user, $correlationId);
-            $message['meta']['attachedFile'] = $attachment;
-            $message['meta']['triggeredByAttachment'] = true;
-            $messages[] = $message;
-        }
-
-        return $messages;
-    }
-
-    /**
-     * @param array<string, mixed> $context
-     * @param array<string, mixed> $body
-     * @return array{role: string, content: string, meta: array<string, mixed>}
-     */
-    private function processToolTurn(
-        string $toolName,
-        array $context,
-        array $body,
-        BackendUserAuthentication $user,
-        string $correlationId,
-    ): array {
-        return $this->toolTurnProcessor->execute($toolName, $context, $body, $user, $correlationId);
-    }
-
-    /**
-     * @param list<array{table: string, uid: int}> $recordAttachments
-     * @param list<array{storageUid: int, identifier: string}> $fileAttachments
-     * @param array<string, mixed> $context
-     * @param array<string, mixed> $body
-     * @param list<array<string, mixed>> $historyMessages
-     * @param callable(string, array<string, mixed>): void|null $emitEvent
-     * @return list<array{role: string, content: string, meta: array<string, mixed>}>
-     */
-    private function resolveNaturalLanguageTurn(
-        string $message,
-        array $recordAttachments,
-        array $fileAttachments,
-        array $context,
-        array $body,
-        BackendUserAuthentication $user,
-        string $correlationId,
-        array $historyMessages,
-        ?callable $emitEvent = null,
-    ): array {
-        $workflowMessages = $this->workflowService->tryExecute(
-            $message,
-            $context,
-            $body,
-            $user,
-            $correlationId,
-            $recordAttachments,
-            $fileAttachments,
-        );
-        if ($workflowMessages !== null && $workflowMessages !== []) {
-            $this->emitAssistantStreamMessages($emitEvent, $workflowMessages);
-
-            return $workflowMessages;
-        }
-
-        $readFastPath = $this->readFastPathService->resolve(
-            $message,
-            $context,
-            $body,
-            $user,
-            $correlationId,
-        );
-        if ($readFastPath !== []) {
-            $this->emitAssistantStreamMessages($emitEvent, $readFastPath);
-
-            return $readFastPath;
-        }
-
-        $attachmentMessages = $this->processRecordAttachmentTurns(
-            $recordAttachments,
-            $context,
-            $body,
-            $user,
-            $correlationId,
-        );
-        if ($attachmentMessages === []) {
-            $attachmentMessages = $this->processFileAttachmentTurns(
-                $fileAttachments,
-                $context,
-                $body,
-                $user,
-                $correlationId,
-            );
-        }
-
-        $followUp = $this->messageParser->stripComposerTokens($message);
-        if ($followUp !== '' && $attachmentMessages !== []) {
-            $followUpWorkflow = $this->workflowService->tryExecute(
-                $followUp,
-                $context,
-                $body,
-                $user,
-                $correlationId,
-                $recordAttachments,
-                $fileAttachments,
-            );
-            if ($followUpWorkflow !== null && $followUpWorkflow !== []) {
-                $merged = array_merge($attachmentMessages, $followUpWorkflow);
-                $this->emitAssistantStreamMessages($emitEvent, $merged);
-
-                return $merged;
-            }
-
-            $history = $historyMessages;
-            foreach ($attachmentMessages as $attachmentMessage) {
-                $history[] = $attachmentMessage;
-            }
-            $orchestratorResult = $this->turnOrchestrator->runTurn(
-                $followUp,
-                $history,
-                $context,
-                $body,
-                $user,
-                $correlationId,
-                $emitEvent,
-            );
-
-            return array_merge($attachmentMessages, $orchestratorResult['messages']);
-        }
-
-        if ($attachmentMessages !== []) {
-            $this->emitAssistantStreamMessages($emitEvent, $attachmentMessages);
-
-            return $attachmentMessages;
-        }
-
-        $orchestratorResult = $this->turnOrchestrator->runTurn(
-            $message,
-            $historyMessages,
-            $context,
-            $body,
-            $user,
-            $correlationId,
-            $emitEvent,
-        );
-
-        return $orchestratorResult['messages'];
-    }
-
-    /**
-     * @param callable(string, array<string, mixed>): void|null $emitEvent
-     * @param list<array{role: string, content: string, meta: array<string, mixed>}> $messages
-     */
-    private function emitAssistantStreamMessages(?callable $emitEvent, array $messages): void
-    {
-        if ($emitEvent === null) {
-            return;
-        }
-        foreach ($messages as $message) {
-            $emitEvent('message', ['message' => $message]);
-        }
-    }
-
-    /**
-     * @param array<string, mixed> $context
-     * @param array<string, mixed> $body
-     * @param list<array{table: string, uid: int}> $attachments
-     * @param list<array{storageUid: int, identifier: string}> $fileAttachments
-     * @param list<string> $compoundSteps
-     * @return list<array{role: string, content: string, meta: array<string, mixed>}>
-     */
-    private function resolveFastPathMessages(
-        string $message,
-        array $context,
-        array $body,
-        BackendUserAuthentication $user,
-        string $correlationId,
-        string $selectedTool,
-        string $starterAction,
-        array $attachments,
-        array $fileAttachments = [],
-        array $compoundSteps = [],
-    ): array {
-        if ($this->nlIntentResolver->isCompoundTranslateSeoFlow($compoundSteps)) {
-            return $this->compoundFlowService->execute(
-                $compoundSteps,
-                (int) ($context['pageId'] ?? 0),
-                $correlationId,
-                $user,
-            );
-        }
-
-        if ($starterAction === 'generate_seo_metadata') {
-            return $this->prependTranslateSkippedNotice(
-                $message,
-                $this->seoMetadataFlow->execute(
-                    (int) ($context['pageId'] ?? 0),
-                    $correlationId,
-                ),
-                $correlationId,
-            );
-        }
-
-        if (($workflowMessages = $this->workflowService->tryExecute(
-            $message,
-            $context,
-            $body,
-            $user,
-            $correlationId,
-            $attachments,
-            $fileAttachments,
-        )) !== null) {
-            return $workflowMessages;
-        }
-
-        if ($selectedTool !== '') {
-            return [$this->processToolTurn($selectedTool, $context, $body, $user, $correlationId)];
-        }
-
-        $messages = $this->processRecordAttachmentTurns(
-            $attachments,
-            $context,
-            $body,
-            $user,
-            $correlationId,
-        );
-        if ($messages !== []) {
-            return $messages;
-        }
-
-        return $this->processFileAttachmentTurns(
-            $fileAttachments,
-            $context,
-            $body,
-            $user,
-            $correlationId,
-        );
-    }
-
     private function configureSseStream(): void
     {
         if (function_exists('apache_setenv')) {
@@ -1093,24 +644,6 @@ final class AgentAjaxController
     private function buildToolCatalog(): array
     {
         return $this->permittedActionProvider->buildCatalog();
-    }
-
-    /**
-     * @param array{executable: list<array<string, mixed>>, locked: list<array<string, mixed>>} $catalog
-     * @return array<string, mixed>|null
-     */
-    private function findTool(array $catalog, string $toolName): ?array
-    {
-        $needle = strtolower(trim($toolName));
-        foreach ([$catalog['executable'], $catalog['locked']] as $group) {
-            foreach ($group as $tool) {
-                if (strtolower((string) ($tool['name'] ?? '')) === $needle) {
-                    return $tool;
-                }
-            }
-        }
-
-        return null;
     }
 
     /**
@@ -1166,32 +699,6 @@ final class AgentAjaxController
         }
 
         return $context;
-    }
-
-    /**
-     * @param list<array{role: string, content: string, meta: array<string, mixed>}> $messages
-     * @return list<array{role: string, content: string, meta: array<string, mixed>}>
-     */
-    private function prependTranslateSkippedNotice(
-        string $message,
-        array $messages,
-        string $correlationId,
-    ): array {
-        if (!preg_match('/\b(translate|translation|localize|localise)\b/i', $message)) {
-            return $messages;
-        }
-
-        array_unshift($messages, [
-            'role' => 'assistant',
-            'content' => $this->translator->translate('agent.turn.translateNotInCombinedFlow'),
-            'meta' => [
-                'type' => 'info',
-                'correlationId' => $correlationId,
-                'skippedStep' => 'translate',
-            ],
-        ]);
-
-        return $messages;
     }
 
     /**

@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Service;
 
+use NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface;
 use NITSAN\NsT3AF\Mcp\Dto\PreviewResult;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Exception\UnsupportedPlanException;
@@ -32,7 +33,7 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
  *
  * @internal
  */
-final readonly class AgentToolTurnProcessor
+final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInterface
 {
     public function __construct(
         private PermittedActionProvider $permittedActionProvider,
