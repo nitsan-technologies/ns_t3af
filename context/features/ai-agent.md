@@ -1,9 +1,9 @@
 # Feature — AI Agent (backend modal)
 
-**Status:** Done (NL turns, tool catalog, write drafts, editor-facing answers, file-module context)  
+**Status:** Done (structural + NL routing, embedding shortlist, DualMode preview→apply, BE i18n)  
 **UI:** Global toolbar **Ask AI Agent** (`AgentToolbarItem`), modal JS `@nitsan/nst3af/agent.js`  
 **Settings route:** `t3af_dashboard.ai_agent`  
-**Verify:** `Documentation/Agent/VerifySuite.md`, `Tests/Unit/Agent/`
+**Verify:** `Documentation/Agent/VerifySuite.md`, `Tests/Unit/Agent/` · routing docs: `Documentation/Agent/Routing.md`, `PreviewApply.md`, `Eval.md`
 
 ---
 
@@ -13,9 +13,10 @@
 - **Turn inputs:** natural language, `/tool_name` slash commands, `@table:uid` record attachments.
 - **Tool catalog** — executable vs locked tools from `PermittedActionProvider` (entitlements, severity, plan support).
 - **Read tools** — auto-run; results shown as **editor-facing prose** (not raw snake_case ids).
-- **Write / destructive tools** — inline MCP elicitation draft; apply via DataHandler or confirmed tool invoke (`AgentWriteService`).
+- **Write / destructive tools** — DualMode + Previewable: native preview → suggestions card → context apply (`AgentWriteService::applySuggestions`). Other writes: elicitation draft → DataHandler / confirm invoke.
 - **NL orchestration** — `AgentTurnOrchestrator` + `AiToolCallingServiceInterface` loop with budgets and brand context.
-- **Structural routing** — `AgentTurnRouter` (slash / `@` / UI tool chips); free-text NL goes only to the orchestrator.
+- **Structural routing** — `AgentTurnRouter` (slash / `@` / UI tool chips); free-text NL goes only to the orchestrator (no keyword workflows).
+- **Semantic shortlist** — `AgentToolShortlistService` + `t3af:agent:index-tools`; eval fixtures via `t3af:agent:eval`.
 - **Conversation persistence** — `tx_nst3af_agent_conversation` via `AgentConversationRepository` / session API.
 
 ---
@@ -74,8 +75,10 @@ Label priority: translated `LABEL_KEYS` → editor-friendly MCP description firs
 
 | Piece | Path |
 |---|---|
+| Preview DualMode | `McpPlaygroundService::preview` + `McpModeOverride` → suggestions meta |
+| Suggestions apply | `AgentWriteService::applySuggestions` (context mode content params) |
 | Plan + draft card | `AgentToolPlanResolver`, `AgentDraftService`, `SatelliteToolPlanService` |
-| Apply | `AgentWriteService` → DataHandler or tool confirmation invoke |
+| Apply (non-preview) | `AgentWriteService::apply` → DataHandler or tool confirmation invoke |
 | Tool confirmation kind | `PLAN_KIND_TOOL_CONFIRMATION` — run-after-confirm for non-DataHandler tools |
 | Classification | `Documentation/Agent/NonDataHandlerToolClassification.md` |
 
@@ -131,7 +134,7 @@ Draft cards carry `editorLabel` for UI; destructive = two-step confirm.
 
 ## Do / Don't
 
-**Do:** Keep workflow-before-fast-path order on stream and non-stream NL paths.
+**Do:** Keep structural router before NL orchestrator on stream and non-stream paths.
 
 **Do:** Pass `storageUid` / `folderIdentifier` from file module; clear `pageId` there.
 

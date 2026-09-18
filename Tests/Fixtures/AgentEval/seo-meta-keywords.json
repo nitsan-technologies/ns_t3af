@@ -1,0 +1,29 @@
+{
+    "id": "seo-meta-keywords",
+    "userMessage": "Share meta title and keywords with three variants",
+    "mocked": {
+        "tool": "t3ai_generate_all_seo",
+        "routingSource": "embeddings",
+        "fieldKeys": [
+            "metaTitle",
+            "keywords"
+        ],
+        "arguments": {
+            "fieldKeys": [
+                "metaTitle",
+                "keywords"
+            ],
+            "variants": 3
+        },
+        "variantsComplete": true
+    },
+    "expect": {
+        "tool": "t3ai_generate_all_seo",
+        "routingSource": "embeddings",
+        "fieldKeys": [
+            "metaTitle",
+            "keywords"
+        ],
+        "variantsComplete": true
+    }
+}

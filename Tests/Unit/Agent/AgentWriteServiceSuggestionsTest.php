@@ -144,6 +144,47 @@ final class AgentWriteServiceSuggestionsTest extends TestCase
     }
 
     #[Test]
+    public function applyOnPreviewDraftRequiresSuggestionsPath(): void
+    {
+        $preview = new PreviewResult(
+            tool: 't3ai_generate_all_seo',
+            target: ['table' => 'pages', 'uid' => 1, 'languageId' => 0],
+            fields: [
+                ['key' => 'metaTitle', 'label' => 'Meta Title', 'current' => ''],
+            ],
+            variants: [
+                ['label' => 'A', 'angle' => '', 'values' => ['metaTitle' => 'Title']],
+            ],
+        );
+
+        $draftSession = $this->createDraftSession();
+        $draftSession->storeDraft('draft-preview', [
+            'flow' => 'agent_preview',
+            'previewResult' => $preview->toArray(),
+            'arguments' => ['pageId' => 1],
+            'severity' => 'write',
+            'tool' => 't3ai_generate_all_seo',
+            'destructiveArmed' => false,
+        ]);
+
+        $playground = $this->createMock(McpPlaygroundService::class);
+        $playground->expects(self::never())->method('invokeWithMode');
+
+        $service = new AgentWriteService(
+            $this->createMock(DataHandlerService::class),
+            $this->createMock(RecordService::class),
+            $draftSession,
+            $playground,
+            $this->createPresenter(),
+            $this->createAgentTranslator(),
+            new AgentLowRiskFieldMatrix(),
+        );
+
+        $this->expectException(\RuntimeException::class);
+        $service->apply('draft-preview', ['metaTitle']);
+    }
+
+    #[Test]
     public function applySuggestionsMergesEditorEditsOverSelections(): void
     {
         $preview = new PreviewResult(

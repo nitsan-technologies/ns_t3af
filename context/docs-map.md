@@ -78,6 +78,7 @@ Build locally: `composer doc-watch` from package root.
 | Run tests / CI | `tasks/run-quality.md` |
 | Backend module markup / CSS conventions | `context/Typo3CoreBackendDesign.md` |
 | Backend AI Agent (modal, NL, drafts, file context) | `context/features/ai-agent.md` |
+| Agent routing / preview-apply / eval | `Documentation/Agent/Routing.md`, `PreviewApply.md`, `Eval.md`, `VerifySuite.md` |
 | Shared checklist in child ext (ns_t3aa, ns_t3ai, ns_t3cs) | `SetupChecklistPresenter`, `ChildSetupChecklistSlot.html`, design guide § Shared UI |
 | AI Logs tab / filter navigation / child “AI Foundation Logs” button | `context/features/ai-logs.md`, `BackendModuleLinkUtility`, `module-navigation.js` |
 | AI Permissions wizard / matrix / editor enforcement | `context/features/ai-access-roles.md`, `access-roles.js` |

@@ -85,4 +85,27 @@ final class McpModeOverrideTest extends TestCase
 
         self::assertNull($override->current());
     }
+
+    #[Test]
+    public function overrideNeverMutatesStoredExtensionSetting(): void
+    {
+        $settingsPayload = ['mcpMode' => 'context'];
+        $settings = $this->createMock(ExtensionSettingsService::class);
+        $settings->method('getAllIgnorePid')->with('ns_t3af')->willReturnCallback(
+            static function () use (&$settingsPayload): array {
+                return $settingsPayload;
+            },
+        );
+
+        $override = new McpModeOverride();
+        $resolver = new McpModeResolver($settings, $override);
+
+        $override->run(McpModeResolver::MODE_NATIVE, static function () use ($resolver): void {
+            self::assertTrue($resolver->isNative());
+        });
+
+        self::assertSame('context', $settingsPayload['mcpMode']);
+        self::assertTrue($resolver->isContext());
+        self::assertNull($override->current());
+    }
 }

@@ -13,6 +13,17 @@ Two layers validate the approved behaviour contract:
    ```bash
    composer test -- Tests/Unit/Agent/
    ```
-   Covers severity resolution, entitlement mirroring, draft service, and behaviour contracts mapped from `verify.cjs` safety properties.
+   Covers severity resolution, entitlement mirroring, draft service, behaviour contracts, shortlist, structural router, preview draft isolation, and suggestions apply.
+
+## Phase 3–5 verify (routing / preview / apply)
+
+| Phase | What to check | Command / place |
+|---|---|---|
+| 3 Shortlist | Embeddings + fallbacks, `routingSource` | `composer test -- Tests/Unit/Agent/AgentToolShortlistServiceTest.php` · warm index `t3af:agent:index-tools` |
+| 4 Router | Slash / `@` / chips structural; NL → orchestrator only | `Tests/Unit/Agent/AgentTurnRouterTest.php` |
+| 5 Preview apply | Suggestions card → `applySuggestions` exact values | BE: DualMode SEO/file tool → card → Apply · `AgentWriteServiceSuggestionsTest` |
+| 6 Eval | Fixture replay without API keys | `vendor/bin/typo3 t3af:agent:eval` · docs `Documentation/Agent/Eval.md` |
+
+Docs: `Routing.md`, `PreviewApply.md`, `Eval.md`.
 
 Functional/E2E coverage against a live TYPO3 backend should extend `Tests/Functional/Agent/` in a follow-up when Playwright infrastructure is wired for this distribution.
