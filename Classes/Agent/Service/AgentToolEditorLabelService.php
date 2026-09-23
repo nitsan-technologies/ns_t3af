@@ -33,6 +33,7 @@ final readonly class AgentToolEditorLabelService
         'pages_search' => 'agent.starter.searchPages',
         'pages_tree' => 'agent.starter.pageTree',
         'content_list' => 'agent.starter.listContent',
+        'content_delete' => 'agent.tool.contentDelete',
         'record_search' => 'agent.starter.recordSearch',
         'file_list' => 'agent.starter.fileList',
         'file_get_info' => 'agent.starter.fileInfo',
@@ -45,6 +46,8 @@ final readonly class AgentToolEditorLabelService
         't3aa_list_files_missing_alt_text' => 'agent.tool.listFilesMissingAltText',
         't3aa_update_file_metadata' => 'agent.tool.updateFileMetadata',
         't3aa_get_file_metadata' => 'agent.tool.getFileMetadata',
+        'explain_capabilities' => 'agent.tool.explainCapabilities',
+        'ask_clarification' => 'agent.tool.askClarification',
     ];
 
     /** @var list<string> */

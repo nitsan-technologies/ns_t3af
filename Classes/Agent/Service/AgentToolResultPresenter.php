@@ -139,7 +139,11 @@ final readonly class AgentToolResultPresenter
             : $this->buildDeterministicSummary($editorLabel, $facts, $details);
 
         $llmSummary = null;
-        if ($error === null && !$this->shouldSkipLlmSummary($facts)) {
+        $hasReadySummary = is_array($details)
+            && isset($details['summary'])
+            && is_string($details['summary'])
+            && trim($details['summary']) !== '';
+        if ($error === null && !$hasReadySummary && !$this->shouldSkipLlmSummary($facts)) {
             $llmSummary = $this->tryLlmSummary($editorLabel, $details, $pageId);
         }
 
@@ -479,6 +483,13 @@ final readonly class AgentToolResultPresenter
      */
     private function buildDeterministicSummary(string $editorLabel, array $facts, mixed $details): string
     {
+        if (is_array($details) && isset($details['summary']) && is_string($details['summary'])) {
+            $fromPayload = trim($details['summary']);
+            if ($fromPayload !== '') {
+                return $fromPayload;
+            }
+        }
+
         if ($facts === []) {
             if (is_scalar($details)) {
                 return (string) $details;

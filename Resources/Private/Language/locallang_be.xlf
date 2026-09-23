@@ -528,6 +528,15 @@
       <trans-unit id="agent.tool.getFileMetadata" resname="agent.tool.getFileMetadata">
         <source>Inspect file metadata</source>
       </trans-unit>
+      <trans-unit id="agent.tool.explainCapabilities" resname="agent.tool.explainCapabilities">
+        <source>Explain available actions</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.contentDelete" resname="agent.tool.contentDelete">
+        <source>Delete a content element</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.askClarification" resname="agent.tool.askClarification">
+        <source>Ask a clarifying question</source>
+      </trans-unit>
       <trans-unit id="agent.upsell.title" resname="agent.upsell.title">
         <source>Extension required</source>
       </trans-unit>
@@ -722,6 +731,12 @@
       </trans-unit>
       <trans-unit id="agent.live.running" resname="agent.live.running">
         <source>Assistant is working…</source>
+      </trans-unit>
+      <trans-unit id="agent.live.thinking" resname="agent.live.thinking">
+        <source>Thinking…</source>
+      </trans-unit>
+      <trans-unit id="agent.live.runningTool" resname="agent.live.runningTool">
+        <source>Running %1$s…</source>
       </trans-unit>
       <trans-unit id="agent.work.working" resname="agent.work.working">
         <source>Working…</source>

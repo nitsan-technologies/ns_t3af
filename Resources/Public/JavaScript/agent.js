@@ -1206,6 +1206,9 @@ class AgentController {
     } else {
       this.renderStarters(this.starters);
     }
+    if (this.isRunning) {
+      this.showProgress(true, this._progressLabel || '');
+    }
     this.stream.scrollTop = this.stream.scrollHeight;
   }
 
@@ -2461,6 +2464,18 @@ class AgentController {
         return;
       }
 
+      if (eventName === 'progress') {
+        const status = String(data.status ?? '');
+        let label = lang('agent.live.running', 'Assistant is working…');
+        if (status === 'llm') {
+          label = lang('agent.live.thinking', 'Thinking…');
+        } else if (status === 'tool' && data.tool) {
+          label = lang('agent.live.runningTool', 'Running %1$s…').replace('%1$s', String(data.tool));
+        }
+        this.updateProgressLabel(label);
+        return;
+      }
+
       if (eventName === 'delta' && data.content) {
         if (streamingMessage === null) {
           streamingMessage = { role: 'assistant', content: '', meta: { type: 'nl_reply', streaming: true } };
@@ -2895,8 +2910,9 @@ class AgentController {
 
   /**
    * @param {boolean} running
+   * @param {string} [label]
    */
-  showProgress(running) {
+  showProgress(running, label = '') {
     if (!this.stream) {
       return;
     }
@@ -2905,16 +2921,39 @@ class AgentController {
     existing?.remove();
 
     if (!running) {
+      this._progressLabel = '';
       return;
     }
 
+    const text = label !== '' ? label : lang('agent.live.running', 'Assistant is working…');
+    this._progressLabel = text;
     const node = document.createElement('div');
     node.dataset.nst3afAgentProgress = '1';
     node.className = 'nst3af-agent-progress';
-    node.innerHTML = '<span class="nst3af-agent-progress__spinner" aria-hidden="true"></span><span>' + escapeHtml(lang('agent.live.running', 'Assistant is working…')) + '</span>';
+    node.innerHTML = '<span class="nst3af-agent-progress__spinner" aria-hidden="true"></span><span data-nst3af-agent-progress-label>' + escapeHtml(text) + '</span>';
     this.stream.appendChild(node);
     this.stream.scrollTop = this.stream.scrollHeight;
-    this.announce(lang('agent.live.running', 'Assistant is working…'));
+    this.announce(text);
+  }
+
+  /**
+   * @param {string} label
+   */
+  updateProgressLabel(label) {
+    this._progressLabel = label;
+    if (!this.stream) {
+      return;
+    }
+    let node = this.stream.querySelector('[data-nst3af-agent-progress]');
+    if (!(node instanceof HTMLElement)) {
+      this.showProgress(true, label);
+      return;
+    }
+    const labelNode = node.querySelector('[data-nst3af-agent-progress-label]');
+    if (labelNode instanceof HTMLElement) {
+      labelNode.textContent = label;
+    }
+    this.announce(label);
   }
 }
 

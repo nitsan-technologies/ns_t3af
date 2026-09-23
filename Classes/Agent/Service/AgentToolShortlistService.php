@@ -68,7 +68,9 @@ final class AgentToolShortlistService
      * @param list<array<string, mixed>> $historyMessages
      * @return array{
      *     tools: list<array<string, mixed>>,
-     *     routingSource: 'embeddings'|'category_pick'|'module_default'
+     *     routingSource: 'embeddings'|'category_pick'|'module_default',
+     *     directTool: string|null,
+     *     primaryHit: string|null
      * }
      */
     public function shortlist(
@@ -79,7 +81,7 @@ final class AgentToolShortlistService
         ?int $limitOverride = null,
     ): array {
         if ($executableTools === []) {
-            return ['tools' => [], 'routingSource' => 'module_default'];
+            return ['tools' => [], 'routingSource' => 'module_default', 'directTool' => null, 'primaryHit' => null];
         }
 
         $limit = $limitOverride ?? $this->agentSettings->getShortlistSize();
@@ -126,6 +128,8 @@ final class AgentToolShortlistService
                     return [
                         'tools' => array_values($merged),
                         'routingSource' => 'embeddings',
+                        'directTool' => $this->resolveDirectTool($scored),
+                        'primaryHit' => $this->resolvePrimaryHit($scored),
                     ];
                 }
             } catch (\Throwable) {
@@ -135,6 +139,9 @@ final class AgentToolShortlistService
 
         $categoryPick = $this->categoryPickFallback($userMessage, $byName, $alwaysOn, $continuity, $limit);
         if ($categoryPick !== null) {
+            $categoryPick['directTool'] = null;
+            $categoryPick['primaryHit'] = null;
+
             return $categoryPick;
         }
 
@@ -147,7 +154,50 @@ final class AgentToolShortlistService
                 $limit,
             )),
             'routingSource' => 'module_default',
+            'directTool' => null,
+            'primaryHit' => null,
         ];
+    }
+
+    /**
+     * Fast-path when embeddings rank explain_capabilities #1, or within 8% of #1.
+     *
+     * @param array<string, float> $scored name => score, already sorted desc
+     */
+    private function resolveDirectTool(array $scored): ?string
+    {
+        if ($scored === [] || !isset($scored['explain_capabilities'])) {
+            return null;
+        }
+        $topName = array_key_first($scored);
+        $topScore = (float) $scored[$topName];
+        $capScore = (float) $scored['explain_capabilities'];
+        if ($topName === 'explain_capabilities') {
+            return 'explain_capabilities';
+        }
+        if ($topScore > 0.0 && $capScore >= $topScore * 0.92) {
+            return 'explain_capabilities';
+        }
+
+        return null;
+    }
+
+    /**
+     * Top non-meta embedding hit for empty-LLM structural recovery.
+     *
+     * @param array<string, float> $scored name => score, already sorted desc
+     */
+    private function resolvePrimaryHit(array $scored): ?string
+    {
+        foreach (array_keys($scored) as $name) {
+            if (!in_array($name, ['ask_clarification', 'explain_capabilities'], true)) {
+                return $name;
+            }
+        }
+
+        $top = array_key_first($scored);
+
+        return is_string($top) ? $top : null;
     }
 
     /**

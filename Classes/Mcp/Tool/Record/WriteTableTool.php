@@ -86,7 +86,8 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         name: 'write_table',
         description: 'Create, update, or delete records in a TYPO3 table via DataHandler.'
             . ' Use table_schema first to discover valid field names and types.'
-            . ' For create, include "pid" in the JSON data object. For update/delete, pass the record uid.',
+            . ' For create, include "pid" in the JSON data object. For update/delete, pass the record uid.'
+            . ' Prefer content_delete when deleting a tt_content element.',
         annotations: new ToolAnnotations(
             readOnlyHint: false,
             destructiveHint: true,

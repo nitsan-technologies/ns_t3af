@@ -19,6 +19,8 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Service;
 
+use NITSAN\NsT3AF\Agent\Contract\AgentActionCatalogInterface;
+use NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface;
 use NITSAN\NsT3AF\Agent\Contract\AgentTurnRunnerInterface;
 use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Api\AiToolCallingServiceInterface;
@@ -38,12 +40,32 @@ final readonly class AgentTurnOrchestrator implements AgentTurnRunnerInterface
 
     private const MAX_LOOP_ITERATIONS = 8;
 
+    /**
+     * Tools that may run on empty-LLM recovery when required args can be filled
+     * from context and/or structural patterns in the user message (#uid, "query").
+     *
+     * @var list<string>
+     */
+    private const EMPTY_RECOVERY_TOOLS = [
+        'pages_get',
+        'pages_list',
+        'content_list',
+        'site_languages_list',
+        'site_configuration_get',
+        'explain_capabilities',
+        'content_get',
+        'content_delete',
+        'pages_search',
+        'content_search',
+        'write_table',
+    ];
+
     public function __construct(
         private AiToolCallingServiceInterface $toolCallingService,
-        private PermittedActionProvider $permittedActionProvider,
+        private AgentActionCatalogInterface $permittedActionProvider,
         private AgentToolDefinitionMapper $toolDefinitionMapper,
         private AgentToolShortlistService $toolShortlist,
-        private AgentToolTurnProcessor $toolTurnProcessor,
+        private AgentToolTurnExecutorInterface $toolTurnProcessor,
         private AgentSettingsService $agentSettings,
         private BrandContextResolver $brandContextResolver,
         private BrandContextAssembler $brandContextAssembler,
@@ -119,6 +141,43 @@ final readonly class AgentTurnOrchestrator implements AgentTurnRunnerInterface
         );
         $shortlistedTools = $shortlistResult['tools'];
         $routingSource = $shortlistResult['routingSource'];
+        $directTool = is_string($shortlistResult['directTool'] ?? null)
+            ? trim((string) $shortlistResult['directTool'])
+            : '';
+        $primaryHit = is_string($shortlistResult['primaryHit'] ?? null)
+            ? trim((string) $shortlistResult['primaryHit'])
+            : '';
+
+        // Embeddings ranked explain_capabilities #1 (or near) → skip the LLM round-trip.
+        if ($directTool !== '' && $this->shortlistHasTool($shortlistedTools, $directTool)) {
+            $this->emit($emitEvent, 'progress', [
+                'status' => 'tool',
+                'tool' => $directTool,
+            ]);
+            $toolBody = $body;
+            $toolBody['arguments'] = [];
+            $message = $this->toolTurnProcessor->execute(
+                $directTool,
+                $context,
+                $toolBody,
+                $user,
+                $correlationId,
+            );
+            $message['meta']['directTool'] = $directTool;
+            $message['meta']['routingSource'] = $routingSource;
+            $message['meta']['shortlistedTools'] = array_map(
+                static fn(array $tool): string => (string) ($tool['name'] ?? ''),
+                $shortlistedTools,
+            );
+            $this->emit($emitEvent, 'message', ['message' => $message]);
+
+            return [
+                'messages' => [$message],
+                'paused' => false,
+                'pauseReason' => null,
+            ];
+        }
+
         $tools = $this->toolDefinitionMapper->mapExecutableTools($shortlistedTools);
         $retriedWithWidenedShortlist = false;
 
@@ -142,6 +201,11 @@ final readonly class AgentTurnOrchestrator implements AgentTurnRunnerInterface
                     'messages' => $llmMessages,
                 ],
             );
+
+            $this->emit($emitEvent, 'progress', [
+                'status' => 'llm',
+                'iteration' => $iteration,
+            ]);
 
             try {
                 $response = $this->toolCallingService->completeWithTools($llmMessages, $tools, $options);
@@ -184,7 +248,50 @@ final readonly class AgentTurnOrchestrator implements AgentTurnRunnerInterface
                 if ($text === '' && $assistantMessages !== []) {
                     break;
                 }
-                if ($text === '' && !$retriedWithWidenedShortlist && $shortlistLimit < count($executableTools)) {
+                if ($text === '') {
+                    $recovery = $this->resolveEmptyTurnRecovery(
+                        $primaryHit,
+                        $shortlistedTools,
+                        $userMessage,
+                        $context,
+                    );
+                    if ($recovery !== null) {
+                        $this->emit($emitEvent, 'progress', [
+                            'status' => 'tool',
+                            'tool' => $recovery['tool'],
+                        ]);
+                        $recovered = $this->recoverEmptyTurnWithPrimaryHit(
+                            $recovery['tool'],
+                            $recovery['arguments'],
+                            $shortlistedTools,
+                            $context,
+                            $body,
+                            $user,
+                            $correlationId,
+                            $routingSource,
+                            $response->modelId,
+                            $response->providerIdentifier,
+                            array_values($trace),
+                        );
+                        if ($recovered !== null) {
+                            $assistantMessages[] = $recovered;
+                            $this->emit($emitEvent, 'message', ['message' => $recovered]);
+
+                            return [
+                                'messages' => $assistantMessages,
+                                'paused' => false,
+                                'pauseReason' => null,
+                            ];
+                        }
+                    }
+                }
+                // Widen only when always-on recovery tools were not already shortlisted.
+                if (
+                    $text === ''
+                    && !$retriedWithWidenedShortlist
+                    && !$this->shortlistHasTool($shortlistedTools, 'explain_capabilities')
+                    && $shortlistLimit < count($executableTools)
+                ) {
                     $retriedWithWidenedShortlist = true;
                     $shortlistLimit = min(AgentToolShortlistService::WIDEN_SHORTLIST, count($executableTools));
                     $shortlistResult = $this->toolShortlist->shortlist(
@@ -196,6 +303,9 @@ final readonly class AgentTurnOrchestrator implements AgentTurnRunnerInterface
                     );
                     $shortlistedTools = $shortlistResult['tools'];
                     $routingSource = $shortlistResult['routingSource'];
+                    $primaryHit = is_string($shortlistResult['primaryHit'] ?? null)
+                        ? trim((string) $shortlistResult['primaryHit'])
+                        : $primaryHit;
                     $tools = $this->toolDefinitionMapper->mapExecutableTools($shortlistedTools);
                     continue;
                 }
@@ -203,7 +313,7 @@ final readonly class AgentTurnOrchestrator implements AgentTurnRunnerInterface
                     'role' => 'assistant',
                     'content' => $text !== ''
                         ? $text
-                        : $this->buildEmptyModelReply($userMessage, $context, $executableTools),
+                        : $this->buildEmptyModelReply($userMessage, $context, $executableTools, $shortlistedTools),
                     'meta' => [
                         'type' => 'nl_reply',
                         'correlationId' => $correlationId,
@@ -258,6 +368,11 @@ final readonly class AgentTurnOrchestrator implements AgentTurnRunnerInterface
                     }
                     ++$writeDraftCount;
                 }
+
+                $this->emit($emitEvent, 'progress', [
+                    'status' => 'tool',
+                    'tool' => $toolName,
+                ]);
 
                 $toolBody = $body;
                 $toolBody['arguments'] = $toolCall->arguments;
@@ -372,6 +487,8 @@ final readonly class AgentTurnOrchestrator implements AgentTurnRunnerInterface
             'Read tools run immediately. Write tools produce drafts that require explicit editor approval.',
             'Prefer concise answers grounded in tool results. Never claim a change was saved unless the editor applied a draft.',
             'When the user asks to create, update, translate, or generate content, prefer calling the most specific write tool instead of replying with text only.',
+            'When the user asks what you can do, which tools are available, or how you can help, you MUST call explain_capabilities (do not answer with an empty message).',
+            'Never respond with an empty message when tools are available — call a tool or write a short answer.',
             'Use pageId/pid/uid from context when a tool accepts a page or storage folder id.',
         ];
 
@@ -564,13 +681,313 @@ final readonly class AgentTurnOrchestrator implements AgentTurnRunnerInterface
     }
 
     /**
+     * Pick a recovery tool + args when the model returns empty.
+     * Structural only: embedding primary hit, then shortlist fallbacks, with args
+     * filled from #uid / "quoted" / context — never keyword routing of meaning.
+     *
+     * @param list<array<string, mixed>> $shortlistedTools
+     * @param array<string, mixed> $context
+     * @return array{tool: string, arguments: array<string, mixed>}|null
+     */
+    private function resolveEmptyTurnRecovery(
+        string $primaryHit,
+        array $shortlistedTools,
+        string $userMessage,
+        array $context,
+    ): ?array {
+        // Structural create (e.g. "Add a headline Welcome") — write_table often misses the
+        // embedding shortlist, so run before shortlist-gated candidates.
+        $writeArgs = $this->extractWriteTableCreateArgument($userMessage, $context);
+        if ($writeArgs !== null) {
+            return ['tool' => 'write_table', 'arguments' => $writeArgs];
+        }
+
+        $shortlistNames = [];
+        foreach ($shortlistedTools as $tool) {
+            $name = trim((string) ($tool['name'] ?? ''));
+            if ($name !== '') {
+                $shortlistNames[] = $name;
+            }
+        }
+
+        $candidates = [];
+        // Message noun wins over embedding primary (pages_search vs content_search).
+        $searchTool = $this->preferSearchToolFromMessage($userMessage, $shortlistNames);
+        if ($searchTool !== null) {
+            $candidates[] = $searchTool;
+        }
+        if ($primaryHit !== '' && !in_array($primaryHit, $candidates, true)) {
+            $candidates[] = $primaryHit;
+        }
+        // Prefer actionable tools over always-on meta (explain_capabilities).
+        foreach (['content_delete', 'content_get', 'write_table', 'pages_search', 'content_search', 'pages_get', 'content_list', 'pages_list', 'site_languages_list'] as $preferred) {
+            if (in_array($preferred, $shortlistNames, true) && !in_array($preferred, $candidates, true)) {
+                $candidates[] = $preferred;
+            }
+        }
+        foreach ($shortlistNames as $name) {
+            if ($name === 'explain_capabilities' || $name === 'ask_clarification') {
+                continue;
+            }
+            if (!in_array($name, $candidates, true)) {
+                $candidates[] = $name;
+            }
+        }
+        // Last resort: capabilities only if it was the embedding primary hit.
+        if ($primaryHit === 'explain_capabilities' && !in_array('explain_capabilities', $candidates, true)) {
+            $candidates[] = 'explain_capabilities';
+        }
+
+        foreach ($candidates as $toolName) {
+            if (!in_array($toolName, self::EMPTY_RECOVERY_TOOLS, true)) {
+                continue;
+            }
+            if (!$this->shortlistHasTool($shortlistedTools, $toolName)) {
+                continue;
+            }
+            $arguments = $this->buildRecoveryArguments($toolName, $userMessage, $context);
+            if ($arguments === null) {
+                continue;
+            }
+
+            return ['tool' => $toolName, 'arguments' => $arguments];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @return array<string, mixed>|null null = cannot safely run this tool
+     */
+    private function buildRecoveryArguments(string $toolName, string $userMessage, array $context): ?array
+    {
+        $pageId = (int) ($context['pageId'] ?? 0);
+
+        return match ($toolName) {
+            'pages_get' => $pageId > 0 ? ['uid' => $pageId] : null,
+            'pages_list',
+            'content_list',
+            'site_languages_list',
+            'site_configuration_get',
+            'explain_capabilities' => [],
+            'content_get',
+            'content_delete' => $this->extractUidArgument($userMessage, $context),
+            'pages_search',
+            'content_search' => $this->extractSearchArgument($userMessage),
+            'write_table' => $this->extractWriteTableCreateArgument($userMessage, $context),
+            default => null,
+        };
+    }
+
+    /**
+     * @param list<string> $shortlistNames
+     */
+    private function preferSearchToolFromMessage(string $userMessage, array $shortlistNames): ?string
+    {
+        $mentionsContent = preg_match('/\bcontent\b/i', $userMessage) === 1;
+        $mentionsPages = preg_match('/\bpages?\b/i', $userMessage) === 1;
+        if ($mentionsContent && !$mentionsPages && in_array('content_search', $shortlistNames, true)) {
+            return 'content_search';
+        }
+        if ($mentionsPages && in_array('pages_search', $shortlistNames, true)) {
+            return 'pages_search';
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @return array{uid: int}|null
+     */
+    private function extractUidArgument(string $userMessage, array $context): ?array
+    {
+        if (preg_match('/#\s*(\d+)\b/', $userMessage, $match) === 1) {
+            return ['uid' => (int) $match[1]];
+        }
+        if (preg_match('/\b(?:uid|element|tt_content)\s*[:=]?\s*(\d+)\b/i', $userMessage, $match) === 1) {
+            return ['uid' => (int) $match[1]];
+        }
+        $record = is_array($context['record'] ?? null) ? $context['record'] : null;
+        if ($record !== null && ($record['table'] ?? '') === 'tt_content') {
+            $uid = (int) ($record['uid'] ?? 0);
+            if ($uid > 0) {
+                return ['uid' => $uid];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{search: string}|null
+     */
+    private function extractSearchArgument(string $userMessage): ?array
+    {
+        if (preg_match('/"([^"]+)"/', $userMessage, $match) === 1) {
+            $query = trim($match[1]);
+
+            return $query !== '' ? ['search' => $query] : null;
+        }
+        if (preg_match("/'([^']+)'/", $userMessage, $match) === 1) {
+            $query = trim($match[1]);
+
+            return $query !== '' ? ['search' => $query] : null;
+        }
+        // "Search content for Camino" / "Find pages named FAQ"
+        if (preg_match(
+            '/\b(?:search|find|list)\s+(?:content|pages?|records?)\s+(?:for|named|called)\s+(.+)$/iu',
+            $userMessage,
+            $match,
+        ) === 1) {
+            $query = trim($match[1], " \t\n\r\0\x0B.?!„“\"'");
+
+            return $query !== '' ? ['search' => $query] : null;
+        }
+        if (preg_match('/\b(?:named|called)\s+(.+)$/iu', $userMessage, $match) === 1) {
+            $query = trim($match[1], " \t\n\r\0\x0B.?!„“\"'");
+
+            return $query !== '' ? ['search' => $query] : null;
+        }
+        if (preg_match('/\b(?:search|find)\s+for\s+(.+)$/iu', $userMessage, $match) === 1) {
+            $query = trim($match[1], " \t\n\r\0\x0B.?!„“\"'");
+
+            return $query !== '' ? ['search' => $query] : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @return array{action: string, tableName: string, data: string}|null
+     */
+    private function extractWriteTableCreateArgument(string $userMessage, array $context): ?array
+    {
+        $pageId = (int) ($context['pageId'] ?? 0);
+        if ($pageId <= 0) {
+            return null;
+        }
+        if (preg_match(
+            '/\b(?:add|create|new)\s+(?:a\s+)?(?:headline|header|title)\s+["\']?(.+?)["\']?\s*$/iu',
+            $userMessage,
+            $match,
+        ) !== 1) {
+            return null;
+        }
+        $header = trim($match[1], " \t\n\r\0\x0B.?!„“\"'");
+        if ($header === '') {
+            return null;
+        }
+
+        return [
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'data' => json_encode([
+                'pid' => $pageId,
+                'CType' => 'header',
+                'header' => $header,
+            ], JSON_THROW_ON_ERROR),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @param list<array<string, mixed>> $shortlistedTools
+     * @param array<string, mixed> $context
+     * @param array<string, mixed> $body
+     * @param list<mixed> $trace
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function recoverEmptyTurnWithPrimaryHit(
+        string $toolName,
+        array $arguments,
+        array $shortlistedTools,
+        array $context,
+        array $body,
+        BackendUserAuthentication $user,
+        string $correlationId,
+        string $routingSource,
+        string $modelId,
+        string $providerIdentifier,
+        array $trace,
+    ): ?array {
+        $toolName = trim($toolName);
+        if ($toolName === '') {
+            return null;
+        }
+        // write_table structural create may not be in the embedding shortlist.
+        if (
+            !$this->shortlistHasTool($shortlistedTools, $toolName)
+            && !($toolName === 'write_table' && ($arguments['action'] ?? '') === 'create')
+        ) {
+            return null;
+        }
+
+        $toolBody = $body;
+        $toolBody['arguments'] = $arguments;
+        $message = $this->toolTurnProcessor->execute(
+            $toolName,
+            $context,
+            $toolBody,
+            $user,
+            $correlationId,
+        );
+        $message['meta']['emptyTurnRecovery'] = $toolName;
+        $message['meta']['modelId'] = $modelId;
+        $message['meta']['providerIdentifier'] = $providerIdentifier;
+        $message['meta']['routingSource'] = $routingSource;
+        $message['meta']['trace'] = $trace;
+        $message['meta']['shortlistedTools'] = array_map(
+            static fn(array $tool): string => (string) ($tool['name'] ?? ''),
+            $shortlistedTools,
+        );
+
+        return $message;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $shortlistedTools
+     */
+    private function shortlistHasTool(array $shortlistedTools, string $toolName): bool
+    {
+        $needle = strtolower(trim($toolName));
+        foreach ($shortlistedTools as $tool) {
+            if (strtolower(trim((string) ($tool['name'] ?? ''))) === $needle) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @param array<string, mixed> $context
      * @param list<array<string, mixed>> $executableTools
+     * @param list<array<string, mixed>> $shortlistedTools
      */
-    private function buildEmptyModelReply(string $userMessage, array $context, array $executableTools): string
-    {
+    private function buildEmptyModelReply(
+        string $userMessage,
+        array $context,
+        array $executableTools,
+        array $shortlistedTools = [],
+    ): string {
         unset($userMessage, $context, $executableTools);
+        $names = [];
+        foreach ($shortlistedTools as $tool) {
+            $name = trim((string) ($tool['name'] ?? ''));
+            if ($name !== '') {
+                $names[] = $name;
+            }
+            if (count($names) >= 5) {
+                break;
+            }
+        }
+        if ($names === []) {
+            return $this->translator->translate('agent.turn.emptyModelReply');
+        }
 
-        return $this->translator->translate('agent.turn.emptyModelReply');
+        return $this->translator->translate('agent.turn.emptyModelReplyWithTools', [implode(', ', $names)]);
     }
 }

@@ -671,6 +671,14 @@
                 <source>Assistant is working…</source>
                 <target>Assistent arbeitet…</target>
             </trans-unit>
+            <trans-unit id="agent.live.thinking">
+                <source>Thinking…</source>
+                <target>Denkt nach…</target>
+            </trans-unit>
+            <trans-unit id="agent.live.runningTool">
+                <source>Running %1$s…</source>
+                <target>Führt %1$s aus…</target>
+            </trans-unit>
             <trans-unit id="agent.live.opened">
                 <source>AI Agent opened.</source>
                 <target>AI Agent geöffnet.</target>
@@ -820,6 +828,18 @@
             <trans-unit id="agent.tool.getFileMetadata">
                 <source>Inspect file metadata</source>
                 <target>Datei-Metadaten ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.explainCapabilities">
+                <source>Explain available actions</source>
+                <target>Verfügbare Aktionen erklären</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.contentDelete">
+                <source>Delete a content element</source>
+                <target>Inhaltselement löschen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.askClarification">
+                <source>Ask a clarifying question</source>
+                <target>Klärende Frage stellen</target>
             </trans-unit>
             <trans-unit id="agent.upsell.title">
                 <source>Extension required</source>

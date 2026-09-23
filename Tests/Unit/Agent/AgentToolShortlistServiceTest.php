@@ -62,10 +62,68 @@ final class AgentToolShortlistServiceTest extends TestCase
         $result = $service->shortlist('list content', ['module' => 'web_layout'], $catalog);
 
         self::assertSame('embeddings', $result['routingSource']);
+        self::assertNull($result['directTool']);
         $names = array_column($result['tools'], 'name');
         self::assertContains('ask_clarification', $names);
         self::assertContains('explain_capabilities', $names);
         self::assertContains('content_list', $names);
+    }
+
+    #[Test]
+    public function directToolWhenExplainCapabilitiesRanksFirst(): void
+    {
+        $catalog = [
+            $this->tool('pages_get', 'pages'),
+            $this->tool('ask_clarification', 'general'),
+            $this->tool('explain_capabilities', 'general'),
+            $this->tool('content_list', 'content'),
+        ];
+
+        $index = $this->createMock(AgentToolIndexInterface::class);
+        $index->method('search')->willReturn([
+            ['name' => 'explain_capabilities', 'score' => 0.95],
+            ['name' => 'content_list', 'score' => 0.7],
+        ]);
+
+        $service = $this->createService(
+            index: $index,
+            embeddingSource: $this->stubSource(ProviderEmbeddingSource::ID),
+            embeddingMode: 'provider',
+        );
+
+        $result = $service->shortlist('What can you do?', ['module' => 'web_layout'], $catalog);
+
+        self::assertSame('embeddings', $result['routingSource']);
+        self::assertSame('explain_capabilities', $result['directTool']);
+        self::assertSame('content_list', $result['primaryHit']);
+    }
+
+    #[Test]
+    public function directToolWhenExplainCapabilitiesNearTopScore(): void
+    {
+        $catalog = [
+            $this->tool('pages_get', 'pages'),
+            $this->tool('ask_clarification', 'general'),
+            $this->tool('explain_capabilities', 'general'),
+            $this->tool('content_list', 'content'),
+        ];
+
+        $index = $this->createMock(AgentToolIndexInterface::class);
+        $index->method('search')->willReturn([
+            ['name' => 'content_list', 'score' => 0.90],
+            ['name' => 'explain_capabilities', 'score' => 0.88],
+        ]);
+
+        $service = $this->createService(
+            index: $index,
+            embeddingSource: $this->stubSource(ProviderEmbeddingSource::ID),
+            embeddingMode: 'provider',
+        );
+
+        $result = $service->shortlist('What can you do?', ['module' => 'web_layout'], $catalog);
+
+        self::assertSame('explain_capabilities', $result['directTool']);
+        self::assertSame('content_list', $result['primaryHit']);
     }
 
     #[Test]
@@ -125,6 +183,7 @@ final class AgentToolShortlistServiceTest extends TestCase
         $result = $service->shortlist('open the page tree', ['module' => 'file'], $catalog);
 
         self::assertSame('category_pick', $result['routingSource']);
+        self::assertNull($result['directTool']);
         $names = array_column($result['tools'], 'name');
         self::assertContains('pages_get', $names);
         self::assertContains('content_list', $names);

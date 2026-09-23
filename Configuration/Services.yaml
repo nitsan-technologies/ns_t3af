@@ -606,6 +606,9 @@ services:
   NITSAN\NsT3AF\Agent\Contract\AgentToolIndexInterface:
     alias: NITSAN\NsT3AF\Agent\Service\AgentToolIndexService
 
+  NITSAN\NsT3AF\Agent\Contract\AgentActionCatalogInterface:
+    alias: NITSAN\NsT3AF\Agent\Service\PermittedActionProvider
+
   NITSAN\NsT3AF\Agent\Service\AgentToolIndexService:
     arguments:
       $cache: '@nst3af.cacheFacade.agent_tool_index'

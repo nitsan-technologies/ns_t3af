@@ -166,7 +166,9 @@ final readonly class AgentToolDefinitionMapper
 
         $schema = [
             'type' => 'object',
-            'properties' => $properties === [] ? new \stdClass() : $properties,
+            // Empty array here; OpenAI HTTP path converts to {} in AiToolDefinition::toProviderShape().
+            // Symfony AI path json_decodes to [] so Serializer never sees stdClass.
+            'properties' => $properties,
         ];
         if ($required !== []) {
             $schema['required'] = $required;

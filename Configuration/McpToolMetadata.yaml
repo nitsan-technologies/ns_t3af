@@ -329,7 +329,13 @@ tools:
     category: Content
     status: ready
     tagline: Move a content element to a new position
-    notes: Positive target = top of page. Negative target = after element uid.
+    notes: Positive target = top of page. Negative target = after element uid. Never target 0. Not for delete — use content_delete.
+
+  content_delete:
+    category: Content
+    status: ready
+    tagline: Delete a content element by uid
+    notes: Destructive. Agent shows confirmation draft before apply. Pass tt_content uid, not page id.
 
   file_copy:
     category: Files

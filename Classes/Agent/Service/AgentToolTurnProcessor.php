@@ -157,7 +157,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
-        $arguments = $this->mergeContextArguments($arguments, $context);
+        $arguments = $this->mergeContextArguments($arguments, $context, (string) ($tool['name'] ?? ''));
 
         $result = $this->playgroundService->invoke($tool['name'], $arguments);
         $invokeSuccess = (bool) ($result['success'] ?? false);
@@ -267,7 +267,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         array $guard,
     ): array {
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
-        $arguments = $this->mergeContextArguments($arguments, $context);
+        $arguments = $this->mergeContextArguments($arguments, $context, (string) ($tool['name'] ?? ''));
 
         $result = $this->playgroundService->invokeWithMode(
             (string) $tool['name'],
@@ -338,7 +338,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     ): array {
         $toolName = (string) ($tool['name'] ?? '');
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
-        $arguments = $this->mergeContextArguments($arguments, $context);
+        $arguments = $this->mergeContextArguments($arguments, $context, $toolName);
 
         $variants = max(1, min(5, (int) ($arguments['variants'] ?? 3)));
         unset($arguments['variants']);
@@ -423,7 +423,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
-        $arguments = $this->mergeContextArguments($arguments, $context);
+        $arguments = $this->mergeContextArguments($arguments, $context, $toolName);
         $arguments = $this->normalizeWriteToolArguments($toolName, $arguments);
 
         try {
@@ -470,13 +470,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      * @param array<string, mixed> $context
      * @return array<string, mixed>
      */
-    public function mergeContextArguments(array $arguments, array $context): array
+    public function mergeContextArguments(array $arguments, array $context, string $toolName = ''): array
     {
         $pageId = (int) ($context['pageId'] ?? 0);
         if ($pageId > 0) {
             $arguments['pageId'] ??= $pageId;
-            $arguments['pid'] ??= $pageId;
-            $arguments['uid'] ??= $pageId;
+            // Never copy pageId into uid. Also do not force pid onto *_search tools —
+            // that scoped site-wide searches to the current page only.
+            if (!$this->toolUsesOptionalSearchPid($toolName)) {
+                $arguments['pid'] ??= $pageId;
+            }
         }
 
         $languageId = (int) ($context['languageId'] ?? 0);
@@ -504,7 +507,19 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $arguments['storageUid'] ??= $storageUid;
         }
 
+        $module = trim((string) ($context['module'] ?? ''));
+        if ($module !== '') {
+            $arguments['module'] ??= $module;
+        }
+
         return $arguments;
+    }
+
+    private function toolUsesOptionalSearchPid(string $toolName): bool
+    {
+        $toolName = strtolower(trim($toolName));
+
+        return $toolName !== '' && str_ends_with($toolName, '_search');
     }
 
     /**

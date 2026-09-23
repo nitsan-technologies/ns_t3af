@@ -32,7 +32,7 @@ final readonly class AiToolDefinition
     public function __construct(
         public string $name,
         public string $description,
-        public array $parameters = ['type' => 'object', 'properties' => new \stdClass()],
+        public array $parameters = ['type' => 'object', 'properties' => []],
     ) {}
 
     /**
@@ -40,10 +40,16 @@ final readonly class AiToolDefinition
      */
     public function toProviderShape(): array
     {
+        $parameters = $this->parameters;
+        // OpenAI-compatible HTTP expects empty properties as JSON `{}`, not `[]`.
+        if (($parameters['properties'] ?? null) === []) {
+            $parameters['properties'] = new \stdClass();
+        }
+
         return [
             'name' => $this->name,
             'description' => $this->description,
-            'parameters' => $this->parameters,
+            'parameters' => $parameters,
         ];
     }
 }

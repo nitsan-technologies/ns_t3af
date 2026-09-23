@@ -593,7 +593,7 @@ final class AgentAjaxController
             $body,
             $user,
             $correlationId,
-        ): string|false {
+        ): false {
             static $emitted = false;
             if ($emitted) {
                 return false;
@@ -636,7 +636,8 @@ final class AgentAjaxController
                 ]);
             }
 
-            return '';
+            // PumpStream forbids ''; false = EOF (SSE already flushed via emitSseEvent).
+            return false;
         });
 
         return new Response(

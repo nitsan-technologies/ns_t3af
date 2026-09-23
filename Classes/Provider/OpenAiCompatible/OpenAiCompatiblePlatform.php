@@ -58,8 +58,10 @@ final class OpenAiCompatiblePlatform
         $body = [
             'model' => $modelId,
             'messages' => $messages,
-            'temperature' => $this->provider->temperature,
         ];
+        if (!$this->isReasoningModel($modelId)) {
+            $body['temperature'] = $this->provider->temperature;
+        }
         if ($tools !== []) {
             $body['tools'] = array_map(
                 static fn(array $tool): array => [
@@ -68,6 +70,7 @@ final class OpenAiCompatiblePlatform
                 ],
                 $tools,
             );
+            $body['tool_choice'] = 'required';
         }
 
         $response = $this->postJson($this->chatCompletionsPath(), $body);
@@ -637,5 +640,17 @@ final class OpenAiCompatiblePlatform
         }
 
         return preg_match('#:11434$#', $base) === 1;
+    }
+
+    private function isReasoningModel(string $model): bool
+    {
+        $normalized = strtolower(trim($model));
+        foreach (['o1', 'o1-mini', 'o3', 'o3-mini', 'o4-mini', 'gpt-5'] as $prefix) {
+            if ($normalized === $prefix || str_starts_with($normalized, $prefix . '-') || str_starts_with($normalized, $prefix . '.')) {
+                return true;
+            }
+        }
+
+        return str_contains($normalized, 'gpt-5');
     }
 }

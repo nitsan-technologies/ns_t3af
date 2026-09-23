@@ -54,6 +54,11 @@ readonly class ContentMoveTool implements McpNonAiToolInterface, McpPlannableToo
         if ($uid <= 0) {
             throw new \InvalidArgumentException('Move requires uid > 0.');
         }
+        if ($target === 0) {
+            throw new \InvalidArgumentException(
+                'Move requires target ≠ 0 (positive = page pid, negative = -uid to place after).',
+            );
+        }
 
         if ($this->recordService->findExistingUids('tt_content', [$uid]) === []) {
             throw new \InvalidArgumentException('Content element not found: uid ' . $uid);
@@ -80,11 +85,22 @@ readonly class ContentMoveTool implements McpNonAiToolInterface, McpPlannableToo
     #[McpTool(
         name: 'content_move',
         description: 'Move a content element to a new position.'
+            . ' Requires uid of the tt_content record and target ≠ 0.'
             . ' Use a positive target to move to the top of a page (target = page pid).'
-            . ' Use a negative target to move after another content element (target = -uid of the element to place after).',
+            . ' Use a negative target to move after another content element (target = -uid of the element to place after).'
+            . ' Do not use this tool to delete content — use content_delete instead.',
     )]
     public function execute(int $uid, int $target): string
     {
+        if ($uid <= 0) {
+            throw new \InvalidArgumentException('Move requires uid > 0.');
+        }
+        if ($target === 0) {
+            throw new \InvalidArgumentException(
+                'Move requires target ≠ 0 (positive = page pid, negative = -uid to place after).',
+            );
+        }
+
         $this->dataHandlerService->moveRecord('tt_content', $uid, $target);
 
         return json_encode(['uid' => $uid, 'target' => $target, 'moved' => true], JSON_THROW_ON_ERROR);

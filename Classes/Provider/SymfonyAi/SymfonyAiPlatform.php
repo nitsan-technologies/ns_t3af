@@ -19,6 +19,8 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Provider\SymfonyAi;
 
+use const JSON_THROW_ON_ERROR;
+
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 
@@ -51,7 +53,10 @@ final class SymfonyAiPlatform
             throw new AdapterRuntimeException('No valid messages for Symfony AI tool calling.');
         }
 
-        $options = ['tools' => $this->normalizeTools($tools)];
+        $options = [
+            'tools' => $this->normalizeTools($tools),
+            'tool_choice' => 'required',
+        ];
         if (!$this->isReasoningModel($modelId)) {
             $options['temperature'] = $this->provider->temperature;
         }
@@ -167,16 +172,33 @@ final class SymfonyAiPlatform
                 continue;
             }
             if (isset($tool['type']) && ($tool['type'] ?? '') === 'function' && is_array($tool['function'] ?? null)) {
-                $normalized[] = $tool;
+                $normalized[] = $this->serializerSafeToolPayload($tool);
                 continue;
             }
-            $normalized[] = [
+            $normalized[] = $this->serializerSafeToolPayload([
                 'type' => 'function',
                 'function' => $tool,
-            ];
+            ]);
         }
 
         return $normalized;
+    }
+
+    /**
+     * Symfony Serializer cannot normalize {@see \stdClass} (used for empty JSON Schema `{}`).
+     *
+     * @param array<string, mixed> $tool
+     * @return array<string, mixed>
+     */
+    private function serializerSafeToolPayload(array $tool): array
+    {
+        $encoded = json_encode($tool, JSON_THROW_ON_ERROR);
+        $decoded = json_decode($encoded, true);
+        if (!is_array($decoded)) {
+            return $tool;
+        }
+
+        return $decoded;
     }
 
     /**
@@ -346,12 +368,13 @@ final class SymfonyAiPlatform
 
     private function isReasoningModel(string $model): bool
     {
-        foreach (['o1', 'o1-mini', 'o3', 'o3-mini', 'o4-mini'] as $prefix) {
-            if ($model === $prefix || str_starts_with($model, $prefix . '-')) {
+        $normalized = strtolower(trim($model));
+        foreach (['o1', 'o1-mini', 'o3', 'o3-mini', 'o4-mini', 'gpt-5'] as $prefix) {
+            if ($normalized === $prefix || str_starts_with($normalized, $prefix . '-') || str_starts_with($normalized, $prefix . '.')) {
                 return true;
             }
         }
 
-        return false;
+        return str_contains($normalized, 'gpt-5');
     }
 }

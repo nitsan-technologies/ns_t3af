@@ -164,6 +164,77 @@ final class SymfonyAiPlatformTest extends TestCase
         self::assertSame([], $inner->receivedOptions);
     }
 
+    #[Test]
+    public function invokeWithToolsStripsStdClassFromEmptyProperties(): void
+    {
+        if (!class_exists('Symfony\\AI\\Platform\\Message\\Message')) {
+            self::markTestSkipped('symfony/ai-platform message classes are not installed.');
+        }
+
+        $seenTools = null;
+        $platform = new class ($seenTools) {
+            /** @var mixed */
+            public mixed $seenToolsRef;
+
+            public function __construct(mixed &$seenTools)
+            {
+                $this->seenToolsRef = &$seenTools;
+            }
+
+            /**
+             * @param array<string, mixed> $options
+             */
+            public function invoke(string $modelId, object $messageBag, array $options): object
+            {
+                $this->seenToolsRef = $options['tools'] ?? null;
+
+                return new class {
+                    public function asText(): string
+                    {
+                        return 'ok';
+                    }
+
+                    public function getRawResult(): object
+                    {
+                        return new class {
+                            /** @return array<string, mixed> */
+                            public function getData(): array
+                            {
+                                return ['choices' => [['message' => ['content' => 'ok', 'tool_calls' => []]]]];
+                            }
+                        };
+                    }
+                };
+            }
+        };
+
+        $service = new SymfonyAiPlatform(
+            $platform,
+            $this->makeProvider(),
+            new SymfonyAiMessageBagFactory(),
+        );
+
+        $service->invokeWithTools(
+            'gpt-4.1-mini',
+            [['role' => 'user', 'content' => 'Help']],
+            [[
+                'name' => 'noop',
+                'description' => 'No args',
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => new \stdClass(),
+                ],
+            ]],
+        );
+
+        self::assertIsArray($seenTools);
+        $function = $seenTools[0]['function'] ?? null;
+        self::assertIsArray($function);
+        $properties = $function['parameters']['properties'] ?? null;
+        self::assertIsArray($properties);
+        self::assertSame([], $properties);
+    }
+
     private function makeProvider(): Provider
     {
         return new Provider(

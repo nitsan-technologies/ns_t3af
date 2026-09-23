@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Service;
 
+use NITSAN\NsT3AF\Agent\Contract\AgentActionCatalogInterface;
 use NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
@@ -28,7 +29,7 @@ use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
  *
  * @internal
  */
-final readonly class PermittedActionProvider
+final readonly class PermittedActionProvider implements AgentActionCatalogInterface
 {
     private const CORE_EXTENSION_KEY = 'ns_t3af';
 
