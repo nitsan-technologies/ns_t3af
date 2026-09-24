@@ -24,11 +24,14 @@ use NITSAN\NsT3AF\Access\RecordAccessGate;
 use NITSAN\NsT3AF\Agent\Context\AgentContextPresenter;
 use NITSAN\NsT3AF\Agent\Service\AgentAuditLogger;
 use NITSAN\NsT3AF\Agent\Service\AgentAvailabilityService;
+use NITSAN\NsT3AF\Agent\Service\AgentConversationRecorder;
 use NITSAN\NsT3AF\Agent\Service\AgentConversationSession;
+use NITSAN\NsT3AF\Agent\Service\AgentConversationSummarizer;
 use NITSAN\NsT3AF\Agent\Service\AgentCreditsStatus;
 use NITSAN\NsT3AF\Agent\Service\AgentDraftSession;
 use NITSAN\NsT3AF\Agent\Service\AgentGovernanceGuard;
 use NITSAN\NsT3AF\Agent\Service\AgentLowRiskFieldMatrix;
+use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentProviderOptions;
 use NITSAN\NsT3AF\Agent\Service\AgentRecordAttachmentResolver;
 use NITSAN\NsT3AF\Agent\Service\AgentRecordLabeler;
@@ -41,6 +44,7 @@ use NITSAN\NsT3AF\Agent\Service\AgentTranslator;
 use NITSAN\NsT3AF\Agent\Service\AgentTurnRepository;
 use NITSAN\NsT3AF\Agent\Service\AgentTurnRouter;
 use NITSAN\NsT3AF\Agent\Service\AgentUndoService;
+use NITSAN\NsT3AF\Agent\Service\AgentWorkspaceTarget;
 use NITSAN\NsT3AF\Agent\Service\AgentWriteService;
 use NITSAN\NsT3AF\Agent\Service\PermittedActionProvider;
 use NITSAN\NsT3AF\Domain\Repository\AgentConversationRepository;
@@ -91,6 +95,9 @@ final class AgentAjaxController
         private readonly AgentRecordLabeler $recordLabeler,
         private readonly AgentSettingsService $agentSettings,
         private readonly AgentCreditsStatus $creditsStatus,
+        private readonly AgentConversationRecorder $conversationRecorder,
+        private readonly AgentConversationSummarizer $conversationSummarizer,
+        private readonly AgentWorkspaceTarget $workspaceTarget,
         private readonly FileService $fileService,
         private readonly ModuleTabUtility $moduleTabUtility,
         private readonly RecordAccessGate $recordAccessGate,
@@ -209,44 +216,8 @@ final class AgentAjaxController
             $this->conversationSession->setDisclosureDismissed((bool) $body['disclosureDismissed'], $user);
         }
 
-        $sessionUuid = trim((string) ($body['sessionUuid'] ?? ''));
-        $messages = $body['messages'] ?? null;
-        if ($sessionUuid === '' || $messages === null) {
-            return new JsonResponse(['ok' => true]);
-        }
-        if (!is_array($messages)) {
-            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.invalidPayload')], 400);
-        }
-
-        $context = $this->resolveContext($request, is_array($body['context'] ?? null) ? $body['context'] : []);
-        if ($this->conversationSession->resolve($user, $context, $sessionUuid) === null) {
-            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.session.notFound')], 404);
-        }
-
-        // The window's copy lacks server-only meta (where a message was written, correlation id):
-        // keep it for messages the server already stored at the same position.
-        $stored = $this->conversationSession->getMessages();
-        $normalized = [];
-        foreach (array_values($messages) as $index => $message) {
-            if (!is_array($message)) {
-                continue;
-            }
-            $meta = $this->sanitizeMessageMeta(is_array($message['meta'] ?? null) ? $message['meta'] : []);
-            $role = (string) ($message['role'] ?? 'assistant');
-            $content = (string) ($message['content'] ?? '');
-            $previous = $stored[$index] ?? null;
-            if (is_array($previous) && ($previous['role'] ?? '') === $role && (string) ($previous['content'] ?? '') === $content) {
-                $previousMeta = is_array($previous['meta'] ?? null) ? $previous['meta'] : [];
-                foreach (['context', 'correlationId'] as $key) {
-                    if (!array_key_exists($key, $meta) && array_key_exists($key, $previousMeta)) {
-                        $meta[$key] = $previousMeta[$key];
-                    }
-                }
-            }
-            $normalized[] = ['role' => $role, 'content' => $content, 'meta' => $meta];
-        }
-        $this->conversationSession->save($user, $normalized, $context);
-
+        // Messages are stored by the server only (turns and card actions); a messages
+        // payload from older agent.js versions is ignored.
         return new JsonResponse(['ok' => true]);
     }
 
@@ -350,7 +321,8 @@ final class AgentAjaxController
         $draftId = trim((string) ($body['draftId'] ?? ''));
         $keptFieldKeys = is_array($body['keptFieldKeys'] ?? null) ? array_values(array_map('strval', $body['keptFieldKeys'])) : [];
         $applyMode = trim((string) ($body['applyMode'] ?? 'all'));
-        $workspaceId = (int) ($body['workspaceId'] ?? 0);
+        // A draft workspace by default, also when the client sends Live (agentWorkspaceMode).
+        $workspaceId = $this->workspaceTarget->resolve((int) ($body['workspaceId'] ?? 0), $user);
         $correlationId = trim((string) ($body['correlationId'] ?? ''));
         $selections = is_array($body['selections'] ?? null) ? $body['selections'] : [];
         $edits = is_array($body['edits'] ?? null) ? $body['edits'] : [];
@@ -393,7 +365,9 @@ final class AgentAjaxController
             $editedByEditor = true;
         }
 
-        $this->applyWorkspaceContext($user, $workspaceId);
+        if (!$this->applyWorkspaceContext($user, $workspaceId)) {
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.workspace.noAccess')], 403);
+        }
 
         try {
             $result = $isPreviewDraft
@@ -444,13 +418,58 @@ final class AgentAjaxController
             ]);
         }
 
+        $labelledResult = $this->labelReadback($result);
+        $links = $this->resultLinks($result, $storedDraft);
+        if ($user !== null) {
+            $this->recordInConversation($user, $body, fn(array $messages): array => $this->conversationRecorder->applied(
+                $messages,
+                $draftId,
+                $labelledResult,
+                [
+                    'message' => $message,
+                    'links' => $links,
+                    'schedulerHandoff' => $handoff,
+                    'keptFieldKeys' => $isPreviewDraft ? null : $keptFieldKeys,
+                    'selections' => $isPreviewDraft ? $selections : null,
+                    'edits' => $isPreviewDraft ? $this->normalizeStringMap($edits) : null,
+                ],
+            ));
+        }
+
         return new JsonResponse([
             'ok' => true,
-            'result' => $this->labelReadback($result),
+            'result' => $labelledResult,
             'message' => $message,
             'schedulerHandoff' => $handoff,
-            'links' => $this->resultLinks($result, $storedDraft),
+            'links' => $links,
         ]);
+    }
+
+    /**
+     * Applies a card outcome to the stored conversation (the server is its only writer).
+     * Failing to record never fails the action itself.
+     *
+     * @param array<string, mixed> $body request body with sessionUuid
+     * @param callable(list<array<string, mixed>>): list<array<string, mixed>> $change
+     */
+    private function recordInConversation(BackendUserAuthentication $user, array $body, callable $change): void
+    {
+        $sessionUuid = trim((string) ($body['sessionUuid'] ?? ''));
+        if ($sessionUuid === '') {
+            return;
+        }
+        try {
+            if ($this->conversationSession->resolve($user, [], $sessionUuid) === null) {
+                return;
+            }
+            $messages = $this->conversationSession->getMessages();
+            $updated = $change($messages);
+            if ($updated !== $messages) {
+                $this->conversationSession->save($user, $updated, $this->conversationSession->getContext());
+            }
+        } catch (\Throwable) {
+            // The change itself succeeded; the transcript catches up with the next turn.
+        }
     }
 
     /**
@@ -608,6 +627,10 @@ final class AgentAjaxController
         }
 
         $this->draftSession->removeDraft($draftId);
+        $user = $this->resolveBackendUser();
+        if ($user !== null) {
+            $this->recordInConversation($user, $body, fn(array $messages): array => $this->conversationRecorder->declined($messages, $draftId));
+        }
 
         return new JsonResponse([
             'ok' => true,
@@ -633,6 +656,10 @@ final class AgentAjaxController
         }
 
         $this->draftSession->setDestructiveArmed($draftId, true);
+        $user = $this->resolveBackendUser();
+        if ($user !== null) {
+            $this->recordInConversation($user, $body, fn(array $messages): array => $this->conversationRecorder->armed($messages, $draftId));
+        }
 
         return new JsonResponse([
             'ok' => true,
@@ -659,10 +686,63 @@ final class AgentAjaxController
             return new JsonResponse(['ok' => false, 'message' => $exception->getMessage()], 400);
         }
 
+        $message = $this->translator->translate('agent.draft.undone');
+        $user = $this->resolveBackendUser();
+        if ($user !== null) {
+            $this->recordInConversation($user, $body, fn(array $messages): array => $this->conversationRecorder->undone($messages, $message));
+        }
+
         return new JsonResponse([
             'ok' => true,
             'result' => $result,
-            'message' => $this->translator->translate('agent.draft.undone'),
+            'message' => $message,
+        ]);
+    }
+
+    /**
+     * "Summarize conversation": stores a short summary; later turns replay it instead of the
+     * older messages.
+     */
+    public function summarizeAction(ServerRequestInterface $request): ResponseInterface
+    {
+        if ($denied = $this->denyUnlessAvailable()) {
+            return $denied;
+        }
+        $user = $this->resolveBackendUser();
+        if ($user === null) {
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.forbidden')], 403);
+        }
+
+        $body = $this->parseRequestBody($request);
+        $sessionUuid = trim((string) ($body['sessionUuid'] ?? ''));
+        if ($sessionUuid === '' || $this->conversationSession->resolve($user, [], $sessionUuid) === null) {
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.session.notFound')], 404);
+        }
+        $messages = $this->conversationSession->getMessages();
+        if (!AgentConversationSummarizer::canSummarize($messages)) {
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.summary.tooShort')], 400);
+        }
+
+        $storedContext = $this->conversationSession->getContext();
+        try {
+            $summary = $this->conversationSummarizer->summarize(
+                $messages,
+                $this->conversationSession->providerIdentifier(),
+                (int) ($storedContext['pageId'] ?? 0),
+            );
+        } catch (\Throwable $exception) {
+            return new JsonResponse([
+                'ok' => false,
+                'message' => $this->translator->translate('agent.summary.failed', [$exception->getMessage()]),
+            ], 502);
+        }
+
+        $this->conversationSession->save($user, [...$messages, $summary], $storedContext);
+
+        return new JsonResponse([
+            'ok' => true,
+            'message' => $summary,
+            'credits' => $this->creditsStatus->status(),
         ]);
     }
 
@@ -897,7 +977,7 @@ final class AgentAjaxController
         $details = is_array($context['details'] ?? null) ? $context['details'] : [];
         $continuation = is_array($body['continuation'] ?? null) ? $body['continuation'] : null;
         if ($continuation !== null) {
-            $message = $this->continuationMessage($continuation);
+            $message = $this->continuationMessage($continuation, $history);
         }
         $messages = $history;
         $messages[] = [
@@ -933,12 +1013,26 @@ final class AgentAjaxController
      * The instruction for the turn after the editor confirmed or declined a card (English, like
      * the system prompt; the reply language rule still applies).
      *
+     * The records the change wrote (table, uid, title) come from the stored result, so a new
+     * page's uid can be used right away (e.g. as pid of its content elements).
+     *
      * @param array<mixed> $continuation {outcome: applied|declined, label: string, result: string}
+     * @param list<array<string, mixed>> $history
      */
-    private function continuationMessage(array $continuation): string
+    private function continuationMessage(array $continuation, array $history = []): string
     {
         $label = mb_substr(trim((string) ($continuation['label'] ?? '')), 0, 120);
         $result = mb_substr(trim((string) ($continuation['result'] ?? '')), 0, 600);
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            if (($history[$i]['role'] ?? '') === 'user') {
+                break;
+            }
+            if (($meta['type'] ?? '') === 'readback_result') {
+                $result = trim($result . AgentPromptBuilder::appliedRecordsNote($meta));
+                break;
+            }
+        }
         if (($continuation['outcome'] ?? '') === 'declined') {
             return sprintf(
                 '[The editor declined "%s". Nothing was written.] Do not repeat it. If other steps of my request remain, continue with them;'
@@ -949,7 +1043,8 @@ final class AgentAjaxController
 
         return sprintf(
             '[The editor confirmed "%s" and it was applied.%s] Continue with the remaining steps of my request.'
-            . ' If nothing is left, confirm in one short sentence.',
+            . ' If nothing is left, confirm in one short sentence without calling tools: the result above is final,'
+            . ' so do not check it again or list what else you can do.',
             $label,
             $result !== '' ? ' Result: ' . $result : '',
         );
@@ -988,15 +1083,6 @@ final class AgentAjaxController
             'module' => (string) ($context['module'] ?? ''),
             'workspaceId' => (int) ($context['workspaceId'] ?? 0),
         ], $user);
-    }
-
-    /**
-     * @param array<string, mixed> $meta
-     * @return array<string, mixed>
-     */
-    private function sanitizeMessageMeta(array $meta): array
-    {
-        return self::sanitizeMessageMetaStatic($meta);
     }
 
     /**
@@ -1245,13 +1331,17 @@ final class AgentAjaxController
         return $user instanceof BackendUserAuthentication ? $user : null;
     }
 
-    private function applyWorkspaceContext(BackendUserAuthentication $user, int $workspaceId): void
+    /**
+     * Switches the workspace for this request only (setWorkspace() would also change the
+     * editor's backend workspace). False when the editor may not use that workspace.
+     */
+    private function applyWorkspaceContext(BackendUserAuthentication $user, int $workspaceId): bool
     {
         if ($workspaceId <= 0 || !AiUniverseUtilityHelper::isExtensionLoaded('workspaces')) {
-            return;
+            return true;
         }
 
-        $user->setWorkspace($workspaceId);
+        return $user->setTemporaryWorkspace($workspaceId);
     }
 
     private function resolveUploadedFile(ServerRequestInterface $request): ?UploadedFileInterface

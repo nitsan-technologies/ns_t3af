@@ -89,6 +89,8 @@ Lock reasons (`agent.tool.blockedForGroup`, `extensionUnavailable`, `planUnsuppo
 | Links after a change | `applyDraftAction` returns `links` (Open page / Edit / View on website); backend links open in the content frame |
 | Credits | `AgentCreditsStatus` → header badge (ok/low/critical); at zero the composer is locked with a top-up hint |
 
+In the agent loop read tools get no extra LLM summary (`present(..., allowLlmSummary: false)`); the model reads the deterministic summary plus the data (JSON, 6000 characters).
+
 Reasoning models (0.13 `MultiPartResult`: thinking + text / tool calls) are read by `SymfonyAiResultReader`; before this, a plain "Hi" returned "I could not produce a reply".
 
 ---
@@ -130,6 +132,7 @@ Draft cards carry `editorLabel` for UI; destructive = two-step confirm.
 | Tool catalog | `Classes/Agent/Service/PermittedActionProvider.php` |
 | Editor labels | `Classes/Agent/Service/AgentToolEditorLabelService.php`, `AgentRecordLabeler.php` |
 | Credits badge | `Classes/Agent/Service/AgentCreditsStatus.php` |
+| Conversation storage | `AgentConversationSession` (load/save), `AgentConversationRecorder` (card actions), `AgentConversationSummarizer` (summary); see `Documentation/Agent/Conversations.md` |
 | Result presenter | `Classes/Agent/Service/AgentToolResultPresenter.php` |
 | Starters | `Classes/Agent/Service/AgentStarterBuilder.php` |
 | Governance | `Classes/Agent/Service/AgentGovernanceGuard.php`, `AgentTurnRepository` |
@@ -145,6 +148,9 @@ Draft cards carry `editorLabel` for UI; destructive = two-step confirm.
 - `agentShowProviderThinking`
 - `agentConversationRetentionDays` (default 90; soft delete, removed 7 days later by `t3af:agent:conversations:cleanup`)
 - `agentContinueAfterConfirm` (default on)
+- `agentHistoryTokenBudget` (default 6000 tokens of replayed history)
+- `agentWorkspaceMode` (`draft` default: from Live, changes go into `agentDraftWorkspaceUid` or the first workspace the editor may use; `current`: the editor's workspace). `AgentWorkspaceTarget`; the workspace switch is per request (`setTemporaryWorkspace`), never the editor's backend workspace.
+- All `AI Agent` settings also appear in the **AI Agent** card of AI Features (scope `ai agent`).
 - `agentConversationScope` (`page` | `module` | `user`), `agentSessionListEnabled`, `agentSessionListDefaultFilter`, `agentMaxSessionsPerScope` (20), `agentMaxSessionsPerUser` (200)
 
 ---

@@ -146,4 +146,72 @@ final class AgentSessionContextTest extends TestCase
 
         self::assertSame(['German', 'French', '3', str_repeat('a', 80), 'b', 'c'], $options);
     }
+
+    #[Test]
+    public function historyReplaysCardsAsShortNotes(): void
+    {
+        $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();
+        $history = $builder->buildHistory([
+            ['role' => 'user', 'content' => 'Improve the SEO', 'meta' => []],
+            ['role' => 'assistant', 'content' => 'Read it.', 'meta' => ['type' => 'tool_result', 'toolCallLabel' => 'Read the page']],
+            ['role' => 'assistant', 'content' => 'New title.', 'meta' => ['type' => 'inline_draft', 'draft' => ['editorLabel' => 'Change a record', 'applied' => true]]],
+            ['role' => 'assistant', 'content' => 'Oops', 'meta' => ['type' => 'error']],
+            ['role' => 'assistant', 'content' => 'Which language?', 'meta' => ['type' => 'clarification', 'options' => ['German', 'French']]],
+        ], 1);
+
+        self::assertSame([
+            ['role' => 'user', 'content' => 'Improve the SEO'],
+            ['role' => 'assistant', 'content' => '[Read the page] Read it.'],
+            ['role' => 'assistant', 'content' => '[Prepared change: Change a record — applied] New title.'],
+            ['role' => 'assistant', 'content' => 'Which language? (options: German, French)'],
+        ], $history);
+    }
+
+    #[Test]
+    public function anAppliedChangeTellsTheModelTheNewRecordUid(): void
+    {
+        $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();
+        $history = $builder->buildHistory([[
+            'role' => 'assistant',
+            'content' => 'Applied 2 of 2 fields.',
+            'meta' => ['type' => 'readback_result', 'readback' => [['table' => 'pages', 'uid' => 145, 'values' => ['title' => 'AI Universe vs Symfony', 'pid' => 12]]]],
+        ]]);
+
+        self::assertSame('[Applied] Applied 2 of 2 fields. Records: pages uid 145 "AI Universe vs Symfony" (pid 12).', $history[0]['content']);
+    }
+
+    #[Test]
+    public function historyKeepsTheNewestMessagesWithinTheBudget(): void
+    {
+        $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();
+        $messages = [];
+        for ($i = 1; $i <= 10; ++$i) {
+            $messages[] = ['role' => $i % 2 === 1 ? 'user' : 'assistant', 'content' => sprintf('m%02d ', $i) . str_repeat('x', 296), 'meta' => []];
+        }
+
+        $history = $builder->buildHistory($messages, 0, 1000);
+
+        self::assertSame('[7 older message(s) of this conversation are left out.]', $history[0]['content']);
+        self::assertCount(4, $history);
+        self::assertStringStartsWith('m08', $history[1]['content']);
+        self::assertStringStartsWith('m10', $history[3]['content']);
+    }
+
+    #[Test]
+    public function aSummaryReplacesTheOlderMessages(): void
+    {
+        $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();
+        $history = $builder->buildHistory([
+            ['role' => 'user', 'content' => 'very old', 'meta' => []],
+            ['role' => 'assistant', 'content' => '- first summary', 'meta' => ['type' => 'summary']],
+            ['role' => 'user', 'content' => 'old', 'meta' => []],
+            ['role' => 'assistant', 'content' => '- the editor translated page 12', 'meta' => ['type' => 'summary']],
+            ['role' => 'user', 'content' => 'And now page 14?', 'meta' => []],
+        ]);
+
+        self::assertSame([
+            ['role' => 'user', 'content' => "[Summary of the earlier conversation]\n- the editor translated page 12"],
+            ['role' => 'user', 'content' => 'And now page 14?'],
+        ], $history);
+    }
 }

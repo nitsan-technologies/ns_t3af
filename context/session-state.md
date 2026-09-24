@@ -2,6 +2,17 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-09-24 — AI Agent conversations (server-only storage, history budget, summary)
+
+- Removed the client conversation save: card actions (apply, decline, arm, undo) update the stored conversation on the server (`AgentConversationRecorder`); `conversation_save` only keeps the disclosure flag.
+- History replay by token budget (`agentHistoryTokenBudget`, default 6000) with compact card/result notes and a "left out" note.
+- "Summarize conversation" (Σ): summary message replaces older messages in the replay.
+- Provider tool schemas: union types / anyOf kept, nested empty `properties` removed. Phar builder note: `Documentation/Agent/PharBuilderSymfonyAi.md`.
+
+**Last touched:** 2026-09-24
+
+---
+
 ## 2026-09-24 — AI Agent Phase 4 (editor UX rules)
 
 - Fixed empty replies ("I could not produce a reply") from reasoning models: `SymfonyAiResultReader` reads 0.13 `MultiPartResult` (thinking + text / tool calls); used by `SymfonyAiPlatform` and `AiService`.

@@ -54,6 +54,12 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 {
     public const MAX_MODEL_ROUNDS = 8;
 
+    /** Tools added per turn by searching the editor's request. */
+    public const REQUEST_TOOLS = 4;
+
+    /** A message shorter than this ("Yes", "do it") is searched together with the previous request. */
+    private const SHORT_REPLY_CHARS = 25;
+
     private const AGENT_MODEL = 't3af-provider';
 
     public function __construct(
@@ -91,6 +97,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         $offeredTools = $this->coreToolSet->forTurn($executableTools, $context, $historyMessages);
+        $offeredTools = $this->withToolsForTheRequest($offeredTools, $executableTools, $userMessage, $historyMessages);
 
         $severities = [];
         foreach ([...$catalog['executable'], ...$catalog['locked']] as $tool) {
@@ -117,6 +124,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             return ['messages' => $state->messages, 'paused' => false, 'pauseReason' => null];
         }
 
+
         if ($finalText !== '') {
             $state->emit('delta', ['content' => $finalText]);
         }
@@ -128,7 +136,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 'correlationId' => $correlationId,
                 'modelId' => $state->modelId,
                 'providerIdentifier' => $state->providerIdentifier,
-                'trace' => $state->trace,
+                // The steps keep their own responses; here only what ran, to keep the row small.
+                'trace' => self::traceWithoutResponses($state->trace),
                 'offeredTools' => $this->toolNames($offeredTools),
                 'foundTools' => $state->foundTools,
                 'runner' => 'symfony-agent',
@@ -217,13 +226,14 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         );
 
         try {
-            $content = $agent->call($this->buildMessages($userMessage, $historyMessages, $context))->getResult()->getContent();
+            $agentResult = $agent->call($this->buildMessages($userMessage, $historyMessages, $context))->getResult();
+            $content = $agentResult->getContent();
             $finalText = is_string($content) ? trim($content) : '';
         } catch (MaxIterationsExceededException) {
             $state->addMessage([
                 'role' => 'assistant',
                 'content' => $this->translator->translate('agent.turn.loopLimit'),
-                'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'trace' => $state->trace, 'orchestratorPause' => true],
+                'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'trace' => self::traceWithoutResponses($state->trace), 'orchestratorPause' => true],
             ]);
             $state->pause('loop_limit');
         } catch (\Throwable $exception) {
@@ -249,7 +259,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if ($system !== '') {
             $bag->add(Message::forSystem($system));
         }
-        foreach ($this->promptBuilder->buildHistory($historyMessages, (int) ($context['pageId'] ?? 0)) as $entry) {
+        foreach ($this->promptBuilder->buildHistory($historyMessages, (int) ($context['pageId'] ?? 0), $this->agentSettings->getHistoryTokenBudget() * 4) as $entry) {
             $bag->add($entry['role'] === 'assistant' ? Message::ofAssistant($entry['content']) : Message::ofUser($entry['content']));
         }
         $bag->add(Message::ofUser($userMessage));
@@ -285,6 +295,72 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * Adds the tools that fit the request (e.g. "create a page" → the create tool), so the model
+     * can act right away instead of reading around or asking "Shall I proceed?" without a tool.
+     *
+     * A short reply ("Yes", "do it") or a continuation after a card is searched together with
+     * the editor's previous request and the agent's last reply.
+     *
+     * @param list<array<string, mixed>> $offeredTools
+     * @param list<array<string, mixed>> $executableTools
+     * @param list<array<string, mixed>> $historyMessages
+     * @return list<array<string, mixed>>
+     */
+    private function withToolsForTheRequest(array $offeredTools, array $executableTools, string $userMessage, array $historyMessages): array
+    {
+        $query = self::requestQuery($userMessage, $historyMessages);
+        if ($query === '') {
+            return $offeredTools;
+        }
+        $offeredNames = array_flip($this->toolNames($offeredTools));
+        $candidates = array_values(array_filter(
+            $executableTools,
+            static fn(array $tool): bool => !isset($offeredNames[(string) ($tool['name'] ?? '')]),
+        ));
+        try {
+            $found = $this->toolSearch->search($query, $candidates, self::REQUEST_TOOLS)['tools'];
+        } catch (\Throwable) {
+            return $offeredTools;
+        }
+        $tools = [...$offeredTools, ...$found];
+        usort($tools, static fn(array $a, array $b): int => strcmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? '')));
+
+        return $tools;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function requestQuery(string $userMessage, array $historyMessages): string
+    {
+        $message = trim($userMessage);
+        $isContinuation = str_starts_with($message, '[The editor ');
+        if (!$isContinuation && mb_strlen($message) >= self::SHORT_REPLY_CHARS) {
+            return $message;
+        }
+
+        $earlier = [];
+        for ($i = count($historyMessages) - 1; $i >= 0 && count($earlier) < 2; --$i) {
+            $entry = $historyMessages[$i];
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            $content = trim((string) ($entry['content'] ?? ''));
+            if ($content === '' || ($meta['hidden'] ?? false) === true) {
+                continue;
+            }
+            $isRequest = ($entry['role'] ?? '') === 'user';
+            $isReply = ($entry['role'] ?? '') === 'assistant' && ($meta['type'] ?? '') === 'nl_reply' && $earlier === [];
+            if ($isRequest || $isReply) {
+                array_unshift($earlier, mb_substr($content, 0, 300));
+            }
+        }
+        if (!$isContinuation) {
+            $earlier[] = $message;
+        }
+
+        return trim(implode("\n", $earlier));
+    }
+
+    /**
      * @param list<array<string, mixed>> $tools
      * @return list<string>
      */
@@ -306,5 +382,23 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $provider = trim((string) ($body['provider'] ?? ''));
 
         return $provider === '' || $provider === 'default' ? null : $provider;
+    }
+
+    /**
+     * @param list<mixed> $trace
+     * @return list<mixed>
+     */
+    private static function traceWithoutResponses(array $trace): array
+    {
+        return array_map(
+            static function (mixed $entry): mixed {
+                if (is_array($entry)) {
+                    unset($entry['response']);
+                }
+
+                return $entry;
+            },
+            $trace,
+        );
     }
 }

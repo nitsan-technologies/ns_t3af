@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Context;
 
+use NITSAN\NsT3AF\Agent\Service\AgentWorkspaceTarget;
 use NITSAN\NsT3AF\Service\BrandContextResolver;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
@@ -36,6 +37,7 @@ final readonly class AgentContextResolver
     public function __construct(
         private BrandContextResolver $brandContextResolver,
         private SiteFinder $siteFinder,
+        private ?AgentWorkspaceTarget $workspaceTarget = null,
     ) {}
 
     /**
@@ -72,6 +74,10 @@ final readonly class AgentContextResolver
         $workspaceId = (int) ($clientContext['workspaceId'] ?? 0);
         if ($workspaceId <= 0 && $user !== null) {
             $workspaceId = (int) $user->workspace;
+        }
+        // Where confirmed changes go (a draft workspace by default, see agentWorkspaceMode).
+        if ($this->workspaceTarget !== null) {
+            $workspaceId = $this->workspaceTarget->resolve($workspaceId, $user);
         }
 
         return new AgentContext(

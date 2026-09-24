@@ -375,6 +375,11 @@ return [
         'target' => AgentAjaxController::class . '::confirmDestructiveAction',
         'methods' => ['POST'],
     ],
+    'nst3af_agent_summarize' => [
+        'path' => '/nst3af/agent/summarize',
+        'target' => AgentAjaxController::class . '::summarizeAction',
+        'methods' => ['POST'],
+    ],
     'nst3af_agent_undo_change' => [
         'path' => '/nst3af/agent/undo-change',
         'target' => AgentAjaxController::class . '::undoChangeAction',

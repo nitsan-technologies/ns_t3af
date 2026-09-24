@@ -56,7 +56,16 @@ final class T3afToolbox implements ToolboxInterface
 
     public const MAX_TOOL_SEARCHES = 3;
 
+    /** Refused reads over the budget before the turn pauses; the earlier ones ask the model to use what it has. */
+    public const READ_REFUSALS_BEFORE_PAUSE = 3;
+
+    /** Repeated identical reads answered from the first result before the turn stops. */
+    public const REPEATED_READS_BEFORE_STOP = 3;
+
     private const FOUND_TOOLS_LIMIT = 5;
+
+    /** Characters of tool data the model reads back (≈ 1500 tokens). */
+    private const MODEL_RESULT_CHARS = 6000;
 
     /** @var array<string, AiToolDefinition> */
     private array $definitions = [];
@@ -141,8 +150,43 @@ final class T3afToolbox implements ToolboxInterface
             return new ToolResult($toolCall, $this->askClarification($validation['arguments']));
         }
 
+        // The same read with the same arguments: answer from the first call, no budget used.
+        $isRead = $this->severityOf($name) === ToolSeverity::Read->value;
+        $readKey = $isRead ? self::readKey($name, $validation['arguments']) : '';
+        if ($isRead && isset($this->state->readResults[$readKey])) {
+            ++$this->state->repeatedReads;
+            if ($this->state->repeatedReads > self::REPEATED_READS_BEFORE_STOP) {
+                // The model goes in circles: stop and tell the editor instead of running into the loop limit.
+                $this->state->addMessage([
+                    'role' => 'assistant',
+                    'content' => $this->runtime->translator->translate('agent.turn.repeatedReads'),
+                    'meta' => ['type' => 'info', 'correlationId' => $this->state->correlationId, 'orchestratorPause' => true],
+                ]);
+                $this->state->pause('repeated_reads');
+
+                return new ToolResult($toolCall, 'Not executed: the same reads were repeated too often. The turn ends.');
+            }
+
+            return new ToolResult(
+                $toolCall,
+                'Already read in this turn, same result: ' . $this->state->readResults[$readKey]
+                . ' Do not call it again. You have everything you need: call the write tool that makes the change'
+                . ' (if none is offered, call find_tools with what should be done), or answer the editor now.',
+            );
+        }
+
         $budgetMessage = $this->consumeBudget($name);
         if ($budgetMessage !== null) {
+            // First refusals go back to the model, so it answers or prepares the change with
+            // what it already has. Only a model that keeps reading pauses the turn.
+            if ($isRead && ++$this->state->budgetRefusals < self::READ_REFUSALS_BEFORE_PAUSE) {
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: the read limit of this turn is reached. Do not read more.'
+                    . ' Use what you already have: call the write tool that prepares the change the editor asked for,'
+                    . ' or answer the editor now.',
+                );
+            }
             $this->state->addMessage($budgetMessage);
             $this->state->pause((string) $budgetMessage['meta']['budgetKind'] . '_budget');
 
@@ -153,6 +197,7 @@ final class T3afToolbox implements ToolboxInterface
 
         $body = $this->runtime->body;
         $body['arguments'] = $validation['arguments'];
+        $body['skipLlmSummary'] = true;
         $message = $this->runtime->executor->execute($name, $this->runtime->context, $body, $this->runtime->user, $this->state->correlationId);
 
         if (isset($message['meta']['trace']) && is_array($message['meta']['trace'])) {
@@ -168,7 +213,22 @@ final class T3afToolbox implements ToolboxInterface
             $this->state->pause($pauseReason);
         }
 
-        return new ToolResult($toolCall, $this->summaryForModel($message));
+        $forModel = $this->summaryForModel($message);
+        if ($isRead) {
+            $this->state->readResults[$readKey] = $forModel;
+        }
+
+        return new ToolResult($toolCall, $forModel);
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    private static function readKey(string $name, array $arguments): string
+    {
+        ksort($arguments);
+
+        return $name . ':' . json_encode($arguments, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
     }
 
     public static function findToolsDescription(): string
@@ -373,16 +433,41 @@ final class T3afToolbox implements ToolboxInterface
     /**
      * @param array{role: string, content: string, meta: array<string, mixed>} $message
      */
+    /**
+     * What the model reads back from a tool: the short summary plus the data (compact JSON,
+     * capped), so it can use names and ids without an extra summarizing call.
+     *
+     * @param array{role: string, content: string, meta: array<string, mixed>} $message
+     */
     private function summaryForModel(array $message): string
     {
+        $summary = '';
         foreach (['llmSummary', 'summary'] as $key) {
             $value = $message['meta'][$key] ?? null;
             if (is_string($value) && trim($value) !== '') {
-                return trim($value);
+                $summary = trim($value);
+                break;
             }
         }
-        $content = trim($message['content']);
+        if ($summary === '') {
+            $summary = trim($message['content']);
+        }
 
-        return $content !== '' ? $content : 'Done.';
+        $details = $message['meta']['details'] ?? null;
+        if (($message['meta']['type'] ?? '') === 'tool_result' && $details !== null && $details !== [] && $details !== '') {
+            try {
+                $json = json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                $json = '';
+            }
+            if ($json !== '' && $json !== 'null') {
+                if (mb_strlen($json) > self::MODEL_RESULT_CHARS) {
+                    $json = mb_substr($json, 0, self::MODEL_RESULT_CHARS) . '… (truncated)';
+                }
+                $summary .= ($summary !== '' ? "\n" : '') . 'Data: ' . $json;
+            }
+        }
+
+        return $summary !== '' ? $summary : 'Done.';
     }
 }

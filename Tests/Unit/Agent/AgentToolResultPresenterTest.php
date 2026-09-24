@@ -56,6 +56,25 @@ final class AgentToolResultPresenterTest extends TestCase
     }
 
     #[Test]
+    public function agentLoopSkipsTheExtraSummaryCall(): void
+    {
+        $ai = $this->createMock(AiServiceInterface::class);
+        $ai->expects(self::never())->method('complete');
+
+        $presented = $this->createPresenter($ai)->present(
+            'pages_get',
+            json_encode(['uid' => 1, 'pid' => 0, 'title' => 'Home', 'doktype' => 1], JSON_THROW_ON_ERROR),
+            true,
+            '',
+            1,
+            false,
+        );
+
+        self::assertNull($presented['llmSummary']);
+        self::assertStringContainsString('Home', $presented['content']);
+    }
+
+    #[Test]
     public function presentDecodesJsonStringAndBuildsPageFacts(): void
     {
         $ai = $this->createMock(AiServiceInterface::class);

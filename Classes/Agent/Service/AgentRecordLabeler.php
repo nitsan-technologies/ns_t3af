@@ -124,7 +124,8 @@ readonly class AgentRecordLabeler
 
     private function translateLabel(string $label): string
     {
-        if (!str_starts_with($label, 'LLL:')) {
+        // "LLL:EXT:…" and TYPO3 v14 translation domains ("core.db.pages:title").
+        if (!str_starts_with($label, 'LLL:') && preg_match('/^[A-Za-z0-9_.-]+\.[A-Za-z0-9_-]+:[A-Za-z0-9_.-]+$/', $label) !== 1) {
             return trim($label);
         }
         $languageService = $GLOBALS['LANG'] ?? null;

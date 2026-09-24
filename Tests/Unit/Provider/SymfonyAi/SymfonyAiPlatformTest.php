@@ -228,11 +228,61 @@ final class SymfonyAiPlatformTest extends TestCase
         );
 
         self::assertIsArray($seenTools);
-        $function = $seenTools[0]['function'] ?? null;
-        self::assertIsArray($function);
-        $properties = $function['parameters']['properties'] ?? null;
-        self::assertIsArray($properties);
-        self::assertSame([], $properties);
+        self::assertNotEmpty($seenTools);
+        $first = $seenTools[0];
+        if (class_exists(\Symfony\AI\Platform\Tool\Tool::class)) {
+            self::assertInstanceOf(\Symfony\AI\Platform\Tool\Tool::class, $first);
+            self::assertSame('noop', $first->getName());
+            // No-arg schema (empty properties) is omitted — OpenAI Responses rejects properties:[].
+            self::assertNull($first->getParameters());
+        } else {
+            self::assertIsArray($first);
+            self::assertSame('noop', $first['name'] ?? null);
+            self::assertArrayNotHasKey('parameters', $first);
+        }
+    }
+
+    #[Test]
+    public function toolSchemasKeepUnionTypesAndDropEmptyNestedProperties(): void
+    {
+        $platform = (new \ReflectionClass(SymfonyAiPlatform::class))->newInstanceWithoutConstructor();
+        $normalize = new \ReflectionMethod(SymfonyAiPlatform::class, 'normalizeParametersForTool');
+
+        $schema = $normalize->invoke($platform, [
+            'type' => 'object',
+            'properties' => [
+                'nullable' => ['type' => ['string', 'null'], 'description' => 'Optional text'],
+                'either' => ['anyOf' => [['type' => 'string'], ['type' => 'object', 'properties' => new \stdClass()]]],
+                'untyped' => ['description' => ''],
+                'nested' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'inner' => ['type' => 'object', 'properties' => new \stdClass(), 'required' => ['ghost']],
+                    ],
+                    'required' => ['inner', 'ghost'],
+                ],
+                'list' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => []]],
+            ],
+            'required' => ['nullable', 'missing'],
+        ]);
+
+        self::assertSame([
+            'type' => 'object',
+            'properties' => [
+                'nullable' => ['type' => ['string', 'null'], 'description' => 'Optional text'],
+                'either' => ['anyOf' => [['type' => 'string'], ['type' => 'object']]],
+                'untyped' => ['type' => 'string'],
+                'nested' => [
+                    'type' => 'object',
+                    'properties' => ['inner' => ['type' => 'object']],
+                    'required' => ['inner'],
+                ],
+                'list' => ['type' => 'array', 'items' => ['type' => 'object']],
+            ],
+            'required' => ['nullable'],
+            'additionalProperties' => false,
+        ], $schema);
+        self::assertStringNotContainsString('"properties":[]', json_encode($schema, JSON_THROW_ON_ERROR));
     }
 
     private function makeProvider(): Provider

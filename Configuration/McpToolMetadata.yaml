@@ -89,7 +89,9 @@ tools:
       - 'Delete the orphaned content element #199'
     searchTerms:
       - 'create update delete record, change field value'
+      - 'create a new page or subpage, add content elements to a page'
       - 'Datensatz anlegen, ändern oder löschen, Feld ändern'
+      - 'neue Seite oder Unterseite anlegen, Inhaltselemente hinzufügen'
 
   workspace_list:
     category: Workspaces

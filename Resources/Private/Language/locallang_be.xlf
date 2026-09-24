@@ -700,7 +700,7 @@
         <source>No content element matched "%1$s" on this page. Content on this page:%2$s%3$s</source>
       </trans-unit>
       <trans-unit id="agent.turn.loopLimit" resname="agent.turn.loopLimit">
-        <source>This turn reached the orchestrator step limit. Review the results below or send a follow-up message.</source>
+        <source>I could not finish this in one go. Tell me a bit more precisely what I should do, for example which page it is about.</source>
       </trans-unit>
       <trans-unit id="agent.turn.readBudgetExceeded" resname="agent.turn.readBudgetExceeded">
         <source>Read tool budget reached (%1$s per turn). Send another message to continue.</source>
@@ -2010,6 +2010,39 @@
       </trans-unit>
       <trans-unit id="agent.arg.no" resname="agent.arg.no">
         <source>No</source>
+      </trans-unit>
+      <trans-unit id="agent.summary.action" resname="agent.summary.action">
+        <source>Summarize conversation</source>
+      </trans-unit>
+      <trans-unit id="agent.summary.title" resname="agent.summary.title">
+        <source>Summary of the conversation so far</source>
+      </trans-unit>
+      <trans-unit id="agent.summary.note" resname="agent.summary.note">
+        <source>From here on the agent works with this summary instead of the older messages.</source>
+      </trans-unit>
+      <trans-unit id="agent.summary.working" resname="agent.summary.working">
+        <source>Summarizing the conversation…</source>
+      </trans-unit>
+      <trans-unit id="agent.summary.failed" resname="agent.summary.failed">
+        <source>The conversation could not be summarized: %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.summary.tooShort" resname="agent.summary.tooShort">
+        <source>There is not enough new in this conversation to summarize yet.</source>
+      </trans-unit>
+      <trans-unit id="extmng.agentHistoryTokenBudget" resname="extmng.agentHistoryTokenBudget">
+        <source>Earlier messages sent to the AI per turn, in tokens (about 4 characters each). Older messages are left out; use "Summarize conversation" to keep them short.</source>
+      </trans-unit>
+      <trans-unit id="agent.workspace.noAccess" resname="agent.workspace.noAccess">
+        <source>You may not use the workspace the agent writes into. Ask your administrator to give you access or change "Where the agent writes" in the AI Agent settings.</source>
+      </trans-unit>
+      <trans-unit id="extmng.agentWorkspaceMode" resname="extmng.agentWorkspaceMode">
+        <source>Where the agent writes confirmed changes: a draft workspace (reviewed and published later) or the editor's current workspace, which can be Live</source>
+      </trans-unit>
+      <trans-unit id="extmng.agentDraftWorkspaceUid" resname="extmng.agentDraftWorkspaceUid">
+        <source>Draft workspace for agent changes (uid of sys_workspace; 0 = the first workspace the editor may use). Without the workspaces extension or an accessible workspace, changes go Live.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.repeatedReads" resname="agent.turn.repeatedReads">
+        <source>I kept checking the same information without getting further. Tell me a bit more precisely what I should do, for example: Create the page "…" under "Home".</source>
       </trans-unit>
     </body>
   </file>

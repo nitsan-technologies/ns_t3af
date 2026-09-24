@@ -70,6 +70,8 @@ final readonly class AgentContextPresenter
                 'id' => $resolved->workspaceId,
                 'title' => $this->workspaceListService->resolveTitle($resolved->workspaceId),
                 'live' => $resolved->workspaceId === 0,
+                // The editor works in Live; the agent writes into this draft workspace (agentWorkspaceMode).
+                'fromLive' => $resolved->workspaceId > 0 && $user !== null && (int) $user->workspace === 0,
             ],
             'folder' => $storageUid > 0 && $folderIdentifier !== '' ? ['storageUid' => $storageUid, 'identifier' => $folderIdentifier] : null,
             'brand' => $resolved->brandContextProfileUid !== null
@@ -158,7 +160,12 @@ final readonly class AgentContextPresenter
         if ($workspace !== null) {
             $lines[] = ($workspace['live'] ?? true) === true
                 ? '- Workspace: Live — confirmed changes are visible on the website'
-                : sprintf('- Workspace: "%s" [%d] — confirmed changes go to this draft workspace', $workspace['title'] ?? '', (int) ($workspace['id'] ?? 0));
+                : sprintf(
+                    '- Workspace: "%s" [%d] — confirmed changes go to this draft workspace%s',
+                    $workspace['title'] ?? '',
+                    (int) ($workspace['id'] ?? 0),
+                    ($workspace['fromLive'] ?? false) === true ? ' (the editor works in Live; nothing goes live until it is published)' : '',
+                );
         }
 
         return implode("\n", $lines);
@@ -280,7 +287,8 @@ final readonly class AgentContextPresenter
 
     private function translateLabel(string $label): string
     {
-        if (!str_starts_with($label, 'LLL:')) {
+        // "LLL:EXT:…" and TYPO3 v14 translation domains ("core.db.pages:title").
+        if (!str_starts_with($label, 'LLL:') && preg_match('/^[A-Za-z0-9_.-]+\.[A-Za-z0-9_-]+:[A-Za-z0-9_.-]+$/', $label) !== 1) {
             return $label;
         }
         $languageService = $GLOBALS['LANG'] ?? null;

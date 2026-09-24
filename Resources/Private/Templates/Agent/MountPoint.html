@@ -46,6 +46,14 @@
                     </button>
                     <button type="button"
                             class="btn btn-default btn-sm nst3af-agent-header__icon"
+                            data-nst3af-agent-summarize
+                            title="{f:translate(key: '{ll}:agent.summary.action', default: 'Summarize conversation')}"
+                            aria-label="{f:translate(key: '{ll}:agent.summary.action', default: 'Summarize conversation')}"
+                            hidden>
+                        <span aria-hidden="true">&#8721;</span>
+                    </button>
+                    <button type="button"
+                            class="btn btn-default btn-sm nst3af-agent-header__icon"
                             data-nst3af-agent-new
                             title="{f:translate(key: '{ll}:agent.session.new', default: 'New conversation')}"
                             aria-label="{f:translate(key: '{ll}:agent.session.new', default: 'New conversation')}">

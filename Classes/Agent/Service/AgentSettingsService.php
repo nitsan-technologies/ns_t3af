@@ -37,6 +37,8 @@ final class AgentSettingsService
 
     private const EXTENSION_KEY = 'ns_t3af';
 
+    public const DEFAULT_HISTORY_TOKEN_BUDGET = 6000;
+
     /**
      * @var array<string, string>
      */
@@ -54,6 +56,9 @@ final class AgentSettingsService
         'agentMaxSessionsPerScope' => 'agentMaxSessionsPerScope',
         'agentMaxSessionsPerUser' => 'agentMaxSessionsPerUser',
         'agentContinueAfterConfirm' => 'agentContinueAfterConfirm',
+        'agentHistoryTokenBudget' => 'agentHistoryTokenBudget',
+        'agentWorkspaceMode' => 'agentWorkspaceMode',
+        'agentDraftWorkspaceUid' => 'agentDraftWorkspaceUid',
     ];
 
     public function __construct(
@@ -81,6 +86,9 @@ final class AgentSettingsService
             'agentMaxSessionsPerScope' => $stored['agentMaxSessionsPerScope'] === '' ? 20 : (int) $stored['agentMaxSessionsPerScope'],
             'agentMaxSessionsPerUser' => $stored['agentMaxSessionsPerUser'] === '' ? 200 : (int) $stored['agentMaxSessionsPerUser'],
             'agentContinueAfterConfirm' => $stored['agentContinueAfterConfirm'] === '' || (int) $stored['agentContinueAfterConfirm'] === 1,
+            'agentWorkspaceMode' => in_array($stored['agentWorkspaceMode'], ['draft', 'current'], true) ? $stored['agentWorkspaceMode'] : 'draft',
+            'agentDraftWorkspaceUid' => max(0, (int) $stored['agentDraftWorkspaceUid']),
+            'agentHistoryTokenBudget' => $stored['agentHistoryTokenBudget'] === '' ? self::DEFAULT_HISTORY_TOKEN_BUDGET : (int) $stored['agentHistoryTokenBudget'],
         ];
     }
 
@@ -154,6 +162,28 @@ final class AgentSettingsService
     public function isContinueAfterConfirmEnabled(): bool
     {
         return ($this->all()['agentContinueAfterConfirm'] ?? true) === true;
+    }
+
+    /**
+     * `draft` (default): writes from Live go into a draft workspace; `current`: the editor's workspace.
+     */
+    public function getWorkspaceMode(): string
+    {
+        return ($this->all()['agentWorkspaceMode'] ?? 'draft') === 'current' ? 'current' : 'draft';
+    }
+
+    /** 0 = the first workspace the editor may use */
+    public function getDraftWorkspaceUid(): int
+    {
+        return max(0, (int) ($this->all()['agentDraftWorkspaceUid'] ?? 0));
+    }
+
+    /**
+     * Approximate tokens of earlier messages replayed to the model per turn (1 token ≈ 4 characters).
+     */
+    public function getHistoryTokenBudget(): int
+    {
+        return max(500, min(100000, (int) ($this->all()['agentHistoryTokenBudget'] ?? self::DEFAULT_HISTORY_TOKEN_BUDGET)));
     }
 
     /** 0 = unlimited */

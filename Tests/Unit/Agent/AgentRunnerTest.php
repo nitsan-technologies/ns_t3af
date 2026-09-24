@@ -23,6 +23,7 @@ use NITSAN\NsT3AF\Agent\Contract\AgentActionCatalogInterface;
 use NITSAN\NsT3AF\Agent\Contract\AgentToolIndexInterface;
 use NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface;
 use NITSAN\NsT3AF\Agent\Embedding\EmbeddingSourceResolver;
+use NITSAN\NsT3AF\Agent\Runtime\T3afToolbox;
 use NITSAN\NsT3AF\Agent\Service\AgentCoreToolSet;
 use NITSAN\NsT3AF\Agent\Service\AgentLowRiskFieldMatrix;
 use NITSAN\NsT3AF\Agent\Service\AgentPausePolicy;
@@ -146,10 +147,29 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
-    public function readBudgetPausesTheTurn(): void
+    public function readOverTheBudgetAsksTheModelToUseWhatItHas(): void
     {
         $calls = [];
         for ($i = 1; $i <= 6; ++$i) {
+            $calls[] = new AiToolCall('call_' . $i, 'pages_get', ['uid' => $i]);
+        }
+        $result = $this->runScripted([
+            new AiToolCallingResponse('', 'gpt-test', 'openai', $calls),
+            new AiToolCallingResponse('Hier ist die Antwort.', 'gpt-test', 'openai'),
+        ]);
+
+        self::assertFalse($result['paused']);
+        self::assertCount(5, $this->executed);
+        $toolMessage = $this->requests[1]['messages'][count($this->requests[1]['messages']) - 1];
+        self::assertStringContainsString('Use what you already have', (string) $toolMessage['content']);
+        self::assertSame('nl_reply', $result['messages'][count($result['messages']) - 1]['meta']['type']);
+    }
+
+    #[Test]
+    public function readBudgetPausesWhenTheModelKeepsReading(): void
+    {
+        $calls = [];
+        for ($i = 1; $i <= 5 + T3afToolbox::READ_REFUSALS_BEFORE_PAUSE; ++$i) {
             $calls[] = new AiToolCall('call_' . $i, 'pages_get', ['uid' => $i]);
         }
         $result = $this->runScripted([new AiToolCallingResponse('', 'gpt-test', 'openai', $calls)]);
@@ -161,11 +181,62 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function theSameReadRunsOnceAndDoesNotUseTheBudget(): void
+    {
+        $result = $this->runScripted([
+            new AiToolCallingResponse('', 'gpt-test', 'openai', [new AiToolCall('call_1', 'pages_get', ['uid' => 7])]),
+            new AiToolCallingResponse('', 'gpt-test', 'openai', [new AiToolCall('call_2', 'pages_get', ['uid' => 7])]),
+            new AiToolCallingResponse('Fertig.', 'gpt-test', 'openai'),
+        ], readBudget: 1);
+
+        self::assertFalse($result['paused']);
+        self::assertSame(['pages_get'], $this->executed);
+        $toolMessage = $this->requests[2]['messages'][count($this->requests[2]['messages']) - 1];
+        self::assertStringContainsString('Already read in this turn', (string) $toolMessage['content']);
+    }
+
+    #[Test]
+    public function repeatingTheSameReadEndsTheTurnWithAHint(): void
+    {
+        $responses = [];
+        for ($i = 0; $i <= T3afToolbox::REPEATED_READS_BEFORE_STOP + 1; ++$i) {
+            $responses[] = new AiToolCallingResponse('', 'gpt-test', 'openai', [new AiToolCall('c' . $i, 'pages_get', ['uid' => 45])]);
+        }
+        $result = $this->runScripted($responses);
+
+        self::assertTrue($result['paused']);
+        self::assertSame('repeated_reads', $result['pauseReason']);
+        self::assertSame(['pages_get'], $this->executed);
+        self::assertStringContainsString('agent.turn.repeatedReads', $result['messages'][count($result['messages']) - 1]['content']);
+    }
+
+    #[Test]
+    public function toolsThatFitTheRequestAreOfferedRightAway(): void
+    {
+        $this->runScripted([new AiToolCallingResponse('Ok', 'gpt-test', 'openai')], message: 'Please update the header of content element 7');
+
+        self::assertContains('content_update', $this->requests[0]['tools']);
+    }
+
+    #[Test]
+    public function aShortReplyIsSearchedWithThePreviousRequest(): void
+    {
+        $query = AgentRunner::requestQuery('Yes', [
+            ['role' => 'user', 'content' => 'create a new page for AI Universe vs Symfony', 'meta' => []],
+            ['role' => 'assistant', 'content' => 'Read the page tree.', 'meta' => ['type' => 'tool_result']],
+            ['role' => 'assistant', 'content' => 'Shall we proceed?', 'meta' => ['type' => 'nl_reply']],
+        ]);
+
+        self::assertSame("create a new page for AI Universe vs Symfony\nShall we proceed?\nYes", $query);
+        self::assertSame('Translate page 12 into German', AgentRunner::requestQuery('Translate page 12 into German', []));
+    }
+
+    #[Test]
     public function endlessToolCallingStopsAtTheLoopLimit(): void
     {
         $responses = [];
         for ($i = 0; $i < AgentRunner::MAX_MODEL_ROUNDS + 1; ++$i) {
-            $responses[] = new AiToolCallingResponse('', 'gpt-test', 'openai', [new AiToolCall('c' . $i, 'explain_page', [])]);
+            $responses[] = new AiToolCallingResponse('', 'gpt-test', 'openai', [new AiToolCall('c' . $i, 'pages_get', ['uid' => $i + 1])]);
         }
         $result = $this->runScripted($responses, readBudget: 50);
 
@@ -233,7 +304,7 @@ final class AgentRunnerTest extends TestCase
      * @param list<AiToolCallingResponse> $responses
      * @return array{messages: list<array{role: string, content: string, meta: array<string, mixed>}>, paused: bool, pauseReason: string|null}
      */
-    private function runScripted(array $responses, int $readBudget = 5): array
+    private function runScripted(array $responses, int $readBudget = 5, string $message = 'Wie heißt diese Seite?'): array
     {
         $toolCalling = $this->createMock(AiToolCallingServiceInterface::class);
         $toolCalling->method('supportsToolCalling')->willReturn(true);
@@ -248,7 +319,7 @@ final class AgentRunnerTest extends TestCase
         );
 
         return $this->makeRunner($toolCalling, $readBudget)
-            ->runTurn('Wie heißt diese Seite?', [], ['pageId' => 49, 'module' => 'web_layout'], [], $this->createMock(BackendUserAuthentication::class), 'corr-1');
+            ->runTurn($message, [], ['pageId' => 49, 'module' => 'web_layout'], [], $this->createMock(BackendUserAuthentication::class), 'corr-1');
     }
 
     /**

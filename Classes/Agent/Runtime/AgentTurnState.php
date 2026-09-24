@@ -35,6 +35,15 @@ final class AgentTurnState
 
     public int $writeCount = 0;
 
+    /** Read calls refused because the read budget was used up (the turn pauses after a few). */
+    public int $budgetRefusals = 0;
+
+    /** Reads with the same tool and arguments as an earlier read of this turn. */
+    public int $repeatedReads = 0;
+
+    /** @var array<string, string> what the model got back per read call (tool name + arguments) */
+    public array $readResults = [];
+
     public string $modelId = '';
 
     public string $providerIdentifier = '';

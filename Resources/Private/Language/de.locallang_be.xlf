@@ -636,8 +636,8 @@
                 <target>Ich konnte keine Antwort erzeugen. Formulieren Sie um oder verwenden Sie / für ein bestimmtes Tool.</target>
             </trans-unit>
             <trans-unit id="agent.turn.loopLimit">
-                <source>This turn reached the orchestrator step limit. Review the results below or send a follow-up message.</source>
-                <target>Diese Runde hat das Schrittlimit des Orchestrators erreicht. Prüfen Sie die Ergebnisse unten oder senden Sie eine Folgenachricht.</target>
+                <source>I could not finish this in one go. Tell me a bit more precisely what I should do, for example which page it is about.</source>
+                <target>Das konnte ich nicht in einem Schritt abschließen. Sagen Sie mir bitte etwas genauer, was ich tun soll, zum Beispiel um welche Seite es geht.</target>
             </trans-unit>
             <trans-unit id="agent.turn.readBudgetExceeded">
                 <source>Read tool budget reached (%1$s per turn). Send another message to continue.</source>
@@ -2548,6 +2548,50 @@
             <trans-unit id="agent.arg.no">
                 <source>No</source>
                 <target>Nein</target>
+            </trans-unit>
+            <trans-unit id="agent.summary.action">
+                <source>Summarize conversation</source>
+                <target>Unterhaltung zusammenfassen</target>
+            </trans-unit>
+            <trans-unit id="agent.summary.title">
+                <source>Summary of the conversation so far</source>
+                <target>Zusammenfassung der bisherigen Unterhaltung</target>
+            </trans-unit>
+            <trans-unit id="agent.summary.note">
+                <source>From here on the agent works with this summary instead of the older messages.</source>
+                <target>Ab hier arbeitet der Agent mit dieser Zusammenfassung statt mit den älteren Nachrichten.</target>
+            </trans-unit>
+            <trans-unit id="agent.summary.working">
+                <source>Summarizing the conversation…</source>
+                <target>Unterhaltung wird zusammengefasst…</target>
+            </trans-unit>
+            <trans-unit id="agent.summary.failed">
+                <source>The conversation could not be summarized: %1$s</source>
+                <target>Die Unterhaltung konnte nicht zusammengefasst werden: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.summary.tooShort">
+                <source>There is not enough new in this conversation to summarize yet.</source>
+                <target>In dieser Unterhaltung gibt es noch nicht genug Neues zum Zusammenfassen.</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentHistoryTokenBudget">
+                <source>Earlier messages sent to the AI per turn, in tokens (about 4 characters each). Older messages are left out; use "Summarize conversation" to keep them short.</source>
+                <target>Frühere Nachrichten, die pro Anfrage an die KI gehen, in Tokens (etwa 4 Zeichen). Ältere Nachrichten werden weggelassen; mit „Unterhaltung zusammenfassen“ bleiben sie kurz.</target>
+            </trans-unit>
+            <trans-unit id="agent.workspace.noAccess">
+                <source>You may not use the workspace the agent writes into. Ask your administrator to give you access or change "Where the agent writes" in the AI Agent settings.</source>
+                <target>Sie dürfen den Arbeitsbereich, in den der Agent schreibt, nicht verwenden. Bitten Sie Ihren Administrator um Zugriff oder ändern Sie „Wohin der Agent schreibt“ in den KI-Agent-Einstellungen.</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentWorkspaceMode">
+                <source>Where the agent writes confirmed changes: a draft workspace (reviewed and published later) or the editor's current workspace, which can be Live</source>
+                <target>Wohin der Agent bestätigte Änderungen schreibt: in einen Entwurfs-Arbeitsbereich (später prüfen und veröffentlichen) oder in den aktuellen Arbeitsbereich des Redakteurs, der auch Live sein kann</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentDraftWorkspaceUid">
+                <source>Draft workspace for agent changes (uid of sys_workspace; 0 = the first workspace the editor may use). Without the workspaces extension or an accessible workspace, changes go Live.</source>
+                <target>Entwurfs-Arbeitsbereich für Agent-Änderungen (uid aus sys_workspace; 0 = der erste Arbeitsbereich, den der Redakteur nutzen darf). Ohne die Workspaces-Erweiterung oder einen zugänglichen Arbeitsbereich gehen Änderungen live.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.repeatedReads">
+                <source>I kept checking the same information without getting further. Tell me a bit more precisely what I should do, for example: Create the page "…" under "Home".</source>
+                <target>Ich habe dieselben Informationen mehrfach geprüft, ohne weiterzukommen. Sagen Sie mir bitte etwas genauer, was ich tun soll, zum Beispiel: Erstelle die Seite „…“ unter „Home“.</target>
             </trans-unit>
         </body>
     </file>

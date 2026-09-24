@@ -1667,11 +1667,18 @@
 }
 
 /* Finished read steps collapsed above the answer */
+/* Consecutive steps sit on one line, left-aligned like the agent's messages. */
 .nst3af-agent-step {
-  margin: 2px auto 4px;
-  max-width: 720px;
+  display: inline-block;
+  margin: 2px 6px 4px 0;
   font-size: 12px;
   color: #4b5563;
+  vertical-align: top;
+}
+
+.nst3af-agent-step[open] {
+  display: block;
+  margin-right: 0;
 }
 
 .nst3af-agent-step > summary {
@@ -1838,6 +1845,29 @@
 }
 
 .nst3af-agent-media__name {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* Conversation summary */
+.nst3af-agent-summary {
+  margin: 10px 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px dashed #c7c2e6;
+  background: #f7f5ff;
+  font-size: 12.5px;
+  color: #374151;
+}
+
+.nst3af-agent-summary__title {
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #4c3fa3;
+}
+
+.nst3af-agent-summary__note {
+  margin: 8px 0 0;
   font-size: 11px;
   color: #6b7280;
 }

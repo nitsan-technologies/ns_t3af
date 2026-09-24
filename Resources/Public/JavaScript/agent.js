@@ -583,20 +583,6 @@ function stripEphemeralWorkTraceMeta(meta) {
 }
 
 /**
- * @param {Array<object>} messages
- * @returns {Array<object>}
- */
-function messagesForPersistence(messages) {
-  return messages.map((message) => {
-    const meta = message.meta ?? {};
-    return {
-      ...message,
-      meta: stripEphemeralWorkTraceMeta(meta),
-    };
-  });
-}
-
-/**
  * @param {string} line
  * @returns {string}
  */
@@ -776,6 +762,7 @@ class AgentController {
     this.settingsLink = root.querySelector('[data-nst3af-agent-settings]');
     this.providerSelect = root.querySelector('[data-nst3af-agent-provider]');
     this.sessionsToggle = root.querySelector('[data-nst3af-agent-sessions-toggle]');
+    this.summarizeButton = root.querySelector('[data-nst3af-agent-summarize]');
     this.sessionsDrawer = root.querySelector('[data-nst3af-agent-sessions]');
     this.sessionsList = root.querySelector('[data-nst3af-agent-sessions-list]');
     this.sessionsFilterEl = root.querySelector('[data-nst3af-agent-sessions-filter]');
@@ -957,6 +944,10 @@ class AgentController {
       if (target.closest('[data-nst3af-agent-new]')) {
         event.preventDefault();
         void this.startNewConversation();
+      }
+      if (target.closest('[data-nst3af-agent-summarize]')) {
+        event.preventDefault();
+        void this.summarizeConversation();
       }
       const filterButton = target.closest('[data-nst3af-agent-sessions-filter-value]');
       if (filterButton instanceof HTMLElement) {
@@ -1231,8 +1222,6 @@ class AgentController {
     this.backdrop.hidden = true;
     this.root.hidden = true;
 
-    // Persist before hide so reopen restores the same transcript + meta.
-    void this.persistSession();
 
     this.announce(lang('agent.live.closed', 'AI Agent closed.'));
 
@@ -1496,7 +1485,6 @@ class AgentController {
     if (uuid === '' || this.isRunning) {
       return;
     }
-    await this.persistSession();
     this.closeDrawers();
     this.contextNotice = '';
     await this.reloadSessionForCurrentScope({ sessionUuid: uuid });
@@ -1507,7 +1495,6 @@ class AgentController {
     if (this.isRunning) {
       return;
     }
-    await this.persistSession();
     this.closeDrawers();
     this.contextNotice = '';
     await this.reloadSessionForCurrentScope({ fresh: true });
@@ -1862,6 +1849,73 @@ class AgentController {
   }
 
   /**
+   * Same rule as the server (AgentConversationSummarizer::canSummarize): a stored conversation
+   * with at least four visible messages since the last summary.
+   *
+   * @returns {boolean}
+   */
+  canSummarize() {
+    if (this.activeSessionUuid() === '') {
+      return false;
+    }
+    let since = 0;
+    this.messages.forEach((message) => {
+      if (message.meta?.type === 'summary') {
+        since = 0;
+      } else if (message.meta?.hidden !== true) {
+        since += 1;
+      }
+    });
+    return since >= 4;
+  }
+
+  updateSummarizeButton() {
+    if (this.summarizeButton instanceof HTMLButtonElement) {
+      this.summarizeButton.hidden = !this.canSummarize();
+      this.summarizeButton.disabled = this.isRunning || this.credits?.empty === true;
+    }
+  }
+
+  async summarizeConversation() {
+    const url = ajaxUrl('nst3af_agent_summarize');
+    if (url === '' || this.isRunning || !this.canSummarize()) {
+      return;
+    }
+    this.isRunning = true;
+    this.updateSummarizeButton();
+    this.showProgress(true, lang('agent.summary.working', 'Summarizing the conversation…'));
+    try {
+      const payload = await new AjaxRequest(url).post({ sessionUuid: this.activeSessionUuid() }).then((r) => r.resolve());
+      if (!payload?.ok || !payload.message) {
+        throw new Error(payload?.message ?? lang('agent.summary.failed', 'The conversation could not be summarized: %1$s', ['']));
+      }
+      this.messages.push(payload.message);
+      if (payload.credits !== undefined) {
+        this.credits = payload.credits;
+        this.renderCredits();
+      }
+    } catch (error) {
+      this.messages.push({ role: 'assistant', content: errorMessage(error), meta: { type: 'error' } });
+    } finally {
+      this.isRunning = false;
+      this.showProgress(false);
+      this.renderStream();
+    }
+  }
+
+  /**
+   * @param {object} message
+   * @returns {string}
+   */
+  renderSummaryMessage(message) {
+    return `<div class="nst3af-agent-summary" role="note">
+      <div class="nst3af-agent-summary__title">${escapeHtml(lang('agent.summary.title', 'Summary of the conversation so far'))}</div>
+      <div class="nst3af-agent-summary__body">${renderMessageBody(String(message.content ?? ''))}</div>
+      <p class="nst3af-agent-summary__note">${escapeHtml(lang('agent.summary.note', 'From here on the agent works with this summary instead of the older messages.'))}</p>
+    </div>`;
+  }
+
+  /**
    * @param {object} message
    * @param {number} index
    * @returns {string}
@@ -1972,7 +2026,7 @@ class AgentController {
   async dismissDisclosure() {
     this.disclosureDismissed = true;
     this.disclosure.hidden = true;
-    await this.persistSession(true);
+    await this.saveDisclosure();
   }
 
   renderStream() {
@@ -2016,6 +2070,9 @@ class AgentController {
       if (meta.type === 'readback_result') {
         return this.renderReadbackMessage(message);
       }
+      if (meta.type === 'summary') {
+        return this.renderSummaryMessage(message);
+      }
       if (meta.type === 'clarification') {
         return this.renderClarificationMessage(message, index);
       }
@@ -2045,6 +2102,7 @@ class AgentController {
       ? `<div class="nst3af-agent-execute-all"><button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-execute-all>${escapeHtml(lang('agent.draft.executeAll', 'Execute all (%1$s)', [String(pending.length)]))}</button></div>`
       : '';
     this.stream.innerHTML = this.renderHomeNotice() + html + executeAllBar + this.renderContextNotice();
+    this.updateSummarizeButton();
     if (this.messages.length === 0) {
       this.renderGreeting();
     } else {
@@ -2370,6 +2428,11 @@ class AgentController {
     }
 
     if (applied) {
+      // The "Changes applied" card right below says the same.
+      const next = this.messages[messageIndex + 1];
+      if (next?.meta?.type === 'readback_result') {
+        return '';
+      }
       const appliedLabel = lang('agent.draft.applied', 'Applied %1$s of %2$s fields.')
         .replace('%1$s', String(keptCount))
         .replace('%2$s', String(fields.length));
@@ -2563,7 +2626,6 @@ class AgentController {
       field.key === fieldKey ? { ...field, kept: field.kept === false } : field
     ));
     this.renderStream();
-    this.persistSession();
   }
 
   /**
@@ -2594,13 +2656,12 @@ class AgentController {
       }
       this.isRunning = true;
       try {
-        const payload = await new AjaxRequest(url).post({ draftId }).then((r) => r.resolve());
+        const payload = await new AjaxRequest(url).post({ draftId, sessionUuid: this.activeSessionUuid() }).then((r) => r.resolve());
         if (!payload?.ok) {
           throw new Error(payload?.message ?? lang('agent.error.confirmFailed', 'Confirm failed'));
         }
         draft.destructiveArmed = true;
         this.renderStream();
-        await this.persistSession();
       } catch (error) {
         const text = errorMessage(error);
         this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
@@ -2637,6 +2698,7 @@ class AgentController {
     try {
       const payload = await new AjaxRequest(url).post({
         draftId,
+        sessionUuid: this.activeSessionUuid(),
         keptFieldKeys: safeKeptFieldKeys,
         applyMode,
         workspaceId: Number(this.context?.workspaceId ?? 0),
@@ -2674,31 +2736,28 @@ class AgentController {
           fromRunner: message.meta?.fromRunner === true,
         };
         this.renderStream();
-        await this.persistSession();
         this.queueContinuation(message, 'applied', String(message.content ?? ''));
-        return;
+      } else {
+        const appliedCount = String(result.appliedCount ?? 0);
+        const totalCount = String(result.totalCount ?? 0);
+        this.messages.push({
+          role: 'assistant',
+          content: messageContent(
+            payload.message,
+            lang('agent.draft.applied', 'Applied %1$s of %2$s fields.', [appliedCount, totalCount]),
+          ),
+          meta: {
+            type: 'readback_result',
+            readback: result.readback ?? [],
+            changeId: result.changeId ?? '',
+            correlationId: result.correlationId ?? '',
+            schedulerHandoff: payload.schedulerHandoff ?? null,
+            links: Array.isArray(payload.links) ? payload.links : [],
+          },
+        });
+        this.renderStream();
+        this.queueContinuation(message, 'applied', String(payload.message ?? ''));
       }
-
-      const appliedCount = String(result.appliedCount ?? 0);
-      const totalCount = String(result.totalCount ?? 0);
-      this.messages.push({
-        role: 'assistant',
-        content: messageContent(
-          payload.message,
-          lang('agent.draft.applied', 'Applied %1$s of %2$s fields.', [appliedCount, totalCount]),
-        ),
-        meta: {
-          type: 'readback_result',
-          readback: result.readback ?? [],
-          changeId: result.changeId ?? '',
-          correlationId: result.correlationId ?? '',
-          schedulerHandoff: payload.schedulerHandoff ?? null,
-          links: Array.isArray(payload.links) ? payload.links : [],
-        },
-      });
-      this.renderStream();
-      await this.persistSession();
-      this.queueContinuation(message, 'applied', String(payload.message ?? ''));
     } catch (error) {
       draft.applying = false;
       const text = errorMessage(error);
@@ -2707,6 +2766,7 @@ class AgentController {
     } finally {
       this.clearWorkTraceTimer();
       this.isRunning = false;
+      this.showProgress(false);
       if (this.stream) {
         this.stream.removeAttribute('aria-busy');
       }
@@ -2731,14 +2791,13 @@ class AgentController {
 
     const url = ajaxUrl('nst3af_agent_discard_draft');
     if (url !== '') {
-      await new AjaxRequest(url).post({ draftId });
+      await new AjaxRequest(url).post({ draftId, sessionUuid: this.activeSessionUuid() });
     }
 
     message.meta.draft.discarded = true;
     const declinedLabel = resolveToolDisplayLabel(message.meta.draft);
     message.content = lang('agent.draft.discarded', 'Draft discarded. Nothing was written.');
     this.renderStream();
-    await this.persistSession();
     this.queueContinuation(message, 'declined', '', declinedLabel);
     await this.flushContinuation();
   }
@@ -2761,7 +2820,6 @@ class AgentController {
     if (message.meta.edits && Object.prototype.hasOwnProperty.call(message.meta.edits, fieldKey)) {
       delete message.meta.edits[fieldKey];
     }
-    this.persistSession();
   }
 
   /**
@@ -2782,7 +2840,6 @@ class AgentController {
     );
     const current = textarea instanceof HTMLTextAreaElement ? textarea.value : '';
     message.meta.edits = { ...(message.meta.edits ?? {}), [fieldKey]: current };
-    this.persistSession();
   }
 
   /**
@@ -2799,7 +2856,6 @@ class AgentController {
       return;
     }
     message.meta.edits = { ...(message.meta.edits ?? {}), [fieldKey]: textarea.value };
-    this.persistSession();
   }
 
   /**
@@ -2864,6 +2920,7 @@ class AgentController {
     try {
       const payload = await new AjaxRequest(url).post({
         draftId,
+        sessionUuid: this.activeSessionUuid(),
         selections,
         edits,
         editedByEditor,
@@ -2898,7 +2955,6 @@ class AgentController {
         },
       });
       this.renderStream();
-      await this.persistSession();
       this.queueContinuation(message, 'applied', String(payload.message ?? ''));
     } catch (error) {
       meta.applying = false;
@@ -2931,14 +2987,13 @@ class AgentController {
 
     const url = ajaxUrl('nst3af_agent_discard_draft');
     if (url !== '') {
-      await new AjaxRequest(url).post({ draftId });
+      await new AjaxRequest(url).post({ draftId, sessionUuid: this.activeSessionUuid() });
     }
 
     message.meta.discarded = true;
     const declinedSuggestionLabel = resolveToolDisplayLabel(message.meta);
     message.content = lang('agent.draft.discarded', 'Draft discarded. Nothing was written.');
     this.renderStream();
-    await this.persistSession();
     this.queueContinuation(message, 'declined', '', declinedSuggestionLabel);
     await this.flushContinuation();
   }
@@ -3050,7 +3105,7 @@ class AgentController {
 
     this.isRunning = true;
     try {
-      const payload = await new AjaxRequest(url).post({ changeId }).then((r) => r.resolve());
+      const payload = await new AjaxRequest(url).post({ changeId, sessionUuid: this.activeSessionUuid() }).then((r) => r.resolve());
       if (!payload?.ok) {
         throw new Error(payload?.message ?? lang('agent.error.undoFailed', 'Undo failed'));
       }
@@ -3060,7 +3115,6 @@ class AgentController {
         meta: { type: 'info' },
       });
       this.renderStream();
-      await this.persistSession();
     } catch (error) {
       const text = errorMessage(error);
       this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
@@ -3210,6 +3264,7 @@ class AgentController {
       return;
     }
 
+
     this.isRunning = true;
     if (continuation === null) {
       this.input.value = '';
@@ -3260,6 +3315,7 @@ class AgentController {
         throw new Error(payload?.message ?? lang('agent.error.turnFailed', 'Turn failed'));
       }
 
+
       if (!streamed) {
         const replies = Array.isArray(payload.messages) ? payload.messages : [];
         replies.forEach((reply) => {
@@ -3294,8 +3350,6 @@ class AgentController {
       if (payload.greeting) {
         this.greeting = payload.greeting;
       }
-
-      await this.persistSession();
     } catch (error) {
       const text = errorMessage(error);
       this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
@@ -3451,35 +3505,29 @@ class AgentController {
     return donePayload !== null ? { payload: donePayload } : null;
   }
 
-  async persistSession(includeDisclosure = false) {
+  /**
+   * Stores the "AI disclosure dismissed" flag. Conversations are stored by the server only
+   * (turns and card actions); the window never sends its messages.
+   */
+  async saveDisclosure() {
     const url = ajaxUrl('nst3af_agent_conversation_save');
     if (url === '') {
       return;
     }
-
-    const body = {
-      context: this.context,
-    };
-    // Only a stored conversation is saved from here; turns are stored by the server.
-    if (this.session?.uuid && !this.freshSession) {
-      body.sessionUuid = this.session.uuid;
-      body.messages = messagesForPersistence(this.messages);
-    } else if (!includeDisclosure && !this.disclosureDismissed) {
-      return;
-    }
-    if (includeDisclosure || this.disclosureDismissed) {
-      body.disclosureDismissed = this.disclosureDismissed;
-    }
-
     try {
-      const payload = await new AjaxRequest(url).post(body).then((response) => response.resolve());
-      if (payload?.ok === false) {
-        console.warn('Agent conversation save failed:', payload?.message ?? payload);
-      }
+      await new AjaxRequest(url).post({ disclosureDismissed: this.disclosureDismissed }).then((response) => response.resolve());
     } catch (error) {
-      // ponytail: best-effort — undo/apply must not surface [object Object] when save fails
-      console.warn('Agent conversation save failed:', errorMessage(error));
+      console.warn('Agent disclosure save failed:', errorMessage(error));
     }
+  }
+
+  /**
+   * Conversation the server records a card action in.
+   *
+   * @returns {string}
+   */
+  activeSessionUuid() {
+    return this.session?.uuid && !this.freshSession ? String(this.session.uuid) : '';
   }
 
   handleComposerInput() {

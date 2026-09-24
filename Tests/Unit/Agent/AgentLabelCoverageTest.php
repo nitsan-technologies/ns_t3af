@@ -42,6 +42,7 @@ final class AgentLabelCoverageTest extends TestCase
     private const NON_LABEL_KEYS = [
         'agent.nl_turn',
         'agent.tool_summary',
+        'agent.conversation_summary',
     ];
 
     #[Test]

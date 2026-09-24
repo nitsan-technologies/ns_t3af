@@ -35,6 +35,9 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
  */
 final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInterface
 {
+    /** Characters of a tool response kept in the stored trace. */
+    private const TRACE_RESPONSE_CHARS = 1500;
+
     public function __construct(
         private PermittedActionProvider $permittedActionProvider,
         private AgentDemandCounter $demandCounter,
@@ -184,6 +187,8 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $invokeSuccess,
             (string) ($result['message'] ?? ''),
             $pageId > 0 ? $pageId : null,
+            // Inside the agent loop the model reads the data itself; an extra summary call only costs time.
+            ($body['skipLlmSummary'] ?? false) !== true,
         );
 
         $content = (string) $presented['content'];
@@ -212,7 +217,6 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             'correlationId' => $correlationId,
             'toolCallCount' => $toolCallCount,
             'trace' => $trace,
-            'rawResult' => $result['result'] ?? null,
         ];
         $this->applyTurnGuardMeta($meta, $guard['message']);
         if ($details !== null) {
@@ -291,6 +295,8 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $invokeSuccess,
             (string) ($result['message'] ?? ''),
             $pageId > 0 ? $pageId : null,
+            // Inside the agent loop the model reads the data itself; an extra summary call only costs time.
+            ($body['skipLlmSummary'] ?? false) !== true,
         );
 
         $meta = [
@@ -574,6 +580,20 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * The tool response in the trace, shortened: the full data is already in the result's details
+     * and is stored with the conversation only once.
+     */
+    private static function traceResponse(mixed $response): mixed
+    {
+        $encoded = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+        if (!is_string($encoded) || mb_strlen($encoded) <= self::TRACE_RESPONSE_CHARS) {
+            return $response;
+        }
+
+        return mb_substr($encoded, 0, self::TRACE_RESPONSE_CHARS) . '… (shortened)';
+    }
+
+    /**
      * @param array<string, mixed> $arguments
      * @param array<string, mixed> $result
      * @return list<array<string, mixed>>
@@ -590,7 +610,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             'tool' => $toolName,
             'request' => $arguments,
             'response' => $invokeSuccess
-                ? ($result['result'] ?? null)
+                ? self::traceResponse($result['result'] ?? null)
                 : ['error' => (string) ($result['message'] ?? 'tool_failed')],
             'latencyMs' => (int) ($result['latencyMs'] ?? 0),
             'status' => $invokeSuccess ? 'ok' : 'error',

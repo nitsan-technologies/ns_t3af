@@ -27,6 +27,8 @@ use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 /**
  * Wraps a Symfony AI Platform bridge for tool-calling chat completions.
  *
+ * @phpstan-import-type JsonSchema from \Symfony\AI\Platform\Contract\JsonSchema\Factory
+ *
  * @internal
  */
 final class SymfonyAiPlatform
@@ -77,6 +79,24 @@ final class SymfonyAiPlatform
             $raw['thinking'] = $thinking;
         }
         $usage = is_array($raw['usage'] ?? null) ? $raw['usage'] : [];
+
+        // Provider errors must not become an empty "I could not produce a reply".
+        if (trim($content) === '' && $toolCalls === []) {
+            $apiErrorMessage = $this->extractApiErrorMessage($raw);
+            if ($apiErrorMessage !== '') {
+                throw new AdapterRuntimeException($apiErrorMessage);
+            }
+            if (is_object($result) && method_exists($result, 'getResult')) {
+                try {
+                    $result->getResult();
+                } catch (\Throwable $exception) {
+                    $message = trim($exception->getMessage());
+                    if ($message !== '') {
+                        throw new AdapterRuntimeException($message, 0, $exception);
+                    }
+                }
+            }
+        }
 
         return [
             'content' => $content,
@@ -173,27 +193,204 @@ final class SymfonyAiPlatform
     }
 
     /**
-     * @param list<array<string, mixed>> $tools
-     * @return list<array<string, mixed>>
+     * Build Symfony {@see \Symfony\AI\Platform\Tool\Tool} instances so the bridge
+     * contract can normalize them per model (OpenAI Responses wants tools[n].name;
+     * chat-completions shape tools[n].function.name is rejected by Responses).
+     *
+     * @param list<array<string, mixed>|object> $tools
+     * @return list<object|array<string, mixed>>
      */
     private function normalizeTools(array $tools): array
     {
+        $toolClass = 'Symfony\\AI\\Platform\\Tool\\Tool';
+        $referenceClass = 'Symfony\\AI\\Platform\\Tool\\ExecutionReference';
+        $canBuildTool = class_exists($toolClass) && class_exists($referenceClass);
+
         $normalized = [];
         foreach ($tools as $tool) {
+            if ($canBuildTool && is_object($tool) && is_a($tool, $toolClass, false)) {
+                $normalized[] = $tool;
+                continue;
+            }
             if (!is_array($tool)) {
                 continue;
             }
-            if (isset($tool['type']) && ($tool['type'] ?? '') === 'function' && is_array($tool['function'] ?? null)) {
-                $normalized[] = $this->serializerSafeToolPayload($tool);
+            $function = $tool;
+            if (($tool['type'] ?? '') === 'function' && is_array($tool['function'] ?? null)) {
+                $function = $tool['function'];
+            }
+            $name = trim((string) ($function['name'] ?? ''));
+            if ($name === '') {
                 continue;
             }
-            $normalized[] = $this->serializerSafeToolPayload([
+            $description = (string) ($function['description'] ?? '');
+            $parameters = isset($function['parameters']) && is_array($function['parameters'])
+                ? $this->normalizeParametersForTool($function['parameters'])
+                : null;
+
+            if ($canBuildTool) {
+                $normalized[] = new $toolClass(
+                    new $referenceClass(self::class, '__invoke'),
+                    $name,
+                    $description,
+                    $parameters,
+                );
+                continue;
+            }
+
+            // Fallback when Symfony Tool classes are unavailable: Responses-style flat shape.
+            $payload = [
                 'type' => 'function',
-                'function' => $tool,
-            ]);
+                'name' => $name,
+                'description' => $description,
+            ];
+            if ($parameters !== null) {
+                $payload['parameters'] = $parameters;
+            }
+            $normalized[] = $this->serializerSafeToolPayload($payload);
         }
 
         return $normalized;
+    }
+
+    /**
+     * OpenAI Responses rejects JSON Schema `properties: []` (must be object `{}`).
+     * No-arg tools omit parameters entirely (same as Symfony OpenResponses ToolNormalizer with null).
+     *
+     * @param array<string, mixed> $parameters
+     * @return JsonSchema|null
+     */
+    private function normalizeParametersForTool(array $parameters): ?array
+    {
+        $parameters = $this->parametersAsArray($parameters);
+        $rawProperties = $parameters['properties'] ?? [];
+        if (!is_array($rawProperties)) {
+            $rawProperties = [];
+        }
+        $rawRequired = $parameters['required'] ?? [];
+        if (!is_array($rawRequired)) {
+            $rawRequired = [];
+        }
+
+        $properties = [];
+        foreach ($rawProperties as $key => $definition) {
+            if (!is_string($key) || $key === '' || !is_array($definition)) {
+                continue;
+            }
+            $properties[$key] = $this->sanitizeSchema($definition);
+        }
+
+        $required = [];
+        foreach ($rawRequired as $name) {
+            if (is_string($name) && $name !== '' && isset($properties[$name])) {
+                $required[] = $name;
+            }
+        }
+
+        if ($properties === [] && $required === []) {
+            return null;
+        }
+
+        /** @var JsonSchema $schema */
+        $schema = [
+            'type' => 'object',
+            'properties' => $properties,
+            'required' => $required,
+            'additionalProperties' => false,
+        ];
+
+        return $schema;
+    }
+
+    /**
+     * Cleans one (nested) JSON Schema node without changing its meaning:
+     * - keeps union types (`["string","null"]`) and `anyOf`/`oneOf`/`allOf` as they are;
+     * - defaults `type` to string only when the node declares no type at all;
+     * - drops empty or non-string descriptions instead of sending `""`;
+     * - removes empty `properties` (a PHP `[]` would be sent as a JSON list, which
+     *   OpenAI rejects) and `required` entries that name no property, at every level.
+     *
+     * @param array<array-key, mixed> $schema
+     * @return array<array-key, mixed>
+     */
+    private function sanitizeSchema(array $schema): array
+    {
+        $composite = ['anyOf', 'oneOf', 'allOf'];
+        $declaresType = isset($schema['type']) || isset($schema['enum']) || isset($schema['const']) || isset($schema['$ref']);
+        foreach ($composite as $keyword) {
+            $declaresType = $declaresType || isset($schema[$keyword]);
+        }
+        if (!$declaresType) {
+            $schema['type'] = 'string';
+        } elseif (isset($schema['type']) && !is_string($schema['type']) && !is_array($schema['type'])) {
+            unset($schema['type']);
+            if (!isset($schema['anyOf']) && !isset($schema['oneOf']) && !isset($schema['allOf'])) {
+                $schema['type'] = 'string';
+            }
+        }
+
+        if (array_key_exists('description', $schema) && (!is_string($schema['description']) || trim($schema['description']) === '')) {
+            unset($schema['description']);
+        }
+
+        if (array_key_exists('properties', $schema)) {
+            $properties = [];
+            foreach (is_array($schema['properties']) ? $schema['properties'] : [] as $key => $definition) {
+                if (is_string($key) && $key !== '' && is_array($definition)) {
+                    $properties[$key] = $this->sanitizeSchema($definition);
+                }
+            }
+            if ($properties === []) {
+                unset($schema['properties']);
+            } else {
+                $schema['properties'] = $properties;
+            }
+        }
+
+        if (array_key_exists('required', $schema)) {
+            $known = is_array($schema['properties'] ?? null) ? $schema['properties'] : [];
+            $required = array_values(array_filter(
+                is_array($schema['required']) ? $schema['required'] : [],
+                static fn(mixed $name): bool => is_string($name) && isset($known[$name]),
+            ));
+            if ($required === []) {
+                unset($schema['required']);
+            } else {
+                $schema['required'] = $required;
+            }
+        }
+
+        if (isset($schema['items']) && is_array($schema['items'])) {
+            $schema['items'] = array_is_list($schema['items']) && $schema['items'] !== []
+                ? array_map(fn(mixed $item): mixed => is_array($item) ? $this->sanitizeSchema($item) : $item, $schema['items'])
+                : $this->sanitizeSchema($schema['items']);
+        }
+        if (isset($schema['additionalProperties']) && is_array($schema['additionalProperties'])) {
+            $schema['additionalProperties'] = $this->sanitizeSchema($schema['additionalProperties']);
+        }
+        foreach ($composite as $keyword) {
+            if (isset($schema[$keyword]) && is_array($schema[$keyword])) {
+                $schema[$keyword] = array_values(array_map(
+                    fn(mixed $branch): mixed => is_array($branch) ? $this->sanitizeSchema($branch) : $branch,
+                    $schema[$keyword],
+                ));
+            }
+        }
+
+        return $schema;
+    }
+
+    /**
+     * @param array<string, mixed> $parameters
+     * @return array<string, mixed>
+     */
+    private function parametersAsArray(array $parameters): array
+    {
+        // Drop stdClass (empty JSON Schema `{}`) so Tool + serializer stay happy.
+        $encoded = json_encode($parameters, JSON_THROW_ON_ERROR);
+        $decoded = json_decode($encoded, true);
+
+        return is_array($decoded) ? $decoded : $parameters;
     }
 
     /**
@@ -400,6 +597,33 @@ final class SymfonyAiPlatform
         }
 
         return [];
+    }
+
+    /**
+     * @param array<string, mixed> $raw
+     */
+    private function extractApiErrorMessage(array $raw): string
+    {
+        $error = $raw['error'] ?? null;
+        if (is_string($error) && trim($error) !== '') {
+            return trim($error);
+        }
+        if (is_array($error)) {
+            foreach (['message', 'error', 0] as $key) {
+                $candidate = $error[$key] ?? null;
+                if (is_string($candidate) && trim($candidate) !== '') {
+                    return trim($candidate);
+                }
+            }
+        }
+        if (is_object($error) && method_exists($error, 'getMessage')) {
+            $message = trim((string) $error->getMessage());
+            if ($message !== '') {
+                return $message;
+            }
+        }
+
+        return '';
     }
 
     private function isReasoningModel(string $model): bool

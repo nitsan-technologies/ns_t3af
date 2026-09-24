@@ -129,6 +129,7 @@ final readonly class AgentToolResultPresenter
         bool $invokeSuccess,
         string $invokeMessage = '',
         ?int $pageId = null,
+        bool $allowLlmSummary = true,
     ): array {
         $details = $this->normalizePayload($rawResult);
         $error = $this->resolveError($details, $invokeSuccess, $invokeMessage);
@@ -143,7 +144,7 @@ final readonly class AgentToolResultPresenter
             && isset($details['summary'])
             && is_string($details['summary'])
             && trim($details['summary']) !== '';
-        if ($error === null && !$hasReadySummary && !$this->shouldSkipLlmSummary($facts)) {
+        if ($allowLlmSummary && $error === null && !$hasReadySummary && !$this->shouldSkipLlmSummary($facts)) {
             $llmSummary = $this->tryLlmSummary($editorLabel, $details, $pageId);
         }
 
