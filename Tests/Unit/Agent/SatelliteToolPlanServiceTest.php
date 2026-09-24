@@ -19,9 +19,10 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
+use NITSAN\NsT3AF\Agent\Service\DeclaredToolSeverityLookup;
 use NITSAN\NsT3AF\Agent\Service\SatelliteToolPlanService;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
-use NITSAN\NsT3AF\Mcp\Service\McpToolSeverityResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -37,7 +38,16 @@ final class SatelliteToolPlanServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->service = new SatelliteToolPlanService(
-            new McpToolSeverityResolver(),
+            $this->severityLookup([
+                't3ai_generate_meta_description' => ToolSeverity::Write,
+                't3ai_apply_schema_markup' => ToolSeverity::Write,
+                't3ai_generate_all_seo' => ToolSeverity::Write,
+                't3cs_save_datasource' => ToolSeverity::Write,
+                't3cs_list_datasources' => ToolSeverity::Read,
+                't3ac_chatbot_settings' => ToolSeverity::Write,
+                't3ac_chatbot_settings_get' => ToolSeverity::Read,
+                'pages_get' => ToolSeverity::Read,
+            ]),
             new McpConfirmationPlanBuilder(),
             $this->createAgentTranslator(),
         );
@@ -48,6 +58,19 @@ final class SatelliteToolPlanServiceTest extends TestCase
         $this->releaseAgentTranslator();
     }
 
+    /**
+     * @param array<string, ToolSeverity> $map
+     */
+    private function severityLookup(array $map): DeclaredToolSeverityLookup
+    {
+        $lookup = $this->createMock(DeclaredToolSeverityLookup::class);
+        $lookup->method('severityFor')->willReturnCallback(
+            static fn(string $name): ?ToolSeverity => $map[$name] ?? null,
+        );
+
+        return $lookup;
+    }
+
     #[Test]
     public function supportsWriteSatelliteToolsOnly(): void
     {
@@ -55,6 +78,16 @@ final class SatelliteToolPlanServiceTest extends TestCase
         self::assertTrue($this->service->supports('t3cs_save_datasource'));
         self::assertFalse($this->service->supports('t3cs_list_datasources'));
         self::assertFalse($this->service->supports('pages_get'));
+    }
+
+    #[Test]
+    public function usesDeclaredSeverityNotTheToolName(): void
+    {
+        // "settings" used to be guessed as read-only; the declared Write wins.
+        self::assertTrue($this->service->supports('t3ac_chatbot_settings'));
+        self::assertFalse($this->service->supports('t3ac_chatbot_settings_get'));
+        // Undeclared satellite tools are never planned (and stay locked).
+        self::assertFalse($this->service->supports('t3ai_undeclared_generate_thing'));
     }
 
     #[Test]
@@ -77,6 +110,27 @@ final class SatelliteToolPlanServiceTest extends TestCase
             ? $plan->context['displayArguments']
             : [];
 
-        self::assertSame([['key' => 'pageId', 'value' => '8']], $displayArguments);
+        self::assertSame([['key' => 'pageId', 'value' => '8', 'label' => 'Page']], $displayArguments);
+    }
+
+    #[Test]
+    public function childToolsWithoutOwnSummaryUseTheirEditorLabel(): void
+    {
+        $service = new SatelliteToolPlanService(
+            $this->severityLookup(['t3ai_translate_page' => ToolSeverity::Write]),
+            new McpConfirmationPlanBuilder(),
+            $this->createAgentTranslator(),
+        );
+        $plan = $service->plan('t3ai_translate_page', ['pageId' => 0, 'languageUids' => [1, 2], 'includeContent' => true]);
+
+        self::assertSame('Translate the whole page.', $plan->context['summary'] ?? null);
+        self::assertSame(
+            [
+                ['key' => 'pageId', 'value' => '0', 'label' => 'Page'],
+                ['key' => 'languageUids', 'value' => '1, 2', 'label' => 'Languages'],
+                ['key' => 'includeContent', 'value' => 'Yes', 'label' => 'Also content elements'],
+            ],
+            $plan->context['displayArguments'] ?? null,
+        );
     }
 }

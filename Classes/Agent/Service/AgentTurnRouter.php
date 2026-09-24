@@ -27,7 +27,7 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 /**
  * Single entry for agent turn routing: structural (slash / @ / UI tool) vs free-text NL.
  *
- * Meaning for free-text lives only in the LLM + embedding shortlist (orchestrator).
+ * Meaning for free-text lives only in the LLM (AgentRunner, with find_tools for tool discovery).
  *
  * @internal
  */

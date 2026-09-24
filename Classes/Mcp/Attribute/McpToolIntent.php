@@ -22,7 +22,7 @@ namespace NITSAN\NsT3AF\Mcp\Attribute;
 use Attribute;
 
 /**
- * Retrieval metadata for agent tool shortlisting (embeddings + category pick).
+ * Retrieval metadata for the AI Agent: module tool set (modules, category) and find_tools (summary, examples).
  *
  * `$verbs` / `$nouns` are deprecated for scoring — kept for BC and folded into
  * the embedded text. Prefer `$summary`, `$examples`, and `$category`.
@@ -31,12 +31,12 @@ use Attribute;
 final class McpToolIntent
 {
     /**
-     * @param list<string> $verbs      @deprecated Kept for BC; folded into embeddings, not scored
-     * @param list<string> $nouns      @deprecated Kept for BC; folded into embeddings, not scored
-     * @param list<string> $modules    Backend module hints, e.g. records, web_layout, file
-     * @param list<string> $examples   Short example requests (mixed languages) for embeddings only
-     * @param string       $summary    One-line English summary for the LLM / embeddings
-     * @param string       $category   content|pages|seo|media_files|translation|…|general
+     * @param list<string> $verbs      Extra search words for find_tools
+     * @param list<string> $nouns      Extra search words for find_tools
+     * @param list<string> $modules    Backend modules where the tool is offered from the start, e.g. web_layout, records, file
+     * @param list<string> $examples   Example requests, at least English and German, for find_tools
+     * @param string       $summary    One-line English summary, shown to the model when find_tools returns the tool
+     * @param string       $category   content|pages|seo|media_files|translation|…|general (module tool set)
      */
     public function __construct(
         public readonly array $verbs = [],

@@ -36,6 +36,7 @@ use NITSAN\NsT3AF\Provider\AdapterRegistry;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
 use NITSAN\NsT3AF\Provider\OpenAiCompatible\OpenAiCompatiblePlatform;
 use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiBridgeAdapter;
+use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiResultReader;
 use Psr\EventDispatcher\EventDispatcherInterface;
 
 /**
@@ -591,6 +592,12 @@ final class AiService implements AiServiceInterface
 
     private function extractContentFromInvokeResult(object $result): string
     {
+        // Reasoning models return several parts (thinking + text); asText() throws for those.
+        $text = SymfonyAiResultReader::text($result);
+        if (trim($text) !== '') {
+            return $text;
+        }
+
         if (method_exists($result, 'asText')) {
             try {
                 /** @var mixed $text */

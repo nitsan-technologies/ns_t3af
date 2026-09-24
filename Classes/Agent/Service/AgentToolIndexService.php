@@ -39,7 +39,7 @@ final class AgentToolIndexService implements AgentToolIndexInterface
 {
     public const CACHE_IDENTIFIER = 'nst3af_agent_tool_index';
 
-    private const CACHE_KEY = 'tool_index_v1';
+    private const CACHE_KEY = 'tool_index_v2';
 
     private ?Store $hydratedStore = null;
 
@@ -50,7 +50,7 @@ final class AgentToolIndexService implements AgentToolIndexInterface
         private readonly EmbeddingSourceResolver $embeddingSourceResolver,
         private readonly McpToolIntrospectorService $toolIntrospector,
         private readonly PermittedActionProvider $permittedActionProvider,
-        private readonly AgentToolEditorLabelService $editorLabelService,
+        private readonly AgentToolDocumentBuilder $documentBuilder,
     ) {}
 
     public function rebuild(): void
@@ -240,28 +240,6 @@ final class AgentToolIndexService implements AgentToolIndexInterface
      */
     private function buildDocumentText(array $tool): string
     {
-        $intent = is_array($tool['intent'] ?? null) ? $tool['intent'] : [];
-        $title = $this->editorLabelService->resolve($tool);
-        $description = (string) ($tool['description'] ?? '');
-        $summary = (string) ($intent['summary'] ?? '');
-        $examples = is_array($intent['examples'] ?? null)
-            ? implode(' ', array_map(static fn(mixed $e): string => (string) $e, $intent['examples']))
-            : '';
-        $category = (string) ($intent['category'] ?? '');
-        $verbs = is_array($intent['verbs'] ?? null)
-            ? implode(' ', array_map(static fn(mixed $v): string => (string) $v, $intent['verbs']))
-            : '';
-        $nouns = is_array($intent['nouns'] ?? null)
-            ? implode(' ', array_map(static fn(mixed $n): string => (string) $n, $intent['nouns']))
-            : '';
-
-        return trim(implode("\n", array_filter([
-            $title,
-            $description,
-            $summary,
-            $examples,
-            $category,
-            trim($verbs . ' ' . $nouns),
-        ], static fn(string $part): bool => $part !== '')));
+        return $this->documentBuilder->build($tool);
     }
 }

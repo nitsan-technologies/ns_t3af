@@ -2,6 +2,20 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-09-24 — AI Agent Phase 4 (editor UX rules)
+
+- Fixed empty replies ("I could not produce a reply") from reasoning models: `SymfonyAiResultReader` reads 0.13 `MultiPartResult` (thinking + text / tool calls); used by `SymfonyAiPlatform` and `AiService`.
+- Draft/readback cards show record and field names (`AgentRecordLabeler`), where the change goes, Execute / Decline, Execute all, and links after apply.
+- `ask_clarification` takes `options[]` and pauses the turn; answer buttons in the chat.
+- Continue after confirm (`agentContinueAfterConfirm`), credits badge + empty lock (`AgentCreditsStatus`).
+- `agent.tool.label.*` EN/DE for all 98 tools; lock reasons rewritten in plain language.
+- Array tool params get JSON-schema `items` from the docblock.
+- 16 new child tools (T3AI queues, translate page, glossary, image; T3AA alt text bulk/approve/decorative, accessibility scan/issues, voice-over); confirmation cards show names instead of ids; image/audio previews in result cards.
+
+**Last touched:** 2026-09-24
+
+---
+
 ## 2026-09-01 — AI Agent editor answers + file-module routing
 
 **Done:** `context/features/ai-agent.md` (new agent entry). Editor-facing tool labels (`AgentToolEditorLabelService`), human result presenter, workflow-before-fast-path on stream NL, file module context (`pageId=0`, `storageUid`/`folderIdentifier`), Cursor-style work trace, hide redundant facts when prose present. Tests under `Tests/Unit/Agent/`.

@@ -51,15 +51,17 @@
         "ext-curl": "*",
         "ext-sodium": "*",
         "mcp/sdk": "^0.7",
-        "symfony/ai-anthropic-platform": "^0.12",
-        "symfony/ai-azure-platform": "^0.12",
-        "symfony/ai-gemini-platform": "^0.12",
-        "symfony/ai-mistral-platform": "^0.12",
-        "symfony/ai-ollama-platform": "^0.12",
-        "symfony/ai-open-ai-platform": "^0.12",
-        "symfony/ai-open-router-platform": "^0.12",
-        "symfony/ai-platform": "^0.12",
-        "symfony/ai-store": "^0.12",
+        "symfony/ai-agent": "^0.13",
+        "symfony/ai-anthropic-platform": "^0.13",
+        "symfony/ai-azure-platform": "^0.13",
+        "symfony/ai-gemini-platform": "^0.13",
+        "symfony/ai-mistral-platform": "^0.13",
+        "symfony/ai-ollama-platform": "^0.13",
+        "symfony/ai-open-ai-platform": "^0.13",
+        "symfony/ai-open-router-platform": "^0.13",
+        "symfony/ai-platform": "^0.13",
+        "symfony/ai-store": "^0.13",
+        "symfony/event-dispatcher": "^7.3 || ^8.0",
         "typo3/cms-backend": "^12.4 || ^13.4 || ^14.3",
         "typo3/cms-core": "^12.4 || ^13.4 || ^14.3",
         "typo3/cms-fluid": "^12.4 || ^13.4 || ^14.3",
@@ -109,6 +111,7 @@
             "Package": {
                 "providesPackages": {
                   "mcp/sdk": ".Build/vendor",
+                  "symfony/ai-agent": ".Build/vendor",
                   "symfony/ai-anthropic-platform": ".Build/vendor",
                   "symfony/ai-azure-platform": ".Build/vendor",
                   "symfony/ai-gemini-platform": ".Build/vendor",
@@ -177,7 +180,6 @@
         "lochmueller/seal": "Vector store abstraction (consumed by upcoming RAG/Embeddings feature).",
         "symfony/ai-platform": "Core Symfony AI runtime; required when using any symfony.* adapter type.",
         "smalot/pdfparser": "Extract text from PDF brand documents in AI Context.",
-        "phpoffice/phpword": "Extract text from DOCX brand documents in AI Context.",
-        "codewithkyrian/transformers": "Optional local embedding models for AI Agent tool routing (requires ext-ffi)."
+        "phpoffice/phpword": "Extract text from DOCX brand documents in AI Context."
     }
 }

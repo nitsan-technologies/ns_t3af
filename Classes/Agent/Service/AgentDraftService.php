@@ -30,6 +30,7 @@ final class AgentDraftService
 {
     public function __construct(
         private readonly AgentLowRiskFieldMatrix $lowRiskFieldMatrix,
+        private readonly ?AgentRecordLabeler $recordLabeler = null,
     ) {}
 
     /**
@@ -61,13 +62,19 @@ final class AgentDraftService
         }
 
         $fields = [];
+        $recordLabels = [];
 
         foreach ($plan->fields as $field) {
+            $recordKey = $field->table . ':' . $field->uid;
+            $recordLabels[$recordKey] ??= $this->recordLabeler?->recordLabel($field->table, $field->uid) ?? '';
             $fields[] = [
                 'key' => $field->key,
                 'table' => $field->table,
                 'uid' => $field->uid,
                 'field' => $field->field,
+                // Editor-facing: "Content element „Welcome“" · "Header"
+                'recordLabel' => $recordLabels[$recordKey],
+                'fieldLabel' => $this->recordLabeler?->fieldLabel($field->table, $field->field) ?? $field->field,
                 'current' => $this->formatValue($field->currentValue),
                 'proposed' => $this->formatValue($field->proposedValue),
                 'kept' => true,

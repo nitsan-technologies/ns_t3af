@@ -145,6 +145,22 @@ final readonly class AgentTurnRepository
         return is_array($row) ? $row : null;
     }
 
+    /**
+     * Removes turn rows created before the cutoff (conversation cleanup).
+     */
+    public function deleteOlderThan(int $cutoffTimestamp): int
+    {
+        if ($cutoffTimestamp <= 0) {
+            return 0;
+        }
+        $qb = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
+        $qb->getRestrictions()->removeAll();
+
+        return $qb->delete(self::TABLE)
+            ->where($qb->expr()->lt('crdate', $qb->createNamedParameter($cutoffTimestamp, Connection::PARAM_INT)))
+            ->executeStatement();
+    }
+
     private function connection(): Connection
     {
         return $this->connectionPool->getConnectionForTable(self::TABLE);

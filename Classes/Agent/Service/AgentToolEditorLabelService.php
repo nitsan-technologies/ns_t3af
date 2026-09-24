@@ -22,6 +22,9 @@ namespace NITSAN\NsT3AF\Agent\Service;
 /**
  * Editor-facing labels for MCP tools (human titles, not snake_case ids).
  *
+ * Lookup order: `agent.tool.label.<tool_name>` in locallang_be.xlf, the legacy starter keys,
+ * the first sentence of the description (when it reads like editor language), the humanized name.
+ *
  * @internal
  */
 final readonly class AgentToolEditorLabelService
@@ -80,8 +83,10 @@ final readonly class AgentToolEditorLabelService
             return '';
         }
 
-        $labelKey = self::LABEL_KEYS[$toolName] ?? '';
-        if ($labelKey !== '') {
+        foreach (['agent.tool.label.' . $toolName, self::LABEL_KEYS[$toolName] ?? ''] as $labelKey) {
+            if ($labelKey === '') {
+                continue;
+            }
             $translated = $this->translator->translate($labelKey);
             if ($translated !== '' && $translated !== $labelKey) {
                 return $translated;

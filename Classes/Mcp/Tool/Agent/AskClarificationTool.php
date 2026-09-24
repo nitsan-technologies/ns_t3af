@@ -47,14 +47,20 @@ use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 )]
 final readonly class AskClarificationTool implements McpNonAiToolInterface
 {
+    /**
+     * @param string $question The question, in the editor's language
+     * @param list<string> $options Short answer choices shown as buttons (2-6), e.g. ["German", "French"]
+     */
     #[McpTool(
         name: 'ask_clarification',
-        description: 'Ask the editor a short clarifying question when the request is ambiguous.'
-            . ' Pass the question in the editor language. Do not call write tools until answered.',
+        description: 'Ask the editor a short clarifying question when the request is ambiguous or a required choice is missing.'
+            . ' Pass the question in the editor language and, when the answer is one of a few choices'
+            . ' (target language, which page), the choices as options. Do not call write tools until answered.',
     )]
-    public function execute(string $question): string
+    public function execute(string $question, array $options = []): string
     {
         $question = trim($question);
+        $options = self::normalizeOptions($options);
         if ($question === '') {
             return json_encode([
                 'ok' => false,
@@ -66,6 +72,24 @@ final readonly class AskClarificationTool implements McpNonAiToolInterface
             'ok' => true,
             'summary' => $question,
             'clarification' => $question,
+            'options' => $options,
         ], JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @param array<mixed> $options
+     * @return list<string>
+     */
+    public static function normalizeOptions(array $options): array
+    {
+        $clean = [];
+        foreach ($options as $option) {
+            $label = is_scalar($option) ? trim((string) $option) : '';
+            if ($label !== '' && !in_array($label, $clean, true)) {
+                $clean[] = mb_substr($label, 0, 80);
+            }
+        }
+
+        return array_slice($clean, 0, 6);
     }
 }

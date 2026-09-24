@@ -130,7 +130,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             ];
         }
 
-        $severity = (string) ($tool['severity'] ?? '');
+        $severity = $this->effectiveSeverity($tool, $body);
         $isDualMode = ($tool['dualMode'] ?? false) === true || ($rawTool['dualMode'] ?? false) === true;
         $isPreviewable = ($tool['previewable'] ?? false) === true || ($rawTool['previewable'] ?? false) === true;
 
@@ -672,4 +672,24 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
     }
 
+    /**
+     * Declared severity, raised to Destructive for a delete through write_table,
+     * so the draft needs the two-step confirmation like other destructive tools.
+     *
+     * @param array<string, mixed> $tool
+     * @param array<string, mixed> $body
+     */
+    private function effectiveSeverity(array $tool, array $body): string
+    {
+        $severity = (string) ($tool['severity'] ?? '');
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        if (
+            ($tool['name'] ?? '') === 'write_table'
+            && strtolower(trim((string) ($arguments['action'] ?? ''))) === 'delete'
+        ) {
+            return ToolSeverity::Destructive->value;
+        }
+
+        return $severity;
+    }
 }

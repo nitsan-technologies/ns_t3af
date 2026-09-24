@@ -77,6 +77,21 @@ final class AgentLanguageResolverTest extends TestCase
     }
 
     #[Test]
+    public function replyInstructionFollowsTheMessageLanguageWithBackendFallback(): void
+    {
+        $resolver = new AgentLanguageResolver($this->createMock(SiteFinder::class));
+
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $user->user = ['lang' => 'de'];
+
+        $instruction = $resolver->replyLanguageInstruction($user);
+
+        self::assertStringContainsString('language of the editor\'s latest message', $instruction);
+        self::assertStringContainsString('reply in German', $instruction);
+        self::assertStringContainsString('Keep tool names, field keys and ids unchanged.', $instruction);
+    }
+
+    #[Test]
     public function contentLanguageComesFromTheTargetSiteLanguage(): void
     {
         $language = $this->createMock(SiteLanguage::class);

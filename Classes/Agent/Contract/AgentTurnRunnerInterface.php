@@ -22,7 +22,7 @@ namespace NITSAN\NsT3AF\Agent\Contract;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
- * Free-text NL turn runner (embedding shortlist + LLM tool-calling loop).
+ * Free-text NL turn runner (LLM tool-calling loop over the editor's permitted tools).
  *
  * @internal
  */

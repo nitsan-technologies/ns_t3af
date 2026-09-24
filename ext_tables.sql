@@ -55,7 +55,7 @@ CREATE TABLE tx_nst3af_request_log (
     request_source VARCHAR(32) NOT NULL DEFAULT 'unknown',
     content_entity_type VARCHAR(64) NOT NULL DEFAULT '',
     content_entity_uid INT(11) DEFAULT 0 NOT NULL,
-    request_type VARCHAR(16) NOT NULL DEFAULT 'complete',
+    request_type VARCHAR(32) NOT NULL DEFAULT 'complete',
     model_requested VARCHAR(128) NOT NULL DEFAULT '',
     model_used VARCHAR(128) NOT NULL DEFAULT '',
     success TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
@@ -296,16 +296,24 @@ CREATE TABLE tx_nst3af_agent_demand (
 
 CREATE TABLE tx_nst3af_agent_conversation (
     uid INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    session_uuid VARCHAR(36) NOT NULL DEFAULT '',
     be_user_uid INT(11) UNSIGNED DEFAULT 0 NOT NULL,
     module_route VARCHAR(128) NOT NULL DEFAULT '',
     page_id INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    title VARCHAR(255) NOT NULL DEFAULT '',
+    provider_identifier VARCHAR(128) NOT NULL DEFAULT '',
+    message_count INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    last_activity INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    deleted TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
     messages MEDIUMTEXT,
     context MEDIUMTEXT,
     disclosure_dismissed TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
     tstamp INT(11) UNSIGNED DEFAULT 0 NOT NULL,
     crdate INT(11) UNSIGNED DEFAULT 0 NOT NULL,
     PRIMARY KEY (uid),
-    UNIQUE KEY agent_conv_scope (be_user_uid, module_route, page_id),
+    KEY agent_conv_session (session_uuid),
+    KEY agent_conv_scope (be_user_uid, module_route, page_id, deleted, last_activity),
+    KEY agent_conv_user (be_user_uid, deleted, last_activity),
     KEY agent_conv_tstamp (tstamp)
 );
 

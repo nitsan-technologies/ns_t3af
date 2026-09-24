@@ -23,10 +23,12 @@ use NITSAN\NsT3AF\Agent\Contract\EmbeddingSourceInterface;
 use NITSAN\NsT3AF\Agent\Embedding\EmbeddingSourceResolver;
 use NITSAN\NsT3AF\Agent\Embedding\ProviderEmbeddingSource;
 use NITSAN\NsT3AF\Agent\Service\AgentSettingsService;
+use NITSAN\NsT3AF\Agent\Service\AgentToolDocumentBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentToolEditorLabelService;
 use NITSAN\NsT3AF\Agent\Service\AgentToolIndexService;
 use NITSAN\NsT3AF\Agent\Service\PermittedActionProvider;
 use NITSAN\NsT3AF\Cache\CacheFacadeInterface;
+use NITSAN\NsT3AF\Mcp\Service\Backend\McpToolMetadataService;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
 use NITSAN\NsT3AF\Settings\ExtensionSettingsService;
 use PHPUnit\Framework\Attributes\Test;
@@ -64,23 +66,23 @@ final class AgentToolIndexServiceTest extends TestCase
             $resolver,
             $introspector,
             $this->permittedActionProvider(),
-            new AgentToolEditorLabelService($this->createAgentTranslator()),
+            new AgentToolDocumentBuilder(new AgentToolEditorLabelService($this->createAgentTranslator()), new McpToolMetadataService()),
         );
 
         $service->ensureFresh();
-        $first = $cache->get('tool_index_v1');
+        $first = $cache->get('tool_index_v2');
         self::assertIsArray($first);
         $firstHash = (string) ($first['hash'] ?? '');
         self::assertNotSame('', $firstHash);
 
         $service->ensureFresh();
-        $second = $cache->get('tool_index_v1');
+        $second = $cache->get('tool_index_v2');
         self::assertIsArray($second);
         self::assertSame($firstHash, (string) ($second['hash'] ?? ''));
 
         $tools = [$toolB];
         $service->ensureFresh();
-        $third = $cache->get('tool_index_v1');
+        $third = $cache->get('tool_index_v2');
         self::assertIsArray($third);
         self::assertNotSame($firstHash, (string) ($third['hash'] ?? ''));
     }
@@ -104,7 +106,7 @@ final class AgentToolIndexServiceTest extends TestCase
             $resolver,
             $introspector,
             $this->permittedActionProvider(),
-            new AgentToolEditorLabelService($this->createAgentTranslator()),
+            new AgentToolDocumentBuilder(new AgentToolEditorLabelService($this->createAgentTranslator()), new McpToolMetadataService()),
         );
 
         $service->rebuild();

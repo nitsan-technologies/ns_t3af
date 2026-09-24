@@ -39,6 +39,8 @@ final class SymfonyAiMessageBagFactory
             return null;
         }
 
+        $toolCallClass = $this->resolveClass('Symfony\\AI\\Platform\\Result\\ToolCall');
+
         $bagMessages = [];
         foreach ($messages as $row) {
             if (!is_array($row)) {
@@ -50,6 +52,32 @@ final class SymfonyAiMessageBagFactory
                 $content = is_scalar($content) ? (string) $content : '';
             }
             $content = trim($content);
+
+            // Tool rounds (internal shape, see OpenAiCompatiblePlatform::toWireMessages()).
+            $toolCalls = is_array($row['tool_calls'] ?? null) ? $row['tool_calls'] : [];
+            if ($role === 'assistant' && $toolCalls !== [] && $toolCallClass !== null) {
+                $parts = $content !== '' ? [$content] : [];
+                foreach ($toolCalls as $call) {
+                    if (is_array($call)) {
+                        $parts[] = $this->createToolCall($toolCallClass, $call);
+                    }
+                }
+                $bagMessages[] = $messageClass::ofAssistant(...$parts);
+                continue;
+            }
+            if ($role === 'tool' && $toolCallClass !== null) {
+                $call = [
+                    'id' => $row['tool_call_id'] ?? '',
+                    'name' => $row['name'] ?? '',
+                    'arguments' => [],
+                ];
+                $bagMessages[] = $messageClass::ofToolCall(
+                    $this->createToolCall($toolCallClass, $call),
+                    $content !== '' ? $content : '-',
+                );
+                continue;
+            }
+
             if ($content === '') {
                 continue;
             }
@@ -66,6 +94,25 @@ final class SymfonyAiMessageBagFactory
         }
 
         return new $bagClass(...$bagMessages);
+    }
+
+    /**
+     * @param class-string $toolCallClass
+     * @param array<mixed> $call
+     */
+    private function createToolCall(string $toolCallClass, array $call): object
+    {
+        $arguments = $call['arguments'] ?? [];
+        if (is_string($arguments)) {
+            $decoded = json_decode($arguments, true);
+            $arguments = is_array($decoded) ? $decoded : [];
+        }
+
+        return new $toolCallClass(
+            (string) ($call['id'] ?? ''),
+            (string) ($call['name'] ?? ''),
+            is_array($arguments) ? $arguments : [],
+        );
     }
 
     /**

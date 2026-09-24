@@ -55,7 +55,7 @@ final class SymfonyAiPlatform
 
         $options = [
             'tools' => $this->normalizeTools($tools),
-            'tool_choice' => 'required',
+            'tool_choice' => 'auto',
         ];
         if (!$this->isReasoningModel($modelId)) {
             $options['temperature'] = $this->provider->temperature;
@@ -63,12 +63,24 @@ final class SymfonyAiPlatform
 
         $result = $this->platform->invoke($modelId, $messageBag, $options);
         $raw = $this->extractRawResponse($result);
-        $content = $this->extractTextContent($result);
+        // Result objects first: reasoning models answer with several parts (thinking + text / tool calls).
+        $content = SymfonyAiResultReader::text($result);
+        if (trim($content) === '') {
+            $content = $this->extractTextContent($result);
+        }
+        $toolCalls = SymfonyAiResultReader::toolCalls($result);
+        if ($toolCalls === []) {
+            $toolCalls = $this->extractToolCalls($raw);
+        }
+        $thinking = SymfonyAiResultReader::thinking($result);
+        if ($thinking !== '' && !isset($raw['thinking'])) {
+            $raw['thinking'] = $thinking;
+        }
         $usage = is_array($raw['usage'] ?? null) ? $raw['usage'] : [];
 
         return [
             'content' => $content,
-            'toolCalls' => $this->extractToolCalls($raw),
+            'toolCalls' => $toolCalls,
             'usage' => $usage,
             'raw' => $raw,
         ];
@@ -324,7 +336,31 @@ final class SymfonyAiPlatform
             }
         }
 
-        return '';
+        // OpenAI Responses API: output[type=message].content[type=output_text].text
+        $text = '';
+        foreach (is_array($raw['output'] ?? null) ? $raw['output'] : [] as $item) {
+            if (!is_array($item) || ($item['type'] ?? '') !== 'message') {
+                continue;
+            }
+            foreach (is_array($item['content'] ?? null) ? $item['content'] : [] as $part) {
+                if (is_array($part) && ($part['type'] ?? '') === 'output_text' && is_string($part['text'] ?? null)) {
+                    $text .= $part['text'];
+                }
+            }
+        }
+        if ($text !== '') {
+            return $text;
+        }
+
+        // Gemini: candidates[0].content.parts[].text (thought parts excluded)
+        $candidate = is_array($raw['candidates'][0] ?? null) ? $raw['candidates'][0] : [];
+        foreach (is_array($candidate['content']['parts'] ?? null) ? $candidate['content']['parts'] : [] as $part) {
+            if (is_array($part) && is_string($part['text'] ?? null) && ($part['thought'] ?? false) !== true) {
+                $text .= $part['text'];
+            }
+        }
+
+        return $text;
     }
 
     /**

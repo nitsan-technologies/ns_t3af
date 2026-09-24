@@ -86,25 +86,10 @@ final class McpToolSeverityResolverTest extends TestCase
     }
 
     #[Test]
-    public function resolveFromToolNameHeuristicsClassifiesSatelliteTools(): void
-    {
-        self::assertSame(ToolSeverity::Read, $this->resolver->resolveFromToolNameHeuristics('t3ai_mass_seo_queue_list'));
-        self::assertSame(ToolSeverity::Read, $this->resolver->resolveFromToolNameHeuristics('t3aa_get_page_speed'));
-        self::assertSame(ToolSeverity::Read, $this->resolver->resolveFromToolNameHeuristics('t3aa_summarize_content'));
-        self::assertSame(ToolSeverity::Read, $this->resolver->resolveFromToolNameHeuristics('t3cs_list_datasources'));
-        self::assertSame(ToolSeverity::Read, $this->resolver->resolveFromToolNameHeuristics('t3ac_chatbot_settings'));
-
-        self::assertSame(ToolSeverity::Write, $this->resolver->resolveFromToolNameHeuristics('t3ai_generate_all_seo'));
-        self::assertSame(ToolSeverity::Write, $this->resolver->resolveFromToolNameHeuristics('t3ai_mass_translation_queue_add'));
-        self::assertSame(ToolSeverity::Write, $this->resolver->resolveFromToolNameHeuristics('t3aa_update_file_metadata'));
-        self::assertSame(ToolSeverity::Write, $this->resolver->resolveFromToolNameHeuristics('t3cs_save_datasource'));
-    }
-
-    #[Test]
-    public function resolveForToolNamePrefersDynamicOperationOverHeuristics(): void
+    public function resolveForToolNameOnlyKnowsDynamicOperations(): void
     {
         self::assertSame(ToolSeverity::Read, $this->resolver->resolveForToolName('blog_post_list'));
-        self::assertSame(ToolSeverity::Write, $this->resolver->resolveForToolName('t3ai_create_page_simple'));
+        self::assertNull($this->resolver->resolveForToolName('t3ai_create_page_simple'));
     }
 }
 

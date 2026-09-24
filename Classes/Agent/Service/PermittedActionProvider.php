@@ -19,10 +19,12 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Service;
 
+use NITSAN\NsT3AF\Access\Dto\AgentToolPolicy;
 use NITSAN\NsT3AF\Agent\Contract\AgentActionCatalogInterface;
 use NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
+use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
  * Permitted tool catalog for the AI Agent (T4).
@@ -52,6 +54,7 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
         private AgentToolPlanResolver $toolPlanResolver,
         private AgentToolEditorLabelService $editorLabelService,
         private AgentTranslator $translator,
+        private AgentGovernanceGuard $governanceGuard,
     ) {}
 
     /**
@@ -61,12 +64,14 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
     {
         $executable = [];
         $locked = [];
+        $backendUser = $GLOBALS['BE_USER'] ?? null;
+        $policy = $this->governanceGuard->agentToolPolicy($backendUser instanceof BackendUserAuthentication ? $backendUser : null);
 
         foreach ($this->toolIntrospector->listTools() as $tool) {
             if ($this->isHiddenFromAgent($tool)) {
                 continue;
             }
-            $entry = $this->normalizeToolEntry($tool);
+            $entry = $this->normalizeToolEntry($tool, $policy);
             if (($entry['executable'] ?? false) === true) {
                 $executable[] = $entry;
             } else {
@@ -114,7 +119,7 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
      * @param array<string, mixed> $tool
      * @return array<string, mixed>
      */
-    private function normalizeToolEntry(array $tool): array
+    private function normalizeToolEntry(array $tool, AgentToolPolicy $policy): array
     {
         $toolName = (string) ($tool['name'] ?? '');
         $ownerKey = (string) ($tool['ownerExtensionKey'] ?? self::CORE_EXTENSION_KEY);
@@ -146,6 +151,10 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
             $executable = false;
             $lockKind = 'severity';
             $lockReason = $this->translator->translate('agent.tool.unclassified');
+        } elseif ($policy->blocks($toolName, $severity)) {
+            $executable = false;
+            $lockKind = 'group';
+            $lockReason = $this->translator->translate('agent.tool.blockedForGroup');
         } elseif (!$this->entitlementResolver->isExecutable($ownerKey)) {
             $executable = false;
             $lockKind = 'extension';

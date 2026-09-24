@@ -22,8 +22,9 @@ namespace NITSAN\NsT3AF\Agent\Service;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Exception\UnsupportedPlanException;
 use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
-use NITSAN\NsT3AF\Mcp\Service\McpToolSeverityResolver;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Core\Site\SiteFinder;
 
 /**
  * Generic draft plans for T3Planet satellite MCP write tools (t3ai, t3aa, t3cs, …).
@@ -47,9 +48,10 @@ final readonly class SatelliteToolPlanService
     ];
 
     public function __construct(
-        private McpToolSeverityResolver $severityResolver,
+        private DeclaredToolSeverityLookup $severityLookup,
         private McpConfirmationPlanBuilder $confirmationPlanBuilder,
         private AgentTranslator $translator,
+        private ?SiteFinder $siteFinder = null,
     ) {}
 
     public function supports(string $toolName): bool
@@ -58,7 +60,7 @@ final readonly class SatelliteToolPlanService
             return false;
         }
 
-        $severity = $this->severityResolver->resolveForToolName($toolName);
+        $severity = $this->severityLookup->severityFor($toolName);
 
         return $severity === ToolSeverity::Write || $severity === ToolSeverity::Destructive;
     }
@@ -72,7 +74,7 @@ final readonly class SatelliteToolPlanService
             throw new UnsupportedPlanException($this->translator->translate('agent.plan.satelliteUnsupported', [$toolName]));
         }
 
-        $severity = $this->severityResolver->resolveForToolName($toolName);
+        $severity = $this->severityLookup->severityFor($toolName);
         $action = $severity === ToolSeverity::Destructive ? 'delete' : 'update';
         $displayArguments = $this->normalizeDisplayArguments($arguments);
         $summary = $this->buildSummary($toolName, $displayArguments);
@@ -118,23 +120,85 @@ final readonly class SatelliteToolPlanService
     }
 
     /**
+     * Editor-facing rows: translated parameter names (`agent.arg.<key>`) and names instead of ids
+     * for pages and languages ("„Home“ [1]", "German [1]").
+     *
      * @param array<string, mixed> $arguments
-     * @return list<array{key: string, value: string}>
+     * @return list<array{key: string, value: string, label?: string}>
      */
     private function formatDisplayArguments(array $arguments): array
     {
+        $pageId = (int) ($arguments['pageId'] ?? 0);
         $rows = [];
         foreach ($arguments as $key => $value) {
             if (!is_string($key) || $key === '') {
                 continue;
             }
-            $rows[] = [
+            $row = [
                 'key' => $key,
-                'value' => $this->formatArgumentValue($value),
+                'value' => $this->formatDisplayValue($key, $value, $pageId),
             ];
+            $label = $this->translator->translate('agent.arg.' . $key);
+            if ($label !== 'agent.arg.' . $key && $label !== '') {
+                $row['label'] = $label;
+            }
+            $rows[] = $row;
         }
 
         return $rows;
+    }
+
+    private function formatDisplayValue(string $key, mixed $value, int $pageId): string
+    {
+        $list = is_array($value) ? array_values($value) : [$value];
+        $ids = array_map(static fn(mixed $item): int => is_numeric($item) ? (int) $item : 0, $list);
+
+        if (is_bool($value)) {
+            return $this->translator->translate($value ? 'agent.arg.yes' : 'agent.arg.no');
+        }
+
+        return match ($key) {
+            'pageId', 'pageIds' => implode(', ', array_map(fn(int $uid): string => $this->pageLabel($uid), $ids)),
+            'languageUid', 'targetLanguageUid', 'languageUids' => implode(', ', array_map(fn(int $uid): string => $this->languageLabel($uid, $pageId), $ids)),
+            default => $this->formatArgumentValue($value),
+        };
+    }
+
+    private function pageLabel(int $uid): string
+    {
+        if ($uid <= 0) {
+            return (string) $uid;
+        }
+        try {
+            $title = trim((string) (BackendUtility::getRecord('pages', $uid, 'title')['title'] ?? ''));
+        } catch (\Throwable) {
+            $title = '';
+        }
+
+        return $title !== '' ? sprintf('„%s“ [%d]', $title, $uid) : (string) $uid;
+    }
+
+    private function languageLabel(int $uid, int $pageId): string
+    {
+        if ($uid < 0) {
+            return $this->translator->translate('agent.arg.allLanguages');
+        }
+        if ($this->siteFinder === null) {
+            return (string) $uid;
+        }
+        try {
+            $sites = $pageId > 0 ? [$this->siteFinder->getSiteByPageId($pageId)] : $this->siteFinder->getAllSites();
+            foreach ($sites as $site) {
+                foreach ($site->getAllLanguages() as $language) {
+                    if ($language->getLanguageId() === $uid) {
+                        return sprintf('%s [%d]', $language->getTitle(), $uid);
+                    }
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return (string) $uid;
     }
 
     /**
@@ -143,7 +207,7 @@ final readonly class SatelliteToolPlanService
     private function buildSummary(string $toolName, array $arguments): string
     {
         $pageId = (int) ($arguments['pageId'] ?? 0);
-        $pageHint = $pageId > 0 ? $this->translator->translate('agent.plan.pageHint', [$pageId]) : '';
+        $pageHint = $pageId > 0 ? $this->translator->translate('agent.plan.pageHint', [$this->pageLabel($pageId)]) : '';
 
         $labelKey = match ($toolName) {
             't3ai_generate_all_seo' => 'agent.plan.generateAllSeo',
@@ -155,6 +219,14 @@ final readonly class SatelliteToolPlanService
             't3cs_sync_datasource' => 'agent.plan.syncDatasource',
             default => 'agent.plan.runTool',
         };
+
+        if ($labelKey === 'agent.plan.runTool') {
+            // Any other child tool: its editor label ("Translate the whole page") instead of "Run this tool".
+            $toolLabel = $this->translator->translate('agent.tool.label.' . $toolName);
+            if ($toolLabel !== 'agent.tool.label.' . $toolName && $toolLabel !== '') {
+                return $this->translator->translate('agent.plan.namedTool', [$toolLabel, $pageHint]);
+            }
+        }
 
         return $this->translator->translate($labelKey, [$pageHint]);
     }

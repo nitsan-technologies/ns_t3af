@@ -258,6 +258,26 @@ final class SymfonyAiPlatformTest extends TestCase
             lastStatusMessage: '',
         );
     }
+
+    public function testMessageBagKeepsToolRounds(): void
+    {
+        $bag = (new SymfonyAiMessageBagFactory())->createFromChatMessages([
+            ['role' => 'system', 'content' => 'SYSTEM'],
+            ['role' => 'user', 'content' => 'Title of page 49?'],
+            ['role' => 'assistant', 'content' => null, 'tool_calls' => [['id' => 'call_1', 'name' => 'pages_get', 'arguments' => ['uid' => 49]]]],
+            ['role' => 'tool', 'tool_call_id' => 'call_1', 'name' => 'pages_get', 'content' => 'AI ChEddi'],
+        ]);
+
+        self::assertInstanceOf(\Symfony\AI\Platform\Message\MessageBag::class, $bag);
+        $messages = $bag->getMessages();
+        self::assertCount(4, $messages);
+        self::assertInstanceOf(\Symfony\AI\Platform\Message\AssistantMessage::class, $messages[2]);
+        self::assertSame('pages_get', $messages[2]->getToolCalls()[0]->getName());
+        self::assertSame(['uid' => 49], $messages[2]->getToolCalls()[0]->getArguments());
+        self::assertInstanceOf(\Symfony\AI\Platform\Message\ToolCallMessage::class, $messages[3]);
+        self::assertSame('call_1', $messages[3]->getToolCall()->getId());
+        self::assertSame('AI ChEddi', $messages[3]->asText());
+    }
 }
 
 final class SymfonyAiTextResultStub

@@ -20,7 +20,16 @@ DualMode write tools that implement `McpPreviewableToolInterface` never blind-ap
 - Agent schema for `t3ai_generate_all_seo` exposes `fieldKeys` + `variants` (`AgentToolDefinitionMapper`).
 - Child tools must put every requested field on every variant (empty string allowed). Incomplete variants skip missing keys on resolve.
 
+## After apply / decline
+
+- The apply response carries `result.readback[*].recordLabel` + `fieldLabels` and `links` (per record: Open page, Edit, View on website; at most 3 records, only readable tables).
+- With `agentContinueAfterConfirm` on, a confirm or decline on a card the runner produced sends one `continuation` turn (`{outcome: applied|declined, label, result}`). The server stores it as a hidden user message and tells the model what happened, so a multi-step request continues without the editor typing "continue". **Execute all** merges the confirmed cards into one continuation.
+
+## Array parameters
+
+Tool parameters typed `array` get a JSON-schema `items` (or `type: object` for `array<string, …>`) from the `@param` docblock (`AgentToolDefinitionMapper::arrayShape`). OpenAI rejects array parameters without `items`. Put the docblock above the `#[McpTool]` attribute.
+
 ## Related
 
-- Routing / shortlist: `Documentation/Agent/Routing.md`
+- Routing / tool selection: `Documentation/Agent/Routing.md`
 - Low-risk matrix tests: `Tests/Unit/Agent/AgentLowRiskFieldMatrixTest.php`

@@ -57,7 +57,7 @@ final class OpenAiCompatiblePlatform
     {
         $body = [
             'model' => $modelId,
-            'messages' => $messages,
+            'messages' => $this->toWireMessages($messages),
         ];
         if (!$this->isReasoningModel($modelId)) {
             $body['temperature'] = $this->provider->temperature;
@@ -70,7 +70,7 @@ final class OpenAiCompatiblePlatform
                 ],
                 $tools,
             );
-            $body['tool_choice'] = 'required';
+            $body['tool_choice'] = 'auto';
         }
 
         $response = $this->postJson($this->chatCompletionsPath(), $body);
@@ -106,6 +106,67 @@ final class OpenAiCompatiblePlatform
             'usage' => $usage,
             'raw' => $decoded,
         ];
+    }
+
+    /**
+     * Internal tool-round messages → OpenAI chat/completions shape.
+     *
+     * Internal: assistant `tool_calls: [{id, name, arguments: array}]`, tool `{tool_call_id, name, content}`.
+     * Wire: assistant `tool_calls: [{id, type: function, function: {name, arguments: json}}]`.
+     *
+     * @param list<array<string, mixed>> $messages
+     * @return list<array<string, mixed>>
+     */
+    private function toWireMessages(array $messages): array
+    {
+        $wire = [];
+        foreach ($messages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $role = is_string($message['role'] ?? null) ? $message['role'] : 'user';
+            if ($role === 'assistant' && is_array($message['tool_calls'] ?? null) && $message['tool_calls'] !== []) {
+                $calls = [];
+                foreach ($message['tool_calls'] as $call) {
+                    if (!is_array($call)) {
+                        continue;
+                    }
+                    if (isset($call['function']) && is_array($call['function'])) {
+                        $calls[] = $call;
+                        continue;
+                    }
+                    $arguments = $call['arguments'] ?? [];
+                    $calls[] = [
+                        'id' => (string) ($call['id'] ?? ''),
+                        'type' => 'function',
+                        'function' => [
+                            'name' => (string) ($call['name'] ?? ''),
+                            'arguments' => is_string($arguments)
+                                ? $arguments
+                                : json_encode(is_array($arguments) && $arguments !== [] ? $arguments : new \stdClass(), JSON_THROW_ON_ERROR),
+                        ],
+                    ];
+                }
+                $content = $message['content'] ?? null;
+                $wire[] = [
+                    'role' => 'assistant',
+                    'content' => is_string($content) && $content !== '' ? $content : null,
+                    'tool_calls' => $calls,
+                ];
+                continue;
+            }
+            if ($role === 'tool') {
+                $wire[] = [
+                    'role' => 'tool',
+                    'tool_call_id' => (string) ($message['tool_call_id'] ?? ''),
+                    'content' => (string) ($message['content'] ?? ''),
+                ];
+                continue;
+            }
+            $wire[] = ['role' => $role, 'content' => $message['content'] ?? ''];
+        }
+
+        return $wire;
     }
 
     /**

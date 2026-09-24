@@ -13,14 +13,14 @@ Two layers validate the approved behaviour contract:
    ```bash
    composer test -- Tests/Unit/Agent/
    ```
-   Covers severity resolution, entitlement mirroring, draft service, behaviour contracts, shortlist, structural router, preview draft isolation, and suggestions apply.
+   Covers severity resolution, entitlement mirroring, draft service, behaviour contracts, tool selection, structural router, preview draft isolation, and suggestions apply.
 
 ## Phase 3–5 verify (routing / preview / apply)
 
 | Phase | What to check | Command / place |
 |---|---|---|
-| 3 Shortlist | Embeddings + fallbacks, `routingSource` | `composer test -- Tests/Unit/Agent/AgentToolShortlistServiceTest.php` · warm index `t3af:agent:index-tools` |
-| 4 Router | Slash / `@` / chips structural; NL → orchestrator only | `Tests/Unit/Agent/AgentTurnRouterTest.php` |
+| 3 Tool selection | Core set, `find_tools` ranking, argument validation, group policy | `composer test -- Tests/Unit/Agent/AgentToolSelectionTest.php Tests/Unit/Agent/AgentToolGuardsTest.php Tests/Unit/Agent/AgentRunnerTest.php` · warm index `t3af:agent:index-tools` |
+| 4 Router | Slash / `@` / chips structural; NL → `AgentRunner` only | `Tests/Unit/Agent/AgentTurnRouterTest.php` |
 | 5 Preview apply | Suggestions card → `applySuggestions` exact values | BE: DualMode SEO/file tool → card → Apply · `AgentWriteServiceSuggestionsTest` |
 | 6 Eval | Fixture replay without API keys | `vendor/bin/typo3 t3af:agent:eval` · docs `Documentation/Agent/Eval.md` |
 

@@ -82,6 +82,23 @@ final class AgentLabelCoverageTest extends TestCase
         }
     }
 
+    #[Test]
+    public function everyCoreToolHasAnEditorLabel(): void
+    {
+        $english = $this->agentLabels('default');
+        $missing = [];
+        foreach ($this->phpFiles(self::EXTENSION_DIR . '/Classes/Mcp/Tool') as $file) {
+            preg_match_all('/#\[McpTool\(\s*name:\s*\'([a-z0-9_]+)\'/', (string) file_get_contents($file), $matches);
+            foreach ($matches[1] as $toolName) {
+                if (!isset($english['agent.tool.label.' . $toolName])) {
+                    $missing[] = $toolName;
+                }
+            }
+        }
+
+        self::assertSame([], $missing, 'MCP tools without agent.tool.label.<name> in locallang_be.xlf');
+    }
+
     /**
      * @return array<string, string>
      */

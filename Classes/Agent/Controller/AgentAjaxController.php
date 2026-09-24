@@ -21,15 +21,20 @@ namespace NITSAN\NsT3AF\Agent\Controller;
 
 use GuzzleHttp\Psr7\PumpStream;
 use NITSAN\NsT3AF\Access\RecordAccessGate;
-use NITSAN\NsT3AF\Agent\Context\AgentContextResolver;
+use NITSAN\NsT3AF\Agent\Context\AgentContextPresenter;
 use NITSAN\NsT3AF\Agent\Service\AgentAuditLogger;
 use NITSAN\NsT3AF\Agent\Service\AgentAvailabilityService;
 use NITSAN\NsT3AF\Agent\Service\AgentConversationSession;
+use NITSAN\NsT3AF\Agent\Service\AgentCreditsStatus;
 use NITSAN\NsT3AF\Agent\Service\AgentDraftSession;
 use NITSAN\NsT3AF\Agent\Service\AgentGovernanceGuard;
 use NITSAN\NsT3AF\Agent\Service\AgentLowRiskFieldMatrix;
+use NITSAN\NsT3AF\Agent\Service\AgentProviderOptions;
 use NITSAN\NsT3AF\Agent\Service\AgentRecordAttachmentResolver;
+use NITSAN\NsT3AF\Agent\Service\AgentRecordLabeler;
 use NITSAN\NsT3AF\Agent\Service\AgentSchedulerHandoff;
+use NITSAN\NsT3AF\Agent\Service\AgentSessionPresenter;
+use NITSAN\NsT3AF\Agent\Service\AgentSettingsService;
 use NITSAN\NsT3AF\Agent\Service\AgentStarterBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentTargetPageResolver;
 use NITSAN\NsT3AF\Agent\Service\AgentTranslator;
@@ -38,9 +43,9 @@ use NITSAN\NsT3AF\Agent\Service\AgentTurnRouter;
 use NITSAN\NsT3AF\Agent\Service\AgentUndoService;
 use NITSAN\NsT3AF\Agent\Service\AgentWriteService;
 use NITSAN\NsT3AF\Agent\Service\PermittedActionProvider;
+use NITSAN\NsT3AF\Domain\Repository\AgentConversationRepository;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
-use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Utility\AiUniverseUtilityHelper;
 use NITSAN\NsT3AF\Utility\ModuleTabUtility;
@@ -52,10 +57,8 @@ use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\Exception\SiteNotFoundException;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use TYPO3\CMS\Core\Http\Response;
-use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
 
 /**
@@ -81,16 +84,20 @@ final class AgentAjaxController
         private readonly AgentStarterBuilder $starterBuilder,
         private readonly AgentRecordAttachmentResolver $recordAttachmentResolver,
         private readonly AgentLowRiskFieldMatrix $lowRiskFieldMatrix,
-        private readonly AgentContextResolver $agentContextResolver,
+        private readonly AgentContextPresenter $contextPresenter,
+        private readonly AgentSessionPresenter $sessionPresenter,
+        private readonly AgentProviderOptions $providerOptions,
+        private readonly AgentConversationRepository $conversationRepository,
+        private readonly AgentRecordLabeler $recordLabeler,
+        private readonly AgentSettingsService $agentSettings,
+        private readonly AgentCreditsStatus $creditsStatus,
         private readonly FileService $fileService,
-        private readonly WorkspaceListService $workspaceListService,
         private readonly ModuleTabUtility $moduleTabUtility,
         private readonly RecordAccessGate $recordAccessGate,
         private readonly UriBuilder $uriBuilder,
         private readonly ConnectionPool $connectionPool,
         private readonly AgentTurnRouter $turnRouter,
         private readonly AgentTargetPageResolver $targetPageResolver,
-        private readonly SiteFinder $siteFinder,
         private readonly AgentTranslator $translator,
     ) {}
 
@@ -129,6 +136,10 @@ final class AgentAjaxController
         ]);
     }
 
+    /**
+     * Opens a conversation: the requested session (sessionUuid), a fresh one (fresh=1), or the
+     * latest one of the configured scope for the current page / module.
+     */
     public function conversationAction(ServerRequestInterface $request): ResponseInterface
     {
         if ($denied = $this->denyUnlessAvailable()) {
@@ -139,8 +150,21 @@ final class AgentAjaxController
             return $this->conversationSaveAction($request);
         }
 
+        $user = $this->resolveBackendUser();
+        if ($user === null) {
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.forbidden')], 403);
+        }
+
+        $query = $request->getQueryParams();
         $context = $this->resolveContext($request);
-        $this->bindConversationScope($context);
+        $this->applyWorkspaceContext($user, (int) ($context['workspaceId'] ?? 0));
+        $row = $this->conversationSession->resolve(
+            $user,
+            $context,
+            trim((string) ($query['sessionUuid'] ?? '')),
+            (string) ($query['fresh'] ?? '') === '1',
+        );
+
         $messages = array_map(static function (array $message): array {
             if (is_array($message['meta'] ?? null)) {
                 $message['meta'] = self::sanitizeMessageMetaStatic($message['meta']);
@@ -156,50 +180,138 @@ final class AgentAjaxController
             'context' => $context,
             'starters' => $starters,
             'greeting' => $this->buildGreeting($context, $starters),
-            'disclosureDismissed' => $this->conversationSession->isDisclosureDismissed(),
+            'disclosureDismissed' => $this->conversationSession->isDisclosureDismissed($user),
+            'session' => $row !== null ? $this->sessionPresenter->summary($row, $context, $user) : null,
+            'sessionList' => $this->sessionPresenter->listSettings(),
+            'providers' => $this->providerOptions->options((int) ($context['pageId'] ?? 0), $user),
+            'continueAfterConfirm' => $this->agentSettings->isContinueAfterConfirmEnabled(),
+            'credits' => $this->creditsStatus->status(),
         ]);
     }
 
+    /**
+     * Stores the window's copy of the active conversation (draft decisions, readbacks).
+     * Only for a session the user owns; turns are stored by the server itself.
+     */
     public function conversationSaveAction(ServerRequestInterface $request): ResponseInterface
     {
         if ($denied = $this->denyUnlessAvailable()) {
             return $denied;
         }
 
+        $user = $this->resolveBackendUser();
+        if ($user === null) {
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.forbidden')], 403);
+        }
+
         $body = $this->parseRequestBody($request);
-        $messages = $body['messages'] ?? [];
+        if (array_key_exists('disclosureDismissed', $body)) {
+            $this->conversationSession->setDisclosureDismissed((bool) $body['disclosureDismissed'], $user);
+        }
+
+        $sessionUuid = trim((string) ($body['sessionUuid'] ?? ''));
+        $messages = $body['messages'] ?? null;
+        if ($sessionUuid === '' || $messages === null) {
+            return new JsonResponse(['ok' => true]);
+        }
         if (!is_array($messages)) {
             return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.invalidPayload')], 400);
         }
 
-        $context = is_array($body['context'] ?? null) ? $body['context'] : [];
-        $this->bindConversationScope($context);
+        $context = $this->resolveContext($request, is_array($body['context'] ?? null) ? $body['context'] : []);
+        if ($this->conversationSession->resolve($user, $context, $sessionUuid) === null) {
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.session.notFound')], 404);
+        }
 
+        // The window's copy lacks server-only meta (where a message was written, correlation id):
+        // keep it for messages the server already stored at the same position.
+        $stored = $this->conversationSession->getMessages();
         $normalized = [];
-        foreach ($messages as $message) {
+        foreach (array_values($messages) as $index => $message) {
             if (!is_array($message)) {
                 continue;
             }
-            $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
-            $normalized[] = [
-                'role' => (string) ($message['role'] ?? 'assistant'),
-                'content' => (string) ($message['content'] ?? ''),
-                'meta' => $this->sanitizeMessageMeta($meta),
-            ];
+            $meta = $this->sanitizeMessageMeta(is_array($message['meta'] ?? null) ? $message['meta'] : []);
+            $role = (string) ($message['role'] ?? 'assistant');
+            $content = (string) ($message['content'] ?? '');
+            $previous = $stored[$index] ?? null;
+            if (is_array($previous) && ($previous['role'] ?? '') === $role && (string) ($previous['content'] ?? '') === $content) {
+                $previousMeta = is_array($previous['meta'] ?? null) ? $previous['meta'] : [];
+                foreach (['context', 'correlationId'] as $key) {
+                    if (!array_key_exists($key, $meta) && array_key_exists($key, $previousMeta)) {
+                        $meta[$key] = $previousMeta[$key];
+                    }
+                }
+            }
+            $normalized[] = ['role' => $role, 'content' => $content, 'meta' => $meta];
         }
-
-        $this->conversationSession->saveMessages($normalized);
-
-        $context = $body['context'] ?? null;
-        if (is_array($context)) {
-            $this->conversationSession->saveContext($context);
-        }
-
-        if (array_key_exists('disclosureDismissed', $body)) {
-            $this->conversationSession->setDisclosureDismissed((bool) $body['disclosureDismissed']);
-        }
+        $this->conversationSession->save($user, $normalized, $context);
 
         return new JsonResponse(['ok' => true]);
+    }
+
+    /**
+     * The user's conversations: filter=current (this page / module) or all.
+     */
+    public function sessionsAction(ServerRequestInterface $request): ResponseInterface
+    {
+        if ($denied = $this->denyUnlessAvailable()) {
+            return $denied;
+        }
+        $user = $this->resolveBackendUser();
+        if ($user === null) {
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.forbidden')], 403);
+        }
+
+        $query = $request->getQueryParams();
+        $context = $this->resolveContext($request);
+        $limit = max(1, min(50, (int) ($query['limit'] ?? 20)));
+        $offset = max(0, (int) ($query['offset'] ?? 0));
+        $sessions = $this->sessionPresenter->list(
+            $user,
+            (string) ($query['filter'] ?? 'current') === 'all' ? 'all' : 'current',
+            $context,
+            $limit + 1,
+            $offset,
+        );
+
+        return new JsonResponse([
+            'ok' => true,
+            'sessions' => array_slice($sessions, 0, $limit),
+            'hasMore' => count($sessions) > $limit,
+        ]);
+    }
+
+    public function sessionRenameAction(ServerRequestInterface $request): ResponseInterface
+    {
+        if ($denied = $this->denyUnlessAvailable()) {
+            return $denied;
+        }
+        $user = $this->resolveBackendUser();
+        $body = $this->parseRequestBody($request);
+        $title = trim((string) preg_replace('/\s+/u', ' ', (string) ($body['title'] ?? '')));
+        if ($user === null || $title === '') {
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.invalidPayload')], 400);
+        }
+
+        $ok = $this->conversationRepository->rename(trim((string) ($body['sessionUuid'] ?? '')), (int) ($user->user['uid'] ?? 0), $title);
+
+        return new JsonResponse(['ok' => $ok], $ok ? 200 : 404);
+    }
+
+    public function sessionDeleteAction(ServerRequestInterface $request): ResponseInterface
+    {
+        if ($denied = $this->denyUnlessAvailable()) {
+            return $denied;
+        }
+        $user = $this->resolveBackendUser();
+        if ($user === null) {
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.forbidden')], 403);
+        }
+        $body = $this->parseRequestBody($request);
+        $ok = $this->conversationRepository->softDelete(trim((string) ($body['sessionUuid'] ?? '')), (int) ($user->user['uid'] ?? 0));
+
+        return new JsonResponse(['ok' => $ok], $ok ? 200 : 404);
     }
 
     public function settingsLinkAction(ServerRequestInterface $request): ResponseInterface
@@ -334,10 +446,85 @@ final class AgentAjaxController
 
         return new JsonResponse([
             'ok' => true,
-            'result' => $result,
+            'result' => $this->labelReadback($result),
             'message' => $message,
             'schedulerHandoff' => $handoff,
+            'links' => $this->resultLinks($result, $storedDraft),
         ]);
+    }
+
+    /**
+     * Editor-facing names for the read-back records and fields.
+     *
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
+     */
+    private function labelReadback(array $result): array
+    {
+        foreach (is_array($result['readback'] ?? null) ? $result['readback'] : [] as $index => $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $table = (string) ($entry['table'] ?? '');
+            $uid = (int) ($entry['uid'] ?? 0);
+            $result['readback'][$index]['recordLabel'] = $this->recordLabeler->recordLabel($table, $uid);
+            $fieldLabels = [];
+            foreach (array_keys(is_array($entry['values'] ?? null) ? $entry['values'] : []) as $field) {
+                $fieldLabels[(string) $field] = $this->recordLabeler->fieldLabel($table, (string) $field);
+            }
+            $result['readback'][$index]['fieldLabels'] = $fieldLabels;
+        }
+
+        return $result;
+    }
+
+    /**
+     * "Open page", "Edit", "View" for the records a confirmed change touched (max. 3 records).
+     *
+     * @param array<string, mixed> $result
+     * @param array<string, mixed> $storedDraft
+     * @return list<array{record: string, links: list<array{kind: string, label: string, href: string}>}>
+     */
+    private function resultLinks(array $result, array $storedDraft): array
+    {
+        $records = [];
+        foreach (is_array($result['readback'] ?? null) ? $result['readback'] : [] as $entry) {
+            if (is_array($entry)) {
+                $records[] = [(string) ($entry['table'] ?? ''), (int) ($entry['uid'] ?? 0)];
+            }
+        }
+        $target = $storedDraft['previewResult']['target'] ?? null;
+        if (is_array($target)) {
+            $records[] = [(string) ($target['table'] ?? ''), (int) ($target['uid'] ?? 0)];
+        }
+        // Confirmed child tools (translate page, generate SEO, …): the page they worked on.
+        if (($result['toolConfirmation'] ?? false) === true) {
+            $arguments = is_array($storedDraft['arguments'] ?? null) ? $storedDraft['arguments'] : [];
+            $pageId = (int) ($arguments['pageId'] ?? 0);
+            if ($pageId > 0) {
+                $records[] = ['pages', $pageId];
+            }
+        }
+        $user = $this->resolveBackendUser();
+
+        $out = [];
+        $seen = [];
+        foreach ($records as [$table, $uid]) {
+            $key = $table . ':' . $uid;
+            if ($table === '' || $uid <= 0 || isset($seen[$key]) || !$this->recordAccessGate->canSelectTable($user, $table)) {
+                continue;
+            }
+            $seen[$key] = true;
+            $links = $this->recordLabeler->links($table, $uid);
+            if ($links !== []) {
+                $out[] = ['record' => $this->recordLabeler->recordLabel($table, $uid), 'links' => $links];
+            }
+            if (count($out) >= 3) {
+                break;
+            }
+        }
+
+        return $out;
     }
 
     public function uploadAction(ServerRequestInterface $request): ResponseInterface
@@ -509,40 +696,31 @@ final class AgentAjaxController
         }
 
         $correlationId = $this->turnRepository->startTurn((int) ($user->user['uid'] ?? 0));
-
-        $context = $this->resolveContext($request, is_array($body['context'] ?? null) ? $body['context'] : []);
-        $context = $this->applyTargetPageFromMessage($message, $context, $user);
-        $this->bindConversationScope($context);
-
-        $messages = $this->conversationSession->getMessages();
-        $messages[] = [
-            'role' => 'user',
-            'content' => $message,
-            'meta' => ['correlationId' => $correlationId],
-        ];
-
-        $assistantMessages = $this->turnRouter->route(
-            $message,
-            $context,
-            $body,
-            $user,
-            $correlationId,
-            $messages,
-        );
-
-        foreach ($assistantMessages as $assistantMessage) {
-            $messages[] = $assistantMessage;
+        $turn = $this->prepareTurn($request, $body, $message, $user, $correlationId);
+        if ($turn instanceof JsonResponse) {
+            return $turn;
         }
 
-        $this->conversationSession->saveMessages($messages);
-        $this->conversationSession->saveContext($context);
+        $assistantMessages = $this->turnRouter->route(
+            $turn['message'],
+            $turn['turnContext'],
+            $turn['body'],
+            $user,
+            $correlationId,
+            $turn['history'],
+        );
+
+        $this->conversationSession->save($user, [...$turn['messages'], ...$assistantMessages], $turn['context'], $turn['provider']);
 
         return new JsonResponse([
             'ok' => true,
             'messages' => $assistantMessages,
-            'context' => $context,
-            'starters' => $this->buildStarters($context),
+            'context' => $turn['context'],
+            'starters' => $this->buildStarters($turn['context']),
             'correlationId' => $correlationId,
+            'session' => $this->activeSessionSummary($turn['context'], $user),
+            'credits' => $this->creditsStatus->status(),
+            'userMessage' => $turn['messages'][count($turn['messages']) - 1],
         ]);
     }
 
@@ -576,24 +754,12 @@ final class AgentAjaxController
         }
 
         $correlationId = $this->turnRepository->startTurn((int) ($user->user['uid'] ?? 0));
-        $context = $this->resolveContext($request, is_array($body['context'] ?? null) ? $body['context'] : []);
-        $context = $this->applyTargetPageFromMessage($message, $context, $user);
-        $this->bindConversationScope($context);
-        $messages = $this->conversationSession->getMessages();
-        $messages[] = [
-            'role' => 'user',
-            'content' => $message,
-            'meta' => ['correlationId' => $correlationId],
-        ];
+        $turn = $this->prepareTurn($request, $body, $message, $user, $correlationId);
+        if ($turn instanceof JsonResponse) {
+            return $turn;
+        }
 
-        $streamBody = new PumpStream(function () use (
-            $message,
-            $messages,
-            $context,
-            $body,
-            $user,
-            $correlationId,
-        ): false {
+        $streamBody = new PumpStream(function () use ($turn, $user, $correlationId): false {
             static $emitted = false;
             if ($emitted) {
                 return false;
@@ -601,33 +767,31 @@ final class AgentAjaxController
             $emitted = true;
 
             $this->configureSseStream();
-            $assistantMessages = [];
 
             try {
                 $assistantMessages = $this->turnRouter->route(
-                    $message,
-                    $context,
-                    $body,
+                    $turn['message'],
+                    $turn['turnContext'],
+                    $turn['body'],
                     $user,
                     $correlationId,
-                    $messages,
+                    $turn['history'],
                     function (string $event, array $payload): void {
                         $this->emitSseEvent($event, $payload);
                     },
                 );
 
-                foreach ($assistantMessages as $assistantMessage) {
-                    $messages[] = $assistantMessage;
-                }
-                $this->conversationSession->saveMessages($messages);
-                $this->conversationSession->saveContext($context);
+                $this->conversationSession->save($user, [...$turn['messages'], ...$assistantMessages], $turn['context'], $turn['provider']);
 
                 $this->emitSseEvent('done', [
                     'ok' => true,
                     'messages' => $assistantMessages,
-                    'context' => $context,
-                    'starters' => $this->buildStarters($context),
+                    'context' => $turn['context'],
+                    'starters' => $this->buildStarters($turn['context']),
                     'correlationId' => $correlationId,
+                    'session' => $this->activeSessionSummary($turn['context'], $user),
+                    'credits' => $this->creditsStatus->status(),
+                    'userMessage' => $turn['messages'][count($turn['messages']) - 1],
                 ]);
             } catch (\Throwable $exception) {
                 $this->emitSseEvent('error', [
@@ -694,22 +858,117 @@ final class AgentAjaxController
     }
 
     /**
-     * @param array<string, mixed> $context
+     * Opens the conversation of this turn, locks its provider and builds the history.
+     *
+     * The conversation is chosen with the context of the page shown (its home for a new
+     * conversation); a page named in the message only changes the context of this turn.
+     *
+     * @param array<string, mixed> $body
+     * @return array{message: string, context: array<string, mixed>, turnContext: array<string, mixed>, body: array<string, mixed>, history: list<array<string, mixed>>, messages: list<array<string, mixed>>, provider: string}|JsonResponse
      */
-    private function bindConversationScope(array $context): void
-    {
-        $this->conversationSession->setScope(
-            trim((string) ($context['module'] ?? '')),
-            (int) ($context['pageId'] ?? 0),
-        );
+    private function prepareTurn(
+        ServerRequestInterface $request,
+        array $body,
+        string $message,
+        BackendUserAuthentication $user,
+        string $correlationId,
+    ): array|JsonResponse {
+        $context = $this->resolveContext($request, is_array($body['context'] ?? null) ? $body['context'] : []);
+        $this->applyWorkspaceContext($user, (int) ($context['workspaceId'] ?? 0));
+        $fresh = ($body['fresh'] ?? false) === true || (string) ($body['fresh'] ?? '') === '1';
+        $this->conversationSession->resolve($user, $context, trim((string) ($body['sessionUuid'] ?? '')), $fresh);
 
-        $user = $this->resolveBackendUser();
-        if ($user !== null) {
-            $this->applyWorkspaceContext($user, (int) ($context['workspaceId'] ?? 0));
+        $locked = $this->conversationSession->providerIdentifier();
+        $provider = $locked !== '' ? $locked : trim((string) ($body['provider'] ?? ''));
+        $provider = $provider !== '' ? $provider : AgentProviderOptions::DEFAULT;
+        if (!$this->providerOptions->isAllowed($provider, (int) ($context['pageId'] ?? 0), $user)) {
+            return new JsonResponse([
+                'ok' => true,
+                'messages' => [[
+                    'role' => 'assistant',
+                    'content' => $this->translator->translate('agent.provider.notAllowed'),
+                    'meta' => ['type' => 'governance_blocked', 'correlationId' => $correlationId],
+                ]],
+            ]);
         }
+        $body['provider'] = $provider;
+
+        $history = $this->conversationSession->getMessages();
+        $details = is_array($context['details'] ?? null) ? $context['details'] : [];
+        $continuation = is_array($body['continuation'] ?? null) ? $body['continuation'] : null;
+        if ($continuation !== null) {
+            $message = $this->continuationMessage($continuation);
+        }
+        $messages = $history;
+        $messages[] = [
+            'role' => 'user',
+            'content' => $message,
+            'meta' => [
+                'correlationId' => $correlationId,
+                // Continuation after confirm / decline: sent to the model, not shown in the window.
+                'hidden' => $continuation !== null,
+                'type' => $continuation !== null ? 'continuation' : 'message',
+                // Where the message was written; a reopened conversation shows and tells the model.
+                'context' => [
+                    'pageId' => (int) ($context['pageId'] ?? 0),
+                    'pageTitle' => (string) ($details['page']['title'] ?? ''),
+                    'module' => (string) ($context['module'] ?? ''),
+                    'moduleLabel' => (string) ($details['module']['label'] ?? ''),
+                ],
+            ],
+        ];
+
+        return [
+            'message' => $message,
+            'context' => $context,
+            'turnContext' => $continuation !== null ? $context : $this->applyTargetPageFromMessage($message, $context, $user),
+            'body' => $body,
+            'history' => $history,
+            'messages' => $messages,
+            'provider' => $provider,
+        ];
     }
 
     /**
+     * The instruction for the turn after the editor confirmed or declined a card (English, like
+     * the system prompt; the reply language rule still applies).
+     *
+     * @param array<mixed> $continuation {outcome: applied|declined, label: string, result: string}
+     */
+    private function continuationMessage(array $continuation): string
+    {
+        $label = mb_substr(trim((string) ($continuation['label'] ?? '')), 0, 120);
+        $result = mb_substr(trim((string) ($continuation['result'] ?? '')), 0, 600);
+        if (($continuation['outcome'] ?? '') === 'declined') {
+            return sprintf(
+                '[The editor declined "%s". Nothing was written.] Do not repeat it. If other steps of my request remain, continue with them;'
+                . ' otherwise ask in one short sentence what to do instead.',
+                $label,
+            );
+        }
+
+        return sprintf(
+            '[The editor confirmed "%s" and it was applied.%s] Continue with the remaining steps of my request.'
+            . ' If nothing is left, confirm in one short sentence.',
+            $label,
+            $result !== '' ? ' Result: ' . $result : '',
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @return array<string, mixed>|null
+     */
+    private function activeSessionSummary(array $context, BackendUserAuthentication $user): ?array
+    {
+        $row = $this->conversationSession->current();
+
+        return $row !== null ? $this->sessionPresenter->summary($row, $context, $user) : null;
+    }
+
+    /**
+     * A page named in the message ("page 12", "#12", a title) becomes the page of this turn.
+     *
      * @param array<string, mixed> $context
      * @return array<string, mixed>
      */
@@ -724,19 +983,11 @@ final class AgentAjaxController
             return $context;
         }
 
-        $context['pageId'] = $targetPageId;
-        if (!is_array($context['chips'] ?? null)) {
-            return $context;
-        }
-
-        foreach ($context['chips'] as $index => $chip) {
-            if (!is_array($chip) || (string) ($chip['key'] ?? '') !== 'page') {
-                continue;
-            }
-            $context['chips'][$index]['value'] = $this->resolvePageTitle($targetPageId) . ' [' . $targetPageId . ']';
-        }
-
-        return $context;
+        return $this->contextPresenter->present([
+            'pageId' => $targetPageId,
+            'module' => (string) ($context['module'] ?? ''),
+            'workspaceId' => (int) ($context['workspaceId'] ?? 0),
+        ], $user);
     }
 
     /**
@@ -797,9 +1048,11 @@ final class AgentAjaxController
             }
         }
 
+        $moduleLabel = (string) ($context['details']['module']['label'] ?? '');
+
         return [
             'page' => $page,
-            'module' => $module,
+            'module' => $moduleLabel !== '' ? $moduleLabel : $module,
             'language' => $language,
             'brand' => $brand,
             'executableCount' => count($starters['executable']),
@@ -827,77 +1080,7 @@ final class AgentAjaxController
             'folderIdentifier' => trim((string) ($clientContext['folderIdentifier'] ?? '')),
         ], $clientContext);
 
-        $resolved = $this->agentContextResolver->resolve($merged, $this->resolveBackendUser());
-
-        $chips = [];
-        if ($resolved->module !== '') {
-            $chips[] = [
-                'key' => 'module',
-                'label' => $this->translator->translate('agent.context.module'),
-                'value' => $resolved->module,
-            ];
-        }
-        if ($resolved->pageId > 0) {
-            $chips[] = [
-                'key' => 'page',
-                'label' => $this->translator->translate('agent.context.page'),
-                'value' => $this->resolvePageTitle($resolved->pageId) . ' [' . $resolved->pageId . ']',
-            ];
-        }
-        $storageUid = max(0, (int) ($merged['storageUid'] ?? 0));
-        $folderIdentifier = trim((string) ($merged['folderIdentifier'] ?? ''));
-        if ($storageUid > 0 && $folderIdentifier !== '') {
-            $chips[] = [
-                'key' => 'folder',
-                'label' => $this->translator->translate('agent.context.folder'),
-                'value' => $folderIdentifier . ' [storage ' . $storageUid . ']',
-            ];
-        }
-        if ($resolved->focusedRecord !== null) {
-            $chips[] = [
-                'key' => 'record',
-                'label' => $this->translator->translate('agent.context.record'),
-                'value' => $resolved->focusedRecord['table'] . ':' . $resolved->focusedRecord['uid'],
-            ];
-        }
-        if ($resolved->brandContextProfileUid !== null) {
-            $chips[] = [
-                'key' => 'brand',
-                'label' => $this->translator->translate('agent.context.brand'),
-                'value' => $resolved->brandName !== ''
-                    ? $resolved->brandName
-                    : ('Profile #' . $resolved->brandContextProfileUid),
-            ];
-        }
-        if ($resolved->languageId > 0) {
-            $chips[] = [
-                'key' => 'language',
-                'label' => $this->translator->translate('agent.context.language'),
-                'value' => $this->resolveLanguageTitle($resolved->languageId, $resolved->pageId),
-            ];
-        }
-        $chips[] = [
-            'key' => 'workspace',
-            'label' => $this->translator->translate('agent.context.workspace'),
-            'value' => $this->workspaceListService->resolveTitle($resolved->workspaceId),
-        ];
-
-        return [
-            'pageId' => $resolved->pageId,
-            'module' => $resolved->module,
-            'record' => $resolved->focusedRecord,
-            'languageId' => $resolved->languageId,
-            'workspaceId' => $resolved->workspaceId,
-            'storageUid' => $storageUid,
-            'folderIdentifier' => $folderIdentifier,
-            'chips' => $chips,
-            'contextAware' => $resolved->pageId > 0
-                || $resolved->focusedRecord !== null
-                || $resolved->module !== ''
-                || $resolved->languageId > 0
-                || $resolved->brandContextProfileUid !== null
-                || ($storageUid > 0 && $folderIdentifier !== ''),
-        ];
+        return $this->contextPresenter->present($merged, $this->resolveBackendUser());
     }
 
     /**
@@ -990,52 +1173,6 @@ final class AgentAjaxController
         }
 
         return $records;
-    }
-
-    private function resolvePageTitle(int $pageId): string
-    {
-        $connection = $this->connectionPool->getConnectionForTable('pages');
-        $queryBuilder = $connection->createQueryBuilder();
-        $queryBuilder->getRestrictions()->removeAll();
-        $title = $queryBuilder
-            ->select('title')
-            ->from('pages')
-            ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($pageId, Connection::PARAM_INT)))
-            ->executeQuery()
-            ->fetchOne();
-
-        return is_string($title) && trim($title) !== '' ? $title : 'Page';
-    }
-
-    private function resolveLanguageTitle(int $languageId, int $pageId = 0): string
-    {
-        if ($languageId <= 0) {
-            return '';
-        }
-
-        if ($pageId > 0) {
-            try {
-                $site = $this->siteFinder->getSiteByPageId($pageId);
-                $title = trim($site->getLanguageById($languageId)->getTitle());
-
-                return $title !== '' ? $title : ('Language #' . $languageId);
-            } catch (SiteNotFoundException|\InvalidArgumentException) {
-                // Fall through to scan all sites.
-            }
-        }
-
-        foreach ($this->siteFinder->getAllSites() as $site) {
-            try {
-                $title = trim($site->getLanguageById($languageId)->getTitle());
-                if ($title !== '') {
-                    return $title;
-                }
-            } catch (\InvalidArgumentException) {
-                continue;
-            }
-        }
-
-        return 'Language #' . $languageId;
     }
 
     private function userCanReadPage(int $pageId): bool

@@ -342,6 +342,20 @@ return [
         'target' => AgentAjaxController::class . '::conversationSaveAction',
         'methods' => ['POST'],
     ],
+    'nst3af_agent_sessions' => [
+        'path' => '/nst3af/agent/sessions',
+        'target' => AgentAjaxController::class . '::sessionsAction',
+    ],
+    'nst3af_agent_session_rename' => [
+        'path' => '/nst3af/agent/session/rename',
+        'target' => AgentAjaxController::class . '::sessionRenameAction',
+        'methods' => ['POST'],
+    ],
+    'nst3af_agent_session_delete' => [
+        'path' => '/nst3af/agent/session/delete',
+        'target' => AgentAjaxController::class . '::sessionDeleteAction',
+        'methods' => ['POST'],
+    ],
     'nst3af_agent_settings_link' => [
         'path' => '/nst3af/agent/settings-link',
         'target' => AgentAjaxController::class . '::settingsLinkAction',

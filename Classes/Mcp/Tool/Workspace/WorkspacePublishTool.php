@@ -36,7 +36,7 @@ use NITSAN\NsT3AF\Mcp\Service\WorkspaceVersionService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
-#[McpToolSeverity(ToolSeverity::Write)]
+#[McpToolSeverity(ToolSeverity::Destructive)]
 readonly class WorkspacePublishTool implements McpNonAiToolInterface, McpPlannableToolInterface
 {
     public function __construct(

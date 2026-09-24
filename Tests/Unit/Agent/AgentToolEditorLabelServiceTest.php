@@ -40,14 +40,18 @@ final class AgentToolEditorLabelServiceTest extends TestCase
     {
         $service = new AgentToolEditorLabelService($this->createAgentTranslator());
 
-        // Mapped tools use their translated label, unmapped ones are humanized.
+        // Tools with agent.tool.label.<name> use it; unknown tools are humanized.
         self::assertSame(
-            'List images missing alt text',
+            'Find images without alt text',
             $service->resolveByName('t3aa_list_files_missing_alt_text'),
         );
         self::assertSame(
-            'Generate all seo',
-            $service->resolveByName('t3ai_generate_all_seo'),
+            'Write all SEO texts',
+            $service->resolveByName('t3ai_generate_all_seo', 'Generate the SEO title for a page.'),
+        );
+        self::assertSame(
+            'Rebuild faq index',
+            $service->resolveByName('t3cs_rebuild_faq_index'),
         );
     }
 
@@ -58,7 +62,7 @@ final class AgentToolEditorLabelServiceTest extends TestCase
 
         self::assertSame(
             'Generate the SEO title for a page',
-            $service->resolveByName('t3ai_generate_all_seo', 'Generate the SEO title for a page.'),
+            $service->resolveByName('t3cs_rebuild_faq_index', 'Generate the SEO title for a page.'),
         );
     }
 
@@ -68,9 +72,9 @@ final class AgentToolEditorLabelServiceTest extends TestCase
         $service = new AgentToolEditorLabelService($this->createAgentTranslator());
 
         self::assertSame(
-            'Generate all seo',
+            'Rebuild faq index',
             $service->resolveByName(
-                't3ai_generate_all_seo',
+                't3cs_rebuild_faq_index',
                 'Find image files in sys_file_metadata where alt text is empty.',
             ),
         );

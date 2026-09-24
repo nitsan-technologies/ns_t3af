@@ -66,6 +66,8 @@ services:
     resource: '../Classes/*'
     exclude:
       - '../Classes/Api/*'
+      # Per-turn objects built by AgentRunner (scalar constructor arguments).
+      - '../Classes/Agent/Runtime/*'
       - '../Classes/Domain/Model/*'
       - '../Classes/Event/*'
       - '../Classes/AiLabel/Event/*'
@@ -424,8 +426,9 @@ services:
   NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface:
     alias: NITSAN\NsT3AF\Agent\Service\AgentToolTurnProcessor
 
+  # Symfony AI Agent loop (core tool set + find_tools).
   NITSAN\NsT3AF\Agent\Contract\AgentTurnRunnerInterface:
-    alias: NITSAN\NsT3AF\Agent\Service\AgentTurnOrchestrator
+    alias: NITSAN\NsT3AF\Agent\Service\AgentRunner
 
   NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver:
     arguments:

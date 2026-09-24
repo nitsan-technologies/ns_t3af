@@ -170,17 +170,29 @@ agentShowProviderThinking = 1
 # cat=AI Agent//40; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentConversationRetentionDays
 agentConversationRetentionDays = 90
 
-# cat=AI Agent//50; type=options[auto=Auto,provider=Provider,transformers=Transformers (local),none=None]; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentEmbeddingSource
+# cat=AI Agent//41; type=options[page=Per page (module + page),module=Per module,user=One per user]; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentConversationScope
+agentConversationScope = page
+
+# cat=AI Agent//42; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentSessionListEnabled
+agentSessionListEnabled = 1
+
+# cat=AI Agent//43; type=options[current=This page,all=All pages]; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentSessionListDefaultFilter
+agentSessionListDefaultFilter = current
+
+# cat=AI Agent//44; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentMaxSessionsPerScope
+agentMaxSessionsPerScope = 20
+
+# cat=AI Agent//45; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentMaxSessionsPerUser
+agentMaxSessionsPerUser = 200
+
+# cat=AI Agent//46; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentContinueAfterConfirm
+agentContinueAfterConfirm = 1
+
+# cat=AI Agent//50; type=options[auto=Auto,provider=Provider,none=None (keyword search only)]; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentEmbeddingSource
 agentEmbeddingSource = auto
 
 # cat=AI Agent//60; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentEmbeddingProvider
 agentEmbeddingProvider =
-
-# cat=AI Agent//70; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentTransformersModel
-agentTransformersModel = Xenova/all-MiniLM-L6-v2
-
-# cat=AI Agent//80; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentShortlistSize
-agentShortlistSize = 12
 
 # cat=AI Agent//90; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentMinSimilarity
 agentMinSimilarity = 0.0

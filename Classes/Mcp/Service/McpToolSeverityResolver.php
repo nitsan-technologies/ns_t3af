@@ -86,47 +86,12 @@ class McpToolSeverityResolver
     }
 
     /**
-     * Name-based resolution when reflection does not declare severity (dynamic + satellite tools).
+     * Name-based resolution for tools without a class to reflect (dynamic per-table tools only).
+     * Other names are not guessed: an undeclared tool stays unclassified and is locked in the AI Agent.
      */
     public function resolveForToolName(string $toolName): ?ToolSeverity
     {
-        $fromDynamic = $this->resolveForDynamicToolName($toolName);
-        if ($fromDynamic !== null) {
-            return $fromDynamic;
-        }
-
-        return $this->resolveFromToolNameHeuristics($toolName);
-    }
-
-    /**
-     * Infer severity from T3Planet satellite and other static tool names without {@see McpToolSeverity}.
-     */
-    public function resolveFromToolNameHeuristics(string $toolName): ?ToolSeverity
-    {
-        $name = strtolower(trim($toolName));
-        if ($name === '') {
-            return null;
-        }
-
-        if (preg_match('/(?:^|_)(delete|purge|remove)(?:_|$)/', $name) === 1) {
-            return ToolSeverity::Destructive;
-        }
-
-        if (
-            str_contains($name, '_queue_list')
-            || preg_match('/(?:^|_)(list|get|search|summary|analytics|settings|questions|pagespeed|echo|missing|inspect|read|summarize)(?:_|$)/', $name) === 1
-        ) {
-            return ToolSeverity::Read;
-        }
-
-        if (
-            str_contains($name, '_queue_add')
-            || preg_match('/(?:^|_)(update|apply|create|generate|translate|save|sync|reset|add|move|copy|upload|structure)(?:_|$)/', $name) === 1
-        ) {
-            return ToolSeverity::Write;
-        }
-
-        return null;
+        return $this->resolveForDynamicToolName($toolName);
     }
 
     private static function extractDynamicOperation(string $toolName): ?string

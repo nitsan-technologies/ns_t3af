@@ -100,6 +100,22 @@ final readonly class AgentDemandCounter
     }
 
     /**
+     * Removes demand rows of tools not asked for since the cutoff (conversation cleanup).
+     */
+    public function deleteInactiveSince(int $cutoffTimestamp): int
+    {
+        if ($cutoffTimestamp <= 0) {
+            return 0;
+        }
+        $qb = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
+        $qb->getRestrictions()->removeAll();
+
+        return $qb->delete(self::TABLE)
+            ->where($qb->expr()->lt('last_activated', $qb->createNamedParameter($cutoffTimestamp, Connection::PARAM_INT)))
+            ->executeStatement();
+    }
+
+    /**
      * @return array<string, scalar|null>|null
      */
     private function findRow(string $ownerExtensionKey, string $toolName): ?array

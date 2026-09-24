@@ -19,7 +19,9 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Command;
 
+use NITSAN\NsT3AF\Agent\Service\AgentDemandCounter;
 use NITSAN\NsT3AF\Agent\Service\AgentSettingsService;
+use NITSAN\NsT3AF\Agent\Service\AgentTurnRepository;
 use NITSAN\NsT3AF\Domain\Repository\AgentConversationRepository;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -30,15 +32,20 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 't3af:agent:conversations:cleanup',
-    description: 'Delete AI Agent conversations older than the retention period (--days)',
+    description: 'Clean up AI Agent conversations: soft-delete after the retention period (--days), remove 7 days later; also old turn and demand rows',
 )]
 final class CleanAgentConversationsCommand extends Command
 {
     public const DEFAULT_RETENTION_DAYS = 90;
 
+    /** Soft-deleted conversations (retention or deleted by the editor) are removed after this many days. */
+    public const GRACE_DAYS = 7;
+
     public function __construct(
         private readonly AgentConversationRepository $conversationRepository,
         private readonly AgentSettingsService $agentSettingsService,
+        private readonly AgentTurnRepository $turnRepository,
+        private readonly AgentDemandCounter $demandCounter,
     ) {
         parent::__construct();
     }
@@ -64,13 +71,21 @@ final class CleanAgentConversationsCommand extends Command
             return Command::FAILURE;
         }
 
-        $cutoff = time() - ($days * 86400);
-        $deleted = $this->conversationRepository->deleteOlderThan($cutoff);
+        $now = time();
+        $cutoff = $now - ($days * 86400);
+        $softDeleted = $this->conversationRepository->softDeleteInactiveSince($cutoff);
+        $removed = $this->conversationRepository->hardDeleteSoftDeletedBefore($now - (self::GRACE_DAYS * 86400));
+        $turns = $this->turnRepository->deleteOlderThan($cutoff);
+        $demand = $this->demandCounter->deleteInactiveSince($cutoff);
         $io->success(sprintf(
-            'Deleted %d agent conversation(s) older than %d days (before %s).',
-            $deleted,
+            'Conversations: %d moved to trash (no activity for %d days, before %s), %d removed after %d days in trash. Turn rows removed: %d. Tool demand rows removed: %d.',
+            $softDeleted,
             $days,
             date('Y-m-d H:i:s', $cutoff),
+            $removed,
+            self::GRACE_DAYS,
+            $turns,
+            $demand,
         ));
 
         return Command::SUCCESS;

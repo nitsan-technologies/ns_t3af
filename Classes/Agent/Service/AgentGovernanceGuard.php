@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Service;
 
+use NITSAN\NsT3AF\Access\Dto\AgentToolPolicy;
 use NITSAN\NsT3AF\Access\Dto\LimitsConfig;
 use NITSAN\NsT3AF\Domain\Repository\GroupSettingsRepository;
 use NITSAN\NsT3AF\Domain\Repository\RequestLogRepository;
@@ -90,6 +91,39 @@ final readonly class AgentGovernanceGuard
         }
 
         return null;
+    }
+
+    /**
+     * Provider identifiers the editor's groups allow (AI Permissions provider allowlist); null = no restriction.
+     *
+     * @return list<string>|null
+     */
+    public function allowedProviders(?BackendUserAuthentication $user): ?array
+    {
+        if ($user === null || $user->isAdmin()) {
+            return null;
+        }
+        $limits = $this->resolveStrictestLimits($user);
+        if ($limits === null || !$limits->providerAllowlistEnabled || $limits->allowedProviders === []) {
+            return null;
+        }
+
+        return $limits->allowedProviders;
+    }
+
+    /**
+     * AI Agent tools the editor's groups allow (strictest across groups; admins are unrestricted).
+     */
+    public function agentToolPolicy(?BackendUserAuthentication $user): AgentToolPolicy
+    {
+        if ($user === null || $user->isAdmin()) {
+            return AgentToolPolicy::unrestricted();
+        }
+        $limits = $this->resolveStrictestLimits($user);
+
+        return $limits === null
+            ? AgentToolPolicy::unrestricted()
+            : new AgentToolPolicy($limits->agentReadOnly, $limits->blockedAgentTools);
     }
 
     /**
@@ -254,6 +288,8 @@ final readonly class AgentGovernanceGuard
             loggingPolicy: $a->loggingPolicy,
             logRetentionDays: min($a->logRetentionDays, $b->logRetentionDays),
             piiMasking: $a->piiMasking || $b->piiMasking,
+            agentReadOnly: $a->agentReadOnly || $b->agentReadOnly,
+            blockedAgentTools: array_values(array_unique([...$a->blockedAgentTools, ...$b->blockedAgentTools])),
         );
     }
 

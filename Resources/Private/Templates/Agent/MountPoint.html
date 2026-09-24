@@ -25,6 +25,42 @@
                         <f:translate key="{ll}:agent.modal.subtitle" default="Ask for anything on this screen. It drafts, you approve, inside the conversation." />
                     </p>
                 </div>
+                <div class="nst3af-agent-header__tools">
+                    <span class="nst3af-agent-credits" data-nst3af-agent-credits role="status" hidden></span>
+                    <label class="visually-hidden" for="nst3af-agent-provider">
+                        <f:translate key="{ll}:agent.provider.label" default="AI provider" />
+                    </label>
+                    <select id="nst3af-agent-provider"
+                            class="form-select form-select-sm nst3af-agent-header__provider"
+                            data-nst3af-agent-provider
+                            hidden></select>
+                    <button type="button"
+                            class="btn btn-default btn-sm nst3af-agent-header__icon"
+                            data-nst3af-agent-sessions-toggle
+                            aria-expanded="false"
+                            aria-controls="nst3af-agent-sessions"
+                            title="{f:translate(key: '{ll}:agent.session.list', default: 'Conversations')}"
+                            aria-label="{f:translate(key: '{ll}:agent.session.list', default: 'Conversations')}"
+                            hidden>
+                        <span aria-hidden="true">&#9776;</span>
+                    </button>
+                    <button type="button"
+                            class="btn btn-default btn-sm nst3af-agent-header__icon"
+                            data-nst3af-agent-new
+                            title="{f:translate(key: '{ll}:agent.session.new', default: 'New conversation')}"
+                            aria-label="{f:translate(key: '{ll}:agent.session.new', default: 'New conversation')}">
+                        <span aria-hidden="true">+</span>
+                    </button>
+                    <button type="button"
+                            class="btn btn-default btn-sm nst3af-agent-header__icon"
+                            data-nst3af-agent-info-toggle
+                            aria-expanded="false"
+                            aria-controls="nst3af-agent-info"
+                            title="{f:translate(key: '{ll}:agent.info.title', default: 'How the AI Agent works')}"
+                            aria-label="{f:translate(key: '{ll}:agent.info.title', default: 'How the AI Agent works')}">
+                        <span aria-hidden="true">i</span>
+                    </button>
+                </div>
                 <a class="btn btn-default btn-sm nst3af-agent-header__settings"
                    href="#"
                    data-nst3af-agent-settings
@@ -41,6 +77,42 @@
         </header>
 
         <div class="nst3af-agent-context" data-nst3af-agent-context aria-live="off"></div>
+
+        <section class="nst3af-agent-drawer"
+                 id="nst3af-agent-sessions"
+                 data-nst3af-agent-sessions
+                 aria-label="{f:translate(key: '{ll}:agent.session.list', default: 'Conversations')}"
+                 hidden>
+            <div class="nst3af-agent-drawer__head">
+                <h3 class="nst3af-agent-drawer__title"><f:translate key="{ll}:agent.session.list" default="Conversations" /></h3>
+                <div class="btn-group btn-group-sm" role="group" data-nst3af-agent-sessions-filter></div>
+                <button type="button" class="btn btn-link btn-sm nst3af-agent-drawer__close" data-nst3af-agent-drawer-close
+                        aria-label="{f:translate(key: '{ll}:agent.modal.close', default: 'Close dialog')}">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <input type="search"
+                   class="form-control form-control-sm nst3af-agent-drawer__search"
+                   data-nst3af-agent-sessions-search
+                   placeholder="{f:translate(key: '{ll}:agent.session.search', default: 'Filter by title')}" />
+            <ul class="nst3af-agent-sessions" data-nst3af-agent-sessions-list></ul>
+            <p class="nst3af-agent-drawer__foot" data-nst3af-agent-sessions-foot></p>
+        </section>
+
+        <section class="nst3af-agent-drawer nst3af-agent-drawer--info"
+                 id="nst3af-agent-info"
+                 data-nst3af-agent-info
+                 aria-label="{f:translate(key: '{ll}:agent.info.title', default: 'How the AI Agent works')}"
+                 hidden>
+            <div class="nst3af-agent-drawer__head">
+                <h3 class="nst3af-agent-drawer__title"><f:translate key="{ll}:agent.info.title" default="How the AI Agent works" /></h3>
+                <button type="button" class="btn btn-link btn-sm nst3af-agent-drawer__close" data-nst3af-agent-drawer-close
+                        aria-label="{f:translate(key: '{ll}:agent.modal.close', default: 'Close dialog')}">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="nst3af-agent-info" data-nst3af-agent-info-body></div>
+        </section>
 
         <div class="nst3af-agent-disclosure" data-nst3af-agent-disclosure hidden>
             <f:translate key="{ll}:agent.disclosure" default="This assistant can use AI. Responses may be inaccurate. Review suggestions before applying changes." />

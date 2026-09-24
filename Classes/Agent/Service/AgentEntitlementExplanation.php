@@ -91,7 +91,7 @@ final readonly class AgentEntitlementExplanation
     private function buildExtensionLockedMessage(array $tool): string
     {
         $ownerKey = (string) ($tool['ownerExtensionKey'] ?? 'ns_t3af');
-        $toolName = (string) ($tool['name'] ?? '');
+        $toolName = $this->toolLabel($tool);
         $ownerLabel = (string) ($tool['ownerLabel'] ?? $ownerKey);
         $toolCount = $this->entitlementResolver->getToolCount($ownerKey);
         $lockReason = trim((string) ($tool['lockReason'] ?? ''));
@@ -114,11 +114,23 @@ final readonly class AgentEntitlementExplanation
     }
 
     /**
+     * Editor label ("Find images without alt text"), not the tool id.
+     *
+     * @param array<string, mixed> $tool
+     */
+    private function toolLabel(array $tool): string
+    {
+        $label = trim((string) ($tool['editorLabel'] ?? ''));
+
+        return $label !== '' ? $label : (string) ($tool['name'] ?? '');
+    }
+
+    /**
      * @param array<string, mixed> $tool
      */
     private function buildPlanLockedMessage(array $tool): string
     {
-        $toolName = (string) ($tool['name'] ?? '');
+        $toolName = $this->toolLabel($tool);
         $severityLabel = strtolower((string) ($tool['severityLabel'] ?? $tool['severity'] ?? 'write'));
 
         return $this->translator->translate('agent.entitlement.planLockedLead', [$toolName, $severityLabel]);
@@ -129,7 +141,7 @@ final readonly class AgentEntitlementExplanation
      */
     private function buildComposerLockedMessage(array $tool): string
     {
-        $toolName = (string) ($tool['name'] ?? '');
+        $toolName = $this->toolLabel($tool);
         $lockReason = trim((string) ($tool['lockReason'] ?? ''));
 
         $parts = [$this->translator->translate('agent.entitlement.composerLockedLead', [$toolName])];
@@ -145,7 +157,7 @@ final readonly class AgentEntitlementExplanation
      */
     private function buildSeverityLockedMessage(array $tool): string
     {
-        $toolName = (string) ($tool['name'] ?? '');
+        $toolName = $this->toolLabel($tool);
         $lockReason = trim((string) ($tool['lockReason'] ?? ''));
 
         $parts = [$this->translator->translate('agent.entitlement.severityLockedLead', [$toolName])];

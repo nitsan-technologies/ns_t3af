@@ -339,6 +339,44 @@ function resolveBackendContext() {
  * @param {object} source
  * @returns {string}
  */
+/**
+ * "targetLanguageId" / "target_language" → "Target language id".
+ *
+ * @param {string} key
+ * @returns {string}
+ */
+/**
+ * Generated image or audio file of a tool result (only same-site paths or http(s) URLs).
+ *
+ * @param {unknown} details
+ * @returns {string}
+ */
+function renderMediaPreview(details) {
+  if (!details || typeof details !== 'object') {
+    return '';
+  }
+  let url = String(details.previewImageUrl ?? details.publicUrl ?? '').trim();
+  if (/^fileadmin\//i.test(url)) {
+    url = `/${url}`;
+  }
+  if (url === '' || !/^(https?:\/\/|\/)/i.test(url) || url.startsWith('//')) {
+    return '';
+  }
+  const name = String(details.fileName ?? '');
+  if (/\.(mp3|wav|ogg|m4a)(\?|$)/i.test(url)) {
+    return `<div class="nst3af-agent-media"><audio controls preload="none" src="${escapeHtml(url)}"></audio><span class="nst3af-agent-media__name">${escapeHtml(name)}</span></div>`;
+  }
+  if (details.previewImageUrl || /\.(png|jpe?g|gif|webp|svg)(\?|$)/i.test(url)) {
+    return `<div class="nst3af-agent-media"><a href="${escapeHtml(url)}" target="_blank" rel="noopener"><img src="${escapeHtml(url)}" alt="${escapeHtml(name)}" loading="lazy"></a><span class="nst3af-agent-media__name">${escapeHtml(name)}</span></div>`;
+  }
+  return '';
+}
+
+function humanizeKey(key) {
+  const words = String(key).replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').trim().toLowerCase();
+  return words === '' ? '' : words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 function resolveToolDisplayLabel(source) {
   const editorLabel = String(source?.editorLabel ?? source?.toolCallLabel ?? source?.label ?? '').trim();
   if (editorLabel !== '') {
@@ -736,6 +774,39 @@ class AgentController {
     this.fileInput = root.querySelector('[data-nst3af-agent-file-input]');
     this.autocomplete = root.querySelector('[data-nst3af-agent-autocomplete]');
     this.settingsLink = root.querySelector('[data-nst3af-agent-settings]');
+    this.providerSelect = root.querySelector('[data-nst3af-agent-provider]');
+    this.sessionsToggle = root.querySelector('[data-nst3af-agent-sessions-toggle]');
+    this.sessionsDrawer = root.querySelector('[data-nst3af-agent-sessions]');
+    this.sessionsList = root.querySelector('[data-nst3af-agent-sessions-list]');
+    this.sessionsFilterEl = root.querySelector('[data-nst3af-agent-sessions-filter]');
+    this.sessionsSearch = root.querySelector('[data-nst3af-agent-sessions-search]');
+    this.sessionsFoot = root.querySelector('[data-nst3af-agent-sessions-foot]');
+    this.infoToggle = root.querySelector('[data-nst3af-agent-info-toggle]');
+    this.infoDrawer = root.querySelector('[data-nst3af-agent-info]');
+    this.infoBody = root.querySelector('[data-nst3af-agent-info-body]');
+    /** Active conversation summary from the server (null until the first message is stored). */
+    this.session = null;
+    /** true after "New conversation": the next turn starts a new conversation. */
+    this.freshSession = false;
+    this.sessionListSettings = { enabled: false, defaultFilter: 'current', scope: 'page', retentionDays: 90 };
+    this.sessions = [];
+    this.sessionsFilter = 'current';
+    this.sessionsHasMore = false;
+    this.providers = [];
+    this.selectedProvider = 'default';
+    /** One-line notice after the editor navigated while the conversation continues. */
+    this.contextNotice = '';
+    /** uuid of the conversation being renamed in the list. */
+    this.renamingUuid = '';
+    /** Run one more turn after the editor confirms / declines a card (agentContinueAfterConfirm). */
+    this.continueAfterConfirm = true;
+    /** @type {{outcome: string, label: string, result: string}|null} */
+    this.pendingContinuation = null;
+    /** true while "Execute all" applies several cards (one continuation at the end). */
+    this.executingAll = false;
+    /** T3Planet Credits status, null outside credits mode. */
+    this.credits = null;
+    this.creditsBadge = root.querySelector('[data-nst3af-agent-credits]');
     this.lastFocus = null;
     this.messages = [];
     this.context = {};
@@ -794,14 +865,28 @@ class AgentController {
     if (nextScope === this.loadedScopeKey) {
       return;
     }
+    const scope = this.sessionListSettings.scope ?? 'page';
+    const previousModule = String(this.loadedScopeKey).split(':')[0];
+    const keepsConversation = this.session?.uuid
+      && (scope === 'user' || (scope === 'module' && previousModule === resolveBackendContext().module));
+    if (keepsConversation) {
+      await this.reloadSessionForCurrentScope({ sessionUuid: this.session.uuid });
+      this.contextNotice = this.describeContextChange();
+      this.renderStream();
+      return;
+    }
+    this.contextNotice = '';
     await this.reloadSessionForCurrentScope();
   }
 
-  async reloadSessionForCurrentScope() {
+  /**
+   * @param {{sessionUuid?: string, fresh?: boolean}} [options]
+   */
+  async reloadSessionForCurrentScope(options = {}) {
     this.isLoadingSession = true;
     this.panel?.setAttribute('aria-busy', 'true');
     this.renderLoadingSkeleton();
-    await this.restoreSession();
+    await this.restoreSession(options);
     this.isLoadingSession = false;
     this.loadedScopeKey = this.sessionScopeKey();
     this.panel?.removeAttribute('aria-busy');
@@ -843,6 +928,62 @@ class AgentController {
       if (target.closest('[data-nst3af-agent-send]')) {
         event.preventDefault();
         this.submitTurn();
+      }
+      const clarifyOption = target.closest('[data-nst3af-agent-clarify-option]');
+      if (clarifyOption instanceof HTMLButtonElement) {
+        event.preventDefault();
+        void this.answerClarification(clarifyOption.dataset.nst3afAgentClarifyOption ?? '');
+      }
+      if (target.closest('[data-nst3af-agent-execute-all]')) {
+        event.preventDefault();
+        void this.executeAll();
+      }
+      const resultLink = target.closest('[data-nst3af-agent-link]');
+      if (resultLink instanceof HTMLAnchorElement && this.openResultLink(resultLink)) {
+        event.preventDefault();
+      }
+      if (target.closest('[data-nst3af-agent-sessions-toggle]')) {
+        event.preventDefault();
+        void this.toggleSessions();
+      }
+      if (target.closest('[data-nst3af-agent-info-toggle]')) {
+        event.preventDefault();
+        this.toggleInfo();
+      }
+      if (target.closest('[data-nst3af-agent-drawer-close]')) {
+        event.preventDefault();
+        this.closeDrawers();
+      }
+      if (target.closest('[data-nst3af-agent-new]')) {
+        event.preventDefault();
+        void this.startNewConversation();
+      }
+      const filterButton = target.closest('[data-nst3af-agent-sessions-filter-value]');
+      if (filterButton instanceof HTMLElement) {
+        event.preventDefault();
+        this.sessionsFilter = filterButton.dataset.nst3afAgentSessionsFilterValue === 'all' ? 'all' : 'current';
+        void this.loadSessions();
+      }
+      if (target.closest('[data-nst3af-agent-sessions-more]')) {
+        event.preventDefault();
+        void this.loadSessions(true);
+      }
+      const renameButton = target.closest('[data-nst3af-agent-session-rename]');
+      if (renameButton instanceof HTMLElement) {
+        event.preventDefault();
+        void this.renameSession(renameButton.dataset.nst3afAgentSessionRename ?? '');
+      } else {
+        const deleteButton = target.closest('[data-nst3af-agent-session-delete]');
+        if (deleteButton instanceof HTMLElement) {
+          event.preventDefault();
+          void this.deleteSession(deleteButton.dataset.nst3afAgentSessionDelete ?? '', deleteButton);
+        } else {
+          const openButton = target.closest('[data-nst3af-agent-session-open]');
+          if (openButton instanceof HTMLElement) {
+            event.preventDefault();
+            void this.openSession(openButton.dataset.nst3afAgentSessionOpen ?? '');
+          }
+        }
       }
       if (target.closest('[data-nst3af-agent-backdrop]')) {
         this.close();
@@ -927,6 +1068,9 @@ class AgentController {
 
       if (event.key === 'Escape') {
         event.preventDefault();
+        if (this.closeDrawers()) {
+          return;
+        }
         this.close();
         return;
       }
@@ -941,6 +1085,16 @@ class AgentController {
 
     this.input?.addEventListener('input', () => {
       this.handleComposerInput();
+    });
+
+    this.providerSelect?.addEventListener('change', () => {
+      if (this.providerSelect instanceof HTMLSelectElement) {
+        this.selectedProvider = this.providerSelect.value || 'default';
+      }
+    });
+
+    this.sessionsSearch?.addEventListener('input', () => {
+      this.renderSessions();
     });
 
     document.addEventListener('input', (event) => {
@@ -1034,6 +1188,8 @@ class AgentController {
     this.messages = [];
     this.context = {};
     this.starters = { executable: [], locked: [] };
+    this.contextNotice = '';
+    this.closeDrawers();
     this.isLoadingSession = true;
     this.panel.setAttribute('aria-busy', 'true');
     this.renderLoadingSkeleton();
@@ -1091,7 +1247,13 @@ class AgentController {
     }
   }
 
-  async restoreSession() {
+  /**
+   * Loads a conversation: the given session, a fresh one, or the latest one of the
+   * configured scope (agentConversationScope) for the current page / module.
+   *
+   * @param {{sessionUuid?: string, fresh?: boolean}} [options]
+   */
+  async restoreSession(options = {}) {
     const url = ajaxUrl('nst3af_agent_conversation');
     if (url === '') {
       return;
@@ -1101,6 +1263,12 @@ class AgentController {
     const query = new URL(url, window.location.href);
     query.searchParams.set('pageId', String(backendContext.pageId));
     query.searchParams.set('module', backendContext.module);
+    if (options.sessionUuid) {
+      query.searchParams.set('sessionUuid', options.sessionUuid);
+    }
+    if (options.fresh) {
+      query.searchParams.set('fresh', '1');
+    }
 
     try {
       const payload = await new AjaxRequest(query.toString()).get().then((r) => r.resolve());
@@ -1115,6 +1283,12 @@ class AgentController {
       this.context = payload.context ?? backendContext;
       this.starters = payload.starters ?? { executable: [], locked: [] };
       this.greeting = payload.greeting ?? null;
+      this.session = payload.session ?? null;
+      this.freshSession = options.fresh === true;
+      this.sessionListSettings = { ...this.sessionListSettings, ...(payload.sessionList ?? {}) };
+      this.providers = Array.isArray(payload.providers) ? payload.providers : [];
+      this.continueAfterConfirm = payload.continueAfterConfirm !== false;
+      this.credits = payload.credits ?? null;
       this.disclosureDismissed = payload.disclosureDismissed === true;
       if (this.disclosureDismissed) {
         this.disclosure.hidden = true;
@@ -1124,6 +1298,639 @@ class AgentController {
       this.context = backendContext;
       this.loadedScopeKey = this.sessionScopeKey();
     }
+    this.renderHeaderControls();
+    this.renderCredits();
+  }
+
+  /**
+   * Provider select (locked once the conversation has an answer) and the list button.
+   */
+  renderHeaderControls() {
+    if (this.sessionsToggle instanceof HTMLElement) {
+      this.sessionsToggle.hidden = this.sessionListSettings.enabled !== true;
+    }
+    if (!(this.providerSelect instanceof HTMLSelectElement)) {
+      return;
+    }
+    const locked = !this.freshSession && Boolean(this.session?.provider) && Number(this.session?.messageCount ?? 0) > 0;
+    const options = [...this.providers];
+    if (locked && !options.some((option) => option.value === this.session.provider)) {
+      options.push({ value: this.session.provider, label: this.session.providerLabel || this.session.provider });
+    }
+    this.providerSelect.innerHTML = options.map((option) => (
+      `<option value="${escapeHtml(String(option.value ?? ''))}">${escapeHtml(String(option.label ?? option.value ?? ''))}</option>`
+    )).join('');
+    const value = locked ? this.session.provider : this.selectedProvider;
+    this.providerSelect.value = options.some((option) => option.value === value) ? value : 'default';
+    this.selectedProvider = locked ? this.selectedProvider : this.providerSelect.value;
+    this.providerSelect.disabled = locked;
+    this.providerSelect.title = locked
+      ? lang('agent.provider.locked', 'The AI provider is fixed for this conversation. Start a new conversation to change it.')
+      : lang('agent.provider.label', 'AI provider');
+    this.providerSelect.hidden = options.length <= 1;
+  }
+
+  /**
+   * @returns {boolean} true when a drawer was open
+   */
+  closeDrawers() {
+    let wasOpen = false;
+    [[this.sessionsDrawer, this.sessionsToggle], [this.infoDrawer, this.infoToggle]].forEach(([drawer, toggle]) => {
+      if (drawer instanceof HTMLElement && !drawer.hidden) {
+        drawer.hidden = true;
+        wasOpen = true;
+      }
+      toggle?.setAttribute('aria-expanded', 'false');
+    });
+    this.renamingUuid = '';
+
+    return wasOpen;
+  }
+
+  /**
+   * Drawers start below the header, so the header buttons stay usable.
+   *
+   * @param {HTMLElement} drawer
+   */
+  positionDrawer(drawer) {
+    const header = this.panel?.querySelector('.nst3af-agent-header');
+    drawer.style.top = header instanceof HTMLElement ? `${header.offsetHeight}px` : '0';
+  }
+
+  async toggleSessions() {
+    if (!(this.sessionsDrawer instanceof HTMLElement)) {
+      return;
+    }
+    const opening = this.sessionsDrawer.hidden;
+    this.closeDrawers();
+    if (!opening) {
+      return;
+    }
+    this.positionDrawer(this.sessionsDrawer);
+    this.sessionsDrawer.hidden = false;
+    this.sessionsToggle?.setAttribute('aria-expanded', 'true');
+    this.sessionsFilter = this.sessionListSettings.scope === 'user' ? 'all' : (this.sessionListSettings.defaultFilter ?? 'current');
+    if (this.sessionsSearch instanceof HTMLInputElement) {
+      this.sessionsSearch.value = '';
+    }
+    await this.loadSessions();
+  }
+
+  /**
+   * @param {boolean} [append]
+   */
+  async loadSessions(append = false) {
+    const url = ajaxUrl('nst3af_agent_sessions');
+    if (url === '') {
+      return;
+    }
+    const backendContext = resolveBackendContext();
+    const query = new URL(url, window.location.href);
+    query.searchParams.set('filter', this.sessionsFilter);
+    query.searchParams.set('pageId', String(backendContext.pageId));
+    query.searchParams.set('module', backendContext.module);
+    query.searchParams.set('limit', '20');
+    query.searchParams.set('offset', String(append ? this.sessions.length : 0));
+    try {
+      const payload = await new AjaxRequest(query.toString()).get().then((r) => r.resolve());
+      const rows = Array.isArray(payload?.sessions) ? payload.sessions : [];
+      this.sessions = append ? [...this.sessions, ...rows] : rows;
+      this.sessionsHasMore = payload?.hasMore === true;
+    } catch (error) {
+      this.sessions = append ? this.sessions : [];
+      this.sessionsHasMore = false;
+      console.warn('Agent sessions could not be loaded:', errorMessage(error));
+    }
+    this.renderSessions();
+  }
+
+  renderSessions() {
+    if (!(this.sessionsList instanceof HTMLElement)) {
+      return;
+    }
+    const scope = this.sessionListSettings.scope ?? 'page';
+    if (this.sessionsFilterEl instanceof HTMLElement) {
+      const currentLabel = scope === 'module'
+        ? lang('agent.session.filterModule', 'This module')
+        : lang('agent.session.filterPage', 'This page');
+      this.sessionsFilterEl.hidden = scope === 'user';
+      this.sessionsFilterEl.innerHTML = [['current', currentLabel], ['all', lang('agent.session.filterAll', 'All pages')]]
+        .map(([value, label]) => `<button type="button" class="btn btn-default ${this.sessionsFilter === value ? 'active' : ''}" aria-pressed="${this.sessionsFilter === value}" data-nst3af-agent-sessions-filter-value="${value}">${escapeHtml(label)}</button>`)
+        .join('');
+    }
+
+    const needle = this.sessionsSearch instanceof HTMLInputElement ? this.sessionsSearch.value.trim().toLowerCase() : '';
+    const rows = this.sessions.filter((row) => needle === '' || String(row.title ?? '').toLowerCase().includes(needle));
+    if (rows.length === 0) {
+      this.sessionsList.innerHTML = `<li class="nst3af-agent-sessions__empty">${escapeHtml(lang('agent.session.empty', 'No conversations yet.'))}</li>`;
+    } else {
+      this.sessionsList.innerHTML = rows.map((row) => this.renderSessionItem(row)).join('');
+    }
+
+    const input = this.sessionsList.querySelector('[data-nst3af-agent-session-title]');
+    if (input instanceof HTMLInputElement) {
+      input.focus();
+      input.select();
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          void this.saveSessionTitle(input.dataset.nst3afAgentSessionTitle ?? '', input.value);
+        } else if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          this.renamingUuid = '';
+          this.renderSessions();
+        }
+      });
+      input.addEventListener('blur', () => {
+        if (this.renamingUuid !== '') {
+          void this.saveSessionTitle(input.dataset.nst3afAgentSessionTitle ?? '', input.value);
+        }
+      });
+    }
+
+    if (this.sessionsFoot instanceof HTMLElement) {
+      const more = this.sessionsHasMore
+        ? `<button type="button" class="btn btn-link btn-sm" data-nst3af-agent-sessions-more>${escapeHtml(lang('agent.session.more', 'Show more'))}</button>`
+        : '';
+      this.sessionsFoot.innerHTML = `${more}<span>${escapeHtml(lang('agent.session.retention', 'Conversations without activity are deleted after %1$s days.', [String(this.sessionListSettings.retentionDays ?? 90)]))}</span>`;
+    }
+  }
+
+  /**
+   * @param {object} row
+   * @returns {string}
+   */
+  renderSessionItem(row) {
+    const uuid = escapeHtml(String(row.uuid ?? ''));
+    const active = row.uuid === this.session?.uuid && !this.freshSession;
+    const title = String(row.title ?? '') || lang('agent.session.untitled', 'Conversation');
+    const where = [row.moduleLabel, row.pageId > 0 ? `${row.pageTitle ?? ''} [${row.pageId}]` : '']
+      .filter((part) => String(part ?? '') !== '')
+      .map((part) => escapeHtml(String(part)))
+      .join(' · ');
+    if (this.renamingUuid === row.uuid) {
+      return `<li class="nst3af-agent-sessions__item is-editing">
+        <input type="text" class="form-control form-control-sm" maxlength="255" value="${escapeHtml(title)}"
+               aria-label="${escapeHtml(lang('agent.session.rename', 'Rename'))}" data-nst3af-agent-session-title="${uuid}" />
+      </li>`;
+    }
+    return `<li class="nst3af-agent-sessions__item${active ? ' is-active' : ''}">
+      <button type="button" class="nst3af-agent-sessions__open" data-nst3af-agent-session-open="${uuid}"${active ? ' aria-current="true"' : ''}>
+        <span class="nst3af-agent-sessions__title">${escapeHtml(title)}</span>
+        <span class="nst3af-agent-sessions__meta">${where}${where !== '' ? ' · ' : ''}${escapeHtml(this.relativeTime(Number(row.lastActivity ?? 0)))}</span>
+      </button>
+      <span class="nst3af-agent-sessions__actions">
+        <button type="button" class="btn btn-link btn-sm" data-nst3af-agent-session-rename="${uuid}"
+                title="${escapeHtml(lang('agent.session.rename', 'Rename'))}" aria-label="${escapeHtml(lang('agent.session.rename', 'Rename'))}">✎</button>
+        <button type="button" class="btn btn-link btn-sm" data-nst3af-agent-session-delete="${uuid}"
+                title="${escapeHtml(lang('agent.session.delete', 'Delete'))}" aria-label="${escapeHtml(lang('agent.session.delete', 'Delete'))}">🗑</button>
+      </span>
+    </li>`;
+  }
+
+  /**
+   * @param {string} uuid
+   */
+  async openSession(uuid) {
+    if (uuid === '' || this.isRunning) {
+      return;
+    }
+    await this.persistSession();
+    this.closeDrawers();
+    this.contextNotice = '';
+    await this.reloadSessionForCurrentScope({ sessionUuid: uuid });
+    this.input?.focus();
+  }
+
+  async startNewConversation() {
+    if (this.isRunning) {
+      return;
+    }
+    await this.persistSession();
+    this.closeDrawers();
+    this.contextNotice = '';
+    await this.reloadSessionForCurrentScope({ fresh: true });
+    this.announce(lang('agent.session.started', 'New conversation started.'));
+    this.input?.focus();
+  }
+
+  /**
+   * @param {string} uuid
+   */
+  async renameSession(uuid) {
+    this.renamingUuid = uuid;
+    this.renderSessions();
+  }
+
+  /**
+   * @param {string} uuid
+   * @param {string} title
+   */
+  async saveSessionTitle(uuid, title) {
+    this.renamingUuid = '';
+    const clean = title.replace(/\s+/g, ' ').trim();
+    const row = this.sessions.find((entry) => entry.uuid === uuid);
+    const url = ajaxUrl('nst3af_agent_session_rename');
+    if (clean === '' || !row || clean === row.title || url === '') {
+      this.renderSessions();
+      return;
+    }
+    try {
+      await new AjaxRequest(url).post({ sessionUuid: uuid, title: clean }).then((r) => r.resolve());
+      row.title = clean;
+      if (this.session?.uuid === uuid) {
+        this.session.title = clean;
+      }
+    } catch (error) {
+      console.warn('Agent session rename failed:', errorMessage(error));
+    }
+    this.renderSessions();
+  }
+
+  /**
+   * Two clicks: the first arms the button, the second deletes.
+   *
+   * @param {string} uuid
+   * @param {HTMLElement} button
+   */
+  async deleteSession(uuid, button) {
+    if (button.dataset.armed !== '1') {
+      button.dataset.armed = '1';
+      button.classList.add('is-armed');
+      button.textContent = lang('agent.session.deleteConfirm', 'Delete?');
+      window.setTimeout(() => {
+        if (button.isConnected) {
+          button.dataset.armed = '';
+          button.classList.remove('is-armed');
+          button.textContent = '🗑';
+        }
+      }, 4000);
+      return;
+    }
+    const url = ajaxUrl('nst3af_agent_session_delete');
+    if (url === '') {
+      return;
+    }
+    try {
+      await new AjaxRequest(url).post({ sessionUuid: uuid }).then((r) => r.resolve());
+    } catch (error) {
+      console.warn('Agent session delete failed:', errorMessage(error));
+      return;
+    }
+    this.sessions = this.sessions.filter((row) => row.uuid !== uuid);
+    if (this.session?.uuid === uuid) {
+      this.session = null;
+      await this.reloadSessionForCurrentScope({ fresh: true });
+      this.sessionsDrawer?.removeAttribute('hidden');
+    }
+    this.renderSessions();
+  }
+
+  toggleInfo() {
+    if (!(this.infoDrawer instanceof HTMLElement)) {
+      return;
+    }
+    const opening = this.infoDrawer.hidden;
+    this.closeDrawers();
+    if (!opening) {
+      return;
+    }
+    this.renderInfo();
+    this.positionDrawer(this.infoDrawer);
+    this.infoDrawer.hidden = false;
+    this.infoToggle?.setAttribute('aria-expanded', 'true');
+  }
+
+  /**
+   * "How the AI Agent works", with a live "Where you are" section from the current context.
+   */
+  renderInfo() {
+    if (!(this.infoBody instanceof HTMLElement)) {
+      return;
+    }
+    const details = this.context.details ?? {};
+    const section = (key, title, body) => `<section class="nst3af-agent-info__section" data-nst3af-agent-info-section="${key}">
+      <h4>${escapeHtml(title)}</h4>${body}</section>`;
+    const paragraph = (text) => `<p>${escapeHtml(text)}</p>`;
+    const list = (items) => `<ul>${items.map((item) => `<li>${item}</li>`).join('')}</ul>`;
+
+    const examples = (Array.isArray(this.starters.executable) ? this.starters.executable : [])
+      .slice(0, 6)
+      .map((tool) => escapeHtml(String(tool.label ?? tool.editorLabel ?? tool.name ?? '')))
+      .filter((label) => label !== '');
+
+    const where = [];
+    if (details.module?.route) {
+      where.push(`<strong>${escapeHtml(lang('agent.context.module', 'Module'))}:</strong> ${escapeHtml(String(details.module.label ?? details.module.route))}`);
+    }
+    if (details.page) {
+      const slug = details.page.slug ? ` · ${escapeHtml(String(details.page.slug))}` : '';
+      where.push(`<strong>${escapeHtml(lang('agent.context.page', 'Page'))}:</strong> ${escapeHtml(String(details.page.title ?? ''))} [${Number(details.page.uid ?? 0)}]${slug}`);
+    } else {
+      where.push(`<strong>${escapeHtml(lang('agent.context.page', 'Page'))}:</strong> ${escapeHtml(lang('agent.info.noPage', 'none selected'))}`);
+    }
+    if (details.language) {
+      where.push(`<strong>${escapeHtml(lang('agent.context.language', 'Language'))}:</strong> ${escapeHtml(String(details.language.title ?? ''))}`);
+    }
+    if (details.record) {
+      where.push(`<strong>${escapeHtml(lang('agent.context.record', 'Record'))}:</strong> ${escapeHtml(`${details.record.tableLabel ?? details.record.table} ${details.record.label ? `"${details.record.label}"` : ''} #${details.record.uid}`)}`);
+    }
+    if (details.folder) {
+      where.push(`<strong>${escapeHtml(lang('agent.context.folder', 'Folder'))}:</strong> ${escapeHtml(String(details.folder.identifier ?? ''))}`);
+    }
+    const live = details.workspace?.live !== false;
+    where.push(`<strong>${escapeHtml(lang('agent.context.workspace', 'Workspace'))}:</strong> ${escapeHtml(String(details.workspace?.title ?? ''))}`);
+
+    const provider = this.session?.providerLabel
+      || (this.providers.find((option) => option.value === (this.session?.provider || this.selectedProvider))?.label ?? '');
+
+    this.infoBody.innerHTML = [
+      section('can', lang('agent.info.canTitle', 'What it can do'),
+        paragraph(lang('agent.info.canBody', 'Ask in your own words, in any language. The agent looks things up, prepares changes and runs the AI features of the installed extensions (SEO, translation, pages and content, alt texts, chatbot knowledge …).'))
+        + (examples.length ? paragraph(lang('agent.info.canExamples', 'On this screen, for example:')) + list(examples) : '')),
+      section('where', lang('agent.info.whereTitle', 'Where you are'),
+        list(where) + paragraph(lang('agent.info.whereBody', 'The agent sees what you are working on. "This page" and "here" mean the page shown above, unless you name another one.'))),
+      section('how', lang('agent.info.howTitle', 'How a task runs'),
+        `<ol>${[
+          lang('agent.info.howStep1', 'It looks up what it needs (pages, content, settings).'),
+          lang('agent.info.howStep2', 'For a change it shows a preview with old and new values.'),
+          lang('agent.info.howStep3', 'You confirm, edit or decline. Deleting needs a second click.'),
+          lang('agent.info.howStep4', 'Only then is anything written.'),
+        ].map((step) => `<li>${escapeHtml(step)}</li>`).join('')}</ol>`),
+      section('mode', lang('agent.info.modeTitle', 'Live or draft'),
+        paragraph(live
+          ? lang('agent.info.modeLive', 'You are in the live workspace: confirmed changes are visible on the website right away.')
+          : lang('agent.info.modeDraft', 'You are in the workspace "%1$s": confirmed changes stay a draft until they are published.', [String(details.workspace?.title ?? '')]))),
+      section('conversations', lang('agent.info.conversationsTitle', 'Conversations'),
+        paragraph(lang(`agent.info.conversations.${this.sessionListSettings.scope ?? 'page'}`, 'Each page has its own conversations.'))
+        + paragraph(lang('agent.info.conversationsList', 'Find earlier conversations in the list; they are deleted after %1$s days without activity.', [String(this.sessionListSettings.retentionDays ?? 90)]))),
+      section('models', lang('agent.info.modelsTitle', 'Models and credits'),
+        paragraph(provider !== ''
+          ? lang('agent.info.modelsBody', 'This conversation uses %1$s. The provider is fixed after the first answer; start a new conversation to use another one.', [provider])
+          : lang('agent.info.modelsDefault', 'The default AI provider of this site is used.'))),
+      section('privacy', lang('agent.info.privacyTitle', 'Data protection'),
+        paragraph(lang('agent.info.privacyBody', 'Your messages and the content the agent reads are sent to the AI provider shown above. Your backend permissions and the AI Permissions of your group always apply.'))),
+      section('attachments', lang('agent.info.attachmentsTitle', 'Attachments'),
+        paragraph(lang('agent.info.attachmentsBody', 'Use + to add files, @ to point at a record and / to pick a tool directly.'))),
+      section('tips', lang('agent.info.tipsTitle', 'Limits and tips'),
+        paragraph(lang('agent.info.tipsBody', 'Be specific ("meta description for this page in German"). Long jobs for many pages go to the scheduler. Answers can be wrong: check previews before you confirm.'))),
+    ].join('');
+  }
+
+  /**
+   * @returns {string}
+   */
+  renderHomeNotice() {
+    if (!this.session || this.freshSession || this.session.isHere !== false || this.messages.length === 0) {
+      return '';
+    }
+    const home = this.session.pageId > 0
+      ? `${this.session.pageTitle ?? ''} [${this.session.pageId}]`
+      : String(this.session.moduleLabel ?? '');
+    const page = this.context.details?.page;
+    const here = page ? `${page.title ?? ''} [${page.uid ?? 0}]` : String(this.context.details?.module?.label ?? '');
+    return `<div class="nst3af-agent-notice" role="note">${escapeHtml(lang('agent.session.otherPage', 'This conversation was started on %1$s. You are now on %2$s; new requests use the current page.', [home, here]))}</div>`;
+  }
+
+  /**
+   * @returns {string}
+   */
+  renderContextNotice() {
+    return this.contextNotice !== ''
+      ? `<div class="nst3af-agent-notice nst3af-agent-notice--system" role="status">${escapeHtml(this.contextNotice)}</div>`
+      : '';
+  }
+
+  /**
+   * @returns {string}
+   */
+  describeContextChange() {
+    const page = this.context.details?.page;
+    if (page) {
+      return lang('agent.session.nowOnPage', 'Now working on page %1$s.', [`${page.title ?? ''} [${page.uid ?? 0}]`]);
+    }
+    return lang('agent.session.nowInModule', 'Now working in %1$s.', [String(this.context.details?.module?.label ?? '')]);
+  }
+
+  /**
+   * @param {number} timestamp seconds
+   * @returns {string}
+   */
+  relativeTime(timestamp) {
+    if (!timestamp) {
+      return '';
+    }
+    const seconds = Math.round(timestamp - Date.now() / 1000);
+    const units = [['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60]];
+    try {
+      const format = new Intl.RelativeTimeFormat(document.documentElement.lang || undefined, { numeric: 'auto' });
+      for (const [unit, size] of units) {
+        if (Math.abs(seconds) >= size) {
+          return format.format(Math.round(seconds / size), unit);
+        }
+      }
+      return format.format(0, 'minute');
+    } catch {
+      return new Date(timestamp * 1000).toLocaleString();
+    }
+  }
+
+  /**
+   * Where a confirmed change goes: live website or the current draft workspace.
+   *
+   * @param {boolean} destructive
+   * @returns {string}
+   */
+  renderDraftTarget(destructive) {
+    const workspace = this.context.details?.workspace ?? null;
+    const live = workspace === null || workspace.live !== false;
+    const text = live
+      ? lang('agent.draft.targetLive', 'On confirm this goes live on the website.')
+      : lang('agent.draft.targetWorkspace', 'On confirm this is saved as a draft in the workspace „%1$s“.', [String(workspace.title ?? '')]);
+    const warn = destructive ? ` ${lang('agent.draft.targetDestructive', 'This cannot be undone.')}` : '';
+    return `<p class="nst3af-agent-draft__target nst3af-agent-draft__target--${live ? 'live' : 'draft'}">${escapeHtml(text + warn)}</p>`;
+  }
+
+  /**
+   * Remembers that the turn continues after this confirm / decline (cards of a natural-language turn only).
+   *
+   * @param {object} message
+   * @param {string} outcome applied|declined
+   * @param {string} result
+   * @param {string} [label]
+   */
+  queueContinuation(message, outcome, result, label = '') {
+    const meta = message?.meta ?? {};
+    if (!this.continueAfterConfirm || meta.fromRunner !== true) {
+      return;
+    }
+    const next = {
+      outcome,
+      label: label || resolveToolDisplayLabel(meta.draft ?? meta),
+      result: String(result ?? '').slice(0, 600),
+    };
+    const previous = this.pendingContinuation;
+    // "Execute all" confirms several cards; the model hears about all of them in one continuation.
+    if (previous !== null && previous.outcome === outcome) {
+      next.label = `${previous.label}, ${next.label}`.slice(0, 120);
+      next.result = [previous.result, next.result].filter((part) => part !== '').join(' | ').slice(0, 600);
+    }
+    this.pendingContinuation = next;
+  }
+
+  async flushContinuation() {
+    if (this.pendingContinuation === null || this.executingAll || this.isRunning) {
+      return;
+    }
+    const continuation = this.pendingContinuation;
+    this.pendingContinuation = null;
+    await this.submitTurn('', {}, '', { continuation });
+  }
+
+  /**
+   * Credits badge in the header; at zero the composer is locked with a clear message.
+   */
+  renderCredits() {
+    const credits = this.credits;
+    if (this.creditsBadge instanceof HTMLElement) {
+      if (!credits) {
+        this.creditsBadge.hidden = true;
+      } else {
+        this.creditsBadge.hidden = false;
+        this.creditsBadge.className = `nst3af-agent-credits nst3af-agent-credits--${escapeHtml(String(credits.level ?? 'ok'))}`;
+        this.creditsBadge.textContent = credits.empty
+          ? lang('agent.credits.badgeEmpty', '0 credits')
+          : lang('agent.credits.badge', '%1$s credits left', [String(credits.remaining ?? '')]);
+        this.creditsBadge.title = credits.empty
+          ? lang('agent.credits.empty', 'Your T3Planet credits are used up.')
+          : (credits.level === 'critical' || credits.level === 'low'
+            ? lang('agent.credits.low', 'Only %1$s credits left.', [String(credits.remaining ?? '')])
+            : String(credits.label ?? ''));
+      }
+    }
+    const empty = credits?.empty === true;
+    if (this.input instanceof HTMLTextAreaElement) {
+      this.input.disabled = empty;
+      this.input.placeholder = empty
+        ? lang('agent.credits.emptyInput', 'Your T3Planet credits are used up. Top up credits to continue.')
+        : lang('agent.composer.placeholder', 'Ask a question, / for tools, @ for records…');
+    }
+    this.root.querySelector('[data-nst3af-agent-send]')?.toggleAttribute('disabled', empty);
+  }
+
+  /**
+   * Indexes of cards that still wait for the editor and can run without a second click.
+   *
+   * @returns {number[]}
+   */
+  pendingExecutableDrafts() {
+    const indexes = [];
+    this.messages.forEach((message, index) => {
+      const draft = message.meta?.draft;
+      if (message.meta?.type === 'inline_draft' && draft && !draft.applied && !draft.discarded && !draft.applying
+        && String(draft.severity ?? 'write') !== 'destructive') {
+        indexes.push(index);
+      }
+    });
+    return indexes;
+  }
+
+  /**
+   * "Execute all": runs every pending non-destructive card in order, then continues once.
+   */
+  async executeAll() {
+    if (this.isRunning) {
+      return;
+    }
+    this.executingAll = true;
+    try {
+      for (const index of this.pendingExecutableDrafts()) {
+        const draft = this.messages[index]?.meta?.draft;
+        if (!draft) {
+          continue;
+        }
+        const button = document.createElement('button');
+        button.dataset.messageIndex = String(index);
+        button.dataset.draftId = String(draft.draftId ?? '');
+        await this.applyDraft(button, 'all');
+      }
+    } finally {
+      this.executingAll = false;
+    }
+    await this.flushContinuation();
+  }
+
+  /**
+   * @param {object} message
+   * @param {number} index
+   * @returns {string}
+   */
+  renderClarificationMessage(message, index) {
+    const options = Array.isArray(message.meta?.options) ? message.meta.options : [];
+    const answered = this.messages.slice(index + 1).some((next) => next.role === 'user' && next.meta?.hidden !== true);
+    const buttons = options.length
+      ? `<div class="nst3af-agent-clarify__options">${options.map((option) => (
+        `<button type="button" class="btn btn-default btn-sm" data-nst3af-agent-clarify-option="${escapeHtml(String(option))}"${answered ? ' disabled' : ''}>${escapeHtml(String(option))}</button>`
+      )).join('')}</div>`
+      : '';
+    return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant nst3af-agent-clarify">
+      <div class="nst3af-agent-msg__who">AI Agent</div>
+      <div class="nst3af-agent-msg__body">${renderMessageBody(String(message.content ?? ''))}</div>
+      ${buttons}
+    </div>`;
+  }
+
+  /**
+   * @param {string} option
+   */
+  async answerClarification(option) {
+    if (!this.input || this.isRunning || option === '') {
+      return;
+    }
+    this.input.value = option;
+    await this.submitTurn();
+  }
+
+  /**
+   * "Open page", "Edit", "View" after a change.
+   *
+   * @param {Array<{record: string, links: Array<{kind: string, label: string, href: string}>}>} groups
+   * @returns {string}
+   */
+  renderResultLinks(groups) {
+    if (!Array.isArray(groups) || groups.length === 0) {
+      return '';
+    }
+    return `<div class="nst3af-agent-links">${groups.map((group) => `
+      <div class="nst3af-agent-links__group">
+        <span class="nst3af-agent-links__record">${escapeHtml(String(group.record ?? ''))}</span>
+        ${(Array.isArray(group.links) ? group.links : []).map((link) => (
+          `<a class="btn btn-default btn-sm" href="${escapeHtml(String(link.href ?? '#'))}" data-nst3af-agent-link="${escapeHtml(String(link.kind ?? 'module'))}"${link.kind === 'frontend' ? ' target="_blank" rel="noopener"' : ''}>${escapeHtml(String(link.label ?? ''))}</a>`
+        )).join('')}
+      </div>`).join('')}</div>`;
+  }
+
+  /**
+   * Backend links open in the content area (the agent stays open), frontend links in a new tab.
+   *
+   * @param {HTMLAnchorElement} link
+   * @returns {boolean} true when handled
+   */
+  openResultLink(link) {
+    if (link.dataset.nst3afAgentLink !== 'module') {
+      return false;
+    }
+    try {
+      const container = window.top?.TYPO3?.Backend?.ContentContainer;
+      if (container && typeof container.setUrl === 'function') {
+        container.setUrl(link.href);
+        return true;
+      }
+    } catch {
+      // Same-origin only; fall back to the default navigation.
+    }
+    return false;
   }
 
   renderLoadingSkeleton() {
@@ -1153,9 +1960,13 @@ class AgentController {
     const dimChip = this.context.contextAware
       ? `<span class="nst3af-agent-ctxchip nst3af-agent-ctxchip--dim">${escapeHtml(lang('agent.context.aware', 'Knows what you are looking at'))}</span>`
       : '';
-    this.contextEl.innerHTML = dimChip + chips.map((chip) => (
-      `<span class="nst3af-agent-ctxchip">${escapeHtml(String(chip.label ?? ''))}: ${escapeHtml(String(chip.value ?? ''))}</span>`
-    )).join('');
+    const icons = { page: '📄', module: '🧩', language: '🌐', record: '✏️', folder: '📁', workspace: '🗂', brand: '🏷' };
+    this.contextEl.innerHTML = dimChip + chips.map((chip) => {
+      const key = String(chip.key ?? '');
+      const icon = icons[key] ? `<span aria-hidden="true">${icons[key]}</span> ` : '';
+      const hint = escapeHtml(String(chip.hint ?? ''));
+      return `<span class="nst3af-agent-ctxchip nst3af-agent-ctxchip--${escapeHtml(key)}" title="${hint}">${icon}<span class="visually-hidden">${escapeHtml(String(chip.label ?? ''))}: </span>${escapeHtml(String(chip.value ?? ''))}</span>`;
+    }).join('');
   }
 
   async dismissDisclosure() {
@@ -1170,9 +1981,30 @@ class AgentController {
     }
 
     this.stream.removeAttribute('aria-busy');
+    const currentPageId = Number(this.context.pageId ?? 0);
+    // A read step is shown as one status line when the model answered after it in the same turn.
+    const summarizedLater = new Array(this.messages.length).fill(false);
+    let replyFollows = false;
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      const entry = this.messages[i];
+      if (entry.role === 'user') {
+        replyFollows = false;
+      } else if (entry.meta?.type === 'nl_reply') {
+        replyFollows = true;
+      }
+      summarizedLater[i] = replyFollows;
+    }
     const html = this.messages.map((message, index) => {
+      if (message.role === 'user' && message.meta?.hidden === true) {
+        return '';
+      }
       if (message.role === 'user') {
-        return `<div class="nst3af-agent-msg nst3af-agent-msg--user">${renderMessageBody(String(message.content ?? ''))}</div>`;
+        const written = message.meta?.context ?? null;
+        const writtenPageId = Number(written?.pageId ?? 0);
+        const caption = writtenPageId > 0 && writtenPageId !== currentPageId
+          ? `<div class="nst3af-agent-msg__where">${escapeHtml(lang('agent.session.writtenOn', 'on %1$s', [`${written.pageTitle ?? ''} [${writtenPageId}]`]))}</div>`
+          : '';
+        return `<div class="nst3af-agent-msg nst3af-agent-msg--user">${caption}${renderMessageBody(String(message.content ?? ''))}</div>`;
       }
       const meta = message.meta ?? {};
       if (meta.type === 'inline_draft' && meta.draft) {
@@ -1184,7 +2016,15 @@ class AgentController {
       if (meta.type === 'readback_result') {
         return this.renderReadbackMessage(message);
       }
+      if (meta.type === 'clarification') {
+        return this.renderClarificationMessage(message, index);
+      }
       if (meta.type === 'tool_result') {
+        const isStep = summarizedLater[index] && meta.success !== false && meta.fromDraftApply !== true
+          && String(meta.severity ?? 'read') === 'read';
+        if (isStep) {
+          return `<details class="nst3af-agent-step"><summary><span aria-hidden="true">✓</span> ${escapeHtml(resolveToolDisplayLabel(meta))}</summary>${this.renderToolResultMessage(message)}</details>`;
+        }
         return this.renderToolResultMessage(message);
       }
       if (meta.type === 'locked') {
@@ -1200,7 +2040,11 @@ class AgentController {
       return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant"><div class="nst3af-agent-msg__who">AI Agent</div><div class="nst3af-agent-msg__body">${renderMessageBody(String(message.content ?? ''))}</div>${extra}</div>`;
     }).join('');
 
-    this.stream.innerHTML = html;
+    const pending = this.pendingExecutableDrafts();
+    const executeAllBar = pending.length >= 2 && !this.isRunning
+      ? `<div class="nst3af-agent-execute-all"><button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-execute-all>${escapeHtml(lang('agent.draft.executeAll', 'Execute all (%1$s)', [String(pending.length)]))}</button></div>`
+      : '';
+    this.stream.innerHTML = this.renderHomeNotice() + html + executeAllBar + this.renderContextNotice();
     if (this.messages.length === 0) {
       this.renderGreeting();
     } else {
@@ -1339,7 +2183,6 @@ class AgentController {
     const displayLabel = resolveToolDisplayLabel(meta);
     const toolLabel = escapeHtml(displayLabel);
     const technicalTool = String(meta.tool ?? '').trim();
-    const severityLabel = escapeHtml(String(meta.severityLabel ?? meta.severity ?? 'read').toUpperCase());
     const autoRan = meta.autoRan === true;
     const facts = Array.isArray(meta.facts) ? meta.facts : [];
     const hasEditorContent = String(message.content ?? '').trim() !== '';
@@ -1349,23 +2192,25 @@ class AgentController {
       )).join('')}</dl>`
       : '';
 
-    let detailsHtml = '';
+    // Technical output (tool name, trace, raw data) stays behind "Technical details".
+    let detailsJson = '';
     if (meta.details !== undefined && meta.details !== null) {
-      let detailsJson = '';
       try {
         detailsJson = JSON.stringify(meta.details, null, 2);
       } catch {
         detailsJson = String(meta.details);
       }
-      if (detailsJson !== '' && detailsJson !== 'null') {
-        const detailsSummary = technicalTool !== '' && technicalTool !== displayLabel
-          ? `${lang('agent.result.details', 'Details')} (${technicalTool})`
-          : lang('agent.result.details', 'Details');
-        detailsHtml = `<details class="nst3af-agent-details"><summary>${escapeHtml(detailsSummary)}</summary><pre><code>${escapeHtml(detailsJson)}</code></pre></details>`;
-      }
     }
-
-    const traceHtml = renderToolTrace(meta.trace);
+    const traceInner = renderToolTrace(meta.trace);
+    let detailsHtml = '';
+    if (traceInner !== '' || (detailsJson !== '' && detailsJson !== 'null') || technicalTool !== '') {
+      detailsHtml = `<details class="nst3af-agent-details"><summary>${escapeHtml(lang('agent.result.technical', 'Technical details'))}</summary>
+        ${technicalTool !== '' ? `<p class="nst3af-agent-details__tool"><code>${escapeHtml(technicalTool)}</code></p>` : ''}
+        ${traceInner}
+        ${detailsJson !== '' && detailsJson !== 'null' ? `<pre><code>${escapeHtml(detailsJson)}</code></pre>` : ''}
+      </details>`;
+    }
+    const traceHtml = this.renderResultLinks(meta.links);
 
     let extra = '';
     if (hasTurnGuardWarning(meta)) {
@@ -1381,16 +2226,16 @@ class AgentController {
       <div class="nst3af-agent-msg__who">AI Agent</div>
       <div class="nst3af-agent-tcall">
         <div class="nst3af-agent-tcall__head">
-          <span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--read" aria-hidden="true"></span>
-          <span class="nst3af-agent-tcall__badge">${severityLabel}</span>
+          <span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(String(meta.severity ?? 'read'))}" aria-hidden="true"></span>
           <strong>${toolLabel}</strong>
           ${autoHtml}
         </div>
         <div class="nst3af-agent-msg__body">${renderMessageBody(String(message.content ?? ''))}</div>
+        ${success ? renderMediaPreview(meta.details) : ''}
         ${factsHtml}
         ${traceHtml}
-        ${detailsHtml}
         ${extra}
+        ${detailsHtml}
       </div>
     </div>`;
   }
@@ -1546,7 +2391,8 @@ class AgentController {
     const rows = fields.map((field) => {
       const kept = field.kept !== false;
       const dropClass = kept ? '' : ' nst3af-agent-draft__fld--dropped';
-      const label = `${escapeHtml(String(field.table ?? ''))}:${Number(field.uid ?? 0)} · ${escapeHtml(String(field.field ?? ''))}`;
+      const recordLabel = String(field.recordLabel ?? '') || `${field.table ?? ''}:${Number(field.uid ?? 0)}`;
+      const label = `${escapeHtml(recordLabel)} · <strong>${escapeHtml(String(field.fieldLabel ?? '') || String(field.field ?? ''))}</strong>`;
       const keepLabel = kept ? '✓' : '✕';
       const keepTitle = kept ? lang('agent.draft.drop', 'Drop') : lang('agent.draft.keep', 'Keep');
       return `<div class="nst3af-agent-draft__fld${dropClass}" data-field-key="${escapeHtml(String(field.key ?? ''))}">
@@ -1561,7 +2407,7 @@ class AgentController {
 
     const applyLabel = isDestructive
       ? (armed ? lang('agent.draft.confirmSecond', 'Apply (2 of 2)') : lang('agent.draft.confirmFirst', 'Confirm (1 of 2)'))
-      : lang('agent.draft.apply', 'Apply');
+      : lang('agent.draft.execute', 'Execute');
     const safeFieldCount = Number(draft.safeFieldCount ?? fields.filter((field) => field.safe === true).length);
     const safeApplyBtn = safeFieldCount > 0 && !isDestructive
       ? `<button type="button" class="btn btn-default btn-sm" data-nst3af-agent-draft-apply-safe="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(lang('agent.draft.applySafe', 'Apply safe fields'))}</button>`
@@ -1576,14 +2422,16 @@ class AgentController {
         <div class="nst3af-agent-draft__header">
           <span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(severity)}" aria-hidden="true"></span>
           <span class="nst3af-agent-draft__title">${escapeHtml(resolveToolDisplayLabel(draft))}</span>
-          <span class="nst3af-agent-draft__badge">${escapeHtml(lang('agent.draft.elicitation', 'MCP elicitation'))}</span>
+          <span class="nst3af-agent-draft__badge">${escapeHtml(lang('agent.draft.previewBadge', 'Preview'))}</span>
         </div>
         <p class="nst3af-agent-draft__lead">${renderMessageBody(String(message.content ?? ''))}</p>
+        <div class="nst3af-agent-draft__cols" aria-hidden="true"><span></span><span>${escapeHtml(lang('agent.draft.colCurrent', 'Now'))}</span><span>${escapeHtml(lang('agent.draft.colProposed', 'New'))}</span><span></span></div>
         <div class="nst3af-agent-draft__fields">${rows}</div>
+        ${this.renderDraftTarget(isDestructive)}
         <div class="nst3af-agent-draft__actions">
           <button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-draft-apply="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(applyLabel)}</button>
           ${safeApplyBtn}
-          <button type="button" class="btn btn-default btn-sm" data-nst3af-agent-draft-discard="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(lang('agent.draft.discard', 'Discard'))}</button>
+          <button type="button" class="btn btn-default btn-sm" data-nst3af-agent-draft-discard="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(lang('agent.draft.decline', 'Decline'))}</button>
         </div>
       </div>
     </div>`;
@@ -1606,7 +2454,7 @@ class AgentController {
     const args = Array.isArray(draft.arguments) ? draft.arguments : [];
 
     const argRows = args.map((entry) => {
-      const key = escapeHtml(String(entry.key ?? ''));
+      const key = escapeHtml(String(entry.label ?? '') || humanizeKey(String(entry.key ?? '')));
       const value = escapeHtml(String(entry.value ?? ''));
       return `<div class="nst3af-agent-tool-confirm__arg"><dt>${key}</dt><dd>${value}</dd></div>`;
     }).join('');
@@ -1635,7 +2483,7 @@ class AgentController {
 
     const applyLabel = isDestructive
       ? (armed ? lang('agent.draft.confirmSecond', 'Apply (2 of 2)') : lang('agent.draft.confirmFirst', 'Confirm (1 of 2)'))
-      : lang('agent.draft.runTool', 'Run tool');
+      : lang('agent.draft.execute', 'Execute');
 
     const severityClass = isDestructive ? ' nst3af-agent-draft--destructive' : ' nst3af-agent-draft--write';
     const armedClass = armed ? ' nst3af-agent-draft--armed' : '';
@@ -1646,13 +2494,14 @@ class AgentController {
         <div class="nst3af-agent-draft__header">
           <span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(severity)}" aria-hidden="true"></span>
           <span class="nst3af-agent-draft__title">${escapeHtml(displayLabel)}</span>
-          <span class="nst3af-agent-draft__badge">${escapeHtml(lang('agent.draft.toolConfirmation', 'Tool confirmation'))}</span>
+          <span class="nst3af-agent-draft__badge">${escapeHtml(lang('agent.draft.previewBadge', 'Preview'))}</span>
         </div>
         <p class="nst3af-agent-tool-confirm__summary">${escapeHtml(summary)}</p>
         ${argsBlock}
+        ${this.renderDraftTarget(isDestructive)}
         <div class="nst3af-agent-draft__actions">
           <button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-draft-apply="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(applyLabel)}</button>
-          <button type="button" class="btn btn-default btn-sm" data-nst3af-agent-draft-discard="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(lang('agent.draft.discard', 'Discard'))}</button>
+          <button type="button" class="btn btn-default btn-sm" data-nst3af-agent-draft-discard="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(lang('agent.draft.decline', 'Decline'))}</button>
         </div>
       </div>
     </div>`;
@@ -1667,10 +2516,12 @@ class AgentController {
     const readback = Array.isArray(meta.readback) ? meta.readback : [];
     const rows = readback.map((entry) => {
       const values = entry.values ?? {};
+      const fieldLabels = entry.fieldLabels ?? {};
       const cells = Object.entries(values).map(([key, value]) => (
-        `<tr><td>${escapeHtml(key)}</td><td>${escapeHtml(String(value ?? ''))}</td></tr>`
+        `<tr><td>${escapeHtml(String(fieldLabels[key] ?? key))}</td><td>${escapeHtml(String(value ?? ''))}</td></tr>`
       )).join('');
-      return `<div class="nst3af-agent-readback__record"><strong>${escapeHtml(String(entry.table ?? ''))}:${Number(entry.uid ?? 0)}</strong><table>${cells}</table></div>`;
+      const recordLabel = String(entry.recordLabel ?? '') || `${entry.table ?? ''}:${Number(entry.uid ?? 0)}`;
+      return `<div class="nst3af-agent-readback__record"><strong>${escapeHtml(recordLabel)}</strong><table>${cells}</table></div>`;
     }).join('');
 
     const undoBtn = meta.changeId
@@ -1686,8 +2537,8 @@ class AgentController {
       <div class="nst3af-agent-applied">
         <div class="nst3af-agent-applied__title"><span aria-hidden="true">✓</span> ${escapeHtml(lang('agent.applied.title', 'Changes applied'))}</div>
         <p>${escapeHtml(String(message.content ?? ''))}</p>
-        <p class="nst3af-agent-readback__note">${escapeHtml(lang('agent.draft.readback', 'Written through DataHandler, then read back from the database. Workspace and publishing are untouched.'))}</p>
         ${rows}
+        ${this.renderResultLinks(meta.links)}
         ${undoBtn}
         ${handoffHtml}
       </div>
@@ -1819,9 +2670,12 @@ class AgentController {
           workDurationMs,
           workSummary: String(draft.summary ?? ''),
           workArguments: Array.isArray(draft.arguments) ? draft.arguments : [],
+          links: Array.isArray(payload.links) ? payload.links : [],
+          fromRunner: message.meta?.fromRunner === true,
         };
         this.renderStream();
         await this.persistSession();
+        this.queueContinuation(message, 'applied', String(message.content ?? ''));
         return;
       }
 
@@ -1839,10 +2693,12 @@ class AgentController {
           changeId: result.changeId ?? '',
           correlationId: result.correlationId ?? '',
           schedulerHandoff: payload.schedulerHandoff ?? null,
+          links: Array.isArray(payload.links) ? payload.links : [],
         },
       });
       this.renderStream();
       await this.persistSession();
+      this.queueContinuation(message, 'applied', String(payload.message ?? ''));
     } catch (error) {
       draft.applying = false;
       const text = errorMessage(error);
@@ -1855,6 +2711,7 @@ class AgentController {
         this.stream.removeAttribute('aria-busy');
       }
     }
+    await this.flushContinuation();
   }
 
   /**
@@ -1878,9 +2735,12 @@ class AgentController {
     }
 
     message.meta.draft.discarded = true;
+    const declinedLabel = resolveToolDisplayLabel(message.meta.draft);
     message.content = lang('agent.draft.discarded', 'Draft discarded. Nothing was written.');
     this.renderStream();
     await this.persistSession();
+    this.queueContinuation(message, 'declined', '', declinedLabel);
+    await this.flushContinuation();
   }
 
   /**
@@ -2034,10 +2894,12 @@ class AgentController {
           correlationId: result.correlationId ?? meta.correlationId ?? '',
           schedulerHandoff: payload.schedulerHandoff ?? null,
           appliedValues: result.appliedValues ?? {},
+          links: Array.isArray(payload.links) ? payload.links : [],
         },
       });
       this.renderStream();
       await this.persistSession();
+      this.queueContinuation(message, 'applied', String(payload.message ?? ''));
     } catch (error) {
       meta.applying = false;
       const text = errorMessage(error);
@@ -2049,6 +2911,7 @@ class AgentController {
         this.stream.removeAttribute('aria-busy');
       }
     }
+    await this.flushContinuation();
   }
 
   /**
@@ -2072,9 +2935,12 @@ class AgentController {
     }
 
     message.meta.discarded = true;
+    const declinedSuggestionLabel = resolveToolDisplayLabel(message.meta);
     message.content = lang('agent.draft.discarded', 'Draft discarded. Nothing was written.');
     this.renderStream();
     await this.persistSession();
+    this.queueContinuation(message, 'declined', '', declinedSuggestionLabel);
+    await this.flushContinuation();
   }
 
   toggleAttachMenu() {
@@ -2323,18 +3189,31 @@ class AgentController {
     await this.submitTurn(tool, toolArguments, action);
   }
 
-  async submitTurn(explicitTool = '', toolArguments = {}, starterAction = '') {
+  /**
+   * @param {string} [explicitTool]
+   * @param {object} [toolArguments]
+   * @param {string} [starterAction]
+   * @param {{continuation?: {outcome: string, label: string, result: string}}} [options]
+   */
+  async submitTurn(explicitTool = '', toolArguments = {}, starterAction = '', options = {}) {
     if (!this.input || this.isRunning) {
       return;
     }
+    if (this.credits?.empty === true) {
+      this.announce(lang('agent.credits.empty', 'Your T3Planet credits are used up.'));
+      return;
+    }
 
-    const message = this.input.value.trim();
+    const continuation = options.continuation ?? null;
+    const message = continuation !== null ? 'continue' : this.input.value.trim();
     if (message === '') {
       return;
     }
 
     this.isRunning = true;
-    this.input.value = '';
+    if (continuation === null) {
+      this.input.value = '';
+    }
     this.hideAutocomplete();
 
     const backendContext = resolveBackendContext();
@@ -2347,12 +3226,21 @@ class AgentController {
         ...backendContext,
         ...this.context,
       },
+      sessionUuid: this.freshSession ? '' : (this.session?.uuid ?? ''),
+      fresh: this.freshSession,
+      provider: this.session?.provider || this.selectedProvider || 'default',
     };
+    if (continuation !== null) {
+      body.continuation = continuation;
+    }
 
     const preferStream = explicitTool === '' && starterAction === '';
 
+    const userMessage = continuation !== null
+      ? { role: 'user', content: message, meta: { hidden: true, type: 'continuation' } }
+      : { role: 'user', content: message, meta: {} };
     try {
-      this.messages.push({ role: 'user', content: message, meta: {} });
+      this.messages.push(userMessage);
       this.renderStream();
       this.showProgress(true);
       let payload = null;
@@ -2383,6 +3271,20 @@ class AgentController {
         });
       }
       this.context = payload.context ?? this.context;
+      if (payload.userMessage && typeof payload.userMessage === 'object') {
+        // The server's copy carries where it was written (and the continuation text).
+        Object.assign(userMessage, payload.userMessage);
+      }
+      if (payload.credits !== undefined) {
+        this.credits = payload.credits;
+        this.renderCredits();
+      }
+      if (payload.session) {
+        this.session = payload.session;
+        this.freshSession = false;
+      }
+      this.contextNotice = '';
+      this.renderHeaderControls();
 
       this.renderContext();
       this.renderStream();
@@ -2469,8 +3371,8 @@ class AgentController {
         let label = lang('agent.live.running', 'Assistant is working…');
         if (status === 'llm') {
           label = lang('agent.live.thinking', 'Thinking…');
-        } else if (status === 'tool' && data.tool) {
-          label = lang('agent.live.runningTool', 'Running %1$s…').replace('%1$s', String(data.tool));
+        } else if (status === 'tool' && (data.label || data.tool)) {
+          label = lang('agent.live.runningTool', 'Running %1$s…').replace('%1$s', String(data.label || data.tool));
         }
         this.updateProgressLabel(label);
         return;
@@ -2556,9 +3458,15 @@ class AgentController {
     }
 
     const body = {
-      messages: messagesForPersistence(this.messages),
       context: this.context,
     };
+    // Only a stored conversation is saved from here; turns are stored by the server.
+    if (this.session?.uuid && !this.freshSession) {
+      body.sessionUuid = this.session.uuid;
+      body.messages = messagesForPersistence(this.messages);
+    } else if (!includeDisclosure && !this.disclosureDismissed) {
+      return;
+    }
     if (includeDisclosure || this.disclosureDismissed) {
       body.disclosureDismissed = this.disclosureDismissed;
     }

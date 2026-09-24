@@ -23,7 +23,7 @@ use NITSAN\NsT3AF\Agent\Contract\EmbeddingSourceInterface;
 use NITSAN\NsT3AF\Agent\Service\AgentSettingsService;
 
 /**
- * Resolves agentEmbeddingSource: auto|provider|transformers|none.
+ * Resolves agentEmbeddingSource: auto|provider|none.
  *
  * @internal
  */
@@ -32,8 +32,6 @@ final class EmbeddingSourceResolver
     public const MODE_AUTO = 'auto';
 
     public const MODE_PROVIDER = 'provider';
-
-    public const MODE_TRANSFORMERS = 'transformers';
 
     public const MODE_NONE = 'none';
 
@@ -55,7 +53,7 @@ final class EmbeddingSourceResolver
         return match ($mode) {
             self::MODE_NONE => null,
             self::MODE_PROVIDER => $this->byId(ProviderEmbeddingSource::ID),
-            self::MODE_TRANSFORMERS => $this->byId(TransformersEmbeddingSource::ID),
+            // "transformers" (removed local models) and unknown values fall back to auto.
             default => $this->resolveAuto(),
         };
     }
@@ -76,7 +74,7 @@ final class EmbeddingSourceResolver
             return 'none';
         }
 
-        if ($source instanceof ProviderEmbeddingSource || $source instanceof TransformersEmbeddingSource) {
+        if ($source instanceof ProviderEmbeddingSource) {
             return $source->modelId();
         }
 
@@ -86,16 +84,8 @@ final class EmbeddingSourceResolver
     private function resolveAuto(): ?EmbeddingSourceInterface
     {
         $provider = $this->byId(ProviderEmbeddingSource::ID);
-        if ($provider !== null && $provider->isAvailable()) {
-            return $provider;
-        }
 
-        $transformers = $this->byId(TransformersEmbeddingSource::ID);
-        if ($transformers !== null && $transformers->isAvailable()) {
-            return $transformers;
-        }
-
-        return null;
+        return $provider !== null && $provider->isAvailable() ? $provider : null;
     }
 
     private function byId(string $id): ?EmbeddingSourceInterface

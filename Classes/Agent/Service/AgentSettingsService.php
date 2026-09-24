@@ -29,13 +29,11 @@ final class AgentSettingsService
 {
     public const DEFAULT_CONVERSATION_RETENTION_DAYS = 90;
 
-    public const DEFAULT_SHORTLIST_SIZE = 12;
-
     public const DEFAULT_MIN_SIMILARITY = 0.0;
 
     public const DEFAULT_EMBEDDING_SOURCE = 'auto';
 
-    public const DEFAULT_TRANSFORMERS_MODEL = 'Xenova/all-MiniLM-L6-v2';
+    public const CONVERSATION_SCOPES = ['page', 'module', 'user'];
 
     private const EXTENSION_KEY = 'ns_t3af';
 
@@ -49,9 +47,13 @@ final class AgentSettingsService
         'agentConversationRetentionDays' => 'agentConversationRetentionDays',
         'agentEmbeddingSource' => 'agentEmbeddingSource',
         'agentEmbeddingProvider' => 'agentEmbeddingProvider',
-        'agentTransformersModel' => 'agentTransformersModel',
-        'agentShortlistSize' => 'agentShortlistSize',
         'agentMinSimilarity' => 'agentMinSimilarity',
+        'agentConversationScope' => 'agentConversationScope',
+        'agentSessionListEnabled' => 'agentSessionListEnabled',
+        'agentSessionListDefaultFilter' => 'agentSessionListDefaultFilter',
+        'agentMaxSessionsPerScope' => 'agentMaxSessionsPerScope',
+        'agentMaxSessionsPerUser' => 'agentMaxSessionsPerUser',
+        'agentContinueAfterConfirm' => 'agentContinueAfterConfirm',
     ];
 
     public function __construct(
@@ -72,9 +74,13 @@ final class AgentSettingsService
             'agentConversationRetentionDays' => (int) $stored['agentConversationRetentionDays'],
             'agentEmbeddingSource' => (string) $stored['agentEmbeddingSource'],
             'agentEmbeddingProvider' => (string) $stored['agentEmbeddingProvider'],
-            'agentTransformersModel' => (string) $stored['agentTransformersModel'],
-            'agentShortlistSize' => (int) $stored['agentShortlistSize'],
             'agentMinSimilarity' => (float) $stored['agentMinSimilarity'],
+            'agentConversationScope' => (string) $stored['agentConversationScope'],
+            'agentSessionListEnabled' => $stored['agentSessionListEnabled'] === '' || (int) $stored['agentSessionListEnabled'] === 1,
+            'agentSessionListDefaultFilter' => (string) $stored['agentSessionListDefaultFilter'],
+            'agentMaxSessionsPerScope' => $stored['agentMaxSessionsPerScope'] === '' ? 20 : (int) $stored['agentMaxSessionsPerScope'],
+            'agentMaxSessionsPerUser' => $stored['agentMaxSessionsPerUser'] === '' ? 200 : (int) $stored['agentMaxSessionsPerUser'],
+            'agentContinueAfterConfirm' => $stored['agentContinueAfterConfirm'] === '' || (int) $stored['agentContinueAfterConfirm'] === 1,
         ];
     }
 
@@ -112,18 +118,48 @@ final class AgentSettingsService
         return trim((string) ($this->all()['agentEmbeddingProvider'] ?? ''));
     }
 
-    public function getTransformersModel(): string
+    /**
+     * Which conversation opens automatically: page (module + page), module, or user (latest anywhere).
+     */
+    public function getConversationScope(): string
     {
-        $value = trim((string) ($this->all()['agentTransformersModel'] ?? self::DEFAULT_TRANSFORMERS_MODEL));
+        $scope = strtolower(trim((string) ($this->all()['agentConversationScope'] ?? 'page')));
 
-        return $value !== '' ? $value : self::DEFAULT_TRANSFORMERS_MODEL;
+        return in_array($scope, self::CONVERSATION_SCOPES, true) ? $scope : 'page';
     }
 
-    public function getShortlistSize(): int
+    public function isSessionListEnabled(): bool
     {
-        $size = (int) ($this->all()['agentShortlistSize'] ?? self::DEFAULT_SHORTLIST_SIZE);
+        return ($this->all()['agentSessionListEnabled'] ?? true) === true;
+    }
 
-        return $size > 0 ? $size : self::DEFAULT_SHORTLIST_SIZE;
+    /**
+     * Initial filter of the session list: "current" (this page / module) or "all".
+     */
+    public function getSessionListDefaultFilter(): string
+    {
+        return ($this->all()['agentSessionListDefaultFilter'] ?? 'current') === 'all' ? 'all' : 'current';
+    }
+
+    /** 0 = unlimited */
+    public function getMaxSessionsPerScope(): int
+    {
+        return max(0, (int) ($this->all()['agentMaxSessionsPerScope'] ?? 20));
+    }
+
+    /**
+     * After the editor confirms or declines a card of a natural-language turn, the agent runs one
+     * more turn so multi-step requests continue ("create the page, then add two headers").
+     */
+    public function isContinueAfterConfirmEnabled(): bool
+    {
+        return ($this->all()['agentContinueAfterConfirm'] ?? true) === true;
+    }
+
+    /** 0 = unlimited */
+    public function getMaxSessionsPerUser(): int
+    {
+        return max(0, (int) ($this->all()['agentMaxSessionsPerUser'] ?? 200));
     }
 
     public function getMinSimilarity(): float

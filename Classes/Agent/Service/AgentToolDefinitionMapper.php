@@ -110,6 +110,13 @@ final readonly class AgentToolDefinitionMapper
         $previewable = ($tool['previewable'] ?? false) === true
             || ($className !== '' && is_subclass_of($className, McpPreviewableToolInterface::class));
 
+        $described = [];
+        foreach (is_array($tool['params'] ?? null) ? $tool['params'] : [] as $param) {
+            if (is_array($param) && is_string($param['name'] ?? null)) {
+                $described[$param['name']] = trim((string) ($param['description'] ?? ''));
+            }
+        }
+
         if ($className !== '' && class_exists($className) && method_exists($className, 'execute')) {
             $reflection = new ReflectionMethod($className, 'execute');
             foreach ($reflection->getParameters() as $parameter) {
@@ -122,8 +129,12 @@ final readonly class AgentToolDefinitionMapper
                 }
                 $properties[$name] = [
                     'type' => $this->mapJsonType($this->parameterTypeName($parameter)),
-                    'description' => '',
+                    // Introspected @param text; the model chooses arguments from it.
+                    'description' => $described[$name] ?? '',
                 ];
+                if ($properties[$name]['type'] === 'array') {
+                    $properties[$name] = array_merge($properties[$name], $this->arrayShape($reflection, $name));
+                }
                 if (!$parameter->isOptional() && !$parameter->isDefaultValueAvailable()) {
                     $required[] = $name;
                 }
@@ -197,5 +208,37 @@ final readonly class AgentToolDefinitionMapper
             'array' => 'array',
             default => 'string',
         };
+    }
+
+    /**
+     * JSON schema for an array parameter from its @param type: list<string> / string[] / array<int> → array with
+     * items, array<string, T> → object. Providers such as OpenAI reject arrays without items.
+     *
+     * @return array<string, mixed>
+     */
+    private function arrayShape(ReflectionMethod $method, string $name): array
+    {
+        $doc = (string) $method->getDocComment();
+        $type = '';
+        if (preg_match('/@param\s+(\S+(?:<[^>]*>)?)\s+\$' . preg_quote($name, '/') . '\b/', $doc, $match) === 1) {
+            $type = strtolower($match[1]);
+        }
+
+        if (preg_match('/^array<\s*string\s*,/', $type) === 1) {
+            return ['type' => 'object'];
+        }
+        $item = '';
+        if (preg_match('/^(?:list|array|non-empty-list|non-empty-array)<(?:\s*int\s*,)?\s*([a-z]+)/', $type, $match) === 1) {
+            $item = $match[1];
+        } elseif (preg_match('/^([a-z]+)\[\]$/', $type, $match) === 1) {
+            $item = $match[1];
+        }
+
+        return ['items' => ['type' => match ($item) {
+            'int', 'integer', 'float' => 'number',
+            'bool' => 'boolean',
+            'array' => 'object',
+            default => 'string',
+        }]];
     }
 }

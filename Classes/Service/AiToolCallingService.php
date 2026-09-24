@@ -20,13 +20,16 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Service;
 
 use NITSAN\NsT3AF\Api\AiOptions;
+use NITSAN\NsT3AF\Api\AiResponse;
 use NITSAN\NsT3AF\Api\AiToolCall;
 use NITSAN\NsT3AF\Api\AiToolCallingResponse;
 use NITSAN\NsT3AF\Api\AiToolCallingServiceInterface;
 use NITSAN\NsT3AF\Api\AiToolDefinition;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface;
+use NITSAN\NsT3AF\Event\AfterProviderResponseEvent;
 use NITSAN\NsT3AF\Event\BeforeProviderRequestEvent;
+use NITSAN\NsT3AF\Event\ProviderRequestFailedEvent;
 use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 use NITSAN\NsT3AF\Exception\UnknownAdapterException;
 use NITSAN\NsT3AF\Provider\AdapterRegistry;
@@ -40,11 +43,14 @@ use Psr\EventDispatcher\EventDispatcherInterface;
  */
 final class AiToolCallingService implements AiToolCallingServiceInterface
 {
+    private const CALL_COMPLETE_WITH_TOOLS = 'complete_with_tools';
+
     public function __construct(
         private readonly ProviderLookupInterface $providers,
         private readonly AdapterRegistry $adapters,
         private readonly EventDispatcherInterface $events,
         private readonly SiteStorageContext $siteStorageContext,
+        private readonly ?RequestTelemetryService $telemetry = null,
     ) {}
 
     public function supportsToolCalling(?string $providerIdentifier = null, ?int $pageId = null): bool
@@ -92,10 +98,23 @@ final class AiToolCallingService implements AiToolCallingServiceInterface
         }
 
         $prompt = $this->messagesToPrompt($messages);
-        $before = new BeforeProviderRequestEvent($provider, $prompt, $options, 'complete_with_tools');
+        $before = new BeforeProviderRequestEvent($provider, $prompt, $options, self::CALL_COMPLETE_WITH_TOOLS);
         $this->events->dispatch($before);
-
         $modelId = $before->getOptions()->modelId ?? $provider->modelId;
+
+        // Governance gates (access control, group limits) cancel via the event;
+        // honour that like AiService does instead of calling the provider anyway.
+        if ($before->isCancelled()) {
+            return new AiToolCallingResponse(
+                content: '',
+                modelId: $modelId,
+                providerIdentifier: $provider->identifier,
+                toolCalls: [],
+                raw: ['cancelled' => $before->getCancellationReason()],
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
+            );
+        }
+
         $platform = $adapter->platform($provider);
         $toolPayload = array_map(
             static fn(AiToolDefinition $definition): array => $definition->toProviderShape(),
@@ -103,18 +122,31 @@ final class AiToolCallingService implements AiToolCallingServiceInterface
         );
 
         $start = (int) (microtime(true) * 1000);
-        if ($platform instanceof OpenAiCompatiblePlatform || $platform instanceof SymfonyAiPlatform) {
-            $result = $platform->invokeWithTools($modelId, $messages, $toolPayload);
-        } elseif (method_exists($platform, 'invokeWithTools')) {
-            $result = $platform->invokeWithTools($modelId, $messages, $toolPayload);
-        } else {
-            throw new AdapterRuntimeException(
-                sprintf('Adapter "%s" advertises tool calling but its platform cannot invoke tools.', $provider->adapterType),
-            );
-        }
+        try {
+            if ($platform instanceof OpenAiCompatiblePlatform || $platform instanceof SymfonyAiPlatform) {
+                $result = $platform->invokeWithTools($modelId, $messages, $toolPayload);
+            } elseif (method_exists($platform, 'invokeWithTools')) {
+                $result = $platform->invokeWithTools($modelId, $messages, $toolPayload);
+            } else {
+                throw new AdapterRuntimeException(
+                    sprintf('Adapter "%s" advertises tool calling but its platform cannot invoke tools.', $provider->adapterType),
+                );
+            }
 
-        if (!is_array($result)) {
-            throw new AdapterRuntimeException('Tool-calling platform returned an invalid result.');
+            if (!is_array($result)) {
+                throw new AdapterRuntimeException('Tool-calling platform returned an invalid result.');
+            }
+        } catch (\Throwable $exception) {
+            $this->telemetry?->logFailure(
+                provider: $provider,
+                options: $before->getOptions(),
+                prompt: $before->getPrompt(),
+                requestType: self::CALL_COMPLETE_WITH_TOOLS,
+                error: $exception,
+                latencyMs: (int) (microtime(true) * 1000) - $start,
+            );
+            $this->events->dispatch(new ProviderRequestFailedEvent($provider, $exception, self::CALL_COMPLETE_WITH_TOOLS));
+            throw $exception;
         }
 
         $toolCalls = [];
@@ -134,17 +166,49 @@ final class AiToolCallingService implements AiToolCallingServiceInterface
         }
 
         $usage = is_array($result['usage'] ?? null) ? $result['usage'] : [];
+        $content = isset($result['content']) && is_string($result['content']) ? $result['content'] : '';
+        $tokensInput = (int) ($usage['prompt_tokens'] ?? $usage['input_tokens'] ?? 0);
+        $tokensOutput = (int) ($usage['completion_tokens'] ?? $usage['output_tokens'] ?? 0);
+        $latencyMs = (int) (microtime(true) * 1000) - $start;
+        $appliedProfileUid = BrandContextLineage::profileUidFromOptions($before->getOptions());
+
+        // Budget, request log and AI Label listeners work on AiResponse; report the
+        // tool-calling round like any other provider call so caps and credits count it.
+        $after = new AfterProviderResponseEvent(
+            $provider,
+            new AiResponse(
+                content: $content,
+                modelId: $modelId,
+                providerIdentifier: $provider->identifier,
+                tokensInput: $tokensInput,
+                tokensOutput: $tokensOutput,
+                latencyMs: $latencyMs,
+                cached: false,
+                raw: ['toolCalls' => array_map(static fn(AiToolCall $call): string => $call->name, $toolCalls)],
+                appliedBrandContextProfileUid: $appliedProfileUid,
+            ),
+            $before->getOptions(),
+            $before->getPrompt(),
+        );
+        $this->events->dispatch($after);
+        $this->telemetry?->logCompletion(
+            provider: $provider,
+            options: $before->getOptions(),
+            prompt: $before->getPrompt(),
+            response: $after->getResponse(),
+            requestType: self::CALL_COMPLETE_WITH_TOOLS,
+        );
 
         return new AiToolCallingResponse(
-            content: isset($result['content']) && is_string($result['content']) ? $result['content'] : '',
+            content: $content,
             modelId: $modelId,
             providerIdentifier: $provider->identifier,
             toolCalls: $toolCalls,
-            tokensInput: (int) ($usage['prompt_tokens'] ?? $usage['input_tokens'] ?? 0),
-            tokensOutput: (int) ($usage['completion_tokens'] ?? $usage['output_tokens'] ?? 0),
-            latencyMs: (int) (microtime(true) * 1000) - $start,
+            tokensInput: $tokensInput,
+            tokensOutput: $tokensOutput,
+            latencyMs: $latencyMs,
             raw: is_array($result['raw'] ?? null) ? $result['raw'] : [],
-            appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
+            appliedBrandContextProfileUid: $appliedProfileUid,
         );
     }
 

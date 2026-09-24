@@ -20,10 +20,16 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use NITSAN\NsT3AF\Domain\Repository\AgentConversationRepository;
+use NITSAN\NsT3AF\Updates\AgentConversationSessionsUpdate;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
- * Module-scoped conversation storage for the AI Agent (DB persistence).
+ * The active AI Agent conversation of one request.
+ *
+ * {@see self::resolve()} picks it: the requested session (if the user owns it), otherwise
+ * the latest conversation of the configured scope (agentConversationScope: page, module
+ * or user). A new conversation is only stored when the first message is saved, so opening
+ * the agent on a page does not create empty rows.
  *
  * @internal
  */
@@ -31,178 +37,166 @@ final class AgentConversationSession
 {
     private const SESSION_DISCLOSURE_KEY = 'nst3af_agent_disclosure_dismissed';
 
-    private string $moduleRoute = '';
-
-    private int $pageId = 0;
+    /** @var array<string, mixed>|null */
+    private ?array $row = null;
 
     public function __construct(
-        private readonly AgentConversationRepository $conversationRepository,
+        private readonly AgentConversationRepository $repository,
+        private readonly AgentSettingsService $settings,
     ) {}
 
-    public function setScope(string $moduleRoute, int $pageId): void
+    /**
+     * @param array<string, mixed> $context resolved context (module, pageId)
+     * @param bool $fresh true = do not open an existing conversation (e.g. "New conversation")
+     * @return array<string, mixed>|null the active row, null while nothing is stored yet
+     */
+    public function resolve(BackendUserAuthentication $user, array $context, string $requestedUuid = '', bool $fresh = false): ?array
     {
-        $this->moduleRoute = trim($moduleRoute);
-        $this->pageId = max(0, $pageId);
+        $userUid = $this->userUid($user);
+        $this->row = null;
+        if ($requestedUuid !== '') {
+            $this->row = $this->repository->findBySessionForUser($requestedUuid, $userUid);
+        }
+        if ($this->row === null && !$fresh && $requestedUuid === '') {
+            $this->row = $this->repository->findLatestForScope(
+                $userUid,
+                $this->settings->getConversationScope(),
+                $this->module($context),
+                $this->pageId($context),
+            );
+        }
+
+        return $this->row;
+    }
+
+    /**
+     * Starts an empty conversation on the current page / module and enforces the limits.
+     *
+     * @param array<string, mixed> $context
+     * @return array<string, mixed>
+     */
+    public function startNew(BackendUserAuthentication $user, array $context, string $providerIdentifier = ''): array
+    {
+        $userUid = $this->userUid($user);
+        $this->row = $this->repository->create($userUid, $this->module($context), $this->pageId($context), '', $providerIdentifier);
+        $this->repository->enforceLimits(
+            $userUid,
+            $this->settings->getConversationScope(),
+            $this->module($context),
+            $this->pageId($context),
+            $this->settings->getMaxSessionsPerScope(),
+            $this->settings->getMaxSessionsPerUser(),
+        );
+
+        return $this->row;
+    }
+
+    public function sessionUuid(): string
+    {
+        return (string) ($this->row['session_uuid'] ?? '');
+    }
+
+    /**
+     * Provider chosen for the active conversation ('' = not locked yet).
+     */
+    public function providerIdentifier(): string
+    {
+        return (string) ($this->row['provider_identifier'] ?? '');
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function current(): ?array
+    {
+        return $this->row;
     }
 
     /**
      * @return list<array<string, mixed>>
      */
-    public function getMessages(?BackendUserAuthentication $user = null): array
+    public function getMessages(): array
     {
-        $payload = $this->readPayload($user);
-        $messages = $payload['messages'] ?? [];
+        $messages = json_decode((string) ($this->row['messages'] ?? ''), true);
 
-        return is_array($messages) ? array_values($messages) : [];
-    }
-
-    /**
-     * @param list<array<string, mixed>> $messages
-     */
-    public function saveMessages(array $messages, ?BackendUserAuthentication $user = null): void
-    {
-        $user ??= $this->resolveBackendUser();
-        if ($user === null) {
-            return;
-        }
-
-        $payload = $this->readPayload($user);
-        $payload['messages'] = array_values($messages);
-        $this->persistPayload($user, $payload);
+        return is_array($messages) ? array_values(array_filter($messages, 'is_array')) : [];
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function getContext(?BackendUserAuthentication $user = null): array
+    public function getContext(): array
     {
-        $payload = $this->readPayload($user);
-        $context = $payload['context'] ?? [];
+        $context = json_decode((string) ($this->row['context'] ?? ''), true);
 
         return is_array($context) ? $context : [];
     }
 
     /**
+     * Stores the messages of the active conversation; creates it on the first message.
+     * The title comes from the first user message; the provider is locked by the first
+     * answer (it can only be set while the conversation has no provider yet).
+     *
+     * @param list<array<string, mixed>> $messages
      * @param array<string, mixed> $context
      */
-    public function saveContext(array $context, ?BackendUserAuthentication $user = null): void
+    public function save(BackendUserAuthentication $user, array $messages, array $context, string $providerIdentifier = ''): void
     {
-        $user ??= $this->resolveBackendUser();
-        if ($user === null) {
+        if ($messages === [] && $this->row === null) {
             return;
         }
+        if ($this->row === null) {
+            $this->startNew($user, $context);
+        }
+        $row = $this->row ?? [];
 
-        $payload = $this->readPayload($user);
-        $payload['context'] = $context;
-        $this->persistPayload($user, $payload);
+        $title = trim((string) ($row['title'] ?? '')) === ''
+            ? AgentConversationSessionsUpdate::titleFromMessages($messages, (int) ($row['page_id'] ?? 0))
+            : null;
+        $provider = (string) ($row['provider_identifier'] ?? '') === '' && $providerIdentifier !== '' ? $providerIdentifier : null;
+
+        $this->repository->saveMessages((int) ($row['uid'] ?? 0), $this->userUid($user), $messages, $context, $title, $provider);
+
+        $row['messages'] = json_encode($messages, JSON_UNESCAPED_UNICODE);
+        $row['context'] = json_encode($context, JSON_UNESCAPED_UNICODE);
+        $row['message_count'] = count($messages);
+        if ($title !== null) {
+            $row['title'] = $title;
+        }
+        if ($provider !== null) {
+            $row['provider_identifier'] = $provider;
+        }
+        $this->row = $row;
     }
 
-    public function clear(?BackendUserAuthentication $user = null): void
+    public function isDisclosureDismissed(BackendUserAuthentication $user): bool
     {
-        $user ??= $this->resolveBackendUser();
-        if ($user === null) {
-            return;
-        }
-
-        $this->persistPayload($user, [
-            'messages' => [],
-            'context' => [],
-        ]);
-    }
-
-    public function isDisclosureDismissed(?BackendUserAuthentication $user = null): bool
-    {
-        $user ??= $this->resolveBackendUser();
-        if ($user === null) {
-            return false;
-        }
-
         return (bool) ($user->getSessionData(self::SESSION_DISCLOSURE_KEY) ?? false);
     }
 
-    public function setDisclosureDismissed(bool $dismissed, ?BackendUserAuthentication $user = null): void
+    public function setDisclosureDismissed(bool $dismissed, BackendUserAuthentication $user): void
     {
-        $user ??= $this->resolveBackendUser();
-        if ($user === null) {
-            return;
-        }
-
         $user->setAndSaveSessionData(self::SESSION_DISCLOSURE_KEY, $dismissed ? 1 : 0);
     }
 
     /**
-     * @return array<string, mixed>
+     * @param array<string, mixed> $context
      */
-    private function readPayload(?BackendUserAuthentication $user): array
+    private function module(array $context): string
     {
-        $user ??= $this->resolveBackendUser();
-        if ($user === null) {
-            return [];
-        }
-
-        $row = $this->conversationRepository->findByScope(
-            (int) ($user->user['uid'] ?? 0),
-            $this->moduleRoute,
-            $this->pageId,
-        );
-        if ($row === null) {
-            return [];
-        }
-
-        return $this->hydratePayload($row);
+        return trim((string) ($context['module'] ?? ''));
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param array<string, mixed> $context
      */
-    private function persistPayload(BackendUserAuthentication $user, array $payload): void
+    private function pageId(array $context): int
     {
-        $this->conversationRepository->save(
-            (int) ($user->user['uid'] ?? 0),
-            $this->moduleRoute,
-            $this->pageId,
-            [
-                'messages' => $this->normalizeMessages(is_array($payload['messages'] ?? null) ? $payload['messages'] : []),
-                'context' => is_array($payload['context'] ?? null) ? $payload['context'] : [],
-            ],
-        );
+        return max(0, (int) ($context['pageId'] ?? 0));
     }
 
-    /**
-     * @param array<int|string, mixed> $messages
-     * @return list<array<string, mixed>>
-     */
-    private function normalizeMessages(array $messages): array
+    private function userUid(BackendUserAuthentication $user): int
     {
-        $normalized = [];
-        foreach (array_values($messages) as $message) {
-            if (is_array($message)) {
-                $normalized[] = $message;
-            }
-        }
-
-        return $normalized;
-    }
-
-    /**
-     * @param array<string, mixed> $row
-     * @return array<string, mixed>
-     */
-    private function hydratePayload(array $row): array
-    {
-        $messages = json_decode((string) ($row['messages'] ?? ''), true);
-        $context = json_decode((string) ($row['context'] ?? ''), true);
-
-        return [
-            'messages' => is_array($messages) ? $messages : [],
-            'context' => is_array($context) ? $context : [],
-        ];
-    }
-
-    private function resolveBackendUser(): ?BackendUserAuthentication
-    {
-        $user = $GLOBALS['BE_USER'] ?? null;
-
-        return $user instanceof BackendUserAuthentication ? $user : null;
+        return (int) ($user->user['uid'] ?? 0);
     }
 }

@@ -145,8 +145,11 @@ class McpToolIntrospectorService
 
         $attributeName = $attribute?->name;
         $severity = $this->toolSeverityResolver->resolveForHandler($tool);
+        // Declared severity only (#[McpToolSeverity]); dynamic per-table tools map by
+        // operation suffix. No guessing from other tool names: an undeclared tool stays
+        // unclassified and is locked in the AI Agent.
         if ($severity === null && is_string($attributeName) && $attributeName !== '') {
-            $severity = $this->toolSeverityResolver->resolveForToolName($attributeName);
+            $severity = $this->toolSeverityResolver->resolveForDynamicToolName($attributeName);
         }
 
         return [

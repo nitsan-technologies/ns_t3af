@@ -20,7 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Contract;
 
 /**
- * Pluggable embedding backend for agent tool-index / shortlist routing.
+ * Pluggable embedding backend for the agent tool index (find_tools).
  *
  * @internal
  */

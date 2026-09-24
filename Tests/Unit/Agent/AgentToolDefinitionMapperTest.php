@@ -91,4 +91,37 @@ final class AgentToolDefinitionMapperTest extends TestCase
         self::assertArrayHasKey('variants', $properties);
         self::assertArrayNotHasKey('fieldKeys', $properties);
     }
+
+    #[Test]
+    public function arrayParametersGetItemsFromTheDocblock(): void
+    {
+        $mapper = new AgentToolDefinitionMapper($this->createMock(McpToolIntrospectorService::class));
+        $shape = new \ReflectionMethod(AgentToolDefinitionMapper::class, 'arrayShape');
+        $execute = new \ReflectionMethod(AgentToolDefinitionMapperArrayFixture::class, 'execute');
+
+        self::assertSame(['items' => ['type' => 'string']], $shape->invoke($mapper, $execute, 'options'));
+        self::assertSame(['items' => ['type' => 'number']], $shape->invoke($mapper, $execute, 'uids'));
+        self::assertSame(['items' => ['type' => 'boolean']], $shape->invoke($mapper, $execute, 'flags'));
+        self::assertSame(['type' => 'object'], $shape->invoke($mapper, $execute, 'fields'));
+        // No docblock type: OpenAI still needs "items".
+        self::assertSame(['items' => ['type' => 'string']], $shape->invoke($mapper, $execute, 'untyped'));
+    }
+}
+
+/**
+ * @internal
+ */
+final class AgentToolDefinitionMapperArrayFixture
+{
+    /**
+     * @param list<string> $options
+     * @param int[] $uids
+     * @param array<int, bool> $flags
+     * @param array<string, mixed> $fields
+     * @param array<mixed> $untyped
+     */
+    public function execute(array $options, array $uids, array $flags, array $fields, array $untyped): string
+    {
+        return '';
+    }
 }

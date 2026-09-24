@@ -1,6 +1,6 @@
 # Feature — AI Agent (backend modal)
 
-**Status:** Done (structural + NL routing, embedding shortlist, DualMode preview→apply, BE i18n)  
+**Status:** Done (structural + NL routing on Symfony AI Agent, core tool set + find_tools, DualMode preview→apply, BE i18n)  
 **UI:** Global toolbar **Ask AI Agent** (`AgentToolbarItem`), modal JS `@nitsan/nst3af/agent.js`  
 **Settings route:** `t3af_dashboard.ai_agent`  
 **Verify:** `Documentation/Agent/VerifySuite.md`, `Tests/Unit/Agent/` · routing docs: `Documentation/Agent/Routing.md`, `PreviewApply.md`, `Eval.md`
@@ -14,10 +14,13 @@
 - **Tool catalog** — executable vs locked tools from `PermittedActionProvider` (entitlements, severity, plan support).
 - **Read tools** — auto-run; results shown as **editor-facing prose** (not raw snake_case ids).
 - **Write / destructive tools** — DualMode + Previewable: native preview → suggestions card → context apply (`AgentWriteService::applySuggestions`). Other writes: elicitation draft → DataHandler / confirm invoke.
-- **NL orchestration** — `AgentTurnOrchestrator` + `AiToolCallingServiceInterface` loop with budgets and brand context.
-- **Structural routing** — `AgentTurnRouter` (slash / `@` / UI tool chips); free-text NL goes only to the orchestrator (no keyword workflows).
-- **Semantic shortlist** — `AgentToolShortlistService` + `t3af:agent:index-tools`; eval fixtures via `t3af:agent:eval`.
-- **Conversation persistence** — `tx_nst3af_agent_conversation` via `AgentConversationRepository` / session API.
+- **NL turns** — `AgentRunner`: Symfony AI `Agent` loop; `GovernedPlatform` sends every round through `AiToolCallingServiceInterface` (governance, credits, logs); `T3afToolbox` runs tools with argument validation, budgets and pauses.
+- **Structural routing** — `AgentTurnRouter` (slash / `@` / UI tool chips); free-text NL goes only to `AgentRunner` (no keyword workflows).
+- **Tool selection** — `AgentCoreToolSet` (core + module + recent) and `find_tools` (`AgentToolSearch`: embeddings + BM25); index via `t3af:agent:index-tools`; eval fixtures via `t3af:agent:eval`.
+- **Per-group tool access** — `LimitsConfig::agentReadOnly` / `blockedAgentTools` → `AgentGovernanceGuard::agentToolPolicy()` → locked in `PermittedActionProvider`.
+- **Conversations** — one row per conversation in `tx_nst3af_agent_conversation` (session uuid, home module + page, title, locked provider). `AgentConversationSession` opens the requested or latest one for `agentConversationScope`; conversation list, rename and delete in the window. See `Documentation/Agent/Conversations.md`.
+- **Provider select** — `AgentProviderOptions` (tool-calling providers the editor's groups may use); fixed per conversation after the first answer.
+- **Info window** — "How the AI Agent works" with a live "Where you are" section (`renderInfo()` in `agent.js`).
 
 ---
 
@@ -28,15 +31,15 @@ Non-stream `turnAction` and stream turns both call `AgentTurnRouter::route()`:
 | Step | Service | Notes |
 |---|---|---|
 | 1 | Structural | Slash commands, UI `tool`/`action` (legacy SEO/file-metadata action ids mapped once to MCP tools), `@` attachment reads |
-| 2 | `AgentTurnOrchestrator` | Free-text NL only — embedding shortlist + LLM tool-calling; **no** keyword workflows / SEO flow / read fast-path |
+| 2 | `AgentRunner` | Free-text NL only — core tool set + `find_tools` + LLM tool-calling; **no** keyword workflows / SEO flow / read fast-path |
 
-Slash/`@` / starter chips go to `AgentToolTurnProcessor::execute()`. Meaning for free-text lives in the LLM + `AgentToolShortlistService`.
+Slash/`@` / starter chips go to `AgentToolTurnProcessor::execute()`. Meaning for free-text lives in the LLM; `find_tools` only helps it discover tools.
 
 ---
 
 ## Backend context
 
-Resolved server-side in `AgentContextResolver` + client hints in `agent.js`.
+Resolved server-side in `AgentContextResolver` (permission checks) and presented by `AgentContextPresenter`: chips for the window and `details` (readable module, page with slug and parent, language with the site's languages, record label, workspace, folder). `AgentContextPresenter::promptBlock()` puts them into the system prompt as "Current context".
 
 | Module | `pageId` | Extra |
 |---|---|---|
@@ -59,7 +62,9 @@ Resolved server-side in `AgentContextResolver` + client hints in `agent.js`.
 
 LLM summaries skipped for structured list results (count + examples) to avoid redundant text.
 
-Label priority: translated `LABEL_KEYS` → editor-friendly MCP description first sentence → humanized name (`t3aa_*` prefix stripped).
+Label priority: `agent.tool.label.<tool_name>` (EN + DE for every tool; `AgentLabelCoverageTest` fails when a core tool has none) → legacy `LABEL_KEYS` → editor-friendly MCP description first sentence → humanized name (`t3aa_*` prefix stripped). New child tools add their `agent.tool.label.*` key to ns_t3af `locallang_be.xlf`.
+
+Lock reasons (`agent.tool.blockedForGroup`, `extensionUnavailable`, `planUnsupported`, `agent.entitlement.*`) are plain language with the next step and use the editor label, never the tool id.
 
 ---
 
@@ -68,6 +73,23 @@ Label priority: translated `LABEL_KEYS` → editor-friendly MCP description firs
 - While running: compact **Working…** (expandable trace).
 - On complete: **Worked for Xs** (live only — stripped before session save via `stripEphemeralWorkTraceMeta()`).
 - Result card renders immediately below trace (not hidden inside collapsed details).
+- Progress events carry `label` (editor label); `find_tools` shows "Looking for the right tool…".
+- Successful read steps followed by an answer in the same turn collapse to `✓ <label>` (`.nst3af-agent-step`).
+- Tool id, trace and JSON live only under **Technical details**.
+
+## Editor UX rules (Phase 4)
+
+| Rule | Implementation |
+|---|---|
+| Records and fields by name | `AgentRecordLabeler` → draft fields `recordLabel`/`fieldLabel`, readback `recordLabel`/`fieldLabels` |
+| Where a change goes | `renderDraftTarget()` — live website vs. workspace „X“, destructive adds "cannot be undone" |
+| Execute / Decline | Draft and tool-confirmation cards; **Execute all (n)** for ≥ 2 pending non-destructive cards |
+| Continue after confirm | `agentContinueAfterConfirm`; client sends `continuation {outcome,label,result}` → hidden user message, `continuationMessage()` tells the model; only for cards the runner made (`meta.fromRunner`) |
+| Ask instead of guess | `ask_clarification(question, options[])` pauses the turn; options render as answer buttons |
+| Links after a change | `applyDraftAction` returns `links` (Open page / Edit / View on website); backend links open in the content frame |
+| Credits | `AgentCreditsStatus` → header badge (ok/low/critical); at zero the composer is locked with a top-up hint |
+
+Reasoning models (0.13 `MultiPartResult`: thinking + text / tool calls) are read by `SymfonyAiResultReader`; before this, a plain "Hi" returned "I could not produce a reply".
 
 ---
 
@@ -88,8 +110,8 @@ Draft cards carry `editorLabel` for UI; destructive = two-step confirm.
 
 ## NL tool selection
 
-- Child tools declare `#[McpToolIntent(verbs, nouns, modules)]` on tool classes (`ns_t3af` attribute; consumed by introspector / embedding index).
-- `AgentToolShortlistService` ranks catalog tools via embeddings (with category/module fallback); orchestrator uses that shortlist before tool-calling.
+- Child tools declare `#[McpToolIntent(modules, summary, examples (EN + DE), category)]`; core tools get `searchTerms` (EN + DE) in `Configuration/McpToolMetadata.yaml`.
+- `AgentCoreToolSet` picks the start set; `find_tools` (`AgentToolSearch`) ranks the rest via embeddings + BM25. See `Documentation/Agent/Routing.md`.
 - Starter chips emit MCP tool names + args (`t3ai_generate_all_seo`, `t3aa_update_file_metadata`, …) — not legacy NL flow action ids.
 
 ---
@@ -103,10 +125,11 @@ Draft cards carry `editorLabel` for UI; destructive = two-step confirm.
 | Context | `Classes/Agent/Context/{AgentContext,AgentContextResolver}.php` |
 | Turn router | `Classes/Agent/Service/AgentTurnRouter.php` |
 | Turn processor | `Classes/Agent/Service/AgentToolTurnProcessor.php` |
-| Orchestrator | `Classes/Agent/Service/AgentTurnOrchestrator.php` |
-| Tool shortlist | `Classes/Agent/Service/AgentToolShortlistService.php` |
+| Runner | `Classes/Agent/Service/AgentRunner.php`, `Classes/Agent/Runtime/{GovernedPlatform,T3afToolbox,AgentTurnState}.php` |
+| Tool selection | `Classes/Agent/Service/{AgentCoreToolSet,AgentToolSearch,AgentToolDocumentBuilder,AgentToolArgumentValidator}.php` |
 | Tool catalog | `Classes/Agent/Service/PermittedActionProvider.php` |
-| Editor labels | `Classes/Agent/Service/AgentToolEditorLabelService.php` |
+| Editor labels | `Classes/Agent/Service/AgentToolEditorLabelService.php`, `AgentRecordLabeler.php` |
+| Credits badge | `Classes/Agent/Service/AgentCreditsStatus.php` |
 | Result presenter | `Classes/Agent/Service/AgentToolResultPresenter.php` |
 | Starters | `Classes/Agent/Service/AgentStarterBuilder.php` |
 | Governance | `Classes/Agent/Service/AgentGovernanceGuard.php`, `AgentTurnRepository` |
@@ -120,11 +143,26 @@ Draft cards carry `editorLabel` for UI; destructive = two-step confirm.
 - `agentMaxReadToolsPerTurn` (default 5)
 - `agentMaxWriteDraftsPerTurn` (default 2)
 - `agentShowProviderThinking`
-- `agentConversationRetentionDays` (default 90)
+- `agentConversationRetentionDays` (default 90; soft delete, removed 7 days later by `t3af:agent:conversations:cleanup`)
+- `agentContinueAfterConfirm` (default on)
+- `agentConversationScope` (`page` | `module` | `user`), `agentSessionListEnabled`, `agentSessionListDefaultFilter`, `agentMaxSessionsPerScope` (20), `agentMaxSessionsPerUser` (200)
 
 ---
 
 ## Child extensions
+
+Phase 4 child tools (all with `McpToolSeverity`, `McpToolIntent` EN/DE, `agent.tool.label.*`; write tools get a confirmation card through `SatelliteToolPlanService`, which shows page/language names and `agent.arg.*` labels):
+
+| Extension | Tools |
+|---|---|
+| ns_t3ai | `t3ai_mass_seo_queue_remove`, `t3ai_mass_translation_queue_remove`, `…_requeue`, `…_clear_completed` (`McpQueueManagementService`, catalog ids bulkSeo/bulkTranslation) |
+| ns_t3ai | `t3ai_translate_page` — page + all content, several languages, always native generation (`McpPageTranslationService`) |
+| ns_t3ai | `t3ai_glossary_list` / `_save` / `_delete` (`McpGlossaryService`, catalog id translationGlossary) |
+| ns_t3ai | `t3ai_generate_image` — one image into the fileadmin, T3AI Media permission; result card shows the image (`previewImageUrl`) |
+| ns_t3aa | `t3aa_alt_text_queue_folder`, `t3aa_alt_text_drafts_list`, `t3aa_alt_text_approve`, `t3aa_mark_image_decorative` (`McpAltTextService`) |
+| ns_t3aa | `t3aa_accessibility_scan_run`, `t3aa_accessibility_issues` (`McpAccessibilityService`) |
+| ns_t3aa | `t3aa_generate_voice_over` — text or page text to MP3, T3AA Media permission; result card plays it (`McpVoiceOverService`) |
+
 
 - **MCP tools** — tag `mcp.tool`; optional `McpToolIntent` for agent retrieval (`ns_t3ai`, `ns_t3aa`, …).
 - **Entitlements** — `EntitlementResolver` locks tools when owner extension inactive.
@@ -134,7 +172,7 @@ Draft cards carry `editorLabel` for UI; destructive = two-step confirm.
 
 ## Do / Don't
 
-**Do:** Keep structural router before NL orchestrator on stream and non-stream paths.
+**Do:** Keep structural router before `AgentRunner` on stream and non-stream paths.
 
 **Do:** Pass `storageUid` / `folderIdentifier` from file module; clear `pageId` there.
 
