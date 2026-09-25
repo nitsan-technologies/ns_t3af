@@ -291,6 +291,7 @@
 
 .aiu-cell-title { display: flex; align-items: center; gap: .75rem; }
 .aiu-cell-title .identifier { font-size: 11px; color: var(--aiu-text-400); font-family: "Fira Code", ui-monospace, monospace; margin-top: .15rem; }
+.aiu-provider-row--inactive { opacity: .72; }
 .aiu-adapter-type { color: var(--aiu-text-500); }
 .aiu-last-used { color: var(--aiu-text-500); }
 .aiu-last-used--empty { color: var(--aiu-text-400); }

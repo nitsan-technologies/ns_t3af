@@ -31,6 +31,15 @@ readonly class AdvancedSettingsService
     /** Default MCP Streamable HTTP POST body limit (16 MiB). */
     public const DEFAULT_MAX_BODY_BYTES = 16 * 1024 * 1024;
 
+    /** Default max file size for MCP uploads / URL downloads (MiB). */
+    public const DEFAULT_MAX_FILE_SIZE_MB = 500;
+
+    /** Default single-use upload token lifetime (seconds). */
+    public const DEFAULT_UPLOAD_TOKEN_TTL = 900;
+
+    /** Default max decoded base64 payload accepted inline via MCP tools (bytes). */
+    public const DEFAULT_MAX_BASE64_UPLOAD_BYTES = 16384;
+
     public function __construct(private ExtensionSettingsService $extensionSettingsService) {}
 
     public function isMcpServerEnabled(): bool
@@ -88,6 +97,41 @@ readonly class AdvancedSettingsService
         return $configured;
     }
 
+    public function maxFileSizeMb(): int
+    {
+        $configured = $this->int('mcpMaxFileSizeMb', self::DEFAULT_MAX_FILE_SIZE_MB);
+        if ($configured < 1) {
+            return self::DEFAULT_MAX_FILE_SIZE_MB;
+        }
+
+        return $configured;
+    }
+
+    public function allowDestructiveFileOps(): bool
+    {
+        return $this->bool('mcpAllowDestructiveFileOps', true);
+    }
+
+    public function uploadTokenTtl(): int
+    {
+        $configured = $this->int('mcpUploadTokenTtl', self::DEFAULT_UPLOAD_TOKEN_TTL);
+        if ($configured < 1) {
+            return self::DEFAULT_UPLOAD_TOKEN_TTL;
+        }
+
+        return $configured;
+    }
+
+    public function maxBase64UploadBytes(): int
+    {
+        $configured = $this->int('mcpMaxBase64UploadBytes', self::DEFAULT_MAX_BASE64_UPLOAD_BYTES);
+        if ($configured < 1) {
+            return self::DEFAULT_MAX_BASE64_UPLOAD_BYTES;
+        }
+
+        return $configured;
+    }
+
     public function oauthDefaultScopes(): string
     {
         return $this->string('oauthDefaultScopes', 'mcp:read mcp:write mcp:tools');
@@ -114,6 +158,10 @@ readonly class AdvancedSettingsService
             'oauthMaxActiveTokensPerUser' => $this->int('oauthMaxActiveTokensPerUser', 5),
             'accessTokenLifetime' => $this->int('accessTokenLifetime', 3600),
             'mcpMaxBodyBytes' => $this->maxBodyBytes(),
+            'mcpMaxFileSizeMb' => $this->maxFileSizeMb(),
+            'mcpAllowDestructiveFileOps' => $this->allowDestructiveFileOps() ? 1 : 0,
+            'mcpUploadTokenTtl' => $this->uploadTokenTtl(),
+            'mcpMaxBase64UploadBytes' => $this->maxBase64UploadBytes(),
         ];
     }
 

@@ -301,7 +301,7 @@ final class ProviderFormServiceTest extends TestCase
         self::assertNotNull($captured);
         self::assertStringStartsWith(CredentialCipher::PREFIX_V1, (string) $captured['api_key']);
         self::assertSame('chat,streaming', $captured['capabilities']);
-        self::assertSame(1, $captured['is_default']);
+        self::assertArrayNotHasKey('is_default', $captured);
         self::assertSame(0.55, $captured['temperature']);
         self::assertSame(20, $captured['priority']);
     }

@@ -106,7 +106,8 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
     #[McpTool(
         name: 'file_reference_add',
         description: 'Attach uploaded files to a record file/image field.'
-            . ' Pass sys_file UIDs from file_upload_from_url (comma-separated).',
+            . ' Pass sys_file UIDs from file_upload_from_url, file_upload, or file_upload_prepare (comma-separated).'
+            . ' Updates the parent FAL counter column (e.g. og_image) so SEO generators see the attachment.',
     )]
     public function execute(string $table, int $uid, string $fieldName, string $fileUids): string
     {
@@ -145,6 +146,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
                 // References live on the page of their record.
                 (int) ($record['pid'] ?? 0),
             );
+            $parentCount = count($this->recordService->findFileReferences($table, $uid, $fieldName));
 
             return json_encode([
                 'table' => $table,
@@ -152,6 +154,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
                 'fieldName' => $fieldName,
                 'referencesCreated' => count($referenceUids),
                 'referenceUids' => $referenceUids,
+                'parentFieldCount' => $parentCount,
             ], JSON_THROW_ON_ERROR);
         } catch (\Throwable $exception) {
             return $this->encodeError($exception->getMessage());

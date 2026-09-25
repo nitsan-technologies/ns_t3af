@@ -65,12 +65,16 @@ readonly class FileMoveTool implements McpFalStorageToolInterface, McpPlannableT
     #[McpTool(
         name: 'file_move',
         description: 'Move a file to a different directory within the same storage.'
-            . ' Provide the file identifier and the target directory path.',
+            . ' Provide the file identifier and the target directory path. Requires mcpAllowDestructiveFileOps.',
     )]
     public function execute(string $fileIdentifier, string $targetDirectory, int $storageUid = 1): string
     {
-        $this->fileService->moveFile($storageUid, $fileIdentifier, $targetDirectory);
+        try {
+            $this->fileService->moveFile($storageUid, $fileIdentifier, $targetDirectory);
 
-        return json_encode(['fileIdentifier' => $fileIdentifier, 'targetDirectory' => $targetDirectory, 'moved' => true], JSON_THROW_ON_ERROR);
+            return json_encode(['fileIdentifier' => $fileIdentifier, 'targetDirectory' => $targetDirectory, 'moved' => true], JSON_THROW_ON_ERROR);
+        } catch (\Throwable $exception) {
+            return json_encode(['error' => $exception->getMessage()], JSON_THROW_ON_ERROR);
+        }
     }
 }

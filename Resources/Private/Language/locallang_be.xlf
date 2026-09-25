@@ -282,6 +282,18 @@
       <trans-unit id="extmng.mcpMaxBodyBytes" resname="extmng.mcpMaxBodyBytes">
         <source>Max MCP POST body size (bytes): Upper limit for Streamable HTTP request bodies (default 16 MiB).</source>
       </trans-unit>
+      <trans-unit id="extmng.mcpMaxFileSizeMb" resname="extmng.mcpMaxFileSizeMb">
+        <source>Max MCP file size (MiB): Upper limit for URL downloads and pre-signed uploads (default 500).</source>
+      </trans-unit>
+      <trans-unit id="extmng.mcpAllowDestructiveFileOps" resname="extmng.mcpAllowDestructiveFileOps">
+        <source>Allow destructive MCP file operations: Enable file/directory delete and overwrite-style tools.</source>
+      </trans-unit>
+      <trans-unit id="extmng.mcpUploadTokenTtl" resname="extmng.mcpUploadTokenTtl">
+        <source>MCP upload token lifetime (seconds): Single-use pre-signed upload token TTL (default 900).</source>
+      </trans-unit>
+      <trans-unit id="extmng.mcpMaxBase64UploadBytes" resname="extmng.mcpMaxBase64UploadBytes">
+        <source>Max inline base64 upload (bytes): Cap for base64 payloads in MCP tools (default 16384).</source>
+      </trans-unit>
       <trans-unit id="extmng.rateLimitEnabled" resname="extmng.rateLimitEnabled">
         <source>Enable per-endpoint rate limits: Apply detailed OAuth endpoint rate limit counters.</source>
       </trans-unit>
@@ -2106,6 +2118,9 @@
       </trans-unit>
       <trans-unit id="agent.error.applyFailedDetail" resname="agent.error.applyFailedDetail">
         <source>The change could not be saved: %s</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.label.file_upload_prepare" resname="agent.tool.label.file_upload_prepare">
+        <source>Prepare a file upload</source>
       </trans-unit>
     </body>
   </file>

@@ -25,6 +25,7 @@ use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\File\FileReferenceAddTool;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -35,7 +36,7 @@ final class FileReferenceAddToolTest extends TestCase
     /**
      * @param array<string, mixed> $row
      */
-    private function record(array $row = ['uid' => 10, 'pid' => 1, 'deleted' => 0]): RecordService
+    private function record(array $row = ['uid' => 10, 'pid' => 1, 'deleted' => 0]): RecordService&MockObject
     {
         $recordService = $this->createMock(RecordService::class);
         $recordService->method('findByUid')->willReturn($row);
@@ -92,12 +93,16 @@ final class FileReferenceAddToolTest extends TestCase
         $tcaSchemaService = $this->createMock(TcaSchemaService::class);
         $tcaSchemaService->method('getFileFields')->with('tt_content')->willReturn(['image']);
 
-        $tool = new FileReferenceAddTool(
-            $dataHandlerService,
-            $tcaSchemaService,
-            new McpConfirmationPlanBuilder(),
-            $this->record(['uid' => 10, 'pid' => 1, 'deleted' => 0]),
-        );
+        $recordService = $this->record(['uid' => 10, 'pid' => 1, 'deleted' => 0]);
+        $recordService
+            ->method('findFileReferences')
+            ->with('tt_content', 10, 'image')
+            ->willReturn([
+                ['uid' => 501],
+                ['uid' => 502],
+            ]);
+
+        $tool = new FileReferenceAddTool($dataHandlerService, $tcaSchemaService, new McpConfirmationPlanBuilder(), $recordService);
 
         $result = json_decode($tool->execute('tt_content', 10, 'image', '42, 43'), true);
 
@@ -107,6 +112,7 @@ final class FileReferenceAddToolTest extends TestCase
         self::assertSame('image', $result['fieldName']);
         self::assertSame(2, $result['referencesCreated']);
         self::assertSame([501, 502], $result['referenceUids']);
+        self::assertSame(2, $result['parentFieldCount']);
     }
 
     #[Test]

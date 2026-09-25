@@ -119,7 +119,7 @@ final class AgentToolIndexService implements AgentToolIndexInterface
             $name = (string) $document->getId();
             $distance = $document->getScore();
             // Cosine distance score → similarity in [≈0, 1]
-            $similarity = $distance === null ? 0.0 : max(0.0, 1.0 - (float) $distance);
+            $similarity = $distance === null ? 0.0 : min(1.0, max(0.0, 1.0 - (float) $distance));
             $out[] = [
                 'name' => $name,
                 'score' => $similarity,

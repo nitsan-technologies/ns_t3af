@@ -1761,8 +1761,32 @@
       <trans-unit id="module.mcpServer.advanced.maxBodyBytes" resname="module.mcpServer.advanced.maxBodyBytes">
         <source>Max POST Body Size (bytes)</source>
       </trans-unit>
+      <trans-unit id="module.mcpServer.advanced.maxFileSizeMb" resname="module.mcpServer.advanced.maxFileSizeMb">
+        <source>Max file size (MiB)</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.advanced.maxFileSizeMbHint" resname="module.mcpServer.advanced.maxFileSizeMbHint">
+        <source>Limit for URL downloads and pre-signed PUT uploads (file_upload_prepare).</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.advanced.uploadTokenTtl" resname="module.mcpServer.advanced.uploadTokenTtl">
+        <source>Upload token TTL (seconds)</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.advanced.uploadTokenTtlHint" resname="module.mcpServer.advanced.uploadTokenTtlHint">
+        <source>Single-use pre-signed upload tokens expire after this many seconds (default 900).</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.advanced.maxBase64UploadBytes" resname="module.mcpServer.advanced.maxBase64UploadBytes">
+        <source>Max inline base64 upload (bytes)</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.advanced.maxBase64UploadBytesHint" resname="module.mcpServer.advanced.maxBase64UploadBytesHint">
+        <source>Larger binaries must use file_upload_prepare (out-of-band PUT). Default 16384.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.advanced.allowDestructiveFileOps" resname="module.mcpServer.advanced.allowDestructiveFileOps">
+        <source>Allow destructive file operations</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.advanced.fileUploadPrepareHint" resname="module.mcpServer.advanced.fileUploadPrepareHint">
+        <source>Chat/desktop binaries: call MCP tool file_upload_prepare, then PUT the file to the returned uploadUrl (Bearer token). Example: curl -X PUT -H "Authorization: Bearer TOKEN" --data-binary @image.jpg "UPLOAD_URL". See Developer Guide → MCP File Uploads.</source>
+      </trans-unit>
       <trans-unit id="module.mcpServer.advanced.maxBodyBytesHint" resname="module.mcpServer.advanced.maxBodyBytesHint">
-        <source>Upper limit for Streamable HTTP request bodies. Default 16 MiB (16777216). Minimum 4 MiB (4194304).</source>
+        <source>Upper limit for Streamable HTTP MCP request bodies (not pre-signed PUT). Default 16 MiB. Use file_upload_prepare for large binaries.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.advanced.enableServer" resname="module.mcpServer.advanced.enableServer">
         <source>Enable MCP Server</source>

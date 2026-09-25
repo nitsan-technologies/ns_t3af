@@ -2677,6 +2677,10 @@
                 <source>The change could not be saved: %s</source>
                 <target>Die Änderung konnte nicht gespeichert werden: %s</target>
             </trans-unit>
+            <trans-unit id="agent.tool.label.file_upload_prepare">
+                <source>Prepare a file upload</source>
+                <target>Datei-Upload vorbereiten</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

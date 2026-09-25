@@ -73,8 +73,9 @@ readonly class FileUploadFromUrlTool implements McpFalStorageToolInterface, McpP
 
     #[McpTool(
         name: 'file_upload_from_url',
-        description: 'Download a file from a URL and upload it to a FAL storage directory.'
-            . ' Returns sys_file uid for use with file_reference_add.',
+        description: 'Download a file from an HTTP(S) URL into FAL storage. YouTube and Vimeo page URLs become '
+            . 'TYPO3 online media assets (placeholder file referencing the video). Other URLs are downloaded '
+            . 'server-side with SSRF checks. Returns sys_file uid for use with file_reference_add.',
     )]
     public function execute(
         string $url,

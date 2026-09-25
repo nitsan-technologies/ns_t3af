@@ -64,15 +64,19 @@ readonly class DirectoryRenameTool implements McpFalStorageToolInterface, McpPla
 
     #[McpTool(
         name: 'directory_rename',
-        description: 'Rename a directory. Provide the directory identifier and the new name.',
+        description: 'Rename a directory. Provide the directory identifier and the new name. Requires mcpAllowDestructiveFileOps.',
     )]
     public function execute(string $directoryIdentifier, string $newName, int $storageUid = 1): string
     {
-        $this->fileService->renameDirectory($storageUid, $directoryIdentifier, $newName);
+        try {
+            $this->fileService->renameDirectory($storageUid, $directoryIdentifier, $newName);
 
-        return json_encode(
-            ['directoryIdentifier' => $directoryIdentifier, 'newName' => $newName, 'renamed' => true],
-            JSON_THROW_ON_ERROR,
-        );
+            return json_encode(
+                ['directoryIdentifier' => $directoryIdentifier, 'newName' => $newName, 'renamed' => true],
+                JSON_THROW_ON_ERROR,
+            );
+        } catch (\Throwable $exception) {
+            return json_encode(['error' => $exception->getMessage()], JSON_THROW_ON_ERROR);
+        }
     }
 }

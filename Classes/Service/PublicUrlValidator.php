@@ -62,10 +62,41 @@ class PublicUrlValidator
 
     private function isPublicIp(string $ip): bool
     {
-        return filter_var(
+        if (filter_var(
             $ip,
             FILTER_VALIDATE_IP,
             FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE,
-        ) !== false;
+        ) === false) {
+            return false;
+        }
+
+        // CGNAT / cloud-metadata-adjacent ranges not covered by NO_PRIV_RANGE.
+        if ($this->ipv4InCidr($ip, '100.64.0.0/10')
+            || $this->ipv4InCidr($ip, '192.0.0.0/24')
+            || $this->ipv4InCidr($ip, '198.18.0.0/15')
+        ) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function ipv4InCidr(string $ip, string $cidr): bool
+    {
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) === false) {
+            return false;
+        }
+
+        [$subnet, $mask] = explode('/', $cidr, 2);
+        $ipLong = ip2long($ip);
+        $subnetLong = ip2long($subnet);
+        if ($ipLong === false || $subnetLong === false) {
+            return false;
+        }
+
+        $maskInt = (int) $mask;
+        $maskLong = -1 << (32 - $maskInt);
+
+        return ($ipLong & $maskLong) === ($subnetLong & $maskLong);
     }
 }

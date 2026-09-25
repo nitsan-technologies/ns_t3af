@@ -1337,7 +1337,7 @@
         <source>Priority</source>
       </trans-unit>
       <trans-unit id="provider.col.status" resname="provider.col.status">
-        <source>Status</source>
+        <source>Connection</source>
       </trans-unit>
       <trans-unit id="provider.col.actions" resname="provider.col.actions">
         <source>Actions</source>

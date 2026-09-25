@@ -180,8 +180,13 @@ final class ProviderFormService
         if ($uid === 0) {
             $payload['pid'] = $storagePid;
         }
+        $wantDefault = ((int) ($payload['is_default'] ?? 0)) === 1;
+        if ($wantDefault) {
+            // Avoid save(is_default=1) + setDefault() double-write lock races / deadlocks.
+            unset($payload['is_default']);
+        }
         $persistedUid = $this->repository->save($uid, $payload);
-        if (($payload['is_default'] ?? 0) === 1) {
+        if ($wantDefault) {
             $this->repository->setDefault($persistedUid, $storagePid);
         }
 

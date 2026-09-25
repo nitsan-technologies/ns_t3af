@@ -37,7 +37,7 @@ final class McpToolMetadataServiceTest extends TestCase
         self::assertSame('Content', $metadata['category']);
         self::assertSame('ready', $metadata['status']);
         self::assertNotSame('', $metadata['tagline']);
-        self::assertCount(4, $metadata['examplePrompts']);
+        self::assertCount(5, $metadata['examplePrompts']);
     }
 
     #[Test]
