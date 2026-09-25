@@ -2122,6 +2122,12 @@
       <trans-unit id="agent.tool.label.file_upload_prepare" resname="agent.tool.label.file_upload_prepare">
         <source>Prepare a file upload</source>
       </trans-unit>
+      <trans-unit id="agent.tool.label.t3aa_accessibility_fix_suggestions" resname="agent.tool.label.t3aa_accessibility_fix_suggestions">
+        <source>Suggest accessibility fixes</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.label.t3ac_chatbot_list" resname="agent.tool.label.t3ac_chatbot_list">
+        <source>List chatbots</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

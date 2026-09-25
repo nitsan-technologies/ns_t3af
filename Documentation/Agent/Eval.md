@@ -75,7 +75,8 @@ vendor/bin/typo3 t3af:agent:eval --live --page=47 --scenario=04,05,12 --provider
 | `noTools` | No tool ran |
 | `card` | `true`: a prepared change; `false`: none; `"orClarification"`: a change or a question with choices |
 | `reply` | A written answer |
-| `argumentsContain` | A call of an `anyTool` tool has this key/value at any depth (JSON strings are searched too) |
+| `argumentsContain` | A call of an `anyTool` tool has this key/value at any depth (JSON strings are searched too). `"a|b"` = any of the spellings (`"primaryColor|primary_color"`); `true`/`1`/`"true"` compare equal. Skipped when `card` is `"orClarification"` and the agent asked back |
+| `argumentsExclude` | Keys (`"a|b"` spellings) a call of an `anyTool` tool must not send, e.g. switches the editor did not mention |
 | `maxToolCalls`, `maxModelRequests`, `maxSeconds`, `maxRepeatedCalls` | Limits for this turn |
 
 `{{pageId}}` in a scenario is replaced by `--page`.

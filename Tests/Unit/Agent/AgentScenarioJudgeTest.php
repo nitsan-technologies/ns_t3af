@@ -94,6 +94,45 @@ final class AgentScenarioJudgeTest extends TestCase
     }
 
     #[Test]
+    public function aSettingsUpdateSendsOnlyWhatTheEditorNamed(): void
+    {
+        $judge = new AgentScenarioJudge();
+        $expect = [
+            'anyTool' => ['t3as_search_settings'],
+            'argumentsContain' => ['primaryColor|primary_color' => '#1a73e8'],
+            'argumentsExclude' => ['enableVoiceover|enable_voiceover', 'widgetHideOnMobile|widget_hide_on_mobile'],
+        ];
+
+        self::assertSame([], $judge->judge($expect, $this->turn([
+            self::call('t3as_search_settings', ['operation' => 'update', 'settingsJson' => '{"primary_color":"#1A73E8"}']),
+        ], [self::card()])));
+        self::assertSame(['t3as_search_settings must not send [enableVoiceover|enable_voiceover].'], $judge->judge($expect, $this->turn([
+            self::call('t3as_search_settings', ['settingsJson' => '{"primaryColor":"#1a73e8","enableVoiceover":false}']),
+        ], [self::card()])));
+    }
+
+    #[Test]
+    public function aQuestionBackSkipsTheArgumentCheckWhenAllowed(): void
+    {
+        $turn = $this->turn([self::call('ask_clarification', ['question' => 'Which chatbot?'])], [
+            ['role' => 'assistant', 'content' => 'Which chatbot?', 'meta' => ['type' => 'clarification']],
+        ]);
+
+        self::assertSame([], (new AgentScenarioJudge())->judge(
+            ['card' => 'orClarification', 'argumentsContain' => ['widget_hide_on_mobile' => true]],
+            $turn,
+        ));
+    }
+
+    #[Test]
+    public function switchValuesCompareLoosely(): void
+    {
+        self::assertTrue(AgentScenarioJudge::containsKeyValue(['settingsJson' => '{"widgetHideOnMobile":true}'], 'widgetHideOnMobile|widget_hide_on_mobile', 1));
+        self::assertTrue(AgentScenarioJudge::containsKeyValue(['widget_hide_on_mobile' => '1'], 'widgetHideOnMobile|widget_hide_on_mobile', true));
+        self::assertFalse(AgentScenarioJudge::containsKeyValue(['widget_hide_on_mobile' => false], 'widget_hide_on_mobile', true));
+    }
+
+    #[Test]
     public function aGreetingNeedsAWrittenAnswerWithoutTools(): void
     {
         $judge = new AgentScenarioJudge();

@@ -27,12 +27,18 @@ use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Exception\ToolCallException;
+use NITSAN\NsT3AF\Mcp\Attribute\McpAgentHidden;
 use NITSAN\NsT3AF\Mcp\Contract\McpFalStorageToolInterface;
 use NITSAN\NsT3AF\Mcp\Service\FileUploadService;
 use NITSAN\NsT3AF\Mcp\Service\McpPathProvider;
 use NITSAN\NsT3AF\Mcp\Service\McpPublicUrlService;
 use Psr\Http\Message\ServerRequestInterface;
 
+/**
+ * Hidden from the AI Agent: the agent window has its own upload (attachments), and an upload
+ * URL plus bearer token is only useful for external MCP clients.
+ */
+#[McpAgentHidden]
 readonly class FileUploadPrepareTool implements McpFalStorageToolInterface
 {
     public function __construct(

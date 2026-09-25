@@ -127,7 +127,9 @@ final class AgentScenarioJudge
         }
 
         $contains = is_array($expect['argumentsContain'] ?? null) ? $expect['argumentsContain'] : [];
-        if ($contains !== []) {
+        // A question back ("Which chatbot?") is fine when allowed; the arguments are checked on the next turn.
+        $askedBack = $card === 'orClarification' && $hasClarification && !$hasCard;
+        if ($contains !== [] && !$askedBack) {
             $candidates = array_filter(
                 $turn['toolCalls'],
                 static fn(array $call): bool => $call['outcome'] === 'executed' && ($anyTool === [] || in_array($call['tool'], $anyTool, true)),
@@ -146,7 +148,44 @@ final class AgentScenarioJudge
             }
         }
 
+        // Keys a call must not send, e.g. switches the editor did not mention ("change the color").
+        $excluded = self::stringList($expect['argumentsExclude'] ?? []);
+        if ($excluded !== []) {
+            foreach ($turn['toolCalls'] as $call) {
+                if ($call['outcome'] !== 'executed' || ($anyTool !== [] && !in_array($call['tool'], $anyTool, true))) {
+                    continue;
+                }
+                $sent = array_values(array_filter($excluded, static fn(string $key): bool => self::containsKey($call['arguments'], $key)));
+                if ($sent !== []) {
+                    $errors[] = sprintf('%s must not send [%s].', $call['tool'], implode(', ', $sent));
+                }
+            }
+        }
+
         return $errors;
+    }
+
+    /**
+     * Whether the key ("a|b" = any of the spellings) appears at any depth (JSON strings are searched too).
+     *
+     * @param array<mixed> $arguments
+     */
+    public static function containsKey(array $arguments, string $key): bool
+    {
+        $keys = explode('|', $key);
+        foreach ($arguments as $name => $argument) {
+            if (in_array((string) $name, $keys, true)) {
+                return true;
+            }
+            if (is_string($argument) && str_starts_with(ltrim($argument), '{')) {
+                $argument = json_decode($argument, true);
+            }
+            if (is_array($argument) && self::containsKey($argument, $key)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -202,8 +241,11 @@ final class AgentScenarioJudge
      */
     public static function containsKeyValue(array $arguments, string $key, mixed $value): bool
     {
+        $keys = explode('|', $key);
         foreach ($arguments as $name => $argument) {
-            if ((string) $name === $key && is_scalar($argument) && is_scalar($value) && (string) $argument === (string) $value) {
+            if (in_array((string) $name, $keys, true) && is_scalar($argument) && is_scalar($value)
+                && self::scalarText($argument) === self::scalarText($value)
+            ) {
                 return true;
             }
             if (is_string($argument) && str_starts_with(ltrim($argument), '{')) {
@@ -218,6 +260,23 @@ final class AgentScenarioJudge
         }
 
         return false;
+    }
+
+    /**
+     * Loose text form for comparing: true/"true"/1 → "1", false/"false"/0 → "0", case-insensitive.
+     */
+    private static function scalarText(int|float|string|bool $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+        $text = mb_strtolower(trim((string) $value));
+
+        return match ($text) {
+            'true' => '1',
+            'false', '' => '0',
+            default => $text,
+        };
     }
 
     /**

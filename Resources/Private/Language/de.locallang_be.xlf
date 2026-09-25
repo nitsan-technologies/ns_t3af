@@ -2681,6 +2681,14 @@
                 <source>Prepare a file upload</source>
                 <target>Datei-Upload vorbereiten</target>
             </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_accessibility_fix_suggestions">
+                <source>Suggest accessibility fixes</source>
+                <target>Lösungen für Barrierefreiheitsprobleme vorschlagen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ac_chatbot_list">
+                <source>List chatbots</source>
+                <target>Chatbots auflisten</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

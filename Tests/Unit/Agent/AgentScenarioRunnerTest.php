@@ -117,7 +117,7 @@ final class AgentScenarioRunnerTest extends TestCase
     {
         $runner = $this->runner([]);
         $scenarios = $runner->load();
-        $knownExpectations = ['anyTool', 'forbidTools', 'noTools', 'card', 'reply', 'argumentsContain', 'maxToolCalls', 'maxModelRequests', 'maxSeconds', 'maxRepeatedCalls'];
+        $knownExpectations = ['anyTool', 'forbidTools', 'noTools', 'card', 'reply', 'argumentsContain', 'maxToolCalls', 'maxModelRequests', 'maxSeconds', 'maxRepeatedCalls', 'argumentsExclude'];
 
         self::assertGreaterThanOrEqual(10, count($scenarios));
         $ids = [];

@@ -1,0 +1,28 @@
+{
+  "id": "17-chatbot-hide-mobile",
+  "title": "Hiding the chatbot on mobile changes only that switch",
+  "requires": [
+    "t3ac_chatbot_settings"
+  ],
+  "turns": [
+    {
+      "message": "Hide the AI chatbot on mobile devices",
+      "expect": {
+        "anyTool": [
+          "t3ac_chatbot_settings"
+        ],
+        "card": "orClarification",
+        "argumentsContain": {
+          "widgetHideOnMobile|widget_hide_on_mobile": true
+        },
+        "argumentsExclude": [
+          "widgetHideOnDesktop|widget_hide_on_desktop",
+          "active",
+          "enableChatbotHistory|enable_chatbot_history",
+          "enableChatbotFeedback|enable_chatbot_feedback",
+          "allowAnyDomain|allow_any_domain"
+        ]
+      }
+    }
+  ]
+}
