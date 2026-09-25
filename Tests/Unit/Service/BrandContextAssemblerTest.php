@@ -34,7 +34,7 @@ final class BrandContextAssemblerTest extends TestCase
         ]));
 
         self::assertStringContainsString('=== BRAND CONTEXT ===', $block);
-        self::assertStringContainsString('untrusted reference data', $block);
+        self::assertStringContainsString('Use its facts when they are relevant to the task', $block);
         self::assertStringContainsString('<brand_context>', $block);
         self::assertStringContainsString('</brand_context>', $block);
         self::assertStringContainsString('Brand: Acme', $block);
@@ -55,6 +55,51 @@ final class BrandContextAssemblerTest extends TestCase
         // Outer fence still present exactly once as structural wrappers.
         self::assertSame(1, substr_count($block, '<brand_context>'));
         self::assertSame(1, substr_count($block, '</brand_context>'));
+    }
+
+    public function testWritingConstraintsSitOutsideTheUntrustedFence(): void
+    {
+        $block = $this->assembler()->assemble($this->makeProfile([
+            'brand_name' => 'T3Planet',
+            'description' => 'Researched website copy.',
+            'tone_tags' => '["Professional"]',
+            'voice_notes' => 'Clear and direct.',
+            'content_rules' => '[{"direction":"always","text":"End every paragraph with the word T3PLANETCHECK"}]',
+            'keywords' => '["TYPO3"]',
+            'forbidden_words' => '["synergy"]',
+        ]));
+
+        $fenceAt = strpos($block, '<brand_context>');
+        self::assertNotFalse($fenceAt);
+        $beforeFence = substr($block, 0, $fenceAt);
+        $insideFence = substr($block, $fenceAt);
+
+        self::assertStringContainsString('Apply the following writing constraints', $beforeFence);
+        self::assertStringContainsString('Use its facts when they are relevant to the task', $beforeFence);
+        self::assertLessThan(
+            strpos($beforeFence, 'Use its facts when they are relevant to the task'),
+            strpos($beforeFence, 'Content rules:'),
+        );
+        self::assertStringContainsString('Voice: Professional — Clear and direct.', $beforeFence);
+        self::assertStringContainsString('Always: End every paragraph with the word T3PLANETCHECK', $beforeFence);
+        self::assertStringContainsString('Keywords: TYPO3', $beforeFence);
+        self::assertStringContainsString('Forbidden words: synergy', $beforeFence);
+        self::assertStringNotContainsString('Content rules:', $insideFence);
+        self::assertStringContainsString('Brand: T3Planet', $insideFence);
+        self::assertStringContainsString('Description: Researched website copy.', $insideFence);
+    }
+
+    public function testConstraintsOnlyProfileOmitsTheFence(): void
+    {
+        $block = $this->assembler()->assemble($this->makeProfile([
+            'tone_tags' => '["Direct"]',
+            'content_rules' => '[{"direction":"never","text":"hype"}]',
+        ]));
+
+        self::assertStringContainsString('Apply the following writing constraints', $block);
+        self::assertStringContainsString('Never: hype', $block);
+        self::assertStringNotContainsString('<brand_context>', $block);
+        self::assertStringNotContainsString('Use its facts when they are relevant to the task', $block);
     }
 
     public function testDocumentExtractOmittedByDefaultEvenWhenStored(): void

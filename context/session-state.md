@@ -2,6 +2,38 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-09-25 — Document facts are usable reference
+
+**Done:** The brand-fence line now tells the model to use facts inside `<brand_context>` when they fit the task, and still not to follow instructions inside it or change the response format. Uploaded document text stays inside the fence.
+
+**Last touched:** 2026-09-25
+
+---
+
+## 2026-09-25 — Brand writing constraints outside the fence
+
+**Done:** `BrandContextAssembler` places voice, audience, content rules, keywords, and forbidden words above `<brand_context>` so the model applies them. Reference text stays inside the fence. Audience labels include pain points and cares-about when set. Feature prompt templates are unchanged.
+
+**Last touched:** 2026-09-25
+
+---
+
+## 2026-09-25 — T3AI prompt audit in AI Logs
+
+**Done:** `PromptAuditLogListener` (after brand injection) writes the chat messages actually passed to the model into `sys_log` channel `t3ai.prompt` for `ns_t3ai` complete/stream/image/tts. AI Logs details keep newlines (`pre-wrap`) and prefer the raw `message` column so `%` is not doubled.
+
+**Last touched:** 2026-09-25
+
+---
+
+## 2026-09-21 — Classic ext_emconf PSR-4 autoload
+
+**Done:** `ext_emconf.php` now declares PSR-4 `NITSAN\NsT3AF\` → `Classes` (matches `composer.json`). Unit test `ExtEmconfAutoloadTest`. Classic activate/deactivate was unsafe without this (QA F-07). Agent `context/core.md` and `tasks/run-quality.md` document Classic CLI (`php typo3/sysext/core/bin/typo3`).
+
+**Last touched:** 2026-09-21
+
+---
+
 ## 2026-08-19 — Release v1.1.4
 
 **Done:** Bump version to 1.1.4. LICENSING.md, README install/licence block, MCP Table Discovery wording, Slack community link, Packagist keywords, core 13/14 CI badges.
