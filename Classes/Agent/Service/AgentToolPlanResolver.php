@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Contract\McpArgumentCheckInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
 use NITSAN\NsT3AF\Mcp\Exception\UnsupportedPlanException;
 use ReflectionMethod;
@@ -46,6 +47,10 @@ final class AgentToolPlanResolver
     public function plan(string $toolName, array $arguments): \NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan
     {
         $handler = $this->findHandler($toolName);
+        if ($handler instanceof McpArgumentCheckInterface) {
+            // Wrong arguments go back to the model before a card is shown.
+            $handler->checkArguments($arguments);
+        }
         if ($handler instanceof McpPlannableToolInterface) {
             return $handler->plan($arguments);
         }

@@ -256,6 +256,13 @@ final class EvalAgentCommand extends Command
                 if (($turn['status'] ?? '') !== 'pass' && $reply !== '') {
                     $io->writeln(sprintf('     <fg=gray>%s replied: "%s"</>', $turn['label'], mb_strimwidth(preg_replace('/\s+/', ' ', $reply) ?? $reply, 0, 200, '…')));
                 }
+                // What the agent sent, so a wrong field name is visible without the report file.
+                if (($turn['status'] ?? '') !== 'pass') {
+                    foreach (is_array($turn['arguments'] ?? null) ? $turn['arguments'] : [] as $call) {
+                        $arguments = json_encode($call['arguments'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PARTIAL_OUTPUT_ON_ERROR) ?: '';
+                        $io->writeln(sprintf('     <fg=gray>%s sent %s: %s</>', $turn['label'], (string) ($call['tool'] ?? ''), mb_strimwidth($arguments, 0, 300, '…')));
+                    }
+                }
             }
         }
     }

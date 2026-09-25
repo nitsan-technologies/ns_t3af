@@ -23,8 +23,6 @@ use NITSAN\NsT3AF\Agent\Service\AgentWorkspaceTarget;
 use NITSAN\NsT3AF\Service\BrandContextResolver;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
-use TYPO3\CMS\Core\Exception\SiteNotFoundException;
-use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
 
 /**
@@ -36,7 +34,6 @@ final readonly class AgentContextResolver
 {
     public function __construct(
         private BrandContextResolver $brandContextResolver,
-        private SiteFinder $siteFinder,
         private ?AgentWorkspaceTarget $workspaceTarget = null,
     ) {}
 
@@ -84,39 +81,14 @@ final readonly class AgentContextResolver
             module: $module,
             pageId: $pageId,
             focusedRecord: $focusedRecord,
-            languageId: $this->resolveTargetLanguageId((int) ($clientContext['languageId'] ?? 0), $pageId, $user),
+            // Trust the client: 0 = default language. Do not invent a translation
+            // target when the site has only one non-default language.
+            languageId: max(0, (int) ($clientContext['languageId'] ?? 0)),
             siteIdentifier: trim((string) ($clientContext['siteIdentifier'] ?? '')),
             workspaceId: max(0, $workspaceId),
             brandContextProfileUid: $brandProfile?->uid,
             brandName: $brandProfile !== null ? $brandProfile->brandName : '',
         );
-    }
-
-    private function resolveTargetLanguageId(int $clientLanguageId, int $pageId, ?BackendUserAuthentication $user): int
-    {
-        if ($clientLanguageId > 0) {
-            return $clientLanguageId;
-        }
-
-        if ($pageId <= 0 || $user === null) {
-            return 0;
-        }
-
-        try {
-            $site = $this->siteFinder->getSiteByPageId($pageId);
-        } catch (SiteNotFoundException) {
-            return 0;
-        }
-
-        $nonDefault = [];
-        foreach ($site->getAvailableLanguages($user, false, $pageId) as $siteLanguage) {
-            $languageId = $siteLanguage->getLanguageId();
-            if ($languageId > 0) {
-                $nonDefault[] = $languageId;
-            }
-        }
-
-        return count($nonDefault) === 1 ? $nonDefault[0] : 0;
     }
 
     private function userCanReadPage(int $pageId, ?BackendUserAuthentication $user): bool
