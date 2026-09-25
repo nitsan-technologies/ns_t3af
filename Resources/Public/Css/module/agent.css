@@ -1122,13 +1122,57 @@
   background: #f0fdf4;
 }
 
+.nst3af-agent-applied {
+  padding: 8px 12px;
+}
+
 .nst3af-agent-applied__title {
   display: flex;
   align-items: center;
   gap: 8px;
   font-weight: 700;
   color: #166534;
-  margin: 0 0 8px;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+
+.nst3af-agent-applied__title::-webkit-details-marker {
+  display: none;
+}
+
+.nst3af-agent-applied__title::after {
+  content: '▸';
+  margin-left: auto;
+  font-size: 11px;
+  color: #4b5563;
+}
+
+.nst3af-agent-applied__details[open] > .nst3af-agent-applied__title::after {
+  content: '▾';
+}
+
+.nst3af-agent-applied__summary {
+  font-weight: 400;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.nst3af-agent-applied__details[open] > .nst3af-agent-applied__title {
+  margin-bottom: 8px;
+}
+
+.nst3af-agent-applied__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.nst3af-agent-applied__actions:empty {
+  display: none;
 }
 
 /* Scheduler handoff card */

@@ -2666,12 +2666,15 @@ class AgentController {
     return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant">
       <div class="nst3af-agent-msg__who">AI Agent</div>
       <div class="nst3af-agent-applied">
-        <div class="nst3af-agent-applied__title"><span aria-hidden="true">✓</span> ${escapeHtml(lang('agent.applied.title', 'Changes applied'))}</div>
-        <p>${escapeHtml(String(message.content ?? ''))}</p>
-        ${rows}
-        ${this.renderResultLinks(meta.links)}
-        ${undoBtn}
-        ${handoffHtml}
+        <details class="nst3af-agent-applied__details">
+          <summary class="nst3af-agent-applied__title"><span aria-hidden="true">✓</span> ${escapeHtml(lang('agent.applied.title', 'Changes applied'))}<span class="nst3af-agent-applied__summary">${escapeHtml(String(message.content ?? ''))}</span></summary>
+          ${rows}
+          ${handoffHtml}
+        </details>
+        <div class="nst3af-agent-applied__actions">
+          ${this.renderResultLinks(meta.links)}
+          ${undoBtn}
+        </div>
       </div>
     </div>`;
   }
