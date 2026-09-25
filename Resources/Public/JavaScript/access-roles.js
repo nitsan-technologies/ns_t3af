@@ -364,6 +364,10 @@ function initAccessRolesRoot(root) {
       ['Scheduler batch limit', enabledCapBadge(!!limits.schedulerBatchLimitEnabled, limits.schedulerBatchLimit ?? 0, ' rows')],
       ['Workspace enforcement', boolBadge(!!limits.workspaceEnforcement)],
       ['PII masking', boolBadge(!!limits.piiMasking)],
+      ['AI Agent: read-only', boolBadge(!!limits.agentReadOnly)],
+      ['AI Agent: blocked tools', (limits.blockedAgentTools ?? []).length
+        ? (limits.blockedAgentTools ?? []).map((tool) => `<code class="me-1">${escapeHtml(tool)}</code>`).join('')
+        : '<span class="text-variant">—</span>'],
       ['Quality threshold', limits.qualityThresholdEnabled
         ? `<span class="badge badge-info">${escapeHtml(String(limits.qualityThresholdScore ?? 70))}%</span>`
         : boolBadge(false)],
@@ -932,6 +936,19 @@ function initAccessRolesRoot(root) {
               <input type="number" min="0" class="form-control" data-limit-key="dailyRequestCap" value="${l.dailyRequestCap ?? 100}" aria-label="Daily request limit" />
               <span class="input-group-text">requests / day</span>
             </div>
+          </div>
+        </div>
+        <div class="col-md-12">
+          <div class="aiu-ar-limit-tile h-100">
+            <h4 class="aiu-ar-section-title mb-2">AI Agent tools</h4>
+            <div class="form-check form-switch mb-2">
+              <input class="form-check-input" type="checkbox" id="agentRo" data-limit-key="agentReadOnly" ${l.agentReadOnly ? 'checked' : ''} />
+              <label class="form-check-label" for="agentRo">Read-only agent</label>
+            </div>
+            <span class="small text-variant d-block mb-2">Members can ask and look things up, but the agent offers no tools that prepare changes.</span>
+            <label class="form-label" for="agentBlocked">Blocked tools</label>
+            <input type="text" class="form-control" id="agentBlocked" data-limit-list="blockedAgentTools" value="${escapeHtml((l.blockedAgentTools ?? []).join(', '))}" placeholder="e.g. file_delete, t3cs_*" />
+            <span class="small text-variant d-block mt-1">Tool names from MCP Tools, comma-separated. <code>*</code> matches any text, e.g. <code>t3cs_*</code> for all AI Chatbot tools.</span>
           </div>
         </div>
       </div>`;
@@ -1585,6 +1602,22 @@ function initAccessRolesRoot(root) {
           return;
         }
         wizardConfig.limits[key] = input.type === 'checkbox' ? input.checked : Number(input.value);
+      });
+    });
+
+    root.querySelectorAll('[data-limit-list]').forEach((input) => {
+      input.addEventListener('change', () => {
+        if (!(input instanceof HTMLInputElement)) {
+          return;
+        }
+        const key = input.getAttribute('data-limit-list');
+        if (!key || !wizardConfig.limits) {
+          return;
+        }
+        wizardConfig.limits[key] = input.value
+          .split(/[\s,;]+/)
+          .map((item) => item.trim().toLowerCase())
+          .filter((item) => /^[a-z0-9_*]+$/.test(item));
       });
     });
 

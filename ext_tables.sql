@@ -55,7 +55,7 @@ CREATE TABLE tx_nst3af_request_log (
     request_source VARCHAR(32) NOT NULL DEFAULT 'unknown',
     content_entity_type VARCHAR(64) NOT NULL DEFAULT '',
     content_entity_uid INT(11) DEFAULT 0 NOT NULL,
-    request_type VARCHAR(16) NOT NULL DEFAULT 'complete',
+    request_type VARCHAR(32) NOT NULL DEFAULT 'complete',
     model_requested VARCHAR(128) NOT NULL DEFAULT '',
     model_used VARCHAR(128) NOT NULL DEFAULT '',
     success TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
@@ -267,13 +267,68 @@ CREATE TABLE tx_nst3af_mcp_tool_log (
     success TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
     error_message TEXT,
     latency_ms INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    correlation_id VARCHAR(64) NOT NULL DEFAULT '',
+    arguments_hash VARCHAR(64) NOT NULL DEFAULT '',
     crdate INT(11) UNSIGNED DEFAULT 0 NOT NULL,
     PRIMARY KEY (uid),
     KEY tool_log_crdate (crdate),
     KEY tool_log_tool_time (tool_name, crdate),
     KEY tool_log_token_time (token_uid, crdate),
     KEY tool_log_success_time (success, crdate),
-    KEY tool_log_client_time (client_label, crdate)
+    KEY tool_log_client_time (client_label, crdate),
+    KEY tool_log_correlation (correlation_id)
+);
+
+CREATE TABLE tx_nst3af_agent_demand (
+    uid INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    pid INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    owner_extension_key VARCHAR(64) NOT NULL DEFAULT '',
+    tool_name VARCHAR(128) NOT NULL DEFAULT '',
+    activation_count INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    last_activated INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    be_user INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    crdate INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    tstamp INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    PRIMARY KEY (uid),
+    UNIQUE KEY demand_owner_tool (owner_extension_key, tool_name),
+    KEY demand_count (activation_count, last_activated)
+);
+
+CREATE TABLE tx_nst3af_agent_conversation (
+    uid INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    session_uuid VARCHAR(36) NOT NULL DEFAULT '',
+    be_user_uid INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    module_route VARCHAR(128) NOT NULL DEFAULT '',
+    page_id INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    title VARCHAR(255) NOT NULL DEFAULT '',
+    provider_identifier VARCHAR(128) NOT NULL DEFAULT '',
+    message_count INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    last_activity INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    deleted TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
+    messages MEDIUMTEXT,
+    context MEDIUMTEXT,
+    disclosure_dismissed TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
+    tstamp INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    crdate INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    PRIMARY KEY (uid),
+    KEY agent_conv_session (session_uuid),
+    KEY agent_conv_scope (be_user_uid, module_route, page_id, deleted, last_activity),
+    KEY agent_conv_user (be_user_uid, deleted, last_activity),
+    KEY agent_conv_tstamp (tstamp)
+);
+
+CREATE TABLE tx_nst3af_agent_turn (
+    uid INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+    pid INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    correlation_id VARCHAR(64) NOT NULL DEFAULT '',
+    be_user INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    tool_call_count INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    guard_state VARCHAR(16) NOT NULL DEFAULT 'ok',
+    crdate INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    tstamp INT(11) UNSIGNED DEFAULT 0 NOT NULL,
+    PRIMARY KEY (uid),
+    UNIQUE KEY agent_turn_correlation (correlation_id),
+    KEY agent_turn_user_time (be_user, crdate)
 );
 
 CREATE TABLE tx_nst3af_mcp_ip_allowlist (
@@ -293,6 +348,7 @@ CREATE TABLE tx_nst3af_mcp_custom_tool (
     description TEXT,
     handler_type VARCHAR(16) NOT NULL DEFAULT 'php',
     handler_value VARCHAR(512) NOT NULL DEFAULT '',
+    severity VARCHAR(16) NOT NULL DEFAULT '',
     parameters_json MEDIUMTEXT,
     hidden TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
     deleted TINYINT(1) UNSIGNED DEFAULT 0 NOT NULL,
@@ -472,4 +528,23 @@ CREATE TABLE tx_nst3af_ailabel_generation (
     PRIMARY KEY (uid),
     KEY correlation_id (correlation_id),
     KEY unbound (target_table, target_uid)
+);
+
+#
+# Pre-signed single-use MCP upload tokens
+#
+CREATE TABLE tx_nst3af_upload_tokens (
+    uid int(11) NOT NULL auto_increment,
+    token varchar(64) DEFAULT '' NOT NULL,
+    be_user_uid int(11) DEFAULT 0 NOT NULL,
+    storage_uid int(11) DEFAULT 1 NOT NULL,
+    target_folder varchar(255) DEFAULT '' NOT NULL,
+    file_name varchar(255) DEFAULT '' NOT NULL,
+    expires int(11) DEFAULT 0 NOT NULL,
+    used int(11) DEFAULT 0 NOT NULL,
+    tstamp int(11) DEFAULT 0 NOT NULL,
+    crdate int(11) DEFAULT 0 NOT NULL,
+    PRIMARY KEY (uid),
+    KEY token (token),
+    KEY expires (expires)
 );

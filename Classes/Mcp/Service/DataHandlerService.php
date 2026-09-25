@@ -25,8 +25,12 @@ namespace NITSAN\NsT3AF\Mcp\Service;
 
 use const JSON_THROW_ON_ERROR;
 
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
 use Psr\Http\Message\ServerRequestInterface;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
 use TYPO3\CMS\Core\Site\SiteFinder;
@@ -34,7 +38,10 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 readonly class DataHandlerService
 {
-    public function __construct(private SiteFinder $siteFinder) {}
+    public function __construct(
+        private SiteFinder $siteFinder,
+        private RecordService $recordService,
+    ) {}
 
     /**
      * @param array<string, mixed> $fields
@@ -204,33 +211,135 @@ readonly class DataHandlerService
      * Attach sys_file records to a TCA file field via DataHandler.
      *
      * @param list<int> $fileUids sys_file UIDs to attach
+     * @param int $pid page of the record (references are stored there)
      * @return list<int> UIDs of the created sys_file_reference records
      */
-    public function createFileReferences(string $table, int $recordUid, string $fieldName, array $fileUids): array
+    public function createFileReferences(string $table, int $recordUid, string $fieldName, array $fileUids, int $pid = 0): array
     {
         if ($fileUids === []) {
             throw new \RuntimeException('No file UIDs provided for file reference creation.', 1712002100);
         }
 
+        $references = [];
+        foreach ($fileUids as $fileUid) {
+            $references[] = ['uid_local' => $fileUid];
+        }
+
+        return $this->writeFileFieldReferences($table, $recordUid, $fieldName, $references, replaceExisting: false, pid: $pid);
+    }
+
+    /**
+     * Replace (or clear) all sys_file_reference rows for a TCA file field.
+     *
+     * Empty $references clears existing attachments. Non-empty lists delete
+     * existing refs first, then create NEW ones in array order (sorting_foreign).
+     *
+     * @param list<array{uid_local: int, alternative?: string, title?: string, description?: string, link?: string, crop?: string}> $references
+     * @return list<int> reference uids
+     */
+    public function replaceFileFieldReferences(string $table, int $recordUid, string $fieldName, array $references): array
+    {
+        return $this->writeFileFieldReferences($table, $recordUid, $fieldName, $references, replaceExisting: true);
+    }
+
+    /**
+     * @param list<array{uid_local: int, alternative?: string, title?: string, description?: string, link?: string, crop?: string}> $references
+     * @return list<int>
+     */
+    private function writeFileFieldReferences(
+        string $table,
+        int $recordUid,
+        string $fieldName,
+        array $references,
+        bool $replaceExisting,
+        int $pid = 0,
+    ): array {
+        // Same visibility as BackendUtility / DCE AfterSaveHook: deleted rows are invisible.
+        $parentRecord = BackendUtility::getRecord($table, $recordUid, 'uid,pid');
+        if ($parentRecord === null) {
+            throw new \RuntimeException(sprintf(
+                'Cannot attach files: %s uid %d was not found (missing or deleted).',
+                $table,
+                $recordUid,
+            ), 1712002102);
+        }
+        // References live on the page of their record.
+        $pid = $pid > 0 ? $pid : max(0, (int) ($parentRecord['pid'] ?? 0));
+
+        if ($replaceExisting) {
+            $existingUids = [];
+            foreach ($this->recordService->findFileReferences($table, $recordUid, $fieldName) as $row) {
+                $uid = (int) ($row['uid'] ?? 0);
+                if ($uid > 0) {
+                    $existingUids[] = $uid;
+                }
+            }
+            if ($existingUids !== []) {
+                $this->deleteRecords('sys_file_reference', $existingUids);
+            }
+        }
+
+        if ($references === []) {
+            if ($replaceExisting) {
+                $this->updateRecord($table, $recordUid, [$fieldName => '']);
+            }
+
+            return [];
+        }
+
         $newIds = [];
         $datamap = [];
+        $metaKeys = ['alternative', 'title', 'description', 'link', 'crop'];
 
-        foreach ($fileUids as $index => $fileUid) {
+        // Keep existing file references when appending so DataHandler updates the
+        // parent counter (og_image etc.) instead of orphaning prior relations.
+        $parentValueParts = [];
+        if (!$replaceExisting) {
+            foreach ($this->recordService->findFileReferences($table, $recordUid, $fieldName) as $row) {
+                $existingUid = (int) ($row['uid'] ?? 0);
+                if ($existingUid > 0) {
+                    $parentValueParts[] = (string) $existingUid;
+                }
+            }
+        }
+
+        foreach ($references as $index => $reference) {
+            $fileUid = (int) ($reference['uid_local'] ?? 0);
+            if ($fileUid <= 0) {
+                throw new \RuntimeException(
+                    'Invalid uid_local in file field "' . $fieldName . '" (index ' . $index . ').',
+                    1712002101,
+                );
+            }
+
             $newId = 'NEW_ref_' . bin2hex(random_bytes(4));
             $newIds[] = $newId;
+            $parentValueParts[] = $newId;
 
-            $datamap['sys_file_reference'][$newId] = [
+            $row = [
                 'uid_local' => $fileUid,
                 'uid_foreign' => $recordUid,
                 'tablenames' => $table,
                 'fieldname' => $fieldName,
-                'sorting_foreign' => $index + 1,
-                'pid' => 0,
+                'sorting_foreign' => count($parentValueParts),
+                'pid' => $pid,
             ];
+
+            foreach ($metaKeys as $metaKey) {
+                if (!array_key_exists($metaKey, $reference)) {
+                    continue;
+                }
+                $metaValue = $reference[$metaKey];
+                if (is_string($metaValue)) {
+                    $row[$metaKey] = $metaValue;
+                }
+            }
+
+            $datamap['sys_file_reference'][$newId] = $row;
         }
 
         $datamap[$table][$recordUid] = [
-            $fieldName => implode(',', $newIds),
+            $fieldName => implode(',', $parentValueParts),
         ];
 
         $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
@@ -248,7 +357,29 @@ readonly class DataHandlerService
             }
         }
 
+        // Ensure parent FAL counter column matches live references (SEO/og_image).
+        $this->syncFileFieldCounter($table, $recordUid, $fieldName);
+
         return $referenceUids;
+    }
+
+    /**
+     * Parent FAL columns store a relation count. DataHandler sometimes leaves it
+     * at 0 even though sys_file_reference rows exist (breaks SEO og:image). Sync
+     * the integer directly without re-processing IRRE relations.
+     */
+    private function syncFileFieldCounter(string $table, int $recordUid, string $fieldName): void
+    {
+        $count = 0;
+        foreach ($this->recordService->findFileReferences($table, $recordUid, $fieldName) as $row) {
+            if ((int) ($row['uid'] ?? 0) > 0) {
+                ++$count;
+            }
+        }
+
+        GeneralUtility::makeInstance(ConnectionPool::class)
+            ->getConnectionForTable($table)
+            ->update($table, [$fieldName => $count], ['uid' => $recordUid]);
     }
 
     private function ensureSiteContext(int $pageId): ?ServerRequestInterface
@@ -268,6 +399,162 @@ readonly class DataHandlerService
         }
 
         return $originalRequest;
+    }
+
+    /**
+     * Apply only the kept fields from a tool plan (R28: server-side filtering).
+     *
+     * @param list<string> $keptFieldKeys
+     * @return array{
+     *     correlationId: string,
+     *     action: string,
+     *     appliedFieldKeys: list<string>,
+     *     affected: list<array{table: string, uid: int}>
+     * }
+     */
+    public function applyFilteredPlan(ToolPlan $plan, array $keptFieldKeys, string $correlationId): array
+    {
+        $keptFields = $plan->keptFields($keptFieldKeys);
+        if ($keptFields === []) {
+            throw new \RuntimeException('No fields selected for apply.', 1712003100);
+        }
+
+        $appliedFieldKeys = array_map(static fn(ToolPlanField $field): string => $field->key, $keptFields);
+        $affected = [];
+
+        switch ($plan->action) {
+            case 'create':
+                $affected[] = $this->applyPlanCreate($plan, $keptFields);
+                break;
+            case 'update':
+                $affected = array_merge($affected, $this->applyPlanUpdate($keptFields));
+                break;
+            case 'delete':
+                $affected[] = $this->applyPlanDelete($keptFields);
+                break;
+            case 'move':
+                $affected[] = $this->applyPlanMove($keptFields, $plan->context);
+                break;
+            case 'copy':
+                $affected[] = $this->applyPlanCopy($keptFields, $plan->context);
+                break;
+            default:
+                throw new \RuntimeException('Unsupported plan action: ' . $plan->action, 1712003101);
+        }
+
+        return [
+            'correlationId' => $correlationId,
+            'action' => $plan->action,
+            'appliedFieldKeys' => $appliedFieldKeys,
+            'affected' => $affected,
+        ];
+    }
+
+    /**
+     * @param list<ToolPlanField> $keptFields
+     * @return array{table: string, uid: int}
+     */
+    private function applyPlanCreate(ToolPlan $plan, array $keptFields): array
+    {
+        $table = '';
+        foreach ($keptFields as $field) {
+            $table = $field->table;
+            break;
+        }
+        if ($table === '') {
+            throw new \RuntimeException('Create plan is missing table context.', 1712003102);
+        }
+
+        $pid = (int) ($plan->context['pid'] ?? 0);
+        if ($pid <= 0) {
+            throw new \RuntimeException('Create plan is missing pid.', 1712003103);
+        }
+
+        $fields = [];
+        foreach ($keptFields as $field) {
+            if ($field->field === '_record') {
+                continue;
+            }
+            $fields[$field->field] = $field->proposedValue;
+        }
+
+        if ($fields === []) {
+            throw new \RuntimeException('Create plan has no writable fields kept.', 1712003104);
+        }
+
+        $newUid = $this->createRecord($table, $pid, $fields);
+
+        return ['table' => $table, 'uid' => $newUid];
+    }
+
+    /**
+     * @param list<ToolPlanField> $keptFields
+     * @return list<array{table: string, uid: int}>
+     */
+    private function applyPlanUpdate(array $keptFields): array
+    {
+        /** @var array<string, array<int, array<string, mixed>>> $grouped */
+        $grouped = [];
+        foreach ($keptFields as $field) {
+            if ($field->field === '_record') {
+                continue;
+            }
+            $grouped[$field->table][$field->uid][$field->field] = $field->proposedValue;
+        }
+
+        $affected = [];
+        foreach ($grouped as $table => $records) {
+            foreach ($records as $uid => $fields) {
+                if ($fields === []) {
+                    continue;
+                }
+                $this->updateRecord($table, (int) $uid, $fields);
+                $affected[] = ['table' => $table, 'uid' => (int) $uid];
+            }
+        }
+
+        return $affected;
+    }
+
+    /**
+     * @param list<ToolPlanField> $keptFields
+     * @return array{table: string, uid: int}
+     */
+    private function applyPlanDelete(array $keptFields): array
+    {
+        $field = $keptFields[0];
+        $this->deleteRecord($field->table, $field->uid);
+
+        return ['table' => $field->table, 'uid' => $field->uid];
+    }
+
+    /**
+     * @param list<ToolPlanField> $keptFields
+     * @param array<string, mixed> $context
+     * @return array{table: string, uid: int}
+     */
+    private function applyPlanMove(array $keptFields, array $context): array
+    {
+        $field = $keptFields[0];
+        $target = (int) ($context['target'] ?? $field->proposedValue ?? 0);
+        $this->moveRecord($field->table, $field->uid, $target);
+
+        return ['table' => $field->table, 'uid' => $field->uid];
+    }
+
+    /**
+     * @param list<ToolPlanField> $keptFields
+     * @param array<string, mixed> $context
+     * @return array{table: string, uid: int}
+     */
+    private function applyPlanCopy(array $keptFields, array $context): array
+    {
+        $field = $keptFields[0];
+        $target = (int) ($context['target'] ?? $field->proposedValue ?? 0);
+        $copyTreeDepth = (int) ($context['copyTreeDepth'] ?? 0);
+        $newUid = $this->copyRecord($field->table, $field->uid, $target, $copyTreeDepth);
+
+        return ['table' => $field->table, 'uid' => $newUid];
     }
 
     /**

@@ -23,9 +23,11 @@ use const JSON_THROW_ON_ERROR;
 
 use Mcp\Exception\ToolCallException;
 use Mcp\Server\Builder;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Repository\DiscoveredTableRepository;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\McpToolSchemaAugmenter;
+use NITSAN\NsT3AF\Mcp\Service\McpToolSeverityResolver;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Helper\MoveTarget;
@@ -49,6 +51,16 @@ readonly class NsT3afDynamicToolRegistrar
         private LoggerInterface $logger,
         private McpToolSchemaAugmenter $toolSchemaAugmenter,
     ) {}
+
+    /**
+     * Severity map for the nine dynamic operations per discovered table.
+     *
+     * @return array<string, ToolSeverity>
+     */
+    public static function operationSeverityMap(): array
+    {
+        return McpToolSeverityResolver::dynamicOperationSeverityMap();
+    }
 
     public function register(Builder $builder): void
     {

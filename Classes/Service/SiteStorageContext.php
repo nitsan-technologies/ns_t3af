@@ -61,11 +61,11 @@ final class SiteStorageContext
     public static function extractPageIdFromRequest(ServerRequestInterface $request): int
     {
         $query = $request->getQueryParams();
-        $pageId = (int) ($query['id'] ?? $query['pageId'] ?? $query['pid'] ?? 0);
+        $pageId = (int) ($query['id'] ?? $query['pageId'] ?? $query['pid'] ?? $query['uid'] ?? 0);
         if ($pageId <= 0) {
             $body = $request->getParsedBody();
             if (is_array($body)) {
-                $pageId = (int) ($body['id'] ?? $body['pageId'] ?? $body['pid'] ?? 0);
+                $pageId = (int) ($body['id'] ?? $body['pageId'] ?? $body['pid'] ?? $body['uid'] ?? 0);
             }
         }
 

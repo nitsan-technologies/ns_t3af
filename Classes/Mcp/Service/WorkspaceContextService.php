@@ -68,6 +68,49 @@ readonly class WorkspaceContextService
     }
 
     /**
+     * BackendUtility::workspaceOL() needs uid (and the versioning columns) in the row. In a
+     * workspace, add them to a partial field selection; strip them again with
+     * stripOverlayFields() after overlaying.
+     *
+     * @param list<string> $fields
+     * @return list<string>
+     */
+    public function withOverlayFields(string $table, array $fields): array
+    {
+        if ($this->isLive() || !$this->isTableWorkspaceAware($table) || in_array('*', $fields, true)) {
+            return $fields;
+        }
+
+        // Workspace-aware tables (versioningWS) always have the t3ver_* columns.
+        foreach (['uid', 'pid', 't3ver_oid', 't3ver_wsid', 't3ver_state'] as $field) {
+            if (!in_array($field, $fields, true)) {
+                $fields[] = $field;
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @param list<string> $requested the fields as originally requested
+     * @return array<string, mixed>
+     */
+    public function stripOverlayFields(array $row, array $requested): array
+    {
+        if (in_array('*', $requested, true)) {
+            return $row;
+        }
+        foreach (['uid', 'pid', 't3ver_oid', 't3ver_wsid', 't3ver_state'] as $field) {
+            if (!in_array($field, $requested, true)) {
+                unset($row[$field]);
+            }
+        }
+
+        return $row;
+    }
+
+    /**
      * Apply the default restrictions for MCP queries to the QueryBuilder:
      * - DeletedRestriction (no-op for tables without soft-delete capability)
      * - WorkspaceRestriction (only when the table is workspace-aware)

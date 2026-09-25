@@ -103,10 +103,49 @@ final class WriteTableToolTest extends TestCase
         self::assertSame('Update requires uid > 0.', $result['error']);
     }
 
+    #[Test]
+    public function planUpdateBuildsDiffFields(): void
+    {
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->method('findExistingUids')->willReturn([42]);
+        $recordService->method('findByUid')->willReturn(['header' => 'Old']);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $recordService,
+            new TcaSchemaService(),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'update',
+            'tableName' => 'tt_content',
+            'uid' => 42,
+            'data' => ['header' => 'New'],
+        ]);
+
+        self::assertSame('update', $plan->action);
+        self::assertSame('tt_content:42:header', $plan->fields[0]->key);
+        self::assertSame('Old', $plan->fields[0]->currentValue);
+        self::assertSame('New', $plan->fields[0]->proposedValue);
+    }
+
     private function bootstrapAdminUser(): void
     {
         $backendUser = $this->createMock(BackendUserAuthentication::class);
         $backendUser->method('check')->willReturn(true);
         $GLOBALS['BE_USER'] = $backendUser;
+    }
+
+    #[Test]
+    public function deleteNeedsNoDataAndBadDataIsExplained(): void
+    {
+        self::assertSame([], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData('', 'delete'));
+        self::assertSame([], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData('not json', 'delete'));
+        self::assertSame([], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData(' ', 'update'));
+        self::assertSame(['title' => 'A'], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData('{"title":"A"}', 'create'));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('data must be a JSON object of field values');
+        \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData('title=A', 'create');
     }
 }

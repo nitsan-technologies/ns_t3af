@@ -26,24 +26,57 @@ namespace NITSAN\NsT3AF\Mcp\Tool\File;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpFalStorageToolInterface;
+use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
+use NITSAN\NsT3AF\Mcp\Service\McpFalPlanBuilder;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 
-readonly class DirectoryRenameTool implements McpFalStorageToolInterface
+#[McpToolSeverity(ToolSeverity::Write)]
+readonly class DirectoryRenameTool implements McpFalStorageToolInterface, McpPlannableToolInterface
 {
-    public function __construct(private FileService $fileService) {}
+    public function __construct(
+        private FileService $fileService,
+        private McpFalPlanBuilder $falPlanBuilder,
+    ) {}
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public function plan(array $arguments): ToolPlan
+    {
+        $storageUid = (int) ($arguments['storageUid'] ?? 1);
+        $directoryIdentifier = (string) ($arguments['directoryIdentifier'] ?? '');
+        $newName = (string) ($arguments['newName'] ?? '');
+
+        return $this->falPlanBuilder->directoryPathChange(
+            'rename',
+            'directory_rename',
+            '_rename',
+            $storageUid,
+            $directoryIdentifier,
+            'rename to ' . $newName,
+            ['newName' => $newName],
+        );
+    }
 
     #[McpTool(
         name: 'directory_rename',
-        description: 'Rename a directory. Provide the directory identifier and the new name.',
+        description: 'Rename a directory. Provide the directory identifier and the new name. Requires mcpAllowDestructiveFileOps.',
     )]
     public function execute(string $directoryIdentifier, string $newName, int $storageUid = 1): string
     {
-        $this->fileService->renameDirectory($storageUid, $directoryIdentifier, $newName);
+        try {
+            $this->fileService->renameDirectory($storageUid, $directoryIdentifier, $newName);
 
-        return json_encode(
-            ['directoryIdentifier' => $directoryIdentifier, 'newName' => $newName, 'renamed' => true],
-            JSON_THROW_ON_ERROR,
-        );
+            return json_encode(
+                ['directoryIdentifier' => $directoryIdentifier, 'newName' => $newName, 'renamed' => true],
+                JSON_THROW_ON_ERROR,
+            );
+        } catch (\Throwable $exception) {
+            return json_encode(['error' => $exception->getMessage()], JSON_THROW_ON_ERROR);
+        }
     }
 }

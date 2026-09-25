@@ -20,9 +20,12 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Tool\File;
 
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\File\FileReferenceAddTool;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -30,12 +33,25 @@ use PHPUnit\Framework\TestCase;
  */
 final class FileReferenceAddToolTest extends TestCase
 {
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function record(array $row = ['uid' => 10, 'pid' => 1, 'deleted' => 0]): RecordService&MockObject
+    {
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->method('findByUid')->willReturn($row);
+
+        return $recordService;
+    }
+
     #[Test]
     public function executeRejectsInvalidFileUids(): void
     {
         $tool = new FileReferenceAddTool(
             $this->createMock(DataHandlerService::class),
             $this->createMock(TcaSchemaService::class),
+            new McpConfirmationPlanBuilder(),
+            $this->record(),
         );
 
         $result = json_decode($tool->execute('tt_content', 1, 'image', '0,abc'), true);
@@ -53,6 +69,8 @@ final class FileReferenceAddToolTest extends TestCase
         $tool = new FileReferenceAddTool(
             $this->createMock(DataHandlerService::class),
             $tcaSchemaService,
+            new McpConfirmationPlanBuilder(),
+            $this->record(),
         );
 
         $result = json_decode($tool->execute('tt_content', 1, 'header', '42'), true);
@@ -69,13 +87,22 @@ final class FileReferenceAddToolTest extends TestCase
         $dataHandlerService
             ->expects(self::once())
             ->method('createFileReferences')
-            ->with('tt_content', 10, 'image', [42, 43])
+            ->with('tt_content', 10, 'image', [42, 43], 1)
             ->willReturn([501, 502]);
 
         $tcaSchemaService = $this->createMock(TcaSchemaService::class);
         $tcaSchemaService->method('getFileFields')->with('tt_content')->willReturn(['image']);
 
-        $tool = new FileReferenceAddTool($dataHandlerService, $tcaSchemaService);
+        $recordService = $this->record(['uid' => 10, 'pid' => 1, 'deleted' => 0]);
+        $recordService
+            ->method('findFileReferences')
+            ->with('tt_content', 10, 'image')
+            ->willReturn([
+                ['uid' => 501],
+                ['uid' => 502],
+            ]);
+
+        $tool = new FileReferenceAddTool($dataHandlerService, $tcaSchemaService, new McpConfirmationPlanBuilder(), $recordService);
 
         $result = json_decode($tool->execute('tt_content', 10, 'image', '42, 43'), true);
 
@@ -85,5 +112,72 @@ final class FileReferenceAddToolTest extends TestCase
         self::assertSame('image', $result['fieldName']);
         self::assertSame(2, $result['referencesCreated']);
         self::assertSame([501, 502], $result['referenceUids']);
+        self::assertSame(2, $result['parentFieldCount']);
+    }
+
+    #[Test]
+    public function executeRejectsMissingOrDeletedRecord(): void
+    {
+        $GLOBALS['TCA']['tt_content']['ctrl']['delete'] = 'deleted';
+        $tcaSchemaService = $this->createMock(TcaSchemaService::class);
+        $tcaSchemaService->method('getFileFields')->willReturn(['image']);
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->method('findByUid')->willReturn(['uid' => 128, 'pid' => 6, 'deleted' => 1]);
+
+        $tool = new FileReferenceAddTool(
+            $this->createMock(DataHandlerService::class),
+            $tcaSchemaService,
+            new McpConfirmationPlanBuilder(),
+            $recordService,
+        );
+
+        $result = json_decode($tool->execute('tt_content', 128, 'image', '5'), true);
+
+        self::assertIsArray($result);
+        self::assertStringContainsString('missing or deleted', (string) ($result['error'] ?? ''));
+    }
+
+    #[Test]
+    public function planRejectsARecordThatDoesNotExist(): void
+    {
+        $tcaSchemaService = $this->createMock(TcaSchemaService::class);
+        $tcaSchemaService->method('getFileFields')->willReturn(['image', 'assets']);
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->method('findByUid')->willReturn(null);
+        $tool = new FileReferenceAddTool($this->createMock(DataHandlerService::class), $tcaSchemaService, new McpConfirmationPlanBuilder(), $recordService);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('There is no tt_content record with uid 128');
+        $tool->plan(['table' => 'tt_content', 'uid' => 128, 'fieldName' => 'image', 'fileUids' => '5']);
+    }
+
+    #[Test]
+    public function planRejectsAFieldThatIsNoFileField(): void
+    {
+        $tcaSchemaService = $this->createMock(TcaSchemaService::class);
+        $tcaSchemaService->method('getFileFields')->willReturn(['image', 'assets']);
+        $tool = new FileReferenceAddTool($this->createMock(DataHandlerService::class), $tcaSchemaService, new McpConfirmationPlanBuilder(), $this->record());
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('File fields: image, assets');
+        $tool->plan(['table' => 'tt_content', 'uid' => 7, 'fieldName' => '_reference', 'fileUids' => '5']);
+    }
+
+    #[Test]
+    public function referencesAreStoredOnThePageOfTheirRecord(): void
+    {
+        $tcaSchemaService = $this->createMock(TcaSchemaService::class);
+        $tcaSchemaService->method('getFileFields')->willReturn(['assets']);
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->method('findByUid')->willReturn(['uid' => 812, 'pid' => 128, 'deleted' => 0]);
+        $dataHandlerService = $this->createMock(DataHandlerService::class);
+        $dataHandlerService->expects(self::once())->method('createFileReferences')
+            ->with('tt_content', 812, 'assets', [5], 128)
+            ->willReturn([900]);
+        $tool = new FileReferenceAddTool($dataHandlerService, $tcaSchemaService, new McpConfirmationPlanBuilder(), $recordService);
+
+        $result = json_decode($tool->execute('tt_content', 812, 'assets', '5'), true);
+
+        self::assertSame([900], $result['referenceUids'] ?? null);
     }
 }

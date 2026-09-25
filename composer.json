@@ -51,19 +51,22 @@
         "ext-curl": "*",
         "ext-sodium": "*",
         "mcp/sdk": "^0.7",
-        "symfony/ai-anthropic-platform": "^0.12",
-        "symfony/ai-azure-platform": "^0.12",
-        "symfony/ai-gemini-platform": "^0.12",
-        "symfony/ai-mistral-platform": "^0.12",
-        "symfony/ai-ollama-platform": "^0.12",
-        "symfony/ai-open-ai-platform": "^0.12",
-        "symfony/ai-open-router-platform": "^0.12",
-        "symfony/ai-platform": "^0.12",
+        "symfony/ai-agent": "^0.13",
+        "symfony/ai-anthropic-platform": "^0.13",
+        "symfony/ai-azure-platform": "^0.13",
+        "symfony/ai-gemini-platform": "^0.13",
+        "symfony/ai-mistral-platform": "^0.13",
+        "symfony/ai-ollama-platform": "^0.13",
+        "symfony/ai-open-ai-platform": "^0.13",
+        "symfony/ai-open-router-platform": "^0.13",
+        "symfony/ai-platform": "^0.13",
+        "symfony/ai-store": "^0.13",
+        "symfony/event-dispatcher": "^7.3 || ^8.0",
         "typo3/cms-backend": "^12.4 || ^13.4 || ^14.3",
         "typo3/cms-core": "^12.4 || ^13.4 || ^14.3",
         "typo3/cms-fluid": "^12.4 || ^13.4 || ^14.3",
-        "typo3/cms-workspaces": "^12.4 || ^13.4 || ^14.3",
-        "typo3/cms-scheduler": "^12.4 || ^13.4 || ^14.3"
+        "typo3/cms-scheduler": "^12.4 || ^13.4 || ^14.3",
+        "typo3/cms-workspaces": "^12.4 || ^13.4 || ^14.3"
     },
     "conflict": {
         "marekskopal/typo3-mcp-server": "*",
@@ -104,10 +107,11 @@
         "typo3/cms": {
             "web-dir": ".Build/public",
             "extension-key": "ns_t3af",
-            "version": "1.2.0",
+            "version": "1.2.2",
             "Package": {
                 "providesPackages": {
                   "mcp/sdk": ".Build/vendor",
+                  "symfony/ai-agent": ".Build/vendor",
                   "symfony/ai-anthropic-platform": ".Build/vendor",
                   "symfony/ai-azure-platform": ".Build/vendor",
                   "symfony/ai-gemini-platform": ".Build/vendor",
@@ -115,7 +119,8 @@
                   "symfony/ai-ollama-platform": ".Build/vendor",
                   "symfony/ai-open-ai-platform": ".Build/vendor",
                   "symfony/ai-open-router-platform": ".Build/vendor",
-                  "symfony/ai-platform": ".Build/vendor"
+                  "symfony/ai-platform": ".Build/vendor",
+                  "symfony/ai-store": ".Build/vendor"
                 }
             }
         }

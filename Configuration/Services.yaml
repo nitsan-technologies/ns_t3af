@@ -5,6 +5,8 @@ services:
     public: false
 
   _instanceof:
+    NITSAN\NsT3AF\Agent\Contract\EmbeddingSourceInterface:
+      tags: ['nst3af.agent.embedding_source']
     NITSAN\NsT3AF\Provider\Contract\AdapterInterface:
       tags: ['nst3af.adapter']
     NITSAN\NsT3AF\Contract\FeatureProviderFormOptionsInterface:
@@ -57,11 +59,15 @@ services:
       tags: ['t3af.credits_feature_key_alias']
     NITSAN\NsT3AF\Contract\McpSkillHubEntryProviderInterface:
       tags: ['t3af.mcp_skill_hub_entry']
+    NITSAN\NsT3AF\Contract\ExtensionOperationalStatusInterface:
+      tags: ['t3af.operational_status']
 
   NITSAN\NsT3AF\:
     resource: '../Classes/*'
     exclude:
       - '../Classes/Api/*'
+      # Per-turn objects built by AgentRunner (scalar constructor arguments).
+      - '../Classes/Agent/Runtime/*'
       - '../Classes/Domain/Model/*'
       - '../Classes/Event/*'
       - '../Classes/AiLabel/Event/*'
@@ -71,6 +77,7 @@ services:
       - '../Classes/Mcp/*'
       - '../Classes/Provider/Capability.php'
       - '../Classes/Provider/Contract/*'
+      - '../Classes/Agent/Contract/*'
       - '../Classes/Provider/Model/ModelInfo.php'
       - '../Classes/Provider/Model/ModelDiscoveryServiceInterface.php'
       - '../Classes/Provider/SymfonyAi/BridgeDescriptor.php'
@@ -142,6 +149,13 @@ services:
 
   NITSAN\NsT3AF\Api\AiServiceInterface:
     alias: NITSAN\NsT3AF\Credits\Service\T3PlanetCreditAiService
+    public: true
+
+  NITSAN\NsT3AF\Api\AiToolCallingServiceInterface:
+    alias: NITSAN\NsT3AF\Service\AiToolCallingService
+    public: true
+
+  NITSAN\NsT3AF\Service\AiToolCallingService:
     public: true
 
   # Public for child-ext makeInstance() (ViewHelpers, AiEngineConfiguration, ModulesUtility).
@@ -334,6 +348,11 @@ services:
     factory: ['@TYPO3\CMS\Core\Cache\CacheManager', 'getCache']
     arguments: ['nst3af_dashboard_analytics']
 
+  nst3af.cacheFrontend.agent_tool_index:
+    class: TYPO3\CMS\Core\Cache\Frontend\FrontendInterface
+    factory: ['@TYPO3\CMS\Core\Cache\CacheManager', 'getCache']
+    arguments: ['nst3af_agent_tool_index']
+
   nst3af.cacheFacade.credits_token:
     class: NITSAN\NsT3AF\Cache\Typo3CacheFacade
     arguments:
@@ -353,6 +372,11 @@ services:
     class: NITSAN\NsT3AF\Cache\Typo3CacheFacade
     arguments:
       $cache: '@nst3af.cacheFrontend.dashboard_analytics'
+
+  nst3af.cacheFacade.agent_tool_index:
+    class: NITSAN\NsT3AF\Cache\Typo3CacheFacade
+    arguments:
+      $cache: '@nst3af.cacheFrontend.agent_tool_index'
 
   NITSAN\NsT3AF\Service\DashboardStatisticsCache:
     arguments:
@@ -381,6 +405,42 @@ services:
   NITSAN\NsT3AF\Backend\ToolbarItems\CreditBalanceToolbarItem:
     tags:
       - name: backend.toolbar.item
+
+  NITSAN\NsT3AF\Agent\Backend\ToolbarItems\AgentToolbarItem:
+    tags:
+      - name: backend.toolbar.item
+
+  NITSAN\NsT3AF\EventListener\AfterBackendPageRenderListener:
+    tags:
+      - name: event.listener
+        identifier: 'nst3af/agent/after-backend-page-render'
+        event: TYPO3\CMS\Backend\Controller\Event\AfterBackendPageRenderEvent
+
+  NITSAN\NsT3AF\Agent\Service\AgentSettingsPresenter:
+    arguments:
+      $toolIntrospector: '@NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService'
+
+  NITSAN\NsT3AF\Agent\Controller\AgentAjaxController:
+    public: true
+
+  NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface:
+    alias: NITSAN\NsT3AF\Agent\Service\AgentToolTurnProcessor
+
+  # Symfony AI Agent loop (core tool set + find_tools).
+  NITSAN\NsT3AF\Agent\Contract\AgentTurnRunnerInterface:
+    alias: NITSAN\NsT3AF\Agent\Service\AgentRunner
+
+  NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver:
+    arguments:
+      $operationalStatusProviders: !tagged_iterator t3af.operational_status
+
+  NITSAN\NsT3AF\Agent\Operational\T3afOperationalStatusProvider:
+    arguments:
+      $coreTools: !tagged_iterator mcp.tool
+
+  NITSAN\NsT3AF\Agent\Service\AgentToolPlanResolver:
+    arguments:
+      $tools: !tagged_iterator mcp.tool
 
   NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface:
     alias: NITSAN\NsT3AF\Domain\Repository\ProviderRepository
@@ -542,6 +602,23 @@ services:
 
   NITSAN\NsT3AF\AiLabel\Service\AiLabelSettingsService:
     public: true
+
+  NITSAN\NsT3AF\Agent\Service\AgentSettingsService:
+    public: true
+
+  NITSAN\NsT3AF\Agent\Contract\AgentToolIndexInterface:
+    alias: NITSAN\NsT3AF\Agent\Service\AgentToolIndexService
+
+  NITSAN\NsT3AF\Agent\Contract\AgentActionCatalogInterface:
+    alias: NITSAN\NsT3AF\Agent\Service\PermittedActionProvider
+
+  NITSAN\NsT3AF\Agent\Service\AgentToolIndexService:
+    arguments:
+      $cache: '@nst3af.cacheFacade.agent_tool_index'
+
+  NITSAN\NsT3AF\Agent\Embedding\EmbeddingSourceResolver:
+    arguments:
+      $sources: !tagged_iterator nst3af.agent.embedding_source
 
   NITSAN\NsT3AF\AiLabel\Service\AiLabelInteropService:
     public: true

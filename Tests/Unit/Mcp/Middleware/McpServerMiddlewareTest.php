@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Middleware;
 
 use Mcp\Server\Transport\StreamableHttpTransport;
 use NITSAN\NsT3AF\Mcp\Authentication\BackendUserBootstrap;
+use NITSAN\NsT3AF\Mcp\Http\FileUploadEndpoint;
 use NITSAN\NsT3AF\Mcp\Middleware\McpServerMiddleware;
 use NITSAN\NsT3AF\Mcp\OAuth\AuthorizationService;
 use NITSAN\NsT3AF\Mcp\Server\McpServerFactory;
@@ -29,9 +30,10 @@ use NITSAN\NsT3AF\Mcp\Service\Backend\McpRuntimeContext;
 use NITSAN\NsT3AF\Mcp\Service\McpPathProvider;
 use NITSAN\NsT3AF\Mcp\Service\WorkspacePreferenceService;
 use PHPUnit\Framework\TestCase;
-use Psr\Http\Message\ResponseFactoryInterface;
-use Psr\Http\Message\StreamFactoryInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+use TYPO3\CMS\Core\Http\ResponseFactory;
 use TYPO3\CMS\Core\Http\ServerRequest;
+use TYPO3\CMS\Core\Http\StreamFactory;
 use TYPO3\CMS\Core\Site\SiteFinder;
 
 final class McpServerMiddlewareTest extends TestCase
@@ -41,22 +43,27 @@ final class McpServerMiddlewareTest extends TestCase
         $settings = $this->createMock(AdvancedSettingsService::class);
         $settings->method('maxBodyBytes')->willReturn(33554432);
 
-        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
-        $streamFactory = $this->createMock(StreamFactoryInterface::class);
+        $responseFactory = new ResponseFactory();
+        $streamFactory = new StreamFactory();
         $siteFinder = $this->createMock(SiteFinder::class);
         $siteFinder->method('getAllSites')->willReturn([]);
+
+        $pathProvider = $this->createMock(McpPathProvider::class);
+        $pathProvider->method('getBasePath')->willReturn('/mcp');
+        $pathProvider->method('getUploadPath')->willReturn('/mcp_upload');
 
         $middleware = new McpServerMiddleware(
             $this->createMock(AuthorizationService::class),
             $this->createMock(BackendUserBootstrap::class),
             $this->createMock(McpServerFactory::class),
-            $this->createMock(McpPathProvider::class),
+            $pathProvider,
             $settings,
             new McpRuntimeContext(),
             $this->createMock(WorkspacePreferenceService::class),
             $responseFactory,
             $streamFactory,
             $siteFinder,
+            $this->createMock(FileUploadEndpoint::class),
         );
 
         $request = (new ServerRequest('https://example.com/mcp', 'POST'));
@@ -68,5 +75,45 @@ final class McpServerMiddlewareTest extends TestCase
 
         $maxBodyBytesProperty = new \ReflectionProperty(StreamableHttpTransport::class, 'maxBodyBytes');
         self::assertSame(33554432, $maxBodyBytesProperty->getValue($transport));
+    }
+
+    public function testProcessReturnsMissingAuthenticationTokenWhenNoTokenProvided(): void
+    {
+        $settings = $this->createMock(AdvancedSettingsService::class);
+        $settings->method('isMcpServerEnabled')->willReturn(true);
+        $settings->method('allowAnonymousReadOnly')->willReturn(false);
+
+        $pathProvider = $this->createMock(McpPathProvider::class);
+        $pathProvider->method('getBasePath')->willReturn('/mcp');
+        $pathProvider->method('getUploadPath')->willReturn('/mcp_upload');
+        $pathProvider->method('getResourceMetadataPath')->willReturn('/.well-known/oauth-protected-resource/mcp');
+
+        $middleware = new McpServerMiddleware(
+            $this->createMock(AuthorizationService::class),
+            $this->createMock(BackendUserBootstrap::class),
+            $this->createMock(McpServerFactory::class),
+            $pathProvider,
+            $settings,
+            new McpRuntimeContext(),
+            $this->createMock(WorkspacePreferenceService::class),
+            new ResponseFactory(),
+            new StreamFactory(),
+            $this->createMock(SiteFinder::class),
+            $this->createMock(FileUploadEndpoint::class),
+        );
+
+        $handler = $this->createMock(RequestHandlerInterface::class);
+        $handler->expects(self::never())->method('handle');
+
+        $response = $middleware->process(
+            new ServerRequest('https://example.com/mcp', 'POST'),
+            $handler,
+        );
+
+        self::assertSame(401, $response->getStatusCode());
+        self::assertSame(
+            ['error' => 'Missing authentication token'],
+            json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR),
+        );
     }
 }

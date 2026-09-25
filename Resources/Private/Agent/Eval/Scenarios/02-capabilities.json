@@ -1,0 +1,17 @@
+{
+  "id": "02-capabilities",
+  "title": "\"What can you do?\" explains the capabilities",
+  "turns": [
+    {
+      "message": "What can you do?",
+      "expect": {
+        "anyTool": [
+          "explain_capabilities"
+        ],
+        "reply": true,
+        "card": false,
+        "maxModelRequests": 3
+      }
+    }
+  ]
+}

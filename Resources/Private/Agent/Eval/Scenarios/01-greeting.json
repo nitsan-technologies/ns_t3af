@@ -1,0 +1,16 @@
+{
+  "id": "01-greeting",
+  "title": "A greeting gets a short answer without tools",
+  "turns": [
+    {
+      "message": "Hi",
+      "expect": {
+        "noTools": true,
+        "reply": true,
+        "card": false,
+        "maxModelRequests": 2,
+        "maxSeconds": 30
+      }
+    }
+  ]
+}

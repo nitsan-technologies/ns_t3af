@@ -1,0 +1,48 @@
+{
+  "id": "15-image-in-new-element",
+  "title": "An image goes into the new element, not into the page uid",
+  "requires": [
+    "file_reference_add"
+  ],
+  "turns": [
+    {
+      "message": "Create a new text & media element with the header \"Eval image\" on this page",
+      "expect": {
+        "anyTool": [
+          "write_table",
+          "t3ai_create_content_element"
+        ],
+        "card": true,
+        "forbidTools": [
+          "file_reference_add"
+        ]
+      }
+    },
+    {
+      "applied": {
+        "table": "tt_content",
+        "uid": 990002,
+        "values": {
+          "header": "Eval image",
+          "pid": "{{pageId}}",
+          "CType": "textmedia"
+        }
+      },
+      "expect": {
+        "maxModelRequests": 8
+      }
+    },
+    {
+      "message": "Now add the image with file uid 1 to this new element",
+      "expect": {
+        "anyTool": [
+          "file_reference_add"
+        ],
+        "argumentsContain": {
+          "uid": 990002
+        },
+        "maxRepeatedCalls": 2
+      }
+    }
+  ]
+}

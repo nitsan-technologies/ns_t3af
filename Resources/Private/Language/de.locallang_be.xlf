@@ -459,6 +459,2228 @@
                 <source>Configured via wizard</source>
                 <target>Per Assistent konfiguriert</target>
             </trans-unit>
+            <trans-unit id="access.agent_enabled">
+                <source>AI Agent access</source>
+                <target>AI-Agent-Zugriff</target>
+            </trans-unit>
+            <trans-unit id="agent.toolbar.title">
+                <source>AI Agent (Ctrl/Cmd+Shift+K)</source>
+                <target>AI Agent (Strg/Cmd+Shift+K)</target>
+            </trans-unit>
+            <trans-unit id="agent.toolbar.titlePrefix">
+                <source>AI Agent</source>
+                <target>AI Agent</target>
+            </trans-unit>
+            <trans-unit id="agent.launch.label">
+                <source>Ask AI Agent</source>
+                <target>AI Agent fragen</target>
+            </trans-unit>
+            <trans-unit id="agent.launch.title">
+                <source>Open AI Agent</source>
+                <target>AI Agent öffnen</target>
+            </trans-unit>
+            <trans-unit id="agent.modal.title">
+                <source>AI Agent</source>
+                <target>AI Agent</target>
+            </trans-unit>
+            <trans-unit id="agent.modal.subtitle">
+                <source>Ask for anything on this screen. It drafts, you approve, inside the conversation.</source>
+                <target>Fragen Sie alles zu diesem Bildschirm. Entwürfe werden erstellt, Sie genehmigen – in der Unterhaltung.</target>
+            </trans-unit>
+            <trans-unit id="agent.modal.settings">
+                <source>Settings</source>
+                <target>Einstellungen</target>
+            </trans-unit>
+            <trans-unit id="agent.modal.close">
+                <source>Close dialog</source>
+                <target>Dialog schließen</target>
+            </trans-unit>
+            <trans-unit id="agent.disclosure">
+                <source>You are interacting with an AI system (EU AI Act Art. 50(1)). Outputs may be inaccurate or incomplete. Review every suggestion before applying changes to your website.</source>
+                <target>Sie interagieren mit einem KI-System (EU-KI-Verordnung Art. 50(1)). Ausgaben können ungenau oder unvollständig sein. Prüfen Sie jeden Vorschlag, bevor Sie Änderungen auf Ihrer Website übernehmen.</target>
+            </trans-unit>
+            <trans-unit id="agent.disclosure.gotIt">
+                <source>Got it</source>
+                <target>Verstanden</target>
+            </trans-unit>
+            <trans-unit id="agent.composer.label">
+                <source>Message</source>
+                <target>Nachricht</target>
+            </trans-unit>
+            <trans-unit id="agent.composer.placeholder">
+                <source>Ask a question, / for tools, @ for records…</source>
+                <target>Frage stellen, / für Tools, @ für Datensätze…</target>
+            </trans-unit>
+            <trans-unit id="agent.composer.hint">
+                <source>/ tools · @ records ·</source>
+                <target>/ Tools · @ Datensätze ·</target>
+            </trans-unit>
+            <trans-unit id="agent.composer.send">
+                <source>Send message</source>
+                <target>Nachricht senden</target>
+            </trans-unit>
+            <trans-unit id="agent.autocomplete.label">
+                <source>Suggestions</source>
+                <target>Vorschläge</target>
+            </trans-unit>
+            <trans-unit id="agent.context.module">
+                <source>Module</source>
+                <target>Modul</target>
+            </trans-unit>
+            <trans-unit id="agent.context.page">
+                <source>Page</source>
+                <target>Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.context.record">
+                <source>Record</source>
+                <target>Datensatz</target>
+            </trans-unit>
+            <trans-unit id="agent.context.brand">
+                <source>Brand profile</source>
+                <target>Markenprofil</target>
+            </trans-unit>
+            <trans-unit id="agent.starters.executable">
+                <source>Suggested actions</source>
+                <target>Vorgeschlagene Aktionen</target>
+            </trans-unit>
+            <trans-unit id="agent.starters.locked">
+                <source>Needs another extension</source>
+                <target>Benötigt eine weitere Extension</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateSeo">
+                <source>Generate SEO metadata</source>
+                <target>SEO-Metadaten generieren</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.inspectPage">
+                <source>Inspect this page</source>
+                <target>Diese Seite ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.listChildPages">
+                <source>List child pages</source>
+                <target>Unterseiten auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.searchPages">
+                <source>Search pages</source>
+                <target>Seiten suchen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.pageTree">
+                <source>Browse page tree</source>
+                <target>Seitenbaum durchsuchen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.listContent">
+                <source>List page content</source>
+                <target>Seiteninhalte auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateSeoNeedsPage">
+                <source>Open a page in the backend first — SEO metadata needs page context.</source>
+                <target>Öffnen Sie zuerst eine Seite im Backend — SEO-Metadaten benötigen Seitenkontext.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateSeoDraft">
+                <source>Review the proposed SEO metadata before anything is written.</source>
+                <target>Prüfen Sie die vorgeschlagenen SEO-Metadaten, bevor etwas geschrieben wird.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateSeoNoFields">
+                <source>SEO fields on this page already look complete.</source>
+                <target>Die SEO-Felder dieser Seite wirken bereits vollständig.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateSeoDescription">
+                <source>Discover %1$s — concise summary for search results and social previews.</source>
+                <target>Entdecken Sie %1$s — kurze Zusammenfassung für Suchergebnisse und Social Previews.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateSeoAbstract">
+                <source>Learn more about %1$s on this site.</source>
+                <target>Erfahren Sie mehr über %1$s auf dieser Website.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateSeoKeywords">
+                <source>%1$s, TYPO3, website</source>
+                <target>%1$s, TYPO3, Website</target>
+            </trans-unit>
+            <trans-unit id="agent.owner.core">
+                <source>AI Foundation</source>
+                <target>AI Foundation</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.blockedForGroup">
+                <source>Your user group may not use this. Ask your administrator to allow it under AI Permissions.</source>
+                <target>Ihre Benutzergruppe darf das nicht verwenden. Bitten Sie Ihren Administrator, es unter „KI-Berechtigungen“ freizugeben.</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.unclassified">
+                <source>The agent cannot use this yet because its extension does not say whether it changes data. Ask your developer to update the extension.</source>
+                <target>Der Agent kann das noch nicht nutzen, weil die Erweiterung nicht angibt, ob es Daten ändert. Bitten Sie Ihren Entwickler, die Erweiterung zu aktualisieren.</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.extensionUnavailable">
+                <source>Needs the extension %1$s. Ask your administrator to install and activate it.</source>
+                <target>Benötigt die Erweiterung %1$s. Bitten Sie Ihren Administrator, sie zu installieren und zu aktivieren.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.help">
+                <source>Pick a starter below, type / to run a tool, or attach a record with @table:uid (for example @tt_content:198).</source>
+                <target>Wählen Sie unten einen Starter, tippen Sie / für ein Tool oder hängen Sie einen Datensatz mit @tabelle:uid an (z. B. @tt_content:198).</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.noToolCalling">
+                <source>Your current AI provider cannot run tools for natural-language requests. Use / to pick a tool or @ to attach a record instead.</source>
+                <target>Ihr aktueller KI-Anbieter kann keine Tools für natürlichsprachliche Anfragen ausführen. Verwenden Sie / für ein Tool oder @, um einen Datensatz anzuhängen.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.noExecutableTools">
+                <source>No executable tools are available for your account. Use / to see what is locked or contact an administrator.</source>
+                <target>Für Ihr Konto sind keine ausführbaren Tools verfügbar. Verwenden Sie /, um gesperrte Tools zu sehen, oder wenden Sie sich an einen Administrator.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.governanceBlocked">
+                <source>This request was blocked by the AI permissions of your backend group: %1$s</source>
+                <target>Diese Anfrage wurde durch die KI-Berechtigungen Ihrer Backend-Gruppe blockiert: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.orchestratorFailed">
+                <source>The agent could not complete this turn: %1$s</source>
+                <target>Der Agent konnte diese Runde nicht abschließen: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.emptyModelReply">
+                <source>I could not produce a reply. Try rephrasing or use / to run a specific tool.</source>
+                <target>Ich konnte keine Antwort erzeugen. Formulieren Sie um oder verwenden Sie / für ein bestimmtes Tool.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.loopLimit">
+                <source>I could not finish this in one go. Tell me a bit more precisely what I should do, for example which page it is about.</source>
+                <target>Das konnte ich nicht in einem Schritt abschließen. Sagen Sie mir bitte etwas genauer, was ich tun soll, zum Beispiel um welche Seite es geht.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.readBudgetExceeded">
+                <source>Read tool budget reached (%1$s per turn). Send another message to continue.</source>
+                <target>Lesetool-Budget erreicht (%1$s pro Runde). Senden Sie eine weitere Nachricht, um fortzufahren.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.writeBudgetExceeded">
+                <source>Write draft budget reached (%1$s per turn). Apply or discard drafts, then continue.</source>
+                <target>Schreibentwurf-Budget erreicht (%1$s pro Runde). Wenden Sie Entwürfe an oder verwerfen Sie sie, dann fahren Sie fort.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.unknownAttachment">
+                <source>No read tool is available for @%1$s:%2$s. Try /content_get %2$s for content elements or pick a tool with /.</source>
+                <target>Kein Lesetool für @%1$s:%2$s verfügbar. Versuchen Sie /content_get %2$s für Inhaltselemente oder wählen Sie ein Tool mit /.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.unknownTool">
+                <source>Unknown tool: %1$s</source>
+                <target>Unbekanntes Tool: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.lockedTool">
+                <source>%1$s is locked: %2$s</source>
+                <target>%1$s ist gesperrt: %2$s</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.writeRequiresApproval">
+                <source>Write and destructive tools require your approval before anything is saved. That workflow arrives in the next release.</source>
+                <target>Schreib- und destruktive Tools erfordern Ihre Freigabe, bevor etwas gespeichert wird. Dieser Workflow folgt in der nächsten Version.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.readExecuted">
+                <source>Read tool %1$s ran without confirmation.</source>
+                <target>Lese-Tool %1$s wurde ohne Bestätigung ausgeführt.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.readFailed">
+                <source>Read tool %1$s failed: %2$s</source>
+                <target>Lese-Tool %1$s fehlgeschlagen: %2$s</target>
+            </trans-unit>
+            <trans-unit id="agent.result.details">
+                <source>Details</source>
+                <target>Details</target>
+            </trans-unit>
+            <trans-unit id="agent.live.running">
+                <source>Assistant is working…</source>
+                <target>Assistent arbeitet…</target>
+            </trans-unit>
+            <trans-unit id="agent.live.thinking">
+                <source>Thinking…</source>
+                <target>Denkt nach…</target>
+            </trans-unit>
+            <trans-unit id="agent.live.runningTool">
+                <source>Running %1$s…</source>
+                <target>Führt %1$s aus…</target>
+            </trans-unit>
+            <trans-unit id="agent.live.opened">
+                <source>AI Agent opened.</source>
+                <target>AI Agent geöffnet.</target>
+            </trans-unit>
+            <trans-unit id="agent.live.closed">
+                <source>AI Agent closed.</source>
+                <target>AI Agent geschlossen.</target>
+            </trans-unit>
+            <trans-unit id="agent.severity.read">
+                <source>Read-only</source>
+                <target>Nur lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.severity.write">
+                <source>Write</source>
+                <target>Schreiben</target>
+            </trans-unit>
+            <trans-unit id="agent.severity.destructive">
+                <source>Destructive</source>
+                <target>Destruktiv</target>
+            </trans-unit>
+            <trans-unit id="agent.severity.unclassified">
+                <source>Unclassified</source>
+                <target>Nicht klassifiziert</target>
+            </trans-unit>
+            <trans-unit id="agent.governance.providerBlocked">
+                <source>Your group policy blocks this AI provider for agent use.</source>
+                <target>Ihre Gruppenrichtlinie blockiert diesen KI-Anbieter für die Agent-Nutzung.</target>
+            </trans-unit>
+            <trans-unit id="agent.governance.modelOverrideBlocked">
+                <source>Model override is disabled for your backend user group.</source>
+                <target>Modell-Override ist für Ihre Backend-Benutzergruppe deaktiviert.</target>
+            </trans-unit>
+            <trans-unit id="agent.governance.dailyCapReached">
+                <source>Daily agent request limit reached for your backend user group.</source>
+                <target>Tägliches Agent-Anfragelimit für Ihre Backend-Benutzergruppe erreicht.</target>
+            </trans-unit>
+            <trans-unit id="agent.governance.creditCapReached">
+                <source>Monthly AI credit cap reached for your backend user group.</source>
+                <target>Monatliches KI-Credit-Limit für Ihre Backend-Benutzergruppe erreicht.</target>
+            </trans-unit>
+            <trans-unit id="agent.governance.turnGuardWarn">
+                <source>Warning: this turn has reached %1$s tool calls (%2$s so far). The agent will stop at 40 calls.</source>
+                <target>Warnung: Dieser Turn hat %1$s Tool-Aufrufe erreicht (%2$s bisher). Der Agent stoppt bei 40 Aufrufen.</target>
+            </trans-unit>
+            <trans-unit id="agent.governance.turnGuardAbort">
+                <source>Turn stopped: the %1$s tool call limit was reached. Start a new message to continue.</source>
+                <target>Turn gestoppt: Das Limit von %1$s Tool-Aufrufen wurde erreicht. Starten Sie eine neue Nachricht, um fortzufahren.</target>
+            </trans-unit>
+            <trans-unit id="agent.entitlement.lockedLead">
+                <source>„%1$s“ comes from %2$s, which is not available on this installation.</source>
+                <target>„%1$s“ gehört zu %2$s, das in dieser Installation nicht verfügbar ist.</target>
+            </trans-unit>
+            <trans-unit id="agent.entitlement.planLockedLead">
+                <source>„%1$s“ changes data, and the agent cannot show you a preview of it yet, so it will not run it. Do it in the matching backend module instead.</source>
+                <target>„%1$s“ ändert Daten, und der Agent kann dafür noch keine Vorschau zeigen – deshalb führt er es nicht aus. Nutzen Sie stattdessen das passende Backend-Modul.</target>
+            </trans-unit>
+            <trans-unit id="agent.entitlement.severityLockedLead">
+                <source>„%1$s“ cannot be used by the agent yet.</source>
+                <target>„%1$s“ kann vom Agenten noch nicht genutzt werden.</target>
+            </trans-unit>
+            <trans-unit id="agent.entitlement.toolCount">
+                <source>With %2$s active you get %1$s more actions here.</source>
+                <target>Mit aktivem %2$s stehen Ihnen hier %1$s weitere Aktionen zur Verfügung.</target>
+            </trans-unit>
+            <trans-unit id="agent.entitlement.settingsHint">
+                <source>Details are in the AI Agent settings: %1$s</source>
+                <target>Details finden Sie in den KI-Agent-Einstellungen: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.scheduler.handoffLabel">
+                <source>Schedule this action</source>
+                <target>Diese Aktion planen</target>
+            </trans-unit>
+            <trans-unit id="agent.scheduler.handoffBodySeo">
+                <source>%1$s pages in your site could use the same treatment. Schedule bulk SEO optimization when you are ready.</source>
+                <target>%1$s Seiten auf Ihrer Website könnten dieselbe Behandlung vertragen. Planen Sie die Bulk-SEO-Optimierung, wenn Sie bereit sind.</target>
+            </trans-unit>
+            <trans-unit id="agent.scheduler.handoffNote">
+                <source>Scheduler tasks still require per-change review before anything is published.</source>
+                <target>Scheduler-Aufgaben erfordern weiterhin eine Prüfung pro Änderung, bevor etwas veröffentlicht wird.</target>
+            </trans-unit>
+            <!-- AI Agent: tool search settings -->
+            <trans-unit id="extmng.agentEmbeddingSource">
+                <source>Tool search for the AI Agent: auto (provider embeddings when available) / provider / none (keyword search only)</source>
+                <target>Tool-Suche des KI-Agenten: auto (Provider-Embeddings, wenn verfügbar) / provider / none (nur Stichwortsuche)</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentEmbeddingProvider">
+                <source>Embedding provider identifier (empty = default provider)</source>
+                <target>Embedding-Provider-Identifier (leer = Standard-Provider)</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentMinSimilarity">
+                <source>Minimum embedding similarity for tool search results (0.0–1.0)</source>
+                <target>Minimale Embedding-Ähnlichkeit für Ergebnisse der Tool-Suche (0.0–1.0)</target>
+            </trans-unit>
+            <!-- AI Agent: language-agnostic routing (Phase 1) -->
+            <trans-unit id="agent.context.folder">
+                <source>Folder</source>
+                <target>Ordner</target>
+            </trans-unit>
+            <trans-unit id="agent.context.language">
+                <source>Language</source>
+                <target>Sprache</target>
+            </trans-unit>
+            <trans-unit id="agent.context.aware">
+                <source>Knows what you are looking at</source>
+                <target>Weiß, was Sie gerade ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.greeting.lead">
+                <source>I can read this screen, draft changes, and run tools — you approve before anything is written.</source>
+                <target>Ich kann diesen Bildschirm lesen, Änderungen entwerfen und Tools ausführen – Sie geben frei, bevor etwas geschrieben wird.</target>
+            </trans-unit>
+            <trans-unit id="agent.greeting.page">
+                <source>Page</source>
+                <target>Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.greeting.module">
+                <source>Module</source>
+                <target>Modul</target>
+            </trans-unit>
+            <trans-unit id="agent.greeting.language">
+                <source>Language</source>
+                <target>Sprache</target>
+            </trans-unit>
+            <trans-unit id="agent.greeting.brand">
+                <source>Brand</source>
+                <target>Marke</target>
+            </trans-unit>
+            <trans-unit id="agent.toolCall.autoRan">
+                <source>completed</source>
+                <target>abgeschlossen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.listFilesMissingAltText">
+                <source>List images missing alt text</source>
+                <target>Bilder ohne Alt-Text auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.updateFileMetadata">
+                <source>Update file metadata</source>
+                <target>Datei-Metadaten aktualisieren</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.getFileMetadata">
+                <source>Inspect file metadata</source>
+                <target>Datei-Metadaten ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.explainCapabilities">
+                <source>Explain available actions</source>
+                <target>Verfügbare Aktionen erklären</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.contentDelete">
+                <source>Delete a content element</source>
+                <target>Inhaltselement löschen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.askClarification">
+                <source>Ask a clarifying question</source>
+                <target>Klärende Frage stellen</target>
+            </trans-unit>
+            <trans-unit id="agent.upsell.title">
+                <source>Extension required</source>
+                <target>Erweiterung erforderlich</target>
+            </trans-unit>
+            <trans-unit id="agent.applied.title">
+                <source>Changes applied</source>
+                <target>Änderungen angewendet</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.generateFileMetadata">
+                <source>Generate file metadata (alt, title)</source>
+                <target>Datei-Metadaten erzeugen (Alt, Titel)</target>
+            </trans-unit>
+            <trans-unit id="agent.workflow.fileMetadataNeedsFile">
+                <source>Attach a file with @file or open the Media module so the agent knows which image to caption.</source>
+                <target>Hängen Sie eine Datei mit @file an oder öffnen Sie das Medien-Modul, damit der Agent weiß, welches Bild beschriftet werden soll.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.createNews">
+                <source>Create news article</source>
+                <target>News-Artikel erstellen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.createNewsNeedsPage">
+                <source>Select a news storage folder page first, then ask to create a news article.</source>
+                <target>Wählen Sie zuerst einen News-Ordner als Seite aus und bitten Sie dann um das Erstellen eines News-Artikels.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.createNewsUnavailable">
+                <source>News creation is not available. Install EXT:news and enable the T3AI news tools.</source>
+                <target>Das Erstellen von News ist nicht verfügbar. Installieren Sie EXT:news und aktivieren Sie die T3AI-News-Tools.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.recordSearch">
+                <source>Search records</source>
+                <target>Datensätze suchen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.fileList">
+                <source>Browse files</source>
+                <target>Dateien durchsuchen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.fileInfo">
+                <source>Inspect file metadata</source>
+                <target>Datei-Metadaten ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.fileSearch">
+                <source>Search files</source>
+                <target>Dateien suchen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.fileUpload">
+                <source>Upload a file</source>
+                <target>Datei hochladen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.redirectList">
+                <source>List redirects</source>
+                <target>Weiterleitungen auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.redirectGet">
+                <source>Inspect redirect</source>
+                <target>Weiterleitung ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.schedulerList">
+                <source>List scheduler tasks</source>
+                <target>Scheduler-Aufgaben auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.schedulerGet">
+                <source>Inspect scheduler task</source>
+                <target>Scheduler-Aufgabe ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.trace.title">
+                <source>Tool trace</source>
+                <target>Tool-Protokoll</target>
+            </trans-unit>
+            <trans-unit id="agent.trace.request">
+                <source>Request</source>
+                <target>Anfrage</target>
+            </trans-unit>
+            <trans-unit id="agent.trace.response">
+                <source>Response</source>
+                <target>Antwort</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.emptyModelReplyWithTools">
+                <source>I could not produce a reply. Closest tools: %1$s. Try rephrasing, pick a suggested action, or use / to run a specific tool.</source>
+                <target>Ich konnte keine Antwort erzeugen. Passende Tools: %1$s. Formulieren Sie die Anfrage neu, wählen Sie eine vorgeschlagene Aktion oder nutzen Sie /, um ein bestimmtes Tool auszuführen.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.translateNotInCombinedFlow">
+                <source>Translation is not run automatically in this combined request yet. This turn only prepares SEO metadata for the target page — run translation separately afterward.</source>
+                <target>Die Übersetzung wird in dieser kombinierten Anfrage noch nicht automatisch ausgeführt. Dieser Schritt bereitet nur die SEO-Metadaten für die Zielseite vor – führen Sie die Übersetzung danach separat aus.</target>
+            </trans-unit>
+            <trans-unit id="agent.compound.translateHandoff">
+                <source>Queue bulk translation for page %1$s via Scheduler. Choose target languages in the handoff below, run the job, then approve the SEO draft when ready.</source>
+                <target>Massenübersetzung für Seite %1$s über den Scheduler einplanen. Wählen Sie unten die Zielsprachen, starten Sie den Job und geben Sie anschließend den SEO-Entwurf frei.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.noContentMatch">
+                <source>No content element matched &quot;%1$s&quot; on this page. Content on this page:%2$s%3$s</source>
+                <target>Kein Inhaltselement auf dieser Seite passt zu „%1$s“. Inhalte auf dieser Seite:%2$s%3$s</target>
+            </trans-unit>
+            <trans-unit id="agent.work.working">
+                <source>Working…</source>
+                <target>Arbeite…</target>
+            </trans-unit>
+            <trans-unit id="agent.work.workingFor">
+                <source>Working… %1$s</source>
+                <target>Arbeite… %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.work.workedFor">
+                <source>Worked for %1$s</source>
+                <target>Dauer: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.governance.workspaceEnforcementBlocked">
+                <source>The agent never writes to Live and no workspace is available to you. Ask an administrator to create a workspace or give you access, or choose one under MCP Server > Workspace selection.</source>
+                <target>Der Agent schreibt nie in Live und Ihnen steht kein Arbeitsbereich zur Verfügung. Bitten Sie einen Administrator, einen Arbeitsbereich anzulegen oder Ihnen Zugriff zu geben, oder wählen Sie einen unter MCP-Server > Arbeitsbereich-Auswahl.</target>
+            </trans-unit>
+            <trans-unit id="agent.context.workspace">
+                <source>Workspace</source>
+                <target>Workspace</target>
+            </trans-unit>
+            <trans-unit id="agent.attach.open">
+                <source>Attach</source>
+                <target>Anhängen</target>
+            </trans-unit>
+            <trans-unit id="agent.attach.files">
+                <source>Add files or photos</source>
+                <target>Dateien oder Fotos hinzufügen</target>
+            </trans-unit>
+            <trans-unit id="agent.upload.success">
+                <source>Uploaded %1$s.</source>
+                <target>%1$s hochgeladen.</target>
+            </trans-unit>
+            <trans-unit id="agent.upload.failed">
+                <source>Upload failed.</source>
+                <target>Upload fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.upload.missingFile">
+                <source>No file was uploaded.</source>
+                <target>Es wurde keine Datei hochgeladen.</target>
+            </trans-unit>
+            <trans-unit id="agent.upload.empty">
+                <source>The uploaded file is empty.</source>
+                <target>Die hochgeladene Datei ist leer.</target>
+            </trans-unit>
+            <trans-unit id="agent.upload.tooLarge">
+                <source>The file exceeds the maximum upload size (100 MB).</source>
+                <target>Die Datei überschreitet die maximale Upload-Größe (100 MB).</target>
+            </trans-unit>
+            <trans-unit id="agent.upload.invalidName">
+                <source>The file name is not allowed.</source>
+                <target>Der Dateiname ist nicht erlaubt.</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.uploadViaComposer">
+                <source>Use the + button next to the message field to upload files.</source>
+                <target>Nutzen Sie die Schaltfläche + neben dem Nachrichtenfeld, um Dateien hochzuladen.</target>
+            </trans-unit>
+            <trans-unit id="agent.entitlement.composerLockedLead">
+                <source>„%1$s“ works through the + button next to the message field.</source>
+                <target>„%1$s“ funktioniert über die Schaltfläche + neben dem Nachrichtenfeld.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.applySafe">
+                <source>Apply safe fields</source>
+                <target>Sichere Felder anwenden</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.noSafeFields">
+                <source>No safe fields are selected for apply.</source>
+                <target>Es sind keine sicheren Felder zum Anwenden ausgewählt.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.unknownFileAttachment">
+                <source>Could not read attached file %1$s.</source>
+                <target>Die angehängte Datei %1$s konnte nicht gelesen werden.</target>
+            </trans-unit>
+            <trans-unit id="agent.scheduler.handoffTitle">
+                <source>Schedule for later?</source>
+                <target>Für später einplanen?</target>
+            </trans-unit>
+            <trans-unit id="agent.scheduler.handoffBody">
+                <source>Run the same kind of work in bulk via Scheduler &amp; CLI when you are ready.</source>
+                <target>Führen Sie die gleiche Arbeit später als Massenvorgang über Scheduler &amp; CLI aus.</target>
+            </trans-unit>
+            <trans-unit id="agent.scheduler.handoffDismiss">
+                <source>Not now</source>
+                <target>Jetzt nicht</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.planUnsupported">
+                <source>The agent cannot show a preview for this change yet, so it will not run it. Do it in the matching backend module instead.</source>
+                <target>Der Agent kann für diese Änderung noch keine Vorschau zeigen und führt sie deshalb nicht aus. Nutzen Sie stattdessen das passende Backend-Modul.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.planUnsupported">
+                <source>%1$s cannot be planned for approval yet.</source>
+                <target>%1$s kann noch nicht zur Freigabe geplant werden.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.planFailed">
+                <source>Could not plan %1$s: %2$s</source>
+                <target>%1$s konnte nicht geplant werden: %2$s</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.proposed">
+                <source>Review the proposed changes for %1$s before anything is written.</source>
+                <target>Prüfen Sie die vorgeschlagenen Änderungen für %1$s, bevor etwas geschrieben wird.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.apply">
+                <source>Apply</source>
+                <target>Anwenden</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.discard">
+                <source>Discard</source>
+                <target>Verwerfen</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.confirmFirst">
+                <source>Confirm (1 of 2)</source>
+                <target>Bestätigen (1 von 2)</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.confirmSecond">
+                <source>Apply (2 of 2)</source>
+                <target>Anwenden (2 von 2)</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.destructiveArmed">
+                <source>Destructive action armed. Click Apply again to proceed.</source>
+                <target>Destruktive Aktion vorbereitet. Klicken Sie erneut auf Anwenden, um fortzufahren.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.applied">
+                <source>Applied %1$s of %2$s fields.</source>
+                <target>%1$s von %2$s Feldern angewendet.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.discarded">
+                <source>Draft discarded. Nothing was written.</source>
+                <target>Entwurf verworfen. Es wurde nichts geschrieben.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.undone">
+                <source>Change undone. A new history entry was written.</source>
+                <target>Änderung zurückgenommen. Ein neuer Verlaufseintrag wurde geschrieben.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.keep">
+                <source>Keep</source>
+                <target>Übernehmen</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.drop">
+                <source>Drop</source>
+                <target>Weglassen</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.elicitation">
+                <source>MCP elicitation</source>
+                <target>MCP-Rückfrage</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.toolConfirmation">
+                <source>Tool confirmation</source>
+                <target>Tool-Bestätigung</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.toolArguments">
+                <source>Parameters</source>
+                <target>Parameter</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.runTool">
+                <source>Run tool</source>
+                <target>Tool ausführen</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.runningTool">
+                <source>Running %1$s…</source>
+                <target>%1$s wird ausgeführt…</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.toolApplied">
+                <source>Tool ran successfully.</source>
+                <target>Das Tool wurde erfolgreich ausgeführt.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.readback">
+                <source>Written through DataHandler, then read back from the database. Workspace and publishing are untouched.</source>
+                <target>Über den DataHandler geschrieben und anschließend aus der Datenbank zurückgelesen. Workspace und Veröffentlichung bleiben unberührt.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.undo">
+                <source>Undo</source>
+                <target>Zurücknehmen</target>
+            </trans-unit>
+            <trans-unit id="agent.error.invalidPayload">
+                <source>The request payload could not be read.</source>
+                <target>Die Anfrage konnte nicht gelesen werden.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.forbidden">
+                <source>You are not allowed to do this.</source>
+                <target>Sie dürfen das nicht tun.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.missingDraftId">
+                <source>The draft reference is missing.</source>
+                <target>Die Entwurfs-Referenz fehlt.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.draftNotFound">
+                <source>This draft was not found or has expired.</source>
+                <target>Dieser Entwurf wurde nicht gefunden oder ist abgelaufen.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.missingChangeId">
+                <source>The change reference is missing.</source>
+                <target>Die Änderungs-Referenz fehlt.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.emptyMessage">
+                <source>Please enter a message.</source>
+                <target>Bitte geben Sie eine Nachricht ein.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.generic">
+                <source>Something went wrong.</source>
+                <target>Etwas ist schiefgelaufen.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.turnFailed">
+                <source>The request failed.</source>
+                <target>Die Anfrage ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.applyFailed">
+                <source>Applying the draft failed.</source>
+                <target>Das Anwenden des Entwurfs ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.confirmFailed">
+                <source>The confirmation failed.</source>
+                <target>Die Bestätigung ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.undoFailed">
+                <source>Undo failed.</source>
+                <target>Das Zurücknehmen ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.streamFailed">
+                <source>The live connection failed.</source>
+                <target>Die Live-Verbindung ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.value.empty">
+                <source>(empty)</source>
+                <target>(leer)</target>
+            </trans-unit>
+            <trans-unit id="agent.value.noHeader">
+                <source>(no header)</source>
+                <target>(keine Überschrift)</target>
+            </trans-unit>
+            <trans-unit id="agent.value.hidden">
+                <source>Hidden</source>
+                <target>Versteckt</target>
+            </trans-unit>
+            <trans-unit id="agent.value.visible">
+                <source>Visible</source>
+                <target>Sichtbar</target>
+            </trans-unit>
+            <trans-unit id="agent.readFastPath.seoFields">
+                <source>SEO-related fields on this page (%1$s):</source>
+                <target>SEO-relevante Felder auf dieser Seite (%1$s):</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.result">
+                <source>Result</source>
+                <target>Ergebnis</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.file">
+                <source>File</source>
+                <target>Datei</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.files">
+                <source>Files</source>
+                <target>Dateien</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.folders">
+                <source>Folders</source>
+                <target>Ordner</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.examples">
+                <source>Examples</source>
+                <target>Beispiele</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.includes">
+                <source>Includes</source>
+                <target>Enthält</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.items">
+                <source>Items</source>
+                <target>Einträge</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.missingAltText">
+                <source>Images missing alt text</source>
+                <target>Bilder ohne Alt-Text</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.matchingFiles">
+                <source>Matching files</source>
+                <target>Passende Dateien</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.matchingPages">
+                <source>Matching pages</source>
+                <target>Passende Seiten</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.matchingContentElements">
+                <source>Matching content elements</source>
+                <target>Passende Inhaltselemente</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.matchingRecords">
+                <source>Matching records</source>
+                <target>Passende Datensätze</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.pages">
+                <source>Pages</source>
+                <target>Seiten</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.contentElements">
+                <source>Content elements</source>
+                <target>Inhaltselemente</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.redirects">
+                <source>Redirects</source>
+                <target>Weiterleitungen</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.scheduledTasks">
+                <source>Scheduled tasks</source>
+                <target>Geplante Aufgaben</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.records">
+                <source>Records</source>
+                <target>Datensätze</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.altText">
+                <source>Alt text</source>
+                <target>Alt-Text</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.title">
+                <source>Title</source>
+                <target>Titel</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.header">
+                <source>Header</source>
+                <target>Überschrift</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.name">
+                <source>Name</source>
+                <target>Name</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.uid">
+                <source>UID</source>
+                <target>UID</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.parent">
+                <source>Parent</source>
+                <target>Übergeordnet</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.page">
+                <source>Page</source>
+                <target>Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.slug">
+                <source>Slug</source>
+                <target>Slug</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.type">
+                <source>Type</source>
+                <target>Typ</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.visibility">
+                <source>Visibility</source>
+                <target>Sichtbarkeit</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.deleted">
+                <source>Deleted</source>
+                <target>Gelöscht</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.description">
+                <source>Description</source>
+                <target>Beschreibung</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.subtitle">
+                <source>Subtitle</source>
+                <target>Untertitel</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.error">
+                <source>Error</source>
+                <target>Fehler</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.message">
+                <source>Message</source>
+                <target>Meldung</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.count">
+                <source>Count</source>
+                <target>Anzahl</target>
+            </trans-unit>
+            <trans-unit id="agent.fact.total">
+                <source>Total</source>
+                <target>Gesamt</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.items">
+                <source>items</source>
+                <target>Einträge</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.files">
+                <source>files</source>
+                <target>Dateien</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.missingAltText">
+                <source>images missing alt text</source>
+                <target>Bilder ohne Alt-Text</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.matchingFiles">
+                <source>matching files</source>
+                <target>passende Dateien</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.matchingPages">
+                <source>matching pages</source>
+                <target>passende Seiten</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.matchingContentElements">
+                <source>matching content elements</source>
+                <target>passende Inhaltselemente</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.matchingRecords">
+                <source>matching records</source>
+                <target>passende Datensätze</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.pages">
+                <source>pages</source>
+                <target>Seiten</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.contentElements">
+                <source>content elements</source>
+                <target>Inhaltselemente</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.redirects">
+                <source>redirects</source>
+                <target>Weiterleitungen</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.scheduledTasks">
+                <source>scheduled tasks</source>
+                <target>geplante Aufgaben</target>
+            </trans-unit>
+            <trans-unit id="agent.subject.records">
+                <source>records</source>
+                <target>Datensätze</target>
+            </trans-unit>
+            <trans-unit id="agent.result.toolFailed">
+                <source>The tool failed.</source>
+                <target>Das Tool ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.toolError">
+                <source>The tool reported an error.</source>
+                <target>Das Tool hat einen Fehler gemeldet.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.toolNoData">
+                <source>The tool returned no data.</source>
+                <target>Das Tool hat keine Daten zurückgegeben.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.action">
+                <source>Action</source>
+                <target>Aktion</target>
+            </trans-unit>
+            <trans-unit id="agent.result.completed">
+                <source>%1$s completed successfully.</source>
+                <target>%1$s wurde erfolgreich abgeschlossen.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.foundOne">
+                <source>Found 1 %1$s.</source>
+                <target>1 %1$s gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.foundMany">
+                <source>Found %1$s %2$s.</source>
+                <target>%1$s %2$s gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.examplesLead">
+                <source>Examples: %1$s</source>
+                <target>Beispiele: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.result.openDetails">
+                <source>Open Details for the full list (%1$s total).</source>
+                <target>Öffnen Sie Details für die vollständige Liste (%1$s insgesamt).</target>
+            </trans-unit>
+            <trans-unit id="agent.result.noMissingAltText">
+                <source>Good news — no images are missing alt text in this storage.</source>
+                <target>Gute Nachricht – in diesem Speicher fehlt bei keinem Bild der Alt-Text.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.nextAltTextHint">
+                <source>Next: use “Generate file metadata (alt, title)” or ask to write alt text for a specific file.</source>
+                <target>Weiter: Nutzen Sie „Datei-Metadaten erzeugen (Alt, Titel)“ oder bitten Sie um Alt-Text für eine bestimmte Datei.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.folderContents">
+                <source>This folder contains %1$s file(s) and %2$s subfolder(s).</source>
+                <target>Dieser Ordner enthält %1$s Datei(en) und %2$s Unterordner.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.folderContentsIn">
+                <source>This folder in %1$s contains %2$s file(s) and %3$s subfolder(s).</source>
+                <target>Der Ordner in %1$s enthält %2$s Datei(en) und %3$s Unterordner.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyMissingAltText">
+                <source>No images are missing alt text in this storage.</source>
+                <target>In diesem Speicher fehlt bei keinem Bild der Alt-Text.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyMatchingFiles">
+                <source>No matching files were found.</source>
+                <target>Es wurden keine passenden Dateien gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyMatchingPages">
+                <source>No matching pages were found.</source>
+                <target>Es wurden keine passenden Seiten gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyMatchingContentElements">
+                <source>No matching content elements were found.</source>
+                <target>Es wurden keine passenden Inhaltselemente gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyMatchingRecords">
+                <source>No matching records were found.</source>
+                <target>Es wurden keine passenden Datensätze gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyChildPages">
+                <source>No child pages were found.</source>
+                <target>Es wurden keine Unterseiten gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyContentElements">
+                <source>No content elements were found on this page.</source>
+                <target>Auf dieser Seite wurden keine Inhaltselemente gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyRedirects">
+                <source>No redirects were found.</source>
+                <target>Es wurden keine Weiterleitungen gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyScheduledTasks">
+                <source>No scheduled tasks were found.</source>
+                <target>Es wurden keine geplanten Aufgaben gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.emptyItems">
+                <source>No items found.</source>
+                <target>Keine Einträge gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneDeleted">
+                <source>Done — the item was deleted.</source>
+                <target>Fertig – der Eintrag wurde gelöscht.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.donePublished">
+                <source>Done — the workspace change was published.</source>
+                <target>Fertig – die Workspace-Änderung wurde veröffentlicht.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneDiscarded">
+                <source>Done — the workspace change was discarded.</source>
+                <target>Fertig – die Workspace-Änderung wurde verworfen.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneCacheCleared">
+                <source>Done — the cache was cleared.</source>
+                <target>Fertig – der Cache wurde geleert.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneCopied">
+                <source>Done — the copy was created.</source>
+                <target>Fertig – die Kopie wurde erstellt.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneMoved">
+                <source>Done — the item was moved.</source>
+                <target>Fertig – der Eintrag wurde verschoben.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneCreated">
+                <source>Done — the item was created.</source>
+                <target>Fertig – der Eintrag wurde erstellt.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneUpdated">
+                <source>Done — the changes were saved.</source>
+                <target>Fertig – die Änderungen wurden gespeichert.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneOneFieldUpdated">
+                <source>Done — 1 field was updated.</source>
+                <target>Fertig – 1 Feld wurde aktualisiert.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.doneFieldsUpdated">
+                <source>Done — %1$s fields were updated.</source>
+                <target>Fertig – %1$s Felder wurden aktualisiert.</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.standard">
+                <source>Standard page</source>
+                <target>Standardseite</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.externalUrl">
+                <source>Link to external URL</source>
+                <target>Link zu externer URL</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.shortcut">
+                <source>Shortcut</source>
+                <target>Verweis</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.backendUserSection">
+                <source>Backend user section</source>
+                <target>Backend-Benutzerbereich</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.mountPoint">
+                <source>Mount point</source>
+                <target>Mount-Point</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.separator">
+                <source>Menu separator</source>
+                <target>Menütrenner</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.folder">
+                <source>Folder</source>
+                <target>Ordner</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.recycler">
+                <source>Recycler</source>
+                <target>Papierkorb</target>
+            </trans-unit>
+            <trans-unit id="agent.doktype.unknown">
+                <source>Doktype %1$s</source>
+                <target>Seitentyp %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.write.draftNotFound">
+                <source>Draft not found or expired.</source>
+                <target>Entwurf nicht gefunden oder abgelaufen.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.destructiveNeedsConfirmation">
+                <source>This destructive draft has to be confirmed first.</source>
+                <target>Dieser destruktive Entwurf muss zuerst bestätigt werden.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.missingToolName">
+                <source>The tool confirmation is missing a tool name.</source>
+                <target>Der Tool-Bestätigung fehlt ein Tool-Name.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.toolInvocationFailed">
+                <source>Running the tool failed.</source>
+                <target>Das Ausführen des Tools ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.undo.changeNotFound">
+                <source>Change not found or already undone.</source>
+                <target>Änderung nicht gefunden oder bereits zurückgenommen.</target>
+            </trans-unit>
+            <trans-unit id="agent.undo.deleteUnsupported">
+                <source>Undoing a deletion is not supported.</source>
+                <target>Das Zurücknehmen einer Löschung wird nicht unterstützt.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.pageHint">
+                <source> for page %1$s</source>
+                <target> für Seite %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.generateAllSeo">
+                <source>Generate and apply all SEO metadata%1$s.</source>
+                <target>Alle SEO-Metadaten%1$s erzeugen und anwenden.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.generateMetaDescription">
+                <source>Generate a meta description%1$s.</source>
+                <target>Eine Meta-Beschreibung%1$s erzeugen.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.translateContent">
+                <source>Translate page content%1$s.</source>
+                <target>Seiteninhalt%1$s übersetzen.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.translateNews">
+                <source>Translate a news record%1$s.</source>
+                <target>Einen News-Datensatz%1$s übersetzen.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.updateFileMetadata">
+                <source>Update file metadata (alt text, title).</source>
+                <target>Datei-Metadaten aktualisieren (Alt-Text, Titel).</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.saveDatasource">
+                <source>Save a content source configuration.</source>
+                <target>Eine Inhaltsquellen-Konfiguration speichern.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.syncDatasource">
+                <source>Sync a content source.</source>
+                <target>Eine Inhaltsquelle synchronisieren.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.runTool">
+                <source>Run this tool%1$s.</source>
+                <target>Dieses Tool%1$s ausführen.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.satelliteUnsupported">
+                <source>This tool does not support draft planning: %1$s</source>
+                <target>Dieses Tool unterstützt keine Entwurfsplanung: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.unknownDynamicTool">
+                <source>Unknown dynamic tool: %1$s</source>
+                <target>Unbekanntes dynamisches Tool: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.unsupportedDynamicOperation">
+                <source>Unsupported dynamic operation: %1$s</source>
+                <target>Nicht unterstützte dynamische Operation: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.notAvailableInAgent">
+                <source>%1$s is not available in the AI Agent yet. Use the MCP Playground or the extension backend module instead.</source>
+                <target>%1$s ist im AI Agent noch nicht verfügbar. Nutzen Sie stattdessen den MCP Playground oder das Backend-Modul der Erweiterung.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.previewFailed">
+                <source>Could not generate a preview for %1$s: %2$s</source>
+                <target>Vorschau für %1$s konnte nicht erzeugt werden: %2$s</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.ready">
+                <source>Here are %2$s suggestion variants for %1$s. Review them below and apply the ones you want.</source>
+                <target>Hier sind %2$s Vorschlagsvarianten für %1$s. Prüfen Sie sie unten und wenden Sie die gewünschten an.</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.title">
+                <source>Suggestions</source>
+                <target>Vorschläge</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.apply">
+                <source>Apply selected</source>
+                <target>Auswahl anwenden</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.applied">
+                <source>Applied %1$s suggestion field(s).</source>
+                <target>%1$s vorgeschlagene Feld(er) angewendet.</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.creditHint">
+                <source>This preview used %1$s AI call(s). Regenerating will use credits again.</source>
+                <target>Diese Vorschau hat %1$s KI-Aufruf(e) verbraucht. Erneutes Generieren verbraucht wieder Credits.</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.current">
+                <source>Current</source>
+                <target>Aktuell</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.custom">
+                <source>Custom</source>
+                <target>Eigene</target>
+            </trans-unit>
+            <trans-unit id="agent.suggestions.editPlaceholder">
+                <source>Edit before applying…</source>
+                <target>Vor dem Anwenden bearbeiten…</target>
+            </trans-unit>
+            <trans-unit id="agent.write.previewNeedsSelections">
+                <source>This draft needs variant selections. Use the suggestions card to apply.</source>
+                <target>Dieser Entwurf benötigt Variantenauswahl. Nutzen Sie die Vorschlagskarte zum Anwenden.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.notPreviewDraft">
+                <source>This draft is not a preview suggestions draft.</source>
+                <target>Dieser Entwurf ist kein Vorschau-Vorschlagsentwurf.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.noSuggestionSelections">
+                <source>Select at least one suggestion variant to apply.</source>
+                <target>Wählen Sie mindestens eine Vorschlagsvariante zum Anwenden.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.editsNeedEditorFlag">
+                <source>Inline edits require editedByEditor confirmation.</source>
+                <target>Inline-Bearbeitungen erfordern die Bestätigung editedByEditor.</target>
+            </trans-unit>
+            <trans-unit id="agent.context.chipHint">
+                <source>The agent works on this unless you name something else.</source>
+                <target>Der Agent arbeitet damit, solange Sie nichts anderes nennen.</target>
+            </trans-unit>
+            <trans-unit id="agent.provider.label">
+                <source>AI provider</source>
+                <target>KI-Provider</target>
+            </trans-unit>
+            <trans-unit id="agent.provider.default">
+                <source>Default provider</source>
+                <target>Standard-Provider</target>
+            </trans-unit>
+            <trans-unit id="agent.provider.defaultNamed">
+                <source>Default: %1$s</source>
+                <target>Standard: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.provider.credits">
+                <source>T3Planet Credits</source>
+                <target>T3Planet Credits</target>
+            </trans-unit>
+            <trans-unit id="agent.provider.locked">
+                <source>The AI provider is fixed for this conversation. Start a new conversation to change it.</source>
+                <target>Der KI-Provider ist für diese Unterhaltung festgelegt. Starten Sie eine neue Unterhaltung, um ihn zu wechseln.</target>
+            </trans-unit>
+            <trans-unit id="agent.provider.notAllowed">
+                <source>This AI provider is not available for your backend group. Choose another provider or ask your administrator.</source>
+                <target>Dieser KI-Provider ist für Ihre Backend-Gruppe nicht verfügbar. Wählen Sie einen anderen Provider oder fragen Sie Ihre Administration.</target>
+            </trans-unit>
+            <trans-unit id="agent.session.list">
+                <source>Conversations</source>
+                <target>Unterhaltungen</target>
+            </trans-unit>
+            <trans-unit id="agent.session.new">
+                <source>New conversation</source>
+                <target>Neue Unterhaltung</target>
+            </trans-unit>
+            <trans-unit id="agent.session.search">
+                <source>Filter by title</source>
+                <target>Nach Titel filtern</target>
+            </trans-unit>
+            <trans-unit id="agent.session.filterPage">
+                <source>This page</source>
+                <target>Diese Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.session.filterModule">
+                <source>This module</source>
+                <target>Dieses Modul</target>
+            </trans-unit>
+            <trans-unit id="agent.session.filterAll">
+                <source>All pages</source>
+                <target>Alle Seiten</target>
+            </trans-unit>
+            <trans-unit id="agent.session.empty">
+                <source>No conversations yet.</source>
+                <target>Noch keine Unterhaltungen.</target>
+            </trans-unit>
+            <trans-unit id="agent.session.more">
+                <source>Show more</source>
+                <target>Mehr anzeigen</target>
+            </trans-unit>
+            <trans-unit id="agent.session.retention">
+                <source>Conversations without activity are deleted after %1$s days.</source>
+                <target>Unterhaltungen ohne Aktivität werden nach %1$s Tagen gelöscht.</target>
+            </trans-unit>
+            <trans-unit id="agent.session.untitled">
+                <source>Conversation</source>
+                <target>Unterhaltung</target>
+            </trans-unit>
+            <trans-unit id="agent.session.rename">
+                <source>Rename</source>
+                <target>Umbenennen</target>
+            </trans-unit>
+            <trans-unit id="agent.session.delete">
+                <source>Delete</source>
+                <target>Löschen</target>
+            </trans-unit>
+            <trans-unit id="agent.session.deleteConfirm">
+                <source>Delete?</source>
+                <target>Löschen?</target>
+            </trans-unit>
+            <trans-unit id="agent.session.started">
+                <source>New conversation started.</source>
+                <target>Neue Unterhaltung gestartet.</target>
+            </trans-unit>
+            <trans-unit id="agent.session.notFound">
+                <source>This conversation no longer exists.</source>
+                <target>Diese Unterhaltung gibt es nicht mehr.</target>
+            </trans-unit>
+            <trans-unit id="agent.session.writtenOn">
+                <source>on %1$s</source>
+                <target>auf %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.session.otherPage">
+                <source>This conversation was started on %1$s. You are now on %2$s; new requests use the current page.</source>
+                <target>Diese Unterhaltung wurde auf %1$s begonnen. Sie sind jetzt auf %2$s; neue Anfragen beziehen sich auf die aktuelle Seite.</target>
+            </trans-unit>
+            <trans-unit id="agent.session.nowOnPage">
+                <source>Now working on page %1$s.</source>
+                <target>Jetzt auf der Seite %1$s.</target>
+            </trans-unit>
+            <trans-unit id="agent.session.nowInModule">
+                <source>Now working in %1$s.</source>
+                <target>Jetzt im Modul %1$s.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.title">
+                <source>How the AI Agent works</source>
+                <target>So arbeitet der KI-Agent</target>
+            </trans-unit>
+            <trans-unit id="agent.info.canTitle">
+                <source>What it can do</source>
+                <target>Was er kann</target>
+            </trans-unit>
+            <trans-unit id="agent.info.canBody">
+                <source>Ask in your own words, in any language. The agent looks things up, prepares changes and runs the AI features of the installed extensions (SEO, translation, pages and content, alt texts, chatbot knowledge …).</source>
+                <target>Fragen Sie in Ihren eigenen Worten, in jeder Sprache. Der Agent schlägt nach, bereitet Änderungen vor und nutzt die KI-Funktionen der installierten Extensions (SEO, Übersetzung, Seiten und Inhalte, Alt-Texte, Chatbot-Wissen …).</target>
+            </trans-unit>
+            <trans-unit id="agent.info.canExamples">
+                <source>On this screen, for example:</source>
+                <target>Auf diesem Bildschirm zum Beispiel:</target>
+            </trans-unit>
+            <trans-unit id="agent.info.whereTitle">
+                <source>Where you are</source>
+                <target>Wo Sie gerade sind</target>
+            </trans-unit>
+            <trans-unit id="agent.info.whereBody">
+                <source>The agent sees what you are working on. "This page" and "here" mean the page shown above, unless you name another one.</source>
+                <target>Der Agent sieht, woran Sie arbeiten. „Diese Seite" und „hier" meinen die oben angezeigte Seite, solange Sie keine andere nennen.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.noPage">
+                <source>none selected</source>
+                <target>keine ausgewählt</target>
+            </trans-unit>
+            <trans-unit id="agent.info.howTitle">
+                <source>How a task runs</source>
+                <target>So läuft eine Aufgabe ab</target>
+            </trans-unit>
+            <trans-unit id="agent.info.howStep1">
+                <source>It looks up what it needs (pages, content, settings).</source>
+                <target>Er schlägt nach, was er braucht (Seiten, Inhalte, Einstellungen).</target>
+            </trans-unit>
+            <trans-unit id="agent.info.howStep2">
+                <source>For a change it shows a preview with old and new values.</source>
+                <target>Für eine Änderung zeigt er eine Vorschau mit alten und neuen Werten.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.howStep3">
+                <source>You confirm, edit or decline. Deleting needs a second click.</source>
+                <target>Sie bestätigen, bearbeiten oder lehnen ab. Löschen braucht einen zweiten Klick.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.howStep4">
+                <source>Only then is anything written.</source>
+                <target>Erst dann wird etwas gespeichert.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.modeTitle">
+                <source>Live or draft</source>
+                <target>Live oder Entwurf</target>
+            </trans-unit>
+            <trans-unit id="agent.info.modeLive">
+                <source>You are in the live workspace: confirmed changes are visible on the website right away.</source>
+                <target>Sie sind im Live-Arbeitsbereich: Bestätigte Änderungen sind sofort auf der Website sichtbar.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.modeDraft">
+                <source>You are in the workspace "%1$s": confirmed changes stay a draft until they are published.</source>
+                <target>Sie sind im Arbeitsbereich „%1$s": Bestätigte Änderungen bleiben ein Entwurf, bis sie veröffentlicht werden.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.conversationsTitle">
+                <source>Conversations</source>
+                <target>Unterhaltungen</target>
+            </trans-unit>
+            <trans-unit id="agent.info.conversations.page">
+                <source>Each page has its own conversations. Opening the agent on a page continues its latest conversation.</source>
+                <target>Jede Seite hat eigene Unterhaltungen. Wenn Sie den Agenten auf einer Seite öffnen, geht es mit ihrer letzten Unterhaltung weiter.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.conversations.module">
+                <source>Each backend module has its own conversations. Opening the agent in a module continues its latest conversation.</source>
+                <target>Jedes Backend-Modul hat eigene Unterhaltungen. Wenn Sie den Agenten in einem Modul öffnen, geht es mit seiner letzten Unterhaltung weiter.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.conversations.user">
+                <source>Your conversation continues when you move between pages; each message remembers where it was written.</source>
+                <target>Ihre Unterhaltung geht weiter, wenn Sie zwischen Seiten wechseln; jede Nachricht merkt sich, wo sie geschrieben wurde.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.conversationsList">
+                <source>Find earlier conversations in the list; they are deleted after %1$s days without activity.</source>
+                <target>Frühere Unterhaltungen finden Sie in der Liste; sie werden nach %1$s Tagen ohne Aktivität gelöscht.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.modelsTitle">
+                <source>Models and credits</source>
+                <target>Modelle und Credits</target>
+            </trans-unit>
+            <trans-unit id="agent.info.modelsBody">
+                <source>This conversation uses %1$s. The provider is fixed after the first answer; start a new conversation to use another one.</source>
+                <target>Diese Unterhaltung nutzt %1$s. Der Provider ist nach der ersten Antwort festgelegt; für einen anderen starten Sie eine neue Unterhaltung.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.modelsDefault">
+                <source>The default AI provider of this site is used.</source>
+                <target>Der Standard-KI-Provider dieser Website wird genutzt.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.privacyTitle">
+                <source>Data protection</source>
+                <target>Datenschutz</target>
+            </trans-unit>
+            <trans-unit id="agent.info.privacyBody">
+                <source>Your messages and the content the agent reads are sent to the AI provider shown above. Your backend permissions and the AI Permissions of your group always apply.</source>
+                <target>Ihre Nachrichten und die Inhalte, die der Agent liest, gehen an den oben angezeigten KI-Provider. Ihre Backend-Rechte und die KI-Berechtigungen Ihrer Gruppe gelten immer.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.attachmentsTitle">
+                <source>Attachments</source>
+                <target>Anhänge</target>
+            </trans-unit>
+            <trans-unit id="agent.info.attachmentsBody">
+                <source>Use + to add files, @ to point at a record and / to pick a tool directly.</source>
+                <target>Mit + fügen Sie Dateien hinzu, mit @ verweisen Sie auf einen Datensatz und mit / wählen Sie direkt ein Werkzeug.</target>
+            </trans-unit>
+            <trans-unit id="agent.info.tipsTitle">
+                <source>Limits and tips</source>
+                <target>Grenzen und Tipps</target>
+            </trans-unit>
+            <trans-unit id="agent.info.tipsBody">
+                <source>Be specific ("meta description for this page in German"). Long jobs for many pages go to the scheduler. Answers can be wrong: check previews before you confirm.</source>
+                <target>Seien Sie konkret („Meta-Description für diese Seite auf Deutsch"). Lange Aufgaben für viele Seiten laufen über den Scheduler. Antworten können falsch sein: Prüfen Sie die Vorschau, bevor Sie bestätigen.</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentConversationScope">
+                <source>Which conversation opens automatically (page, module or one per user)</source>
+                <target>Welche Unterhaltung automatisch geöffnet wird (Seite, Modul oder eine pro Benutzer)</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentSessionListEnabled">
+                <source>Show the conversation list in the agent window</source>
+                <target>Liste der Unterhaltungen im Agent-Fenster anzeigen</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentSessionListDefaultFilter">
+                <source>Initial filter of the conversation list</source>
+                <target>Anfangsfilter der Unterhaltungsliste</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentMaxSessionsPerScope">
+                <source>Maximum conversations per page / module and user (0 = unlimited)</source>
+                <target>Maximale Unterhaltungen pro Seite / Modul und Benutzer (0 = unbegrenzt)</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentMaxSessionsPerUser">
+                <source>Maximum conversations per user (0 = unlimited)</source>
+                <target>Maximale Unterhaltungen pro Benutzer (0 = unbegrenzt)</target>
+            </trans-unit>
+            <trans-unit id="agent.credits.badge">
+                <source>%1$s credits left</source>
+                <target>Noch %1$s Credits</target>
+            </trans-unit>
+            <trans-unit id="agent.credits.badgeEmpty">
+                <source>0 credits</source>
+                <target>0 Credits</target>
+            </trans-unit>
+            <trans-unit id="agent.credits.empty">
+                <source>Your T3Planet credits are used up.</source>
+                <target>Ihre T3Planet-Credits sind aufgebraucht.</target>
+            </trans-unit>
+            <trans-unit id="agent.credits.emptyInput">
+                <source>Your T3Planet credits are used up. Top up credits to continue.</source>
+                <target>Ihre T3Planet-Credits sind aufgebraucht. Laden Sie Credits auf, um weiterzumachen.</target>
+            </trans-unit>
+            <trans-unit id="agent.credits.low">
+                <source>Only %1$s credits left.</source>
+                <target>Nur noch %1$s Credits.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.colCurrent">
+                <source>Now</source>
+                <target>Jetzt</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.colProposed">
+                <source>New</source>
+                <target>Neu</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.decline">
+                <source>Decline</source>
+                <target>Ablehnen</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.execute">
+                <source>Execute</source>
+                <target>Ausführen</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.executeAll">
+                <source>Execute all (%1$s)</source>
+                <target>Alle ausführen (%1$s)</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.previewBadge">
+                <source>Preview — nothing changed yet</source>
+                <target>Vorschau – noch nichts geändert</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.targetDestructive">
+                <source>This cannot be undone.</source>
+                <target>Das kann nicht rückgängig gemacht werden.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.targetLive">
+                <source>On confirm this goes live on the website.</source>
+                <target>Nach der Bestätigung ist das sofort auf der Website sichtbar.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.targetWorkspace">
+                <source>On confirm this is saved as a draft in the workspace „%1$s“.</source>
+                <target>Nach der Bestätigung wird das als Entwurf im Arbeitsbereich „%1$s“ gespeichert.</target>
+            </trans-unit>
+            <trans-unit id="agent.link.edit">
+                <source>Edit</source>
+                <target>Bearbeiten</target>
+            </trans-unit>
+            <trans-unit id="agent.link.openPage">
+                <source>Open page</source>
+                <target>Seite öffnen</target>
+            </trans-unit>
+            <trans-unit id="agent.link.view">
+                <source>View on website</source>
+                <target>Auf der Website ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.live.findingTools">
+                <source>Looking for the right tool…</source>
+                <target>Suche das passende Werkzeug…</target>
+            </trans-unit>
+            <trans-unit id="agent.record.new">
+                <source>New %1$s</source>
+                <target>Neu: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.result.technical">
+                <source>Technical details</source>
+                <target>Technische Details</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentContinueAfterConfirm">
+                <source>Continue the task after the editor confirms or declines a card (the agent keeps working without a new message)</source>
+                <target>Aufgabe fortsetzen, nachdem der Redakteur eine Karte bestätigt oder ablehnt (der Agent arbeitet ohne neue Nachricht weiter)</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.ask_clarification">
+                <source>Ask a question</source>
+                <target>Rückfrage stellen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.explain_capabilities">
+                <source>Explain what I can do</source>
+                <target>Erklären, was ich kann</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.backend_group_get">
+                <source>Read a backend user group</source>
+                <target>Backend-Benutzergruppe lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.backend_group_list">
+                <source>List backend user groups</source>
+                <target>Backend-Benutzergruppen auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.backend_user_get">
+                <source>Read a backend user</source>
+                <target>Backend-Benutzer lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.backend_user_list">
+                <source>List backend users</source>
+                <target>Backend-Benutzer auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.cache_clear">
+                <source>Clear the cache</source>
+                <target>Cache leeren</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.content_delete">
+                <source>Delete a content element</source>
+                <target>Inhaltselement löschen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.content_get">
+                <source>Read a content element</source>
+                <target>Inhaltselement lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.content_list">
+                <source>List content on the page</source>
+                <target>Inhalte der Seite auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.content_move">
+                <source>Move a content element</source>
+                <target>Inhaltselement verschieben</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.content_search">
+                <source>Search content</source>
+                <target>Inhalte durchsuchen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.directory_create">
+                <source>Create a folder</source>
+                <target>Ordner anlegen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.directory_delete">
+                <source>Delete a folder</source>
+                <target>Ordner löschen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.directory_move">
+                <source>Move a folder</source>
+                <target>Ordner verschieben</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.directory_rename">
+                <source>Rename a folder</source>
+                <target>Ordner umbenennen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.file_copy">
+                <source>Copy a file</source>
+                <target>Datei kopieren</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.file_delete">
+                <source>Delete a file</source>
+                <target>Datei löschen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.file_get_info">
+                <source>Read file details</source>
+                <target>Dateidetails lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.file_list">
+                <source>List files</source>
+                <target>Dateien auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.file_move">
+                <source>Move a file</source>
+                <target>Datei verschieben</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.file_reference_add">
+                <source>Attach a file to a record</source>
+                <target>Datei an Datensatz anhängen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.file_reference_list">
+                <source>List attached files</source>
+                <target>Angehängte Dateien auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.file_reference_remove">
+                <source>Remove an attached file</source>
+                <target>Angehängte Datei entfernen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.file_rename">
+                <source>Rename a file</source>
+                <target>Datei umbenennen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.file_search">
+                <source>Search files</source>
+                <target>Dateien suchen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.file_upload">
+                <source>Upload a file</source>
+                <target>Datei hochladen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.file_upload_from_url">
+                <source>Upload a file from a URL</source>
+                <target>Datei von URL hochladen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.pages_copy">
+                <source>Copy a page</source>
+                <target>Seite kopieren</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.pages_get">
+                <source>Read the page</source>
+                <target>Seite lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.pages_list">
+                <source>List subpages</source>
+                <target>Unterseiten auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.pages_search">
+                <source>Search pages</source>
+                <target>Seiten suchen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.pages_tree">
+                <source>Read the page tree</source>
+                <target>Seitenbaum lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.permission_check_page">
+                <source>Check page permissions</source>
+                <target>Seitenrechte prüfen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.permission_check_summary">
+                <source>Check my permissions</source>
+                <target>Meine Rechte prüfen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.permission_check_table">
+                <source>Check record permissions</source>
+                <target>Datensatzrechte prüfen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.record_count">
+                <source>Count records</source>
+                <target>Datensätze zählen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.record_search">
+                <source>Search records</source>
+                <target>Datensätze suchen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.redirect_create">
+                <source>Create a redirect</source>
+                <target>Weiterleitung anlegen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.redirect_delete">
+                <source>Delete a redirect</source>
+                <target>Weiterleitung löschen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.redirect_get">
+                <source>Read a redirect</source>
+                <target>Weiterleitung lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.redirect_list">
+                <source>List redirects</source>
+                <target>Weiterleitungen auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.redirect_update">
+                <source>Change a redirect</source>
+                <target>Weiterleitung ändern</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.scheduler_delete">
+                <source>Delete a scheduled task</source>
+                <target>Geplante Aufgabe löschen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.scheduler_get">
+                <source>Read a scheduled task</source>
+                <target>Geplante Aufgabe lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.scheduler_list">
+                <source>List scheduled tasks</source>
+                <target>Geplante Aufgaben auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.scheduler_update">
+                <source>Change a scheduled task</source>
+                <target>Geplante Aufgabe ändern</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.site_languages_list">
+                <source>List site languages</source>
+                <target>Sprachen der Website auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.table_schema">
+                <source>Read the record structure</source>
+                <target>Datensatzstruktur lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.workspace_changes_list">
+                <source>List workspace changes</source>
+                <target>Änderungen im Arbeitsbereich auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.workspace_discard">
+                <source>Discard workspace changes</source>
+                <target>Änderungen im Arbeitsbereich verwerfen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.workspace_get">
+                <source>Read a workspace</source>
+                <target>Arbeitsbereich lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.workspace_list">
+                <source>List workspaces</source>
+                <target>Arbeitsbereiche auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.workspace_publish">
+                <source>Publish workspace changes</source>
+                <target>Änderungen im Arbeitsbereich veröffentlichen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.workspace_stage_set">
+                <source>Change the review stage</source>
+                <target>Prüfstufe ändern</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.workspace_switch">
+                <source>Switch workspace</source>
+                <target>Arbeitsbereich wechseln</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.write_table">
+                <source>Change a record</source>
+                <target>Datensatz ändern</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_get_file_for_metadata">
+                <source>Look at an image</source>
+                <target>Bild ansehen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_get_file_metadata">
+                <source>Read image texts</source>
+                <target>Bildtexte lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_get_page_speed">
+                <source>Check page speed</source>
+                <target>Seitengeschwindigkeit prüfen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_list_files_missing_alt_text">
+                <source>Find images without alt text</source>
+                <target>Bilder ohne Alt-Text finden</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_summarize_content">
+                <source>Summarize content</source>
+                <target>Inhalt zusammenfassen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_update_file_metadata">
+                <source>Save image texts</source>
+                <target>Bildtexte speichern</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ac_chatbot_settings">
+                <source>Change chatbot settings</source>
+                <target>Chatbot-Einstellungen ändern</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ac_chatbot_settings_get">
+                <source>Read chatbot settings</source>
+                <target>Chatbot-Einstellungen lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_apply_content_analysis">
+                <source>Analyze and improve content</source>
+                <target>Inhalt analysieren und verbessern</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_apply_schema_markup">
+                <source>Add structured data</source>
+                <target>Strukturierte Daten ergänzen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_create_blog_advanced">
+                <source>Write a blog post (detailed)</source>
+                <target>Blogbeitrag schreiben (ausführlich)</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_create_blog_simple">
+                <source>Write a blog post</source>
+                <target>Blogbeitrag schreiben</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_create_content_element">
+                <source>Write a content element</source>
+                <target>Inhaltselement schreiben</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_create_news_advanced">
+                <source>Write a news article (detailed)</source>
+                <target>News-Artikel schreiben (ausführlich)</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_create_news_simple">
+                <source>Write a news article</source>
+                <target>News-Artikel schreiben</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_create_page_advanced">
+                <source>Create a page (detailed)</source>
+                <target>Seite erstellen (ausführlich)</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_create_page_simple">
+                <source>Create a page</source>
+                <target>Seite erstellen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_create_page_structure">
+                <source>Create a page structure</source>
+                <target>Seitenstruktur erstellen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_generate_all_seo">
+                <source>Write all SEO texts</source>
+                <target>Alle SEO-Texte schreiben</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_generate_keywords">
+                <source>Suggest keywords</source>
+                <target>Keywords vorschlagen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_generate_meta_description">
+                <source>Write the meta description</source>
+                <target>Meta-Beschreibung schreiben</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_generate_og_description">
+                <source>Write the social media description</source>
+                <target>Social-Media-Beschreibung schreiben</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_generate_og_title">
+                <source>Write the social media title</source>
+                <target>Social-Media-Titel schreiben</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_generate_seo_batch">
+                <source>Write SEO texts for several pages</source>
+                <target>SEO-Texte für mehrere Seiten schreiben</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_mass_seo_queue_add">
+                <source>Add pages to the SEO queue</source>
+                <target>Seiten zur SEO-Warteschlange hinzufügen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_mass_seo_queue_list">
+                <source>Show the SEO queue</source>
+                <target>SEO-Warteschlange anzeigen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_mass_translation_queue_add">
+                <source>Add to the translation queue</source>
+                <target>Zur Übersetzungs-Warteschlange hinzufügen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_mass_translation_queue_list">
+                <source>Show the translation queue</source>
+                <target>Übersetzungs-Warteschlange anzeigen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_record_translate">
+                <source>Translate a record</source>
+                <target>Datensatz übersetzen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_translate_content">
+                <source>Translate content</source>
+                <target>Inhalt übersetzen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_translate_news">
+                <source>Translate a news article</source>
+                <target>News-Artikel übersetzen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3as_list_predefined_questions">
+                <source>List suggested search questions</source>
+                <target>Vorgeschlagene Suchfragen auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3as_search_settings">
+                <source>Change AI search settings</source>
+                <target>Einstellungen der KI-Suche ändern</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3as_search_settings_get">
+                <source>Read AI search settings</source>
+                <target>Einstellungen der KI-Suche lesen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3cs_list_datasources">
+                <source>List chatbot data sources</source>
+                <target>Datenquellen des Chatbots auflisten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3cs_list_queue_items">
+                <source>Show the training queue</source>
+                <target>Trainings-Warteschlange anzeigen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3cs_reset_failed_queue_item">
+                <source>Retry a failed training item</source>
+                <target>Fehlgeschlagenen Trainingseintrag erneut versuchen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3cs_save_datasource">
+                <source>Save a chatbot data source</source>
+                <target>Datenquelle des Chatbots speichern</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3cs_sync_datasource">
+                <source>Sync a chatbot data source</source>
+                <target>Datenquelle des Chatbots synchronisieren</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3cs_training_summary">
+                <source>Show the training status</source>
+                <target>Trainingsstatus anzeigen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3cs_usage_analytics_summary">
+                <source>Show chatbot usage</source>
+                <target>Chatbot-Nutzung anzeigen</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.namedTool">
+                <source>%1$s%2$s.</source>
+                <target>%1$s%2$s.</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.allLanguages">
+                <source>All languages</source>
+                <target>Alle Sprachen</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.pageId">
+                <source>Page</source>
+                <target>Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.pageIds">
+                <source>Pages</source>
+                <target>Seiten</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.languageUid">
+                <source>Language</source>
+                <target>Sprache</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.targetLanguageUid">
+                <source>Language</source>
+                <target>Sprache</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.languageUids">
+                <source>Languages</source>
+                <target>Sprachen</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.includeContent">
+                <source>Also content elements</source>
+                <target>Auch Inhaltselemente</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.includeFinished">
+                <source>Also finished entries</source>
+                <target>Auch erledigte Einträge</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.recursive">
+                <source>Include subpages</source>
+                <target>Unterseiten einbeziehen</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.isRenew">
+                <source>Translate again</source>
+                <target>Neu übersetzen</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.fileUid">
+                <source>File</source>
+                <target>Datei</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.fileUids">
+                <source>Files</source>
+                <target>Dateien</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.folder">
+                <source>Folder</source>
+                <target>Ordner</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.prompt">
+                <source>Description</source>
+                <target>Beschreibung</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.size">
+                <source>Size</source>
+                <target>Größe</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.altText">
+                <source>Alt text</source>
+                <target>Alt-Text</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.text">
+                <source>Text</source>
+                <target>Text</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.voice">
+                <source>Voice</source>
+                <target>Stimme</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.sourceTerm">
+                <source>Term</source>
+                <target>Begriff</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.targetTerm">
+                <source>Translation</source>
+                <target>Übersetzung</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.termId">
+                <source>Glossary term</source>
+                <target>Glossarbegriff</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.decorative">
+                <source>Decorative</source>
+                <target>Dekorativ</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.depth">
+                <source>Subpage levels</source>
+                <target>Unterseiten-Ebenen</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.device">
+                <source>Device</source>
+                <target>Gerät</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.contentUid">
+                <source>Content element</source>
+                <target>Inhaltselement</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.variants">
+                <source>Variants</source>
+                <target>Varianten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_mass_seo_queue_remove">
+                <source>Remove pages from the SEO queue</source>
+                <target>Seiten aus der SEO-Warteschlange entfernen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_mass_translation_queue_remove">
+                <source>Remove pages from the translation queue</source>
+                <target>Seiten aus der Übersetzungs-Warteschlange entfernen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_mass_translation_queue_requeue">
+                <source>Retry translations</source>
+                <target>Übersetzungen erneut versuchen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_mass_translation_queue_clear_completed">
+                <source>Clear finished translations from the queue</source>
+                <target>Erledigte Übersetzungen aus der Warteschlange entfernen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_translate_page">
+                <source>Translate the whole page</source>
+                <target>Ganze Seite übersetzen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_glossary_list">
+                <source>Show the translation glossary</source>
+                <target>Übersetzungsglossar anzeigen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_glossary_save">
+                <source>Save a glossary term</source>
+                <target>Glossarbegriff speichern</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_glossary_delete">
+                <source>Remove a glossary term</source>
+                <target>Glossarbegriff entfernen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ai_generate_image">
+                <source>Generate an image</source>
+                <target>Bild erzeugen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_alt_text_queue_folder">
+                <source>Write alt texts for a folder</source>
+                <target>Alt-Texte für einen Ordner schreiben</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_alt_text_drafts_list">
+                <source>Show alt text drafts</source>
+                <target>Alt-Text-Entwürfe anzeigen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_alt_text_approve">
+                <source>Approve alt texts</source>
+                <target>Alt-Texte freigeben</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_mark_image_decorative">
+                <source>Mark an image as decorative</source>
+                <target>Bild als dekorativ markieren</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_accessibility_scan_run">
+                <source>Check accessibility</source>
+                <target>Barrierefreiheit prüfen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_accessibility_issues">
+                <source>Show accessibility issues</source>
+                <target>Barrierefreiheitsprobleme anzeigen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_generate_voice_over">
+                <source>Create a voice-over</source>
+                <target>Vertonung erstellen</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.yes">
+                <source>Yes</source>
+                <target>Ja</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.no">
+                <source>No</source>
+                <target>Nein</target>
+            </trans-unit>
+            <trans-unit id="agent.summary.action">
+                <source>Summarize conversation</source>
+                <target>Unterhaltung zusammenfassen</target>
+            </trans-unit>
+            <trans-unit id="agent.summary.title">
+                <source>Summary of the conversation so far</source>
+                <target>Zusammenfassung der bisherigen Unterhaltung</target>
+            </trans-unit>
+            <trans-unit id="agent.summary.note">
+                <source>From here on the agent works with this summary instead of the older messages.</source>
+                <target>Ab hier arbeitet der Agent mit dieser Zusammenfassung statt mit den älteren Nachrichten.</target>
+            </trans-unit>
+            <trans-unit id="agent.summary.working">
+                <source>Summarizing the conversation…</source>
+                <target>Unterhaltung wird zusammengefasst…</target>
+            </trans-unit>
+            <trans-unit id="agent.summary.failed">
+                <source>The conversation could not be summarized: %1$s</source>
+                <target>Die Unterhaltung konnte nicht zusammengefasst werden: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.summary.tooShort">
+                <source>There is not enough new in this conversation to summarize yet.</source>
+                <target>In dieser Unterhaltung gibt es noch nicht genug Neues zum Zusammenfassen.</target>
+            </trans-unit>
+            <trans-unit id="extmng.agentHistoryTokenBudget">
+                <source>Earlier messages sent to the AI per turn, in tokens (about 4 characters each). Older messages are left out; use "Summarize conversation" to keep them short.</source>
+                <target>Frühere Nachrichten, die pro Anfrage an die KI gehen, in Tokens (etwa 4 Zeichen). Ältere Nachrichten werden weggelassen; mit „Unterhaltung zusammenfassen“ bleiben sie kurz.</target>
+            </trans-unit>
+            <trans-unit id="agent.workspace.noAccess">
+                <source>You may not use the workspace the agent writes into. Ask your administrator to give you access or pick another workspace under MCP Server > Workspace selection.</source>
+                <target>Sie dürfen den Arbeitsbereich, in den der Agent schreibt, nicht verwenden. Bitten Sie Ihren Administrator um Zugriff oder wählen Sie unter MCP-Server > Arbeitsbereich-Auswahl einen anderen Arbeitsbereich.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.repeatedReads">
+                <source>I kept checking the same information without getting further. Tell me a bit more precisely what I should do, for example: Create the page "…" under "Home".</source>
+                <target>Ich habe dieselben Informationen mehrfach geprüft, ohne weiterzukommen. Sagen Sie mir bitte etwas genauer, was ich tun soll, zum Beispiel: Erstelle die Seite „…“ unter „Home“.</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.recordImprove">
+                <source>Improve the text of this content element</source>
+                <target>Verbessere den Text dieses Inhaltselements</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.recordTranslate">
+                <source>Translate this content element</source>
+                <target>Übersetze dieses Inhaltselement</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.newsTranslate">
+                <source>Translate this news article</source>
+                <target>Übersetze diese News</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.fileAltText">
+                <source>Write alt text for this image</source>
+                <target>Schreibe einen Alternativtext für dieses Bild</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.seo">
+                <source>Generate SEO for this page</source>
+                <target>Erstelle SEO-Angaben für diese Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.translatePage">
+                <source>Translate this page</source>
+                <target>Übersetze diese Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.accessibility">
+                <source>Check this page for accessibility issues</source>
+                <target>Prüfe diese Seite auf Barrierefreiheit</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.summarizePage">
+                <source>Summarize this page</source>
+                <target>Fasse diese Seite zusammen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.addContent">
+                <source>Add a content element to this page</source>
+                <target>Füge dieser Seite ein Inhaltselement hinzu</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.createSubpage">
+                <source>Create a subpage</source>
+                <target>Erstelle eine Unterseite</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.missingAltText">
+                <source>Find images without alt text</source>
+                <target>Finde Bilder ohne Alternativtext</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.generateImage">
+                <source>Generate an image</source>
+                <target>Erstelle ein Bild</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.redirectsToPage">
+                <source>Show redirects to this page</source>
+                <target>Zeige Weiterleitungen auf diese Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.createRedirect">
+                <source>Create a redirect</source>
+                <target>Erstelle eine Weiterleitung</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.failedTasks">
+                <source>Show failed scheduler tasks</source>
+                <target>Zeige fehlgeschlagene Scheduler-Aufgaben</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.workspaceChanges">
+                <source>Show my changes in this workspace</source>
+                <target>Zeige meine Änderungen in diesem Arbeitsbereich</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.pageTree">
+                <source>Show the page tree</source>
+                <target>Zeige den Seitenbaum</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.capabilities">
+                <source>What can you do?</source>
+                <target>Was kannst du?</target>
+            </trans-unit>
+            <trans-unit id="agent.media.open">
+                <source>Open image in a new tab</source>
+                <target>Bild in neuem Tab öffnen</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.planInvalid">
+                <source>Could not prepare this change: %s</source>
+                <target>Diese Änderung konnte nicht vorbereitet werden: %s</target>
+            </trans-unit>
+            <trans-unit id="agent.error.applyFailedDetail">
+                <source>The change could not be saved: %s</source>
+                <target>Die Änderung konnte nicht gespeichert werden: %s</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.file_upload_prepare">
+                <source>Prepare a file upload</source>
+                <target>Datei-Upload vorbereiten</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3aa_accessibility_fix_suggestions">
+                <source>Suggest accessibility fixes</source>
+                <target>Lösungen für Barrierefreiheitsprobleme vorschlagen</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.t3ac_chatbot_list">
+                <source>List chatbots</source>
+                <target>Chatbots auflisten</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

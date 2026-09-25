@@ -47,6 +47,10 @@
                 <source>Open in new tab</source>
                 <target>In neuem Tab öffnen</target>
             </trans-unit>
+            <trans-unit id="credits.js.checkout.iframeBlocked">
+                <source>Checkout could not open in this window (browser security). It was opened in a new tab instead.</source>
+                <target>Checkout konnte in diesem Fenster nicht geöffnet werden (Browsersicherheit). Stattdessen wurde ein neuer Tab geöffnet.</target>
+            </trans-unit>
             <trans-unit id="credits.js.modal.switchTitle">
                 <source>Switch AI Provider Mode?</source>
                 <target>AI Provider-Modus wechseln?</target>

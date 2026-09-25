@@ -110,6 +110,13 @@ Set up providers, backend modules, and MCP through the AI Foundation module.
       ..  card-footer:: :ref:`Read more <mcp-server>`
          :button-style: btn btn-primary stretched-link
 
+   ..  card:: DPA & GDPR
+
+      Technical data-management for providers, prompts, usage, logs, and Credits.
+
+      ..  card-footer:: :ref:`Read more <data-processing-agreement>`
+         :button-style: btn btn-secondary stretched-link
+
    ..  card:: User Guide
 
       Day-to-day guidance for editors, administrators, and stakeholders.
@@ -189,6 +196,7 @@ Help
    Installation/Index
    Configuration/Index
    T3Planet-Credit-System/Index
+   Data-Processing-Agreement/Index
    Integrations/Index
    UserGuide/Index
    DeveloperGuide/Index

@@ -2,6 +2,41 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-09-24 — AI Agent conversations (server-only storage, history budget, summary)
+
+- Removed the client conversation save: card actions (apply, decline, arm, undo) update the stored conversation on the server (`AgentConversationRecorder`); `conversation_save` only keeps the disclosure flag.
+- History replay by token budget (`agentHistoryTokenBudget`, default 6000) with compact card/result notes and a "left out" note.
+- "Summarize conversation" (Σ): summary message replaces older messages in the replay.
+- Provider tool schemas: union types / anyOf kept, nested empty `properties` removed. Phar builder note: `Documentation/Agent/PharBuilderSymfonyAi.md`.
+
+**Last touched:** 2026-09-24
+
+---
+
+## 2026-09-24 — AI Agent Phase 4 (editor UX rules)
+
+- Fixed empty replies ("I could not produce a reply") from reasoning models: `SymfonyAiResultReader` reads 0.13 `MultiPartResult` (thinking + text / tool calls); used by `SymfonyAiPlatform` and `AiService`.
+- Draft/readback cards show record and field names (`AgentRecordLabeler`), where the change goes, Execute / Decline, Execute all, and links after apply.
+- `ask_clarification` takes `options[]` and pauses the turn; answer buttons in the chat.
+- Continue after confirm (`agentContinueAfterConfirm`), credits badge + empty lock (`AgentCreditsStatus`).
+- `agent.tool.label.*` EN/DE for all 98 tools; lock reasons rewritten in plain language.
+- Array tool params get JSON-schema `items` from the docblock.
+- 16 new child tools (T3AI queues, translate page, glossary, image; T3AA alt text bulk/approve/decorative, accessibility scan/issues, voice-over); confirmation cards show names instead of ids; image/audio previews in result cards.
+
+**Last touched:** 2026-09-24
+
+---
+
+## 2026-09-01 — AI Agent editor answers + file-module routing
+
+**Done:** `context/features/ai-agent.md` (new agent entry). Editor-facing tool labels (`AgentToolEditorLabelService`), human result presenter, workflow-before-fast-path on stream NL, file module context (`pageId=0`, `storageUid`/`folderIdentifier`), Cursor-style work trace, hide redundant facts when prose present. Tests under `Tests/Unit/Agent/`.
+
+**Agent context:** `context/features/ai-agent.md`; architecture § AI Agent; router rows in `AGENTS.md`, `context/docs-map.md`, `tasks/context-update.md`.
+
+**Last touched:** 2026-09-01
+
+---
+
 ## 2026-08-19 — Release v1.1.4
 
 **Done:** Bump version to 1.1.4. LICENSING.md, README install/licence block, MCP Table Discovery wording, Slack community link, Packagist keywords, core 13/14 CI badges.
@@ -583,3 +618,11 @@ Provider-driven registration (2026-07): child extensions ship `*AccessCatalogPro
 ## Next
 
 Refer to `context/features/ai-access-roles.md` for wizard/matrix/enforcement details. Use `context/session-state.md` + feature context when extending ACL or child-extension gates.
+
+## AI Agent: starter chips, image previews, live eval (2026-09)
+
+- Starter chips per context (`AgentStarterBuilder`), sent as normal messages; labels `agent.starter.prompt.*` (EN/DE).
+- `AgentMediaPreviewService` → `meta.previews` thumbnails on results / cards (`renderImagePreviews` in `agent.js`).
+- `t3af:agent:eval --live --page=<uid> [--provider=all] [--scenario=04,05] [--report=file.json]`: scenarios in `Resources/Private/Agent/Eval/Scenarios`, judged by `AgentScenarioJudge` (no answer / loops / wrong tools / time). CLI session via `AgentEvalCliEnvironment`.
+- Toolbox emits `tool_call` (with outcome) and `GovernedPlatform` `model_request` events; the SSE stream filters them out.
+- `AgentPromptBuilder::continuationMessage()` (moved from the controller) builds the turn after confirm/decline.

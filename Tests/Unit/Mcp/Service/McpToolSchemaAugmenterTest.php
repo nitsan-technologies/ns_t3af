@@ -28,6 +28,7 @@ use NITSAN\NsT3AF\Mcp\Contract\McpDualModeContentToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpFalStorageToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Service\McpConnectedProviderEnumResolver;
+use NITSAN\NsT3AF\Mcp\Service\McpModeOverride;
 use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
 use NITSAN\NsT3AF\Mcp\Service\McpToolSchemaAugmenter;
 use NITSAN\NsT3AF\Mcp\Service\McpWorkspaceEnumResolver;
@@ -258,7 +259,7 @@ final class McpToolSchemaAugmenterTest extends TestCase
         return new McpToolSchemaAugmenter(
             new McpWorkspaceEnumResolver($workspaceList),
             $providerResolver,
-            new McpModeResolver($settings),
+            new McpModeResolver($settings, new McpModeOverride()),
         );
     }
 }

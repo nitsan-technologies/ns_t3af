@@ -47,6 +47,129 @@ final class OpenAiCompatiblePlatform
     ) {}
 
     /**
+     * Chat completion with optional tools (POST …/chat/completions).
+     *
+     * @param list<array<string, mixed>> $messages
+     * @param list<array<string, mixed>> $tools Provider tool definitions
+     * @return array{content: string, toolCalls: list<array{id: string, name: string, arguments: array<string, mixed>}>, usage?: array<string, mixed>, raw: array<string, mixed>}
+     */
+    public function invokeWithTools(string $modelId, array $messages, array $tools): array
+    {
+        $body = [
+            'model' => $modelId,
+            'messages' => $this->toWireMessages($messages),
+        ];
+        if (!$this->isReasoningModel($modelId)) {
+            $body['temperature'] = $this->provider->temperature;
+        }
+        if ($tools !== []) {
+            $body['tools'] = array_map(
+                static fn(array $tool): array => [
+                    'type' => 'function',
+                    'function' => $tool,
+                ],
+                $tools,
+            );
+            $body['tool_choice'] = 'auto';
+        }
+
+        $response = $this->postJson($this->chatCompletionsPath(), $body);
+        $this->assertOk($response, 'chat/completions (tools)');
+
+        $decoded = $this->decodeJsonBody($response);
+        $choice = is_array($decoded['choices'][0] ?? null) ? $decoded['choices'][0] : [];
+        $message = is_array($choice['message'] ?? null) ? $choice['message'] : [];
+        $content = isset($message['content']) && is_string($message['content']) ? $message['content'] : '';
+        $toolCalls = [];
+        foreach (is_array($message['tool_calls'] ?? null) ? $message['tool_calls'] : [] as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $function = is_array($row['function'] ?? null) ? $row['function'] : [];
+            $name = isset($function['name']) && is_string($function['name']) ? $function['name'] : '';
+            if ($name === '') {
+                continue;
+            }
+            $argsJson = isset($function['arguments']) && is_string($function['arguments']) ? $function['arguments'] : '{}';
+            $args = json_decode($argsJson, true);
+            $toolCalls[] = [
+                'id' => isset($row['id']) && is_string($row['id']) ? $row['id'] : uniqid('call_', true),
+                'name' => $name,
+                'arguments' => is_array($args) ? $args : [],
+            ];
+        }
+        $usage = is_array($decoded['usage'] ?? null) ? $decoded['usage'] : [];
+
+        return [
+            'content' => $content,
+            'toolCalls' => $toolCalls,
+            'usage' => $usage,
+            'raw' => $decoded,
+        ];
+    }
+
+    /**
+     * Internal tool-round messages → OpenAI chat/completions shape.
+     *
+     * Internal: assistant `tool_calls: [{id, name, arguments: array}]`, tool `{tool_call_id, name, content}`.
+     * Wire: assistant `tool_calls: [{id, type: function, function: {name, arguments: json}}]`.
+     *
+     * @param list<array<string, mixed>> $messages
+     * @return list<array<string, mixed>>
+     */
+    private function toWireMessages(array $messages): array
+    {
+        $wire = [];
+        foreach ($messages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $role = is_string($message['role'] ?? null) ? $message['role'] : 'user';
+            if ($role === 'assistant' && is_array($message['tool_calls'] ?? null) && $message['tool_calls'] !== []) {
+                $calls = [];
+                foreach ($message['tool_calls'] as $call) {
+                    if (!is_array($call)) {
+                        continue;
+                    }
+                    if (isset($call['function']) && is_array($call['function'])) {
+                        $calls[] = $call;
+                        continue;
+                    }
+                    $arguments = $call['arguments'] ?? [];
+                    $calls[] = [
+                        'id' => (string) ($call['id'] ?? ''),
+                        'type' => 'function',
+                        'function' => [
+                            'name' => (string) ($call['name'] ?? ''),
+                            'arguments' => is_string($arguments)
+                                ? $arguments
+                                : json_encode(is_array($arguments) && $arguments !== [] ? $arguments : new \stdClass(), JSON_THROW_ON_ERROR),
+                        ],
+                    ];
+                }
+                $content = $message['content'] ?? null;
+                $wire[] = [
+                    'role' => 'assistant',
+                    'content' => is_string($content) && $content !== '' ? $content : null,
+                    'tool_calls' => $calls,
+                ];
+                continue;
+            }
+            if ($role === 'tool') {
+                $wire[] = [
+                    'role' => 'tool',
+                    'tool_call_id' => (string) ($message['tool_call_id'] ?? ''),
+                    'content' => (string) ($message['content'] ?? ''),
+                ];
+                continue;
+            }
+            $wire[] = ['role' => $role, 'content' => $message['content'] ?? ''];
+        }
+
+        return $wire;
+    }
+
+    /**
      * Non-streaming chat completion (POST …/chat/completions).
      *
      * @param mixed $payload {@see AiService} passes string | array with messages/input shape.
@@ -578,5 +701,17 @@ final class OpenAiCompatiblePlatform
         }
 
         return preg_match('#:11434$#', $base) === 1;
+    }
+
+    private function isReasoningModel(string $model): bool
+    {
+        $normalized = strtolower(trim($model));
+        foreach (['o1', 'o1-mini', 'o3', 'o3-mini', 'o4-mini', 'gpt-5'] as $prefix) {
+            if ($normalized === $prefix || str_starts_with($normalized, $prefix . '-') || str_starts_with($normalized, $prefix . '.')) {
+                return true;
+            }
+        }
+
+        return str_contains($normalized, 'gpt-5');
     }
 }

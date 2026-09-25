@@ -411,7 +411,7 @@ function bindActions(root, workspaceSelect) {
     }
 
     const payload = Object.fromEntries(new FormData(form));
-    ['enableMcpServer', 'requireAuth', 'rateLimitGlobal', 'logAllToolCalls', 'allowAnonymousReadOnly'].forEach((key) => {
+    ['enableMcpServer', 'requireAuth', 'rateLimitGlobal', 'logAllToolCalls', 'allowAnonymousReadOnly', 'mcpAllowDestructiveFileOps'].forEach((key) => {
       payload[key] = form.querySelector(`[name="${key}"]`)?.checked ? '1' : '0';
     });
     postPayload(TYPO3.settings.ajaxUrls.nst3af_mcp_advanced_save, payload);
