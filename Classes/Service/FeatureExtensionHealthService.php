@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Service;
 use NITSAN\NsT3AF\Contract\FeatureHealthAreaProviderInterface;
 use NITSAN\NsT3AF\Contract\FeatureHealthContributorInterface;
 use NITSAN\NsT3AF\Domain\Repository\RequestLogRepository;
+use TYPO3\CMS\Core\Package\PackageManager;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
 /**
@@ -42,6 +43,7 @@ final class FeatureExtensionHealthService
     public function __construct(
         private readonly RequestLogRepository $requestLogs,
         private readonly DashboardStatisticsCache $statisticsCache,
+        private readonly PackageManager $packageManager,
         private readonly iterable $areaProviders = [],
         private readonly iterable $contributors = [],
     ) {}
@@ -198,15 +200,11 @@ final class FeatureExtensionHealthService
             return '';
         }
 
-        $emConfPath = ExtensionManagementUtility::extPath($extensionKey, 'ext_emconf.php');
-        if (!is_file($emConfPath)) {
+        try {
+            $version = trim((string) $this->packageManager->getPackage($extensionKey)->getPackageMetaData()->getVersion());
+        } catch (\Throwable) {
             return '';
         }
-
-        /** @var array<string, array<string, mixed>> $EM_CONF */
-        $EM_CONF = [];
-        include $emConfPath;
-        $version = trim((string) ($EM_CONF[$extensionKey]['version'] ?? ''));
 
         return $version !== '' ? 'v' . $version : '';
     }
