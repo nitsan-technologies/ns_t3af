@@ -28,6 +28,7 @@ use Psr\Http\Message\UploadedFileInterface;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * AJAX endpoints for AI Context drawer: auto-research and document extraction.
@@ -141,8 +142,9 @@ final class BrandContextAjaxController
             );
         } finally {
             foreach ($tempFiles as $temp) {
-                if (isset($temp['path']) && is_file($temp['path'])) {
-                    @unlink($temp['path']);
+                $path = $temp['path'] ?? '';
+                if (is_string($path) && $path !== '') {
+                    GeneralUtility::unlink_tempfile($path);
                 }
             }
         }
@@ -212,17 +214,17 @@ final class BrandContextAjaxController
     {
         $clientName = $upload->getClientFilename() ?? 'upload.bin';
         $extension = strtolower(pathinfo($clientName, PATHINFO_EXTENSION));
-        $tempPath = tempnam(sys_get_temp_dir(), 'aiu-brand-doc-');
-        if ($tempPath === false) {
-            throw new \RuntimeException('Could not create temporary file.');
-        }
+        $suffix = preg_match('/^[a-z0-9]{1,8}$/', $extension) === 1 ? '.' . $extension : '';
+        // TYPO3 UploadedFile::moveTo() only accepts paths inside the project.
+        // GeneralUtility::tempnam() writes under var/transient/, which is allowed.
+        $targetPath = GeneralUtility::tempnam('aiu-brand-doc-', $suffix);
 
-        $targetPath = $extension !== '' ? $tempPath . '.' . $extension : $tempPath;
-        if ($targetPath !== $tempPath) {
-            rename($tempPath, $targetPath);
+        try {
+            $upload->moveTo($targetPath);
+        } catch (\Throwable $exception) {
+            GeneralUtility::unlink_tempfile($targetPath);
+            throw $exception;
         }
-
-        $upload->moveTo($targetPath);
 
         return [
             'path' => $targetPath,
