@@ -80,7 +80,6 @@ final class GovernedPlatform implements PlatformInterface
 
         $response = $this->toolCallingService->completeWithTools($messages, $tools, ($this->optionsFactory)($messages));
 
-
         if (array_key_exists('cancelled', $response->raw)) {
             $this->state->cancel(trim((string) $response->raw['cancelled']));
 

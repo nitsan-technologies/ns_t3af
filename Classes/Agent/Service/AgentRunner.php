@@ -96,7 +96,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             return $this->single($emitEvent, $this->info('agent.turn.noExecutableTools', $correlationId));
         }
 
-        $offeredTools = $this->coreToolSet->forTurn($executableTools, $context, $historyMessages);
+        $requestQuery = self::requestQuery($userMessage, $historyMessages);
+        $offeredTools = $this->coreToolSet->forTurn($executableTools, $context, $historyMessages, $requestQuery);
         $offeredTools = $this->withToolsForTheRequest($offeredTools, $executableTools, $userMessage, $historyMessages);
 
         $severities = [];
@@ -312,20 +313,76 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if ($query === '') {
             return $offeredTools;
         }
+
+        $createContent = AgentCoreToolSet::isCreateContentRequest($query);
+        if ($createContent) {
+            $offeredTools = array_values(array_filter(
+                $offeredTools,
+                static fn(array $tool): bool => (string) ($tool['name'] ?? '') !== 'content_delete',
+            ));
+        }
+
         $offeredNames = array_flip($this->toolNames($offeredTools));
         $candidates = array_values(array_filter(
             $executableTools,
-            static fn(array $tool): bool => !isset($offeredNames[(string) ($tool['name'] ?? '')]),
+            static fn(array $tool): bool => !isset($offeredNames[(string) ($tool['name'] ?? '')])
+                && (!$createContent || (string) ($tool['name'] ?? '') !== 'content_delete'),
         ));
         try {
             $found = $this->toolSearch->search($query, $candidates, self::REQUEST_TOOLS)['tools'];
         } catch (\Throwable) {
-            return $offeredTools;
+            $found = [];
         }
-        $tools = [...$offeredTools, ...$found];
-        usort($tools, static fn(array $a, array $b): int => strcmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? '')));
 
-        return $tools;
+        if ($createContent) {
+            $found = [...self::createContentTools($executableTools, $offeredNames), ...$found];
+        }
+
+        $byName = [];
+        foreach ([...$offeredTools, ...$found] as $tool) {
+            $name = (string) ($tool['name'] ?? '');
+            if ($name !== '') {
+                $byName[$name] = $tool;
+            }
+        }
+        ksort($byName);
+
+        return array_values($byName);
+    }
+
+    /**
+     * Prefer dedicated create-content tools even when the module tool cap sliced them out.
+     *
+     * @param list<array<string, mixed>> $executableTools
+     * @param array<string, int|string> $alreadyOffered
+     * @return list<array<string, mixed>>
+     */
+    public static function createContentTools(array $executableTools, array $alreadyOffered = []): array
+    {
+        $picked = [];
+        foreach ($executableTools as $tool) {
+            $name = (string) ($tool['name'] ?? '');
+            if ($name === '' || isset($alreadyOffered[$name]) || isset($picked[$name])) {
+                continue;
+            }
+            if ($name === 't3ai_create_content_element' || $name === 'write_table') {
+                $picked[$name] = $tool;
+                continue;
+            }
+            $intent = is_array($tool['intent'] ?? null) ? $tool['intent'] : [];
+            $verbs = array_map('strtolower', array_map('strval', is_array($intent['verbs'] ?? null) ? $intent['verbs'] : []));
+            $nouns = array_map('strtolower', array_map('strval', is_array($intent['nouns'] ?? null) ? $intent['nouns'] : []));
+            $category = strtolower((string) ($intent['category'] ?? ''));
+            if (
+                $category === 'content'
+                && array_intersect($verbs, ['create', 'write', 'add', 'generate']) !== []
+                && array_intersect($nouns, ['content', 'element', 'block', 'tt_content']) !== []
+            ) {
+                $picked[$name] = $tool;
+            }
+        }
+
+        return array_values($picked);
     }
 
     /**

@@ -2105,7 +2105,7 @@ class AgentController {
     this.updateSummarizeButton();
     if (this.messages.length === 0) {
       this.renderGreeting();
-    } else {
+    } else if (!this.isRunning) {
       this.renderStarters(this.starters);
     }
     if (this.isRunning) {
@@ -2668,6 +2668,7 @@ class AgentController {
         this.renderStream();
       } finally {
         this.isRunning = false;
+        this.renderStream();
       }
       return;
     }
@@ -2770,6 +2771,7 @@ class AgentController {
       if (this.stream) {
         this.stream.removeAttribute('aria-busy');
       }
+      this.renderStream();
     }
     await this.flushContinuation();
   }
@@ -2966,6 +2968,7 @@ class AgentController {
       if (this.stream) {
         this.stream.removeAttribute('aria-busy');
       }
+      this.renderStream();
     }
     await this.flushContinuation();
   }
@@ -3082,6 +3085,7 @@ class AgentController {
       if (this.fileInput instanceof HTMLInputElement) {
         this.fileInput.value = '';
       }
+      this.renderStream();
     }
   }
 
@@ -3121,6 +3125,7 @@ class AgentController {
       this.renderStream();
     } finally {
       this.isRunning = false;
+      this.renderStream();
     }
   }
 
@@ -3357,6 +3362,7 @@ class AgentController {
     } finally {
       this.isRunning = false;
       this.showProgress(false);
+      this.renderStream();
     }
   }
 

@@ -219,6 +219,45 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function createContentRequestPrimesCreateToolsAndDropsDelete(): void
+    {
+        $this->runScripted(
+            [new AiToolCallingResponse('Ok', 'gpt-test', 'openai')],
+            message: 'Create all elements in this page',
+            history: [['role' => 'assistant', 'content' => 'deleted', 'meta' => ['type' => 'tool_result', 'tool' => 'content_delete']]],
+            extraTools: [
+                ['name' => 'content_delete', 'severity' => 'destructive', 'description' => 'Delete a content element', 'params' => [['name' => 'uid', 'type' => 'int', 'required' => true]]],
+                ['name' => 't3ai_create_content_element', 'severity' => 'write', 'description' => 'Create a header or text content element', 'params' => []],
+                ['name' => 'write_table', 'severity' => 'write', 'description' => 'Create update or delete table records', 'params' => []],
+            ],
+        );
+
+        $tools = $this->requests[0]['tools'];
+        self::assertContains('t3ai_create_content_element', $tools);
+        self::assertContains('write_table', $tools);
+        self::assertNotContains('content_delete', $tools);
+    }
+
+    #[Test]
+    public function createContentToolsPicksNamedAndIntentMatchedTools(): void
+    {
+        $catalog = [
+            ['name' => 'content_delete', 'intent' => ['category' => 'content', 'verbs' => ['delete'], 'nouns' => ['content']]],
+            ['name' => 't3ai_create_content_element', 'intent' => null],
+            ['name' => 'write_table', 'intent' => null],
+            ['name' => 'other_create_block', 'intent' => ['category' => 'content', 'verbs' => ['add'], 'nouns' => ['element']]],
+            ['name' => 'pages_create', 'intent' => ['category' => 'pages', 'verbs' => ['create'], 'nouns' => ['page']]],
+        ];
+        $names = array_map(
+            static fn(array $t): string => (string) $t['name'],
+            AgentRunner::createContentTools($catalog),
+        );
+        sort($names);
+
+        self::assertSame(['other_create_block', 't3ai_create_content_element', 'write_table'], $names);
+    }
+
+    #[Test]
     public function aShortReplyIsSearchedWithThePreviousRequest(): void
     {
         $query = AgentRunner::requestQuery('Yes', [
@@ -302,10 +341,17 @@ final class AgentRunnerTest extends TestCase
 
     /**
      * @param list<AiToolCallingResponse> $responses
+     * @param list<array<string, mixed>> $history
+     * @param list<array<string, mixed>> $extraTools
      * @return array{messages: list<array{role: string, content: string, meta: array<string, mixed>}>, paused: bool, pauseReason: string|null}
      */
-    private function runScripted(array $responses, int $readBudget = 5, string $message = 'Wie heißt diese Seite?'): array
-    {
+    private function runScripted(
+        array $responses,
+        int $readBudget = 5,
+        string $message = 'Wie heißt diese Seite?',
+        array $history = [],
+        array $extraTools = [],
+    ): array {
         $toolCalling = $this->createMock(AiToolCallingServiceInterface::class);
         $toolCalling->method('supportsToolCalling')->willReturn(true);
         $toolCalling->method('completeWithTools')->willReturnCallback(
@@ -318,8 +364,8 @@ final class AgentRunnerTest extends TestCase
             },
         );
 
-        return $this->makeRunner($toolCalling, $readBudget)
-            ->runTurn($message, [], ['pageId' => 49, 'module' => 'web_layout'], [], $this->createMock(BackendUserAuthentication::class), 'corr-1');
+        return $this->makeRunner($toolCalling, $readBudget, $extraTools)
+            ->runTurn($message, $history, ['pageId' => 49, 'module' => 'web_layout'], [], $this->createMock(BackendUserAuthentication::class), 'corr-1');
     }
 
     /**
@@ -341,12 +387,16 @@ final class AgentRunnerTest extends TestCase
         $this->requests[] = ['messages' => $rows, 'tools' => $names, 'options' => $options];
     }
 
-    private function makeRunner(AiToolCallingServiceInterface $toolCalling, int $readBudget): AgentRunner
+    /**
+     * @param list<array<string, mixed>> $extraTools
+     */
+    private function makeRunner(AiToolCallingServiceInterface $toolCalling, int $readBudget, array $extraTools = []): AgentRunner
     {
         $tools = [
             ['name' => 'pages_get', 'severity' => 'read', 'description' => 'Get a page', 'params' => [['name' => 'uid', 'type' => 'int', 'required' => true, 'description' => 'Page uid']]],
             ['name' => 'content_update', 'severity' => 'write', 'description' => 'Update a content element (header, text)', 'params' => [['name' => 'uid', 'type' => 'int', 'required' => true]]],
             ['name' => 'explain_page', 'severity' => 'read', 'description' => 'Explain the page', 'params' => []],
+            ...$extraTools,
         ];
         $catalog = $this->createMock(AgentActionCatalogInterface::class);
         $catalog->method('buildCatalog')->willReturn(['executable' => $tools, 'locked' => []]);

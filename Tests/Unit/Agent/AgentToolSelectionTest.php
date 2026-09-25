@@ -83,6 +83,44 @@ final class AgentToolSelectionTest extends TestCase
     }
 
     #[Test]
+    public function createContentRequestSkipsRecentContentDelete(): void
+    {
+        $catalog = [
+            $this->tool('pages_get'),
+            $this->tool('content_list'),
+            $this->tool('content_delete'),
+            $this->tool('scheduler_list'),
+        ];
+        $history = [['role' => 'assistant', 'content' => 'ok', 'meta' => ['type' => 'tool_result', 'tool' => 'content_delete']]];
+
+        $withDelete = array_map(
+            static fn(array $tool): string => (string) $tool['name'],
+            $this->coreSet()->forTurn($catalog, ['module' => 'web_layout'], $history, 'Delete content element 12'),
+        );
+        $withoutDelete = array_map(
+            static fn(array $tool): string => (string) $tool['name'],
+            $this->coreSet()->forTurn($catalog, ['module' => 'web_layout'], $history, 'Create all elements on this page'),
+        );
+
+        self::assertContains('content_delete', $withDelete);
+        self::assertNotContains('content_delete', $withoutDelete);
+    }
+
+    #[Test]
+    public function isCreateContentRequestDetectsCreateElementPhrases(): void
+    {
+        self::assertTrue(AgentCoreToolSet::isCreateContentRequest('Create all elements in the this page'));
+        self::assertTrue(AgentCoreToolSet::isCreateContentRequest('Add a text element here'));
+        self::assertTrue(AgentCoreToolSet::isCreateContentRequest('Neues Inhaltselement anlegen'));
+        self::assertFalse(AgentCoreToolSet::isCreateContentRequest('Delete content element 449'));
+        self::assertFalse(AgentCoreToolSet::isCreateContentRequest('Delete the old elements and create new ones'));
+        self::assertFalse(AgentCoreToolSet::isCreateContentRequest('Replace the text element with a new one'));
+        self::assertFalse(AgentCoreToolSet::isCreateContentRequest('Alte Inhaltselemente löschen und neue anlegen'));
+        self::assertFalse(AgentCoreToolSet::isCreateContentRequest('Create a new page'));
+        self::assertFalse(AgentCoreToolSet::isCreateContentRequest('List backend user groups'));
+    }
+
+    #[Test]
     public function keywordSearchFindsToolsFromGermanExamples(): void
     {
         $catalog = [
@@ -145,17 +183,17 @@ final class AgentToolSelectionTest extends TestCase
      * @param list<string> $examples
      * @return array<string, mixed>
      */
-    private function tool(string $name, array $modules = [], array $examples = []): array
+    private function tool(string $name, array $modules = [], array $examples = [], string $category = ''): array
     {
         return [
             'name' => $name,
             'description' => '',
             'severity' => 'read',
-            'intent' => $modules === [] && $examples === [] ? null : [
+            'intent' => $modules === [] && $examples === [] && $category === '' ? null : [
                 'modules' => $modules,
                 'examples' => $examples,
                 'summary' => '',
-                'category' => '',
+                'category' => $category,
                 'verbs' => [],
                 'nouns' => [],
                 'requiresPage' => false,

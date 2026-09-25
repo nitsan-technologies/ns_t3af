@@ -78,9 +78,10 @@ final readonly class AgentCoreToolSet
      * @param list<array<string, mixed>> $executableTools
      * @param array<string, mixed> $context
      * @param list<array<string, mixed>> $historyMessages
+     * @param string $requestQuery Expanded editor request (may include prior turn for short replies)
      * @return list<array<string, mixed>>
      */
-    public function forTurn(array $executableTools, array $context, array $historyMessages = []): array
+    public function forTurn(array $executableTools, array $context, array $historyMessages = [], string $requestQuery = ''): array
     {
         $byName = [];
         foreach ($executableTools as $tool) {
@@ -115,15 +116,46 @@ final readonly class AgentCoreToolSet
             $picked += array_slice($declared + $byCategory, 0, self::MAX_MODULE_TOOLS, true);
         }
 
+        $skipRecentDeletes = self::isCreateContentRequest($requestQuery);
         foreach ($this->recentToolNames($historyMessages) as $name) {
+            if ($skipRecentDeletes && $name === 'content_delete') {
+                continue;
+            }
             if (isset($byName[$name])) {
                 $picked[$name] = $byName[$name];
             }
         }
 
+        if ($skipRecentDeletes) {
+            unset($picked['content_delete']);
+        }
+
         ksort($picked);
 
         return array_values($picked);
+    }
+
+    /**
+     * Editor wants new content on a page and does not ask to delete or replace anything
+     * ("delete the old elements and create new ones" keeps the delete tool).
+     */
+    public static function isCreateContentRequest(string $query): bool
+    {
+        $q = mb_strtolower(trim($query));
+        if ($q === '') {
+            return false;
+        }
+        if (preg_match('/\b(delete|remove|replace|clear|löschen|loeschen|entfernen|ersetzen)/u', $q)) {
+            return false;
+        }
+        if (!preg_match('/\b(create|add|new|generate|anlegen|erstellen|hinzufuegen|hinzufügen|neues|neue)\b/u', $q)) {
+            return false;
+        }
+
+        return (bool) preg_match(
+            '/\b(content|element|elements|ce|tt_content|inhalt|inhalte|inhaltselement|headline|header|bodytext|textblock)\b/u',
+            $q,
+        );
     }
 
     public function normalizeModule(string $module): string
