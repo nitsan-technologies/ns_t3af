@@ -25,9 +25,9 @@ use NITSAN\NsT3AF\Domain\Model\BrandContextProfile;
  * Builds the full `{brand_context}` block for system-prompt injection.
  *
  * Editor writing constraints (voice, audience, content rules, keywords,
- * forbidden words) sit outside the fence so the model applies them.
- * Reference text (identity, researched copy, uploads) stays inside the fence
- * and must not be followed as instructions (CTX-01 / CTX-02).
+ * forbidden words, and an included document) sit outside the fence so the
+ * model applies them. Identity and researched copy stay inside the fence
+ * as background facts (CTX-01 / CTX-02).
  *
  * Every field is still escaped so it cannot close the fence or spoof a role.
  *
@@ -55,7 +55,7 @@ final class BrandContextAssembler
     public function assemble(BrandContextProfile $profile): string
     {
         $map = $this->placeholders->buildMap($profile);
-        $constraints = $this->constraintLines($map);
+        $constraints = $this->constraintLines($profile, $map);
         $reference = $this->referenceLines($profile, $map);
 
         if ($constraints === [] && $reference === []) {
@@ -87,7 +87,7 @@ final class BrandContextAssembler
      * @param array<string, string> $map
      * @return list<string>
      */
-    private function constraintLines(array $map): array
+    private function constraintLines(BrandContextProfile $profile, array $map): array
     {
         $lines = [];
         if ($map['{brand_voice}'] !== '') {
@@ -104,6 +104,10 @@ final class BrandContextAssembler
         }
         if ($map['{forbidden_words}'] !== '') {
             $lines[] = 'Forbidden words: ' . $this->escapeUntrusted($map['{forbidden_words}']);
+        }
+        if ($profile->includeDocumentInPrompt && $profile->documentExtract !== '') {
+            $extract = $this->capDocumentExtract($profile->documentExtract);
+            $lines[] = 'Document context: ' . $this->escapeUntrusted($extract);
         }
 
         return $lines;
@@ -138,10 +142,6 @@ final class BrandContextAssembler
         }
         if ($profile->sampleContent !== '') {
             $lines[] = 'Sample content: ' . $this->escapeUntrusted($profile->sampleContent);
-        }
-        if ($profile->includeDocumentInPrompt && $profile->documentExtract !== '') {
-            $extract = $this->capDocumentExtract($profile->documentExtract);
-            $lines[] = 'Document context: ' . $this->escapeUntrusted($extract);
         }
 
         return $lines;

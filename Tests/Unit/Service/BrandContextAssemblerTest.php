@@ -122,12 +122,19 @@ final class BrandContextAssemblerTest extends TestCase
             'include_document_in_prompt' => 1,
         ]));
 
-        self::assertStringContainsString('Document context:', $block);
+        $fenceAt = strpos($block, '<brand_context>');
+        self::assertNotFalse($fenceAt);
+        $beforeFence = substr($block, 0, $fenceAt);
+        $insideFence = substr($block, $fenceAt);
+
+        self::assertStringContainsString('Document context:', $beforeFence);
+        self::assertStringNotContainsString('Document context:', $insideFence);
         self::assertMatchesRegularExpression(
             '/Document context: A{2000}…/',
-            $block,
+            $beforeFence,
         );
         self::assertStringNotContainsString(str_repeat('A', BrandContextAssembler::MAX_INJECT_DOCUMENT_CHARS + 1), $block);
+        self::assertStringContainsString('Brand: Acme', $insideFence);
     }
 
     private function assembler(): BrandContextAssembler
