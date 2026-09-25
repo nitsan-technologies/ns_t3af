@@ -110,6 +110,7 @@ final readonly class AgentToolResultPresenter
         private AgentToolEditorLabelService $editorLabelService,
         private AgentLanguageResolver $languageResolver,
         private AgentTranslator $translator,
+        private ?AgentMediaPreviewService $mediaPreviews = null,
     ) {}
 
     /**
@@ -120,6 +121,7 @@ final readonly class AgentToolResultPresenter
      *     llmSummary: string|null,
      *     facts: list<array{key: string, label: string, value: string}>,
      *     details: mixed,
+     *     previews: list<array{fileUid: int, url: string, href: string, name: string, alt: string}>,
      *     error: string|null
      * }
      */
@@ -158,6 +160,8 @@ final readonly class AgentToolResultPresenter
             'llmSummary' => $llmSummary,
             'facts' => $facts,
             'details' => $details,
+            // Thumbnails of the images the result is about (generated image, file list, metadata).
+            'previews' => $error === null && $this->mediaPreviews !== null ? $this->mediaPreviews->forDetails($details) : [],
             'error' => $error,
         ];
     }

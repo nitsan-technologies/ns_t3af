@@ -2593,6 +2593,90 @@
                 <source>I kept checking the same information without getting further. Tell me a bit more precisely what I should do, for example: Create the page "…" under "Home".</source>
                 <target>Ich habe dieselben Informationen mehrfach geprüft, ohne weiterzukommen. Sagen Sie mir bitte etwas genauer, was ich tun soll, zum Beispiel: Erstelle die Seite „…“ unter „Home“.</target>
             </trans-unit>
+            <trans-unit id="agent.starter.prompt.recordImprove">
+                <source>Improve the text of this content element</source>
+                <target>Verbessere den Text dieses Inhaltselements</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.recordTranslate">
+                <source>Translate this content element</source>
+                <target>Übersetze dieses Inhaltselement</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.newsTranslate">
+                <source>Translate this news article</source>
+                <target>Übersetze diese News</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.fileAltText">
+                <source>Write alt text for this image</source>
+                <target>Schreibe einen Alternativtext für dieses Bild</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.seo">
+                <source>Generate SEO for this page</source>
+                <target>Erstelle SEO-Angaben für diese Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.translatePage">
+                <source>Translate this page</source>
+                <target>Übersetze diese Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.accessibility">
+                <source>Check this page for accessibility issues</source>
+                <target>Prüfe diese Seite auf Barrierefreiheit</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.summarizePage">
+                <source>Summarize this page</source>
+                <target>Fasse diese Seite zusammen</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.addContent">
+                <source>Add a content element to this page</source>
+                <target>Füge dieser Seite ein Inhaltselement hinzu</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.createSubpage">
+                <source>Create a subpage</source>
+                <target>Erstelle eine Unterseite</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.missingAltText">
+                <source>Find images without alt text</source>
+                <target>Finde Bilder ohne Alternativtext</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.generateImage">
+                <source>Generate an image</source>
+                <target>Erstelle ein Bild</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.redirectsToPage">
+                <source>Show redirects to this page</source>
+                <target>Zeige Weiterleitungen auf diese Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.createRedirect">
+                <source>Create a redirect</source>
+                <target>Erstelle eine Weiterleitung</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.failedTasks">
+                <source>Show failed scheduler tasks</source>
+                <target>Zeige fehlgeschlagene Scheduler-Aufgaben</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.workspaceChanges">
+                <source>Show my changes in this workspace</source>
+                <target>Zeige meine Änderungen in diesem Arbeitsbereich</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.pageTree">
+                <source>Show the page tree</source>
+                <target>Zeige den Seitenbaum</target>
+            </trans-unit>
+            <trans-unit id="agent.starter.prompt.capabilities">
+                <source>What can you do?</source>
+                <target>Was kannst du?</target>
+            </trans-unit>
+            <trans-unit id="agent.media.open">
+                <source>Open image in a new tab</source>
+                <target>Bild in neuem Tab öffnen</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.planInvalid">
+                <source>Could not prepare this change: %s</source>
+                <target>Diese Änderung konnte nicht vorbereitet werden: %s</target>
+            </trans-unit>
+            <trans-unit id="agent.error.applyFailedDetail">
+                <source>The change could not be saved: %s</source>
+                <target>Die Änderung konnte nicht gespeichert werden: %s</target>
+            </trans-unit>
         </body>
     </file>
 </xliff>

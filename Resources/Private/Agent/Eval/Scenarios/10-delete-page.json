@@ -1,0 +1,17 @@
+{
+  "id": "10-delete-page",
+  "title": "Deleting a page is prepared as a change to confirm",
+  "turns": [
+    {
+      "message": "Delete this page",
+      "expect": {
+        "anyTool": [
+          "write_table",
+          "pages_delete"
+        ],
+        "card": "orClarification",
+        "maxToolCalls": 4
+      }
+    }
+  ]
+}

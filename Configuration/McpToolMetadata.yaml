@@ -90,8 +90,10 @@ tools:
     searchTerms:
       - 'create update delete record, change field value'
       - 'create a new page or subpage, add content elements to a page'
+      - 'delete a page or a record'
       - 'Datensatz anlegen, ändern oder löschen, Feld ändern'
       - 'neue Seite oder Unterseite anlegen, Inhaltselemente hinzufügen'
+      - 'Seite oder Datensatz löschen'
 
   workspace_list:
     category: Workspaces
@@ -432,11 +434,11 @@ tools:
   pages_copy:
     category: Content
     status: ready
-    tagline: Copy a page to a new tree position
-    notes: Positive target = child of page. Negative target = after page uid. includeSubpages copies subtree.
+    tagline: Copy an existing page to a new tree position
+    notes: Only for copying / duplicating an existing page, never to create a new page. Positive target = child of page. Negative target = after page uid. includeSubpages copies subtree.
     searchTerms:
-      - 'copy page, duplicate page'
-      - 'Seite kopieren, Seite duplizieren'
+      - 'copy an existing page, duplicate page'
+      - 'bestehende Seite kopieren, Seite duplizieren'
 
   content_search:
     category: Content

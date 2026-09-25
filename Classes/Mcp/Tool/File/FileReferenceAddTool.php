@@ -32,6 +32,7 @@ use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 
@@ -42,6 +43,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
         private DataHandlerService $dataHandlerService,
         private TcaSchemaService $tcaSchemaService,
         private McpConfirmationPlanBuilder $confirmationPlanBuilder,
+        private RecordService $recordService,
     ) {}
 
     /**
@@ -64,6 +66,24 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
 
         if ($fieldName === '') {
             throw new \InvalidArgumentException('fieldName is required.');
+        }
+        // Check before the editor sees a card: a wrong uid (e.g. the page uid instead of the
+        // content element uid) or field would only fail after "Execute".
+        $fileFields = $this->tcaSchemaService->getFileFields($table);
+        if (!in_array($fieldName, $fileFields, true)) {
+            throw new \InvalidArgumentException(sprintf(
+                'Field "%s" is not a file field of %s. File fields: %s.',
+                $fieldName,
+                $table,
+                $fileFields !== [] ? implode(', ', $fileFields) : 'none',
+            ));
+        }
+        if ($this->findRecord($table, $uid) === null) {
+            throw new \InvalidArgumentException(sprintf(
+                'There is no %s record with uid %d. Use the uid of the record itself (for a new content element: the uid from the applied result), not the page uid.',
+                $table,
+                $uid,
+            ));
         }
 
         return $this->confirmationPlanBuilder->confirmation(
@@ -107,8 +127,24 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
             );
         }
 
+        $record = $this->findRecord($table, $uid);
+        if ($record === null) {
+            return $this->encodeError(sprintf(
+                'There is no %s record with uid %d (missing or deleted). Use the content element uid, not the page uid.',
+                $table,
+                $uid,
+            ));
+        }
+
         try {
-            $referenceUids = $this->dataHandlerService->createFileReferences($table, $uid, $fieldName, $parsedUids);
+            $referenceUids = $this->dataHandlerService->createFileReferences(
+                $table,
+                $uid,
+                $fieldName,
+                $parsedUids,
+                // References live on the page of their record.
+                (int) ($record['pid'] ?? 0),
+            );
 
             return json_encode([
                 'table' => $table,
@@ -120,6 +156,21 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
         } catch (\Throwable $exception) {
             return $this->encodeError($exception->getMessage());
         }
+    }
+
+    /**
+     * @return array<string, mixed>|null the record (uid, pid), or null when missing/deleted
+     */
+    private function findRecord(string $table, int $uid): ?array
+    {
+        $deleteField = (string) ($GLOBALS['TCA'][$table]['ctrl']['delete'] ?? '');
+        try {
+            $row = $this->recordService->findByUid($table, $uid, $deleteField !== '' ? ['uid', 'pid', $deleteField] : ['uid', 'pid']);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $row !== null && ($deleteField === '' || (int) ($row[$deleteField] ?? 0) === 0) ? $row : null;
     }
 
     /** @param array<string, mixed> $context */

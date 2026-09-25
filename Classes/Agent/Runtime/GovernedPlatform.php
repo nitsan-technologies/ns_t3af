@@ -76,6 +76,7 @@ final class GovernedPlatform implements PlatformInterface
         $tools = $this->toToolDefinitions(array_values($this->toolbox?->getTools() ?? $this->toolsFromOptions($options)));
 
         $this->state->emit('progress', ['status' => 'llm', 'iteration' => $this->state->modelRequests]);
+        $this->state->emit('model_request', ['round' => $this->state->modelRequests + 1]);
         ++$this->state->modelRequests;
 
         $response = $this->toolCallingService->completeWithTools($messages, $tools, ($this->optionsFactory)($messages));

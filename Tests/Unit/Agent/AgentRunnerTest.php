@@ -271,6 +271,45 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function everyToolCallIsReportedWithItsOutcome(): void
+    {
+        $responses = [
+            new AiToolCallingResponse('', 'gpt-test', 'openai', [new AiToolCall('c1', 'pages_get', ['uid' => 45])]),
+            new AiToolCallingResponse('', 'gpt-test', 'openai', [new AiToolCall('c2', 'pages_get', ['uid' => 45]), new AiToolCall('c3', 'pages_get', [])]),
+            new AiToolCallingResponse('Done', 'gpt-test', 'openai'),
+        ];
+        $toolCalling = $this->createMock(AiToolCallingServiceInterface::class);
+        $toolCalling->method('supportsToolCalling')->willReturn(true);
+        $toolCalling->method('completeWithTools')->willReturnCallback(static function () use (&$responses): AiToolCallingResponse {
+            return array_shift($responses) ?? new AiToolCallingResponse('Done', 'gpt-test', 'openai');
+        });
+        $events = [];
+        $this->makeRunner($toolCalling, 5)->runTurn(
+            'Read page 45',
+            [],
+            ['pageId' => 49],
+            [],
+            $this->createMock(BackendUserAuthentication::class),
+            'corr',
+            static function (string $event, array $payload) use (&$events): void {
+                $events[] = [$event, $payload];
+            },
+        );
+
+        $calls = array_values(array_map(static fn(array $e): string => $e[1]['tool'] . ':' . $e[1]['outcome'], array_filter($events, static fn(array $e): bool => $e[0] === 'tool_call')));
+        self::assertSame(['pages_get:executed', 'pages_get:repeated', 'pages_get:invalid'], $calls);
+        self::assertCount(3, array_filter($events, static fn(array $e): bool => $e[0] === 'model_request'));
+    }
+
+    #[Test]
+    public function copyingAPageIsOfferedOnlyWhenAskedFor(): void
+    {
+        self::assertSame(['pages_copy'], AgentRunner::toolsNotAskedFor('I want a new subpage "Eval yes" under this page'));
+        self::assertSame([], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
+        self::assertSame([], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
+    }
+
+    #[Test]
     public function endlessToolCallingStopsAtTheLoopLimit(): void
     {
         $responses = [];

@@ -79,7 +79,8 @@ readonly class PagesCopyTool implements McpNonAiToolInterface, McpPlannableToolI
 
     #[McpTool(
         name: 'pages_copy',
-        description: 'Copy a page to a new position in the page tree.'
+        description: 'Copy an existing page (with its content) to a new position in the page tree.'
+            . ' Only when the editor asks to copy or duplicate a page; to create a new page use the create tools.'
             . ' Use a positive target to copy as a child of that page (target = parent pid).'
             . ' Use a negative target to copy after a specific page (target = -uid of the page to place after).'
             . ' Set includeSubpages to true to copy the entire subtree including all subpages.',

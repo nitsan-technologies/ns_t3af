@@ -69,11 +69,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             throw new \InvalidArgumentException('Table not found: ' . $tableName);
         }
 
-        /** @var array<string, mixed> $payload */
-        $payload = json_decode($dataRaw, true, 512, JSON_THROW_ON_ERROR);
-        if (!is_array($payload)) {
-            throw new \InvalidArgumentException('Data must be a JSON object.');
-        }
+        $payload = self::decodeData($dataRaw, $action);
 
         return match ($action) {
             'create' => $this->planCreate($tableName, $payload),
@@ -119,13 +115,9 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         try {
-            /** @var array<string, mixed> $payload */
-            $payload = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
-            if (!is_array($payload)) {
-                return $this->encodeError('Data must be a JSON object.');
-            }
-        } catch (\JsonException $exception) {
-            return $this->encodeError('Invalid JSON in data: ' . $exception->getMessage());
+            $payload = self::decodeData($data, $action);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->encodeError($exception->getMessage());
         }
 
         return match ($action) {
@@ -133,6 +125,35 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             'update' => $this->update($tableName, $uid, $payload),
             'delete' => $this->delete($tableName, $uid),
         };
+    }
+
+    /**
+     * The "data" JSON object. A delete needs none (empty or invalid data is ignored there);
+     * empty data is an empty object.
+     *
+     * @return array<string, mixed>
+     * @throws \InvalidArgumentException when create/update data is not a JSON object
+     */
+    public static function decodeData(string $data, string $action): array
+    {
+        if ($action === 'delete' || trim($data) === '') {
+            return [];
+        }
+        try {
+            $payload = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            throw new \InvalidArgumentException(
+                'data must be a JSON object of field values, e.g. {"pid": 12, "title": "News"} (' . $exception->getMessage() . ').',
+                1790400001,
+                $exception,
+            );
+        }
+        if (!is_array($payload) || ($payload !== [] && array_is_list($payload))) {
+            throw new \InvalidArgumentException('data must be a JSON object of field values, e.g. {"pid": 12, "title": "News"}.', 1790400002);
+        }
+
+        /** @var array<string, mixed> $payload */
+        return $payload;
     }
 
     /** @param array<string, mixed> $payload */

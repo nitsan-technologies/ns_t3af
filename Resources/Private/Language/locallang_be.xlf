@@ -2044,6 +2044,69 @@
       <trans-unit id="agent.turn.repeatedReads" resname="agent.turn.repeatedReads">
         <source>I kept checking the same information without getting further. Tell me a bit more precisely what I should do, for example: Create the page "…" under "Home".</source>
       </trans-unit>
+      <trans-unit id="agent.starter.prompt.recordImprove" resname="agent.starter.prompt.recordImprove">
+        <source>Improve the text of this content element</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.recordTranslate" resname="agent.starter.prompt.recordTranslate">
+        <source>Translate this content element</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.newsTranslate" resname="agent.starter.prompt.newsTranslate">
+        <source>Translate this news article</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.fileAltText" resname="agent.starter.prompt.fileAltText">
+        <source>Write alt text for this image</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.seo" resname="agent.starter.prompt.seo">
+        <source>Generate SEO for this page</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.translatePage" resname="agent.starter.prompt.translatePage">
+        <source>Translate this page</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.accessibility" resname="agent.starter.prompt.accessibility">
+        <source>Check this page for accessibility issues</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.summarizePage" resname="agent.starter.prompt.summarizePage">
+        <source>Summarize this page</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.addContent" resname="agent.starter.prompt.addContent">
+        <source>Add a content element to this page</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.createSubpage" resname="agent.starter.prompt.createSubpage">
+        <source>Create a subpage</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.missingAltText" resname="agent.starter.prompt.missingAltText">
+        <source>Find images without alt text</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.generateImage" resname="agent.starter.prompt.generateImage">
+        <source>Generate an image</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.redirectsToPage" resname="agent.starter.prompt.redirectsToPage">
+        <source>Show redirects to this page</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.createRedirect" resname="agent.starter.prompt.createRedirect">
+        <source>Create a redirect</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.failedTasks" resname="agent.starter.prompt.failedTasks">
+        <source>Show failed scheduler tasks</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.workspaceChanges" resname="agent.starter.prompt.workspaceChanges">
+        <source>Show my changes in this workspace</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.pageTree" resname="agent.starter.prompt.pageTree">
+        <source>Show the page tree</source>
+      </trans-unit>
+      <trans-unit id="agent.starter.prompt.capabilities" resname="agent.starter.prompt.capabilities">
+        <source>What can you do?</source>
+      </trans-unit>
+      <trans-unit id="agent.media.open" resname="agent.media.open">
+        <source>Open image in a new tab</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.planInvalid" resname="agent.turn.planInvalid">
+        <source>Could not prepare this change: %s</source>
+      </trans-unit>
+      <trans-unit id="agent.error.applyFailedDetail" resname="agent.error.applyFailedDetail">
+        <source>The change could not be saved: %s</source>
+      </trans-unit>
     </body>
   </file>
 </xliff>

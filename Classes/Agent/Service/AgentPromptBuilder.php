@@ -70,6 +70,8 @@ readonly class AgentPromptBuilder
             'Read results earlier in this conversation are still valid: do not read the same record or run the same search again; use what you have.',
             'Do not ask the editor in text whether you should make a change ("Shall we proceed?"): call the write tool; it only prepares the change, and the editor confirms or declines it in the window. If no offered tool can make the change, call find_tools first.',
             'Read only what you need, then act. To create or change something, call the write tool as soon as you know the target; the editor reviews it before anything is saved.',
+            'To add an image to a new content element: first prepare the element (e.g. a text & media element), after it is applied attach the image to its uid with the file reference tool (field "assets" for text & media, "image" for text & images). The page uid is never a content element uid.',
+            'To create a new page, prepare a new record in the pages table (or use a create-page tool); copying a page is only for "copy" or "duplicate" requests. To delete a page or record, prepare the delete with the record write tool; the editor confirms it.',
             'To create a page with content: first prepare the new page (only the page). After the editor applies it, the result gives the new page uid; then prepare the content elements with that uid as their pid.',
             'When the editor asks to create or add content elements, use a create/write tool. Do not call content_delete unless they asked to remove or replace something.',
             'To change or delete a content element, use its uid from the latest content_list or content_get result; uids from older messages may no longer exist. The uid of a record you just created (from the applied result) is valid.',
@@ -202,10 +204,11 @@ readonly class AgentPromptBuilder
 
         $content = match ($type) {
             'tool_result' => sprintf(
-                '[%s%s] %s',
+                '[%s%s] %s%s',
                 $label !== '' ? $label : 'Tool result',
                 ($meta['success'] ?? true) === false ? ' failed' : '',
                 $content,
+                ($meta['autoRan'] ?? true) === false ? self::resultRecordsNote($meta['details'] ?? null) : '',
             ),
             'inline_draft', 'suggestions' => sprintf(
                 '[Prepared change: %s — %s] %s',
@@ -266,6 +269,52 @@ readonly class AgentPromptBuilder
     }
 
     /**
+     * The instruction for the turn after the editor confirmed or declined a card (English, like
+     * the system prompt; the reply language rule still applies).
+     *
+     * The records the change wrote (table, uid, title) come from the stored result, so a new
+     * page's uid can be used right away (e.g. as pid of its content elements).
+     *
+     * @param array<mixed> $continuation {outcome: applied|declined, label: string, result: string}
+     * @param list<array<string, mixed>> $history
+     */
+    public static function continuationMessage(array $continuation, array $history = []): string
+    {
+        $label = mb_substr(trim((string) ($continuation['label'] ?? '')), 0, 120);
+        $result = mb_substr(trim((string) ($continuation['result'] ?? '')), 0, 600);
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            if (($history[$i]['role'] ?? '') === 'user') {
+                break;
+            }
+            if (($meta['type'] ?? '') === 'readback_result') {
+                $result = trim($result . self::appliedRecordsNote($meta));
+                break;
+            }
+            // A confirmed tool (create content element, generate image, …): the ids it returned.
+            if (($meta['type'] ?? '') === 'tool_result' && ($meta['autoRan'] ?? true) === false) {
+                $result = trim($result . self::resultRecordsNote($meta['details'] ?? null));
+                break;
+            }
+        }
+        if (($continuation['outcome'] ?? '') === 'declined') {
+            return sprintf(
+                '[The editor declined "%s". Nothing was written.] Do not repeat it. If other steps of my request remain, continue with them;'
+                . ' otherwise ask in one short sentence what to do instead.',
+                $label,
+            );
+        }
+
+        return sprintf(
+            '[The editor confirmed "%s" and it was applied.%s] Continue with the remaining steps of my request.'
+            . ' If nothing is left, confirm in one short sentence without calling tools: the result above is final,'
+            . ' so do not check it again or list what else you can do.',
+            $label,
+            $result !== '' ? ' Result: ' . $result : '',
+        );
+    }
+
+    /**
      * " Records: pages 145 "AI Universe vs Symfony"; tt_content 812" for an applied change, so the
      * model can use a new record's uid (e.g. as pid of its content) without searching for it.
      *
@@ -300,6 +349,43 @@ readonly class AgentPromptBuilder
         }
 
         return $records !== [] ? ' Records: ' . implode('; ', $records) . '.' : '';
+    }
+
+    /** Keys of a tool result that identify what was created or changed. */
+    private const RESULT_ID_KEYS = [
+        'table', 'uid', 'pid', 'pageId', 'pageUid', 'contentUid', 'contentElementUid', 'elementId',
+        'recordUid', 'newUid', 'fileUid', 'referenceUids', 'languageId', 'sysLanguageUid',
+    ];
+
+    /**
+     * " Ids: table tt_content, uid 812, pid 128" from a confirmed tool's result, so the next step
+     * (e.g. attaching an image to the new element) uses the right record.
+     */
+    public static function resultRecordsNote(mixed $details): string
+    {
+        if (!is_array($details)) {
+            return '';
+        }
+        $sources = [$details];
+        foreach (['record', 'result', 'data', 'contentElement', 'page', 'file'] as $key) {
+            if (is_array($details[$key] ?? null) && !array_is_list($details[$key])) {
+                $sources[] = $details[$key];
+            }
+        }
+        $parts = [];
+        foreach ($sources as $source) {
+            foreach (self::RESULT_ID_KEYS as $key) {
+                $value = $source[$key] ?? null;
+                if (is_array($value) && array_is_list($value)) {
+                    $value = implode(',', array_filter($value, 'is_scalar'));
+                }
+                if ((is_int($value) || (is_string($value) && $value !== '' && mb_strlen($value) <= 60)) && !isset($parts[$key])) {
+                    $parts[$key] = $key . ' ' . $value;
+                }
+            }
+        }
+
+        return $parts !== [] ? ' Ids: ' . implode(', ', array_slice($parts, 0, 8)) . '.' : '';
     }
 
     private static function shorten(string $text, int $limit): string

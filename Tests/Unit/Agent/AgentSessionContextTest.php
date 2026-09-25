@@ -20,7 +20,6 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
 use NITSAN\NsT3AF\Agent\Context\AgentContextPresenter;
-use NITSAN\NsT3AF\Agent\Controller\AgentAjaxController;
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
 use NITSAN\NsT3AF\Domain\Repository\AgentConversationRepository;
 use NITSAN\NsT3AF\Mcp\Tool\Agent\AskClarificationTool;
@@ -126,15 +125,12 @@ final class AgentSessionContextTest extends TestCase
     #[Test]
     public function continuationTellsTheModelWhatTheEditorDecided(): void
     {
-        $controller = (new \ReflectionClass(AgentAjaxController::class))->newInstanceWithoutConstructor();
-        $message = new \ReflectionMethod(AgentAjaxController::class, 'continuationMessage');
-
-        $applied = (string) $message->invoke($controller, ['outcome' => 'applied', 'label' => 'Write the meta description', 'result' => 'Saved.']);
+        $applied = AgentPromptBuilder::continuationMessage(['outcome' => 'applied', 'label' => 'Write the meta description', 'result' => 'Saved.']);
         self::assertStringContainsString('confirmed "Write the meta description"', $applied);
         self::assertStringContainsString('Result: Saved.', $applied);
         self::assertStringContainsString('Continue with the remaining steps', $applied);
 
-        $declined = (string) $message->invoke($controller, ['outcome' => 'declined', 'label' => 'Delete a redirect']);
+        $declined = AgentPromptBuilder::continuationMessage(['outcome' => 'declined', 'label' => 'Delete a redirect']);
         self::assertStringContainsString('declined "Delete a redirect"', $declined);
         self::assertStringContainsString('Do not repeat it', $declined);
     }
@@ -178,6 +174,25 @@ final class AgentSessionContextTest extends TestCase
         ]]);
 
         self::assertSame('[Applied] Applied 2 of 2 fields. Records: pages uid 145 "AI Universe vs Symfony" (pid 12).', $history[0]['content']);
+    }
+
+    #[Test]
+    public function aConfirmedToolResultTellsTheModelTheNewIds(): void
+    {
+        $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();
+        $history = $builder->buildHistory([[
+            'role' => 'assistant',
+            'content' => 'Content element created.',
+            'meta' => ['type' => 'tool_result', 'toolCallLabel' => 'Create a content element', 'autoRan' => false, 'details' => ['record' => ['table' => 'tt_content', 'uid' => 812, 'pid' => 128], 'fileUid' => 55]],
+        ]]);
+
+        self::assertSame('[Create a content element] Content element created. Ids: fileUid 55, table tt_content, uid 812, pid 128.', $history[0]['content']);
+        self::assertStringContainsString(
+            'uid 812',
+            AgentPromptBuilder::continuationMessage(['outcome' => 'applied', 'label' => 'Create a content element', 'result' => 'Created.'], [
+                ['role' => 'assistant', 'content' => 'Created.', 'meta' => ['type' => 'tool_result', 'autoRan' => false, 'details' => ['uid' => 812, 'pid' => 128]]],
+            ]),
+        );
     }
 
     #[Test]

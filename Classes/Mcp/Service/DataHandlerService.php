@@ -28,6 +28,7 @@ use const JSON_THROW_ON_ERROR;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
 use Psr\Http\Message\ServerRequestInterface;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
@@ -206,12 +207,22 @@ readonly class DataHandlerService
      * Attach sys_file records to a TCA file field via DataHandler.
      *
      * @param list<int> $fileUids sys_file UIDs to attach
+     * @param int $pid page of the record (references are stored there)
      * @return list<int> UIDs of the created sys_file_reference records
      */
-    public function createFileReferences(string $table, int $recordUid, string $fieldName, array $fileUids): array
+    public function createFileReferences(string $table, int $recordUid, string $fieldName, array $fileUids, int $pid = 0): array
     {
         if ($fileUids === []) {
             throw new \RuntimeException('No file UIDs provided for file reference creation.', 1712002100);
+        }
+
+        // Same visibility as BackendUtility / DCE AfterSaveHook: deleted rows are invisible.
+        if (BackendUtility::getRecord($table, $recordUid) === null) {
+            throw new \RuntimeException(sprintf(
+                'Cannot attach files: %s uid %d was not found (missing or deleted).',
+                $table,
+                $recordUid,
+            ), 1712002101);
         }
 
         $newIds = [];
@@ -227,7 +238,7 @@ readonly class DataHandlerService
                 'tablenames' => $table,
                 'fieldname' => $fieldName,
                 'sorting_foreign' => $index + 1,
-                'pid' => 0,
+                'pid' => max(0, $pid),
             ];
         }
 

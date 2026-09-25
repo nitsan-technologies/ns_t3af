@@ -118,26 +118,50 @@ final class T3afToolbox implements ToolboxInterface
 
     public function execute(ToolCall $toolCall): ToolResult
     {
+        $outcome = 'executed';
+        $result = $this->run($toolCall, $outcome);
+        // For the eval and debugging: every call the model made, also the ones that did not run.
+        $this->state->emit('tool_call', [
+            'tool' => $toolCall->getName(),
+            'arguments' => $toolCall->getArguments(),
+            'outcome' => $outcome,
+        ]);
+
+        return $result;
+    }
+
+    /**
+     * @param string $outcome executed | paused | unavailable | invalid | repeated | refused | stopped
+     */
+    private function run(ToolCall $toolCall, string &$outcome): ToolResult
+    {
         $name = $toolCall->getName();
 
         if ($this->state->isPaused()) {
+            $outcome = 'paused';
+
             return new ToolResult($toolCall, 'Not executed: the editor has to review the previous step first.');
         }
         if ($name === self::FIND_TOOLS) {
             return new ToolResult($toolCall, $this->findTools((string) ($toolCall->getArguments()['query'] ?? '')));
         }
         if (!isset($this->catalog[$name])) {
+            $outcome = 'unavailable';
+
             return new ToolResult($toolCall, sprintf('Tool "%s" is not available to this editor.', $name));
         }
         // A permitted tool the model knows from earlier turns: offer it from now on.
         $definition = $this->definitions[$name] ?? $this->addDefinitions([$this->catalog[$name]])[0] ?? null;
         if ($definition === null) {
+            $outcome = 'unavailable';
+
             return new ToolResult($toolCall, sprintf('Tool "%s" is not available to this editor.', $name));
         }
 
         $validation = $this->runtime->argumentValidator->validate($definition->parameters, $toolCall->getArguments());
         if ($validation['errors'] !== []) {
             $this->state->trace[] = ['tool' => $name, 'invalidArguments' => $validation['errors']];
+            $outcome = 'invalid';
 
             return new ToolResult($toolCall, sprintf(
                 'Not executed: invalid arguments for %s. %s Correct the arguments and call the tool again.',
@@ -163,9 +187,12 @@ final class T3afToolbox implements ToolboxInterface
                     'meta' => ['type' => 'info', 'correlationId' => $this->state->correlationId, 'orchestratorPause' => true],
                 ]);
                 $this->state->pause('repeated_reads');
+                $outcome = 'stopped';
 
                 return new ToolResult($toolCall, 'Not executed: the same reads were repeated too often. The turn ends.');
             }
+
+            $outcome = 'repeated';
 
             return new ToolResult(
                 $toolCall,
@@ -179,6 +206,7 @@ final class T3afToolbox implements ToolboxInterface
         if ($budgetMessage !== null) {
             // First refusals go back to the model, so it answers or prepares the change with
             // what it already has. Only a model that keeps reading pauses the turn.
+            $outcome = 'refused';
             if ($isRead && ++$this->state->budgetRefusals < self::READ_REFUSALS_BEFORE_PAUSE) {
                 return new ToolResult(
                     $toolCall,

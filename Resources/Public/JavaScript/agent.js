@@ -141,6 +141,27 @@ function errorMessage(error) {
 }
 
 /**
+ * Like errorMessage(), but also reads the JSON message of a failed TYPO3 AjaxRequest
+ * (it rejects with the response, not with an Error).
+ *
+ * @param {unknown} error
+ * @returns {Promise<string>}
+ */
+async function errorText(error) {
+  if (error && typeof error === 'object' && typeof error.resolve === 'function') {
+    try {
+      const payload = await error.resolve();
+      if (payload && typeof payload === 'object' && typeof payload.message === 'string' && payload.message.trim() !== '') {
+        return payload.message;
+      }
+    } catch {
+      // Not JSON: fall back to the generic text.
+    }
+  }
+  return errorMessage(error);
+}
+
+/**
  * @param {unknown} value
  * @param {string} fallback
  * @returns {string}
@@ -351,7 +372,51 @@ function resolveBackendContext() {
  * @param {unknown} details
  * @returns {string}
  */
-function renderMediaPreview(details) {
+/**
+ * Thumbnails prepared by the server (meta.previews): the image a result or a prepared change is about.
+ *
+ * @param {Array<{url?: string, href?: string, name?: string, alt?: string}>} previews
+ * @returns {string}
+ */
+function renderImagePreviews(previews) {
+  if (!Array.isArray(previews) || previews.length === 0) {
+    return '';
+  }
+  const safeUrl = (value) => {
+    const url = String(value ?? '').trim();
+    return url !== '' && /^(https?:\/\/|\/)/i.test(url) && !url.startsWith('//') ? url : '';
+  };
+  const items = previews.map((preview) => {
+    const src = safeUrl(preview?.url);
+    if (src === '') {
+      return '';
+    }
+    const href = safeUrl(preview?.href) || src;
+    const name = String(preview?.name ?? '');
+    const alt = String(preview?.alt ?? '');
+    const openLabel = lang('agent.media.open', 'Open image in a new tab');
+    return `<figure class="nst3af-agent-gallery__item">
+      <a href="${escapeHtml(href)}" target="_blank" rel="noopener" title="${escapeHtml(openLabel)}"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt !== '' ? alt : name)}" loading="lazy"></a>
+      <figcaption class="nst3af-agent-gallery__name" title="${escapeHtml(name)}">${escapeHtml(name)}</figcaption>
+    </figure>`;
+  }).join('');
+  if (items === '') {
+    return '';
+  }
+  const single = previews.length === 1 ? ' nst3af-agent-gallery--single' : '';
+  return `<div class="nst3af-agent-gallery${single}">${items}</div>`;
+}
+
+/**
+ * @param {object} details
+ * @param {Array<object>} [previews]
+ * @returns {string}
+ */
+function renderMediaPreview(details, previews = []) {
+  const gallery = renderImagePreviews(previews);
+  if (gallery !== '') {
+    return gallery;
+  }
   if (!details || typeof details !== 'object') {
     return '';
   }
@@ -1895,7 +1960,7 @@ class AgentController {
         this.renderCredits();
       }
     } catch (error) {
-      this.messages.push({ role: 'assistant', content: errorMessage(error), meta: { type: 'error' } });
+      this.messages.push({ role: 'assistant', content: await errorText(error), meta: { type: 'error' } });
     } finally {
       this.isRunning = false;
       this.showProgress(false);
@@ -2289,7 +2354,7 @@ class AgentController {
           ${autoHtml}
         </div>
         <div class="nst3af-agent-msg__body">${renderMessageBody(String(message.content ?? ''))}</div>
-        ${success ? renderMediaPreview(meta.details) : ''}
+        ${success ? renderMediaPreview(meta.details, meta.previews) : ''}
         ${factsHtml}
         ${traceHtml}
         ${extra}
@@ -2393,6 +2458,7 @@ class AgentController {
           <div class="nst3af-agent-suggestions__title">${escapeHtml(lang('agent.suggestions.title', 'Suggestions'))}: ${escapeHtml(toolLabel)}</div>
         </div>
         <p class="nst3af-agent-suggestions__lead">${escapeHtml(String(message.content ?? ''))}</p>
+        ${renderImagePreviews(meta.previews)}
         <p class="nst3af-agent-suggestions__credits" role="note">${escapeHtml(creditHint)}</p>
         <div class="nst3af-agent-suggestions__fields">${fieldRows}</div>
         <div class="nst3af-agent-suggestions__actions">
@@ -2488,6 +2554,7 @@ class AgentController {
           <span class="nst3af-agent-draft__badge">${escapeHtml(lang('agent.draft.previewBadge', 'Preview'))}</span>
         </div>
         <p class="nst3af-agent-draft__lead">${renderMessageBody(String(message.content ?? ''))}</p>
+        ${renderImagePreviews(message.meta?.previews)}
         <div class="nst3af-agent-draft__cols" aria-hidden="true"><span></span><span>${escapeHtml(lang('agent.draft.colCurrent', 'Now'))}</span><span>${escapeHtml(lang('agent.draft.colProposed', 'New'))}</span><span></span></div>
         <div class="nst3af-agent-draft__fields">${rows}</div>
         ${this.renderDraftTarget(isDestructive)}
@@ -2560,6 +2627,7 @@ class AgentController {
           <span class="nst3af-agent-draft__badge">${escapeHtml(lang('agent.draft.previewBadge', 'Preview'))}</span>
         </div>
         <p class="nst3af-agent-tool-confirm__summary">${escapeHtml(summary)}</p>
+        ${renderImagePreviews(message.meta?.previews)}
         ${argsBlock}
         ${this.renderDraftTarget(isDestructive)}
         <div class="nst3af-agent-draft__actions">
@@ -2663,7 +2731,7 @@ class AgentController {
         draft.destructiveArmed = true;
         this.renderStream();
       } catch (error) {
-        const text = errorMessage(error);
+        const text = await errorText(error);
         this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
         this.renderStream();
       } finally {
@@ -2726,6 +2794,7 @@ class AgentController {
           severityLabel: 'Write',
           facts: Array.isArray(presented.facts) ? presented.facts : [],
           details: presented.details ?? null,
+          previews: Array.isArray(presented.previews) ? presented.previews : [],
           autoRan: false,
           correlationId: result.correlationId ?? message.meta?.correlationId ?? '',
           schedulerHandoff: payload.schedulerHandoff ?? null,
@@ -2761,7 +2830,7 @@ class AgentController {
       }
     } catch (error) {
       draft.applying = false;
-      const text = errorMessage(error);
+      const text = await errorText(error);
       this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
       this.renderStream();
     } finally {
@@ -2960,7 +3029,7 @@ class AgentController {
       this.queueContinuation(message, 'applied', String(payload.message ?? ''));
     } catch (error) {
       meta.applying = false;
-      const text = errorMessage(error);
+      const text = await errorText(error);
       this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
       this.renderStream();
     } finally {
@@ -3076,7 +3145,7 @@ class AgentController {
         this.input.focus();
       }
     } catch (error) {
-      const text = errorMessage(error);
+      const text = await errorText(error);
       this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
       this.renderStream();
     } finally {
@@ -3120,7 +3189,7 @@ class AgentController {
       });
       this.renderStream();
     } catch (error) {
-      const text = errorMessage(error);
+      const text = await errorText(error);
       this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
       this.renderStream();
     } finally {
@@ -3188,6 +3257,9 @@ class AgentController {
     btn.dataset.tool = String(tool.name ?? '');
     btn.dataset.action = String(tool.action ?? '');
     btn.dataset.label = String(tool.label ?? tool.name ?? '');
+    if (typeof tool.prompt === 'string' && tool.prompt.trim() !== '') {
+      btn.dataset.prompt = tool.prompt;
+    }
     if (tool.arguments && typeof tool.arguments === 'object') {
       btn.dataset.arguments = JSON.stringify(tool.arguments);
     }
@@ -3231,6 +3303,15 @@ class AgentController {
    * @param {HTMLButtonElement} btn
    */
   async runStarter(btn) {
+    // Context chips carry a request in the editor's language: send it like typed text.
+    const prompt = String(btn.dataset.prompt ?? '').trim();
+    if (prompt !== '' && btn.dataset.locked !== '1') {
+      if (this.input) {
+        this.input.value = prompt;
+      }
+      await this.submitTurn();
+      return;
+    }
     const tool = btn.dataset.tool ?? '';
     const action = btn.dataset.action ?? '';
     if (tool === '' && action === '') {
@@ -3356,7 +3437,7 @@ class AgentController {
         this.greeting = payload.greeting;
       }
     } catch (error) {
-      const text = errorMessage(error);
+      const text = await errorText(error);
       this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
       this.renderStream();
     } finally {

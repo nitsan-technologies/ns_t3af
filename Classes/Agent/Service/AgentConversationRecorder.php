@@ -101,6 +101,7 @@ final readonly class AgentConversationRecorder
                     'severityLabel' => 'Write',
                     'facts' => array_values(is_array($presented['facts'] ?? null) ? $presented['facts'] : []),
                     'details' => $presented['details'] ?? null,
+                    'previews' => array_values(is_array($presented['previews'] ?? null) ? $presented['previews'] : []),
                     'autoRan' => false,
                     'correlationId' => (string) ($result['correlationId'] ?? $meta['correlationId'] ?? ''),
                     'schedulerHandoff' => $handoff,

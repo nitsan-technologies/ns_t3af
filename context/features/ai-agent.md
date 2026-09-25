@@ -16,7 +16,7 @@
 - **Write / destructive tools** — DualMode + Previewable: native preview → suggestions card → context apply (`AgentWriteService::applySuggestions`). Other writes: elicitation draft → DataHandler / confirm invoke.
 - **NL turns** — `AgentRunner`: Symfony AI `Agent` loop; `GovernedPlatform` sends every round through `AiToolCallingServiceInterface` (governance, credits, logs); `T3afToolbox` runs tools with argument validation, budgets and pauses.
 - **Structural routing** — `AgentTurnRouter` (slash / `@` / UI tool chips); free-text NL goes only to `AgentRunner` (no keyword workflows).
-- **Tool selection** — `AgentCoreToolSet` (core + module + recent) and `find_tools` (`AgentToolSearch`: embeddings + BM25); index via `t3af:agent:index-tools`; eval fixtures via `t3af:agent:eval`.
+- **Tool selection** — `AgentCoreToolSet` (core + module + recent) and `find_tools` (`AgentToolSearch`: embeddings + BM25); index via `t3af:agent:index-tools`; eval via `t3af:agent:eval` (`--live` runs `Resources/Private/Agent/Eval/Scenarios/*.json` against providers, see `Documentation/Agent/Eval.md`).
 - **Per-group tool access** — `LimitsConfig::agentReadOnly` / `blockedAgentTools` → `AgentGovernanceGuard::agentToolPolicy()` → locked in `PermittedActionProvider`.
 - **Conversations** — one row per conversation in `tx_nst3af_agent_conversation` (session uuid, home module + page, title, locked provider). `AgentConversationSession` opens the requested or latest one for `agentConversationScope`; conversation list, rename and delete in the window. See `Documentation/Agent/Conversations.md`.
 - **Provider select** — `AgentProviderOptions` (tool-calling providers the editor's groups may use); fixed per conversation after the first answer.
@@ -114,7 +114,8 @@ Draft cards carry `editorLabel` for UI; destructive = two-step confirm.
 
 - Child tools declare `#[McpToolIntent(modules, summary, examples (EN + DE), category)]`; core tools get `searchTerms` (EN + DE) in `Configuration/McpToolMetadata.yaml`.
 - `AgentCoreToolSet` picks the start set; `find_tools` (`AgentToolSearch`) ranks the rest via embeddings + BM25. See `Documentation/Agent/Routing.md`.
-- Starter chips emit MCP tool names + args (`t3ai_generate_all_seo`, `t3aa_update_file_metadata`, …) — not legacy NL flow action ids.
+- Starter chips are context requests in the editor's language (`AgentStarterBuilder::choose`: page → SEO / translate / add content / accessibility; open record → improve / translate; file → alt text / missing alt text / generate image; draft workspace → changes). A click sends the text as a normal message; a chip only shows when a permitted tool can do it.
+- Image previews: `AgentMediaPreviewService` adds `meta.previews` (processed thumbnails, read permission checked) to tool results, suggestion cards and drafts about a file; `agent.js` renders them as a gallery.
 
 ---
 

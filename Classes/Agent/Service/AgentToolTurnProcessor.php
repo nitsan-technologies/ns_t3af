@@ -54,6 +54,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         private AgentToolEditorLabelService $editorLabelService,
         private AgentTranslator $translator,
         private McpToolIntrospectorService $toolIntrospector,
+        private ?AgentMediaPreviewService $mediaPreviews = null,
     ) {}
 
     /**
@@ -222,6 +223,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($details !== null) {
             $meta['details'] = $details;
         }
+        if ($presented['previews'] !== []) {
+            $meta['previews'] = $presented['previews'];
+        }
 
         $handoff = $this->schedulerHandoff->buildHandoffMeta(
             $tool,
@@ -321,6 +325,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($presented['details'] !== null) {
             $meta['details'] = $presented['details'];
         }
+        if ($presented['previews'] !== []) {
+            $meta['previews'] = $presented['previews'];
+        }
 
         return [
             'role' => 'assistant',
@@ -402,6 +409,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'severity' => $severity,
                 'draftId' => $draftId,
                 'suggestions' => $preview->toArray(),
+                'previews' => $this->previewsForChange($arguments, $preview->target),
                 'callCount' => $preview->callCount,
                 'generationPath' => $preview->generationPath,
                 'correlationId' => $correlationId,
@@ -440,6 +448,23 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'content' => $exception->getMessage(),
                 'meta' => ['type' => 'error', 'tool' => $toolName, 'orchestratorPause' => true],
             ];
+        } catch (\InvalidArgumentException $exception) {
+            // Wrong arguments (a record that does not exist, a wrong field): no card, and the turn
+            // goes on so the model can correct the call.
+            return [
+                'role' => 'assistant',
+                'content' => $this->translator->translate('agent.turn.planInvalid', [$exception->getMessage()]),
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => $toolName,
+                    'toolCallLabel' => $this->editorLabelService->resolve($tool),
+                    'severity' => $severity,
+                    'success' => false,
+                    'error' => $exception->getMessage(),
+                    'autoRan' => false,
+                    'facts' => [],
+                ],
+            ];
         } catch (\Throwable $exception) {
             return [
                 'role' => 'assistant',
@@ -466,9 +491,27 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'editorLabel' => $editorLabel,
                 'severity' => $severity,
                 'draft' => $draftCard,
+                'previews' => $this->previewsForChange($arguments, []),
                 'orchestratorPause' => true,
             ],
         ];
+    }
+
+    /**
+     * The image a prepared change is about (alt text / metadata of a file), shown on the card.
+     *
+     * @param array<string, mixed> $arguments
+     * @param array<mixed> $target
+     * @return list<array{fileUid: int, url: string, href: string, name: string, alt: string}>
+     */
+    private function previewsForChange(array $arguments, array $target): array
+    {
+        if (!isset($this->mediaPreviews)) {
+            return [];
+        }
+        $previews = $this->mediaPreviews->forRecord((string) ($target['table'] ?? ''), (int) ($target['uid'] ?? 0));
+
+        return $previews !== [] ? $previews : $this->mediaPreviews->forDetails($arguments);
     }
 
     /**

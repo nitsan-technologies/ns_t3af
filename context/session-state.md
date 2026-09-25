@@ -618,3 +618,11 @@ Provider-driven registration (2026-07): child extensions ship `*AccessCatalogPro
 ## Next
 
 Refer to `context/features/ai-access-roles.md` for wizard/matrix/enforcement details. Use `context/session-state.md` + feature context when extending ACL or child-extension gates.
+
+## AI Agent: starter chips, image previews, live eval (2026-09)
+
+- Starter chips per context (`AgentStarterBuilder`), sent as normal messages; labels `agent.starter.prompt.*` (EN/DE).
+- `AgentMediaPreviewService` → `meta.previews` thumbnails on results / cards (`renderImagePreviews` in `agent.js`).
+- `t3af:agent:eval --live --page=<uid> [--provider=all] [--scenario=04,05] [--report=file.json]`: scenarios in `Resources/Private/Agent/Eval/Scenarios`, judged by `AgentScenarioJudge` (no answer / loops / wrong tools / time). CLI session via `AgentEvalCliEnvironment`.
+- Toolbox emits `tool_call` (with outcome) and `GovernedPlatform` `model_request` events; the SSE stream filters them out.
+- `AgentPromptBuilder::continuationMessage()` (moved from the controller) builds the turn after confirm/decline.

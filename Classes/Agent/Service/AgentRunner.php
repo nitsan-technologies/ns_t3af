@@ -315,18 +315,20 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         $createContent = AgentCoreToolSet::isCreateContentRequest($query);
+        $notAskedFor = array_flip(self::toolsNotAskedFor($query));
         if ($createContent) {
-            $offeredTools = array_values(array_filter(
-                $offeredTools,
-                static fn(array $tool): bool => (string) ($tool['name'] ?? '') !== 'content_delete',
-            ));
+            $notAskedFor['content_delete'] = true;
         }
+        $offeredTools = array_values(array_filter(
+            $offeredTools,
+            static fn(array $tool): bool => !isset($notAskedFor[(string) ($tool['name'] ?? '')]),
+        ));
 
         $offeredNames = array_flip($this->toolNames($offeredTools));
         $candidates = array_values(array_filter(
             $executableTools,
             static fn(array $tool): bool => !isset($offeredNames[(string) ($tool['name'] ?? '')])
-                && (!$createContent || (string) ($tool['name'] ?? '') !== 'content_delete'),
+                && !isset($notAskedFor[(string) ($tool['name'] ?? '')]),
         ));
         try {
             $found = $this->toolSearch->search($query, $candidates, self::REQUEST_TOOLS)['tools'];
@@ -348,6 +350,31 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         ksort($byName);
 
         return array_values($byName);
+    }
+
+    /**
+     * Tools that fit only when the editor says so, and the words that ask for them.
+     * "Create a new subpage" must not end in a copy of another page.
+     *
+     * @var array<string, string>
+     */
+    private const ONLY_WHEN_ASKED = [
+        'pages_copy' => '/\b(copy|copies|duplicate|duplicat\w*|clone|kopier\w*|kopie|dupliz\w*|klon\w*)\b/iu',
+    ];
+
+    /**
+     * @return list<string>
+     */
+    public static function toolsNotAskedFor(string $query): array
+    {
+        $names = [];
+        foreach (self::ONLY_WHEN_ASKED as $name => $pattern) {
+            if (preg_match($pattern, $query) !== 1) {
+                $names[] = $name;
+            }
+        }
+
+        return $names;
     }
 
     /**

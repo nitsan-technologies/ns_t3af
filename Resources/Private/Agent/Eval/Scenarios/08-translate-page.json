@@ -1,0 +1,23 @@
+{
+  "id": "08-translate-page",
+  "title": "Translating a page uses a page translation tool or asks for the language",
+  "requires": [
+    "t3ai_translate_page",
+    "t3ai_translate_page_content",
+    "t3ai_mass_translation_queue_add"
+  ],
+  "turns": [
+    {
+      "message": "Translate this page into German",
+      "expect": {
+        "anyTool": [
+          "t3ai_translate_page",
+          "t3ai_translate_page_content",
+          "t3ai_mass_translation_queue_add",
+          "ask_clarification"
+        ],
+        "card": "orClarification"
+      }
+    }
+  ]
+}

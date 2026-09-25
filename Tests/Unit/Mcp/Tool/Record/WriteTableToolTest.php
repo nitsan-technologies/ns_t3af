@@ -135,4 +135,17 @@ final class WriteTableToolTest extends TestCase
         $backendUser->method('check')->willReturn(true);
         $GLOBALS['BE_USER'] = $backendUser;
     }
+
+    #[Test]
+    public function deleteNeedsNoDataAndBadDataIsExplained(): void
+    {
+        self::assertSame([], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData('', 'delete'));
+        self::assertSame([], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData('not json', 'delete'));
+        self::assertSame([], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData(' ', 'update'));
+        self::assertSame(['title' => 'A'], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData('{"title":"A"}', 'create'));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('data must be a JSON object of field values');
+        \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData('title=A', 'create');
+    }
 }

@@ -59,6 +59,7 @@ use Psr\Http\Message\UploadedFileInterface;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Http\JsonResponse;
@@ -73,6 +74,9 @@ use TYPO3\CMS\Core\Type\Bitmask\Permission;
 final class AgentAjaxController
 {
     private const UPLOAD_MAX_BYTES = 104857600;
+
+    /** Turn events that are not sent to the agent window. */
+    private const INTERNAL_TURN_EVENTS = ['tool_call', 'model_request'];
 
     public function __construct(
         private readonly AgentAvailabilityService $agentAvailability,
@@ -385,7 +389,10 @@ final class AgentAjaxController
                     $correlationId !== '' ? $correlationId : null,
                 );
         } catch (\Throwable $exception) {
-            return new JsonResponse(['ok' => false, 'message' => $exception->getMessage()], 400);
+            // Paths inside the project are shortened; the editor sees what failed, not where it lives.
+            $reason = str_replace(Environment::getProjectPath() . '/', '', $exception->getMessage());
+
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.applyFailedDetail', [$reason])], 400);
         }
 
         $this->auditLogger->logToolInvocation(
@@ -857,7 +864,10 @@ final class AgentAjaxController
                     $correlationId,
                     $turn['history'],
                     function (string $event, array $payload): void {
-                        $this->emitSseEvent($event, $payload);
+                        // tool_call / model_request are for the eval and logs, not for the window.
+                        if (!in_array($event, self::INTERNAL_TURN_EVENTS, true)) {
+                            $this->emitSseEvent($event, $payload);
+                        }
                     },
                 );
 
@@ -977,7 +987,7 @@ final class AgentAjaxController
         $details = is_array($context['details'] ?? null) ? $context['details'] : [];
         $continuation = is_array($body['continuation'] ?? null) ? $body['continuation'] : null;
         if ($continuation !== null) {
-            $message = $this->continuationMessage($continuation, $history);
+            $message = AgentPromptBuilder::continuationMessage($continuation, $history);
         }
         $messages = $history;
         $messages[] = [
@@ -1007,47 +1017,6 @@ final class AgentAjaxController
             'messages' => $messages,
             'provider' => $provider,
         ];
-    }
-
-    /**
-     * The instruction for the turn after the editor confirmed or declined a card (English, like
-     * the system prompt; the reply language rule still applies).
-     *
-     * The records the change wrote (table, uid, title) come from the stored result, so a new
-     * page's uid can be used right away (e.g. as pid of its content elements).
-     *
-     * @param array<mixed> $continuation {outcome: applied|declined, label: string, result: string}
-     * @param list<array<string, mixed>> $history
-     */
-    private function continuationMessage(array $continuation, array $history = []): string
-    {
-        $label = mb_substr(trim((string) ($continuation['label'] ?? '')), 0, 120);
-        $result = mb_substr(trim((string) ($continuation['result'] ?? '')), 0, 600);
-        for ($i = count($history) - 1; $i >= 0; --$i) {
-            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
-            if (($history[$i]['role'] ?? '') === 'user') {
-                break;
-            }
-            if (($meta['type'] ?? '') === 'readback_result') {
-                $result = trim($result . AgentPromptBuilder::appliedRecordsNote($meta));
-                break;
-            }
-        }
-        if (($continuation['outcome'] ?? '') === 'declined') {
-            return sprintf(
-                '[The editor declined "%s". Nothing was written.] Do not repeat it. If other steps of my request remain, continue with them;'
-                . ' otherwise ask in one short sentence what to do instead.',
-                $label,
-            );
-        }
-
-        return sprintf(
-            '[The editor confirmed "%s" and it was applied.%s] Continue with the remaining steps of my request.'
-            . ' If nothing is left, confirm in one short sentence without calling tools: the result above is final,'
-            . ' so do not check it again or list what else you can do.',
-            $label,
-            $result !== '' ? ' Result: ' . $result : '',
-        );
     }
 
     /**

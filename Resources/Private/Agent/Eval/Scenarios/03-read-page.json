@@ -1,0 +1,18 @@
+{
+  "id": "03-read-page",
+  "title": "A question about the page is answered from reads",
+  "turns": [
+    {
+      "message": "What is the title of this page and how many content elements are on it?",
+      "expect": {
+        "anyTool": [
+          "pages_get",
+          "content_list"
+        ],
+        "reply": true,
+        "card": false,
+        "maxToolCalls": 4
+      }
+    }
+  ]
+}
