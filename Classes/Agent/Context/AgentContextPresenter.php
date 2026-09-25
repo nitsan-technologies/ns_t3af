@@ -70,7 +70,7 @@ final readonly class AgentContextPresenter
                 'id' => $resolved->workspaceId,
                 'title' => $this->workspaceListService->resolveTitle($resolved->workspaceId),
                 'live' => $resolved->workspaceId === 0,
-                // The editor works in Live; the agent writes into this draft workspace (agentWorkspaceMode).
+                // The editor works in Live; the agent writes into this workspace chosen under MCP Server > Workspace selection.
                 'fromLive' => $resolved->workspaceId > 0 && $user !== null && (int) $user->workspace === 0,
             ],
             'folder' => $storageUid > 0 && $folderIdentifier !== '' ? ['storageUid' => $storageUid, 'identifier' => $folderIdentifier] : null,
@@ -159,7 +159,7 @@ final readonly class AgentContextPresenter
         $workspace = is_array($details['workspace'] ?? null) ? $details['workspace'] : null;
         if ($workspace !== null) {
             $lines[] = ($workspace['live'] ?? true) === true
-                ? '- Workspace: Live — confirmed changes are visible on the website'
+                ? '- Workspace: none available — the agent never writes to Live, so confirmed changes cannot be applied until an administrator provides a workspace'
                 : sprintf(
                     '- Workspace: "%s" [%d] — confirmed changes go to this draft workspace%s',
                     $workspace['title'] ?? '',

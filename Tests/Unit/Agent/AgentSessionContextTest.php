@@ -70,7 +70,7 @@ final class AgentSessionContextTest extends TestCase
 
         self::assertStringContainsString('- Page: none selected', $block);
         self::assertStringContainsString('- Folder: 1:/user_upload/', $block);
-        self::assertStringContainsString('- Workspace: Live — confirmed changes are visible on the website', $block);
+        self::assertStringContainsString('- Workspace: none available — the agent never writes to Live', $block);
         self::assertSame('', AgentContextPresenter::promptBlock(['pageId' => 3]));
     }
 

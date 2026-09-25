@@ -31,12 +31,11 @@ use PHPUnit\Framework\TestCase;
 final class AgentWorkspaceTargetTest extends TestCase
 {
     #[Test]
-    public function configuredWorkspaceIsUsedOnlyWithAccess(): void
+    public function preferredWorkspaceIsUsedOnlyWithAccess(): void
     {
         $never = static fn(): array => throw new \LogicException('not needed');
 
         self::assertSame(3, AgentWorkspaceTarget::pick(3, $never, static fn(int $uid): bool => $uid === 3));
-        self::assertSame(0, AgentWorkspaceTarget::pick(3, $never, static fn(int $uid): bool => false));
     }
 
     #[Test]
@@ -45,7 +44,15 @@ final class AgentWorkspaceTargetTest extends TestCase
         $candidates = static fn(): array => [1, 2, 5];
 
         self::assertSame(2, AgentWorkspaceTarget::pick(0, $candidates, static fn(int $uid): bool => $uid >= 2));
-        self::assertSame(0, AgentWorkspaceTarget::pick(0, $candidates, static fn(int $uid): bool => false));
+        self::assertSame(2, AgentWorkspaceTarget::pick(4, $candidates, static fn(int $uid): bool => $uid >= 2 && $uid !== 4));
+    }
+
+    #[Test]
+    public function noAccessibleWorkspaceMeansNone(): void
+    {
+        $candidates = static fn(): array => [1, 2];
+
+        self::assertSame(0, AgentWorkspaceTarget::pick(3, $candidates, static fn(int $uid): bool => false));
         self::assertSame(0, AgentWorkspaceTarget::pick(0, static fn(): array => [], static fn(int $uid): bool => true));
     }
 }

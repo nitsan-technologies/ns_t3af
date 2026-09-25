@@ -796,7 +796,7 @@
         <source>Turn stopped: the %1$s tool call limit was reached. Start a new message to continue.</source>
       </trans-unit>
       <trans-unit id="agent.governance.workspaceEnforcementBlocked" resname="agent.governance.workspaceEnforcementBlocked">
-        <source>Your group policy requires workspace-only edits. Switch to a draft workspace before applying changes.</source>
+        <source>The agent never writes to Live and no workspace is available to you. Ask an administrator to create a workspace or give you access, or choose one under MCP Server > Workspace selection.</source>
       </trans-unit>
       <trans-unit id="agent.context.workspace" resname="agent.context.workspace">
         <source>Workspace</source>
@@ -2045,13 +2045,7 @@
         <source>Earlier messages sent to the AI per turn, in tokens (about 4 characters each). Older messages are left out; use "Summarize conversation" to keep them short.</source>
       </trans-unit>
       <trans-unit id="agent.workspace.noAccess" resname="agent.workspace.noAccess">
-        <source>You may not use the workspace the agent writes into. Ask your administrator to give you access or change "Where the agent writes" in the AI Agent settings.</source>
-      </trans-unit>
-      <trans-unit id="extmng.agentWorkspaceMode" resname="extmng.agentWorkspaceMode">
-        <source>Where the agent writes confirmed changes: a draft workspace (reviewed and published later) or the editor's current workspace, which can be Live</source>
-      </trans-unit>
-      <trans-unit id="extmng.agentDraftWorkspaceUid" resname="extmng.agentDraftWorkspaceUid">
-        <source>Draft workspace for agent changes (uid of sys_workspace; 0 = the first workspace the editor may use). Without the workspaces extension or an accessible workspace, changes go Live.</source>
+        <source>You may not use the workspace the agent writes into. Ask your administrator to give you access or pick another workspace under MCP Server > Workspace selection.</source>
       </trans-unit>
       <trans-unit id="agent.turn.repeatedReads" resname="agent.turn.repeatedReads">
         <source>I kept checking the same information without getting further. Tell me a bit more precisely what I should do, for example: Create the page "…" under "Home".</source>

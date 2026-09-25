@@ -61,7 +61,7 @@ readonly class AgentPromptBuilder
             'When the user asks to create, update, translate, or generate content, prefer calling the most specific write tool instead of replying with text only.',
             'When the user asks what you can do, which tools are available, or how you can help, call explain_capabilities.',
             'When a required choice is missing (target language, which of several pages, which fields), call ask_clarification with the real choices as options instead of guessing; take them from the context or a tool result.',
-            'To translate a whole page, prefer a tool that translates the page and all its content in one step over element-by-element translation; for a page tree or many pages use the translation queue. If the editor did not name the languages, offer the site languages from the context as ask_clarification options.',
+            'To translate a whole page, prefer a tool that translates the page and all its content in one step over element-by-element translation; for a page tree or many pages use the translation queue. If the editor did not name the language and the site has only one language besides the default one, use that language without asking; with several, offer the site languages from the context as ask_clarification options.',
             'Write for editors: plain language, no tool names, ids only where they help to identify a record.',
             'Only some tools are offered at first. If none fits the request, call find_tools with a short description of the task before you say that something is not possible.',
             'Never respond with an empty message: call a tool or write a short answer.',

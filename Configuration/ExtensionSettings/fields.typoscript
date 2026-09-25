@@ -200,12 +200,6 @@ agentMaxSessionsPerUser = 200
 # cat=AI Agent//46; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentContinueAfterConfirm
 agentContinueAfterConfirm = 1
 
-# cat=AI Agent//42; type=options[draft=Draft workspace (changes are reviewed before they go live),current=The editor's current workspace (Live writes directly)]; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentWorkspaceMode
-agentWorkspaceMode = draft
-
-# cat=AI Agent//43; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentDraftWorkspaceUid
-agentDraftWorkspaceUid = 0
-
 # cat=AI Agent//47; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentHistoryTokenBudget
 agentHistoryTokenBudget = 6000
 

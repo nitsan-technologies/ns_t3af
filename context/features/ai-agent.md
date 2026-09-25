@@ -150,7 +150,7 @@ Draft cards carry `editorLabel` for UI; destructive = two-step confirm.
 - `agentConversationRetentionDays` (default 90; soft delete, removed 7 days later by `t3af:agent:conversations:cleanup`)
 - `agentContinueAfterConfirm` (default on)
 - `agentHistoryTokenBudget` (default 6000 tokens of replayed history)
-- `agentWorkspaceMode` (`draft` default: from Live, changes go into `agentDraftWorkspaceUid` or the first workspace the editor may use; `current`: the editor's workspace). `AgentWorkspaceTarget`; the workspace switch is per request (`setTemporaryWorkspace`), never the editor's backend workspace.
+- Workspace: no agent setting, and the agent never writes to Live. From Live, confirmed changes go into the editor's **MCP Server > Workspace selection** (`WorkspacePreferenceService`, `be_users.uc['nst3af_mcp_workspace']`); if unset/unusable, the first workspace the editor may use; if none exists and the editor may create one, an "MCP Workspace" is created (`WorkspaceProvisionService`) and remembered. An editor already in a workspace keeps it. No workspace available = apply is refused (`AgentGovernanceGuard::assertDraftApplyAllowed`). `AgentWorkspaceTarget`; the switch is per request (`setTemporaryWorkspace`), never the editor's backend workspace.
 - All `AI Agent` settings also appear in the **AI Agent** card of AI Features (scope `ai agent`).
 - `agentConversationScope` (`page` | `module` | `user`), `agentSessionListEnabled`, `agentSessionListDefaultFilter`, `agentMaxSessionsPerScope` (20), `agentMaxSessionsPerUser` (200)
 

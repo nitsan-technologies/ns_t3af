@@ -48,7 +48,7 @@ readonly class RecordService
         $this->workspaceContext->applyRestriction($queryBuilder, $table);
 
         $row = $queryBuilder
-            ->select(...$fields)
+            ->select(...$this->workspaceContext->withOverlayFields($table, $fields))
             ->from($table)
             ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, ParameterType::INTEGER)))
             ->executeQuery()
@@ -62,6 +62,7 @@ readonly class RecordService
         if ($row === null) {
             return null;
         }
+        $row = $this->workspaceContext->stripOverlayFields($row, $fields);
 
         return $this->relationUidListResolver->enrichRecord($table, $row);
     }
@@ -125,7 +126,7 @@ readonly class RecordService
             ->where($countQueryBuilder->expr()->eq('pid', $countQueryBuilder->createNamedParameter($pid, ParameterType::INTEGER)));
 
         $queryBuilder
-            ->select(...$fields)
+            ->select(...$this->workspaceContext->withOverlayFields($table, $fields))
             ->from($table)
             ->where($queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pid, ParameterType::INTEGER)));
 
@@ -152,6 +153,7 @@ readonly class RecordService
             ->fetchAllAssociative();
 
         $records = $this->workspaceContext->overlayMany($table, $records);
+        $records = array_map(fn(array $r): array => $this->workspaceContext->stripOverlayFields($r, $fields), $records);
         $records = $this->relationUidListResolver->enrichRecords($table, $records);
 
         return [
@@ -203,7 +205,7 @@ readonly class RecordService
         $countQueryBuilder->getRestrictions()->removeAll();
         $this->workspaceContext->applyRestriction($countQueryBuilder, $table);
 
-        $queryBuilder->select(...$fields)->from($table);
+        $queryBuilder->select(...$this->workspaceContext->withOverlayFields($table, $fields))->from($table);
         $countQueryBuilder->count('uid')->from($table);
 
         if ($pid !== null) {
@@ -231,6 +233,7 @@ readonly class RecordService
             ->fetchAllAssociative();
 
         $records = $this->workspaceContext->overlayMany($table, $records);
+        $records = array_map(fn(array $r): array => $this->workspaceContext->stripOverlayFields($r, $fields), $records);
         $records = $this->relationUidListResolver->enrichRecords($table, $records);
 
         return [

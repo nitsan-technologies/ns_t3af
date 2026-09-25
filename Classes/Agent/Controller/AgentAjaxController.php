@@ -325,7 +325,7 @@ final class AgentAjaxController
         $draftId = trim((string) ($body['draftId'] ?? ''));
         $keptFieldKeys = is_array($body['keptFieldKeys'] ?? null) ? array_values(array_map('strval', $body['keptFieldKeys'])) : [];
         $applyMode = trim((string) ($body['applyMode'] ?? 'all'));
-        // A draft workspace by default, also when the client sends Live (agentWorkspaceMode).
+        // The MCP workspace preference, also when the client sends Live.
         $workspaceId = $this->workspaceTarget->resolve((int) ($body['workspaceId'] ?? 0), $user);
         $correlationId = trim((string) ($body['correlationId'] ?? ''));
         $selections = is_array($body['selections'] ?? null) ? $body['selections'] : [];

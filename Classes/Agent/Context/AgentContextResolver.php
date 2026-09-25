@@ -72,7 +72,7 @@ final readonly class AgentContextResolver
         if ($workspaceId <= 0 && $user !== null) {
             $workspaceId = (int) $user->workspace;
         }
-        // Where confirmed changes go (a draft workspace by default, see agentWorkspaceMode).
+        // Where confirmed changes go (the editor's MCP workspace preference, see AgentWorkspaceTarget).
         if ($this->workspaceTarget !== null) {
             $workspaceId = $this->workspaceTarget->resolve($workspaceId, $user);
         }

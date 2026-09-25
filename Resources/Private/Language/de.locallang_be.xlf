@@ -946,8 +946,8 @@
                 <target>Dauer: %1$s</target>
             </trans-unit>
             <trans-unit id="agent.governance.workspaceEnforcementBlocked">
-                <source>Your group policy requires workspace-only edits. Switch to a draft workspace before applying changes.</source>
-                <target>Ihre Gruppenrichtlinie erlaubt nur Änderungen in einem Workspace. Wechseln Sie in einen Draft-Workspace, bevor Sie Änderungen anwenden.</target>
+                <source>The agent never writes to Live and no workspace is available to you. Ask an administrator to create a workspace or give you access, or choose one under MCP Server > Workspace selection.</source>
+                <target>Der Agent schreibt nie in Live und Ihnen steht kein Arbeitsbereich zur Verfügung. Bitten Sie einen Administrator, einen Arbeitsbereich anzulegen oder Ihnen Zugriff zu geben, oder wählen Sie einen unter MCP-Server > Arbeitsbereich-Auswahl.</target>
             </trans-unit>
             <trans-unit id="agent.context.workspace">
                 <source>Workspace</source>
@@ -2578,16 +2578,8 @@
                 <target>Frühere Nachrichten, die pro Anfrage an die KI gehen, in Tokens (etwa 4 Zeichen). Ältere Nachrichten werden weggelassen; mit „Unterhaltung zusammenfassen“ bleiben sie kurz.</target>
             </trans-unit>
             <trans-unit id="agent.workspace.noAccess">
-                <source>You may not use the workspace the agent writes into. Ask your administrator to give you access or change "Where the agent writes" in the AI Agent settings.</source>
-                <target>Sie dürfen den Arbeitsbereich, in den der Agent schreibt, nicht verwenden. Bitten Sie Ihren Administrator um Zugriff oder ändern Sie „Wohin der Agent schreibt“ in den KI-Agent-Einstellungen.</target>
-            </trans-unit>
-            <trans-unit id="extmng.agentWorkspaceMode">
-                <source>Where the agent writes confirmed changes: a draft workspace (reviewed and published later) or the editor's current workspace, which can be Live</source>
-                <target>Wohin der Agent bestätigte Änderungen schreibt: in einen Entwurfs-Arbeitsbereich (später prüfen und veröffentlichen) oder in den aktuellen Arbeitsbereich des Redakteurs, der auch Live sein kann</target>
-            </trans-unit>
-            <trans-unit id="extmng.agentDraftWorkspaceUid">
-                <source>Draft workspace for agent changes (uid of sys_workspace; 0 = the first workspace the editor may use). Without the workspaces extension or an accessible workspace, changes go Live.</source>
-                <target>Entwurfs-Arbeitsbereich für Agent-Änderungen (uid aus sys_workspace; 0 = der erste Arbeitsbereich, den der Redakteur nutzen darf). Ohne die Workspaces-Erweiterung oder einen zugänglichen Arbeitsbereich gehen Änderungen live.</target>
+                <source>You may not use the workspace the agent writes into. Ask your administrator to give you access or pick another workspace under MCP Server > Workspace selection.</source>
+                <target>Sie dürfen den Arbeitsbereich, in den der Agent schreibt, nicht verwenden. Bitten Sie Ihren Administrator um Zugriff oder wählen Sie unter MCP-Server > Arbeitsbereich-Auswahl einen anderen Arbeitsbereich.</target>
             </trans-unit>
             <trans-unit id="agent.turn.repeatedReads">
                 <source>I kept checking the same information without getting further. Tell me a bit more precisely what I should do, for example: Create the page "…" under "Home".</source>
