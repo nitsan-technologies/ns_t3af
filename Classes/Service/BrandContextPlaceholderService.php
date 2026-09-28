@@ -145,6 +145,19 @@ final class BrandContextPlaceholderService
             $label .= ' — ' . $role;
         }
 
+        $details = [];
+        $painPoints = trim((string) ($persona['painPoints'] ?? ''));
+        if ($painPoints !== '') {
+            $details[] = 'Pain points: ' . $painPoints;
+        }
+        $caresAbout = trim((string) ($persona['caresAbout'] ?? ''));
+        if ($caresAbout !== '') {
+            $details[] = 'Cares about: ' . $caresAbout;
+        }
+        if ($details !== []) {
+            $label .= '. ' . implode('. ', $details);
+        }
+
         return $label;
     }
 

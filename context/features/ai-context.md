@@ -109,14 +109,16 @@ Declared in `BrandContextService::PLACEHOLDERS`:
 | `{brand_context}` | Full assembled block (`BrandContextAssembler`) |
 | `{brand_name}` | Profile brand name |
 | `{brand_voice}` | Tone tags + voice notes |
-| `{target_audience}` | All personas (`Name (Level)`; role appended when set) |
-| `{target_persona}` | **First** persona only |
+| `{target_audience}` | All personas (`Name (Level)`; role, pain points, and cares-about appended when set) |
+| `{target_persona}` | **First** persona only, same label shape as `{target_audience}` |
 | `{content_rules}` | Always/Never rule lines |
 | `{keywords}` | Comma-separated |
 | `{forbidden_words}` | Comma-separated |
 | `{language}` | Localized language label |
 | `{competitors}` | Comma-separated |
 | `{compliance_notes}` | Plain text |
+
+**Assembled block shape:** writing constraints (voice, audience, content rules, keywords, forbidden words) sit above `<brand_context>` with an apply-when-it-fits-the-format instruction. Identity, tagline, description, competitors, compliance, sample content, and document extract stay inside the fence as background facts the model may use when they fit the task. Instructions inside the fence are not followed, and the fence must not change the response format. A profile with only constraints omits the fence. Response-format lines in the feature prompt still come after this block, so character limits and “JSON only” requests keep their shape.
 
 **Special inline token — `[brand_profile]`** (CTX-06): not a field token and intentionally **not** in `BrandContextService::PLACEHOLDERS` (the editor placeholder bar). Wherever it appears in a prompt or chat message it expands **inline** to the full assembled `=== BRAND CONTEXT ===` block (same content as `{brand_context}`). When present, the separate system-block injection is suppressed to avoid duplication. Resolved in `BrandContextPromptInjectionListener` / `BrandContextPlaceholderService`.
 

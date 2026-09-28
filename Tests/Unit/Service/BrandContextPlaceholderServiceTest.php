@@ -85,6 +85,22 @@ final class BrandContextPlaceholderServiceTest extends TestCase
         self::assertSame('CTO (Expert); PM (Intermediate)', $map['{target_audience}']);
     }
 
+    public function testAudienceIncludesPainPointsAndCaresAboutWhenSet(): void
+    {
+        $map = $this->service->buildMap($this->makeProfile([
+            'personas' => '[{"name":"CTO","level":"Expert","role":"Buyer","painPoints":"Upgrades break extensions","caresAbout":"Stable APIs"},{"name":"PM","level":"Intermediate"}]',
+        ]));
+
+        self::assertSame(
+            'CTO (Expert) — Buyer. Pain points: Upgrades break extensions. Cares about: Stable APIs',
+            $map['{target_persona}'],
+        );
+        self::assertSame(
+            'CTO (Expert) — Buyer. Pain points: Upgrades break extensions. Cares about: Stable APIs; PM (Intermediate)',
+            $map['{target_audience}'],
+        );
+    }
+
     public function testAssemblerBuildsBrandContextBlock(): void
     {
         $assembler = new BrandContextAssembler($this->service);
