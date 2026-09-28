@@ -632,6 +632,11 @@ const initAiContext = () => {
         renderCompleteness();
       });
     });
+
+    const addPersonaBtn = qs(root, '[data-aiu-context-add-persona]');
+    if (addPersonaBtn instanceof HTMLButtonElement) {
+      addPersonaBtn.disabled = state.personas.length >= 3;
+    }
   };
 
   const renderRules = () => {
@@ -687,6 +692,11 @@ const initAiContext = () => {
         renderCompleteness();
       });
     });
+
+    const addRuleBtn = qs(root, '[data-aiu-context-add-rule]');
+    if (addRuleBtn instanceof HTMLButtonElement) {
+      addRuleBtn.disabled = state.contentRules.length >= 10;
+    }
   };
 
   const renderChips = (key) => {
@@ -772,15 +782,6 @@ const initAiContext = () => {
     clearConfidenceBadges();
     syncHiddenFields();
     renderCompleteness();
-
-    const addPersonaBtn = qs(root, '[data-aiu-context-add-persona]');
-    if (addPersonaBtn instanceof HTMLButtonElement) {
-      addPersonaBtn.disabled = state.personas.length >= 3;
-    }
-    const addRuleBtn = qs(root, '[data-aiu-context-add-rule]');
-    if (addRuleBtn instanceof HTMLButtonElement) {
-      addRuleBtn.disabled = state.contentRules.length >= 10;
-    }
   };
 
   const loadState = (profile, options = {}) => {

@@ -300,6 +300,9 @@
       <trans-unit id="module.aiContext.field.voiceNotesPlaceholder" resname="module.aiContext.field.voiceNotesPlaceholder">
         <source>Describe how your brand should sound in AI-generated content.</source>
       </trans-unit>
+      <trans-unit id="module.aiContext.field.personaLimit" resname="module.aiContext.field.personaLimit">
+        <source>Maximum 3 personas are allowed.</source>
+      </trans-unit>
       <trans-unit id="module.aiContext.field.personaWarning" resname="module.aiContext.field.personaWarning">
         <source>The primary persona (first row) needs both a name and level for the {target_persona} placeholder.</source>
       </trans-unit>

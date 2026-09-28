@@ -399,6 +399,10 @@
                 <source>Describe how your brand should sound in AI-generated content.</source>
                 <target>Beschreiben Sie, wie Ihre Marke in KI-generierten Inhalten klingen soll.</target>
             </trans-unit>
+            <trans-unit id="module.aiContext.field.personaLimit">
+                <source>Maximum 3 personas are allowed.</source>
+                <target>Maximal 3 Personas sind erlaubt.</target>
+            </trans-unit>
             <trans-unit id="module.aiContext.field.personaWarning">
                 <source>The primary persona (first row) needs both a name and level for the {target_persona} placeholder.</source>
                 <target>Die primäre Persona (erste Zeile) benötigt sowohl einen Namen als auch eine Ebene für den Platzhalter {target_persona}.</target>
