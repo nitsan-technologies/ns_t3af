@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Domain\Repository;
 
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\DBAL\ParameterType;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use TYPO3\CMS\Core\Database\Connection;
@@ -222,6 +223,7 @@ final class ProviderRepository implements ProviderRepositoryInterface
         if ($values === []) {
             return $uid;
         }
+        $this->releaseDeletedIdentifierOccupant($uid, $values);
         $now = $GLOBALS['EXEC_TIME'] ?? time();
         $values['tstamp'] = $now;
         $connection = $this->connection();
@@ -238,11 +240,15 @@ final class ProviderRepository implements ProviderRepositoryInterface
 
     public function softDelete(int $uid): void
     {
-        if ($uid <= 0) {
-            return;
-        }
-        $now = $GLOBALS['EXEC_TIME'] ?? time();
-        $this->connection()->update(self::TABLE, ['deleted' => 1, 'tstamp' => $now], ['uid' => $uid]);
+        $this->applyDeletedTombstone($uid);
+    }
+
+    /**
+     * Identifier stored on a soft-deleted row so `(pid, identifier)` can be reused.
+     */
+    public static function tombstoneIdentifier(int $uid): string
+    {
+        return 'deleted-' . $uid;
     }
 
     /**
@@ -260,6 +266,73 @@ final class ProviderRepository implements ProviderRepositoryInterface
         }
         $payload['tstamp'] = $GLOBALS['EXEC_TIME'] ?? time();
         $this->connection()->update(self::TABLE, $payload, ['uid' => $uid]);
+    }
+
+    /**
+     * Rows deleted before identifier tombstones still occupy `provider_identifier_per_site`.
+     * Rewrite those rows before insert/update so the name can be stored again.
+     *
+     * @param array<string, int|float|string|null> $values
+     */
+    private function releaseDeletedIdentifierOccupant(int $uid, array $values): void
+    {
+        $identifier = $values['identifier'] ?? null;
+        if (!is_string($identifier) || $identifier === '') {
+            return;
+        }
+
+        $storagePid = isset($values['pid']) ? (int) $values['pid'] : 0;
+        if ($storagePid <= 0 && $uid > 0) {
+            $existing = $this->findByUid($uid);
+            if ($existing instanceof Provider) {
+                $storagePid = $existing->pid;
+            }
+        }
+        if ($storagePid <= 0) {
+            return;
+        }
+
+        $qb = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
+        $qb->getRestrictions()->removeAll();
+        $blockingUids = $qb->select('uid')
+            ->from(self::TABLE)
+            ->where($qb->expr()->eq('identifier', $qb->createNamedParameter($identifier)))
+            ->andWhere($qb->expr()->eq('pid', $qb->createNamedParameter($storagePid, ParameterType::INTEGER)))
+            ->andWhere($qb->expr()->eq('deleted', $qb->createNamedParameter(1, ParameterType::INTEGER)))
+            ->executeQuery()
+            ->fetchFirstColumn();
+
+        foreach ($blockingUids as $blockingUid) {
+            $blockingUid = (int) $blockingUid;
+            if ($blockingUid > 0 && $blockingUid !== $uid) {
+                $this->applyDeletedTombstone($blockingUid);
+            }
+        }
+    }
+
+    private function applyDeletedTombstone(int $uid): void
+    {
+        if ($uid <= 0) {
+            return;
+        }
+
+        $now = (int) ($GLOBALS['EXEC_TIME'] ?? time());
+        $payload = [
+            'deleted' => 1,
+            'is_default' => 0,
+            'tstamp' => $now,
+        ];
+        try {
+            $this->connection()->update(self::TABLE, [
+                ...$payload,
+                'identifier' => self::tombstoneIdentifier($uid),
+            ], ['uid' => $uid]);
+        } catch (UniqueConstraintViolationException) {
+            $this->connection()->update(self::TABLE, [
+                ...$payload,
+                'identifier' => substr(self::tombstoneIdentifier($uid) . '-' . $now, 0, 64),
+            ], ['uid' => $uid]);
+        }
     }
 
     private function queryBuilder(bool $includeHidden = false): QueryBuilder

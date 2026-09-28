@@ -56,6 +56,10 @@ interface ProviderRepositoryInterface extends ProviderLookupInterface
      */
     public function save(int $uid, array $values): int;
 
+    /**
+     * Marks the row deleted and rewrites `identifier` so the unique
+     * `(pid, identifier)` key no longer blocks a later provider with the same name.
+     */
     public function softDelete(int $uid): void;
 
     public function setDefault(int $uid, int $storagePid): void;
