@@ -408,8 +408,8 @@
                 <target>Persona hinzufügen</target>
             </trans-unit>
             <trans-unit id="module.aiContext.field.contentRulesHint">
-                <source>Define always/never rules injected as {content_rules} in prompts.</source>
-                <target>Definieren Sie Immer/Nie-Regeln, die als {content_rules} in Prompts eingefügt werden.</target>
+                <source>Define always/never rules injected as {content_rules} in prompts. Maximum 10 rules are allowed.</source>
+                <target>Definieren Sie Immer/Nie-Regeln, die als {content_rules} in Prompts eingefügt werden. Maximal 10 Regeln sind erlaubt.</target>
             </trans-unit>
             <trans-unit id="module.aiContext.field.addRule">
                 <source>Add Rule</source>
