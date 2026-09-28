@@ -31,28 +31,29 @@ use PHPUnit\Framework\TestCase;
 final class AgentWorkspaceTargetTest extends TestCase
 {
     #[Test]
-    public function preferredWorkspaceIsUsedOnlyWithAccess(): void
+    public function aChosenWorkspaceIsUsedWhenTheEditorMayUseIt(): void
     {
-        $never = static fn(): array => throw new \LogicException('not needed');
-
-        self::assertSame(3, AgentWorkspaceTarget::pick(3, $never, static fn(int $uid): bool => $uid === 3));
+        self::assertSame(3, AgentWorkspaceTarget::target(3, static fn(int $uid): bool => $uid === 3));
+        self::assertFalse(AgentWorkspaceTarget::unusable(3, static fn(int $uid): bool => true));
     }
 
     #[Test]
-    public function otherwiseTheFirstAccessibleWorkspace(): void
+    public function liveChosenOrNeverChosenMeansLive(): void
     {
-        $candidates = static fn(): array => [1, 2, 5];
+        $canUse = static fn(int $uid): bool => true;
 
-        self::assertSame(2, AgentWorkspaceTarget::pick(0, $candidates, static fn(int $uid): bool => $uid >= 2));
-        self::assertSame(2, AgentWorkspaceTarget::pick(4, $candidates, static fn(int $uid): bool => $uid >= 2 && $uid !== 4));
+        self::assertSame(0, AgentWorkspaceTarget::target(0, $canUse));
+        self::assertSame(0, AgentWorkspaceTarget::target(null, $canUse));
+        self::assertFalse(AgentWorkspaceTarget::unusable(0, $canUse));
+        self::assertFalse(AgentWorkspaceTarget::unusable(null, $canUse));
     }
 
     #[Test]
-    public function noAccessibleWorkspaceMeansNone(): void
+    public function aChosenWorkspaceWithoutAccessIsUnusableAndNotReplaced(): void
     {
-        $candidates = static fn(): array => [1, 2];
+        $canUse = static fn(int $uid): bool => false;
 
-        self::assertSame(0, AgentWorkspaceTarget::pick(3, $candidates, static fn(int $uid): bool => false));
-        self::assertSame(0, AgentWorkspaceTarget::pick(0, static fn(): array => [], static fn(int $uid): bool => true));
+        self::assertSame(0, AgentWorkspaceTarget::target(3, $canUse));
+        self::assertTrue(AgentWorkspaceTarget::unusable(3, $canUse));
     }
 }

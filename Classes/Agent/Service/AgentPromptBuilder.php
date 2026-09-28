@@ -64,6 +64,8 @@ readonly class AgentPromptBuilder
             'To translate a whole page, prefer a tool that translates the page and all its content in one step over element-by-element translation; for a page tree or many pages use the translation queue. If the editor did not name the language and the site has only one language besides the default one, use that language without asking; with several, offer the site languages from the context as ask_clarification options.',
             'Write for editors: plain language, no tool names, ids only where they help to identify a record.',
             'Only some tools are offered at first. If none fits the request, call find_tools with a short description of the task before you say that something is not possible.',
+            'For a request that needs three or more steps (for example create a page, add content, then translate it), call update_plan first with the steps (the first one in_progress), and again after every finished step (mark it completed, start the next). Never for a simple request; never as a substitute for doing the work.',
+            'For a page or record you just created, pass its uid from the applied result (pageId, uid) to the next tool; never guess a pageUrl or slug for it.',
             'Never respond with an empty message: call a tool or write a short answer.',
             'If a tool result says a tool is not available or was not executed, tell the editor in one sentence instead of retrying it.',
             'Use pageId/pid/uid from context when a tool accepts a page or storage folder id.',
@@ -106,6 +108,45 @@ readonly class AgentPromptBuilder
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * Records the editor applied in this conversation (newest first), so a later step can address
+     * them by uid instead of guessing a URL or slug.
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function appliedRecordsBlock(array $historyMessages): string
+    {
+        $records = [];
+        for ($i = count($historyMessages) - 1; $i >= 0 && count($records) < 8; --$i) {
+            $meta = is_array($historyMessages[$i]['meta'] ?? null) ? $historyMessages[$i]['meta'] : [];
+            if (($meta['type'] ?? '') !== 'readback_result') {
+                continue;
+            }
+            $note = trim(self::appliedRecordsNote($meta), ' .');
+            if (str_starts_with($note, 'Records: ')) {
+                foreach (explode('; ', substr($note, strlen('Records: '))) as $record) {
+                    $records[$record] = true;
+                }
+            }
+        }
+
+        return $records === []
+            ? ''
+            : 'Records the editor applied in this conversation (use these uids as pageId / pid / uid, never a guessed URL): '
+                . implode('; ', array_slice(array_keys($records), 0, 8)) . '.';
+    }
+
+    /**
+     * The plan of this conversation as the model last saved it (meta.plan of the newest message that
+     * carries one), as a prompt block; empty when there is none or every step is completed.
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function planBlock(array $historyMessages): string
+    {
+        return AgentPlan::promptBlock(AgentPlan::latest($historyMessages));
     }
 
     /**

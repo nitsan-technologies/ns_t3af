@@ -81,7 +81,7 @@ final class AgentRunnerTest extends TestCase
         self::assertSame('Hallo! Wie kann ich helfen?', $result['messages'][0]['content']);
         self::assertSame('nl_reply', $result['messages'][0]['meta']['type']);
         self::assertSame('gpt-test', $result['messages'][0]['meta']['modelId']);
-        self::assertSame(['pages_get', 'find_tools'], $this->requests[0]['tools']);
+        self::assertSame(['pages_get', 'find_tools', 'update_plan'], $this->requests[0]['tools']);
         self::assertSame('agent.nl_turn', $this->requests[0]['options']->featureKey);
     }
 

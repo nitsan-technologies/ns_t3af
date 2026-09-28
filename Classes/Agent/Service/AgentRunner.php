@@ -107,6 +107,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         [$state, $finalText] = $this->runAgent($userMessage, $historyMessages, $context, $body, $user, $correlationId, $emitEvent, $offeredTools, $executableTools, $severities);
 
+        $state->attachPendingPlan();
+
         if ($state->isCancelled()) {
             $state->addMessage([
                 'role' => 'assistant',
@@ -128,6 +130,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         if ($finalText !== '') {
             $state->emit('delta', ['content' => $finalText]);
+        }
+        // A clean answer (not a question back) means the work is done: no step stays open in the Progress list.
+        if ($finalText !== '' && !str_ends_with($finalText, '?') && AgentPlan::hasOpenSteps($state->plan)) {
+            $state->setPlan(AgentPlan::completeAll($state->plan));
         }
         $state->addMessage([
             'role' => 'assistant',
@@ -172,6 +178,15 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     ): array {
         $finalText = '';
         $state = new AgentTurnState($correlationId, $emitEvent);
+        // The plan of this conversation. A confirmed change finishes its step, even when the model forgets to say so.
+        $plan = AgentPlan::latest($historyMessages);
+        $continuation = is_array($body['continuation'] ?? null) ? $body['continuation'] : [];
+        if ($plan !== [] && ($continuation['outcome'] ?? '') === 'applied' && AgentPlan::hasOpenSteps($plan)) {
+            $plan = AgentPlan::advance($plan);
+            $state->setPlan($plan);
+        } else {
+            $state->plan = $plan;
+        }
         $pageId = (int) ($context['pageId'] ?? 0);
         $providerIdentifier = self::providerFromBody($body);
 
@@ -227,7 +242,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         );
 
         try {
-            $agentResult = $agent->call($this->buildMessages($userMessage, $historyMessages, $context))->getResult();
+            $agentResult = $agent->call($this->buildMessages($userMessage, $historyMessages, $context, $plan))->getResult();
             $content = $agentResult->getContent();
             $finalText = is_string($content) ? trim($content) : '';
         } catch (MaxIterationsExceededException) {
@@ -252,11 +267,20 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     /**
      * @param list<array<string, mixed>> $historyMessages
      * @param array<string, mixed> $context
+     * @param list<array{title: string, status: string}> $plan
      */
-    private function buildMessages(string $userMessage, array $historyMessages, array $context): MessageBag
+    private function buildMessages(string $userMessage, array $historyMessages, array $context, array $plan = []): MessageBag
     {
         $bag = new MessageBag();
         $system = $this->promptBuilder->buildSystemPrompt($context);
+        $appliedBlock = AgentPromptBuilder::appliedRecordsBlock($historyMessages);
+        if ($appliedBlock !== '') {
+            $system .= "\n" . $appliedBlock;
+        }
+        $planBlock = AgentPlan::promptBlock($plan);
+        if ($planBlock !== '') {
+            $system .= "\n" . $planBlock;
+        }
         if ($system !== '') {
             $bag->add(Message::forSystem($system));
         }

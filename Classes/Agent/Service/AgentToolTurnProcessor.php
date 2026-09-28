@@ -521,8 +521,17 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      */
     public function mergeContextArguments(array $arguments, array $context, string $toolName = ''): array
     {
+        // An id and a URL for the same target: the id (e.g. from an applied result) wins, a guessed URL must not contradict it.
+        foreach ([['pageId', 'pageUrl'], ['parentPageId', 'parentPageUrl']] as [$idKey, $urlKey]) {
+            if ((int) ($arguments[$idKey] ?? 0) > 0 && trim((string) ($arguments[$urlKey] ?? '')) !== '') {
+                unset($arguments[$urlKey]);
+            }
+        }
+
         $pageId = (int) ($context['pageId'] ?? 0);
-        if ($pageId > 0) {
+        // The model named another page by URL: the page on screen must not be added as a second, conflicting target.
+        $namesPageByUrl = trim((string) ($arguments['pageUrl'] ?? '')) !== '' && !isset($arguments['pageId']);
+        if ($pageId > 0 && !$namesPageByUrl) {
             $arguments['pageId'] ??= $pageId;
             // Never copy pageId into uid. Also do not force pid onto *_search tools —
             // that scoped site-wide searches to the current page only.

@@ -1967,3 +1967,122 @@
   font-size: 11px;
   color: #6b7280;
 }
+
+/* Progress plan above the input */
+.nst3af-agent-plan {
+  margin: 0 16px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13px;
+}
+
+.nst3af-agent-plan[hidden] {
+  display: none;
+}
+
+.nst3af-agent-plan__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+  list-style: none;
+}
+
+.nst3af-agent-plan__summary::-webkit-details-marker {
+  display: none;
+}
+
+.nst3af-agent-plan__summary::after {
+  content: '▾';
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.nst3af-agent-plan__details:not([open]) > .nst3af-agent-plan__summary::after {
+  content: '▸';
+}
+
+.nst3af-agent-plan__count {
+  margin-left: auto;
+  font-weight: 400;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.nst3af-agent-plan__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 10px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.nst3af-agent-plan__step {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.nst3af-agent-plan__mark {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border: 2px solid #d1d5db;
+  border-radius: 50%;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+  color: #fff;
+}
+
+.nst3af-agent-plan__step--completed .nst3af-agent-plan__mark {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.nst3af-agent-plan__step--completed .nst3af-agent-plan__title {
+  color: #6b7280;
+  text-decoration: line-through;
+}
+
+.nst3af-agent-plan__step--in_progress .nst3af-agent-plan__mark {
+  border-color: #3b82f6;
+  border-top-color: transparent;
+}
+
+.nst3af-agent-plan--running .nst3af-agent-plan__step--in_progress .nst3af-agent-plan__mark {
+  animation: nst3af-agent-plan-spin 0.9s linear infinite;
+}
+
+.nst3af-agent-plan__step--failed .nst3af-agent-plan__mark {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.nst3af-agent-plan__step--failed .nst3af-agent-plan__title {
+  color: #b91c1c;
+}
+
+.nst3af-agent-plan__step--in_progress .nst3af-agent-plan__title {
+  font-weight: 600;
+}
+
+@keyframes nst3af-agent-plan-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nst3af-agent-plan--running .nst3af-agent-plan__step--in_progress .nst3af-agent-plan__mark {
+    animation: none;
+  }
+}

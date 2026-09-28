@@ -325,8 +325,12 @@ final class AgentAjaxController
         $draftId = trim((string) ($body['draftId'] ?? ''));
         $keptFieldKeys = is_array($body['keptFieldKeys'] ?? null) ? array_values(array_map('strval', $body['keptFieldKeys'])) : [];
         $applyMode = trim((string) ($body['applyMode'] ?? 'all'));
-        // The MCP workspace preference, also when the client sends Live.
-        $workspaceId = $this->workspaceTarget->resolve((int) ($body['workspaceId'] ?? 0), $user);
+        // The MCP workspace selection decides when the editor is in Live (Live itself is a valid choice).
+        $requestedWorkspaceId = (int) ($body['workspaceId'] ?? 0);
+        $workspaceId = $this->workspaceTarget->resolve($requestedWorkspaceId, $user);
+        if ($this->workspaceTarget->isPreferredWorkspaceUnusable($requestedWorkspaceId, $user)) {
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.workspace.noAccess')], 403);
+        }
         $correlationId = trim((string) ($body['correlationId'] ?? ''));
         $selections = is_array($body['selections'] ?? null) ? $body['selections'] : [];
         $edits = is_array($body['edits'] ?? null) ? $body['edits'] : [];

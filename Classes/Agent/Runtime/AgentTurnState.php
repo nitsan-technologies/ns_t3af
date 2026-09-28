@@ -60,6 +60,11 @@ final class AgentTurnState
     /** The provider call or the loop failed; the error message is already in {@see $messages}. */
     public bool $failed = false;
 
+    /** @var list<array{title: string, status: string}> the plan the model keeps up to date (update_plan) */
+    public array $plan = [];
+
+    private bool $planChanged = false;
+
     private ?string $pauseReason = null;
 
     private ?string $cancelledReason = null;
@@ -77,8 +82,41 @@ final class AgentTurnState
      */
     public function addMessage(array $message): void
     {
+        // The plan travels with the next assistant message, so it is saved with the conversation.
+        if ($this->planChanged && ($message['role'] ?? '') === 'assistant') {
+            $message['meta']['plan'] = $this->plan;
+            $this->planChanged = false;
+        }
         $this->messages[] = $message;
         $this->emit('message', ['message' => $message]);
+    }
+
+    /**
+     * @param list<array{title: string, status: string}> $steps
+     */
+    public function setPlan(array $steps): void
+    {
+        $this->plan = $steps;
+        $this->planChanged = true;
+        $this->emit('plan', ['steps' => $steps]);
+    }
+
+    /**
+     * Saves a plan change that no later assistant message carries onto the newest one.
+     */
+    public function attachPendingPlan(): void
+    {
+        if (!$this->planChanged) {
+            return;
+        }
+        for ($i = count($this->messages) - 1; $i >= 0; --$i) {
+            if (($this->messages[$i]['role'] ?? '') === 'assistant') {
+                $this->messages[$i]['meta']['plan'] = $this->plan;
+                $this->planChanged = false;
+
+                return;
+            }
+        }
     }
 
     /**

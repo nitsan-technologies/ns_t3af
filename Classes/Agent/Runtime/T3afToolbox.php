@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Runtime;
 
+use NITSAN\NsT3AF\Agent\Service\AgentPlan;
 use NITSAN\NsT3AF\Api\AiToolDefinition;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Tool\Agent\AskClarificationTool;
@@ -53,6 +54,12 @@ final class T3afToolbox implements ToolboxInterface
     public const FIND_TOOLS = 'find_tools';
 
     public const ASK_CLARIFICATION = 'ask_clarification';
+
+    public const UPDATE_PLAN = 'update_plan';
+
+    private const PLAN_MAX_STEPS = 10;
+
+    private const PLAN_STATUSES = ['pending', 'in_progress', 'completed'];
 
     public const MAX_TOOL_SEARCHES = 3;
 
@@ -113,6 +120,8 @@ final class T3afToolbox implements ToolboxInterface
             $tools[] = $this->tool(self::FIND_TOOLS, self::findToolsDescription(), self::findToolsParameters());
         }
 
+        $tools[] = $this->tool(self::UPDATE_PLAN, self::updatePlanDescription(), self::updatePlanParameters());
+
         return $tools;
     }
 
@@ -137,6 +146,10 @@ final class T3afToolbox implements ToolboxInterface
     {
         $name = $toolCall->getName();
 
+        // A plan update is not a change: it also counts after a step paused the turn for review.
+        if ($name === self::UPDATE_PLAN) {
+            return new ToolResult($toolCall, $this->updatePlan($toolCall->getArguments()));
+        }
         if ($this->state->isPaused()) {
             $outcome = 'paused';
 
@@ -235,6 +248,11 @@ final class T3afToolbox implements ToolboxInterface
         // Cards from a natural-language turn continue the turn after the editor confirms / declines.
         $message['meta']['fromRunner'] = true;
         $this->state->addMessage($message);
+        // The step that was running failed: the Progress list shows it instead of spinning on.
+        if (($message['meta']['type'] ?? '') === 'error' && $this->state->plan !== []) {
+            $this->state->setPlan(AgentPlan::failCurrent($this->state->plan));
+            $this->state->attachPendingPlan();
+        }
 
         $pauseReason = $this->runtime->pausePolicy->pauseReason($message);
         if ($pauseReason !== null) {
@@ -263,6 +281,80 @@ final class T3afToolbox implements ToolboxInterface
     {
         return 'Search all TYPO3 backend tools this editor may use, by what should be done (any language).'
             . ' Use it when none of the offered tools fits the request. The found tools can be called in the next step.';
+    }
+
+    public static function updatePlanDescription(): string
+    {
+        return 'Show the editor your plan for a request that needs three or more steps, and keep it up to date.'
+            . ' Send the complete list every time: one step in_progress, finished steps completed, the rest pending.'
+            . ' Call it first, then again whenever a step is done. Do not use it for simple requests.';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function updatePlanParameters(): array
+    {
+        return [
+            'type' => 'object',
+            'properties' => [
+                'steps' => [
+                    'type' => 'array',
+                    'description' => 'All steps in order, each a short phrase in the editor\'s language (max ' . self::PLAN_MAX_STEPS . ').',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'title' => ['type' => 'string'],
+                            'status' => ['type' => 'string', 'enum' => self::PLAN_STATUSES],
+                        ],
+                        'required' => ['title', 'status'],
+                    ],
+                ],
+            ],
+            'required' => ['steps'],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    private function updatePlan(array $arguments): string
+    {
+        $raw = $arguments['steps'] ?? [];
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : [];
+        }
+        $steps = [];
+        $active = false;
+        foreach (is_array($raw) ? $raw : [] as $step) {
+            if (is_string($step)) {
+                $step = ['title' => $step];
+            }
+            if (!is_array($step)) {
+                continue;
+            }
+            $title = trim((string) ($step['title'] ?? ''));
+            if ($title === '') {
+                continue;
+            }
+            $status = (string) ($step['status'] ?? 'pending');
+            $status = in_array($status, self::PLAN_STATUSES, true) ? $status : 'pending';
+            // One step at a time is in progress.
+            if ($status === 'in_progress') {
+                $status = $active ? 'pending' : 'in_progress';
+                $active = true;
+            }
+            $steps[] = ['title' => mb_substr($title, 0, 120), 'status' => $status];
+            if (count($steps) >= self::PLAN_MAX_STEPS) {
+                break;
+            }
+        }
+        $this->state->setPlan($steps);
+
+        return $steps === []
+            ? 'Plan cleared.'
+            : 'Plan saved. Carry on with the step that is in progress and update the plan when it is done.';
     }
 
     /**
@@ -407,7 +499,7 @@ final class T3afToolbox implements ToolboxInterface
             $name,
             $description,
             null,
-            ['severity' => $name === self::FIND_TOOLS ? ToolSeverity::Read->value : $this->severityOf($name), 'parameters' => $parameters],
+            ['severity' => $name === self::FIND_TOOLS || $name === self::UPDATE_PLAN ? ToolSeverity::Read->value : $this->severityOf($name), 'parameters' => $parameters],
         );
     }
 

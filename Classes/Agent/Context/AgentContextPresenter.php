@@ -159,7 +159,7 @@ final readonly class AgentContextPresenter
         $workspace = is_array($details['workspace'] ?? null) ? $details['workspace'] : null;
         if ($workspace !== null) {
             $lines[] = ($workspace['live'] ?? true) === true
-                ? '- Workspace: none available — the agent never writes to Live, so confirmed changes cannot be applied until an administrator provides a workspace'
+                ? '- Workspace: Live — confirmed changes are visible on the website'
                 : sprintf(
                     '- Workspace: "%s" [%d] — confirmed changes go to this draft workspace%s',
                     $workspace['title'] ?? '',

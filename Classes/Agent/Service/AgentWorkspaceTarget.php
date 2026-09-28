@@ -19,22 +19,18 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Service;
 
-use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
 use NITSAN\NsT3AF\Mcp\Service\WorkspacePreferenceService;
-use NITSAN\NsT3AF\Mcp\Service\WorkspaceProvisionService;
 use NITSAN\NsT3AF\Utility\AiUniverseUtilityHelper;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
- * Where confirmed agent changes are written: never Live.
+ * Where confirmed agent changes are written: the same place as the MCP server.
  *
- * Uses the same workspace as the MCP server ("MCP Server > Workspace selection", stored per
- * backend user by `WorkspacePreferenceService`). Resolution order for an editor working in Live:
- * the preferred workspace if the editor may use it; otherwise the first existing workspace the
- * editor may use (remembered as the preference); otherwise, when no workspace exists at all and
- * the editor may create one, an "MCP Workspace" is created (as in the MCP module) and remembered.
- * An editor already in a workspace keeps it. 0 means no workspace is available: the caller must
- * refuse the write (see `AgentGovernanceGuard::assertDraftApplyAllowed`).
+ * An editor already working in a workspace keeps it. From Live, the choice under
+ * "MCP Server > Workspace selection" (`WorkspacePreferenceService`) decides: a workspace = the
+ * changes go there, Live chosen explicitly (or never chosen) = they go Live. A chosen workspace the
+ * editor may not use is not replaced by another one: the caller refuses the write
+ * (see {@see self::isPreferredWorkspaceUnusable()}).
  *
  * @internal
  */
@@ -42,78 +38,49 @@ final readonly class AgentWorkspaceTarget
 {
     public function __construct(
         private WorkspacePreferenceService $preference,
-        private WorkspaceListService $workspaceList,
-        private WorkspaceProvisionService $provision,
     ) {}
 
     public function resolve(int $currentWorkspaceId, ?BackendUserAuthentication $user): int
     {
-        if ($currentWorkspaceId > 0 || $user === null) {
+        if ($currentWorkspaceId > 0 || $user === null || !AiUniverseUtilityHelper::isExtensionLoaded('workspaces')) {
             return max(0, $currentWorkspaceId);
         }
-        if (!AiUniverseUtilityHelper::isExtensionLoaded('workspaces')) {
-            return 0;
-        }
 
-        $preferred = $this->preference->getForUser((int) ($user->user['uid'] ?? 0));
-        $canUse = static fn(int $uid): bool => $user->checkWorkspace($uid) !== false;
-        $uid = self::pick(
-            $preferred,
-            fn(): array => array_values(array_filter(
-                array_map(static fn(array $w): int => $w['uid'], $this->workspaceList->list()),
-                static fn(int $u): bool => $u > 0,
-            )),
-            $canUse,
+        return self::target(
+            $this->preference->getStoredForBackendUser($user),
+            static fn(int $uid): bool => $user->checkWorkspace($uid) !== false,
         );
-        if ($uid > 0) {
-            $this->remember($uid, $preferred);
-
-            return $uid;
-        }
-        if ($this->provision->hasDraftWorkspace() || !$this->provision->canUserCreateWorkspaces($user)) {
-            return 0;
-        }
-
-        try {
-            $uid = $this->provision->createMcpWorkspace($user);
-        } catch (\Throwable) {
-            return 0;
-        }
-        $this->remember($uid, $preferred);
-
-        return $uid;
     }
 
     /**
-     * The preferred workspace if the editor may use it, otherwise the first workspace the
-     * editor may use; 0 = none.
-     *
-     * @param callable(): list<int> $candidates
-     * @param callable(int): bool $canUse
+     * True when the editor is in Live and the MCP workspace selection names a workspace they
+     * may not use (or that no longer exists).
      */
-    public static function pick(int $preferred, callable $candidates, callable $canUse): int
+    public function isPreferredWorkspaceUnusable(int $currentWorkspaceId, BackendUserAuthentication $user): bool
     {
-        if ($preferred > 0 && $canUse($preferred)) {
-            return $preferred;
-        }
-        foreach ($candidates() as $uid) {
-            if ($uid > 0 && $canUse($uid)) {
-                return $uid;
-            }
+        if ($currentWorkspaceId > 0 || !AiUniverseUtilityHelper::isExtensionLoaded('workspaces')) {
+            return false;
         }
 
-        return 0;
+        return self::unusable(
+            $this->preference->getStoredForBackendUser($user),
+            static fn(int $uid): bool => $user->checkWorkspace($uid) !== false,
+        );
     }
 
-    private function remember(int $uid, int $previous): void
+    /**
+     * @param callable(int): bool $canUse
+     */
+    public static function target(?int $stored, callable $canUse): int
     {
-        if ($uid === $previous) {
-            return;
-        }
-        try {
-            $this->preference->saveForCurrentUser($uid);
-        } catch (\Throwable) {
-            // Not fatal: the choice is only remembered for the MCP module.
-        }
+        return $stored !== null && $stored > 0 && $canUse($stored) ? $stored : 0;
+    }
+
+    /**
+     * @param callable(int): bool $canUse
+     */
+    public static function unusable(?int $stored, callable $canUse): bool
+    {
+        return $stored !== null && $stored > 0 && !$canUse($stored);
     }
 }

@@ -946,8 +946,8 @@
                 <target>Dauer: %1$s</target>
             </trans-unit>
             <trans-unit id="agent.governance.workspaceEnforcementBlocked">
-                <source>The agent never writes to Live and no workspace is available to you. Ask an administrator to create a workspace or give you access, or choose one under MCP Server > Workspace selection.</source>
-                <target>Der Agent schreibt nie in Live und Ihnen steht kein Arbeitsbereich zur Verfügung. Bitten Sie einen Administrator, einen Arbeitsbereich anzulegen oder Ihnen Zugriff zu geben, oder wählen Sie einen unter MCP-Server > Arbeitsbereich-Auswahl.</target>
+                <source>Your group policy requires workspace-only edits. Switch to a draft workspace before applying changes.</source>
+                <target>Ihre Gruppenrichtlinie erlaubt nur Änderungen in einem Workspace. Wechseln Sie in einen Draft-Workspace, bevor Sie Änderungen anwenden.</target>
             </trans-unit>
             <trans-unit id="agent.context.workspace">
                 <source>Workspace</source>
@@ -2578,8 +2578,12 @@
                 <target>Frühere Nachrichten, die pro Anfrage an die KI gehen, in Tokens (etwa 4 Zeichen). Ältere Nachrichten werden weggelassen; mit „Unterhaltung zusammenfassen“ bleiben sie kurz.</target>
             </trans-unit>
             <trans-unit id="agent.workspace.noAccess">
-                <source>You may not use the workspace the agent writes into. Ask your administrator to give you access or pick another workspace under MCP Server > Workspace selection.</source>
-                <target>Sie dürfen den Arbeitsbereich, in den der Agent schreibt, nicht verwenden. Bitten Sie Ihren Administrator um Zugriff oder wählen Sie unter MCP-Server > Arbeitsbereich-Auswahl einen anderen Arbeitsbereich.</target>
+                <source>The workspace selected under MCP Server > Workspace selection is not available to you. Ask your administrator for access or pick another workspace there.</source>
+                <target>Den unter MCP-Server > Arbeitsbereich-Auswahl gewählten Arbeitsbereich dürfen Sie nicht verwenden. Bitten Sie Ihren Administrator um Zugriff oder wählen Sie dort einen anderen Arbeitsbereich.</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.title">
+                <source>Progress</source>
+                <target>Fortschritt</target>
             </trans-unit>
             <trans-unit id="agent.turn.repeatedReads">
                 <source>I kept checking the same information without getting further. Tell me a bit more precisely what I should do, for example: Create the page "…" under "Home".</source>

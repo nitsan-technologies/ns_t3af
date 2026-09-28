@@ -817,6 +817,19 @@ class AgentController {
     this.backdrop = root.querySelector('[data-nst3af-agent-backdrop]');
     this.panel = root.querySelector('[data-nst3af-agent-panel]');
     this.stream = root.querySelector('[data-nst3af-agent-stream]');
+    this.planPanel = root.querySelector('[data-nst3af-agent-plan]');
+    // Plan sent live by the running turn; null = use the newest plan saved in the messages.
+    this.livePlan = null;
+    // null = automatic (open while steps remain), true/false = the editor's choice
+    this.planOpen = null;
+    this.planPanel?.addEventListener('click', (event) => {
+      const summary = event.target instanceof Element ? event.target.closest('summary') : null;
+      const details = summary?.parentElement;
+      if (details instanceof HTMLDetailsElement) {
+        // The click toggles it right after this handler, so the new state is the opposite.
+        this.planOpen = !details.open;
+      }
+    });
     this.contextEl = root.querySelector('[data-nst3af-agent-context]');
     this.disclosure = root.querySelector('[data-nst3af-agent-disclosure]');
     this.input = root.querySelector('[data-nst3af-agent-input]');
@@ -935,6 +948,7 @@ class AgentController {
    * @param {{sessionUuid?: string, fresh?: boolean}} [options]
    */
   async reloadSessionForCurrentScope(options = {}) {
+    this.livePlan = null;
     this.isLoadingSession = true;
     this.panel?.setAttribute('aria-busy', 'true');
     this.renderLoadingSkeleton();
@@ -1246,6 +1260,7 @@ class AgentController {
     this.starters = { executable: [], locked: [] };
     this.contextNotice = '';
     this.closeDrawers();
+    this.livePlan = null;
     this.isLoadingSession = true;
     this.panel.setAttribute('aria-busy', 'true');
     this.renderLoadingSkeleton();
@@ -2094,10 +2109,70 @@ class AgentController {
     await this.saveDisclosure();
   }
 
+  get isRunning() {
+    return this._isRunning === true;
+  }
+
+  set isRunning(value) {
+    this._isRunning = value === true;
+    // The spinner of the current step only turns while the agent is working.
+    this.planPanel?.classList.toggle('nst3af-agent-plan--running', this._isRunning);
+  }
+
+  /**
+   * The plan the agent is working through: the live one while a turn runs, otherwise the newest
+   * plan saved with the conversation.
+   *
+   * @returns {Array<{title: string, status: string}>}
+   */
+  currentPlan() {
+    if (Array.isArray(this.livePlan)) {
+      return this.livePlan;
+    }
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      const plan = this.messages[i]?.meta?.plan;
+      if (Array.isArray(plan)) {
+        return plan;
+      }
+    }
+    return [];
+  }
+
+  /**
+   * "Progress" checklist above the input: done steps checked, the current step marked, the rest open.
+   */
+  renderPlan() {
+    if (!this.planPanel) {
+      return;
+    }
+    const steps = this.currentPlan();
+    if (steps.length === 0) {
+      this.planPanel.hidden = true;
+      this.planPanel.innerHTML = '';
+      return;
+    }
+    const done = steps.filter((step) => step.status === 'completed').length;
+    const open = this.planOpen ?? done < steps.length;
+    const items = steps.map((step) => {
+      const status = ['completed', 'in_progress', 'failed'].includes(step.status) ? step.status : 'pending';
+      const mark = status === 'completed' ? '✓' : (status === 'failed' ? '✕' : '');
+      const current = status === 'in_progress' ? ' aria-current="step"' : '';
+      return `<li class="nst3af-agent-plan__step nst3af-agent-plan__step--${status}"${current}>`
+        + `<span class="nst3af-agent-plan__mark" aria-hidden="true">${mark}</span>`
+        + `<span class="nst3af-agent-plan__title">${escapeHtml(String(step.title ?? ''))}</span></li>`;
+    }).join('');
+    this.planPanel.hidden = false;
+    this.planPanel.innerHTML = `<details class="nst3af-agent-plan__details"${open ? ' open' : ''}>`
+      + `<summary class="nst3af-agent-plan__summary"><span>${escapeHtml(lang('agent.plan.title', 'Progress'))}</span>`
+      + `<span class="nst3af-agent-plan__count">${done}/${steps.length}</span></summary>`
+      + `<ol class="nst3af-agent-plan__list">${items}</ol></details>`;
+  }
+
   renderStream() {
     if (!this.stream || this.isLoadingSession) {
       return;
     }
+    this.renderPlan();
 
     this.stream.removeAttribute('aria-busy');
     const currentPageId = Number(this.context.pageId ?? 0);
@@ -3519,6 +3594,12 @@ class AgentController {
           label = lang('agent.live.runningTool', 'Running %1$s…').replace('%1$s', String(data.label || data.tool));
         }
         this.updateProgressLabel(label);
+        return;
+      }
+
+      if (eventName === 'plan') {
+        this.livePlan = Array.isArray(data.steps) ? data.steps : [];
+        this.renderPlan();
         return;
       }
 

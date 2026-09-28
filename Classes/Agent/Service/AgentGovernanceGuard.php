@@ -207,7 +207,10 @@ final readonly class AgentGovernanceGuard
 
     public function assertDraftApplyAllowed(BackendUserAuthentication $user, int $workspaceId): ?string
     {
-        // Agent changes are never written to Live, whatever the group policy says.
+        if (!$this->requiresWorkspaceEnforcement($user)) {
+            return null;
+        }
+
         if ($workspaceId > 0) {
             return null;
         }
