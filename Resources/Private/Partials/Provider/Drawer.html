@@ -269,19 +269,10 @@
                 </f:if>
                     <f:for each="{allCapabilities}" as="capability">
                         <f:variable name="capChecked" value="0" />
-                        <f:if condition="{selectedCapabilities} != ''">
-                            <f:then>
-                                <f:if condition="{aiu:contains(subject: selectedCapabilities, value: capability)}">
-                                    <f:variable name="capChecked" value="1" />
-                                </f:if>
-                            </f:then>
-                            <f:else>
-                                <f:if condition="{provider.uid} > 0">
-                                    <f:if condition="{provider.hasCapability(capability)} == 1">
-                                        <f:variable name="capChecked" value="1" />
-                                    </f:if>
-                                </f:if>
-                            </f:else>
+                        <f:if condition="{selectedCapabilities}">
+                            <aiu:contains subject="{selectedCapabilities}" value="{capability}">
+                                <f:variable name="capChecked" value="1" />
+                            </aiu:contains>
                         </f:if>
                         <div class="form-group">
                             <div class="form-check">
