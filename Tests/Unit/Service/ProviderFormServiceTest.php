@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Service;
 
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
 use NITSAN\NsT3AF\Provider\AdapterRegistry;
@@ -120,6 +121,28 @@ final class ProviderFormServiceTest extends TestCase
 
         self::assertFalse($result->ok);
         self::assertSame('Identifier "taken" is already in use.', $result->errors['identifier']);
+    }
+
+    public function testUniqueConstraintOnSaveReturnsIdentifierError(): void
+    {
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $repo->expects(self::once())->method('save')->willThrowException(new UniqueConstraintViolationException(
+            $this->createMock(\Doctrine\DBAL\Driver\Exception::class),
+            null,
+        ));
+        $repo->expects(self::never())->method('setDefault');
+
+        $service = new ProviderFormService($repo, new AdapterRegistry([$this->fakeAdapter()]), new CredentialCipher());
+        $result = $service->save(0, [
+            'identifier' => 'Openai',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => 'sk-plain-secret',
+        ], 1);
+
+        self::assertFalse($result->ok);
+        self::assertSame('Identifier "Openai" is already in use.', $result->errors['identifier']);
     }
 
     public function testOpenAiCompatibleRequiresEndpointUrl(): void
