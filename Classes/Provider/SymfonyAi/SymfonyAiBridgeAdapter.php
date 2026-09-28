@@ -812,10 +812,14 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         // Factory classes may be absent while the PlatformInterface is still
         // loadable (Composer/phar modes). Build FQNs dynamically so this stays
         // a real runtime probe across install modes.
+        // class_exists() is false for interfaces on PHP 8.2+, so probe both.
         $platformInterface = implode('\\', ['Symfony', 'AI', 'Platform', 'PlatformInterface']);
         $scopedPlatformInterface = self::VENDOR_PREFIX . $platformInterface;
 
-        return class_exists($platformInterface) || class_exists($scopedPlatformInterface);
+        return class_exists($platformInterface)
+            || interface_exists($platformInterface)
+            || class_exists($scopedPlatformInterface)
+            || interface_exists($scopedPlatformInterface);
     }
 
     private function expectedFactoryFqcn(): string
@@ -838,7 +842,9 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
      *   1. The exact FQN supplied by PlatformRegistry (classic/phar mode) — authoritative,
      *      correctly cased (e.g. `…\Bridge\OpenAi\Factory`), so it survives the
      *      phar's case-sensitive classmap-authoritative autoloader.
-     *   2. Derived un-scoped + vendor-prefixed guesses (Composer mode, or as a fallback).
+     *   2. Azure's nested OpenAI factory. pascalVendor() yields Bridge\Azure\Factory,
+     *      which symfony/ai-azure-platform does not ship.
+     *   3. Derived un-scoped + vendor-prefixed guesses (Composer mode, or as a fallback).
      *
      * @return list<string>
      */
@@ -847,6 +853,11 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         $out = [];
         if ($this->descriptor->factoryClass !== null) {
             $out[] = $this->descriptor->factoryClass;
+        }
+
+        if ($this->canonicalTypeKey($this->descriptor->type) === 'symfony.azure') {
+            $out[] = self::AZURE_FACTORY_FQCN;
+            $out[] = self::VENDOR_PREFIX . self::AZURE_FACTORY_FQCN;
         }
 
         $base = [
