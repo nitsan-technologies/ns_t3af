@@ -747,6 +747,18 @@
       <trans-unit id="agent.live.thinking" resname="agent.live.thinking">
         <source>Thinking…</source>
       </trans-unit>
+      <trans-unit id="agent.live.thinking2" resname="agent.live.thinking2">
+        <source>Reasoning…</source>
+      </trans-unit>
+      <trans-unit id="agent.live.thinking3" resname="agent.live.thinking3">
+        <source>Working it out…</source>
+      </trans-unit>
+      <trans-unit id="agent.live.thinking4" resname="agent.live.thinking4">
+        <source>Piecing it together…</source>
+      </trans-unit>
+      <trans-unit id="agent.live.thinking5" resname="agent.live.thinking5">
+        <source>One moment…</source>
+      </trans-unit>
       <trans-unit id="agent.live.runningTool" resname="agent.live.runningTool">
         <source>Running %1$s…</source>
       </trans-unit>
