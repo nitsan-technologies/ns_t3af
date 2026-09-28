@@ -363,6 +363,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if ($createContent) {
             $found = [...self::createContentTools($executableTools, $offeredNames), ...$found];
         }
+        if (AgentPromptBuilder::pendingImageAttachNote($historyMessages) !== '') {
+            $found = [...self::pendingAttachTools($executableTools, $offeredNames), ...$found];
+        }
 
         $byName = [];
         foreach ([...$offeredTools, ...$found] as $tool) {
@@ -374,6 +377,28 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         ksort($byName);
 
         return array_values($byName);
+    }
+
+    /**
+     * When a generated file still needs attaching, keep file_reference_add in the toolbox
+     * even if the module tool cap left it out (otherwise the model only retries write_table).
+     *
+     * @param list<array<string, mixed>> $executableTools
+     * @param array<string, int|string> $alreadyOffered
+     * @return list<array<string, mixed>>
+     */
+    public static function pendingAttachTools(array $executableTools, array $alreadyOffered = []): array
+    {
+        $picked = [];
+        foreach ($executableTools as $tool) {
+            $name = (string) ($tool['name'] ?? '');
+            if ($name === 'file_reference_add' && !isset($alreadyOffered[$name])) {
+                $picked[$name] = $tool;
+                break;
+            }
+        }
+
+        return array_values($picked);
     }
 
     /**

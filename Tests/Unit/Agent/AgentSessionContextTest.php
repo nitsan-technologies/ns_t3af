@@ -129,10 +129,130 @@ final class AgentSessionContextTest extends TestCase
         self::assertStringContainsString('confirmed "Write the meta description"', $applied);
         self::assertStringContainsString('Result: Saved.', $applied);
         self::assertStringContainsString('Continue with the remaining steps', $applied);
+        self::assertStringContainsString('Never claim a file or image is attached', $applied);
+        self::assertStringNotContainsString('Remaining: attach fileUid', $applied);
 
         $declined = AgentPromptBuilder::continuationMessage(['outcome' => 'declined', 'label' => 'Delete a redirect']);
         self::assertStringContainsString('declined "Delete a redirect"', $declined);
         self::assertStringContainsString('Do not repeat it', $declined);
+    }
+
+    #[Test]
+    public function continuationRemindsToAttachAnUnattachedFileToNewContent(): void
+    {
+        $history = [
+            [
+                'role' => 'assistant',
+                'content' => 'Image saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'autoRan' => false,
+                    'details' => ['fileUid' => 87, 'fileName' => '1790575760.png'],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Applied 3 of 3 fields.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tt_content', 'uid' => 477, 'values' => ['CType' => 'textmedia', 'header' => 'Error vs Log']]],
+                ],
+            ],
+        ];
+
+        $message = AgentPromptBuilder::continuationMessage(
+            ['outcome' => 'applied', 'label' => 'Change a record', 'result' => 'Applied 3 of 3 fields.'],
+            $history,
+        );
+
+        self::assertStringContainsString('Remaining: attach fileUid 87 to tt_content uid 477', $message);
+        self::assertStringContainsString('Do not confirm completion until that succeeds', $message);
+        self::assertSame([87], AgentPromptBuilder::unattachedFileUids($history));
+        self::assertSame(477, AgentPromptBuilder::latestAppliedContentElementUid($history));
+    }
+
+    #[Test]
+    public function pendingAttachPrefersTextMediaOverALaterPlainTextElement(): void
+    {
+        $history = [
+            [
+                'role' => 'assistant',
+                'content' => 'Image saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 95],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Applied.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tt_content', 'uid' => 481, 'values' => ['CType' => 'textmedia', 'header' => 'Demo']]],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Applied.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tt_content', 'uid' => 482, 'values' => ['CType' => 'text', 'header' => 'Why Progress matters']]],
+                ],
+            ],
+        ];
+
+        self::assertSame(481, AgentPromptBuilder::latestAppliedContentElementUid($history));
+        self::assertStringContainsString(
+            'attach fileUid 95 to tt_content uid 481',
+            AgentPromptBuilder::pendingImageAttachNote($history),
+        );
+    }
+
+    #[Test]
+    public function continuationSkipsAttachReminderWhenFileReferenceAlreadySucceeded(): void
+    {
+        $history = [
+            [
+                'role' => 'assistant',
+                'content' => 'Image saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 87],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Applied.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tt_content', 'uid' => 477, 'values' => ['header' => 'Error vs Log']]],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Attached.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 'file_reference_add',
+                    'success' => true,
+                    'details' => ['table' => 'tt_content', 'uid' => 477, 'fileUids' => '87', 'referenceUids' => [1]],
+                ],
+            ],
+        ];
+
+        $message = AgentPromptBuilder::continuationMessage(
+            ['outcome' => 'applied', 'label' => 'Attach file', 'result' => 'Attached.'],
+            $history,
+        );
+
+        self::assertStringNotContainsString('Remaining: attach fileUid', $message);
+        self::assertSame([], AgentPromptBuilder::unattachedFileUids($history));
     }
 
     #[Test]

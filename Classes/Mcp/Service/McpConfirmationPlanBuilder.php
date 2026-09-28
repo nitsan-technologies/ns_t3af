@@ -25,10 +25,17 @@ use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
 /**
  * Builds confirmation-style tool plans when no TCA field diff exists.
  *
+ * Apply must re-invoke the tool ({@see planKind} = tool_confirmation). Writing the
+ * pseudo-field through DataHandler is a no-op (e.g. file_reference_add would report
+ * "Applied" without creating sys_file_reference rows).
+ *
  * @internal
  */
 final class McpConfirmationPlanBuilder
 {
+    /** Same value as Agent SatelliteToolPlanService::PLAN_KIND_TOOL_CONFIRMATION. */
+    public const PLAN_KIND_TOOL_CONFIRMATION = 'tool_confirmation';
+
     /**
      * @param array<string, mixed> $context
      */
@@ -42,6 +49,18 @@ final class McpConfirmationPlanBuilder
         string $table = '_action',
         int $uid = 0,
     ): ToolPlan {
+        $arguments = is_array($context['arguments'] ?? null) ? $context['arguments'] : null;
+        if ($arguments === null) {
+            $arguments = $context;
+            unset($arguments['planKind'], $arguments['summary'], $arguments['displayArguments'], $arguments['arguments']);
+        }
+
+        $context['planKind'] = self::PLAN_KIND_TOOL_CONFIRMATION;
+        $context['arguments'] = $arguments;
+        if (!isset($context['summary']) || trim((string) $context['summary']) === '') {
+            $context['summary'] = $proposedDescription;
+        }
+
         return new ToolPlan($action, $toolName, [
             new ToolPlanField(
                 ToolPlanField::buildKey($table, $uid, $pseudoField),

@@ -354,9 +354,9 @@ readonly class TcaSchemaService
                 return [
                     'field' => $fieldName,
                     'reason' => 'file_field',
-                    'hint' => 'Use file_reference_add, or write_table with '
-                        . $fieldName . ' as [{"uid_local": <sys_file uid>, "alternative": "..."}] '
-                        . '(full replace on update; [] clears). Do not set a bare integer counter.',
+                    'hint' => 'Use file_reference_add with table, uid, fieldName "' . $fieldName
+                        . '", and fileUids (comma-separated sys_file uids). Do not set a bare integer counter on '
+                        . $fieldName . '.',
                 ];
             }
 

@@ -258,6 +258,23 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function pendingAttachToolsOffersFileReferenceAdd(): void
+    {
+        $catalog = [
+            ['name' => 'write_table'],
+            ['name' => 'file_reference_add'],
+            ['name' => 'pages_get'],
+        ];
+        $names = array_map(
+            static fn(array $t): string => (string) $t['name'],
+            AgentRunner::pendingAttachTools($catalog),
+        );
+
+        self::assertSame(['file_reference_add'], $names);
+        self::assertSame([], AgentRunner::pendingAttachTools($catalog, ['file_reference_add' => 0]));
+    }
+
+    #[Test]
     public function aShortReplyIsSearchedWithThePreviousRequest(): void
     {
         $query = AgentRunner::requestQuery('Yes', [

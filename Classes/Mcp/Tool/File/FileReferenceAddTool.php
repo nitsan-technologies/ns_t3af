@@ -86,6 +86,13 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
             ));
         }
 
+        $arguments = [
+            'table' => $table,
+            'uid' => $uid,
+            'fieldName' => $fieldName,
+            'fileUids' => $fileUids,
+        ];
+
         return $this->confirmationPlanBuilder->confirmation(
             'update',
             'file_reference_add',
@@ -93,10 +100,9 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
             $fieldName,
             'attach file(s) ' . $fileUids,
             [
-                'table' => $table,
-                'uid' => $uid,
-                'fieldName' => $fieldName,
-                'fileUids' => $fileUids,
+                'arguments' => $arguments,
+                'summary' => sprintf('Attach file(s) %s to %s uid %d (%s)', $fileUids, $table, $uid, $fieldName),
+                ...$arguments,
             ],
             $table,
             $uid,
@@ -152,6 +158,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
                 'table' => $table,
                 'uid' => $uid,
                 'fieldName' => $fieldName,
+                'fileUids' => $parsedUids,
                 'referencesCreated' => count($referenceUids),
                 'referenceUids' => $referenceUids,
                 'parentFieldCount' => $parentCount,

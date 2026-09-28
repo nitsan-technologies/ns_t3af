@@ -202,6 +202,10 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         $filteredData = $this->filterWritableFields($tableName, $payload);
+        if ($filteredData === []) {
+            throw new \InvalidArgumentException($this->noWritableFieldsMessage($tableName, $payload, $filteredData));
+        }
+
         $fieldNames = array_keys($filteredData);
         $current = $this->recordService->findByUid($tableName, $uid, $fieldNames) ?? [];
 
@@ -470,6 +474,32 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return $payload;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @param array<string, mixed> $filteredData
+     */
+    private function noWritableFieldsMessage(string $tableName, array $payload, array $filteredData): string
+    {
+        $ignored = $this->ignoredFields($payload, $filteredData);
+        if ($ignored === []) {
+            return 'No valid writable fields provided.';
+        }
+
+        $hints = [];
+        foreach ($this->ignoredFieldDetails($tableName, $ignored) as $detail) {
+            $field = (string) ($detail['field'] ?? '');
+            $hint = trim((string) ($detail['hint'] ?? ''));
+            if ($field === '' || $hint === '') {
+                continue;
+            }
+            $hints[] = $field . ': ' . $hint;
+        }
+
+        return $hints !== []
+            ? 'No valid writable fields provided. ' . implode(' ', $hints)
+            : 'No valid writable fields provided. Ignored: ' . implode(', ', $ignored) . '.';
     }
 
     /**

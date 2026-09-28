@@ -129,6 +129,43 @@ final class WriteTableToolTest extends TestCase
         self::assertSame('New', $plan->fields[0]->proposedValue);
     }
 
+    #[Test]
+    public function planUpdateWithOnlyFileFieldsGivesAClearHintInsteadOfSelectError(): void
+    {
+        $GLOBALS['TCA']['tt_content'] = [
+            'ctrl' => ['label' => 'header'],
+            'columns' => [
+                'header' => ['config' => ['type' => 'input']],
+                'assets' => ['config' => ['type' => 'file']],
+            ],
+        ];
+
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->method('findExistingUids')->willReturn([480]);
+        $recordService->expects(self::never())->method('findByUid');
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $recordService,
+            new TcaSchemaService(),
+        );
+
+        try {
+            $tool->plan([
+                'action' => 'update',
+                'tableName' => 'tt_content',
+                'uid' => 480,
+                'data' => ['assets' => [['uid_local' => 93]]],
+            ]);
+            self::fail('Expected InvalidArgumentException');
+        } catch (\InvalidArgumentException $exception) {
+            self::assertStringContainsString('No valid writable fields provided', $exception->getMessage());
+            self::assertStringContainsString('file_reference_add', $exception->getMessage());
+            self::assertStringNotContainsString('uid_local', $exception->getMessage());
+            self::assertStringNotContainsString('No SELECT expressions', $exception->getMessage());
+        }
+    }
+
     private function bootstrapAdminUser(): void
     {
         $backendUser = $this->createMock(BackendUserAuthentication::class);

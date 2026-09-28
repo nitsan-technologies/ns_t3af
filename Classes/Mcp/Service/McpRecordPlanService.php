@@ -78,6 +78,27 @@ final class McpRecordPlanService
         }
 
         $filteredData = $this->filterWritableFields($tableName, $payload, $allowedFields);
+        if ($filteredData === []) {
+            $ignored = array_values(array_diff(array_keys($payload), array_keys($filteredData)));
+            $hints = [];
+            foreach ($ignored as $fieldName) {
+                if (!is_string($fieldName) || $fieldName === '') {
+                    continue;
+                }
+                $detail = $this->tcaSchemaService->describeIgnoredField($tableName, $fieldName);
+                $hint = trim((string) ($detail['hint'] ?? ''));
+                if ($hint !== '') {
+                    $hints[] = $fieldName . ': ' . $hint;
+                }
+            }
+
+            throw new \InvalidArgumentException(
+                $hints !== []
+                    ? 'No valid writable fields provided. ' . implode(' ', $hints)
+                    : 'No valid writable fields provided.',
+            );
+        }
+
         $fieldNames = array_keys($filteredData);
         $current = $this->recordService->findByUid($tableName, $uid, $fieldNames) ?? [];
 

@@ -112,6 +112,7 @@ final class FileReferenceAddToolTest extends TestCase
         self::assertSame('image', $result['fieldName']);
         self::assertSame(2, $result['referencesCreated']);
         self::assertSame([501, 502], $result['referenceUids']);
+        self::assertSame([42, 43], $result['fileUids']);
         self::assertSame(2, $result['parentFieldCount']);
     }
 
@@ -135,6 +136,33 @@ final class FileReferenceAddToolTest extends TestCase
 
         self::assertIsArray($result);
         self::assertStringContainsString('missing or deleted', (string) ($result['error'] ?? ''));
+    }
+
+    #[Test]
+    public function planMarksConfirmationSoApplyReinvokesTheTool(): void
+    {
+        $tcaSchemaService = $this->createMock(TcaSchemaService::class);
+        $tcaSchemaService->method('getFileFields')->willReturn(['assets']);
+        $tool = new FileReferenceAddTool(
+            $this->createMock(DataHandlerService::class),
+            $tcaSchemaService,
+            new McpConfirmationPlanBuilder(),
+            $this->record(['uid' => 477, 'pid' => 154, 'deleted' => 0]),
+        );
+
+        $plan = $tool->plan([
+            'table' => 'tt_content',
+            'uid' => 477,
+            'fieldName' => 'assets',
+            'fileUids' => '87',
+        ]);
+
+        self::assertSame(McpConfirmationPlanBuilder::PLAN_KIND_TOOL_CONFIRMATION, $plan->context['planKind'] ?? null);
+        self::assertSame(
+            ['table' => 'tt_content', 'uid' => 477, 'fieldName' => 'assets', 'fileUids' => '87'],
+            $plan->context['arguments'] ?? null,
+        );
+        self::assertStringContainsString('Attach file(s) 87', (string) ($plan->context['summary'] ?? ''));
     }
 
     #[Test]

@@ -43,6 +43,10 @@ readonly class RecordService
      */
     public function findByUid(string $table, int $uid, array $fields): ?array
     {
+        if ($fields === []) {
+            throw new \InvalidArgumentException('fields must not be empty when loading a record.', 1790400010);
+        }
+
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
         $queryBuilder->getRestrictions()->removeAll();
         $this->workspaceContext->applyRestriction($queryBuilder, $table);

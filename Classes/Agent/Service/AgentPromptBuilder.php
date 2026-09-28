@@ -73,6 +73,7 @@ readonly class AgentPromptBuilder
             'Do not ask the editor in text whether you should make a change ("Shall we proceed?"): call the write tool; it only prepares the change, and the editor confirms or declines it in the window. If no offered tool can make the change, call find_tools first.',
             'Read only what you need, then act. To create or change something, call the write tool as soon as you know the target; the editor reviews it before anything is saved.',
             'To add an image to a new content element: first prepare the element (e.g. a text & media element), after it is applied attach the image to its uid with the file reference tool (field "assets" for text & media, "image" for text & images). The page uid is never a content element uid.',
+            'Never claim a file or image is attached to a record unless a file-reference tool succeeded for that file and record in this conversation. Generating or uploading a file alone does not attach it.',
             'To create a new page, prepare a new record in the pages table (or use a create-page tool); copying a page is only for "copy" or "duplicate" requests. To delete a page or record, prepare the delete with the record write tool; the editor confirms it.',
             'To create a page with content: first prepare the new page (only the page). After the editor applies it, the result gives the new page uid; then prepare the content elements with that uid as their pid.',
             'When the editor asks to create or add content elements, use a create/write tool. Do not call content_delete unless they asked to remove or replace something.',
@@ -346,13 +347,160 @@ readonly class AgentPromptBuilder
             );
         }
 
-        return sprintf(
+        $message = sprintf(
             '[The editor confirmed "%s" and it was applied.%s] Continue with the remaining steps of my request.'
-            . ' If nothing is left, confirm in one short sentence without calling tools: the result above is final,'
-            . ' so do not check it again or list what else you can do.',
+            . ' Only when every part of my original request is already done through tools, confirm in one short sentence without calling tools.'
+            . ' Never claim a file or image is attached unless a file-reference step succeeded.'
+            . ' Do not re-check finished results or list what else you can do.',
             $label,
             $result !== '' ? ' Result: ' . $result : '',
         );
+        $pendingAttach = self::pendingImageAttachNote($history);
+
+        return $pendingAttach !== '' ? $message . ' ' . $pendingAttach : $message;
+    }
+
+    /**
+     * When a generated/uploaded file still has no file reference and a content element exists,
+     * tell the model that attach is still open (do not let it declare the request done early).
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function pendingImageAttachNote(array $history): string
+    {
+        $fileUids = self::unattachedFileUids($history);
+        if ($fileUids === []) {
+            return '';
+        }
+        $contentUid = self::latestAppliedContentElementUid($history);
+        if ($contentUid === null) {
+            return '';
+        }
+
+        return sprintf(
+            'Remaining: attach fileUid %s to tt_content uid %d by calling file_reference_add'
+            . ' (fieldName "assets" for text & media, "image" for textpic). Do not use write_table for file fields.'
+            . ' Do not confirm completion until that succeeds.',
+            implode(', ', array_map(static fn(int $uid): string => (string) $uid, $fileUids)),
+            $contentUid,
+        );
+    }
+
+    /**
+     * sys_file uids from successful writes that are not yet covered by a successful file_reference_add.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return list<int>
+     */
+    public static function unattachedFileUids(array $history): array
+    {
+        $created = [];
+        $attached = [];
+        foreach ($history as $entry) {
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($meta['type'] ?? '') !== 'tool_result' || ($meta['success'] ?? true) === false) {
+                continue;
+            }
+            $tool = (string) ($meta['tool'] ?? '');
+            $details = $meta['details'] ?? null;
+            if ($tool === 'file_reference_add') {
+                foreach (self::fileUidsFromDetails($details) as $uid) {
+                    $attached[$uid] = true;
+                }
+                continue;
+            }
+            foreach (self::fileUidsFromDetails($details) as $uid) {
+                $created[$uid] = true;
+            }
+            foreach (is_array($meta['previews'] ?? null) ? $meta['previews'] : [] as $preview) {
+                if (is_array($preview) && (int) ($preview['fileUid'] ?? 0) > 0) {
+                    $created[(int) $preview['fileUid']] = true;
+                }
+            }
+        }
+        $pending = [];
+        foreach (array_keys($created) as $uid) {
+            if (!isset($attached[$uid])) {
+                $pending[] = $uid;
+            }
+        }
+
+        return $pending;
+    }
+
+    /**
+     * Preferred tt_content uid for attaching a pending image: media-capable types first
+     * (textmedia / textpic / image), else the newest content element.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function latestAppliedContentElementUid(array $history): ?int
+    {
+        $fallback = null;
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            if (($history[$i]['role'] ?? '') !== 'assistant' || ($meta['type'] ?? '') !== 'readback_result') {
+                continue;
+            }
+            foreach (is_array($meta['readback'] ?? null) ? $meta['readback'] : [] as $entry) {
+                if (!is_array($entry) || ($entry['table'] ?? '') !== 'tt_content' || (int) ($entry['uid'] ?? 0) <= 0) {
+                    continue;
+                }
+                $uid = (int) $entry['uid'];
+                $values = is_array($entry['values'] ?? null) ? $entry['values'] : [];
+                $cType = strtolower(trim((string) ($values['CType'] ?? '')));
+                if (in_array($cType, ['textmedia', 'textpic', 'image'], true)) {
+                    return $uid;
+                }
+                $fallback ??= $uid;
+            }
+        }
+
+        return $fallback;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private static function fileUidsFromDetails(mixed $details): array
+    {
+        if (!is_array($details)) {
+            return [];
+        }
+        $uids = [];
+        foreach (['fileUid', 'file_uid', 'sysFileUid', 'fileId'] as $key) {
+            if ((int) ($details[$key] ?? 0) > 0) {
+                $uids[] = (int) $details[$key];
+            }
+        }
+        $list = $details['fileUids'] ?? null;
+        if (is_string($list) && $list !== '') {
+            foreach (explode(',', $list) as $part) {
+                $uid = (int) trim($part);
+                if ($uid > 0) {
+                    $uids[] = $uid;
+                }
+            }
+        } elseif (is_array($list)) {
+            foreach ($list as $value) {
+                $uid = (int) $value;
+                if ($uid > 0) {
+                    $uids[] = $uid;
+                }
+            }
+        }
+        foreach (['file', 'result', 'data'] as $nest) {
+            if (is_array($details[$nest] ?? null)) {
+                foreach (self::fileUidsFromDetails($details[$nest]) as $uid) {
+                    $uids[] = $uid;
+                }
+            }
+        }
+
+        return array_values(array_unique($uids));
     }
 
     /**

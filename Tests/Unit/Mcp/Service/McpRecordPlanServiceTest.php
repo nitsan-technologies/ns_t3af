@@ -50,4 +50,26 @@ final class McpRecordPlanServiceTest extends TestCase
         self::assertSame('Old meta', $plan->fields[0]->currentValue);
         self::assertSame('New meta', $plan->fields[0]->proposedValue);
     }
+
+    #[Test]
+    public function planUpdateWithNoWritableFieldsExplainsInsteadOfLoadingTheRecord(): void
+    {
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->method('findExistingUids')->willReturn([480]);
+        $recordService->expects(self::never())->method('findByUid');
+
+        $tcaSchemaService = $this->createMock(TcaSchemaService::class);
+        $tcaSchemaService->method('getWritableFields')->willReturn(['header']);
+        $tcaSchemaService->method('describeIgnoredField')->with('tt_content', 'assets')->willReturn([
+            'field' => 'assets',
+            'reason' => 'file_field',
+            'hint' => 'Use file_reference_add.',
+        ]);
+
+        $service = new McpRecordPlanService($recordService, $tcaSchemaService);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Use file_reference_add');
+        $service->planUpdate('tt_content', 480, ['assets' => [['uid_local' => 93]]], 'write_table');
+    }
 }
