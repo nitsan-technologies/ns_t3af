@@ -227,7 +227,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         );
 
         $events = new EventDispatcher();
-        $events->addListener(ToolCallsExecuted::class, static function (ToolCallsExecuted $event) use ($state): void {
+        $events->addListener(self::dispatchedEventName(ToolCallsExecuted::class), static function (ToolCallsExecuted $event) use ($state): void {
             if ($state->isPaused()) {
                 $event->setResult(new TextResult(''));
             }
@@ -262,6 +262,31 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return [$state, $finalText];
+    }
+
+    /**
+     * The name the dispatcher will actually see for a Symfony AI event.
+     *
+     * Symfony's EventDispatcher keys listeners by `$event::class`. In classic
+     * (phar) mode the Agent is php-scoper-prefixed, so it dispatches
+     * `NITSAN\T3af\Vendor\…\ToolCallsExecuted`, while `ToolCallsExecuted::class`
+     * written here is a compile-time literal of the public name. The phar's
+     * class_alias() gives those two the same class identity but NOT the same
+     * name, so a listener registered under the public name is never called.
+     *
+     * The failure is silent — no error, just a dead listener — and here it
+     * would mean a paused turn keeps calling tools instead of stopping.
+     *
+     * ClassResolver ships inside the phar. In Composer mode it is absent and
+     * nothing is scoped, so the public name is already correct.
+     *
+     * @param class-string $publicName
+     */
+    private static function dispatchedEventName(string $publicName): string
+    {
+        return class_exists(\NITSAN\T3af\Runtime\ClassResolver::class)
+            ? \NITSAN\T3af\Runtime\ClassResolver::resolve($publicName)
+            : $publicName;
     }
 
     /**
