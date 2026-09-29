@@ -1472,7 +1472,73 @@
         <source>Cost center</source>
       </trans-unit>
       <trans-unit id="provider.field.pricingNote" resname="provider.field.pricingNote">
-        <source>Costs are estimated using manual provider pricing fields.</source>
+        <source>These price fields only help you estimate costs in the dashboard and logs. They do not change what your AI provider bills you, and they are not linked to T3Planet credits or spending limits.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.help.aria" resname="provider.field.help.aria">
+        <source>Show help for this field</source>
+      </trans-unit>
+      <trans-unit id="provider.field.identifier.help" resname="provider.field.identifier.help">
+        <source>A short technical name for this connection (letters, numbers, dots, dashes, underscores). You will see it in logs and settings — visitors never see it.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.title.help" resname="provider.field.title.help">
+        <source>The friendly name you see in lists and dropdowns in the backend.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.adapter.help" resname="provider.field.adapter.help">
+        <source>Which AI service you are connecting to (OpenAI, Claude, Ollama, and so on). This also decides which fields you need to fill in.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.endpoint.help" resname="provider.field.endpoint.help">
+        <source>The web address TYPO3 talks to. Needed for Custom / Other, Ollama, and Azure. For many cloud providers you can leave this empty and we use a default.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.apiKey.help" resname="provider.field.apiKey.help">
+        <source>Your secret key from the AI provider. We store it encrypted. You usually do not need one for local Ollama. This key is not used to manage billing or credits.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.chatModelId.help" resname="provider.field.chatModelId.help">
+        <source>Which model to use for chat and text generation with this connection. On Azure, enter the deployment name here.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.embeddingModelId.help" resname="provider.field.embeddingModelId.help">
+        <source>Which model to use for search and similarity (embeddings). Leave empty to use the same model as for chat.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.apiVersion" resname="provider.field.apiVersion">
+        <source>API version</source>
+      </trans-unit>
+      <trans-unit id="provider.field.apiVersion.help" resname="provider.field.apiVersion.help">
+        <source>Only for Azure OpenAI. Leave empty to use our default (2024-10-21). Other adapters ignore this field.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.endpoint.requiredAzure" resname="provider.field.endpoint.requiredAzure">
+        <source>Your Azure OpenAI resource URL, for example https://myresource.openai.azure.com</source>
+      </trans-unit>
+      <trans-unit id="provider.field.capabilities.help" resname="provider.field.capabilities.help">
+        <source>Tick what this model can do — chat, embeddings, vision, and so on. Some AI features only work if the right options are on.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.temperature.help" resname="provider.field.temperature.help">
+        <source>How creative the answers feel. Lower (near 0) is steadier; higher (toward 2) is more varied. A single feature can still choose its own value.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.systemPrompt.help" resname="provider.field.systemPrompt.help">
+        <source>An optional starting instruction we add when this provider is used as the default. Leave blank if you do not need one.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.priority.help" resname="provider.field.priority.help">
+        <source>Only affects the order in lists (0–100). It does not change prices or credits.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.pricingInput.help" resname="provider.field.pricingInput.help">
+        <source>Rough price you pay per 1 million input tokens — only so we can show estimated costs in the dashboard and logs when you use your own API keys. This does not change your provider bill, T3Planet credits, or spending limits.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.pricingOutput.help" resname="provider.field.pricingOutput.help">
+        <source>Rough price you pay per 1 million output tokens — again only for cost estimates in the dashboard and logs. Not billing and not credit management.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.pricingCurrency.help" resname="provider.field.pricingCurrency.help">
+        <source>Currency for those estimates, like USD. Display only — this is not a payment setting.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.costCenter.help" resname="provider.field.costCenter.help">
+        <source>An optional tag for your own notes (team, project, department). We store it here only — it is not connected to accounting or your AI provider’s billing.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.isDefault.help" resname="provider.field.isDefault.help">
+        <source>When this is on, AI features on this site use this provider unless a feature is set to use another one.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.isEnabled.help" resname="provider.field.isEnabled.help">
+        <source>Turn this off to pause the provider without deleting it. Your settings and key stay saved so you can switch it back on later.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.enabledForDashboard.help" resname="provider.field.enabledForDashboard.help">
+        <source>When this is off, AI still works — this provider just stays out of dashboard charts. Handy for test or internal connections.</source>
       </trans-unit>
       <trans-unit id="provider.field.isEnabled" resname="provider.field.isEnabled">
         <source>Provider enabled</source>

@@ -1940,8 +1940,96 @@
                 <target>Kostenstelle</target>
             </trans-unit>
             <trans-unit id="provider.field.pricingNote">
-                <source>Costs are estimated using manual provider pricing fields.</source>
-                <target>Die Kosten werden mithilfe manueller Provider-Preisfelder geschätzt.</target>
+                <source>These price fields only help you estimate costs in the dashboard and logs. They do not change what your AI provider bills you, and they are not linked to T3Planet credits or spending limits.</source>
+                <target>Diese Preisfelder helfen nur bei Kostenschätzungen im Dashboard und in den Protokollen. Sie ändern nicht, was Ihr AI-Anbieter abrechnet, und haben nichts mit T3Planet Credits oder Ausgabenlimits zu tun.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.help.aria">
+                <source>Show help for this field</source>
+                <target>Hilfe zu diesem Feld anzeigen</target>
+            </trans-unit>
+            <trans-unit id="provider.field.identifier.help">
+                <source>A short technical name for this connection (letters, numbers, dots, dashes, underscores). You will see it in logs and settings — visitors never see it.</source>
+                <target>Ein kurzer technischer Name für diese Verbindung (Buchstaben, Zahlen, Punkte, Bindestriche, Unterstriche). Sie sehen ihn in Protokollen und Einstellungen — Website-Besucher nicht.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.title.help">
+                <source>The friendly name you see in lists and dropdowns in the backend.</source>
+                <target>Der Anzeigename, den Sie in Listen und Dropdowns im Backend sehen.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.adapter.help">
+                <source>Which AI service you are connecting to (OpenAI, Claude, Ollama, and so on). This also decides which fields you need to fill in.</source>
+                <target>Welchen AI-Dienst Sie verbinden (OpenAI, Claude, Ollama usw.). Daran hängt auch, welche Felder Sie ausfüllen müssen.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.endpoint.help">
+                <source>The web address TYPO3 talks to. Needed for Custom / Other, Ollama, and Azure. For many cloud providers you can leave this empty and we use a default.</source>
+                <target>Die Webadresse, mit der TYPO3 spricht. Nötig für Custom / Other, Ollama und Azure. Bei vielen Cloud-Anbietern können Sie das Feld leer lassen — dann nutzen wir einen Standard.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.apiKey.help">
+                <source>Your secret key from the AI provider. We store it encrypted. You usually do not need one for local Ollama. This key is not used to manage billing or credits.</source>
+                <target>Ihr geheimer Schlüssel vom AI-Anbieter. Wir speichern ihn verschlüsselt. Für lokales Ollama brauchen Sie meist keinen. Mit diesem Schlüssel verwalten Sie weder Abrechnung noch Credits.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.chatModelId.help">
+                <source>Which model to use for chat and text generation with this connection. On Azure, enter the deployment name here.</source>
+                <target>Welches Modell für Chat und Textgenerierung über diese Verbindung genutzt wird. Bei Azure tragen Sie hier den Deployment-Namen ein.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.embeddingModelId.help">
+                <source>Which model to use for search and similarity (embeddings). Leave empty to use the same model as for chat.</source>
+                <target>Welches Modell für Suche und Ähnlichkeit (Embeddings) genutzt wird. Leer lassen, wenn dasselbe Modell wie für Chat verwendet werden soll.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.apiVersion">
+                <source>API version</source>
+                <target>API-Version</target>
+            </trans-unit>
+            <trans-unit id="provider.field.apiVersion.help">
+                <source>Only for Azure OpenAI. Leave empty to use our default (2024-10-21). Other adapters ignore this field.</source>
+                <target>Nur für Azure OpenAI. Leer lassen für unseren Standard (2024-10-21). Andere Adapter ignorieren dieses Feld.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.endpoint.requiredAzure">
+                <source>Your Azure OpenAI resource URL, for example https://myresource.openai.azure.com</source>
+                <target>Ihre Azure-OpenAI-Ressourcen-URL, zum Beispiel https://myresource.openai.azure.com</target>
+            </trans-unit>
+            <trans-unit id="provider.field.capabilities.help">
+                <source>Tick what this model can do — chat, embeddings, vision, and so on. Some AI features only work if the right options are on.</source>
+                <target>Haken Sie an, was dieses Modell kann — Chat, Embeddings, Vision usw. Manche AI-Funktionen brauchen die passenden Optionen.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.temperature.help">
+                <source>How creative the answers feel. Lower (near 0) is steadier; higher (toward 2) is more varied. A single feature can still choose its own value.</source>
+                <target>Wie kreativ die Antworten wirken. Niedriger (nahe 0) ist ruhiger; höher (Richtung 2) abwechslungsreicher. Einzelne Features können trotzdem einen eigenen Wert nutzen.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.systemPrompt.help">
+                <source>An optional starting instruction we add when this provider is used as the default. Leave blank if you do not need one.</source>
+                <target>Eine optionale Startanweisung, die wir hinzufügen, wenn dieser Provider der Standard ist. Leer lassen, wenn Sie keine brauchen.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.priority.help">
+                <source>Only affects the order in lists (0–100). It does not change prices or credits.</source>
+                <target>Betrifft nur die Reihenfolge in Listen (0–100). Preise und Credits ändern sich dadurch nicht.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.pricingInput.help">
+                <source>Rough price you pay per 1 million input tokens — only so we can show estimated costs in the dashboard and logs when you use your own API keys. This does not change your provider bill, T3Planet credits, or spending limits.</source>
+                <target>Ungefährer Preis pro 1 Million Eingabe-Tokens — nur damit wir Kosten im Dashboard und in den Protokollen schätzen können, wenn Sie eigene API-Schlüssel nutzen. Dadurch ändert sich weder Ihre Anbieter-Rechnung noch T3Planet Credits oder Ausgabenlimits.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.pricingOutput.help">
+                <source>Rough price you pay per 1 million output tokens — again only for cost estimates in the dashboard and logs. Not billing and not credit management.</source>
+                <target>Ungefährer Preis pro 1 Million Ausgabe-Tokens — ebenfalls nur für Kostenschätzungen im Dashboard und in den Protokollen. Keine Abrechnung und keine Credit-Verwaltung.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.pricingCurrency.help">
+                <source>Currency for those estimates, like USD. Display only — this is not a payment setting.</source>
+                <target>Währung für diese Schätzungen, z. B. USD. Nur Anzeige — das ist keine Zahlungseinstellung.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.costCenter.help">
+                <source>An optional tag for your own notes (team, project, department). We store it here only — it is not connected to accounting or your AI provider’s billing.</source>
+                <target>Ein optionales Kennzeichen für Ihre Notizen (Team, Projekt, Abteilung). Wir speichern es nur hier — es hängt weder an der Buchhaltung noch an der Abrechnung Ihres AI-Anbieters.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.isDefault.help">
+                <source>When this is on, AI features on this site use this provider unless a feature is set to use another one.</source>
+                <target>Wenn das aktiv ist, nutzen AI-Funktionen auf dieser Site diesen Provider — außer ein Feature ist bewusst auf einen anderen gestellt.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.isEnabled.help">
+                <source>Turn this off to pause the provider without deleting it. Your settings and key stay saved so you can switch it back on later.</source>
+                <target>Schalten Sie das aus, um den Provider zu pausieren, ohne ihn zu löschen. Einstellungen und Schlüssel bleiben erhalten, damit Sie ihn später wieder einschalten können.</target>
+            </trans-unit>
+            <trans-unit id="provider.field.enabledForDashboard.help">
+                <source>When this is off, AI still works — this provider just stays out of dashboard charts. Handy for test or internal connections.</source>
+                <target>Wenn das aus ist, funktioniert AI weiter — dieser Provider erscheint nur nicht in den Dashboard-Diagrammen. Praktisch für Test- oder interne Verbindungen.</target>
             </trans-unit>
             <trans-unit id="provider.field.isEnabled">
                 <source>Provider enabled</source>
