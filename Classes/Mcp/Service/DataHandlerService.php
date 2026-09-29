@@ -216,7 +216,12 @@ readonly class DataHandlerService
         $datamap = [];
 
         foreach ($fileUids as $index => $fileUid) {
-            $newId = 'NEW_ref_' . bin2hex(random_bytes(4));
+            // Placeholder must not contain "_": DataHandler::processRemapStack() treats
+            // underscored child ids as "<table>_<uid>" and fails to resolve them. On v12
+            // FileExtensionFilter then throws after the reference row is already written
+            // (duplicate references on MCP retry); on v13/v14 the reference is silently
+            // dropped from the parent field. Same pattern as createRecord().
+            $newId = 'NEW' . bin2hex(random_bytes(8));
             $newIds[] = $newId;
 
             $datamap['sys_file_reference'][$newId] = [
