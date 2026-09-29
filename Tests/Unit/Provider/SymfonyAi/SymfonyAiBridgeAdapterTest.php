@@ -125,7 +125,13 @@ final class SymfonyAiBridgeAdapterTest extends TestCase
     {
         $adapter = $this->makeAdapter();
         $this->expectException(AdapterRuntimeException::class);
-        $this->expectExceptionMessageMatches('/Symfony AI Platform runtime/');
+        // PlatformInterface is an interface. When it is loadable, the runtime is
+        // installed and a missing guessed factory is a different error.
+        if (interface_exists(\Symfony\AI\Platform\PlatformInterface::class)) {
+            $this->expectExceptionMessageMatches('/No platform factory found/');
+        } else {
+            $this->expectExceptionMessageMatches('/Symfony AI Platform runtime/');
+        }
         $adapter->platform($this->makeProvider());
     }
 
@@ -463,6 +469,41 @@ final class SymfonyAiBridgeAdapterTest extends TestCase
         $platform = $adapter->platform($provider);
 
         self::assertInstanceOf(SymfonyAiPlatform::class, $platform);
+    }
+
+    /**
+     * Composer discovery leaves factoryClass null. The runtime probe must still
+     * find Symfony\AI\Platform\Bridge\Azure\OpenAi\Factory rather than reporting
+     * that symfony/ai-azure-platform is not installed.
+     */
+    public function testAzurePlatformResolvesNestedFactoryWhenDescriptorOmitsFactoryClass(): void
+    {
+        if (!class_exists(\Symfony\AI\Platform\Bridge\Azure\OpenAi\Factory::class)) {
+            self::markTestSkipped('symfony/ai-azure-platform is not installed.');
+        }
+
+        $adapter = new SymfonyAiBridgeAdapter(
+            new BridgeDescriptor(
+                packageName: 'symfony/ai-azure-platform',
+                vendorKey: 'azure',
+                type: 'symfony.azure',
+                displayName: 'Azure (Symfony AI)',
+                defaultEndpoint: '',
+                defaultCapabilities: [Capability::CHAT, Capability::STREAMING, Capability::EMBEDDINGS],
+            ),
+            new CredentialCipher(),
+            $this->createMock(RequestFactory::class),
+        );
+        $cipher = new CredentialCipher();
+        $provider = $this->makeProviderWith(
+            endpoint: 'https://myresource.openai.azure.com',
+            apiKey: $cipher->encrypt('azure-key-123'),
+            adapterType: 'symfony.azure',
+        );
+
+        $platform = $adapter->platform($provider);
+
+        self::assertInstanceOf(\Symfony\AI\Platform\Provider::class, $platform);
     }
 
     private function makeAzureAdapter(?RequestFactory $requestFactory = null): SymfonyAiBridgeAdapter
