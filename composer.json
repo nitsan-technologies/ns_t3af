@@ -110,17 +110,17 @@
             "version": "1.2.2",
             "Package": {
                 "providesPackages": {
-                  "mcp/sdk": ".Build/vendor",
-                  "symfony/ai-agent": ".Build/vendor",
-                  "symfony/ai-anthropic-platform": ".Build/vendor",
-                  "symfony/ai-azure-platform": ".Build/vendor",
-                  "symfony/ai-gemini-platform": ".Build/vendor",
-                  "symfony/ai-mistral-platform": ".Build/vendor",
-                  "symfony/ai-ollama-platform": ".Build/vendor",
-                  "symfony/ai-open-ai-platform": ".Build/vendor",
-                  "symfony/ai-open-router-platform": ".Build/vendor",
-                  "symfony/ai-platform": ".Build/vendor",
-                  "symfony/ai-store": ".Build/vendor"
+                  "mcp/sdk": "",
+                  "symfony/ai-agent": "",
+                  "symfony/ai-anthropic-platform": "",
+                  "symfony/ai-azure-platform": "",
+                  "symfony/ai-gemini-platform": "",
+                  "symfony/ai-mistral-platform": "",
+                  "symfony/ai-ollama-platform": "",
+                  "symfony/ai-open-ai-platform": "",
+                  "symfony/ai-open-router-platform": "",
+                  "symfony/ai-platform": "",
+                  "symfony/ai-store": ""
                 }
             }
         }
