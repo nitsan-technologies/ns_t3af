@@ -2191,6 +2191,50 @@
                 <source>One-time purchases — credits never expire and stack with your balance</source>
                 <target>Einmalige Käufe – Guthaben verfallen nie und werden mit Ihrem Guthaben addiert</target>
             </trans-unit>
+            <trans-unit id="credits.dashboard.bundles.subPlans">
+                <source>Subscription plans — credits renew each billing period</source>
+                <target>Abonnements – Guthaben wird in jedem Abrechnungszeitraum erneuert</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.bundles.subTopups">
+                <source>One-time purchases — credits never expire and stack with your balance</source>
+                <target>Einmalige Käufe – Guthaben verfallen nie und werden mit Ihrem Guthaben addiert</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.bundles.tabPlans">
+                <source>Plans</source>
+                <target>Pläne</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.bundles.tabTopups">
+                <source>Top-ups</source>
+                <target>Aufladungen</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.bundles.periodMonthly">
+                <source>Monthly</source>
+                <target>Monatlich</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.bundles.periodYearly">
+                <source>Yearly</source>
+                <target>Jährlich</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.bundles.perMonth">
+                <source>/ month</source>
+                <target>/ Monat</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.bundles.perYear">
+                <source>/ year</source>
+                <target>/ Jahr</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.bundles.emptyPlansMonthly">
+                <source>No monthly plans available right now.</source>
+                <target>Derzeit sind keine Monatspläne verfügbar.</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.bundles.emptyPlansYearly">
+                <source>No yearly plans available right now.</source>
+                <target>Derzeit sind keine Jahrespläne verfügbar.</target>
+            </trans-unit>
+            <trans-unit id="credits.dashboard.bundles.emptyTopups">
+                <source>No top-up packs available right now.</source>
+                <target>Derzeit sind keine Aufladepakete verfügbar.</target>
+            </trans-unit>
             <trans-unit id="credits.dashboard.bundles.badge">
                 <source>No subscription · buy when you need</source>
                 <target>Kein Abonnement · Kaufen Sie, wenn Sie es brauchen</target>

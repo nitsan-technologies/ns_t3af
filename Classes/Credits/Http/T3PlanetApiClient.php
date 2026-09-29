@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Credits\Http;
 
 use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Credits\CreditsFeatureKeyCatalog;
+use NITSAN\NsT3AF\Credits\Service\CreditsCatalogLanguageResolver;
 use NITSAN\NsT3AF\Credits\Service\CreditsMetaJsonBuilder;
 
 /**
@@ -140,9 +141,17 @@ class T3PlanetApiClient
     /**
      * @return array<string, mixed>
      */
-    public function features(string $domain, #[\SensitiveParameter] string $bearerToken, ?string $ifNoneMatch = null): array
-    {
-        $result = $this->http->postJsonWithStatus('Features', ['domain' => $domain], $bearerToken, $ifNoneMatch);
+    public function features(
+        string $domain,
+        #[\SensitiveParameter]
+        string $bearerToken,
+        string $language = CreditsCatalogLanguageResolver::EN,
+        ?string $ifNoneMatch = null,
+    ): array {
+        $result = $this->http->postJsonWithStatus('Features', [
+            'domain' => $domain,
+            'language' => CreditsCatalogLanguageResolver::normalize($language),
+        ], $bearerToken, $ifNoneMatch);
         if ($result['status'] === 304) {
             return ['not_modified' => true];
         }
@@ -158,9 +167,13 @@ class T3PlanetApiClient
         #[\SensitiveParameter]
         string $bearerToken,
         string $redirectTo,
+        string $language = CreditsCatalogLanguageResolver::EN,
         ?string $ifNoneMatch = null,
     ): array {
-        $body = ['domain' => $domain];
+        $body = [
+            'domain' => $domain,
+            'language' => CreditsCatalogLanguageResolver::normalize($language),
+        ];
         if ($redirectTo !== '') {
             $body['redirect_to'] = $redirectTo;
             $body['backend_url'] = $redirectTo;
