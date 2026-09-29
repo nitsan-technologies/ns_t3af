@@ -932,18 +932,25 @@ class RequestLogRepository
         $search = trim((string) ($filters['search'] ?? ''));
         if ($search !== '') {
             $like = '%' . mb_strtolower($search) . '%';
-            $qb->andWhere(
-                $qb->expr()->or(
-                    $qb->expr()->like('LOWER(extension_key)', $qb->createNamedParameter($like)),
-                    $qb->expr()->like('LOWER(feature_key)', $qb->createNamedParameter($like)),
-                    $qb->expr()->like('LOWER(feature_label)', $qb->createNamedParameter($like)),
-                    $qb->expr()->like('LOWER(provider_identifier)', $qb->createNamedParameter($like)),
-                    $qb->expr()->like('LOWER(model_used)', $qb->createNamedParameter($like)),
-                    $qb->expr()->like('LOWER(request_source)', $qb->createNamedParameter($like)),
-                    $qb->expr()->like('LOWER(error_code)', $qb->createNamedParameter($like)),
-                    $qb->expr()->like('LOWER(raw_meta)', $qb->createNamedParameter($like)),
-                ),
-            );
+            $predicates = [];
+            foreach ([
+                'extension_key',
+                'feature_key',
+                'feature_label',
+                'provider_identifier',
+                'model_used',
+                'request_source',
+                'error_code',
+                'raw_meta',
+            ] as $column) {
+                // expr()->like() quotes the whole argument, so LOWER(column) becomes an unknown column.
+                $predicates[] = $qb->expr()->comparison(
+                    'LOWER(' . $qb->quoteIdentifier($column) . ')',
+                    'LIKE',
+                    $qb->createNamedParameter($like),
+                );
+            }
+            $qb->andWhere($qb->expr()->or(...$predicates));
         }
 
         $engine = trim((string) ($filters['engine'] ?? ''));
