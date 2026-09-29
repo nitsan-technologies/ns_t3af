@@ -574,45 +574,167 @@ final class AiService implements AiServiceInterface
 
     private function extractContentFromInvokeResult(object $result): string
     {
+        $conversionError = null;
+
         if (method_exists($result, 'asText')) {
             try {
-                /** @var mixed $text */
-                $text = $result->asText();
-                if (is_string($text) && $text !== '') {
+                $text = $this->textFromContentValue($result->asText());
+                if ($text !== '') {
                     return $text;
                 }
-            } catch (\Throwable) {
-                // Fall through to other extraction strategies.
+            } catch (\Throwable $exception) {
+                $conversionError = $exception;
             }
         }
 
-        if (method_exists($result, 'getResult')) {
+        if ($conversionError === null && method_exists($result, 'getResult')) {
             try {
                 /** @var mixed $nestedResult */
                 $nestedResult = $result->getResult();
                 if (is_object($nestedResult) && method_exists($nestedResult, 'getContent')) {
-                    $nestedContent = $nestedResult->getContent();
-                    if (is_string($nestedContent) && $nestedContent !== '') {
-                        return $nestedContent;
+                    $nestedText = $this->textFromContentValue($nestedResult->getContent());
+                    if ($nestedText !== '') {
+                        return $nestedText;
                     }
                 }
-            } catch (\Throwable) {
-                // Fall through to other extraction strategies.
+            } catch (\Throwable $exception) {
+                $conversionError = $exception;
             }
         }
 
         if (method_exists($result, 'getContent')) {
-            $directContent = $result->getContent();
-            if (is_string($directContent) && $directContent !== '') {
-                return $directContent;
+            try {
+                $directText = $this->textFromContentValue($result->getContent());
+                if ($directText !== '') {
+                    return $directText;
+                }
+            } catch (\Throwable) {
+                // Direct content is optional when asText() already ran.
             }
         }
 
-        if (method_exists($result, '__toString')) {
+        $raw = $this->extractRawResponse($result);
+        $rawText = $this->textFromChatCompletionPayload($raw);
+        if ($rawText !== '') {
+            return $rawText;
+        }
+
+        $apiError = $this->messageFromProviderPayload($raw);
+        if ($apiError !== '') {
+            throw new AdapterRuntimeException($apiError);
+        }
+
+        if ($conversionError !== null && !$this->isSkippableContentExtractionError($conversionError)) {
+            throw new AdapterRuntimeException($conversionError->getMessage(), 0, $conversionError);
+        }
+
+        if ($conversionError === null && method_exists($result, '__toString')) {
             return (string) $result;
         }
 
         return '';
+    }
+
+    /**
+     * Chat completions may return a string or a list of content parts.
+     * Thinking parts are skipped so the translated text is what remains.
+     */
+    private function textFromContentValue(mixed $content): string
+    {
+        if (is_string($content)) {
+            return trim($content);
+        }
+        if (!is_array($content)) {
+            return '';
+        }
+        if ($content !== [] && !array_is_list($content)) {
+            $content = [$content];
+        }
+
+        $chunks = [];
+        foreach ($content as $part) {
+            if (is_string($part)) {
+                $partText = trim($part);
+                if ($partText !== '') {
+                    $chunks[] = $partText;
+                }
+                continue;
+            }
+            if (!is_array($part)) {
+                continue;
+            }
+            $type = strtolower(trim((string) ($part['type'] ?? 'text')));
+            if (in_array($type, ['thinking', 'reasoning', 'redacted_thinking'], true)) {
+                continue;
+            }
+            $partText = $this->textFromContentValue($part['text'] ?? $part['content'] ?? null);
+            if ($partText !== '') {
+                $chunks[] = $partText;
+            }
+        }
+
+        return trim(implode("\n", $chunks));
+    }
+
+    /**
+     * @param array<string, mixed> $raw
+     */
+    private function textFromChatCompletionPayload(array $raw): string
+    {
+        $choices = $raw['choices'] ?? null;
+        if (is_array($choices) && isset($choices[0]) && is_array($choices[0])) {
+            $message = $choices[0]['message'] ?? null;
+            if (is_array($message)) {
+                $text = $this->textFromContentValue($message['content'] ?? null);
+                if ($text !== '') {
+                    return $text;
+                }
+            }
+            $choiceText = $this->textFromContentValue($choices[0]['text'] ?? null);
+            if ($choiceText !== '') {
+                return $choiceText;
+            }
+        }
+
+        $output = $raw['output'] ?? null;
+        if (is_array($output)) {
+            $chunks = [];
+            foreach ($output as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $itemText = $this->textFromContentValue($item['content'] ?? $item['text'] ?? null);
+                if ($itemText !== '') {
+                    $chunks[] = $itemText;
+                }
+            }
+            if ($chunks !== []) {
+                return trim(implode("\n", $chunks));
+            }
+        }
+
+        return $this->textFromContentValue($raw['content'] ?? null);
+    }
+
+    /**
+     * @param array<string, mixed> $raw
+     */
+    private function messageFromProviderPayload(array $raw): string
+    {
+        $error = $raw['error'] ?? null;
+        if (is_string($error)) {
+            return trim($error);
+        }
+        if (!is_array($error)) {
+            return '';
+        }
+
+        return trim((string) ($error['message'] ?? ''));
+    }
+
+    private function isSkippableContentExtractionError(\Throwable $exception): bool
+    {
+        return str_contains($exception::class, 'UnexpectedResultTypeException');
     }
 
     /**
