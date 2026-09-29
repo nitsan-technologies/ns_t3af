@@ -60,6 +60,7 @@ Test v12 + v13 + v14 (light + dark backend theme)
 | **Typography** | ~13px Bootstrap body | `--typo3-font-size` (12px) | Open Sans headings | **Mandatory:** inherit core — see **Typography** section |
 | **Dark mode** | `[data-bs-theme=dark]` | `[data-color-scheme=dark]` | Both | `base.css` covers both selectors |
 | **Icons** | `<core:icon … />` | Same | + `alternativeMarkupIdentifier="inline"` in headers | Safe on all versions (attribute ignored where unsupported) |
+| **Field help (drawer)** | Bootstrap 5 Popover + `.help-teaser` | Same | Same | AJAX drawers: init Popover in module JS with `container: document.body` — see **Field help in slide-in drawers** |
 | **Tables in cards** | `.table.table-striped` | + `.table-fit` | Nested `.card` + `.table-fit` | Nested card wrapper when inside parent card |
 
 ---
@@ -922,6 +923,36 @@ Reference: `Partials/McpTools/ToolDetailDrawer.html` (`ToolBody` + `Drawer` sect
 4. Compare parameter table border weight to **Styleguide → Tables** nested in card.
 5. Light + dark theme on expanded row and drawer.
 
+### Field help in slide-in drawers (v12 · v13 · v14)
+
+Reference: `Partials/Module/FieldHelpIcon.html`, `FieldLabelHelp.html`, `FieldLabelHelpInner.html`, `FieldHelpForKey.html`; init in `Resources/Public/JavaScript/provider-drawer.js` (`initFieldHelpLinks`).
+
+Short field labels (especially pricing / cost fields) need inline help so users do not confuse **local estimates** with vendor billing or T3Planet credits.
+
+| Area | Pattern |
+|------|---------|
+| Icon | Core `actions-system-help-open` inside `<abbr class="help-teaser help-teaser-icon">` (FormEngine / CSH look) |
+| Wrapper | `<span class="help-link" data-bs-title="…" data-bs-content="…" …>` — **do not** rely on empty `data-bs-content` + `data-description` swap for AJAX drawers |
+| Copy | XLF `provider.field.<name>.help` (+ shared `provider.field.help.aria`); keep labels short, put meaning in help |
+| Init | After AJAX injects drawer HTML, call module JS that constructs `Popover` from `bootstrap` with **explicit** `title` / `content` |
+| Container | **`container: document.body`** — required because `.aiu-drawer__panel` uses `overflow-y: auto` and would clip in-panel popovers |
+| Z-index | `.popover.aiu-field-help-popover { z-index: 1100; }` (above `.aiu-drawer` at `1050`) |
+| Trigger | `hover focus` (drawer UX); FormEngine CSH stays **click** via core `@typo3/backend/context-help.js` — do not re-use that module alone for AJAX content |
+| Dispose | `BsPopover.getInstance(el)?.dispose()` before re-init and on drawer close |
+
+**Why not only `@typo3/backend/context-help.js`?** Core CSH binds `.help-link` once at document ready. Slide-in drawers load HTML later, so popovers must be created in the drawer module after `panel.innerHTML = …`.
+
+**Compatibility (v12–v14):** Bootstrap 5 Popover, `.help-teaser` / `actions-system-help-open`, and ESM `import { Popover } from 'bootstrap'` are available on all supported versions (`composer.json`: `typo3/cms-core` `^12.4 \|\| ^13.4 \|\| ^14.3`). Avoid Fluid `<f:tag>` (not available / unreliable across Fluid builds). Prefer plain HTML wrappers.
+
+**Forbidden:** Native `title="…"` alone for long help (truncates / inaccessible); popovers without `container: body` inside overflow drawers; assuming core `context-help.js` covers AJAX markup.
+
+**Self-check (AI Providers → Edit drawer):**
+
+- [ ] Hover / focus on `?` shows title + help body (not empty popover)
+- [ ] Pricing / cost-center help states estimates / reporting only — not billing or credits
+- [ ] Azure adapter still renames model label text without removing the help icon (`[data-aiu-field-label-text]`)
+- [ ] Light + dark theme; popover not clipped by drawer edge
+
 ### Action groups in rows
 
 ```html
@@ -1277,9 +1308,10 @@ When reporting “final status” after a design migration, **include all rows**
 | No horizontal scroll in docheader / dashboard | ✓ | ✓ | ✓ |
 | MCP overview: 3 cards + metrics + client list | ✓ (stacked grid) | ✓ | ✓ (container grid) |
 | MCP overview: badges / progress in dark theme | ✓ | ✓ | ✓ |
+| Field help `?` in provider drawer (hover → popover body) | ✓ | ✓ | ✓ |
 
 Compare visually against **System → Styleguide → Components** on the same TYPO3 version when unsure.
 
 ---
 
-*Last updated: 2026-06-22 — MCP tool panel/drawer patterns, final status template, basic test cases.*
+*Last updated: 2026-09-29 — Field help in slide-in drawers (Bootstrap Popover + AJAX init, v12–v14).*

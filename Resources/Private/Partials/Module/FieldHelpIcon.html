@@ -1,0 +1,14 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<span class="help-link"
+      data-bs-title="{helpTitle -> f:format.htmlspecialchars()}"
+      data-bs-content="{helpText -> f:format.htmlspecialchars()}"
+      tabindex="0"
+      role="button"
+      aria-label="{ariaLabel -> f:format.htmlspecialchars()}">
+    <abbr class="help-teaser help-teaser-icon" title="">
+        <core:icon identifier="actions-info-circle" size="small" />
+    </abbr>
+</span>
+</html>

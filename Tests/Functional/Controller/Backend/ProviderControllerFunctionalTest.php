@@ -186,6 +186,18 @@ final class ProviderControllerFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function newActionDrawerHtmlIncludesFieldHelp(): void
+    {
+        $request = $this->requestWithSiteContext(new ServerRequest());
+        $response = $this->get(ProviderController::class)->newAction($request);
+        $body = (string) $response->getBody();
+
+        self::assertStringContainsString('help-link', $body);
+        self::assertStringContainsString('data-description', $body);
+        self::assertStringContainsString('Input price / 1M tokens', $body);
+    }
+
+    #[Test]
     public function governanceFieldsPersistThroughFormService(): void
     {
         $groupUid = $this->insertBackendGroup('Editors');
