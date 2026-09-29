@@ -34,4 +34,12 @@ interface EmbeddingSourceInterface
      * @return list<float>
      */
     public function embed(string $text): array;
+
+    /**
+     * Embed several texts in as few upstream calls as the backend allows.
+     *
+     * @param list<string> $texts
+     * @return list<list<float>> One vector per input, same order
+     */
+    public function embedMany(array $texts): array;
 }

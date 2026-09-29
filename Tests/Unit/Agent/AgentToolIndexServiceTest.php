@@ -177,6 +177,11 @@ final class AgentToolIndexServiceTest extends TestCase
 
                 return [$a, $b, $c];
             }
+
+            public function embedMany(array $texts): array
+            {
+                return array_map($this->embed(...), $texts);
+            }
         };
     }
 }

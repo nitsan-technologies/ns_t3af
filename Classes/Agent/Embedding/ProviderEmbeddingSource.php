@@ -33,7 +33,13 @@ final class ProviderEmbeddingSource implements EmbeddingSourceInterface
 {
     public const ID = 'provider';
 
+    /** Upstream batch size — keeps cold index rebuilds under rate limits. */
+    public const BATCH_SIZE = 16;
+
     private ?string $lastModelId = null;
+
+    /** @var array<string, list<float>> In-request cache (query + duplicate docs). */
+    private array $vectorCache = [];
 
     public function __construct(
         private readonly AiServiceInterface $aiService,
@@ -61,24 +67,41 @@ final class ProviderEmbeddingSource implements EmbeddingSourceInterface
 
     public function embed(string $text): array
     {
-        $providerId = $this->agentSettings->getEmbeddingProvider();
-        $options = new AiOptions(
-            providerIdentifier: $providerId !== '' ? $providerId : null,
-            extensionKey: 'ns_t3af',
-            featureKey: 'agent_routing',
-            featureLabel: 'AI Agent tool routing embeddings',
-            requestSource: 'agent',
-        );
+        return $this->embedMany([$text])[0];
+    }
 
-        $response = $this->aiService->embed($text, $options);
-        $this->lastModelId = $response->modelId !== '' ? $response->modelId : 'default';
-
-        $vector = $response->vectors[0] ?? [];
-        if ($vector === []) {
-            throw new \RuntimeException('Provider embedding returned an empty vector.');
+    public function embedMany(array $texts): array
+    {
+        if ($texts === []) {
+            return [];
         }
 
-        return array_values(array_map(static fn(mixed $v): float => (float) $v, $vector));
+        $out = [];
+        $missIndexes = [];
+        $missTexts = [];
+
+        foreach ($texts as $i => $text) {
+            $key = $this->cacheKey($text);
+            if (isset($this->vectorCache[$key])) {
+                $out[$i] = $this->vectorCache[$key];
+                continue;
+            }
+            $missIndexes[] = $i;
+            $missTexts[] = $text;
+        }
+
+        if ($missTexts !== []) {
+            $fetched = $this->fetchBatches($missTexts);
+            foreach ($missIndexes as $j => $i) {
+                $vector = $fetched[$j];
+                $this->vectorCache[$this->cacheKey($missTexts[$j])] = $vector;
+                $out[$i] = $vector;
+            }
+        }
+
+        ksort($out);
+
+        return array_values($out);
     }
 
     public function modelId(): string
@@ -98,5 +121,56 @@ final class ProviderEmbeddingSource implements EmbeddingSourceInterface
         } catch (\Throwable) {
             return 'default';
         }
+    }
+
+    /**
+     * @param list<string> $texts
+     * @return list<list<float>>
+     */
+    private function fetchBatches(array $texts): array
+    {
+        $options = $this->options();
+        $all = [];
+
+        foreach (array_chunk($texts, self::BATCH_SIZE) as $chunk) {
+            $response = $this->aiService->embed($chunk, $options);
+            $this->lastModelId = $response->modelId !== '' ? $response->modelId : 'default';
+
+            if (count($response->vectors) !== count($chunk)) {
+                throw new \RuntimeException(sprintf(
+                    'Provider embedding returned %d vectors for %d inputs.',
+                    count($response->vectors),
+                    count($chunk),
+                ));
+            }
+
+            foreach ($response->vectors as $raw) {
+                $vector = array_values(array_map(static fn(mixed $v): float => (float) $v, $raw));
+                if ($vector === []) {
+                    throw new \RuntimeException('Provider embedding returned an empty vector.');
+                }
+                $all[] = $vector;
+            }
+        }
+
+        return $all;
+    }
+
+    private function options(): AiOptions
+    {
+        $providerId = $this->agentSettings->getEmbeddingProvider();
+
+        return new AiOptions(
+            providerIdentifier: $providerId !== '' ? $providerId : null,
+            extensionKey: 'ns_t3af',
+            featureKey: 'agent_routing',
+            featureLabel: 'AI Agent tool routing embeddings',
+            requestSource: 'agent',
+        );
+    }
+
+    private function cacheKey(string $text): string
+    {
+        return hash('xxh128', $text);
     }
 }

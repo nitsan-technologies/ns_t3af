@@ -133,7 +133,7 @@ final class AgentToolIndexService implements AgentToolIndexInterface
     {
         $modelId = $this->embeddingSourceResolver->modelIdFor($source);
         $hash = $this->definitionHash();
-        $documents = [];
+        $pending = [];
 
         foreach ($this->indexableTools() as $tool) {
             $name = (string) ($tool['name'] ?? '');
@@ -141,18 +141,36 @@ final class AgentToolIndexService implements AgentToolIndexInterface
                 continue;
             }
             $text = $this->buildDocumentText($tool);
-            $vector = $source->embed($text);
             $intent = is_array($tool['intent'] ?? null) ? $tool['intent'] : [];
-            $documents[] = [
+            $pending[] = [
                 'id' => $name,
-                'vector' => $vector,
+                'text' => $text,
                 'metadata' => [
                     'name' => $name,
                     'category' => (string) ($intent['category'] ?? ''),
                     'severity' => (string) ($tool['severity'] ?? ''),
                     'ownerExtensionKey' => (string) ($tool['ownerExtensionKey'] ?? 'ns_t3af'),
                 ],
-                'text' => $text,
+            ];
+        }
+
+        $texts = array_column($pending, 'text');
+        $vectors = $texts === [] ? [] : $source->embedMany($texts);
+        if (count($vectors) !== count($pending)) {
+            throw new \RuntimeException(sprintf(
+                'Tool index embedMany returned %d vectors for %d tools.',
+                count($vectors),
+                count($pending),
+            ));
+        }
+
+        $documents = [];
+        foreach ($pending as $i => $row) {
+            $documents[] = [
+                'id' => $row['id'],
+                'vector' => $vectors[$i],
+                'metadata' => $row['metadata'],
+                'text' => $row['text'],
             ];
         }
 

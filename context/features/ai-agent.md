@@ -14,7 +14,7 @@
 - **Tool catalog** — executable vs locked tools from `PermittedActionProvider` (entitlements, severity, plan support).
 - **Read tools** — auto-run; results shown as **editor-facing prose** (not raw snake_case ids).
 - **Write / destructive tools** — DualMode + Previewable: native preview → suggestions card → context apply (`AgentWriteService::applySuggestions`). Other writes: elicitation draft → DataHandler / confirm invoke.
-- **NL turns** — `AgentRunner`: Symfony AI `Agent` loop; `GovernedPlatform` sends every round through `AiToolCallingServiceInterface` (governance, credits, logs); `T3afToolbox` runs tools with argument validation, budgets and pauses.
+- **NL turns** — `AgentRunner`: Symfony AI `Agent` loop; `GovernedPlatform` sends every round through `AiToolCallingServiceInterface` (governance, logs). In T3Planet Credits mode that path uses `/API/AI/v1/chat/completions` via `symfony/ai-generic-platform` (`T3PlanetCreditsChatExecutor`); own-key sites keep provider adapters. `T3afToolbox` runs tools with argument validation, budgets and pauses.
 - **Structural routing** — `AgentTurnRouter` (slash / `@` / UI tool chips); free-text NL goes only to `AgentRunner` (no keyword workflows).
 - **Tool selection** — `AgentCoreToolSet` (core + module + recent) and `find_tools` (`AgentToolSearch`: embeddings + BM25); index via `t3af:agent:index-tools`; eval via `t3af:agent:eval` (`--live` runs `Resources/Private/Agent/Eval/Scenarios/*.json` against providers, see `Documentation/Agent/Eval.md`).
 - **Per-group tool access** — `LimitsConfig::agentReadOnly` / `blockedAgentTools` → `AgentGovernanceGuard::agentToolPolicy()` → locked in `PermittedActionProvider`.
@@ -87,7 +87,7 @@ Lock reasons (`agent.tool.blockedForGroup`, `extensionUnavailable`, `planUnsuppo
 | Continue after confirm | `agentContinueAfterConfirm`; client sends `continuation {outcome,label,result}` → hidden user message, `continuationMessage()` tells the model; only for cards the runner made (`meta.fromRunner`) |
 | Ask instead of guess | `ask_clarification(question, options[])` pauses the turn; options render as answer buttons |
 | Links after a change | `applyDraftAction` returns `links` (Open page / Edit / View on website); backend links open in the content frame |
-| Credits | `AgentCreditsStatus` → header badge (ok/low/critical); at zero the composer is locked with a top-up hint |
+| Credits | `AgentCreditsStatus` → header badge (ok/low/critical); at zero the composer is locked with a top-up hint. NL tool-calling uses Credits **v1 chat** (per completions call). Tool-result LLM summaries are skipped in credits mode (deterministic prose only). |
 
 In the agent loop read tools get no extra LLM summary (`present(..., allowLlmSummary: false)`); the model reads the deterministic summary plus the data (JSON, 6000 characters).
 
@@ -128,7 +128,7 @@ Draft cards carry `editorLabel` for UI; destructive = two-step confirm.
 | Context | `Classes/Agent/Context/{AgentContext,AgentContextResolver}.php` |
 | Turn router | `Classes/Agent/Service/AgentTurnRouter.php` |
 | Turn processor | `Classes/Agent/Service/AgentToolTurnProcessor.php` |
-| Runner | `Classes/Agent/Service/AgentRunner.php`, `Classes/Agent/Runtime/{GovernedPlatform,T3afToolbox,AgentTurnState}.php` |
+| Runner | `Classes/Agent/Service/AgentRunner.php`, `Classes/Agent/Runtime/{GovernedPlatform,T3afToolbox,AgentTurnState}.php`, credits chat: `Classes/Service/T3PlanetCreditsChatExecutor.php` + `Classes/Credits/Platform/T3PlanetCreditsPlatformFactory.php` |
 | Tool selection | `Classes/Agent/Service/{AgentCoreToolSet,AgentToolSearch,AgentToolDocumentBuilder,AgentToolArgumentValidator}.php` |
 | Tool catalog | `Classes/Agent/Service/PermittedActionProvider.php` |
 | Editor labels | `Classes/Agent/Service/AgentToolEditorLabelService.php`, `AgentRecordLabeler.php` |

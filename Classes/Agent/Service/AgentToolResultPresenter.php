@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Agent\Service;
 
 use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Api\AiServiceInterface;
+use NITSAN\NsT3AF\Credits\Service\CreditModeResolver;
 
 /**
  * Turns raw MCP tool payloads into editor-facing agent answers (A–D).
@@ -111,6 +112,7 @@ final readonly class AgentToolResultPresenter
         private AgentLanguageResolver $languageResolver,
         private AgentTranslator $translator,
         private ?AgentMediaPreviewService $mediaPreviews = null,
+        private ?CreditModeResolver $creditModeResolver = null,
     ) {}
 
     /**
@@ -146,7 +148,13 @@ final readonly class AgentToolResultPresenter
             && isset($details['summary'])
             && is_string($details['summary'])
             && trim($details['summary']) !== '';
-        if ($allowLlmSummary && $error === null && !$hasReadySummary && !$this->shouldSkipLlmSummary($facts)) {
+        if (
+            $allowLlmSummary
+            && !($this->creditModeResolver?->isActive() ?? false)
+            && $error === null
+            && !$hasReadySummary
+            && !$this->shouldSkipLlmSummary($facts)
+        ) {
             $llmSummary = $this->tryLlmSummary($editorLabel, $details, $pageId);
         }
 

@@ -1378,6 +1378,18 @@
       <trans-unit id="agent.provider.credits" resname="agent.provider.credits">
         <source>T3Planet Credits</source>
       </trans-unit>
+      <trans-unit id="agent.provider.creditsNamed" resname="agent.provider.creditsNamed">
+        <source>T3Planet Credits: %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.credits.modelUnknown" resname="agent.credits.modelUnknown">
+        <source>That Credits model is not available. Choose another model in the AI Agent window.</source>
+      </trans-unit>
+      <trans-unit id="agent.credits.modelNotAllowed" resname="agent.credits.modelNotAllowed">
+        <source>Your Credits plan cannot use that model. Choose another model or ask your administrator.</source>
+      </trans-unit>
+      <trans-unit id="agent.credits.toolsUnsupported" resname="agent.credits.toolsUnsupported">
+        <source>That Credits model cannot run tools. Choose a tools-capable model (for example agent-standard).</source>
+      </trans-unit>
       <trans-unit id="agent.provider.locked" resname="agent.provider.locked">
         <source>The AI provider is fixed for this conversation. Start a new conversation to change it.</source>
       </trans-unit>

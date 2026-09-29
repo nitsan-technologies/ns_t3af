@@ -1689,6 +1689,22 @@
                 <source>T3Planet Credits</source>
                 <target>T3Planet Credits</target>
             </trans-unit>
+            <trans-unit id="agent.provider.creditsNamed">
+                <source>T3Planet Credits: %1$s</source>
+                <target>T3Planet Credits: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.credits.modelUnknown">
+                <source>That Credits model is not available. Choose another model in the AI Agent window.</source>
+                <target>Dieses Credits-Modell ist nicht verfügbar. Wählen Sie ein anderes Modell im KI-Agenten-Fenster.</target>
+            </trans-unit>
+            <trans-unit id="agent.credits.modelNotAllowed">
+                <source>Your Credits plan cannot use that model. Choose another model or ask your administrator.</source>
+                <target>Ihr Credits-Plan kann dieses Modell nicht nutzen. Wählen Sie ein anderes Modell oder fragen Sie Ihre Administration.</target>
+            </trans-unit>
+            <trans-unit id="agent.credits.toolsUnsupported">
+                <source>That Credits model cannot run tools. Choose a tools-capable model (for example agent-standard).</source>
+                <target>Dieses Credits-Modell kann keine Tools ausführen. Wählen Sie ein modell mit Tool-Unterstützung (z. B. agent-standard).</target>
+            </trans-unit>
             <trans-unit id="agent.provider.locked">
                 <source>The AI provider is fixed for this conversation. Start a new conversation to change it.</source>
                 <target>Der KI-Provider ist für diese Unterhaltung festgelegt. Starten Sie eine neue Unterhaltung, um ihn zu wechseln.</target>

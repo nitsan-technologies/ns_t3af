@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Agent\Service;
 use NITSAN\NsT3AF\Api\AiToolCallingServiceInterface;
 use NITSAN\NsT3AF\Credits\CreditsProviderIdentifier;
 use NITSAN\NsT3AF\Credits\Service\CreditModeResolver;
+use NITSAN\NsT3AF\Credits\Service\T3PlanetCreditsModelsService;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
 use NITSAN\NsT3AF\Service\SiteStorageContext;
@@ -33,7 +34,7 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
  *
  * Lists "Default" plus every enabled provider of the site that can call tools, that the
  * editor's backend groups may use (provider be_groups and the AI Permissions allowlist).
- * In T3Planet Credits mode there is only the credits option.
+ * In T3Planet Credits mode the options are Credits model aliases from {@code /v1/models}.
  *
  * @internal
  */
@@ -49,6 +50,7 @@ final readonly class AgentProviderOptions
         private WizardProviderCatalog $providerCatalog,
         private AgentGovernanceGuard $governanceGuard,
         private AgentTranslator $translator,
+        private T3PlanetCreditsModelsService $creditsModels,
     ) {}
 
     /**
@@ -57,7 +59,7 @@ final readonly class AgentProviderOptions
     public function options(int $pageId, ?BackendUserAuthentication $user): array
     {
         if ($this->creditModeResolver->isActive()) {
-            return [['value' => self::DEFAULT, 'label' => $this->translator->translate('agent.provider.credits')]];
+            return $this->creditsOptions();
         }
 
         $storagePid = $this->storagePid($pageId);
@@ -90,7 +92,11 @@ final readonly class AgentProviderOptions
             return true;
         }
         if ($this->creditModeResolver->isActive()) {
-            return $identifier === CreditsProviderIdentifier::IDENTIFIER;
+            if ($identifier === CreditsProviderIdentifier::IDENTIFIER) {
+                return true;
+            }
+
+            return $this->creditsModels->isKnownAlias($identifier);
         }
         $storagePid = $this->storagePid($pageId);
         $provider = $storagePid !== null ? $this->providers->findByIdentifier($identifier, $storagePid) : null;
@@ -103,10 +109,53 @@ final readonly class AgentProviderOptions
         if ($identifier === '' || $identifier === self::DEFAULT) {
             return '';
         }
+        if ($this->creditModeResolver->isActive()) {
+            foreach ($this->creditsModels->listModels() as $model) {
+                if ($model['id'] === $identifier) {
+                    return $model['label'];
+                }
+            }
+
+            return $identifier;
+        }
         $storagePid = $this->storagePid($pageId);
         $provider = $storagePid !== null ? $this->providers->findByIdentifier($identifier, $storagePid) : null;
 
         return $provider instanceof Provider ? $this->summary($provider) : $identifier;
+    }
+
+    /**
+     * @return list<array{value: string, label: string}>
+     */
+    private function creditsOptions(): array
+    {
+        $models = $this->creditsModels->listModels(true);
+        if ($models === []) {
+            return [['value' => self::DEFAULT, 'label' => $this->translator->translate('agent.provider.credits')]];
+        }
+
+        $options = [];
+        $defaultAlias = $this->creditsModels->resolveDefaultAlias();
+        foreach ($models as $model) {
+            $label = $model['label'] !== '' ? $model['label'] : $model['id'];
+            if ($model['id'] === $defaultAlias) {
+                $options[] = [
+                    'value' => self::DEFAULT,
+                    'label' => $this->translator->translate('agent.provider.creditsNamed', [$label]),
+                ];
+                continue;
+            }
+            $options[] = ['value' => $model['id'], 'label' => $label];
+        }
+
+        if (($options[0]['value'] ?? '') !== self::DEFAULT) {
+            array_unshift($options, [
+                'value' => self::DEFAULT,
+                'label' => $this->translator->translate('agent.provider.credits'),
+            ]);
+        }
+
+        return $options;
     }
 
     private function isUsable(Provider $provider, int $pageId, ?BackendUserAuthentication $user): bool

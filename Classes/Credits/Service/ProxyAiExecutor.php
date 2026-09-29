@@ -52,6 +52,9 @@ class ProxyAiExecutor
     private const CALL_EMBED = 'embed';
     private const CALL_STREAM = 'stream';
 
+    /** @var callable(float): void */
+    private $sleeper;
+
     public function __construct(
         private readonly T3PlanetApiClient $apiClient,
         private readonly T3PlanetSseStreamParser $sseParser,
@@ -62,7 +65,15 @@ class ProxyAiExecutor
         private readonly RequestTelemetryService $telemetry,
         private readonly CreditsFeatureKeyMapper $featureKeyMapper,
         private readonly LoggerInterface $logger,
-    ) {}
+        ?callable $sleeper = null,
+    ) {
+        $this->sleeper = $sleeper ?? static function (float $seconds): void {
+            if ($seconds <= 0) {
+                return;
+            }
+            usleep((int) max(1, (int) round($seconds * 1_000_000)));
+        };
+    }
 
     /**
      * @return \Generator<int, string, mixed, StreamSummary>
@@ -449,14 +460,43 @@ class ProxyAiExecutor
      */
     private function postJsonWithRetries(callable $call, string $requestUuid): array
     {
-        try {
-            return $call($requestUuid);
-        } catch (CreditsApiException $e) {
-            if ($e->errorCode !== CreditsApiErrorCodes::IDEMPOTENCY_CONFLICT) {
-                throw $e;
-            }
+        $uuid = $requestUuid;
+        $attempt = 0;
 
-            return $call(Uuid::v4()->toRfc4122());
+        while (true) {
+            ++$attempt;
+            try {
+                return $call($uuid);
+            } catch (CreditsApiException $e) {
+                if ($e->errorCode === CreditsApiErrorCodes::IDEMPOTENCY_CONFLICT) {
+                    if ($attempt >= CreditsRateLimitBackoff::MAX_ATTEMPTS) {
+                        throw $e;
+                    }
+                    $uuid = Uuid::v4()->toRfc4122();
+                    continue;
+                }
+
+                if (!CreditsRateLimitBackoff::isRateLimited($e->errorCode, $e->httpStatus)) {
+                    throw $e;
+                }
+
+                if ($attempt >= CreditsRateLimitBackoff::MAX_ATTEMPTS) {
+                    throw $e;
+                }
+
+                $retryAfter = (int) ($e->extra['retry_after'] ?? 0);
+                $delay = CreditsRateLimitBackoff::delaySeconds($attempt, $retryAfter);
+                $this->logger->warning('Credits API rate limited; retrying after backoff.', [
+                    'error_code' => $e->errorCode,
+                    'http_status' => $e->httpStatus,
+                    'attempt' => $attempt,
+                    'delay_seconds' => $delay,
+                    'retry_after' => $retryAfter,
+                ]);
+                ($this->sleeper)($delay);
+                // Fresh uuid: failed rate-limited calls are not settled; avoids rare idempotency collisions.
+                $uuid = Uuid::v4()->toRfc4122();
+            }
         }
     }
 

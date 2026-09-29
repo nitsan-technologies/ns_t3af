@@ -28,6 +28,9 @@ use NITSAN\NsT3AF\Agent\Runtime\GovernedPlatform;
 use NITSAN\NsT3AF\Agent\Runtime\T3afToolbox;
 use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Api\AiToolCallingServiceInterface;
+use NITSAN\NsT3AF\Credits\CreditsApiErrorCodes;
+use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
+use NITSAN\NsT3AF\Credits\Exception\InsufficientCreditsException;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use Symfony\AI\Agent\Agent;
 use Symfony\AI\Agent\Exception\MaxIterationsExceededException;
@@ -216,11 +219,16 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             static fn(array $messages): AiOptions => new AiOptions(
                 pageId: $pageId > 0 ? $pageId : null,
                 providerIdentifier: $providerIdentifier,
+                modelId: $providerIdentifier,
                 extensionKey: 'ns_t3af',
                 featureKey: 'agent.nl_turn',
                 featureLabel: 'AI Agent NL turn',
                 requestSource: 'backend_module',
-                extra: ['brandContextScope' => 'agent', 'messages' => $messages],
+                extra: [
+                    'brandContextScope' => 'agent',
+                    'messages' => $messages,
+                    'turn_id' => $correlationId,
+                ],
             ),
             $toolbox,
             $this->agentSettings->isProviderThinkingVisible(),
@@ -255,13 +263,35 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         } catch (\Throwable $exception) {
             $state->addMessage([
                 'role' => 'assistant',
-                'content' => $this->translator->translate('agent.turn.orchestratorFailed', [$exception->getMessage()]),
+                'content' => $this->creditsErrorMessage($exception),
                 'meta' => ['type' => 'error', 'correlationId' => $correlationId, 'degraded' => true],
             ]);
             $state->failed = true;
         }
 
         return [$state, $finalText];
+    }
+
+    private function creditsErrorMessage(\Throwable $exception): string
+    {
+        if ($exception instanceof InsufficientCreditsException) {
+            return $exception->getMessage() !== '' && $exception->getMessage() !== 'insufficient_credits'
+                ? $exception->getMessage()
+                : $this->translator->translate('agent.turn.orchestratorFailed', [$exception->getMessage()]);
+        }
+        if ($exception instanceof CreditsApiException) {
+            $key = match ($exception->errorCode) {
+                CreditsApiErrorCodes::MODEL_UNKNOWN => 'agent.credits.modelUnknown',
+                CreditsApiErrorCodes::MODEL_NOT_ALLOWED => 'agent.credits.modelNotAllowed',
+                CreditsApiErrorCodes::TOOLS_UNSUPPORTED => 'agent.credits.toolsUnsupported',
+                default => null,
+            };
+            if ($key !== null) {
+                return $this->translator->translate($key);
+            }
+        }
+
+        return $this->translator->translate('agent.turn.orchestratorFailed', [$exception->getMessage()]);
     }
 
     /**

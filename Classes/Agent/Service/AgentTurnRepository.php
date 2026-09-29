@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Service;
 
+use Symfony\Component\Uid\Uuid;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
@@ -35,7 +36,7 @@ final readonly class AgentTurnRepository
 
     public function startTurn(int $beUserId): string
     {
-        $correlationId = bin2hex(random_bytes(16));
+        $correlationId = Uuid::v4()->toRfc4122();
         $now = (int) ($GLOBALS['EXEC_TIME'] ?? time());
 
         $this->connection()->insert(self::TABLE, [

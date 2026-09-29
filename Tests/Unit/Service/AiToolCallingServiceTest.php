@@ -19,7 +19,10 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Service;
 
+use NITSAN\NsT3AF\Api\AiOptions;
+use NITSAN\NsT3AF\Api\AiToolCallingResponse;
 use NITSAN\NsT3AF\Api\AiToolDefinition;
+use NITSAN\NsT3AF\Credits\CreditsProviderIdentifier;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface;
 use NITSAN\NsT3AF\Event\AfterProviderResponseEvent;
@@ -32,12 +35,14 @@ use NITSAN\NsT3AF\Provider\Contract\ToolCallingCapableInterface;
 use NITSAN\NsT3AF\Provider\Contract\VerifyResult;
 use NITSAN\NsT3AF\Service\AiToolCallingService;
 use NITSAN\NsT3AF\Service\SiteStorageContext;
+use NITSAN\NsT3AF\Service\T3PlanetCreditsChatExecutor;
 use PHPUnit\Framework\TestCase;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use TYPO3\CMS\Core\Site\SiteFinder;
 
 final class AiToolCallingServiceTest extends TestCase
 {
+    use \NITSAN\NsT3AF\Tests\Unit\Credits\CreditsModeResolverFixtureTrait;
     public function testSupportsToolCallingIsFalseForNonCapableAdapter(): void
     {
         $provider = $this->makeProvider('plain.text');
@@ -50,9 +55,22 @@ final class AiToolCallingServiceTest extends TestCase
         $siteFinder = $this->createMock(SiteFinder::class);
         $context = new SiteStorageContext($siteFinder);
 
-        $service = new AiToolCallingService($providers, $registry, $events, $context);
+        $service = $this->createService($providers, $registry, $events, $context);
 
         self::assertFalse($service->supportsToolCalling());
+    }
+
+    public function testSupportsToolCallingIsTrueInCreditsMode(): void
+    {
+        $providers = $this->createMock(ProviderLookupInterface::class);
+        $providers->method('findDefault')->willReturn(null);
+        $registry = new AdapterRegistry([]);
+        $events = $this->createMock(EventDispatcherInterface::class);
+        $context = new SiteStorageContext($this->createMock(SiteFinder::class));
+
+        $service = $this->createService($providers, $registry, $events, $context, creditsActive: true);
+
+        self::assertTrue($service->supportsToolCalling());
     }
 
     public function testCompleteWithToolsFailsLoudlyForNonCapableAdapter(): void
@@ -67,7 +85,7 @@ final class AiToolCallingServiceTest extends TestCase
         $siteFinder = $this->createMock(SiteFinder::class);
         $context = new SiteStorageContext($siteFinder);
 
-        $service = new AiToolCallingService($providers, $registry, $events, $context);
+        $service = $this->createService($providers, $registry, $events, $context);
 
         $this->expectException(AdapterRuntimeException::class);
         $service->completeWithTools([], []);
@@ -153,6 +171,51 @@ final class AiToolCallingServiceTest extends TestCase
         self::assertSame(7, $after[0]->getResponse()->tokensOutput);
     }
 
+    public function testCreditsModeDelegatesToChatExecutor(): void
+    {
+        $executor = $this->createMock(T3PlanetCreditsChatExecutor::class);
+        $executor->expects(self::once())
+            ->method('completeWithTools')
+            ->willReturn(new AiToolCallingResponse(
+                content: 'Done',
+                modelId: 't3planet/agent-standard',
+                providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
+                toolCalls: [],
+                tokensInput: 10,
+                tokensOutput: 4,
+                latencyMs: 12,
+                raw: ['id' => 'chatcmpl-1'],
+            ));
+
+        $dispatched = [];
+        $events = $this->createMock(EventDispatcherInterface::class);
+        $events->method('dispatch')->willReturnCallback(static function (object $event) use (&$dispatched): object {
+            $dispatched[] = $event;
+
+            return $event;
+        });
+
+        $service = $this->createService(
+            $this->createMock(ProviderLookupInterface::class),
+            new AdapterRegistry([]),
+            $events,
+            new SiteStorageContext($this->createMock(SiteFinder::class)),
+            creditsActive: true,
+            creditsExecutor: $executor,
+        );
+
+        $response = $service->completeWithTools(
+            [['role' => 'user', 'content' => 'Hi']],
+            [],
+            new AiOptions(extra: ['turn_id' => 'turn-1']),
+        );
+
+        self::assertSame('Done', $response->content);
+        self::assertSame(CreditsProviderIdentifier::IDENTIFIER, $response->providerIdentifier);
+        $after = array_values(array_filter($dispatched, static fn(object $e): bool => $e instanceof AfterProviderResponseEvent));
+        self::assertCount(1, $after);
+    }
+
     private function makeToolCallingService(object $platform, EventDispatcherInterface $events): AiToolCallingService
     {
         $provider = $this->makeProvider('tools.capable');
@@ -198,11 +261,31 @@ final class AiToolCallingServiceTest extends TestCase
             }
         };
 
-        return new AiToolCallingService(
+        return $this->createService(
             $providers,
             new AdapterRegistry([$adapter]),
             $events,
             new SiteStorageContext($this->createMock(SiteFinder::class)),
+        );
+    }
+
+    private function createService(
+        ProviderLookupInterface $providers,
+        AdapterRegistry $registry,
+        EventDispatcherInterface $events,
+        SiteStorageContext $context,
+        bool $creditsActive = false,
+        ?T3PlanetCreditsChatExecutor $creditsExecutor = null,
+    ): AiToolCallingService {
+        $mode = $this->creditModeResolver($creditsActive);
+
+        return new AiToolCallingService(
+            $providers,
+            $registry,
+            $events,
+            $context,
+            $mode,
+            $creditsExecutor ?? $this->createMock(T3PlanetCreditsChatExecutor::class),
         );
     }
 
@@ -227,6 +310,8 @@ final class AiToolCallingServiceTest extends TestCase
             lastStatus: '',
             lastStatusAt: 0,
             lastStatusMessage: '',
+            beGroups: [],
+            isEnabled: true,
         );
     }
 

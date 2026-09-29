@@ -25,6 +25,8 @@ use NITSAN\NsT3AF\Api\AiToolCall;
 use NITSAN\NsT3AF\Api\AiToolCallingResponse;
 use NITSAN\NsT3AF\Api\AiToolCallingServiceInterface;
 use NITSAN\NsT3AF\Api\AiToolDefinition;
+use NITSAN\NsT3AF\Credits\CreditsProviderIdentifier;
+use NITSAN\NsT3AF\Credits\Service\CreditModeResolver;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface;
 use NITSAN\NsT3AF\Event\AfterProviderResponseEvent;
@@ -50,11 +52,17 @@ final class AiToolCallingService implements AiToolCallingServiceInterface
         private readonly AdapterRegistry $adapters,
         private readonly EventDispatcherInterface $events,
         private readonly SiteStorageContext $siteStorageContext,
+        private readonly CreditModeResolver $creditModeResolver,
+        private readonly T3PlanetCreditsChatExecutor $creditsChatExecutor,
         private readonly ?RequestTelemetryService $telemetry = null,
     ) {}
 
     public function supportsToolCalling(?string $providerIdentifier = null, ?int $pageId = null): bool
     {
+        if ($this->creditModeResolver->isActive()) {
+            return true;
+        }
+
         try {
             if ($providerIdentifier !== null && $providerIdentifier !== '') {
                 $provider = $this->providers->findByIdentifier(
@@ -84,6 +92,10 @@ final class AiToolCallingService implements AiToolCallingServiceInterface
         array $tools,
         AiOptions $options = new AiOptions(),
     ): AiToolCallingResponse {
+        if ($this->creditModeResolver->isActive()) {
+            return $this->completeWithCredits($messages, $tools, $options);
+        }
+
         $provider = $this->resolveProvider($options);
         $adapter = $this->adapters->get($provider->adapterType);
 
@@ -210,6 +222,104 @@ final class AiToolCallingService implements AiToolCallingServiceInterface
             raw: is_array($result['raw'] ?? null) ? $result['raw'] : [],
             appliedBrandContextProfileUid: $appliedProfileUid,
         );
+    }
+
+    /**
+     * @param list<array<string, mixed>> $messages
+     * @param list<AiToolDefinition> $tools
+     */
+    private function completeWithCredits(array $messages, array $tools, AiOptions $options): AiToolCallingResponse
+    {
+        $provider = $this->creditsProvider();
+        $prompt = $this->messagesToPrompt($messages);
+        $before = new BeforeProviderRequestEvent($provider, $prompt, $options, self::CALL_COMPLETE_WITH_TOOLS);
+        $this->events->dispatch($before);
+        $modelId = $before->getOptions()->modelId
+            ?? $before->getOptions()->providerIdentifier
+            ?? $provider->modelId;
+
+        if ($before->isCancelled()) {
+            return new AiToolCallingResponse(
+                content: '',
+                modelId: (string) $modelId,
+                providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
+                toolCalls: [],
+                raw: ['cancelled' => $before->getCancellationReason()],
+                appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
+            );
+        }
+
+        $start = (int) (microtime(true) * 1000);
+        try {
+            $response = $this->creditsChatExecutor->completeWithTools($messages, $tools, $before->getOptions());
+        } catch (\Throwable $exception) {
+            $this->telemetry?->logFailure(
+                provider: $provider,
+                options: $before->getOptions(),
+                prompt: $before->getPrompt(),
+                requestType: self::CALL_COMPLETE_WITH_TOOLS,
+                error: $exception,
+                latencyMs: (int) (microtime(true) * 1000) - $start,
+            );
+            $this->events->dispatch(new ProviderRequestFailedEvent(
+                $provider,
+                $exception,
+                self::CALL_COMPLETE_WITH_TOOLS,
+                '',
+                $before->getOptions(),
+                $before->getPrompt(),
+            ));
+            throw $exception;
+        }
+
+        $appliedProfileUid = BrandContextLineage::profileUidFromOptions($before->getOptions());
+        $after = new AfterProviderResponseEvent(
+            $provider,
+            new AiResponse(
+                content: $response->content,
+                modelId: $response->modelId,
+                providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
+                tokensInput: $response->tokensInput,
+                tokensOutput: $response->tokensOutput,
+                latencyMs: $response->latencyMs,
+                cached: false,
+                raw: ['toolCalls' => array_map(static fn(AiToolCall $call): string => $call->name, $response->toolCalls)],
+                appliedBrandContextProfileUid: $appliedProfileUid,
+            ),
+            $before->getOptions(),
+            $before->getPrompt(),
+        );
+        $this->events->dispatch($after);
+        $this->telemetry?->logCompletion(
+            provider: $provider,
+            options: $before->getOptions(),
+            prompt: $before->getPrompt(),
+            response: $after->getResponse(),
+            requestType: self::CALL_COMPLETE_WITH_TOOLS,
+        );
+
+        return new AiToolCallingResponse(
+            content: $response->content,
+            modelId: $response->modelId,
+            providerIdentifier: CreditsProviderIdentifier::IDENTIFIER,
+            toolCalls: $response->toolCalls,
+            tokensInput: $response->tokensInput,
+            tokensOutput: $response->tokensOutput,
+            latencyMs: $response->latencyMs,
+            raw: $response->raw,
+            appliedBrandContextProfileUid: $appliedProfileUid,
+        );
+    }
+
+    private function creditsProvider(): Provider
+    {
+        return Provider::fromRow([
+            'uid' => 0,
+            'identifier' => CreditsProviderIdentifier::IDENTIFIER,
+            'title' => 'T3Planet Credits',
+            'adapter_type' => 't3planet.credits',
+            'model_id' => 't3planet/agent-standard',
+        ]);
     }
 
     private function resolveProvider(AiOptions $options): Provider

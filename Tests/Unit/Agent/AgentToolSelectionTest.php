@@ -233,6 +233,11 @@ final class AgentToolSelectionTest extends TestCase
             {
                 return [0.1];
             }
+
+            public function embedMany(array $texts): array
+            {
+                return array_map($this->embed(...), $texts);
+            }
         };
 
         return new AgentToolSearch(

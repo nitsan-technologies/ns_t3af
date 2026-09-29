@@ -503,7 +503,9 @@ final class SymfonyAiBridgeAdapterTest extends TestCase
 
         $platform = $adapter->platform($provider);
 
-        self::assertInstanceOf(\Symfony\AI\Platform\Provider::class, $platform);
+        // adapter->platform() wraps the bridge in SymfonyAiPlatform (same as
+        // testAzureDualDeploymentBuildsPlatformWhenAzureBridgeInstalled).
+        self::assertInstanceOf(SymfonyAiPlatform::class, $platform);
     }
 
     private function makeAzureAdapter(?RequestFactory $requestFactory = null): SymfonyAiBridgeAdapter

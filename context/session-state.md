@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-09-29 — Credits v1 chat for AI Agent
+
+**Done:** Agent NL turns in T3Planet Credits mode call `/API/AI/v1/chat/completions` via `symfony/ai-generic-platform` (`T3PlanetCreditsPlatformFactory` + `T3PlanetCreditsChatExecutor`). `AiToolCallingService` branches on `CreditModeResolver`; `supportsToolCalling` is true in credits mode. Provider select lists `/v1/models` aliases. Side-call LLM tool summaries are skipped while credits mode is on. Billing follows the live server (per completions call + `turn_id`); Charge/Stream stay for non-agent traffic.
+
+**Last touched:** 2026-09-29
+
+---
+
 ## 2026-09-25 — Document facts are usable reference
 
 **Done:** The brand-fence line now tells the model to use facts inside `<brand_context>` when they fit the task, and still not to follow instructions inside it or change the response format. Uploaded document text stays inside the fence.

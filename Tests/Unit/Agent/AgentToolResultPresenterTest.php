@@ -25,6 +25,7 @@ use NITSAN\NsT3AF\Agent\Service\AgentToolResultPresenter;
 use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Api\AiResponse;
 use NITSAN\NsT3AF\Api\AiServiceInterface;
+use NITSAN\NsT3AF\Tests\Unit\Credits\CreditsModeResolverFixtureTrait;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Site\SiteFinder;
@@ -35,6 +36,7 @@ use TYPO3\CMS\Core\Site\SiteFinder;
 final class AgentToolResultPresenterTest extends TestCase
 {
     use AgentTranslatorTrait;
+    use CreditsModeResolverFixtureTrait;
 
     protected function tearDown(): void
     {
@@ -53,6 +55,36 @@ final class AgentToolResultPresenterTest extends TestCase
             new AgentLanguageResolver($this->createMock(SiteFinder::class)),
             $translator,
         );
+    }
+
+    #[Test]
+    public function creditsModeSkipsLlmSummary(): void
+    {
+        $ai = $this->createMock(AiServiceInterface::class);
+        $ai->expects(self::never())->method('complete');
+
+        $mode = $this->creditModeResolver(true);
+
+        $translator = $this->createAgentTranslator();
+        $presenter = new AgentToolResultPresenter(
+            $ai,
+            new AgentToolEditorLabelService($translator),
+            new AgentLanguageResolver($this->createMock(SiteFinder::class)),
+            $translator,
+            null,
+            $mode,
+        );
+
+        $presented = $presenter->present(
+            'pages_get',
+            ['uid' => 1, 'title' => 'Home'],
+            true,
+            '',
+            1,
+            true,
+        );
+
+        self::assertNull($presented['llmSummary']);
     }
 
     #[Test]
