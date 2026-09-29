@@ -7,7 +7,53 @@
  */
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
 import Notification from '@typo3/backend/notification.js';
+import { Popover as BsPopover } from 'bootstrap';
 import { bindFilterSearchInput, observeBrowserAutocomplete } from '@nitsan/nst3af/disable-browser-autocomplete.js';
+
+/**
+ * @param {ParentNode} root
+ */
+function disposeFieldHelpLinks(root) {
+  root.querySelectorAll('.help-link').forEach((el) => {
+    if (!(el instanceof HTMLElement)) {
+      return;
+    }
+    BsPopover.getInstance(el)?.dispose();
+  });
+}
+
+/**
+ * Field help for AJAX-injected drawer markup.
+ * Appended to document.body so overflow on .aiu-drawer__panel does not clip the popover.
+ *
+ * @param {ParentNode} root
+ */
+function initFieldHelpLinks(root) {
+  root.querySelectorAll('.help-link').forEach((el) => {
+    if (!(el instanceof HTMLElement)) {
+      return;
+    }
+    BsPopover.getInstance(el)?.dispose();
+
+    const title = '';
+    const content = el.getAttribute('data-bs-content')
+      || el.getAttribute('data-description')
+      || '';
+    if (content === '') {
+      return;
+    }
+
+    new BsPopover(el, {
+      container: document.body,
+      placement: 'right',
+      trigger: 'hover focus',
+      html: false,
+      title,
+      content,
+      customClass: 'aiu-field-help-popover',
+    });
+  });
+}
 
 const ROUTES = {
   test: TYPO3.settings.ajaxUrls['nst3af_provider_test'],
@@ -242,6 +288,7 @@ class ProviderDrawer {
       const html = await new AjaxRequest(url).get().then((r) => r.resolve('text/html'));
       this.panel.innerHTML = html;
       this.bindForm();
+      initFieldHelpLinks(this.panel);
       this.drawer.setAttribute('aria-hidden', 'false');
       this.drawer.classList.remove('is-closing');
       this.drawer.classList.add('is-open');
@@ -315,6 +362,9 @@ class ProviderDrawer {
       return;
     }
     this.deactivateDrawerFocus();
+    if (this.panel) {
+      disposeFieldHelpLinks(this.panel);
+    }
     this.drawer.classList.remove('is-open');
     this.drawer.classList.remove('aiu-drawer--open');
     this.drawer.classList.add('is-closing');
@@ -440,19 +490,22 @@ class ProviderDrawer {
         }
       }
       // Azure: update model field labels to deployment-centric terminology.
-      const modelFieldLabel = form.querySelector('[data-aiu-model-field-label]');
-      if (modelFieldLabel) {
-        modelFieldLabel.textContent = isAzure ? 'Chat deployment' : (modelFieldLabel.dataset.defaultLabel || modelFieldLabel.textContent);
-        if (!modelFieldLabel.dataset.defaultLabel && !isAzure) {
-          // Store original label on first non-azure render.
-          modelFieldLabel.dataset.defaultLabel = modelFieldLabel.textContent;
+      const modelFieldLabelText = form.querySelector('[data-aiu-model-field-label] [data-aiu-field-label-text]');
+      if (modelFieldLabelText instanceof HTMLElement) {
+        modelFieldLabelText.textContent = isAzure
+          ? 'Chat deployment'
+          : (modelFieldLabelText.dataset.defaultLabel || modelFieldLabelText.textContent);
+        if (!modelFieldLabelText.dataset.defaultLabel && !isAzure) {
+          modelFieldLabelText.dataset.defaultLabel = modelFieldLabelText.textContent;
         }
       }
-      const embeddingModelFieldLabel = form.querySelector('[data-aiu-embedding-model-field-label]');
-      if (embeddingModelFieldLabel) {
-        embeddingModelFieldLabel.textContent = isAzure ? 'Embedding deployment' : (embeddingModelFieldLabel.dataset.defaultLabel || embeddingModelFieldLabel.textContent);
-        if (!embeddingModelFieldLabel.dataset.defaultLabel && !isAzure) {
-          embeddingModelFieldLabel.dataset.defaultLabel = embeddingModelFieldLabel.textContent;
+      const embeddingModelFieldLabelText = form.querySelector('[data-aiu-embedding-model-field-label] [data-aiu-field-label-text]');
+      if (embeddingModelFieldLabelText instanceof HTMLElement) {
+        embeddingModelFieldLabelText.textContent = isAzure
+          ? 'Embedding deployment'
+          : (embeddingModelFieldLabelText.dataset.defaultLabel || embeddingModelFieldLabelText.textContent);
+        if (!embeddingModelFieldLabelText.dataset.defaultLabel && !isAzure) {
+          embeddingModelFieldLabelText.dataset.defaultLabel = embeddingModelFieldLabelText.textContent;
         }
       }
     };

@@ -10,6 +10,13 @@
 
 ---
 
+## 2026-09-29 — Read chat content parts
+
+**Done:** `AiService::extractContentFromInvokeResult()` reads a string or a list of text parts from the raw chat completion when the bridge converter rejects the body. Thinking parts are skipped. A provider error in that body is thrown instead of an empty success. A normal `asText()` string is unchanged.
+
+**Last touched:** 2026-09-29
+
+---
 ## 2026-09-25 — Document facts are usable reference
 
 **Done:** The brand-fence line now tells the model to use facts inside `<brand_context>` when they fit the task, and still not to follow instructions inside it or change the response format. Uploaded document text stays inside the fence.
