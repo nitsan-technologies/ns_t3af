@@ -1,6 +1,11 @@
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
 import DocumentService from '@typo3/core/document-service.js';
 import { ModuleStateStorage } from '@typo3/backend/storage/module-state-storage.js';
+import Persistent from '@typo3/backend/storage/persistent.js';
+// Defines the <typo3-backend-icon> custom element used by dynamically-rendered session-list
+// action buttons (rename/delete) — same explicit-import pattern TYPO3 core itself uses in
+// resizable-navigation.js before generating icon markup at runtime.
+import '@typo3/backend/element/icon-element.js';
 import { hotkeyLabel, readHotkeyPref, matchesAgentHotkey, STORAGE_PREFS_KEY } from './agent/hotkeys.js';
 import { lang, hasTurnGuardWarning, errorMessage, errorText, messageContent, escapeHtml, formatWorkDuration, humanizeKey } from './agent/format.js';
 import { ajaxUrl, resolveBackendContext } from './agent/context.js';
@@ -66,6 +71,18 @@ class AgentController {
     this.sessions = [];
     this.sessionsFilter = 'current';
     this.sessionsHasMore = false;
+    /**
+     * Conversations rail visible/collapsed choice, read once here (not per open()) so it's
+     * known before the panel is ever painted. Persistent.get() is not reliably async (a
+     * synchronous blocking XHR on a cold cache, a plain sync read once warm) so resolving it
+     * eagerly at construction avoids stalling the "open panel" click. Missing key -> visible.
+     */
+    const storedSessionsVisible = Persistent.get('nst3af.agent.sessionsVisible');
+    this.sessionsRailOpen = storedSessionsVisible === undefined ? true : storedSessionsVisible === true;
+    /** Timer id for the deferred hide after the close-slide transition finishes. */
+    this.closeTimer = 0;
+    /** Rail visibility to restore once the info drawer (which borrows the rail's space) closes. */
+    this._railStateBeforeInfo = null;
     this.providers = [];
     this.selectedProvider = 'default';
     /** One-line notice after the editor navigated while the conversation continues. */
@@ -283,15 +300,26 @@ function mountLaunchBar(retry = 0) {
     controller?.open(clone);
   });
 
-  let slot = topbar.querySelector('.nst3af-agent-launchbar-slot');
+  // .scaffold-header is the real full-width row (spans both grid columns, position:relative
+  // via CSS) that TYPO3 core lays .scaffold-topbar (logo, search) and .scaffold-toolbar
+  // (module icon list) out in as flex siblings. The slot is absolutely centered against it
+  // (see agent.css), so DOM order inside .scaffold-header doesn't matter — any child works.
+  const scaffoldHeader = topbar.closest('.scaffold-header')
+    ?? backendDoc.querySelector('.scaffold-header, .t3js-scaffold-header');
+
+  let slot = (scaffoldHeader ?? topbar).querySelector('.nst3af-agent-launchbar-slot');
   if (!(slot instanceof HTMLElement)) {
     slot = backendDoc.createElement('div');
     slot.className = 'nst3af-agent-launchbar-slot';
-    const anchor = topbar.querySelector('.topbar-button-search, .t3js-topbar-button-search');
-    if (anchor instanceof HTMLElement && anchor.parentElement) {
-      anchor.parentElement.insertBefore(slot, anchor);
+    if (scaffoldHeader instanceof HTMLElement) {
+      scaffoldHeader.appendChild(slot);
     } else {
-      topbar.appendChild(slot);
+      const anchor = topbar.querySelector('.topbar-button-search, .t3js-topbar-button-search');
+      if (anchor instanceof HTMLElement && anchor.parentElement) {
+        anchor.parentElement.insertBefore(slot, anchor);
+      } else {
+        topbar.appendChild(slot);
+      }
     }
   }
   slot.replaceChildren(clone);

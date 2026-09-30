@@ -195,6 +195,7 @@ final class AgentAjaxController
             'session' => $row !== null ? $this->sessionPresenter->summary($row, $context, $user) : null,
             'sessionList' => $this->sessionPresenter->listSettings(),
             'providers' => $this->providerOptions->options((int) ($context['pageId'] ?? 0), $user),
+            'hasUsableProvider' => $this->providerOptions->hasUsableProvider((int) ($context['pageId'] ?? 0), $user),
             'continueAfterConfirm' => $this->agentSettings->isContinueAfterConfirmEnabled(),
             'credits' => $this->creditsStatus->status(),
         ]);

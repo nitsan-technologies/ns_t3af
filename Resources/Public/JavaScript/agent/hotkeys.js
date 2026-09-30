@@ -5,7 +5,7 @@
 export const STORAGE_PREFS_KEY = 'nst3af.agent.prefs';
 export const STORAGE_OPEN_KEY = 'nst3af.agent.open';
 
-/** Safe default — leaves Live Search on Ctrl/Cmd+K (CTO / Sanjay). */
+/** Safe default — leaves Live Search on Ctrl/Cmd+K. */
 export const HOTKEY_DEFAULT = 'mod+shift+k';
 
 /** Opt-in: takes Live Search chord. */

@@ -481,10 +481,13 @@
         <source>Message</source>
       </trans-unit>
       <trans-unit id="agent.composer.placeholder" resname="agent.composer.placeholder">
-        <source>Ask a question, / for tools, @ for records…</source>
+        <source>Ask a question about this page…</source>
       </trans-unit>
       <trans-unit id="agent.composer.hint" resname="agent.composer.hint">
         <source>/ tools · @ records ·</source>
+      </trans-unit>
+      <trans-unit id="agent.composer.disclaimer" resname="agent.composer.disclaimer">
+        <source>AI-generated content can be wrong. Please verify before you approve.</source>
       </trans-unit>
       <trans-unit id="agent.composer.send" resname="agent.composer.send">
         <source>Send message</source>
@@ -513,8 +516,14 @@
       <trans-unit id="agent.context.aware" resname="agent.context.aware">
         <source>Knows what you are looking at</source>
       </trans-unit>
+      <trans-unit id="agent.greeting.title" resname="agent.greeting.title">
+        <source>Start a conversation</source>
+      </trans-unit>
       <trans-unit id="agent.greeting.lead" resname="agent.greeting.lead">
-        <source>I can read this screen, draft changes, and run tools — you approve before anything is written.</source>
+        <source>Ask about this page or pick a starting point. The agent drafts changes, and nothing is saved until you approve.</source>
+      </trans-unit>
+      <trans-unit id="agent.greeting.tip" resname="agent.greeting.tip">
+        <source>Type %1$s for tools or %2$s to reference a record.</source>
       </trans-unit>
       <trans-unit id="agent.greeting.page" resname="agent.greeting.page">
         <source>Page</source>
@@ -1396,6 +1405,12 @@
       <trans-unit id="agent.provider.notAllowed" resname="agent.provider.notAllowed">
         <source>This AI provider is not available for your backend group. Choose another provider or ask your administrator.</source>
       </trans-unit>
+      <trans-unit id="agent.provider.none.title" resname="agent.provider.none.title">
+        <source>No AI provider configured</source>
+      </trans-unit>
+      <trans-unit id="agent.provider.none.body" resname="agent.provider.none.body">
+        <source>Configure an AI provider that can call tools before using the AI Agent.</source>
+      </trans-unit>
       <trans-unit id="agent.session.list" resname="agent.session.list">
         <source>Conversations</source>
       </trans-unit>
@@ -1404,6 +1419,12 @@
       </trans-unit>
       <trans-unit id="agent.session.search" resname="agent.session.search">
         <source>Filter by title</source>
+      </trans-unit>
+      <trans-unit id="agent.session.resize" resname="agent.session.resize">
+        <source>Resize conversations list</source>
+      </trans-unit>
+      <trans-unit id="agent.panel.resize" resname="agent.panel.resize">
+        <source>Resize AI Agent panel</source>
       </trans-unit>
       <trans-unit id="agent.session.filterPage" resname="agent.session.filterPage">
         <source>This page</source>

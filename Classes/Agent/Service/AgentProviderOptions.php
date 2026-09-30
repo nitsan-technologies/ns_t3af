@@ -84,6 +84,37 @@ final readonly class AgentProviderOptions
     }
 
     /**
+     * Whether a real tool-calling provider (or Credits model) is available.
+     *
+     * {@see options()} always includes a synthetic "default" row for the select, so the
+     * client cannot infer this from an empty list.
+     */
+    public function hasUsableProvider(int $pageId, ?BackendUserAuthentication $user): bool
+    {
+        if ($this->creditModeResolver->isActive()) {
+            return $this->creditsModels->listModels(true) !== [];
+        }
+
+        $storagePid = $this->storagePid($pageId);
+        if ($storagePid === null) {
+            return false;
+        }
+
+        $default = $this->providers->findDefault($storagePid);
+        if ($default instanceof Provider && $this->isUsable($default, $pageId, $user)) {
+            return true;
+        }
+
+        foreach ($this->providers->findAllByStoragePid($storagePid) as $provider) {
+            if ($this->isUsable($provider, $pageId, $user)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Whether the editor may run the agent with this provider ("default" / empty always).
      */
     public function isAllowed(string $identifier, int $pageId, ?BackendUserAuthentication $user): bool

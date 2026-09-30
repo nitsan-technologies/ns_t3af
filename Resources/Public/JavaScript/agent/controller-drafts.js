@@ -342,7 +342,9 @@ export const draftMethods = {
         const dropClass = kept ? '' : ' nst3af-agent-draft__fld--dropped';
         const recordLabel = String(field.recordLabel ?? '') || `${field.table ?? ''}:${Number(field.uid ?? 0)}`;
         const label = `${escapeHtml(recordLabel)} · <strong>${escapeHtml(String(field.fieldLabel ?? '') || String(field.field ?? ''))}</strong>`;
-        const keepLabel = kept ? '✓' : '✕';
+        const keepLabel = kept
+          ? '<typo3-backend-icon identifier="actions-check" size="small"></typo3-backend-icon>'
+          : '<typo3-backend-icon identifier="actions-close" size="small"></typo3-backend-icon>';
         const keepTitle = kept ? lang('agent.draft.drop', 'Drop') : lang('agent.draft.keep', 'Keep');
         return `<div class="nst3af-agent-draft__fld${dropClass}" data-field-key="${escapeHtml(String(field.key ?? ''))}">
           <div class="nst3af-agent-draft__fld-label">${label}</div>
@@ -487,7 +489,7 @@ export const draftMethods = {
         <div class="nst3af-agent-msg__who">AI Agent</div>
         <div class="nst3af-agent-applied">
           <details class="nst3af-agent-applied__details">
-            <summary class="nst3af-agent-applied__title"><span aria-hidden="true">✓</span> ${escapeHtml(lang('agent.applied.title', 'Changes applied'))}<span class="nst3af-agent-applied__summary">${escapeHtml(String(message.content ?? ''))}</span></summary>
+            <summary class="nst3af-agent-applied__title"><typo3-backend-icon identifier="actions-check" size="small" aria-hidden="true"></typo3-backend-icon> ${escapeHtml(lang('agent.applied.title', 'Changes applied'))}<span class="nst3af-agent-applied__summary">${escapeHtml(String(message.content ?? ''))}</span></summary>
             ${rows}
             ${handoffHtml}
           </details>

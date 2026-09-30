@@ -34,7 +34,7 @@ export const streamMethods = {
         this.input.disabled = empty;
         this.input.placeholder = empty
           ? lang('agent.credits.emptyInput', 'Your T3Planet credits are used up. Top up credits to continue.')
-          : lang('agent.composer.placeholder', 'Ask a question, / for tools, @ for records…');
+          : lang('agent.composer.placeholder', 'Ask a question about this page…');
       }
       this.root.querySelector('[data-nst3af-agent-send]')?.toggleAttribute('disabled', empty);
     },
@@ -224,7 +224,9 @@ export const streamMethods = {
       const open = this.planOpen ?? done < steps.length;
       const items = steps.map((step) => {
         const status = ['completed', 'in_progress', 'failed'].includes(step.status) ? step.status : 'pending';
-        const mark = status === 'completed' ? '✓' : (status === 'failed' ? '✕' : '');
+        const mark = status === 'completed'
+          ? '<typo3-backend-icon identifier="actions-check" size="small"></typo3-backend-icon>'
+          : (status === 'failed' ? '<typo3-backend-icon identifier="actions-close" size="small"></typo3-backend-icon>' : '');
         const current = status === 'in_progress' ? ' aria-current="step"' : '';
         return `<li class="nst3af-agent-plan__step nst3af-agent-plan__step--${status}"${current}>`
           + `<span class="nst3af-agent-plan__mark" aria-hidden="true">${mark}</span>`
@@ -289,7 +291,7 @@ export const streamMethods = {
           const isStep = summarizedLater[index] && meta.success !== false && meta.fromDraftApply !== true
             && String(meta.severity ?? 'read') === 'read';
           if (isStep) {
-            return `<details class="nst3af-agent-step"><summary><span aria-hidden="true">✓</span> ${escapeHtml(resolveToolDisplayLabel(meta))}</summary>${this.renderToolResultMessage(message)}</details>`;
+            return `<details class="nst3af-agent-step"><summary><typo3-backend-icon identifier="actions-check" size="small" aria-hidden="true"></typo3-backend-icon> ${escapeHtml(resolveToolDisplayLabel(meta))}</summary>${this.renderToolResultMessage(message)}</details>`;
           }
           return this.renderToolResultMessage(message);
         }
@@ -311,6 +313,7 @@ export const streamMethods = {
         ? `<div class="nst3af-agent-execute-all"><button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-execute-all>${escapeHtml(lang('agent.draft.executeAll', 'Execute all (%1$s)', [String(pending.length)]))}</button></div>`
         : '';
       this.stream.innerHTML = this.renderHomeNotice() + html + executeAllBar + this.renderContextNotice();
+      this.stream.classList.toggle('nst3af-agent-stream--empty', this.messages.length === 0 && !this.isRunning);
       this.updateSummarizeButton();
       if (this.messages.length === 0) {
         this.renderGreeting();
@@ -320,7 +323,7 @@ export const streamMethods = {
       if (this.isRunning) {
         this.showProgress(true, this._progressLabel || '');
       }
-      this.stream.scrollTop = this.stream.scrollHeight;
+      this.stream.scrollTop = this.messages.length === 0 ? 0 : this.stream.scrollHeight;
     },
 
   renderGreeting() {
@@ -331,58 +334,66 @@ export const streamMethods = {
       const existing = this.stream.querySelector('[data-nst3af-agent-greeting]');
       existing?.remove();
 
-      const g = this.greeting ?? {};
-      const parts = [];
-      if (g.page) {
-        parts.push(`<strong>${escapeHtml(lang('agent.greeting.page', 'Page'))}:</strong> ${escapeHtml(String(g.page))}`);
-      }
-      if (g.module) {
-        parts.push(`<strong>${escapeHtml(lang('agent.greeting.module', 'Module'))}:</strong> ${escapeHtml(String(g.module))}`);
-      }
-      if (g.language) {
-        parts.push(`<strong>${escapeHtml(lang('agent.greeting.language', 'Language'))}:</strong> ${escapeHtml(String(g.language))}`);
-      }
-      if (g.brand) {
-        parts.push(`<strong>${escapeHtml(lang('agent.greeting.brand', 'Brand'))}:</strong> ${escapeHtml(String(g.brand))}`);
-      }
-
-      const contextHtml = parts.length
-        ? `<div class="nst3af-agent-greeting__context">${parts.join('<br>')}</div>`
-        : '';
-
       const wrap = document.createElement('div');
       wrap.dataset.nst3afAgentGreeting = '1';
-      wrap.className = 'nst3af-agent-msg nst3af-agent-msg--assistant nst3af-agent-greeting';
-      wrap.innerHTML = `<div class="nst3af-agent-msg__who">AI Agent</div>
-        <p class="nst3af-agent-greeting__lead">${escapeHtml(lang('agent.greeting.lead', 'I can read this screen, draft changes, and run tools — you approve before anything is written.'))}</p>
-        ${contextHtml}`;
+      wrap.className = 'nst3af-agent-empty';
 
-      const starters = document.createElement('div');
-      starters.className = 'nst3af-agent-starters';
+      const mark = document.createElement('div');
+      mark.className = 'nst3af-agent-empty__mark';
+      mark.setAttribute('aria-hidden', 'true');
+      mark.innerHTML = '<typo3-backend-icon identifier="actions-wand-sparkles" size="medium"></typo3-backend-icon>';
+      wrap.appendChild(mark);
+
+      const title = document.createElement('h2');
+      title.className = 'nst3af-agent-empty__title';
+      title.textContent = lang('agent.greeting.title', 'Start a conversation');
+      wrap.appendChild(title);
+
+      const lead = document.createElement('p');
+      lead.className = 'nst3af-agent-empty__lead';
+      lead.textContent = lang(
+        'agent.greeting.lead',
+        'Ask about this page or pick a starting point. The agent drafts changes, and nothing is saved until you approve.',
+      );
+      wrap.appendChild(lead);
+
       const executable = Array.isArray(this.starters.executable) ? this.starters.executable : [];
       const locked = Array.isArray(this.starters.locked) ? this.starters.locked : [];
 
       if (executable.length > 0) {
-        const label = document.createElement('div');
-        label.className = 'nst3af-agent-starter-group-label';
-        label.textContent = lang('agent.starters.executable', 'Suggested actions');
-        starters.appendChild(label);
-        executable.forEach((tool) => starters.appendChild(this.createStarterButton(tool, false)));
+        const grid = document.createElement('div');
+        grid.className = 'nst3af-agent-starters nst3af-agent-starters--grid';
+        grid.setAttribute('role', 'list');
+        executable.forEach((tool) => {
+          const btn = this.createStarterButton(tool, false, { variant: 'card' });
+          btn.setAttribute('role', 'listitem');
+          grid.appendChild(btn);
+        });
+        wrap.appendChild(grid);
       }
+
       if (locked.length > 0) {
+        const lockedWrap = document.createElement('div');
+        lockedWrap.className = 'nst3af-agent-starters nst3af-agent-starters--locked';
         const label = document.createElement('div');
         label.className = 'nst3af-agent-starter-group-label';
         label.textContent = lang('agent.starters.locked', 'Needs another extension');
-        starters.appendChild(label);
-        locked.forEach((tool) => starters.appendChild(this.createStarterButton(tool, true)));
+        lockedWrap.appendChild(label);
+        locked.forEach((tool) => lockedWrap.appendChild(this.createStarterButton(tool, true, { variant: 'card' })));
+        wrap.appendChild(lockedWrap);
       }
 
-      if (starters.childNodes.length > 0) {
-        wrap.appendChild(starters);
-      }
+      const tip = document.createElement('p');
+      tip.className = 'nst3af-agent-empty__tip';
+      tip.innerHTML = lang(
+        'agent.greeting.tip',
+        'Type %1$s for tools or %2$s to reference a record.',
+        ['<kbd>/</kbd>', '<kbd>@</kbd>'],
+      );
+      wrap.appendChild(tip);
 
       this.stream.appendChild(wrap);
-      this.stream.scrollTop = this.stream.scrollHeight;
+      this.stream.scrollTop = 0;
     },
 
   /**

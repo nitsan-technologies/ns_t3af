@@ -77,7 +77,7 @@ Build locally: `composer doc-watch` from package root.
 | MCP OAuth / tools | `context/features/mcp-server.md`, `Documentation/McpServer/` |
 | Run tests / CI | `tasks/run-quality.md` |
 | Backend module markup / CSS conventions | `context/Typo3CoreBackendDesign.md` |
-| Backend AI Agent (modal, NL, drafts, file context) | `context/features/ai-agent.md` |
+| Backend AI Agent (right-edge panel, NL, drafts, file context) | `context/features/ai-agent.md` |
 | Agent routing / preview-apply / eval | `Documentation/Agent/Routing.md`, `PreviewApply.md`, `Eval.md`, `VerifySuite.md` |
 | Shared checklist in child ext (ns_t3aa, ns_t3ai, ns_t3cs) | `SetupChecklistPresenter`, `ChildSetupChecklistSlot.html`, design guide § Shared UI |
 | AI Logs tab / filter navigation / child “AI Foundation Logs” button | `context/features/ai-logs.md`, `BackendModuleLinkUtility`, `module-navigation.js` |

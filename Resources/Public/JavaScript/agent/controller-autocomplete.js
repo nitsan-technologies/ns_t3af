@@ -145,12 +145,14 @@ export const autocompleteMethods = {
   /**
      * @param {object} tool
      * @param {boolean} locked
+     * @param {{variant?: 'chip'|'card'}} [options]
      * @returns {HTMLButtonElement}
      */
-    createStarterButton(tool, locked) {
+    createStarterButton(tool, locked, options = {}) {
+      const variant = options.variant === 'card' ? 'card' : 'chip';
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = `nst3af-agent-starter${locked ? ' nst3af-agent-starter--locked' : ''}`;
+      btn.className = `nst3af-agent-starter nst3af-agent-starter--${variant}${locked ? ' nst3af-agent-starter--locked' : ''}`;
       btn.dataset.nst3afAgentStarter = '1';
       btn.dataset.tool = String(tool.name ?? '');
       btn.dataset.action = String(tool.action ?? '');
@@ -163,19 +165,30 @@ export const autocompleteMethods = {
       }
       btn.dataset.locked = locked ? '1' : '0';
       btn.setAttribute('aria-label', this.buildToolAriaLabel(tool, locked));
+      if (locked) {
+        btn.disabled = true;
+      }
 
       if (locked) {
         const lock = document.createElement('span');
         lock.className = 'nst3af-agent-starter__lock';
         lock.setAttribute('aria-hidden', 'true');
-        lock.textContent = '🔒';
+        lock.innerHTML = '<typo3-backend-icon identifier="actions-lock" size="small"></typo3-backend-icon>';
         btn.appendChild(lock);
       }
 
-      const dot = document.createElement('span');
-      dot.className = `nst3af-agent-sev-dot nst3af-agent-sev-dot--${String(tool.severity ?? 'read')}`;
-      dot.setAttribute('aria-hidden', 'true');
-      btn.appendChild(dot);
+      if (variant === 'card') {
+        const icon = document.createElement('span');
+        icon.className = 'nst3af-agent-starter__icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.innerHTML = `<typo3-backend-icon identifier="${escapeHtml(this.starterIconIdentifier(tool))}" size="small"></typo3-backend-icon>`;
+        btn.appendChild(icon);
+      } else {
+        const dot = document.createElement('span');
+        dot.className = `nst3af-agent-sev-dot nst3af-agent-sev-dot--${String(tool.severity ?? 'read')}`;
+        dot.setAttribute('aria-hidden', 'true');
+        btn.appendChild(dot);
+      }
 
       const label = document.createElement('span');
       label.className = 'nst3af-agent-starter__label';
@@ -198,39 +211,71 @@ export const autocompleteMethods = {
     },
 
   /**
+     * Icon API id for an empty-state starter card.
+     * @param {object} tool
+     * @returns {string}
+     */
+    starterIconIdentifier(tool) {
+      const byStarter = {
+        seo: 'actions-search',
+        translatePage: 'actions-localize',
+        recordTranslate: 'actions-localize',
+        newsTranslate: 'actions-localize',
+        addContent: 'actions-plus',
+        createSubpage: 'actions-page-new',
+        accessibility: 'actions-eye',
+        summarizePage: 'actions-document-info',
+        fileAltText: 'actions-file',
+        missingAltText: 'actions-file',
+        generateImage: 'actions-image',
+        redirectsToPage: 'actions-link',
+        createRedirect: 'actions-link',
+        failedTasks: 'actions-clock',
+        workspaceChanges: 'actions-workspace',
+        pageTree: 'apps-pagetree-page-default',
+        capabilities: 'actions-info-circle',
+        recordImprove: 'actions-document-edit',
+      };
+      const starterId = String(tool.starterId ?? '');
+      if (starterId !== '' && byStarter[starterId]) {
+        return byStarter[starterId];
+      }
+      return 'actions-arrow-right';
+    },
+
+  /**
+     * Fill the composer from a starter; the editor sends explicitly.
      * @param {HTMLButtonElement} btn
      */
     async runStarter(btn) {
-      // Context chips carry a request in the editor's language: send it like typed text.
+      if (btn.dataset.locked === '1' || btn.disabled) {
+        return;
+      }
+      if (!(this.input instanceof HTMLTextAreaElement)) {
+        return;
+      }
+
       const prompt = String(btn.dataset.prompt ?? '').trim();
-      if (prompt !== '' && btn.dataset.locked !== '1') {
-        if (this.input) {
-          this.input.value = prompt;
+      if (prompt !== '') {
+        this.input.value = prompt;
+      } else {
+        const tool = btn.dataset.tool ?? '';
+        const action = btn.dataset.action ?? '';
+        if (tool === '' && action === '') {
+          return;
         }
-        await this.submitTurn();
-        return;
-      }
-      const tool = btn.dataset.tool ?? '';
-      const action = btn.dataset.action ?? '';
-      if (tool === '' && action === '') {
-        return;
-      }
-      let toolArguments = {};
-      try {
-        toolArguments = JSON.parse(btn.dataset.arguments ?? '{}');
-      } catch {
-        toolArguments = {};
-      }
-      if (this.input) {
         this.input.value = action !== '' ? `/${action}` : `/${tool} `;
       }
-      await this.submitTurn(tool, toolArguments, action);
+      this.resizeComposerInput();
+      this.input.focus();
     },
 
   handleComposerInput() {
       if (!this.input) {
         return;
       }
+
+      this.resizeComposerInput();
 
       const value = this.input.value;
       const slash = value.match(/\/(\S*)$/);
@@ -249,6 +294,20 @@ export const autocompleteMethods = {
       }
 
       this.hideAutocomplete();
+    },
+
+  /**
+     * Grow the composer textarea with content up to ~10 lines, then scroll.
+     */
+    resizeComposerInput() {
+      if (!(this.input instanceof HTMLTextAreaElement)) {
+        return;
+      }
+      const maxPx = 220;
+      this.input.style.height = 'auto';
+      const scroll = this.input.scrollHeight;
+      this.input.style.height = `${Math.min(scroll, maxPx)}px`;
+      this.input.style.overflowY = scroll > maxPx ? 'auto' : 'hidden';
     },
 
   /**

@@ -508,12 +508,16 @@
                 <target>Nachricht</target>
             </trans-unit>
             <trans-unit id="agent.composer.placeholder">
-                <source>Ask a question, / for tools, @ for records…</source>
-                <target>Frage stellen, / für Tools, @ für Datensätze…</target>
+                <source>Ask a question about this page…</source>
+                <target>Stellen Sie eine Frage zu dieser Seite…</target>
             </trans-unit>
             <trans-unit id="agent.composer.hint">
                 <source>/ tools · @ records ·</source>
                 <target>/ Tools · @ Datensätze ·</target>
+            </trans-unit>
+            <trans-unit id="agent.composer.disclaimer">
+                <source>AI-generated content can be wrong. Please verify before you approve.</source>
+                <target>KI-generierte Inhalte können falsch sein. Bitte prüfen Sie sie, bevor Sie freigeben.</target>
             </trans-unit>
             <trans-unit id="agent.composer.send">
                 <source>Send message</source>
@@ -809,9 +813,17 @@
                 <source>Knows what you are looking at</source>
                 <target>Weiß, was Sie gerade ansehen</target>
             </trans-unit>
+            <trans-unit id="agent.greeting.title">
+                <source>Start a conversation</source>
+                <target>Unterhaltung starten</target>
+            </trans-unit>
             <trans-unit id="agent.greeting.lead">
-                <source>I can read this screen, draft changes, and run tools — you approve before anything is written.</source>
-                <target>Ich kann diesen Bildschirm lesen, Änderungen entwerfen und Tools ausführen – Sie geben frei, bevor etwas geschrieben wird.</target>
+                <source>Ask about this page or pick a starting point. The agent drafts changes, and nothing is saved until you approve.</source>
+                <target>Fragen Sie zu dieser Seite oder wählen Sie einen Startpunkt. Der Agent entwirft Änderungen; gespeichert wird erst nach Ihrer Freigabe.</target>
+            </trans-unit>
+            <trans-unit id="agent.greeting.tip">
+                <source>Type %1$s for tools or %2$s to reference a record.</source>
+                <target>Tippen Sie %1$s für Tools oder %2$s, um einen Datensatz zu referenzieren.</target>
             </trans-unit>
             <trans-unit id="agent.greeting.page">
                 <source>Page</source>
@@ -1713,6 +1725,14 @@
                 <source>This AI provider is not available for your backend group. Choose another provider or ask your administrator.</source>
                 <target>Dieser KI-Provider ist für Ihre Backend-Gruppe nicht verfügbar. Wählen Sie einen anderen Provider oder fragen Sie Ihre Administration.</target>
             </trans-unit>
+            <trans-unit id="agent.provider.none.title">
+                <source>No AI provider configured</source>
+                <target>Kein KI-Provider konfiguriert</target>
+            </trans-unit>
+            <trans-unit id="agent.provider.none.body">
+                <source>Configure an AI provider that can call tools before using the AI Agent.</source>
+                <target>Konfigurieren Sie einen KI-Provider mit Tool-Unterstützung, bevor Sie den AI Agent nutzen.</target>
+            </trans-unit>
             <trans-unit id="agent.session.list">
                 <source>Conversations</source>
                 <target>Unterhaltungen</target>
@@ -1724,6 +1744,14 @@
             <trans-unit id="agent.session.search">
                 <source>Filter by title</source>
                 <target>Nach Titel filtern</target>
+            </trans-unit>
+            <trans-unit id="agent.session.resize">
+                <source>Resize conversations list</source>
+                <target>Unterhaltungsliste anpassen</target>
+            </trans-unit>
+            <trans-unit id="agent.panel.resize">
+                <source>Resize AI Agent panel</source>
+                <target>AI-Agent-Panel anpassen</target>
             </trans-unit>
             <trans-unit id="agent.session.filterPage">
                 <source>This page</source>

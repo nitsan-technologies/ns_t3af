@@ -6,6 +6,8 @@ import { hotkeyLabel, readHotkeyPref, STORAGE_OPEN_KEY } from './hotkeys.js';
 import { lang, errorMessage, escapeHtml } from './format.js';
 import { ajaxUrl } from './context.js';
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
+import Notification from '@typo3/backend/notification.js';
+import Persistent from '@typo3/backend/storage/persistent.js';
 
 export const chromeMethods = {
   /**
@@ -66,7 +68,7 @@ export const chromeMethods = {
         }
         if (target.closest('[data-nst3af-agent-drawer-close]')) {
           event.preventDefault();
-          this.closeDrawers();
+          this.closeInfoDrawer();
         }
         if (target.closest('[data-nst3af-agent-new]')) {
           event.preventDefault();
@@ -186,7 +188,7 @@ export const chromeMethods = {
 
         if (event.key === 'Escape') {
           event.preventDefault();
-          if (this.closeDrawers()) {
+          if (this.closeInfoDrawer()) {
             return;
           }
           this.close();
@@ -266,6 +268,208 @@ export const chromeMethods = {
           this.hideAttachMenu();
         }
       });
+
+      this.bindSessionsResize();
+      this.bindPanelResize();
+    },
+
+  /**
+     * Drag (or arrow-key) resize for the whole panel's width, same idiom as the sessions-rail
+     * resize below. The panel is anchored to the right edge, so dragging the handle further
+     * left widens it. Once the editor has resized manually, that width is remembered
+     * (Persistent) and takes over from the responsive --nst3af-agent-width media-query bands;
+     * a window resize re-clamps it down if the viewport got too narrow to keep it safe —
+     * same fallback idiom as TYPO3 core's own tree resizer
+     * (fallbackNavigationSizeIfNeeded in resizable-navigation.js / content-navigation.js).
+     */
+    bindPanelResize() {
+      const handle = this.root?.querySelector('[data-nst3af-agent-panel-resize]');
+      if (!(handle instanceof HTMLElement) || !(this.panel instanceof HTMLElement)) {
+        return;
+      }
+
+      const MIN_WIDTH = 400;
+      const MAX_WIDTH_CAP = 1400;
+      const SAFE_MARGIN = 40;
+      const STEP = 24;
+
+      // Mirrors the CSS responsive bands: reserved space for the module sidebar (240px
+      // expanded) and page/file tree (300px, the larger of the two installed core versions'
+      // defaults) — see agent.css's --nst3af-agent-width media queries for the verified
+      // breakpoints (992px sidebar off-canvas, 750px tree container-query flyout).
+      const reservedChromeWidth = (viewportWidth) => {
+        if (viewportWidth >= 992) {
+          return 540;
+        }
+        if (viewportWidth >= 750) {
+          return 300;
+        }
+        return 0;
+      };
+
+      const maxWidth = () => {
+        const viewportWidth = window.innerWidth;
+        return Math.min(MAX_WIDTH_CAP, Math.max(MIN_WIDTH, viewportWidth - reservedChromeWidth(viewportWidth) - SAFE_MARGIN));
+      };
+
+      const applyWidth = (width, { persist = false } = {}) => {
+        const clamped = Math.min(maxWidth(), Math.max(MIN_WIDTH, Math.round(width)));
+        this.panel.style.setProperty('--nst3af-agent-width', `${clamped}px`);
+        handle.setAttribute('aria-valuenow', String(clamped));
+        handle.setAttribute('aria-valuemax', String(maxWidth()));
+        if (persist) {
+          void Persistent.set('nst3af.agent.panelWidth', clamped).catch((error) => {
+            console.warn('Agent panel width could not be saved:', errorMessage(error));
+          });
+        }
+        return clamped;
+      };
+
+      handle.setAttribute('aria-valuemin', String(MIN_WIDTH));
+
+      const storedWidth = Number(Persistent.get('nst3af.agent.panelWidth'));
+      if (Number.isFinite(storedWidth) && storedWidth > 0) {
+        applyWidth(storedWidth);
+      }
+
+      const currentWidth = () => {
+        const value = parseInt(this.panel.style.getPropertyValue('--nst3af-agent-width'), 10);
+        return Number.isFinite(value) ? value : this.panel.getBoundingClientRect().width;
+      };
+
+      let startX = 0;
+      let startWidth = 0;
+
+      const onMove = (event) => {
+        const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+        applyWidth(startWidth + (startX - clientX));
+      };
+
+      const onUp = () => {
+        handle.classList.remove('is-resizing');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onUp);
+        applyWidth(currentWidth(), { persist: true });
+      };
+
+      const onDown = (event) => {
+        if (typeof event.button === 'number' && event.button !== 0) {
+          return;
+        }
+        startX = event.touches ? event.touches[0].clientX : event.clientX;
+        startWidth = this.panel.getBoundingClientRect().width;
+        handle.classList.add('is-resizing');
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        document.addEventListener('touchmove', onMove, { passive: true });
+        document.addEventListener('touchend', onUp);
+        event.preventDefault();
+      };
+
+      handle.addEventListener('mousedown', onDown);
+      handle.addEventListener('touchstart', onDown, { passive: false });
+      handle.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          applyWidth(currentWidth() + STEP, { persist: true });
+        } else if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          applyWidth(currentWidth() - STEP, { persist: true });
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        if (this.panel.style.getPropertyValue('--nst3af-agent-width') === '') {
+          return;
+        }
+        applyWidth(currentWidth());
+      });
+    },
+
+  /**
+     * Drag (or arrow-key) resize for the sessions rail, same idiom as TYPO3 core's own
+     * page/file-tree resizer. Width is a CSS custom property on the rail element itself,
+     * remembered per editor via Persistent, applied once at bind time (before the rail is
+     * ever shown) so there is no flash of the default width.
+     */
+    bindSessionsResize() {
+      const handle = this.root?.querySelector('[data-nst3af-agent-sessions-resize]');
+      if (!(handle instanceof HTMLElement) || !(this.sessionsDrawer instanceof HTMLElement)) {
+        return;
+      }
+
+      const MIN_WIDTH = 200;
+      const MAX_WIDTH = 420;
+      const DEFAULT_WIDTH = 248;
+      const STEP = 16;
+
+      const applyWidth = (width, { persist = false } = {}) => {
+        const clamped = Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, Math.round(width)));
+        this.sessionsDrawer.style.setProperty('--nst3af-agent-rail-width', `${clamped}px`);
+        handle.setAttribute('aria-valuenow', String(clamped));
+        if (persist) {
+          void Persistent.set('nst3af.agent.sessionsRailWidth', clamped).catch((error) => {
+            console.warn('Agent sessions rail width could not be saved:', errorMessage(error));
+          });
+        }
+        return clamped;
+      };
+
+      handle.setAttribute('aria-valuemin', String(MIN_WIDTH));
+      handle.setAttribute('aria-valuemax', String(MAX_WIDTH));
+
+      const storedWidth = Number(Persistent.get('nst3af.agent.sessionsRailWidth'));
+      applyWidth(Number.isFinite(storedWidth) && storedWidth > 0 ? storedWidth : DEFAULT_WIDTH);
+
+      const currentWidth = () => {
+        const value = parseInt(this.sessionsDrawer.style.getPropertyValue('--nst3af-agent-rail-width'), 10);
+        return Number.isFinite(value) ? value : DEFAULT_WIDTH;
+      };
+
+      let startX = 0;
+      let startWidth = DEFAULT_WIDTH;
+
+      const onMove = (event) => {
+        const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+        applyWidth(startWidth + (clientX - startX));
+      };
+
+      const onUp = () => {
+        handle.classList.remove('is-resizing');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onUp);
+        applyWidth(currentWidth(), { persist: true });
+      };
+
+      const onDown = (event) => {
+        if (typeof event.button === 'number' && event.button !== 0) {
+          return;
+        }
+        startX = event.touches ? event.touches[0].clientX : event.clientX;
+        startWidth = this.sessionsDrawer.getBoundingClientRect().width;
+        handle.classList.add('is-resizing');
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+        document.addEventListener('touchmove', onMove, { passive: true });
+        document.addEventListener('touchend', onUp);
+        event.preventDefault();
+      };
+
+      handle.addEventListener('mousedown', onDown);
+      handle.addEventListener('touchstart', onDown, { passive: false });
+      handle.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          applyWidth(currentWidth() - STEP, { persist: true });
+        } else if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          applyWidth(currentWidth() + STEP, { persist: true });
+        }
+      });
     },
 
   async loadSettingsLink() {
@@ -293,6 +497,8 @@ export const chromeMethods = {
         return;
       }
 
+      window.clearTimeout(this.closeTimer);
+
       this.hotkey = readHotkeyPref();
       this.applyHotkeyChrome();
 
@@ -302,24 +508,44 @@ export const chromeMethods = {
       this.backdrop.hidden = false;
       this.panel.hidden = false;
       this.panel.setAttribute('aria-hidden', 'false');
+      // Force a layout flush so the browser commits the closed (translateX) state before the
+      // --open class flips it, otherwise the two style changes get coalesced into one paint
+      // and the slide-in transition never runs.
+      void this.panel.offsetHeight;
+      this.panel.classList.add('nst3af-agent-panel--open');
 
       this.messages = [];
       this.context = {};
       this.starters = { executable: [], locked: [] };
       this.contextNotice = '';
-      this.closeDrawers();
+      this.closeInfoDrawer();
       this.livePlan = null;
       this.isLoadingSession = true;
       this.panel.setAttribute('aria-busy', 'true');
       this.renderLoadingSkeleton();
 
-      await this.restoreSession();
+      // Resume the last-viewed conversation for this conversation-scope key when remembered;
+      // otherwise the server opens the latest of the configured scope (see restoreSession).
+      await this.restoreSession(this.lastSessionOpenOptions());
       this.isLoadingSession = false;
       this.loadedScopeKey = this.sessionScopeKey();
       this.panel.removeAttribute('aria-busy');
 
       this.renderContext();
       this.renderStream();
+
+      // Apply the remembered/default rail state now that sessionListSettings.enabled is known
+      // from the server payload — the rail stayed in its template-default [hidden] state during
+      // the load above, so there is no flash of the wrong state to correct.
+      const effectiveRailOpen = this.sessionListSettings.enabled === true && this.sessionsRailOpen;
+      this.setSessionsRailOpen(effectiveRailOpen, { persist: false });
+      if (effectiveRailOpen) {
+        this.sessionsFilter = this.sessionListSettings.scope === 'user' ? 'all' : (this.sessionListSettings.defaultFilter ?? 'current');
+        if (this.sessionsSearch instanceof HTMLInputElement) {
+          this.sessionsSearch.value = '';
+        }
+        await this.loadSessions();
+      }
 
       if (!this.disclosureDismissed) {
         this.disclosure.hidden = false;
@@ -330,12 +556,28 @@ export const chromeMethods = {
       this.announce(lang('agent.live.opened', 'AI Agent opened.'));
       this.trapFocus();
       this.input?.focus();
+      this.resizeComposerInput?.();
+      this.warnIfNoUsableProvider();
 
       try {
         localStorage.setItem(STORAGE_OPEN_KEY, '1');
       } catch {
         // ponytail: localStorage may be unavailable; open state is session-only.
       }
+    },
+
+  /**
+     * Flash when the conversation payload reports no real tool-calling provider.
+     * options() always includes a synthetic "default", so providers.length is useless here.
+     */
+    warnIfNoUsableProvider() {
+      if (this.hasUsableProvider !== false) {
+        return;
+      }
+      Notification.warning(
+        lang('agent.provider.none.title', 'No AI provider configured'),
+        lang('agent.provider.none.body', 'Configure an AI provider that can call tools before using the AI Agent.'),
+      );
     },
 
   close() {
@@ -346,9 +588,16 @@ export const chromeMethods = {
       this.isOpen = false;
       this.hideAutocomplete();
       this.panel.setAttribute('aria-hidden', 'true');
-      this.panel.hidden = true;
-      this.backdrop.hidden = true;
-      this.root.hidden = true;
+      this.panel.classList.remove('nst3af-agent-panel--open');
+
+      // Defer the actual hide until the slide-out transition finishes, so the panel is visibly
+      // seen sliding away instead of vanishing the instant the backdrop/root go [hidden].
+      window.clearTimeout(this.closeTimer);
+      this.closeTimer = window.setTimeout(() => {
+        this.panel.hidden = true;
+        this.backdrop.hidden = true;
+        this.root.hidden = true;
+      }, 260);
 
       this.announce(lang('agent.live.closed', 'AI Agent closed.'));
 
@@ -392,20 +641,52 @@ export const chromeMethods = {
     },
 
   /**
-     * @returns {boolean} true when a drawer was open
+     * @returns {boolean} true when the info drawer was open
      */
-    closeDrawers() {
+    closeInfoDrawer() {
       let wasOpen = false;
-      [[this.sessionsDrawer, this.sessionsToggle], [this.infoDrawer, this.infoToggle]].forEach(([drawer, toggle]) => {
-        if (drawer instanceof HTMLElement && !drawer.hidden) {
-          drawer.hidden = true;
-          wasOpen = true;
-        }
-        toggle?.setAttribute('aria-expanded', 'false');
-      });
-      this.renamingUuid = '';
+      if (this.infoDrawer instanceof HTMLElement && !this.infoDrawer.hidden) {
+        this.infoDrawer.hidden = true;
+        wasOpen = true;
+      }
+      this.infoToggle?.setAttribute('aria-expanded', 'false');
+      // Info collapses the rail for a11y; every close path (toggle, Escape, drawer ×,
+      // session pick) must restore the pre-info rail state. Persist:false — a peek must
+      // not rewrite the editor's stored preference via setSessionsRailOpen(false).
+      if (wasOpen && this._railStateBeforeInfo !== null) {
+        this.setSessionsRailOpen(Boolean(this._railStateBeforeInfo), { persist: false });
+        this._railStateBeforeInfo = null;
+      }
 
       return wasOpen;
+    },
+
+  /**
+     * Sessions rail: a persistent side column, not a dismissible overlay. Visibility is the
+     * editor's remembered choice (or "visible" by default), independent of the info drawer's
+     * open/close lifecycle.
+     *
+     * @param {boolean} open
+     * @param {{persist?: boolean}} [options]
+     */
+    setSessionsRailOpen(open, { persist = true } = {}) {
+      this.sessionsRailOpen = open;
+      if (this.sessionsDrawer instanceof HTMLElement) {
+        this.sessionsDrawer.hidden = !open;
+      }
+      const resizeHandle = this.root?.querySelector('[data-nst3af-agent-sessions-resize]');
+      if (resizeHandle instanceof HTMLElement) {
+        resizeHandle.hidden = !open;
+      }
+      this.sessionsToggle?.setAttribute('aria-pressed', String(open));
+      if (!open) {
+        this.renamingUuid = '';
+      }
+      if (persist) {
+        void Persistent.set('nst3af.agent.sessionsVisible', open).catch((error) => {
+          console.warn('Agent sessions rail preference could not be saved:', errorMessage(error));
+        });
+      }
     },
 
   /**
@@ -422,11 +703,16 @@ export const chromeMethods = {
       if (!(this.infoDrawer instanceof HTMLElement)) {
         return;
       }
-      const opening = this.infoDrawer.hidden;
-      this.closeDrawers();
-      if (!opening) {
+      // Closing restores the rail inside closeInfoDrawer() (shared with Escape / drawer ×).
+      if (!this.infoDrawer.hidden) {
+        this.closeInfoDrawer();
         return;
       }
+      // The info drawer overlays the rail's space and the a11y focus trap has no occlusion
+      // check, so the rail is collapsed while info is open and restored (not re-persisted)
+      // once it closes, rather than left reachable-but-hidden underneath.
+      this._railStateBeforeInfo = this.sessionsRailOpen;
+      this.setSessionsRailOpen(false, { persist: false });
       this.renderInfo();
       this.positionDrawer(this.infoDrawer);
       this.infoDrawer.hidden = false;
@@ -594,10 +880,18 @@ export const chromeMethods = {
       const dimChip = this.context.contextAware
         ? `<span class="nst3af-agent-ctxchip nst3af-agent-ctxchip--dim">${escapeHtml(lang('agent.context.aware', 'Knows what you are looking at'))}</span>`
         : '';
-      const icons = { page: '📄', module: '🧩', language: '🌐', record: '✏️', folder: '📁', workspace: '🗂', brand: '🏷' };
+      const icons = {
+        page: 'apps-pagetree-page',
+        module: 'module-generic',
+        language: 'actions-globe',
+        record: 'actions-document-edit',
+        folder: 'apps-filetree-folder-default',
+        workspace: 'actions-workspace',
+        brand: 'actions-tag',
+      };
       this.contextEl.innerHTML = dimChip + chips.map((chip) => {
         const key = String(chip.key ?? '');
-        const icon = icons[key] ? `<span aria-hidden="true">${icons[key]}</span> ` : '';
+        const icon = icons[key] ? `<typo3-backend-icon identifier="${icons[key]}" size="small" aria-hidden="true"></typo3-backend-icon> ` : '';
         const hint = escapeHtml(String(chip.hint ?? ''));
         return `<span class="nst3af-agent-ctxchip nst3af-agent-ctxchip--${escapeHtml(key)}" title="${hint}">${icon}<span class="visually-hidden">${escapeHtml(String(chip.label ?? ''))}: </span>${escapeHtml(String(chip.value ?? ''))}</span>`;
       }).join('');

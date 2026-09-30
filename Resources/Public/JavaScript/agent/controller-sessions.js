@@ -6,6 +6,10 @@ import { lang, errorMessage, escapeHtml } from './format.js';
 import { ajaxUrl, resolveBackendContext } from './context.js';
 import { stripEphemeralWorkTraceMeta } from './render-helpers.js';
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
+import Persistent from '@typo3/backend/storage/persistent.js';
+
+/** Last-viewed conversation uuid + scope key (same Persistent uc store as rail/panel width). */
+const STORAGE_LAST_SESSION_KEY = 'nst3af.agent.lastSession';
 
 export const sessionMethods = {
   /**
@@ -15,6 +19,82 @@ export const sessionMethods = {
     sessionScopeKey() {
       const ctx = resolveBackendContext();
       return `${ctx.module}:${ctx.pageId}`;
+    },
+
+  /**
+     * Key used to decide whether a remembered conversation still applies at the current
+     * backend location, given agentConversationScope (page | module | user).
+     *
+     * @param {string} [scope]
+     * @returns {string}
+     */
+    rememberScopeKey(scope = 'page') {
+      const ctx = resolveBackendContext();
+      if (scope === 'user') {
+        return 'user';
+      }
+      if (scope === 'module') {
+        return `module:${ctx.module}`;
+      }
+
+      return `page:${ctx.module}:${ctx.pageId}`;
+    },
+
+  /**
+     * Options for open(): pass sessionUuid only when the remembered entry matches the
+     * current location under the scope mode stored with it.
+     *
+     * @returns {{sessionUuid?: string}}
+     */
+    lastSessionOpenOptions() {
+      const stored = Persistent.get(STORAGE_LAST_SESSION_KEY);
+      if (stored === undefined || stored === null || typeof stored !== 'object') {
+        return {};
+      }
+      const uuid = String(stored.uuid ?? '').trim();
+      const scopeKey = String(stored.scopeKey ?? '');
+      const scope = stored.scope === 'module' || stored.scope === 'user' || stored.scope === 'page'
+        ? stored.scope
+        : 'page';
+      if (uuid === '' || scopeKey === '' || this.rememberScopeKey(scope) !== scopeKey) {
+        return {};
+      }
+
+      return { sessionUuid: uuid };
+    },
+
+  /**
+     * Persist the active conversation so the next open() resumes it (within scope).
+     */
+    rememberLastSession() {
+      const uuid = this.activeSessionUuid();
+      if (uuid === '') {
+        return;
+      }
+      const scope = this.sessionListSettings.scope ?? 'page';
+      void Persistent.set(STORAGE_LAST_SESSION_KEY, {
+        uuid,
+        scope,
+        scopeKey: this.rememberScopeKey(scope),
+      }).catch((error) => {
+        console.warn('Agent last conversation could not be saved:', errorMessage(error));
+      });
+    },
+
+  clearRememberedLastSession() {
+      void Persistent.unset(STORAGE_LAST_SESSION_KEY).catch((error) => {
+        console.warn('Agent last conversation preference could not be cleared:', errorMessage(error));
+      });
+    },
+
+  /**
+     * @param {string} uuid
+     */
+    clearRememberedLastSessionIf(uuid) {
+      const stored = Persistent.get(STORAGE_LAST_SESSION_KEY);
+      if (stored && typeof stored === 'object' && String(stored.uuid ?? '') === uuid) {
+        this.clearRememberedLastSession();
+      }
     },
 
   bindScopeRefresh() {
@@ -81,8 +161,9 @@ export const sessionMethods = {
       const query = new URL(url, window.location.href);
       query.searchParams.set('pageId', String(backendContext.pageId));
       query.searchParams.set('module', backendContext.module);
-      if (options.sessionUuid) {
-        query.searchParams.set('sessionUuid', options.sessionUuid);
+      const requestedUuid = String(options.sessionUuid ?? '').trim();
+      if (requestedUuid !== '') {
+        query.searchParams.set('sessionUuid', requestedUuid);
       }
       if (options.fresh) {
         query.searchParams.set('fresh', '1');
@@ -105,6 +186,7 @@ export const sessionMethods = {
         this.freshSession = options.fresh === true;
         this.sessionListSettings = { ...this.sessionListSettings, ...(payload.sessionList ?? {}) };
         this.providers = Array.isArray(payload.providers) ? payload.providers : [];
+        this.hasUsableProvider = payload.hasUsableProvider !== false;
         this.continueAfterConfirm = payload.continueAfterConfirm !== false;
         this.credits = payload.credits ?? null;
         this.disclosureDismissed = payload.disclosureDismissed === true;
@@ -112,6 +194,19 @@ export const sessionMethods = {
           this.disclosure.hidden = true;
         }
         this.loadedScopeKey = this.sessionScopeKey();
+
+        // Stale remembered uuid: server returns session:null and does not fall back to
+        // latest while a sessionUuid was requested — clear and retry without it.
+        if (requestedUuid !== '' && !options.fresh && this.session === null) {
+          this.clearRememberedLastSession();
+          await this.restoreSession({ fresh: false });
+          return;
+        }
+        if (options.fresh) {
+          this.clearRememberedLastSession();
+        } else {
+          this.rememberLastSession();
+        }
       } catch {
         this.context = backendContext;
         this.loadedScopeKey = this.sessionScopeKey();
@@ -125,13 +220,10 @@ export const sessionMethods = {
         return;
       }
       const opening = this.sessionsDrawer.hidden;
-      this.closeDrawers();
+      this.setSessionsRailOpen(opening);
       if (!opening) {
         return;
       }
-      this.positionDrawer(this.sessionsDrawer);
-      this.sessionsDrawer.hidden = false;
-      this.sessionsToggle?.setAttribute('aria-expanded', 'true');
       this.sessionsFilter = this.sessionListSettings.scope === 'user' ? 'all' : (this.sessionListSettings.defaultFilter ?? 'current');
       if (this.sessionsSearch instanceof HTMLInputElement) {
         this.sessionsSearch.value = '';
@@ -245,9 +337,13 @@ export const sessionMethods = {
         </button>
         <span class="nst3af-agent-sessions__actions">
           <button type="button" class="btn btn-link btn-sm" data-nst3af-agent-session-rename="${uuid}"
-                  title="${escapeHtml(lang('agent.session.rename', 'Rename'))}" aria-label="${escapeHtml(lang('agent.session.rename', 'Rename'))}">✎</button>
+                  title="${escapeHtml(lang('agent.session.rename', 'Rename'))}" aria-label="${escapeHtml(lang('agent.session.rename', 'Rename'))}">
+            <typo3-backend-icon identifier="actions-rename" size="small"></typo3-backend-icon>
+          </button>
           <button type="button" class="btn btn-link btn-sm" data-nst3af-agent-session-delete="${uuid}"
-                  title="${escapeHtml(lang('agent.session.delete', 'Delete'))}" aria-label="${escapeHtml(lang('agent.session.delete', 'Delete'))}">🗑</button>
+                  title="${escapeHtml(lang('agent.session.delete', 'Delete'))}" aria-label="${escapeHtml(lang('agent.session.delete', 'Delete'))}">
+            <typo3-backend-icon identifier="actions-delete" size="small"></typo3-backend-icon>
+          </button>
         </span>
       </li>`;
     },
@@ -259,7 +355,9 @@ export const sessionMethods = {
       if (uuid === '' || this.isRunning) {
         return;
       }
-      this.closeDrawers();
+      // Restore rail from an open info drawer first, then apply narrow-viewport collapse.
+      this.closeInfoDrawer();
+      this.closeRailAfterPickOnNarrowViewport();
       this.contextNotice = '';
       await this.reloadSessionForCurrentScope({ sessionUuid: uuid });
       this.input?.focus();
@@ -269,11 +367,25 @@ export const sessionMethods = {
       if (this.isRunning) {
         return;
       }
-      this.closeDrawers();
+      this.closeInfoDrawer();
+      this.closeRailAfterPickOnNarrowViewport();
       this.contextNotice = '';
       await this.reloadSessionForCurrentScope({ fresh: true });
       this.announce(lang('agent.session.started', 'New conversation started.'));
       this.input?.focus();
+    },
+
+  /**
+     * Below 750px the rail already behaves like an overlay picker (same breakpoint the
+     * panel's own responsive width scale treats as "mobile takeover"), so picking a
+     * conversation there collapses it afterward. On wider viewports the rail stays a
+     * persistent list and is left alone. Not persisted: this is a transient narrow-viewport
+     * affordance, not the editor expressing a new stored preference.
+     */
+    closeRailAfterPickOnNarrowViewport() {
+      if (this.sessionsRailOpen && window.matchMedia('(max-width: 749px)').matches) {
+        this.setSessionsRailOpen(false, { persist: false });
+      }
     },
 
   /**
@@ -324,7 +436,7 @@ export const sessionMethods = {
           if (button.isConnected) {
             button.dataset.armed = '';
             button.classList.remove('is-armed');
-            button.textContent = '🗑';
+            button.innerHTML = '<typo3-backend-icon identifier="actions-delete" size="small"></typo3-backend-icon>';
           }
         }, 4000);
         return;
@@ -340,10 +452,10 @@ export const sessionMethods = {
         return;
       }
       this.sessions = this.sessions.filter((row) => row.uuid !== uuid);
+      this.clearRememberedLastSessionIf(uuid);
       if (this.session?.uuid === uuid) {
         this.session = null;
         await this.reloadSessionForCurrentScope({ fresh: true });
-        this.sessionsDrawer?.removeAttribute('hidden');
       }
       this.renderSessions();
     },

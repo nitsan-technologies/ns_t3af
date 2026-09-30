@@ -31,6 +31,7 @@ export const turnMethods = {
       this.isRunning = true;
       if (continuation === null) {
         this.input.value = '';
+        this.resizeComposerInput?.();
       }
       this.hideAutocomplete();
 
@@ -100,6 +101,7 @@ export const turnMethods = {
         if (payload.session) {
           this.session = payload.session;
           this.freshSession = false;
+          this.rememberLastSession();
         }
         this.contextNotice = '';
         this.renderHeaderControls();

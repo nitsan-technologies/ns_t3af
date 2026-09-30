@@ -25,8 +25,7 @@ use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
  * Suggested actions ("starter chips") for where the editor is.
  *
  * - A chip is a request in the editor's language ("Generate SEO for this page"). Clicking it
- *   sends that text as a normal message, so the agent handles it like typed text: it picks
- *   the tools, prepares the change and the editor confirms it.
+ *   fills the composer; the editor sends explicitly so they can edit first.
  * - Chips depend on the context (page, open record, file, workspace, module) and appear only
  *   when a tool for them is installed and permitted.
  * - Tools of other extensions that are not installed stay in the "locked" list (upsell).

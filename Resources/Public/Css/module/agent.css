@@ -50,70 +50,224 @@
 
 .nst3af-agent-panel {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  /* Match ns_t3ai--modal-large (1600px / 90vh) */
-  width: min(1600px, calc(100dvw - 3rem));
-  height: 90dvh;
-  max-height: 90vh;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--nst3af-agent-width, 800px);
+  height: 100dvh;
+  max-height: 100dvh;
   background: var(--nst3af-agent-surface);
   color: var(--nst3af-agent-text);
-  border: 1px solid var(--nst3af-agent-border);
-  border-radius: 16px;
+  border-left: 1px solid var(--nst3af-agent-border);
+  border-radius: 0;
   box-shadow: var(--nst3af-agent-shadow);
   z-index: 1081;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transform: translateX(100%);
+  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Drag handle on the panel's own left edge, widening/narrowing the whole panel — same idiom
+   as the sessions-rail resize handle below. Stays inside the panel's own overflow:hidden box
+   (left:0, not a negative offset) so it isn't clipped. */
+.nst3af-agent-panel-resize {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  background: transparent;
+  z-index: 5;
+  touch-action: none;
+}
+
+.nst3af-agent-panel-resize:hover,
+.nst3af-agent-panel-resize:focus-visible,
+.nst3af-agent-panel-resize.is-resizing {
+  background: var(--nst3af-agent-accent);
+  outline: none;
+}
+
+.nst3af-agent-panel--open {
+  transform: none;
+}
+
+/*
+ * Dynamic first-open width: inverse to screen size, banded by TYPO3's own real
+ * chrome breakpoints (verified against the installed core, not assumed):
+ *   - 992px is where the module icon sidebar goes off-canvas (scaffold-state.js /
+ *     --scaffold-modulemenu-expanded-width: 240px, identical in v13.4 and v14.3).
+ *   - 750px is where the page/file tree stops reserving permanent width (v14.3
+ *     content-navigation.js container-query FLYOUT_BREAKPOINT; v13.4's tree has no
+ *     such flyout but defaults to the same order of magnitude, 300px vs 280px min).
+ * Reserved width is therefore ~540px (240 sidebar + 300 tree) for any viewport
+ * >=992px, and ~300px (tree only, sidebar already off-canvas) for 750-991px — not
+ * a smooth curve, a real two-step function. Below 750px the panel takes the full
+ * screen, so tree/sidebar visibility behind it is moot.
+ */
+:root {
+  --nst3af-agent-width: 800px;
+}
+
+@media (min-width: 1920px) {
+  :root {
+    --nst3af-agent-width: clamp(760px, 50vw, 960px);
+  }
+}
+
+@media (min-width: 1440px) and (max-width: 1919px) {
+  :root {
+    --nst3af-agent-width: clamp(700px, 50vw, 900px);
+  }
+}
+
+@media (min-width: 992px) and (max-width: 1439px) {
+  :root {
+    --nst3af-agent-width: clamp(440px, 35vw, 760px);
+  }
+}
+
+@media (min-width: 750px) and (max-width: 991px) {
+  :root {
+    --nst3af-agent-width: clamp(360px, 50vw, 430px);
+  }
+}
+
+@media (max-width: 749px) {
+  :root {
+    --nst3af-agent-width: 100vw;
+  }
+}
+
+.nst3af-agent-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.nst3af-agent-sessions-rail {
+  width: var(--nst3af-agent-rail-width, 248px);
+  min-width: 200px;
+  max-width: 420px;
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 12px;
+  background: var(--nst3af-agent-surface-soft);
+  overflow: hidden;
+  min-height: 0;
+}
+
+.nst3af-agent-sessions-rail[hidden] {
+  display: none;
+}
+
+/* Drag handle between the rail and the chat column, same idiom as TYPO3 core's own
+   page/file-tree resizer (.scaffold-content-navigation-drag). Given a solid width (not a
+   hairline border with a negative-margin overlap trick) so it's both visible at rest and has
+   a real hit area — a 1px border was too subtle to notice or reliably grab. */
+.nst3af-agent-sessions-rail__resize {
+  flex: 0 0 auto;
+  width: 6px;
+  cursor: ew-resize;
+  background: var(--nst3af-agent-border-soft);
+  position: relative;
+  z-index: 1;
+  touch-action: none;
+}
+
+.nst3af-agent-sessions-rail__resize:hover,
+.nst3af-agent-sessions-rail__resize:focus-visible,
+.nst3af-agent-sessions-rail__resize.is-resizing {
+  background: var(--nst3af-agent-accent);
+  outline: none;
+}
+
+.nst3af-agent-sessions-rail__resize[hidden] {
+  display: none;
+}
+
+.nst3af-agent-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
 }
 
 .nst3af-agent-header {
-  padding: 14px 20px 12px;
+  padding: 12px 16px 10px;
   border-bottom: 1px solid var(--nst3af-agent-border-soft);
 }
 
 .nst3af-agent-header__row {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
 }
 
 .nst3af-agent-header__mark {
-  width: 27px;
-  height: 27px;
-  border-radius: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
   background: var(--nst3af-agent-accent-fill);
   color: var(--nst3af-agent-on-accent);
   display: grid;
   place-items: center;
-  font-size: 14px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
 .nst3af-agent-header__title {
   margin: 0;
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 700;
-}
-
-.nst3af-agent-header__subtitle {
-  margin: 3px 0 0;
-  color: var(--nst3af-agent-text-muted);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.nst3af-agent-header__settings {
-  margin-left: auto;
   white-space: nowrap;
 }
 
+.nst3af-agent-header__subtitle {
+  margin: 6px 0 0;
+  color: var(--nst3af-agent-text-muted);
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.nst3af-agent-header__settings {
+  white-space: nowrap;
+  background: var(--nst3af-agent-surface-soft);
+  border-color: var(--nst3af-agent-border-soft);
+  color: var(--nst3af-agent-text-muted);
+  font-size: 12px;
+}
+
+.nst3af-agent-header__settings:hover,
+.nst3af-agent-header__settings:focus-visible {
+  background: var(--nst3af-agent-surface-high);
+  border-color: var(--nst3af-agent-border);
+  color: var(--nst3af-agent-text);
+}
+
 .nst3af-agent-header__close {
-  font-size: 22px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  font-size: 20px;
   line-height: 1;
   color: var(--nst3af-agent-text-faint);
-  padding: 0 4px;
+  flex-shrink: 0;
+  border-radius: 6px;
+}
+
+.nst3af-agent-header__close:hover,
+.nst3af-agent-header__close:focus-visible {
+  background: var(--nst3af-agent-surface-high);
+  color: var(--nst3af-agent-text);
 }
 
 .nst3af-agent-context {
@@ -129,14 +283,21 @@
 .nst3af-agent-ctxchip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--nst3af-agent-accent-soft);
-  color: var(--nst3af-agent-accent);
-  font-size: 10.5px;
+  gap: 5px;
+  color: var(--nst3af-agent-text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.nst3af-agent-ctxchip:not(:first-child)::before {
+  content: '\203A';
+  margin-right: 5px;
+  color: var(--nst3af-agent-text-faint);
+}
+
+.nst3af-agent-ctxchip:last-of-type {
+  color: var(--nst3af-agent-text-strong);
   font-weight: 600;
-  border: 1px solid var(--nst3af-agent-accent-soft-strong);
 }
 
 .nst3af-agent-disclosure {
@@ -163,10 +324,9 @@
   padding: 0;
 }
 
-.nst3af-agent-ctxchip--dim {
-  background: var(--nst3af-agent-surface-soft);
-  color: var(--nst3af-agent-text-muted);
-  border-color: var(--nst3af-agent-border-soft);
+.nst3af-agent-ctxchip--dim:first-child {
+  color: var(--nst3af-agent-text-faint);
+  font-size: 11px;
 }
 
 @keyframes nst3af-agent-skeleton-pulse {
@@ -212,15 +372,21 @@
 .nst3af-agent-stream {
   flex: 1;
   overflow: auto;
-  padding: 20px 20px 8px;
+  padding: 14px 16px 8px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
+}
+
+.nst3af-agent-stream--empty {
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1.5rem;
 }
 
 .nst3af-agent-msg {
   font-size: 13px;
-  line-height: 1.65;
+  line-height: 1.45;
   max-width: 94%;
   color: var(--nst3af-agent-text);
 }
@@ -230,7 +396,7 @@
   background: var(--nst3af-agent-accent-fill);
   color: var(--nst3af-agent-on-accent);
   border-radius: 14px 14px 4px 14px;
-  padding: 10px 14px;
+  padding: 6px 12px;
   max-width: 78%;
 }
 
@@ -248,14 +414,14 @@
   color: var(--nst3af-agent-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .nst3af-agent-msg--assistant > .nst3af-agent-msg__body {
   background: var(--nst3af-agent-surface-soft);
   border: 1px solid var(--nst3af-agent-border-soft);
   border-radius: 4px 14px 14px 14px;
-  padding: 10px 14px;
+  padding: 6px 12px;
 }
 
 .nst3af-agent-msg__body ul,
@@ -447,6 +613,24 @@
   margin-top: 8px;
 }
 
+.nst3af-agent-starters--grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0;
+  width: 100%;
+  text-align: left;
+}
+
+.nst3af-agent-starters--locked {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  width: 100%;
+  text-align: left;
+}
+
 .nst3af-agent-starters-wrap {
   margin-top: 8px;
   max-width: 94%;
@@ -462,6 +646,30 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
+}
+
+.nst3af-agent-starter--card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--typo3-component-border-radius, 0.25rem);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nst3af-agent-starter--card .nst3af-agent-starter__icon {
+  color: var(--nst3af-agent-accent);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+
+.nst3af-agent-starter--card .nst3af-agent-starter__label {
+  flex: 1;
+  min-width: 0;
 }
 
 .nst3af-agent-starter:hover:not(:disabled) {
@@ -525,7 +733,7 @@
   border-radius: 16px;
   background: var(--nst3af-agent-surface);
   padding: 11px 14px;
-  box-shadow: 0 2px 14px rgba(16, 24, 40, 0.09);
+  box-shadow: 0 2px 14px color-mix(in srgb, var(--nst3af-agent-text-strong) 9%, transparent);
 }
 
 .nst3af-agent-composer:focus-within {
@@ -538,9 +746,11 @@
   border: 0;
   outline: 0;
   resize: none;
+  overflow-y: hidden;
   font-size: 14px;
-  line-height: 1.55;
-  min-height: 46px;
+  line-height: 1.45;
+  min-height: 38px;
+  max-height: 220px;
   color: var(--nst3af-agent-text-strong);
   background: transparent;
 }
@@ -554,7 +764,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .nst3af-agent-composer__attach-wrap {
@@ -562,12 +772,13 @@
 }
 
 .nst3af-agent-composer__attach {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: var(--typo3-component-border-radius, 0.25rem);
   line-height: 1;
-  font-size: 18px;
+  display: grid;
+  place-items: center;
 }
 
 .nst3af-agent-attach-menu {
@@ -612,12 +823,20 @@
 
 .nst3af-agent-composer__send {
   margin-left: auto;
-  border-radius: 999px;
+  border-radius: var(--typo3-component-border-radius, 0.25rem);
   width: 32px;
   height: 32px;
+  min-width: 32px;
   padding: 0;
   display: grid;
   place-items: center;
+}
+
+.nst3af-agent-composer__attach typo3-backend-icon,
+.nst3af-agent-composer__attach .icon,
+.nst3af-agent-composer__send typo3-backend-icon,
+.nst3af-agent-composer__send .icon {
+  display: block;
 }
 
 .nst3af-agent-kbd {
@@ -703,9 +922,19 @@
   padding: 0;
 }
 
-/* Launch bar (prototype .launchbar) */
-.scaffold-topbar,
-.t3js-scaffold-topbar {
+/*
+ * Launch bar (prototype .launchbar). Centered by absolute position against .scaffold-header —
+ * the real full-width row (grid-column: 1/3, spans the whole header incl. the sidebar column)
+ * that TYPO3 core lays .scaffold-topbar (logo, search) and .scaffold-toolbar (module icon
+ * list) out in as flex siblings. This is deliberately NOT flex-centering (margin:auto /
+ * justify-content:center among those siblings): that only centers within whatever space is
+ * left after both siblings claim their own natural width, which is not the same point as the
+ * visual center of the full bar and drifts with the site name/module icon count. Absolute
+ * positioning at 50%/50% of .scaffold-header's own box is centered on the bar itself,
+ * independent of sibling content.
+ */
+.scaffold-header,
+.t3js-scaffold-header {
   position: relative;
 }
 
@@ -714,10 +943,8 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
-  z-index: 2;
+  z-index: 1;
   pointer-events: none;
-  display: flex;
-  justify-content: center;
   max-width: min(420px, calc(100vw - 320px));
 }
 
@@ -797,8 +1024,27 @@
   font-family: inherit;
 }
 
+/* The mounted topbar clone sits on TYPO3's dark header bar — use the topbar's own CSS custom
+   properties (already defined on .topbar, an ancestor here) instead of the panel's light
+   --nst3af-agent-surface tokens, which produced a bright white pill clashing with the bar. */
 .nst3af-agent-launchbar--topbar {
   margin: 0;
+  color: var(--topbar-item-color, inherit);
+  background: var(--topbar-item-bg, transparent);
+  border-color: color-mix(in srgb, var(--topbar-item-color, currentColor) 25%, transparent);
+  box-shadow: 0 2px 4px color-mix(in srgb, var(--topbar-item-color, currentColor) 50%, transparent);
+}
+
+.nst3af-agent-launchbar--topbar:hover,
+.nst3af-agent-launchbar--topbar:focus-visible {
+  background: var(--typo3-state-default-hover-bg, var(--topbar-item-bg, transparent));
+  border-color: var(--typo3-state-default-hover-border-color, currentColor);
+}
+
+.nst3af-agent-launchbar--topbar .nst3af-agent-launchbar__kbd {
+  background: color-mix(in srgb, var(--topbar-item-color, currentColor) 14%, transparent);
+  border-color: color-mix(in srgb, var(--topbar-item-color, currentColor) 25%, transparent);
+  color: inherit;
 }
 
 .toolbar-item-nst3af-agent--hidden {
@@ -1135,29 +1381,70 @@
   border-bottom: 1px solid var(--nst3af-agent-surface-high);
 }
 
-/* Greeting (ephemeral) */
-.nst3af-agent-greeting {
-  font-size: 13px;
-  line-height: 1.6;
+/* Empty conversation (first open / new chat) */
+.nst3af-agent-empty {
+  width: 100%;
+  max-width: 30rem;
+  text-align: center;
 }
 
-.nst3af-agent-greeting__lead {
-  margin: 0 0 12px;
-  color: var(--nst3af-agent-text);
+.nst3af-agent-empty__mark {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  background: var(--nst3af-agent-accent-fill, var(--typo3-state-primary-bg, #1c58a5));
+  color: var(--nst3af-agent-on-accent, var(--typo3-state-primary-color, #fff));
+  border-radius: 6px;
 }
 
-.nst3af-agent-greeting__context {
-  margin: 0 0 14px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--nst3af-agent-surface-soft);
-  border: 1px solid var(--nst3af-agent-surface-high);
+.nst3af-agent-empty__mark typo3-backend-icon,
+.nst3af-agent-empty__mark .icon {
+  display: block;
+}
+
+.nst3af-agent-empty__title {
+  margin: 0 0 0.5rem;
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--nst3af-agent-text-strong);
+}
+
+.nst3af-agent-empty__lead {
+  margin: 0 auto 1.5rem;
+  max-width: 26rem;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--nst3af-agent-text-muted);
+}
+
+.nst3af-agent-empty__tip {
+  margin: 1.25rem 0 0;
   font-size: 12px;
   color: var(--nst3af-agent-text-muted);
 }
 
-.nst3af-agent-greeting__context strong {
+.nst3af-agent-empty__tip kbd {
+  padding: 0.05rem 0.35rem;
+  background: var(--nst3af-agent-surface);
+  border: 1px solid var(--nst3af-agent-border);
+  border-radius: 3px;
+  font: 11px ui-monospace, Menlo, monospace;
   color: var(--nst3af-agent-text-strong);
+}
+
+.nst3af-agent-composer__note {
+  margin: 0.5rem 14px 12px;
+  font-size: 12px;
+  color: var(--nst3af-agent-text-muted);
+}
+
+@media (max-width: 520px) {
+  .nst3af-agent-starters--grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Tool-call card — collapsed by default (open on failure) */
@@ -1470,22 +1757,28 @@
 }
 
 .nst3af-agent-composer--agbox {
-  margin: 12px 16px 16px;
+  margin: 10px 14px 14px;
   border: 1px solid var(--nst3af-agent-border);
   border-radius: 12px;
   background: var(--nst3af-agent-surface);
   overflow: hidden;
+  padding: 0;
+  box-shadow: 0 2px 14px color-mix(in srgb, var(--nst3af-agent-text-strong) 9%, transparent);
 }
 
 .nst3af-agent-composer--agbox .nst3af-agent-composer__input {
   border: 0;
   border-radius: 0;
   box-shadow: none;
+  padding: 10px 12px 6px;
+  min-height: 36px;
 }
 
 .nst3af-agent-composer--agbox .nst3af-agent-composer__bar {
-  border-top: 1px solid var(--nst3af-agent-surface-high);
-  padding: 8px 10px;
+  border-top: 1px solid var(--nst3af-agent-border-soft);
+  padding: 6px 10px;
+  margin-top: 0;
+  background: var(--nst3af-agent-surface-soft);
 }
 
 .nst3af-agent-footer {
@@ -1626,12 +1919,13 @@
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  min-width: 0;
 }
 
 .nst3af-agent-header__provider {
-  max-width: 280px;
-  font-size: 12px;
+  max-width: 180px;
+  font-size: 11.5px;
 }
 
 .nst3af-agent-header__provider:disabled {
@@ -1639,15 +1933,38 @@
   cursor: not-allowed;
 }
 
+/* Icon-only buttons: a faint fill + border at rest so they read as buttons (not bare glyphs),
+   a clearer fill on hover/focus. */
 .nst3af-agent-header__icon {
-  min-width: 30px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
   font-weight: 700;
+  background: var(--nst3af-agent-surface-soft);
+  border-color: var(--nst3af-agent-border-soft);
+  color: var(--nst3af-agent-text-muted);
 }
 
-.nst3af-agent-header__icon[aria-expanded="true"] {
+.nst3af-agent-header__icon:hover,
+.nst3af-agent-header__icon:focus-visible {
+  background: var(--nst3af-agent-surface-high);
+  border-color: var(--nst3af-agent-border);
+  color: var(--nst3af-agent-text);
+}
+
+.nst3af-agent-header__icon[aria-expanded="true"],
+.nst3af-agent-header__icon[aria-pressed="true"] {
   background: var(--nst3af-agent-accent-soft);
   border-color: var(--nst3af-agent-accent-soft-strong);
   color: var(--nst3af-agent-accent);
+}
+
+/* Sessions toggle sits at the far left of the header, directly above the rail it controls,
+   instead of buried in the right-side icon cluster far from that rail. */
+.nst3af-agent-header__sessions-toggle {
+  margin-right: 2px;
 }
 
 /* Drawers (conversation list, info) slide over the right side of the window */
@@ -1684,6 +2001,50 @@
   font-size: 14px;
   font-weight: 700;
   margin-right: auto;
+}
+
+/* The rail is narrow (default ~248px, can be dragged down to 200px) — "Conversations" plus a
+   two-button filter never reliably fit on one line, so the filter gets its own row instead of
+   fighting the title for space and overflowing/clipping. */
+.nst3af-agent-sessions-rail .nst3af-agent-drawer__head {
+  flex-wrap: wrap;
+}
+
+.nst3af-agent-sessions-rail .nst3af-agent-drawer__title {
+  flex: 1 1 auto;
+}
+
+/* Sessions rail scope filter ("This page" / "All pages"): plain segmented pill, not two
+   separate boxy Bootstrap buttons. */
+.nst3af-agent-sessions-rail [data-nst3af-agent-sessions-filter] {
+  flex: 0 0 100%;
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid var(--nst3af-agent-border-soft);
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--nst3af-agent-surface);
+}
+
+.nst3af-agent-sessions-rail [data-nst3af-agent-sessions-filter] .btn {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 3px 9px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--nst3af-agent-text-muted);
+}
+
+.nst3af-agent-sessions-rail [data-nst3af-agent-sessions-filter] .btn.active,
+.nst3af-agent-sessions-rail [data-nst3af-agent-sessions-filter] .btn[aria-pressed="true"] {
+  background: var(--nst3af-agent-accent-soft);
+  color: var(--nst3af-agent-accent);
+}
+
+.nst3af-agent-sessions-rail .nst3af-agent-drawer__search {
+  font-size: 12px;
+  border-radius: 7px;
 }
 
 .nst3af-agent-drawer__close {

@@ -1,7 +1,7 @@
-# Feature — AI Agent (backend modal)
+# Feature — AI Agent (backend right-edge panel)
 
 **Status:** Done (structural + NL routing on Symfony AI Agent, core tool set + find_tools, DualMode preview→apply, BE i18n)  
-**UI:** Global toolbar **Ask AI Agent** (`AgentToolbarItem`), modal JS `@nitsan/nst3af/agent.js`  
+**UI:** Global toolbar **Ask AI Agent** (`AgentToolbarItem`), right-edge sliding panel JS `@nitsan/nst3af/agent.js` (persistent sessions rail, remembered last conversation via Persistent)  
 **Settings route:** `t3af_dashboard.ai_agent`  
 **Verify:** `Documentation/Agent/VerifySuite.md`, `Tests/Unit/Agent/` · routing docs: `Documentation/Agent/Routing.md`, `PreviewApply.md`, `Eval.md`
 

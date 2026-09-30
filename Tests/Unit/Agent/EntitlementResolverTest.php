@@ -22,10 +22,19 @@ namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 use NITSAN\NsT3AF\Access\ExtensionAvailability;
 use NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver;
 use NITSAN\NsT3AF\Contract\ExtensionOperationalStatusInterface;
+use NITSAN\NsT3AF\Tests\Unit\Access\Support\LoadedExtensionsTestTrait;
 use PHPUnit\Framework\TestCase;
 
 final class EntitlementResolverTest extends TestCase
 {
+    use LoadedExtensionsTestTrait;
+
+    protected function tearDown(): void
+    {
+        $this->resetLoadedExtensions();
+        parent::tearDown();
+    }
+
     public function testCoreAndFoundationAlwaysExecutable(): void
     {
         $resolver = new EntitlementResolver([], new ExtensionAvailability());
@@ -62,6 +71,11 @@ final class EntitlementResolverTest extends TestCase
 
     public function testUnknownOwnerWithoutProviderDefaultsToLoadedCheck(): void
     {
+        // ExtensionAvailability::isLoaded() falls back to "loaded" whenever
+        // ExtensionManagementUtility's static PackageManager isn't bootstrapped (safe default
+        // for unrelated unit tests) — so a deterministic "nothing is loaded" PackageManager
+        // must be injected here for this fake key to genuinely exercise the not-loaded path.
+        $this->resetLoadedExtensions();
         $resolver = new EntitlementResolver([], new ExtensionAvailability());
 
         // Extension not loaded in unit context — should be false for fake keys

@@ -204,12 +204,12 @@ Per-group wizard + permission matrix for AI Foundation and child extensions. Thi
 
 ---
 
-## AI Agent (backend modal)
+## AI Agent (backend right-edge panel)
 
 Global toolbar assistant: NL + slash tools, workflow fast-paths, read auto-run, write drafts, conversation persistence.
 
 ```
-Toolbar AgentToolbarItem → agent.js modal
+Toolbar AgentToolbarItem → agent.js right-edge panel
         │
         ▼
 AgentAjaxController (turn / stream / tools / conversation / draft apply)

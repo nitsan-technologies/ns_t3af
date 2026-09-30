@@ -1,12 +1,12 @@
 # AI Agent conversations
 
-A conversation belongs to the **page and module where it was started** (its home). Opening the agent opens the latest conversation of the configured scope; every conversation stays reachable from the conversation list (☰ in the window header).
+A conversation belongs to the **page and module where it was started** (its home). Opening the agent resumes the **last-viewed** conversation for the current conversation-scope location (remembered per editor in `$BE_USER->uc` via `nst3af.agent.lastSession`, same Persistent store as the sessions rail / panel width). If nothing is remembered, or the remembered row is gone / out of scope, it opens the latest conversation of the configured scope. Every conversation stays reachable from the conversation list (header toggle).
 
 ## Settings (AI Agent)
 
 | Key | Default | Effect |
 |---|---|---|
-| `agentConversationScope` | `page` | Which conversation opens automatically: `page` (same module + page), `module` (same module), `user` (latest anywhere; navigating keeps the conversation and shows "Now working on page …") |
+| `agentConversationScope` | `page` | Where a remembered last-viewed conversation still applies, and which conversation opens when none is remembered: `page` (same module + page), `module` (same module), `user` (anywhere; navigating keeps the conversation and shows "Now working on page …") |
 | `agentSessionListEnabled` | `1` | Show the conversation list button |
 | `agentSessionListDefaultFilter` | `current` | Initial filter: this page / module, or all pages |
 | `agentMaxSessionsPerScope` | `20` | Per user and home; the oldest are moved to trash when a new one is stored (0 = unlimited) |
@@ -16,7 +16,7 @@ A conversation belongs to the **page and module where it was started** (its home
 
 ## Behaviour
 
-- A new conversation is stored with the first message (title = first message, 60 characters). "＋" starts a fresh one; the previous one stays in the list.
+- A new conversation is stored with the first message (title = first message, 60 characters). "New conversation" starts a fresh one and clears the remembered last-viewed uuid; the previous one stays in the list. Picking a conversation in the list updates the remembered uuid for the next open.
 - The **AI provider** select is fixed after the first answer (`provider_identifier`). It lists the default plus every enabled provider of the site that can call tools and that the editor's groups may use (provider backend groups, AI Permissions allowlist). Credits mode shows only T3Planet Credits.
 - Each user message stores where it was written (`meta.context`: page, module). Reopened on another page, the window says where the conversation was started; older messages written elsewhere are captioned and sent to the model with "[written on page …]".
 - **The server is the only writer.** Turns are stored by the turn endpoints; Execute, Decline, the first click on a destructive card and Undo update the stored card (found by its draft id) and append the result (`AgentConversationRecorder`). The window sends `sessionUuid` with these actions and never posts its messages. Unsaved choices on a card (kept fields, picked variants, edits) are sent with Execute and stored then.
@@ -28,7 +28,7 @@ A conversation belongs to the **page and module where it was started** (its home
 
 | Route | Purpose |
 |---|---|
-| `nst3af_agent_conversation` (GET) | Open: `sessionUuid`, `fresh=1`, or the latest of the scope. Returns messages, context, session, list settings, providers |
+| `nst3af_agent_conversation` (GET) | Open: `sessionUuid` (client may send the remembered last-viewed id), `fresh=1`, or the latest of the scope. Returns messages, context, session, list settings, providers |
 | `nst3af_agent_sessions` (GET) | List: `filter=current\|all`, `limit`, `offset` |
 | `nst3af_agent_session_rename` / `_delete` (POST) | `sessionUuid` (+ `title`); delete is soft |
 | `nst3af_agent_turn` / `_stream` (POST) | `sessionUuid`, `fresh`, `provider`; response includes `session` |
