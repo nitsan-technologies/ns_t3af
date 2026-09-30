@@ -598,6 +598,23 @@ class T3PlanetCreditsChatExecutor
         $topup = (string) ($nested['topup_url'] ?? $body['topup_url'] ?? '');
         $status = CreditsApiErrorCodes::httpStatus($code);
 
+        // Match T3PlanetHttpClient::throwDecodedApiError — Credits often wraps the
+        // real provider text in upstream_* fields while message stays generic.
+        foreach (['upstream_message', 'upstream_error', 'upstream_body_snippet', 'detail'] as $detailKey) {
+            $detail = trim((string) ($nested[$detailKey] ?? $body[$detailKey] ?? ''));
+            if ($detail === '' || str_contains($message, $detail)) {
+                continue;
+            }
+            $parsedUpstream = $this->messageFromUpstreamBodySnippet($detail);
+            $detailText = $parsedUpstream !== '' ? $parsedUpstream : $detail;
+            $message = $message !== '' && $message !== $code
+                ? $message . ' — ' . $detailText
+                : $detailText;
+        }
+        if ($message === '' || $message === $code) {
+            $message = $code;
+        }
+
         if ($code === CreditsApiErrorCodes::INSUFFICIENT_CREDITS || $status === 402) {
             return new InsufficientCreditsException(
                 $message !== $code ? $message : 'Insufficient credits',
@@ -608,5 +625,20 @@ class T3PlanetCreditsChatExecutor
         }
 
         return new CreditsApiException($code, $status, $message, is_array($nested) ? $nested : [], $previous);
+    }
+
+    /**
+     * Prefer the provider's nested error.message when Credits embeds raw JSON in upstream_body_snippet.
+     */
+    private function messageFromUpstreamBodySnippet(string $snippet): string
+    {
+        $decoded = json_decode($snippet, true);
+        if (!is_array($decoded)) {
+            return '';
+        }
+        $nested = is_array($decoded['error'] ?? null) ? $decoded['error'] : null;
+        $message = trim((string) ($nested['message'] ?? $decoded['message'] ?? ''));
+
+        return $message;
     }
 }

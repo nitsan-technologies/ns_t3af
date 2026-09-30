@@ -19,12 +19,10 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Credits\Platform;
 
+use NITSAN\NsT3AF\Bootstrap\T3afPharBootstrap;
 use NITSAN\NsT3AF\Credits\Service\CreditsDomainResolver;
 use NITSAN\NsT3AF\Credits\Service\RuntimeSettingsService;
 use NITSAN\NsT3AF\Credits\Service\TokenResolver;
-use Symfony\AI\Platform\Bridge\Generic\Factory;
-use Symfony\AI\Platform\PlatformInterface;
-use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -47,14 +45,19 @@ class T3PlanetCreditsPlatformFactory
     /**
      * @param non-empty-string|null $bearerToken Skip TokenResolver when already resolved (retry paths).
      */
-    public function create(#[\SensitiveParameter] ?string $bearerToken = null): PlatformInterface
+    public function create(#[\SensitiveParameter] ?string $bearerToken = null): object
     {
         $token = $bearerToken ?? $this->tokenResolver->resolve();
         if ($token === '') {
             $token = $this->tokenResolver->issueFreshToken();
         }
 
-        return Factory::createPlatform(
+        $factoryClass = $this->resolveClass('Symfony\\AI\\Platform\\Bridge\\Generic\\Factory');
+        if ($factoryClass === null) {
+            throw new \RuntimeException('symfony/ai-generic-platform Factory is not available (Composer or t3af.phar).');
+        }
+
+        return $factoryClass::createPlatform(
             baseUrl: $this->apiRoot(),
             apiKey: $token,
             httpClient: $this->httpClient($this->domainResolver->resolve()),
@@ -82,6 +85,26 @@ class T3PlanetCreditsPlatformFactory
             $headers['X-T3P-Domain'] = $trimmed;
         }
 
-        return HttpClient::create($headers !== [] ? ['headers' => $headers] : []);
+        $httpClientClass = $this->resolveClass('Symfony\\Component\\HttpClient\\HttpClient');
+        if ($httpClientClass === null) {
+            throw new \RuntimeException('symfony/http-client HttpClient is not available (Composer or t3af.phar).');
+        }
+
+        return $httpClientClass::create($headers !== [] ? ['headers' => $headers] : []);
+    }
+
+    /**
+     * @param class-string|string $fqcn
+     * @return class-string|null
+     */
+    private function resolveClass(string $fqcn): ?string
+    {
+        if (class_exists($fqcn)) {
+            return $fqcn;
+        }
+
+        $scoped = T3afPharBootstrap::VENDOR_PREFIX . $fqcn;
+
+        return class_exists($scoped) ? $scoped : null;
     }
 }
