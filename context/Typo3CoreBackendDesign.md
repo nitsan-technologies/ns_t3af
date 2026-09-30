@@ -1135,8 +1135,13 @@ Surfaces, borders, and body text must use `--typo3-*` first (see token block abo
 | `ai-usage.css` | AI Usage |
 | `ai-prompts.css` | AI Prompts |
 | `setup.css` | Setup wizard / checklist |
+| `toolbar-credit.css` | Global scaffold **Credits** toolbar item (`CreditBalanceToolbarItem`) |
 
 Add layout-only rules (flex banner, grid gaps, chart height). Do not re-theme core components.
+
+### Global Credits toolbar (scaffold header)
+
+Healthy / default “`0/50 cr`” text **and** the wallet icon (`.aiu-toolbar-credit-balance__icon`) must **`color: inherit`** from `.toolbar-item-link` (`--typo3-scaffold-header-color`), with `--icon-color-primary: currentColor` so `.icon` / SVG fill match other toolbar icons. Do **not** use `--typo3-text-color-base` — Fresh / primary topbars keep dark body text while the header uses light text. Low / critical states may use `--typo3-state-*-border-color` accents on the amount only. Dropdown panel text may keep content tokens (`--typo3-text-color-variant`).
 
 ---
 

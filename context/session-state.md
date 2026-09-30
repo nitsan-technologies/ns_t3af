@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-09-30 — Credits toolbar Fresh/dark contrast
+
+**Done:** `toolbar-credit.css` — healthy balance inherits `.toolbar-item-link` / scaffold header color (fixes unreadable dark “0/50 cr” on Fresh primary topbar). Low/critical keep warning/danger border tokens. Documented in `Typo3CoreBackendDesign.md`. Synced to `12.4.45-new`.
+
+**Last touched:** 2026-09-30
+
+---
+
 ## 2026-09-30 — DataHandlerService: live page uid + site for v12 workspaces
 
 **Done:** `updateRecord` / `createRecord` / `copyRecord` for `pages` resolve `t3ver_oid` (live) before DataHandler and attach site on `TYPO3_REQUEST` even when MCP had no request. Fixes TYPO3 v12 RootlineUtility "Could not fetch page data for uid \<workspace version\>".
