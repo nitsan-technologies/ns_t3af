@@ -2,6 +2,38 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-09-30 — DataHandlerService: live page uid + site for v12 workspaces
+
+**Done:** `updateRecord` / `createRecord` / `copyRecord` for `pages` resolve `t3ver_oid` (live) before DataHandler and attach site on `TYPO3_REQUEST` even when MCP had no request. Fixes TYPO3 v12 RootlineUtility "Could not fetch page data for uid \<workspace version\>".
+
+**Last touched:** 2026-09-30
+
+---
+
+## 2026-09-30 — TranslateHook: public McpInvocationContext for DataHandler localize
+
+**Done:** `GeneralUtility::makeInstance(McpInvocationContext)` failed during backend page localize (DeepL via `aiProviderIdentifier`) because the service was DI-private (`0` ctor args). Marked `McpInvocationContext` public; TranslateHook resolves it safely and falls back to `backend_module` / `backend_localization` when unavailable.
+
+**Last touched:** 2026-09-30
+
+---
+
+## 2026-09-30 — MCP invocation forces request_source=mcp (incl. credits mode)
+
+**Done:** `McpInvocationContext` tracks active tool calls (`applyFromArguments` / `clear`). `enrichAiOptions` sets `requestSource=mcp` while active; new `enrichRequestSourceOnly()` does the same without swapping providers (used when T3Planet credits mode skips full enrich). Cleared in `ContextualReferenceHandler` + playground `finally`. Fixes AI Usage mis-labeling MCP news/translate as `backend_module`.
+
+**Last touched:** 2026-09-30
+
+---
+
+## 2026-09-29 — AI Usage search quotes the column inside LOWER()
+
+**Done:** Request-log search wraps each quoted column in LOWER() before LIKE. The previous like() call treated LOWER(column) as a column name, and MariaDB raised unknown column 1054.
+
+**Last touched:** 2026-09-29
+
+---
+
 ## 2026-09-29 — Read chat content parts
 
 **Done:** `AiService::extractContentFromInvokeResult()` reads a string or a list of text parts from the raw chat completion when the bridge converter rejects the body. Thinking parts are skipped. A provider error in that body is thrown instead of an empty success. A normal `asText()` string is unchanged.
