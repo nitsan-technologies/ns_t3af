@@ -1940,96 +1940,96 @@
                 <target>Kostenstelle</target>
             </trans-unit>
             <trans-unit id="provider.field.pricingNote">
-                <source>These price fields only help you estimate costs in the dashboard and logs. They do not change what your AI provider bills you, and they are not linked to T3Planet credits or spending limits.</source>
-                <target>Diese Preisfelder helfen nur bei Kostenschätzungen im Dashboard und in den Protokollen. Sie ändern nicht, was Ihr AI-Anbieter abrechnet, und haben nichts mit T3Planet Credits oder Ausgabenlimits zu tun.</target>
+                <source>These numbers are only used to estimate how much your AI usage costs, so you can see that estimate in the dashboard and in the logs. They do not change the bill from your AI provider, and they do not change T3Planet credits.</source>
+                <target>Diese Zahlen dienen nur dazu, die Kosten Ihrer AI-Nutzung zu schätzen, damit Sie diese Schätzung im Dashboard und in den Protokollen sehen. Sie ändern weder die Rechnung Ihres AI-Anbieters noch die T3Planet Credits.</target>
             </trans-unit>
             <trans-unit id="provider.field.help.aria">
                 <source>Show help for this field</source>
                 <target>Hilfe zu diesem Feld anzeigen</target>
             </trans-unit>
             <trans-unit id="provider.field.identifier.help">
-                <source>A short technical name for this connection (letters, numbers, dots, dashes, underscores). You will see it in logs and settings — visitors never see it.</source>
-                <target>Ein kurzer technischer Name für diese Verbindung (Buchstaben, Zahlen, Punkte, Bindestriche, Unterstriche). Sie sehen ihn in Protokollen und Einstellungen — Website-Besucher nicht.</target>
+                <source>This is an internal name for this connection. You will see it in logs and in settings. People visiting your website never see it. Use a short name made of letters, numbers, dots, dashes, or underscores. For example: openai-live or claude-marketing.</source>
+                <target>Das ist ein interner Name für diese Verbindung. Sie sehen ihn in Protokollen und in den Einstellungen. Besucher Ihrer Website sehen ihn nicht. Verwenden Sie einen kurzen Namen aus Buchstaben, Zahlen, Punkten, Bindestrichen oder Unterstrichen. Zum Beispiel: openai-live oder claude-marketing.</target>
             </trans-unit>
             <trans-unit id="provider.field.title.help">
-                <source>The friendly name you see in lists and dropdowns in the backend.</source>
-                <target>Der Anzeigename, den Sie in Listen und Dropdowns im Backend sehen.</target>
+                <source>This is the name editors see in lists and dropdowns in the TYPO3 backend. Write it so someone can pick the right connection without opening it. For example: OpenAI for the live site or Claude for blog drafts.</source>
+                <target>Das ist der Name, den Redakteure in Listen und Dropdowns im TYPO3-Backend sehen. Formulieren Sie ihn so, dass jemand die richtige Verbindung wählen kann, ohne sie zu öffnen. Zum Beispiel: OpenAI für die Live-Website oder Claude für Blogentwürfe.</target>
             </trans-unit>
             <trans-unit id="provider.field.adapter.help">
-                <source>Which AI service you are connecting to (OpenAI, Claude, Ollama, and so on). This also decides which fields you need to fill in.</source>
-                <target>Welchen AI-Dienst Sie verbinden (OpenAI, Claude, Ollama usw.). Daran hängt auch, welche Felder Sie ausfüllen müssen.</target>
+                <source>Choose the service you are connecting to, such as OpenAI, Claude, or Ollama. The form then shows the fields that service needs. If you are unsure, open the account where you created the key. The service name there is the one to pick.</source>
+                <target>Wählen Sie den Dienst, den Sie verbinden, zum Beispiel OpenAI, Claude oder Ollama. Das Formular zeigt dann die Felder, die dieser Dienst braucht. Wenn Sie unsicher sind, öffnen Sie das Konto, in dem Sie den Schlüssel erstellt haben. Der Dienstname dort ist der richtige.</target>
             </trans-unit>
             <trans-unit id="provider.field.endpoint.help">
-                <source>The web address TYPO3 talks to. Needed for Custom / Other, Ollama, and Azure. For many cloud providers you can leave this empty and we use a default.</source>
-                <target>Die Webadresse, mit der TYPO3 spricht. Nötig für Custom / Other, Ollama und Azure. Bei vielen Cloud-Anbietern können Sie das Feld leer lassen — dann nutzen wir einen Standard.</target>
+                <source>This is the web address TYPO3 uses to reach the AI service. Fill it in for Custom / Other, Ollama, and Azure. For OpenAI, Claude, and most other cloud services you can leave it empty, and TYPO3 uses the usual address. A local Ollama install often looks like http://host.docker.internal:11434.</source>
+                <target>Das ist die Webadresse, über die TYPO3 den AI-Dienst erreicht. Füllen Sie sie für Custom / Other, Ollama und Azure aus. Für OpenAI, Claude und die meisten anderen Cloud-Dienste können Sie sie leer lassen. TYPO3 verwendet dann die übliche Adresse. Eine lokale Ollama-Installation sieht oft so aus: http://host.docker.internal:11434.</target>
             </trans-unit>
             <trans-unit id="provider.field.apiKey.help">
-                <source>Your secret key from the AI provider. We store it encrypted. You usually do not need one for local Ollama. This key is not used to manage billing or credits.</source>
-                <target>Ihr geheimer Schlüssel vom AI-Anbieter. Wir speichern ihn verschlüsselt. Für lokales Ollama brauchen Sie meist keinen. Mit diesem Schlüssel verwalten Sie weder Abrechnung noch Credits.</target>
+                <source>Paste the secret key from your AI provider's account. TYPO3 stores it locked away. A local Ollama install usually does not need a key. The key only lets TYPO3 talk to the AI. It does not pay invoices or change credits.</source>
+                <target>Fügen Sie den geheimen Schlüssel aus dem Konto Ihres AI-Anbieters ein. TYPO3 speichert ihn verschlüsselt. Eine lokale Ollama-Installation braucht meist keinen Schlüssel. Der Schlüssel lässt TYPO3 nur mit der AI sprechen. Er bezahlt keine Rechnungen und ändert keine Credits.</target>
             </trans-unit>
             <trans-unit id="provider.field.chatModelId.help">
-                <source>Which model to use for chat and text generation with this connection. On Azure, enter the deployment name here.</source>
-                <target>Welches Modell für Chat und Textgenerierung über diese Verbindung genutzt wird. Bei Azure tragen Sie hier den Deployment-Namen ein.</target>
+                <source>Choose the model that writes answers and other text for this connection. A model is one specific AI version, such as gpt-4o or claude-sonnet. On Azure, type the deployment name from the Azure portal, which is often different from the public model name.</source>
+                <target>Wählen Sie das Modell, das Antworten und anderen Text für diese Verbindung schreibt. Ein Modell ist eine bestimmte AI-Version, zum Beispiel gpt-4o oder claude-sonnet. Bei Azure tragen Sie den Deployment-Namen aus dem Azure-Portal ein. Der weicht oft vom öffentlichen Modellnamen ab.</target>
             </trans-unit>
             <trans-unit id="provider.field.embeddingModelId.help">
-                <source>Which model to use for search and similarity (embeddings). Leave empty to use the same model as for chat.</source>
-                <target>Welches Modell für Suche und Ähnlichkeit (Embeddings) genutzt wird. Leer lassen, wenn dasselbe Modell wie für Chat verwendet werden soll.</target>
+                <source>Choose the model used when the site searches or looks for similar content. If you leave this empty, the chat model above is used for that too. For example: text-embedding-3-small. You can skip this if you only use the AI for writing.</source>
+                <target>Wählen Sie das Modell, das die Website für die Suche oder für ähnliche Inhalte nutzt. Wenn Sie das Feld leer lassen, wird dafür das Chat-Modell oben verwendet. Zum Beispiel: text-embedding-3-small. Sie können das Feld überspringen, wenn Sie die AI nur zum Schreiben nutzen.</target>
             </trans-unit>
             <trans-unit id="provider.field.apiVersion">
                 <source>API version</source>
                 <target>API-Version</target>
             </trans-unit>
             <trans-unit id="provider.field.apiVersion.help">
-                <source>Only for Azure OpenAI. Leave empty to use our default (2024-10-21). Other adapters ignore this field.</source>
-                <target>Nur für Azure OpenAI. Leer lassen für unseren Standard (2024-10-21). Andere Adapter ignorieren dieses Feld.</target>
+                <source>This field is only for Azure OpenAI. Leave it empty to keep the built-in date 2024-10-21. Other services ignore it. Change it only if Azure support asks you to use a different date.</source>
+                <target>Dieses Feld gilt nur für Azure OpenAI. Lassen Sie es leer, um das eingebaute Datum 2024-10-21 zu behalten. Andere Dienste ignorieren es. Ändern Sie es nur, wenn der Azure-Support ein anderes Datum verlangt.</target>
             </trans-unit>
             <trans-unit id="provider.field.endpoint.requiredAzure">
                 <source>Your Azure OpenAI resource URL, for example https://myresource.openai.azure.com</source>
                 <target>Ihre Azure-OpenAI-Ressourcen-URL, zum Beispiel https://myresource.openai.azure.com</target>
             </trans-unit>
             <trans-unit id="provider.field.capabilities.help">
-                <source>Tick what this model can do — chat, embeddings, vision, and so on. Some AI features only work if the right options are on.</source>
-                <target>Haken Sie an, was dieses Modell kann — Chat, Embeddings, Vision usw. Manche AI-Funktionen brauchen die passenden Optionen.</target>
+                <source>Tick what this model is allowed to do here. A feature runs only when the matching option is on. For everyday writing, turn on chat. For site search, also turn on embeddings. Turn on vision only when the model can read pictures.</source>
+                <target>Setzen Sie Häkchen bei dem, was dieses Modell hier tun darf. Eine Funktion läuft nur, wenn die passende Option aktiv ist. Für alltägliches Schreiben aktivieren Sie chat. Für die Website-Suche aktivieren Sie zusätzlich embeddings. Aktivieren Sie vision nur, wenn das Modell Bilder lesen kann.</target>
             </trans-unit>
             <trans-unit id="provider.field.temperature.help">
-                <source>How creative the answers feel. Lower (near 0) is steadier; higher (toward 2) is more varied. A single feature can still choose its own value.</source>
-                <target>Wie kreativ die Antworten wirken. Niedriger (nahe 0) ist ruhiger; höher (Richtung 2) abwechslungsreicher. Einzelne Features können trotzdem einen eigenen Wert nutzen.</target>
+                <source>This sets how steady or varied the answers are, on a scale from 0 to 2. A low value such as 0.2 keeps wording similar each time. A higher value such as 1.0 allows more variety. 0.7 is a safe everyday choice. One feature can still use its own value and skip this one.</source>
+                <target>Das legt fest, wie gleichmäßig oder abwechslungsreich die Antworten sind, auf einer Skala von 0 bis 2. Ein niedriger Wert wie 0.2 hält die Formulierungen ähnlich. Ein höherer Wert wie 1.0 lässt mehr Abwechslung zu. 0.7 ist eine sichere Wahl für den Alltag. Eine einzelne Funktion kann trotzdem einen eigenen Wert nutzen und diesen hier überspringen.</target>
             </trans-unit>
             <trans-unit id="provider.field.systemPrompt.help">
-                <source>An optional starting instruction we add when this provider is used as the default. Leave blank if you do not need one.</source>
-                <target>Eine optionale Startanweisung, die wir hinzufügen, wenn dieser Provider der Standard ist. Leer lassen, wenn Sie keine brauchen.</target>
+                <source>This is an optional standing instruction, added whenever this connection is the default. Use it for a rule you want every time, such as “Write in a friendly tone and keep answers short.” Leave it empty when each feature already has its own instructions.</source>
+                <target>Das ist eine optionale feste Anweisung, die hinzugefügt wird, wenn diese Verbindung der Standard ist. Nutzen Sie sie für eine Regel, die immer gelten soll, zum Beispiel: „Schreiben Sie in einem freundlichen Ton und halten Sie Antworten kurz.“ Lassen Sie das Feld leer, wenn jede Funktion schon eigene Anweisungen hat.</target>
             </trans-unit>
             <trans-unit id="provider.field.priority.help">
-                <source>Only affects the order in lists (0–100). It does not change prices or credits.</source>
-                <target>Betrifft nur die Reihenfolge in Listen (0–100). Preise und Credits ändern sich dadurch nicht.</target>
+                <source>This only changes the order of connections in lists. Use a number from 0 to 100. A higher number is shown first. It does not change prices or credits. For example, set the live connection to 80 and a test connection to 10.</source>
+                <target>Das ändert nur die Reihenfolge der Verbindungen in Listen. Verwenden Sie eine Zahl von 0 bis 100. Eine höhere Zahl wird zuerst angezeigt. Preise und Credits ändern sich dadurch nicht. Setzen Sie zum Beispiel die Live-Verbindung auf 80 und eine Test-Verbindung auf 10.</target>
             </trans-unit>
             <trans-unit id="provider.field.pricingInput.help">
-                <source>Rough price you pay per 1 million input tokens — only so we can show estimated costs in the dashboard and logs when you use your own API keys. This does not change your provider bill, T3Planet credits, or spending limits.</source>
-                <target>Ungefährer Preis pro 1 Million Eingabe-Tokens — nur damit wir Kosten im Dashboard und in den Protokollen schätzen können, wenn Sie eigene API-Schlüssel nutzen. Dadurch ändert sich weder Ihre Anbieter-Rechnung noch T3Planet Credits oder Ausgabenlimits.</target>
+                <source>Type about what you pay for the text you send to the AI, per 1 million tokens. A token is a small piece of text, roughly a few letters. TYPO3 uses this only to estimate cost in the dashboard and logs. If the price list says $2.50, enter 2.50. Your invoice stays the same.</source>
+                <target>Tragen Sie ungefähr ein, was Sie für den Text zahlen, den Sie an die AI senden, pro 1 Million Tokens. Ein Token ist ein kleines Textstück, ungefähr ein paar Buchstaben. TYPO3 nutzt das nur, um Kosten im Dashboard und in den Protokollen zu schätzen. Steht in der Preisliste 2,50 USD, tragen Sie 2.50 ein. Ihre Rechnung bleibt gleich.</target>
             </trans-unit>
             <trans-unit id="provider.field.pricingOutput.help">
-                <source>Rough price you pay per 1 million output tokens — again only for cost estimates in the dashboard and logs. Not billing and not credit management.</source>
-                <target>Ungefährer Preis pro 1 Million Ausgabe-Tokens — ebenfalls nur für Kostenschätzungen im Dashboard und in den Protokollen. Keine Abrechnung und keine Credit-Verwaltung.</target>
+                <source>Type about what you pay for the text the AI sends back, per 1 million tokens. This is also only for the cost estimate. If replies are listed at $10, enter 10.</source>
+                <target>Tragen Sie ungefähr ein, was Sie für den Text zahlen, den die AI zurücksendet, pro 1 Million Tokens. Auch das dient nur der Kostenschätzung. Stehen Antworten in der Liste mit 10 USD, tragen Sie 10 ein.</target>
             </trans-unit>
             <trans-unit id="provider.field.pricingCurrency.help">
-                <source>Currency for those estimates, like USD. Display only — this is not a payment setting.</source>
-                <target>Währung für diese Schätzungen, z. B. USD. Nur Anzeige — das ist keine Zahlungseinstellung.</target>
+                <source>This is the money of the two prices above, so estimates show the right currency. Use the 3-letter code from the price list, such as USD or EUR. It is a display setting, not a payment setting.</source>
+                <target>Das ist die Währung der beiden Preise oben, damit Schätzungen in der richtigen Währung erscheinen. Verwenden Sie den dreistelligen Code aus der Preisliste, zum Beispiel USD oder EUR. Das ist eine Anzeige-Einstellung, keine Zahlungseinstellung.</target>
             </trans-unit>
             <trans-unit id="provider.field.costCenter.help">
-                <source>An optional tag for your own notes (team, project, department). We store it here only — it is not connected to accounting or your AI provider’s billing.</source>
-                <target>Ein optionales Kennzeichen für Ihre Notizen (Team, Projekt, Abteilung). Wir speichern es nur hier — es hängt weder an der Buchhaltung noch an der Abrechnung Ihres AI-Anbieters.</target>
+                <source>This is an optional label so you can tell connections apart in your own notes, for example marketing or support. TYPO3 only stores it here. It is not sent to your AI provider, and it is not an accounting code.</source>
+                <target>Das ist eine optionale Bezeichnung, damit Sie Verbindungen in Ihren eigenen Notizen unterscheiden können, zum Beispiel marketing oder support. TYPO3 speichert sie nur hier. Sie wird nicht an Ihren AI-Anbieter gesendet und ist kein Buchhaltungscode.</target>
             </trans-unit>
             <trans-unit id="provider.field.isDefault.help">
-                <source>When this is on, AI features on this site use this provider unless a feature is set to use another one.</source>
-                <target>Wenn das aktiv ist, nutzen AI-Funktionen auf dieser Site diesen Provider — außer ein Feature ist bewusst auf einen anderen gestellt.</target>
+                <source>Turn this on when AI features on this website should use this connection unless a feature is pointed at another one. Keep one default. For example, turn it on for OpenAI for the live site.</source>
+                <target>Schalten Sie das ein, wenn AI-Funktionen auf dieser Website diese Verbindung nutzen sollen, sofern eine Funktion nicht auf eine andere zeigt. Behalten Sie einen Standard. Schalten Sie es zum Beispiel für „OpenAI für die Live-Website“ ein.</target>
             </trans-unit>
             <trans-unit id="provider.field.isEnabled.help">
-                <source>Turn this off to pause the provider without deleting it. Your settings and key stay saved so you can switch it back on later.</source>
-                <target>Schalten Sie das aus, um den Provider zu pausieren, ohne ihn zu löschen. Einstellungen und Schlüssel bleiben erhalten, damit Sie ihn später wieder einschalten können.</target>
+                <source>Turn this off to pause the connection without deleting it. Settings and the API key stay saved, so you can switch it back on later. While it is off, no AI feature can use it.</source>
+                <target>Schalten Sie das aus, um die Verbindung zu pausieren, ohne sie zu löschen. Einstellungen und der API-Schlüssel bleiben gespeichert, sodass Sie sie später wieder einschalten können. Solange sie aus ist, kann keine AI-Funktion sie nutzen.</target>
             </trans-unit>
             <trans-unit id="provider.field.enabledForDashboard.help">
-                <source>When this is off, AI still works — this provider just stays out of dashboard charts. Handy for test or internal connections.</source>
-                <target>Wenn das aus ist, funktioniert AI weiter — dieser Provider erscheint nur nicht in den Dashboard-Diagrammen. Praktisch für Test- oder interne Verbindungen.</target>
+                <source>Turn this off to leave this connection out of the dashboard charts. The AI still works. Use that for a test connection you do not want in the usage numbers.</source>
+                <target>Schalten Sie das aus, damit diese Verbindung in den Dashboard-Diagrammen fehlt. Die AI funktioniert weiter. Nutzen Sie das für eine Test-Verbindung, die Sie nicht in den Nutzungszahlen haben möchten.</target>
             </trans-unit>
             <trans-unit id="provider.field.isEnabled">
                 <source>Provider enabled</source>
