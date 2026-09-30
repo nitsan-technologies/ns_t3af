@@ -3,7 +3,7 @@
 Design reference for **ns_t3af** backend modules. Use TYPO3 core markup and CSS first; add extension CSS only when core cannot express the layout.
 
 **Scope:** Backend module UI (Fluid templates, module CSS, JS toggles).  
-**Supported TYPO3:** `^12.4 || ^13.4 || ^14.3` (see `composer.json`).  
+**Supported TYPO3:** `^13.4 || ^14.3` (see `composer.json`). Guidance below still discusses v12 for historical/comparison context (child extensions or older installs); ns_t3af itself no longer supports it.  
 **Reference implementation:** `Resources/Private/Partials/`, `Resources/Public/Css/module/`.
 
 ---

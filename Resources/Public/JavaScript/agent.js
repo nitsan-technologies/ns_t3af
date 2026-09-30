@@ -147,11 +147,10 @@ function getBackendDocument() {
 }
 
 /**
- * Open shortcut for TYPO3 12–14: bind keydown (capture) on the scaffold and every
- * same-origin iframe. v12 Live Search treats Cmd+K and Cmd+Shift+K as the same
- * chord; we stopImmediatePropagation so only Agent opens on Shift+K. v13/v14 Live
- * Search uses an exact Hotkeys combo, so this is a no-op there except still
- * opening Agent from the iframe.
+ * Open shortcut for TYPO3 13–14: bind keydown (capture) on the scaffold and every
+ * same-origin iframe. Live Search uses an exact Hotkeys combo, so
+ * stopImmediatePropagation is a no-op there except still opening Agent from the
+ * iframe.
  *
  * @param {KeyboardEvent} event
  */

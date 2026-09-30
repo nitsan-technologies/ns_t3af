@@ -1,6 +1,6 @@
 # AI Agent hotkey conflict matrix (T6)
 
-The global agent opens from the orange **Ask AI Agent** launch bar (toolbar item, optionally cloned into the topbar center on v13+) on **Ctrl/Cmd+Shift+K** by default (`Resources/Public/JavaScript/agent.js`). Editors can opt into **Ctrl/Cmd+K** under AI Agent settings (stored in browser `localStorage`). On **TYPO3 12–14**, the open shortcut is bound on the scaffold document **and** every same-origin iframe (`#typo3-contentIframe`, page tree, …), matching how Live Search reaches module content. Rebind on `typo3-iframe-loaded` / iframe `load`. Escape, autocomplete, and focus-trap keys while the modal is open still use a top-document `keydown` listener.
+The global agent opens from the orange **Ask AI Agent** launch bar (toolbar item, optionally cloned into the topbar center on v13+) on **Ctrl/Cmd+Shift+K** by default (`Resources/Public/JavaScript/agent.js`). Editors can opt into **Ctrl/Cmd+K** under AI Agent settings (stored in browser `localStorage`). On **TYPO3 13–14**, the open shortcut is bound on the scaffold document **and** every same-origin iframe (`#typo3-contentIframe`, page tree, …), matching how Live Search reaches module content. Rebind on `typo3-iframe-loaded` / iframe `load`. Escape, autocomplete, and focus-trap keys while the modal is open still use a top-document `keydown` listener.
 
 | Browser / surface | Ctrl/Cmd+Shift+K (default) | Ctrl/Cmd+K (opt-in) | Ctrl/Cmd+J (rejected) |
 |---|---|---|---|
@@ -11,8 +11,7 @@ The global agent opens from the orange **Ask AI Agent** launch bar (toolbar item
 
 | TYPO3 major | Core LiveSearch on Ctrl/Cmd+K | Agent default behaviour | Notes |
 |---|---|---|---|
-| v12 | Yes (global shortcut) | Agent uses Shift+K; Live Search keeps K | Capture-phase bind + stopImmediatePropagation (v12 Live Search ignores Shift) |
-| v13 | Yes | Same | Exact Hotkeys combo on Live Search; same Agent capture bind |
+| v13 | Yes | Agent uses Shift+K; Live Search keeps K | Exact Hotkeys combo on Live Search; capture-phase Agent bind |
 | v14 | Yes | Same as v13 | Same as v13 |
 
 ## Choosing Ctrl/Cmd+K instead

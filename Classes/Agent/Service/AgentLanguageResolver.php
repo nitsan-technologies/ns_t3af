@@ -123,7 +123,7 @@ final readonly class AgentLanguageResolver
             return self::FALLBACK_ISO;
         }
 
-        // getHreflang() is a plain string on v12–v14, unlike getLocale().
+        // getHreflang() is a plain string on v13–v14, unlike getLocale().
         return $this->normalizeIsoCode($language->getHreflang());
     }
 

@@ -2,6 +2,16 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-09-30 — Drop TYPO3 12 support (2.0.0)
+
+**Done:** Raised `composer.json`/`ext_emconf.php` floor to `^13.4 || ^14.3`, pinned `symfony/ai-agent` to `~0.13.0`, bumped version to `2.0.0`. Removed TYPO3-12-only dual code paths: `ModuleController`/`ExtensionExtConfCategoryService` Fluid `StandaloneView` fallback (now `ViewFactoryInterface` only), `PagePathUtility` legacy icon-size reflection, `ProcessFileListActionsListener` legacy icon-size reflection, `AiUniverseUtilityHelper::getPageTreeNavigationComponent()` v12 branch, `AiApiAlertNotificationService` TYPO3-11 `Mailer` branch, `SetupChecklistPresenterTest` v12 adapter stub/test. Updated public docs (README, Installation/FAQ/Introduction RST, guides.xml/Includes.txt, CHANGELOG + `Documentation/ReleaseNotes/2.0.0/`, CONTRIBUTING, compliance-strings) and agent context (`core.md`, `Build/version-matrix.json`, `docs-map.md`, `Typo3CoreBackendDesign(.generic).md` support lines) to v13/v14 only. v1.x line stays on TYPO3 12 support for existing customers. Q1a/b/c in `ns-t3af-agent-cto-decisions.md` recorded as decided (drop v12, accept `~0.13.0`, no v12 CI job).
+
+Also fixed two pre-existing failures surfaced by `composer test`/`composer stan` during verification (unrelated to the v12 drop, both from local commit `f17edd7`): (1) `T3PlanetCreditsChatExecutor.php:182` PHPStan `object::invoke()` error — added the same `method_exists($platform, 'invoke')` guard already used in `SymfonyAiPlatform::invokeWithTools()`, since `T3PlanetCreditsPlatformFactory::create()` returns `object` (dynamic class resolution for phar-prefix support). (2) `DataHandlerServiceFileReferenceTest` — constructor was missing the `RecordService` arg; fixed by mocking `RecordService` plus the `TcaSchemaFactory`/`ConnectionPool` seams `BackendUtility::getRecord()` touches (reusing the `QueryBuilder`-mock pattern from `RelationUidListResolverTest`). `composer test` (1098/1098) and `composer stan` (0 errors) both fully green.
+
+**Last touched:** 2026-09-30
+
+---
+
 ## 2026-09-29 — Credits v1 chat for AI Agent
 
 **Done:** Agent NL turns in T3Planet Credits mode call `/API/AI/v1/chat/completions` via `symfony/ai-generic-platform` (`T3PlanetCreditsPlatformFactory` + `T3PlanetCreditsChatExecutor`). `AiToolCallingService` branches on `CreditModeResolver`; `supportsToolCalling` is true in credits mode. Provider select lists `/v1/models` aliases. Side-call LLM tool summaries are skipped while credits mode is on. Billing follows the live server (per completions call + `turn_id`); Charge/Stream stay for non-agent traffic.

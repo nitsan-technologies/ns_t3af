@@ -24,13 +24,13 @@ $EM_CONF['ns_t3af'] = [
     'author_company' => 'T3Planet',
     'state' => 'stable',
     'clearCacheOnLoad' => 0,
-    'version' => '1.2.2',
+    'version' => '2.0.0',
     'constraints' => [
         'depends' => [
-            'typo3' => '12.4.0-14.99.99',
+            'typo3' => '13.4.0-14.99.99',
             'php' => '8.2.0-8.5.99',
-            'workspaces' => '12.4.0-14.99.99',
-            'scheduler' => '12.4.0-14.99.99',
+            'workspaces' => '13.4.0-14.99.99',
+            'scheduler' => '13.4.0-14.99.99',
         ],
         'conflicts' => [
             'ms_mcp_server' => '',

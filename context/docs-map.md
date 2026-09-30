@@ -10,7 +10,7 @@
 |---|---|
 | Router / what to load | `AGENTS.md` |
 | Principles | `context/principles.md` |
-| Backend UI (TYPO3 v12–v14, styleguide) | `context/Typo3CoreBackendDesign.md` |
+| Backend UI (TYPO3 v13–v14, styleguide) | `context/Typo3CoreBackendDesign.md` |
 | Tooling, compatibility | `context/core.md` |
 | Runtime architecture | `context/architecture.md` |
 | Feature summaries | `context/features/<name>.md` |

@@ -22,7 +22,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Open hotkey must work in the module iframe on TYPO3 12–14 (Live Search pattern).
+ * Open hotkey must work in the module iframe on TYPO3 13–14 (Live Search pattern).
  */
 final class AgentOpenHotkeyIframeTest extends TestCase
 {

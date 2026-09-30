@@ -93,7 +93,8 @@ use TYPO3\CMS\Core\Http\RedirectResponse;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Pagination\SimplePagination;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Fluid\View\StandaloneView;
+use TYPO3\CMS\Core\View\ViewFactoryData;
+use TYPO3\CMS\Core\View\ViewFactoryInterface;
 
 /**
  * Backend module controller for AI Foundation.
@@ -1514,69 +1515,14 @@ final class ModuleController extends AbstractAiUniverseModuleController
 
     private function renderCreditsCheckoutFrame(ServerRequestInterface $request, string $checkoutUrl): string
     {
-        // ViewFactoryInterface is TYPO3 13+; StandaloneView covers TYPO3 12.
-        // Build FQNs dynamically so PHPStan (per CI TYPO3 matrix job) cannot
-        // prove class_exists() always true/false.
-        $viewFactoryInterface = implode('\\', ['TYPO3', 'CMS', 'Core', 'View', 'ViewFactoryInterface']);
-        $viewFactoryDataClass = implode('\\', ['TYPO3', 'CMS', 'Core', 'View', 'ViewFactoryData']);
-        if (class_exists($viewFactoryInterface) && class_exists($viewFactoryDataClass)) {
-            return $this->renderCreditsCheckoutFrameWithCoreViewFactory(
-                $request,
-                $checkoutUrl,
-                $viewFactoryInterface,
-                $viewFactoryDataClass,
-            );
-        }
-
-        return $this->renderCreditsCheckoutFrameWithStandaloneView($request, $checkoutUrl);
-    }
-
-    /**
-     * @param class-string $viewFactoryInterface
-     * @param class-string $viewFactoryDataClass
-     */
-    private function renderCreditsCheckoutFrameWithCoreViewFactory(
-        ServerRequestInterface $request,
-        string $checkoutUrl,
-        string $viewFactoryInterface,
-        string $viewFactoryDataClass,
-    ): string {
-        $viewFactory = GeneralUtility::makeInstance($viewFactoryInterface);
-        $create = [$viewFactory, 'create'];
-        if (!is_callable($create)) {
-            throw new \RuntimeException('ViewFactoryInterface::create() is not callable.');
-        }
-
-        $view = $create(new $viewFactoryDataClass(
+        $viewFactory = GeneralUtility::makeInstance(ViewFactoryInterface::class);
+        $view = $viewFactory->create(new ViewFactoryData(
             templateRootPaths: ['EXT:ns_t3af/Resources/Private/Templates/'],
             request: $request,
         ));
-        $assign = [$view, 'assign'];
-        $render = [$view, 'render'];
-        if (!is_callable($assign) || !is_callable($render)) {
-            throw new \RuntimeException('ViewFactory view is missing assign()/render().');
-        }
-
-        $assign('checkoutUrl', $checkoutUrl);
-
-        return $render('Module/CreditsCheckoutFrame');
-    }
-
-    private function renderCreditsCheckoutFrameWithStandaloneView(ServerRequestInterface $request, string $checkoutUrl): string
-    {
-        if (!class_exists(StandaloneView::class)) {
-            throw new \RuntimeException('No compatible Fluid view renderer available for credits checkout frame.');
-        }
-
-        $view = GeneralUtility::makeInstance(StandaloneView::class);
-        $view->setRequest($request);
-        $view->setTemplateRootPaths(['EXT:ns_t3af/Resources/Private/Templates/']);
-        $view->setLayoutRootPaths(['EXT:ns_t3af/Resources/Private/Layouts/']);
-        $view->setPartialRootPaths(['EXT:ns_t3af/Resources/Private/Partials/']);
-        $view->setTemplate('Module/CreditsCheckoutFrame');
         $view->assign('checkoutUrl', $checkoutUrl);
 
-        return $view->render();
+        return $view->render('Module/CreditsCheckoutFrame');
     }
 
     /**

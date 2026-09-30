@@ -2,6 +2,7 @@
 
 Release notes live in the documentation:
 
+- [2.0.0](Documentation/ReleaseNotes/2.0.0/Index.rst) — 30 September 2026 (drops TYPO3 12 support, see upgrade notes)
 - [1.2.2](Documentation/ReleaseNotes/1.2.2/Index.rst) — 15 September 2026
 - [1.2.1](Documentation/ReleaseNotes/1.2.1/Index.rst) — 9 September 2026
 - [1.2.0](Documentation/ReleaseNotes/1.2.0/Index.rst) — 26 August 2026

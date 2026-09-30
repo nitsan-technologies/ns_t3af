@@ -24,8 +24,7 @@ use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Backend\Controller\Event\AfterBackendPageRenderEvent;
 
 /**
- * v12 cannot register PHP AsEventListener attributes (class does not exist).
- * YAML event.listener tags are the TYPO3 12–14 path, matching core Live Search.
+ * YAML event.listener tags match core Live Search's registration pattern.
  */
 final class AfterBackendPageRenderListenerTest extends TestCase
 {
@@ -36,7 +35,7 @@ final class AfterBackendPageRenderListenerTest extends TestCase
         $this->extRoot = dirname(__DIR__, 3);
     }
 
-    public function testListenerIsTaggedInServicesYamlForTypo3v12(): void
+    public function testListenerIsTaggedInServicesYaml(): void
     {
         $yaml = (string) file_get_contents($this->extRoot . '/Configuration/Services.yaml');
         $class = AfterBackendPageRenderListener::class;

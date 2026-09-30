@@ -93,7 +93,7 @@ abstract class AbstractAiUniverseModuleController
         $docHeader->disable();
         $docHeader->setMetaInformation([]);
 
-        // TYPO3 14+ only (Feature #108008). Reflection keeps this safe on 12.4 / 13.4
+        // TYPO3 14+ only (Feature #108008). Reflection keeps this safe on 13.4
         // without version-specific PHPStan ignores that break the CI matrix.
         try {
             (new \ReflectionMethod($docHeader, 'setShortcutContext'))->invoke(

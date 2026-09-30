@@ -179,6 +179,9 @@ class T3PlanetCreditsChatExecutor
             $platform = $this->platformFactory->create(
                 $bearerToken !== null && $bearerToken !== '' ? $bearerToken : null,
             );
+            if (!method_exists($platform, 'invoke')) {
+                throw new AdapterRuntimeException('T3Planet Credits platform does not support invoke().');
+            }
             $result = $platform->invoke($modelAlias, $messageBag, $invokeOptions);
         } catch (\Throwable $exception) {
             throw $this->mapThrowable($exception);

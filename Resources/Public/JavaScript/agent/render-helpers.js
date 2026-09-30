@@ -413,7 +413,7 @@ export let renderMessageBodyImpl = renderPlainMessageBody;
 export let messageRendererReady = null;
 
 /**
- * Prefer core marked + DOMPurify (TYPO3 >=13.4.5, all v14). Fallback keeps working on v12.4.
+ * Prefer core marked + DOMPurify (TYPO3 >=13.4.5, all v14). Falls back to plain rendering if unavailable.
  * @returns {Promise<void>}
  */
 export function ensureMessageRenderer() {
