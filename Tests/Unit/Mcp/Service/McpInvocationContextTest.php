@@ -49,10 +49,12 @@ final class McpInvocationContextTest extends TestCase
         $options = $context->enrichAiOptions(new AiOptions(
             providerIdentifier: 'default.provider',
             modelId: 'gpt-4',
+            requestSource: 'backend_module',
         ));
 
         self::assertSame('custom.provider', $options->providerIdentifier);
         self::assertSame('gpt-4', $options->modelId);
+        self::assertSame('mcp', $options->requestSource);
     }
 
     #[Test]
@@ -64,9 +66,35 @@ final class McpInvocationContextTest extends TestCase
         $options = $context->enrichAiOptions(new AiOptions(
             providerIdentifier: 'default.provider',
             modelId: 'gpt-4',
+            requestSource: 'backend_module',
         ));
 
         self::assertSame('default.provider', $options->providerIdentifier);
+        self::assertSame('mcp', $options->requestSource);
+    }
+
+    #[Test]
+    public function enrichRequestSourceOnlySetsMcpWhileToolIsActive(): void
+    {
+        $context = new McpInvocationContext($this->createMock(WorkspaceListService::class));
+        $context->applyFromArguments([]);
+
+        $options = $context->enrichRequestSourceOnly(new AiOptions(
+            providerIdentifier: 'credits.provider',
+            modelId: 'gpt-4',
+            requestSource: 'backend_module',
+        ));
+
+        self::assertSame('credits.provider', $options->providerIdentifier);
+        self::assertSame('mcp', $options->requestSource);
+
+        $context->clear();
+        $unchanged = $context->enrichRequestSourceOnly(new AiOptions(
+            providerIdentifier: 'credits.provider',
+            modelId: 'gpt-4',
+            requestSource: 'backend_module',
+        ));
+        self::assertSame('backend_module', $unchanged->requestSource);
     }
 
     #[Test]

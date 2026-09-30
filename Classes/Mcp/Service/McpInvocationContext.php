@@ -32,6 +32,8 @@ final class McpInvocationContext
 {
     public function __construct(private readonly WorkspaceListService $workspaceListService) {}
 
+    private bool $active = false;
+
     private ?string $providerIdentifier = null;
 
     /**
@@ -39,6 +41,7 @@ final class McpInvocationContext
      */
     public function applyFromArguments(array $arguments): void
     {
+        $this->active = true;
         $this->providerIdentifier = null;
 
         if (array_key_exists('workspaceId', $arguments)) {
@@ -65,6 +68,17 @@ final class McpInvocationContext
         $this->providerIdentifier = $providerIdentifier;
     }
 
+    public function isActive(): bool
+    {
+        return $this->active;
+    }
+
+    public function clear(): void
+    {
+        $this->active = false;
+        $this->providerIdentifier = null;
+    }
+
     public function getProviderIdentifier(): ?string
     {
         return $this->providerIdentifier;
@@ -72,12 +86,22 @@ final class McpInvocationContext
 
     public function enrichAiOptions(AiOptions $options): AiOptions
     {
-        if ($this->providerIdentifier === null) {
+        $providerIdentifier = $options->providerIdentifier;
+        if ($this->providerIdentifier !== null) {
+            $providerIdentifier = $this->providerIdentifier;
+        }
+
+        $requestSource = $this->active ? 'mcp' : $options->requestSource;
+
+        if (
+            $providerIdentifier === $options->providerIdentifier
+            && $requestSource === $options->requestSource
+        ) {
             return $options;
         }
 
         return new AiOptions(
-            providerIdentifier: $this->providerIdentifier,
+            providerIdentifier: $providerIdentifier,
             modelId: $options->modelId,
             temperature: $options->temperature,
             systemPrompt: $options->systemPrompt,
@@ -86,7 +110,35 @@ final class McpInvocationContext
             extensionKey: $options->extensionKey,
             featureKey: $options->featureKey,
             featureLabel: $options->featureLabel,
-            requestSource: $options->requestSource,
+            requestSource: $requestSource,
+            contentEntityType: $options->contentEntityType,
+            contentEntityUid: $options->contentEntityUid,
+            pageId: $options->pageId,
+            requestUuid: $options->requestUuid,
+            extra: $options->extra,
+        );
+    }
+
+    /**
+     * Credits mode skips provider override; still attribute the call as MCP when a tool is active.
+     */
+    public function enrichRequestSourceOnly(AiOptions $options): AiOptions
+    {
+        if (!$this->active || $options->requestSource === 'mcp') {
+            return $options;
+        }
+
+        return new AiOptions(
+            providerIdentifier: $options->providerIdentifier,
+            modelId: $options->modelId,
+            temperature: $options->temperature,
+            systemPrompt: $options->systemPrompt,
+            maxTokens: $options->maxTokens,
+            noCache: $options->noCache,
+            extensionKey: $options->extensionKey,
+            featureKey: $options->featureKey,
+            featureLabel: $options->featureLabel,
+            requestSource: 'mcp',
             contentEntityType: $options->contentEntityType,
             contentEntityUid: $options->contentEntityUid,
             pageId: $options->pageId,
