@@ -19,16 +19,29 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\AiLabel\Service;
 
+use TYPO3\CMS\Core\Cache\CacheManager;
+use TYPO3\CMS\Core\Cache\Exception\NoSuchCacheException;
+use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\FileInterface;
 
 /**
  * IPTC Digital Source Type (trained algorithmic media) via Imagick when available.
+ *
+ * Reads use Imagick::pingImage() (header/profile parse only, no pixel decode) —
+ * `new \Imagick($path)` previously decoded the full original on every FE image
+ * processing event and could exceed max_execution_time on large originals.
  */
 class IptcDigitalSourceTypeService
 {
     public const TRAINED_ALGORITHMIC_MEDIA = 'http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia';
+
+    private const CACHE_IDENTIFIER = 'nst3af_ailabel_iptc';
+
+    public function __construct(
+        private readonly ?CacheManager $cacheManager = null,
+    ) {}
 
     public function imagickAvailable(): bool
     {
@@ -58,7 +71,8 @@ class IptcDigitalSourceTypeService
 
         try {
             $path = $file->getForLocalProcessing(false);
-            $image = new \Imagick($path);
+            $image = new \Imagick();
+            $image->pingImage($path);
             $parts = [
                 (string) $image->getImageProperty('iptc:DigitalSourceType'),
                 (string) $image->getImageProperty('exif:ImageHistory'),
@@ -78,6 +92,9 @@ class IptcDigitalSourceTypeService
 
     /**
      * Read-only DigitalSourceType only (no writable FAL temp copy on local storage).
+     *
+     * Result is cached per original file (keyed by sha1, falling back to uid+mtime) so
+     * repeated FE processed-variant requests for the same original don't re-read it.
      */
     public function readDigitalSourceType(FileInterface $file): ?string
     {
@@ -85,16 +102,61 @@ class IptcDigitalSourceTypeService
             return null;
         }
 
+        $cacheKey = $this->cacheKeyForFile($file);
+        $cache = $cacheKey !== null ? $this->getCache() : null;
+        if ($cache !== null && $cache->has($cacheKey)) {
+            $cached = $cache->get($cacheKey);
+
+            return $cached !== '' ? $cached : null;
+        }
+
         try {
             $path = $file->getForLocalProcessing(false);
-            $image = new \Imagick($path);
+            $image = new \Imagick();
+            $image->pingImage($path);
             $value = trim((string) $image->getImageProperty('iptc:DigitalSourceType'));
             $image->clear();
         } catch (\Throwable) {
-            return null;
+            $value = '';
+        }
+
+        if ($cache !== null && $cacheKey !== null) {
+            $cache->set($cacheKey, $value);
         }
 
         return $value !== '' ? $value : null;
+    }
+
+    private function cacheKeyForFile(FileInterface $file): ?string
+    {
+        if (!$file instanceof File) {
+            return null;
+        }
+
+        $sha1 = (string) ($file->getProperty('sha1') ?? '');
+        if ($sha1 !== '') {
+            return 'ds_sha1_' . $sha1;
+        }
+
+        $uid = $file->getUid();
+        if ($uid <= 0) {
+            return null;
+        }
+
+        return 'ds_uid_' . $uid . '_' . $file->getModificationTime();
+    }
+
+    private function getCache(): ?FrontendInterface
+    {
+        if ($this->cacheManager === null) {
+            return null;
+        }
+
+        try {
+            return $this->cacheManager->getCache(self::CACHE_IDENTIFIER);
+        } catch (NoSuchCacheException) {
+            return null;
+        }
     }
 
     public function writeTrainedAlgorithmicMedia(File $file): void
