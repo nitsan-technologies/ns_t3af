@@ -2,6 +2,22 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-01 — Clear models when adapter type changes
+
+**Done:** Changing `adapter_type` on save clears `model_id` / `embedding_model_id` (and Azure `api_version` when leaving Azure). Drawer JS clears those inputs before reloading the model list. Prevents stale ids like `magistral-small` after Mistral → OpenAI. Unit coverage + `providers.md`.
+
+**Last touched:** 2026-10-01
+
+---
+
+## 2026-10-01 — Reset connection status on connection-relevant provider edits
+
+**Done:** `ProviderFormService` clears `last_status*` to `unknown` when edit changes `adapter_type`, `endpoint_url`, `api_key`, `model_id`, `embedding_model_id`, or `api_version`. Title/pricing/toggle-only saves keep the prior Connected badge. Unit tests cover adapter / API key / model change vs title-only. Documented in `context/features/providers.md`.
+
+**Last touched:** 2026-10-01
+
+---
+
 ## 2026-09-30 — Credits toolbar Fresh/dark contrast
 
 **Done:** `toolbar-credit.css` — healthy balance inherits `.toolbar-item-link` / scaffold header color (fixes unreadable dark “0/50 cr” on Fresh primary topbar). Low/critical keep warning/danger border tokens. Documented in `Typo3CoreBackendDesign.md`. Synced to `12.4.45-new`.

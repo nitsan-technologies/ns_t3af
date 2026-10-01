@@ -79,6 +79,20 @@ final class ProviderFormService
         'enabled_for_dashboard',
     ];
 
+    /**
+     * Fields that affect reachability / auth. Changing any of these on edit
+     * invalidates a prior Connected probe until the admin tests again.
+     *
+     * @var list<string>
+     */
+    private const CONNECTION_RELEVANT_FIELDS = [
+        'adapter_type',
+        'endpoint_url',
+        'model_id',
+        'embedding_model_id',
+        'api_version',
+    ];
+
     public function __construct(
         private readonly ProviderRepositoryInterface $repository,
         private readonly AdapterRegistry $adapters,
@@ -220,9 +234,24 @@ final class ProviderFormService
         }
 
         if ($uid === 0) {
-            $payload['last_status'] = Provider::LAST_STATUS_UNKNOWN;
-            $payload['last_status_message'] = Provider::LAST_STATUS_UNKNOWN;
-            $payload['last_status_at'] = 0;
+            $this->applyUnknownLastStatus($payload);
+        } elseif ($uid > 0) {
+            $existing = $this->repository->findByUid($uid);
+            if ($existing instanceof Provider) {
+                if ($this->shouldInvalidateConnectionStatus($existing, $payload)) {
+                    $this->applyUnknownLastStatus($payload);
+                }
+                if ($this->adapterTypeChanged($existing, $payload)) {
+                    // Vendor-specific model ids are not portable across adapters.
+                    $payload['model_id'] = '';
+                    $payload['embedding_model_id'] = '';
+                    if (Provider::isAzureAdapter($existing->adapterType)
+                        && !Provider::isAzureAdapter(trim((string) ($payload['adapter_type'] ?? '')))
+                    ) {
+                        $payload['api_version'] = '';
+                    }
+                }
+            }
         }
 
         $embeddingModelId = trim((string) ($payload['embedding_model_id'] ?? ''));
@@ -236,6 +265,59 @@ final class ProviderFormService
         }
 
         return $payload;
+    }
+
+    /**
+     * @param array<string, int|float|string|null> $payload
+     */
+    private function applyUnknownLastStatus(array &$payload): void
+    {
+        $payload['last_status'] = Provider::LAST_STATUS_UNKNOWN;
+        $payload['last_status_message'] = Provider::LAST_STATUS_UNKNOWN;
+        $payload['last_status_at'] = 0;
+    }
+
+    /**
+     * @param array<string, int|float|string|null> $payload
+     */
+    private function adapterTypeChanged(Provider $existing, array $payload): bool
+    {
+        if (!array_key_exists('adapter_type', $payload)) {
+            return false;
+        }
+
+        return trim((string) $payload['adapter_type']) !== trim($existing->adapterType);
+    }
+
+    /**
+     * @param array<string, int|float|string|null> $payload
+     */
+    private function shouldInvalidateConnectionStatus(Provider $existing, array $payload): bool
+    {
+        // A newly submitted API key always invalidates the previous probe.
+        if (array_key_exists('api_key', $payload)) {
+            return true;
+        }
+
+        foreach (self::CONNECTION_RELEVANT_FIELDS as $field) {
+            if (!array_key_exists($field, $payload)) {
+                continue;
+            }
+            $incoming = trim((string) $payload[$field]);
+            $current = match ($field) {
+                'adapter_type' => $existing->adapterType,
+                'endpoint_url' => $existing->endpointUrl,
+                'model_id' => $existing->modelId,
+                'embedding_model_id' => $existing->embeddingModelId,
+                'api_version' => $existing->apiVersion,
+                default => '',
+            };
+            if ($incoming !== trim($current)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -46,12 +46,14 @@
 **Do:**
 - Inject `AiServiceInterface` from child extensions.
 - Tag custom adapters with `nst3af.adapter` in the **child** `Services.yaml`.
+- On provider edit, clear `last_status*` to `unknown` when connection-relevant fields change (`adapter_type`, `endpoint_url`, `api_key`, `model_id`, `embedding_model_id`, `api_version`). Cosmetic edits (title, pricing, toggles) keep the prior probe.
+- When `adapter_type` changes, also clear `model_id` / `embedding_model_id` (and `api_version` when leaving Azure). Drawer JS clears those inputs on adapter change so a vendor model id is not kept as Custom.
 
 **Don't:**
 - Add provider API keys back to ext_conf.
 - Import adapters from controllers (phpat blocks this).
 - Return decrypted keys to the browser (mask only).
-
+- Auto-run `testConnection()` on every save (latency / rate limits); require an explicit Test connection.
 ---
 
 ## Verification

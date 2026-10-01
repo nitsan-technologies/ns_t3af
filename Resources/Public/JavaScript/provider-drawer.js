@@ -537,6 +537,22 @@ class ProviderDrawer {
             endpointInput.placeholder = defaultEndpoint;
           }
         }
+        // Model ids are vendor-specific — clear so a Mistral id is not kept as OpenAI Custom.
+        if (modelInput) {
+          modelInput.value = '';
+          modelInput.hidden = false;
+          modelInput.required = false;
+        }
+        if (modelSelect) {
+          modelSelect.value = '';
+        }
+        if (embeddingModelInput) {
+          embeddingModelInput.value = '';
+          embeddingModelInput.hidden = false;
+        }
+        if (embeddingModelSelect) {
+          embeddingModelSelect.value = '';
+        }
         syncChipActiveFromSelect();
         syncAdapterConnectionUi();
         this.loadModels({
