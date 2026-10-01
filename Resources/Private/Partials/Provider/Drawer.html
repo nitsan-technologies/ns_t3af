@@ -39,10 +39,12 @@
             </div>
 
             <label class="aiu-field aiu-field--mono">
-                <span class="aiu-field-label">
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.identifier"
-                                 default="Identifier" />
-                </span>
+                <f:render partial="Module/FieldLabelHelp" arguments="{
+                    labelKey: 'provider.field.identifier',
+                    labelDefault: 'Identifier',
+                    helpKey: 'provider.field.identifier.help',
+                    helpDefault: 'Unique slug for this connection.'
+                }" />
                 <input type="text" class="form-control" name="identifier" required maxlength="64"
                        value="{provider.identifier}{submitted.identifier}"
                        placeholder="my-openai-prod"
@@ -51,10 +53,12 @@
             </label>
 
             <label class="aiu-field">
-                <span class="aiu-field-label">
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.title"
-                                 default="Display Name" />
-                </span>
+                <f:render partial="Module/FieldLabelHelp" arguments="{
+                    labelKey: 'provider.field.title',
+                    labelDefault: 'Display Name',
+                    helpKey: 'provider.field.title.help',
+                    helpDefault: 'Human-readable name shown in backend dropdowns.'
+                }" />
                 <input type="text" class="form-control" name="title" required maxlength="255"
                        value="{provider.title}{submitted.title}"
                        placeholder="OpenAI Production" />
@@ -63,8 +67,12 @@
 
             <div class="aiu-field">
                 <span class="aiu-field-label" id="aiu-adapter-field-label">
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.adapter"
-                                 default="Adapter Type" />
+                    <f:render partial="Module/FieldLabelHelpInner" arguments="{
+                        labelKey: 'provider.field.adapter',
+                        labelDefault: 'Adapter Type',
+                        helpKey: 'provider.field.adapter.help',
+                        helpDefault: 'Vendor protocol for the API connection.'
+                    }" />
                 </span>
                 <f:if condition="{submitted.adapter_type} != ''">
                     <f:then>
@@ -120,8 +128,12 @@
             <label class="aiu-field aiu-field--mono" data-aiu-endpoint-field
                    {f:if(condition: '{showEndpointField} == 1', then: '', else: 'hidden="hidden"')}>
                 <span class="aiu-field-label">
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.endpoint"
-                                 default="Endpoint URL" />
+                    <f:render partial="Module/FieldLabelHelpInner" arguments="{
+                        labelKey: 'provider.field.endpoint',
+                        labelDefault: 'Endpoint URL',
+                        helpKey: 'provider.field.endpoint.help',
+                        helpDefault: 'Base URL for API requests.'
+                    }" />
                     <span class="aiu-field-note" data-aiu-endpoint-optional-note>
                         (<f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.endpoint.optional"
                                      default="optional unless Custom / Other" />)
@@ -136,7 +148,8 @@
                                  default="Ollama base URL (no API key). In Docker/DDEV use http://host.docker.internal:11434 instead of localhost." />
                 </small>
                 <small class="aiu-field-subnote" data-aiu-endpoint-azure-hint hidden>
-                    Azure OpenAI resource endpoint, e.g. https://myresource.openai.azure.com
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.endpoint.requiredAzure"
+                                 default="Azure OpenAI resource endpoint, e.g. https://myresource.openai.azure.com" />
                 </small>
                 <input type="url" class="form-control" name="endpoint_url" maxlength="255"
                        data-aiu-endpoint-input
@@ -146,10 +159,12 @@
 
             <div class="aiu-field aiu-field--mono" data-aiu-api-key-field
                  {f:if(condition: '{showApiKeyField} == 1', then: '', else: 'hidden="hidden"')}">
-                <span class="aiu-field-label">
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.apiKey"
-                                 default="API Key" />
-                </span>
+                <f:render partial="Module/FieldLabelHelp" arguments="{
+                    labelKey: 'provider.field.apiKey',
+                    labelDefault: 'API Key',
+                    helpKey: 'provider.field.apiKey.help',
+                    helpDefault: 'Vendor API authentication key.'
+                }" />
                 <f:if condition="{apiKeyMasked} != ''">
                     <small class="aiu-field-subnote">
                         <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.apiKey.stored"
@@ -186,8 +201,12 @@
 
             <div class="aiu-field aiu-field--mono" data-aiu-model-field>
                 <span class="aiu-field-label" data-aiu-model-field-label>
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.chatModelId"
-                                 default="Chat / completion model" />
+                    <f:render partial="Module/FieldLabelHelpInner" arguments="{
+                        labelKey: 'provider.field.chatModelId',
+                        labelDefault: 'Chat / completion model',
+                        helpKey: 'provider.field.chatModelId.help',
+                        helpDefault: 'Default chat or completion model.'
+                    }" />
                 </span>
                 <div class="aiu-field__inline aiu-model-row">
                     <select class="form-select" data-aiu-model-select hidden>
@@ -217,8 +236,12 @@
             <f:if condition="{showEmbeddingModelField} == 1">
             <div class="aiu-field aiu-field--mono" data-aiu-embedding-model-field>
                 <span class="aiu-field-label" data-aiu-embedding-model-field-label>
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.embeddingModelId"
-                                 default="Embedding model" />
+                    <f:render partial="Module/FieldLabelHelpInner" arguments="{
+                        labelKey: 'provider.field.embeddingModelId',
+                        labelDefault: 'Embedding model',
+                        helpKey: 'provider.field.embeddingModelId.help',
+                        helpDefault: 'Model for embedding requests.'
+                    }" />
                 </span>
                 <div class="aiu-field__inline aiu-model-row">
                     <select class="form-select" data-aiu-embedding-model-select hidden>
@@ -244,20 +267,24 @@
             </f:if>
 
             <label class="aiu-field aiu-field--mono" data-aiu-api-version-field hidden="hidden">
-                <span class="aiu-field-label">API Version</span>
+                <f:render partial="Module/FieldLabelHelp" arguments="{
+                    labelKey: 'provider.field.apiVersion',
+                    labelDefault: 'API version',
+                    helpKey: 'provider.field.apiVersion.help',
+                    helpDefault: 'Azure OpenAI API version string.'
+                }" />
                 <input type="text" class="form-control" name="api_version" maxlength="64"
                        value="{provider.apiVersion}{submitted.api_version}"
                        placeholder="2024-10-21" />
-                <small class="aiu-field-subnote">
-                    Azure OpenAI API version. Leave blank to use the built-in default (2024-10-21).
-                </small>
             </label>
 
             <div class="aiu-field">
-                <span class="aiu-field-label">
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.capabilities"
-                                 default="Capabilities" />
-                </span>
+                <f:render partial="Module/FieldLabelHelp" arguments="{
+                    labelKey: 'provider.field.capabilities',
+                    labelDefault: 'Capabilities',
+                    helpKey: 'provider.field.capabilities.help',
+                    helpDefault: 'Supported model capabilities.'
+                }" />
                 <div class="form-grid aiu-form-grid--2">
                     <f:if condition="{submitted.capabilities} != ''">
                     <f:then>
@@ -269,19 +296,10 @@
                 </f:if>
                     <f:for each="{allCapabilities}" as="capability">
                         <f:variable name="capChecked" value="0" />
-                        <f:if condition="{selectedCapabilities} != ''">
-                            <f:then>
-                                <f:if condition="{aiu:contains(subject: selectedCapabilities, value: capability)}">
-                                    <f:variable name="capChecked" value="1" />
-                                </f:if>
-                            </f:then>
-                            <f:else>
-                                <f:if condition="{provider.uid} > 0">
-                                    <f:if condition="{provider.hasCapability(capability)} == 1">
-                                        <f:variable name="capChecked" value="1" />
-                                    </f:if>
-                                </f:if>
-                            </f:else>
+                        <f:if condition="{selectedCapabilities}">
+                            <aiu:contains subject="{selectedCapabilities}" value="{capability}">
+                                <f:variable name="capChecked" value="1" />
+                            </aiu:contains>
                         </f:if>
                         <div class="form-group">
                             <div class="form-check">
@@ -302,8 +320,12 @@
 
             <label class="aiu-field">
                 <span class="aiu-field-label">
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.temperature"
-                                 default="Temperature" />:
+                    <f:render partial="Module/FieldLabelHelpInner" arguments="{
+                        labelKey: 'provider.field.temperature',
+                        labelDefault: 'Temperature',
+                        helpKey: 'provider.field.temperature.help',
+                        helpDefault: 'Default sampling temperature.'
+                    }" />:
                     <span class="aiu-temp-output" data-aiu-temp-output>{f:if(condition:provider,then:'{provider.temperature}',else:'0.7')}</span>
                 </span>
                 <input type="range" name="temperature" min="0" max="2" step="0.05"
@@ -312,37 +334,45 @@
             </label>
 
             <label class="aiu-field">
-                <span class="aiu-field-label">
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.systemPrompt"
-                                 default="System Prompt" />
-                </span>
+                <f:render partial="Module/FieldLabelHelp" arguments="{
+                    labelKey: 'provider.field.systemPrompt',
+                    labelDefault: 'System Prompt',
+                    helpKey: 'provider.field.systemPrompt.help',
+                    helpDefault: 'Optional provider-level system message.'
+                }" />
                 <textarea class="form-control" name="system_prompt" rows="3"
                           placeholder="You are a helpful TYPO3 assistant...">{provider.systemPrompt}</textarea>
             </label>
 
             <label class="aiu-field">
-                <span class="aiu-field-label">
-                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.priority"
-                                 default="Priority" />
-                </span>
+                <f:render partial="Module/FieldLabelHelp" arguments="{
+                    labelKey: 'provider.field.priority',
+                    labelDefault: 'Priority',
+                    helpKey: 'provider.field.priority.help',
+                    helpDefault: 'Sort hint when listing providers.'
+                }" />
                 <input type="number" class="form-control" name="priority" min="0" max="100"
                        value="{f:if(condition:provider,then:'{provider.priority}',else:'50')}" />
             </label>
 
             <div class="aiu-field-grid">
                 <label class="aiu-field">
-                    <span class="aiu-field-label">
-                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.pricingInput"
-                                     default="Input price / 1M tokens" />
-                    </span>
+                    <f:render partial="Module/FieldLabelHelp" arguments="{
+                        labelKey: 'provider.field.pricingInput',
+                        labelDefault: 'Input price / 1M tokens',
+                        helpKey: 'provider.field.pricingInput.help',
+                        helpDefault: 'Reference prompt token price for local cost estimates only.'
+                    }" />
                     <input type="number" class="form-control" name="pricing_input_per_1m" min="0" step="0.000001"
                            value="{f:if(condition:provider,then:'{provider.pricingInputPer1m}',else:'0')}" />
                 </label>
                 <label class="aiu-field">
-                    <span class="aiu-field-label">
-                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.pricingOutput"
-                                     default="Output price / 1M tokens" />
-                    </span>
+                    <f:render partial="Module/FieldLabelHelp" arguments="{
+                        labelKey: 'provider.field.pricingOutput',
+                        labelDefault: 'Output price / 1M tokens',
+                        helpKey: 'provider.field.pricingOutput.help',
+                        helpDefault: 'Reference completion token price for local cost estimates only.'
+                    }" />
                     <input type="number" class="form-control" name="pricing_output_per_1m" min="0" step="0.000001"
                            value="{f:if(condition:provider,then:'{provider.pricingOutputPer1m}',else:'0')}" />
                 </label>
@@ -350,18 +380,22 @@
 
             <div class="aiu-field-grid">
                 <label class="aiu-field">
-                    <span class="aiu-field-label">
-                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.pricingCurrency"
-                                     default="Currency" />
-                    </span>
+                    <f:render partial="Module/FieldLabelHelp" arguments="{
+                        labelKey: 'provider.field.pricingCurrency',
+                        labelDefault: 'Currency',
+                        helpKey: 'provider.field.pricingCurrency.help',
+                        helpDefault: 'Currency code for displaying estimated costs.'
+                    }" />
                     <input type="text" class="form-control" name="pricing_currency" maxlength="3"
                            value="{f:if(condition:provider.pricingCurrency,then:'{provider.pricingCurrency}',else:'USD')}" />
                 </label>
                 <label class="aiu-field">
-                    <span class="aiu-field-label">
-                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.costCenter"
-                                     default="Cost center" />
-                    </span>
+                    <f:render partial="Module/FieldLabelHelp" arguments="{
+                        labelKey: 'provider.field.costCenter',
+                        labelDefault: 'Cost center',
+                        helpKey: 'provider.field.costCenter.help',
+                        helpDefault: 'Optional reporting label, not billing.'
+                    }" />
                     <input type="text" class="form-control" name="cost_center" maxlength="64"
                            value="{provider.costCenter}" placeholder="marketing-seo" />
                 </label>
@@ -374,9 +408,17 @@
 
             <div class="aiu-default-card">
                 <div class="aiu-default-card__content">
-                    <div class="aiu-default-card__title">
-                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.isDefault"
-                                     default="Set as Default Provider" />
+                    <div class="aiu-default-card__title aiu-default-card__title--with-help">
+                        <span>
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.isDefault"
+                                         default="Set as Default Provider" />
+                        </span>
+                        <f:render partial="Module/FieldHelpForKey" arguments="{
+                            labelKey: 'provider.field.isDefault',
+                            labelDefault: 'Set as Default Provider',
+                            helpKey: 'provider.field.isDefault.help',
+                            helpDefault: 'Site-wide default provider for AI extensions.'
+                        }" />
                     </div>
                     <div class="aiu-default-card__sub">
                         <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.isDefault.desc"
@@ -393,9 +435,17 @@
 
             <div class="aiu-default-card">
                 <div class="aiu-default-card__content">
-                    <div class="aiu-default-card__title">
-                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.isEnabled"
-                                     default="Provider enabled" />
+                    <div class="aiu-default-card__title aiu-default-card__title--with-help">
+                        <span>
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.isEnabled"
+                                         default="Provider enabled" />
+                        </span>
+                        <f:render partial="Module/FieldHelpForKey" arguments="{
+                            labelKey: 'provider.field.isEnabled',
+                            labelDefault: 'Provider enabled',
+                            helpKey: 'provider.field.isEnabled.help',
+                            helpDefault: 'Include or exclude this provider from runtime usage.'
+                        }" />
                     </div>
                     <div class="aiu-default-card__sub">
                         <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.isEnabled.desc"
@@ -419,9 +469,17 @@
 
             <div class="aiu-default-card">
                 <div class="aiu-default-card__content">
-                    <div class="aiu-default-card__title">
-                        <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.enabledForDashboard"
-                                     default="Include in dashboard analytics" />
+                    <div class="aiu-default-card__title aiu-default-card__title--with-help">
+                        <span>
+                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.enabledForDashboard"
+                                         default="Include in dashboard analytics" />
+                        </span>
+                        <f:render partial="Module/FieldHelpForKey" arguments="{
+                            labelKey: 'provider.field.enabledForDashboard',
+                            labelDefault: 'Include in dashboard analytics',
+                            helpKey: 'provider.field.enabledForDashboard.help',
+                            helpDefault: 'Include this provider in dashboard charts and aggregates.'
+                        }" />
                     </div>
                     <div class="aiu-default-card__sub">
                         <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.enabledForDashboard.desc"

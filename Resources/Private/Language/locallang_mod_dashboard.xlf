@@ -300,6 +300,9 @@
       <trans-unit id="module.aiContext.field.voiceNotesPlaceholder" resname="module.aiContext.field.voiceNotesPlaceholder">
         <source>Describe how your brand should sound in AI-generated content.</source>
       </trans-unit>
+      <trans-unit id="module.aiContext.field.personaLimit" resname="module.aiContext.field.personaLimit">
+        <source>Maximum 3 personas are allowed.</source>
+      </trans-unit>
       <trans-unit id="module.aiContext.field.personaWarning" resname="module.aiContext.field.personaWarning">
         <source>The primary persona (first row) needs both a name and level for the {target_persona} placeholder.</source>
       </trans-unit>
@@ -307,7 +310,7 @@
         <source>Add Persona</source>
       </trans-unit>
       <trans-unit id="module.aiContext.field.contentRulesHint" resname="module.aiContext.field.contentRulesHint">
-        <source>Define always/never rules injected as {content_rules} in prompts.</source>
+        <source>Define always/never rules injected as {content_rules} in prompts. Maximum 10 rules are allowed.</source>
       </trans-unit>
       <trans-unit id="module.aiContext.field.addRule" resname="module.aiContext.field.addRule">
         <source>Add Rule</source>
@@ -1469,7 +1472,73 @@
         <source>Cost center</source>
       </trans-unit>
       <trans-unit id="provider.field.pricingNote" resname="provider.field.pricingNote">
-        <source>Costs are estimated using manual provider pricing fields.</source>
+        <source>These numbers are only used to estimate how much your AI usage costs, so you can see that estimate in the dashboard and in the logs. They do not change the bill from your AI provider, and they do not change T3Planet credits.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.help.aria" resname="provider.field.help.aria">
+        <source>Show help for this field</source>
+      </trans-unit>
+      <trans-unit id="provider.field.identifier.help" resname="provider.field.identifier.help">
+        <source>This is an internal name for this connection. You will see it in logs and in settings. People visiting your website never see it. Use a short name made of letters, numbers, dots, dashes, or underscores. For example: openai-live or claude-marketing.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.title.help" resname="provider.field.title.help">
+        <source>This is the name editors see in lists and dropdowns in the TYPO3 backend. Write it so someone can pick the right connection without opening it. For example: OpenAI for the live site or Claude for blog drafts.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.adapter.help" resname="provider.field.adapter.help">
+        <source>Choose the service you are connecting to, such as OpenAI, Claude, or Ollama. The form then shows the fields that service needs. If you are unsure, open the account where you created the key. The service name there is the one to pick.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.endpoint.help" resname="provider.field.endpoint.help">
+        <source>This is the web address TYPO3 uses to reach the AI service. Fill it in for Custom / Other, Ollama, and Azure. For OpenAI, Claude, and most other cloud services you can leave it empty, and TYPO3 uses the usual address. A local Ollama install often looks like http://host.docker.internal:11434.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.apiKey.help" resname="provider.field.apiKey.help">
+        <source>Paste the secret key from your AI provider's account. TYPO3 stores it locked away. A local Ollama install usually does not need a key. The key only lets TYPO3 talk to the AI. It does not pay invoices or change credits.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.chatModelId.help" resname="provider.field.chatModelId.help">
+        <source>Choose the model that writes answers and other text for this connection. A model is one specific AI version, such as gpt-4o or claude-sonnet. On Azure, type the deployment name from the Azure portal, which is often different from the public model name.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.embeddingModelId.help" resname="provider.field.embeddingModelId.help">
+        <source>Choose the model used when the site searches or looks for similar content. If you leave this empty, the chat model above is used for that too. For example: text-embedding-3-small. You can skip this if you only use the AI for writing.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.apiVersion" resname="provider.field.apiVersion">
+        <source>API version</source>
+      </trans-unit>
+      <trans-unit id="provider.field.apiVersion.help" resname="provider.field.apiVersion.help">
+        <source>This field is only for Azure OpenAI. Leave it empty to keep the built-in date 2024-10-21. Other services ignore it. Change it only if Azure support asks you to use a different date.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.endpoint.requiredAzure" resname="provider.field.endpoint.requiredAzure">
+        <source>Your Azure OpenAI resource URL, for example https://myresource.openai.azure.com</source>
+      </trans-unit>
+      <trans-unit id="provider.field.capabilities.help" resname="provider.field.capabilities.help">
+        <source>Tick what this model is allowed to do here. A feature runs only when the matching option is on. For everyday writing, turn on chat. For site search, also turn on embeddings. Turn on vision only when the model can read pictures.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.temperature.help" resname="provider.field.temperature.help">
+        <source>This sets how steady or varied the answers are, on a scale from 0 to 2. A low value such as 0.2 keeps wording similar each time. A higher value such as 1.0 allows more variety. 0.7 is a safe everyday choice. One feature can still use its own value and skip this one.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.systemPrompt.help" resname="provider.field.systemPrompt.help">
+        <source>This is an optional standing instruction, added whenever this connection is the default. Use it for a rule you want every time, such as “Write in a friendly tone and keep answers short.” Leave it empty when each feature already has its own instructions.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.priority.help" resname="provider.field.priority.help">
+        <source>This only changes the order of connections in lists. Use a number from 0 to 100. A higher number is shown first. It does not change prices or credits. For example, set the live connection to 80 and a test connection to 10.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.pricingInput.help" resname="provider.field.pricingInput.help">
+        <source>Type about what you pay for the text you send to the AI, per 1 million tokens. A token is a small piece of text, roughly a few letters. TYPO3 uses this only to estimate cost in the dashboard and logs. If the price list says $2.50, enter 2.50. Your invoice stays the same.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.pricingOutput.help" resname="provider.field.pricingOutput.help">
+        <source>Type about what you pay for the text the AI sends back, per 1 million tokens. This is also only for the cost estimate. If replies are listed at $10, enter 10.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.pricingCurrency.help" resname="provider.field.pricingCurrency.help">
+        <source>This is the money of the two prices above, so estimates show the right currency. Use the 3-letter code from the price list, such as USD or EUR. It is a display setting, not a payment setting.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.costCenter.help" resname="provider.field.costCenter.help">
+        <source>This is an optional label so you can tell connections apart in your own notes, for example marketing or support. TYPO3 only stores it here. It is not sent to your AI provider, and it is not an accounting code.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.isDefault.help" resname="provider.field.isDefault.help">
+        <source>Turn this on when AI features on this website should use this connection unless a feature is pointed at another one. Keep one default. For example, turn it on for OpenAI for the live site.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.isEnabled.help" resname="provider.field.isEnabled.help">
+        <source>Turn this off to pause the connection without deleting it. Settings and the API key stay saved, so you can switch it back on later. While it is off, no AI feature can use it.</source>
+      </trans-unit>
+      <trans-unit id="provider.field.enabledForDashboard.help" resname="provider.field.enabledForDashboard.help">
+        <source>Turn this off to leave this connection out of the dashboard charts. The AI still works. Use that for a test connection you do not want in the usage numbers.</source>
       </trans-unit>
       <trans-unit id="provider.field.isEnabled" resname="provider.field.isEnabled">
         <source>Provider enabled</source>

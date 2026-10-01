@@ -456,6 +456,10 @@ services:
       - '../Classes/Mcp/Domain/Enum/*'
       - '../Classes/Mcp/Domain/Model/*'
 
+  # Shared across MCP tools and TranslateHook (makeInstance / DataHandler localize).
+  NITSAN\NsT3AF\Mcp\Service\McpInvocationContext:
+    public: true
+
   NITSAN\NsT3AF\Mcp\Tool\:
     resource: '../Classes/Mcp/Tool/*'
 

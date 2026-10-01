@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Service;
 
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
 use NITSAN\NsT3AF\Provider\AdapterRegistry;
@@ -120,6 +121,28 @@ final class ProviderFormServiceTest extends TestCase
 
         self::assertFalse($result->ok);
         self::assertSame('Identifier "taken" is already in use.', $result->errors['identifier']);
+    }
+
+    public function testUniqueConstraintOnSaveReturnsIdentifierError(): void
+    {
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $repo->expects(self::once())->method('save')->willThrowException(new UniqueConstraintViolationException(
+            $this->createMock(\Doctrine\DBAL\Driver\Exception::class),
+            null,
+        ));
+        $repo->expects(self::never())->method('setDefault');
+
+        $service = new ProviderFormService($repo, new AdapterRegistry([$this->fakeAdapter()]), new CredentialCipher());
+        $result = $service->save(0, [
+            'identifier' => 'Openai',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => 'sk-plain-secret',
+        ], 1);
+
+        self::assertFalse($result->ok);
+        self::assertSame('Identifier "Openai" is already in use.', $result->errors['identifier']);
     }
 
     public function testOpenAiCompatibleRequiresEndpointUrl(): void
@@ -392,6 +415,232 @@ final class ProviderFormServiceTest extends TestCase
         self::assertSame(0, $captured['last_status_at']);
     }
 
+    public function testEditResetsLastStatusWhenAdapterTypeChanges(): void
+    {
+        $existing = Provider::fromRow([
+            'uid' => 5,
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => (new CredentialCipher())->encrypt('sk-stored'),
+            'last_status' => 'connected',
+            'last_status_at' => 1700000100,
+            'last_status_message' => 'OK',
+            'model_id' => 'gpt-4o',
+            'embedding_model_id' => 'text-embedding-3-small',
+        ]);
+
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $repo->method('findByUid')->with(5)->willReturn($existing);
+        $captured = null;
+        $repo->expects(self::once())->method('save')
+            ->willReturnCallback(function (int $uid, array $values) use (&$captured): int {
+                $captured = $values;
+
+                return $uid;
+            });
+
+        $service = new ProviderFormService(
+            $repo,
+            new AdapterRegistry([$this->fakeAdapter(), $this->fakeOllamaAdapter()]),
+            new CredentialCipher(),
+        );
+        $result = $service->save(5, [
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => Provider::ADAPTER_SYMFONY_OLLAMA,
+            'endpoint_url' => 'http://localhost:11434',
+            'api_key' => '',
+            'model_id' => 'gpt-4o',
+            'embedding_model_id' => 'text-embedding-3-small',
+        ], 1);
+
+        self::assertTrue($result->ok);
+        self::assertNotNull($captured);
+        self::assertSame(Provider::LAST_STATUS_UNKNOWN, $captured['last_status']);
+        self::assertSame(Provider::LAST_STATUS_UNKNOWN, $captured['last_status_message']);
+        self::assertSame(0, $captured['last_status_at']);
+        self::assertSame('', $captured['model_id']);
+        self::assertSame('', $captured['embedding_model_id']);
+    }
+
+    public function testEditClearsStaleModelsWhenAdapterTypeChanges(): void
+    {
+        $existing = Provider::fromRow([
+            'uid' => 7,
+            'identifier' => 'mistral-live',
+            'title' => 'Mistral',
+            'adapter_type' => 'symfony.mistral',
+            'api_key' => (new CredentialCipher())->encrypt('sk-mistral'),
+            'last_status' => 'connected',
+            'last_status_at' => 1700000100,
+            'last_status_message' => 'OK',
+            'model_id' => 'magistral-small',
+            'embedding_model_id' => 'mistral-embed',
+        ]);
+
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $repo->method('findByUid')->with(7)->willReturn($existing);
+        $captured = null;
+        $repo->expects(self::once())->method('save')
+            ->willReturnCallback(function (int $uid, array $values) use (&$captured): int {
+                $captured = $values;
+
+                return $uid;
+            });
+
+        $service = new ProviderFormService(
+            $repo,
+            new AdapterRegistry([$this->fakeAdapter(), $this->fakeMistralAdapter()]),
+            new CredentialCipher(),
+        );
+        $result = $service->save(7, [
+            'identifier' => 'mistral-live',
+            'title' => 'Mistral',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => '',
+            'model_id' => 'magistral-small',
+            'embedding_model_id' => 'mistral-embed',
+        ], 1);
+
+        self::assertTrue($result->ok);
+        self::assertNotNull($captured);
+        self::assertSame('symfony.openai', $captured['adapter_type']);
+        self::assertSame('', $captured['model_id']);
+        self::assertSame('', $captured['embedding_model_id']);
+        self::assertSame(Provider::LAST_STATUS_UNKNOWN, $captured['last_status']);
+    }
+
+    public function testEditKeepsLastStatusWhenOnlyTitleChanges(): void
+    {
+        $existing = Provider::fromRow([
+            'uid' => 5,
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => (new CredentialCipher())->encrypt('sk-stored'),
+            'last_status' => 'connected',
+            'last_status_at' => 1700000100,
+            'last_status_message' => 'OK',
+            'model_id' => 'gpt-4o',
+            'endpoint_url' => '',
+            'embedding_model_id' => '',
+            'api_version' => '',
+        ]);
+
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $repo->method('findByUid')->with(5)->willReturn($existing);
+        $captured = null;
+        $repo->expects(self::once())->method('save')
+            ->willReturnCallback(function (int $uid, array $values) use (&$captured): int {
+                $captured = $values;
+
+                return $uid;
+            });
+
+        $service = new ProviderFormService($repo, new AdapterRegistry([$this->fakeAdapter()]), new CredentialCipher());
+        $result = $service->save(5, [
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI Live',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => '',
+            'model_id' => 'gpt-4o',
+            'endpoint_url' => '',
+            'embedding_model_id' => '',
+            'api_version' => '',
+        ], 1);
+
+        self::assertTrue($result->ok);
+        self::assertNotNull($captured);
+        self::assertArrayNotHasKey('last_status', $captured);
+        self::assertArrayNotHasKey('last_status_at', $captured);
+        self::assertArrayNotHasKey('last_status_message', $captured);
+    }
+
+    public function testEditResetsLastStatusWhenApiKeyChanges(): void
+    {
+        $existing = Provider::fromRow([
+            'uid' => 5,
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => (new CredentialCipher())->encrypt('sk-stored'),
+            'last_status' => 'connected',
+            'last_status_at' => 1700000100,
+            'last_status_message' => 'OK',
+            'model_id' => 'gpt-4o',
+        ]);
+
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $repo->method('findByUid')->with(5)->willReturn($existing);
+        $captured = null;
+        $repo->expects(self::once())->method('save')
+            ->willReturnCallback(function (int $uid, array $values) use (&$captured): int {
+                $captured = $values;
+
+                return $uid;
+            });
+
+        $service = new ProviderFormService($repo, new AdapterRegistry([$this->fakeAdapter()]), new CredentialCipher());
+        $result = $service->save(5, [
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => 'sk-new-secret',
+            'model_id' => 'gpt-4o',
+        ], 1);
+
+        self::assertTrue($result->ok);
+        self::assertNotNull($captured);
+        self::assertArrayHasKey('api_key', $captured);
+        self::assertSame(Provider::LAST_STATUS_UNKNOWN, $captured['last_status']);
+        self::assertSame(0, $captured['last_status_at']);
+    }
+
+    public function testEditResetsLastStatusWhenModelIdChanges(): void
+    {
+        $existing = Provider::fromRow([
+            'uid' => 5,
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => (new CredentialCipher())->encrypt('sk-stored'),
+            'last_status' => 'connected',
+            'last_status_at' => 1700000100,
+            'last_status_message' => 'OK',
+            'model_id' => 'gpt-4o',
+        ]);
+
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $repo->method('findByUid')->with(5)->willReturn($existing);
+        $captured = null;
+        $repo->expects(self::once())->method('save')
+            ->willReturnCallback(function (int $uid, array $values) use (&$captured): int {
+                $captured = $values;
+
+                return $uid;
+            });
+
+        $service = new ProviderFormService($repo, new AdapterRegistry([$this->fakeAdapter()]), new CredentialCipher());
+        $result = $service->save(5, [
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => '',
+            'model_id' => 'gpt-4o-mini',
+        ], 1);
+
+        self::assertTrue($result->ok);
+        self::assertNotNull($captured);
+        self::assertSame(Provider::LAST_STATUS_UNKNOWN, $captured['last_status']);
+        self::assertSame(0, $captured['last_status_at']);
+    }
+
     public function testKeepsExistingApiKeyWhenInputBlankOnEdit(): void
     {
         $existing = Provider::fromRow([
@@ -588,6 +837,36 @@ final class ProviderFormServiceTest extends TestCase
             public function getDisplayName(): string
             {
                 return 'OpenAI';
+            }
+            public function getDefaultEndpoint(): string
+            {
+                return '';
+            }
+            public function getDefaultCapabilities(): array
+            {
+                return [Capability::CHAT];
+            }
+            public function testConnection(Provider $provider): VerifyResult
+            {
+                return VerifyResult::ok();
+            }
+            public function platform(Provider $provider): object
+            {
+                return new \stdClass();
+            }
+        };
+    }
+
+    private function fakeMistralAdapter(): AdapterInterface
+    {
+        return new class implements AdapterInterface {
+            public function getType(): string
+            {
+                return 'symfony.mistral';
+            }
+            public function getDisplayName(): string
+            {
+                return 'Mistral';
             }
             public function getDefaultEndpoint(): string
             {

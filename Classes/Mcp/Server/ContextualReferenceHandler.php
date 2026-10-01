@@ -38,8 +38,12 @@ final readonly class ContextualReferenceHandler implements ReferenceHandlerInter
      */
     public function handle(ElementReference $reference, array $arguments): mixed
     {
-        $this->invocationContext->applyFromArguments($arguments);
+        try {
+            $this->invocationContext->applyFromArguments($arguments);
 
-        return $this->inner->handle($reference, $arguments);
+            return $this->inner->handle($reference, $arguments);
+        } finally {
+            $this->invocationContext->clear();
+        }
     }
 }

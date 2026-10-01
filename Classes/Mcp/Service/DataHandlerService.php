@@ -26,9 +26,12 @@ namespace NITSAN\NsT3AF\Mcp\Service;
 use const JSON_THROW_ON_ERROR;
 
 use Psr\Http\Message\ServerRequestInterface;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Core\SystemEnvironmentBuilder;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
+use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -44,9 +47,16 @@ readonly class DataHandlerService
         $newId = 'NEW' . bin2hex(random_bytes(8));
         $fields['pid'] = $pid;
 
-        $originalRequest = $table === 'pages' ? $this->ensureSiteContext($pid) : null;
+        $hadRequest = isset($GLOBALS['TYPO3_REQUEST']);
+        $originalRequest = $GLOBALS['TYPO3_REQUEST'] ?? null;
 
         try {
+            if ($table === 'pages') {
+                $pid = $this->resolveLivePageUid($pid);
+                $fields['pid'] = $pid;
+                $this->attachSiteAttribute($pid);
+            }
+
             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
             $dataHandler->start([$table => [$newId => $fields]], []);
             $dataHandler->process_datamap();
@@ -61,8 +71,8 @@ readonly class DataHandlerService
 
             return (int) $uid;
         } finally {
-            if ($originalRequest !== null) {
-                $GLOBALS['TYPO3_REQUEST'] = $originalRequest;
+            if ($table === 'pages') {
+                $this->restoreRequest($hadRequest, $originalRequest);
             }
         }
     }
@@ -70,17 +80,24 @@ readonly class DataHandlerService
     /** @param array<string, mixed> $fields */
     public function updateRecord(string $table, int $uid, array $fields): void
     {
-        $originalRequest = $table === 'pages' ? $this->ensureSiteContext($uid) : null;
+        $hadRequest = isset($GLOBALS['TYPO3_REQUEST']);
+        $originalRequest = $GLOBALS['TYPO3_REQUEST'] ?? null;
 
         try {
+            if ($table === 'pages') {
+                // TYPO3 v12 RootlineUtility cannot resolve workspace version uids; always address live.
+                $uid = $this->resolveLivePageUid($uid);
+                $this->attachSiteAttribute($uid);
+            }
+
             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
             $dataHandler->start([$table => [$uid => $fields]], []);
             $dataHandler->process_datamap();
 
             $this->checkErrors($dataHandler);
         } finally {
-            if ($originalRequest !== null) {
-                $GLOBALS['TYPO3_REQUEST'] = $originalRequest;
+            if ($table === 'pages') {
+                $this->restoreRequest($hadRequest, $originalRequest);
             }
         }
     }
@@ -115,10 +132,16 @@ readonly class DataHandlerService
      */
     public function copyRecord(string $table, int $uid, int $target, int $copyTreeDepth = 0): int
     {
-        $originalRequest = $table === 'pages' ? $this->ensureSiteContext($uid) : null;
+        $hadRequest = isset($GLOBALS['TYPO3_REQUEST']);
+        $originalRequest = $GLOBALS['TYPO3_REQUEST'] ?? null;
         $previousCopyLevels = null;
 
         try {
+            if ($table === 'pages') {
+                $uid = $this->resolveLivePageUid($uid);
+                $this->attachSiteAttribute($uid);
+            }
+
             if ($table === 'pages' && $copyTreeDepth > 0 && isset($GLOBALS['BE_USER'])) {
                 $beUser = $GLOBALS['BE_USER'];
                 if ($beUser instanceof BackendUserAuthentication) {
@@ -146,8 +169,8 @@ readonly class DataHandlerService
                     $beUser->uc['copyLevels'] = $previousCopyLevels;
                 }
             }
-            if ($originalRequest !== null) {
-                $GLOBALS['TYPO3_REQUEST'] = $originalRequest;
+            if ($table === 'pages') {
+                $this->restoreRequest($hadRequest, $originalRequest);
             }
         }
     }
@@ -216,7 +239,12 @@ readonly class DataHandlerService
         $datamap = [];
 
         foreach ($fileUids as $index => $fileUid) {
-            $newId = 'NEW_ref_' . bin2hex(random_bytes(4));
+            // Placeholder must not contain "_": DataHandler::processRemapStack() treats
+            // underscored child ids as "<table>_<uid>" and fails to resolve them. On v12
+            // FileExtensionFilter then throws after the reference row is already written
+            // (duplicate references on MCP retry); on v13/v14 the reference is silently
+            // dropped from the parent field. Same pattern as createRecord().
+            $newId = 'NEW' . bin2hex(random_bytes(8));
             $newIds[] = $newId;
 
             $datamap['sys_file_reference'][$newId] = [
@@ -251,23 +279,61 @@ readonly class DataHandlerService
         return $referenceUids;
     }
 
-    private function ensureSiteContext(int $pageId): ?ServerRequestInterface
+    /**
+     * DataHandler page operations must use the live uid. Workspace version uids break
+     * RootlineUtility / SiteFinder on TYPO3 v12 ("Could not fetch page data for uid …").
+     */
+    private function resolveLivePageUid(int $pageId): int
     {
-        if (!isset($GLOBALS['TYPO3_REQUEST'])) {
-            return null;
+        if ($pageId <= 0) {
+            return $pageId;
         }
 
-        /** @var ServerRequestInterface $originalRequest */
-        $originalRequest = $GLOBALS['TYPO3_REQUEST'];
+        $record = BackendUtility::getRecord('pages', $pageId, 'uid,t3ver_oid');
+        if (!is_array($record)) {
+            return $pageId;
+        }
+
+        $oid = (int) ($record['t3ver_oid'] ?? 0);
+
+        return $oid > 0 ? $oid : (int) ($record['uid'] ?? $pageId);
+    }
+
+    private function attachSiteAttribute(int $livePageId): void
+    {
+        if ($livePageId <= 0) {
+            return;
+        }
 
         try {
-            $site = $this->siteFinder->getSiteByPageId($pageId);
-            $GLOBALS['TYPO3_REQUEST'] = $originalRequest->withAttribute('site', $site);
+            $site = $this->siteFinder->getSiteByPageId($livePageId);
         } catch (SiteNotFoundException) {
-            // No site found for this page — leave request unchanged
+            return;
         }
 
-        return $originalRequest;
+        $request = $GLOBALS['TYPO3_REQUEST'] ?? null;
+        if ($request instanceof ServerRequestInterface) {
+            $GLOBALS['TYPO3_REQUEST'] = $request->withAttribute('site', $site);
+
+            return;
+        }
+
+        $GLOBALS['TYPO3_REQUEST'] = (new ServerRequest((string) $site->getBase()))
+            ->withAttribute('site', $site)
+            ->withAttribute('applicationType', SystemEnvironmentBuilder::REQUESTTYPE_BE);
+    }
+
+    private function restoreRequest(bool $hadRequest, mixed $originalRequest): void
+    {
+        if ($hadRequest && $originalRequest instanceof ServerRequestInterface) {
+            $GLOBALS['TYPO3_REQUEST'] = $originalRequest;
+
+            return;
+        }
+
+        if (!$hadRequest) {
+            unset($GLOBALS['TYPO3_REQUEST']);
+        }
     }
 
     /**

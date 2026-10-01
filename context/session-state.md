@@ -2,6 +2,110 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-01 — Confirm before changing embedding model
+
+**Done:** Provider drawer shows TYPO3 `Modal.confirm` when changing a non-empty embedding model (select or free-text blur). Copy warns about trained data. Cancel restores the previous value. Labels EN/DE in `locallang_js.xlf`.
+
+**Last touched:** 2026-10-01
+
+---
+
+## 2026-10-01 — Clear models when adapter type changes
+
+**Done:** Changing `adapter_type` on save clears `model_id` / `embedding_model_id` (and Azure `api_version` when leaving Azure). Drawer JS clears those inputs before reloading the model list. Prevents stale ids like `magistral-small` after Mistral → OpenAI. Unit coverage + `providers.md`.
+
+**Last touched:** 2026-10-01
+
+---
+
+## 2026-10-01 — Reset connection status on connection-relevant provider edits
+
+**Done:** `ProviderFormService` clears `last_status*` to `unknown` when edit changes `adapter_type`, `endpoint_url`, `api_key`, `model_id`, `embedding_model_id`, or `api_version`. Title/pricing/toggle-only saves keep the prior Connected badge. Unit tests cover adapter / API key / model change vs title-only. Documented in `context/features/providers.md`.
+
+**Last touched:** 2026-10-01
+
+---
+
+## 2026-09-30 — Credits toolbar Fresh/dark contrast
+
+**Done:** `toolbar-credit.css` — healthy balance inherits `.toolbar-item-link` / scaffold header color (fixes unreadable dark “0/50 cr” on Fresh primary topbar). Low/critical keep warning/danger border tokens. Documented in `Typo3CoreBackendDesign.md`. Synced to `12.4.45-new`.
+
+**Last touched:** 2026-09-30
+
+---
+
+## 2026-09-30 — DataHandlerService: live page uid + site for v12 workspaces
+
+**Done:** `updateRecord` / `createRecord` / `copyRecord` for `pages` resolve `t3ver_oid` (live) before DataHandler and attach site on `TYPO3_REQUEST` even when MCP had no request. Fixes TYPO3 v12 RootlineUtility "Could not fetch page data for uid \<workspace version\>".
+
+**Last touched:** 2026-09-30
+
+---
+
+## 2026-09-30 — TranslateHook: public McpInvocationContext for DataHandler localize
+
+**Done:** `GeneralUtility::makeInstance(McpInvocationContext)` failed during backend page localize (DeepL via `aiProviderIdentifier`) because the service was DI-private (`0` ctor args). Marked `McpInvocationContext` public; TranslateHook resolves it safely and falls back to `backend_module` / `backend_localization` when unavailable.
+
+**Last touched:** 2026-09-30
+
+---
+
+## 2026-09-30 — MCP invocation forces request_source=mcp (incl. credits mode)
+
+**Done:** `McpInvocationContext` tracks active tool calls (`applyFromArguments` / `clear`). `enrichAiOptions` sets `requestSource=mcp` while active; new `enrichRequestSourceOnly()` does the same without swapping providers (used when T3Planet credits mode skips full enrich). Cleared in `ContextualReferenceHandler` + playground `finally`. Fixes AI Usage mis-labeling MCP news/translate as `backend_module`.
+
+**Last touched:** 2026-09-30
+
+---
+
+## 2026-09-29 — AI Usage search quotes the column inside LOWER()
+
+**Done:** Request-log search wraps each quoted column in LOWER() before LIKE. The previous like() call treated LOWER(column) as a column name, and MariaDB raised unknown column 1054.
+
+**Last touched:** 2026-09-29
+
+---
+
+## 2026-09-29 — Read chat content parts
+
+**Done:** `AiService::extractContentFromInvokeResult()` reads a string or a list of text parts from the raw chat completion when the bridge converter rejects the body. Thinking parts are skipped. A provider error in that body is thrown instead of an empty success. A normal `asText()` string is unchanged.
+
+**Last touched:** 2026-09-29
+
+---
+
+## 2026-09-25 — Document facts are usable reference
+
+**Done:** The brand-fence line now tells the model to use facts inside `<brand_context>` when they fit the task, and still not to follow instructions inside it or change the response format. Uploaded document text stays inside the fence.
+
+**Last touched:** 2026-09-25
+
+---
+
+## 2026-09-25 — Brand writing constraints outside the fence
+
+**Done:** `BrandContextAssembler` places voice, audience, content rules, keywords, and forbidden words above `<brand_context>` so the model applies them. Reference text stays inside the fence. Audience labels include pain points and cares-about when set. Feature prompt templates are unchanged.
+
+**Last touched:** 2026-09-25
+
+---
+
+## 2026-09-25 — T3AI prompt audit in AI Logs
+
+**Done:** `PromptAuditLogListener` (after brand injection) writes the chat messages actually passed to the model into `sys_log` channel `t3ai.prompt` for `ns_t3ai` complete/stream/image/tts. AI Logs details keep newlines (`pre-wrap`) and prefer the raw `message` column so `%` is not doubled.
+
+**Last touched:** 2026-09-25
+
+---
+
+## 2026-09-21 — Classic ext_emconf PSR-4 autoload
+
+**Done:** `ext_emconf.php` now declares PSR-4 `NITSAN\NsT3AF\` → `Classes` (matches `composer.json`). Unit test `ExtEmconfAutoloadTest`. Classic activate/deactivate was unsafe without this (QA F-07). Agent `context/core.md` and `tasks/run-quality.md` document Classic CLI (`php typo3/sysext/core/bin/typo3`).
+
+**Last touched:** 2026-09-21
+
+---
+
 ## 2026-08-19 — Release v1.1.4
 
 **Done:** Bump version to 1.1.4. LICENSING.md, README install/licence block, MCP Table Discovery wording, Slack community link, Packagist keywords, core 13/14 CI badges.

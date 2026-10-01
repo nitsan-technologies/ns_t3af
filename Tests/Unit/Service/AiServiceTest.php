@@ -1237,6 +1237,134 @@ final class AiServiceTest extends TestCase
         self::assertSame('Summarize this', $parts[0]->getText());
     }
 
+    public function testCompleteReadsTextPartsWhenConverterRejectsArrayContent(): void
+    {
+        $provider = $this->makeProvider(adapterType: 'symfony.mistral');
+        $platform = new class {
+            public function invoke(string $model, mixed $payload): object
+            {
+                return new class {
+                    public function asText(): string
+                    {
+                        throw new \TypeError('TextResult::__construct(): Argument #1 ($content) must be of type string, array given');
+                    }
+
+                    public function getRawResult(): object
+                    {
+                        return new class {
+                            /**
+                             * @return array<string, mixed>
+                             */
+                            public function getData(): array
+                            {
+                                return [
+                                    'choices' => [[
+                                        'message' => [
+                                            'content' => [
+                                                ['type' => 'thinking', 'thinking' => 'ignore this'],
+                                                ['type' => 'text', 'text' => '翻訳されたタイトル'],
+                                            ],
+                                        ],
+                                    ]],
+                                ];
+                            }
+                        };
+                    }
+                };
+            }
+        };
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$this->makeAdapter('symfony.mistral', $platform)]),
+            new CapturingDispatcher(),
+            $this->makeSiteStorageContext(),
+        );
+
+        self::assertSame('翻訳されたタイトル', $service->complete('hello')->content);
+    }
+
+    public function testCompleteReadsStringContentFromRawWhenConverterFails(): void
+    {
+        $provider = $this->makeProvider();
+        $platform = new class {
+            public function invoke(string $model, mixed $payload): object
+            {
+                return new class {
+                    public function asText(): string
+                    {
+                        throw new \TypeError('TextResult::__construct(): Argument #1 ($content) must be of type string, null given');
+                    }
+
+                    public function getRawResult(): object
+                    {
+                        return new class {
+                            /**
+                             * @return array<string, mixed>
+                             */
+                            public function getData(): array
+                            {
+                                return [
+                                    'choices' => [[
+                                        'message' => ['content' => 'OpenAI title'],
+                                    ]],
+                                ];
+                            }
+                        };
+                    }
+                };
+            }
+        };
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$this->makeAdapter('symfony.openai', $platform)]),
+            new CapturingDispatcher(),
+            $this->makeSiteStorageContext(),
+        );
+
+        self::assertSame('OpenAI title', $service->complete('hello')->content);
+    }
+
+    public function testCompleteSurfacesProviderErrorInsteadOfEmptyResponse(): void
+    {
+        $provider = $this->makeProvider();
+        $platform = new class {
+            public function invoke(string $model, mixed $payload): object
+            {
+                return new class {
+                    public function asText(): string
+                    {
+                        throw new \RuntimeException('HTTP/1.1 400 Bad Request');
+                    }
+
+                    public function getRawResult(): object
+                    {
+                        return new class {
+                            /**
+                             * @return array<string, mixed>
+                             */
+                            public function getData(): array
+                            {
+                                return [
+                                    'error' => ['message' => 'Invalid model'],
+                                ];
+                            }
+                        };
+                    }
+                };
+            }
+        };
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$this->makeAdapter('symfony.openai', $platform)]),
+            new CapturingDispatcher(),
+            $this->makeSiteStorageContext(),
+        );
+
+        $this->expectException(AdapterRuntimeException::class);
+        $this->expectExceptionMessage('Invalid model');
+        $service->complete('hello');
+    }
+
     private function makeAdapter(string $type, object $platform): AdapterInterface
     {
         return new class ($type, $platform) implements AdapterInterface {
