@@ -43,6 +43,7 @@ final readonly class AgentTurnRouter
 
     public function __construct(
         private AgentMessageParser $messageParser,
+        private AgentSlashArgumentBinder $slashArgumentBinder,
         private AgentRecordAttachmentResolver $recordAttachmentResolver,
         private AgentToolTurnExecutorInterface $toolTurnProcessor,
         private AgentTurnRunnerInterface $turnOrchestrator,
@@ -70,6 +71,7 @@ final readonly class AgentTurnRouter
         $selectedTool = trim((string) ($body['tool'] ?? ''));
         $toolArguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
         $starterAction = trim((string) ($body['action'] ?? ''));
+        $slashRemainder = '';
 
         if ($selectedTool === '') {
             $parsed = $this->messageParser->extractSlashCommand($message);
@@ -77,6 +79,7 @@ final readonly class AgentTurnRouter
             if ($toolArguments === [] && $parsed['arguments'] !== []) {
                 $toolArguments = $parsed['arguments'];
             }
+            $slashRemainder = trim((string) ($parsed['remainder'] ?? ''));
         }
 
         $recordAttachments = $this->recordAttachmentResolver->extractAttachments($message);
@@ -92,6 +95,14 @@ final readonly class AgentTurnRouter
             $context,
             $fileAttachments,
         );
+
+        if ($selectedTool !== '' && $slashRemainder !== '') {
+            $toolArguments = $this->slashArgumentBinder->bindForTool(
+                $selectedTool,
+                $toolArguments,
+                $slashRemainder,
+            );
+        }
 
         $body['arguments'] = $toolArguments;
 
@@ -379,14 +390,19 @@ final readonly class AgentTurnRouter
             if ($content === '') {
                 continue;
             }
+            $replyMeta = [
+                'type' => 'nl_reply',
+                'correlationId' => $correlationId,
+                'fromToolResult' => true,
+            ];
+            $previews = is_array($meta['previews'] ?? null) ? $meta['previews'] : [];
+            if ($previews !== []) {
+                $replyMeta['previews'] = $previews;
+            }
             $out[] = [
                 'role' => 'assistant',
                 'content' => $content,
-                'meta' => [
-                    'type' => 'nl_reply',
-                    'correlationId' => $correlationId,
-                    'fromToolResult' => true,
-                ],
+                'meta' => $replyMeta,
             ];
         }
 

@@ -39,12 +39,38 @@ final class AgentMessageParserTest extends TestCase
     public function extractSlashCommandRequiresLeadingSlash(): void
     {
         self::assertSame(
-            ['name' => 'pages_get', 'arguments' => ['uid' => 49]],
+            ['name' => 'pages_get', 'arguments' => [], 'remainder' => '49'],
             $this->parser->extractSlashCommand('/pages_get 49'),
         );
         self::assertSame(
-            ['name' => '', 'arguments' => []],
+            ['name' => '', 'arguments' => [], 'remainder' => ''],
             $this->parser->extractSlashCommand('please run /pages_get 49'),
+        );
+    }
+
+    #[Test]
+    public function extractSlashCommandKeepsFreeTextAsRemainder(): void
+    {
+        self::assertSame(
+            [
+                'name' => 'ask_clarification',
+                'arguments' => [],
+                'remainder' => 'What can you do here?',
+            ],
+            $this->parser->extractSlashCommand('/ask_clarification What can you do here?'),
+        );
+    }
+
+    #[Test]
+    public function extractSlashCommandParsesJsonArguments(): void
+    {
+        self::assertSame(
+            [
+                'name' => 'ask_clarification',
+                'arguments' => ['question' => 'Which?', 'options' => ['A', 'B']],
+                'remainder' => '',
+            ],
+            $this->parser->extractSlashCommand('/ask_clarification {"question":"Which?","options":["A","B"]}'),
         );
     }
 
@@ -52,7 +78,7 @@ final class AgentMessageParserTest extends TestCase
     public function extractSlashCommandIgnoresSlashesInFilePaths(): void
     {
         self::assertSame(
-            ['name' => '', 'arguments' => []],
+            ['name' => '', 'arguments' => [], 'remainder' => ''],
             $this->parser->extractSlashCommand('@file:1:user_upload/image.png explain this'),
         );
     }

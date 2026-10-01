@@ -1794,8 +1794,8 @@
   border: 1px solid var(--nst3af-agent-border);
   border-radius: 12px;
   background: var(--nst3af-agent-surface);
-  /* Autocomplete anchors above the box (bottom: 100%); hidden would clip it. */
-  overflow: visible;
+  /* Clip the bar's square fill to the radius. Autocomplete is position:fixed (not clipped). */
+  overflow: hidden;
   padding: 0;
   box-shadow: 0 2px 14px color-mix(in srgb, var(--nst3af-agent-text-strong) 9%, transparent);
   position: relative;
@@ -1811,6 +1811,7 @@
 
 .nst3af-agent-composer--agbox .nst3af-agent-composer__bar {
   border-top: 1px solid var(--nst3af-agent-border-soft);
+  border-radius: 0 0 11px 11px;
   padding: 6px 10px;
   margin-top: 0;
   background: var(--nst3af-agent-surface-soft);

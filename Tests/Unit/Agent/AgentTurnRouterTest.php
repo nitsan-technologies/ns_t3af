@@ -23,10 +23,12 @@ use NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface;
 use NITSAN\NsT3AF\Agent\Contract\AgentTurnRunnerInterface;
 use NITSAN\NsT3AF\Agent\Service\AgentMessageParser;
 use NITSAN\NsT3AF\Agent\Service\AgentRecordAttachmentResolver;
+use NITSAN\NsT3AF\Agent\Service\AgentSlashArgumentBinder;
 use NITSAN\NsT3AF\Agent\Service\AgentTranslator;
 use NITSAN\NsT3AF\Agent\Service\AgentTurnRouter;
 use NITSAN\NsT3AF\Agent\Service\PermittedActionProvider;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
+use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -48,8 +50,12 @@ final class AgentTurnRouterTest extends TestCase
         $this->toolTurnProcessor = $this->createMock(AgentToolTurnExecutorInterface::class);
         $this->turnOrchestrator = $this->createMock(AgentTurnRunnerInterface::class);
 
+        $introspector = $this->createMock(McpToolIntrospectorService::class);
+        $introspector->method('listTools')->willReturn([]);
+
         $this->router = new AgentTurnRouter(
             new AgentMessageParser(),
+            new AgentSlashArgumentBinder($introspector),
             new AgentRecordAttachmentResolver(),
             $this->toolTurnProcessor,
             $this->turnOrchestrator,
@@ -93,6 +99,43 @@ final class AgentTurnRouterTest extends TestCase
         self::assertSame('nl_reply', $messages[1]['meta']['type'] ?? null);
         self::assertSame('Page 49: Home', $messages[1]['content']);
         self::assertTrue($messages[1]['meta']['fromToolResult'] ?? false);
+    }
+
+    #[Test]
+    public function structuralNlReplyForwardsMediaPreviews(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $previews = [[
+            'fileUid' => 11,
+            'url' => 'https://example.test/thumb.webp',
+            'href' => '/fileadmin/camino-portugues.webp',
+            'name' => 'camino-portugues.webp',
+            'alt' => '',
+        ]];
+        $this->toolTurnProcessor->expects(self::once())
+            ->method('execute')
+            ->willReturn([
+                'role' => 'assistant',
+                'content' => 'Found 1 matching files.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 'file_search',
+                    'success' => true,
+                    'previews' => $previews,
+                ],
+            ]);
+
+        $messages = $this->router->route(
+            '/file_search logo',
+            ['pageId' => 1],
+            ['tool' => 'file_search', 'arguments' => ['namePattern' => 'logo']],
+            $user,
+            'corr-preview',
+        );
+
+        self::assertCount(2, $messages);
+        self::assertSame('nl_reply', $messages[1]['meta']['type'] ?? null);
+        self::assertSame($previews, $messages[1]['meta']['previews'] ?? null);
     }
 
     #[Test]

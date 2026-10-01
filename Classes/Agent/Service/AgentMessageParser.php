@@ -22,6 +22,9 @@ namespace NITSAN\NsT3AF\Agent\Service;
 /**
  * Parses composer slash commands without matching path slashes inside @file tokens.
  *
+ * Free-text after the tool name is returned as `remainder` for {@see AgentSlashArgumentBinder}.
+ * JSON bodies are decoded into `arguments` immediately.
+ *
  * @internal
  */
 final class AgentMessageParser
@@ -41,23 +44,28 @@ final class AgentMessageParser
     /**
      * Slash commands must lead the message (after stripping attachments), e.g. "/pages_get 49".
      *
-     * @return array{name: string, arguments: array<string, mixed>}
+     * @return array{name: string, arguments: array<string, mixed>, remainder: string}
      */
     public function extractSlashCommand(string $message): array
     {
+        $empty = ['name' => '', 'arguments' => [], 'remainder' => ''];
         $stripped = $this->stripComposerTokens($message);
         if ($stripped === '' || !str_starts_with($stripped, '/')) {
-            return ['name' => '', 'arguments' => []];
+            return $empty;
         }
 
         if (preg_match('#^/(\S+)(?:\s+(.*))?$#s', $stripped, $matches) !== 1) {
-            return ['name' => '', 'arguments' => []];
+            return $empty;
         }
 
         $name = trim($matches[1]);
         $rest = trim($matches[2] ?? '');
-        if ($name === '' || $rest === '') {
-            return ['name' => $name, 'arguments' => []];
+        if ($name === '') {
+            return $empty;
+        }
+
+        if ($rest === '') {
+            return ['name' => $name, 'arguments' => [], 'remainder' => ''];
         }
 
         if (str_starts_with($rest, '{')) {
@@ -67,18 +75,17 @@ final class AgentMessageParser
                 return [
                     'name' => $name,
                     'arguments' => is_array($decoded) ? $decoded : [],
+                    'remainder' => '',
                 ];
             } catch (\JsonException) {
-                return ['name' => $name, 'arguments' => []];
+                return ['name' => $name, 'arguments' => [], 'remainder' => ''];
             }
         }
 
-        $parts = preg_split('/\s+/', $rest) ?: [];
-        $arguments = [];
-        if (isset($parts[0]) && ctype_digit($parts[0])) {
-            $arguments['uid'] = (int) $parts[0];
-        }
-
-        return ['name' => $name, 'arguments' => $arguments];
+        return [
+            'name' => $name,
+            'arguments' => [],
+            'remainder' => $rest,
+        ];
     }
 }
