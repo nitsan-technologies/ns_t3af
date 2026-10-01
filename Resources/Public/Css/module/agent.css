@@ -95,6 +95,16 @@
   transform: none;
 }
 
+.nst3af-agent-panel--fullscreen {
+  width: 100vw !important;
+  max-width: 100vw;
+  --nst3af-agent-width: 100vw;
+}
+
+.nst3af-agent-panel--fullscreen .nst3af-agent-panel-resize {
+  display: none;
+}
+
 /*
  * Dynamic first-open width: inverse to screen size, banded by TYPO3's own real
  * chrome breakpoints (verified against the installed core, not assumed):
@@ -832,10 +842,28 @@
   place-items: center;
 }
 
+.nst3af-agent-composer__stop {
+  margin-left: auto;
+  border-radius: var(--typo3-component-border-radius, 0.25rem);
+  height: 32px;
+  min-width: 32px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.nst3af-agent-composer__stop-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .nst3af-agent-composer__attach typo3-backend-icon,
 .nst3af-agent-composer__attach .icon,
 .nst3af-agent-composer__send typo3-backend-icon,
-.nst3af-agent-composer__send .icon {
+.nst3af-agent-composer__send .icon,
+.nst3af-agent-composer__stop typo3-backend-icon,
+.nst3af-agent-composer__stop .icon {
   display: block;
 }
 
@@ -855,14 +883,19 @@
   position: absolute;
   left: 12px;
   right: 12px;
-  bottom: calc(100% - 4px);
+  bottom: calc(100% + 6px);
   background: var(--nst3af-agent-surface);
   border: 1px solid var(--nst3af-agent-border);
   border-radius: 9px;
   box-shadow: 0 -6px 24px rgba(16, 24, 40, 0.16);
-  max-height: 238px;
+  max-height: min(280px, 45vh);
   overflow: auto;
-  z-index: 5;
+  z-index: 20;
+}
+
+.nst3af-agent-autocomplete:not([hidden]) {
+  /* Fixed coords are applied in JS (positionAutocomplete) so panel overflow cannot clip. */
+  z-index: 1200;
 }
 
 .nst3af-agent-autocomplete__heading {
@@ -1761,9 +1794,11 @@
   border: 1px solid var(--nst3af-agent-border);
   border-radius: 12px;
   background: var(--nst3af-agent-surface);
-  overflow: hidden;
+  /* Autocomplete anchors above the box (bottom: 100%); hidden would clip it. */
+  overflow: visible;
   padding: 0;
   box-shadow: 0 2px 14px color-mix(in srgb, var(--nst3af-agent-text-strong) 9%, transparent);
+  position: relative;
 }
 
 .nst3af-agent-composer--agbox .nst3af-agent-composer__input {
@@ -2012,6 +2047,23 @@
 
 .nst3af-agent-sessions-rail .nst3af-agent-drawer__title {
   flex: 1 1 auto;
+}
+
+.nst3af-agent-drawer__search-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.nst3af-agent-drawer__search-row .nst3af-agent-drawer__search {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.nst3af-agent-drawer__new {
+  flex: 0 0 auto;
 }
 
 /* Sessions rail scope filter ("This page" / "All pages"): plain segmented pill, not two

@@ -523,6 +523,14 @@
                 <source>Send message</source>
                 <target>Nachricht senden</target>
             </trans-unit>
+            <trans-unit id="agent.composer.stop">
+                <source>Stop</source>
+                <target>Stoppen</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.stopped">
+                <source>Stopped.</source>
+                <target>Gestoppt.</target>
+            </trans-unit>
             <trans-unit id="agent.autocomplete.label">
                 <source>Suggestions</source>
                 <target>Vorschläge</target>
@@ -544,8 +552,28 @@
                 <target>Markenprofil</target>
             </trans-unit>
             <trans-unit id="agent.starters.executable">
-                <source>Suggested actions</source>
-                <target>Vorgeschlagene Aktionen</target>
+                <source>MCP Tools</source>
+                <target>MCP Tools</target>
+            </trans-unit>
+            <trans-unit id="agent.tools.module">
+                <source>On this module</source>
+                <target>In diesem Modul</target>
+            </trans-unit>
+            <trans-unit id="agent.tools.rest">
+                <source>All tools</source>
+                <target>Alle Tools</target>
+            </trans-unit>
+            <trans-unit id="agent.attach.mcpTools">
+                <source>MCP Tools</source>
+                <target>MCP Tools</target>
+            </trans-unit>
+            <trans-unit id="agent.panel.fullscreen">
+                <source>Full screen</source>
+                <target>Vollbild</target>
+            </trans-unit>
+            <trans-unit id="agent.panel.fullscreenExit">
+                <source>Exit full screen</source>
+                <target>Vollbild beenden</target>
             </trans-unit>
             <trans-unit id="agent.starters.locked">
                 <source>Needs another extension</source>

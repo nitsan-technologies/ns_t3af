@@ -2,7 +2,7 @@
  * AgentController mixin: panel open/close, drawers, info/context notices, focus trap.
  */
 
-import { hotkeyLabel, readHotkeyPref, STORAGE_OPEN_KEY } from './hotkeys.js';
+import { hotkeyLabel, readHotkeyPref, STORAGE_OPEN_KEY, STORAGE_PREFS_KEY } from './hotkeys.js';
 import { lang, errorMessage, escapeHtml } from './format.js';
 import { ajaxUrl } from './context.js';
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
@@ -45,6 +45,10 @@ export const chromeMethods = {
           event.preventDefault();
           this.submitTurn();
         }
+        if (target.closest('[data-nst3af-agent-stop]')) {
+          event.preventDefault();
+          this.stopTurn();
+        }
         const clarifyOption = target.closest('[data-nst3af-agent-clarify-option]');
         if (clarifyOption instanceof HTMLButtonElement) {
           event.preventDefault();
@@ -73,6 +77,10 @@ export const chromeMethods = {
         if (target.closest('[data-nst3af-agent-new]')) {
           event.preventDefault();
           void this.startNewConversation();
+        }
+        if (target.closest('[data-nst3af-agent-fullscreen]')) {
+          event.preventDefault();
+          this.toggleFullscreen();
         }
         if (target.closest('[data-nst3af-agent-summarize]')) {
           event.preventDefault();
@@ -162,10 +170,6 @@ export const chromeMethods = {
           event.preventDefault();
           this.undoChange(target.closest('[data-nst3af-agent-undo]'));
         }
-        if (target.closest('[data-nst3af-agent-disclosure-dismiss]')) {
-          event.preventDefault();
-          this.dismissDisclosure();
-        }
         if (target.closest('[data-nst3af-agent-attach-toggle]')) {
           event.preventDefault();
           this.toggleAttachMenu();
@@ -173,6 +177,10 @@ export const chromeMethods = {
         if (target.closest('[data-nst3af-agent-attach-files]')) {
           event.preventDefault();
           this.openFilePicker();
+        }
+        if (target.closest('[data-nst3af-agent-attach-mcp-tools]')) {
+          event.preventDefault();
+          this.openMcpToolsPicker();
         }
         if (target.closest('[data-nst3af-agent-handoff-dismiss]')) {
           event.preventDefault();
@@ -206,6 +214,13 @@ export const chromeMethods = {
       this.input?.addEventListener('input', () => {
         this.handleComposerInput();
       });
+
+      window.addEventListener('resize', () => {
+        this.positionAutocomplete?.();
+      });
+      this.stream?.addEventListener('scroll', () => {
+        this.positionAutocomplete?.();
+      }, { passive: true });
 
       this.providerSelect?.addEventListener('change', () => {
         if (this.providerSelect instanceof HTMLSelectElement) {
@@ -533,6 +548,7 @@ export const chromeMethods = {
 
       this.renderContext();
       this.renderStream();
+      this.restoreFullscreenPref();
 
       // Apply the remembered/default rail state now that sessionListSettings.enabled is known
       // from the server payload — the rail stayed in its template-default [hidden] state during
@@ -545,12 +561,6 @@ export const chromeMethods = {
           this.sessionsSearch.value = '';
         }
         await this.loadSessions();
-      }
-
-      if (!this.disclosureDismissed) {
-        this.disclosure.hidden = false;
-      } else {
-        this.disclosure.hidden = true;
       }
 
       this.announce(lang('agent.live.opened', 'AI Agent opened.'));
@@ -897,25 +907,51 @@ export const chromeMethods = {
       }).join('');
     },
 
-  async dismissDisclosure() {
-      this.disclosureDismissed = true;
-      this.disclosure.hidden = true;
-      await this.saveDisclosure();
+  toggleFullscreen() {
+      if (!(this.panel instanceof HTMLElement)) {
+        return;
+      }
+      const next = !this.panel.classList.contains('nst3af-agent-panel--fullscreen');
+      this.setFullscreen(next, { persist: true });
     },
 
   /**
-     * Stores the "AI disclosure dismissed" flag. Conversations are stored by the server only
-     * (turns and card actions); the window never sends its messages.
+     * @param {boolean} enabled
+     * @param {{ persist?: boolean }} [options]
      */
-    async saveDisclosure() {
-      const url = ajaxUrl('nst3af_agent_conversation_save');
-      if (url === '') {
+    setFullscreen(enabled, options = {}) {
+      if (!(this.panel instanceof HTMLElement)) {
         return;
       }
+      this.panel.classList.toggle('nst3af-agent-panel--fullscreen', enabled);
+      const button = this.root.querySelector('[data-nst3af-agent-fullscreen]');
+      if (button instanceof HTMLElement) {
+        button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+        const label = enabled
+          ? lang('agent.panel.fullscreenExit', 'Exit full screen')
+          : lang('agent.panel.fullscreen', 'Full screen');
+        button.setAttribute('title', label);
+        button.setAttribute('aria-label', label);
+      }
+      if (options.persist !== false) {
+        try {
+          const prefs = JSON.parse(localStorage.getItem(STORAGE_PREFS_KEY) ?? '{}');
+          prefs.fullscreen = enabled;
+          localStorage.setItem(STORAGE_PREFS_KEY, JSON.stringify(prefs));
+        } catch {
+          // ignore
+        }
+      }
+    },
+
+  restoreFullscreenPref() {
       try {
-        await new AjaxRequest(url).post({ disclosureDismissed: this.disclosureDismissed }).then((response) => response.resolve());
-      } catch (error) {
-        console.warn('Agent disclosure save failed:', errorMessage(error));
+        const prefs = JSON.parse(localStorage.getItem(STORAGE_PREFS_KEY) ?? '{}');
+        if (prefs?.fullscreen === true) {
+          this.setFullscreen(true, { persist: false });
+        }
+      } catch {
+        // ignore
       }
     },
 

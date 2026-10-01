@@ -198,9 +198,24 @@ final class AgentConversationRepository
             return false;
         }
 
+        $row = $this->findBySessionForUser($sessionUuid, $beUserUid);
+        if ($row === null) {
+            return false;
+        }
+        $context = json_decode((string) ($row['context'] ?? ''), true);
+        if (!is_array($context)) {
+            $context = [];
+        }
+        $context['titleLocked'] = true;
+        $context['shortTitleApplied'] = true;
+
         return $this->connection()->update(
             self::TABLE,
-            ['title' => mb_substr($title, 0, 255), 'tstamp' => $this->now()],
+            [
+                'title' => mb_substr($title, 0, 255),
+                'context' => json_encode($context, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+                'tstamp' => $this->now(),
+            ],
             ['session_uuid' => $sessionUuid, 'be_user_uid' => $beUserUid, 'deleted' => 0],
         ) > 0;
     }

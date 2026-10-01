@@ -22,7 +22,7 @@ namespace NITSAN\NsT3AF\Agent\Service;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 
 /**
- * Suggested actions ("starter chips") for where the editor is.
+ * MCP Tools ("starter chips") for where the editor is.
  *
  * - A chip is a request in the editor's language ("Generate SEO for this page"). Clicking it
  *   fills the composer; the editor sends explicitly so they can edit first.

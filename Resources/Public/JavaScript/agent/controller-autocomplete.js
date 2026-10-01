@@ -39,6 +39,22 @@ export const autocompleteMethods = {
       }
     },
 
+  openMcpToolsPicker() {
+      this.hideAttachMenu();
+      if (!(this.input instanceof HTMLTextAreaElement)) {
+        return;
+      }
+      const value = this.input.value;
+      if (!value.startsWith('/')) {
+        this.input.value = '/' + (value.trim() === '' ? '' : value);
+      }
+      this.input.focus();
+      const caret = this.input.value.length;
+      this.input.setSelectionRange(caret, caret);
+      this.autocompleteMode = 'tools';
+      void this.loadAutocomplete('tools', '');
+    },
+
   /**
      * @param {File[]} files
      */
@@ -124,7 +140,7 @@ export const autocompleteMethods = {
       if (executable.length > 0) {
         const label = document.createElement('div');
         label.className = 'nst3af-agent-starter-group-label';
-        label.textContent = lang('agent.starters.executable', 'Suggested actions');
+        label.textContent = lang('agent.starters.executable', 'MCP Tools');
         container.appendChild(label);
         executable.forEach((tool) => container.appendChild(this.createStarterButton(tool, false)));
       }
@@ -327,7 +343,11 @@ export const autocompleteMethods = {
 
       const url = new URL(base, window.location.href);
       url.searchParams.set('q', query);
-      url.searchParams.set('pageId', String(resolveBackendContext().pageId));
+      const ctx = resolveBackendContext();
+      url.searchParams.set('pageId', String(ctx.pageId));
+      if (mode === 'tools' && ctx.module) {
+        url.searchParams.set('module', String(ctx.module));
+      }
 
       try {
         const payload = await new AjaxRequest(url.toString()).get().then((r) => r.resolve());
@@ -347,28 +367,49 @@ export const autocompleteMethods = {
     },
 
   /**
-     * @param {{ executable?: Array<object>, locked?: Array<object> }} catalog
+     * @param {{
+     *   executable?: Array<object>,
+     *   locked?: Array<object>,
+     *   module?: { executable?: Array<object>, locked?: Array<object> },
+     *   rest?: { executable?: Array<object>, locked?: Array<object> },
+     * }} catalog
      */
     renderToolAutocomplete(catalog) {
       if (!this.autocomplete) {
         return;
       }
 
-      const executable = Array.isArray(catalog.executable) ? catalog.executable : [];
-      const locked = Array.isArray(catalog.locked) ? catalog.locked : [];
+      const moduleExec = Array.isArray(catalog.module?.executable) ? catalog.module.executable : [];
+      const moduleLocked = Array.isArray(catalog.module?.locked) ? catalog.module.locked : [];
+      const restExec = Array.isArray(catalog.rest?.executable)
+        ? catalog.rest.executable
+        : (Array.isArray(catalog.executable) ? catalog.executable : []);
+      const restLocked = Array.isArray(catalog.rest?.locked)
+        ? catalog.rest.locked
+        : (Array.isArray(catalog.locked) ? catalog.locked : []);
       const sections = [];
 
-      if (executable.length > 0) {
-        sections.push(`<div class="nst3af-agent-autocomplete__heading">${escapeHtml(lang('agent.starters.executable', 'Suggested actions'))}</div>`);
+      const pushGroup = (headingKey, fallback, executable, locked) => {
+        if (executable.length === 0 && locked.length === 0) {
+          return;
+        }
+        sections.push(`<div class="nst3af-agent-autocomplete__heading">${escapeHtml(lang(headingKey, fallback))}</div>`);
         sections.push(executable.map((tool) => this.renderToolItem(tool, false)).join(''));
-      }
-      if (locked.length > 0) {
-        sections.push(`<div class="nst3af-agent-autocomplete__heading">${escapeHtml(lang('agent.starters.locked', 'Needs another extension'))}</div>`);
         sections.push(locked.map((tool) => this.renderToolItem(tool, true)).join(''));
+      };
+
+      if (moduleExec.length > 0 || moduleLocked.length > 0) {
+        pushGroup('agent.tools.module', 'On this module', moduleExec, moduleLocked);
+        pushGroup('agent.tools.rest', 'All tools', restExec, restLocked);
+      } else {
+        pushGroup('agent.starters.executable', 'MCP Tools', restExec, restLocked);
       }
 
       this.autocomplete.innerHTML = sections.join('');
       this.autocomplete.hidden = sections.length === 0;
+      if (!this.autocomplete.hidden) {
+        this.positionAutocomplete();
+      }
     },
 
   /**
@@ -402,6 +443,31 @@ export const autocompleteMethods = {
 
       this.autocomplete.innerHTML = heading + items;
       this.autocomplete.hidden = false;
+      this.positionAutocomplete();
+    },
+
+  /**
+     * Pin the list above the composer with fixed coords so panel overflow:hidden cannot clip it.
+     */
+    positionAutocomplete() {
+      if (!(this.autocomplete instanceof HTMLElement) || this.autocomplete.hidden) {
+        return;
+      }
+      const anchor = this.composer instanceof HTMLElement ? this.composer : this.input;
+      if (!(anchor instanceof HTMLElement)) {
+        return;
+      }
+      const rect = anchor.getBoundingClientRect();
+      const gutter = 12;
+      Object.assign(this.autocomplete.style, {
+        position: 'fixed',
+        left: `${Math.max(8, rect.left + gutter)}px`,
+        width: `${Math.max(160, rect.width - gutter * 2)}px`,
+        right: 'auto',
+        bottom: `${Math.max(8, window.innerHeight - rect.top + 6)}px`,
+        top: 'auto',
+        zIndex: '1200',
+      });
     },
 
   /**
@@ -453,6 +519,15 @@ export const autocompleteMethods = {
       this.autocomplete.innerHTML = '';
       this.autocompleteMode = null;
       this.autocompleteIndex = -1;
+      if (this.autocomplete instanceof HTMLElement) {
+        this.autocomplete.style.position = '';
+        this.autocomplete.style.left = '';
+        this.autocomplete.style.width = '';
+        this.autocomplete.style.right = '';
+        this.autocomplete.style.bottom = '';
+        this.autocomplete.style.top = '';
+        this.autocomplete.style.zIndex = '';
+      }
     },
 
   /**

@@ -178,14 +178,21 @@ export const streamMethods = {
       return false;
     },
 
-  get isRunning() {
-      return this._isRunning === true;
-    },
-
-  set isRunning(value) {
-      this._isRunning = value === true;
-      // The spinner of the current step only turns while the agent is working.
-      this.planPanel?.classList.toggle('nst3af-agent-plan--running', this._isRunning);
+  /**
+     * Send ↔ Stop + plan spinner. Called from the isRunning accessor (defined in agent.js —
+     * Object.assign cannot copy getters/setters).
+     */
+    applyRunningChrome() {
+      const running = this._isRunning === true;
+      this.planPanel?.classList.toggle('nst3af-agent-plan--running', running);
+      const send = this.root?.querySelector('[data-nst3af-agent-send]');
+      const stop = this.root?.querySelector('[data-nst3af-agent-stop]');
+      if (send instanceof HTMLElement) {
+        send.hidden = running;
+      }
+      if (stop instanceof HTMLElement) {
+        stop.hidden = !running;
+      }
     },
 
   /**

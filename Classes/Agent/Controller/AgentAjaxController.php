@@ -27,6 +27,8 @@ use NITSAN\NsT3AF\Agent\Service\AgentAvailabilityService;
 use NITSAN\NsT3AF\Agent\Service\AgentConversationRecorder;
 use NITSAN\NsT3AF\Agent\Service\AgentConversationSession;
 use NITSAN\NsT3AF\Agent\Service\AgentConversationSummarizer;
+use NITSAN\NsT3AF\Agent\Service\AgentConversationTitleService;
+use NITSAN\NsT3AF\Agent\Service\AgentCoreToolSet;
 use NITSAN\NsT3AF\Agent\Service\AgentCreditsStatus;
 use NITSAN\NsT3AF\Agent\Service\AgentDraftSession;
 use NITSAN\NsT3AF\Agent\Service\AgentGovernanceGuard;
@@ -101,6 +103,8 @@ final class AgentAjaxController
         private readonly AgentCreditsStatus $creditsStatus,
         private readonly AgentConversationRecorder $conversationRecorder,
         private readonly AgentConversationSummarizer $conversationSummarizer,
+        private readonly AgentConversationTitleService $conversationTitleService,
+        private readonly AgentCoreToolSet $coreToolSet,
         private readonly AgentWorkspaceTarget $workspaceTarget,
         private readonly FileService $fileService,
         private readonly ModuleTabUtility $moduleTabUtility,
@@ -119,16 +123,36 @@ final class AgentAjaxController
         }
 
         $query = trim((string) ($request->getQueryParams()['q'] ?? ''));
+        $module = trim((string) ($request->getQueryParams()['module'] ?? ''));
         $catalog = $this->buildToolCatalog();
         if ($query !== '') {
             $needle = strtolower($query);
-            $filter = static fn(array $tool): bool => str_contains(strtolower($tool['name']), $needle)
-                || str_contains(strtolower($tool['description']), $needle);
+            $filter = static fn(array $tool): bool => str_contains(strtolower((string) ($tool['name'] ?? '')), $needle)
+                || str_contains(strtolower((string) ($tool['description'] ?? '')), $needle)
+                || str_contains(strtolower((string) ($tool['editorLabel'] ?? '')), $needle);
             $catalog['executable'] = array_values(array_filter($catalog['executable'], $filter));
             $catalog['locked'] = array_values(array_filter($catalog['locked'], $filter));
         }
 
-        return new JsonResponse(['ok' => true, 'tools' => $catalog]);
+        $executableParts = $this->coreToolSet->partitionByModule($catalog['executable'], $module);
+        $lockedParts = $this->coreToolSet->partitionByModule($catalog['locked'], $module);
+
+        return new JsonResponse([
+            'ok' => true,
+            'tools' => [
+                'module' => [
+                    'executable' => $executableParts['module'],
+                    'locked' => $lockedParts['module'],
+                ],
+                'rest' => [
+                    'executable' => $executableParts['rest'],
+                    'locked' => $lockedParts['rest'],
+                ],
+                // Flat lists stay module-first for any client that ignores the sections.
+                'executable' => [...$executableParts['module'], ...$executableParts['rest']],
+                'locked' => [...$lockedParts['module'], ...$lockedParts['rest']],
+            ],
+        ]);
     }
 
     public function recordsAction(ServerRequestInterface $request): ResponseInterface
@@ -271,6 +295,10 @@ final class AgentAjaxController
         }
 
         $ok = $this->conversationRepository->rename(trim((string) ($body['sessionUuid'] ?? '')), (int) ($user->user['uid'] ?? 0), $title);
+        if ($ok && $this->conversationSession->sessionUuid() === trim((string) ($body['sessionUuid'] ?? ''))) {
+            // Keep in-memory session row/context in sync with the locked title.
+            $this->conversationSession->applyTitle($user, $title, ['titleLocked' => true, 'shortTitleApplied' => true]);
+        }
 
         return new JsonResponse(['ok' => $ok], $ok ? 200 : 404);
     }
@@ -802,15 +830,18 @@ final class AgentAjaxController
             $turn['history'],
         );
 
-        $this->conversationSession->save($user, [...$turn['messages'], ...$assistantMessages], $turn['context'], $turn['provider']);
+        $allMessages = [...$turn['messages'], ...$assistantMessages];
+        $this->conversationSession->save($user, $allMessages, $turn['context'], $turn['provider']);
+        $sessionTitle = $this->maybeApplyShortTitle($user, $allMessages, $turn['provider'], $turn['context']);
 
         return new JsonResponse([
             'ok' => true,
             'messages' => $assistantMessages,
-            'context' => $turn['context'],
+            'context' => $this->conversationSession->getContext(),
             'starters' => $this->buildStarters($turn['context']),
             'correlationId' => $correlationId,
             'session' => $this->activeSessionSummary($turn['context'], $user),
+            'sessionTitle' => $sessionTitle,
             'credits' => $this->creditsStatus->status(),
             'userMessage' => $turn['messages'][count($turn['messages']) - 1],
         ]);
@@ -876,15 +907,18 @@ final class AgentAjaxController
                     },
                 );
 
-                $this->conversationSession->save($user, [...$turn['messages'], ...$assistantMessages], $turn['context'], $turn['provider']);
+                $allMessages = [...$turn['messages'], ...$assistantMessages];
+                $this->conversationSession->save($user, $allMessages, $turn['context'], $turn['provider']);
+                $sessionTitle = $this->maybeApplyShortTitle($user, $allMessages, $turn['provider'], $turn['context']);
 
                 $this->emitSseEvent('done', [
                     'ok' => true,
                     'messages' => $assistantMessages,
-                    'context' => $turn['context'],
+                    'context' => $this->conversationSession->getContext(),
                     'starters' => $this->buildStarters($turn['context']),
                     'correlationId' => $correlationId,
                     'session' => $this->activeSessionSummary($turn['context'], $user),
+                    'sessionTitle' => $sessionTitle,
                     'credits' => $this->creditsStatus->status(),
                     'userMessage' => $turn['messages'][count($turn['messages']) - 1],
                 ]);
@@ -933,6 +967,49 @@ final class AgentAjaxController
         if (function_exists('flush')) {
             flush();
         }
+    }
+
+    /**
+     * @param list<array<string, mixed>> $messages
+     * @param array<string, mixed> $context
+     */
+    private function maybeApplyShortTitle(
+        BackendUserAuthentication $user,
+        array $messages,
+        string $provider,
+        array $context,
+    ): ?string {
+        $stored = $this->conversationSession->getContext();
+        if (($stored['shortTitleApplied'] ?? false) === true || ($stored['titleLocked'] ?? false) === true) {
+            return null;
+        }
+
+        $hasAssistant = false;
+        foreach ($messages as $message) {
+            if (($message['role'] ?? '') === 'assistant'
+                && ($message['meta']['hidden'] ?? false) !== true
+                && $this->conversationTitleService->isTitleWorthyAssistant($message)
+            ) {
+                $hasAssistant = true;
+                break;
+            }
+        }
+        if (!$hasAssistant) {
+            return null;
+        }
+
+        $title = $this->conversationTitleService->suggest(
+            $messages,
+            $provider,
+            (int) ($context['pageId'] ?? 0),
+        );
+        if ($title === null || $title === '') {
+            return null;
+        }
+
+        $this->conversationSession->applyTitle($user, $title, ['shortTitleApplied' => true]);
+
+        return $title;
     }
 
     /**

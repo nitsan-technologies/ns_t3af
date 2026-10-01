@@ -170,6 +170,41 @@ final readonly class AgentCoreToolSet
     }
 
     /**
+     * Split a tool list into module-relevant tools first, then everything else (slash/MCP Tools UI).
+     *
+     * @param list<array<string, mixed>> $tools
+     * @return array{module: list<array<string, mixed>>, rest: list<array<string, mixed>>}
+     */
+    public function partitionByModule(array $tools, string $module): array
+    {
+        $module = $this->normalizeModule($module);
+        $relevant = [];
+        $rest = [];
+        foreach ($tools as $tool) {
+            if ($module !== '' && $this->isModuleRelevant($tool, $module)) {
+                $relevant[] = $tool;
+            } else {
+                $rest[] = $tool;
+            }
+        }
+
+        return ['module' => $relevant, 'rest' => $rest];
+    }
+
+    /**
+     * @param array<string, mixed> $tool
+     */
+    public function isModuleRelevant(array $tool, string $module): bool
+    {
+        $module = $this->normalizeModule($module);
+        if ($module === '') {
+            return false;
+        }
+
+        return $this->declaresModule($tool, $module) || $this->matchesModuleCategory($tool, $module);
+    }
+
+    /**
      * @param array<string, mixed> $tool
      */
     private function declaresModule(array $tool, string $module): bool

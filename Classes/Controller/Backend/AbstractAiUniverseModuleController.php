@@ -122,14 +122,14 @@ abstract class AbstractAiUniverseModuleController
 
     protected function translateModule(string $key): string
     {
-        return (string) ($GLOBALS['LANG']?->sL(
+        return (string) (($GLOBALS['LANG'] ?? null)?->sL(
             'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:' . $key,
         ) ?? $key);
     }
 
     protected function translateDashboard(string $key): string
     {
-        return (string) ($GLOBALS['LANG']?->sL(
+        return (string) (($GLOBALS['LANG'] ?? null)?->sL(
             'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:' . $key,
         ) ?? $key);
     }
@@ -139,7 +139,7 @@ abstract class AbstractAiUniverseModuleController
      */
     protected function translateJs(string $key): string
     {
-        return (string) ($GLOBALS['LANG']?->sL(
+        return (string) (($GLOBALS['LANG'] ?? null)?->sL(
             'LLL:' . self::LOCALLANG_JS . ':' . $key,
         ) ?? $key);
     }

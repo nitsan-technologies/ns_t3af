@@ -43,6 +43,7 @@ final class AgentLabelCoverageTest extends TestCase
         'agent.nl_turn',
         'agent.tool_summary',
         'agent.conversation_summary',
+        'agent.conversation_title',
     ];
 
     #[Test]

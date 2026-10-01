@@ -65,6 +65,14 @@
                     </button>
                     <button type="button"
                             class="btn btn-default btn-sm nst3af-agent-header__icon"
+                            data-nst3af-agent-fullscreen
+                            aria-pressed="false"
+                            title="{f:translate(key: '{ll}:agent.panel.fullscreen', default: 'Full screen')}"
+                            aria-label="{f:translate(key: '{ll}:agent.panel.fullscreen', default: 'Full screen')}">
+                        <core:icon identifier="actions-expand" size="small" alternativeMarkupIdentifier="inline" />
+                    </button>
+                    <button type="button"
+                            class="btn btn-default btn-sm nst3af-agent-header__icon"
                             data-nst3af-agent-info-toggle
                             aria-expanded="false"
                             aria-controls="nst3af-agent-info"
@@ -101,10 +109,19 @@
                     <h3 class="nst3af-agent-drawer__title"><f:translate key="{ll}:agent.session.list" default="Conversations" /></h3>
                     <div class="btn-group btn-group-sm" role="group" data-nst3af-agent-sessions-filter></div>
                 </div>
-                <input type="search"
-                       class="form-control form-control-sm nst3af-agent-drawer__search"
-                       data-nst3af-agent-sessions-search
-                       placeholder="{f:translate(key: '{ll}:agent.session.search', default: 'Filter by title')}" />
+                <div class="nst3af-agent-drawer__search-row">
+                    <input type="search"
+                           class="form-control form-control-sm nst3af-agent-drawer__search"
+                           data-nst3af-agent-sessions-search
+                           placeholder="{f:translate(key: '{ll}:agent.session.search', default: 'Filter by title')}" />
+                    <button type="button"
+                            class="btn btn-default btn-sm nst3af-agent-drawer__new"
+                            data-nst3af-agent-new
+                            title="{f:translate(key: '{ll}:agent.session.new', default: 'New conversation')}"
+                            aria-label="{f:translate(key: '{ll}:agent.session.new', default: 'New conversation')}">
+                        <core:icon identifier="actions-plus" size="small" alternativeMarkupIdentifier="inline" />
+                    </button>
+                </div>
                 <ul class="nst3af-agent-sessions" data-nst3af-agent-sessions-list></ul>
                 <p class="nst3af-agent-drawer__foot" data-nst3af-agent-sessions-foot></p>
             </section>
@@ -119,13 +136,6 @@
 
             <div class="nst3af-agent-main" data-nst3af-agent-main>
                 <div class="nst3af-agent-context" data-nst3af-agent-context aria-live="off"></div>
-
-                <div class="nst3af-agent-disclosure" data-nst3af-agent-disclosure hidden>
-                    <f:translate key="{ll}:agent.disclosure" default="This assistant can use AI. Responses may be inaccurate. Review suggestions before applying changes." />
-                    <button type="button" class="nst3af-agent-disclosure__dismiss" data-nst3af-agent-disclosure-dismiss>
-                        <f:translate key="{ll}:agent.disclosure.gotIt" default="Got it" />
-                    </button>
-                </div>
 
                 <div class="nst3af-agent-stream"
                      data-nst3af-agent-stream
@@ -161,6 +171,12 @@
                                             role="menuitem">
                                         <f:translate key="{ll}:agent.attach.files" default="Add files or photos" />
                                     </button>
+                                    <button type="button"
+                                            class="nst3af-agent-attach-menu__item"
+                                            data-nst3af-agent-attach-mcp-tools
+                                            role="menuitem">
+                                        <f:translate key="{ll}:agent.attach.mcpTools" default="MCP Tools" />
+                                    </button>
                                 </div>
                                 <input type="file"
                                        class="visually-hidden"
@@ -176,6 +192,14 @@
                                     data-nst3af-agent-send
                                     aria-label="{f:translate(key: '{ll}:agent.composer.send', default: 'Send message')}">
                                 <core:icon identifier="actions-arrow-right" size="small" alternativeMarkupIdentifier="inline" />
+                            </button>
+                            <button type="button"
+                                    class="btn btn-default nst3af-agent-composer__stop"
+                                    data-nst3af-agent-stop
+                                    hidden
+                                    aria-label="{f:translate(key: '{ll}:agent.composer.stop', default: 'Stop')}">
+                                <core:icon identifier="actions-close" size="small" alternativeMarkupIdentifier="inline" />
+                                <span class="nst3af-agent-composer__stop-label"><f:translate key="{ll}:agent.composer.stop" default="Stop" /></span>
                             </button>
                         </div>
                         <div class="nst3af-agent-autocomplete" data-nst3af-agent-autocomplete hidden role="listbox" aria-label="{f:translate(key: '{ll}:agent.autocomplete.label', default: 'Suggestions')}"></div>

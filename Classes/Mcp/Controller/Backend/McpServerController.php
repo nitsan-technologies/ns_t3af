@@ -456,7 +456,7 @@ final class McpServerController
 
     private function translate(string $key): string
     {
-        return (string) ($GLOBALS['LANG']?->sL(
+        return (string) (($GLOBALS['LANG'] ?? null)?->sL(
             'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:' . $key,
         ) ?? $key);
     }

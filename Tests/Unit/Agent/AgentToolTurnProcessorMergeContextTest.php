@@ -29,7 +29,59 @@ use PHPUnit\Framework\TestCase;
 final class AgentToolTurnProcessorMergeContextTest extends TestCase
 {
     #[Test]
-    public function mergeContextDoesNotCopyPageIdIntoUid(): void
+    public function mergeContextDoesNotCopyPageIdIntoUidForContentTools(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            [],
+            ['pageId' => 7, 'module' => 'web_layout'],
+            'content_get',
+        );
+
+        self::assertSame(7, $merged['pageId']);
+        self::assertSame(7, $merged['pid']);
+        self::assertArrayNotHasKey('uid', $merged);
+    }
+
+    #[Test]
+    public function mergeContextMapsPageIdToUidForPagesGet(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            [],
+            ['pageId' => 7, 'module' => 'web_layout'],
+            'pages_get',
+        );
+
+        self::assertSame(7, $merged['pageId']);
+        self::assertSame(7, $merged['uid']);
+    }
+
+    #[Test]
+    public function mergeContextMapsPageIdToUidForPagesCopyButKeepsExplicitUid(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            ['uid' => 99],
+            ['pageId' => 7],
+            'pages_copy',
+        );
+
+        self::assertSame(99, $merged['uid']);
+        self::assertSame(7, $merged['pageId']);
+    }
+
+    #[Test]
+    public function mergeContextDoesNotCopyPageIdIntoUidWithoutToolName(): void
     {
         $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
         $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');

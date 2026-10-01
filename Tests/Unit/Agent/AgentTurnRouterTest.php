@@ -74,8 +74,8 @@ final class AgentTurnRouterTest extends TestCase
             )
             ->willReturn([
                 'role' => 'assistant',
-                'content' => 'ok',
-                'meta' => ['tool' => 'pages_get'],
+                'content' => 'Page 49: Home',
+                'meta' => ['type' => 'tool_result', 'tool' => 'pages_get', 'success' => true],
             ]);
         $this->turnOrchestrator->expects(self::never())->method('runTurn');
 
@@ -87,8 +87,36 @@ final class AgentTurnRouterTest extends TestCase
             'corr-1',
         );
 
-        self::assertCount(1, $messages);
+        self::assertCount(2, $messages);
+        self::assertSame('tool_result', $messages[0]['meta']['type'] ?? null);
         self::assertSame('pages_get', $messages[0]['meta']['tool'] ?? null);
+        self::assertSame('nl_reply', $messages[1]['meta']['type'] ?? null);
+        self::assertSame('Page 49: Home', $messages[1]['content']);
+        self::assertTrue($messages[1]['meta']['fromToolResult'] ?? false);
+    }
+
+    #[Test]
+    public function structuralDraftDoesNotGetTrailingNlReply(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $this->toolTurnProcessor->expects(self::once())
+            ->method('execute')
+            ->willReturn([
+                'role' => 'assistant',
+                'content' => 'Review changes',
+                'meta' => ['type' => 'inline_draft', 'tool' => 'write_table'],
+            ]);
+
+        $messages = $this->router->route(
+            '/write_table',
+            ['pageId' => 1],
+            ['tool' => 'write_table', 'arguments' => ['action' => 'update', 'tableName' => 'pages']],
+            $user,
+            'corr-draft',
+        );
+
+        self::assertCount(1, $messages);
+        self::assertSame('inline_draft', $messages[0]['meta']['type'] ?? null);
     }
 
     #[Test]
@@ -149,7 +177,7 @@ final class AgentTurnRouterTest extends TestCase
             ->willReturn([
                 'role' => 'assistant',
                 'content' => 'seo draft',
-                'meta' => ['tool' => 't3ai_generate_all_seo'],
+                'meta' => ['type' => 'suggestions', 'tool' => 't3ai_generate_all_seo'],
             ]);
         $this->turnOrchestrator->expects(self::never())->method('runTurn');
 
@@ -161,6 +189,7 @@ final class AgentTurnRouterTest extends TestCase
             'corr-3',
         );
 
+        self::assertCount(1, $messages);
         self::assertSame('t3ai_generate_all_seo', $messages[0]['meta']['tool'] ?? null);
     }
 

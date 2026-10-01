@@ -492,6 +492,12 @@
       <trans-unit id="agent.composer.send" resname="agent.composer.send">
         <source>Send message</source>
       </trans-unit>
+      <trans-unit id="agent.composer.stop" resname="agent.composer.stop">
+        <source>Stop</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.stopped" resname="agent.turn.stopped">
+        <source>Stopped.</source>
+      </trans-unit>
       <trans-unit id="agent.autocomplete.label" resname="agent.autocomplete.label">
         <source>Suggestions</source>
       </trans-unit>
@@ -565,7 +571,22 @@
         <source>Changes applied</source>
       </trans-unit>
       <trans-unit id="agent.starters.executable" resname="agent.starters.executable">
-        <source>Suggested actions</source>
+        <source>MCP Tools</source>
+      </trans-unit>
+      <trans-unit id="agent.tools.module" resname="agent.tools.module">
+        <source>On this module</source>
+      </trans-unit>
+      <trans-unit id="agent.tools.rest" resname="agent.tools.rest">
+        <source>All tools</source>
+      </trans-unit>
+      <trans-unit id="agent.attach.mcpTools" resname="agent.attach.mcpTools">
+        <source>MCP Tools</source>
+      </trans-unit>
+      <trans-unit id="agent.panel.fullscreen" resname="agent.panel.fullscreen">
+        <source>Full screen</source>
+      </trans-unit>
+      <trans-unit id="agent.panel.fullscreenExit" resname="agent.panel.fullscreenExit">
+        <source>Exit full screen</source>
       </trans-unit>
       <trans-unit id="agent.starters.locked" resname="agent.starters.locked">
         <source>Needs another extension</source>

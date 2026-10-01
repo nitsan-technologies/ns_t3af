@@ -4,7 +4,6 @@
 
 import { lang, hasTurnGuardWarning, errorText } from './format.js';
 import { ajaxUrl, resolveBackendContext } from './context.js';
-import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
 
 export const turnMethods = {
   /**
@@ -27,6 +26,10 @@ export const turnMethods = {
       if (message === '') {
         return;
       }
+
+      this.turnAbort?.abort();
+      this.turnAbort = new AbortController();
+      const signal = this.turnAbort.signal;
 
       this.isRunning = true;
       if (continuation === null) {
@@ -65,15 +68,28 @@ export const turnMethods = {
         let payload = null;
         let streamed = false;
         if (preferStream) {
-          const streamResult = await this.submitTurnStreaming(body);
+          const streamResult = await this.submitTurnStreaming(body, signal);
           if (streamResult !== null) {
             payload = streamResult.payload;
             streamed = true;
           }
         }
         if (payload === null) {
+          if (signal.aborted) {
+            throw new DOMException('Aborted', 'AbortError');
+          }
           const url = ajaxUrl('nst3af_agent_turn');
-          payload = await new AjaxRequest(url).post(body).then((r) => r.resolve());
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+            },
+            body: JSON.stringify(body),
+            credentials: 'same-origin',
+            signal,
+          });
+          payload = await response.json();
         }
         if (!payload?.ok) {
           throw new Error(payload?.message ?? lang('agent.error.turnFailed', 'Turn failed'));
@@ -102,7 +118,10 @@ export const turnMethods = {
           this.session = payload.session;
           this.freshSession = false;
           this.rememberLastSession();
+          this.ensureSessionInList(payload.session);
         }
+        this.applySessionTitle(payload.sessionTitle);
+        this.refreshSessionsRail();
         this.contextNotice = '';
         this.renderHeaderControls();
 
@@ -115,21 +134,46 @@ export const turnMethods = {
           this.greeting = payload.greeting;
         }
       } catch (error) {
-        const text = await errorText(error);
-        this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
-        this.renderStream();
+        if (error?.name === 'AbortError' || signal.aborted) {
+          for (let i = this.messages.length - 1; i >= 0; i--) {
+            const row = this.messages[i];
+            if (row?.meta?.streaming === true) {
+              row.meta = { ...(row.meta ?? {}), streaming: false, stopped: true };
+              break;
+            }
+          }
+          this.messages.push({
+            role: 'assistant',
+            content: lang('agent.turn.stopped', 'Stopped.'),
+            meta: { type: 'info' },
+          });
+          this.renderStream();
+        } else {
+          const text = await errorText(error);
+          this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
+          this.renderStream();
+        }
       } finally {
+        this.turnAbort = null;
         this.isRunning = false;
         this.showProgress(false);
         this.renderStream();
       }
     },
 
+  stopTurn() {
+      if (!this.isRunning) {
+        return;
+      }
+      this.turnAbort?.abort();
+    },
+
   /**
      * @param {object} body
+     * @param {AbortSignal} [signal]
      * @returns {Promise<{payload: object}|null>}
      */
-    async submitTurnStreaming(body) {
+    async submitTurnStreaming(body, signal) {
       const streamUrl = ajaxUrl('nst3af_agent_turn_stream');
       if (streamUrl === '') {
         return null;
@@ -145,8 +189,12 @@ export const turnMethods = {
           },
           body: JSON.stringify(body),
           credentials: 'same-origin',
+          signal,
         });
-      } catch {
+      } catch (error) {
+        if (error?.name === 'AbortError' || signal?.aborted) {
+          throw error;
+        }
         return null;
       }
 
@@ -160,6 +208,16 @@ export const turnMethods = {
       }
 
       const reader = response.body.getReader();
+      if (signal instanceof AbortSignal) {
+        const cancelReader = () => {
+          void reader.cancel().catch(() => {});
+        };
+        if (signal.aborted) {
+          cancelReader();
+          throw new DOMException('Aborted', 'AbortError');
+        }
+        signal.addEventListener('abort', cancelReader, { once: true });
+      }
       const decoder = new TextDecoder();
       let buffer = '';
       let donePayload = null;

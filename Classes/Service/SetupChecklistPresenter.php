@@ -403,7 +403,7 @@ final class SetupChecklistPresenter
 
     private function translateModule(string $key): string
     {
-        return (string) ($GLOBALS['LANG']?->sL(
+        return (string) (($GLOBALS['LANG'] ?? null)?->sL(
             'LLL:' . self::LOCALLANG_MOD . ':' . $key,
         ) ?? $key);
     }

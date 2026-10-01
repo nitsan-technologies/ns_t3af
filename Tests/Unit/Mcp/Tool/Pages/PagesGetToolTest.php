@@ -95,4 +95,39 @@ final class PagesGetToolTest extends TestCase
 
         self::assertSame('126', $decoded['categories']);
     }
+
+    #[Test]
+    public function pageIdAliasIsUsedWhenUidOmitted(): void
+    {
+        $tca = $this->createMock(TcaSchemaService::class);
+        $tca->method('getTranslationConfig')->with('pages')->willReturn([
+            'languageField' => null,
+            'transOrigPointerField' => null,
+        ]);
+        $tca->method('getReadFields')->with('pages')->willReturn(['title']);
+
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->expects(self::once())
+            ->method('findByUid')
+            ->with('pages', 42, ['title'])
+            ->willReturn(['uid' => 42, 'title' => 'About']);
+
+        $tool = new PagesGetTool($recordService, $tca);
+        $decoded = json_decode($tool->execute(0, '', 42), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(42, $decoded['uid']);
+        self::assertSame('About', $decoded['title']);
+    }
+
+    #[Test]
+    public function missingUidAndPageIdReturnsError(): void
+    {
+        $tool = new PagesGetTool(
+            $this->createMock(RecordService::class),
+            $this->createMock(TcaSchemaService::class),
+        );
+        $decoded = json_decode($tool->execute(), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame('Missing required argument: uid (or pageId)', $decoded['error']);
+    }
 }

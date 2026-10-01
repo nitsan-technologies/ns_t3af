@@ -96,7 +96,10 @@ final readonly class AgentTurnRouter
         $body['arguments'] = $toolArguments;
 
         if ($selectedTool !== '') {
-            $messages = [$this->executeTool($selectedTool, $context, $body, $user, $correlationId)];
+            $messages = $this->finalizeStructuralMessages(
+                [$this->executeTool($selectedTool, $context, $body, $user, $correlationId)],
+                $correlationId,
+            );
             $this->emitMessages($emitEvent, $messages);
 
             return $messages;
@@ -121,6 +124,7 @@ final readonly class AgentTurnRouter
         }
 
         if ($followUp === '' && $attachmentMessages !== []) {
+            $attachmentMessages = $this->finalizeStructuralMessages($attachmentMessages, $correlationId);
             $this->emitMessages($emitEvent, $attachmentMessages);
 
             return $attachmentMessages;
@@ -353,6 +357,40 @@ final readonly class AgentTurnRouter
         }
 
         return null;
+    }
+
+    /**
+     * Slash / @ / starter tool turns have no model closing line. Mirror NL turns: keep the
+     * tool_result (collapsible step) and append an nl_reply so the editor always sees the answer.
+     *
+     * @param list<array{role: string, content: string, meta: array<string, mixed>}> $messages
+     * @return list<array{role: string, content: string, meta: array<string, mixed>}>
+     */
+    private function finalizeStructuralMessages(array $messages, string $correlationId): array
+    {
+        $out = [];
+        foreach ($messages as $message) {
+            $out[] = $message;
+            $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
+            if (($meta['type'] ?? '') !== 'tool_result') {
+                continue;
+            }
+            $content = trim((string) ($message['content'] ?? ''));
+            if ($content === '') {
+                continue;
+            }
+            $out[] = [
+                'role' => 'assistant',
+                'content' => $content,
+                'meta' => [
+                    'type' => 'nl_reply',
+                    'correlationId' => $correlationId,
+                    'fromToolResult' => true,
+                ],
+            ];
+        }
+
+        return $out;
     }
 
     /**

@@ -533,10 +533,13 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $namesPageByUrl = trim((string) ($arguments['pageUrl'] ?? '')) !== '' && !isset($arguments['pageId']);
         if ($pageId > 0 && !$namesPageByUrl) {
             $arguments['pageId'] ??= $pageId;
-            // Never copy pageId into uid. Also do not force pid onto *_search tools —
-            // that scoped site-wide searches to the current page only.
+            // Do not force pid onto *_search tools — that scoped site-wide searches to the current page only.
             if (!$this->toolUsesOptionalSearchPid($toolName)) {
                 $arguments['pid'] ??= $pageId;
+            }
+            // Only for tools whose `uid` means pages.uid (never content_get / other entity uids).
+            if ($this->toolUsesPageIdAsUid($toolName)) {
+                $arguments['uid'] ??= $pageId;
             }
         }
 
@@ -578,6 +581,17 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $toolName = strtolower(trim($toolName));
 
         return $toolName !== '' && str_ends_with($toolName, '_search');
+    }
+
+    /**
+     * Tools where the primary `uid` argument is a pages row (same value as context pageId).
+     */
+    private function toolUsesPageIdAsUid(string $toolName): bool
+    {
+        return match (strtolower(trim($toolName))) {
+            'pages_get', 'pages_copy' => true,
+            default => false,
+        };
     }
 
     /**

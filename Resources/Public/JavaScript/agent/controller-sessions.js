@@ -13,6 +13,53 @@ const STORAGE_LAST_SESSION_KEY = 'nst3af.agent.lastSession';
 
 export const sessionMethods = {
   /**
+     * @param {unknown} title
+     */
+    applySessionTitle(title) {
+      const clean = typeof title === 'string' ? title.trim() : '';
+      if (clean === '' || !this.session) {
+        return;
+      }
+      this.session = { ...this.session, title: clean };
+      this.ensureSessionInList(this.session);
+    },
+
+  /**
+     * Keep the Conversations rail in sync when a fresh chat gets its first saved row.
+     *
+     * @param {object|null|undefined} session
+     */
+    ensureSessionInList(session) {
+      if (!session || typeof session !== 'object') {
+        return;
+      }
+      const uuid = String(session.uuid ?? '');
+      if (uuid === '') {
+        return;
+      }
+      if (!Array.isArray(this.sessions)) {
+        this.sessions = [];
+      }
+      const index = this.sessions.findIndex((row) => String(row.uuid ?? '') === uuid);
+      if (index >= 0) {
+        this.sessions[index] = { ...this.sessions[index], ...session };
+      } else {
+        this.sessions = [session, ...this.sessions];
+      }
+      this.renderSessions?.();
+    },
+
+  /**
+     * After a turn saves (or retitles) a conversation, keep the open rail in sync with the server.
+     */
+    refreshSessionsRail() {
+      if (this.sessionsRailOpen !== true || !(this.sessionsDrawer instanceof HTMLElement) || this.sessionsDrawer.hidden) {
+        return;
+      }
+      void this.loadSessions();
+    },
+
+  /**
      * Scope key for DB-backed conversation rows (module + page).
      * @returns {string}
      */
@@ -190,9 +237,6 @@ export const sessionMethods = {
         this.continueAfterConfirm = payload.continueAfterConfirm !== false;
         this.credits = payload.credits ?? null;
         this.disclosureDismissed = payload.disclosureDismissed === true;
-        if (this.disclosureDismissed) {
-          this.disclosure.hidden = true;
-        }
         this.loadedScopeKey = this.sessionScopeKey();
 
         // Stale remembered uuid: server returns session:null and does not fall back to

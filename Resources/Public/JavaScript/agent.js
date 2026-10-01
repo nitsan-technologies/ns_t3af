@@ -45,7 +45,7 @@ class AgentController {
       }
     });
     this.contextEl = root.querySelector('[data-nst3af-agent-context]');
-    this.disclosure = root.querySelector('[data-nst3af-agent-disclosure]');
+    this.disclosure = null;
     this.input = root.querySelector('[data-nst3af-agent-input]');
     this.composer = root.querySelector('[data-nst3af-agent-composer]');
     this.attachMenu = root.querySelector('[data-nst3af-agent-attach-menu]');
@@ -145,6 +145,20 @@ Object.assign(
   turnMethods,
   autocompleteMethods,
 );
+
+// Object.assign copies accessor *values*, not getters/setters. Reinstall isRunning so
+// Send↔Stop chrome and the plan spinner actually update when a turn starts/ends.
+Object.defineProperty(AgentController.prototype, 'isRunning', {
+  configurable: true,
+  enumerable: true,
+  get() {
+    return this._isRunning === true;
+  },
+  set(value) {
+    this._isRunning = value === true;
+    this.applyRunningChrome?.();
+  },
+});
 
 /**
  * Backend shell (topbar/toolbar) renders outside the module iframe on TYPO3 v14+.

@@ -133,6 +133,28 @@ final class AgentConversationSession
     }
 
     /**
+     * Sets the session title and merges flags into stored context (short-title / rename lock).
+     *
+     * @param array<string, mixed> $contextFlags
+     */
+    public function applyTitle(BackendUserAuthentication $user, string $title, array $contextFlags = []): void
+    {
+        if ($this->row === null || $title === '') {
+            return;
+        }
+        $context = [...$this->getContext(), ...$contextFlags];
+        $this->repository->saveMessages(
+            (int) ($this->row['uid'] ?? 0),
+            $this->userUid($user),
+            $this->getMessages(),
+            $context,
+            $title,
+        );
+        $this->row['title'] = $title;
+        $this->row['context'] = json_encode($context, JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
      * Stores the messages of the active conversation; creates it on the first message.
      * The title comes from the first user message; the provider is locked by the first
      * answer (it can only be set while the conversation has no provider yet).
