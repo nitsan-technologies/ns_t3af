@@ -24,7 +24,7 @@ $EM_CONF['ns_t3af'] = [
     'author_company' => 'T3Planet',
     'state' => 'stable',
     'clearCacheOnLoad' => 0,
-    'version' => '1.2.2',
+    'version' => '1.2.3',
     'constraints' => [
         'depends' => [
             'typo3' => '12.4.0-14.99.99',
@@ -37,5 +37,10 @@ $EM_CONF['ns_t3af'] = [
             'mcp_server' => '',
         ],
         'suggests' => [],
+    ],
+    'autoload' => [
+        'psr-4' => [
+            'NITSAN\\NsT3AF\\' => 'Classes',
+        ],
     ],
 ];
