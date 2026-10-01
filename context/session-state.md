@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-01 — Confirm before changing embedding model
+
+**Done:** Provider drawer shows TYPO3 `Modal.confirm` when changing a non-empty embedding model (select or free-text blur). Copy warns about trained data. Cancel restores the previous value. Labels EN/DE in `locallang_js.xlf`.
+
+**Last touched:** 2026-10-01
+
+---
+
 ## 2026-10-01 — Clear models when adapter type changes
 
 **Done:** Changing `adapter_type` on save clears `model_id` / `embedding_model_id` (and Azure `api_version` when leaving Azure). Drawer JS clears those inputs before reloading the model list. Prevents stale ids like `magistral-small` after Mistral → OpenAI. Unit coverage + `providers.md`.

@@ -6,7 +6,9 @@
  * session/CSRF-aware fetch.
  */
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
+import Modal from '@typo3/backend/modal.js';
 import Notification from '@typo3/backend/notification.js';
+import Severity from '@typo3/backend/severity.js';
 import { Popover as BsPopover } from 'bootstrap';
 import { bindFilterSearchInput, observeBrowserAutocomplete } from '@nitsan/nst3af/disable-browser-autocomplete.js';
 
@@ -79,6 +81,9 @@ const LL = {
   hintLatency: 'provider.js.hint.latency',
   revealShow: 'provider.js.reveal.show',
   revealHide: 'provider.js.reveal.hide',
+  embeddingConfirmTitle: 'provider.js.embeddingModel.confirmTitle',
+  embeddingConfirmMessage: 'provider.js.embeddingModel.confirmMessage',
+  embeddingConfirmOk: 'provider.js.embeddingModel.confirmOk',
 };
 
 /**
@@ -101,6 +106,86 @@ function llFormat(key, fallback, ...args) {
     s = s.replace('%s', String(a));
   }
   return s;
+}
+
+/**
+ * Warn before changing a stored embedding model (trained vectors may not match).
+ *
+ * @param {string} previous
+ * @param {string} next
+ * @param {() => void} onConfirm
+ * @param {() => void} onCancel
+ */
+function confirmEmbeddingModelChange(previous, next, onConfirm, onCancel) {
+  if (previous === '' || previous === next) {
+    onConfirm();
+    return;
+  }
+  Modal.confirm(
+    ll(LL.embeddingConfirmTitle, 'Change embedding model?'),
+    ll(
+      LL.embeddingConfirmMessage,
+      'Are you sure you want to change this model for your trained data? If you have already trained your data then you need to re-train it.',
+    ),
+    Severity.warning,
+    [
+      {
+        text: (typeof TYPO3 !== 'undefined' && TYPO3.lang && TYPO3.lang['button.cancel']) || 'Cancel',
+        active: true,
+        btnClass: 'btn-default',
+        trigger: () => {
+          Modal.dismiss();
+          onCancel();
+        },
+      },
+      {
+        text: ll(LL.embeddingConfirmOk, 'Change model'),
+        btnClass: 'btn-warning',
+        trigger: () => {
+          Modal.dismiss();
+          onConfirm();
+        },
+      },
+    ],
+  );
+}
+
+/**
+ * Restore embedding select/input to a previously committed model id.
+ *
+ * @param {HTMLSelectElement|null} select
+ * @param {HTMLInputElement|null} input
+ * @param {string} previous
+ */
+function restoreEmbeddingModelFields(select, input, previous) {
+  if (input) {
+    input.value = previous;
+  }
+  if (!select) {
+    if (input) {
+      input.hidden = false;
+    }
+    return;
+  }
+  if (previous === '') {
+    select.value = '';
+    if (input) {
+      input.hidden = false;
+    }
+    return;
+  }
+  const match = Array.from(select.options).find((o) => o.value === previous);
+  if (match) {
+    select.value = previous;
+    if (input) {
+      input.hidden = true;
+    }
+    return;
+  }
+  select.value = '__custom__';
+  if (input) {
+    input.hidden = false;
+  }
 }
 
 const OPENAI_COMPATIBLE_ADAPTER = 'nst3af.openai_compatible';
@@ -549,6 +634,7 @@ class ProviderDrawer {
         if (embeddingModelInput) {
           embeddingModelInput.value = '';
           embeddingModelInput.hidden = false;
+          embeddingModelInput.dataset.aiuCommittedEmbedding = '';
         }
         if (embeddingModelSelect) {
           embeddingModelSelect.value = '';
@@ -596,8 +682,14 @@ class ProviderDrawer {
       });
     }
     if (embeddingModelSelect && embeddingModelInput) {
-      embeddingModelSelect.addEventListener('change', () => {
-        const val = embeddingModelSelect.value;
+      const readCommittedEmbedding = () =>
+        (embeddingModelInput.dataset.aiuCommittedEmbedding ?? embeddingModelInput.value ?? '').trim();
+      const writeCommittedEmbedding = (value) => {
+        embeddingModelInput.dataset.aiuCommittedEmbedding = value;
+      };
+      writeCommittedEmbedding((embeddingModelInput.value || '').trim());
+
+      const applyEmbeddingModelSelection = (val) => {
         if (val === '__custom__') {
           embeddingModelInput.hidden = false;
           embeddingModelInput.focus();
@@ -606,19 +698,56 @@ class ProviderDrawer {
         if (val === '') {
           embeddingModelInput.value = '';
           embeddingModelInput.hidden = false;
+          writeCommittedEmbedding('');
           this.setEmbeddingsCapability(form, false);
           return;
         }
         embeddingModelInput.value = val;
         embeddingModelInput.hidden = true;
+        writeCommittedEmbedding(val);
         this.setEmbeddingsCapability(form, true);
         const info = this.modelCache.find((m) => m.id === val);
         if (info && embeddingModelHint) {
           embeddingModelHint.hidden = false;
           embeddingModelHint.textContent = llFormat(LL.hintSource, 'Source: %s', info.source);
         }
+      };
+
+      embeddingModelSelect.addEventListener('change', () => {
+        const val = embeddingModelSelect.value;
+        const previous = readCommittedEmbedding();
+        const next = val === '__custom__' ? embeddingModelInput.value.trim() : val.trim();
+
+        // Opening the free-text path is not a model change yet.
+        if (val === '__custom__') {
+          applyEmbeddingModelSelection(val);
+          return;
+        }
+
+        confirmEmbeddingModelChange(
+          previous,
+          next,
+          () => applyEmbeddingModelSelection(val),
+          () => restoreEmbeddingModelFields(embeddingModelSelect, embeddingModelInput, previous),
+        );
+      });
+      embeddingModelInput.addEventListener('change', () => {
+        const next = embeddingModelInput.value.trim();
+        const previous = readCommittedEmbedding();
+        confirmEmbeddingModelChange(
+          previous,
+          next,
+          () => {
+            writeCommittedEmbedding(next);
+            this.setEmbeddingsCapability(form, next !== '');
+          },
+          () => {
+            restoreEmbeddingModelFields(embeddingModelSelect, embeddingModelInput, previous);
+          },
+        );
       });
       embeddingModelInput.addEventListener('input', () => {
+        // Live capability tick while typing; commit still goes through change+confirm.
         this.setEmbeddingsCapability(form, embeddingModelInput.value.trim() !== '');
       });
     }

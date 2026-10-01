@@ -203,6 +203,18 @@
                 <source>Delete?</source>
                 <target>Löschen?</target>
             </trans-unit>
+            <trans-unit id="provider.js.embeddingModel.confirmTitle">
+                <source>Change embedding model?</source>
+                <target>Embedding-Modell ändern?</target>
+            </trans-unit>
+            <trans-unit id="provider.js.embeddingModel.confirmMessage">
+                <source>Are you sure you want to change this model for your trained data? If you have already trained your data then you need to re-train it.</source>
+                <target>Möchten Sie dieses Modell für Ihre trainierten Daten wirklich ändern? Wenn Sie Ihre Daten bereits trainiert haben, müssen Sie sie erneut trainieren.</target>
+            </trans-unit>
+            <trans-unit id="provider.js.embeddingModel.confirmOk">
+                <source>Change model</source>
+                <target>Modell ändern</target>
+            </trans-unit>
             <trans-unit id="wizard.step3.empty">
                 <source>No provider catalog entries are configured.</source>
                 <target>Es sind keine Provider-Katalogeinträge konfiguriert.</target>
