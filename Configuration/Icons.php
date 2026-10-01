@@ -66,4 +66,9 @@ return [
         'provider' => SvgIconProvider::class,
         'source' => 'EXT:ns_t3af/Resources/Public/Icons/t3ai-grey.svg',
     ],
+    // Agent mark (core actions-wand-sparkles exists only from v14; ship our copy for v13)
+    'ns-t3af-agent-wand' => [
+        'provider' => SvgIconProvider::class,
+        'source' => 'EXT:ns_t3af/Resources/Public/Icons/AgentWandSparkles.svg',
+    ],
 ];

@@ -341,7 +341,7 @@ export const streamMethods = {
       const mark = document.createElement('div');
       mark.className = 'nst3af-agent-empty__mark';
       mark.setAttribute('aria-hidden', 'true');
-      mark.innerHTML = '<typo3-backend-icon identifier="actions-wand-sparkles" size="medium"></typo3-backend-icon>';
+      mark.innerHTML = '<typo3-backend-icon identifier="ns-t3af-agent-wand" size="medium"></typo3-backend-icon>';
       wrap.appendChild(mark);
 
       const title = document.createElement('h2');
