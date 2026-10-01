@@ -117,7 +117,7 @@ class IptcDigitalSourceTypeService
             $value = trim((string) $image->getImageProperty('iptc:DigitalSourceType'));
             $image->clear();
         } catch (\Throwable) {
-            $value = '';
+            return null;
         }
 
         if ($cache !== null && $cacheKey !== null) {
