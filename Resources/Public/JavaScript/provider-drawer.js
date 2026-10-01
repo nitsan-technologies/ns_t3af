@@ -806,6 +806,8 @@ class ProviderDrawer {
       });
     }
 
+    this.bindApiKeyKeepBlankOnEdit(form, apiKeyInput);
+
     // Auto-load on open when adapter already selected (edit path).
     if (adapterSelect && adapterSelect.value) {
       syncChipActiveFromSelect();
@@ -825,6 +827,49 @@ class ProviderDrawer {
     }
 
     syncAdapterConnectionUi();
+  }
+
+  /**
+   * Edit forms keep api_key blank to preserve the stored cipher. Browser password
+   * managers often autofill the field anyway (yellow background), which POSTs a
+   * non-empty key and wrongly resets last_status to unknown. Clear autofill unless
+   * the admin intentionally typed/pasted a replacement key.
+   *
+   * @param {HTMLFormElement} form
+   * @param {HTMLInputElement|null|undefined} apiKeyInput
+   */
+  bindApiKeyKeepBlankOnEdit(form, apiKeyInput) {
+    if (!(apiKeyInput instanceof HTMLInputElement)) {
+      return;
+    }
+    if (apiKeyInput.dataset.aiuApiKeyKeepBlank !== '1' && form.dataset.aiuHasStoredApiKey !== '1') {
+      return;
+    }
+
+    const markDirty = () => {
+      apiKeyInput.dataset.aiuApiKeyDirty = '1';
+    };
+    const clearUnlessDirty = () => {
+      if (apiKeyInput.dataset.aiuApiKeyDirty === '1') {
+        return;
+      }
+      apiKeyInput.value = '';
+    };
+
+    apiKeyInput.addEventListener('focus', () => {
+      apiKeyInput.removeAttribute('readonly');
+    });
+    apiKeyInput.addEventListener('keydown', markDirty);
+    apiKeyInput.addEventListener('paste', markDirty);
+    apiKeyInput.addEventListener('beforeinput', markDirty);
+
+    clearUnlessDirty();
+    window.setTimeout(clearUnlessDirty, 50);
+    window.setTimeout(clearUnlessDirty, 400);
+
+    form.addEventListener('submit', () => {
+      clearUnlessDirty();
+    });
   }
 
   async loadModels({
