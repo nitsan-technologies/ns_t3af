@@ -560,6 +560,110 @@ final class ProviderFormServiceTest extends TestCase
         self::assertArrayNotHasKey('last_status_message', $captured);
     }
 
+    public function testEditKeepsLastStatusWhenOnlyCapabilitiesChange(): void
+    {
+        $existing = Provider::fromRow([
+            'uid' => 5,
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => (new CredentialCipher())->encrypt('sk-stored'),
+            'last_status' => 'connected',
+            'last_status_at' => 1700000100,
+            'last_status_message' => 'OK',
+            'model_id' => 'gpt-4o',
+            'endpoint_url' => '',
+            'embedding_model_id' => '',
+            'api_version' => '',
+            'capabilities' => 'chat,streaming',
+        ]);
+
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $repo->method('findByUid')->with(5)->willReturn($existing);
+        $captured = null;
+        $repo->expects(self::once())->method('save')
+            ->willReturnCallback(function (int $uid, array $values) use (&$captured): int {
+                $captured = $values;
+
+                return $uid;
+            });
+
+        $service = new ProviderFormService($repo, new AdapterRegistry([$this->fakeAdapter()]), new CredentialCipher());
+        $result = $service->save(5, [
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => '',
+            'model_id' => 'gpt-4o',
+            'endpoint_url' => '',
+            'embedding_model_id' => '',
+            'api_version' => '',
+            'capabilities' => ['completion', 'embeddings', 'vision', 'streaming', 'tool_use', 'tts'],
+        ], 1);
+
+        self::assertTrue($result->ok);
+        self::assertNotNull($captured);
+        self::assertSame(
+            'completion,embeddings,vision,streaming,tool_use,tts',
+            $captured['capabilities'],
+        );
+        self::assertArrayNotHasKey('last_status', $captured);
+        self::assertArrayNotHasKey('last_status_at', $captured);
+        self::assertArrayNotHasKey('last_status_message', $captured);
+    }
+
+    public function testEditKeepsLastStatusWhenResubmittedApiKeyMatchesStored(): void
+    {
+        $cipher = new CredentialCipher();
+        $plain = 'sk-stored-same';
+        $existing = Provider::fromRow([
+            'uid' => 5,
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => $cipher->encrypt($plain),
+            'last_status' => 'connected',
+            'last_status_at' => 1700000100,
+            'last_status_message' => 'OK',
+            'model_id' => 'gpt-4o',
+            'endpoint_url' => '',
+            'embedding_model_id' => '',
+            'api_version' => '',
+            'capabilities' => 'chat',
+        ]);
+
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $repo->method('findByUid')->with(5)->willReturn($existing);
+        $captured = null;
+        $repo->expects(self::once())->method('save')
+            ->willReturnCallback(function (int $uid, array $values) use (&$captured): int {
+                $captured = $values;
+
+                return $uid;
+            });
+
+        $service = new ProviderFormService($repo, new AdapterRegistry([$this->fakeAdapter()]), $cipher);
+        $result = $service->save(5, [
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => $plain,
+            'model_id' => 'gpt-4o',
+            'endpoint_url' => '',
+            'embedding_model_id' => '',
+            'api_version' => '',
+            'capabilities' => ['chat', 'completion', 'embeddings'],
+        ], 1);
+
+        self::assertTrue($result->ok);
+        self::assertNotNull($captured);
+        self::assertArrayNotHasKey('api_key', $captured);
+        self::assertArrayNotHasKey('last_status', $captured);
+        self::assertSame('chat,completion,embeddings', $captured['capabilities']);
+    }
+
     public function testEditResetsLastStatusWhenApiKeyChanges(): void
     {
         $existing = Provider::fromRow([
