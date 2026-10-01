@@ -399,6 +399,17 @@ final class T3afToolbox implements ToolboxInterface
             $found,
         )];
 
+        // Checked before the found-tools list, not only when it is empty: embeddings/BM25 almost
+        // always surface *some* loosely related core tool for a coherent sentence (e.g. "crawl and
+        // index for search" matching cache_clear/file_list), so a strict empty-check rarely fires.
+        // A premium match is always safe to prefer here — PremiumCatalogProvider::findMatch()
+        // already excludes extensions that are loaded, so if it matches, the real tool for this
+        // capability cannot be among $found anyway.
+        $premiumMatch = $this->runtime->premiumCatalog->findMatch($query);
+        if ($premiumMatch !== null) {
+            return $this->runtime->entitlementExplanation->buildNotPurchasedMessage($premiumMatch, $this->runtime->user);
+        }
+
         if ($found === []) {
             return 'No matching tool. Tell the editor in one sentence that this is not possible with the AI Agent here.';
         }

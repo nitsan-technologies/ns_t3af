@@ -19,12 +19,17 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
+use NITSAN\NsT3AF\Access\ExtensionAvailability;
 use NITSAN\NsT3AF\Agent\Contract\AgentActionCatalogInterface;
 use NITSAN\NsT3AF\Agent\Contract\AgentToolIndexInterface;
 use NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface;
 use NITSAN\NsT3AF\Agent\Embedding\EmbeddingSourceResolver;
+use NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver;
+use NITSAN\NsT3AF\Agent\PremiumCatalog\PremiumCatalogProvider;
 use NITSAN\NsT3AF\Agent\Runtime\T3afToolbox;
 use NITSAN\NsT3AF\Agent\Service\AgentCoreToolSet;
+use NITSAN\NsT3AF\Agent\Service\AgentEntitlementExplanation;
+use NITSAN\NsT3AF\Agent\Service\AgentLanguageResolver;
 use NITSAN\NsT3AF\Agent\Service\AgentLowRiskFieldMatrix;
 use NITSAN\NsT3AF\Agent\Service\AgentPausePolicy;
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
@@ -44,15 +49,21 @@ use NITSAN\NsT3AF\Api\AiToolDefinition;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpToolMetadataService;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
 use NITSAN\NsT3AF\Settings\ExtensionSettingsService;
+use NITSAN\NsT3AF\Tests\Unit\Access\Support\LoadedExtensionsTestTrait;
+use NITSAN\NsT3AF\Utility\ModuleTabUtility;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Site\SiteFinder;
 
 /**
  * @internal
  */
 final class AgentRunnerTest extends TestCase
 {
+    use LoadedExtensionsTestTrait;
+
     /** @var list<array{messages: list<array<mixed>>, tools: list<string>, options: AiOptions}> */
     private array $requests = [];
 
@@ -69,6 +80,12 @@ final class AgentRunnerTest extends TestCase
         $this->executed = [];
         $this->executedArguments = [];
         unset($GLOBALS['LANG'], $GLOBALS['BE_USER']);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->resetLoadedExtensions();
+        parent::tearDown();
     }
 
     #[Test]
@@ -357,6 +374,49 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function standalonePremiumRequestSkipsTheModelEntirely(): void
+    {
+        $this->resetLoadedExtensions();
+
+        $result = $this->runScripted([], message: 'Translate this page to German.');
+
+        self::assertSame([], $this->requests, 'The model must not be called at all.');
+        self::assertCount(1, $result['messages']);
+        self::assertSame('not_purchased', $result['messages'][0]['meta']['type']);
+        self::assertStringContainsString('agent.entitlement.notPurchasedLead', (string) $result['messages'][0]['content']);
+        self::assertStringContainsString('Content rewriting, SEO, translation', (string) $result['messages'][0]['content']);
+    }
+
+    #[Test]
+    public function compoundPremiumRequestStillReachesTheModel(): void
+    {
+        $this->resetLoadedExtensions();
+
+        $result = $this->runScripted(
+            [new AiToolCallingResponse('Seite angelegt.', 'gpt-test', 'openai')],
+            message: 'Create this page, then translate it to German',
+        );
+
+        self::assertCount(1, $this->requests, 'A compound request must still reach the model.');
+        self::assertSame('nl_reply', $result['messages'][count($result['messages']) - 1]['meta']['type']);
+    }
+
+    #[Test]
+    public function barePageSearchDoesNotShortCircuitToAiSearchUpsell(): void
+    {
+        $this->resetLoadedExtensions();
+
+        $result = $this->runScripted(
+            [new AiToolCallingResponse('Found the page.', 'gpt-test', 'openai')],
+            message: 'Search for page Home',
+        );
+
+        self::assertCount(1, $this->requests, 'Core page search must reach the model, not the AI Search upsell.');
+        self::assertNotSame('not_purchased', $result['messages'][count($result['messages']) - 1]['meta']['type'] ?? null);
+        self::assertSame('nl_reply', $result['messages'][count($result['messages']) - 1]['meta']['type']);
+    }
+
+    #[Test]
     public function invalidArgumentsGoBackToTheModelWithoutRunningTheTool(): void
     {
         $this->runScripted([
@@ -520,6 +580,14 @@ final class AgentRunnerTest extends TestCase
             $prompt,
             new AgentPausePolicy(new AgentLowRiskFieldMatrix()),
             $translator,
+            new PremiumCatalogProvider(new ExtensionAvailability()),
+            new AgentEntitlementExplanation(
+                new EntitlementResolver([], new ExtensionAvailability()),
+                new ModuleTabUtility(),
+                $this->createMock(UriBuilder::class),
+                $translator,
+                new AgentLanguageResolver($this->createMock(SiteFinder::class)),
+            ),
         );
     }
 }

@@ -68,6 +68,8 @@ services:
       - '../Classes/Api/*'
       # Per-turn objects built by AgentRunner (scalar constructor arguments).
       - '../Classes/Agent/Runtime/*'
+      # Plain DTO (scalar constructor arguments), never a service — see PremiumCatalogProvider.
+      - '../Classes/Agent/PremiumCatalog/PremiumCatalogEntry.php'
       - '../Classes/Domain/Model/*'
       - '../Classes/Event/*'
       - '../Classes/AiLabel/Event/*'

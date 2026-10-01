@@ -775,6 +775,14 @@
                 <source>Details are in the AI Agent settings: %1$s</source>
                 <target>Details finden Sie in den KI-Agent-Einstellungen: %1$s</target>
             </trans-unit>
+            <trans-unit id="agent.entitlement.notPurchasedLead">
+                <source>%1$s is not included in your current extensions.</source>
+                <target>%1$s ist nicht in Ihren aktuellen Erweiterungen enthalten.</target>
+            </trans-unit>
+            <trans-unit id="agent.entitlement.notPurchasedHint">
+                <source>Learn more: %1$s</source>
+                <target>Mehr erfahren: %1$s</target>
+            </trans-unit>
             <trans-unit id="agent.scheduler.handoffLabel">
                 <source>Schedule this action</source>
                 <target>Diese Aktion planen</target>
@@ -2044,6 +2052,10 @@
             <trans-unit id="agent.tool.label.explain_capabilities">
                 <source>Explain what I can do</source>
                 <target>Erklären, was ich kann</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.explain_identity">
+                <source>Who built this AI Agent</source>
+                <target>Wer hat diesen KI-Agenten entwickelt</target>
             </trans-unit>
             <trans-unit id="agent.tool.label.backend_group_get">
                 <source>Read a backend user group</source>

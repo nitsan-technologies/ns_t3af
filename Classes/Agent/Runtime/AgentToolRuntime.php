@@ -20,6 +20,8 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Runtime;
 
 use NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface;
+use NITSAN\NsT3AF\Agent\PremiumCatalog\PremiumCatalogProvider;
+use NITSAN\NsT3AF\Agent\Service\AgentEntitlementExplanation;
 use NITSAN\NsT3AF\Agent\Service\AgentPausePolicy;
 use NITSAN\NsT3AF\Agent\Service\AgentToolArgumentValidator;
 use NITSAN\NsT3AF\Agent\Service\AgentToolDefinitionMapper;
@@ -43,6 +45,8 @@ final readonly class AgentToolRuntime
         public AgentPausePolicy $pausePolicy,
         public AgentTranslator $translator,
         public AgentToolSearch $toolSearch,
+        public PremiumCatalogProvider $premiumCatalog,
+        public AgentEntitlementExplanation $entitlementExplanation,
         public AgentToolDefinitionMapper $definitionMapper,
         public AgentToolArgumentValidator $argumentValidator,
         public array $context,

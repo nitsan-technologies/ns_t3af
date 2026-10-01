@@ -41,6 +41,7 @@ final readonly class AgentCoreToolSet
         'content_list',
         'content_search',
         'explain_capabilities',
+        'explain_identity',
         'pages_get',
         'pages_search',
         'pages_tree',

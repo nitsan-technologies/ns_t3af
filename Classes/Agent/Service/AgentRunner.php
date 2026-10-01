@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Agent\Service;
 use NITSAN\NsT3AF\Agent\Contract\AgentActionCatalogInterface;
 use NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface;
 use NITSAN\NsT3AF\Agent\Contract\AgentTurnRunnerInterface;
+use NITSAN\NsT3AF\Agent\PremiumCatalog\PremiumCatalogProvider;
 use NITSAN\NsT3AF\Agent\Runtime\AgentToolRuntime;
 use NITSAN\NsT3AF\Agent\Runtime\AgentTurnState;
 use NITSAN\NsT3AF\Agent\Runtime\GovernedPlatform;
@@ -77,6 +78,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         private AgentPromptBuilder $promptBuilder,
         private AgentPausePolicy $pausePolicy,
         private AgentTranslator $translator,
+        private PremiumCatalogProvider $premiumCatalog,
+        private AgentEntitlementExplanation $entitlementExplanation,
     ) {}
 
     public function runTurn(
@@ -88,6 +91,23 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         string $correlationId,
         ?callable $emitEvent = null,
     ): array {
+        // A single, standalone premium-capability request (e.g. "translate this page" without
+        // ns_t3ai) is answered directly — a capable model can otherwise fake it with generic
+        // tools instead of discovering there is no real tool for it. Skipped on a continuation
+        // (confirm/decline of an in-progress draft, not a fresh request) and on anything that
+        // reads as a multi-step ask, so the model still handles those normally.
+        $continuation = is_array($body['continuation'] ?? null) ? $body['continuation'] : [];
+        if ($continuation === []) {
+            $premiumMatch = $this->premiumCatalog->findStandaloneMatch($userMessage);
+            if ($premiumMatch !== null) {
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $this->entitlementExplanation->buildNotPurchasedMessage($premiumMatch, $user),
+                    'meta' => ['type' => 'not_purchased', 'correlationId' => $correlationId],
+                ]);
+            }
+        }
+
         $pageId = (int) ($context['pageId'] ?? 0);
         if (!$this->toolCallingService->supportsToolCalling(self::providerFromBody($body), $pageId > 0 ? $pageId : null)) {
             return $this->single($emitEvent, $this->info('agent.turn.noToolCalling', $correlationId, ['degraded' => true]));
@@ -203,6 +223,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $this->pausePolicy,
                 $this->translator,
                 $this->toolSearch,
+                $this->premiumCatalog,
+                $this->entitlementExplanation,
                 $this->toolDefinitionMapper,
                 $this->argumentValidator,
                 $context,

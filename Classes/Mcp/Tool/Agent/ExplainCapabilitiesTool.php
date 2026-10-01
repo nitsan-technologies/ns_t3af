@@ -77,6 +77,7 @@ final readonly class ExplainCapabilitiesTool implements McpNonAiToolInterface
     private const HIDDEN_EXACT = [
         'cache_clear',
         'explain_capabilities',
+        'explain_identity',
         'ask_clarification',
         'content_move',
         't3ai_mass_seo_queue_add',

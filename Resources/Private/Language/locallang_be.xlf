@@ -876,6 +876,12 @@
       <trans-unit id="agent.entitlement.settingsHint" resname="agent.entitlement.settingsHint">
         <source>Details are in the AI Agent settings: %1$s</source>
       </trans-unit>
+      <trans-unit id="agent.entitlement.notPurchasedLead" resname="agent.entitlement.notPurchasedLead">
+        <source>%1$s is not included in your current extensions.</source>
+      </trans-unit>
+      <trans-unit id="agent.entitlement.notPurchasedHint" resname="agent.entitlement.notPurchasedHint">
+        <source>Learn more: %1$s</source>
+      </trans-unit>
       <trans-unit id="agent.scheduler.handoffLabel" resname="agent.scheduler.handoffLabel">
         <source>Open Scheduler &amp; CLI</source>
       </trans-unit>
@@ -1644,6 +1650,9 @@
       </trans-unit>
       <trans-unit id="agent.tool.label.explain_capabilities" resname="agent.tool.label.explain_capabilities">
         <source>Explain what I can do</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.label.explain_identity" resname="agent.tool.label.explain_identity">
+        <source>Who built this AI Agent</source>
       </trans-unit>
       <trans-unit id="agent.tool.label.backend_group_get" resname="agent.tool.label.backend_group_get">
         <source>Read a backend user group</source>

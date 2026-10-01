@@ -20,8 +20,10 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver;
+use NITSAN\NsT3AF\Agent\PremiumCatalog\PremiumCatalogEntry;
 use NITSAN\NsT3AF\Utility\ModuleTabUtility;
 use TYPO3\CMS\Backend\Routing\UriBuilder;
+use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
  * In-conversation explanation when a locked tool is activated (T18).
@@ -40,6 +42,7 @@ final readonly class AgentEntitlementExplanation
         private ModuleTabUtility $moduleTabUtility,
         private UriBuilder $uriBuilder,
         private AgentTranslator $translator,
+        private AgentLanguageResolver $languageResolver,
     ) {}
 
     /**
@@ -109,6 +112,26 @@ final readonly class AgentEntitlementExplanation
         }
 
         $parts[] = $this->translator->translate('agent.entitlement.settingsHint', [$this->settingsHref()]);
+
+        return implode("\n\n", $parts);
+    }
+
+    /**
+     * `find_tools` matched a capability from a premium extension that is not installed on this
+     * site at all (so there is no real tool/lockKind to build from — see {@see PremiumCatalogEntry}).
+     */
+    public function buildNotPurchasedMessage(PremiumCatalogEntry $entry, ?BackendUserAuthentication $user = null): string
+    {
+        $parts = [
+            $this->translator->translate('agent.entitlement.notPurchasedLead', [$entry->label]),
+        ];
+
+        if ($entry->tagline !== '') {
+            $parts[] = $entry->tagline;
+        }
+
+        $infoUrl = $entry->infoUrl($this->languageResolver->resolveBackendIsoCode($user));
+        $parts[] = $this->translator->translate('agent.entitlement.notPurchasedHint', [$infoUrl]);
 
         return implode("\n\n", $parts);
     }
