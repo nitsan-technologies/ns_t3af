@@ -35,6 +35,7 @@ use NITSAN\NsT3AF\Exception\UnknownAdapterException;
 use NITSAN\NsT3AF\Provider\AdapterRegistry;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
 use NITSAN\NsT3AF\Provider\OpenAiCompatible\OpenAiCompatiblePlatform;
+use NITSAN\NsT3AF\Provider\ProviderCapabilityGuard;
 use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiBridgeAdapter;
 use Psr\EventDispatcher\EventDispatcherInterface;
 
@@ -72,6 +73,7 @@ final class AiService implements AiServiceInterface
     public function complete(string $prompt, AiOptions $options = new AiOptions()): AiResponse
     {
         $provider = $this->provider($options->providerIdentifier, $options->pageId);
+        ProviderCapabilityGuard::assertCallAllowed($provider, ProviderCapabilityGuard::CALL_COMPLETE, $options);
         $adapter = $this->resolveAdapter($provider);
 
         $before = new BeforeProviderRequestEvent($provider, $prompt, $options, self::CALL_COMPLETE);
@@ -150,6 +152,7 @@ final class AiService implements AiServiceInterface
     public function stream(string $prompt, AiOptions $options = new AiOptions()): \Generator
     {
         $provider = $this->provider($options->providerIdentifier, $options->pageId);
+        ProviderCapabilityGuard::assertCallAllowed($provider, ProviderCapabilityGuard::CALL_STREAM, $options);
         $adapter = $this->resolveAdapter($provider);
 
         $before = new BeforeProviderRequestEvent($provider, $prompt, $options, self::CALL_STREAM);
@@ -236,6 +239,7 @@ final class AiService implements AiServiceInterface
     public function embed(string|array $text, AiOptions $options = new AiOptions()): EmbeddingResponse
     {
         $provider = $this->provider($options->providerIdentifier, $options->pageId);
+        ProviderCapabilityGuard::assertCallAllowed($provider, ProviderCapabilityGuard::CALL_EMBED, $options);
         $adapter = $this->resolveAdapter($provider);
 
         $promptForEvent = is_array($text) ? implode("\n", $text) : $text;

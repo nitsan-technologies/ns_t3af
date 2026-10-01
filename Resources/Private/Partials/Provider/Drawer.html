@@ -10,7 +10,8 @@
         <button type="button" class="aiu-drawer__close btn" data-aiu-drawer-close aria-label="Close">
             <core:icon identifier="actions-close" size="small" />
         </button>
-        <h2 class="aiu-drawer__title">
+        <div class="aiu-drawer__header-content">
+          <h2 class="aiu-drawer__title">
             <f:if condition="{provider.uid} > 0">
                 <f:then>
                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.drawer.titleEdit"
@@ -21,11 +22,12 @@
                                  default="Add AI Provider" />
                 </f:else>
             </f:if>
-        </h2>
-        <p class="aiu-drawer__desc">
-            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.drawer.desc"
-                         default="Configure a new language model provider connection." />
-        </p>
+          </h2>
+          <p class="aiu-drawer__desc">
+              <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.drawer.desc"
+                          default="Configure a new language model provider connection." />
+          </p>
+        </div>
     </div>
 
     <div class="aiu-drawer__body">

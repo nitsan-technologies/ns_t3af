@@ -1138,7 +1138,12 @@ final class AiServiceTest extends TestCase
     {
         // Vision array content must become MessageBag(Text + ImageUrl), not a raw `messages`
         // payload (OpenAI Responses rejects `messages`) and not the string "Array".
-        $provider = $this->makeProvider();
+        $provider = $this->makeProvider(capabilities: [
+            Capability::CHAT,
+            Capability::STREAMING,
+            Capability::EMBEDDINGS,
+            Capability::VISION,
+        ]);
         $platform = new class {
             /** @var list<mixed> */
             public array $receivedPayloads = [];
@@ -1365,6 +1370,140 @@ final class AiServiceTest extends TestCase
         $service->complete('hello');
     }
 
+    public function testCompleteRejectsProviderWithoutChatCapability(): void
+    {
+        $provider = $this->makeProvider(capabilities: [Capability::TOOL_USE]);
+        $adapter = $this->makeAdapter('symfony.openai', new \stdClass());
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$adapter]),
+            new CapturingDispatcher(),
+            $this->makeSiteStorageContext(),
+        );
+
+        $this->expectException(AdapterRuntimeException::class);
+        $this->expectExceptionMessage('does not have the "chat" or "completion" capability enabled');
+        $service->complete('hello');
+    }
+
+    public function testCompleteAllowsEmptyCapabilities(): void
+    {
+        $provider = $this->makeProvider(capabilities: []);
+        $platform = new class {
+            /** @param array<string, mixed> $invokeOptions */
+            public function invoke(string $model, mixed $payload, array $invokeOptions = []): string
+            {
+                return 'ok';
+            }
+        };
+        $adapter = $this->makeAdapter('symfony.openai', $platform);
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$adapter]),
+            new CapturingDispatcher(),
+            $this->makeSiteStorageContext(),
+        );
+
+        self::assertSame('ok', $service->complete('hello')->content);
+    }
+
+    public function testCompleteAllowsCompletionCapabilityWithoutChat(): void
+    {
+        $provider = $this->makeProvider(capabilities: [Capability::COMPLETION]);
+        $platform = new class {
+            /** @param array<string, mixed> $invokeOptions */
+            public function invoke(string $model, mixed $payload, array $invokeOptions = []): string
+            {
+                return 'ok';
+            }
+        };
+        $adapter = $this->makeAdapter('symfony.openai', $platform);
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$adapter]),
+            new CapturingDispatcher(),
+            $this->makeSiteStorageContext(),
+        );
+
+        self::assertSame('ok', $service->complete('hello')->content);
+    }
+
+    public function testEmbedRejectsProviderWithoutEmbeddingsCapability(): void
+    {
+        $provider = $this->makeProvider(capabilities: [Capability::CHAT]);
+        $adapter = $this->makeAdapter('symfony.openai', new \stdClass());
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$adapter]),
+            new CapturingDispatcher(),
+            $this->makeSiteStorageContext(),
+        );
+
+        $this->expectException(AdapterRuntimeException::class);
+        $this->expectExceptionMessage('does not have the "embeddings" capability enabled');
+        $service->embed('hello');
+    }
+
+    public function testStreamRejectsProviderWithoutStreamingCapability(): void
+    {
+        $provider = $this->makeProvider(capabilities: [Capability::CHAT]);
+        $adapter = $this->makeAdapter('symfony.openai', new \stdClass());
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$adapter]),
+            new CapturingDispatcher(),
+            $this->makeSiteStorageContext(),
+        );
+
+        $this->expectException(AdapterRuntimeException::class);
+        $this->expectExceptionMessage('does not have the "streaming" capability enabled');
+        iterator_to_array($service->stream('hi'), false);
+    }
+
+    public function testCompleteRejectsVisionPayloadWithoutVisionCapability(): void
+    {
+        $provider = $this->makeProvider(capabilities: [Capability::CHAT]);
+        $adapter = $this->makeAdapter('symfony.openai', new \stdClass());
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$adapter]),
+            new CapturingDispatcher(),
+            $this->makeSiteStorageContext(),
+        );
+
+        $this->expectException(AdapterRuntimeException::class);
+        $this->expectExceptionMessage('does not have the "vision" capability enabled');
+        $service->complete('describe', new AiOptions(extra: [
+            'messages' => [
+                [
+                    'role' => 'user',
+                    'content' => [
+                        ['type' => 'text', 'text' => 'what is this'],
+                        ['type' => 'image_url', 'image_url' => ['url' => 'https://example.com/a.png']],
+                    ],
+                ],
+            ],
+        ]));
+    }
+
+    public function testCompleteRejectsToolsPayloadWithoutToolUseCapability(): void
+    {
+        $provider = $this->makeProvider(capabilities: [Capability::CHAT]);
+        $adapter = $this->makeAdapter('symfony.openai', new \stdClass());
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$adapter]),
+            new CapturingDispatcher(),
+            $this->makeSiteStorageContext(),
+        );
+
+        $this->expectException(AdapterRuntimeException::class);
+        $this->expectExceptionMessage('does not have the "tool_use" capability enabled');
+        $service->complete('hello', new AiOptions(extra: [
+            'tools' => [['type' => 'function', 'function' => ['name' => 'lookup']]],
+        ]));
+    }
+
     private function makeAdapter(string $type, object $platform): AdapterInterface
     {
         return new class ($type, $platform) implements AdapterInterface {
@@ -1396,8 +1535,14 @@ final class AiServiceTest extends TestCase
         };
     }
 
-    private function makeProvider(string $embeddingModelId = '', string $adapterType = 'symfony.openai'): Provider
-    {
+    /**
+     * @param list<string> $capabilities
+     */
+    private function makeProvider(
+        string $embeddingModelId = '',
+        string $adapterType = 'symfony.openai',
+        array $capabilities = [Capability::CHAT, Capability::STREAMING, Capability::EMBEDDINGS],
+    ): Provider {
         return new Provider(
             uid: 1,
             pid: 0,
@@ -1408,7 +1553,7 @@ final class AiServiceTest extends TestCase
             apiKeyCipher: '',
             modelId: 'gpt-4o',
             embeddingModelId: $embeddingModelId,
-            capabilities: [Capability::CHAT, Capability::STREAMING],
+            capabilities: $capabilities,
             temperature: 0.7,
             systemPrompt: '',
             isDefault: true,
