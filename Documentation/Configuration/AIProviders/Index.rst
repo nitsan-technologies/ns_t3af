@@ -13,7 +13,7 @@ type, optional endpoint, encrypted credentials, models, and capability flags.
 
 **Path:** :guilabel:`AI Foundation > AI Providers`
 
-`AI Foundation Providers Demo <https://app.supademo.com/embed/cmrbo0w7i0d96qmo57ifnabvz?utm_source=link>`__
+`AI Foundation Providers Demo <https://app.supademo.com/embed/cmrbo0w7i0d96qmo57ifnabvz?embed_v=2&utm_source=embed>`__
 
 .. figure:: ../../Images/provider-01.png
    :alt: AI Providers with Own API Keys mode, provider list, models, and connection status
