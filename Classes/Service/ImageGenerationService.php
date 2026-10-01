@@ -29,8 +29,8 @@ use NITSAN\NsT3AF\Event\ProviderRequestFailedEvent;
 use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 use NITSAN\NsT3AF\Exception\UnknownAdapterException;
 use NITSAN\NsT3AF\Provider\AdapterRegistry;
-use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\OpenAiCompatible\OpenAiCompatiblePlatform;
+use NITSAN\NsT3AF\Provider\ProviderCapabilityGuard;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use TYPO3\CMS\Core\Http\RequestFactory;
 
@@ -222,11 +222,7 @@ final class ImageGenerationService implements ImageGenerationServiceInterface
             );
         }
 
-        if (!$provider->hasCapability(Capability::IMAGE_GENERATION)) {
-            throw new AdapterRuntimeException(
-                sprintf('Provider "%s" does not advertise the "%s" capability.', $provider->identifier, Capability::IMAGE_GENERATION),
-            );
-        }
+        ProviderCapabilityGuard::assertCallAllowed($provider, ProviderCapabilityGuard::CALL_IMAGE_GENERATION);
 
         return $provider;
     }
