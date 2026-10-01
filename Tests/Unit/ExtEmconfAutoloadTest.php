@@ -35,8 +35,11 @@ final class ExtEmconfAutoloadTest extends TestCase
         $composerPsr4 = $composer['autoload']['psr-4'] ?? [];
         self::assertNotEmpty($composerPsr4);
 
+        /** @var array<string, array<string, mixed>> $EM_CONF */
         $EM_CONF = [];
         include $packageRoot . '/ext_emconf.php';
+        self::assertArrayHasKey('ns_t3af', $EM_CONF);
+        /** @var array<string, string> $emconfPsr4 */
         $emconfPsr4 = $EM_CONF['ns_t3af']['autoload']['psr-4'] ?? [];
 
         foreach ($composerPsr4 as $namespace => $path) {

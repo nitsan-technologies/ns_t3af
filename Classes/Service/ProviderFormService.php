@@ -310,7 +310,6 @@ final class ProviderFormService
                 'model_id' => $existing->modelId,
                 'embedding_model_id' => $existing->embeddingModelId,
                 'api_version' => $existing->apiVersion,
-                default => '',
             };
             if ($incoming !== trim($current)) {
                 return true;
