@@ -707,7 +707,6 @@ final class ProviderController extends AbstractAiUniverseModuleController
      */
     private function embeddingModelFieldViewData(): array
     {
-        return ['showEmbeddingModelField' => true];
         return [
             'showEmbeddingModelField' => self::fluidFlag(
                 $this->extensionAvailability->isEmbeddingModelConfigurationAvailable(),
