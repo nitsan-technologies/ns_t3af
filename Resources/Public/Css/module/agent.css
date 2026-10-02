@@ -878,7 +878,7 @@
 .nst3af-agent-kbd {
   display: inline-block;
   padding: 1px 5px;
-  border: 1px solid var(--nst3af-agent-border);
+  border: 1px solid var(--nst3af-agent-border) !important;
   border-bottom-width: 2px;
   border-radius: 4px;
   background: var(--nst3af-agent-surface);
@@ -1096,6 +1096,7 @@
   background: color-mix(in srgb, currentColor 14%, transparent);
   border-color: color-mix(in srgb, currentColor 25%, transparent);
   color: inherit;
+  box-shadow: none;
 }
 
 .toolbar-item-nst3af-agent--hidden {
