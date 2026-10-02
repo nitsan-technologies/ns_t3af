@@ -775,13 +775,13 @@ final class ProviderFormServiceTest extends TestCase
             'endpoint_url' => '',
             'embedding_model_id' => '',
             'api_version' => '',
-            'capabilities' => ['completion', 'embeddings', 'vision', 'streaming', 'tool_use', 'tts'],
+            'capabilities' => ['completion', 'embeddings', 'vision', 'streaming', 'tts'],
         ], 1);
 
         self::assertTrue($result->ok);
         self::assertNotNull($captured);
         self::assertSame(
-            'completion,embeddings,vision,streaming,tool_use,tts',
+            'completion,embeddings,vision,streaming,tts',
             $captured['capabilities'],
         );
         self::assertArrayNotHasKey('last_status', $captured);

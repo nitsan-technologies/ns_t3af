@@ -38,9 +38,9 @@ final class ProviderCapabilityGuardTest extends TestCase
         self::assertTrue(ProviderCapabilityGuard::allowsChat($this->provider([Capability::CHAT])));
     }
 
-    public function testRejectsChatWhenOnlyToolUse(): void
+    public function testRejectsChatWhenOnlyEmbeddings(): void
     {
-        self::assertFalse(ProviderCapabilityGuard::allowsChat($this->provider([Capability::TOOL_USE])));
+        self::assertFalse(ProviderCapabilityGuard::allowsChat($this->provider([Capability::EMBEDDINGS])));
     }
 
     public function testAssertCallAllowedPassesForEmptyCapabilities(): void
@@ -56,7 +56,7 @@ final class ProviderCapabilityGuardTest extends TestCase
     {
         $this->expectException(AdapterRuntimeException::class);
         ProviderCapabilityGuard::assertCallAllowed(
-            $this->provider([Capability::TOOL_USE]),
+            $this->provider([Capability::EMBEDDINGS]),
             ProviderCapabilityGuard::CALL_COMPLETE,
         );
     }

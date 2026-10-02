@@ -47,9 +47,14 @@ final class CapabilityTest extends TestCase
         self::assertContains('embeddings', Capability::ALL);
         self::assertContains('vision', Capability::ALL);
         self::assertContains('streaming', Capability::ALL);
-        self::assertContains('tool_use', Capability::ALL);
+        self::assertNotContains('tool_use', Capability::ALL);
         self::assertContains('tts', Capability::ALL);
         self::assertContains('image_generation', Capability::ALL);
-        self::assertCount(8, Capability::ALL);
+        self::assertCount(7, Capability::ALL);
+    }
+
+    public function testFromCsvDropsLegacyToolUseToken(): void
+    {
+        self::assertSame(['chat', 'streaming'], Capability::fromCsv('chat,tool_use,streaming'));
     }
 }

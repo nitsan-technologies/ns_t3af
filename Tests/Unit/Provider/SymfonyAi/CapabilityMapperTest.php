@@ -28,7 +28,7 @@ final class CapabilityMapperTest extends TestCase
     public function testMapsKnownStrings(): void
     {
         $out = (new CapabilityMapper())->map(['input-messages', 'output-streaming', 'tool-calling']);
-        self::assertSame([Capability::CHAT, Capability::STREAMING, Capability::TOOL_USE], $out);
+        self::assertSame([Capability::CHAT, Capability::STREAMING], $out);
     }
 
     public function testIgnoresUnknown(): void

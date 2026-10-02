@@ -66,7 +66,7 @@ final class WizardProviderCatalog
             'keyUrlHref' => 'https://platform.openai.com',
             'keyUrlHost' => 'platform.openai.com',
             'modelOptions' => ['gpt-5.6', 'gpt-5.5', 'gpt-5-mini'],
-            'capabilities' => [Capability::CHAT, Capability::STREAMING, Capability::TOOL_USE, Capability::EMBEDDINGS],
+            'capabilities' => [Capability::CHAT, Capability::STREAMING, Capability::EMBEDDINGS],
         ],
         [
             'id' => 'anthropic',
@@ -82,7 +82,7 @@ final class WizardProviderCatalog
             'keyUrlHref' => 'https://console.anthropic.com',
             'keyUrlHost' => 'console.anthropic.com',
             'modelOptions' => ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5'],
-            'capabilities' => [Capability::CHAT, Capability::STREAMING, Capability::TOOL_USE],
+            'capabilities' => [Capability::CHAT, Capability::STREAMING],
         ],
         [
             'id' => 'gemini',
