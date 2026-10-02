@@ -52,6 +52,56 @@ function parseChartConfig(value) {
 /**
  * @param {HTMLCanvasElement} canvas
  */
+const CURRENCY_SYMBOLS = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  JPY: '¥',
+};
+
+/**
+ * @param {string} currency
+ * @param {number} amount
+ */
+function formatChartMoney(currency, amount) {
+  const code = String(currency || 'USD').toUpperCase();
+  const number = Number.isFinite(amount) ? amount : 0;
+  const text = number > 0 && number < 0.01
+    ? String(Number(number.toFixed(4)))
+    : number.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const symbol = CURRENCY_SYMBOLS[code];
+  return symbol ? symbol + text : `${text} ${code}`;
+}
+
+/**
+ * @param {object} config
+ * @param {string} currency
+ */
+function applyCurrencyAxis(config, currency) {
+  if (!currency || typeof config !== 'object' || config === null) {
+    return config;
+  }
+  config.options = config.options || {};
+  config.options.scales = config.options.scales || {};
+  config.options.scales.y = config.options.scales.y || {};
+  config.options.scales.y.ticks = config.options.scales.y.ticks || {};
+  config.options.scales.y.ticks.callback = (value) => formatChartMoney(currency, Number(value));
+  config.options.plugins = config.options.plugins || {};
+  config.options.plugins.tooltip = config.options.plugins.tooltip || {};
+  config.options.plugins.tooltip.callbacks = {
+    ...(config.options.plugins.tooltip.callbacks || {}),
+    label(context) {
+      const series = context.dataset && context.dataset.label ? `${context.dataset.label}: ` : '';
+      const value = context.parsed && typeof context.parsed.y === 'number' ? context.parsed.y : Number(context.raw);
+      return series + formatChartMoney(currency, value);
+    },
+  };
+  return config;
+}
+
+/**
+ * @param {HTMLCanvasElement} canvas
+ */
 function readChartConfig(canvas) {
   const configId = canvas.getAttribute('data-aiu-chart-config-id');
   if (configId) {
@@ -119,6 +169,7 @@ function initCharts(root = document) {
     if (!config) {
       return;
     }
+    applyCurrencyAxis(config, (canvas.getAttribute('data-aiu-chart-currency') || '').trim());
 
     destroyChartForCanvas(canvas);
 

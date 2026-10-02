@@ -345,7 +345,8 @@ function buildUsageDetailContent(scope, button) {
   const latency = button.getAttribute('data-latency') || '';
   const latencyDisplay = latency !== '' ? `${latency} ms` : '';
   const cost = button.getAttribute('data-cost') || '';
-  const costDisplay = cost !== '' ? `$${cost}` : '';
+  const costFormatted = button.getAttribute('data-cost-formatted') || '';
+  const costDisplay = costFormatted !== '' ? costFormatted : (cost !== '' ? `$${cost}` : '');
   const errorCode = (button.getAttribute('data-error-code') || '').trim();
   const errorClass = (button.getAttribute('data-error-class') || '').trim();
   const errorMessage = typeof meta.message === 'string' ? meta.message.trim() : '';
