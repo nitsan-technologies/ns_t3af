@@ -51,7 +51,15 @@ final class DashboardViewModelBuilder
         $periodPreset = (string) ($analytics['periodPreset'] ?? '');
         $dailyAvg = $totalSpend / $periodDays;
         $rows = [];
-        $distribution = is_array($analytics['providerStats'] ?? null) ? $analytics['providerStats'] : [];
+        $distribution = [];
+        $providerStats = $analytics['providerStats'] ?? null;
+        if (is_array($providerStats)) {
+            foreach ($providerStats as $row) {
+                if (is_array($row)) {
+                    $distribution[] = $row;
+                }
+            }
+        }
         $maxCost = 0.0;
         foreach ($distribution as $row) {
             $maxCost = max($maxCost, (float) ($row['cost'] ?? 0.0));

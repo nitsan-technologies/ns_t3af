@@ -187,8 +187,6 @@ final class DashboardStatisticsCache
 
     /**
      * @param array{fromTimestamp:int,toTimestamp:int,days:int,preset?:string} $period
-     */
-    /**
      * @param list<int>|null $providerUids
      */
     private function analyticsKey(
