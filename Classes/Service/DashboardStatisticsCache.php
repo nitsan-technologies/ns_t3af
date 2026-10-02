@@ -39,14 +39,16 @@ final class DashboardStatisticsCache
 
     /**
      * @param array{fromTimestamp:int,toTimestamp:int,days:int,preset?:string} $period
+     * @param list<int>|null $providerUids
      * @return array<string, mixed>|null
      */
     public function getAnalytics(
         array $period,
         RequestLogProviderScope $scope,
         int $storagePid,
+        ?array $providerUids = null,
     ): ?array {
-        $entry = $this->cache->get($this->analyticsKey($period, $scope, $storagePid));
+        $entry = $this->cache->get($this->analyticsKey($period, $scope, $storagePid, $providerUids));
 
         return is_array($entry) ? $entry : null;
     }
@@ -54,15 +56,17 @@ final class DashboardStatisticsCache
     /**
      * @param array{fromTimestamp:int,toTimestamp:int,days:int,preset?:string} $period
      * @param array<string, mixed> $payload
+     * @param list<int>|null $providerUids
      */
     public function setAnalytics(
         array $period,
         RequestLogProviderScope $scope,
         int $storagePid,
         array $payload,
+        ?array $providerUids = null,
     ): void {
         $this->cache->set(
-            $this->analyticsKey($period, $scope, $storagePid),
+            $this->analyticsKey($period, $scope, $storagePid, $providerUids),
             $payload,
             [self::TAG],
             self::TTL_SECONDS,
@@ -184,11 +188,18 @@ final class DashboardStatisticsCache
     /**
      * @param array{fromTimestamp:int,toTimestamp:int,days:int,preset?:string} $period
      */
+    /**
+     * @param list<int>|null $providerUids
+     */
     private function analyticsKey(
         array $period,
         RequestLogProviderScope $scope,
         int $storagePid,
+        ?array $providerUids = null,
     ): string {
+        $uids = $providerUids ?? [];
+        sort($uids);
+
         return 'analytics_' . $this->hash([
             'cli_tasks',
             $scope->name,
@@ -197,6 +208,7 @@ final class DashboardStatisticsCache
             (int) ($period['toTimestamp'] ?? 0),
             (int) ($period['days'] ?? 0),
             (string) ($period['preset'] ?? ''),
+            implode(',', array_map('strval', $uids)),
         ]);
     }
 

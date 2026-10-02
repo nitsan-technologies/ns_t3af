@@ -159,7 +159,7 @@ final readonly class Provider
             lastStatusMessage: (string) ($row['last_status_message'] ?? ''),
             beGroups: self::splitIntList((string) ($row['be_groups'] ?? '')),
             isEnabled: (bool) ($row['is_enabled'] ?? true),
-            enabledForDashboard: (bool) ($row['enabled_for_dashboard'] ?? true),
+            enabledForDashboard: (bool) (int) ($row['enabled_for_dashboard'] ?? 1),
             pricingInputPer1m: (float) ($row['pricing_input_per_1m'] ?? 0.0),
             pricingOutputPer1m: (float) ($row['pricing_output_per_1m'] ?? 0.0),
             pricingCurrency: (string) ($row['pricing_currency'] ?? 'USD'),
