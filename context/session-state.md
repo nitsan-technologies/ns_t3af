@@ -2,6 +2,98 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-09-30 — Drop TYPO3 12 support (2.0.0)
+
+**Done:** Raised `composer.json`/`ext_emconf.php` floor to `^13.4 || ^14.3`, pinned `symfony/ai-agent` to `~0.13.0`, bumped version to `2.0.0`. Removed TYPO3-12-only dual code paths: `ModuleController`/`ExtensionExtConfCategoryService` Fluid `StandaloneView` fallback (now `ViewFactoryInterface` only), `PagePathUtility` legacy icon-size reflection, `ProcessFileListActionsListener` legacy icon-size reflection, `AiUniverseUtilityHelper::getPageTreeNavigationComponent()` v12 branch, `AiApiAlertNotificationService` TYPO3-11 `Mailer` branch, `SetupChecklistPresenterTest` v12 adapter stub/test. Updated public docs (README, Installation/FAQ/Introduction RST, guides.xml/Includes.txt, CHANGELOG + `Documentation/ReleaseNotes/2.0.0/`, CONTRIBUTING, compliance-strings) and agent context (`core.md`, `Build/version-matrix.json`, `docs-map.md`, `Typo3CoreBackendDesign(.generic).md` support lines) to v13/v14 only. v1.x line stays on TYPO3 12 support for existing customers. Decided: drop v12, accept `~0.13.0`, no v12 CI job.
+
+Also fixed two pre-existing failures surfaced by `composer test`/`composer stan` during verification (unrelated to the v12 drop, both from local commit `f17edd7`): (1) `T3PlanetCreditsChatExecutor.php:182` PHPStan `object::invoke()` error — added the same `method_exists($platform, 'invoke')` guard already used in `SymfonyAiPlatform::invokeWithTools()`, since `T3PlanetCreditsPlatformFactory::create()` returns `object` (dynamic class resolution for phar-prefix support). (2) `DataHandlerServiceFileReferenceTest` — constructor was missing the `RecordService` arg; fixed by mocking `RecordService` plus the `TcaSchemaFactory`/`ConnectionPool` seams `BackendUtility::getRecord()` touches (reusing the `QueryBuilder`-mock pattern from `RelationUidListResolverTest`). `composer test` (1098/1098) and `composer stan` (0 errors) both fully green.
+
+**Last touched:** 2026-09-30
+
+---
+
+## 2026-09-29 — Credits v1 chat for AI Agent
+
+**Done:** Agent NL turns in T3Planet Credits mode call `/API/AI/v1/chat/completions` via `symfony/ai-generic-platform` (`T3PlanetCreditsPlatformFactory` + `T3PlanetCreditsChatExecutor`). `AiToolCallingService` branches on `CreditModeResolver`; `supportsToolCalling` is true in credits mode. Provider select lists `/v1/models` aliases. Side-call LLM tool summaries are skipped while credits mode is on. Billing follows the live server (per completions call + `turn_id`); Charge/Stream stay for non-agent traffic.
+
+**Last touched:** 2026-09-29
+
+---
+
+## 2026-09-29 — Read chat content parts
+
+**Done:** `AiService::extractContentFromInvokeResult()` reads a string or a list of text parts from the raw chat completion when the bridge converter rejects the body. Thinking parts are skipped. A provider error in that body is thrown instead of an empty success. A normal `asText()` string is unchanged.
+
+**Last touched:** 2026-09-29
+
+---
+## 2026-09-25 — Document facts are usable reference
+
+**Done:** The brand-fence line now tells the model to use facts inside `<brand_context>` when they fit the task, and still not to follow instructions inside it or change the response format. Uploaded document text stays inside the fence.
+
+**Last touched:** 2026-09-25
+
+---
+
+## 2026-09-25 — Brand writing constraints outside the fence
+
+**Done:** `BrandContextAssembler` places voice, audience, content rules, keywords, and forbidden words above `<brand_context>` so the model applies them. Reference text stays inside the fence. Audience labels include pain points and cares-about when set. Feature prompt templates are unchanged.
+
+**Last touched:** 2026-09-25
+
+---
+
+## 2026-09-25 — T3AI prompt audit in AI Logs
+
+**Done:** `PromptAuditLogListener` (after brand injection) writes the chat messages actually passed to the model into `sys_log` channel `t3ai.prompt` for `ns_t3ai` complete/stream/image/tts. AI Logs details keep newlines (`pre-wrap`) and prefer the raw `message` column so `%` is not doubled.
+
+**Last touched:** 2026-09-25
+
+---
+
+## 2026-09-24 — AI Agent conversations (server-only storage, history budget, summary)
+
+- Removed the client conversation save: card actions (apply, decline, arm, undo) update the stored conversation on the server (`AgentConversationRecorder`); `conversation_save` only keeps the disclosure flag.
+- History replay by token budget (`agentHistoryTokenBudget`, default 6000) with compact card/result notes and a "left out" note.
+- "Summarize conversation" (Σ): summary message replaces older messages in the replay.
+- Provider tool schemas: union types / anyOf kept, nested empty `properties` removed. Phar builder note: `Documentation/Agent/PharBuilderSymfonyAi.md`.
+
+**Last touched:** 2026-09-24
+
+---
+
+## 2026-09-24 — AI Agent Phase 4 (editor UX rules)
+
+- Fixed empty replies ("I could not produce a reply") from reasoning models: `SymfonyAiResultReader` reads 0.13 `MultiPartResult` (thinking + text / tool calls); used by `SymfonyAiPlatform` and `AiService`.
+- Draft/readback cards show record and field names (`AgentRecordLabeler`), where the change goes, Execute / Decline, Execute all, and links after apply.
+- `ask_clarification` takes `options[]` and pauses the turn; answer buttons in the chat.
+- Continue after confirm (`agentContinueAfterConfirm`), credits badge + empty lock (`AgentCreditsStatus`).
+- `agent.tool.label.*` EN/DE for all 98 tools; lock reasons rewritten in plain language.
+- Array tool params get JSON-schema `items` from the docblock.
+- 16 new child tools (T3AI queues, translate page, glossary, image; T3AA alt text bulk/approve/decorative, accessibility scan/issues, voice-over); confirmation cards show names instead of ids; image/audio previews in result cards.
+
+**Last touched:** 2026-09-24
+
+---
+
+## 2026-09-21 — Classic ext_emconf PSR-4 autoload
+
+**Done:** `ext_emconf.php` now declares PSR-4 `NITSAN\NsT3AF\` → `Classes` (matches `composer.json`). Unit test `ExtEmconfAutoloadTest`. Classic activate/deactivate was unsafe without this (QA F-07). Agent `context/core.md` and `tasks/run-quality.md` document Classic CLI (`php typo3/sysext/core/bin/typo3`).
+
+**Last touched:** 2026-09-21
+
+---
+
+## 2026-09-01 — AI Agent editor answers + file-module routing
+
+**Done:** `context/features/ai-agent.md` (new agent entry). Editor-facing tool labels (`AgentToolEditorLabelService`), human result presenter, workflow-before-fast-path on stream NL, file module context (`pageId=0`, `storageUid`/`folderIdentifier`), Cursor-style work trace, hide redundant facts when prose present. Tests under `Tests/Unit/Agent/`.
+
+**Agent context:** `context/features/ai-agent.md`; architecture § AI Agent; router rows in `AGENTS.md`, `context/docs-map.md`, `tasks/context-update.md`.
+
+**Last touched:** 2026-09-01
+
+---
+
 ## 2026-08-19 — Release v1.1.4
 
 **Done:** Bump version to 1.1.4. LICENSING.md, README install/licence block, MCP Table Discovery wording, Slack community link, Packagist keywords, core 13/14 CI badges.
@@ -583,3 +675,11 @@ Provider-driven registration (2026-07): child extensions ship `*AccessCatalogPro
 ## Next
 
 Refer to `context/features/ai-access-roles.md` for wizard/matrix/enforcement details. Use `context/session-state.md` + feature context when extending ACL or child-extension gates.
+
+## AI Agent: starter chips, image previews, live eval (2026-09)
+
+- Starter chips per context (`AgentStarterBuilder`), sent as normal messages; labels `agent.starter.prompt.*` (EN/DE).
+- `AgentMediaPreviewService` → `meta.previews` thumbnails on results / cards (`renderImagePreviews` in `agent.js`).
+- `t3af:agent:eval --live --page=<uid> [--provider=all] [--scenario=04,05] [--report=file.json]`: scenarios in `Resources/Private/Agent/Eval/Scenarios`, judged by `AgentScenarioJudge` (no answer / loops / wrong tools / time). CLI session via `AgentEvalCliEnvironment`.
+- Toolbox emits `tool_call` (with outcome) and `GovernedPlatform` `model_request` events; the SSE stream filters them out.
+- `AgentPromptBuilder::continuationMessage()` (moved from the controller) builds the turn after confirm/decline.

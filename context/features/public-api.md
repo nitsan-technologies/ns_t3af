@@ -12,6 +12,7 @@
 - Resolves provider by `AiOptions::$providerIdentifier` or default row.
 - Dispatches PSR-14 lifecycle events; optional response cache.
 - Attributes calls via `extensionKey`, `featureKey` for telemetry and credits.
+- `complete()` prefers `asText()`. If the bridge rejects the body, it reads a string or text parts from the raw chat completion and skips thinking parts. A provider error in that body is thrown.
 
 ---
 

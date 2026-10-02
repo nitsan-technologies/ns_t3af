@@ -26,10 +26,13 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Search;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 
+#[McpToolSeverity(ToolSeverity::Read)]
 readonly class RecordSearchTool implements McpNonAiToolInterface
 {
     public function __construct(
@@ -61,10 +64,10 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
         }
 
         try {
-            /** @var array<string, mixed> $searchData */
-            $searchData = json_decode($search, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            return json_encode(['error' => 'Invalid JSON in search parameter: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
+            $labelField = (string) ($GLOBALS['TCA'][$tableName]['ctrl']['label'] ?? '');
+            $searchData = SearchParamParser::parse($search, $labelField, array_merge(['uid', 'pid'], $readFields));
+        } catch (\InvalidArgumentException $e) {
+            return json_encode(['error' => 'Invalid search parameter: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
         }
 
         $allowedFields = array_merge(['uid', 'pid'], $readFields);

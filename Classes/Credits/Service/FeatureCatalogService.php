@@ -32,6 +32,7 @@ final class FeatureCatalogService
         private readonly TokenResolver $tokenResolver,
         private readonly CreditsDomainResolver $domainResolver,
         private readonly CreditsApiResponseCacheInterface $responseCache,
+        private readonly CreditsCatalogLanguageResolver $catalogLanguage,
     ) {}
 
     /**
@@ -41,19 +42,21 @@ final class FeatureCatalogService
     {
         $domain = $this->domainResolver->resolve();
         $token = $this->tokenResolver->resolve();
+        $language = $this->catalogLanguage->resolve();
+        $cacheScope = CreditsApiResponseCache::scopeFeatures($language);
 
-        $cached = $this->responseCache->get(CreditsApiResponseCache::SCOPE_FEATURES, $domain, $token);
+        $cached = $this->responseCache->get($cacheScope, $domain, $token);
         if ($cached !== null) {
             return $cached;
         }
 
-        $payload = $this->apiClient->features($domain, $token);
+        $payload = $this->apiClient->features($domain, $token, $language);
         if (($payload['not_modified'] ?? false) === true) {
             return $payload;
         }
 
         $this->responseCache->set(
-            CreditsApiResponseCache::SCOPE_FEATURES,
+            $cacheScope,
             $domain,
             $token,
             $payload,

@@ -26,8 +26,8 @@
 | | Floor |
 |---|---|
 | PHP | `>=8.2 <9` |
-| TYPO3 | `^12.4 \|\| ^13.4 \|\| ^14.3` |
-| Version | `1.2.0` (`ext_emconf.php` / TER) |
+| TYPO3 | `^13.4 \|\| ^14.3` |
+| Version | `1.2.2` (`ext_emconf.php` / TER) |
 
 Match `composer.json` + `ext_emconf.php` — do not invent a separate “v2.x” floor unless those files change.
 

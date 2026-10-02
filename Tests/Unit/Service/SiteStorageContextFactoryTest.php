@@ -59,4 +59,19 @@ final class SiteStorageContextFactoryTest extends TestCase
             SiteStorageContext::extractPageIdFromRequest($request),
         );
     }
+
+    public function testExtractPageIdFromRequestReadsUidUsedByAiSuggestions(): void
+    {
+        $request = (new ServerRequest('http://localhost/'))->withQueryParams(['uid' => '70']);
+
+        self::assertSame(70, SiteStorageContext::extractPageIdFromRequest($request));
+    }
+
+    public function testExtractPageIdFromRequestPrefersPageIdOverUid(): void
+    {
+        $request = (new ServerRequest('http://localhost/'))
+            ->withQueryParams(['pageId' => '68', 'uid' => '70']);
+
+        self::assertSame(68, SiteStorageContext::extractPageIdFromRequest($request));
+    }
 }

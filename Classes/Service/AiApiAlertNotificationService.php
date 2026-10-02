@@ -30,7 +30,6 @@ use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Mail\FluidEmail;
-use TYPO3\CMS\Core\Mail\Mailer;
 use TYPO3\CMS\Core\Mail\MailerInterface;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -217,12 +216,7 @@ final class AiApiAlertNotificationService
                 $email->setRequest($request);
             }
 
-            $version = AiUniverseUtilityHelper::getTypo3MajorVersion();
-            if ($version === 11) {
-                GeneralUtility::makeInstance(Mailer::class)->send($email);
-            } else {
-                GeneralUtility::makeInstance(MailerInterface::class)->send($email);
-            }
+            GeneralUtility::makeInstance(MailerInterface::class)->send($email);
         } catch (TransportExceptionInterface) {
             // Mail transport not configured — do not break AI flows.
         } catch (\Throwable) {

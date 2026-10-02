@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Service;
 
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
 use NITSAN\NsT3AF\Exception\CipherException;
@@ -180,8 +181,19 @@ final class ProviderFormService
         if ($uid === 0) {
             $payload['pid'] = $storagePid;
         }
-        $persistedUid = $this->repository->save($uid, $payload);
-        if (($payload['is_default'] ?? 0) === 1) {
+        $wantDefault = ((int) ($payload['is_default'] ?? 0)) === 1;
+        if ($wantDefault) {
+            // Avoid save(is_default=1) + setDefault() double-write lock races / deadlocks.
+            unset($payload['is_default']);
+        }
+        try {
+            $persistedUid = $this->repository->save($uid, $payload);
+        } catch (UniqueConstraintViolationException) {
+            return ProviderFormResult::errors([
+                'identifier' => sprintf('Identifier "%s" is already in use.', $identifier),
+            ]);
+        }
+        if ($wantDefault) {
             $this->repository->setDefault($persistedUid, $storagePid);
         }
 

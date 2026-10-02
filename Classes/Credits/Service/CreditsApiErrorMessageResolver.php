@@ -73,7 +73,7 @@ final class CreditsApiErrorMessageResolver
 
     private function translate(string $errorCode, CreditsApiException $exception): string
     {
-        $label = (string) ($GLOBALS['LANG']?->sL(self::LANGUAGE_FILE . 'credits.api.error.' . $errorCode) ?? '');
+        $label = (string) (($GLOBALS['LANG'] ?? null)?->sL(self::LANGUAGE_FILE . 'credits.api.error.' . $errorCode) ?? '');
         if ($label === '' || $label === 'credits.api.error.' . $errorCode) {
             return '';
         }
@@ -111,7 +111,7 @@ final class CreditsApiErrorMessageResolver
             return $label;
         }
 
-        $hint = (string) ($GLOBALS['LANG']?->sL(self::LANGUAGE_FILE . 'credits.api.error.insufficient_credits.topup_hint') ?? '');
+        $hint = (string) (($GLOBALS['LANG'] ?? null)?->sL(self::LANGUAGE_FILE . 'credits.api.error.insufficient_credits.topup_hint') ?? '');
         if ($hint === '' || $hint === 'credits.api.error.insufficient_credits.topup_hint') {
             return $label . ' ' . $exception->topupUrl;
         }

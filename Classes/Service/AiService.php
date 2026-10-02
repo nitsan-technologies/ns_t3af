@@ -36,6 +36,7 @@ use NITSAN\NsT3AF\Provider\AdapterRegistry;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
 use NITSAN\NsT3AF\Provider\OpenAiCompatible\OpenAiCompatiblePlatform;
 use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiBridgeAdapter;
+use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiResultReader;
 use Psr\EventDispatcher\EventDispatcherInterface;
 
 /**
@@ -235,6 +236,20 @@ final class AiService implements AiServiceInterface
 
     public function embed(string|array $text, AiOptions $options = new AiOptions()): EmbeddingResponse
     {
+        if (is_string($text) && trim($text) === '') {
+            throw new AdapterRuntimeException('Empty embedding input: expected a non-empty string.');
+        }
+        if (is_array($text)) {
+            $filtered = array_values(array_filter(
+                $text,
+                static fn(mixed $item): bool => is_string($item) && trim($item) !== '',
+            ));
+            if ($filtered === []) {
+                throw new AdapterRuntimeException('Empty embedding input: expected a non-empty string or token array.');
+            }
+            $text = count($text) === 1 ? $filtered[0] : $filtered;
+        }
+
         $provider = $this->provider($options->providerIdentifier, $options->pageId);
         $adapter = $this->resolveAdapter($provider);
 
@@ -386,13 +401,15 @@ final class AiService implements AiServiceInterface
             $invokeOptions = ['task' => 'feature-extraction'];
         }
 
-        // The built-in OpenAI-compatible platform implements both invoke() (chat)
-        // and embed() (embeddings); embeddings must never go through invoke(),
-        // which posts to /chat/completions and returns chat content.
-        if ($platform instanceof OpenAiCompatiblePlatform) {
+        // Prefer embed() when present. OpenAiCompatiblePlatform posts to /embeddings
+        // (invoke would hit /chat/completions). SymfonyAiPlatform::embed() passes the
+        // raw string through; its invoke() wraps strings as MessageBag and OpenAI
+        // embeddings reject that with: Invalid 'input': expected a string or token array.
+        if (method_exists($platform, 'embed')) {
             $raw = $platform->embed($modelId, $text);
         } elseif (method_exists($platform, 'invoke')) {
-            // Prefer invoke() for Symfony AI Platform (DeferredResult + TokenUsageExtractor metadata).
+            // Platforms without a dedicated embed() still use invoke() + payload fallbacks
+            // (DeferredResult + TokenUsageExtractor metadata on Symfony AI).
             $raw = $this->invokeWithPayloadFallbacks(
                 $platform,
                 'invoke',
@@ -400,8 +417,6 @@ final class AiService implements AiServiceInterface
                 $payloads,
                 $invokeOptions,
             );
-        } elseif (method_exists($platform, 'embed')) {
-            $raw = $platform->embed($modelId, $text);
         } elseif (method_exists($platform, 'request')) {
             $raw = $this->invokeWithPayloadFallbacks(
                 $platform,
@@ -430,11 +445,14 @@ final class AiService implements AiServiceInterface
      */
     private function embeddingPayloads(string|array $text): array
     {
+        // OpenAI Embeddings\ModelClient sets JSON `input` to $payload as-is.
+        // Never pass ['input' => $text] — that becomes input: {input: "..."} and
+        // OpenAI rejects with: Invalid 'input': expected a string or token array.
         if (is_array($text)) {
-            return [$text, ['input' => $text]];
+            return [$text];
         }
 
-        return [$text, ['input' => $text], [$text]];
+        return [$text, [$text]];
     }
 
     /**
@@ -574,45 +592,173 @@ final class AiService implements AiServiceInterface
 
     private function extractContentFromInvokeResult(object $result): string
     {
+        // Reasoning models return several parts (thinking + text); asText() throws for those.
+        $text = SymfonyAiResultReader::text($result);
+        if (trim($text) !== '') {
+            return $text;
+        }
+
+        $conversionError = null;
+
         if (method_exists($result, 'asText')) {
             try {
-                /** @var mixed $text */
-                $text = $result->asText();
-                if (is_string($text) && $text !== '') {
+                $text = $this->textFromContentValue($result->asText());
+                if ($text !== '') {
                     return $text;
                 }
-            } catch (\Throwable) {
-                // Fall through to other extraction strategies.
+            } catch (\Throwable $exception) {
+                $conversionError = $exception;
             }
         }
 
-        if (method_exists($result, 'getResult')) {
+        if ($conversionError === null && method_exists($result, 'getResult')) {
             try {
                 /** @var mixed $nestedResult */
                 $nestedResult = $result->getResult();
                 if (is_object($nestedResult) && method_exists($nestedResult, 'getContent')) {
-                    $nestedContent = $nestedResult->getContent();
-                    if (is_string($nestedContent) && $nestedContent !== '') {
-                        return $nestedContent;
+                    $nestedText = $this->textFromContentValue($nestedResult->getContent());
+                    if ($nestedText !== '') {
+                        return $nestedText;
                     }
                 }
-            } catch (\Throwable) {
-                // Fall through to other extraction strategies.
+            } catch (\Throwable $exception) {
+                $conversionError = $exception;
             }
         }
 
         if (method_exists($result, 'getContent')) {
-            $directContent = $result->getContent();
-            if (is_string($directContent) && $directContent !== '') {
-                return $directContent;
+            try {
+                $directText = $this->textFromContentValue($result->getContent());
+                if ($directText !== '') {
+                    return $directText;
+                }
+            } catch (\Throwable) {
+                // Direct content is optional when asText() already ran.
             }
         }
 
-        if (method_exists($result, '__toString')) {
+        $raw = $this->extractRawResponse($result);
+        $rawText = $this->textFromChatCompletionPayload($raw);
+        if ($rawText !== '') {
+            return $rawText;
+        }
+
+        $apiError = $this->messageFromProviderPayload($raw);
+        if ($apiError !== '') {
+            throw new AdapterRuntimeException($apiError);
+        }
+
+        if ($conversionError !== null && !$this->isSkippableContentExtractionError($conversionError)) {
+            throw new AdapterRuntimeException($conversionError->getMessage(), 0, $conversionError);
+        }
+
+        if ($conversionError === null && method_exists($result, '__toString')) {
             return (string) $result;
         }
 
         return '';
+    }
+
+    /**
+     * Chat completions may return a string or a list of content parts.
+     * Thinking parts are skipped so the translated text is what remains.
+     */
+    private function textFromContentValue(mixed $content): string
+    {
+        if (is_string($content)) {
+            return trim($content);
+        }
+        if (!is_array($content)) {
+            return '';
+        }
+        if ($content !== [] && !array_is_list($content)) {
+            $content = [$content];
+        }
+
+        $chunks = [];
+        foreach ($content as $part) {
+            if (is_string($part)) {
+                $partText = trim($part);
+                if ($partText !== '') {
+                    $chunks[] = $partText;
+                }
+                continue;
+            }
+            if (!is_array($part)) {
+                continue;
+            }
+            $type = strtolower(trim((string) ($part['type'] ?? 'text')));
+            if (in_array($type, ['thinking', 'reasoning', 'redacted_thinking'], true)) {
+                continue;
+            }
+            $partText = $this->textFromContentValue($part['text'] ?? $part['content'] ?? null);
+            if ($partText !== '') {
+                $chunks[] = $partText;
+            }
+        }
+
+        return trim(implode("\n", $chunks));
+    }
+
+    /**
+     * @param array<string, mixed> $raw
+     */
+    private function textFromChatCompletionPayload(array $raw): string
+    {
+        $choices = $raw['choices'] ?? null;
+        if (is_array($choices) && isset($choices[0]) && is_array($choices[0])) {
+            $message = $choices[0]['message'] ?? null;
+            if (is_array($message)) {
+                $text = $this->textFromContentValue($message['content'] ?? null);
+                if ($text !== '') {
+                    return $text;
+                }
+            }
+            $choiceText = $this->textFromContentValue($choices[0]['text'] ?? null);
+            if ($choiceText !== '') {
+                return $choiceText;
+            }
+        }
+
+        $output = $raw['output'] ?? null;
+        if (is_array($output)) {
+            $chunks = [];
+            foreach ($output as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $itemText = $this->textFromContentValue($item['content'] ?? $item['text'] ?? null);
+                if ($itemText !== '') {
+                    $chunks[] = $itemText;
+                }
+            }
+            if ($chunks !== []) {
+                return trim(implode("\n", $chunks));
+            }
+        }
+
+        return $this->textFromContentValue($raw['content'] ?? null);
+    }
+
+    /**
+     * @param array<string, mixed> $raw
+     */
+    private function messageFromProviderPayload(array $raw): string
+    {
+        $error = $raw['error'] ?? null;
+        if (is_string($error)) {
+            return trim($error);
+        }
+        if (!is_array($error)) {
+            return '';
+        }
+
+        return trim((string) ($error['message'] ?? ''));
+    }
+
+    private function isSkippableContentExtractionError(\Throwable $exception): bool
+    {
+        return str_contains($exception::class, 'UnexpectedResultTypeException');
     }
 
     /**
@@ -964,19 +1110,45 @@ final class AiService implements AiServiceInterface
     private function yieldFromStreamResult(mixed $result, AdapterInterface $adapter): \Generator
     {
         if (is_object($result) && method_exists($result, 'asTextStream')) {
-            foreach ($result->asTextStream() as $delta) {
-                yield $this->coerceStreamChunk($delta);
-            }
+            try {
+                foreach ($result->asTextStream() as $delta) {
+                    yield $this->coerceStreamChunk($delta);
+                }
 
-            return;
+                return;
+            } catch (\Throwable $e) {
+                // Some bridges ignore stream:true and return TextResult; fall back below.
+                if (!$this->isUnexpectedStreamTypeError($e)) {
+                    throw $e;
+                }
+            }
         }
 
         if (is_object($result) && method_exists($result, 'asStream')) {
-            foreach ($result->asStream() as $delta) {
-                yield $this->coerceStreamChunk($delta);
-            }
+            try {
+                foreach ($result->asStream() as $delta) {
+                    yield $this->coerceStreamChunk($delta);
+                }
 
-            return;
+                return;
+            } catch (\Throwable $e) {
+                if (!$this->isUnexpectedStreamTypeError($e)) {
+                    throw $e;
+                }
+            }
+        }
+
+        if (is_object($result) && method_exists($result, 'asText')) {
+            try {
+                $text = trim((string) $result->asText());
+                if ($text !== '') {
+                    yield $text;
+                }
+
+                return;
+            } catch (\Throwable) {
+                // Continue to iterable / error paths.
+            }
         }
 
         if (is_iterable($result)) {
@@ -991,6 +1163,14 @@ final class AiService implements AiServiceInterface
             'Adapter "%s" invoke(stream) did not return a streamable result.',
             $adapter->getType(),
         ));
+    }
+
+    private function isUnexpectedStreamTypeError(\Throwable $throwable): bool
+    {
+        $message = $throwable->getMessage();
+
+        return str_contains($message, 'Unexpected response type:')
+            && str_contains($message, 'StreamResult');
     }
 
     private function coerceStreamChunk(mixed $chunk): string
@@ -1043,7 +1223,9 @@ final class AiService implements AiServiceInterface
             || str_contains($message, 'string given')
             || str_contains($message, 'array given')
             || str_contains($message, 'could not normalize object of type')
-            || str_contains($message, 'no supporting normalizer found');
+            || str_contains($message, 'no supporting normalizer found')
+            || str_contains($message, "invalid 'input'")
+            || str_contains($message, 'expected a string or token array');
     }
 
     private function mapRuntimeException(Provider $provider, string $callType, \Throwable $error): AdapterRuntimeException

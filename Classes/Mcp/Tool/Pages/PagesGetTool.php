@@ -27,19 +27,32 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Pages;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 
+#[McpToolSeverity(ToolSeverity::Read)]
 readonly class PagesGetTool implements McpNonAiToolInterface
 {
     public function __construct(private RecordService $recordService, private TcaSchemaService $tcaSchemaService) {}
 
-    #[McpTool(name: 'pages_get', description: 'Get a single page by its uid.')]
-    public function execute(int $uid): string
+    #[McpTool(
+        name: 'pages_get',
+        description: 'Get a single page by its uid.'
+            . ' When uid is omitted, pageId may be used (agent context supplies the current page).'
+            . ' Use selectFields (comma-separated) to choose which fields to return.',
+    )]
+    public function execute(int $uid = 0, string $selectFields = '', int $pageId = 0): string
     {
+        $resolvedUid = $uid > 0 ? $uid : $pageId;
+        if ($resolvedUid <= 0) {
+            return json_encode(['error' => 'Missing required argument: uid (or pageId)'], JSON_THROW_ON_ERROR);
+        }
+
         $translationConfig = $this->tcaSchemaService->getTranslationConfig('pages');
-        $fields = $this->tcaSchemaService->getReadFields('pages');
+        $fields = $this->resolveSelectFields($selectFields);
 
         $languageField = $translationConfig['languageField'];
         if ($languageField !== null && !in_array($languageField, $fields, true)) {
@@ -51,7 +64,7 @@ readonly class PagesGetTool implements McpNonAiToolInterface
             $fields[] = $transOrigPointerField;
         }
 
-        $record = $this->recordService->findByUid('pages', $uid, $fields);
+        $record = $this->recordService->findByUid('pages', $resolvedUid, $fields);
 
         if ($record === null) {
             return json_encode(['error' => 'Page not found'], JSON_THROW_ON_ERROR);
@@ -67,9 +80,28 @@ readonly class PagesGetTool implements McpNonAiToolInterface
             )
             && (int) $sysLanguageUid === 0
         ) {
-            $record['translations'] = $this->recordService->findTranslations('pages', $uid, $languageField, $transOrigPointerField);
+            $record['translations'] = $this->recordService->findTranslations('pages', $resolvedUid, $languageField, $transOrigPointerField);
         }
 
         return json_encode($record, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function resolveSelectFields(string $selectFields): array
+    {
+        if ($selectFields === '') {
+            return $this->tcaSchemaService->getReadFields('pages');
+        }
+
+        $requested = array_map('trim', explode(',', $selectFields));
+        $readable = $this->tcaSchemaService->getReadFields('pages');
+        $allowed = array_merge(['uid', 'pid'], $readable);
+        $valid = array_values(array_intersect($requested, $allowed));
+
+        return $valid !== []
+            ? array_values(array_unique(array_merge(['uid', 'pid'], $valid)))
+            : $this->tcaSchemaService->getReadFields('pages');
     }
 }

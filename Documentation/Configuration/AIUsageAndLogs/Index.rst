@@ -75,9 +75,13 @@ Set ``openai_admin_api_key`` in Extension Configuration for organization-level u
 Privacy
 -------
 
-Log detail depends on provider privacy settings and group audit limits from
-:ref:`AI Permissions <ai-permissions>`. Configure carefully before enabling full
-prompt/response storage.
+Local logs never store prompt or response text. Privacy level on each
+:ref:`AI provider <ai-providers>` (and optional UserTSconfig
+``nst3af.privacyLevel``) controls **local AI Usage telemetry only**. It does
+not change what is sent to the AI provider.
+
+Full DPA and GDPR notes, including BYOK vs Credits, retention, and cleanup
+commands: :ref:`DPA & GDPR <data-processing-agreement>`.
 
 Weekly admin habit
 ------------------

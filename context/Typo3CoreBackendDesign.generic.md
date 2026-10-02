@@ -3,7 +3,7 @@
 Project-agnostic reference for building **any** TYPO3 backend module so it looks and behaves like native TYPO3. Drop this file into any extension/project. When implementing a new extension or feature, follow this guide to adopt TYPO3 core design **automatically** — use core markup and `--typo3-*` tokens first; add extension CSS only when core cannot express the layout.
 
 **Scope:** Backend module UI (Fluid templates, module CSS, JS toggles).
-**Supported TYPO3:** `^12.4 || ^13.4 || ^14.3`.
+**Supported TYPO3:** `^13.4 || ^14.3`.
 **Source of truth:** TYPO3 core `backend.css` (always) + **styleguide** when installed (optional live reference). Styleguide is **not** required in production — see fallbacks below.
 
 ---

@@ -1,0 +1,19 @@
+{
+  "id": "14-missing-alt-text",
+  "title": "Images without alt text are listed",
+  "requires": [
+    "t3aa_list_files_missing_alt_text"
+  ],
+  "module": "media_management",
+  "turns": [
+    {
+      "message": "Which images have no alt text?",
+      "expect": {
+        "anyTool": [
+          "t3aa_list_files_missing_alt_text"
+        ],
+        "reply": true
+      }
+    }
+  ]
+}

@@ -26,9 +26,12 @@ namespace NITSAN\NsT3AF\Mcp\Tool\File;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpFalStorageToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
 
+#[McpToolSeverity(ToolSeverity::Read)]
 readonly class FileGetInfoTool implements McpFalStorageToolInterface
 {
     public function __construct(private FileService $fileService) {}

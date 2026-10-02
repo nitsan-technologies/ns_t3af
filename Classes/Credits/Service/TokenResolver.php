@@ -28,7 +28,7 @@ use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
 /**
  * @internal
  */
-final class TokenResolver
+class TokenResolver
 {
     private const CACHE_IDENTIFIER = 't3planet_bearer_token';
 

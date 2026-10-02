@@ -25,7 +25,7 @@ child extensions such as AI Assistant or AI Chatbot.
 
 **Which TYPO3 and PHP versions are supported?**
 
-TYPO3 12.4–14.x with PHP 8.2 or higher. See
+TYPO3 13.4–14.x with PHP 8.2 or higher. See
 :ref:`System Requirements <system-requirements>`.
 
 Installation
@@ -73,8 +73,10 @@ AI Foundation is self-hosted. With **Your Own API Keys**, prompts and responses
 go from your server to the AI provider you configure. T3Planet is not in that
 AI data path. With :ref:`T3Planet Credits <t3planet-credit-system>` active,
 billable AI calls go through T3Planet and use your credit balance. AI Foundation
-makes no product licence call. See :ref:`Installation <installation>` and the
-extension ``LICENSING.md`` / ``PRIVACY.md``.
+makes no product licence call. See
+:ref:`DPA & GDPR <data-processing-agreement>`,
+:ref:`Installation <installation>`, and the extension ``LICENSING.md`` /
+``PRIVACY.md``.
 
 Still stuck?
 ------------

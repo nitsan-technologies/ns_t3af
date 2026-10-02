@@ -65,6 +65,10 @@ Default is **Own API Keys**. Credits stays off until you select it and complete
 :guilabel:`Activate`. Your saved providers stay in the database and are available
 again when you switch back to :guilabel:`Your Own API Keys`.
 
+When Credits is active, billable AI calls go to T3Planet. Prompts and inputs
+may be stored in T3Planet billing records. For processors, retention, and
+minimisation, see :ref:`DPA & GDPR <data-processing-agreement>`.
+
 ..  toctree::
    :maxdepth: 2
    :titlesonly:

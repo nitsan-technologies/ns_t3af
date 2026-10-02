@@ -25,7 +25,9 @@ Activate Credits
 3. Confirm if asked.
 4. Click :guilabel:`Activate` if shown.
 5. If no AI Universe license contact is available, enter name and email in the
-   free-credits form, accept the privacy notice, then continue.
+   free-credits form, accept the privacy notice, then continue. Credits
+   processing (including optional prompt storage in billing records) is
+   documented in :ref:`DPA & GDPR <data-processing-agreement>`.
 6. Wait for success → page reloads.
 
 .. figure:: ../../Images/t3planet-credits-activate.png

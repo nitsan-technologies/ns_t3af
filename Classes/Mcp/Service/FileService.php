@@ -24,32 +24,28 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Service;
 
 use Doctrine\DBAL\ParameterType;
-use NITSAN\NsT3AF\Service\PublicUrlValidator;
-
-use const PHP_URL_HOST;
-use const PHP_URL_PATH;
-use const PHP_URL_SCHEME;
-
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Resource\File;
 use TYPO3\CMS\Core\Resource\Folder;
+use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
 use TYPO3\CMS\Core\Resource\StorageRepository;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 readonly class FileService
 {
-    private const MAX_DOWNLOAD_BYTES = 104857600;
-
     public function __construct(
         private StorageRepository $storageRepository,
         private ConnectionPool $connectionPool,
-        private PublicUrlValidator $publicUrlValidator = new PublicUrlValidator(),
+        private FileUploadService $fileUploadService,
+        private AdvancedSettingsService $advancedSettingsService,
+        private McpPublicUrlService $mcpPublicUrlService,
     ) {}
 
     /**
      * @return array{
-     *     files: list<array{name: string, identifier: string, size: int, mimeType: string, extension: string, modificationTime: int}>,
+     *     files: list<array{uid: int, name: string, identifier: string, size: int, mimeType: string, extension: string, modificationTime: int, publicUrl: string|null, sha1: string}>,
      *     directories: list<array{name: string, identifier: string, modificationTime: int}>,
      *     totalFiles: int,
      *     totalDirectories: int
@@ -93,7 +89,8 @@ readonly class FileService
      *     mimeType: string,
      *     extension: string,
      *     modificationTime: int,
-     *     publicUrl: string|null
+     *     publicUrl: string|null,
+     *     sha1: string
      * }
      */
     public function getFileInfo(int $storageUid, string $fileIdentifier): array
@@ -113,17 +110,35 @@ readonly class FileService
             'mimeType' => $file->getMimeType(),
             'extension' => $file->getExtension(),
             'modificationTime' => $file->getModificationTime(),
-            'publicUrl' => $file->getPublicUrl(),
+            'publicUrl' => $this->mcpPublicUrlService->makeAbsoluteUrl($file->getPublicUrl()),
+            'sha1' => $file->getSha1(),
         ];
     }
 
     /**
-     * @return array{uid: int, name: string, identifier: string, size: int, mimeType: string}
+     * Resolve sys_file uid from storage + identifier; 0 when missing or inaccessible.
+     */
+    public function resolveFileUid(int $storageUid, string $identifier): int
+    {
+        if ($storageUid <= 0 || trim($identifier) === '') {
+            return 0;
+        }
+
+        try {
+            $info = $this->getFileInfo($storageUid, $identifier);
+
+            return (int) ($info['uid'] ?? 0);
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
      */
     public function uploadFile(int $storageUid, string $directoryPath, string $fileName, string $content): array
     {
-        $storage = $this->getStorage($storageUid);
-        $folder = $storage->getFolder($directoryPath);
+        $folder = $this->fileUploadService->resolveFolder($storageUid, $directoryPath);
 
         $tempFile = tempnam(sys_get_temp_dir(), 'nst3af_upload_');
         if ($tempFile === false) {
@@ -131,122 +146,49 @@ readonly class FileService
         }
 
         try {
-            file_put_contents($tempFile, $content);
-            $file = $storage->addFile($tempFile, $folder, $fileName);
+            if (file_put_contents($tempFile, $content) === false) {
+                throw new \RuntimeException('Failed to write temporary upload file', 1712002019);
+            }
+            $stored = $this->fileUploadService->storeFile($tempFile, $fileName, $folder);
         } finally {
             if (file_exists($tempFile)) {
                 unlink($tempFile);
             }
         }
 
-        return [
-            'uid' => $file->getUid(),
-            'name' => $file->getName(),
-            'identifier' => $file->getIdentifier(),
-            'size' => $file->getSize(),
-            'mimeType' => $file->getMimeType(),
-        ];
+        return $this->enrichStoredFileResult($stored, $fileName);
     }
 
     /**
-     * @return array{uid: int, name: string, identifier: string, size: int, mimeType: string}
+     * @return array<string, mixed>
      */
     public function uploadFileFromUrl(int $storageUid, string $directoryPath, string $url, string $fileName = ''): array
     {
-        $scheme = parse_url($url, PHP_URL_SCHEME);
-        if (!is_string($scheme) || !in_array($scheme, ['http', 'https'], true)) {
-            throw new \RuntimeException('Only http and https URLs are allowed', 1712002010);
+        $folder = $this->fileUploadService->resolveFolder($storageUid, $directoryPath);
+
+        $onlineMedia = $this->fileUploadService->tryCreateOnlineMedia($url, $folder);
+        if ($onlineMedia instanceof File) {
+            $data = $this->fileUploadService->describeFile($onlineMedia);
+            $data['onlineMedia'] = true;
+
+            return $data;
         }
 
-        $host = parse_url($url, PHP_URL_HOST);
-        if (!is_string($host) || $host === '') {
-            throw new \RuntimeException('Invalid URL: missing host', 1712002014);
-        }
-
-        if (!$this->publicUrlValidator->isPublicUrl($url)) {
-            throw new \RuntimeException('URL resolves to a private or reserved IP address', 1712002015);
-        }
-
-        if ($fileName === '') {
-            $path = parse_url($url, PHP_URL_PATH);
-            $fileName = is_string($path) ? basename($path) : '';
-            if ($fileName === '' || $fileName === '.') {
-                $fileName = 'download_' . bin2hex(random_bytes(4));
-            }
-        }
-
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => 30,
-                'max_redirects' => 5,
-                'follow_location' => 1,
-                'method' => 'GET',
-                'user_agent' => 'TYPO3-AI-Foundation-MCP/1.0',
-            ],
-            'ssl' => [
-                'verify_peer' => true,
-                'verify_peer_name' => true,
-            ],
-        ]);
-
-        $tempFile = tempnam(sys_get_temp_dir(), 'nst3af_url_upload_');
-        if ($tempFile === false) {
-            throw new \RuntimeException('Failed to create temporary file', 1712002003);
-        }
-
+        [$tempPath, $resolvedFileName] = $this->fileUploadService->downloadFromUrl($url, $fileName);
         try {
-            $stream = @fopen($url, 'r', false, $context);
-            if ($stream === false) {
-                throw new \RuntimeException('Failed to download file from URL', 1712002011);
-            }
-
-            $bytesWritten = 0;
-            $fp = fopen($tempFile, 'w');
-            if ($fp === false) {
-                fclose($stream);
-
-                throw new \RuntimeException('Failed to open temporary file for writing', 1712002016);
-            }
-
-            while (!feof($stream)) {
-                $chunk = fread($stream, 8192);
-                if ($chunk === false) {
-                    break;
-                }
-                $bytesWritten += strlen($chunk);
-                if ($bytesWritten > self::MAX_DOWNLOAD_BYTES) {
-                    fclose($fp);
-                    fclose($stream);
-
-                    throw new \RuntimeException('Downloaded file exceeds maximum allowed size of 100 MB', 1712002012);
-                }
-                fwrite($fp, $chunk);
-            }
-
-            fclose($fp);
-            fclose($stream);
-
-            $storage = $this->getStorage($storageUid);
-            $folder = $storage->getFolder($directoryPath);
-            $file = $storage->addFile($tempFile, $folder, $fileName);
+            $stored = $this->fileUploadService->storeFile($tempPath, $resolvedFileName, $folder);
         } finally {
-            if (file_exists($tempFile)) {
-                unlink($tempFile);
+            if (file_exists($tempPath)) {
+                unlink($tempPath);
             }
         }
 
-        return [
-            'uid' => $file->getUid(),
-            'name' => $file->getName(),
-            'identifier' => $file->getIdentifier(),
-            'size' => $file->getSize(),
-            'mimeType' => $file->getMimeType(),
-        ];
+        return $this->enrichStoredFileResult($stored, $resolvedFileName);
     }
 
     /**
      * @return array{
-     *     files: list<array{name: string, identifier: string, size: int, mimeType: string, extension: string, storage: int}>,
+     *     files: list<array{uid: int, name: string, identifier: string, size: int, mimeType: string, extension: string, storage: int, publicUrl: string|null}>,
      *     total: int
      * }
      */
@@ -255,12 +197,15 @@ readonly class FileService
         $limit = min(max($limit, 1), 500);
         $offset = max(0, $offset);
 
+        // Enforce BE file mounts before querying (same gate as list/get/upload).
+        $this->getStorage($storageUid);
+
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('sys_file');
         $queryBuilder->getRestrictions()->removeAll();
         $countQueryBuilder = $this->connectionPool->getQueryBuilderForTable('sys_file');
         $countQueryBuilder->getRestrictions()->removeAll();
 
-        $queryBuilder->select('name', 'identifier', 'size', 'mime_type', 'extension', 'storage')->from('sys_file');
+        $queryBuilder->select('uid', 'name', 'identifier', 'size', 'mime_type', 'extension', 'storage')->from('sys_file');
         $countQueryBuilder->count('uid')->from('sys_file');
 
         $queryBuilder->andWhere(
@@ -291,7 +236,7 @@ readonly class FileService
         /** @var int|string $totalResult */
         $totalResult = $countQueryBuilder->executeQuery()->fetchOne();
 
-        /** @var list<array{name: string, identifier: string, size: int, mime_type: string, extension: string, storage: int}> $rows */
+        /** @var list<array{uid: int, name: string, identifier: string, size: int, mime_type: string, extension: string, storage: int}> $rows */
         $rows = $queryBuilder
             ->setMaxResults($limit)
             ->setFirstResult($offset)
@@ -299,14 +244,29 @@ readonly class FileService
             ->executeQuery()
             ->fetchAllAssociative();
 
-        $files = array_map(static fn(array $row): array => [
-            'name' => $row['name'],
-            'identifier' => $row['identifier'],
-            'size' => (int) $row['size'],
-            'mimeType' => $row['mime_type'],
-            'extension' => $row['extension'],
-            'storage' => (int) $row['storage'],
-        ], $rows);
+        $resourceFactory = GeneralUtility::makeInstance(ResourceFactory::class);
+        $publicUrlService = $this->mcpPublicUrlService;
+        $files = array_map(static function (array $row) use ($resourceFactory, $publicUrlService): array {
+            $uid = (int) $row['uid'];
+            $publicUrl = null;
+            try {
+                $file = $resourceFactory->getFileObject($uid, $row);
+                $publicUrl = $publicUrlService->makeAbsoluteUrl($file->getPublicUrl());
+            } catch (\Throwable) {
+                // Leave publicUrl null when the FAL object cannot be resolved.
+            }
+
+            return [
+                'uid' => $uid,
+                'name' => $row['name'],
+                'identifier' => $row['identifier'],
+                'size' => (int) $row['size'],
+                'mimeType' => $row['mime_type'],
+                'extension' => $row['extension'],
+                'storage' => (int) $row['storage'],
+                'publicUrl' => $publicUrl,
+            ];
+        }, $rows);
 
         return [
             'files' => $files,
@@ -342,6 +302,7 @@ readonly class FileService
 
     public function moveFile(int $storageUid, string $fileIdentifier, string $targetDirectoryPath): void
     {
+        $this->assertDestructiveAllowed();
         $storage = $this->getStorage($storageUid);
         $file = $storage->getFileByIdentifier($fileIdentifier);
 
@@ -355,6 +316,7 @@ readonly class FileService
 
     public function renameFile(int $storageUid, string $fileIdentifier, string $newName): void
     {
+        $this->assertDestructiveAllowed();
         $storage = $this->getStorage($storageUid);
         $file = $storage->getFileByIdentifier($fileIdentifier);
 
@@ -367,6 +329,7 @@ readonly class FileService
 
     public function deleteFile(int $storageUid, string $fileIdentifier): void
     {
+        $this->assertDestructiveAllowed();
         $storage = $this->getStorage($storageUid);
         $file = $storage->getFileByIdentifier($fileIdentifier);
 
@@ -379,6 +342,7 @@ readonly class FileService
 
     public function moveDirectory(int $storageUid, string $directoryIdentifier, string $targetDirectoryPath): void
     {
+        $this->assertDestructiveAllowed();
         $storage = $this->getStorage($storageUid);
         $folder = $storage->getFolder($directoryIdentifier);
         $targetFolder = $storage->getFolder($targetDirectoryPath);
@@ -387,6 +351,7 @@ readonly class FileService
 
     public function renameDirectory(int $storageUid, string $directoryIdentifier, string $newName): void
     {
+        $this->assertDestructiveAllowed();
         $storage = $this->getStorage($storageUid);
         $folder = $storage->getFolder($directoryIdentifier);
         $storage->renameFolder($folder, $newName);
@@ -394,6 +359,7 @@ readonly class FileService
 
     public function deleteDirectory(int $storageUid, string $directoryIdentifier, bool $recursive): void
     {
+        $this->assertDestructiveAllowed();
         $storage = $this->getStorage($storageUid);
         $folder = $storage->getFolder($directoryIdentifier);
         $storage->deleteFolder($folder, $recursive);
@@ -426,16 +392,50 @@ readonly class FileService
         throw new \RuntimeException('Access denied to storage: ' . $storageUid, 1712002018);
     }
 
-    /** @return array{name: string, identifier: string, size: int, mimeType: string, extension: string, modificationTime: int} */
+    private function assertDestructiveAllowed(): void
+    {
+        if (!$this->advancedSettingsService->allowDestructiveFileOps()) {
+            throw new \RuntimeException(
+                'Destructive file operations are disabled (mcpAllowDestructiveFileOps).',
+                1712002020,
+            );
+        }
+    }
+
+    /**
+     * @param array{file: File, deduplicated: bool} $stored
+     * @return array<string, mixed>
+     */
+    private function enrichStoredFileResult(array $stored, string $requestedFileName): array
+    {
+        $data = $this->fileUploadService->describeFile($stored['file']);
+        if ($stored['deduplicated']) {
+            $data['deduplicated'] = true;
+            $data['note'] = 'A file with identical content already existed in this storage (see identifier, '
+                . 'possibly in a different folder than requested); it is returned instead of creating a duplicate.';
+        } elseif ($requestedFileName !== '' && $stored['file']->getName() !== basename($requestedFileName)) {
+            $data['renamedFrom'] = basename($requestedFileName);
+            $data['note'] = 'A different file with this name already existed, so the upload was stored under a new name.';
+        }
+
+        return $data;
+    }
+
+    /**
+     * @return array{uid: int, name: string, identifier: string, size: int, mimeType: string, extension: string, modificationTime: int, publicUrl: string|null, sha1: string}
+     */
     private function mapFileToArray(File $file): array
     {
         return [
+            'uid' => $file->getUid(),
             'name' => $file->getName(),
             'identifier' => $file->getIdentifier(),
             'size' => $file->getSize(),
             'mimeType' => $file->getMimeType(),
             'extension' => $file->getExtension(),
             'modificationTime' => $file->getModificationTime(),
+            'publicUrl' => $this->mcpPublicUrlService->makeAbsoluteUrl($file->getPublicUrl()),
+            'sha1' => $file->getSha1(),
         ];
     }
 

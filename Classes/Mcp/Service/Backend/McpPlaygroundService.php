@@ -20,7 +20,11 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Service\Backend;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Contract\McpPreviewableToolInterface;
+use NITSAN\NsT3AF\Mcp\Dto\PreviewResult;
 use NITSAN\NsT3AF\Mcp\Service\McpInvocationContext;
+use NITSAN\NsT3AF\Mcp\Service\McpModeOverride;
+use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
 use ReflectionMethod;
 use ReflectionNamedType;
@@ -42,6 +46,7 @@ readonly class McpPlaygroundService
         private McpAnalyticsService $analyticsService,
         private McpInvocationContext $invocationContext,
         private McpToolLogService $toolLogService,
+        private McpModeOverride $modeOverride,
     ) {}
 
     /**
@@ -163,6 +168,69 @@ readonly class McpPlaygroundService
                 'message' => $exception->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Run a DualMode write tool's preview() under a native-mode override (no persist).
+     *
+     * @param array<string, mixed> $arguments
+     * @return array{success: bool, preview: PreviewResult|null, latencyMs: int, message: string, callCount: int}
+     */
+    public function preview(string $toolName, array $arguments, int $variants = 1): array
+    {
+        $handler = $this->findHandler($toolName);
+        if (!$handler instanceof McpPreviewableToolInterface) {
+            return [
+                'success' => false,
+                'preview' => null,
+                'latencyMs' => 0,
+                'message' => 'Tool is not previewable: ' . $toolName,
+                'callCount' => 0,
+            ];
+        }
+
+        $this->invocationContext->applyFromArguments($arguments);
+        $start = hrtime(true);
+
+        try {
+            $preview = $this->modeOverride->run(
+                McpModeResolver::MODE_NATIVE,
+                static fn(): PreviewResult => $handler->preview($arguments, $variants),
+            );
+            $latencyMs = (int) round((hrtime(true) - $start) / 1_000_000);
+
+            return [
+                'success' => true,
+                'preview' => $preview,
+                'latencyMs' => $latencyMs,
+                'message' => '',
+                'callCount' => $preview->callCount,
+            ];
+        } catch (\Throwable $exception) {
+            $latencyMs = (int) round((hrtime(true) - $start) / 1_000_000);
+
+            return [
+                'success' => false,
+                'preview' => null,
+                'latencyMs' => $latencyMs,
+                'message' => $exception->getMessage(),
+                'callCount' => 0,
+            ];
+        }
+    }
+
+    /**
+     * Invoke a tool under a temporary mode override (e.g. native read for DualMode Read).
+     *
+     * @param array<string, mixed> $arguments
+     * @return array{success: bool, result: mixed, latencyMs: int, message: string}
+     */
+    public function invokeWithMode(string $toolName, array $arguments, string $mode): array
+    {
+        return $this->modeOverride->run(
+            $mode,
+            fn(): array => $this->invoke($toolName, $arguments),
+        );
     }
 
     private function findHandler(string $toolName): ?object

@@ -37,6 +37,7 @@ final class ProductCatalogService
         private readonly CreditsDomainResolver $domainResolver,
         private readonly ConnectionPool $connectionPool,
         private readonly CreditsApiResponseCacheInterface $responseCache,
+        private readonly CreditsCatalogLanguageResolver $catalogLanguage,
     ) {}
 
     /**
@@ -47,26 +48,28 @@ final class ProductCatalogService
         $domain = $this->domainResolver->resolve();
         $token = $this->tokenResolver->resolve();
         $redirectTo = trim($redirectTo);
-        $cacheScope = CreditsApiResponseCache::scopeProducts($redirectTo);
+        $language = $this->catalogLanguage->resolve();
+        $cacheScope = CreditsApiResponseCache::scopeProducts($redirectTo, $language);
 
         $memoryCached = $this->responseCache->get($cacheScope, $domain, $token);
         if ($memoryCached !== null) {
             return $memoryCached;
         }
 
-        $cached = $this->loadCached();
+        $cached = $this->loadCachedForLanguage($language);
         $etag = is_array($cached) ? (string) ($cached['etag'] ?? '') : '';
         $result = $this->apiClient->products(
             $domain,
             $token,
             $redirectTo,
+            $language,
             $etag !== '' ? $etag : null,
         );
 
         if (($result['body']['not_modified'] ?? false) === true && is_array($cached)) {
             $body = json_decode((string) ($cached['body_json'] ?? ''), true);
             $body = is_array($body) ? $body : [];
-            $this->rememberMemoryCache($domain, $token, $redirectTo, $body);
+            $this->rememberMemoryCache($domain, $token, $redirectTo, $language, $body);
 
             return $body;
         }
@@ -77,7 +80,7 @@ final class ProductCatalogService
         }
 
         $this->storeCache($body, (string) ($result['etag'] ?? ''));
-        $this->rememberMemoryCache($domain, $token, $redirectTo, $body);
+        $this->rememberMemoryCache($domain, $token, $redirectTo, $language, $body);
 
         return $body;
     }
@@ -85,15 +88,47 @@ final class ProductCatalogService
     /**
      * @param array<string, mixed> $body
      */
-    private function rememberMemoryCache(string $domain, #[\SensitiveParameter] string $token, string $redirectTo, array $body): void
-    {
+    private function rememberMemoryCache(
+        string $domain,
+        #[\SensitiveParameter]
+        string $token,
+        string $redirectTo,
+        string $language,
+        array $body,
+    ): void {
         $this->responseCache->set(
-            CreditsApiResponseCache::scopeProducts($redirectTo),
+            CreditsApiResponseCache::scopeProducts($redirectTo, $language),
             $domain,
             $token,
             $body,
             CreditsApiResponseCache::TTL_PRODUCTS,
         );
+    }
+
+    /**
+     * Single-row DB cache: reuse only when the stored payload language matches the request.
+     * Avoids sending an EN ETag on a DE request (server 304 would return the wrong language).
+     *
+     * @return array<string, mixed>|null
+     */
+    private function loadCachedForLanguage(string $language): ?array
+    {
+        $row = $this->loadCached();
+        if ($row === null) {
+            return null;
+        }
+
+        $body = json_decode((string) ($row['body_json'] ?? ''), true);
+        if (!is_array($body)) {
+            return null;
+        }
+
+        $stored = CreditsCatalogLanguageResolver::normalize((string) ($body['language'] ?? CreditsCatalogLanguageResolver::EN));
+        if ($stored !== CreditsCatalogLanguageResolver::normalize($language)) {
+            return null;
+        }
+
+        return $row;
     }
 
     /**

@@ -34,7 +34,7 @@ use TYPO3\CMS\Filelist\Event\ProcessFileListActionsEvent;
  * File module row action deep link into the AI Label media tab.
  *
  * TYPO3 v14+ uses Buttons API ({@see ProcessFileListActionsEvent::setAction()});
- * v12/v13 still use HTML action-item arrays.
+ * v13 still uses HTML action-item arrays.
  */
 final class ProcessFileListActionsListener
 {
@@ -69,7 +69,7 @@ final class ProcessFileListActionsListener
         ]);
         $title = $this->translate(self::LABEL);
 
-        // v14+: Buttons API (breaking #107884). v12/v13: HTML action items.
+        // v14+: Buttons API (breaking #107884). v13: HTML action items.
         // Gate on major version — method_exists() is always true under T3 14 PHPStan.
         if ((new Typo3Version())->getMajorVersion() >= 14) {
             $button = GeneralUtility::makeInstance(ComponentFactory::class)
@@ -104,14 +104,6 @@ final class ProcessFileListActionsListener
 
     private function renderSmallIcon(string $identifier): string
     {
-        if (enum_exists(IconSize::class)) {
-            return $this->iconFactory->getIcon($identifier, IconSize::SMALL)->render();
-        }
-
-        // TYPO3 12: getIcon() still accepts legacy string size.
-        $icon = (new \ReflectionMethod($this->iconFactory, 'getIcon'))
-            ->invoke($this->iconFactory, $identifier, 'small');
-
-        return is_object($icon) && method_exists($icon, 'render') ? (string) $icon->render() : '';
+        return $this->iconFactory->getIcon($identifier, IconSize::SMALL)->render();
     }
 }

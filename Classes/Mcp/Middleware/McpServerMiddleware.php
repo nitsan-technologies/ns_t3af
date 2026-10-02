@@ -23,6 +23,7 @@ use const JSON_THROW_ON_ERROR;
 
 use Mcp\Server\Transport\StreamableHttpTransport;
 use NITSAN\NsT3AF\Mcp\Authentication\BackendUserBootstrap;
+use NITSAN\NsT3AF\Mcp\Http\FileUploadEndpoint;
 use NITSAN\NsT3AF\Mcp\OAuth\AuthorizationService;
 use NITSAN\NsT3AF\Mcp\Server\McpServerFactory;
 use NITSAN\NsT3AF\Mcp\Service\AdvancedSettingsService;
@@ -54,12 +55,24 @@ readonly class McpServerMiddleware implements MiddlewareInterface
         private ResponseFactoryInterface $responseFactory,
         private StreamFactoryInterface $streamFactory,
         private SiteFinder $siteFinder,
+        private FileUploadEndpoint $fileUploadEndpoint,
     ) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $path = $request->getUri()->getPath();
         $basePath = $this->pathProvider->getBasePath();
+        $uploadPath = $this->pathProvider->getUploadPath();
+
+        // Pre-signed uploads use their own token — do not require OAuth access token.
+        if ($path === $uploadPath) {
+            if (!$this->settingsService->isMcpServerEnabled()) {
+                return $this->withCorsHeaders($this->createJsonResponse(['error' => 'MCP server is disabled'], 503));
+            }
+
+            return ($this->fileUploadEndpoint)($request);
+        }
+
         $urlToken = $this->extractUrlToken($path, $basePath);
 
         if ($path !== $basePath && $urlToken === null) {
@@ -80,7 +93,7 @@ readonly class McpServerMiddleware implements MiddlewareInterface
                 return $this->withCorsHeaders($this->createJsonResponse(['error' => 'Anonymous read-only not implemented in v1'], 501));
             }
 
-            return $this->withCorsHeaders($this->createUnauthorizedResponse($request, 'Missing or invalid Authorization header'));
+            return $this->withCorsHeaders($this->createUnauthorizedResponse($request, 'Missing authentication token'));
         }
 
         try {

@@ -107,6 +107,178 @@
                 <source>Only TYPO3 administrators can configure AI Permissions.</source>
                 <target>Nur TYPO3-Administratoren können KI-Berechtigungen konfigurieren.</target>
             </trans-unit>
+            <trans-unit id="module.menu.aiAgent">
+                <source>AI Agent</source>
+                <target>AI Agent</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.heading">
+                <source>AI Agent</source>
+                <target>AI Agent</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.intro">
+                <source>A chat in every backend module. It drafts, you approve, inside the conversation.</source>
+                <target>Ein Chat in jedem Backend-Modul. Erstellt Entwürfe, Sie genehmigen – direkt in der Unterhaltung.</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.tabs.aria">
+                <source>AI Agent settings sections</source>
+                <target>AI-Agent-Einstellungsbereiche</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.tab.overview">
+                <source>Overview</source>
+                <target>Übersicht</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.tab.severity">
+                <source>Severity policy</source>
+                <target>Schweregrad-Richtlinie</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.tab.governance">
+                <source>Governance</source>
+                <target>Governance</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.tab.audit">
+                <source>Audit</source>
+                <target>Audit</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.tab.demand">
+                <source>Demand signals</source>
+                <target>Demand-Signale</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.overview.totalTools">
+                <source>Registered tools</source>
+                <target>Registrierte Tools</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.overview.executable">
+                <source>Executable now</source>
+                <target>Jetzt ausführbar</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.overview.locked">
+                <source>Locked</source>
+                <target>Gesperrt</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.overview.byOwner">
+                <source>Tools by owning extension</source>
+                <target>Tools nach Extension</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.hotkey.heading">
+                <source>Keyboard shortcut</source>
+                <target>Tastenkürzel</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.hotkey.lead">
+                <source>Default is Ctrl/Cmd+Shift+K so TYPO3 Live Search keeps Ctrl/Cmd+K. Opt into Ctrl/Cmd+K only if this install prefers Agent over Live Search. Preference is stored in this browser.</source>
+                <target>Standard ist Strg/Cmd+Shift+K, damit die TYPO3-Live-Suche Strg/Cmd+K behält. Strg/Cmd+K nur wählen, wenn Agent Vorrang vor der Live-Suche haben soll. Die Einstellung gilt für diesen Browser.</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.hotkey.option.shiftK">
+                <source>Ctrl/Cmd+Shift+K (recommended)</source>
+                <target>Strg/Cmd+Shift+K (empfohlen)</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.hotkey.option.shiftK.help">
+                <source>Free in Chrome, Safari, and Edge. Only overlaps Firefox Web Console.</source>
+                <target>Frei in Chrome, Safari und Edge. Überschneidet sich nur mit der Firefox-Webkonsole.</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.hotkey.option.k">
+                <source>Ctrl/Cmd+K (opt-in)</source>
+                <target>Strg/Cmd+K (optional)</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.hotkey.option.k.help">
+                <source>Takes the Live Search chord. Use only when editors agree Agent should win.</source>
+                <target>Übernimmt den Live-Suche-Shortcut. Nur nutzen, wenn Redakteure dem Agent Vorrang geben.</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.hotkey.saved">
+                <source>Saved for this browser. Open or reopen the Agent (or reload other backend tabs) to apply.</source>
+                <target>Für diesen Browser gespeichert. Agent öffnen/neu öffnen (oder andere Backend-Tabs neu laden), damit es greift.</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.col.owner">
+                <source>Owner</source>
+                <target>Extension</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.col.total">
+                <source>Total</source>
+                <target>Gesamt</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.col.executable">
+                <source>Executable</source>
+                <target>Ausführbar</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.col.locked">
+                <source>Locked</source>
+                <target>Gesperrt</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.col.tool">
+                <source>Tool</source>
+                <target>Tool</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.col.time">
+                <source>Time</source>
+                <target>Zeit</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.col.success">
+                <source>Result</source>
+                <target>Ergebnis</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.col.correlation">
+                <source>Correlation</source>
+                <target>Korrelation</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.col.argsHash">
+                <source>Arguments hash</source>
+                <target>Argument-Hash</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.col.activations">
+                <source>Activations</source>
+                <target>Aktivierungen</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.col.lastActivated">
+                <source>Last activated</source>
+                <target>Zuletzt aktiviert</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.status.ok">
+                <source>Success</source>
+                <target>Erfolg</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.status.error">
+                <source>Failed</source>
+                <target>Fehlgeschlagen</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.governance.lead">
+                <source>Agent governance is enforced on agent turns only. Configure limits per backend user group under AI Permissions.</source>
+                <target>Agent-Governance gilt nur für Agent-Turns. Limits konfigurieren Sie pro Backend-Benutzergruppe unter KI-Berechtigungen.</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.governance.creditCap">
+                <source>Monthly credit cap stops agent turns when the group limit is reached.</source>
+                <target>Monatliches Credit-Limit stoppt Agent-Turns, wenn das Gruppenlimit erreicht ist.</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.governance.dailyCap">
+                <source>Daily request cap counts agent turns per backend user.</source>
+                <target>Tägliches Anfragelimit zählt Agent-Turns pro Backend-Benutzer.</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.governance.allowlist">
+                <source>Provider allowlist blocks agent turns that specify a disallowed provider.</source>
+                <target>Provider-Allowlist blockiert Agent-Turns mit nicht erlaubtem Anbieter.</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.governance.modelOverride">
+                <source>Model override permission is enforced on agent requests.</source>
+                <target>Modell-Override-Berechtigung wird bei Agent-Anfragen durchgesetzt.</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.governance.piiMasking">
+                <source>PII masking redacts emails and phone numbers in agent responses when enabled for the group.</source>
+                <target>PII-Maskierung schwärzt E-Mails und Telefonnummern in Agent-Antworten, wenn für die Gruppe aktiviert.</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.governance.turnGuard">
+                <source>Turn guard warns at %1$s tool calls and aborts at %2$s calls within one turn.</source>
+                <target>Turn-Guard warnt bei %1$s Tool-Aufrufen und stoppt bei %2$s Aufrufen innerhalb eines Turns.</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.audit.toolLog">
+                <source>Recent agent tool invocations (no payloads stored)</source>
+                <target>Aktuelle Agent-Tool-Aufrufe (keine Payloads gespeichert)</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.demand.signals">
+                <source>Locked tool activation signals</source>
+                <target>Aktivierungssignale gesperrter Tools</target>
+            </trans-unit>
+            <trans-unit id="module.aiAgent.demand.sharingDisabled">
+                <source>Demand signal sharing with T3Planet is disabled. Counts remain on this installation only.</source>
+                <target>Demand-Signal-Freigabe an T3Planet ist deaktiviert. Zähler bleiben nur auf dieser Installation.</target>
+            </trans-unit>
             <trans-unit id="module.menu.forDevelopers">
                 <source>For Developers</source>
                 <target>Für Entwickler</target>

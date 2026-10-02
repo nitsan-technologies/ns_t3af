@@ -19,15 +19,17 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Utility;
 
+use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Http\NormalizedParams;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * Writes to sys_log across TYPO3 v12–v14 schema differences.
+ * Writes to sys_log across TYPO3 v13–v14 schema differences.
  *
- * v12–v13: details_nr + details
+ * v13: details_nr + details
  * v14+: message + data (+ component)
  */
 final class SysLogWriterUtility
@@ -73,7 +75,7 @@ final class SysLogWriterUtility
 
         $encodedData = $data === [] ? '' : (string) json_encode($data);
         $escapedMessage = str_replace('%', '%%', $logMessage);
-        $ip = GeneralUtility::getIndpEnv('REMOTE_ADDR') ?: '';
+        $ip = self::resolveClientIp();
         $tstamp = time();
         $channel = mb_substr($channel, 0, 20);
 
@@ -154,6 +156,26 @@ final class SysLogWriterUtility
     private static function schemaCacheKey(Connection $connection): string
     {
         return $connection->getDatabase() . ':' . self::TABLE;
+    }
+
+    /**
+     * Client IP from the current request. NormalizedParams exists on v13–v14 and
+     * honors a trusted reverse proxy. CLI and scheduler runs have no request,
+     * so the log row stores an empty IP.
+     */
+    private static function resolveClientIp(): string
+    {
+        $request = $GLOBALS['TYPO3_REQUEST'] ?? null;
+        if (!$request instanceof ServerRequestInterface) {
+            return '';
+        }
+
+        $normalizedParams = $request->getAttribute('normalizedParams');
+        if (!$normalizedParams instanceof NormalizedParams) {
+            return '';
+        }
+
+        return $normalizedParams->getRemoteAddress();
     }
 
     /**

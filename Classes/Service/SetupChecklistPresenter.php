@@ -279,9 +279,8 @@ final class SetupChecklistPresenter
 
     private function resolveRenderingContext(object $view): ?RenderingContextInterface
     {
-        // The actual Fluid view is wrapped in a view adapter that differs between TYPO3 versions:
-        // TYPO3\CMS\Core\View\FluidViewAdapter (v12) vs. TYPO3\CMS\Fluid\View\FluidViewAdapter (v13+).
-        // Both expose the wrapped view through a protected "view" property, so unwrap generically
+        // The actual Fluid view may be wrapped in TYPO3\CMS\Fluid\View\FluidViewAdapter, which
+        // exposes the wrapped view through a protected "view" property — unwrap generically
         // until we reach a view that provides the rendering context.
         $guard = 0;
         while (!method_exists($view, 'getRenderingContext') && $guard < 5) {
@@ -404,7 +403,7 @@ final class SetupChecklistPresenter
 
     private function translateModule(string $key): string
     {
-        return (string) ($GLOBALS['LANG']?->sL(
+        return (string) (($GLOBALS['LANG'] ?? null)?->sL(
             'LLL:' . self::LOCALLANG_MOD . ':' . $key,
         ) ?? $key);
     }

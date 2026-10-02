@@ -43,6 +43,7 @@ This documentation
 ------------------
 
 * :ref:`Introduction <introduction>` — Start here
+* :ref:`DPA & GDPR <data-processing-agreement>` — Logging, retention, BYOK vs Credits
 * :ref:`FAQ <faq>` — Common questions
 * :ref:`Known Problems <known-problems>` — Workarounds
 * :ref:`Support <support>` — Contact T3Planet

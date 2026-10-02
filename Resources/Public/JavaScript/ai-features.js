@@ -54,6 +54,7 @@ const parseManagedExtensionKeys = (root) => {
 /** Fallback when Fluid does not output settingsScope on the card. */
 const EXT_CONF_SCOPE_BY_ID = {
   'universe-auth-api-translation': 'universe-auth-api-translation',
+  'ai-agent': 'ai agent',
   'universe-xai': 'xai',
   'ai-feature-toggles': 'feature configurations',
   'aa-feature-toggles': 't3aa-feature-toggles',

@@ -116,6 +116,7 @@ Security checklist
 * Rotate API keys every 90 days
 * Enable :ref:`AI Permissions <ai-permissions>` for large teams
 * Never store keys in Git or email
+* Review :ref:`DPA & GDPR <data-processing-agreement>` before production AI traffic
 
 When to reconfigure
 -------------------
