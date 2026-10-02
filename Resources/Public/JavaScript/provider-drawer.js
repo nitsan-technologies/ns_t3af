@@ -66,6 +66,7 @@ const ROUTES = {
 
 const LL = {
   drawerLoadFailed: 'provider.js.error.drawerLoadFailed',
+  saveFailed: 'provider.js.error.saveFailed',
   connectionFailed: 'provider.js.error.connectionFailed',
   testFailed: 'provider.js.error.testFailed',
   setDefaultFailed: 'provider.js.error.setDefaultFailed',
@@ -374,9 +375,7 @@ class ProviderDrawer {
         this.triggerElement = active instanceof HTMLElement ? active : null;
       }
       const html = await new AjaxRequest(url).get().then((r) => r.resolve('text/html'));
-      this.panel.innerHTML = html;
-      this.bindForm();
-      initFieldHelpLinks(this.panel);
+      this.applyDrawerHtml(html);
       this.drawer.setAttribute('aria-hidden', 'false');
       this.drawer.classList.remove('is-closing');
       this.drawer.classList.add('is-open');
@@ -384,6 +383,93 @@ class ProviderDrawer {
       this.activateDrawerFocus();
     } catch (err) {
       Notification.error(ll(LL.drawerLoadFailed, 'Drawer load failed'), String(err));
+    }
+  }
+
+  /**
+   * Inject drawer markup into the panel. Prefers the form node so ModuleTemplate
+   * chrome from a full-page response does not nest inside the slide-over.
+   *
+   * @param {string} html
+   */
+  applyDrawerHtml(html) {
+    if (!(this.panel instanceof HTMLElement)) {
+      return;
+    }
+    disposeFieldHelpLinks(this.panel);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const formEl = doc.querySelector('[data-aiu-drawer-form]');
+    if (formEl instanceof HTMLElement) {
+      this.panel.replaceChildren(document.importNode(formEl, true));
+    } else {
+      this.panel.innerHTML = html;
+    }
+    this.bindForm();
+    initFieldHelpLinks(this.panel);
+  }
+
+  /**
+   * POST the drawer form without leaving the Providers list. Validation errors
+   * re-render inside the open panel; success follows the server redirect.
+   *
+   * @param {HTMLFormElement} form
+   */
+  async saveForm(form) {
+    const action = form.getAttribute('action') || form.action;
+    if (!action) {
+      form.submit();
+      return;
+    }
+
+    const submitButtons = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+    submitButtons.forEach((button) => {
+      if (button instanceof HTMLButtonElement || button instanceof HTMLInputElement) {
+        button.disabled = true;
+      }
+    });
+
+    try {
+      const response = await fetch(action, {
+        method: 'POST',
+        body: new FormData(form),
+        credentials: 'same-origin',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      });
+      const html = await response.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const errorForm = doc.querySelector('[data-aiu-drawer-form]');
+      const listRoot = doc.querySelector('[data-aiu-provider-list]');
+
+      // Success: controller redirects to the list (flash=saved). Stay in-module.
+      if (response.redirected || (listRoot && !errorForm)) {
+        window.location.assign(response.url || action);
+        return;
+      }
+
+      if (errorForm instanceof HTMLElement) {
+        this.applyDrawerHtml(html);
+        this.drawer?.setAttribute('aria-hidden', 'false');
+        this.drawer?.classList.remove('is-closing');
+        this.drawer?.classList.add('is-open');
+        this.drawer?.classList.add('aiu-drawer--open');
+        this.activateDrawerFocus();
+        const firstError = this.panel?.querySelector('.aiu-error');
+        if (firstError instanceof HTMLElement) {
+          firstError.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+        return;
+      }
+
+      window.location.assign(response.url || action);
+    } catch (err) {
+      submitButtons.forEach((button) => {
+        if (button instanceof HTMLButtonElement || button instanceof HTMLInputElement) {
+          button.disabled = false;
+        }
+      });
+      Notification.error(ll(LL.saveFailed, 'Save failed'), String(err));
     }
   }
 
@@ -489,7 +575,7 @@ class ProviderDrawer {
 
   bindForm() {
     const form = this.panel?.querySelector('[data-aiu-drawer-form]');
-    if (!form) {
+    if (!(form instanceof HTMLFormElement)) {
       return;
     }
     const adapterSelect = form.querySelector('[data-aiu-adapter-select]');
@@ -859,6 +945,13 @@ class ProviderDrawer {
     }
 
     syncAdapterConnectionUi();
+
+    // After api-key autofill clear: AJAX save keeps validation errors in the drawer.
+    form.addEventListener('submit', (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      void this.saveForm(form);
+    });
   }
 
   /**

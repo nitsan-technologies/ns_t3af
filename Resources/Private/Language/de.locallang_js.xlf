@@ -139,6 +139,10 @@
                 <source>Drawer load failed</source>
                 <target>Das Laden der Schublade ist fehlgeschlagen</target>
             </trans-unit>
+            <trans-unit id="provider.js.error.saveFailed">
+                <source>Save failed</source>
+                <target>Speichern fehlgeschlagen</target>
+            </trans-unit>
             <trans-unit id="provider.js.error.connectionFailed">
                 <source>Connection failed</source>
                 <target>Verbindung fehlgeschlagen</target>

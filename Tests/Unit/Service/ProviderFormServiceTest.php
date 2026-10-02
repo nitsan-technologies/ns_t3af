@@ -66,6 +66,121 @@ final class ProviderFormServiceTest extends TestCase
         self::assertArrayHasKey('adapter_type', $result->errors);
     }
 
+    public function testRejectsMissingCapabilitiesAsNoneSelected(): void
+    {
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $repo->expects(self::never())->method('save');
+
+        $service = new ProviderFormService($repo, new AdapterRegistry([$this->fakeAdapter()]), new CredentialCipher());
+        $result = $service->save(0, [
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => 'sk-plain-secret',
+            // capabilities omitted — same as unchecking every box in the drawer
+        ], 1);
+
+        self::assertFalse($result->ok);
+        self::assertSame('Select at least one capability.', $result->errors['capabilities'] ?? null);
+    }
+
+    public function testRejectsExplicitEmptyCapabilitiesOnEdit(): void
+    {
+        $existing = Provider::fromRow([
+            'uid' => 5,
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => (new CredentialCipher())->encrypt('sk-stored'),
+            'capabilities' => 'chat,streaming',
+        ]);
+
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $repo->method('findByUid')->with(5)->willReturn($existing);
+        $repo->expects(self::never())->method('save');
+
+        $service = new ProviderFormService($repo, new AdapterRegistry([$this->fakeAdapter()]), new CredentialCipher());
+        $result = $service->save(5, [
+            'identifier' => 'openai-x',
+            'title' => 'OpenAI',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => '',
+            'capabilities' => [],
+        ], 1);
+
+        self::assertFalse($result->ok);
+        self::assertSame('Select at least one capability.', $result->errors['capabilities'] ?? null);
+    }
+
+    public function testAllowsSaveWhenOnlyEmbeddingsForcedByEmbeddingModel(): void
+    {
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $captured = null;
+        $repo->expects(self::once())->method('save')
+            ->willReturnCallback(function (int $uid, array $values) use (&$captured): int {
+                $captured = $values;
+
+                return 8;
+            });
+
+        $service = new ProviderFormService($repo, new AdapterRegistry([$this->fakeAdapter()]), new CredentialCipher());
+        $result = $service->save(0, [
+            'identifier' => 'embed-only',
+            'title' => 'Embed',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => 'sk-plain-secret',
+            'embedding_model_id' => 'text-embedding-3-small',
+            // no capabilities[] — server forces embeddings when a model is set
+        ], 1);
+
+        self::assertTrue($result->ok);
+        self::assertNotNull($captured);
+        self::assertStringContainsString(Capability::EMBEDDINGS, (string) $captured['capabilities']);
+    }
+
+    /**
+     * @return iterable<string, array{0: string}>
+     */
+    public static function translateOnlyAdapterTypes(): iterable
+    {
+        yield 'deepl' => ['ns_t3ai.deepl_translate'];
+        yield 'google' => ['ns_t3ai.google_translate'];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('translateOnlyAdapterTypes')]
+    public function testAllowsEmptyCapabilitiesForTranslateOnlyAdapters(string $adapterType): void
+    {
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $captured = null;
+        $repo->expects(self::once())->method('save')
+            ->willReturnCallback(function (int $uid, array $values) use (&$captured): int {
+                $captured = $values;
+
+                return 14;
+            });
+
+        $service = new ProviderFormService(
+            $repo,
+            new AdapterRegistry([$this->fakeTranslateOnlyAdapter($adapterType)]),
+            new CredentialCipher(),
+        );
+        $result = $service->save(0, [
+            'identifier' => 'translate-x',
+            'title' => 'Translate',
+            'adapter_type' => $adapterType,
+            'api_key' => 'sk-translate-secret',
+            // no capabilities — translate-only adapters declare empty defaults
+        ], 1);
+
+        self::assertTrue($result->ok);
+        self::assertNotNull($captured);
+        self::assertSame('', $captured['capabilities'] ?? null);
+    }
+
     public function testRejectsUnregisteredAdapterType(): void
     {
         $service = new ProviderFormService(
@@ -139,6 +254,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'OpenAI',
             'adapter_type' => 'symfony.openai',
             'api_key' => 'sk-plain-secret',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertFalse($result->ok);
@@ -157,6 +273,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'Custom host',
             'adapter_type' => Provider::ADAPTER_OPENAI_COMPATIBLE,
             'endpoint_url' => '',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertFalse($result->ok);
@@ -176,6 +293,7 @@ final class ProviderFormServiceTest extends TestCase
             'adapter_type' => Provider::ADAPTER_OPENAI_COMPATIBLE,
             'endpoint_url' => 'https://llm.example.com/v1',
             'api_key' => 'sk-plain-secret',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertTrue($result->ok);
@@ -194,6 +312,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'Custom host',
             'adapter_type' => Provider::ADAPTER_OPENAI_COMPATIBLE,
             'endpoint_url' => 'not-a-valid-url',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertFalse($result->ok);
@@ -212,6 +331,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'Ollama',
             'adapter_type' => Provider::ADAPTER_SYMFONY_OLLAMA,
             'endpoint_url' => '',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertFalse($result->ok);
@@ -232,6 +352,7 @@ final class ProviderFormServiceTest extends TestCase
             'adapter_type' => Provider::ADAPTER_SYMFONY_OPENRESPONSES,
             'endpoint_url' => '',
             'api_key' => 'sk-qa-dummy-openresponses-0000',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertFalse($result->ok);
@@ -258,6 +379,7 @@ final class ProviderFormServiceTest extends TestCase
             'endpoint_url' => 'https://api.example.com',
             'api_key' => 'sk-qa-dummy-openresponses-0000',
             'model_id' => 'gpt-4o',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertTrue($result->ok);
@@ -282,6 +404,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'Ollama',
             'adapter_type' => Provider::ADAPTER_SYMFONY_OLLAMA,
             'endpoint_url' => '',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertTrue($result->ok);
@@ -307,6 +430,7 @@ final class ProviderFormServiceTest extends TestCase
             'adapter_type' => Provider::ADAPTER_SYMFONY_OLLAMA,
             'endpoint_url' => 'http://host.docker.internal:11434',
             'api_key' => '',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertTrue($result->ok);
@@ -334,6 +458,7 @@ final class ProviderFormServiceTest extends TestCase
             'adapter_type' => 'symfony.openai_compatible',
             'endpoint_url' => 'https://example.com/v1',
             'api_key' => 'sk-plain-secret',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertTrue($result->ok);
@@ -391,6 +516,7 @@ final class ProviderFormServiceTest extends TestCase
                 'title' => 'OpenAI',
                 'adapter_type' => 'symfony.openai',
                 'api_key' => 'sk-plain-secret',
+                'capabilities' => ['chat'],
             ], 1);
 
             self::assertFalse($result->ok);
@@ -419,6 +545,7 @@ final class ProviderFormServiceTest extends TestCase
                 'title' => 'OpenAI',
                 'adapter_type' => 'symfony.openai',
                 'api_key' => 'sk-plain-secret',
+                'capabilities' => ['chat'],
             ], 1);
 
             self::assertFalse($result->ok);
@@ -451,6 +578,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'OpenAI',
             'adapter_type' => 'symfony.openai',
             'api_key' => 'sk-plain-secret',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertTrue($result->ok);
@@ -499,6 +627,7 @@ final class ProviderFormServiceTest extends TestCase
             'api_key' => '',
             'model_id' => 'gpt-4o',
             'embedding_model_id' => 'text-embedding-3-small',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertTrue($result->ok);
@@ -548,6 +677,7 @@ final class ProviderFormServiceTest extends TestCase
             'api_key' => '',
             'model_id' => 'magistral-small',
             'embedding_model_id' => 'mistral-embed',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertTrue($result->ok);
@@ -596,6 +726,7 @@ final class ProviderFormServiceTest extends TestCase
             'endpoint_url' => '',
             'embedding_model_id' => '',
             'api_version' => '',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertTrue($result->ok);
@@ -741,6 +872,7 @@ final class ProviderFormServiceTest extends TestCase
             'adapter_type' => 'symfony.openai',
             'api_key' => 'sk-new-secret',
             'model_id' => 'gpt-4o',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertTrue($result->ok);
@@ -782,6 +914,7 @@ final class ProviderFormServiceTest extends TestCase
             'adapter_type' => 'symfony.openai',
             'api_key' => '',
             'model_id' => 'gpt-4o-mini',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertTrue($result->ok);
@@ -816,6 +949,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'OpenAI',
             'adapter_type' => 'symfony.openai',
             'api_key' => '',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertTrue($result->ok);
@@ -894,6 +1028,7 @@ final class ProviderFormServiceTest extends TestCase
             'adapter_type' => 'symfony.openai',
             'api_key' => 'sk-plain-secret',
             'is_default' => '1',
+            'capabilities' => ['chat'],
         ], 1);
     }
 
@@ -925,6 +1060,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'OpenAI',
             'adapter_type' => 'symfony.openai',
             'api_key' => '',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertTrue($result->ok);
@@ -961,6 +1097,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'OpenAI',
             'adapter_type' => 'symfony.openai',
             'api_key' => '',
+            'capabilities' => ['chat'],
         ], 1);
 
         self::assertTrue($result->ok);
@@ -994,6 +1131,38 @@ final class ProviderFormServiceTest extends TestCase
             public function getDefaultCapabilities(): array
             {
                 return [Capability::CHAT];
+            }
+            public function testConnection(Provider $provider): VerifyResult
+            {
+                return VerifyResult::ok();
+            }
+            public function platform(Provider $provider): object
+            {
+                return new \stdClass();
+            }
+        };
+    }
+
+    private function fakeTranslateOnlyAdapter(string $type): AdapterInterface
+    {
+        return new class ($type) implements AdapterInterface {
+            public function __construct(private readonly string $type) {}
+
+            public function getType(): string
+            {
+                return $this->type;
+            }
+            public function getDisplayName(): string
+            {
+                return 'Translate-only';
+            }
+            public function getDefaultEndpoint(): string
+            {
+                return '';
+            }
+            public function getDefaultCapabilities(): array
+            {
+                return [];
             }
             public function testConnection(Provider $provider): VerifyResult
             {
