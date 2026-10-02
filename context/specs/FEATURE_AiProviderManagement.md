@@ -137,7 +137,7 @@ CREATE TABLE tx_nst3af_provider (
     endpoint_url VARCHAR(255) NOT NULL DEFAULT '',
     api_key TEXT,                                          -- ciphertext (base64) — never plaintext
     model_id VARCHAR(128) NOT NULL DEFAULT '',
-    capabilities VARCHAR(255) NOT NULL DEFAULT '',         -- CSV: chat,completion,embeddings,vision,streaming,tool_use
+    capabilities VARCHAR(255) NOT NULL DEFAULT '',         -- CSV: chat,completion,embeddings,vision,streaming,tts,image_generation
     temperature DECIMAL(3,2) DEFAULT 0.70,
     system_prompt TEXT,
     is_default TINYINT(1) DEFAULT 0,
@@ -183,7 +183,7 @@ interface AdapterInterface
 1. **Symfony AI Platform bridges (primary).** `Classes/Provider/SymfonyAi/SymfonyAiPlatformDiscovery.php` scans `Composer\InstalledVersions` for any package matching `symfony/ai-*-platform` (and its SEAL re-exports via `lochmueller/seal_ai`). For each found package:
    - Reads PSR-4 namespace + `PlatformFactory` + `ModelCatalog` (pattern ported from `aim/Classes/DependencyInjection/SymfonyAiCompilerPass.php`).
    - Registers a `SymfonyAiBridgeAdapter` instance keyed `symfony.<vendor>` (e.g. `symfony.openai`, `symfony.anthropic`, `symfony.gemini`, `symfony.mistral`, `symfony.ollama`, `symfony.openrouter`).
-   - Maps Symfony AI `Capability` enums to `nst3af` capabilities (`input-image`→vision, `input-messages`→chat, `output-streaming`→streaming, `tool-calling`→tool_use, etc.).
+   - Maps Symfony AI `Capability` enums to `nst3af` capabilities (`input-image`→vision, `input-messages`→chat, `output-streaming`→streaming, etc.).
    - Sanitizes model IDs (strips colons that break TYPO3 LangService).
    - `testConnection()` calls `PlatformInterface::request($modelCatalog->getModels()[0], 'ping')` with 1 max-token, or — when a list endpoint is documented — a cheaper `Models::list()` call where the bridge supplies one.
    - `platform()` returns the bridge's `PlatformInterface` instance for downstream services to invoke completions/embeddings.
@@ -255,7 +255,7 @@ Reuses skeleton, **relocated** (decision 2026-05-08): drop `tools_aiuniverse` (A
 
 CSV in `capabilities` column. Constants in `Classes/Provider/Capability.php`:
 ```
-chat, completion, embeddings, vision, streaming, tool_use
+chat, completion, embeddings, vision, streaming, tts, image_generation
 ```
 Form renders these as 6 checkboxes (matches mockup). `Provider::hasCapability(string $cap): bool` helper.
 

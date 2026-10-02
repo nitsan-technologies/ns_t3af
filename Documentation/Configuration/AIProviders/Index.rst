@@ -129,7 +129,6 @@ validate the choice.
 * **Streaming** — Live response display in the backend
 * **Embeddings** — Search and similarity features
 * **Vision** — Image analysis
-* **Tool use** — MCP agent workflows
 
 Multiple providers — when and why
 =================================
@@ -213,7 +212,7 @@ Optional configuration
     :type: string list
 
     Enabled capabilities: ``chat``, ``completion``, ``embeddings``, ``vision``,
-    ``streaming``, ``tool_use``.
+    ``streaming``, ``tts``, ``image_generation``.
 
 ..  confval:: temperature
     :name: provider-temperature

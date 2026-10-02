@@ -203,7 +203,6 @@ class SymfonyAiCatalogReader
         return match (true) {
             str_contains($name, 'embed') => Capability::EMBEDDINGS,
             str_contains($name, 'vision'), str_contains($name, 'image') => Capability::VISION,
-            str_contains($name, 'tool'), str_contains($name, 'function') => Capability::TOOL_USE,
             str_contains($name, 'stream') => Capability::STREAMING,
             str_contains($name, 'chat'), str_contains($name, 'conversation'), str_contains($name, 'message') => Capability::CHAT,
             str_contains($name, 'completion'), str_contains($name, 'text') => Capability::COMPLETION,

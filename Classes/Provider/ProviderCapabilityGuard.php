@@ -27,7 +27,7 @@ use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
  * Enforces provider capability flags at AI call sites.
  *
  * Empty {@see Provider::$capabilities} stays permissive (legacy rows). When the
- * list is non-empty, the call kind (and optional vision/tools payload) must match.
+ * list is non-empty, the call kind (and optional vision payload) must match.
  *
  * @internal
  */
@@ -88,10 +88,6 @@ final class ProviderCapabilityGuard
             && self::optionsRequireVision($options)
         ) {
             self::assertHas($provider, Capability::VISION);
-        }
-
-        if (self::optionsRequireTools($options)) {
-            self::assertHas($provider, Capability::TOOL_USE);
         }
     }
 
@@ -169,22 +165,5 @@ final class ProviderCapabilityGuard
         }
 
         return false;
-    }
-
-    private static function optionsRequireTools(AiOptions $options): bool
-    {
-        $extra = $options->extra;
-        if (isset($extra['tools']) && is_array($extra['tools']) && $extra['tools'] !== []) {
-            return true;
-        }
-        if (isset($extra['functions']) && is_array($extra['functions']) && $extra['functions'] !== []) {
-            return true;
-        }
-        $toolChoice = $extra['tool_choice'] ?? null;
-        if (is_string($toolChoice) && $toolChoice !== '' && $toolChoice !== 'none') {
-            return true;
-        }
-
-        return is_array($toolChoice) && $toolChoice !== [];
     }
 }

@@ -1372,7 +1372,7 @@ final class AiServiceTest extends TestCase
 
     public function testCompleteRejectsProviderWithoutChatCapability(): void
     {
-        $provider = $this->makeProvider(capabilities: [Capability::TOOL_USE]);
+        $provider = $this->makeProvider(capabilities: [Capability::EMBEDDINGS]);
         $adapter = $this->makeAdapter('symfony.openai', new \stdClass());
         $service = new AiService(
             new StaticProviderLookup($provider),
@@ -1483,24 +1483,6 @@ final class AiServiceTest extends TestCase
                     ],
                 ],
             ],
-        ]));
-    }
-
-    public function testCompleteRejectsToolsPayloadWithoutToolUseCapability(): void
-    {
-        $provider = $this->makeProvider(capabilities: [Capability::CHAT]);
-        $adapter = $this->makeAdapter('symfony.openai', new \stdClass());
-        $service = new AiService(
-            new StaticProviderLookup($provider),
-            new AdapterRegistry([$adapter]),
-            new CapturingDispatcher(),
-            $this->makeSiteStorageContext(),
-        );
-
-        $this->expectException(AdapterRuntimeException::class);
-        $this->expectExceptionMessage('does not have the "tool_use" capability enabled');
-        $service->complete('hello', new AiOptions(extra: [
-            'tools' => [['type' => 'function', 'function' => ['name' => 'lookup']]],
         ]));
     }
 

@@ -37,7 +37,6 @@ final class Capability
     public const EMBEDDINGS = 'embeddings';
     public const VISION = 'vision';
     public const STREAMING = 'streaming';
-    public const TOOL_USE = 'tool_use';
     public const TTS = 'tts';
     public const IMAGE_GENERATION = 'image_generation';
 
@@ -48,7 +47,6 @@ final class Capability
         self::EMBEDDINGS,
         self::VISION,
         self::STREAMING,
-        self::TOOL_USE,
         self::TTS,
         self::IMAGE_GENERATION,
     ];
