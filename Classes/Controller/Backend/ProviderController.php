@@ -644,7 +644,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
     }
 
     /**
-     * @return list<array{type: string, label: string, defaultEndpoint: string}>
+     * @return list<array{type: string, label: string, defaultEndpoint: string, requiresEndpoint: bool}>
      */
     private function buildAdapterRows(): array
     {
@@ -655,6 +655,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
                 'type' => $type,
                 'label' => $this->formatAdapterUiLabel($type, $adapter->getDisplayName()),
                 'defaultEndpoint' => $adapter->getDefaultEndpoint(),
+                'requiresEndpoint' => Provider::adapterRequiresEndpoint($type),
             ];
         }
 

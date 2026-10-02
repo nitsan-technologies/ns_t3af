@@ -160,6 +160,8 @@ final class ProviderFormService
                     $errors['endpoint_url'] = 'Ollama base URL is required (e.g. http://host.docker.internal:11434 in DDEV).';
                 } elseif ($adapterType === Provider::ADAPTER_SYMFONY_AZURE) {
                     $errors['endpoint_url'] = 'Azure OpenAI endpoint is required (e.g. https://myresource.openai.azure.com).';
+                } elseif ($adapterType === Provider::ADAPTER_SYMFONY_OPENRESPONSES) {
+                    $errors['endpoint_url'] = 'Open Responses base URL is required (e.g. https://api.example.com).';
                 } else {
                     $errors['endpoint_url'] = 'API base URL is required for Custom / Other.';
                 }

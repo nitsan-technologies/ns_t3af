@@ -193,6 +193,7 @@ function restoreEmbeddingModelFields(select, input, previous) {
 const OPENAI_COMPATIBLE_ADAPTER = 'nst3af.openai_compatible';
 const OLLAMA_ADAPTER = 'symfony.ollama';
 const AZURE_ADAPTER = 'symfony.azure';
+const OPENRESPONSES_ADAPTER = 'symfony.openresponses';
 const CAP_EMBEDDINGS = 'embeddings';
 const CAP_CHAT = 'chat';
 const CAP_COMPLETION = 'completion';
@@ -518,10 +519,16 @@ class ProviderDrawer {
 
     const syncAdapterConnectionUi = () => {
       const adapterType = adapterSelect?.value || '';
+      const selectedOpt = adapterSelect?.selectedOptions?.[0];
       const isCustom = adapterType === OPENAI_COMPATIBLE_ADAPTER;
       const isOllama = adapterType === OLLAMA_ADAPTER;
       const isAzure = adapterType === AZURE_ADAPTER;
-      const showEndpoint = isCustom || isOllama || isAzure;
+      const isOpenResponses = adapterType === OPENRESPONSES_ADAPTER;
+      const showEndpoint = selectedOpt?.dataset.requiresEndpoint === '1'
+        || isCustom
+        || isOllama
+        || isAzure
+        || isOpenResponses;
       const endpointField = form.querySelector('[data-aiu-endpoint-field]');
       if (endpointField) {
         endpointField.hidden = !showEndpoint;
@@ -534,14 +541,16 @@ class ProviderDrawer {
           endpointInput.value = '';
         }
         if (isOllama && !endpointInput.value) {
-          const opt = adapterSelect?.selectedOptions[0];
-          const defaultEndpoint = opt?.dataset.endpoint || '';
+          const defaultEndpoint = selectedOpt?.dataset.endpoint || '';
           if (defaultEndpoint) {
             endpointInput.placeholder = defaultEndpoint;
           }
         }
         if (isAzure) {
           endpointInput.placeholder = 'https://myresource.openai.azure.com';
+        }
+        if (isOpenResponses) {
+          endpointInput.placeholder = 'https://api.example.com';
         }
       }
       const optionalNote = form.querySelector('[data-aiu-endpoint-optional-note]');
@@ -559,6 +568,10 @@ class ProviderDrawer {
       const azureHint = form.querySelector('[data-aiu-endpoint-azure-hint]');
       if (azureHint) {
         azureHint.hidden = !isAzure;
+      }
+      const openResponsesHint = form.querySelector('[data-aiu-endpoint-openresponses-hint]');
+      if (openResponsesHint) {
+        openResponsesHint.hidden = !isOpenResponses;
       }
       const apiVersionField = form.querySelector('[data-aiu-api-version-field]');
       if (apiVersionField) {

@@ -219,6 +219,51 @@ final class ProviderFormServiceTest extends TestCase
         self::assertStringContainsString('Ollama', $result->errors['endpoint_url']);
     }
 
+    public function testOpenResponsesRequiresEndpointUrl(): void
+    {
+        $service = new ProviderFormService(
+            $this->makeRepo(savedUid: 0),
+            new AdapterRegistry([$this->fakeOpenResponsesAdapter()]),
+            new CredentialCipher(),
+        );
+        $result = $service->save(0, [
+            'identifier' => 'qa-openresponses',
+            'title' => 'QA Open-responses',
+            'adapter_type' => Provider::ADAPTER_SYMFONY_OPENRESPONSES,
+            'endpoint_url' => '',
+            'api_key' => 'sk-qa-dummy-openresponses-0000',
+        ], 1);
+
+        self::assertFalse($result->ok);
+        self::assertArrayHasKey('endpoint_url', $result->errors);
+        self::assertStringContainsString('Open Responses', $result->errors['endpoint_url']);
+        self::assertStringNotContainsString('host.docker.internal', $result->errors['endpoint_url']);
+    }
+
+    public function testOpenResponsesAcceptsValidEndpointUrl(): void
+    {
+        $repo = $this->createMock(ProviderRepositoryInterface::class);
+        $repo->method('findByIdentifier')->willReturn(null);
+        $repo->expects(self::once())->method('save')->willReturn(11);
+
+        $service = new ProviderFormService(
+            $repo,
+            new AdapterRegistry([$this->fakeOpenResponsesAdapter()]),
+            new CredentialCipher(),
+        );
+        $result = $service->save(0, [
+            'identifier' => 'qa-openresponses',
+            'title' => 'QA Open-responses',
+            'adapter_type' => Provider::ADAPTER_SYMFONY_OPENRESPONSES,
+            'endpoint_url' => 'https://api.example.com',
+            'api_key' => 'sk-qa-dummy-openresponses-0000',
+            'model_id' => 'gpt-4o',
+        ], 1);
+
+        self::assertTrue($result->ok);
+        self::assertSame(11, $result->uid);
+    }
+
     public function testOllamaFillsDefaultEndpointWhenFieldEmpty(): void
     {
         $repo = $this->createMock(ProviderRepositoryInterface::class);
@@ -1033,6 +1078,36 @@ final class ProviderFormServiceTest extends TestCase
             public function getDisplayName(): string
             {
                 return 'Custom / Other';
+            }
+            public function getDefaultEndpoint(): string
+            {
+                return '';
+            }
+            public function getDefaultCapabilities(): array
+            {
+                return [Capability::CHAT];
+            }
+            public function testConnection(Provider $provider): VerifyResult
+            {
+                return VerifyResult::ok();
+            }
+            public function platform(Provider $provider): object
+            {
+                return new \stdClass();
+            }
+        };
+    }
+
+    private function fakeOpenResponsesAdapter(): AdapterInterface
+    {
+        return new class implements AdapterInterface {
+            public function getType(): string
+            {
+                return Provider::ADAPTER_SYMFONY_OPENRESPONSES;
+            }
+            public function getDisplayName(): string
+            {
+                return 'Open Responses (Symfony AI)';
             }
             public function getDefaultEndpoint(): string
             {

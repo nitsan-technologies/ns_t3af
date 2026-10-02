@@ -109,10 +109,10 @@
                     <f:for each="{adapterRows}" as="row">
                         <f:if condition="{selectedAdapter} == {row.type}">
                             <f:then>
-                                <option value="{row.type}" selected="selected" data-endpoint="{row.defaultEndpoint}">{row.label}</option>
+                                <option value="{row.type}" selected="selected" data-endpoint="{row.defaultEndpoint}" data-requires-endpoint="{f:if(condition: row.requiresEndpoint, then: '1', else: '0')}">{row.label}</option>
                             </f:then>
                             <f:else>
-                                <option value="{row.type}" data-endpoint="{row.defaultEndpoint}">{row.label}</option>
+                                <option value="{row.type}" data-endpoint="{row.defaultEndpoint}" data-requires-endpoint="{f:if(condition: row.requiresEndpoint, then: '1', else: '0')}">{row.label}</option>
                             </f:else>
                         </f:if>
                     </f:for>
@@ -152,6 +152,10 @@
                 <small class="aiu-field-subnote" data-aiu-endpoint-azure-hint hidden>
                     <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.endpoint.requiredAzure"
                                  default="Azure OpenAI resource endpoint, e.g. https://myresource.openai.azure.com" />
+                </small>
+                <small class="aiu-field-subnote" data-aiu-endpoint-openresponses-hint hidden>
+                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.field.endpoint.requiredOpenResponses"
+                                 default="Open Responses-compatible API base URL (no built-in default). Example: https://api.example.com" />
                 </small>
                 <input type="url" class="form-control" name="endpoint_url" maxlength="255"
                        data-aiu-endpoint-input
