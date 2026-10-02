@@ -120,6 +120,9 @@
       <trans-unit id="provider.js.error.drawerLoadFailed" resname="provider.js.error.drawerLoadFailed">
         <source>Drawer load failed</source>
       </trans-unit>
+      <trans-unit id="provider.js.error.saveFailed" resname="provider.js.error.saveFailed">
+        <source>Save failed</source>
+      </trans-unit>
       <trans-unit id="provider.js.error.connectionFailed" resname="provider.js.error.connectionFailed">
         <source>Connection failed</source>
       </trans-unit>

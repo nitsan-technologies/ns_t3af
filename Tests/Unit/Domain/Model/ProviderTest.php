@@ -129,6 +129,13 @@ final class ProviderTest extends TestCase
         self::assertTrue(Provider::adapterRequiresApiKey('symfony.openai'));
     }
 
+    public function testOpenResponsesAdapterRequiresEndpoint(): void
+    {
+        self::assertTrue(Provider::adapterRequiresEndpoint(Provider::ADAPTER_SYMFONY_OPENRESPONSES));
+        self::assertTrue(Provider::adapterRequiresEndpoint('symfony.open-responses'));
+        self::assertTrue(Provider::adapterRequiresApiKey(Provider::ADAPTER_SYMFONY_OPENRESPONSES));
+    }
+
     public function testFromRowDropsUnknownCapability(): void
     {
         $p = Provider::fromRow(['capabilities' => 'chat,bogus,vision']);

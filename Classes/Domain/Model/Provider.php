@@ -44,6 +44,12 @@ final readonly class Provider
     /** Symfony AI bridge for local / remote Ollama (no API key). */
     public const ADAPTER_SYMFONY_OLLAMA = 'symfony.ollama';
 
+    /**
+     * Symfony AI Open Responses bridge (requires install-specific base URL;
+     * factory first argument is baseUrl, no cloud default).
+     */
+    public const ADAPTER_SYMFONY_OPENRESPONSES = 'symfony.openresponses';
+
     /** Persisted probe status before the first connection test. */
     public const LAST_STATUS_UNKNOWN = 'unknown';
 
@@ -52,9 +58,12 @@ final readonly class Provider
 
     public static function adapterRequiresEndpoint(string $adapterType): bool
     {
+        $adapterType = self::normalizeAdapterType($adapterType);
+
         return $adapterType === self::ADAPTER_OPENAI_COMPATIBLE
             || $adapterType === self::ADAPTER_SYMFONY_OLLAMA
-            || $adapterType === self::ADAPTER_SYMFONY_AZURE;
+            || $adapterType === self::ADAPTER_SYMFONY_AZURE
+            || $adapterType === self::ADAPTER_SYMFONY_OPENRESPONSES;
     }
 
     public static function isAzureAdapter(string $adapterType): bool

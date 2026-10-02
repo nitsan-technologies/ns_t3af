@@ -327,6 +327,11 @@ final class ProviderController extends AbstractAiUniverseModuleController
         if (!$result->ok) {
             $view = $this->createModuleView($request, 'providers');
             $existingProvider = $uid > 0 ? $this->providerRepository->findByUid($uid) : null;
+            // Missing capabilities[] means none selected — keep empty so the drawer
+            // does not fall back to the stored provider CSV while showing the error.
+            if (!array_key_exists('capabilities', $body)) {
+                $body['capabilities'] = [];
+            }
             $view->assignMultiple([
                 'provider' => $existingProvider,
                 'adapterRows' => $this->buildAdapterRows(),
@@ -644,7 +649,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
     }
 
     /**
-     * @return list<array{type: string, label: string, defaultEndpoint: string}>
+     * @return list<array{type: string, label: string, defaultEndpoint: string, requiresEndpoint: bool}>
      */
     private function buildAdapterRows(): array
     {
@@ -655,6 +660,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
                 'type' => $type,
                 'label' => $this->formatAdapterUiLabel($type, $adapter->getDisplayName()),
                 'defaultEndpoint' => $adapter->getDefaultEndpoint(),
+                'requiresEndpoint' => Provider::adapterRequiresEndpoint($type),
             ];
         }
 

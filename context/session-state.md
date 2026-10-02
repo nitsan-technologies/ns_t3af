@@ -2,6 +2,30 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-02 — Empty capabilities: required except translate-only
+
+**Done:** Save still rejects empty capabilities for LLM/media adapters. DeepL / Google Translate (`getDefaultCapabilities() === []`) may save with none selected. Documented in `providers.md`.
+
+**Last touched:** 2026-10-02
+
+---
+
+## 2026-10-02 — Provider drawer AJAX save (keep errors in panel)
+
+**Done:** `provider-drawer.js` POSTs the drawer form via fetch. Validation errors inject the form back into the open panel (no bare full-page HTML). Success follows the list redirect. Shared `applyDrawerHtml()` also used when opening edit/new.
+
+**Last touched:** 2026-10-02
+
+---
+
+## 2026-10-02 — Reject save with zero capabilities
+
+**Done:** Missing `capabilities[]` POST (all unchecked) is treated as none selected. Save fails with “Select at least one capability.” instead of keeping the old CSV. Drawer shows the error and keeps boxes unchecked. Embedding-model force still counts as a capability when an embedding model is set.
+
+**Last touched:** 2026-10-02
+
+---
+
 ## 2026-10-02 — Hide providers excluded from dashboard analytics
 
 **Done:** `enabled_for_dashboard` off drops that provider from dashboard cards, cost totals, and the cost trend. Requests, AI Usage, and logs are unchanged. Analytics cache key includes the included provider uids so the toggle applies immediately.
