@@ -171,6 +171,15 @@
       <trans-unit id="provider.js.delete.confirmDefault" resname="provider.js.delete.confirmDefault">
         <source>Delete?</source>
       </trans-unit>
+      <trans-unit id="provider.js.embeddingModel.confirmTitle" resname="provider.js.embeddingModel.confirmTitle">
+        <source>Change embedding model?</source>
+      </trans-unit>
+      <trans-unit id="provider.js.embeddingModel.confirmMessage" resname="provider.js.embeddingModel.confirmMessage">
+        <source>Are you sure you want to change this model for your trained data? If you have already trained your data then you need to re-train it.</source>
+      </trans-unit>
+      <trans-unit id="provider.js.embeddingModel.confirmOk" resname="provider.js.embeddingModel.confirmOk">
+        <source>Change model</source>
+      </trans-unit>
       <trans-unit id="wizard.step3.empty" resname="wizard.step3.empty">
         <source>No provider catalog entries are configured.</source>
       </trans-unit>

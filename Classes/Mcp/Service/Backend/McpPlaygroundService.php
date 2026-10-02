@@ -167,6 +167,8 @@ readonly class McpPlaygroundService
                 'latencyMs' => $latencyMs,
                 'message' => $exception->getMessage(),
             ];
+        } finally {
+            $this->invocationContext->clear();
         }
     }
 

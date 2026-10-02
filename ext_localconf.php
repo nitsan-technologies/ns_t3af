@@ -32,6 +32,7 @@ foreach ([
     'nst3af_dashboard_analytics' => 900,
     'nst3af_ailabel_undo' => 600,
     'nst3af_agent_tool_index' => 0,
+    'nst3af_ailabel_iptc' => 0,
 ] as $cacheId => $defaultLifetime) {
     if (!is_array($GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations'][$cacheId] ?? null)) {
         $GLOBALS['TYPO3_CONF_VARS']['SYS']['caching']['cacheConfigurations'][$cacheId] = [

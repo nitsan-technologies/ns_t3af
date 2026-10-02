@@ -2,6 +2,30 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-01 — Confirm before changing embedding model
+
+**Done:** Provider drawer shows TYPO3 `Modal.confirm` when changing a non-empty embedding model (select or free-text blur). Copy warns about trained data. Cancel restores the previous value. Labels EN/DE in `locallang_js.xlf`.
+
+**Last touched:** 2026-10-01
+
+---
+
+## 2026-10-01 — Clear models when adapter type changes
+
+**Done:** Changing `adapter_type` on save clears `model_id` / `embedding_model_id` (and Azure `api_version` when leaving Azure). Drawer JS clears those inputs before reloading the model list. Prevents stale ids like `magistral-small` after Mistral → OpenAI. Unit coverage + `providers.md`.
+
+**Last touched:** 2026-10-01
+
+---
+
+## 2026-10-01 — Reset connection status on connection-relevant provider edits
+
+**Done:** `ProviderFormService` clears `last_status*` to `unknown` when edit changes `adapter_type`, `endpoint_url`, `api_key`, `model_id`, `embedding_model_id`, or `api_version`. Title/pricing/toggle-only saves keep the prior Connected badge. Unit tests cover adapter / API key / model change vs title-only. Documented in `context/features/providers.md`.
+
+**Last touched:** 2026-10-01
+
+---
+
 ## 2026-09-30 — Drop TYPO3 12 support (2.0.0)
 
 **Done:** Raised `composer.json`/`ext_emconf.php` floor to `^13.4 || ^14.3`, pinned `symfony/ai-agent` to `~0.13.0`, bumped version to `2.0.0`. Removed TYPO3-12-only dual code paths: `ModuleController`/`ExtensionExtConfCategoryService` Fluid `StandaloneView` fallback (now `ViewFactoryInterface` only), `PagePathUtility` legacy icon-size reflection, `ProcessFileListActionsListener` legacy icon-size reflection, `AiUniverseUtilityHelper::getPageTreeNavigationComponent()` v12 branch, `AiApiAlertNotificationService` TYPO3-11 `Mailer` branch, `SetupChecklistPresenterTest` v12 adapter stub/test. Updated public docs (README, Installation/FAQ/Introduction RST, guides.xml/Includes.txt, CHANGELOG + `Documentation/ReleaseNotes/2.0.0/`, CONTRIBUTING, compliance-strings) and agent context (`core.md`, `Build/version-matrix.json`, `docs-map.md`, `Typo3CoreBackendDesign(.generic).md` support lines) to v13/v14 only. v1.x line stays on TYPO3 12 support for existing customers. Decided: drop v12, accept `~0.13.0`, no v12 CI job.
@@ -12,9 +36,49 @@ Also fixed two pre-existing failures surfaced by `composer test`/`composer stan`
 
 ---
 
+## 2026-09-30 — Credits toolbar Fresh/dark contrast
+
+**Done:** `toolbar-credit.css` — healthy balance inherits `.toolbar-item-link` / scaffold header color (fixes unreadable dark “0/50 cr” on Fresh primary topbar). Low/critical keep warning/danger border tokens. Documented in `Typo3CoreBackendDesign.md`. Synced to `12.4.45-new`.
+
+**Last touched:** 2026-09-30
+
+---
+
+## 2026-09-30 — DataHandlerService: live page uid + site for workspaces
+
+**Done:** `updateRecord` / `createRecord` / `copyRecord` for `pages` resolve `t3ver_oid` (live) before DataHandler and attach site on `TYPO3_REQUEST` even when MCP had no request. Fixes RootlineUtility "Could not fetch page data for uid \<workspace version\>".
+
+**Last touched:** 2026-09-30
+
+---
+
+## 2026-09-30 — TranslateHook: public McpInvocationContext for DataHandler localize
+
+**Done:** `GeneralUtility::makeInstance(McpInvocationContext)` failed during backend page localize (DeepL via `aiProviderIdentifier`) because the service was DI-private (`0` ctor args). Marked `McpInvocationContext` public; TranslateHook resolves it safely and falls back to `backend_module` / `backend_localization` when unavailable.
+
+**Last touched:** 2026-09-30
+
+---
+
+## 2026-09-30 — MCP invocation forces request_source=mcp (incl. credits mode)
+
+**Done:** `McpInvocationContext` tracks active tool calls (`applyFromArguments` / `clear`). `enrichAiOptions` sets `requestSource=mcp` while active; new `enrichRequestSourceOnly()` does the same without swapping providers (used when T3Planet credits mode skips full enrich). Cleared in `ContextualReferenceHandler` + playground `finally`. Fixes AI Usage mis-labeling MCP news/translate as `backend_module`.
+
+**Last touched:** 2026-09-30
+
+---
+
 ## 2026-09-29 — Credits v1 chat for AI Agent
 
 **Done:** Agent NL turns in T3Planet Credits mode call `/API/AI/v1/chat/completions` via `symfony/ai-generic-platform` (`T3PlanetCreditsPlatformFactory` + `T3PlanetCreditsChatExecutor`). `AiToolCallingService` branches on `CreditModeResolver`; `supportsToolCalling` is true in credits mode. Provider select lists `/v1/models` aliases. Side-call LLM tool summaries are skipped while credits mode is on. Billing follows the live server (per completions call + `turn_id`); Charge/Stream stay for non-agent traffic.
+
+**Last touched:** 2026-09-29
+
+---
+
+## 2026-09-29 — AI Usage search quotes the column inside LOWER()
+
+**Done:** Request-log search wraps each quoted column in LOWER() before LIKE. The previous like() call treated LOWER(column) as a column name, and MariaDB raised unknown column 1054.
 
 **Last touched:** 2026-09-29
 

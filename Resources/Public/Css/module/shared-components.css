@@ -532,6 +532,7 @@
     justify-content: space-between;
     padding: 1.25rem 1.5rem 1rem;
     position: relative;
+    justify-content: flex-start;
 }
 .aiu-drawer__header-main {
     flex: 1 1 auto;
@@ -549,7 +550,6 @@
 .aiu-drawer__desc  { font-size: var(--typo3-font-size-small, .6875rem); color: var(--typo3-text-color-variant, var(--aiu-text-500)); margin: .15rem 0 0; }
 .aiu-drawer__close {
     flex: 0 0 auto;
-    margin-left: auto;
 }
 .aiu-drawer__close:not(.btn) {
     background: transparent; border: 0; cursor: pointer;
@@ -746,11 +746,11 @@
 .aiu-error { display: block; color: var(--aiu-status-bad); font-size: 11px; margin-top: .25rem; }
 
 .aiu-drawer__footer {
-    display: flex; gap: .5rem; 
-    padding: 1rem 1.5rem; 
+    display: flex; gap: .5rem;
+    padding: 1rem 1.5rem;
     border-top: 1px solid var(--typo3-card-border-color, var(--aiu-border));
-    position: sticky; 
-    bottom: 0; 
+    position: sticky;
+    bottom: 0;
     background: var(--typo3-card-bg, var(--aiu-bg-white));
     justify-content: space-between;
 }

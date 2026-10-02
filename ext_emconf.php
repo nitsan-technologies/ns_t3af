@@ -38,4 +38,9 @@ $EM_CONF['ns_t3af'] = [
         ],
         'suggests' => [],
     ],
+    'autoload' => [
+        'psr-4' => [
+            'NITSAN\\NsT3AF\\' => 'Classes',
+        ],
+    ],
 ];
