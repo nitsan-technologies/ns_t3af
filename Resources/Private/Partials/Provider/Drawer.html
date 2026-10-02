@@ -7,9 +7,6 @@
     <input type="hidden" name="uid" value="{provider.uid}" />
 
     <div class="aiu-drawer__header">
-        <button type="button" class="aiu-drawer__close btn" data-aiu-drawer-close aria-label="Close">
-            <core:icon identifier="actions-close" size="small" />
-        </button>
         <div class="aiu-drawer__header-content">
           <h2 class="aiu-drawer__title">
             <f:if condition="{provider.uid} > 0">
@@ -28,6 +25,9 @@
                           default="Configure a new language model provider connection." />
           </p>
         </div>
+        <button type="button" class="aiu-drawer__close btn" data-aiu-drawer-close aria-label="Close">
+          <core:icon identifier="actions-close" size="small" />
+      </button>
     </div>
 
     <div class="aiu-drawer__body">

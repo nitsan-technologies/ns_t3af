@@ -30,6 +30,8 @@ final class DashboardProviderCardBuilder
 
     private const MAX_CARDS = 4;
 
+    public function __construct(private readonly MoneyFormatter $moneyFormatter = new MoneyFormatter()) {}
+
     /**
      * @param list<Provider> $providers
      * @param list<array{provider:string,requests:int,failed:int,cost:float,tokens:int,lastCrdate:int}> $stats
@@ -68,7 +70,7 @@ final class DashboardProviderCardBuilder
                 'isDefault' => $provider->isDefault,
                 'isEnabled' => $provider->isEnabled,
                 'periodCost' => $cost,
-                'periodCostFormatted' => '$' . number_format($cost, 2),
+                'periodCostFormatted' => $this->moneyFormatter->format($cost, $provider->pricingCurrency),
                 'errorRate' => $errorRate,
                 'errorRateHigh' => $highErrorRate,
                 'missingKey' => $missingKey,

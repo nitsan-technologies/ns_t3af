@@ -354,7 +354,18 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 static fn($provider): bool => $provider->isEnabled,
             ),
         ));
-        $apiSpendSummary = $this->dashboardViewModelBuilder->buildApiSpendSummary($analyticsOwnKeys, $ownKeysSpendTotal);
+        $currencyByProvider = [];
+        foreach ($ownKeysProviders as $provider) {
+            $currencyByProvider[$provider->identifier] = $provider->pricingCurrency;
+        }
+        $apiSpendSummary = $this->dashboardViewModelBuilder->buildApiSpendSummary(
+            $analyticsOwnKeys,
+            $ownKeysSpendTotal,
+            $currencyByProvider,
+        );
+        $ownKeysCostCurrency = is_string($apiSpendSummary['currency'] ?? null)
+            ? $apiSpendSummary['currency']
+            : null;
         $creditsHero = $this->dashboardViewModelBuilder->buildCreditsHero($creditsDashboard, $analyticsCredits, $creditProjection);
         $kpiStripCredits = $this->dashboardViewModelBuilder->buildKpiStrip(
             $analyticsCredits,
@@ -369,6 +380,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             false,
             $creditsDashboard,
             $activeProviderLabels,
+            $ownKeysCostCurrency,
         );
         $creditEfficiency = $this->dashboardViewModelBuilder->buildCreditEfficiency($analyticsCredits, $creditsDashboard);
         $providerDistributionLegend = $this->dashboardViewModelBuilder->buildProviderDistributionLegend(
@@ -437,6 +449,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 'creditProjection' => $creditProjection,
                 'ownKeysSpendTotal' => $ownKeysSpendTotal,
                 'ownKeysSpendTotalFormatted' => (string) ($apiSpendSummary['totalFormatted'] ?? '$0.00'),
+                'chartCostCurrency' => (string) ($apiSpendSummary['currency'] ?? ''),
                 'creditsPricingUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.credits_pricing'),
                 'providersUri' => $providersUri,
                 'aiUsageUri' => $aiUsageUri,

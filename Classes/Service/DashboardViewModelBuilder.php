@@ -28,8 +28,11 @@ use NITSAN\NsT3AF\Api\AiCreditUnits;
  */
 final class DashboardViewModelBuilder
 {
+    public function __construct(private readonly MoneyFormatter $moneyFormatter = new MoneyFormatter()) {}
+
     /**
      * @param array<string, mixed> $analytics
+     * @param array<string, string> $currencyByProvider provider identifier => ISO code
      * @return array{
      *   total:float,
      *   totalFormatted:string,
@@ -38,10 +41,11 @@ final class DashboardViewModelBuilder
      *   periodDays:int,
      *   periodLabel:string,
      *   title:string,
+     *   currency:?string,
      *   rows:list<array{label:string,cost:float,costFormatted:string,barPercent:float}>
      * }
      */
-    public function buildApiSpendSummary(array $analytics, float $totalSpend): array
+    public function buildApiSpendSummary(array $analytics, float $totalSpend, array $currencyByProvider = []): array
     {
         $periodDays = max(1, (int) ($analytics['periodDays'] ?? 7));
         $periodPreset = (string) ($analytics['periodPreset'] ?? '');
@@ -64,19 +68,29 @@ final class DashboardViewModelBuilder
             $rows[] = [
                 'label' => $label,
                 'cost' => $cost,
-                'costFormatted' => $this->formatUsd($cost),
+                'costFormatted' => $this->moneyFormatter->format(
+                    $cost,
+                    (string) ($currencyByProvider[$label] ?? 'USD'),
+                ),
                 'barPercent' => round(100 * $cost / $maxCost, 1),
             ];
         }
 
+        $currency = $this->moneyFormatter->singleCurrency($currencyByProvider, $distribution);
+
         return [
             'total' => $totalSpend,
-            'totalFormatted' => $this->formatUsd($totalSpend),
+            'totalFormatted' => $currency === null
+                ? $this->moneyFormatter->formatAmount($totalSpend)
+                : $this->moneyFormatter->format($totalSpend, $currency),
             'dailyAvg' => $dailyAvg,
-            'dailyAvgFormatted' => $this->formatUsd($dailyAvg) . '/day avg',
+            'dailyAvgFormatted' => ($currency === null
+                ? $this->moneyFormatter->formatAmount($dailyAvg)
+                : $this->moneyFormatter->format($dailyAvg, $currency)) . '/day avg',
             'periodDays' => $periodDays,
             'periodLabel' => (string) $periodDays . ' days',
             'title' => $this->formatApiSpendTitle($periodDays, $periodPreset),
+            'currency' => $currency,
             'rows' => $rows,
         ];
     }
@@ -88,15 +102,6 @@ final class DashboardViewModelBuilder
             DashboardPeriodResolver::PRESET_YESTERDAY => "Yesterday's API spend",
             default => sprintf('%d-day API spend', $periodDays),
         };
-    }
-
-    private function formatUsd(float $amount): string
-    {
-        if ($amount > 0.0 && $amount < 0.01) {
-            return '$' . rtrim(rtrim(number_format($amount, 4, '.', ''), '0'), '.');
-        }
-
-        return '$' . number_format($amount, 2);
     }
 
     /**
@@ -112,6 +117,7 @@ final class DashboardViewModelBuilder
         bool $creditsMode,
         array $creditsDashboard,
         array $activeProviderLabels,
+        ?string $costCurrency = 'USD',
     ): array {
         $totals = is_array($analytics['totals'] ?? null) ? $analytics['totals'] : [];
         $successFail = is_array($analytics['successFail'] ?? null) ? $analytics['successFail'] : [];
@@ -153,9 +159,11 @@ final class DashboardViewModelBuilder
             $strip[] = $this->kpiCard(
                 'apiCost',
                 'actions-credit-card',
-                '$' . number_format($cost, 2),
+                $costCurrency === null
+                    ? $this->moneyFormatter->formatAmount($cost)
+                    : $this->moneyFormatter->format($cost, $costCurrency),
                 $trends['cost'] ?? [],
-                'across all providers',
+                $costCurrency === null ? 'mixed currencies' : 'across all providers',
             );
         }
 

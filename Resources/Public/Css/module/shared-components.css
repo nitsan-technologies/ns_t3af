@@ -549,6 +549,7 @@
 .aiu-drawer__desc  { font-size: var(--typo3-font-size-small, .6875rem); color: var(--typo3-text-color-variant, var(--aiu-text-500)); margin: .15rem 0 0; }
 .aiu-drawer__close {
     flex: 0 0 auto;
+    margin-left: auto;
 }
 .aiu-drawer__close:not(.btn) {
     background: transparent; border: 0; cursor: pointer;
@@ -700,6 +701,8 @@
     --typo3-form-grid-spacing-y: calc(var(--typo3-spacing, 1rem) / 2);
     grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-bottom: 0;
+    display: grid;
+    gap: 5px;
 }
 
 .form-grid.aiu-form-grid--2 > .form-group {

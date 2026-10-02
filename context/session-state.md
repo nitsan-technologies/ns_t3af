@@ -2,6 +2,30 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-02 — Dashboard cost uses provider currency
+
+**Done:** Provider cards, spend panel, API Cost KPI, cost-trend axis, and AI Usage cost use `pricing_currency` / the log `currency` (`€` for EUR). Mixed-currency totals stay unlabeled. No FX conversion.
+
+**Last touched:** 2026-10-02
+
+---
+
+## 2026-10-02 — SEO save can makeInstance DataHandlerService
+
+**Done:** `DataHandlerService` is `public: true` so `GeneralUtility::makeInstance()` from `ns_t3ai` `PageRepository::saveField()` receives `SiteFinder`. Private services were constructed with zero arguments and SEO save failed.
+
+**Last touched:** 2026-10-02
+
+---
+
+## 2026-10-02 — Block unchecking embeddings while a model is selected
+
+**Done:** Provider drawer restores the embeddings checkbox and shows a warning when the user unchecks it while `embedding_model_id` is non-empty. Chat-model capability apply keeps embeddings checked in that case. Labels EN/DE in `locallang_js.xlf`. Save still forces the capability server-side.
+
+**Last touched:** 2026-10-02
+
+---
+
 ## 2026-10-01 — Confirm before changing embedding model
 
 **Done:** Provider drawer shows TYPO3 `Modal.confirm` when changing a non-empty embedding model (select or free-text blur). Copy warns about trained data. Cancel restores the previous value. Labels EN/DE in `locallang_js.xlf`.

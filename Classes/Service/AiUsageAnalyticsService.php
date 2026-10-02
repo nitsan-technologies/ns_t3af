@@ -26,6 +26,7 @@ final class AiUsageAnalyticsService
     public function __construct(
         private readonly RequestLogRepository $requestLogs,
         private readonly DashboardPeriodResolver $dashboardPeriodResolver,
+        private readonly MoneyFormatter $moneyFormatter = new MoneyFormatter(),
     ) {}
 
     /**
@@ -186,8 +187,17 @@ final class AiUsageAnalyticsService
         $currentPage = min($currentPage, $totalPages);
         $offset = ($currentPage - 1) * $perPage;
 
+        $entries = $this->requestLogs->findFiltered($filters, $from, $to, null, $perPage, $offset);
+        foreach ($entries as &$entry) {
+            $entry['cost_formatted'] = $this->moneyFormatter->format(
+                (float) ($entry['estimated_cost'] ?? 0),
+                (string) ($entry['currency'] ?? 'USD'),
+            );
+        }
+        unset($entry);
+
         return [
-            'entries' => $this->requestLogs->findFiltered($filters, $from, $to, null, $perPage, $offset),
+            'entries' => $entries,
             'totalCount' => $totalCount,
             'currentPage' => $currentPage,
             'perPage' => $perPage,
