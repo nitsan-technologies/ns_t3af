@@ -2,7 +2,6 @@
 
 Release notes live in the documentation:
 
-- [1.2.3](Documentation/ReleaseNotes/1.2.3/Index.rst) — 1 October 2026
 - [1.2.2](Documentation/ReleaseNotes/1.2.2/Index.rst) — 15 September 2026
 - [1.2.1](Documentation/ReleaseNotes/1.2.1/Index.rst) — 9 September 2026
 - [1.2.0](Documentation/ReleaseNotes/1.2.0/Index.rst) — 26 August 2026
