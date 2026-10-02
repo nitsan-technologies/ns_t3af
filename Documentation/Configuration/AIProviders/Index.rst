@@ -119,16 +119,47 @@ Built-in and discovered adapters include:
 
 Custom adapters: :ref:`Custom AI Providers <custom-ai-providers>`.
 
-Capabilities
-============
+.. _ai-provider-capabilities:
+
+Capabilities and their purpose
+==============================
 
 Pick a model that supports what you need. :guilabel:`Test connection` helps
 validate the choice.
 
-* **Chat** — Text generation
-* **Streaming** — Live response display in the backend
-* **Embeddings** — Search and similarity features
-* **Vision** — Image analysis
+..  list-table::
+   :header-rows: 1
+   :widths: 22 78
+
+   * - Capability
+     - Purpose
+   * - ``chat``
+     - Normal text generation: SEO, Pages, Content, News, LLM translation,
+       chatbot answers. This is the main flag for message-style APIs, and every
+       ``complete()`` request is allowed when it is ticked.
+   * - ``completion``
+     - Legacy/raw text completion. AI Foundation treats it as equivalent to
+       ``chat``: either one is enough for the ``complete()`` path, and text
+       features are blocked only when both are unticked.
+   * - ``embeddings``
+     - Only for ``embed()``, which turns text into vectors for semantic search,
+       RAG and similarity matching. It has no effect on normal text generation,
+       and an embedding model should also be set on the provider.
+   * - ``vision``
+     - Only needed when a request includes images (for example alt-text
+       generation or image description). Text-only requests do not need it,
+       but requests with images are blocked without it.
+   * - ``streaming``
+     - Only for ``stream()``, where the answer arrives piece by piece (for
+       example a live chatbot). Without it, streaming calls are blocked, but
+       normal ``complete()`` requests still work.
+   * - ``tts``
+     - Only for text-to-speech: converting text into audio (for example audio
+       for content elements). It is always checked strictly and must be ticked
+       explicitly.
+   * - ``image_generation``
+     - Only for creating images from a text prompt (for example the T3AI image
+       generator). It is always checked strictly and must be ticked explicitly.
 
 Multiple providers — when and why
 =================================
@@ -173,6 +204,16 @@ Required
     Adapter protocol identifier, for example ``symfony.openai`` or
     ``nst3af.openai_compatible``.
 
+..  confval:: capabilities
+    :name: provider-capabilities
+    :required: true
+    :type: string list
+
+    Enabled capabilities: ``chat``, ``completion``, ``embeddings``, ``vision``,
+    ``streaming``, ``tts``, ``image_generation``. Tick at least one capability
+    the model supports. See
+    :ref:`Capabilities and their purpose <ai-provider-capabilities>`.
+
 Connection
 ----------
 
@@ -206,13 +247,6 @@ Connection
 
 Optional configuration
 ----------------------
-
-..  confval:: capabilities
-    :name: provider-capabilities
-    :type: string list
-
-    Enabled capabilities: ``chat``, ``completion``, ``embeddings``, ``vision``,
-    ``streaming``, ``tts``, ``image_generation``.
 
 ..  confval:: temperature
     :name: provider-temperature
@@ -307,5 +341,6 @@ Where to get API keys
    * Google Gemini: https://aistudio.google.com/apikey
    * Mistral: https://console.mistral.ai/
    * Azure OpenAI: https://portal.azure.com/
+   * DeepL Translation: https://www.deepl.com/pro-api
 
 More links: :ref:`Helpful Links <helpful-links>`
