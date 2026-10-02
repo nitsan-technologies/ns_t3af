@@ -1227,3 +1227,8 @@
 [data-ai-agent-settings] .aiu-agent-card--collapsed .aiu-agent-card__body {
     display: none;
 }
+
+.aiu-agent-card__body .card-body,
+.aiu-agent-card__body .table thead th {
+    padding-top: 0;
+}

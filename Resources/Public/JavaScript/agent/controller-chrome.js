@@ -896,7 +896,7 @@ export const chromeMethods = {
         language: 'actions-globe',
         record: 'actions-document-edit',
         folder: 'apps-filetree-folder-default',
-        workspace: 'actions-workspace',
+        workspace: 'apps-toolbar-menu-workspace',
         brand: 'actions-tag',
       };
       this.contextEl.innerHTML = dimChip + chips.map((chip) => {
