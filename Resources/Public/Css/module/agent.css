@@ -410,6 +410,10 @@
   max-width: 78%;
 }
 
+.nst3af-agent-msg--user p {
+  margin-bottom: 0;
+}
+
 .nst3af-agent-msg--assistant {
   align-self: flex-start;
   max-width: 86%;
