@@ -84,6 +84,8 @@ const LL = {
   embeddingConfirmTitle: 'provider.js.embeddingModel.confirmTitle',
   embeddingConfirmMessage: 'provider.js.embeddingModel.confirmMessage',
   embeddingConfirmOk: 'provider.js.embeddingModel.confirmOk',
+  embeddingCapabilityBlockedTitle: 'provider.js.embeddingCapability.blockedTitle',
+  embeddingCapabilityBlockedMessage: 'provider.js.embeddingCapability.blockedMessage',
 };
 
 /**
@@ -751,6 +753,23 @@ class ProviderDrawer {
         this.setEmbeddingsCapability(form, embeddingModelInput.value.trim() !== '');
       });
     }
+    const embeddingsCheckbox = form.querySelector('input[name="capabilities[]"][value="embeddings"]');
+    if (embeddingsCheckbox instanceof HTMLInputElement) {
+      embeddingsCheckbox.addEventListener('change', () => {
+        const modelId = (embeddingModelInput?.value || '').trim();
+        if (embeddingsCheckbox.checked || modelId === '') {
+          return;
+        }
+        embeddingsCheckbox.checked = true;
+        Notification.warning(
+          ll(LL.embeddingCapabilityBlockedTitle, 'Cannot turn off embeddings'),
+          ll(
+            LL.embeddingCapabilityBlockedMessage,
+            'An embedding model is selected. Clear the embedding model before you turn off the embeddings capability.',
+          ),
+        );
+      });
+    }
     if (modelRefresh) {
       modelRefresh.addEventListener('click', async (evt) => {
         evt.preventDefault();
@@ -997,8 +1016,13 @@ class ProviderDrawer {
   }
 
   applyCapabilities(form, caps) {
+    const embeddingModel = (form.querySelector('[data-aiu-embedding-model-input]')?.value || '').trim();
     const checkboxes = form.querySelectorAll('input[name="capabilities[]"]');
     checkboxes.forEach((cb) => {
+      if (cb.value === CAP_EMBEDDINGS && embeddingModel !== '') {
+        cb.checked = true;
+        return;
+      }
       cb.checked = caps.includes(cb.value);
     });
   }

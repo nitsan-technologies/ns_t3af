@@ -215,6 +215,14 @@
                 <source>Change model</source>
                 <target>Modell ändern</target>
             </trans-unit>
+            <trans-unit id="provider.js.embeddingCapability.blockedTitle">
+                <source>Cannot turn off embeddings</source>
+                <target>Embeddings können nicht deaktiviert werden</target>
+            </trans-unit>
+            <trans-unit id="provider.js.embeddingCapability.blockedMessage">
+                <source>An embedding model is selected. Clear the embedding model before you turn off the embeddings capability.</source>
+                <target>Ein Embedding-Modell ist ausgewählt. Entfernen Sie das Embedding-Modell, bevor Sie die Embeddings-Fähigkeit deaktivieren.</target>
+            </trans-unit>
             <trans-unit id="wizard.step3.empty">
                 <source>No provider catalog entries are configured.</source>
                 <target>Es sind keine Provider-Katalogeinträge konfiguriert.</target>

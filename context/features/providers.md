@@ -49,6 +49,7 @@
 - On provider edit, clear `last_status*` to `unknown` when connection-relevant fields change (`adapter_type`, `endpoint_url`, `api_key`, `model_id`, `embedding_model_id`, `api_version`). Cosmetic edits (title, pricing, toggles) keep the prior probe.
 - When `adapter_type` changes, also clear `model_id` / `embedding_model_id` (and `api_version` when leaving Azure). Drawer JS clears those inputs on adapter change so a vendor model id is not kept as Custom.
 - Changing a non-empty embedding model shows a TYPO3 confirm modal (trained-data warning) before applying.
+- Embeddings cannot be unchecked while an embedding model is selected. The drawer restores the checkbox and shows a warning. Clear the embedding model first.
 
 **Don't:**
 - Add provider API keys back to ext_conf.
