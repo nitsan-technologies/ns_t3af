@@ -70,7 +70,7 @@ final class MoneyFormatter
      * An empty map with spend falls back to USD. No spend uses the single mapped code, or USD.
      *
      * @param array<string, string> $currencyByProvider
-     * @param list<array<string, mixed>> $rows
+     * @param array<int|string, array<string, mixed>> $rows
      */
     public function singleCurrency(array $currencyByProvider, array $rows): ?string
     {

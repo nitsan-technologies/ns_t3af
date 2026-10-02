@@ -282,7 +282,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $activeProviderCount = 0;
         $defaultIdentifier = null;
         foreach ($this->providerRepository->findAllByStoragePid($storagePid, includeHidden: true) as $provider) {
-            if ($provider->identifier === CreditsProviderIdentifier::IDENTIFIER) {
+            if ($provider->identifier === CreditsProviderIdentifier::IDENTIFIER || !$provider->enabledForDashboard) {
                 continue;
             }
             $ownKeysProviders[] = $provider;

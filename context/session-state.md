@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-02 — Hide providers excluded from dashboard analytics
+
+**Done:** `enabled_for_dashboard` off drops that provider from dashboard cards, cost totals, and the cost trend. Requests, AI Usage, and logs are unchanged. Analytics cache key includes the included provider uids so the toggle applies immediately.
+
+**Last touched:** 2026-10-02
+
+---
+
 ## 2026-10-02 — Dashboard cost uses provider currency
 
 **Done:** Provider cards, spend panel, API Cost KPI, cost-trend axis, and AI Usage cost use `pricing_currency` / the log `currency` (`€` for EUR). Mixed-currency totals stay unlabeled. No FX conversion.

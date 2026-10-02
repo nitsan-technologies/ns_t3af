@@ -48,15 +48,15 @@ final class DashboardAnalyticsService
         RequestLogProviderScope $scope,
         int $storagePid = 0,
     ): array {
-        $cached = $this->statisticsCache->getAnalytics($period, $scope, $storagePid);
-        if ($cached !== null) {
-            return $cached;
-        }
-
         $fromTimestamp = (int) $period['fromTimestamp'];
         $toTimestamp = (int) $period['toTimestamp'];
         $days = max(1, (int) $period['days']);
         $providerUids = $this->resolveProviderUidsForScope($scope, $storagePid);
+
+        $cached = $this->statisticsCache->getAnalytics($period, $scope, $storagePid, $providerUids);
+        if ($cached !== null) {
+            return $cached;
+        }
 
         $totals = $this->requestLogs->totals($fromTimestamp, $toTimestamp, $scope, $providerUids);
         $successFail = $this->requestLogs->successFailTotals($fromTimestamp, $toTimestamp, $scope, $providerUids);
@@ -91,7 +91,7 @@ final class DashboardAnalyticsService
             'avgCreditsPerRequest' => $this->averageCreditsPerRequest($totals),
         ];
 
-        $this->statisticsCache->setAnalytics($period, $scope, $storagePid, $payload);
+        $this->statisticsCache->setAnalytics($period, $scope, $storagePid, $payload, $providerUids);
 
         return $payload;
     }
@@ -192,7 +192,7 @@ final class DashboardAnalyticsService
 
         $uids = [];
         foreach ($this->providers->findAllByStoragePid($storagePid, includeHidden: true) as $provider) {
-            if ($this->isOwnKeysProvider($provider) && $provider->uid > 0) {
+            if ($this->isIncludedInDashboard($provider) && $provider->uid > 0) {
                 $uids[] = $provider->uid;
             }
         }
@@ -212,7 +212,7 @@ final class DashboardAnalyticsService
 
         $count = 0;
         foreach ($providerList as $provider) {
-            if ($this->isOwnKeysProvider($provider) && $provider->isEnabled) {
+            if ($this->isIncludedInDashboard($provider) && $provider->isEnabled) {
                 $count++;
             }
         }
@@ -223,6 +223,11 @@ final class DashboardAnalyticsService
     private function isOwnKeysProvider(Provider $provider): bool
     {
         return $provider->identifier !== CreditsProviderIdentifier::IDENTIFIER;
+    }
+
+    private function isIncludedInDashboard(Provider $provider): bool
+    {
+        return $this->isOwnKeysProvider($provider) && $provider->enabledForDashboard;
     }
 
     /**
