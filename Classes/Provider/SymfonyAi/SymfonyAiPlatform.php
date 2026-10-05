@@ -23,6 +23,7 @@ use const JSON_THROW_ON_ERROR;
 
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
+use NITSAN\NsT3AF\Provider\Model\VendorModelIdNormalizer;
 
 /**
  * Wraps a Symfony AI Platform bridge for tool-calling chat completions.
@@ -50,14 +51,17 @@ final class SymfonyAiPlatform
             throw new AdapterRuntimeException('Symfony AI platform does not support invoke().');
         }
 
+        $modelId = VendorModelIdNormalizer::canonicalize($modelId, $this->provider->adapterType);
         $messageBag = $this->messageBagFactory->createFromChatMessages($messages);
         if ($messageBag === null) {
             throw new AdapterRuntimeException('No valid messages for Symfony AI tool calling.');
         }
 
+        // Do not set OpenAI-shaped tool_choice here: Gemini rejects it inside
+        // generationConfig, Anthropic expects ['type'=>'auto'] (bridge default),
+        // and OpenAI-compatible bridges default tool_choice themselves.
         $options = [
             'tools' => $this->normalizeTools($tools),
-            'tool_choice' => 'auto',
         ];
         if (!$this->isReasoningModel($modelId)) {
             $options['temperature'] = $this->provider->temperature;
@@ -122,6 +126,8 @@ final class SymfonyAiPlatform
             throw new AdapterRuntimeException('Symfony AI platform does not support invoke().');
         }
 
+        $modelId = VendorModelIdNormalizer::canonicalize($modelId, $this->provider->adapterType);
+
         // No chat temperature / tools options — embeddings only accept model + input.
         return $this->platform->invoke($modelId, $text, []);
     }
@@ -136,6 +142,8 @@ final class SymfonyAiPlatform
         if (!method_exists($this->platform, 'invoke')) {
             throw new AdapterRuntimeException('Symfony AI platform does not support invoke().');
         }
+
+        $modelId = VendorModelIdNormalizer::canonicalize($modelId, $this->provider->adapterType);
 
         if (!$this->isReasoningModel($modelId) && !array_key_exists('temperature', $options)) {
             $options['temperature'] = $this->provider->temperature;

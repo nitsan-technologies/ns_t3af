@@ -241,7 +241,6 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             static fn(array $messages): AiOptions => new AiOptions(
                 pageId: $pageId > 0 ? $pageId : null,
                 providerIdentifier: $providerIdentifier,
-                modelId: $providerIdentifier,
                 extensionKey: 'ns_t3af',
                 featureKey: 'agent.nl_turn',
                 featureLabel: 'AI Agent NL turn',

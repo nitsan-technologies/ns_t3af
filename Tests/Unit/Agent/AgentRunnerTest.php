@@ -442,6 +442,33 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function namedProviderDoesNotUseIdentifierAsModelId(): void
+    {
+        $toolCalling = $this->createMock(AiToolCallingServiceInterface::class);
+        $toolCalling->method('supportsToolCalling')->willReturn(true);
+        $toolCalling->method('completeWithTools')->willReturnCallback(
+            function (array $messages, array $tools, AiOptions $options): AiToolCallingResponse {
+                $this->record($messages, $tools, $options);
+                self::assertSame('gemini', $options->providerIdentifier);
+                self::assertNull($options->modelId);
+
+                return new AiToolCallingResponse('Hello', 'gemini-3.5-flash', 'gemini');
+            },
+        );
+
+        $this->makeRunner($toolCalling, 5)->runTurn(
+            'Hi',
+            [],
+            ['pageId' => 49],
+            ['provider' => 'gemini'],
+            $this->createMock(BackendUserAuthentication::class),
+            'corr-gemini',
+        );
+
+        self::assertCount(1, $this->requests);
+    }
+
+    #[Test]
     public function providerErrorIsReportedWithoutPause(): void
     {
         $toolCalling = $this->createMock(AiToolCallingServiceInterface::class);

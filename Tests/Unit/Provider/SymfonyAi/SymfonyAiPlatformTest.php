@@ -98,6 +98,45 @@ final class SymfonyAiPlatformTest extends TestCase
     }
 
     #[Test]
+    public function invokeWithToolsOmitsToolChoiceSoBridgesApplyTheirOwnDefaults(): void
+    {
+        if (!class_exists('Symfony\\AI\\Platform\\Message\\Message')) {
+            self::markTestSkipped('symfony/ai-platform message classes are not installed.');
+        }
+
+        $inner = new class {
+            /** @var array<string, mixed>|null */
+            public ?array $lastOptions = null;
+
+            /**
+             * @param array<string, mixed> $options
+             */
+            public function invoke(string $modelId, object $messageBag, array $options): SymfonyAiTextResultStub
+            {
+                $this->lastOptions = $options;
+
+                return new SymfonyAiTextResultStub('ok');
+            }
+        };
+
+        $service = new SymfonyAiPlatform(
+            $inner,
+            $this->makeProvider(adapterType: 'symfony.gemini'),
+            new SymfonyAiMessageBagFactory(),
+        );
+
+        $service->invokeWithTools(
+            'gemini-3.5-flash',
+            [['role' => 'user', 'content' => 'Hi']],
+            [['name' => 'pages_get', 'description' => 'Get page']],
+        );
+
+        self::assertIsArray($inner->lastOptions);
+        self::assertArrayHasKey('tools', $inner->lastOptions);
+        self::assertArrayNotHasKey('tool_choice', $inner->lastOptions);
+    }
+
+    #[Test]
     public function invokeDelegatesToInnerPlatform(): void
     {
         if (!class_exists('Symfony\\AI\\Platform\\Message\\Message')) {
@@ -285,14 +324,72 @@ final class SymfonyAiPlatformTest extends TestCase
         self::assertStringNotContainsString('"properties":[]', json_encode($schema, JSON_THROW_ON_ERROR));
     }
 
-    private function makeProvider(): Provider
+    #[Test]
+    public function geminiInvokeCanonicalizesPrefixedModelId(): void
+    {
+        if (!class_exists('Symfony\\AI\\Platform\\Message\\Message')) {
+            self::markTestSkipped('symfony/ai-platform message classes are not installed.');
+        }
+
+        $inner = new class {
+            /** @var list<string> */
+            public array $models = [];
+
+            /**
+             * @param array<string, mixed> $options
+             */
+            public function invoke(string $modelId, object $messageBag, array $options): SymfonyAiTextResultStub
+            {
+                $this->models[] = $modelId;
+
+                return new SymfonyAiTextResultStub('ok');
+            }
+        };
+
+        $provider = new Provider(
+            uid: 2,
+            pid: 0,
+            identifier: 'gemini',
+            title: 'Gemini',
+            adapterType: 'symfony.gemini',
+            endpointUrl: '',
+            apiKeyCipher: '',
+            modelId: 'gemini-3.5-flash',
+            embeddingModelId: '',
+            capabilities: [Capability::CHAT],
+            temperature: 0.7,
+            systemPrompt: '',
+            isDefault: false,
+            priority: 50,
+            lastUsedAt: 0,
+            lastStatus: '',
+            lastStatusAt: 0,
+            lastStatusMessage: '',
+        );
+
+        $service = new SymfonyAiPlatform(
+            $inner,
+            $provider,
+            new SymfonyAiMessageBagFactory(),
+        );
+
+        $service->invokeWithTools(
+            'models/gemini-3.5-flash',
+            [['role' => 'user', 'content' => 'Hi']],
+            [],
+        );
+
+        self::assertSame(['gemini-3.5-flash'], $inner->models);
+    }
+
+    private function makeProvider(string $adapterType = 'symfony.openai'): Provider
     {
         return new Provider(
             uid: 1,
             pid: 0,
             identifier: 'demo',
             title: 'Demo',
-            adapterType: 'symfony.openai',
+            adapterType: $adapterType,
             endpointUrl: '',
             apiKeyCipher: '',
             modelId: 'gpt-4.1-mini',

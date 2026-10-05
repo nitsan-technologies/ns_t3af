@@ -26,6 +26,7 @@ use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
 use NITSAN\NsT3AF\Provider\Contract\ToolCallingCapableInterface;
 use NITSAN\NsT3AF\Provider\Contract\VerifyResult;
+use NITSAN\NsT3AF\Provider\Model\VendorModelIdNormalizer;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use TYPO3\CMS\Core\Http\RequestFactory;
 
@@ -716,33 +717,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface, ToolCallingCapab
      */
     private function extractModelsFromJson(string $body): array
     {
-        if ($body === '') {
-            return [];
-        }
-        $decoded = json_decode($body, true);
-        if (!is_array($decoded)) {
-            return [];
-        }
-        $list = $decoded['data'] ?? $decoded['models'] ?? null;
-        if (!is_array($list)) {
-            return [];
-        }
-        $out = [];
-        foreach ($list as $item) {
-            if (is_string($item)) {
-                $out[] = $item;
-                continue;
-            }
-            if (!is_array($item)) {
-                continue;
-            }
-            $id = $item['id'] ?? $item['name'] ?? null;
-            if (is_string($id)) {
-                $out[] = $id;
-            }
-        }
-
-        return $out;
+        return VendorModelIdNormalizer::idsFromModelsListJson($body, $this->getType());
     }
 
     private function extractApiError(string $body): ?string
