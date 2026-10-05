@@ -522,6 +522,10 @@ services:
   NITSAN\NsT3AF\Mcp\Service\McpInvocationContext:
     public: true
 
+  # SEO save in ns_t3ai uses GeneralUtility::makeInstance() (PageRepository::saveField).
+  NITSAN\NsT3AF\Mcp\Service\DataHandlerService:
+    public: true
+
   NITSAN\NsT3AF\Mcp\Tool\:
     resource: '../Classes/Mcp/Tool/*'
 

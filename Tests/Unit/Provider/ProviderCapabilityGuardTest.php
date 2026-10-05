@@ -38,9 +38,9 @@ final class ProviderCapabilityGuardTest extends TestCase
         self::assertTrue(ProviderCapabilityGuard::allowsChat($this->provider([Capability::CHAT])));
     }
 
-    public function testRejectsChatWhenOnlyToolUse(): void
+    public function testRejectsChatWhenOnlyEmbeddings(): void
     {
-        self::assertFalse(ProviderCapabilityGuard::allowsChat($this->provider([Capability::TOOL_USE])));
+        self::assertFalse(ProviderCapabilityGuard::allowsChat($this->provider([Capability::EMBEDDINGS])));
     }
 
     public function testAllowsToolCallingWhenCapabilitiesEmpty(): void
@@ -48,14 +48,14 @@ final class ProviderCapabilityGuardTest extends TestCase
         self::assertTrue(ProviderCapabilityGuard::allowsToolCalling($this->provider([])));
     }
 
-    public function testAllowsToolCallingWhenToolUsePresent(): void
+    public function testAllowsToolCallingWhenChatPresent(): void
     {
-        self::assertTrue(ProviderCapabilityGuard::allowsToolCalling($this->provider([Capability::TOOL_USE])));
+        self::assertTrue(ProviderCapabilityGuard::allowsToolCalling($this->provider([Capability::CHAT])));
     }
 
-    public function testRejectsToolCallingWhenOnlyChat(): void
+    public function testRejectsToolCallingWhenOnlyEmbeddings(): void
     {
-        self::assertFalse(ProviderCapabilityGuard::allowsToolCalling($this->provider([Capability::CHAT])));
+        self::assertFalse(ProviderCapabilityGuard::allowsToolCalling($this->provider([Capability::EMBEDDINGS])));
     }
 
     public function testAssertCallAllowedPassesForEmptyCapabilities(): void
@@ -67,30 +67,20 @@ final class ProviderCapabilityGuardTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
-    public function testAssertCompleteWithToolsRequiresChatAndToolUse(): void
+    public function testAssertCompleteWithToolsRequiresChat(): void
     {
         ProviderCapabilityGuard::assertCallAllowed(
-            $this->provider([Capability::CHAT, Capability::TOOL_USE]),
+            $this->provider([Capability::CHAT]),
             ProviderCapabilityGuard::CALL_COMPLETE_WITH_TOOLS,
         );
         $this->addToAssertionCount(1);
     }
 
-    public function testAssertCompleteWithToolsThrowsWhenOnlyToolUse(): void
+    public function testAssertCompleteWithToolsThrowsWhenOnlyEmbeddings(): void
     {
         $this->expectException(AdapterRuntimeException::class);
         ProviderCapabilityGuard::assertCallAllowed(
-            $this->provider([Capability::TOOL_USE]),
-            ProviderCapabilityGuard::CALL_COMPLETE_WITH_TOOLS,
-        );
-    }
-
-    public function testAssertCompleteWithToolsThrowsWhenOnlyChat(): void
-    {
-        $this->expectException(AdapterRuntimeException::class);
-        $this->expectExceptionMessage('tool_use');
-        ProviderCapabilityGuard::assertCallAllowed(
-            $this->provider([Capability::CHAT]),
+            $this->provider([Capability::EMBEDDINGS]),
             ProviderCapabilityGuard::CALL_COMPLETE_WITH_TOOLS,
         );
     }
@@ -99,7 +89,7 @@ final class ProviderCapabilityGuardTest extends TestCase
     {
         $this->expectException(AdapterRuntimeException::class);
         ProviderCapabilityGuard::assertCallAllowed(
-            $this->provider([Capability::TOOL_USE]),
+            $this->provider([Capability::EMBEDDINGS]),
             ProviderCapabilityGuard::CALL_COMPLETE,
         );
     }

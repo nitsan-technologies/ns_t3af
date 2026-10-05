@@ -66,6 +66,7 @@ const ROUTES = {
 
 const LL = {
   drawerLoadFailed: 'provider.js.error.drawerLoadFailed',
+  saveFailed: 'provider.js.error.saveFailed',
   connectionFailed: 'provider.js.error.connectionFailed',
   testFailed: 'provider.js.error.testFailed',
   setDefaultFailed: 'provider.js.error.setDefaultFailed',
@@ -84,6 +85,8 @@ const LL = {
   embeddingConfirmTitle: 'provider.js.embeddingModel.confirmTitle',
   embeddingConfirmMessage: 'provider.js.embeddingModel.confirmMessage',
   embeddingConfirmOk: 'provider.js.embeddingModel.confirmOk',
+  embeddingCapabilityBlockedTitle: 'provider.js.embeddingCapability.blockedTitle',
+  embeddingCapabilityBlockedMessage: 'provider.js.embeddingCapability.blockedMessage',
 };
 
 /**
@@ -191,6 +194,7 @@ function restoreEmbeddingModelFields(select, input, previous) {
 const OPENAI_COMPATIBLE_ADAPTER = 'nst3af.openai_compatible';
 const OLLAMA_ADAPTER = 'symfony.ollama';
 const AZURE_ADAPTER = 'symfony.azure';
+const OPENRESPONSES_ADAPTER = 'symfony.openresponses';
 const CAP_EMBEDDINGS = 'embeddings';
 const CAP_CHAT = 'chat';
 const CAP_COMPLETION = 'completion';
@@ -371,9 +375,7 @@ class ProviderDrawer {
         this.triggerElement = active instanceof HTMLElement ? active : null;
       }
       const html = await new AjaxRequest(url).get().then((r) => r.resolve('text/html'));
-      this.panel.innerHTML = html;
-      this.bindForm();
-      initFieldHelpLinks(this.panel);
+      this.applyDrawerHtml(html);
       this.drawer.setAttribute('aria-hidden', 'false');
       this.drawer.classList.remove('is-closing');
       this.drawer.classList.add('is-open');
@@ -381,6 +383,93 @@ class ProviderDrawer {
       this.activateDrawerFocus();
     } catch (err) {
       Notification.error(ll(LL.drawerLoadFailed, 'Drawer load failed'), String(err));
+    }
+  }
+
+  /**
+   * Inject drawer markup into the panel. Prefers the form node so ModuleTemplate
+   * chrome from a full-page response does not nest inside the slide-over.
+   *
+   * @param {string} html
+   */
+  applyDrawerHtml(html) {
+    if (!(this.panel instanceof HTMLElement)) {
+      return;
+    }
+    disposeFieldHelpLinks(this.panel);
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const formEl = doc.querySelector('[data-aiu-drawer-form]');
+    if (formEl instanceof HTMLElement) {
+      this.panel.replaceChildren(document.importNode(formEl, true));
+    } else {
+      this.panel.innerHTML = html;
+    }
+    this.bindForm();
+    initFieldHelpLinks(this.panel);
+  }
+
+  /**
+   * POST the drawer form without leaving the Providers list. Validation errors
+   * re-render inside the open panel; success follows the server redirect.
+   *
+   * @param {HTMLFormElement} form
+   */
+  async saveForm(form) {
+    const action = form.getAttribute('action') || form.action;
+    if (!action) {
+      form.submit();
+      return;
+    }
+
+    const submitButtons = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+    submitButtons.forEach((button) => {
+      if (button instanceof HTMLButtonElement || button instanceof HTMLInputElement) {
+        button.disabled = true;
+      }
+    });
+
+    try {
+      const response = await fetch(action, {
+        method: 'POST',
+        body: new FormData(form),
+        credentials: 'same-origin',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      });
+      const html = await response.text();
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const errorForm = doc.querySelector('[data-aiu-drawer-form]');
+      const listRoot = doc.querySelector('[data-aiu-provider-list]');
+
+      // Success: controller redirects to the list (flash=saved). Stay in-module.
+      if (response.redirected || (listRoot && !errorForm)) {
+        window.location.assign(response.url || action);
+        return;
+      }
+
+      if (errorForm instanceof HTMLElement) {
+        this.applyDrawerHtml(html);
+        this.drawer?.setAttribute('aria-hidden', 'false');
+        this.drawer?.classList.remove('is-closing');
+        this.drawer?.classList.add('is-open');
+        this.drawer?.classList.add('aiu-drawer--open');
+        this.activateDrawerFocus();
+        const firstError = this.panel?.querySelector('.aiu-error');
+        if (firstError instanceof HTMLElement) {
+          firstError.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+        return;
+      }
+
+      window.location.assign(response.url || action);
+    } catch (err) {
+      submitButtons.forEach((button) => {
+        if (button instanceof HTMLButtonElement || button instanceof HTMLInputElement) {
+          button.disabled = false;
+        }
+      });
+      Notification.error(ll(LL.saveFailed, 'Save failed'), String(err));
     }
   }
 
@@ -486,7 +575,7 @@ class ProviderDrawer {
 
   bindForm() {
     const form = this.panel?.querySelector('[data-aiu-drawer-form]');
-    if (!form) {
+    if (!(form instanceof HTMLFormElement)) {
       return;
     }
     const adapterSelect = form.querySelector('[data-aiu-adapter-select]');
@@ -516,10 +605,16 @@ class ProviderDrawer {
 
     const syncAdapterConnectionUi = () => {
       const adapterType = adapterSelect?.value || '';
+      const selectedOpt = adapterSelect?.selectedOptions?.[0];
       const isCustom = adapterType === OPENAI_COMPATIBLE_ADAPTER;
       const isOllama = adapterType === OLLAMA_ADAPTER;
       const isAzure = adapterType === AZURE_ADAPTER;
-      const showEndpoint = isCustom || isOllama || isAzure;
+      const isOpenResponses = adapterType === OPENRESPONSES_ADAPTER;
+      const showEndpoint = selectedOpt?.dataset.requiresEndpoint === '1'
+        || isCustom
+        || isOllama
+        || isAzure
+        || isOpenResponses;
       const endpointField = form.querySelector('[data-aiu-endpoint-field]');
       if (endpointField) {
         endpointField.hidden = !showEndpoint;
@@ -532,14 +627,16 @@ class ProviderDrawer {
           endpointInput.value = '';
         }
         if (isOllama && !endpointInput.value) {
-          const opt = adapterSelect?.selectedOptions[0];
-          const defaultEndpoint = opt?.dataset.endpoint || '';
+          const defaultEndpoint = selectedOpt?.dataset.endpoint || '';
           if (defaultEndpoint) {
             endpointInput.placeholder = defaultEndpoint;
           }
         }
         if (isAzure) {
           endpointInput.placeholder = 'https://myresource.openai.azure.com';
+        }
+        if (isOpenResponses) {
+          endpointInput.placeholder = 'https://api.example.com';
         }
       }
       const optionalNote = form.querySelector('[data-aiu-endpoint-optional-note]');
@@ -557,6 +654,10 @@ class ProviderDrawer {
       const azureHint = form.querySelector('[data-aiu-endpoint-azure-hint]');
       if (azureHint) {
         azureHint.hidden = !isAzure;
+      }
+      const openResponsesHint = form.querySelector('[data-aiu-endpoint-openresponses-hint]');
+      if (openResponsesHint) {
+        openResponsesHint.hidden = !isOpenResponses;
       }
       const apiVersionField = form.querySelector('[data-aiu-api-version-field]');
       if (apiVersionField) {
@@ -751,6 +852,23 @@ class ProviderDrawer {
         this.setEmbeddingsCapability(form, embeddingModelInput.value.trim() !== '');
       });
     }
+    const embeddingsCheckbox = form.querySelector('input[name="capabilities[]"][value="embeddings"]');
+    if (embeddingsCheckbox instanceof HTMLInputElement) {
+      embeddingsCheckbox.addEventListener('change', () => {
+        const modelId = (embeddingModelInput?.value || '').trim();
+        if (embeddingsCheckbox.checked || modelId === '') {
+          return;
+        }
+        embeddingsCheckbox.checked = true;
+        Notification.warning(
+          ll(LL.embeddingCapabilityBlockedTitle, 'Cannot turn off embeddings'),
+          ll(
+            LL.embeddingCapabilityBlockedMessage,
+            'An embedding model is selected. Clear the embedding model before you turn off the embeddings capability.',
+          ),
+        );
+      });
+    }
     if (modelRefresh) {
       modelRefresh.addEventListener('click', async (evt) => {
         evt.preventDefault();
@@ -827,6 +945,13 @@ class ProviderDrawer {
     }
 
     syncAdapterConnectionUi();
+
+    // After api-key autofill clear: AJAX save keeps validation errors in the drawer.
+    form.addEventListener('submit', (evt) => {
+      evt.preventDefault();
+      evt.stopPropagation();
+      void this.saveForm(form);
+    });
   }
 
   /**
@@ -997,8 +1122,13 @@ class ProviderDrawer {
   }
 
   applyCapabilities(form, caps) {
+    const embeddingModel = (form.querySelector('[data-aiu-embedding-model-input]')?.value || '').trim();
     const checkboxes = form.querySelectorAll('input[name="capabilities[]"]');
     checkboxes.forEach((cb) => {
+      if (cb.value === CAP_EMBEDDINGS && embeddingModel !== '') {
+        cb.checked = true;
+        return;
+      }
       cb.checked = caps.includes(cb.value);
     });
   }

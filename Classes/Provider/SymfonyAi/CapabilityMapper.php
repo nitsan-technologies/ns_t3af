@@ -45,8 +45,6 @@ final class CapabilityMapper
         'input-image' => Capability::VISION,
         'input-audio' => Capability::CHAT,
         'output-streaming' => Capability::STREAMING,
-        'output-structured' => Capability::TOOL_USE,
-        'tool-calling' => Capability::TOOL_USE,
         'embedding' => Capability::EMBEDDINGS,
     ];
 

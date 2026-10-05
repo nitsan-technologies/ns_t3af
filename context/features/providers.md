@@ -49,6 +49,10 @@
 - On provider edit, clear `last_status*` to `unknown` when connection-relevant fields change (`adapter_type`, `endpoint_url`, `api_key`, `model_id`, `embedding_model_id`, `api_version`). Cosmetic edits (title, pricing, toggles) keep the prior probe.
 - When `adapter_type` changes, also clear `model_id` / `embedding_model_id` (and `api_version` when leaving Azure). Drawer JS clears those inputs on adapter change so a vendor model id is not kept as Custom.
 - Changing a non-empty embedding model shows a TYPO3 confirm modal (trained-data warning) before applying.
+- Embeddings cannot be unchecked while an embedding model is selected. The drawer restores the checkbox and shows a warning. Clear the embedding model first.
+- Save requires at least one capability for normal adapters. Missing `capabilities[]` in POST (all boxes unchecked) is treated as none selected and rejected — it must not silently keep the previous CSV.
+- Exception: adapters with `getDefaultCapabilities() === []` (DeepL Translate `ns_t3ai.deepl_translate`, Google Translate `ns_t3ai.google_translate`) may save with zero capabilities — they are translate-only and must not advertise chat/completion.
+- Drawer save is AJAX (`provider-drawer.js`): validation errors re-render inside the open panel; do not rely on a full-page `providers.save` HTML response for the happy path.
 
 **Don't:**
 - Add provider API keys back to ext_conf.

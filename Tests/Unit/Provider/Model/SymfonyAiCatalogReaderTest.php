@@ -105,6 +105,6 @@ final class SymfonyAiCatalogReaderTest extends TestCase
         self::assertArrayHasKey('mistral-large-latest', $byId);
         self::assertContains(Capability::CHAT, $byId['mistral-large-latest']->capabilities);
         self::assertContains(Capability::STREAMING, $byId['mistral-large-latest']->capabilities);
-        self::assertContains(Capability::TOOL_USE, $byId['mistral-large-latest']->capabilities);
+        self::assertNotContains('tool_use', $byId['mistral-large-latest']->capabilities);
     }
 }

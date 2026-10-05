@@ -126,7 +126,6 @@ return [
                     ['label' => 'Embeddings', 'value' => 'embeddings'],
                     ['label' => 'Vision', 'value' => 'vision'],
                     ['label' => 'Streaming', 'value' => 'streaming'],
-                    ['label' => 'Tool use', 'value' => 'tool_use'],
                 ],
             ],
         ],

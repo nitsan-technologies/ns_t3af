@@ -119,6 +119,10 @@ final class ProviderFormService
             return ProviderFormResult::errors(['_storage' => 'Select a page from the page tree first.']);
         }
 
+        // Unchecked capability boxes are omitted from POST — treat missing as none selected
+        // so we do not silently keep the previous CSV on edit.
+        $input = $this->normalizeCapabilitiesInput($input);
+
         if (array_key_exists('adapter_type', $input)) {
             $rawAdapter = $input['adapter_type'];
             $input['adapter_type'] = Provider::normalizeAdapterType(
@@ -160,6 +164,8 @@ final class ProviderFormService
                     $errors['endpoint_url'] = 'Ollama base URL is required (e.g. http://host.docker.internal:11434 in DDEV).';
                 } elseif ($adapterType === Provider::ADAPTER_SYMFONY_AZURE) {
                     $errors['endpoint_url'] = 'Azure OpenAI endpoint is required (e.g. https://myresource.openai.azure.com).';
+                } elseif ($adapterType === Provider::ADAPTER_SYMFONY_OPENRESPONSES) {
+                    $errors['endpoint_url'] = 'Open Responses base URL is required (e.g. https://api.example.com).';
                 } else {
                     $errors['endpoint_url'] = 'API base URL is required for Custom / Other.';
                 }
@@ -198,6 +204,19 @@ final class ProviderFormService
         } catch (CipherException $e) {
             return ProviderFormResult::errors(['api_key' => $e->getMessage()]);
         }
+
+        // After embedding-model force / adapter model clears — empty list is not allowed
+        // for LLM/media adapters. Translate-only adapters (DeepL / Google Translate)
+        // declare getDefaultCapabilities() = [] and must stay saveable with none selected.
+        if (Capability::fromCsv((string) ($payload['capabilities'] ?? '')) === []) {
+            $adapterForCaps = trim((string) ($payload['adapter_type'] ?? $adapterType));
+            if (!$this->adapterAllowsEmptyCapabilities($adapterForCaps)) {
+                return ProviderFormResult::errors([
+                    'capabilities' => 'Select at least one capability.',
+                ]);
+            }
+        }
+
         if ($uid === 0) {
             $payload['pid'] = $storagePid;
         }
@@ -218,6 +237,34 @@ final class ProviderFormService
         }
 
         return ProviderFormResult::success($persistedUid);
+    }
+
+    /**
+     * HTML omits `capabilities[]` when every box is unchecked. Missing key ⇒ empty list.
+     *
+     * @param array<string, mixed> $input
+     * @return array<string, mixed>
+     */
+    private function normalizeCapabilitiesInput(array $input): array
+    {
+        if (!array_key_exists('capabilities', $input)) {
+            $input['capabilities'] = [];
+        }
+
+        return $input;
+    }
+
+    /**
+     * Adapters that advertise no default capabilities (currently DeepL / Google Translate
+     * in ns_t3ai) are translate-only and must not be forced to pick chat/completion flags.
+     */
+    private function adapterAllowsEmptyCapabilities(string $adapterType): bool
+    {
+        if ($adapterType === '' || !$this->adapters->has($adapterType)) {
+            return false;
+        }
+
+        return $this->adapters->get($adapterType)->getDefaultCapabilities() === [];
     }
 
     /**

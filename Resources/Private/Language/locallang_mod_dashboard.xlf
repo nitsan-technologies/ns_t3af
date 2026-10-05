@@ -1507,6 +1507,9 @@
       <trans-unit id="provider.field.endpoint.requiredAzure" resname="provider.field.endpoint.requiredAzure">
         <source>Your Azure OpenAI resource URL, for example https://myresource.openai.azure.com</source>
       </trans-unit>
+      <trans-unit id="provider.field.endpoint.requiredOpenResponses" resname="provider.field.endpoint.requiredOpenResponses">
+        <source>Open Responses-compatible API base URL (no built-in default). Example: https://api.example.com</source>
+      </trans-unit>
       <trans-unit id="provider.field.capabilities.help" resname="provider.field.capabilities.help">
         <source>Tick what this model is allowed to do here. A feature runs only when the matching option is on. For everyday writing, turn on chat. For site search, also turn on embeddings. Turn on vision only when the model can read pictures.</source>
       </trans-unit>

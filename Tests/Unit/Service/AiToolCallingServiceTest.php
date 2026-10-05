@@ -73,9 +73,9 @@ final class AiToolCallingServiceTest extends TestCase
         self::assertTrue($service->supportsToolCalling());
     }
 
-    public function testSupportsToolCallingIsFalseWhenProviderHasToolUseButNoChat(): void
+    public function testSupportsToolCallingIsFalseWhenProviderHasNoChat(): void
     {
-        $provider = $this->makeProvider('tools.capable', [Capability::TOOL_USE]);
+        $provider = $this->makeProvider('tools.capable', [Capability::EMBEDDINGS]);
         $providers = $this->createMock(ProviderLookupInterface::class);
         $providers->method('findDefault')->willReturn($provider);
 
@@ -345,7 +345,7 @@ final class AiToolCallingServiceTest extends TestCase
     /**
      * @param list<string> $capabilities
      */
-    private function makeProvider(string $adapterType, array $capabilities = [Capability::CHAT, Capability::TOOL_USE]): Provider
+    private function makeProvider(string $adapterType, array $capabilities = [Capability::CHAT]): Provider
     {
         return new Provider(
             uid: 1,

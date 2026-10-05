@@ -197,6 +197,7 @@ final class ProviderControllerFunctionalTest extends FunctionalTestCase
             'endpoint_url' => 'https://api.example.test/v1',
             'api_key' => 'sk-functional-test-secret',
             'model_id' => 'gpt-4o',
+            'capabilities' => ['chat'],
             'be_groups' => [(string) $groupUid],
             'privacy_level' => 'reduced',
             'no_rerouting' => '1',

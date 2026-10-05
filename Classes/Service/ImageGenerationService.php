@@ -218,7 +218,10 @@ final class ImageGenerationService implements ImageGenerationServiceInterface
 
         if (!$provider->isEnabled) {
             throw new UnknownAdapterException(
-                sprintf('AI provider "%s" is disabled.', $provider->identifier),
+                sprintf(
+                    'AI provider "%s" is disabled. Enable it under AI Foundation → AI Providers.',
+                    trim($provider->title) !== '' ? $provider->title : $provider->identifier,
+                ),
             );
         }
 

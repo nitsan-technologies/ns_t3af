@@ -196,13 +196,11 @@ final class SymfonyAiPlatformDiscovery
             'openai', 'anthropic', 'gemini', 'mistral', 'bedrock', 'meta' => [
                 Capability::CHAT,
                 Capability::STREAMING,
-                Capability::TOOL_USE,
             ],
             'azure' => [
                 Capability::CHAT,
                 Capability::STREAMING,
                 Capability::EMBEDDINGS,
-                Capability::TOOL_USE,
             ],
             'ollama' => [Capability::CHAT, Capability::STREAMING, Capability::EMBEDDINGS],
             'huggingface' => [Capability::CHAT, Capability::EMBEDDINGS],

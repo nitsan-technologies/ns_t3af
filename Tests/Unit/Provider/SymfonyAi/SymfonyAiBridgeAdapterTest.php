@@ -121,6 +121,30 @@ final class SymfonyAiBridgeAdapterTest extends TestCase
         self::assertStringContainsString('Endpoint URL is required', (string) $result->message);
     }
 
+    public function testOpenResponsesTestConnectionUsesAdapterSpecificEndpointHint(): void
+    {
+        $adapter = new SymfonyAiBridgeAdapter(
+            new BridgeDescriptor(
+                packageName: 'symfony/ai-open-responses-platform',
+                vendorKey: 'open-responses',
+                type: 'symfony.openresponses',
+                displayName: 'Open Responses (Symfony AI)',
+                defaultEndpoint: '',
+                defaultCapabilities: [Capability::CHAT],
+            ),
+            new CredentialCipher(),
+            $this->createMock(RequestFactory::class),
+        );
+
+        $provider = $this->makeProviderWith(endpoint: '', apiKey: '', adapterType: 'symfony.openresponses');
+        $result = $adapter->testConnection($provider);
+
+        self::assertFalse($result->ok);
+        self::assertStringContainsString('Endpoint URL is required', (string) $result->message);
+        self::assertStringContainsString('Open Responses', (string) $result->message);
+        self::assertStringNotContainsString('host.docker.internal', (string) $result->message);
+    }
+
     public function testPlatformThrowsWhenRuntimeMissing(): void
     {
         $adapter = $this->makeAdapter();

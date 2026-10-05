@@ -54,7 +54,6 @@ $GLOBALS['TYPO3_CONF_VARS']['BE']['customPermOptions']['nst3af'] = [
         'capability_streaming' => ['Streaming responses', 'actions-system-extension-import'],
         'capability_embeddings' => ['Embeddings', 'actions-database'],
         'capability_vision' => ['Vision', 'actions-image'],
-        'capability_tool_use' => ['Tool / function calling', 'actions-cog'],
         'capability_completion' => ['Raw completion', 'actions-bolt'],
         'capability_tts' => ['Text-to-speech', 'actions-volume-up'],
         'capability_image_generation' => ['Image generation', 'actions-image'],

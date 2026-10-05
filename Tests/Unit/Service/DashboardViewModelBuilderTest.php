@@ -63,11 +63,43 @@ final class DashboardViewModelBuilderTest extends TestCase
         self::assertSame('$0.0045', $summary['totalFormatted']);
         self::assertSame('$0.0001/day avg', $summary['dailyAvgFormatted']);
         self::assertSame('$0.0045', $summary['rows'][0]['costFormatted']);
+        self::assertSame('USD', $summary['currency']);
         self::assertSame("Today's API spend", $this->builder->buildApiSpendSummary([
             'periodDays' => 1,
             'periodPreset' => 'today',
             'providerStats' => [],
         ], 0.0)['title']);
+    }
+
+    public function testBuildApiSpendSummaryUsesProviderCurrency(): void
+    {
+        $summary = $this->builder->buildApiSpendSummary([
+            'periodDays' => 7,
+            'periodPreset' => '7d',
+            'providerStats' => [
+                ['provider' => 'openai', 'cost' => 0.00435],
+            ],
+        ], 0.00435, ['openai' => 'EUR']);
+
+        self::assertSame('EUR', $summary['currency']);
+        self::assertSame('€0.0044', $summary['totalFormatted']);
+        self::assertSame('€0.0044', $summary['rows'][0]['costFormatted']);
+    }
+
+    public function testBuildApiSpendSummaryLeavesMixedTotalUnlabeled(): void
+    {
+        $summary = $this->builder->buildApiSpendSummary([
+            'periodDays' => 7,
+            'providerStats' => [
+                ['provider' => 'openai', 'cost' => 1.5],
+                ['provider' => 'mistral', 'cost' => 2.5],
+            ],
+        ], 4.0, ['openai' => 'EUR', 'mistral' => 'USD']);
+
+        self::assertNull($summary['currency']);
+        self::assertSame('4.00', $summary['totalFormatted']);
+        self::assertSame('€1.50', $summary['rows'][0]['costFormatted']);
+        self::assertSame('$2.50', $summary['rows'][1]['costFormatted']);
     }
 
     public function testEnrichRecentRequestsAddsQualityView(): void

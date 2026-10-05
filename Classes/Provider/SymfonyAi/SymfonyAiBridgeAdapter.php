@@ -107,8 +107,12 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface, ToolCallingCapab
             $provider->capabilities,
             $this->descriptor->defaultCapabilities,
         );
+        if ($caps === []) {
+            return true;
+        }
 
-        return in_array(Capability::TOOL_USE, $caps, true);
+        return in_array(Capability::CHAT, $caps, true)
+            || in_array(Capability::COMPLETION, $caps, true);
     }
 
     public function testConnection(Provider $provider): VerifyResult
@@ -132,7 +136,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface, ToolCallingCapab
             $endpoint = trim($this->descriptor->defaultEndpoint);
         }
         if ($endpoint === '') {
-            return VerifyResult::failure('Endpoint URL is required.', $this->elapsed($start));
+            return VerifyResult::failure($this->missingEndpointMessage(), $this->elapsed($start));
         }
 
         try {
@@ -908,10 +912,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface, ToolCallingCapab
         if ($this->factoryExpectsEndpointFirst($factoryClass, $method)) {
             $endpoint = $this->resolveEndpoint($provider);
             if ($endpoint === null) {
-                throw new AdapterRuntimeException(sprintf(
-                    'Endpoint URL is required for adapter "%s". Example: http://host.docker.internal:11434 when TYPO3 runs in Docker.',
-                    $this->descriptor->type,
-                ));
+                throw new AdapterRuntimeException($this->missingEndpointMessage());
             }
 
             $apiKeyArg = $apiKey !== '' ? $apiKey : null;
@@ -973,6 +974,35 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface, ToolCallingCapab
         }
 
         return $endpoint !== '' ? $endpoint : null;
+    }
+
+    /**
+     * Adapter-specific hint when a base URL is required but missing.
+     * Avoids the generic Ollama Docker example for unrelated bridges
+     * (e.g. Open Responses).
+     */
+    private function missingEndpointMessage(): string
+    {
+        $type = $this->descriptor->type;
+
+        return match ($this->canonicalTypeKey($type)) {
+            Provider::ADAPTER_SYMFONY_OLLAMA => sprintf(
+                'Endpoint URL is required for adapter "%s". Example: http://host.docker.internal:11434 when TYPO3 runs in Docker.',
+                $type,
+            ),
+            Provider::ADAPTER_SYMFONY_AZURE => sprintf(
+                'Endpoint URL is required for adapter "%s". Example: https://myresource.openai.azure.com',
+                $type,
+            ),
+            Provider::ADAPTER_SYMFONY_OPENRESPONSES => sprintf(
+                'Endpoint URL is required for adapter "%s". Example: https://api.example.com (Open Responses-compatible base URL).',
+                $type,
+            ),
+            default => sprintf(
+                'Endpoint URL is required for adapter "%s".',
+                $type,
+            ),
+        };
     }
 
     private function factoryExpectsEndpointFirst(string $factoryClass, string $method): bool

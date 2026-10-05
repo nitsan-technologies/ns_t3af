@@ -1987,6 +1987,10 @@
                 <source>Your Azure OpenAI resource URL, for example https://myresource.openai.azure.com</source>
                 <target>Ihre Azure-OpenAI-Ressourcen-URL, zum Beispiel https://myresource.openai.azure.com</target>
             </trans-unit>
+            <trans-unit id="provider.field.endpoint.requiredOpenResponses">
+                <source>Open Responses-compatible API base URL (no built-in default). Example: https://api.example.com</source>
+                <target>Open-Responses-kompatible API-Basis-URL (kein eingebautes Standardziel). Beispiel: https://api.example.com</target>
+            </trans-unit>
             <trans-unit id="provider.field.capabilities.help">
                 <source>Tick what this model is allowed to do here. A feature runs only when the matching option is on. For everyday writing, turn on chat. For site search, also turn on embeddings. Turn on vision only when the model can read pictures.</source>
                 <target>Setzen Sie Häkchen bei dem, was dieses Modell hier tun darf. Eine Funktion läuft nur, wenn die passende Option aktiv ist. Für alltägliches Schreiben aktivieren Sie chat. Für die Website-Suche aktivieren Sie zusätzlich embeddings. Aktivieren Sie vision nur, wenn das Modell Bilder lesen kann.</target>

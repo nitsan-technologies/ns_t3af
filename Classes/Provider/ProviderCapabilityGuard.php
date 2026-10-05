@@ -27,7 +27,7 @@ use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
  * Enforces provider capability flags at AI call sites.
  *
  * Empty {@see Provider::$capabilities} stays permissive (legacy rows). When the
- * list is non-empty, the call kind (and optional vision/tools payload) must match.
+ * list is non-empty, the call kind (and optional vision payload) must match.
  *
  * @internal
  */
@@ -55,15 +55,11 @@ final class ProviderCapabilityGuard
 
     /**
      * Whether this provider may run tool-calling turns (Agent NL loop).
-     * Empty capabilities stay permissive (legacy); otherwise requires TOOL_USE.
+     * Same chat/completion gate as text generation; adapter probes runtime support.
      */
     public static function allowsToolCalling(Provider $provider): bool
     {
-        if ($provider->capabilities === []) {
-            return true;
-        }
-
-        return $provider->hasCapability(Capability::TOOL_USE);
+        return self::allowsChat($provider);
     }
 
     /**
@@ -108,10 +104,6 @@ final class ProviderCapabilityGuard
         ) {
             self::assertHas($provider, Capability::VISION);
         }
-
-        if ($callKind !== self::CALL_COMPLETE_WITH_TOOLS && self::optionsRequireTools($options)) {
-            self::assertHas($provider, Capability::TOOL_USE);
-        }
     }
 
     private static function assertCompleteWithTools(Provider $provider): void
@@ -120,7 +112,6 @@ final class ProviderCapabilityGuard
             $provider,
             [Capability::CHAT, Capability::COMPLETION],
         );
-        self::assertHas($provider, Capability::TOOL_USE);
     }
 
     /**
@@ -197,22 +188,5 @@ final class ProviderCapabilityGuard
         }
 
         return false;
-    }
-
-    private static function optionsRequireTools(AiOptions $options): bool
-    {
-        $extra = $options->extra;
-        if (isset($extra['tools']) && is_array($extra['tools']) && $extra['tools'] !== []) {
-            return true;
-        }
-        if (isset($extra['functions']) && is_array($extra['functions']) && $extra['functions'] !== []) {
-            return true;
-        }
-        $toolChoice = $extra['tool_choice'] ?? null;
-        if (is_string($toolChoice) && $toolChoice !== '' && $toolChoice !== 'none') {
-            return true;
-        }
-
-        return is_array($toolChoice) && $toolChoice !== [];
     }
 }

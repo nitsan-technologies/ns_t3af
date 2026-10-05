@@ -2,6 +2,62 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-02 — Empty capabilities: required except translate-only
+
+**Done:** Save still rejects empty capabilities for LLM/media adapters. DeepL / Google Translate (`getDefaultCapabilities() === []`) may save with none selected. Documented in `providers.md`.
+
+**Last touched:** 2026-10-02
+
+---
+
+## 2026-10-02 — Provider drawer AJAX save (keep errors in panel)
+
+**Done:** `provider-drawer.js` POSTs the drawer form via fetch. Validation errors inject the form back into the open panel (no bare full-page HTML). Success follows the list redirect. Shared `applyDrawerHtml()` also used when opening edit/new.
+
+**Last touched:** 2026-10-02
+
+---
+
+## 2026-10-02 — Reject save with zero capabilities
+
+**Done:** Missing `capabilities[]` POST (all unchecked) is treated as none selected. Save fails with “Select at least one capability.” instead of keeping the old CSV. Drawer shows the error and keeps boxes unchecked. Embedding-model force still counts as a capability when an embedding model is set.
+
+**Last touched:** 2026-10-02
+
+---
+
+## 2026-10-02 — Hide providers excluded from dashboard analytics
+
+**Done:** `enabled_for_dashboard` off drops that provider from dashboard cards, cost totals, and the cost trend. Requests, AI Usage, and logs are unchanged. Analytics cache key includes the included provider uids so the toggle applies immediately.
+
+**Last touched:** 2026-10-02
+
+---
+
+## 2026-10-02 — Dashboard cost uses provider currency
+
+**Done:** Provider cards, spend panel, API Cost KPI, cost-trend axis, and AI Usage cost use `pricing_currency` / the log `currency` (`€` for EUR). Mixed-currency totals stay unlabeled. No FX conversion.
+
+**Last touched:** 2026-10-02
+
+---
+
+## 2026-10-02 — SEO save can makeInstance DataHandlerService
+
+**Done:** `DataHandlerService` is `public: true` so `GeneralUtility::makeInstance()` from `ns_t3ai` `PageRepository::saveField()` receives `SiteFinder`. Private services were constructed with zero arguments and SEO save failed.
+
+**Last touched:** 2026-10-02
+
+---
+
+## 2026-10-02 — Block unchecking embeddings while a model is selected
+
+**Done:** Provider drawer restores the embeddings checkbox and shows a warning when the user unchecks it while `embedding_model_id` is non-empty. Chat-model capability apply keeps embeddings checked in that case. Labels EN/DE in `locallang_js.xlf`. Save still forces the capability server-side.
+
+**Last touched:** 2026-10-02
+
+---
+
 ## 2026-10-01 — Confirm before changing embedding model
 
 **Done:** Provider drawer shows TYPO3 `Modal.confirm` when changing a non-empty embedding model (select or free-text blur). Copy warns about trained data. Cancel restores the previous value. Labels EN/DE in `locallang_js.xlf`.

@@ -71,15 +71,17 @@ final class OpenAiCompatibleAdapter implements AdapterInterface, ToolCallingCapa
             Capability::EMBEDDINGS,
             Capability::TTS,
             Capability::IMAGE_GENERATION,
-            Capability::TOOL_USE,
         ];
     }
 
     public function supportsToolCalling(Provider $provider): bool
     {
-        $caps = $provider->capabilities;
+        if ($provider->capabilities === []) {
+            return true;
+        }
 
-        return in_array(Capability::TOOL_USE, $caps, true);
+        return $provider->hasCapability(Capability::CHAT)
+            || $provider->hasCapability(Capability::COMPLETION);
     }
 
     public function testConnection(Provider $provider): VerifyResult

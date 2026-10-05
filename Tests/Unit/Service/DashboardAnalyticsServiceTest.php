@@ -68,6 +68,28 @@ final class DashboardAnalyticsServiceTest extends TestCase
         self::assertSame([5], $service->resolveOwnKeysProviderUids(68));
     }
 
+    public function testResolveOwnKeysProviderUidsSkipsProvidersExcludedFromDashboard(): void
+    {
+        $included = Provider::fromRow([
+            'uid' => 5,
+            'identifier' => 'openai',
+            'enabled_for_dashboard' => 1,
+        ]);
+        $excluded = Provider::fromRow([
+            'uid' => 7,
+            'identifier' => 'openai-test',
+            'enabled_for_dashboard' => 0,
+        ]);
+
+        $providers = $this->createMock(ProviderRepositoryInterface::class);
+        $providers->method('findAllByStoragePid')->with(68, true)->willReturn([$included, $excluded]);
+
+        $service = $this->createService($providers);
+
+        self::assertFalse($excluded->enabledForDashboard);
+        self::assertSame([5], $service->resolveOwnKeysProviderUids(68));
+    }
+
     public function testResolveOwnKeysProviderUidsReturnsEmptyListWhenSiteHasNoOwnKeysProviders(): void
     {
         $providers = $this->createMock(ProviderRepositoryInterface::class);

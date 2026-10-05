@@ -38,20 +38,20 @@ final class CapabilityInferrerTest extends TestCase
         self::assertSame([Capability::EMBEDDINGS], $this->inferrer->infer('voyage-large-2'));
     }
 
-    public function testGpt4oGetsVisionAndToolUse(): void
+    public function testGpt4oGetsVision(): void
     {
         $caps = $this->inferrer->infer('gpt-4o-mini');
         self::assertContains(Capability::CHAT, $caps);
         self::assertContains(Capability::STREAMING, $caps);
         self::assertContains(Capability::VISION, $caps);
-        self::assertContains(Capability::TOOL_USE, $caps);
+        self::assertNotContains('tool_use', $caps);
     }
 
-    public function testClaude3GetsVisionAndToolUse(): void
+    public function testClaude3GetsVision(): void
     {
         $caps = $this->inferrer->infer('claude-3-5-sonnet-20241022');
         self::assertContains(Capability::VISION, $caps);
-        self::assertContains(Capability::TOOL_USE, $caps);
+        self::assertNotContains('tool_use', $caps);
     }
 
     public function testUnknownModelDefaultsToChatStreaming(): void
@@ -60,10 +60,10 @@ final class CapabilityInferrerTest extends TestCase
         self::assertSame([Capability::CHAT, Capability::STREAMING], $caps);
     }
 
-    public function testOpenRouterAdapterEnablesToolUse(): void
+    public function testOpenRouterAdapterDoesNotAddToolUse(): void
     {
         $caps = $this->inferrer->infer('meta-llama/llama-3.1-8b-instruct', 'symfony.openrouter');
-        self::assertContains(Capability::TOOL_USE, $caps);
+        self::assertSame([Capability::CHAT, Capability::STREAMING], $caps);
     }
 
     public function testEmptyModelReturnsEmpty(): void

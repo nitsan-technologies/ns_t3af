@@ -143,6 +143,10 @@
                 <source>Drawer load failed</source>
                 <target>Das Laden der Schublade ist fehlgeschlagen</target>
             </trans-unit>
+            <trans-unit id="provider.js.error.saveFailed">
+                <source>Save failed</source>
+                <target>Speichern fehlgeschlagen</target>
+            </trans-unit>
             <trans-unit id="provider.js.error.connectionFailed">
                 <source>Connection failed</source>
                 <target>Verbindung fehlgeschlagen</target>
@@ -218,6 +222,14 @@
             <trans-unit id="provider.js.embeddingModel.confirmOk">
                 <source>Change model</source>
                 <target>Modell ändern</target>
+            </trans-unit>
+            <trans-unit id="provider.js.embeddingCapability.blockedTitle">
+                <source>Cannot turn off embeddings</source>
+                <target>Embeddings können nicht deaktiviert werden</target>
+            </trans-unit>
+            <trans-unit id="provider.js.embeddingCapability.blockedMessage">
+                <source>An embedding model is selected. Clear the embedding model before you turn off the embeddings capability.</source>
+                <target>Ein Embedding-Modell ist ausgewählt. Entfernen Sie das Embedding-Modell, bevor Sie die Embeddings-Fähigkeit deaktivieren.</target>
             </trans-unit>
             <trans-unit id="wizard.step3.empty">
                 <source>No provider catalog entries are configured.</source>

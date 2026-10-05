@@ -81,7 +81,7 @@
                                     <f:else>{entry.total_tokens}</f:else>
                                 </f:if>
                             </td>
-                            <td>${entry.estimated_cost -> f:format.number(decimals: 4)}</td>
+                            <td>{entry.cost_formatted}</td>
                             <td class="col-control">
                                 <div class="btn-group" role="group"
                                      aria-label="{f:translate(key: '{ll}:module.aiUsage.table.actions', default: 'Actions')}">
@@ -101,6 +101,7 @@
                                             data-prompt-tokens="{entry.prompt_tokens}"
                                             data-completion-tokens="{entry.completion_tokens}"
                                             data-cost="{entry.estimated_cost}"
+                                            data-cost-formatted="{entry.cost_formatted}"
                                             data-latency="{entry.latency_ms}"
                                             data-credits="{entry.credits_used}"
                                             data-error-code="{entry.error_code}"
