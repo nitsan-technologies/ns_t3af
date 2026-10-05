@@ -67,14 +67,17 @@ readonly class AgentPromptBuilder
             'Write for editors: plain language, no tool names, ids only where they help to identify a record.',
             'Only some tools are offered at first. If none fits the request, call find_tools with a short description of the task before you say that something is not possible.',
             'For a request that needs three or more steps (for example create a page, add content, then translate it), call update_plan first with the steps (the first one in_progress), and again after every finished step (mark it completed, start the next). Never for a simple request; never as a substitute for doing the work.',
+            'When the editor asks for several content elements of different types (e.g. Text & Media, Text, Bullets), call update_plan with one step per type (and a step to attach an image when they asked for one). After each apply, do the next distinct CType — never create another element of the same CType you just applied. Do not say the request is finished while the plan still has pending or in_progress steps, or while an image still needs attaching.',
             'For a page or record you just created, pass its uid from the applied result (pageId, uid) to the next tool; never guess a pageUrl or slug for it.',
             'Never respond with an empty message: call a tool or write a short answer.',
+            'Never reply with lines that look like history notes such as "[Prepared change: …]" or "Review the proposed changes for …" — those are internal records of past drafts, not answers. Call a write tool or write a normal sentence.',
             'If a tool result says a tool is not available or was not executed, tell the editor in one sentence instead of retrying it.',
             'Use pageId/pid/uid from context when a tool accepts a page or storage folder id.',
             'Read results earlier in this conversation are still valid: do not read the same record or run the same search again; use what you have.',
             'Do not ask the editor in text whether you should make a change ("Shall we proceed?"): call the write tool; it only prepares the change, and the editor confirms or declines it in the window. If no offered tool can make the change, call find_tools first.',
             'Read only what you need, then act. To create or change something, call the write tool as soon as you know the target; the editor reviews it before anything is saved.',
             'To add an image to a new content element: first prepare the element (e.g. a text & media element), after it is applied attach the image to its uid with the file reference tool (field "assets" for text & media, "image" for text & images). The page uid is never a content element uid.',
+            'Do not call image generation until a Text & Media (textmedia) element for that image was applied, unless the editor asked only for a standalone image file. Mark a Text & Media plan step completed only after its element exists (and attach when they asked for an image).',
             'Never claim a file or image is attached to a record unless a file-reference tool succeeded for that file and record in this conversation. Generating or uploading a file alone does not attach it.',
             'To create a new page, prepare a new record in the pages table (or use a create-page tool); copying a page is only for "copy" or "duplicate" requests. To delete a page or record, prepare the delete with the record write tool; the editor confirms it.',
             'To create a page with content: first prepare the new page (only the page). After the editor applies it, the result gives the new page uid; then prepare the content elements with that uid as their pid.',
@@ -254,8 +257,7 @@ readonly class AgentPromptBuilder
                 $content,
                 ($meta['autoRan'] ?? true) === false ? self::resultRecordsNote($meta['details'] ?? null) : '',
             ),
-            'inline_draft', 'suggestions' => sprintf(
-                '[Prepared change: %s — %s] %s',
+            'inline_draft', 'suggestions' => self::preparedChangeHistoryNote(
                 $label !== '' ? $label : 'change',
                 $this->cardStatus($meta),
                 $content,
@@ -351,15 +353,222 @@ readonly class AgentPromptBuilder
 
         $message = sprintf(
             '[The editor confirmed "%s" and it was applied.%s] Continue with the remaining steps of my request.'
+            . ' Do not create another content element of the same CType you just applied; prepare the next distinct type from my request, or attach a pending image.'
             . ' Only when every part of my original request is already done through tools, confirm in one short sentence without calling tools.'
             . ' Never claim a file or image is attached unless a file-reference step succeeded.'
             . ' Do not re-check finished results or list what else you can do.',
             $label,
             $result !== '' ? ' Result: ' . $result : '',
         );
-        $pendingAttach = self::pendingImageAttachNote($history);
+        $lastCType = self::lastAppliedTtContentCType($history);
+        if ($lastCType !== '') {
+            $message .= sprintf(
+                ' You just applied tt_content with CType "%1$s"; do not create another "%1$s" unless that was the only type requested.',
+                $lastCType,
+            );
+        }
+        $request = self::latestUserRequestText($history);
+        $reminder = self::remainingWorkReminder($history, AgentPlan::latest($history), $request);
 
-        return $pendingAttach !== '' ? $message . ' ' . $pendingAttach : $message;
+        return $reminder !== '' ? $message . ' ' . $reminder : $message;
+    }
+
+    /**
+     * Editor's newest non-continuation user message (the original multi-step request when present).
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function latestUserRequestText(array $history): string
+    {
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            if (($history[$i]['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            if (($meta['type'] ?? '') === 'continuation') {
+                continue;
+            }
+            $text = trim((string) ($history[$i]['content'] ?? ''));
+
+            return $text;
+        }
+
+        return '';
+    }
+
+    public static function requestMentionsImage(string $query): bool
+    {
+        return preg_match(
+            '/\b(image|images|bild|bilder|foto|photo|illustration|textmedia|text\s*&\s*media|text\s+and\s+media)\b/ui',
+            $query,
+        ) === 1;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @param list<array{title: string, status: string}> $plan
+     */
+    public static function remainingWorkReminder(array $history, array $plan, string $requestQuery = ''): string
+    {
+        $query = trim($requestQuery) !== '' ? $requestQuery : self::latestUserRequestText($history);
+        $parts = [];
+
+        $checklist = AgentRequestChecklist::reconcile($history, $query);
+        if ($checklist !== []) {
+            $block = AgentRequestChecklist::promptBlock($checklist);
+            if ($block !== '') {
+                $parts[] = $block;
+            }
+        } elseif ($plan !== [] && AgentPlan::hasOpenSteps($plan)) {
+            $block = AgentPlan::promptBlock($plan);
+            if ($block !== '') {
+                $parts[] = $block;
+            }
+        }
+
+        $pending = self::pendingImageAttachNote($history);
+        if ($pending !== '') {
+            $parts[] = $pending;
+        }
+        $missing = self::missingMediaImageNote($history, $query, $plan);
+        if ($missing !== '' && $checklist === []) {
+            // Checklist already encodes attach_image when present; avoid duplicating.
+            $parts[] = $missing;
+        }
+
+        return implode(' ', $parts);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @param list<array{title: string, status: string}> $plan
+     */
+    public static function hasBlockingRemainingWork(array $history, array $plan, string $requestQuery = ''): bool
+    {
+        $query = trim($requestQuery) !== '' ? $requestQuery : self::latestUserRequestText($history);
+        $checklist = AgentRequestChecklist::reconcile($history, $query);
+        if ($checklist !== [] && AgentRequestChecklist::hasOpen($checklist)) {
+            return true;
+        }
+
+        return self::remainingWorkReminder($history, $plan, $query) !== '';
+    }
+
+    /**
+     * Media-capable tt_content uid created in this conversation but never got file_reference_add.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function unattachedMediaContentElementUid(array $history): ?int
+    {
+        $attached = self::contentElementUidsWithSuccessfulFileReference($history);
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            if (($history[$i]['role'] ?? '') !== 'assistant' || ($meta['type'] ?? '') !== 'readback_result') {
+                continue;
+            }
+            foreach (is_array($meta['readback'] ?? null) ? $meta['readback'] : [] as $entry) {
+                if (!is_array($entry) || ($entry['table'] ?? '') !== 'tt_content' || (int) ($entry['uid'] ?? 0) <= 0) {
+                    continue;
+                }
+                $values = is_array($entry['values'] ?? null) ? $entry['values'] : [];
+                $cType = strtolower(trim((string) ($values['CType'] ?? '')));
+                if (!in_array($cType, ['textmedia', 'textpic', 'image'], true)) {
+                    continue;
+                }
+                $uid = (int) $entry['uid'];
+                if (!isset($attached[$uid])) {
+                    return $uid;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @param list<array{title: string, status: string}> $plan
+     */
+    public static function missingMediaImageNote(array $history, string $requestQuery, array $plan = []): string
+    {
+        if (self::unattachedFileUids($history) !== []) {
+            return '';
+        }
+        $uid = self::unattachedMediaContentElementUid($history);
+        if ($uid === null) {
+            return '';
+        }
+        if (!self::requestMentionsImage($requestQuery) && !AgentPlan::hasOpenImageAttachStep($plan)) {
+            return '';
+        }
+
+        return sprintf(
+            'Remaining: tt_content uid %d still has no image in this conversation.'
+            . ' Call t3ai_generate_image (or use an uploaded file), then file_reference_add on that uid'
+            . ' (fieldName "assets" for textmedia, "image" for textpic). Do not confirm completion until attach succeeds.',
+            $uid,
+        );
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @return array<int, true>
+     */
+    private static function contentElementUidsWithSuccessfulFileReference(array $history): array
+    {
+        $uids = [];
+        foreach ($history as $entry) {
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($meta['type'] ?? '') !== 'tool_result' || ($meta['success'] ?? true) === false) {
+                continue;
+            }
+            if ((string) ($meta['tool'] ?? '') !== 'file_reference_add') {
+                continue;
+            }
+            $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+            if ((string) ($details['table'] ?? '') !== 'tt_content') {
+                continue;
+            }
+            $uid = (int) ($details['uid'] ?? 0);
+            if ($uid > 0) {
+                $uids[$uid] = true;
+            }
+        }
+
+        return $uids;
+    }
+
+    /**
+     * CType of the newest applied tt_content row in history (empty when none).
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function lastAppliedTtContentCType(array $history): string
+    {
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            if (($meta['type'] ?? '') !== 'readback_result') {
+                continue;
+            }
+            $readback = is_array($meta['readback'] ?? null) ? $meta['readback'] : [];
+            for ($j = count($readback) - 1; $j >= 0; --$j) {
+                $row = is_array($readback[$j] ?? null) ? $readback[$j] : [];
+                if (($row['table'] ?? '') !== 'tt_content') {
+                    continue;
+                }
+                $values = is_array($row['values'] ?? null) ? $row['values'] : [];
+                $cType = strtolower(trim((string) ($values['CType'] ?? $values['ctype'] ?? '')));
+                if ($cType !== '') {
+                    return $cType;
+                }
+            }
+        }
+
+        return '';
     }
 
     /**
@@ -374,16 +583,23 @@ readonly class AgentPromptBuilder
         if ($fileUids === []) {
             return '';
         }
+        $fileUidList = implode(', ', array_map(static fn(int $uid): string => (string) $uid, $fileUids));
         $contentUid = self::latestAppliedContentElementUid($history);
         if ($contentUid === null) {
-            return '';
+            return sprintf(
+                'Remaining: fileUid %s is saved but not attached. Prepare a Text & Media element (CType textmedia) and wait until the editor applies it,'
+                . ' then attach fileUid %s to that tt_content uid with file_reference_add (fieldName "assets").'
+                . ' Do not attach to plain Text or Bullets elements. Do not confirm completion until the attach succeeds.',
+                $fileUidList,
+                $fileUidList,
+            );
         }
 
         return sprintf(
             'Remaining: attach fileUid %s to tt_content uid %d by calling file_reference_add'
             . ' (fieldName "assets" for text & media, "image" for textpic). Do not use write_table for file fields.'
-            . ' Do not confirm completion until that succeeds.',
-            implode(', ', array_map(static fn(int $uid): string => (string) $uid, $fileUids)),
+            . ' Do not attach to non-media content types. Do not confirm completion until that succeeds.',
+            $fileUidList,
             $contentUid,
         );
     }
@@ -434,14 +650,12 @@ readonly class AgentPromptBuilder
     }
 
     /**
-     * Preferred tt_content uid for attaching a pending image: media-capable types first
-     * (textmedia / textpic / image), else the newest content element.
+     * Newest applied tt_content uid that can hold the image (textmedia / textpic / image), or null.
      *
      * @param list<array<string, mixed>> $history
      */
     public static function latestAppliedContentElementUid(array $history): ?int
     {
-        $fallback = null;
         for ($i = count($history) - 1; $i >= 0; --$i) {
             $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
             if (($history[$i]['role'] ?? '') !== 'assistant' || ($meta['type'] ?? '') !== 'readback_result') {
@@ -451,17 +665,15 @@ readonly class AgentPromptBuilder
                 if (!is_array($entry) || ($entry['table'] ?? '') !== 'tt_content' || (int) ($entry['uid'] ?? 0) <= 0) {
                     continue;
                 }
-                $uid = (int) $entry['uid'];
                 $values = is_array($entry['values'] ?? null) ? $entry['values'] : [];
                 $cType = strtolower(trim((string) ($values['CType'] ?? '')));
                 if (in_array($cType, ['textmedia', 'textpic', 'image'], true)) {
-                    return $uid;
+                    return (int) $entry['uid'];
                 }
-                $fallback ??= $uid;
             }
         }
 
-        return $fallback;
+        return null;
     }
 
     /**
@@ -582,6 +794,45 @@ readonly class AgentPromptBuilder
     private static function shorten(string $text, int $limit): string
     {
         return mb_strlen($text) > $limit ? rtrim(mb_substr($text, 0, max(1, $limit - 1))) . '…' : $text;
+    }
+
+    /**
+     * History note for a draft card. Omits the generic "Review the proposed changes…" body so the
+     * model does not learn to parrot that UI copy as a final answer.
+     */
+    public static function preparedChangeHistoryNote(string $label, string $status, string $body): string
+    {
+        $prefix = sprintf('[Prepared change: %s — %s]', $label, $status);
+        $body = trim($body);
+        if ($body === '' || self::isDraftReviewBoilerplate($body)) {
+            return $prefix;
+        }
+
+        return $prefix . ' ' . $body;
+    }
+
+    /**
+     * True when text is (or contains) an internal draft-history note, not a real editor-facing reply.
+     */
+    public static function isCardHistoryEcho(string $text): bool
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return false;
+        }
+        if (str_contains($text, '[Prepared change:')) {
+            return true;
+        }
+
+        return self::isDraftReviewBoilerplate($text);
+    }
+
+    public static function isDraftReviewBoilerplate(string $text): bool
+    {
+        return preg_match(
+            '/^Review the proposed changes for .+ before anything is written\.?$/iu',
+            trim($text),
+        ) === 1;
     }
 
     /**

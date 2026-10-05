@@ -24,8 +24,6 @@ use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Toolbar\RequestAwareToolbarItemInterface;
 use TYPO3\CMS\Backend\Toolbar\ToolbarItemInterface;
 use TYPO3\CMS\Backend\View\BackendViewFactory;
-use TYPO3\CMS\Core\Page\JavaScriptModuleInstruction;
-use TYPO3\CMS\Core\Page\PageRenderer;
 
 /**
  * Toolbar button opening the AI Agent modal.
@@ -39,7 +37,6 @@ final class AgentToolbarItem implements ToolbarItemInterface, RequestAwareToolba
     public function __construct(
         private readonly AgentAvailabilityService $agentAvailability,
         private readonly BackendViewFactory $backendViewFactory,
-        private readonly PageRenderer $pageRenderer,
     ) {}
 
     public function setRequest(ServerRequestInterface $request): void
@@ -58,10 +55,8 @@ final class AgentToolbarItem implements ToolbarItemInterface, RequestAwareToolba
             return '';
         }
 
-        $this->pageRenderer->addCssFile('EXT:ns_t3af/Resources/Public/Css/module/agent.css');
-        $this->pageRenderer->getJavaScriptRenderer()->addJavaScriptModuleInstruction(
-            JavaScriptModuleInstruction::create('@nitsan/nst3af/agent.js')->invoke('boot'),
-        );
+        // agent.js + boot() are registered once per backend page in AfterBackendPageRenderListener.
+        // Loading the module again from the toolbar races TYPO3 core imports (ModuleStateStorage).
 
         $view = $this->backendViewFactory->create($this->request, ['nitsan/ns-t3af']);
 

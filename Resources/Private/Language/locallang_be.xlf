@@ -729,6 +729,9 @@
       <trans-unit id="agent.turn.emptyModelReply" resname="agent.turn.emptyModelReply">
         <source>I could not produce a reply. Try rephrasing or use / to run a specific tool.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.stepsStillOpen" resname="agent.turn.stepsStillOpen">
+        <source>There are still open steps (for example attaching an image). Send another message or pick a suggested action to continue.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.emptyModelReplyWithTools" resname="agent.turn.emptyModelReplyWithTools">
         <source>I could not produce a reply. Closest tools: %1$s. Try rephrasing, pick a suggested action, or use / to run a specific tool.</source>
       </trans-unit>

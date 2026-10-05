@@ -1,7 +1,7 @@
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
 import DocumentService from '@typo3/core/document-service.js';
-import { ModuleStateStorage } from '@typo3/backend/storage/module-state-storage.js';
 import Persistent from '@typo3/backend/storage/persistent.js';
+import { preloadModuleStateStorage } from './agent/module-state.js';
 // Defines the <typo3-backend-icon> custom element used by dynamically-rendered session-list
 // action buttons (rename/delete) — same explicit-import pattern TYPO3 core itself uses in
 // resizable-navigation.js before generating icon markup at runtime.
@@ -371,6 +371,7 @@ function initialize() {
 }
 
 export function boot() {
+  void preloadModuleStateStorage();
   void ensureMessageRenderer();
   DocumentService.ready().then(initialize);
 }

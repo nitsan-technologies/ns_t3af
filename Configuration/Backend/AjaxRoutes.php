@@ -337,6 +337,10 @@ return [
         'path' => '/nst3af/agent/conversation',
         'target' => AgentAjaxController::class . '::conversationAction',
     ],
+    'nst3af_agent_index_warm' => [
+        'path' => '/nst3af/agent/index-warm',
+        'target' => AgentAjaxController::class . '::indexWarmAction',
+    ],
     'nst3af_agent_conversation_save' => [
         'path' => '/nst3af/agent/conversation/save',
         'target' => AgentAjaxController::class . '::conversationSaveAction',

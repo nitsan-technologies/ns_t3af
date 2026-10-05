@@ -80,6 +80,7 @@ final class AgentPlanTest extends TestCase
 
         self::assertStringContainsString('1. [completed] Create page', $block);
         self::assertStringContainsString('2. [in_progress] Add content', $block);
+        self::assertStringContainsString('Do not claim the request is finished while any step is pending or in_progress', $block);
     }
 
     #[Test]
@@ -107,11 +108,21 @@ final class AgentPlanTest extends TestCase
     }
 
     #[Test]
-    public function aCleanAnswerLeavesNoStepOpen(): void
+    public function completeAllMarksEveryStepCompleted(): void
     {
         $steps = [['title' => 'A', 'status' => 'in_progress'], ['title' => 'B', 'status' => 'pending']];
 
         self::assertTrue(AgentPlan::hasOpenSteps($steps));
         self::assertFalse(AgentPlan::hasOpenSteps(AgentPlan::completeAll($steps)));
+    }
+
+    #[Test]
+    public function anNlReplyMustNotWipeOpenPlanStepsViaCompleteAllInRunner(): void
+    {
+        // Regression for multi-CType requests: AgentRunner used to call completeAll() on a
+        // final NL reply, which made Progress look finished after the first apply.
+        $open = [['title' => 'Text & Media', 'status' => 'completed'], ['title' => 'Text', 'status' => 'in_progress']];
+        self::assertTrue(AgentPlan::hasOpenSteps($open));
+        self::assertStringContainsString('Do not claim the request is finished', AgentPlan::promptBlock($open));
     }
 }

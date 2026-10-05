@@ -32,6 +32,7 @@ use NITSAN\NsT3AF\Agent\Service\AgentEntitlementExplanation;
 use NITSAN\NsT3AF\Agent\Service\AgentLanguageResolver;
 use NITSAN\NsT3AF\Agent\Service\AgentLowRiskFieldMatrix;
 use NITSAN\NsT3AF\Agent\Service\AgentPausePolicy;
+use NITSAN\NsT3AF\Agent\Service\AgentPlan;
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentRunner;
 use NITSAN\NsT3AF\Agent\Service\AgentSettingsService;
@@ -100,6 +101,91 @@ final class AgentRunnerTest extends TestCase
         self::assertSame('gpt-test', $result['messages'][0]['meta']['modelId']);
         self::assertSame(['pages_get', 'find_tools', 'update_plan'], $this->requests[0]['tools']);
         self::assertSame('agent.nl_turn', $this->requests[0]['options']->featureKey);
+    }
+
+    #[Test]
+    public function cardHistoryEchoIsRetriedAndNotShownToTheEditor(): void
+    {
+        $parrot = '[Prepared change: Change a record — applied] Review the proposed changes for Change a record before anything is written.';
+        $result = $this->runScripted([
+            new AiToolCallingResponse($parrot, 'gpt-test', 'openai'),
+            new AiToolCallingResponse('I will prepare the next content element next.', 'gpt-test', 'openai'),
+        ]);
+
+        self::assertCount(2, $this->requests, 'A card-history echo must trigger one corrective model call.');
+        self::assertSame('nl_reply', $result['messages'][0]['meta']['type']);
+        self::assertSame('I will prepare the next content element next.', $result['messages'][0]['content']);
+        self::assertStringNotContainsString('[Prepared change:', $result['messages'][0]['content']);
+        $nudge = (string) ($this->requests[1]['messages'][count($this->requests[1]['messages']) - 1]['content'] ?? '');
+        self::assertStringContainsString('Do not quote or repeat', $nudge);
+    }
+
+    #[Test]
+    public function falseDoneNlReplyIsSuppressedWhenProgressStillOpen(): void
+    {
+        $history = [
+            [
+                'role' => 'user',
+                'content' => 'Add Text & Media with a relevant image, Text, and Bullets about AI.',
+                'meta' => [],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Applied.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tt_content', 'uid' => 546, 'values' => ['CType' => 'textmedia']]],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'x',
+                'meta' => ['plan' => [
+                    ['title' => 'Text & Media', 'status' => 'completed'],
+                    ['title' => 'Text', 'status' => 'completed'],
+                    ['title' => 'Bullets', 'status' => 'completed'],
+                    ['title' => 'Attach an image to Text & Media element', 'status' => 'in_progress'],
+                ]],
+            ],
+        ];
+        $done = 'All requested content elements have been successfully added to the page.';
+        $result = $this->runScripted(
+            [
+                new AiToolCallingResponse($done, 'gpt-test', 'openai'),
+                new AiToolCallingResponse($done, 'gpt-test', 'openai'),
+            ],
+            message: '[The editor confirmed "Change a record" and it was applied.] Continue with the remaining steps of my request.',
+            history: $history,
+            extraTools: [
+                ['name' => 't3ai_generate_image', 'severity' => 'write', 'description' => 'Generate image', 'params' => []],
+                ['name' => 'file_reference_add', 'severity' => 'write', 'description' => 'Attach file', 'params' => []],
+                ['name' => 'write_table', 'severity' => 'write', 'description' => 'Write', 'params' => []],
+            ],
+        );
+
+        self::assertSame('nl_reply', $result['messages'][0]['meta']['type']);
+        self::assertStringNotContainsString('successfully added', strtolower($result['messages'][0]['content']));
+        $plan = $result['messages'][0]['meta']['plan'] ?? [];
+        self::assertNotSame([], $plan);
+        self::assertTrue(
+            AgentPlan::hasOpenSteps($plan) || AgentPlan::hasOpenImageAttachStep($plan),
+            'Progress must keep the attach (or other) step open',
+        );
+    }
+
+    #[Test]
+    public function repeatedCardHistoryEchoIsDropped(): void
+    {
+        $parrot = '[Prepared change: Change a record — applied] Review the proposed changes for Change a record before anything is written.';
+        $result = $this->runScripted([
+            new AiToolCallingResponse($parrot, 'gpt-test', 'openai'),
+            new AiToolCallingResponse($parrot, 'gpt-test', 'openai'),
+        ]);
+
+        self::assertCount(2, $this->requests);
+        self::assertSame('nl_reply', $result['messages'][0]['meta']['type']);
+        self::assertStringNotContainsString('[Prepared change:', $result['messages'][0]['content']);
+        self::assertStringNotContainsString('Review the proposed changes', $result['messages'][0]['content']);
     }
 
     #[Test]

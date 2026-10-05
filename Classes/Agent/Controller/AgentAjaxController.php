@@ -197,13 +197,6 @@ final class AgentAjaxController
         $context = $this->resolveContext($request);
         $this->applyWorkspaceContext($user, (int) ($context['workspaceId'] ?? 0));
 
-        try {
-            // Warm tool embeddings off the chat hot path (search never rebuilds mid-turn).
-            $this->agentToolIndex->ensureFresh();
-        } catch (\Throwable) {
-            // Opening a conversation must not fail if embeddings are unavailable.
-        }
-
         $row = $this->conversationSession->resolve(
             $user,
             $context,
@@ -234,6 +227,25 @@ final class AgentAjaxController
             'continueAfterConfirm' => $this->agentSettings->isContinueAfterConfirmEnabled(),
             'credits' => $this->creditsStatus->status(),
         ]);
+    }
+
+    /**
+     * Rebuilds the semantic tool index when stale. Fired after the panel opens so open
+     * is not blocked by embedMany (find_tools falls back to keywords until ready).
+     */
+    public function indexWarmAction(ServerRequestInterface $request): ResponseInterface
+    {
+        if ($denied = $this->denyUnlessAvailable()) {
+            return $denied;
+        }
+
+        try {
+            $this->agentToolIndex->ensureFresh();
+        } catch (\Throwable) {
+            return new JsonResponse(['ok' => false], 200);
+        }
+
+        return new JsonResponse(['ok' => true]);
     }
 
     /**

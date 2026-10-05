@@ -150,28 +150,54 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             return ['messages' => $state->messages, 'paused' => false, 'pauseReason' => null];
         }
 
+        // Never surface internal draft-history notes as the editor-facing reply.
+        if (AgentPromptBuilder::isCardHistoryEcho($finalText)) {
+            $finalText = '';
+        }
+
+        $workPlan = $state->plan !== [] ? $state->plan : AgentPlan::latest($historyMessages);
+        $requestForGate = AgentPromptBuilder::latestUserRequestText($historyMessages);
+        if ($requestForGate === '') {
+            $requestForGate = $userMessage;
+        }
+        if (
+            $finalText !== ''
+            && AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $requestForGate)
+        ) {
+            $finalText = '';
+        }
 
         if ($finalText !== '') {
             $state->emit('delta', ['content' => $finalText]);
         }
-        // A clean answer (not a question back) means the work is done: no step stays open in the Progress list.
-        if ($finalText !== '' && !str_ends_with($finalText, '?') && AgentPlan::hasOpenSteps($state->plan)) {
-            $state->setPlan(AgentPlan::completeAll($state->plan));
+        $nlMeta = [
+            'type' => 'nl_reply',
+            'correlationId' => $correlationId,
+            'modelId' => $state->modelId,
+            'providerIdentifier' => $state->providerIdentifier,
+            'trace' => self::traceWithoutResponses($state->trace),
+            'offeredTools' => $this->toolNames($offeredTools),
+            'foundTools' => $state->foundTools,
+            'runner' => 'symfony-agent',
+        ];
+        $effective = AgentRequestChecklist::effectivePlan($historyMessages, $workPlan, $requestForGate);
+        if ($effective !== []) {
+            $nlMeta['plan'] = $effective;
+            $workPlan = $effective;
+        } elseif ($workPlan !== []) {
+            $nlMeta['plan'] = $workPlan;
         }
+        $nlContent = $finalText !== '' ? $finalText : (
+            AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $requestForGate)
+                ? $this->translator->translate('agent.turn.stepsStillOpen')
+                : $this->translator->translate('agent.turn.emptyModelReply')
+        );
+        // Keep open Progress steps when the model answers in text: auto-completing them
+        // made multi-element requests look finished after the first apply.
         $state->addMessage([
             'role' => 'assistant',
-            'content' => $finalText !== '' ? $finalText : $this->translator->translate('agent.turn.emptyModelReply'),
-            'meta' => [
-                'type' => 'nl_reply',
-                'correlationId' => $correlationId,
-                'modelId' => $state->modelId,
-                'providerIdentifier' => $state->providerIdentifier,
-                // The steps keep their own responses; here only what ran, to keep the row small.
-                'trace' => self::traceWithoutResponses($state->trace),
-                'offeredTools' => $this->toolNames($offeredTools),
-                'foundTools' => $state->foundTools,
-                'runner' => 'symfony-agent',
-            ],
+            'content' => $nlContent,
+            'meta' => $nlMeta,
         ]);
 
         return ['messages' => $state->messages, 'paused' => false, 'pauseReason' => null];
@@ -201,13 +227,29 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     ): array {
         $finalText = '';
         $state = new AgentTurnState($correlationId, $emitEvent);
-        // The plan of this conversation. A confirmed change finishes its step, even when the model forgets to say so.
-        $plan = AgentPlan::latest($historyMessages);
+        // Prefer the server checklist from the editor request when it applies; otherwise the model plan.
+        $requestForChecklist = trim(self::requestQuery($userMessage, $historyMessages));
+        if ($requestForChecklist === '' || str_starts_with(trim($userMessage), '[The editor ')) {
+            $requestForChecklist = AgentPromptBuilder::latestUserRequestText($historyMessages);
+        }
+        $modelPlan = AgentPlan::latest($historyMessages);
         $continuation = is_array($body['continuation'] ?? null) ? $body['continuation'] : [];
-        if ($plan !== [] && ($continuation['outcome'] ?? '') === 'applied' && AgentPlan::hasOpenSteps($plan)) {
-            $plan = AgentPlan::advance($plan);
+        if ($modelPlan !== [] && ($continuation['outcome'] ?? '') === 'applied' && AgentPlan::hasOpenSteps($modelPlan)) {
+            $modelPlan = AgentPlan::advance($modelPlan);
+        }
+        $checklist = AgentRequestChecklist::reconcile($historyMessages, $requestForChecklist);
+        if ($checklist !== []) {
+            $plan = AgentRequestChecklist::toPlan($checklist);
             $state->setPlan($plan);
+        } elseif ($modelPlan !== []) {
+            $plan = $modelPlan;
+            if (($continuation['outcome'] ?? '') === 'applied') {
+                $state->setPlan($plan);
+            } else {
+                $state->plan = $plan;
+            }
         } else {
+            $plan = [];
             $state->plan = $plan;
         }
         $pageId = (int) ($context['pageId'] ?? 0);
@@ -274,6 +316,38 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $agentResult = $agent->call($this->buildMessages($userMessage, $historyMessages, $context, $plan))->getResult();
             $content = $agentResult->getContent();
             $finalText = is_string($content) ? trim($content) : '';
+            // Models sometimes parrot draft-history notes as the final answer; never show that, retry once.
+            if (
+                AgentPromptBuilder::isCardHistoryEcho($finalText)
+                && !$state->isPaused()
+                && !$state->failed
+                && !$state->isCancelled()
+            ) {
+                $finalText = '';
+                $nudge = $userMessage . "\n\n[System: Do not quote or repeat \"[Prepared change:…]\" or \"Review the proposed changes…\" lines — those are internal history notes, not answers. Call a write tool for my request now, or reply in one short plain sentence about the work.]";
+                $retryPlan = $state->plan !== [] ? $state->plan : $plan;
+                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan))->getResult();
+                $content = $agentResult->getContent();
+                $finalText = is_string($content) ? trim($content) : '';
+                if (AgentPromptBuilder::isCardHistoryEcho($finalText)) {
+                    $finalText = '';
+                }
+            }
+            $retryPlan = $state->plan !== [] ? $state->plan : $plan;
+            if (
+                $this->shouldRetryForRemainingWork($state, $retryPlan, $historyMessages, $userMessage, $finalText)
+            ) {
+                $reminder = AgentPromptBuilder::remainingWorkReminder($historyMessages, $retryPlan, $userMessage);
+                $nudge = $userMessage . "\n\n[System: Open work remains — do not say the request is finished. "
+                    . $reminder
+                    . ' Call the next write tool now (generate/attach image or the next content step).]';
+                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan))->getResult();
+                $content = $agentResult->getContent();
+                $finalText = is_string($content) ? trim($content) : '';
+                if (AgentPromptBuilder::isCardHistoryEcho($finalText)) {
+                    $finalText = '';
+                }
+            }
         } catch (MaxIterationsExceededException) {
             $state->addMessage([
                 'role' => 'assistant',
@@ -354,7 +428,13 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $system .= "\n" . $appliedBlock;
         }
         $planBlock = AgentPlan::promptBlock($plan);
-        if ($planBlock !== '') {
+        $checklist = AgentRequestChecklist::reconcile(
+            $historyMessages,
+            AgentPromptBuilder::latestUserRequestText($historyMessages) ?: $userMessage,
+        );
+        if ($checklist !== [] && AgentRequestChecklist::hasOpen($checklist)) {
+            $system .= "\n" . AgentRequestChecklist::promptBlock($checklist);
+        } elseif ($planBlock !== '') {
             $system .= "\n" . $planBlock;
         }
         if ($system !== '') {
@@ -439,7 +519,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if ($createContent) {
             $found = [...self::createContentTools($executableTools, $offeredNames), ...$found];
         }
-        if (AgentPromptBuilder::pendingImageAttachNote($historyMessages) !== '') {
+        $workPlan = AgentPlan::latest($historyMessages);
+        if (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $query)) {
+            $found = [...self::imageWorkTools($executableTools, $offeredNames), ...$found];
+        } elseif (AgentPromptBuilder::pendingImageAttachNote($historyMessages) !== '') {
             $found = [...self::pendingAttachTools($executableTools, $offeredNames), ...$found];
         }
 
@@ -475,6 +558,50 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return array_values($picked);
+    }
+
+    /**
+     * When image generate/attach is still open, keep those tools in the toolbox.
+     *
+     * @param list<array<string, mixed>> $executableTools
+     * @param array<string, int|string> $alreadyOffered
+     * @return list<array<string, mixed>>
+     */
+    public static function imageWorkTools(array $executableTools, array $alreadyOffered = []): array
+    {
+        $picked = [];
+        foreach ($executableTools as $tool) {
+            $name = (string) ($tool['name'] ?? '');
+            if ($name === '' || isset($alreadyOffered[$name]) || isset($picked[$name])) {
+                continue;
+            }
+            if ($name === 't3ai_generate_image' || $name === 'file_reference_add') {
+                $picked[$name] = $tool;
+            }
+        }
+
+        return array_values($picked);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $historyMessages
+     * @param list<array{title: string, status: string}> $plan
+     */
+    private function shouldRetryForRemainingWork(
+        AgentTurnState $state,
+        array $plan,
+        array $historyMessages,
+        string $userMessage,
+        string $finalText,
+    ): bool {
+        if ($finalText === '' || $state->isPaused() || $state->failed || $state->isCancelled()) {
+            return false;
+        }
+        if ($state->executedTools !== []) {
+            return false;
+        }
+
+        return AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $plan, $userMessage);
     }
 
     /**

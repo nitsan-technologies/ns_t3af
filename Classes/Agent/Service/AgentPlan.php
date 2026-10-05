@@ -23,7 +23,8 @@ namespace NITSAN\NsT3AF\Agent\Service;
  * Helpers for the "Progress" plan (the steps the model saves with update_plan).
  *
  * The model does not always update the plan, so the runner keeps it consistent: a confirmed
- * change finishes the step in progress, and a clean final answer finishes what is left.
+ * change finishes the step in progress. An NL final reply must not wipe open steps — that
+ * let multi-element requests falsely "finish" after the first CType.
  *
  * @internal
  */
@@ -65,6 +66,26 @@ final class AgentPlan
     {
         foreach ($steps as $step) {
             if ($step['status'] !== 'completed') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Progress step that still needs an image attached (title from update_plan heuristics).
+     *
+     * @param list<array{title: string, status: string}> $steps
+     */
+    public static function hasOpenImageAttachStep(array $steps): bool
+    {
+        foreach ($steps as $step) {
+            if (($step['status'] ?? '') === 'completed') {
+                continue;
+            }
+            $title = mb_strtolower((string) ($step['title'] ?? ''));
+            if (preg_match('/\b(attach|image|bild|media|file|assets)\b/u', $title) === 1) {
                 return true;
             }
         }
@@ -151,6 +172,8 @@ final class AgentPlan
             $lines[] = sprintf('%d. [%s] %s', $number + 1, $step['status'], $step['title']);
         }
 
-        return "Current plan (you saved it earlier in this conversation; continue with the step in progress and keep it up to date with update_plan; a confirmed change already moved it on, correct it if that is wrong):\n" . implode("\n", $lines);
+        return 'Current plan (you saved it earlier in this conversation; continue with the step in progress and keep it up to date with update_plan; a confirmed change already moved it on, correct it if that is wrong).'
+            . " Do not claim the request is finished while any step is pending or in_progress — call the next write tool (or update_plan) instead:\n"
+            . implode("\n", $lines);
     }
 }

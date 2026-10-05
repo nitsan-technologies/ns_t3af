@@ -2,7 +2,7 @@
  * AI Agent backend context resolution (module route, page/file context, language ids).
  */
 
-import { ModuleStateStorage } from '@typo3/backend/storage/module-state-storage.js';
+import { currentWebPageId } from './module-state.js';
 
 /**
  * @param {string} route
@@ -170,11 +170,8 @@ export function resolveBackendContext() {
   const inFileModule = isFileModuleRoute(module);
   const fileList = inFileModule ? resolveFileListContext() : { storageUid: 0, folderIdentifier: '' };
 
-  const state = ModuleStateStorage.current('web');
-  let pageId = Number.parseInt(state?.identifier || '0', 10);
-  if (!Number.isFinite(pageId) || pageId <= 0) {
-    pageId = 0;
-  }
+  const iframeUrl = resolveContentIframeUrl();
+  let pageId = currentWebPageId(iframeUrl);
   if (inFileModule) {
     pageId = 0;
   }

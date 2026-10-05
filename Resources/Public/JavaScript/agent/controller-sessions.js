@@ -11,6 +11,26 @@ import Persistent from '@typo3/backend/storage/persistent.js';
 /** Last-viewed conversation uuid + scope key (same Persistent uc store as rail/panel width). */
 const STORAGE_LAST_SESSION_KEY = 'nst3af.agent.lastSession';
 
+/** One background warm per backend page load (embedMany can take minutes when stale). */
+let toolIndexWarmRequested = false;
+
+/**
+ * Rebuild tool embeddings off the open path (keywords cover find_tools until ready).
+ */
+function warmToolIndexInBackground() {
+  if (toolIndexWarmRequested) {
+    return;
+  }
+  const url = ajaxUrl('nst3af_agent_index_warm');
+  if (url === '') {
+    return;
+  }
+  toolIndexWarmRequested = true;
+  void new AjaxRequest(url).get().catch(() => {
+    // Index warm is best-effort; find_tools falls back to keywords.
+  });
+}
+
 export const sessionMethods = {
   /**
      * @param {unknown} title
@@ -251,6 +271,7 @@ export const sessionMethods = {
         } else {
           this.rememberLastSession();
         }
+        warmToolIndexInBackground();
       } catch {
         this.context = backendContext;
         this.loadedScopeKey = this.sessionScopeKey();

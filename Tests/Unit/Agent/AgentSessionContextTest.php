@@ -129,6 +129,7 @@ final class AgentSessionContextTest extends TestCase
         self::assertStringContainsString('confirmed "Write the meta description"', $applied);
         self::assertStringContainsString('Result: Saved.', $applied);
         self::assertStringContainsString('Continue with the remaining steps', $applied);
+        self::assertStringContainsString('Do not create another content element of the same CType', $applied);
         self::assertStringContainsString('Never claim a file or image is attached', $applied);
         self::assertStringNotContainsString('Remaining: attach fileUid', $applied);
 
@@ -169,8 +170,11 @@ final class AgentSessionContextTest extends TestCase
 
         self::assertStringContainsString('Remaining: attach fileUid 87 to tt_content uid 477', $message);
         self::assertStringContainsString('Do not confirm completion until that succeeds', $message);
+        self::assertStringContainsString('CType "textmedia"', $message);
+        self::assertStringContainsString('do not create another "textmedia"', $message);
         self::assertSame([87], AgentPromptBuilder::unattachedFileUids($history));
         self::assertSame(477, AgentPromptBuilder::latestAppliedContentElementUid($history));
+        self::assertSame('textmedia', AgentPromptBuilder::lastAppliedTtContentCType($history));
     }
 
     #[Test]
@@ -210,6 +214,109 @@ final class AgentSessionContextTest extends TestCase
             'attach fileUid 95 to tt_content uid 481',
             AgentPromptBuilder::pendingImageAttachNote($history),
         );
+    }
+
+    #[Test]
+    public function pendingAttachDoesNotTargetPlainTextWhenTextMediaIsStillMissing(): void
+    {
+        $history = [
+            [
+                'role' => 'assistant',
+                'content' => 'Image saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 114],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Applied.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tt_content', 'uid' => 521, 'values' => ['CType' => 'text', 'header' => 'Benefits']]],
+                ],
+            ],
+        ];
+
+        self::assertNull(AgentPromptBuilder::latestAppliedContentElementUid($history));
+        $note = AgentPromptBuilder::pendingImageAttachNote($history);
+        self::assertStringContainsString('CType textmedia', $note);
+        self::assertStringContainsString('fileUid 114', $note);
+        self::assertStringNotContainsString('tt_content uid 521', $note);
+    }
+
+    #[Test]
+    public function continuationRemindsToAttachImageWhenTextMediaHasNoFileYet(): void
+    {
+        $history = [
+            [
+                'role' => 'user',
+                'content' => 'Add Text & Media with a relevant image about AI.',
+                'meta' => ['type' => 'message'],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Applied.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tt_content', 'uid' => 546, 'values' => ['CType' => 'textmedia', 'header' => 'AI']]],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Bullets applied.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tt_content', 'uid' => 548, 'values' => ['CType' => 'bullets']]],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'plan',
+                'meta' => ['plan' => [
+                    ['title' => 'Text & Media', 'status' => 'completed'],
+                    ['title' => 'Attach an image to Text & Media element', 'status' => 'in_progress'],
+                ]],
+            ],
+        ];
+
+        $message = AgentPromptBuilder::continuationMessage(
+            ['outcome' => 'applied', 'label' => 'Change a record', 'result' => 'Applied 3 of 3 fields.'],
+            $history,
+        );
+
+        self::assertStringContainsString('Attach an image', $message);
+        self::assertStringContainsString('file_reference_add', $message);
+        self::assertSame(546, AgentPromptBuilder::unattachedMediaContentElementUid($history));
+    }
+
+    #[Test]
+    public function continuationAfterImageOnlyRemindsToCreateTextMediaBeforeAttach(): void
+    {
+        $history = [
+            [
+                'role' => 'assistant',
+                'content' => 'Image saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'autoRan' => false,
+                    'details' => ['fileUid' => 114],
+                ],
+            ],
+        ];
+
+        $message = AgentPromptBuilder::continuationMessage(
+            ['outcome' => 'applied', 'label' => 'Generate an image', 'result' => 'Image saved.'],
+            $history,
+        );
+
+        self::assertStringContainsString('CType textmedia', $message);
+        self::assertStringContainsString('fileUid 114', $message);
+        self::assertStringNotContainsString('file_reference_add to tt_content uid', $message);
     }
 
     #[Test]
@@ -281,6 +388,37 @@ final class AgentSessionContextTest extends TestCase
             ['role' => 'assistant', 'content' => '[Prepared change: Change a record — applied] New title.'],
             ['role' => 'assistant', 'content' => 'Which language? (options: German, French)'],
         ], $history);
+    }
+
+    #[Test]
+    public function historyOmitsDraftReviewBoilerplateSoModelsDoNotParrotIt(): void
+    {
+        $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();
+        $history = $builder->buildHistory([[
+            'role' => 'assistant',
+            'content' => 'Review the proposed changes for Change a record before anything is written.',
+            'meta' => ['type' => 'inline_draft', 'draft' => ['editorLabel' => 'Change a record', 'applied' => true]],
+        ]]);
+
+        self::assertSame(
+            [['role' => 'assistant', 'content' => '[Prepared change: Change a record — applied]']],
+            $history,
+        );
+        self::assertSame(
+            '[Prepared change: Change a record — applied]',
+            AgentPromptBuilder::preparedChangeHistoryNote(
+                'Change a record',
+                'applied',
+                'Review the proposed changes for Change a record before anything is written.',
+            ),
+        );
+        self::assertTrue(AgentPromptBuilder::isCardHistoryEcho(
+            '[Prepared change: Change a record — applied] Review the proposed changes for Change a record before anything is written.',
+        ));
+        self::assertTrue(AgentPromptBuilder::isDraftReviewBoilerplate(
+            'Review the proposed changes for Change a record before anything is written.',
+        ));
+        self::assertFalse(AgentPromptBuilder::isCardHistoryEcho('All requested content elements have been added.'));
     }
 
     #[Test]

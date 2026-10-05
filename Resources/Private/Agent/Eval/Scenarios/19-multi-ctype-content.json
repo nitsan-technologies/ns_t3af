@@ -1,0 +1,39 @@
+{
+  "id": "19-multi-ctype-content",
+  "title": "Different content types after apply; no same-CType loop",
+  "turns": [
+    {
+      "message": "Add a Text & Media element and a separate Text element about AI on this page",
+      "expect": {
+        "anyTool": [
+          "write_table",
+          "t3ai_create_content_element",
+          "update_plan"
+        ],
+        "card": "orClarification",
+        "maxModelRequests": 8
+      }
+    },
+    {
+      "applied": {
+        "table": "tt_content",
+        "uid": 990019,
+        "values": {
+          "header": "AI and the web",
+          "pid": "{{pageId}}",
+          "CType": "textmedia"
+        }
+      },
+      "expect": {
+        "anyTool": [
+          "write_table",
+          "t3ai_create_content_element",
+          "update_plan"
+        ],
+        "card": "orClarification",
+        "maxModelRequests": 8,
+        "maxRepeatedCalls": 2
+      }
+    }
+  ]
+}
