@@ -73,6 +73,59 @@ final class AiToolCallingServiceTest extends TestCase
         self::assertTrue($service->supportsToolCalling());
     }
 
+    public function testSupportsToolCallingIsFalseWhenProviderHasToolUseButNoChat(): void
+    {
+        $provider = $this->makeProvider('tools.capable', [Capability::TOOL_USE]);
+        $providers = $this->createMock(ProviderLookupInterface::class);
+        $providers->method('findDefault')->willReturn($provider);
+
+        $adapter = new class implements ToolCallingCapableInterface {
+            public function getType(): string
+            {
+                return 'tools.capable';
+            }
+
+            public function getDisplayName(): string
+            {
+                return 'Tools';
+            }
+
+            public function getDefaultEndpoint(): string
+            {
+                return '';
+            }
+
+            public function getDefaultCapabilities(): array
+            {
+                return [];
+            }
+
+            public function testConnection(Provider $provider): VerifyResult
+            {
+                return VerifyResult::failure('unsupported');
+            }
+
+            public function platform(Provider $provider): object
+            {
+                return new \stdClass();
+            }
+
+            public function supportsToolCalling(Provider $provider): bool
+            {
+                return true;
+            }
+        };
+
+        $service = $this->createService(
+            $providers,
+            new AdapterRegistry([$adapter]),
+            $this->createMock(EventDispatcherInterface::class),
+            new SiteStorageContext($this->createMock(SiteFinder::class)),
+        );
+
+        self::assertFalse($service->supportsToolCalling());
+    }
+
     public function testCompleteWithToolsFailsLoudlyForNonCapableAdapter(): void
     {
         $provider = $this->makeProvider('plain.text');
@@ -289,7 +342,10 @@ final class AiToolCallingServiceTest extends TestCase
         );
     }
 
-    private function makeProvider(string $adapterType): Provider
+    /**
+     * @param list<string> $capabilities
+     */
+    private function makeProvider(string $adapterType, array $capabilities = [Capability::CHAT, Capability::TOOL_USE]): Provider
     {
         return new Provider(
             uid: 1,
@@ -301,7 +357,7 @@ final class AiToolCallingServiceTest extends TestCase
             apiKeyCipher: '',
             modelId: 'gpt-4o',
             embeddingModelId: '',
-            capabilities: [Capability::CHAT],
+            capabilities: $capabilities,
             temperature: 0.7,
             systemPrompt: '',
             isDefault: true,

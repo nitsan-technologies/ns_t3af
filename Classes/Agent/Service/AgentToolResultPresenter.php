@@ -195,14 +195,20 @@ final readonly class AgentToolResultPresenter
     {
         if (!$invokeSuccess) {
             $message = trim($invokeMessage);
+            if ($message === '') {
+                return $this->translator->translate('agent.result.toolFailed');
+            }
 
-            return $message !== '' ? $message : $this->translator->translate('agent.result.toolFailed');
+            return AgentPermissionMessage::rewrite($message, $this->translator);
         }
 
         if (is_array($details) && isset($details['error']) && is_scalar($details['error'])) {
             $error = trim((string) $details['error']);
+            if ($error === '') {
+                return $this->translator->translate('agent.result.toolError');
+            }
 
-            return $error !== '' ? $error : $this->translator->translate('agent.result.toolError');
+            return AgentPermissionMessage::rewrite($error, $this->translator);
         }
 
         if ($details === null) {

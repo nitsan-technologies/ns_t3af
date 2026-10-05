@@ -358,11 +358,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
 
         $result = $this->playgroundService->preview($toolName, $arguments, $variants);
         if (($result['success'] ?? false) !== true || !$result['preview'] instanceof PreviewResult) {
+            $failureDetail = AgentPermissionMessage::rewrite(
+                (string) ($result['message'] ?? ''),
+                $this->translator,
+            );
+
             return [
                 'role' => 'assistant',
                 'content' => $this->translator->translate(
                     'agent.turn.previewFailed',
-                    [$toolName, (string) ($result['message'] ?? '')],
+                    [$toolName, $failureDetail],
                 ),
                 'meta' => [
                     'type' => 'error',

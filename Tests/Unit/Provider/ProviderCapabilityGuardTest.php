@@ -43,6 +43,21 @@ final class ProviderCapabilityGuardTest extends TestCase
         self::assertFalse(ProviderCapabilityGuard::allowsChat($this->provider([Capability::TOOL_USE])));
     }
 
+    public function testAllowsToolCallingWhenCapabilitiesEmpty(): void
+    {
+        self::assertTrue(ProviderCapabilityGuard::allowsToolCalling($this->provider([])));
+    }
+
+    public function testAllowsToolCallingWhenToolUsePresent(): void
+    {
+        self::assertTrue(ProviderCapabilityGuard::allowsToolCalling($this->provider([Capability::TOOL_USE])));
+    }
+
+    public function testRejectsToolCallingWhenOnlyChat(): void
+    {
+        self::assertFalse(ProviderCapabilityGuard::allowsToolCalling($this->provider([Capability::CHAT])));
+    }
+
     public function testAssertCallAllowedPassesForEmptyCapabilities(): void
     {
         ProviderCapabilityGuard::assertCallAllowed(
@@ -50,6 +65,34 @@ final class ProviderCapabilityGuardTest extends TestCase
             ProviderCapabilityGuard::CALL_COMPLETE,
         );
         $this->addToAssertionCount(1);
+    }
+
+    public function testAssertCompleteWithToolsRequiresChatAndToolUse(): void
+    {
+        ProviderCapabilityGuard::assertCallAllowed(
+            $this->provider([Capability::CHAT, Capability::TOOL_USE]),
+            ProviderCapabilityGuard::CALL_COMPLETE_WITH_TOOLS,
+        );
+        $this->addToAssertionCount(1);
+    }
+
+    public function testAssertCompleteWithToolsThrowsWhenOnlyToolUse(): void
+    {
+        $this->expectException(AdapterRuntimeException::class);
+        ProviderCapabilityGuard::assertCallAllowed(
+            $this->provider([Capability::TOOL_USE]),
+            ProviderCapabilityGuard::CALL_COMPLETE_WITH_TOOLS,
+        );
+    }
+
+    public function testAssertCompleteWithToolsThrowsWhenOnlyChat(): void
+    {
+        $this->expectException(AdapterRuntimeException::class);
+        $this->expectExceptionMessage('tool_use');
+        ProviderCapabilityGuard::assertCallAllowed(
+            $this->provider([Capability::CHAT]),
+            ProviderCapabilityGuard::CALL_COMPLETE_WITH_TOOLS,
+        );
     }
 
     public function testAssertCallAllowedThrowsForMissingChat(): void

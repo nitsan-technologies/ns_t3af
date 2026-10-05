@@ -1669,6 +1669,10 @@
                 <source>Could not generate a preview for %1$s: %2$s</source>
                 <target>Vorschau für %1$s konnte nicht erzeugt werden: %2$s</target>
             </trans-unit>
+            <trans-unit id="agent.tool.permissionDenied">
+                <source>You do not have permission to change this page or its content. Ask an administrator for page or content edit rights, then try again.</source>
+                <target>Sie haben keine Berechtigung, diese Seite oder ihren Inhalt zu ändern. Bitten Sie einen Administrator um Seiten- oder Inhaltbearbeitungsrechte und versuchen Sie es erneut.</target>
+            </trans-unit>
             <trans-unit id="agent.suggestions.ready">
                 <source>Here are %2$s suggestion variants for %1$s. Review them below and apply the ones you want.</source>
                 <target>Hier sind %2$s Vorschlagsvarianten für %1$s. Prüfen Sie sie unten und wenden Sie die gewünschten an.</target>

@@ -218,6 +218,8 @@ readonly class McpPlaygroundService
                 'message' => $exception->getMessage(),
                 'callCount' => 0,
             ];
+        } finally {
+            $this->invocationContext->clear();
         }
     }
 

@@ -34,6 +34,7 @@ use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 final class ProviderCapabilityGuard
 {
     public const CALL_COMPLETE = 'complete';
+    public const CALL_COMPLETE_WITH_TOOLS = 'complete_with_tools';
     public const CALL_STREAM = 'stream';
     public const CALL_EMBED = 'embed';
     public const CALL_TTS = 'tts';
@@ -50,6 +51,19 @@ final class ProviderCapabilityGuard
 
         return $provider->hasCapability(Capability::CHAT)
             || $provider->hasCapability(Capability::COMPLETION);
+    }
+
+    /**
+     * Whether this provider may run tool-calling turns (Agent NL loop).
+     * Empty capabilities stay permissive (legacy); otherwise requires TOOL_USE.
+     */
+    public static function allowsToolCalling(Provider $provider): bool
+    {
+        if ($provider->capabilities === []) {
+            return true;
+        }
+
+        return $provider->hasCapability(Capability::TOOL_USE);
     }
 
     /**
@@ -72,6 +86,7 @@ final class ProviderCapabilityGuard
                 $provider,
                 [Capability::CHAT, Capability::COMPLETION],
             ),
+            self::CALL_COMPLETE_WITH_TOOLS => self::assertCompleteWithTools($provider),
             self::CALL_STREAM => self::assertHas($provider, Capability::STREAMING),
             self::CALL_EMBED => self::assertHas($provider, Capability::EMBEDDINGS),
             self::CALL_TTS => self::assertHas($provider, Capability::TTS),
@@ -84,15 +99,28 @@ final class ProviderCapabilityGuard
         }
 
         if (
-            ($callKind === self::CALL_COMPLETE || $callKind === self::CALL_STREAM)
+            (
+                $callKind === self::CALL_COMPLETE
+                || $callKind === self::CALL_COMPLETE_WITH_TOOLS
+                || $callKind === self::CALL_STREAM
+            )
             && self::optionsRequireVision($options)
         ) {
             self::assertHas($provider, Capability::VISION);
         }
 
-        if (self::optionsRequireTools($options)) {
+        if ($callKind !== self::CALL_COMPLETE_WITH_TOOLS && self::optionsRequireTools($options)) {
             self::assertHas($provider, Capability::TOOL_USE);
         }
+    }
+
+    private static function assertCompleteWithTools(Provider $provider): void
+    {
+        self::assertAny(
+            $provider,
+            [Capability::CHAT, Capability::COMPLETION],
+        );
+        self::assertHas($provider, Capability::TOOL_USE);
     }
 
     /**

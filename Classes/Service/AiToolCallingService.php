@@ -37,6 +37,7 @@ use NITSAN\NsT3AF\Exception\UnknownAdapterException;
 use NITSAN\NsT3AF\Provider\AdapterRegistry;
 use NITSAN\NsT3AF\Provider\Contract\ToolCallingCapableInterface;
 use NITSAN\NsT3AF\Provider\OpenAiCompatible\OpenAiCompatiblePlatform;
+use NITSAN\NsT3AF\Provider\ProviderCapabilityGuard;
 use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiPlatform;
 use Psr\EventDispatcher\EventDispatcherInterface;
 
@@ -81,6 +82,13 @@ final class AiToolCallingService implements AiToolCallingServiceInterface
             return false;
         }
 
+        if (
+            !ProviderCapabilityGuard::allowsChat($provider)
+            || !ProviderCapabilityGuard::allowsToolCalling($provider)
+        ) {
+            return false;
+        }
+
         $adapter = $this->adapters->get($provider->adapterType);
 
         return $adapter instanceof ToolCallingCapableInterface
@@ -108,6 +116,12 @@ final class AiToolCallingService implements AiToolCallingServiceInterface
                 ),
             );
         }
+
+        ProviderCapabilityGuard::assertCallAllowed(
+            $provider,
+            ProviderCapabilityGuard::CALL_COMPLETE_WITH_TOOLS,
+            $options,
+        );
 
         $prompt = $this->messagesToPrompt($messages);
         $before = new BeforeProviderRequestEvent($provider, $prompt, $options, self::CALL_COMPLETE_WITH_TOOLS);

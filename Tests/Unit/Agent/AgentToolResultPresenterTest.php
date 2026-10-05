@@ -174,6 +174,28 @@ final class AgentToolResultPresenterTest extends TestCase
     }
 
     #[Test]
+    public function presentRewritesInsufficientPermissionInvokeMessage(): void
+    {
+        $ai = $this->createMock(AiServiceInterface::class);
+        $ai->expects(self::never())->method('complete');
+
+        $presenter = $this->createPresenter($ai);
+        $presented = $presenter->present(
+            't3ai_create_page_simple',
+            null,
+            false,
+            'Insufficient permissions to create a page under parent uid 12.',
+        );
+
+        self::assertFalse($presented['success']);
+        self::assertSame(
+            'You do not have permission to change this page or its content. Ask an administrator for page or content edit rights, then try again.',
+            $presented['error'],
+        );
+        self::assertSame($presented['error'], $presented['content']);
+    }
+
+    #[Test]
     public function presentFallsBackWhenLlmFails(): void
     {
         $ai = $this->createMock(AiServiceInterface::class);

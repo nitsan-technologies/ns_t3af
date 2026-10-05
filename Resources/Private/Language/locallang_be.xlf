@@ -1363,6 +1363,9 @@
       <trans-unit id="agent.turn.previewFailed" resname="agent.turn.previewFailed">
         <source>Could not generate a preview for %1$s: %2$s</source>
       </trans-unit>
+      <trans-unit id="agent.tool.permissionDenied" resname="agent.tool.permissionDenied">
+        <source>You do not have permission to change this page or its content. Ask an administrator for page or content edit rights, then try again.</source>
+      </trans-unit>
       <trans-unit id="agent.suggestions.ready" resname="agent.suggestions.ready">
         <source>Here are %2$s suggestion variants for %1$s. Review them below and apply the ones you want.</source>
       </trans-unit>

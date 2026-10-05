@@ -33,6 +33,7 @@ use NITSAN\NsT3AF\Agent\Service\AgentCreditsStatus;
 use NITSAN\NsT3AF\Agent\Service\AgentDraftSession;
 use NITSAN\NsT3AF\Agent\Service\AgentGovernanceGuard;
 use NITSAN\NsT3AF\Agent\Service\AgentLowRiskFieldMatrix;
+use NITSAN\NsT3AF\Agent\Service\AgentPermissionMessage;
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentProviderOptions;
 use NITSAN\NsT3AF\Agent\Service\AgentRecordAttachmentResolver;
@@ -424,6 +425,7 @@ final class AgentAjaxController
         } catch (\Throwable $exception) {
             // Paths inside the project are shortened; the editor sees what failed, not where it lives.
             $reason = str_replace(Environment::getProjectPath() . '/', '', $exception->getMessage());
+            $reason = AgentPermissionMessage::rewrite($reason, $this->translator);
 
             return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.applyFailedDetail', [$reason])], 400);
         }
