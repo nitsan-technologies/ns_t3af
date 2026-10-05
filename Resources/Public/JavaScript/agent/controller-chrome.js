@@ -291,9 +291,10 @@ export const chromeMethods = {
   /**
      * Drag (or arrow-key) resize for the whole panel's width, same idiom as the sessions-rail
      * resize below. The panel is anchored to the right edge, so dragging the handle further
-     * left widens it. Once the editor has resized manually, that width is remembered
-     * (Persistent) and takes over from the responsive --nst3af-agent-width media-query bands;
-     * a window resize re-clamps it down if the viewport got too narrow to keep it safe —
+     * left widens it up to nearly the full viewport (small margin so the handle stays
+     * grabable). Once the editor has resized manually, that width is remembered (Persistent)
+     * and takes over from the responsive --nst3af-agent-width media-query bands; a window
+     * resize re-clamps it if the viewport got too narrow —
      * same fallback idiom as TYPO3 core's own tree resizer
      * (fallbackNavigationSizeIfNeeded in resizable-navigation.js / content-navigation.js).
      */
@@ -304,28 +305,11 @@ export const chromeMethods = {
       }
 
       const MIN_WIDTH = 400;
-      const MAX_WIDTH_CAP = 1400;
-      const SAFE_MARGIN = 40;
+      // Keep a thin strip so the left-edge resize handle remains usable at max width.
+      const SAFE_MARGIN = 16;
       const STEP = 24;
 
-      // Mirrors the CSS responsive bands: reserved space for the module sidebar (240px
-      // expanded) and page/file tree (300px, the larger of the two installed core versions'
-      // defaults) — see agent.css's --nst3af-agent-width media queries for the verified
-      // breakpoints (992px sidebar off-canvas, 750px tree container-query flyout).
-      const reservedChromeWidth = (viewportWidth) => {
-        if (viewportWidth >= 992) {
-          return 540;
-        }
-        if (viewportWidth >= 750) {
-          return 300;
-        }
-        return 0;
-      };
-
-      const maxWidth = () => {
-        const viewportWidth = window.innerWidth;
-        return Math.min(MAX_WIDTH_CAP, Math.max(MIN_WIDTH, viewportWidth - reservedChromeWidth(viewportWidth) - SAFE_MARGIN));
-      };
+      const maxWidth = () => Math.max(MIN_WIDTH, window.innerWidth - SAFE_MARGIN);
 
       const applyWidth = (width, { persist = false } = {}) => {
         const clamped = Math.min(maxWidth(), Math.max(MIN_WIDTH, Math.round(width)));
