@@ -161,7 +161,12 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
-        $arguments = $this->mergeContextArguments($arguments, $context, (string) ($tool['name'] ?? ''));
+        $arguments = $this->mergeContextArguments(
+            $arguments,
+            $context,
+            (string) ($tool['name'] ?? ''),
+            (string) ($body['provider'] ?? ''),
+        );
 
         $result = $this->playgroundService->invoke($tool['name'], $arguments);
         $invokeSuccess = (bool) ($result['success'] ?? false);
@@ -275,7 +280,12 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         array $guard,
     ): array {
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
-        $arguments = $this->mergeContextArguments($arguments, $context, (string) ($tool['name'] ?? ''));
+        $arguments = $this->mergeContextArguments(
+            $arguments,
+            $context,
+            (string) ($tool['name'] ?? ''),
+            (string) ($body['provider'] ?? ''),
+        );
 
         $result = $this->playgroundService->invokeWithMode(
             (string) $tool['name'],
@@ -351,7 +361,12 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     ): array {
         $toolName = (string) ($tool['name'] ?? '');
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
-        $arguments = $this->mergeContextArguments($arguments, $context, $toolName);
+        $arguments = $this->mergeContextArguments(
+            $arguments,
+            $context,
+            $toolName,
+            (string) ($body['provider'] ?? ''),
+        );
 
         $variants = max(1, min(5, (int) ($arguments['variants'] ?? 3)));
         unset($arguments['variants']);
@@ -442,7 +457,12 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
-        $arguments = $this->mergeContextArguments($arguments, $context, $toolName);
+        $arguments = $this->mergeContextArguments(
+            $arguments,
+            $context,
+            $toolName,
+            (string) ($body['provider'] ?? ''),
+        );
         $arguments = $this->normalizeWriteToolArguments($toolName, $arguments);
 
         try {
@@ -524,8 +544,12 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      * @param array<string, mixed> $context
      * @return array<string, mixed>
      */
-    public function mergeContextArguments(array $arguments, array $context, string $toolName = ''): array
-    {
+    public function mergeContextArguments(
+        array $arguments,
+        array $context,
+        string $toolName = '',
+        string $providerIdentifier = '',
+    ): array {
         // An id and a URL for the same target: the id (e.g. from an applied result) wins, a guessed URL must not contradict it.
         foreach ([['pageId', 'pageUrl'], ['parentPageId', 'parentPageUrl']] as [$idKey, $urlKey]) {
             if ((int) ($arguments[$idKey] ?? 0) > 0 && trim((string) ($arguments[$urlKey] ?? '')) !== '') {
@@ -576,6 +600,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $module = trim((string) ($context['module'] ?? ''));
         if ($module !== '') {
             $arguments['module'] ??= $module;
+        }
+
+        // Agent provider selection → MCP McpInvocationContext (`aiProvider` arg).
+        $provider = trim($providerIdentifier);
+        if (
+            $provider !== ''
+            && $provider !== AgentProviderOptions::DEFAULT
+            && (!isset($arguments['aiProvider']) || trim((string) $arguments['aiProvider']) === '')
+        ) {
+            $arguments['aiProvider'] = $provider;
         }
 
         return $arguments;

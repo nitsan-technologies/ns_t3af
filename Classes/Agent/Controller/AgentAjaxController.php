@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Agent\Controller;
 use GuzzleHttp\Psr7\PumpStream;
 use NITSAN\NsT3AF\Access\RecordAccessGate;
 use NITSAN\NsT3AF\Agent\Context\AgentContextPresenter;
+use NITSAN\NsT3AF\Agent\Contract\AgentToolIndexInterface;
 use NITSAN\NsT3AF\Agent\Service\AgentAuditLogger;
 use NITSAN\NsT3AF\Agent\Service\AgentAvailabilityService;
 use NITSAN\NsT3AF\Agent\Service\AgentConversationRecorder;
@@ -115,6 +116,7 @@ final class AgentAjaxController
         private readonly AgentTurnRouter $turnRouter,
         private readonly AgentTargetPageResolver $targetPageResolver,
         private readonly AgentTranslator $translator,
+        private readonly AgentToolIndexInterface $agentToolIndex,
     ) {}
 
     public function toolsAction(ServerRequestInterface $request): ResponseInterface
@@ -194,6 +196,14 @@ final class AgentAjaxController
         $query = $request->getQueryParams();
         $context = $this->resolveContext($request);
         $this->applyWorkspaceContext($user, (int) ($context['workspaceId'] ?? 0));
+
+        try {
+            // Warm tool embeddings off the chat hot path (search never rebuilds mid-turn).
+            $this->agentToolIndex->ensureFresh();
+        } catch (\Throwable) {
+            // Opening a conversation must not fail if embeddings are unavailable.
+        }
+
         $row = $this->conversationSession->resolve(
             $user,
             $context,
@@ -981,6 +991,7 @@ final class AgentAjaxController
         string $provider,
         array $context,
     ): ?string {
+        unset($provider);
         $stored = $this->conversationSession->getContext();
         if (($stored['shortTitleApplied'] ?? false) === true || ($stored['titleLocked'] ?? false) === true) {
             return null;
@@ -1000,9 +1011,9 @@ final class AgentAjaxController
             return null;
         }
 
-        $title = $this->conversationTitleService->suggest(
+        // Cosmetic only — never call LLM title on the turn hot path.
+        $title = $this->conversationTitleService->suggestWithoutLlm(
             $messages,
-            $provider,
             (int) ($context['pageId'] ?? 0),
         );
         if ($title === null || $title === '') {

@@ -67,7 +67,7 @@ final class AgentToolIndexService implements AgentToolIndexInterface
         $this->writeIndex($source);
     }
 
-    public function ensureFresh(): void
+    public function ensureFresh(bool $rebuildIfStale = true): void
     {
         $source = $this->embeddingSourceResolver->resolve();
         if ($source === null) {
@@ -87,6 +87,10 @@ final class AgentToolIndexService implements AgentToolIndexInterface
             return;
         }
 
+        if (!$rebuildIfStale) {
+            return;
+        }
+
         $this->writeIndex($source);
     }
 
@@ -98,7 +102,8 @@ final class AgentToolIndexService implements AgentToolIndexInterface
             return [];
         }
 
-        $this->ensureFresh();
+        // Hot path: never rebuild embeddings mid-turn (cold index → keywords via AgentToolSearch).
+        $this->ensureFresh(rebuildIfStale: false);
         $store = $this->hydrateStore($source);
         if ($store === null) {
             return [];
@@ -188,7 +193,8 @@ final class AgentToolIndexService implements AgentToolIndexInterface
     private function hydrateStore(EmbeddingSourceInterface $source): ?Store
     {
         $modelId = $this->embeddingSourceResolver->modelIdFor($source);
-        $fingerprint = $source->id() . '|' . $modelId;
+        $expectedHash = $this->definitionHash();
+        $fingerprint = $source->id() . '|' . $modelId . '|' . $expectedHash;
         if ($this->hydratedStore !== null && $this->hydratedFingerprint === $fingerprint) {
             return $this->hydratedStore;
         }
@@ -197,7 +203,11 @@ final class AgentToolIndexService implements AgentToolIndexInterface
         if (!is_array($cached) || !is_array($cached['documents'] ?? null)) {
             return null;
         }
-        if (($cached['sourceId'] ?? null) !== $source->id() || ($cached['modelId'] ?? null) !== $modelId) {
+        if (
+            ($cached['sourceId'] ?? null) !== $source->id()
+            || ($cached['modelId'] ?? null) !== $modelId
+            || ($cached['hash'] ?? null) !== $expectedHash
+        ) {
             return null;
         }
 

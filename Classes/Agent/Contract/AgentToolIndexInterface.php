@@ -28,7 +28,13 @@ interface AgentToolIndexInterface
 {
     public function rebuild(): void;
 
-    public function ensureFresh(): void;
+    /**
+     * Ensure the cached tool index matches the current tool definitions.
+     *
+     * @param bool $rebuildIfStale When false (search hot path), skip embed rebuild and leave
+     *                             callers on keyword-only ranking until {@see rebuild()} runs.
+     */
+    public function ensureFresh(bool $rebuildIfStale = true): void;
 
     /**
      * @return list<array{name: string, score: float}>

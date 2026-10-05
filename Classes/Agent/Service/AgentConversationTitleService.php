@@ -40,6 +40,21 @@ final readonly class AgentConversationTitleService
     ) {}
 
     /**
+     * Fast list title from the first user message — no LLM (hot path).
+     *
+     * @param list<array<string, mixed>> $messages
+     */
+    public function suggestWithoutLlm(array $messages, int $pageId = 0): ?string
+    {
+        $userLine = $this->firstUserLine($messages);
+        if ($userLine === '') {
+            return null;
+        }
+
+        return $this->heuristicTitle($userLine, $pageId);
+    }
+
+    /**
      * @param list<array<string, mixed>> $messages
      */
     public function suggest(array $messages, string $providerIdentifier = '', int $pageId = 0): ?string
@@ -97,6 +112,27 @@ final readonly class AgentConversationTitleService
         }
 
         return $this->heuristicTitle($userLine, $pageId);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $messages
+     */
+    private function firstUserLine(array $messages): string
+    {
+        foreach ($messages as $message) {
+            if (($message['meta']['hidden'] ?? false) === true) {
+                continue;
+            }
+            if ((string) ($message['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $content = trim((string) preg_replace('/\s+/u', ' ', (string) ($message['content'] ?? '')));
+            if ($content !== '') {
+                return mb_substr($content, 0, 400);
+            }
+        }
+
+        return '';
     }
 
     public function heuristicTitle(string $userLine, int $pageId = 0): ?string

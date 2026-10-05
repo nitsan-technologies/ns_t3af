@@ -88,6 +88,69 @@ final class AgentToolIndexServiceTest extends TestCase
     }
 
     #[Test]
+    public function searchDoesNotRebuildWhenIndexIsStale(): void
+    {
+        $tools = [$this->tool('pages_get', 'Get page')];
+        $embedCalls = 0;
+
+        $cache = new InMemoryCacheFacade();
+        $source = new class ($embedCalls) implements EmbeddingSourceInterface {
+            public function __construct(private int &$embedCalls) {}
+
+            public function id(): string
+            {
+                return ProviderEmbeddingSource::ID;
+            }
+
+            public function isAvailable(): bool
+            {
+                return true;
+            }
+
+            public function embed(string $text): array
+            {
+                ++$this->embedCalls;
+
+                return [0.1, 0.2, 0.3];
+            }
+
+            public function embedMany(array $texts): array
+            {
+                $this->embedCalls += count($texts);
+
+                return array_map(static fn(string $_): array => [0.1, 0.2, 0.3], $texts);
+            }
+        };
+
+        $settings = $this->settings(['agentEmbeddingSource' => 'provider']);
+        $resolver = new EmbeddingSourceResolver($settings, [$source]);
+        $introspector = $this->createMock(McpToolIntrospectorService::class);
+        $introspector->method('listTools')->willReturnCallback(
+            static function () use (&$tools): array {
+                return $tools;
+            },
+        );
+
+        $service = new AgentToolIndexService(
+            $cache,
+            $resolver,
+            $introspector,
+            $this->permittedActionProvider(),
+            new AgentToolDocumentBuilder(new AgentToolEditorLabelService($this->createAgentTranslator()), new McpToolMetadataService()),
+        );
+
+        $service->rebuild();
+        $afterRebuild = $embedCalls;
+        self::assertGreaterThan(0, $afterRebuild);
+
+        $tools = [$this->tool('pages_get', 'Get page with SEO fields')];
+        $hits = $service->search(ProviderEmbeddingSource::ID, 'page', 5);
+
+        self::assertSame([], $hits);
+        self::assertSame($afterRebuild, $embedCalls, 'search must not call embedMany/embed when the index is stale');
+    }
+
+    #[Test]
     public function searchReturnsSimilarityScoresFromCachedVectors(): void
     {
         $cache = new InMemoryCacheFacade();

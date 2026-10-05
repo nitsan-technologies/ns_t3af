@@ -168,4 +168,51 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
 
         self::assertSame(7, $merged['pid']);
     }
+
+    #[Test]
+    public function mergeContextInjectsAiProviderFromAgentSelection(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            [],
+            ['pageId' => 7],
+            't3ai_generate_all_seo',
+            'openai',
+        );
+
+        self::assertSame('openai', $merged['aiProvider']);
+    }
+
+    #[Test]
+    public function mergeContextDoesNotInjectDefaultOrEmptyProvider(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $empty = $method->invoke($processor, [], ['pageId' => 7], 't3ai_generate_all_seo', '');
+        $default = $method->invoke($processor, [], ['pageId' => 7], 't3ai_generate_all_seo', 'default');
+
+        self::assertArrayNotHasKey('aiProvider', $empty);
+        self::assertArrayNotHasKey('aiProvider', $default);
+    }
+
+    #[Test]
+    public function mergeContextKeepsExplicitAiProvider(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            ['aiProvider' => 'claude'],
+            ['pageId' => 7],
+            't3ai_generate_all_seo',
+            'openai',
+        );
+
+        self::assertSame('claude', $merged['aiProvider']);
+    }
 }
