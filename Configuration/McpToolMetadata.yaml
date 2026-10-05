@@ -96,6 +96,21 @@ tools:
       - 'neue Seite oder Unterseite anlegen, Inhaltselemente hinzufügen'
       - 'Seite oder Datensatz löschen'
 
+  records_apply:
+    category: Records
+    status: ready
+    tagline: Apply many record changes across tables in one atomic call
+    notes: 'One DataHandler run in one database transaction: any refusal or error rolls back every change. data = {table: {uid or NEWid: fields}}, cmd for delete/move/copy/undelete/localize, up to 500 records per call. New records are appended in the order sent. Use dryRun first: it runs everything for real, then rolls back. Returns the NEW id to uid map and a batchId.'
+    examplePrompts:
+      - 'Create a landing page with a header, three text elements and a FAQ in one go'
+      - 'Hide all 40 expired news records in one operation'
+      - 'Move these 12 content elements to the Services page, then show me what would change first'
+      - 'Import this list of 200 glossary entries and roll back if any of them fails'
+    searchTerms:
+      - 'batch create update delete records, bulk write, many records at once'
+      - 'atomic multi-record change with dry run and rollback'
+      - 'Datensätze gesammelt anlegen, ändern oder löschen, Stapelverarbeitung'
+
   workspace_list:
     category: Workspaces
     status: ready

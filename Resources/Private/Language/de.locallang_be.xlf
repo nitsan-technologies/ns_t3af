@@ -2313,6 +2313,10 @@
                 <source>Change a record</source>
                 <target>Datensatz ändern</target>
             </trans-unit>
+            <trans-unit id="agent.tool.label.records_apply">
+                <source>Apply several record changes</source>
+                <target>Mehrere Datensatzänderungen anwenden</target>
+            </trans-unit>
             <trans-unit id="agent.tool.label.t3aa_get_file_for_metadata">
                 <source>Look at an image</source>
                 <target>Bild ansehen</target>

@@ -1846,6 +1846,9 @@
       <trans-unit id="agent.tool.label.write_table" resname="agent.tool.label.write_table">
         <source>Change a record</source>
       </trans-unit>
+      <trans-unit id="agent.tool.label.records_apply" resname="agent.tool.label.records_apply">
+        <source>Apply several record changes</source>
+      </trans-unit>
       <trans-unit id="agent.tool.label.t3aa_get_file_for_metadata" resname="agent.tool.label.t3aa_get_file_for_metadata">
         <source>Look at an image</source>
       </trans-unit>

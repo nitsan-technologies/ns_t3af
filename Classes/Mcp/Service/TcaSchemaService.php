@@ -193,6 +193,83 @@ readonly class TcaSchemaService
         return $fields;
     }
 
+    /**
+     * Fields the batch engine (records_apply) may write: everything getWritableFields() returns, plus
+     * file and inline fields, which the engine takes as comma-separated uid / NEW-id lists.
+     *
+     * Kept apart from getWritableFields() on purpose: write_table handles file fields through
+     * dedicated reference calls, and widening the shared list would change what it accepts.
+     *
+     * @return list<string>
+     */
+    public function getApplyWritableFields(string $tableName): array
+    {
+        $tca = $this->getTca($tableName);
+        if ($tca === null) {
+            return [];
+        }
+
+        $columns = $tca['columns'] ?? [];
+        if (!is_array($columns)) {
+            return [];
+        }
+
+        $systemFields = $this->getSystemFields($tca);
+        $fields = [];
+
+        foreach ($columns as $fieldName => $columnConfig) {
+            if (!is_string($fieldName) || !is_array($columnConfig) || in_array($fieldName, $systemFields, true)) {
+                continue;
+            }
+
+            if ($this->isWritableField($columnConfig) || $this->isWritableListContainer($columnConfig)) {
+                $fields[] = $fieldName;
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
+     * Fields of a table whose value is a list of related uids: category / MM relations, file fields and
+     * inline collections. records_apply accepts these as a list or comma-separated string, including
+     * NEW ids of records created in the same call.
+     *
+     * @return list<string>
+     */
+    public function getApplyListFields(string $tableName): array
+    {
+        $writable = $this->getApplyWritableFields($tableName);
+        $tca = $this->getTca($tableName);
+        $columns = is_array($tca) && is_array($tca['columns'] ?? null) ? $tca['columns'] : [];
+
+        $fields = [];
+        foreach ($writable as $fieldName) {
+            $columnConfig = $columns[$fieldName] ?? null;
+            if (!is_array($columnConfig)) {
+                continue;
+            }
+
+            if ($this->isRelationUidListField($columnConfig) || $this->isWritableListContainer($columnConfig)) {
+                $fields[] = $fieldName;
+            }
+        }
+
+        return $fields;
+    }
+
+    /** @param array<mixed> $columnConfig */
+    private function isWritableListContainer(array $columnConfig): bool
+    {
+        if (!$this->isFileField($columnConfig) && !$this->isCollectionField($columnConfig)) {
+            return false;
+        }
+
+        $config = $columnConfig['config'] ?? [];
+
+        return !(is_array($config) && ($config['readOnly'] ?? false) === true);
+    }
+
     /** @return list<string> Field names that are file reference fields (TCA type 'file' or inline with sys_file_reference). */
     public function getFileFields(string $tableName): array
     {
