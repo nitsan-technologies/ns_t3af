@@ -45,8 +45,17 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 final class DataHandlerServiceFileReferenceTest extends TestCase
 {
+    /** @var array<string, mixed>|null */
+    private ?array $originalTca = null;
+
     protected function tearDown(): void
     {
+        if ($this->originalTca !== null) {
+            $GLOBALS['TCA'] = $this->originalTca;
+            $this->originalTca = null;
+        } else {
+            unset($GLOBALS['TCA']);
+        }
         GeneralUtility::purgeInstances();
         parent::tearDown();
     }
@@ -75,8 +84,15 @@ final class DataHandlerServiceFileReferenceTest extends TestCase
             });
         GeneralUtility::addInstance(DataHandler::class, $dataHandler);
 
-        // BackendUtility::getRecord('tt_content', 10, 'uid,pid') resolves TcaSchemaFactory
-        // twice (once for its own TCA check, once inside DeletedRestriction's constructor).
+        // v13 BackendUtility::getRecord() early-returns null when $GLOBALS['TCA'][$table]
+        // is empty. v14 uses TcaSchemaFactory instead (mocked below).
+        $this->originalTca = $GLOBALS['TCA'] ?? null;
+        $GLOBALS['TCA']['tt_content'] = [
+            'ctrl' => ['delete' => 'deleted'],
+            'columns' => [],
+        ];
+
+        // v14: getRecord resolves TcaSchemaFactory twice (own TCA check + DeletedRestriction).
         $schemaFactory = $this->createMock(TcaSchemaFactory::class);
         $schemaFactory->method('has')->willReturn(true);
         $schemaFactory->method('get')->willReturn($this->createMock(TcaSchema::class));
