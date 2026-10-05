@@ -476,11 +476,11 @@ Also fixed two pre-existing failures surfaced by `composer test`/`composer stan`
   6. Symfony AI bridge — **adopted** (decision reversed from earlier draft).
   7. T3Planet Credits mode toggle — visual stub only (Credits card disabled "Coming soon"). Full credits = Feature 2.
   8. Migration: `MigrateExtConfProvidersUpdate` upgrade wizard auto-imports existing `*_api_key` ext_conf entries.
-- Cross-cutting requirements (CC-1…CC-9 in FEATURE doc) apply project-wide: security/sodium, BE roles, workspace, response cache, streaming, hooks/events/`AiServiceInterface` facade, custom providers, per-user budgets (forward), quality bars (PHPStan 10, phpat, Infection MSI ≥ 70%, PHP 8.1+ × TYPO3 12.4/13.4 matrix).
+- Cross-cutting requirements (CC-1…CC-9 in FEATURE doc) apply project-wide: security/sodium, BE roles, workspace, response cache, streaming, hooks/events/`AiServiceInterface` facade, custom providers, per-user budgets (forward), quality bars (PHPStan, phpat, Infection MSI ≥ 70%, PHP 8.2+ × TYPO3 13.4/14.3 matrix).
 - Public API: `NITSAN\NsT3AF\Api\AiServiceInterface` is the semver-stable surface. Child extensions (`ns_t3ai`, `ns_t3cs`, …) inject this; never touch adapters directly.
 - File list (add/modify) and verification steps are in the FEATURE file.
 - `BaseClient` / `AiRequestService` stay on ext_conf in v1 — switch happens in a follow-up patch after migration ships.
-- Branch separation: master-extension feature work targets new v2.x line (PHP 8.1+, TYPO3 12.4+); existing v1.x compatibility kept.
+- Branch separation: v2.x line is PHP 8.2+ / TYPO3 `^13.4 || ^14.3`; v1.x keeps TYPO3 12 for legacy customers.
 
 **Forward-pointed features (separate FEATURE_*.md files later):**
 - Feature 2 — AI Credits (port from `autodudes/ai-suite` → `packages/ai-suite/Classes/Enumeration/CreditCostEnumeration.php`, `Backend/ToolbarItems/RequestsToolbarItem.php`).
@@ -494,7 +494,7 @@ Also fixed two pre-existing failures surfaced by `composer test`/`composer stan`
 - Static analysis: `composer stan` (PHPStan 2.1, level 3 globally; new `Provider/`, `Api/`, `Service/AiService` namespaces opt into level 8 via path-scoped config to be added in Feature 1)
 - Code style: `composer cs:check` (php-cs-fixer 3.94, non-blocking baseline)
 - Bootstrap: `.Build/vendor/autoload.php`
-- CI: `.github/workflows/ci.yml` — currently PHP 8.4 only; expand to PHP 8.1/8.2/8.3/8.4 × TYPO3 12.4/13.4 in Feature 1
+- CI: `.github/workflows/core13.yml` + `core14.yml` — PHP 8.2/8.3/8.4 × TYPO3 13.4/14.3
 - 3 reference unit tests already in `Tests/Unit/` — mirror their pattern
 
 **Decisions confirmed:**

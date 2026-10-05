@@ -1,9 +1,9 @@
-# TYPO3 Core Backend Design Guide (v12 · v13 · v14)
+# TYPO3 Core Backend Design Guide (v13 · v14)
 
 Design reference for **ns_t3af** backend modules. Use TYPO3 core markup and CSS first; add extension CSS only when core cannot express the layout.
 
 **Scope:** Backend module UI (Fluid templates, module CSS, JS toggles).  
-**Supported TYPO3:** `^13.4 || ^14.3` (see `composer.json`). Guidance below still discusses v12 for historical/comparison context (child extensions or older installs); ns_t3af itself no longer supports it.  
+**Supported TYPO3:** `^13.4 || ^14.3` (see `composer.json`). Some tables still mention v12 for historical comparison only — ns_t3af does not support it.  
 **Reference implementation:** `Resources/Private/Partials/`, `Resources/Public/Css/module/`.
 
 ---
@@ -12,7 +12,7 @@ Design reference for **ns_t3af** backend modules. Use TYPO3 core markup and CSS 
 
 1. **Look native** — Users should not notice a “custom skin” inside the TYPO3 backend.
 2. **Survive upgrades** — Prefer core classes and `--typo3-*` tokens over hard-coded colours (`#f8fafc`, `#fff`).
-3. **Support v12–v14** — One template set with progressive enhancement on v14; avoid v14-only markup without a fallback where feasible.
+3. **Support v13–v14** — One template set with progressive enhancement on v14; avoid v14-only markup without a fallback where feasible.
 4. **Use TYPO3 core typography** — Inherit backend font stack, sizes, and line-height from `backend.css`. Never ship a parallel type scale (Inter, Fira Code, pixel labels, custom `__title` sizes).
 
 ### Core typography rule (always)
@@ -28,7 +28,7 @@ Design reference for **ns_t3af** backend modules. Use TYPO3 core markup and CSS 
 
 ## Cross-version strategy
 
-Use **v14 core patterns as the design target**, with graceful degradation on v12 and v13.
+Use **v14 core patterns as the design target**, with graceful degradation on v13.
 
 ```
 Design (v14 styleguide + SubmoduleOverview)
@@ -37,13 +37,13 @@ Markup (core classes, one Fluid template set)
     ↓
 CSS (layout + --typo3-* tokens with fallbacks in base.css)
     ↓
-Test v12 + v13 + v14 (light + dark backend theme)
+Test v13 + v14 (light + dark backend theme)
 ```
 
 | Principle | Rationale |
 |-----------|-----------|
 | **Target v14 markup** | Newest patterns (`card-container`, structured `card-header`, `callout`) |
-| **Token + fallback CSS** | `--typo3-*` on v13+; v12 gets sensible defaults via `base.css` |
+| **Token + fallback CSS** | `--typo3-*` tokens with fallbacks in `base.css` |
 | **One template set** | No version-specific Fluid files unless unavoidable |
 | **Extension CSS = layout only** | Do not re-skin `.card`, `.btn`, `.badge` |
 | **Toggle `active` + `is-active`** | Segmented controls work with core JS and extension scripts |
@@ -167,7 +167,7 @@ Install or enable styleguide in local DDEV when designing new UI. After core upg
 <code>gpt-4o</code>
 ```
 
-### Core tokens (v12 · v13 · v14)
+### Core tokens (v13 · v14)
 
 Source: `typo3/sysext/backend/Resources/Public/Css/backend.css` (`:root`). Live preview: **Styleguide → Styles**.
 
@@ -190,7 +190,7 @@ Source: `typo3/sysext/backend/Resources/Public/Css/backend.css` (`:root`). Live 
 
 **v12 note:** `--typo3-font-size` and related tokens may be partial or absent. Still use the same **class names** (`card-title`, `btn-sm`, `small`, `text-variant`) — they map to `backend.css` in all supported versions. Do not add a v12-specific font stack.
 
-### v12 · v13 · v14 typography compatibility
+### v13 · v14 typography compatibility
 
 | Concern | v12 | v13 · v14 | Extension rule |
 |---------|-----|-----------|----------------|
@@ -923,7 +923,7 @@ Reference: `Partials/McpTools/ToolDetailDrawer.html` (`ToolBody` + `Drawer` sect
 4. Compare parameter table border weight to **Styleguide → Tables** nested in card.
 5. Light + dark theme on expanded row and drawer.
 
-### Field help in slide-in drawers (v12 · v13 · v14)
+### Field help in slide-in drawers (v13 · v14)
 
 Reference: `Partials/Module/FieldHelpIcon.html`, `FieldLabelHelp.html`, `FieldLabelHelpInner.html`, `FieldHelpForKey.html`; init in `Resources/Public/JavaScript/provider-drawer.js` (`initFieldHelpLinks`).
 
@@ -942,7 +942,7 @@ Short field labels (especially pricing / cost fields) need inline help so users 
 
 **Why not only `@typo3/backend/context-help.js`?** Core CSH binds `.help-link` once at document ready. Slide-in drawers load HTML later, so popovers must be created in the drawer module after `panel.innerHTML = …`.
 
-**Compatibility (v12–v14):** Bootstrap 5 Popover, `.help-teaser` / `actions-system-help-open`, and ESM `import { Popover } from 'bootstrap'` are available on all supported versions (`composer.json`: `typo3/cms-core` `^12.4 \|\| ^13.4 \|\| ^14.3`). Avoid Fluid `<f:tag>` (not available / unreliable across Fluid builds). Prefer plain HTML wrappers.
+**Compatibility (v13–v14):** Bootstrap 5 Popover, `.help-teaser` / `actions-system-help-open`, and ESM `import { Popover } from 'bootstrap'` are available on supported versions (`composer.json`: `typo3/cms-core` `^13.4 || ^14.3`). Avoid Fluid `<f:tag>` (not available / unreliable across Fluid builds). Prefer plain HTML wrappers.
 
 **Forbidden:** Native `title="…"` alone for long help (truncates / inaccessible); popovers without `container: body` inside overflow drawers; assuming core `context-help.js` covers AJAX markup.
 
@@ -964,7 +964,7 @@ Short field labels (especially pricing / cost fields) need inline help so users 
 
 Avoid custom ghost buttons (`aiu-mcp-action-btn`, `aiu-btn-outline`) in new UI — use `btn btn-default`.
 
-### Table row icon actions (v12 · v13 · v14)
+### Table row icon actions (v13 · v14)
 
 Reference: `beuser/Resources/Private/Partials/BackendUser/PaginatedList.fluid.html`, `Partials/Provider/Row.html`.
 
@@ -1089,7 +1089,7 @@ Preserve stable hooks: `data-scheduler-cli-toggle`, `data-scheduler-cli-card`, `
 
 ## CSS rules for extension modules
 
-### Prefer tokens with fallbacks (v12–v14)
+### Prefer tokens with fallbacks (v13–v14)
 
 ```css
 .my-block {
@@ -1102,7 +1102,7 @@ Preserve stable hooks: `data-scheduler-cli-toggle`, `data-scheduler-cli-card`, `
 
 Brand colours (`--aiu-primary`) are **bridged to TYPO3 core** in `base.css` (`--typo3-link-color`, `--typo3-state-primary-*`). Do **not** hardcode extension blue (`#1a56db`, `#2563eb`, `rgba(26, 86, 219, …)`).
 
-### Colour tokens (v12–v14)
+### Colour tokens (v13–v14)
 
 | Token | Maps to | Use for |
 |-------|---------|---------|
@@ -1237,7 +1237,7 @@ Healthy / default “`0/50 cr`” text **and** the wallet icon (`.aiu-toolbar-cr
 
 ### Self-design testing (required before merge)
 
-When changing Fluid markup or module CSS, **manually verify on each supported TYPO3 version** you have locally (v12.4, v13.4, v14.3). Do not rely on markup-only review.
+When changing Fluid markup or module CSS, **manually verify on each supported TYPO3 version** you have locally (v13.4, v14.3). Do not rely on markup-only review.
 
 | Step | Action |
 |------|--------|
@@ -1319,4 +1319,4 @@ Compare visually against **System → Styleguide → Components** on the same TY
 
 ---
 
-*Last updated: 2026-09-29 — Field help in slide-in drawers (Bootstrap Popover + AJAX init, v12–v14).*
+*Last updated: 2026-10-05 — Support floor refreshed to v13 · v14 only.*

@@ -91,7 +91,8 @@ readonly class DataHandlerService
 
         try {
             if ($table === 'pages') {
-                // TYPO3 v12 RootlineUtility cannot resolve workspace version uids; always address live.
+                // DataHandler page writes must use the live uid — workspace version
+                // uids break RootlineUtility / SiteFinder ("Could not fetch page data").
                 $uid = $this->resolveLivePageUid($uid);
                 $this->attachSiteAttribute($uid);
             }
@@ -335,10 +336,9 @@ readonly class DataHandlerService
             }
 
             // Placeholder must not contain "_": DataHandler::processRemapStack() treats
-            // underscored child ids as "<table>_<uid>" and fails to resolve them. On v12
-            // FileExtensionFilter then throws after the reference row is already written
-            // (duplicate references on MCP retry); on v13/v14 the reference is silently
-            // dropped from the parent field. Same pattern as createRecord().
+            // underscored child ids as "<table>_<uid>" and fails to resolve them — the
+            // reference is then silently dropped from the parent field on v13/v14.
+            // Same pattern as createRecord().
             $newId = 'NEW' . bin2hex(random_bytes(8));
             $newIds[] = $newId;
             $parentValueParts[] = $newId;

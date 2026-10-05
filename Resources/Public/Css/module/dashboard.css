@@ -73,7 +73,7 @@
 
 .aiu-period__menu.dropdown-menu {
     --typo3-dropdown-min-width: 14rem;
-    /* Keep menu fully visible on v12–v14 (Bootstrap 5 dropdown). */
+    /* Keep menu fully visible on v13–v14 (Bootstrap 5 dropdown). */
     overflow-x: hidden;
     overflow-y: auto;
     max-height: min(70vh, 28rem);

@@ -38,8 +38,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 /**
  * Regression: sys_file_reference placeholders must not contain "_", otherwise
  * DataHandler::processRemapStack() parses them as "<table>_<uid>" and the
- * parent field remap fails (v12: exception after the row is written → MCP
- * retry duplicates; v13/v14: reference silently dropped from the parent).
+ * parent field remap fails (v13/v14: reference silently dropped from the parent).
  *
  * @internal
  */
