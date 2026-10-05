@@ -300,9 +300,13 @@
 }
 
 .nst3af-agent-ctxchip:not(:first-child)::before {
-  content: '\203A';
-  margin-right: 5px;
-  color: var(--nst3af-agent-text-faint);
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 10px;
+  background-color: var(--nst3af-agent-text-faint);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23000' d='M5.5 2.6 11.4 8l-5.9 5.4-.9-1 4.8-4.4-4.8-4.4z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23000' d='M5.5 2.6 11.4 8l-5.9 5.4-.9-1 4.8-4.4-4.8-4.4z'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .nst3af-agent-ctxchip:last-of-type {
@@ -408,6 +412,10 @@
   border-radius: 14px 14px 4px 14px;
   padding: 6px 12px;
   max-width: 78%;
+}
+
+.nst3af-agent-msg--user p {
+  margin-bottom: 0;
 }
 
 .nst3af-agent-msg--assistant {
@@ -870,7 +878,7 @@
 .nst3af-agent-kbd {
   display: inline-block;
   padding: 1px 5px;
-  border: 1px solid var(--nst3af-agent-border);
+  border: 1px solid var(--nst3af-agent-border) !important;
   border-bottom-width: 2px;
   border-radius: 4px;
   background: var(--nst3af-agent-surface);
@@ -1002,25 +1010,23 @@
   height: auto;
   padding: 6px 14px 6px 10px;
   border: 1px solid var(--nst3af-agent-accent);
-  border-radius: 999px;
   background: linear-gradient(180deg, var(--nst3af-agent-accent-soft) 0%, var(--nst3af-agent-surface) 100%);
   color: var(--nst3af-agent-text);
   font-size: 12.5px;
-  font-weight: 600;
   line-height: 1.2;
   cursor: pointer;
   box-shadow: 0 1px 0 rgba(244, 98, 58, 0.12);
 }
 
-.scaffold-toolbar .nst3af-agent-launchbar.toolbar-item-link,
-.scaffold-toolbar .nst3af-agent-launchbar.toolbar-item-link:hover,
-.scaffold-toolbar .nst3af-agent-launchbar.toolbar-item-link:focus,
-.nst3af-agent-launchbar.toolbar-item-link {
+.scaffold-toolbar .nst3af-agent-launchbar.toolbar-item-link:not(.nst3af-agent-launchbar--topbar),
+.scaffold-toolbar .nst3af-agent-launchbar.toolbar-item-link:not(.nst3af-agent-launchbar--topbar):hover,
+.scaffold-toolbar .nst3af-agent-launchbar.toolbar-item-link:not(.nst3af-agent-launchbar--topbar):focus,
+.nst3af-agent-launchbar.toolbar-item-link:not(.nst3af-agent-launchbar--topbar) {
   color: var(--nst3af-agent-text);
 }
 
-.nst3af-agent-launchbar:hover,
-.nst3af-agent-launchbar:focus-visible {
+.nst3af-agent-launchbar:hover:not(.nst3af-agent-launchbar--topbar),
+.nst3af-agent-launchbar:focus-visible:not(.nst3af-agent-launchbar--topbar) {
   background: var(--nst3af-agent-accent-soft);
   border-color: var(--nst3af-agent-accent);
   outline: none;
@@ -1048,7 +1054,7 @@
   margin-left: auto;
   flex-shrink: 0;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 400;
   padding: 2px 6px;
   border-radius: 5px;
   border: 1px solid var(--nst3af-agent-border-soft);
@@ -1057,27 +1063,44 @@
   font-family: inherit;
 }
 
-/* The mounted topbar clone sits on TYPO3's dark header bar — use the topbar's own CSS custom
-   properties (already defined on .topbar, an ancestor here) instead of the panel's light
-   --nst3af-agent-surface tokens, which produced a bright white pill clashing with the bar. */
-.nst3af-agent-launchbar--topbar {
+.nst3af-agent-launchbar--topbar .nst3af-agent-launchbar__kbd {
+  background: transparent !important;
+}
+
+/* Topbar clone: use core topbar / state tokens (they already flip via light-dark /
+   data-color-scheme / data-bs-theme). Match .topbar-button: set color+bg+border together. */
+.nst3af-agent-launchbar--topbar,
+.nst3af-agent-launchbar--topbar.toolbar-item-link {
   margin: 0;
   color: var(--topbar-item-color, inherit);
   background: var(--topbar-item-bg, transparent);
   border-color: color-mix(in srgb, var(--topbar-item-color, currentColor) 25%, transparent);
-  box-shadow: 0 2px 4px color-mix(in srgb, var(--topbar-item-color, currentColor) 50%, transparent);
+  box-shadow: 0 0 2px color-mix(in srgb, var(--topbar-item-color, currentColor) 50%, transparent);
 }
 
 .nst3af-agent-launchbar--topbar:hover,
-.nst3af-agent-launchbar--topbar:focus-visible {
+.nst3af-agent-launchbar--topbar:focus,
+.nst3af-agent-launchbar--topbar.toolbar-item-link:hover,
+.nst3af-agent-launchbar--topbar.toolbar-item-link:focus {
+  color: var(--typo3-state-default-hover-color, var(--topbar-item-color, inherit));
   background: var(--typo3-state-default-hover-bg, var(--topbar-item-bg, transparent));
   border-color: var(--typo3-state-default-hover-border-color, currentColor);
+  outline: none;
+}
+
+.nst3af-agent-launchbar--topbar:focus-visible,
+.nst3af-agent-launchbar--topbar.toolbar-item-link:focus-visible {
+  color: var(--typo3-state-default-focus-color, var(--typo3-state-default-hover-color, inherit));
+  background: var(--typo3-state-default-focus-bg, var(--typo3-state-default-hover-bg, transparent));
+  border-color: var(--typo3-state-default-focus-border-color, var(--typo3-state-default-hover-border-color, currentColor));
+  outline: none;
 }
 
 .nst3af-agent-launchbar--topbar .nst3af-agent-launchbar__kbd {
-  background: color-mix(in srgb, var(--topbar-item-color, currentColor) 14%, transparent);
-  border-color: color-mix(in srgb, var(--topbar-item-color, currentColor) 25%, transparent);
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  border-color: color-mix(in srgb, currentColor 25%, transparent);
   color: inherit;
+  box-shadow: none;
 }
 
 .toolbar-item-nst3af-agent--hidden {

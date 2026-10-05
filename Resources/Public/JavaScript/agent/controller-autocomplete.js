@@ -247,7 +247,7 @@ export const autocompleteMethods = {
         redirectsToPage: 'actions-link',
         createRedirect: 'actions-link',
         failedTasks: 'actions-clock',
-        workspaceChanges: 'actions-workspace',
+        workspaceChanges: 'apps-toolbar-menu-workspace',
         pageTree: 'apps-pagetree-page-default',
         capabilities: 'actions-info-circle',
         recordImprove: 'actions-document-edit',
