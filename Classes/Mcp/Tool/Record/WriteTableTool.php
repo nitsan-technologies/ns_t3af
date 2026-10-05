@@ -33,6 +33,7 @@ use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\RecordPayloadNormalizer;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
@@ -44,14 +45,15 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 {
     private const ALLOWED_ACTIONS = ['create', 'update', 'delete'];
 
-    /** @var list<string> */
-    private const FILE_REF_META_KEYS = ['alternative', 'title', 'description', 'link', 'crop'];
+    private RecordPayloadNormalizer $normalizer;
 
     public function __construct(
         private DataHandlerService $dataHandlerService,
         private RecordService $recordService,
-        private TcaSchemaService $tcaSchemaService,
-    ) {}
+        TcaSchemaService $tcaSchemaService,
+    ) {
+        $this->normalizer = new RecordPayloadNormalizer($tcaSchemaService);
+    }
 
     /**
      * @param array<string, mixed> $arguments
@@ -173,7 +175,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
         $pid = (int) $payload['pid'];
         unset($payload['pid']);
-        $filteredData = $this->filterWritableFields($tableName, $payload);
+        $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
 
         $fields = [];
         foreach ($filteredData as $fieldName => $value) {
@@ -201,9 +203,9 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             throw new \InvalidArgumentException('Record not found: ' . $tableName . ' uid ' . $uid);
         }
 
-        $filteredData = $this->filterWritableFields($tableName, $payload);
+        $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
         if ($filteredData === []) {
-            throw new \InvalidArgumentException($this->noWritableFieldsMessage($tableName, $payload, $filteredData));
+            throw new \InvalidArgumentException($this->normalizer->noWritableFieldsMessage($tableName, $payload, $filteredData));
         }
 
         $fieldNames = array_keys($filteredData);
@@ -256,15 +258,15 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         $pid = (int) $payload['pid'];
         unset($payload['pid']);
 
-        [$payload, $fileFields] = $this->extractInlineFileFields($tableName, $payload);
-        $payload = $this->normalizeRelationUidListFields($tableName, $payload);
-        $filteredData = $this->filterWritableFields($tableName, $payload);
-        $ignoredFields = $this->ignoredFields($payload, $filteredData);
+        [$payload, $fileFields] = $this->normalizer->extractFileFields($tableName, $payload);
+        $payload = $this->normalizer->normalizeRelationUidListFields($tableName, $payload);
+        $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
+        $ignoredFields = $this->normalizer->ignoredFields($payload, $filteredData);
 
         if ($filteredData === [] && $fileFields === []) {
             return $this->encodeError(
                 'No valid writable fields provided.',
-                $this->ignoredFieldsContext($tableName, $ignoredFields),
+                $this->normalizer->ignoredFieldsContext($tableName, $ignoredFields),
             );
         }
 
@@ -284,7 +286,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             'ignoredFields' => $ignoredFields,
         ];
         if ($ignoredFields !== []) {
-            $response['ignoredFieldDetails'] = $this->ignoredFieldDetails($tableName, $ignoredFields);
+            $response['ignoredFieldDetails'] = $this->normalizer->ignoredFieldDetails($tableName, $ignoredFields);
         }
         if ($fileFieldUids !== []) {
             $response['fileFields'] = $fileFieldUids;
@@ -304,15 +306,15 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             return $this->encodeError('Record not found: ' . $tableName . ' uid ' . $uid);
         }
 
-        [$payload, $fileFields] = $this->extractInlineFileFields($tableName, $payload);
-        $payload = $this->normalizeRelationUidListFields($tableName, $payload);
-        $filteredData = $this->filterWritableFields($tableName, $payload);
-        $ignoredFields = $this->ignoredFields($payload, $filteredData);
+        [$payload, $fileFields] = $this->normalizer->extractFileFields($tableName, $payload);
+        $payload = $this->normalizer->normalizeRelationUidListFields($tableName, $payload);
+        $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
+        $ignoredFields = $this->normalizer->ignoredFields($payload, $filteredData);
 
         if ($filteredData === [] && $fileFields === []) {
             return $this->encodeError(
                 'No valid writable fields provided.',
-                $this->ignoredFieldsContext($tableName, $ignoredFields),
+                $this->normalizer->ignoredFieldsContext($tableName, $ignoredFields),
             );
         }
 
@@ -333,7 +335,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             'ignoredFields' => $ignoredFields,
         ];
         if ($ignoredFields !== []) {
-            $response['ignoredFieldDetails'] = $this->ignoredFieldDetails($tableName, $ignoredFields);
+            $response['ignoredFieldDetails'] = $this->normalizer->ignoredFieldDetails($tableName, $ignoredFields);
         }
         if ($fileFieldUids !== []) {
             $response['fileFields'] = $fileFieldUids;
@@ -366,69 +368,6 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     }
 
     /**
-     * Pull TCA file fields shaped as [{"uid_local": N, ...}] (or []) out of the payload.
-     *
-     * @param array<string, mixed> $payload
-     * @return array{
-     *     0: array<string, mixed>,
-     *     1: array<string, list<array{uid_local: int, alternative?: string, title?: string, description?: string, link?: string, crop?: string}>>
-     * }
-     */
-    private function extractInlineFileFields(string $tableName, array $payload): array
-    {
-        $extracted = [];
-        foreach ($this->tcaSchemaService->getFileFields($tableName) as $fieldName) {
-            if (!array_key_exists($fieldName, $payload)) {
-                continue;
-            }
-
-            $value = $payload[$fieldName];
-            if (!is_array($value) || !$this->isUidLocalReferenceList($value)) {
-                continue;
-            }
-
-            $normalized = [];
-            foreach ($value as $item) {
-                if (!is_array($item)) {
-                    continue;
-                }
-                $uidLocal = (int) ($item['uid_local'] ?? 0);
-                if ($uidLocal <= 0) {
-                    continue;
-                }
-                $ref = ['uid_local' => $uidLocal];
-                foreach (self::FILE_REF_META_KEYS as $metaKey) {
-                    if (isset($item[$metaKey]) && is_string($item[$metaKey])) {
-                        $ref[$metaKey] = $item[$metaKey];
-                    }
-                }
-                $normalized[] = $ref;
-            }
-
-            $extracted[$fieldName] = $normalized;
-            unset($payload[$fieldName]);
-        }
-
-        return [$payload, $extracted];
-    }
-
-    /** @param array<mixed> $value */
-    private function isUidLocalReferenceList(array $value): bool
-    {
-        if ($value === []) {
-            return true;
-        }
-
-        foreach ($value as $item) {
-            if (!is_array($item) || !array_key_exists('uid_local', $item)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
      * @param array<string, list<array{uid_local: int, alternative?: string, title?: string, description?: string, link?: string, crop?: string}>> $fileFields
      * @return array<string, list<int>>
      */
@@ -445,108 +384,6 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return $result;
-    }
-
-    /**
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>
-     */
-    private function normalizeRelationUidListFields(string $tableName, array $payload): array
-    {
-        foreach ($this->tcaSchemaService->getRelationUidListFields($tableName) as $fieldName) {
-            if (!array_key_exists($fieldName, $payload)) {
-                continue;
-            }
-            $value = $payload[$fieldName];
-            if (is_int($value) || is_float($value)) {
-                $payload[$fieldName] = (string) (int) $value;
-                continue;
-            }
-            if (is_array($value)) {
-                $uids = [];
-                foreach ($value as $item) {
-                    if (is_int($item) || (is_string($item) && ctype_digit($item))) {
-                        $uids[] = (string) (int) $item;
-                    }
-                }
-                $payload[$fieldName] = implode(',', $uids);
-            }
-        }
-
-        return $payload;
-    }
-
-    /**
-     * @param array<string, mixed> $payload
-     * @param array<string, mixed> $filteredData
-     */
-    private function noWritableFieldsMessage(string $tableName, array $payload, array $filteredData): string
-    {
-        $ignored = $this->ignoredFields($payload, $filteredData);
-        if ($ignored === []) {
-            return 'No valid writable fields provided.';
-        }
-
-        $hints = [];
-        foreach ($this->ignoredFieldDetails($tableName, $ignored) as $detail) {
-            $field = (string) ($detail['field'] ?? '');
-            $hint = trim((string) ($detail['hint'] ?? ''));
-            if ($field === '' || $hint === '') {
-                continue;
-            }
-            $hints[] = $field . ': ' . $hint;
-        }
-
-        return $hints !== []
-            ? 'No valid writable fields provided. ' . implode(' ', $hints)
-            : 'No valid writable fields provided. Ignored: ' . implode(', ', $ignored) . '.';
-    }
-
-    /**
-     * @param list<string> $ignoredFields
-     * @return array{ignoredFields: list<string>, ignoredFieldDetails: list<array<string, mixed>>}
-     */
-    private function ignoredFieldsContext(string $tableName, array $ignoredFields): array
-    {
-        return [
-            'ignoredFields' => $ignoredFields,
-            'ignoredFieldDetails' => $this->ignoredFieldDetails($tableName, $ignoredFields),
-        ];
-    }
-
-    /**
-     * @param list<string> $ignoredFields
-     * @return list<array<string, mixed>>
-     */
-    private function ignoredFieldDetails(string $tableName, array $ignoredFields): array
-    {
-        $details = [];
-        foreach ($ignoredFields as $fieldName) {
-            $details[] = $this->tcaSchemaService->describeIgnoredField($tableName, $fieldName);
-        }
-
-        return $details;
-    }
-
-    /**
-     * @param array<string, mixed> $payload
-     * @return array<string, mixed>
-     */
-    private function filterWritableFields(string $tableName, array $payload): array
-    {
-        $writableFields = $this->tcaSchemaService->getWritableFields($tableName);
-
-        return array_intersect_key($payload, array_flip($writableFields));
-    }
-
-    /**
-     * @param array<string, mixed> $payload
-     * @param array<string, mixed> $filteredData
-     * @return list<string>
-     */
-    private function ignoredFields(array $payload, array $filteredData): array
-    {
-        return array_values(array_diff(array_keys($payload), array_keys($filteredData)));
     }
 
     private function tableExists(string $tableName): bool
