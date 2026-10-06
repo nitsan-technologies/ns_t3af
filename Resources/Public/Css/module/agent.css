@@ -280,38 +280,45 @@
   color: var(--nst3af-agent-text);
 }
 
+/* Context meta: TYPO3 docheader page-path pattern (.typo3-docheader-pagePath + strong). */
 .nst3af-agent-context {
   display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   padding: 9px 20px;
   border-bottom: 1px solid var(--nst3af-agent-border-soft);
   background: var(--nst3af-agent-surface-soft);
   min-height: 36px;
 }
 
-.nst3af-agent-ctxchip {
-  display: inline-flex;
+.nst3af-agent-context__doc {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 5px;
-  color: var(--nst3af-agent-text-muted);
-  font-size: 12px;
+  gap: 0;
+  max-width: 100%;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+}
+
+.nst3af-agent-context .typo3-docheader-pagePath,
+.nst3af-agent-context__sep {
+  color: var(--typo3-text-color-variant, var(--nst3af-agent-text-muted));
   white-space: nowrap;
 }
 
-.nst3af-agent-ctxchip:not(:first-child)::before {
-  content: '';
-  display: inline-block;
-  width: 12px;
-  height: 10px;
-  background-color: var(--nst3af-agent-text-faint);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23000' d='M5.5 2.6 11.4 8l-5.9 5.4-.9-1 4.8-4.4-4.8-4.4z'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23000' d='M5.5 2.6 11.4 8l-5.9 5.4-.9-1 4.8-4.4-4.8-4.4z'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-
-.nst3af-agent-ctxchip:last-of-type {
-  color: var(--nst3af-agent-text-strong);
-  font-weight: 600;
+.nst3af-agent-context__doc > strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-weight: 700;
+  color: var(--typo3-text-color-base, var(--nst3af-agent-text-strong));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nst3af-agent-disclosure {
@@ -336,11 +343,6 @@
   text-decoration: underline;
   cursor: pointer;
   padding: 0;
-}
-
-.nst3af-agent-ctxchip--dim:first-child {
-  color: var(--nst3af-agent-text-faint);
-  font-size: 11px;
 }
 
 @keyframes nst3af-agent-skeleton-pulse {
