@@ -198,39 +198,6 @@ readonly class DataHandlerService
     }
 
     /**
-     * @param list<int> $uids
-     * @param array<string, mixed> $fields
-     */
-    public function updateRecords(string $table, array $uids, array $fields): void
-    {
-        $datamap = [];
-        foreach ($uids as $uid) {
-            $datamap[$uid] = $fields;
-        }
-
-        $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
-        $dataHandler->start([$table => $datamap], []);
-        $dataHandler->process_datamap();
-
-        $this->checkErrors($dataHandler);
-    }
-
-    /** @param list<int> $uids */
-    public function moveRecords(string $table, array $uids, int $target): void
-    {
-        $cmdmap = [];
-        foreach ($uids as $uid) {
-            $cmdmap[$uid] = ['move' => $target];
-        }
-
-        $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
-        $dataHandler->start([], [$table => $cmdmap]);
-        $dataHandler->process_cmdmap();
-
-        $this->checkErrors($dataHandler);
-    }
-
-    /**
      * Attach sys_file records to a TCA file field via DataHandler.
      *
      * @param list<int> $fileUids sys_file UIDs to attach
