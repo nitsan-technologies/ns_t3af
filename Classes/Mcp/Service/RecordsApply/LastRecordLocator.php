@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Mcp\Service\RecordsApply;
 
+use NITSAN\NsT3AF\Mcp\Service\WorkspaceContextService;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
@@ -28,14 +29,17 @@ use TYPO3\CMS\Core\Database\Query\Restriction\WorkspaceRestriction;
 /**
  * Finds the record a new record has to be placed after to land at the end of its page.
  *
- * Only LIVE, not deleted records count. Hidden and time-restricted records count too: they still
+ * Only the live records (and, in a workspace, records new in that workspace) count, not deleted ones. Hidden and time-restricted records count too: they still
  * occupy a position in the backend, and placing a new record before them would reverse the order
  * the client sent. For translatable tables only records of the same language count, and for
  * tt_content only those of the same column.
  */
 readonly class LastRecordLocator
 {
-    public function __construct(private ConnectionPool $connectionPool) {}
+    public function __construct(
+        private ConnectionPool $connectionPool,
+        private WorkspaceContextService $workspaceContext,
+    ) {}
 
     /**
      * @param array<string, mixed> $fields the new record's fields, read for colPos and language
@@ -51,11 +55,19 @@ readonly class LastRecordLocator
         $queryBuilder->getRestrictions()
             ->removeAll()
             ->add(new DeletedRestriction())
-            ->add(new WorkspaceRestriction(0));
+            ->add(new WorkspaceRestriction($this->workspaceContext->getCurrentWorkspaceId()));
 
         $queryBuilder->select('uid')->from($table)->where(
             $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pid, Connection::PARAM_INT)),
         );
+
+        if ($this->workspaceContext->isTableWorkspaceAware($table)) {
+            // In a workspace the restriction also lets the workspace VERSIONS of existing records through
+            // (t3ver_oid > 0). Skip them: the position is the live record, or a record NEW in this workspace.
+            $queryBuilder->andWhere(
+                $queryBuilder->expr()->eq('t3ver_oid', $queryBuilder->createNamedParameter(0, Connection::PARAM_INT)),
+            );
+        }
 
         $this->constrain($queryBuilder, $table, 'colPos', $fields);
 

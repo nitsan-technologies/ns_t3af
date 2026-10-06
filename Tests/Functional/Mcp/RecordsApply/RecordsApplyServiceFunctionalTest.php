@@ -273,6 +273,123 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
         self::assertSame(0, $this->countWhere('tt_content', 'header', 'Blocked'));
     }
 
+    #[Test]
+    public function theBulkShorthandChangesAndDeletesManyRecordsInOneCall(): void
+    {
+        /** @var DataHandlerService $dataHandlerService */
+        $dataHandlerService = $this->get(DataHandlerService::class);
+        $first = $dataHandlerService->createRecord('tt_content', self::SITE_ROOT_PAGE_ID, ['CType' => 'text', 'header' => 'Bulk 1']);
+        $second = $dataHandlerService->createRecord('tt_content', self::SITE_ROOT_PAGE_ID, ['CType' => 'text', 'header' => 'Bulk 2']);
+        $third = $dataHandlerService->createRecord('tt_content', self::SITE_ROOT_PAGE_ID, ['CType' => 'text', 'header' => 'Bulk 3']);
+
+        $result = $this->service->apply(
+            [],
+            [],
+            false,
+            true,
+            true,
+            [
+                ['table' => 'tt_content', 'uids' => [$first, $second], 'set' => ['hidden' => 1]],
+                ['table' => 'tt_content', 'uids' => [$third], 'delete' => true],
+            ],
+        );
+
+        self::assertSame(['update' => 2, 'delete' => 1], $result->operations['tt_content']);
+        self::assertSame(2, $this->countWhere('tt_content', 'hidden', '1'));
+        self::assertSame(0, $this->countDeleted('tt_content', $first));
+        self::assertSame(1, $this->countDeleted('tt_content', $third));
+    }
+
+    #[Test]
+    public function aBulkEntryNamingAMissingRecordRefusesTheWholeCallAndWritesNothing(): void
+    {
+        /** @var DataHandlerService $dataHandlerService */
+        $dataHandlerService = $this->get(DataHandlerService::class);
+        $existing = $dataHandlerService->createRecord('tt_content', self::SITE_ROOT_PAGE_ID, ['CType' => 'text', 'header' => 'Untouched']);
+
+        try {
+            $this->service->apply(
+                [],
+                [],
+                false,
+                true,
+                true,
+                [['table' => 'tt_content', 'uids' => [$existing, 999999], 'set' => ['header' => 'Changed']]],
+            );
+            self::fail('Expected a validation exception.');
+        } catch (RecordsApplyValidationException $exception) {
+            self::assertSame('Record not found or not accessible.', $exception->getProblems()[0]['error']);
+        }
+
+        self::assertSame(1, $this->countWhere('tt_content', 'header', 'Untouched'));
+        self::assertSame(0, $this->countWhere('tt_content', 'header', 'Changed'));
+    }
+
+    #[Test]
+    public function inAWorkspaceTheBatchCreatesWorkspaceRecordsAndNothingLive(): void
+    {
+        $workspace = $this->switchToWorkspace();
+
+        $result = $this->service->apply(
+            [
+                'pages' => ['NEWpage' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Workspace page']],
+                'tt_content' => ['NEWc' => ['pid' => 'NEWpage', 'CType' => 'text', 'header' => 'Workspace element']],
+            ],
+            [],
+            false,
+            true,
+            true,
+        );
+
+        self::assertTrue($result->written);
+        self::assertCount(2, $result->created);
+        self::assertSame(1, $this->countWhere('pages', 'title', 'Workspace page', $workspace));
+        self::assertSame(0, $this->countWhere('pages', 'title', 'Workspace page', 0));
+        self::assertSame(1, $this->countWhere('tt_content', 'header', 'Workspace element', $workspace));
+        self::assertSame(0, $this->countWhere('tt_content', 'header', 'Workspace element', 0));
+    }
+
+    #[Test]
+    public function inAWorkspaceNewElementsAreStillAppendedAfterTheExistingOnes(): void
+    {
+        /** @var DataHandlerService $dataHandlerService */
+        $dataHandlerService = $this->get(DataHandlerService::class);
+        $dataHandlerService->createRecord('tt_content', self::SITE_ROOT_PAGE_ID, ['CType' => 'text', 'colPos' => 0, 'header' => 'Live 1']);
+        $dataHandlerService->createRecord('tt_content', self::SITE_ROOT_PAGE_ID, ['CType' => 'text', 'colPos' => 0, 'header' => 'Live 2']);
+
+        $this->switchToWorkspace();
+
+        $this->service->apply(
+            [
+                'tt_content' => [
+                    'NEWa' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'Workspace A'],
+                    'NEWb' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'Workspace B'],
+                ],
+            ],
+            [],
+            false,
+            true,
+            true,
+        );
+
+        $headers = $this->headersOnPage(self::SITE_ROOT_PAGE_ID);
+
+        self::assertCount(4, $headers);
+        self::assertSame(['Workspace A', 'Workspace B'], array_slice($headers, 2));
+    }
+
+    private function switchToWorkspace(): int
+    {
+        $connection = $this->getConnectionPool()->getConnectionForTable('sys_workspace');
+        $connection->insert('sys_workspace', ['pid' => 0, 'title' => 'MCP test workspace', 'deleted' => 0, 'tstamp' => 1734875000]);
+        $workspace = (int) $connection->lastInsertId();
+
+        $GLOBALS['BE_USER']->setWorkspace($workspace);
+        GeneralUtility::makeInstance(Context::class)->setAspect('workspace', new WorkspaceAspect($workspace));
+
+        return $workspace;
+    }
+
     /**
      * @return list<string>
      */
@@ -283,10 +400,17 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
             ->fetchFirstColumn());
     }
 
-    private function countWhere(string $table, string $field, string $value): int
+    private function countWhere(string $table, string $field, string $value, ?int $workspace = null): int
     {
+        $sql = 'SELECT COUNT(*) FROM ' . $table . ' WHERE ' . $field . ' = ?';
+        $parameters = [$value];
+        if ($workspace !== null) {
+            $sql .= ' AND t3ver_wsid = ?';
+            $parameters[] = $workspace;
+        }
+
         return (int) $this->getConnectionPool()->getConnectionForTable($table)
-            ->executeQuery('SELECT COUNT(*) FROM ' . $table . ' WHERE ' . $field . ' = ?', [$value])
+            ->executeQuery($sql, $parameters)
             ->fetchOne();
     }
 

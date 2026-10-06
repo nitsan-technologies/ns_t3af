@@ -71,6 +71,7 @@ final class RecordsApplyToolTest extends TestCase
                 true,
                 false,
                 false,
+                [['table' => 'tt_content', 'uids' => [1, 2], 'set' => ['hidden' => 1]]],
             )
             ->willReturn(new RecordsApplyResult('ra-abc', true, false, ['NEWc' => 41], [], ['tt_content' => ['create' => 1, 'delete' => 1]], []));
 
@@ -81,6 +82,7 @@ final class RecordsApplyToolTest extends TestCase
                 true,
                 false,
                 false,
+                '[{"table":"tt_content","uids":[1,2],"set":{"hidden":1}}]',
             ),
             true,
         );
@@ -103,7 +105,7 @@ final class RecordsApplyToolTest extends TestCase
     {
         $this->service->expects(self::once())
             ->method('apply')
-            ->with([], [], false, true, true)
+            ->with([], [], false, true, true, [])
             ->willReturn(new RecordsApplyResult('ra-abc', false, true, [], [], [], []));
 
         $this->tool->execute();
@@ -148,6 +150,69 @@ final class RecordsApplyToolTest extends TestCase
         $this->expectExceptionMessage('cmd must be a JSON object');
 
         $this->tool->execute('{}', '[1,2]');
+    }
+
+    #[Test]
+    public function aBulkThatIsNotAListIsAToolError(): void
+    {
+        $this->service->expects(self::never())->method('apply');
+
+        $this->expectException(ToolCallException::class);
+        $this->expectExceptionMessage('bulk must be a JSON list');
+
+        $this->tool->execute('{}', '{}', false, true, true, '{"table":"tt_content"}');
+    }
+
+    #[Test]
+    public function brokenBulkJsonIsAToolError(): void
+    {
+        $this->service->expects(self::never())->method('apply');
+
+        $this->expectException(ToolCallException::class);
+        $this->expectExceptionMessage('bulk must be a JSON list');
+
+        $this->tool->execute('{}', '{}', false, true, true, '[{oops');
+    }
+
+    #[Test]
+    public function aRequestOverTheByteCapIsRefusedBeforeItIsDecoded(): void
+    {
+        $this->service->expects(self::never())->method('apply');
+
+        $big = '{"tt_content":{"NEWc":{"pid":1,"bodytext":"' . str_repeat('x', RecordsApplyTool::MAX_PAYLOAD_BYTES) . '"}}}';
+
+        try {
+            $this->tool->execute($big);
+            self::fail('Expected a ToolCallException.');
+        } catch (ToolCallException $exception) {
+            self::assertStringContainsString('too large', $exception->getMessage());
+            self::assertStringContainsString('Nothing was written', $exception->getMessage());
+            self::assertStringNotContainsString('xxxxxxxx', $exception->getMessage());
+        }
+    }
+
+    #[Test]
+    public function theByteCapCountsDataCmdAndBulkTogether(): void
+    {
+        $this->service->expects(self::never())->method('apply');
+
+        $half = str_repeat('x', (int) (RecordsApplyTool::MAX_PAYLOAD_BYTES / 2));
+
+        $this->expectException(ToolCallException::class);
+        $this->expectExceptionMessage('too large');
+
+        $this->tool->execute($half, $half, false, true, true, '[]');
+    }
+
+    #[Test]
+    public function aRequestJustUnderTheByteCapIsAccepted(): void
+    {
+        $this->service->expects(self::once())->method('apply')
+            ->willReturn(new RecordsApplyResult('ra-abc', false, true, [], [], [], []));
+
+        $padding = str_repeat('x', RecordsApplyTool::MAX_PAYLOAD_BYTES - 100);
+
+        $this->tool->execute('{"tt_content":{"NEWc":{"pid":1,"header":"' . $padding . '"}}}');
     }
 
     #[Test]

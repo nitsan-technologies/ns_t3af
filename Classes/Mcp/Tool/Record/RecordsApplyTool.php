@@ -41,6 +41,9 @@ use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyValidationException;
 #[McpAgentHidden]
 readonly class RecordsApplyTool implements McpNonAiToolInterface
 {
+    /** What the three JSON arguments may weigh together. Bigger batches are split by the client. */
+    public const MAX_PAYLOAD_BYTES = 2097152;
+
     public function __construct(
         private RecordsApplyService $service,
     ) {}
@@ -52,6 +55,8 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
             . ' and needs "pid"; other records in the same call may point at it: pid "NEWpage1" puts a record on that new page,'
             . ' and file, inline and category/MM fields take "NEWa,NEWb" or [uid, "NEWb"] lists.'
             . ' cmd = {"<table>": {"<uid>": {"delete": 1 | "move": <pid, or -uid to go after a record> | "copy": <target> | "undelete": 1 | "localize": <language uid>}}}.'
+            . ' bulk = [{"table": "tt_content", "uids": [1, 2, 3], "set": {"hidden": 1}}] is a shorthand for the same field change on many records;'
+            . ' use "delete": true or "move": <target> instead of "set" for those. Each record may be named once per section.'
             . ' New records are appended after the existing ones on their page in the order sent (append=true); give a negative pid to place one yourself.'
             . ' strict=true (default) refuses the WHOLE call if any field is not writable and names it; strict=false drops those fields and reports them.'
             . ' dryRun=true runs everything for real, reports the result, then rolls everything back: use it first for deletes and large batches.'
@@ -69,12 +74,26 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
         bool $dryRun = false,
         bool $strict = true,
         bool $append = true,
+        string $bulk = '[]',
     ): string {
+        $size = strlen($data) + strlen($cmd) + strlen($bulk);
+        if ($size > self::MAX_PAYLOAD_BYTES) {
+            throw new ToolCallException(
+                sprintf(
+                    'The request is too large: %d bytes, the maximum is %d. Nothing was written. Split it into several calls.',
+                    $size,
+                    self::MAX_PAYLOAD_BYTES,
+                ),
+                1790500009,
+            );
+        }
+
         $datamap = $this->decodeObject($data, 'data');
         $cmdmap = $this->decodeObject($cmd, 'cmd');
+        $bulkEntries = $this->decodeList($bulk, 'bulk');
 
         try {
-            $result = $this->service->apply($datamap, $cmdmap, $dryRun, $strict, $append);
+            $result = $this->service->apply($datamap, $cmdmap, $dryRun, $strict, $append, $bulkEntries);
         } catch (RecordsApplyValidationException $exception) {
             $payload = [
                 'ok' => false,
@@ -91,6 +110,33 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
         }
 
         return json_encode($result->toArray(), JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    private function decodeList(string $json, string $name): array
+    {
+        $json = trim($json);
+        if ($json === '') {
+            return [];
+        }
+
+        try {
+            $decoded = json_decode($json, true, 64, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $exception) {
+            throw new ToolCallException(
+                sprintf('%s must be a JSON list (%s).', $name, $exception->getMessage()),
+                1790500010,
+                $exception,
+            );
+        }
+
+        if (!is_array($decoded) || ($decoded !== [] && !array_is_list($decoded))) {
+            throw new ToolCallException(sprintf('%s must be a JSON list, e.g. [{"table": "tt_content", "uids": [1, 2], "set": {"hidden": 1}}].', $name), 1790500011);
+        }
+
+        return $decoded;
     }
 
     /**

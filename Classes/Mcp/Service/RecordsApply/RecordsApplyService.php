@@ -33,7 +33,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  * Applies many record changes as ONE DataHandler run inside ONE database transaction.
  *
  * Order of events:
- *  1. preflight: refuse everything that can be known to fail, before touching the database,
+ *  1. expand the bulk shorthand, then preflight: refuse everything that can be known to fail, before touching the database,
  *  2. append: let new records land at the end of their page, in the order sent,
  *  3. begin a transaction, run the datamap, then the cmdmap with the same batch id,
  *  4. any DataHandler error, thrown exception or dry run rolls EVERYTHING back; otherwise commit,
@@ -51,6 +51,7 @@ readonly class RecordsApplyService
     private const MAX_ERRORS = 20;
 
     public function __construct(
+        private RecordsApplyBulkExpander $bulkExpander,
         private RecordsApplyPreflight $preflight,
         private RecordAppendOrderer $orderer,
         private RecordsApplyAudit $audit,
@@ -61,14 +62,16 @@ readonly class RecordsApplyService
     /**
      * @param array<mixed> $datamap DataHandler datamap: table => [uid|NEW id => fields]
      * @param array<mixed> $cmdmap DataHandler cmdmap: table => [uid => [command => value]]
+     * @param array<mixed> $bulk shorthand entries, expanded into the two maps above before anything is checked
      * @throws RecordsApplyValidationException when the request is refused before anything is written
      * @throws ToolCallException when DataHandler refuses or fails; everything is rolled back
      */
-    public function apply(array $datamap, array $cmdmap, bool $dryRun, bool $strict, bool $append): RecordsApplyResult
+    public function apply(array $datamap, array $cmdmap, bool $dryRun, bool $strict, bool $append, array $bulk = []): RecordsApplyResult
     {
         $batchId = 'ra-' . bin2hex(random_bytes(10));
 
         try {
+            [$datamap, $cmdmap] = $this->bulkExpander->expand($bulk, $datamap, $cmdmap);
             $checked = $this->preflight->check($datamap, $cmdmap, $strict);
         } catch (RecordsApplyValidationException $exception) {
             $this->audit->log($batchId, $dryRun, false, 'validation', [], [], $exception->getMessage());
