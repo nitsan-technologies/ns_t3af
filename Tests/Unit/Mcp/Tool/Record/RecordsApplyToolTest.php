@@ -24,6 +24,7 @@ use NITSAN\NsT3AF\Mcp\Attribute\McpAgentHidden;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\McpToolSeverityResolver;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileSource;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyResult;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyValidationException;
@@ -39,6 +40,8 @@ final class RecordsApplyToolTest extends TestCase
 {
     private RecordsApplyService&MockObject $service;
 
+    private RecordsApplyFileSource&MockObject $fileSource;
+
     private RecordsApplyTool $tool;
 
     protected function setUp(): void
@@ -46,7 +49,8 @@ final class RecordsApplyToolTest extends TestCase
         parent::setUp();
 
         $this->service = $this->createMock(RecordsApplyService::class);
-        $this->tool = new RecordsApplyTool($this->service);
+        $this->fileSource = $this->createMock(RecordsApplyFileSource::class);
+        $this->tool = new RecordsApplyTool($this->service, $this->fileSource);
     }
 
     #[Test]
@@ -154,6 +158,77 @@ final class RecordsApplyToolTest extends TestCase
 
         self::assertTrue($response['replayed']);
         self::assertSame(['NEWc' => 41], $response['map']);
+    }
+
+    #[Test]
+    public function aFilePayloadIsReadAndHandedToTheService(): void
+    {
+        $this->fileSource->expects(self::once())->method('read')->with(77)->willReturn([
+            ['tt_content' => ['NEWc' => ['pid' => 1, 'header' => 'From file']]],
+            [],
+            [['table' => 'tt_content', 'uids' => [1], 'set' => ['hidden' => 1]]],
+        ]);
+        $this->service->expects(self::once())
+            ->method('apply')
+            ->with(
+                ['tt_content' => ['NEWc' => ['pid' => 1, 'header' => 'From file']]],
+                [],
+                false,
+                true,
+                true,
+                [['table' => 'tt_content', 'uids' => [1], 'set' => ['hidden' => 1]]],
+                'records_apply',
+                '',
+            )
+            ->willReturn(new RecordsApplyResult('ra-abc', false, true, ['NEWc' => 41], [], [], []));
+
+        $response = json_decode($this->tool->execute('{}', '{}', false, true, true, '[]', '', 77), true);
+
+        self::assertSame(['NEWc' => 41], $response['map']);
+    }
+
+    #[Test]
+    public function aFileAndInlineDataTogetherAreRefused(): void
+    {
+        $this->fileSource->expects(self::never())->method('read');
+        $this->service->expects(self::never())->method('apply');
+
+        $this->expectException(ToolCallException::class);
+        $this->expectExceptionCode(1790500026);
+
+        $this->tool->execute('{"tt_content":{"NEWc":{"pid":1}}}', '{}', false, true, true, '[]', '', 77);
+    }
+
+    #[Test]
+    public function aFileAndInlineBulkTogetherAreRefused(): void
+    {
+        $this->expectException(ToolCallException::class);
+        $this->expectExceptionCode(1790500026);
+
+        $this->tool->execute('{}', '{}', false, true, true, '[{"table":"tt_content","uids":[1],"set":{"hidden":1}}]', '', 77);
+    }
+
+    #[Test]
+    public function theInlineByteCapDoesNotApplyToAFile(): void
+    {
+        $this->fileSource->method('read')->willReturn([['tt_content' => ['NEWc' => ['pid' => 1]]], [], []]);
+        $this->service->method('apply')->willReturn(new RecordsApplyResult('ra-abc', false, true, [], [], [], []));
+
+        $response = json_decode($this->tool->execute('{}', '{}', false, true, true, '[]', '', 5), true);
+
+        self::assertTrue($response['ok']);
+    }
+
+    #[Test]
+    public function aRefusalToReadTheFileStaysAToolError(): void
+    {
+        $this->fileSource->method('read')->willThrowException(new ToolCallException('File 77 was not found or is not accessible to you. Nothing was written.', 1790500027));
+        $this->service->expects(self::never())->method('apply');
+
+        $this->expectException(ToolCallException::class);
+        $this->expectExceptionCode(1790500027);
+
+        $this->tool->execute('{}', '{}', false, true, true, '[]', '', 77);
     }
 
     #[Test]

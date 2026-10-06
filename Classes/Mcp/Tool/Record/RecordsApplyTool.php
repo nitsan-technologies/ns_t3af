@@ -28,6 +28,7 @@ use NITSAN\NsT3AF\Mcp\Attribute\McpAgentHidden;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileSource;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyValidationException;
 
@@ -46,6 +47,7 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
 
     public function __construct(
         private RecordsApplyService $service,
+        private RecordsApplyFileSource $fileSource,
     ) {}
 
     #[McpTool(
@@ -63,6 +65,8 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
             . ' All-or-nothing: any refusal or error rolls back every change. Limit: 500 records per call (data + cmd), split larger batches.'
             . ' requestId (e.g. a UUID) makes a retry safe: resend the SAME request with the SAME requestId after a timeout and it is applied once;'
             . ' you get the first answer back with replayed=true. A requestId used with a different request is refused. Dry runs ignore it.'
+            . ' fromFile = the sys_file uid of a .json file you uploaded, holding {"data": {...}, "cmd": {...}, "bulk": [...]} (each optional), for batches too big to send inline'
+            . ' (up to 10 MB). Then leave data, cmd and bulk empty. The file is checked exactly like inline arguments and you need read access to it.'
             . ' Your own backend permissions apply. Returns "map" (NEW id => uid) and a batchId.',
         annotations: new ToolAnnotations(
             readOnlyHint: false,
@@ -78,22 +82,31 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
         bool $append = true,
         string $bulk = '[]',
         string $requestId = '',
+        int $fromFile = 0,
     ): string {
-        $size = strlen($data) + strlen($cmd) + strlen($bulk);
-        if ($size > self::MAX_PAYLOAD_BYTES) {
-            throw new ToolCallException(
-                sprintf(
-                    'The request is too large: %d bytes, the maximum is %d. Nothing was written. Split it into several calls.',
-                    $size,
-                    self::MAX_PAYLOAD_BYTES,
-                ),
-                1790500009,
-            );
-        }
+        if ($fromFile > 0) {
+            if (!in_array(trim($data), ['', '{}'], true) || !in_array(trim($cmd), ['', '{}'], true) || !in_array(trim($bulk), ['', '[]'], true)) {
+                throw new ToolCallException('With fromFile, data, cmd and bulk must be empty: put everything in the file. Nothing was written.', 1790500026);
+            }
 
-        $datamap = $this->decodeObject($data, 'data');
-        $cmdmap = $this->decodeObject($cmd, 'cmd');
-        $bulkEntries = $this->decodeList($bulk, 'bulk');
+            [$datamap, $cmdmap, $bulkEntries] = $this->fileSource->read($fromFile);
+        } else {
+            $size = strlen($data) + strlen($cmd) + strlen($bulk);
+            if ($size > self::MAX_PAYLOAD_BYTES) {
+                throw new ToolCallException(
+                    sprintf(
+                        'The request is too large: %d bytes, the maximum is %d. Nothing was written. Split it into several calls, or upload it as a .json file and pass fromFile.',
+                        $size,
+                        self::MAX_PAYLOAD_BYTES,
+                    ),
+                    1790500009,
+                );
+            }
+
+            $datamap = $this->decodeObject($data, 'data');
+            $cmdmap = $this->decodeObject($cmd, 'cmd');
+            $bulkEntries = $this->decodeList($bulk, 'bulk');
+        }
 
         try {
             $result = $this->service->apply($datamap, $cmdmap, $dryRun, $strict, $append, $bulkEntries, 'records_apply', trim($requestId));
