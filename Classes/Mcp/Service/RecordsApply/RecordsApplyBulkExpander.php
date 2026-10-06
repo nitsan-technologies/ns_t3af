@@ -26,7 +26,7 @@ namespace NITSAN\NsT3AF\Mcp\Service\RecordsApply;
  *
  *   {"table": "tt_content", "uids": [1, 2, 3], "set": {"hidden": 1}}   => datamap, one entry per uid
  *   {"table": "tt_content", "uids": [4, 5],    "delete": true}         => cmdmap delete
- *   {"table": "tt_content", "uids": [6, 7],    "move": 12}             => cmdmap move (page, or -uid to go after)
+ *   {"table": "tt_content", "uids": [6, 7],    "move": 12}             => cmdmap move, chained to keep request order
  *
  * It only reshapes. The expanded maps then go through the SAME preflight, the SAME transaction and
  * the SAME audit as hand-written data / cmd, so a bulk entry cannot do anything a data / cmd entry
@@ -108,9 +108,18 @@ readonly class RecordsApplyBulkExpander
 
             foreach ($uids as $uid) {
                 $taken[$section][$table][(string) $uid] = true;
-                if ($action === 'set') {
+            }
+
+            if ($action === 'set') {
+                foreach ($uids as $uid) {
                     $datamap[$table][$uid] = $argument;
-                } else {
+                }
+            } elseif ($action === 'move') {
+                foreach (RecordsApplyMoveCommandChainer::chain($table, $uids, (int) $argument) as $uid => $command) {
+                    $cmdmap[$table][$uid] = $command;
+                }
+            } else {
+                foreach ($uids as $uid) {
                     $cmdmap[$table][$uid] = [$action => $argument];
                 }
             }

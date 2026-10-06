@@ -33,6 +33,10 @@ final class RecordsUndoPlannerTest extends TestCase
 
     protected function setUp(): void
     {
+        $GLOBALS['TCA']['tt_content']['ctrl']['sortby'] = 'sorting';
+        $GLOBALS['TCA']['pages']['ctrl']['sortby'] = 'sorting';
+        $GLOBALS['TCA']['tx_nst3af_no_sort']['ctrl'] = [];
+
         $this->schema = $this->createMock(RecordsUndoSchemaInfo::class);
         $this->schema->method('supportsSoftDelete')->willReturn(true);
         $this->schema->method('fieldKind')->willReturnCallback(
@@ -146,6 +150,79 @@ final class RecordsUndoPlannerTest extends TestCase
         ]);
 
         self::assertSame(['tt_content' => [7 => ['move' => -256]]], $plan['cmdmap']);
+    }
+
+    #[Test]
+    public function consecutiveCoMoversAreRestoredInOldSortingOrderWithChaining(): void
+    {
+        $this->schema->expects(self::once())->method('resolveMoveTarget')->willReturn(1);
+
+        $plan = $this->planner->plan([
+            $this->row(1, 3, 'tt_content', 20, ['oldData' => ['pid' => 1, 'sorting' => 512], 'newData' => ['pid' => 9]]),
+            $this->row(2, 3, 'tt_content', 10, ['oldData' => ['pid' => 1, 'sorting' => 256], 'newData' => ['pid' => 9]]),
+            $this->row(3, 3, 'tt_content', 30, ['oldData' => ['pid' => 1, 'sorting' => 768], 'newData' => ['pid' => 9]]),
+        ]);
+
+        self::assertSame(
+            [
+                'tt_content' => [
+                    10 => ['move' => 1],
+                    20 => ['move' => -10],
+                    30 => ['move' => -20],
+                ],
+            ],
+            $plan['cmdmap'],
+        );
+    }
+
+    #[Test]
+    public function aCoMoverGroupChainsAfterTheEarliestResolvedPredecessor(): void
+    {
+        // M1 stayed on the page (uid 1); only M2 and M3 left. Earliest of the group resolves to -1.
+        $this->schema->expects(self::once())->method('resolveMoveTarget')->willReturn(-1);
+
+        $plan = $this->planner->plan([
+            $this->row(1, 3, 'tt_content', 3, ['oldData' => ['pid' => 1, 'sorting' => 768], 'newData' => ['pid' => 9]]),
+            $this->row(2, 3, 'tt_content', 2, ['oldData' => ['pid' => 1, 'sorting' => 512], 'newData' => ['pid' => 9]]),
+        ]);
+
+        self::assertSame(
+            [
+                'tt_content' => [
+                    2 => ['move' => -1],
+                    3 => ['move' => -2],
+                ],
+            ],
+            $plan['cmdmap'],
+        );
+    }
+
+    #[Test]
+    public function tablesWithoutSortbyRestoreEachRecordToItsOwnOldPidWithoutChaining(): void
+    {
+        $this->schema->expects(self::exactly(3))->method('resolveMoveTarget')->willReturnCallback(
+            static fn(string $table, int $uid, array $previous): int => (int) $previous['pid'],
+        );
+
+        $plan = $this->planner->plan([
+            $this->row(1, 3, 'tx_nst3af_no_sort', 10, ['oldData' => ['pid' => 5], 'newData' => ['pid' => 9]]),
+            $this->row(2, 3, 'tx_nst3af_no_sort', 20, ['oldData' => ['pid' => 5], 'newData' => ['pid' => 9]]),
+            $this->row(3, 3, 'tx_nst3af_no_sort', 30, ['oldData' => ['pid' => 7], 'newData' => ['pid' => 9]]),
+        ]);
+
+        self::assertSame(
+            [
+                'tx_nst3af_no_sort' => [
+                    10 => ['move' => 5],
+                    20 => ['move' => 5],
+                    30 => ['move' => 7],
+                ],
+            ],
+            $plan['cmdmap'],
+        );
+        foreach ($plan['cmdmap']['tx_nst3af_no_sort'] as $command) {
+            self::assertGreaterThan(0, $command['move']);
+        }
     }
 
     #[Test]

@@ -85,6 +85,47 @@ final class RecordsApplyIdempotencyTest extends TestCase
     }
 
     #[Test]
+    public function reorderingFieldNamesInsideARecordKeepsTheSameHash(): void
+    {
+        $a = ['tt_content' => ['NEWc' => ['pid' => 1, 'header' => 'Hi', 'CType' => 'text']]];
+        $b = ['tt_content' => ['NEWc' => ['CType' => 'text', 'header' => 'Hi', 'pid' => 1]]];
+
+        self::assertSame(
+            RecordsApplyIdempotency::payloadHash($a, [], [], true, true),
+            RecordsApplyIdempotency::payloadHash($b, [], [], true, true),
+        );
+
+        $bulkA = [['table' => 'tt_content', 'uids' => [1, 2], 'set' => ['hidden' => 1, 'header' => 'X']]];
+        $bulkB = [['table' => 'tt_content', 'uids' => [1, 2], 'set' => ['header' => 'X', 'hidden' => 1]]];
+        self::assertSame(
+            RecordsApplyIdempotency::payloadHash([], [], $bulkA, true, true),
+            RecordsApplyIdempotency::payloadHash([], [], $bulkB, true, true),
+        );
+    }
+
+    #[Test]
+    public function swappingTwoRecordsGivesADifferentHash(): void
+    {
+        $firstThenSecond = [
+            'tt_content' => [
+                'NEWa' => ['pid' => 1, 'header' => 'A'],
+                'NEWb' => ['pid' => 1, 'header' => 'B'],
+            ],
+        ];
+        $secondThenFirst = [
+            'tt_content' => [
+                'NEWb' => ['pid' => 1, 'header' => 'B'],
+                'NEWa' => ['pid' => 1, 'header' => 'A'],
+            ],
+        ];
+
+        self::assertNotSame(
+            RecordsApplyIdempotency::payloadHash($firstThenSecond, [], [], true, true),
+            RecordsApplyIdempotency::payloadHash($secondThenFirst, [], [], true, true),
+        );
+    }
+
+    #[Test]
     public function anythingThatChangesWhatIsWrittenChangesTheHash(): void
     {
         $datamap = ['tt_content' => ['NEWc' => ['pid' => 1, 'header' => 'Hi']]];

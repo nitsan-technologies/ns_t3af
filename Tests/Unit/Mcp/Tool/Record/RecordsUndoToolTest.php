@@ -54,6 +54,20 @@ final class RecordsUndoToolTest extends TestCase
     }
 
     #[Test]
+    public function theDescriptionExplainsNotRestoredVersusCreatedRelationRows(): void
+    {
+        $description = (new \ReflectionMethod(RecordsUndoTool::class, 'execute'))
+            ->getAttributes(\Mcp\Capability\Attribute\McpTool::class)[0]
+            ->newInstance()
+            ->description;
+
+        self::assertIsString($description);
+        self::assertStringContainsString('history diff', $description);
+        self::assertStringContainsString('notRestored', $description);
+        self::assertStringContainsString('file references', $description);
+    }
+
+    #[Test]
     public function theBatchIdAndDryRunReachTheService(): void
     {
         $this->service->expects(self::once())

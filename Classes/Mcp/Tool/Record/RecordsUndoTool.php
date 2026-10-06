@@ -50,7 +50,9 @@ readonly class RecordsUndoTool implements McpNonAiToolInterface
             . ' field changes and moves are reverted. One atomic call, through DataHandler, with your own backend permissions.'
             . ' Refuses (and writes nothing) when anybody changed one of those records after the batch, when the batch was already undone,'
             . ' when it ran in a workspace (use workspace_discard) or when pages it created now hold records it did not create.'
-            . ' File, inline, category and other relation fields are not restored; they are listed under notRestored. Records changed and deleted in the same batch come back with their changes not reverted.'
+            . ' Relation fields that appear in the history diff are listed under notRestored and are not restored;'
+            . ' records the batch created (for example file references) are removed by the undo.'
+            . ' Records changed and deleted in the same batch come back with their changes not reverted.'
             . ' dryRun=true runs it for real and rolls back: use it first. The undo is a batch itself (its batchId is returned) and can be undone in turn.',
         annotations: new ToolAnnotations(
             readOnlyHint: false,

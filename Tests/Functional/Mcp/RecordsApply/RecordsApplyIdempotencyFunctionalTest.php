@@ -225,6 +225,60 @@ final class RecordsApplyIdempotencyFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function aStalePendingRowWithACorrectedPayloadIsTakenOver(): void
+    {
+        $oldPayload = $this->oneElement('Stale original');
+        $newPayload = $this->oneElement('Corrected');
+        $old = time() - RecordsApplyIdempotency::PENDING_TIMEOUT - 60;
+        $oldHash = RecordsApplyIdempotency::payloadHash($oldPayload, [], [], true, true);
+        $newHash = RecordsApplyIdempotency::payloadHash($newPayload, [], [], true, true);
+        self::assertNotSame($oldHash, $newHash);
+
+        $this->insertRow('req-stale-corrected', $oldHash, 'pending', $old, $old);
+
+        $result = $this->service->apply($newPayload, [], false, true, true, [], 'records_apply', 'req-stale-corrected');
+
+        self::assertFalse($result->replayed);
+        self::assertSame(1, $this->countContent('Corrected'));
+        self::assertSame(0, $this->countContent('Stale original'));
+        self::assertSame('done', $this->stateOf('req-stale-corrected'));
+        self::assertSame($newHash, $this->payloadHashOf('req-stale-corrected'));
+    }
+
+    #[Test]
+    public function aFreshPendingRowWithADifferentPayloadIsStillRefused(): void
+    {
+        $oldHash = RecordsApplyIdempotency::payloadHash($this->oneElement('Running'), [], [], true, true);
+        $this->insertRow('req-fresh-mismatch', $oldHash, 'pending', time(), time());
+
+        try {
+            $this->service->apply($this->oneElement('Other'), [], false, true, true, [], 'records_apply', 'req-fresh-mismatch');
+            self::fail('Expected the payload mismatch to be refused.');
+        } catch (ToolCallException $exception) {
+            self::assertSame(1790500012, $exception->getCode());
+        }
+
+        self::assertSame(0, $this->countContent('Other'));
+        self::assertSame('pending', $this->stateOf('req-fresh-mismatch'));
+    }
+
+    #[Test]
+    public function aDoneRowWithADifferentPayloadIsStillRefused(): void
+    {
+        $this->service->apply($this->oneElement('Done original'), [], false, true, true, [], 'records_apply', 'req-done-mismatch');
+
+        try {
+            $this->service->apply($this->oneElement('Done other'), [], false, true, true, [], 'records_apply', 'req-done-mismatch');
+            self::fail('Expected the payload mismatch to be refused.');
+        } catch (ToolCallException $exception) {
+            self::assertSame(1790500012, $exception->getCode());
+        }
+
+        self::assertSame(1, $this->countContent('Done original'));
+        self::assertSame(0, $this->countContent('Done other'));
+    }
+
+    #[Test]
     public function aFinishedRowPastItsLifetimeIsForgotten(): void
     {
         $data = $this->oneElement('Forgotten');
@@ -298,6 +352,15 @@ final class RecordsApplyIdempotencyFunctionalTest extends FunctionalTestCase
             ->fetchOne();
 
         return is_string($state) ? $state : null;
+    }
+
+    private function payloadHashOf(string $requestId): ?string
+    {
+        $hash = $this->getConnectionPool()->getConnectionForTable(RecordsApplyIdempotency::TABLE)
+            ->executeQuery('SELECT payload_hash FROM ' . RecordsApplyIdempotency::TABLE . ' WHERE request_id = ?', [$requestId])
+            ->fetchOne();
+
+        return is_string($hash) ? $hash : null;
     }
 
     private function insertRow(string $requestId, string $hash, string $state, int $crdate, int $tstamp): void

@@ -90,8 +90,12 @@ readonly class RecordsUndoSchemaInfo
             return null;
         }
 
-        $sortBy = $this->ctrl($table)['sortby'] ?? '';
-        if (!is_string($sortBy) || $sortBy === '' || !isset($previousPosition[$sortBy]) || !is_numeric($previousPosition[$sortBy])) {
+        if (!RecordsApplyMoveCommandChainer::tableSupportsSorting($table)) {
+            return $previousPageId;
+        }
+
+        $sortBy = (string) ($this->ctrl($table)['sortby'] ?? '');
+        if ($sortBy === '' || !isset($previousPosition[$sortBy]) || !is_numeric($previousPosition[$sortBy])) {
             return $previousPageId;
         }
 

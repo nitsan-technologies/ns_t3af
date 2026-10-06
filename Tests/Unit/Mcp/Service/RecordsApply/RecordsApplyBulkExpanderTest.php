@@ -36,6 +36,8 @@ final class RecordsApplyBulkExpanderTest extends TestCase
     {
         parent::setUp();
 
+        $GLOBALS['TCA']['tt_content']['ctrl']['sortby'] = 'sorting';
+        $GLOBALS['TCA']['pages']['ctrl']['sortby'] = 'sorting';
         $this->expander = new RecordsApplyBulkExpander();
     }
 
@@ -79,6 +81,47 @@ final class RecordsApplyBulkExpanderTest extends TestCase
             [
                 'tt_content' => [4 => ['delete' => 1], 5 => ['delete' => 1], 6 => ['move' => 12]],
                 'pages' => [9 => ['move' => -3]],
+            ],
+            $cmd,
+        );
+    }
+
+    #[Test]
+    public function aMultiUidMoveChainsAfterThePreviousRecord(): void
+    {
+        [, $cmd] = $this->expander->expand(
+            [['table' => 'tt_content', 'uids' => [10, 20, 30], 'move' => 5]],
+            [],
+            [],
+        );
+
+        self::assertSame(
+            [
+                'tt_content' => [
+                    10 => ['move' => 5],
+                    20 => ['move' => -10],
+                    30 => ['move' => -20],
+                ],
+            ],
+            $cmd,
+        );
+    }
+
+    #[Test]
+    public function pagesBulkMoveChainsToo(): void
+    {
+        [, $cmd] = $this->expander->expand(
+            [['table' => 'pages', 'uids' => [2, 3], 'move' => 1]],
+            [],
+            [],
+        );
+
+        self::assertSame(
+            [
+                'pages' => [
+                    2 => ['move' => 1],
+                    3 => ['move' => -2],
+                ],
             ],
             $cmd,
         );

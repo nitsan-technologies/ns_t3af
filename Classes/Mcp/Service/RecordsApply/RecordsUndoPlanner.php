@@ -98,7 +98,8 @@ readonly class RecordsUndoPlanner
 
         $datamap = [];
         $undeletes = [];
-        $moves = [];
+        /** @var list<array{table: string, uid: int, previous: array<mixed>}> $pendingMoves */
+        $pendingMoves = [];
         $deletes = [];
         $created = [];
         $notRestored = [];
@@ -154,13 +155,13 @@ readonly class RecordsUndoPlanner
             }
 
             if ($record['move'] !== null) {
-                $target = $this->schemaInfo->resolveMoveTarget($table, $uid, $record['move']);
-                if ($target === null) {
-                    $notRestored[] = ['table' => $table, 'id' => $uid, 'fields' => [], 'reason' => 'the previous position of the moved record is unknown'];
-                } else {
-                    $moves[] = [$table, $uid, $target];
-                }
+                $pendingMoves[] = ['table' => $table, 'uid' => $uid, 'previous' => $record['move']];
             }
+        }
+
+        [$moves, $moveNotRestored] = $this->resolveOrderedMoves($pendingMoves);
+        foreach ($moveNotRestored as $entry) {
+            $notRestored[] = $entry;
         }
 
         $cmdmap = [];
@@ -169,6 +170,7 @@ readonly class RecordsUndoPlanner
             $cmdmap[$table][$uid]['undelete'] = 1;
         }
 
+        // Moves oldest (lowest old sorting) first so chained after-uid targets exist when DataHandler runs.
         foreach ($moves as [$table, $uid, $target]) {
             $cmdmap[$table][$uid]['move'] = $target;
         }
@@ -216,5 +218,93 @@ readonly class RecordsUndoPlanner
         }
 
         return false;
+    }
+
+    /**
+     * Co-movers that left the same page together cannot resolve "after the previous sibling" while those
+     * siblings are still on the destination page. For tables with ctrl.sortby: sort by old sorting, put the
+     * earliest back with the normal target lookup, then chain the rest after the previous uid. Tables without
+     * a sort field cannot use negative "after" targets, so each record is restored to its own old pid alone.
+     *
+     * @param list<array{table: string, uid: int, previous: array<mixed>}> $pending
+     * @return array{
+     *     0: list<array{0: string, 1: int, 2: int}>,
+     *     1: list<array{table: string, id: int, fields: list<string>, reason: string}>
+     * }
+     */
+    private function resolveOrderedMoves(array $pending): array
+    {
+        /** @var array<string, list<array{table: string, uid: int, previous: array<mixed>}>> $groups */
+        $groups = [];
+        foreach ($pending as $item) {
+            $pid = isset($item['previous']['pid']) && is_numeric($item['previous']['pid'])
+                ? (int) $item['previous']['pid']
+                : -1;
+            $groups[$item['table'] . ':' . $pid][] = $item;
+        }
+
+        $moves = [];
+        $notRestored = [];
+        foreach ($groups as $group) {
+            $table = $group[0]['table'];
+            if (!RecordsApplyMoveCommandChainer::tableSupportsSorting($table)) {
+                foreach ($group as $item) {
+                    $this->appendMove($moves, $notRestored, $item, $this->schemaInfo->resolveMoveTarget(
+                        $item['table'],
+                        $item['uid'],
+                        $item['previous'],
+                    ));
+                }
+                continue;
+            }
+
+            usort(
+                $group,
+                static function (array $a, array $b): int {
+                    $sortA = isset($a['previous']['sorting']) && is_numeric($a['previous']['sorting'])
+                        ? (int) $a['previous']['sorting']
+                        : 0;
+                    $sortB = isset($b['previous']['sorting']) && is_numeric($b['previous']['sorting'])
+                        ? (int) $b['previous']['sorting']
+                        : 0;
+
+                    return $sortA <=> $sortB ?: $a['uid'] <=> $b['uid'];
+                },
+            );
+
+            $previousUid = null;
+            foreach ($group as $item) {
+                $target = $previousUid === null
+                    ? $this->schemaInfo->resolveMoveTarget($item['table'], $item['uid'], $item['previous'])
+                    : -$previousUid;
+                $this->appendMove($moves, $notRestored, $item, $target);
+                if ($target !== null) {
+                    $previousUid = $item['uid'];
+                }
+            }
+        }
+
+        return [$moves, $notRestored];
+    }
+
+    /**
+     * @param list<array{0: string, 1: int, 2: int}> $moves
+     * @param list<array{table: string, id: int, fields: list<string>, reason: string}> $notRestored
+     * @param array{table: string, uid: int, previous: array<mixed>} $item
+     */
+    private function appendMove(array &$moves, array &$notRestored, array $item, ?int $target): void
+    {
+        if ($target === null) {
+            $notRestored[] = [
+                'table' => $item['table'],
+                'id' => $item['uid'],
+                'fields' => [],
+                'reason' => 'the previous position of the moved record is unknown',
+            ];
+
+            return;
+        }
+
+        $moves[] = [$item['table'], $item['uid'], $target];
     }
 }

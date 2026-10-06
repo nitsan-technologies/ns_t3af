@@ -20,7 +20,7 @@ Here is the list of features and updates introduced in this release:
    06-10-2026 [FEATURE] MCP records_apply: fromFile reads the batch from an uploaded .json file (up to 10 MB)
    06-10-2026 [FEATURE] MCP records_undo: take a whole batch back by its batchId
    06-10-2026 [FEATURE] MCP: write_table and the generated *_delete_batch / *_update_batch / *_move_batch tools run
-              on the records_apply engine (one transaction, all or nothing)
+              on the records_apply engine (batch tools all-or-nothing; write_table file fields after commit)
    06-10-2026 [FEATURE] MCP: records written by an MCP client are recorded in the AI Label module (setting mcpMarkWritesAsAi)
    06-10-2026 [TASK] t3af:mcp:cleanup also removes expired records_apply request ids
    06-10-2026 [TASK] New settings: mcpMarkWritesAsAi, mcpIdempotencyTtlHours
@@ -57,8 +57,12 @@ Behaviour changes
   connection than the TYPO3 default.
 * ``write_table`` and the generated batch tools write their audit entry under their own tool name, with the batch
   id, tables, operation counts and field names (never values).
-* The generated ``*_delete_batch``, ``*_update_batch`` and ``*_move_batch`` tools are now all-or-nothing and take at
-  most 500 records per call.
+* ``write_table`` scalar/relation writes share the engine transaction; file fields are attached after that commit
+  and are not rolled back with it. ``write_table`` does not return a ``batchId``.
+* The generated ``*_delete_batch``, ``*_update_batch`` and ``*_move_batch`` tools are now all-or-nothing, take at
+  most 500 records per call, and return a ``batchId`` that ``records_undo`` accepts.
+* Bulk and ``*_move_batch`` moves keep the order of the request on the target page (when the table has a sort
+  field). Hand-written ``cmd`` moves are unchanged.
 * Records created or changed by an MCP client are marked as AI-involved in the AI Label module. Disable this with
   the setting ``mcpMarkWritesAsAi``.
 * ``records_apply`` and ``records_undo`` are not offered to the AI Agent (its approval flow handles one record at a

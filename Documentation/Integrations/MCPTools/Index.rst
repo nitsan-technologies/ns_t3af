@@ -76,7 +76,9 @@ written. Your own backend permissions apply (tables, fields, pages, workspaces).
 * **cmd** — ``delete``, ``undelete``, ``move``, ``copy`` and ``localize`` per record uid.
 * **bulk** — a shorthand for one change on many records of a table:
   ``[{"table": "tt_content", "uids": [1, 2, 3], "set": {"hidden": 1}}]``. Use ``"delete": true`` or
-  ``"move": <target>`` instead of ``set``.
+  ``"move": <target>`` instead of ``set``. Bulk and ``*_move_batch`` moves keep the order of the request
+  on the target page when the table has a sort field (the first record takes the target; each following
+  one is placed after the previous). Hand-written ``cmd`` moves are unchanged.
 * **append** (default on) — new records land after the existing ones on their page, in the order sent. A negative
   ``pid`` places a record after that record.
 * **strict** (default on) — refuses the whole call if a field is not writable and names it; with ``strict=false``
@@ -86,7 +88,10 @@ written. Your own backend permissions apply (tables, fields, pages, workspaces).
   rolled back.
 * **requestId** — makes a retry safe. Resend the same request with the same id after a timeout and it is applied
   once; the second answer is the stored first one with ``replayed: true``. The same id with a different request is
-  refused. An id is remembered for the setting ``mcpIdempotencyTtlHours`` (default 24 hours). Dry runs ignore it.
+  refused while a call is finished or still running. A ``pending`` call that died (no finish within 10 minutes) can
+  be taken over, including with a corrected payload. Field-name key order inside each record does not matter for the
+  match; table order, record order and list order do. An id is remembered for the setting ``mcpIdempotencyTtlHours``
+  (default 24 hours). Dry runs ignore it.
 * **fromFile** — the ``sys_file`` uid of a ``.json`` file you uploaded, holding ``{"data": {}, "cmd": {}, "bulk": []}``
   (each key optional), for batches too big to send inline (up to 10 MB; inline calls are capped at 2 MiB). You need
   read access to the file, and its content is checked exactly like inline arguments.
@@ -103,14 +108,33 @@ through the same engine, with a dry run. It refuses, and writes nothing, when
 * pages the batch created now hold records it did not create,
 * the batch ran in a workspace (take it back with ``workspace_discard``), or belongs to another backend user.
 
-File, inline, category and other relation fields are not restored; they are listed under ``notRestored``. An undo is
-a batch itself and can be undone in turn.
+Relation fields that appear in the history diff are listed under ``notRestored`` and are not restored; records the
+batch created (for example file references) are removed by the undo. An undo is a batch itself and can be undone in
+turn.
 
 The generated ``<prefix>_delete_batch``, ``<prefix>_update_batch`` and ``<prefix>_move_batch`` tools of every
-discovered table run on the same engine, so they are all-or-nothing too. ``write_table`` also runs on it.
+discovered table run on the same engine, so they are all-or-nothing too. Each accepts at most 500 uids per call
+(refused before any lookup) and returns a ``batchId`` that ``records_undo`` accepts (history is keyed by that id,
+not by the tool name in the audit log).
+
+``write_table`` uses the same engine for scalar and relation field writes (one transaction). File fields
+(``[{"uid_local": N, ...}]``) are attached **after** that commit in a separate DataHandler pass, so a
+file-attach failure does not roll back the create or update. ``write_table`` does not return a ``batchId``.
 
 Records written through MCP tools are recorded as AI-involved in the AI Label module (source ``mcp``). Switch this
 off with the extension setting ``mcpMarkWritesAsAi``.
+
+Manual checks worth running against a live MCP client
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* **Stale takeover with a corrected payload** — start a ``records_apply`` with a ``requestId``, kill the client
+  before it finishes, wait more than 10 minutes (or age the ``pending`` row), then resend the same ``requestId``
+  with a fixed payload. Expect the corrected write, not ``1790500012``.
+* **Batch tool then undo** — call ``*_update_batch`` (or delete/move), take ``batchId`` from the answer, call
+  ``records_undo`` with it. Expect the previous field values / undelete / previous position.
+* **Key-order-only retry** — finish a ``records_apply`` with a ``requestId``, then retry with the same id and the
+  same records but field names reordered inside each record. Expect ``replayed: true`` and no second write.
+  Swapping two records under the same table must still be refused with ``1790500012``.
 
 .. note::
    ``records_apply`` and ``records_undo`` are available to external MCP clients. They are intentionally hidden from

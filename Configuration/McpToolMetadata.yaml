@@ -82,7 +82,7 @@ tools:
     category: Records
     status: ready
     tagline: Create, update, or delete records in any workspace-capable table
-    notes: 'All writes go through DataHandler, in one transaction (the same engine as records_apply). New records are appended after the existing ones on their page. Records written by an MCP client are marked as AI-involved in the AI Label module (setting mcpMarkWritesAsAi). Category/MM fields accept "126" or "8,12". File fields accept [{"uid_local": N, "alternative": "..."}] (replace on update; [] clears). Collections: write child table rows with foreign_table_parent_uid (see ignoredFieldDetails).'
+    notes: 'Scalar and relation field writes go through DataHandler via the records_apply engine (one transaction). File fields are attached after that commit in a separate pass, so a file-attach failure does not roll back the create/update. New records are appended after the existing ones on their page. Does not return a batchId. Records written by an MCP client are marked as AI-involved in the AI Label module (setting mcpMarkWritesAsAi). Category/MM fields accept "126" or "8,12". File fields accept [{"uid_local": N, "alternative": "..."}] (replace on update; [] clears). Collections: write child table rows with foreign_table_parent_uid (see ignoredFieldDetails).'
     examplePrompts:
       - 'Create a news article titled Summer Sale 2026 on the News page'
       - 'Add a new text content element to the homepage'
@@ -115,7 +115,7 @@ tools:
     category: Records
     status: ready
     tagline: Take back a whole records_apply batch by its batchId
-    notes: 'Builds the inverse of a batch from its history and applies it through the same engine (one transaction): created records are deleted, deleted records restored, field changes and moves reverted. Refuses when anyone changed those records after the batch, when it was already undone, when it ran in a workspace (use workspace_discard) or when pages it created now hold other records. File, inline and category fields are not restored (listed under notRestored). Use dryRun first. The undo is itself a batch and can be undone.'
+    notes: 'Builds the inverse of a batch from its history and applies it through the same engine (one transaction): created records are deleted, deleted records restored, field changes and moves reverted. Refuses when anyone changed those records after the batch, when it was already undone, when it ran in a workspace (use workspace_discard) or when pages it created now hold other records. Relation fields that appear in the history diff are listed under notRestored and are not restored; records the batch created (for example file references) are removed by the undo. Use dryRun first. The undo is itself a batch and can be undone.'
     examplePrompts:
       - 'Undo that last import'
       - 'Take back batch ra-0123456789abcdef0123, show me first what would change'

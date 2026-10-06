@@ -38,9 +38,10 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
  *  - `done`: written INSIDE the engine transaction, just before the commit, together with the response. Either
  *    the data and the row exist, or neither does. A retry gets the stored response back, marked `replayed`.
  *
- * Reusing an id with a different payload is refused: it is almost always a client bug, and silently running
- * or replaying the wrong thing would be worse. A `pending` row that nobody finishes (the process died) is
- * taken over after PENDING_TIMEOUT seconds. A `done` row expires after the configured lifetime.
+ * Reusing an id with a different payload is refused while the row is `done` or a fresh `pending`: it is almost
+ * always a client bug, and silently running or replaying the wrong thing would be worse. A `pending` row that
+ * nobody finishes (the process died) is taken over after PENDING_TIMEOUT seconds, including when the retry
+ * sends a corrected payload (the stored hash is overwritten). A `done` row expires after the configured lifetime.
  *
  * Dry runs never take, store or replay an id.
  */
@@ -81,13 +82,82 @@ readonly class RecordsApplyIdempotency
     /**
      * What makes two calls "the same request": everything that changes what is written.
      *
+     * Field-name maps inside each record (and bulk ``set`` maps) are sorted so a retry that only reorders
+     * keys still matches. Table order, record order and list order are left alone — those decide creation
+     * order, NEW resolution and sorting.
+     *
      * @param array<mixed> $datamap
      * @param array<mixed> $cmdmap
      * @param array<mixed> $bulk
      */
     public static function payloadHash(array $datamap, array $cmdmap, array $bulk, bool $strict, bool $append): string
     {
-        return hash('sha256', json_encode([$datamap, $cmdmap, $bulk, $strict, $append], JSON_THROW_ON_ERROR));
+        return hash('sha256', json_encode([
+            self::canonicalizeRecordMaps($datamap),
+            self::canonicalizeRecordMaps($cmdmap),
+            self::canonicalizeBulk($bulk),
+            $strict,
+            $append,
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * Keep table and record order; sort only each record's field-name map.
+     *
+     * @param array<mixed> $tables
+     * @return array<mixed>
+     */
+    private static function canonicalizeRecordMaps(array $tables): array
+    {
+        $out = [];
+        foreach ($tables as $table => $records) {
+            if (!is_array($records)) {
+                $out[$table] = $records;
+                continue;
+            }
+            $canonRecords = [];
+            foreach ($records as $id => $fields) {
+                $canonRecords[$id] = is_array($fields) ? self::sortFieldMap($fields) : $fields;
+            }
+            $out[$table] = $canonRecords;
+        }
+
+        return $out;
+    }
+
+    /**
+     * Keep list order; sort only each entry's ``set`` field-name map.
+     *
+     * @param array<mixed> $bulk
+     * @return list<mixed>
+     */
+    private static function canonicalizeBulk(array $bulk): array
+    {
+        $out = [];
+        foreach ($bulk as $entry) {
+            if (!is_array($entry)) {
+                $out[] = $entry;
+                continue;
+            }
+            $canon = [];
+            foreach ($entry as $key => $value) {
+                $canon[$key] = $key === 'set' && is_array($value) ? self::sortFieldMap($value) : $value;
+            }
+            $out[] = $canon;
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param array<mixed> $fields
+     * @return array<mixed>
+     */
+    private static function sortFieldMap(array $fields): array
+    {
+        ksort($fields);
+
+        return $fields;
     }
 
     /**
@@ -152,9 +222,10 @@ readonly class RecordsApplyIdempotency
                 }
 
                 // A pending row nobody finished: take it over, but only if it is still the stale one.
+                // Overwrite payload_hash so a corrected retry (different hash) owns the row from here on.
                 $affected = $connection->update(
                     self::TABLE,
-                    ['lock_token' => $token, 'tstamp' => $now],
+                    ['lock_token' => $token, 'tstamp' => $now, 'payload_hash' => $payloadHash],
                     ['uid' => (int) $row['uid'], 'state' => self::STATE_PENDING, 'lock_token' => (string) $row['lock_token']],
                 );
                 if ($affected === 1) {
@@ -244,25 +315,41 @@ readonly class RecordsApplyIdempotency
      */
     private function resolveExisting(array $row, string $payloadHash): ?RecordsApplyResult
     {
-        if (!hash_equals((string) $row['payload_hash'], $payloadHash)) {
-            throw new ToolCallException(
-                'This requestId was already used with a different request. Use a new requestId for a different request, or resend the original one unchanged. Nothing was written.',
-                1790500012,
-            );
+        $state = (string) $row['state'];
+        $hashMatches = hash_equals((string) $row['payload_hash'], $payloadHash);
+
+        if ($state === self::STATE_PENDING) {
+            $stale = (int) $row['tstamp'] <= time() - self::PENDING_TIMEOUT;
+            if ($stale) {
+                // Dead call: reclaim with any payload (including a corrected one).
+                return null;
+            }
+            if (!$hashMatches) {
+                throw self::payloadMismatch();
+            }
+
+            throw self::inProgress();
         }
 
-        if ((string) $row['state'] === self::STATE_DONE) {
+        if (!$hashMatches) {
+            throw self::payloadMismatch();
+        }
+
+        if ($state === self::STATE_DONE) {
             $stored = json_decode((string) $row['response'], true);
 
             return RecordsApplyResult::fromStored(is_array($stored) ? $stored : [])->withReplayed();
         }
 
-        $stale = (int) $row['tstamp'] <= time() - self::PENDING_TIMEOUT;
-        if ($stale) {
-            return null;
-        }
-
         throw self::inProgress();
+    }
+
+    private static function payloadMismatch(): ToolCallException
+    {
+        return new ToolCallException(
+            'This requestId was already used with a different request. Use a new requestId for a different request, or resend the original one unchanged. Nothing was written.',
+            1790500012,
+        );
     }
 
     private static function inProgress(): ToolCallException
