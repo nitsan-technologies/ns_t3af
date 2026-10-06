@@ -861,6 +861,14 @@
                 <source>Knows what you are looking at</source>
                 <target>Weiß, was Sie gerade ansehen</target>
             </trans-unit>
+            <trans-unit id="agent.context.breadcrumb">
+                <source>Current context</source>
+                <target>Aktueller Kontext</target>
+            </trans-unit>
+            <trans-unit id="agent.context.path">
+                <source>Path</source>
+                <target>Pfad</target>
+            </trans-unit>
             <trans-unit id="agent.greeting.title">
                 <source>Start a conversation</source>
                 <target>Unterhaltung starten</target>

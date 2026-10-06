@@ -871,9 +871,6 @@ export const chromeMethods = {
       }
 
       const chips = Array.isArray(this.context.chips) ? this.context.chips : [];
-      const dimChip = this.context.contextAware
-        ? `<span class="nst3af-agent-ctxchip nst3af-agent-ctxchip--dim">${escapeHtml(lang('agent.context.aware', 'Knows what you are looking at'))}</span>`
-        : '';
       const icons = {
         page: 'apps-pagetree-page',
         module: 'module-generic',
@@ -883,12 +880,33 @@ export const chromeMethods = {
         workspace: 'apps-toolbar-menu-workspace',
         brand: 'actions-tag',
       };
-      this.contextEl.innerHTML = dimChip + chips.map((chip) => {
-        const key = String(chip.key ?? '');
-        const icon = icons[key] ? `<typo3-backend-icon identifier="${icons[key]}" size="small" aria-hidden="true"></typo3-backend-icon> ` : '';
-        const hint = escapeHtml(String(chip.hint ?? ''));
-        return `<span class="nst3af-agent-ctxchip nst3af-agent-ctxchip--${escapeHtml(key)}" title="${hint}">${icon}<span class="visually-hidden">${escapeHtml(String(chip.label ?? ''))}: </span>${escapeHtml(String(chip.value ?? ''))}</span>`;
-      }).join('');
+      if (chips.length === 0) {
+        this.contextEl.innerHTML = '';
+        return;
+      }
+
+      // One-line docheader-style trail: ancestors / current (icon + label), no "Path:" prefix.
+      const ancestors = chips.slice(0, -1);
+      const current = chips[chips.length - 1];
+      const currentKey = String(current.key ?? '');
+      const currentIcon = icons[currentKey]
+        ? `<typo3-backend-icon identifier="${icons[currentKey]}" size="small" aria-hidden="true"></typo3-backend-icon> `
+        : '';
+      const pathTitle = ancestors.length > 0
+        ? escapeHtml(ancestors.map((chip) => `${String(chip.label ?? '')}: ${String(chip.value ?? '')}`).join(' · '))
+        : '';
+      const currentHint = escapeHtml(String(current.hint ?? ''));
+      const pathHtml = ancestors.length > 0
+        ? `<span class="typo3-docheader-pagePath"${pathTitle ? ` title="${pathTitle}"` : ''}>${ancestors.map((chip) => escapeHtml(String(chip.value ?? ''))).join(' / ')}</span>`
+          + `<span class="nst3af-agent-context__sep me-1 ps-1" aria-hidden="true"> / </span>`
+        : '';
+
+      this.contextEl.innerHTML = `<div class="nst3af-agent-context__doc">`
+        + pathHtml
+        + `<strong class="nst3af-agent-ctxchip nst3af-agent-ctxchip--${escapeHtml(currentKey)}" title="${currentHint}">`
+        + `${currentIcon}<span class="visually-hidden">${escapeHtml(String(current.label ?? ''))}: </span>`
+        + `${escapeHtml(String(current.value ?? ''))}</strong>`
+        + `</div>`;
     },
 
   toggleFullscreen() {

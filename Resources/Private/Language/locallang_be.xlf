@@ -528,6 +528,12 @@
       <trans-unit id="agent.context.aware" resname="agent.context.aware">
         <source>Knows what you are looking at</source>
       </trans-unit>
+      <trans-unit id="agent.context.breadcrumb" resname="agent.context.breadcrumb">
+        <source>Current context</source>
+      </trans-unit>
+      <trans-unit id="agent.context.path" resname="agent.context.path">
+        <source>Path</source>
+      </trans-unit>
       <trans-unit id="agent.greeting.title" resname="agent.greeting.title">
         <source>Start a conversation</source>
       </trans-unit>
