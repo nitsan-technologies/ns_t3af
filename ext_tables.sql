@@ -548,3 +548,22 @@ CREATE TABLE tx_nst3af_upload_tokens (
     KEY token (token),
     KEY expires (expires)
 );
+
+#
+# records_apply requestId: makes a retried batch write safe (one row per user, tool and request id)
+#
+CREATE TABLE tx_nst3af_mcp_idempotency (
+    uid int(11) NOT NULL auto_increment,
+    be_user_uid int(11) DEFAULT 0 NOT NULL,
+    tool varchar(64) DEFAULT '' NOT NULL,
+    request_id varchar(128) DEFAULT '' NOT NULL,
+    payload_hash varchar(64) DEFAULT '' NOT NULL,
+    state varchar(16) DEFAULT 'pending' NOT NULL,
+    lock_token varchar(32) DEFAULT '' NOT NULL,
+    response mediumtext,
+    tstamp int(11) DEFAULT 0 NOT NULL,
+    crdate int(11) DEFAULT 0 NOT NULL,
+    PRIMARY KEY (uid),
+    UNIQUE KEY request (be_user_uid, tool, request_id),
+    KEY crdate (crdate)
+);

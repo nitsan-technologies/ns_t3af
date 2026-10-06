@@ -33,6 +33,7 @@ final readonly class RecordsApplyResult
      * @param array<string, array<string, int>> $operations table => [operation => number of records]
      * @param list<array{table: string, id: string, fields: list<string>}> $ignoredFields non-strict mode only
      * @param int $aiLabelled how many records were marked as AI-involved in the AI Label module
+     * @param bool $replayed true when this is the stored answer of an earlier call with the same requestId; nothing was written now
      */
     public function __construct(
         public string $batchId,
@@ -43,7 +44,94 @@ final readonly class RecordsApplyResult
         public array $operations,
         public array $ignoredFields,
         public int $aiLabelled = 0,
+        public bool $replayed = false,
     ) {}
+
+    public function withAiLabelled(int $aiLabelled): self
+    {
+        return new self(
+            $this->batchId,
+            $this->dryRun,
+            $this->written,
+            $this->created,
+            $this->copied,
+            $this->operations,
+            $this->ignoredFields,
+            $aiLabelled,
+            $this->replayed,
+        );
+    }
+
+    public function withReplayed(): self
+    {
+        return new self(
+            $this->batchId,
+            $this->dryRun,
+            $this->written,
+            $this->created,
+            $this->copied,
+            $this->operations,
+            $this->ignoredFields,
+            0,
+            true,
+        );
+    }
+
+    /**
+     * Rebuilds a result from what toArray() produced, for a requestId replay.
+     *
+     * @param array<mixed> $stored
+     */
+    public static function fromStored(array $stored): self
+    {
+        $created = [];
+        foreach (is_array($stored['map'] ?? null) ? $stored['map'] : [] as $newId => $uid) {
+            if (is_numeric($uid)) {
+                $created[(string) $newId] = (int) $uid;
+            }
+        }
+
+        $copied = [];
+        foreach (is_array($stored['copied'] ?? null) ? $stored['copied'] : [] as $table => $mapping) {
+            foreach (is_array($mapping) ? $mapping : [] as $sourceUid => $copyUid) {
+                if (is_numeric($copyUid)) {
+                    $copied[(string) $table][(int) $sourceUid] = (int) $copyUid;
+                }
+            }
+        }
+
+        $operations = [];
+        foreach (is_array($stored['operations'] ?? null) ? $stored['operations'] : [] as $table => $counts) {
+            foreach (is_array($counts) ? $counts : [] as $operation => $count) {
+                if (is_numeric($count)) {
+                    $operations[(string) $table][(string) $operation] = (int) $count;
+                }
+            }
+        }
+
+        $ignored = [];
+        foreach (is_array($stored['ignoredFields'] ?? null) ? $stored['ignoredFields'] : [] as $entry) {
+            if (!is_array($entry) || !is_string($entry['table'] ?? null) || !is_array($entry['fields'] ?? null)) {
+                continue;
+            }
+
+            $ignored[] = [
+                'table' => $entry['table'],
+                'id' => (string) ($entry['id'] ?? ''),
+                'fields' => array_values(array_map('strval', $entry['fields'])),
+            ];
+        }
+
+        return new self(
+            is_string($stored['batchId'] ?? null) ? $stored['batchId'] : '',
+            false,
+            true,
+            $created,
+            $copied,
+            $operations,
+            $ignored,
+        );
+    }
 
     /** @return array<string, mixed> */
     public function toArray(): array
@@ -67,6 +155,11 @@ final readonly class RecordsApplyResult
 
         if ($this->aiLabelled > 0) {
             $result['aiLabelled'] = $this->aiLabelled;
+        }
+
+        if ($this->replayed) {
+            $result['replayed'] = true;
+            $result['note'] = 'This requestId was already applied. This is the stored answer of that call, nothing was written now.';
         }
 
         return $result;

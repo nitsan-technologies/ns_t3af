@@ -100,7 +100,7 @@ tools:
     category: Records
     status: ready
     tagline: Apply many record changes across tables in one atomic call
-    notes: 'One DataHandler run in one database transaction: any refusal or error rolls back every change. data = {table: {uid or NEWid: fields}}, cmd for delete/move/copy/undelete/localize, up to 500 records per call. New records are appended in the order sent. bulk is a shorthand for one change on many records of a table (set, delete or move). In a workspace the changes become workspace versions. Use dryRun first: it runs everything for real, then rolls back. Returns the NEW id to uid map and a batchId.'
+    notes: 'One DataHandler run in one database transaction: any refusal or error rolls back every change. data = {table: {uid or NEWid: fields}}, cmd for delete/move/copy/undelete/localize, up to 500 records per call. New records are appended in the order sent. bulk is a shorthand for one change on many records of a table (set, delete or move). In a workspace the changes become workspace versions. Use dryRun first: it runs everything for real, then rolls back. Send a requestId (for example a UUID) to make a retry safe: the same request with the same id is applied once and a repeat gets the stored answer with replayed=true; the same id with another request is refused (remembered for the setting mcpIdempotencyTtlHours, default 24 h). Returns the NEW id to uid map and a batchId.'
     examplePrompts:
       - 'Create a landing page with a header, three text elements and a FAQ in one go'
       - 'Hide all 40 expired news records in one operation'

@@ -72,6 +72,8 @@ final class RecordsApplyToolTest extends TestCase
                 false,
                 false,
                 [['table' => 'tt_content', 'uids' => [1, 2], 'set' => ['hidden' => 1]]],
+                'records_apply',
+                '',
             )
             ->willReturn(new RecordsApplyResult('ra-abc', true, false, ['NEWc' => 41], [], ['tt_content' => ['create' => 1, 'delete' => 1]], []));
 
@@ -105,7 +107,7 @@ final class RecordsApplyToolTest extends TestCase
     {
         $this->service->expects(self::once())
             ->method('apply')
-            ->with([], [], false, true, true, [])
+            ->with([], [], false, true, true, [], 'records_apply', '')
             ->willReturn(new RecordsApplyResult('ra-abc', false, true, [], [], [], []));
 
         $this->tool->execute();
@@ -128,6 +130,30 @@ final class RecordsApplyToolTest extends TestCase
 
         self::assertSame(['tt_content' => [7 => 70]], $response['copied']);
         self::assertSame('bogus', $response['ignoredFields'][0]['fields'][0]);
+    }
+
+    #[Test]
+    public function theRequestIdReachesTheServiceTrimmed(): void
+    {
+        $this->service->expects(self::once())
+            ->method('apply')
+            ->with([], [], false, true, true, [], 'records_apply', 'import-2026-10-05')
+            ->willReturn(new RecordsApplyResult('ra-abc', false, true, [], [], [], []));
+
+        $this->tool->execute('{}', '{}', false, true, true, '[]', '  import-2026-10-05 ');
+    }
+
+    #[Test]
+    public function aReplayedAnswerSaysSo(): void
+    {
+        $this->service->method('apply')->willReturn(
+            (new RecordsApplyResult('ra-abc', false, true, ['NEWc' => 41], [], [], []))->withReplayed(),
+        );
+
+        $response = json_decode($this->tool->execute('{"tt_content":{"NEWc":{"pid":1}}}', '{}', false, true, true, '[]', 'r1'), true);
+
+        self::assertTrue($response['replayed']);
+        self::assertSame(['NEWc' => 41], $response['map']);
     }
 
     #[Test]

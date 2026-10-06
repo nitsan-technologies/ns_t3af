@@ -61,6 +61,8 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
             . ' strict=true (default) refuses the WHOLE call if any field is not writable and names it; strict=false drops those fields and reports them.'
             . ' dryRun=true runs everything for real, reports the result, then rolls everything back: use it first for deletes and large batches.'
             . ' All-or-nothing: any refusal or error rolls back every change. Limit: 500 records per call (data + cmd), split larger batches.'
+            . ' requestId (e.g. a UUID) makes a retry safe: resend the SAME request with the SAME requestId after a timeout and it is applied once;'
+            . ' you get the first answer back with replayed=true. A requestId used with a different request is refused. Dry runs ignore it.'
             . ' Your own backend permissions apply. Returns "map" (NEW id => uid) and a batchId.',
         annotations: new ToolAnnotations(
             readOnlyHint: false,
@@ -75,6 +77,7 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
         bool $strict = true,
         bool $append = true,
         string $bulk = '[]',
+        string $requestId = '',
     ): string {
         $size = strlen($data) + strlen($cmd) + strlen($bulk);
         if ($size > self::MAX_PAYLOAD_BYTES) {
@@ -93,7 +96,7 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
         $bulkEntries = $this->decodeList($bulk, 'bulk');
 
         try {
-            $result = $this->service->apply($datamap, $cmdmap, $dryRun, $strict, $append, $bulkEntries);
+            $result = $this->service->apply($datamap, $cmdmap, $dryRun, $strict, $append, $bulkEntries, 'records_apply', trim($requestId));
         } catch (RecordsApplyValidationException $exception) {
             $payload = [
                 'ok' => false,

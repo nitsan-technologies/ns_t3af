@@ -37,6 +37,9 @@ readonly class AdvancedSettingsService
     /** Default single-use upload token lifetime (seconds). */
     public const DEFAULT_UPLOAD_TOKEN_TTL = 900;
 
+    /** Default time a records_apply requestId is remembered (hours). */
+    public const DEFAULT_IDEMPOTENCY_TTL_HOURS = 24;
+
     /** Default max decoded base64 payload accepted inline via MCP tools (bytes). */
     public const DEFAULT_MAX_BASE64_UPLOAD_BYTES = 16384;
 
@@ -118,6 +121,14 @@ readonly class AdvancedSettingsService
         return $this->bool('mcpMarkWritesAsAi', true);
     }
 
+    /** How long records_apply remembers a requestId and its answer, in seconds. */
+    public function idempotencyTtlSeconds(): int
+    {
+        $hours = $this->int('mcpIdempotencyTtlHours', self::DEFAULT_IDEMPOTENCY_TTL_HOURS);
+
+        return ($hours < 1 ? self::DEFAULT_IDEMPOTENCY_TTL_HOURS : $hours) * 3600;
+    }
+
     public function uploadTokenTtl(): int
     {
         $configured = $this->int('mcpUploadTokenTtl', self::DEFAULT_UPLOAD_TOKEN_TTL);
@@ -167,6 +178,7 @@ readonly class AdvancedSettingsService
             'mcpMaxFileSizeMb' => $this->maxFileSizeMb(),
             'mcpAllowDestructiveFileOps' => $this->allowDestructiveFileOps() ? 1 : 0,
             'mcpMarkWritesAsAi' => $this->markWritesAsAi() ? 1 : 0,
+            'mcpIdempotencyTtlHours' => intdiv($this->idempotencyTtlSeconds(), 3600),
             'mcpUploadTokenTtl' => $this->uploadTokenTtl(),
             'mcpMaxBase64UploadBytes' => $this->maxBase64UploadBytes(),
         ];

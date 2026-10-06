@@ -36,7 +36,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  *  1. expand the bulk shorthand, then preflight: refuse everything that can be known to fail, before touching the database,
  *  2. append: let new records land at the end of their page, in the order sent,
  *  3. begin a transaction, run the datamap, then the cmdmap with the same batch id,
- *  4. any DataHandler error, thrown exception or dry run rolls EVERYTHING back; otherwise commit,
+ *  4. any DataHandler error, thrown exception or dry run rolls EVERYTHING back; otherwise commit (a requestId's stored answer is written just before it),
  *  5. mark the written records as AI-involved in the AI Label module (after the commit, never inside it),
  *  6. write the audit entry (after the transaction, so a rollback cannot take it with it).
  *
@@ -57,6 +57,7 @@ readonly class RecordsApplyService
         private RecordAppendOrderer $orderer,
         private RecordsApplyAudit $audit,
         private RecordsApplyAiLabelMarker $aiLabelMarker,
+        private RecordsApplyIdempotency $idempotency,
         private ConnectionPool $connectionPool,
         private LoggerInterface $logger,
     ) {}
@@ -66,12 +67,28 @@ readonly class RecordsApplyService
      * @param array<mixed> $cmdmap DataHandler cmdmap: table => [uid => [command => value]]
      * @param array<mixed> $bulk shorthand entries, expanded into the two maps above before anything is checked
      * @param string $tool name of the calling MCP tool, for the audit entry (records_apply, or write_table which runs on this engine)
+     * @param string $requestId client-chosen id that makes a retry safe: the same id with the same payload is applied once and answered from the stored result. Ignored for dry runs.
      * @throws RecordsApplyValidationException when the request is refused before anything is written
      * @throws ToolCallException when DataHandler refuses or fails; everything is rolled back
      */
-    public function apply(array $datamap, array $cmdmap, bool $dryRun, bool $strict, bool $append, array $bulk = [], string $tool = 'records_apply'): RecordsApplyResult
+    public function apply(array $datamap, array $cmdmap, bool $dryRun, bool $strict, bool $append, array $bulk = [], string $tool = 'records_apply', string $requestId = ''): RecordsApplyResult
     {
         $batchId = 'ra-' . bin2hex(random_bytes(10));
+
+        $payloadHash = '';
+        if ($requestId !== '') {
+            RecordsApplyIdempotency::assertValidRequestId($requestId);
+        }
+
+        // Dry runs never take, store or replay a request id.
+        $useRequestId = $requestId !== '' && !$dryRun;
+        if ($useRequestId) {
+            $payloadHash = RecordsApplyIdempotency::payloadHash($datamap, $cmdmap, $bulk, $strict, $append);
+            $stored = $this->idempotency->lookup($tool, $requestId, $payloadHash);
+            if ($stored !== null) {
+                return $this->replayed($tool, $stored);
+            }
+        }
 
         try {
             [$datamap, $cmdmap] = $this->bulkExpander->expand($bulk, $datamap, $cmdmap);
@@ -99,7 +116,24 @@ readonly class RecordsApplyService
             throw new ToolCallException($message, 1790500002);
         }
 
-        $connection->beginTransaction();
+        $lock = null;
+        if ($useRequestId) {
+            $acquired = $this->idempotency->acquire($tool, $requestId, $payloadHash);
+            if ($acquired instanceof RecordsApplyResult) {
+                return $this->replayed($tool, $acquired);
+            }
+
+            $lock = $acquired;
+        }
+
+        try {
+            $connection->beginTransaction();
+        } catch (\Throwable $throwable) {
+            $this->release($lock, $batchId);
+
+            throw $throwable;
+        }
+
         $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
 
         try {
@@ -111,6 +145,7 @@ readonly class RecordsApplyService
             }
         } catch (\Throwable $throwable) {
             $this->rollBack($connection);
+            $this->release($lock, $batchId);
             $this->logger->error('records_apply: DataHandler threw', ['exception' => $throwable, 'batchId' => $batchId]);
 
             $summary = sprintf('%s (code %d)', $throwable::class, (int) $throwable->getCode());
@@ -130,6 +165,7 @@ readonly class RecordsApplyService
         $errors = self::errors($dataHandler->errorLog);
         if ($errors !== []) {
             $this->rollBack($connection);
+            $this->release($lock, $batchId);
             $this->audit->log($tool, $batchId, $dryRun, false, 'datahandler', $operations, $fieldNames, implode(' | ', $errors));
 
             throw new ToolCallException(
@@ -159,13 +195,29 @@ readonly class RecordsApplyService
             }
         }
 
+        $result = new RecordsApplyResult(
+            $batchId,
+            $dryRun,
+            !$dryRun,
+            $created,
+            $copied,
+            $operations,
+            $checked['ignored'],
+        );
+
         if ($dryRun) {
             $this->rollBack($connection);
         } else {
             try {
+                // The stored answer is written inside the transaction: the data and the row exist together, or neither does.
+                if ($lock !== null) {
+                    $this->idempotency->complete($lock, $result->toArray());
+                }
+
                 $connection->commit();
             } catch (\Throwable $throwable) {
                 $this->rollBack($connection);
+                $this->release($lock, $batchId);
                 $this->logger->error('records_apply: commit failed', ['exception' => $throwable, 'batchId' => $batchId]);
                 $summary = sprintf('%s (code %d)', $throwable::class, (int) $throwable->getCode());
                 $this->audit->log($tool, $batchId, $dryRun, false, 'commit', $operations, $fieldNames, $summary);
@@ -192,16 +244,30 @@ readonly class RecordsApplyService
 
         $this->audit->log($tool, $batchId, $dryRun, true, $dryRun ? 'dry-run' : 'applied', $operations, $fieldNames);
 
-        return new RecordsApplyResult(
-            $batchId,
-            $dryRun,
-            !$dryRun,
-            $created,
-            $copied,
-            $operations,
-            $checked['ignored'],
-            $aiLabelled,
-        );
+        return $result->withAiLabelled($aiLabelled);
+    }
+
+    /** A retry of a finished call: nothing is written, the audit entry says so. */
+    private function replayed(string $tool, RecordsApplyResult $result): RecordsApplyResult
+    {
+        $this->audit->log($tool, $result->batchId, false, true, 'replayed', $result->operations, []);
+
+        return $result;
+    }
+
+    /** The call failed and wrote nothing: free its request id so the client can retry. */
+    private function release(?RecordsApplyIdempotencyLock $lock, string $batchId): void
+    {
+        if ($lock === null) {
+            return;
+        }
+
+        try {
+            $this->idempotency->release($lock);
+        } catch (\Throwable $throwable) {
+            // A stale pending row is taken over by the next retry after the timeout, so this is not fatal.
+            $this->logger->warning('records_apply: could not release the requestId', ['exception' => $throwable, 'batchId' => $batchId]);
+        }
     }
 
     private function rollBack(Connection $connection): void

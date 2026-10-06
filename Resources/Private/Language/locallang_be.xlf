@@ -291,6 +291,9 @@
       <trans-unit id="extmng.mcpMarkWritesAsAi" resname="extmng.mcpMarkWritesAsAi">
         <source>Mark MCP writes as AI: Records an MCP client creates or changes are recorded as AI-generated or AI-modified in the AI Label module (source "mcp").</source>
       </trans-unit>
+      <trans-unit id="extmng.mcpIdempotencyTtlHours" resname="extmng.mcpIdempotencyTtlHours">
+        <source>MCP request id lifetime (hours): How long records_apply remembers a requestId and its answer, so a retried call is not applied twice (default 24).</source>
+      </trans-unit>
       <trans-unit id="extmng.mcpUploadTokenTtl" resname="extmng.mcpUploadTokenTtl">
         <source>MCP upload token lifetime (seconds): Single-use pre-signed upload token TTL (default 900).</source>
       </trans-unit>
