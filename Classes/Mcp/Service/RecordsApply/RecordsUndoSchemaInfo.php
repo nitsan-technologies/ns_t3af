@@ -77,54 +77,73 @@ readonly class RecordsUndoSchemaInfo
     }
 
     /**
-     * Where a record has to go to sit at its previous position again: the previous page (on top), or the negative
-     * uid of the record it followed. The stored sorting value alone means nothing, so the predecessor is looked up now.
+     * Non-deleted records currently on a page, ordered by the table's sort field then uid.
+     * Hidden records are kept (default restrictions are cleared; only DeletedRestriction is re-applied).
+     * Language overlays (uid > 0) are excluded; default language (0) and "all languages" (-1) stay.
      *
-     * @param array<string, mixed> $previousPosition the old data of the move: pid and, when the table sorts, the sorting value
-     * @return int|null null when the previous position is unknown
+     * @return list<array{uid: int, sorting: int}>
      */
-    public function resolveMoveTarget(string $table, int $uid, array $previousPosition): ?int
+    public function recordsOnPage(string $table, int $pageId): array
     {
-        $previousPageId = isset($previousPosition['pid']) && is_numeric($previousPosition['pid']) ? (int) $previousPosition['pid'] : -1;
-        if ($previousPageId < 0) {
-            return null;
-        }
-
-        if (!RecordsApplyMoveCommandChainer::tableSupportsSorting($table)) {
-            return $previousPageId;
+        if ($pageId < 0 || !RecordsApplyMoveCommandChainer::tableSupportsSorting($table)) {
+            return [];
         }
 
         $sortBy = (string) ($this->ctrl($table)['sortby'] ?? '');
-        if ($sortBy === '' || !isset($previousPosition[$sortBy]) || !is_numeric($previousPosition[$sortBy])) {
-            return $previousPageId;
-        }
-
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
+        // Keep hidden / starttime / endtime / fe_group rows; only drop soft-deleted ones.
         $queryBuilder->getRestrictions()->removeAll();
-        $conditions = [
-            $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($previousPageId, Connection::PARAM_INT)),
-            $queryBuilder->expr()->neq('uid', $queryBuilder->createNamedParameter($uid, Connection::PARAM_INT)),
-            $queryBuilder->expr()->lt($sortBy, $queryBuilder->createNamedParameter((int) $previousPosition[$sortBy], Connection::PARAM_INT)),
-        ];
         if ($this->supportsSoftDelete($table)) {
             $queryBuilder->getRestrictions()->add(GeneralUtility::makeInstance(DeletedRestriction::class));
         }
 
+        $conditions = [
+            $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pageId, Connection::PARAM_INT)),
+        ];
+        $languageField = $this->ctrl($table)['languageField'] ?? '';
+        if (is_string($languageField) && $languageField !== '') {
+            // Default language (0) and "all languages" (-1) share the default-language sort order.
+            $conditions[] = $queryBuilder->expr()->in(
+                $languageField,
+                $queryBuilder->createNamedParameter([-1, 0], Connection::PARAM_INT_ARRAY),
+            );
+        }
         if (!empty($this->ctrl($table)['versioningWS'])) {
             $conditions[] = $queryBuilder->expr()->eq('t3ver_wsid', 0);
         }
 
-        $predecessor = $queryBuilder
-            ->select('uid')
+        $rows = $queryBuilder
+            ->select('uid', $sortBy)
             ->from($table)
             ->where(...$conditions)
-            ->orderBy($sortBy, 'DESC')
-            ->setMaxResults(1)
+            ->orderBy($sortBy, 'ASC')
+            ->addOrderBy('uid', 'ASC')
             ->executeQuery()
-            ->fetchOne();
+            ->fetchAllAssociative();
 
-        // Nothing came before it: it was the first record of that page.
-        return $predecessor === false ? $previousPageId : -(int) $predecessor;
+        $result = [];
+        foreach ($rows as $row) {
+            $result[] = [
+                'uid' => (int) $row['uid'],
+                'sorting' => (int) ($row[$sortBy] ?? 0),
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Previous page for a move without a sort field (positive pid). Sorted tables rebuild order in the
+     * planner from {@see recordsOnPage()} plus each mover's old sorting from history.
+     *
+     * @param array<string, mixed> $previousPosition the old data of the move (needs pid)
+     * @return int|null null when the previous page is unknown
+     */
+    public function resolveMoveTarget(string $table, int $uid, array $previousPosition): ?int
+    {
+        $previousPageId = isset($previousPosition['pid']) && is_numeric($previousPosition['pid']) ? (int) $previousPosition['pid'] : -1;
+
+        return $previousPageId < 0 ? null : $previousPageId;
     }
 
     /** @return array<string, mixed> */

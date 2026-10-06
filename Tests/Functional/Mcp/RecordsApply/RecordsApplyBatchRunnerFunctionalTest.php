@@ -236,6 +236,266 @@ final class RecordsApplyBatchRunnerFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function undoingAnInterleavedBulkMoveRestoresOrderAroundTheUnmovedRecord(): void
+    {
+        $service = $this->get(RecordsApplyService::class);
+        // Clear the A/B/C fixtures from setUp so page order is only this case.
+        $service->apply([], ['tt_content' => array_fill_keys($this->uids, ['delete' => 1])], false, true, true);
+
+        $setup = $service->apply(
+            [
+                'tt_content' => [
+                    'NEWe1' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E1'],
+                    'NEWe1b' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E1b'],
+                    'NEWe2' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E2'],
+                    'NEWe3' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E3'],
+                    'NEWe4' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E4'],
+                ],
+            ],
+            [],
+            false,
+            true,
+            true,
+        );
+        $e1 = $setup->created['NEWe1'];
+        $e2 = $setup->created['NEWe2'];
+        $e3 = $setup->created['NEWe3'];
+        $pageA = self::SITE_ROOT_PAGE_ID;
+
+        self::assertSame(['E1', 'E1b', 'E2', 'E3', 'E4'], $this->headersOnPage($pageA));
+
+        $batch = $service->apply(
+            [],
+            [],
+            false,
+            true,
+            true,
+            [['table' => 'tt_content', 'uids' => [$e1, $e2, $e3], 'move' => $this->otherPage]],
+        );
+        self::assertSame(['E1', 'E2', 'E3'], $this->headersOnPage($this->otherPage));
+        self::assertSame(['E1b', 'E4'], $this->headersOnPage($pageA));
+
+        $undo = $this->get(RecordsUndoService::class);
+        $outcome = $undo->undo($batch->batchId, false);
+
+        self::assertTrue($outcome['result']->written);
+        self::assertSame(['E1', 'E1b', 'E2', 'E3', 'E4'], $this->headersOnPage($pageA));
+
+        try {
+            $undo->undo($batch->batchId, false);
+            self::fail('Expected the second undo to be refused as already undone.');
+        } catch (ToolCallException $exception) {
+            self::assertSame(1790500018, $exception->getCode());
+        }
+
+        $redo = $undo->undo($outcome['result']->batchId, false);
+        self::assertTrue($redo['result']->written);
+        self::assertSame(['E1', 'E2', 'E3'], $this->headersOnPage($this->otherPage));
+        self::assertSame(['E1b', 'E4'], $this->headersOnPage($pageA));
+    }
+
+    #[Test]
+    public function undoingAnAlternatingBulkMoveRestoresOrderAroundUnmovedRecords(): void
+    {
+        $service = $this->get(RecordsApplyService::class);
+        $service->apply([], ['tt_content' => array_fill_keys($this->uids, ['delete' => 1])], false, true, true);
+
+        $setup = $service->apply(
+            [
+                'tt_content' => [
+                    'NEWe1' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E1'],
+                    'NEWx' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'X'],
+                    'NEWe2' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E2'],
+                    'NEWy' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'Y'],
+                    'NEWe3' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E3'],
+                ],
+            ],
+            [],
+            false,
+            true,
+            true,
+        );
+        $movers = [$setup->created['NEWe1'], $setup->created['NEWe2'], $setup->created['NEWe3']];
+
+        $batch = $service->apply(
+            [],
+            [],
+            false,
+            true,
+            true,
+            [['table' => 'tt_content', 'uids' => $movers, 'move' => $this->otherPage]],
+        );
+        self::assertSame(['E1', 'E2', 'E3'], $this->headersOnPage($this->otherPage));
+        self::assertSame(['X', 'Y'], $this->headersOnPage(self::SITE_ROOT_PAGE_ID));
+
+        $this->get(RecordsUndoService::class)->undo($batch->batchId, false);
+
+        self::assertSame(['E1', 'X', 'E2', 'Y', 'E3'], $this->headersOnPage(self::SITE_ROOT_PAGE_ID));
+    }
+
+    #[Test]
+    public function undoingAnInterleavedBulkMoveKeepsHiddenUnmovedPredecessors(): void
+    {
+        $service = $this->get(RecordsApplyService::class);
+        $service->apply([], ['tt_content' => array_fill_keys($this->uids, ['delete' => 1])], false, true, true);
+
+        $setup = $service->apply(
+            [
+                'tt_content' => [
+                    'NEWe1' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E1', 'hidden' => 1],
+                    'NEWe1b' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E1b', 'hidden' => 1],
+                    'NEWe2' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E2', 'hidden' => 1],
+                    'NEWe3' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E3', 'hidden' => 1],
+                    'NEWe4' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E4', 'hidden' => 1],
+                ],
+            ],
+            [],
+            false,
+            true,
+            true,
+        );
+        $movers = [$setup->created['NEWe1'], $setup->created['NEWe2'], $setup->created['NEWe3']];
+
+        $batch = $service->apply(
+            [],
+            [],
+            false,
+            true,
+            true,
+            [['table' => 'tt_content', 'uids' => $movers, 'move' => $this->otherPage]],
+        );
+
+        $this->get(RecordsUndoService::class)->undo($batch->batchId, false);
+
+        self::assertSame(['E1', 'E1b', 'E2', 'E3', 'E4'], $this->headersOnPage(self::SITE_ROOT_PAGE_ID));
+        foreach (array_merge($movers, [$setup->created['NEWe1b'], $setup->created['NEWe4']]) as $uid) {
+            self::assertSame(1, (int) $this->getConnectionPool()->getConnectionForTable('tt_content')
+                ->executeQuery('SELECT hidden FROM tt_content WHERE uid = ?', [$uid])
+                ->fetchOne());
+        }
+    }
+
+    #[Test]
+    public function undoingAnInterleavedBulkMoveIgnoresTranslatedRecordsBetweenMovers(): void
+    {
+        $service = $this->get(RecordsApplyService::class);
+        $service->apply([], ['tt_content' => array_fill_keys($this->uids, ['delete' => 1])], false, true, true);
+
+        $setup = $service->apply(
+            [
+                'tt_content' => [
+                    'NEWe1' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E1'],
+                    'NEWe1b' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E1b'],
+                    'NEWe2' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E2'],
+                    'NEWe3' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E3'],
+                ],
+            ],
+            [],
+            false,
+            true,
+            true,
+        );
+        $e1 = $setup->created['NEWe1'];
+        $e1b = $setup->created['NEWe1b'];
+        $e2 = $setup->created['NEWe2'];
+        $e3 = $setup->created['NEWe3'];
+
+        $sortE1 = (int) $this->getConnectionPool()->getConnectionForTable('tt_content')
+            ->executeQuery('SELECT sorting FROM tt_content WHERE uid = ?', [$e1])->fetchOne();
+        $sortE1b = (int) $this->getConnectionPool()->getConnectionForTable('tt_content')
+            ->executeQuery('SELECT sorting FROM tt_content WHERE uid = ?', [$e1b])->fetchOne();
+
+        // Language overlay between E1 and E1b — must not become a predecessor for default-language undo.
+        $this->getConnectionPool()->getConnectionForTable('tt_content')->insert('tt_content', [
+            'pid' => self::SITE_ROOT_PAGE_ID,
+            'CType' => 'text',
+            'header' => 'E1-DE',
+            'sys_language_uid' => 1,
+            'l18n_parent' => $e1,
+            'sorting' => intdiv($sortE1 + $sortE1b, 2),
+            'colPos' => 0,
+            'deleted' => 0,
+            'hidden' => 0,
+            'tstamp' => time(),
+            'crdate' => time(),
+        ]);
+
+        $batch = $service->apply(
+            [],
+            [],
+            false,
+            true,
+            true,
+            [['table' => 'tt_content', 'uids' => [$e1, $e2, $e3], 'move' => $this->otherPage]],
+        );
+
+        $this->get(RecordsUndoService::class)->undo($batch->batchId, false);
+
+        self::assertSame(
+            ['E1', 'E1b', 'E2', 'E3'],
+            $this->defaultLanguageHeadersOnPage(self::SITE_ROOT_PAGE_ID),
+        );
+    }
+
+    #[Test]
+    public function undoingAnInterleavedBulkMoveKeepsAllLanguagesUnmovedPredecessors(): void
+    {
+        $service = $this->get(RecordsApplyService::class);
+        $service->apply([], ['tt_content' => array_fill_keys($this->uids, ['delete' => 1])], false, true, true);
+
+        $setup = $service->apply(
+            [
+                'tt_content' => [
+                    'NEWe1' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E1'],
+                    'NEWe2' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E2'],
+                    'NEWe3' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'colPos' => 0, 'header' => 'E3'],
+                ],
+            ],
+            [],
+            false,
+            true,
+            true,
+        );
+        $e1 = $setup->created['NEWe1'];
+        $e2 = $setup->created['NEWe2'];
+        $e3 = $setup->created['NEWe3'];
+        $sortE1 = (int) $this->getConnectionPool()->getConnectionForTable('tt_content')
+            ->executeQuery('SELECT sorting FROM tt_content WHERE uid = ?', [$e1])->fetchOne();
+        $sortE2 = (int) $this->getConnectionPool()->getConnectionForTable('tt_content')
+            ->executeQuery('SELECT sorting FROM tt_content WHERE uid = ?', [$e2])->fetchOne();
+
+        // "All languages" between E1 and E2 — must stay in the merge (unlike language overlays).
+        $this->getConnectionPool()->getConnectionForTable('tt_content')->insert('tt_content', [
+            'pid' => self::SITE_ROOT_PAGE_ID,
+            'CType' => 'text',
+            'header' => 'ALL',
+            'sys_language_uid' => -1,
+            'sorting' => intdiv($sortE1 + $sortE2, 2),
+            'colPos' => 0,
+            'deleted' => 0,
+            'hidden' => 0,
+            'tstamp' => time(),
+            'crdate' => time(),
+        ]);
+
+        self::assertSame(['E1', 'ALL', 'E2', 'E3'], $this->defaultLanguageHeadersOnPage(self::SITE_ROOT_PAGE_ID));
+
+        $batch = $service->apply(
+            [],
+            [],
+            false,
+            true,
+            true,
+            [['table' => 'tt_content', 'uids' => [$e1, $e2, $e3], 'move' => $this->otherPage]],
+        );
+        self::assertSame(['ALL'], $this->defaultLanguageHeadersOnPage(self::SITE_ROOT_PAGE_ID));
+
+        $this->get(RecordsUndoService::class)->undo($batch->batchId, false);
+
+        self::assertSame(['E1', 'ALL', 'E2', 'E3'], $this->defaultLanguageHeadersOnPage(self::SITE_ROOT_PAGE_ID));
+    }
+
+    #[Test]
     public function aBulkMoveIncludingARecordAlreadyOnTheTargetKeepsRequestOrder(): void
     {
         $service = $this->get(RecordsApplyService::class);
@@ -332,6 +592,19 @@ final class RecordsApplyBatchRunnerFunctionalTest extends FunctionalTestCase
         $rows = $this->getConnectionPool()->getConnectionForTable('tt_content')
             ->executeQuery(
                 'SELECT header FROM tt_content WHERE pid = ? AND deleted = 0 ORDER BY sorting ASC',
+                [$pid],
+            )
+            ->fetchFirstColumn();
+
+        return array_map('strval', $rows);
+    }
+
+    /** @return list<string> */
+    private function defaultLanguageHeadersOnPage(int $pid): array
+    {
+        $rows = $this->getConnectionPool()->getConnectionForTable('tt_content')
+            ->executeQuery(
+                'SELECT header FROM tt_content WHERE pid = ? AND deleted = 0 AND sys_language_uid IN (-1, 0) ORDER BY sorting ASC, uid ASC',
                 [$pid],
             )
             ->fetchFirstColumn();

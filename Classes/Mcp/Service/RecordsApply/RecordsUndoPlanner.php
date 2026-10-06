@@ -221,10 +221,10 @@ readonly class RecordsUndoPlanner
     }
 
     /**
-     * Co-movers that left the same page together cannot resolve "after the previous sibling" while those
-     * siblings are still on the destination page. For tables with ctrl.sortby: sort by old sorting, put the
-     * earliest back with the normal target lookup, then chain the rest after the previous uid. Tables without
-     * a sort field cannot use negative "after" targets, so each record is restored to its own old pid alone.
+     * Co-movers that left the same page together must be restored with unmoved siblings in mind.
+     * For tables with ctrl.sortby: merge records still on the old page (current sorting) with the movers
+     * (old sorting from history), sort ascending, then place each mover after its predecessor in that list
+     * (positive pid when it was first). Tables without a sort field keep positive-pid restores only.
      *
      * @param list<array{table: string, uid: int, previous: array<mixed>}> $pending
      * @return array{
@@ -234,21 +234,25 @@ readonly class RecordsUndoPlanner
      */
     private function resolveOrderedMoves(array $pending): array
     {
-        /** @var array<string, list<array{table: string, uid: int, previous: array<mixed>}>> $groups */
+        /** @var array<string, array{table: string, pid: int, items: list<array{table: string, uid: int, previous: array<mixed>}>}> $groups */
         $groups = [];
         foreach ($pending as $item) {
             $pid = isset($item['previous']['pid']) && is_numeric($item['previous']['pid'])
                 ? (int) $item['previous']['pid']
                 : -1;
-            $groups[$item['table'] . ':' . $pid][] = $item;
+            $key = $item['table'] . ':' . $pid;
+            $groups[$key] ??= ['table' => $item['table'], 'pid' => $pid, 'items' => []];
+            $groups[$key]['items'][] = $item;
         }
 
         $moves = [];
         $notRestored = [];
         foreach ($groups as $group) {
-            $table = $group[0]['table'];
+            $table = $group['table'];
+            $pid = $group['pid'];
+            $items = $group['items'];
             if (!RecordsApplyMoveCommandChainer::tableSupportsSorting($table)) {
-                foreach ($group as $item) {
+                foreach ($items as $item) {
                     $this->appendMove($moves, $notRestored, $item, $this->schemaInfo->resolveMoveTarget(
                         $item['table'],
                         $item['uid'],
@@ -258,29 +262,61 @@ readonly class RecordsUndoPlanner
                 continue;
             }
 
-            usort(
-                $group,
-                static function (array $a, array $b): int {
-                    $sortA = isset($a['previous']['sorting']) && is_numeric($a['previous']['sorting'])
-                        ? (int) $a['previous']['sorting']
-                        : 0;
-                    $sortB = isset($b['previous']['sorting']) && is_numeric($b['previous']['sorting'])
-                        ? (int) $b['previous']['sorting']
-                        : 0;
+            if ($pid < 0) {
+                foreach ($items as $item) {
+                    $this->appendMove($moves, $notRestored, $item, null);
+                }
+                continue;
+            }
 
-                    return $sortA <=> $sortB ?: $a['uid'] <=> $b['uid'];
-                },
+            /** @var array<int, array{table: string, uid: int, previous: array<mixed>}> $movedByUid */
+            $movedByUid = [];
+            /** @var list<array{table: string, uid: int, previous: array<mixed>}> $moversWithoutSorting */
+            $moversWithoutSorting = [];
+            foreach ($items as $item) {
+                $movedByUid[$item['uid']] = $item;
+                if (!isset($item['previous']['sorting']) || !is_numeric($item['previous']['sorting'])) {
+                    $moversWithoutSorting[] = $item;
+                }
+            }
+
+            /** @var list<array{uid: int, sorting: int, moved: bool}> $slots */
+            $slots = [];
+            foreach ($this->schemaInfo->recordsOnPage($table, $pid) as $row) {
+                if (isset($movedByUid[$row['uid']])) {
+                    continue;
+                }
+                $slots[] = ['uid' => $row['uid'], 'sorting' => $row['sorting'], 'moved' => false];
+            }
+
+            foreach ($items as $item) {
+                if (!isset($item['previous']['sorting']) || !is_numeric($item['previous']['sorting'])) {
+                    continue;
+                }
+                $slots[] = ['uid' => $item['uid'], 'sorting' => (int) $item['previous']['sorting'], 'moved' => true];
+            }
+
+            // Equal sorting: uid ascending for a stable order.
+            usort(
+                $slots,
+                static fn(array $a, array $b): int => $a['sorting'] <=> $b['sorting'] ?: $a['uid'] <=> $b['uid'],
             );
 
             $previousUid = null;
-            foreach ($group as $item) {
-                $target = $previousUid === null
-                    ? $this->schemaInfo->resolveMoveTarget($item['table'], $item['uid'], $item['previous'])
-                    : -$previousUid;
-                $this->appendMove($moves, $notRestored, $item, $target);
-                if ($target !== null) {
-                    $previousUid = $item['uid'];
+            foreach ($slots as $slot) {
+                if ($slot['moved']) {
+                    $target = $previousUid === null ? $pid : -$previousUid;
+                    $this->appendMove($moves, $notRestored, $movedByUid[$slot['uid']], $target);
                 }
+                $previousUid = $slot['uid'];
+            }
+
+            // History without old sorting: fall back to the previous chain (first → top / after last known
+            // predecessor, each following mover after the previous mover). Avoid inventing sorting 0.
+            foreach ($moversWithoutSorting as $item) {
+                $target = $previousUid === null ? $pid : -$previousUid;
+                $this->appendMove($moves, $notRestored, $item, $target);
+                $previousUid = $item['uid'];
             }
         }
 

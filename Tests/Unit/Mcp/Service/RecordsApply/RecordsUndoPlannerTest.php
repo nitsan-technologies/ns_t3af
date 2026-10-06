@@ -39,6 +39,7 @@ final class RecordsUndoPlannerTest extends TestCase
 
         $this->schema = $this->createMock(RecordsUndoSchemaInfo::class);
         $this->schema->method('supportsSoftDelete')->willReturn(true);
+        $this->schema->method('recordsOnPage')->willReturn([]);
         $this->schema->method('fieldKind')->willReturnCallback(
             static fn(string $table, string $field): int => match ($field) {
                 'image' => RecordsUndoSchemaInfo::FIELD_RELATION,
@@ -140,23 +141,18 @@ final class RecordsUndoPlannerTest extends TestCase
     #[Test]
     public function aMovedRecordGoesBackToWhereTheOldestMoveTookItFrom(): void
     {
-        $this->schema->method('resolveMoveTarget')->willReturnCallback(
-            static fn(string $table, int $uid, array $previous): int => -((int) $previous['sorting']),
-        );
-
         $plan = $this->planner->plan([
             $this->row(1, 3, 'tt_content', 7, ['oldData' => ['pid' => 4, 'sorting' => 256], 'newData' => ['pid' => 5]]),
             $this->row(2, 3, 'tt_content', 7, ['oldData' => ['pid' => 5, 'sorting' => 512], 'newData' => ['pid' => 6]]),
         ]);
 
-        self::assertSame(['tt_content' => [7 => ['move' => -256]]], $plan['cmdmap']);
+        // Oldest move wins; empty old page → top of pid 4.
+        self::assertSame(['tt_content' => [7 => ['move' => 4]]], $plan['cmdmap']);
     }
 
     #[Test]
     public function consecutiveCoMoversAreRestoredInOldSortingOrderWithChaining(): void
     {
-        $this->schema->expects(self::once())->method('resolveMoveTarget')->willReturn(1);
-
         $plan = $this->planner->plan([
             $this->row(1, 3, 'tt_content', 20, ['oldData' => ['pid' => 1, 'sorting' => 512], 'newData' => ['pid' => 9]]),
             $this->row(2, 3, 'tt_content', 10, ['oldData' => ['pid' => 1, 'sorting' => 256], 'newData' => ['pid' => 9]]),
@@ -176,10 +172,14 @@ final class RecordsUndoPlannerTest extends TestCase
     }
 
     #[Test]
-    public function aCoMoverGroupChainsAfterTheEarliestResolvedPredecessor(): void
+    public function aCoMoverGroupChainsAfterTheUnmovedPredecessorStillOnThePage(): void
     {
-        // M1 stayed on the page (uid 1); only M2 and M3 left. Earliest of the group resolves to -1.
-        $this->schema->expects(self::once())->method('resolveMoveTarget')->willReturn(-1);
+        // M1 stayed on the page (uid 1); only M2 and M3 left.
+        $this->schema = $this->createMock(RecordsUndoSchemaInfo::class);
+        $this->schema->method('supportsSoftDelete')->willReturn(true);
+        $this->schema->method('fieldKind')->willReturn(RecordsUndoSchemaInfo::FIELD_RESTORE);
+        $this->schema->method('recordsOnPage')->willReturn([['uid' => 1, 'sorting' => 256]]);
+        $this->planner = new RecordsUndoPlanner($this->schema);
 
         $plan = $this->planner->plan([
             $this->row(1, 3, 'tt_content', 3, ['oldData' => ['pid' => 1, 'sorting' => 768], 'newData' => ['pid' => 9]]),
@@ -191,6 +191,234 @@ final class RecordsUndoPlannerTest extends TestCase
                 'tt_content' => [
                     2 => ['move' => -1],
                     3 => ['move' => -2],
+                ],
+            ],
+            $plan['cmdmap'],
+        );
+    }
+
+    #[Test]
+    public function interleavedUnmovedRecordsAreKeptBetweenRestoredMovers(): void
+    {
+        // Old page: E1(10@256), E1b(15@384), E2(20@512), E3(30@768), E4(40@1024). Moved: E1, E2, E3.
+        $this->schema = $this->createMock(RecordsUndoSchemaInfo::class);
+        $this->schema->method('supportsSoftDelete')->willReturn(true);
+        $this->schema->method('fieldKind')->willReturn(RecordsUndoSchemaInfo::FIELD_RESTORE);
+        $this->schema->method('recordsOnPage')->willReturn([
+            ['uid' => 15, 'sorting' => 384],
+            ['uid' => 40, 'sorting' => 1024],
+        ]);
+        $this->planner = new RecordsUndoPlanner($this->schema);
+
+        $plan = $this->planner->plan([
+            $this->row(1, 3, 'tt_content', 10, ['oldData' => ['pid' => 1, 'sorting' => 256], 'newData' => ['pid' => 9]]),
+            $this->row(2, 3, 'tt_content', 20, ['oldData' => ['pid' => 1, 'sorting' => 512], 'newData' => ['pid' => 9]]),
+            $this->row(3, 3, 'tt_content', 30, ['oldData' => ['pid' => 1, 'sorting' => 768], 'newData' => ['pid' => 9]]),
+        ]);
+
+        self::assertSame(
+            [
+                'tt_content' => [
+                    10 => ['move' => 1],
+                    20 => ['move' => -15],
+                    30 => ['move' => -20],
+                ],
+            ],
+            $plan['cmdmap'],
+        );
+    }
+
+    #[Test]
+    public function moversAtTheStartOfThePageChainAmongThemselves(): void
+    {
+        $this->schema = $this->createMock(RecordsUndoSchemaInfo::class);
+        $this->schema->method('supportsSoftDelete')->willReturn(true);
+        $this->schema->method('fieldKind')->willReturn(RecordsUndoSchemaInfo::FIELD_RESTORE);
+        $this->schema->method('recordsOnPage')->willReturn([
+            ['uid' => 40, 'sorting' => 1024],
+            ['uid' => 50, 'sorting' => 1280],
+        ]);
+        $this->planner = new RecordsUndoPlanner($this->schema);
+
+        $plan = $this->planner->plan([
+            $this->row(1, 3, 'tt_content', 10, ['oldData' => ['pid' => 1, 'sorting' => 256], 'newData' => ['pid' => 9]]),
+            $this->row(2, 3, 'tt_content', 20, ['oldData' => ['pid' => 1, 'sorting' => 512], 'newData' => ['pid' => 9]]),
+            $this->row(3, 3, 'tt_content', 30, ['oldData' => ['pid' => 1, 'sorting' => 768], 'newData' => ['pid' => 9]]),
+        ]);
+
+        self::assertSame(
+            [
+                'tt_content' => [
+                    10 => ['move' => 1],
+                    20 => ['move' => -10],
+                    30 => ['move' => -20],
+                ],
+            ],
+            $plan['cmdmap'],
+        );
+    }
+
+    #[Test]
+    public function moversAtTheEndOfThePageFollowTheLastUnmovedRecord(): void
+    {
+        $this->schema = $this->createMock(RecordsUndoSchemaInfo::class);
+        $this->schema->method('supportsSoftDelete')->willReturn(true);
+        $this->schema->method('fieldKind')->willReturn(RecordsUndoSchemaInfo::FIELD_RESTORE);
+        $this->schema->method('recordsOnPage')->willReturn([
+            ['uid' => 10, 'sorting' => 256],
+            ['uid' => 20, 'sorting' => 512],
+        ]);
+        $this->planner = new RecordsUndoPlanner($this->schema);
+
+        $plan = $this->planner->plan([
+            $this->row(1, 3, 'tt_content', 30, ['oldData' => ['pid' => 1, 'sorting' => 768], 'newData' => ['pid' => 9]]),
+            $this->row(2, 3, 'tt_content', 40, ['oldData' => ['pid' => 1, 'sorting' => 1024], 'newData' => ['pid' => 9]]),
+            $this->row(3, 3, 'tt_content', 50, ['oldData' => ['pid' => 1, 'sorting' => 1280], 'newData' => ['pid' => 9]]),
+        ]);
+
+        self::assertSame(
+            [
+                'tt_content' => [
+                    30 => ['move' => -20],
+                    40 => ['move' => -30],
+                    50 => ['move' => -40],
+                ],
+            ],
+            $plan['cmdmap'],
+        );
+    }
+
+    #[Test]
+    public function alternatingMovedAndUnmovedRecordsRestoreAfterEachUnmovedPredecessor(): void
+    {
+        // E1, X, E2, Y, E3 — movers E1/E2/E3; X=11, Y=21 still on page.
+        $this->schema = $this->createMock(RecordsUndoSchemaInfo::class);
+        $this->schema->method('supportsSoftDelete')->willReturn(true);
+        $this->schema->method('fieldKind')->willReturn(RecordsUndoSchemaInfo::FIELD_RESTORE);
+        $this->schema->method('recordsOnPage')->willReturn([
+            ['uid' => 11, 'sorting' => 384],
+            ['uid' => 21, 'sorting' => 640],
+        ]);
+        $this->planner = new RecordsUndoPlanner($this->schema);
+
+        $plan = $this->planner->plan([
+            $this->row(1, 3, 'tt_content', 10, ['oldData' => ['pid' => 1, 'sorting' => 256], 'newData' => ['pid' => 9]]),
+            $this->row(2, 3, 'tt_content', 20, ['oldData' => ['pid' => 1, 'sorting' => 512], 'newData' => ['pid' => 9]]),
+            $this->row(3, 3, 'tt_content', 30, ['oldData' => ['pid' => 1, 'sorting' => 768], 'newData' => ['pid' => 9]]),
+        ]);
+
+        self::assertSame(
+            [
+                'tt_content' => [
+                    10 => ['move' => 1],
+                    20 => ['move' => -11],
+                    30 => ['move' => -21],
+                ],
+            ],
+            $plan['cmdmap'],
+        );
+    }
+
+    #[Test]
+    public function moversFromTwoOldPagesAreRestoredPerPage(): void
+    {
+        $this->schema = $this->createMock(RecordsUndoSchemaInfo::class);
+        $this->schema->method('supportsSoftDelete')->willReturn(true);
+        $this->schema->method('fieldKind')->willReturn(RecordsUndoSchemaInfo::FIELD_RESTORE);
+        $this->schema->method('recordsOnPage')->willReturnCallback(
+            static fn(string $table, int $pid): array => match ($pid) {
+                1 => [['uid' => 15, 'sorting' => 384]],
+                2 => [],
+                default => [],
+            },
+        );
+        $this->planner = new RecordsUndoPlanner($this->schema);
+
+        $plan = $this->planner->plan([
+            $this->row(1, 3, 'tt_content', 10, ['oldData' => ['pid' => 1, 'sorting' => 256], 'newData' => ['pid' => 9]]),
+            $this->row(2, 3, 'tt_content', 20, ['oldData' => ['pid' => 1, 'sorting' => 512], 'newData' => ['pid' => 9]]),
+            $this->row(3, 3, 'tt_content', 30, ['oldData' => ['pid' => 2, 'sorting' => 256], 'newData' => ['pid' => 9]]),
+            $this->row(4, 3, 'tt_content', 40, ['oldData' => ['pid' => 2, 'sorting' => 512], 'newData' => ['pid' => 9]]),
+        ]);
+
+        self::assertSame(
+            [
+                'tt_content' => [
+                    10 => ['move' => 1],
+                    20 => ['move' => -15],
+                    30 => ['move' => 2],
+                    40 => ['move' => -30],
+                ],
+            ],
+            $plan['cmdmap'],
+        );
+    }
+
+    #[Test]
+    public function equalOldSortingIsOrderedByUidForAStableMerge(): void
+    {
+        $plan = $this->planner->plan([
+            $this->row(1, 3, 'tt_content', 20, ['oldData' => ['pid' => 1, 'sorting' => 256], 'newData' => ['pid' => 9]]),
+            $this->row(2, 3, 'tt_content', 10, ['oldData' => ['pid' => 1, 'sorting' => 256], 'newData' => ['pid' => 9]]),
+        ]);
+
+        self::assertSame(
+            [
+                'tt_content' => [
+                    10 => ['move' => 1],
+                    20 => ['move' => -10],
+                ],
+            ],
+            $plan['cmdmap'],
+        );
+    }
+
+    #[Test]
+    public function moversWithoutOldSortingFallBackToChainingAfterTheMergedList(): void
+    {
+        $this->schema = $this->createMock(RecordsUndoSchemaInfo::class);
+        $this->schema->method('supportsSoftDelete')->willReturn(true);
+        $this->schema->method('fieldKind')->willReturn(RecordsUndoSchemaInfo::FIELD_RESTORE);
+        $this->schema->method('recordsOnPage')->willReturn([
+            ['uid' => 15, 'sorting' => 384],
+        ]);
+        $this->planner = new RecordsUndoPlanner($this->schema);
+
+        $plan = $this->planner->plan([
+            $this->row(1, 3, 'tt_content', 10, ['oldData' => ['pid' => 1, 'sorting' => 256], 'newData' => ['pid' => 9]]),
+            // No sorting in history: chain after the last known slot (E1b), not invent sorting 0.
+            $this->row(2, 3, 'tt_content', 20, ['oldData' => ['pid' => 1], 'newData' => ['pid' => 9]]),
+            $this->row(3, 3, 'tt_content', 30, ['oldData' => ['pid' => 1, 'sorting' => 768], 'newData' => ['pid' => 9]]),
+        ]);
+
+        self::assertSame(
+            [
+                'tt_content' => [
+                    10 => ['move' => 1],
+                    30 => ['move' => -15],
+                    20 => ['move' => -30],
+                ],
+            ],
+            $plan['cmdmap'],
+        );
+    }
+
+    #[Test]
+    public function allMoversWithoutOldSortingChainLikeThePreviousBehaviour(): void
+    {
+        $plan = $this->planner->plan([
+            $this->row(1, 3, 'tt_content', 20, ['oldData' => ['pid' => 1], 'newData' => ['pid' => 9]]),
+            $this->row(2, 3, 'tt_content', 10, ['oldData' => ['pid' => 1], 'newData' => ['pid' => 9]]),
+            $this->row(3, 3, 'tt_content', 30, ['oldData' => ['pid' => 1], 'newData' => ['pid' => 9]]),
+        ]);
+
+        // History order of the group (not uid): first → top, then after previous mover.
+        self::assertSame(
+            [
+                'tt_content' => [
+                    20 => ['move' => 1],
+                    10 => ['move' => -20],
+                    30 => ['move' => -10],
                 ],
             ],
             $plan['cmdmap'],
@@ -228,10 +456,8 @@ final class RecordsUndoPlannerTest extends TestCase
     #[Test]
     public function aMoveWithAnUnknownPreviousPositionIsReported(): void
     {
-        $this->schema->method('resolveMoveTarget')->willReturn(null);
-
         $plan = $this->planner->plan([
-            $this->row(1, 3, 'tt_content', 7, ['oldData' => ['pid' => 4], 'newData' => ['pid' => 5]]),
+            $this->row(1, 3, 'tt_content', 7, ['oldData' => ['pid' => -1, 'sorting' => 256], 'newData' => ['pid' => 5]]),
         ]);
 
         self::assertSame([], $plan['cmdmap']);
@@ -241,7 +467,7 @@ final class RecordsUndoPlannerTest extends TestCase
     #[Test]
     public function aMoveOfARecordTheBatchCreatedIsIgnored(): void
     {
-        $this->schema->expects(self::never())->method('resolveMoveTarget');
+        $this->schema->expects(self::never())->method('recordsOnPage');
 
         $plan = $this->planner->plan([
             $this->row(1, 1, 'tt_content', 7),
