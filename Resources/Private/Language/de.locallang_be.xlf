@@ -335,6 +335,10 @@
                 <source>Session lifetime (seconds): Sliding TTL for MCP session storage.</source>
                 <target>Sitzungslebensdauer (Sekunden): Gleitende TTL für MCP-Sitzungsspeicher.</target>
             </trans-unit>
+            <trans-unit id="extmng.mcpMarkWritesAsAi">
+                <source>Mark MCP writes as AI: Records an MCP client creates or changes are recorded as AI-generated or AI-modified in the AI Label module (source "mcp").</source>
+                <target>MCP-Schreibzugriffe als KI kennzeichnen: Datensätze, die ein MCP-Client anlegt oder ändert, werden im AI-Label-Modul als KI-generiert oder KI-geändert erfasst (Quelle "mcp").</target>
+            </trans-unit>
             <trans-unit id="extmng.mcpMaxBodyBytes">
                 <source>Max MCP POST body size (bytes): Upper limit for Streamable HTTP request bodies (default 16 MiB).</source>
                 <target>Max. MCP-POST-Body-Größe (Bytes): Obergrenze für Streamable-HTTP-Anfragen (Standard 16 MiB).</target>

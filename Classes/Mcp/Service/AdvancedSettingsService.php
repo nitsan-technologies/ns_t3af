@@ -112,6 +112,12 @@ readonly class AdvancedSettingsService
         return $this->bool('mcpAllowDestructiveFileOps', true);
     }
 
+    /** Mark records written through MCP tools as AI-involved in the AI Label module. */
+    public function markWritesAsAi(): bool
+    {
+        return $this->bool('mcpMarkWritesAsAi', true);
+    }
+
     public function uploadTokenTtl(): int
     {
         $configured = $this->int('mcpUploadTokenTtl', self::DEFAULT_UPLOAD_TOKEN_TTL);
@@ -160,6 +166,7 @@ readonly class AdvancedSettingsService
             'mcpMaxBodyBytes' => $this->maxBodyBytes(),
             'mcpMaxFileSizeMb' => $this->maxFileSizeMb(),
             'mcpAllowDestructiveFileOps' => $this->allowDestructiveFileOps() ? 1 : 0,
+            'mcpMarkWritesAsAi' => $this->markWritesAsAi() ? 1 : 0,
             'mcpUploadTokenTtl' => $this->uploadTokenTtl(),
             'mcpMaxBase64UploadBytes' => $this->maxBase64UploadBytes(),
         ];

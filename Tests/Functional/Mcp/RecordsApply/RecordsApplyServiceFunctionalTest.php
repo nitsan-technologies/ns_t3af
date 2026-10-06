@@ -378,6 +378,119 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
         self::assertSame(['Workspace A', 'Workspace B'], array_slice($headers, 2));
     }
 
+    #[Test]
+    public function recordsCreatedByTheBatchAreLabelledAsAiGeneratedFromTheMcpSource(): void
+    {
+        $result = $this->service->apply(
+            [
+                'pages' => ['NEWpage' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Labelled page']],
+                'tt_content' => ['NEWc' => ['pid' => 'NEWpage', 'CType' => 'text', 'header' => 'Labelled element']],
+            ],
+            [],
+            false,
+            true,
+            true,
+        );
+
+        self::assertSame(2, $result->aiLabelled);
+        foreach (['pages' => $result->created['NEWpage'], 'tt_content' => $result->created['NEWc']] as $table => $uid) {
+            self::assertSame(['ai_generated', 'mcp'], $this->labelOf($table, $uid), $table);
+        }
+    }
+
+    #[Test]
+    public function aDryRunLabelsNothing(): void
+    {
+        $result = $this->service->apply(
+            ['pages' => ['NEWpage' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Dry labelled']]],
+            [],
+            true,
+            true,
+            true,
+        );
+
+        self::assertSame(0, $result->aiLabelled);
+    }
+
+    #[Test]
+    public function aChangeOfContentMarksAnExistingRecordAiModified(): void
+    {
+        /** @var DataHandlerService $dataHandlerService */
+        $dataHandlerService = $this->get(DataHandlerService::class);
+        $uid = $dataHandlerService->createRecord('tt_content', self::SITE_ROOT_PAGE_ID, ['CType' => 'text', 'header' => 'Written by a human']);
+
+        $this->service->apply(['tt_content' => [$uid => ['header' => 'Rewritten by an AI']]], [], false, true, true);
+
+        self::assertSame(['ai_modified', 'mcp'], $this->labelOf('tt_content', $uid));
+    }
+
+    #[Test]
+    public function aRecordThatIsAlreadyAiGeneratedStaysAiGenerated(): void
+    {
+        $created = $this->service->apply(
+            ['tt_content' => ['NEWc' => ['pid' => self::SITE_ROOT_PAGE_ID, 'CType' => 'text', 'header' => 'First draft']]],
+            [],
+            false,
+            true,
+            true,
+        );
+        $uid = $created->created['NEWc'];
+
+        $this->service->apply(['tt_content' => [$uid => ['header' => 'Second draft']]], [], false, true, true);
+
+        self::assertSame('ai_generated', $this->labelOf('tt_content', $uid)[0]);
+    }
+
+    #[Test]
+    public function hidingARecordDoesNotMarkItAsAiModified(): void
+    {
+        /** @var DataHandlerService $dataHandlerService */
+        $dataHandlerService = $this->get(DataHandlerService::class);
+        $uid = $dataHandlerService->createRecord('tt_content', self::SITE_ROOT_PAGE_ID, ['CType' => 'text', 'header' => 'Visible']);
+
+        $result = $this->service->apply(['tt_content' => [$uid => ['hidden' => 1]]], [], false, true, true);
+
+        self::assertSame(0, $result->aiLabelled);
+        self::assertNotSame('ai_modified', $this->labelOf('tt_content', $uid)[0]);
+    }
+
+    #[Test]
+    public function aHiddenAiGeneratedRecordStaysAiGeneratedWhenItIsEditedAgain(): void
+    {
+        // TYPO3 creates new pages hidden; hidden rows must not look unlabelled to the marker.
+        $created = $this->service->apply(
+            ['pages' => ['NEWpage' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Hidden draft']]],
+            [],
+            false,
+            true,
+            true,
+        );
+        $uid = $created->created['NEWpage'];
+
+        $this->service->apply(['pages' => [$uid => ['title' => 'Hidden draft, edited']]], [], false, true, true);
+
+        self::assertSame(['ai_generated', 'mcp'], $this->labelOf('pages', $uid));
+    }
+
+    /**
+     * @return array{0: string, 1: string} involvement and recording source of a record
+     */
+    private function labelOf(string $table, int $uid): array
+    {
+        // Raw SQL on purpose: Connection::select() applies the default restrictions, which hide hidden
+        // and deleted rows (and TYPO3 creates new pages as hidden).
+        $row = $this->getConnectionPool()->getConnectionForTable($table)
+            ->executeQuery(
+                'SELECT tx_nst3af_ailabel_involvement, tx_nst3af_ailabel_recording_source FROM ' . $table . ' WHERE uid = ?',
+                [$uid],
+            )
+            ->fetchAssociative();
+
+        self::assertIsArray($row);
+
+        return [(string) $row['tx_nst3af_ailabel_involvement'], (string) $row['tx_nst3af_ailabel_recording_source']];
+    }
+
     private function switchToWorkspace(): int
     {
         $connection = $this->getConnectionPool()->getConnectionForTable('sys_workspace');

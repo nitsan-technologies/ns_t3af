@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Tool\Record;
 
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool;
@@ -53,7 +54,7 @@ final class WriteTableToolTest extends TestCase
         $recordService = $this->createMock(RecordService::class);
         $dataHandlerService = $this->createMock(DataHandlerService::class);
 
-        $this->tool = new WriteTableTool($dataHandlerService, $recordService, $tcaSchemaService);
+        $this->tool = new WriteTableTool($dataHandlerService, $recordService, $tcaSchemaService, $this->createMock(RecordsApplyService::class));
     }
 
     protected function tearDown(): void
@@ -114,6 +115,7 @@ final class WriteTableToolTest extends TestCase
             $this->createMock(DataHandlerService::class),
             $recordService,
             new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
         );
 
         $plan = $tool->plan([
@@ -148,6 +150,7 @@ final class WriteTableToolTest extends TestCase
             $this->createMock(DataHandlerService::class),
             $recordService,
             new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
         );
 
         try {

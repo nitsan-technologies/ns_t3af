@@ -131,6 +131,16 @@ final class RecordsApplyToolTest extends TestCase
     }
 
     #[Test]
+    public function theNumberOfRecordsMarkedAsAiIsReportedWhenThereAreAny(): void
+    {
+        $this->service->method('apply')->willReturn(new RecordsApplyResult('ra-abc', false, true, ['NEWc' => 41], [], [], [], 3));
+
+        $response = json_decode($this->tool->execute('{"tt_content":{"NEWc":{"pid":1}}}'), true);
+
+        self::assertSame(3, $response['aiLabelled']);
+    }
+
+    #[Test]
     public function brokenJsonIsAToolError(): void
     {
         $this->service->expects(self::never())->method('apply');

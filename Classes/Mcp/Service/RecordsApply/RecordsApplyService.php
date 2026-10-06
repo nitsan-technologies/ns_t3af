@@ -37,7 +37,8 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  *  2. append: let new records land at the end of their page, in the order sent,
  *  3. begin a transaction, run the datamap, then the cmdmap with the same batch id,
  *  4. any DataHandler error, thrown exception or dry run rolls EVERYTHING back; otherwise commit,
- *  5. write the audit entry (after the transaction, so a rollback cannot take it with it).
+ *  5. mark the written records as AI-involved in the AI Label module (after the commit, never inside it),
+ *  6. write the audit entry (after the transaction, so a rollback cannot take it with it).
  *
  * The batch id is the DataHandler correlation scope: every sys_history row the run writes carries it.
  *
@@ -55,6 +56,7 @@ readonly class RecordsApplyService
         private RecordsApplyPreflight $preflight,
         private RecordAppendOrderer $orderer,
         private RecordsApplyAudit $audit,
+        private RecordsApplyAiLabelMarker $aiLabelMarker,
         private ConnectionPool $connectionPool,
         private LoggerInterface $logger,
     ) {}
@@ -63,10 +65,11 @@ readonly class RecordsApplyService
      * @param array<mixed> $datamap DataHandler datamap: table => [uid|NEW id => fields]
      * @param array<mixed> $cmdmap DataHandler cmdmap: table => [uid => [command => value]]
      * @param array<mixed> $bulk shorthand entries, expanded into the two maps above before anything is checked
+     * @param string $tool name of the calling MCP tool, for the audit entry (records_apply, or write_table which runs on this engine)
      * @throws RecordsApplyValidationException when the request is refused before anything is written
      * @throws ToolCallException when DataHandler refuses or fails; everything is rolled back
      */
-    public function apply(array $datamap, array $cmdmap, bool $dryRun, bool $strict, bool $append, array $bulk = []): RecordsApplyResult
+    public function apply(array $datamap, array $cmdmap, bool $dryRun, bool $strict, bool $append, array $bulk = [], string $tool = 'records_apply'): RecordsApplyResult
     {
         $batchId = 'ra-' . bin2hex(random_bytes(10));
 
@@ -74,7 +77,7 @@ readonly class RecordsApplyService
             [$datamap, $cmdmap] = $this->bulkExpander->expand($bulk, $datamap, $cmdmap);
             $checked = $this->preflight->check($datamap, $cmdmap, $strict);
         } catch (RecordsApplyValidationException $exception) {
-            $this->audit->log($batchId, $dryRun, false, 'validation', [], [], $exception->getMessage());
+            $this->audit->log($tool, $batchId, $dryRun, false, 'validation', [], [], $exception->getMessage());
 
             throw $exception;
         }
@@ -91,7 +94,7 @@ readonly class RecordsApplyService
         $connection = $this->connectionPool->getConnectionByName(ConnectionPool::DEFAULT_CONNECTION_NAME);
         if ($connection->isTransactionActive()) {
             $message = 'records_apply cannot run inside an open database transaction, because it could not roll back on its own. Nothing was written.';
-            $this->audit->log($batchId, $dryRun, false, 'transaction', $operations, $fieldNames, $message);
+            $this->audit->log($tool, $batchId, $dryRun, false, 'transaction', $operations, $fieldNames, $message);
 
             throw new ToolCallException($message, 1790500002);
         }
@@ -111,7 +114,7 @@ readonly class RecordsApplyService
             $this->logger->error('records_apply: DataHandler threw', ['exception' => $throwable, 'batchId' => $batchId]);
 
             $summary = sprintf('%s (code %d)', $throwable::class, (int) $throwable->getCode());
-            $this->audit->log($batchId, $dryRun, false, 'datahandler', $operations, $fieldNames, $summary);
+            $this->audit->log($tool, $batchId, $dryRun, false, 'datahandler', $operations, $fieldNames, $summary);
 
             throw new ToolCallException(
                 sprintf(
@@ -127,7 +130,7 @@ readonly class RecordsApplyService
         $errors = self::errors($dataHandler->errorLog);
         if ($errors !== []) {
             $this->rollBack($connection);
-            $this->audit->log($batchId, $dryRun, false, 'datahandler', $operations, $fieldNames, implode(' | ', $errors));
+            $this->audit->log($tool, $batchId, $dryRun, false, 'datahandler', $operations, $fieldNames, implode(' | ', $errors));
 
             throw new ToolCallException(
                 json_encode([
@@ -165,7 +168,7 @@ readonly class RecordsApplyService
                 $this->rollBack($connection);
                 $this->logger->error('records_apply: commit failed', ['exception' => $throwable, 'batchId' => $batchId]);
                 $summary = sprintf('%s (code %d)', $throwable::class, (int) $throwable->getCode());
-                $this->audit->log($batchId, $dryRun, false, 'commit', $operations, $fieldNames, $summary);
+                $this->audit->log($tool, $batchId, $dryRun, false, 'commit', $operations, $fieldNames, $summary);
 
                 throw new ToolCallException(
                     sprintf('The database refused to commit the batch (%s). Nothing was written (batch %s).', $summary, $batchId),
@@ -175,7 +178,19 @@ readonly class RecordsApplyService
             }
         }
 
-        $this->audit->log($batchId, $dryRun, true, $dryRun ? 'dry-run' : 'applied', $operations, $fieldNames);
+        $aiLabelled = 0;
+        if (!$dryRun) {
+            [$createdRecords, $updatedRecords] = self::writtenRecords($datamap, $created);
+
+            try {
+                $aiLabelled = $this->aiLabelMarker->mark($createdRecords, $updatedRecords);
+            } catch (\Throwable $throwable) {
+                // The batch is committed; a labelling problem must not turn it into a failure.
+                $this->logger->warning('records_apply: AI Label marking failed', ['exception' => $throwable, 'batchId' => $batchId]);
+            }
+        }
+
+        $this->audit->log($tool, $batchId, $dryRun, true, $dryRun ? 'dry-run' : 'applied', $operations, $fieldNames);
 
         return new RecordsApplyResult(
             $batchId,
@@ -185,6 +200,7 @@ readonly class RecordsApplyService
             $copied,
             $operations,
             $checked['ignored'],
+            $aiLabelled,
         );
     }
 
@@ -239,6 +255,37 @@ readonly class RecordsApplyService
         }
 
         return array_map(static fn(array $set): array => array_keys($set), $names);
+    }
+
+    /**
+     * Which records the call created and which it updated, by table, for the AI Label marking.
+     *
+     * @param array<string, array<int|string, array<string, mixed>>> $datamap
+     * @param array<string, int> $created NEW id => uid
+     * @return array{0: array<string, list<int>>, 1: array<string, array<int, list<string>>>}
+     */
+    private static function writtenRecords(array $datamap, array $created): array
+    {
+        $createdRecords = [];
+        $updatedRecords = [];
+
+        foreach ($datamap as $table => $records) {
+            foreach ($records as $id => $fields) {
+                $id = (string) $id;
+                if (str_starts_with($id, 'NEW')) {
+                    if (isset($created[$id])) {
+                        $createdRecords[$table][] = $created[$id];
+                    }
+
+                    continue;
+                }
+
+                $fieldNames = array_values(array_map('strval', array_keys(array_diff_key($fields, ['pid' => true]))));
+                $updatedRecords[$table][(int) $id] = $fieldNames;
+            }
+        }
+
+        return [$createdRecords, $updatedRecords];
     }
 
     /**

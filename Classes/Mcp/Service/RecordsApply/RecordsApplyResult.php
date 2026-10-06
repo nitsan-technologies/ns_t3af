@@ -32,6 +32,7 @@ final readonly class RecordsApplyResult
      * @param array<string, array<int, int>> $copied table => [source uid => copy uid]
      * @param array<string, array<string, int>> $operations table => [operation => number of records]
      * @param list<array{table: string, id: string, fields: list<string>}> $ignoredFields non-strict mode only
+     * @param int $aiLabelled how many records were marked as AI-involved in the AI Label module
      */
     public function __construct(
         public string $batchId,
@@ -41,6 +42,7 @@ final readonly class RecordsApplyResult
         public array $copied,
         public array $operations,
         public array $ignoredFields,
+        public int $aiLabelled = 0,
     ) {}
 
     /** @return array<string, mixed> */
@@ -61,6 +63,10 @@ final readonly class RecordsApplyResult
 
         if ($this->ignoredFields !== []) {
             $result['ignoredFields'] = $this->ignoredFields;
+        }
+
+        if ($this->aiLabelled > 0) {
+            $result['aiLabelled'] = $this->aiLabelled;
         }
 
         return $result;

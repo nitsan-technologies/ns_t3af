@@ -23,7 +23,7 @@ use NITSAN\NsT3AF\Service\AiLogChannelCatalog;
 use NITSAN\NsT3AF\Utility\SysLogWriterUtility;
 
 /**
- * Writes the one audit entry of a records_apply call to sys_log.
+ * Writes the one audit entry of a batch write (records_apply, or write_table which runs on the same engine) to sys_log.
  *
  * It is called AFTER the transaction has been committed or rolled back. A row written inside the
  * transaction would vanish with a rollback, and failed and dry-run calls are exactly the ones an
@@ -39,6 +39,7 @@ readonly class RecordsApplyAudit
      * @param array<string, list<string>> $fieldNames
      */
     public function log(
+        string $tool,
         string $batchId,
         bool $dryRun,
         bool $ok,
@@ -49,7 +50,7 @@ readonly class RecordsApplyAudit
     ): void {
         try {
             $data = [
-                'tool' => 'records_apply',
+                'tool' => $tool,
                 'batchId' => $batchId,
                 'dryRun' => $dryRun,
                 'ok' => $ok,
@@ -65,7 +66,7 @@ readonly class RecordsApplyAudit
             }
 
             SysLogWriterUtility::insert(
-                sprintf('MCP records_apply %s %s (batch %s)', $dryRun ? 'dry-run' : 'apply', $ok ? 'OK' : 'failed', $batchId),
+                sprintf('MCP %s %s %s (batch %s)', $tool, $dryRun ? 'dry-run' : 'apply', $ok ? 'OK' : 'failed', $batchId),
                 $ok ? 'info' : 'error',
                 AiLogChannelCatalog::CHANNEL_MCP,
                 $data,

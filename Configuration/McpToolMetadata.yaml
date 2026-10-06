@@ -82,7 +82,7 @@ tools:
     category: Records
     status: ready
     tagline: Create, update, or delete records in any workspace-capable table
-    notes: 'All writes go through DataHandler. Category/MM fields accept "126" or "8,12". File fields accept [{"uid_local": N, "alternative": "..."}] (replace on update; [] clears). Collections: write child table rows with foreign_table_parent_uid (see ignoredFieldDetails).'
+    notes: 'All writes go through DataHandler, in one transaction (the same engine as records_apply). New records are appended after the existing ones on their page. Records written by an MCP client are marked as AI-involved in the AI Label module (setting mcpMarkWritesAsAi). Category/MM fields accept "126" or "8,12". File fields accept [{"uid_local": N, "alternative": "..."}] (replace on update; [] clears). Collections: write child table rows with foreign_table_parent_uid (see ignoredFieldDetails).'
     examplePrompts:
       - 'Create a news article titled Summer Sale 2026 on the News page'
       - 'Add a new text content element to the homepage'

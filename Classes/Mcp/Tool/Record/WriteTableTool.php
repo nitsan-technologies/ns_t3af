@@ -27,6 +27,7 @@ use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
+use Mcp\Exception\ToolCallException;
 use Mcp\Schema\ToolAnnotations;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
@@ -34,16 +35,29 @@ use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\RecordPayloadNormalizer;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyResult;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyValidationException;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
+/**
+ * One record per call. The write itself runs on the records_apply engine (preflight, one DataHandler
+ * run in a transaction, audit, AI Label marking), so a single write and a batch behave the same way.
+ * Not strict: fields that cannot be written are dropped and reported in "ignoredFields", as before.
+ * New records are appended after the existing ones of their page (give a negative pid to place one).
+ * File fields are attached afterwards, outside that transaction.
+ */
 #[McpToolSeverity(ToolSeverity::Write)]
 readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableToolInterface
 {
     private const ALLOWED_ACTIONS = ['create', 'update', 'delete'];
+
+    /** A NEW id for the one record of a create. */
+    private const NEW_ID = 'NEWrecord';
 
     private RecordPayloadNormalizer $normalizer;
 
@@ -51,6 +65,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         private DataHandlerService $dataHandlerService,
         private RecordService $recordService,
         TcaSchemaService $tcaSchemaService,
+        private RecordsApplyService $recordsApply,
     ) {
         $this->normalizer = new RecordPayloadNormalizer($tcaSchemaService);
     }
@@ -87,7 +102,8 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         name: 'write_table',
         description: 'Create, update, or delete records in a TYPO3 table via DataHandler.'
             . ' Use table_schema first to discover valid field names and types.'
-            . ' For create, include "pid" in the JSON data object (negative pid = insert after that uid for sorting).'
+            . ' For create, include "pid" in the JSON data object; the new record is appended after the existing ones on that page'
+            . ' (negative pid = insert after that uid instead).'
             . ' For update/delete, pass the record uid.'
             . ' Category/MM relations (categories, authors, tags, …) accept a comma-separated UID string, e.g. "126" or "8,12".'
             . ' File/image fields accept [{"uid_local": <sys_file uid>, "alternative": "..."}]'
@@ -271,18 +287,25 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         try {
-            $newUid = $this->dataHandlerService->createRecord($tableName, $pid, $filteredData);
+            $result = $this->write([$tableName => [self::NEW_ID => ['pid' => $pid] + $filteredData]], []);
+            $newUid = $result->created[self::NEW_ID] ?? 0;
+            if ($newUid <= 0) {
+                throw new \RuntimeException('Failed to create record: no uid returned', 1712000020);
+            }
+
             $fileFieldUids = $this->applyFileFields($tableName, $newUid, $fileFields);
         } catch (\Throwable $exception) {
-            return $this->encodeError($exception->getMessage());
+            return $this->encodeError($this->describe($exception));
         }
+
+        [$writtenFields, $ignoredFields] = $this->withEngineIgnored($filteredData, $ignoredFields, $result);
 
         $response = [
             'action' => 'create',
             'table' => $tableName,
             'uid' => $newUid,
             'pid' => $pid,
-            'fields' => array_keys($filteredData),
+            'fields' => $writtenFields,
             'ignoredFields' => $ignoredFields,
         ];
         if ($ignoredFields !== []) {
@@ -318,20 +341,24 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             );
         }
 
+        $result = null;
+
         try {
             if ($filteredData !== []) {
-                $this->dataHandlerService->updateRecord($tableName, $uid, $filteredData);
+                $result = $this->write([$tableName => [$uid => $filteredData]], []);
             }
             $fileFieldUids = $this->applyFileFields($tableName, $uid, $fileFields);
         } catch (\Throwable $exception) {
-            return $this->encodeError($exception->getMessage());
+            return $this->encodeError($this->describe($exception));
         }
+
+        [$writtenFields, $ignoredFields] = $this->withEngineIgnored($filteredData, $ignoredFields, $result);
 
         $response = [
             'action' => 'update',
             'table' => $tableName,
             'uid' => $uid,
-            'fields' => array_keys($filteredData),
+            'fields' => $writtenFields,
             'ignoredFields' => $ignoredFields,
         ];
         if ($ignoredFields !== []) {
@@ -355,9 +382,9 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         try {
-            $this->dataHandlerService->deleteRecord($tableName, $uid);
+            $this->write([], [$tableName => [$uid => ['delete' => 1]]]);
         } catch (\Throwable $exception) {
-            return $this->encodeError($exception->getMessage());
+            return $this->encodeError($this->describe($exception));
         }
 
         return json_encode([
@@ -365,6 +392,62 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             'table' => $tableName,
             'uid' => $uid,
         ], JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @param array<string, array<int|string, array<string, mixed>>> $datamap
+     * @param array<string, array<int, array<string, int>>> $cmdmap
+     */
+    private function write(array $datamap, array $cmdmap): RecordsApplyResult
+    {
+        return $this->recordsApply->apply($datamap, $cmdmap, false, false, true, [], 'write_table');
+    }
+
+    /**
+     * Fields the engine dropped on top of those the normalizer already ignored.
+     *
+     * @param array<string, mixed> $filteredData
+     * @param list<string> $ignoredFields
+     * @return array{0: list<string>, 1: list<string>} the fields that were written, the fields that were ignored
+     */
+    private function withEngineIgnored(array $filteredData, array $ignoredFields, ?RecordsApplyResult $result): array
+    {
+        $dropped = [];
+        foreach ($result->ignoredFields ?? [] as $entry) {
+            $dropped = array_merge($dropped, $entry['fields']);
+        }
+
+        return [
+            array_values(array_diff(array_keys($filteredData), $dropped)),
+            array_values(array_unique(array_merge($ignoredFields, $dropped))),
+        ];
+    }
+
+    /** The message write_table has always returned, built from what the engine refused with. */
+    private function describe(\Throwable $exception): string
+    {
+        if ($exception instanceof RecordsApplyValidationException) {
+            $parts = [];
+            foreach ($exception->getProblems() as $problem) {
+                $text = (string) ($problem['error'] ?? '');
+                $fields = $problem['fields'] ?? [];
+                if (is_array($fields) && $fields !== []) {
+                    $text .= ' (' . implode(', ', array_map('strval', $fields)) . ')';
+                }
+                $parts[] = $text;
+            }
+
+            return implode('; ', array_slice($parts, 0, 5));
+        }
+
+        if ($exception instanceof ToolCallException) {
+            $payload = json_decode($exception->getMessage(), true);
+            if (is_array($payload) && isset($payload['errors']) && is_array($payload['errors'])) {
+                return 'DataHandler errors: ' . implode('; ', array_map('strval', $payload['errors']));
+            }
+        }
+
+        return $exception->getMessage();
     }
 
     /**

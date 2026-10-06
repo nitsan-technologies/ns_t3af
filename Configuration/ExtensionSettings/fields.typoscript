@@ -73,6 +73,9 @@ mcpMaxFileSizeMb = 500
 # cat=MCP Server//37; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mcpAllowDestructiveFileOps
 mcpAllowDestructiveFileOps = 1
 
+# cat=MCP Server//51; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mcpMarkWritesAsAi
+mcpMarkWritesAsAi = 1
+
 # cat=MCP Server//38; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mcpUploadTokenTtl
 mcpUploadTokenTtl = 900
 
