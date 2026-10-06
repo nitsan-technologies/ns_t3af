@@ -2325,6 +2325,10 @@
                 <source>Apply several record changes</source>
                 <target>Mehrere Datensatzänderungen anwenden</target>
             </trans-unit>
+            <trans-unit id="agent.tool.label.records_undo">
+                <source>Undo a batch of record changes</source>
+                <target>Stapel von Datensatzänderungen rückgängig machen</target>
+            </trans-unit>
             <trans-unit id="agent.tool.label.t3aa_get_file_for_metadata">
                 <source>Look at an image</source>
                 <target>Bild ansehen</target>

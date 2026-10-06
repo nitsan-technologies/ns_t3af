@@ -67,13 +67,14 @@ readonly class RecordsApplyService
      * @param array<mixed> $cmdmap DataHandler cmdmap: table => [uid => [command => value]]
      * @param array<mixed> $bulk shorthand entries, expanded into the two maps above before anything is checked
      * @param string $tool name of the calling MCP tool, for the audit entry (records_apply, or write_table which runs on this engine)
+     * @param string $batchId fixed batch id, for callers that must find the batch again by a known name (records_undo); empty = a random one
      * @param string $requestId client-chosen id that makes a retry safe: the same id with the same payload is applied once and answered from the stored result. Ignored for dry runs.
      * @throws RecordsApplyValidationException when the request is refused before anything is written
      * @throws ToolCallException when DataHandler refuses or fails; everything is rolled back
      */
-    public function apply(array $datamap, array $cmdmap, bool $dryRun, bool $strict, bool $append, array $bulk = [], string $tool = 'records_apply', string $requestId = ''): RecordsApplyResult
+    public function apply(array $datamap, array $cmdmap, bool $dryRun, bool $strict, bool $append, array $bulk = [], string $tool = 'records_apply', string $requestId = '', string $batchId = ''): RecordsApplyResult
     {
-        $batchId = 'ra-' . bin2hex(random_bytes(10));
+        $batchId = $batchId !== '' ? $batchId : 'ra-' . bin2hex(random_bytes(10));
 
         $payloadHash = '';
         if ($requestId !== '') {

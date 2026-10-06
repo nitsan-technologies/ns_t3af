@@ -111,6 +111,18 @@ tools:
       - 'atomic multi-record change with dry run and rollback'
       - 'Datensätze gesammelt anlegen, ändern oder löschen, Stapelverarbeitung'
 
+  records_undo:
+    category: Records
+    status: ready
+    tagline: Take back a whole records_apply batch by its batchId
+    notes: 'Builds the inverse of a batch from its history and applies it through the same engine (one transaction): created records are deleted, deleted records restored, field changes and moves reverted. Refuses when anyone changed those records after the batch, when it was already undone, when it ran in a workspace (use workspace_discard) or when pages it created now hold other records. File, inline and category fields are not restored (listed under notRestored). Use dryRun first. The undo is itself a batch and can be undone.'
+    examplePrompts:
+      - 'Undo that last import'
+      - 'Take back batch ra-0123456789abcdef0123, show me first what would change'
+    searchTerms:
+      - 'undo batch, revert records_apply, roll back a bulk change'
+      - 'Stapel rückgängig machen, Änderungen zurücknehmen'
+
   workspace_list:
     category: Workspaces
     status: ready
