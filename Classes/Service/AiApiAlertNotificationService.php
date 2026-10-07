@@ -33,7 +33,6 @@ use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Mail\FluidEmail;
-use TYPO3\CMS\Core\Mail\Mailer;
 use TYPO3\CMS\Core\Mail\MailerInterface;
 use TYPO3\CMS\Core\Routing\PageArguments;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
@@ -307,12 +306,7 @@ final class AiApiAlertNotificationService
                 $email->setRequest($request);
             }
 
-            $version = AiUniverseUtilityHelper::getTypo3MajorVersion();
-            if ($version === 11) {
-                GeneralUtility::makeInstance(Mailer::class)->send($email);
-            } else {
-                GeneralUtility::makeInstance(MailerInterface::class)->send($email);
-            }
+            GeneralUtility::makeInstance(MailerInterface::class)->send($email);
 
             return true;
         } catch (TransportExceptionInterface $e) {
