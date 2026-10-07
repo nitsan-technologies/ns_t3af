@@ -541,6 +541,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             'scopes' => $defaultScopes,
             'clientTokens' => $clientTokens,
             'customJsonSnippet' => $this->buildCustomJsonSnippet($serverUrl),
+            'httpAuthCursorJson' => $this->buildHttpAuthCursorJson($serverUrl),
         ];
 
         $hasDraftWorkspace = $this->mcpWorkspaceProvisionService->hasDraftWorkspace();
@@ -673,6 +674,31 @@ final class ModuleController extends AbstractAiUniverseModuleController
                 ],
             ],
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}');
+    }
+
+    private function buildHttpAuthCursorJson(string $serverUrl): string
+    {
+        $baseUrl = $serverUrl !== '' ? $serverUrl : 'https://example.com/mcp';
+        $separator = str_contains($baseUrl, '?') ? '&' : '?';
+        $tokenUrl = $baseUrl . $separator . 'token=YOUR_64_CHAR_TOKEN';
+
+        return json_encode([
+            'mcpServers' => [
+                't3cs' => [
+                    'command' => 'npx',
+                    'args' => [
+                        '-y',
+                        'mcp-remote',
+                        $tokenUrl,
+                        '--header',
+                        'Authorization:${SITE_BASIC_AUTH}',
+                    ],
+                    'env' => [
+                        'SITE_BASIC_AUTH' => 'Basic dDNwbGFuZXQ6dDNwbGFuZXQjMjAyNg==',
+                    ],
+                ],
+            ],
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
     }
 
     private function buildCliConfigJson(): string

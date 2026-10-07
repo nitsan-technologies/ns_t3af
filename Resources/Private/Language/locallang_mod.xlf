@@ -1494,6 +1494,27 @@
       <trans-unit id="module.mcpServer.snippet.claude.step5" resname="module.mcpServer.snippet.claude.step5">
         <source>Claude Desktop will automatically handle OAuth authentication.</source>
       </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.httpAuth.title" resname="module.mcpServer.snippet.httpAuth.title">
+        <source>With HTTP Auth (While your site is in HTTP Auth.)</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.httpAuth.build" resname="module.mcpServer.snippet.httpAuth.build">
+        <source>Build the Basic Auth header value:</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.httpAuth.use" resname="module.mcpServer.snippet.httpAuth.use">
+        <source>Use: Basic + the base64 output (e.g. Basic dDNwbGFuZXQ6...).</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step1" resname="module.mcpServer.snippet.httpAuth.claude.step1">
+        <source>Paste the Token URL as the MCP server URL.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step2" resname="module.mcpServer.snippet.httpAuth.claude.step2">
+        <source>Set Authentication to None.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step3" resname="module.mcpServer.snippet.httpAuth.claude.step3">
+        <source>Add a Request header: Authorization = the Basic value from the command above.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step4" resname="module.mcpServer.snippet.httpAuth.claude.step4">
+        <source>Set Transport to Streamable HTTP.</source>
+      </trans-unit>
       <trans-unit id="module.mcpServer.snippet.n8n.step1" resname="module.mcpServer.snippet.n8n.step1">
         <source>In your n8n workflow, add an MCP Client node.</source>
       </trans-unit>

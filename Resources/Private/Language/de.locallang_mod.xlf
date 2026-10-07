@@ -1979,6 +1979,34 @@
                 <source>Claude Desktop will automatically handle OAuth authentication.</source>
                 <target>Claude Desktop übernimmt automatisch die OAuth-Authentifizierung.</target>
             </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.httpAuth.title">
+                <source>With HTTP Auth (While your site is in HTTP Auth.)</source>
+                <target>Mit HTTP-Auth (Während Ihre Website mit HTTP-Auth geschützt ist.)</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.httpAuth.build">
+                <source>Build the Basic Auth header value:</source>
+                <target>Basic-Auth-Header-Wert erzeugen:</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.httpAuth.use">
+                <source>Use: Basic + the base64 output (e.g. Basic dDNwbGFuZXQ6...).</source>
+                <target>Verwenden Sie: Basic + die Base64-Ausgabe (z. B. Basic dDNwbGFuZXQ6...).</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step1">
+                <source>Paste the Token URL as the MCP server URL.</source>
+                <target>Fügen Sie die Token-URL als MCP-Server-URL ein.</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step2">
+                <source>Set Authentication to None.</source>
+                <target>Setzen Sie die Authentifizierung auf Keine.</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step3">
+                <source>Add a Request header: Authorization = the Basic value from the command above.</source>
+                <target>Fügen Sie einen Request-Header hinzu: Authorization = der oben erzeugte Basic-Wert.</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step4">
+                <source>Set Transport to Streamable HTTP.</source>
+                <target>Setzen Sie den Transport auf Streamable HTTP.</target>
+            </trans-unit>
             <trans-unit id="module.mcpServer.snippet.n8n.step1">
                 <source>In your n8n workflow, add an MCP Client node.</source>
                 <target>Fügen Sie in Ihrem n8n-Workflow einen MCP Client-Knoten hinzu.</target>
