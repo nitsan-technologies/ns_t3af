@@ -793,7 +793,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             ['key' => 'langchain', 'icon' => 'actions-link', 'snippet' => 'CustomJson'],
             ['key' => 'autogen', 'icon' => 'actions-lightbulb', 'snippet' => 'CustomJson'],
             ['key' => 'codex', 'icon' => 'actions-lightbulb', 'snippet' => 'ChatGpt'],
-            ['key' => 'openai-gpts', 'icon' => 'actions-chat', 'snippet' => 'ChatGpt'],
+            ['key' => 'openai-gpts', 'icon' => 'actions-chat', 'snippet' => 'OpenAiCustomGpts'],
             ['key' => 'copilot-studio', 'icon' => 'actions-window', 'snippet' => 'Other'],
             ['key' => 'inspector', 'icon' => 'actions-search', 'snippet' => 'Inspector'],
             ['key' => 'other', 'icon' => 'actions-menu-alternative', 'snippet' => 'Other'],

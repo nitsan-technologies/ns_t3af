@@ -1867,6 +1867,42 @@
                 <source>Server URL: %1$s</source>
                 <target>Server URL: %1$s</target>
             </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.openaiGpts.step1">
+                <source>In ChatGPT, Go to: Settings → Apps → Advanced Settings → Developer Mode</source>
+                <target>In ChatGPT, gehen Sie zu: Einstellungen → Apps → Erweiterte Einstellungen → Entwicklermodus</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.openaiGpts.step3" resname="module.mcpServer.snippet.openaiGpts.step3">
+              <source>Create a custom app/connector and provide:</source>
+              <target>Erstellen Sie eine benutzerdefinierte App oder einen Connector und geben Sie an:</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.openaiGpts.endpoint">
+                <source>MCP server endpoint - Get from Local Bridge &gt; Click on 'Create mcp-remote Token'</source>
+                <target>MCP-Server-Endpunkt — holen Sie ihn unter Lokale Brücke über „Erstellen Sie mcp-remote Token“</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.openaiGpts.auth">
+                <source>Authentication method, if required</source>
+                <target>Authentifizierungsmethode, falls erforderlich</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.openaiGpts.oauth">
+                <source>OAuth configuration, if applicable</source>
+                <target>OAuth-Konfiguration, falls zutreffend</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.openaiGpts.step4">
+                <source>ChatGPT will Scan Tools from your MCP server.</source>
+                <target>ChatGPT scannt die Tools von Ihrem MCP-Server.</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.openaiGpts.step5">
+                <source>Create the app.</source>
+                <target>Erstellen Sie die App.</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.openaiGpts.step6">
+                <source>Open a new chat and select your MCP app from the Tools/Apps menu.</source>
+                <target>Öffnen Sie einen neuen Chat und wählen Sie Ihre MCP-App im Menü Tools/Apps.</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.snippet.openaiGpts.step7">
+                <source>You can then ask ChatGPT to use your MCP tools.</source>
+                <target>Anschließend können Sie ChatGPT bitten, Ihre MCP-Tools zu verwenden.</target>
+            </trans-unit>
             <trans-unit id="module.mcpServer.snippet.gemini.step1">
                 <source>Configure Gemini CLI MCP settings.</source>
                 <target>Konfigurieren Sie die MCP-Einstellungen für Gemini CLI.</target>
