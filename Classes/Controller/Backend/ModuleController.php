@@ -544,6 +544,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             'scopes' => $defaultScopes,
             'clientTokens' => $clientTokens,
             'customJsonSnippet' => $this->buildCustomJsonSnippet($serverUrl),
+            'httpAuthCursorJson' => $this->buildHttpAuthCursorJson($serverUrl),
         ];
 
         $hasDraftWorkspace = $this->mcpWorkspaceProvisionService->hasDraftWorkspace();
@@ -678,6 +679,31 @@ final class ModuleController extends AbstractAiUniverseModuleController
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}');
     }
 
+    private function buildHttpAuthCursorJson(string $serverUrl): string
+    {
+        $baseUrl = $serverUrl !== '' ? $serverUrl : 'https://example.com/mcp';
+        $separator = str_contains($baseUrl, '?') ? '&' : '?';
+        $tokenUrl = $baseUrl . $separator . 'token=YOUR_64_CHAR_TOKEN';
+
+        return json_encode([
+            'mcpServers' => [
+                't3cs' => [
+                    'command' => 'npx',
+                    'args' => [
+                        '-y',
+                        'mcp-remote',
+                        $tokenUrl,
+                        '--header',
+                        'Authorization:${SITE_BASIC_AUTH}',
+                    ],
+                    'env' => [
+                        'SITE_BASIC_AUTH' => 'Basic YOUR_GENERATED_AUTH',
+                    ],
+                ],
+            ],
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
+    }
+
     private function buildCliConfigJson(): string
     {
         return json_encode([
@@ -770,7 +796,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             ['key' => 'langchain', 'icon' => 'actions-link', 'snippet' => 'CustomJson'],
             ['key' => 'autogen', 'icon' => 'actions-lightbulb', 'snippet' => 'CustomJson'],
             ['key' => 'codex', 'icon' => 'actions-lightbulb', 'snippet' => 'ChatGpt'],
-            ['key' => 'openai-gpts', 'icon' => 'actions-chat', 'snippet' => 'ChatGpt'],
+            ['key' => 'openai-gpts', 'icon' => 'actions-chat', 'snippet' => 'OpenAiCustomGpts'],
             ['key' => 'copilot-studio', 'icon' => 'actions-window', 'snippet' => 'Other'],
             ['key' => 'inspector', 'icon' => 'actions-search', 'snippet' => 'Inspector'],
             ['key' => 'other', 'icon' => 'actions-menu-alternative', 'snippet' => 'Other'],

@@ -1429,9 +1429,6 @@ final class AiService implements AiServiceInterface
         return [];
     }
 
-    /**
-     * @param array<string, mixed> $raw
-     */
     private function failEmptyEmbedding(
         Provider $provider,
         AiOptions $options,
@@ -1483,6 +1480,9 @@ final class AiService implements AiServiceInterface
         }
     }
 
+    /**
+     * @param array<string, mixed> $raw
+     */
     private function extractEmbedApiErrorMessage(array $raw): string
     {
         foreach (['error', 'detail', 'message'] as $key) {

@@ -1710,6 +1710,33 @@
       <trans-unit id="module.mcpServer.snippet.chatgpt.step2" resname="module.mcpServer.snippet.chatgpt.step2">
         <source>Server URL: %1$s</source>
       </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.openaiGpts.step1" resname="module.mcpServer.snippet.openaiGpts.step1">
+        <source>In ChatGPT, Go to: Settings → Apps → Advanced Settings → Developer Mode</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.openaiGpts.step3" resname="module.mcpServer.snippet.openaiGpts.step3">
+        <source>Create a custom app/connector and provide:</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.openaiGpts.endpoint" resname="module.mcpServer.snippet.openaiGpts.endpoint">
+        <source>MCP server endpoint - Get from Local Bridge &gt; Click on 'Create mcp-remote Token'</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.openaiGpts.auth" resname="module.mcpServer.snippet.openaiGpts.auth">
+        <source>Authentication method, if required</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.openaiGpts.oauth" resname="module.mcpServer.snippet.openaiGpts.oauth">
+        <source>OAuth configuration, if applicable</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.openaiGpts.step4" resname="module.mcpServer.snippet.openaiGpts.step4">
+        <source>ChatGPT will Scan Tools from your MCP server.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.openaiGpts.step5" resname="module.mcpServer.snippet.openaiGpts.step5">
+        <source>Create the app.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.openaiGpts.step6" resname="module.mcpServer.snippet.openaiGpts.step6">
+        <source>Open a new chat and select your MCP app from the Tools/Apps menu.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.openaiGpts.step7" resname="module.mcpServer.snippet.openaiGpts.step7">
+        <source>You can then ask ChatGPT to use your MCP tools.</source>
+      </trans-unit>
       <trans-unit id="module.mcpServer.snippet.gemini.step1" resname="module.mcpServer.snippet.gemini.step1">
         <source>Configure Gemini CLI MCP settings.</source>
       </trans-unit>
@@ -1817,6 +1844,27 @@
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.claude.step5" resname="module.mcpServer.snippet.claude.step5">
         <source>Claude Desktop will automatically handle OAuth authentication.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.httpAuth.title" resname="module.mcpServer.snippet.httpAuth.title">
+        <source>With HTTP Auth (While your site is in HTTP Auth.)</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.httpAuth.build" resname="module.mcpServer.snippet.httpAuth.build">
+        <source>Build the Basic Auth header value:</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.httpAuth.use" resname="module.mcpServer.snippet.httpAuth.use">
+        <source>Use: Basic + the base64 output (e.g. Basic dDNwbGFuZXQ6...).</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step1" resname="module.mcpServer.snippet.httpAuth.claude.step1">
+        <source>Paste the Token URL as the MCP server URL.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step2" resname="module.mcpServer.snippet.httpAuth.claude.step2">
+        <source>Set Authentication to None.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step3" resname="module.mcpServer.snippet.httpAuth.claude.step3">
+        <source>Add a Request header: Authorization = the Basic value from the command above.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step4" resname="module.mcpServer.snippet.httpAuth.claude.step4">
+        <source>Set Transport to Streamable HTTP.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.n8n.step1" resname="module.mcpServer.snippet.n8n.step1">
         <source>In your n8n workflow, add an MCP Client node.</source>
