@@ -21,17 +21,21 @@ namespace NITSAN\NsT3AF\Service;
 
 use NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepository;
+use NITSAN\NsT3AF\Settings\ExtensionSettingsRepository;
 use NITSAN\NsT3AF\Utility\AiUniverseUtilityHelper;
 use NITSAN\NsT3AF\Utility\ProviderSlugMapper;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mime\Address;
 use TYPO3\CMS\Core\Cache\CacheManager;
 use TYPO3\CMS\Core\Cache\Frontend\FrontendInterface;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Log\LogManager;
 use TYPO3\CMS\Core\Mail\FluidEmail;
 use TYPO3\CMS\Core\Mail\Mailer;
 use TYPO3\CMS\Core\Mail\MailerInterface;
+use TYPO3\CMS\Core\Routing\PageArguments;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Extbase\Utility\LocalizationUtility;
@@ -86,7 +90,7 @@ final class AiApiAlertNotificationService
             return;
         }
 
-        $extConf = AiUniverseUtilityHelper::getExtensionConf('ns_t3af');
+        $extConf = $this->resolveAlertExtensionConf();
         if (empty($extConf['enableApiQuotaEmailNotification'])) {
             return;
         }
@@ -101,14 +105,100 @@ final class AiApiAlertNotificationService
             return;
         }
 
-        $this->sendNotificationEmail(
+        $sent = $this->sendNotificationEmail(
             $recipient,
             $errorMessage,
             $occurFrom,
             $category,
             $this->resolveAiEngineForNotification($aiEngine, $occurFrom),
         );
-        $this->cache->set($cacheKey, 1, [], self::COOLDOWN_SECONDS);
+        if ($sent) {
+            $this->cache->set($cacheKey, 1, [], self::COOLDOWN_SECONDS);
+        }
+    }
+
+    /**
+     * Frontend chat uses the routed page. CLI, scheduler, and backend have no
+     * reliable page id, so use a site row where alerts are actually enabled.
+     *
+     * @return array<string, mixed>
+     */
+    private function resolveAlertExtensionConf(): array
+    {
+        $pageId = $this->frontendRoutePageId();
+        if ($pageId > 0) {
+            return AiUniverseUtilityHelper::getExtensionConf('ns_t3af', $pageId);
+        }
+
+        $enabled = $this->findEnabledAlertSettings();
+        if ($enabled !== null) {
+            return $enabled;
+        }
+
+        return AiUniverseUtilityHelper::getExtensionConf('ns_t3af');
+    }
+
+    private function frontendRoutePageId(): int
+    {
+        $request = $GLOBALS['TYPO3_REQUEST'] ?? null;
+        if (!$request instanceof ServerRequestInterface) {
+            return 0;
+        }
+
+        $routing = $request->getAttribute('routing');
+        if ($routing instanceof PageArguments && $routing->getPageId() > 0) {
+            return $routing->getPageId();
+        }
+
+        return 0;
+    }
+
+    /**
+     * @return array{enableApiQuotaEmailNotification: string, apiQuotaNotificationEmail: string}|null
+     */
+    private function findEnabledAlertSettings(): ?array
+    {
+        try {
+            $rows = GeneralUtility::makeInstance(
+                ExtensionSettingsRepository::class,
+                GeneralUtility::makeInstance(ConnectionPool::class),
+            )->findAllByExtensionKey('ns_t3af');
+        } catch (\Throwable $e) {
+            $this->logger()->warning('Could not read AI alert settings.', ['exception' => $e]);
+
+            return null;
+        }
+
+        usort($rows, static fn (array $a, array $b): int => (int) ($a['pid'] ?? 0) <=> (int) ($b['pid'] ?? 0));
+        foreach ($rows as $row) {
+            if ((int) ($row['pid'] ?? 0) <= 0) {
+                continue;
+            }
+            $decoded = json_decode((string) ($row['settings_json'] ?? ''), true);
+            if (!is_array($decoded)) {
+                continue;
+            }
+            $flag = $decoded['enableApiQuotaEmailNotification'] ?? '';
+            if ($flag !== 1 && $flag !== '1' && $flag !== true) {
+                continue;
+            }
+            $email = trim((string) ($decoded['apiQuotaNotificationEmail'] ?? ''));
+            if ($email === '' || !GeneralUtility::validEmail($email)) {
+                continue;
+            }
+
+            return [
+                'enableApiQuotaEmailNotification' => '1',
+                'apiQuotaNotificationEmail' => $email,
+            ];
+        }
+
+        return null;
+    }
+
+    private function logger(): LoggerInterface
+    {
+        return GeneralUtility::makeInstance(LogManager::class)->getLogger(self::class);
     }
 
     /**
@@ -182,7 +272,7 @@ final class AiApiAlertNotificationService
         string $occurFrom,
         string $category,
         string $aiEngine,
-    ): void {
+    ): bool {
         $subject = $category === 'quota'
             ? (LocalizationUtility::translate('email.apiAlert.subject.quota', 'ns_t3af')
                 ?: 'AI API data quota exceeded')
@@ -223,11 +313,15 @@ final class AiApiAlertNotificationService
             } else {
                 GeneralUtility::makeInstance(MailerInterface::class)->send($email);
             }
-        } catch (TransportExceptionInterface) {
-            // Mail transport not configured — do not break AI flows.
-        } catch (\Throwable) {
-            // Ignore mail failures.
+
+            return true;
+        } catch (TransportExceptionInterface $e) {
+            $this->logger()->error('AI API alert email could not be sent.', ['exception' => $e]);
+        } catch (\Throwable $e) {
+            $this->logger()->error('AI API alert email could not be sent.', ['exception' => $e]);
         }
+
+        return false;
     }
 
     private function createFluidEmail(): FluidEmail
