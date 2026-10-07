@@ -137,7 +137,7 @@ final class CreditModeController
             }
 
             $this->runtimeSettings->save(['credit_mode' => 1]);
-            $this->tokenResolver->activateTrialToken($contactOverride);
+            $activation = $this->tokenResolver->activateTrialToken($contactOverride);
             $balance = $this->fetchBalanceOrResync();
             $this->pricingResolver->rememberFromPayload($balance);
 
@@ -146,6 +146,7 @@ final class CreditModeController
                 'creditMode' => true,
                 'active' => $this->creditModeResolver->isActive(),
                 'needsContact' => false,
+                'adoptedExistingAccount' => ($activation['action'] ?? '') === 'adopted',
                 'creditsBearerToken' => $this->runtimeSettings->getTokenPlain() ?? '',
                 'balance' => $balance,
                 'pricing' => $this->serializePricing($this->pricingResolver->resolve()),
@@ -312,6 +313,8 @@ final class CreditModeController
         return in_array($exception->errorCode, [
             CreditsApiErrorCodes::TOKEN_INVALID,
             CreditsApiErrorCodes::TOKEN_MISSING,
+            // Stored bearer cannot bind: the server IP is owned by another account; re-issue adopts it.
+            CreditsApiErrorCodes::TOKEN_IP_CONFLICT,
         ], true);
     }
 
