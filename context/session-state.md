@@ -2,6 +2,22 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-06 — Alert mail reads the site from the frontend route
+
+**Done:** `extractPageIdFromRequest()` uses the frontend `PageArguments` page id when the chat URL has no `?id=`. API alert settings saved on that site root are then visible. Query `id` still wins.
+
+**Last touched:** 2026-10-06
+
+---
+
+## 2026-10-06 — Embedding auth errors reach the API alert mail
+
+**Done:** An empty embedding result is a failed request (`logFailure`, `success = 0`). The message is taken from `error`, `detail`, or `message`, or from the platform exception. Chatbot and AI Search pass that text to `reportApiError()`, so an invalid key or quota error sends the existing alert mail. A normal vector is unchanged.
+
+**Last touched:** 2026-10-06
+
+---
+
 ## 2026-10-02 — Empty capabilities: required except translate-only
 
 **Done:** Save still rejects empty capabilities for LLM/media adapters. DeepL / Google Translate (`getDefaultCapabilities() === []`) may save with none selected. Documented in `providers.md`.
