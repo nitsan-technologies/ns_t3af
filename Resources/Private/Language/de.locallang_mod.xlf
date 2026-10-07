@@ -2016,12 +2016,12 @@
                 <target>Claude Desktop übernimmt automatisch die OAuth-Authentifizierung.</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.httpAuth.title">
-                <source>With HTTP Auth (While your site is in HTTP Auth.)</source>
-                <target>Mit HTTP-Auth (Während Ihre Website mit HTTP-Auth geschützt ist.)</target>
+                <source>With HTTP Auth (While your site is protected)</source>
+                <target>Mit HTTP-Authentifizierung (sofern Ihre Website geschützt ist)</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.httpAuth.build">
-                <source>Build the Basic Auth header value:</source>
-                <target>Basic-Auth-Header-Wert erzeugen:</target>
+                <source>Build the Basic Auth header value in the terminal:</source>
+                <target>Basic-Auth-Header-Wert im Terminal erzeugen:</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.httpAuth.use">
                 <source>Use: Basic + the base64 output (e.g. Basic dDNwbGFuZXQ6...).</source>

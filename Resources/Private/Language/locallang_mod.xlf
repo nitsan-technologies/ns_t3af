@@ -1522,10 +1522,10 @@
         <source>Claude Desktop will automatically handle OAuth authentication.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.httpAuth.title" resname="module.mcpServer.snippet.httpAuth.title">
-        <source>With HTTP Auth (While your site is in HTTP Auth.)</source>
+        <source>With HTTP Auth (While your site is protected)</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.httpAuth.build" resname="module.mcpServer.snippet.httpAuth.build">
-        <source>Build the Basic Auth header value:</source>
+        <source>Build the Basic Auth header value in the terminal:</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.httpAuth.use" resname="module.mcpServer.snippet.httpAuth.use">
         <source>Use: Basic + the base64 output (e.g. Basic dDNwbGFuZXQ6...).</source>
