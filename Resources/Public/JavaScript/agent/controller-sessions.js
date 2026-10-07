@@ -496,7 +496,7 @@ export const sessionMethods = {
       if (button.dataset.armed !== '1') {
         button.dataset.armed = '1';
         button.classList.add('is-armed');
-        button.textContent = lang('agent.session.deleteConfirm', 'Delete?');
+        button.textContent = lang('agent.session.deleteConfirm', 'Are you sure?');
         window.setTimeout(() => {
           if (button.isConnected) {
             button.dataset.armed = '';

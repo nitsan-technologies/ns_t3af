@@ -34,7 +34,7 @@ export const streamMethods = {
         this.input.disabled = empty;
         this.input.placeholder = empty
           ? lang('agent.credits.emptyInput', 'Your T3Planet credits are used up. Top up credits to continue.')
-          : lang('agent.composer.placeholder', 'Ask a question about this page…');
+          : lang('agent.composer.placeholder', 'Ask a question or describe a change. Enter to send.');
       }
       this.root.querySelector('[data-nst3af-agent-send]')?.toggleAttribute('disabled', empty);
     },

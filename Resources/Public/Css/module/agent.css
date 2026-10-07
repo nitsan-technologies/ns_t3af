@@ -2209,9 +2209,19 @@
   opacity: 1;
 }
 
+.nst3af-agent-sessions__actions:has(.is-armed) {
+  opacity: 1;
+}
+
 .nst3af-agent-sessions__actions .is-armed {
-  color: var(--nst3af-agent-danger);
+  color: #fff;
+  background: var(--nst3af-agent-danger);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
+  text-decoration: none;
 }
 
 .nst3af-agent-sessions__empty {

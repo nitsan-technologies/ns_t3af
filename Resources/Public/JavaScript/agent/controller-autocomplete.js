@@ -7,6 +7,9 @@ import { ajaxUrl, resolveBackendContext } from './context.js';
 import { resolveToolDisplayLabel } from './render-helpers.js';
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
 
+/** Same limit as AgentAjaxController::UPLOAD_MAX_BYTES (100 MB). */
+const UPLOAD_MAX_BYTES = 100 * 1024 * 1024;
+
 export const autocompleteMethods = {
   toggleAttachMenu() {
       if (!(this.attachMenu instanceof HTMLElement)) {
@@ -75,6 +78,9 @@ export const autocompleteMethods = {
       const tokens = [];
       try {
         for (const file of files) {
+          if (file.size > UPLOAD_MAX_BYTES) {
+            throw new Error(lang('agent.upload.tooLarge', 'The file exceeds the maximum upload size (100 MB).'));
+          }
           const formData = new FormData();
           formData.append('file', file);
           formData.append('directoryPath', '/user_upload/');
@@ -84,7 +90,12 @@ export const autocompleteMethods = {
             body: formData,
             credentials: 'same-origin',
           });
-          const payload = await response.json();
+          // PHP can reject an oversized request before the controller runs and answer with a
+          // warning page instead of JSON: show a plain message, never the raw response.
+          const payload = await response.json().catch(() => null);
+          if (payload === null) {
+            throw new Error(lang('agent.upload.serverRejected', 'The server could not accept this file. It may be larger than the server upload limit.'));
+          }
           if (!payload?.ok) {
             throw new Error(payload?.message ?? lang('agent.upload.failed', 'Upload failed.'));
           }
@@ -293,19 +304,22 @@ export const autocompleteMethods = {
 
       this.resizeComposerInput();
 
+      // "/" and "@" only open a menu at the start of a word, so URLs, dates and e-mail
+      // addresses typed in a message never contact the server.
       const value = this.input.value;
-      const slash = value.match(/\/(\S*)$/);
-      const at = value.match(/@(\S*)$/);
+      const slash = value.match(/(?:^|\s)\/(\S*)$/);
+      const at = value.match(/(?:^|\s)@(\S*)$/);
 
+      window.clearTimeout(this.autocompleteTimer);
       if (slash) {
         this.autocompleteMode = 'tools';
-        this.loadAutocomplete('tools', slash[1] ?? '');
+        this.autocompleteTimer = window.setTimeout(() => this.loadAutocomplete('tools', slash[1] ?? ''), 200);
         return;
       }
 
       if (at) {
         this.autocompleteMode = 'records';
-        this.loadAutocomplete('records', at[1] ?? '');
+        this.autocompleteTimer = window.setTimeout(() => this.loadAutocomplete('records', at[1] ?? ''), 200);
         return;
       }
 
@@ -349,8 +363,13 @@ export const autocompleteMethods = {
         url.searchParams.set('module', String(ctx.module));
       }
 
+      const requestId = (this.autocompleteRequestId = (this.autocompleteRequestId ?? 0) + 1);
       try {
         const payload = await new AjaxRequest(url.toString()).get().then((r) => r.resolve());
+        if (requestId !== this.autocompleteRequestId || this.autocompleteMode !== mode) {
+          // A newer keystroke or a closed menu made this answer obsolete.
+          return;
+        }
         if (!payload?.ok) {
           this.hideAutocomplete();
           return;
@@ -420,7 +439,7 @@ export const autocompleteMethods = {
       const severityText = this.severityLabel(tool.severity);
       const displayLabel = resolveToolDisplayLabel(tool);
       const aria = this.buildToolAriaLabel(tool, locked);
-      return `<button type="button" class="nst3af-agent-autocomplete__item${locked ? ' nst3af-agent-autocomplete__item--locked' : ''}" data-nst3af-agent-ac-item="1" data-locked="${locked ? '1' : '0'}" data-insert="/${escapeHtml(String(tool.name ?? ''))} " aria-label="${escapeHtml(aria)}" role="option"><span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(String(tool.severity ?? 'read'))}" aria-hidden="true"></span><span><span class="nst3af-agent-autocomplete__item-title">${escapeHtml(displayLabel)}</span><span class="nst3af-agent-autocomplete__item-desc">${escapeHtml(String(tool.description ?? ''))} · ${escapeHtml(String(tool.ownerLabel ?? ''))} · ${escapeHtml(severityText)}</span></span></button>`;
+      return `<button type="button" class="nst3af-agent-autocomplete__item${locked ? ' nst3af-agent-autocomplete__item--locked' : ''}" data-nst3af-agent-ac-item="1" data-locked="${locked ? '1' : '0'}" data-insert="/${escapeHtml(String(tool.name ?? ''))} " data-label="${escapeHtml(displayLabel)}" aria-label="${escapeHtml(aria)}" role="option"><span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(String(tool.severity ?? 'read'))}" aria-hidden="true"></span><span><span class="nst3af-agent-autocomplete__item-title">${escapeHtml(displayLabel)}</span><span class="nst3af-agent-autocomplete__item-desc">${escapeHtml(String(tool.description ?? ''))} · ${escapeHtml(String(tool.ownerLabel ?? ''))} · ${escapeHtml(severityText)}</span></span></button>`;
     },
 
   /**
@@ -486,8 +505,16 @@ export const autocompleteMethods = {
 
       const value = this.input.value;
       const mode = this.autocompleteMode;
-      const pattern = mode === 'records' ? /@(\S*)$/ : /\/(\S*)$/;
-      this.input.value = value.replace(pattern, insert);
+      const pattern = mode === 'records' ? /(^|\s)@(\S*)$/ : /(^|\s)\/(\S*)$/;
+      // A picked tool shows its readable name in the box; the real "/tool_name" command is
+      // restored when the message is sent (see expandSlashLabel in submitTurn).
+      const label = mode === 'tools' && !locked ? String(item.dataset.label ?? '').trim() : '';
+      if (label !== '') {
+        this.slashLabel = { label, command: insert.trim() };
+        this.input.value = value.replace(pattern, (_m, lead) => `${lead}${label} `);
+      } else {
+        this.input.value = value.replace(pattern, (_m, lead) => `${lead}${insert}`);
+      }
 
       if (item.dataset.recordTable && item.dataset.recordUid) {
         this.context = {
@@ -512,6 +539,7 @@ export const autocompleteMethods = {
     },
 
   hideAutocomplete() {
+      window.clearTimeout(this.autocompleteTimer);
       if (!this.autocomplete) {
         return;
       }

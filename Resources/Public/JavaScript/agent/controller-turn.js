@@ -7,6 +7,23 @@ import { ajaxUrl, resolveBackendContext } from './context.js';
 
 export const turnMethods = {
   /**
+     * Turns the readable tool name the editor picked from the "/" menu back into the real
+     * "/tool_name" command. If the editor changed the text, it is sent as typed.
+     *
+     * @param {string} text
+     * @returns {string}
+     */
+    expandSlashLabel(text) {
+      const picked = this.slashLabel;
+      this.slashLabel = null;
+      if (!picked || picked.label === '' || !text.startsWith(picked.label)) {
+        return text;
+      }
+      const rest = text.slice(picked.label.length).trim();
+      return rest === '' ? picked.command : `${picked.command} ${rest}`;
+    },
+
+  /**
      * @param {string} [explicitTool]
      * @param {object} [toolArguments]
      * @param {string} [starterAction]
@@ -22,7 +39,7 @@ export const turnMethods = {
       }
 
       const continuation = options.continuation ?? null;
-      const message = continuation !== null ? 'continue' : this.input.value.trim();
+      const message = continuation !== null ? 'continue' : this.expandSlashLabel(this.input.value.trim());
       if (message === '') {
         return;
       }
@@ -222,7 +239,43 @@ export const turnMethods = {
       let buffer = '';
       let donePayload = null;
       let streamingMessage = null;
+      let revealState = null;
       let streamAssistantCount = 0;
+
+      /**
+       * The server sends the finished answer in one piece. Show it growing over about a second
+       * so the editor sees the answer arriving instead of a sudden block of text.
+       * Returns null when the text is shown at once (short text or reduced motion).
+       */
+      const revealInto = (message, full) => {
+        const reduceMotion = typeof window.matchMedia === 'function'
+          && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (reduceMotion || full.length < 80) {
+          message.content = full;
+          return null;
+        }
+        const state = { full, shown: 0, final: null };
+        const step = Math.max(4, Math.ceil(full.length / 25));
+        message.content = '';
+        const timer = window.setInterval(() => {
+          let next = Math.min(state.full.length, state.shown + step);
+          const last = state.full.charCodeAt(next - 1);
+          if (next < state.full.length && last >= 0xD800 && last <= 0xDBFF) {
+            next += 1;
+          }
+          state.shown = next;
+          message.content = state.full.slice(0, next);
+          if (next >= state.full.length) {
+            window.clearInterval(timer);
+            if (state.final !== null) {
+              message.content = state.final.content ?? state.full;
+              message.meta = { ...state.final.meta, streaming: false };
+            }
+          }
+          this.renderStream();
+        }, 40);
+        return state;
+      };
 
       const pushAssistantReply = (reply) => {
         const meta = reply.meta ?? {};
@@ -265,11 +318,16 @@ export const turnMethods = {
         }
 
         if (eventName === 'delta' && data.content) {
+          const text = String(data.content);
           if (streamingMessage === null) {
             streamingMessage = { role: 'assistant', content: '', meta: { type: 'nl_reply', streaming: true } };
             this.messages.push(streamingMessage);
+            revealState = revealInto(streamingMessage, text);
+          } else if (revealState !== null) {
+            revealState.full += text;
+          } else {
+            streamingMessage.content += text;
           }
-          streamingMessage.content += String(data.content);
           this.renderStream();
           return;
         }
@@ -282,8 +340,14 @@ export const turnMethods = {
             reply.content = String(meta.turnGuardWarning) + '\n\n' + String(reply.content);
           }
           if (streamingMessage !== null && reply.meta?.type === 'nl_reply') {
-            streamingMessage.content = reply.content ?? streamingMessage.content;
-            streamingMessage.meta = { ...reply.meta, streaming: false };
+            if (revealState !== null && revealState.shown < revealState.full.length) {
+              // Still growing: the final text and meta are applied when the reveal ends.
+              revealState.final = { content: reply.content, meta: reply.meta };
+            } else {
+              streamingMessage.content = reply.content ?? streamingMessage.content;
+              streamingMessage.meta = { ...reply.meta, streaming: false };
+            }
+            revealState = null;
             streamingMessage = null;
           } else {
             pushAssistantReply(reply);

@@ -178,7 +178,7 @@ function getBackendDocument() {
 }
 
 /**
- * Open shortcut for TYPO3 13–14: bind keydown (capture) on the scaffold and every
+ * Open/close (toggle) shortcut for TYPO3 13–14: bind keydown (capture) on the scaffold and every
  * same-origin iframe. Live Search uses an exact Hotkeys combo, so
  * stopImmediatePropagation is a no-op there except still opening Agent from the
  * iframe.
@@ -186,7 +186,7 @@ function getBackendDocument() {
  * @param {KeyboardEvent} event
  */
 function handleOpenHotkey(event) {
-  if (controller === null || controller.isOpen) {
+  if (controller === null) {
     return;
   }
   if (!matchesAgentHotkey(event, readHotkeyPref())) {
@@ -194,6 +194,11 @@ function handleOpenHotkey(event) {
   }
   event.preventDefault();
   event.stopImmediatePropagation();
+  if (controller.isOpen) {
+    // Same chord again closes the panel (toggle).
+    controller.close();
+    return;
+  }
   controller.open(getBackendDocument().querySelector('[data-nst3af-agent-open]'));
 }
 

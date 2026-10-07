@@ -705,4 +705,22 @@ final class AgentRunnerTest extends TestCase
             ),
         );
     }
+
+    #[Test]
+    public function providerErrorsAreShownAsOneReadableSentence(): void
+    {
+        self::assertSame(
+            'Rate limit reached',
+            AgentRunner::readableProviderError('HTTP 429 returned for "https://api.example.com/v1/chat": {"error":{"message":"Rate limit reached","type":"x"}}'),
+        );
+        self::assertSame(
+            'HTTP 400 returned for "https://api.example.com/v1/chat"',
+            AgentRunner::readableProviderError('HTTP 400 returned for "https://api.example.com/v1/chat": {not json'),
+        );
+        self::assertSame(
+            'The AI provider returned an error. Please try again.',
+            AgentRunner::readableProviderError('{"raw":true}'),
+        );
+        self::assertLessThanOrEqual(201, mb_strlen(AgentRunner::readableProviderError(str_repeat('word ', 200))));
+    }
 }

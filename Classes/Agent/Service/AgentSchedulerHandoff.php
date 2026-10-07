@@ -106,6 +106,11 @@ final readonly class AgentSchedulerHandoff
         }
 
         $cliCommand = $this->resolveSchedulableCommand($toolName);
+        if ($cliCommand === null && $flow === null) {
+            // A one-off edit (for example a title change through write_table) is not bulk work:
+            // do not advertise the scheduler for it.
+            return null;
+        }
         if ($cliCommand !== null && $this->commandCatalog->findByCommand($cliCommand) === null) {
             $cliCommand = null;
         }
@@ -153,7 +158,7 @@ final readonly class AgentSchedulerHandoff
         if (str_contains($needle, 'translate') || str_contains($needle, 'translation')) {
             return 't3af:bulk:translate';
         }
-        if (str_contains($needle, 'seo') || $needle === 'write_table') {
+        if (str_contains($needle, 'seo')) {
             return 't3af:bulk:seo-optimize';
         }
 

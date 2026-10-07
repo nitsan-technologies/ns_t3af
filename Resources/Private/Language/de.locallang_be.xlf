@@ -516,8 +516,8 @@
                 <target>Nachricht</target>
             </trans-unit>
             <trans-unit id="agent.composer.placeholder">
-                <source>Ask a question about this page…</source>
-                <target>Stellen Sie eine Frage zu dieser Seite…</target>
+                <source>Ask a question or describe a change. Enter to send.</source>
+                <target>Stellen Sie eine Frage oder beschreiben Sie eine Änderung. Enter zum Senden.</target>
             </trans-unit>
             <trans-unit id="agent.composer.hint">
                 <source>/ tools · @ records ·</source>
@@ -1064,6 +1064,10 @@
             <trans-unit id="agent.upload.empty">
                 <source>The uploaded file is empty.</source>
                 <target>Die hochgeladene Datei ist leer.</target>
+            </trans-unit>
+            <trans-unit id="agent.upload.serverRejected">
+                <source>The server could not accept this file. It may be larger than the server upload limit.</source>
+                <target>Der Server konnte diese Datei nicht annehmen. Sie ist möglicherweise größer als das Upload-Limit des Servers.</target>
             </trans-unit>
             <trans-unit id="agent.upload.tooLarge">
                 <source>The file exceeds the maximum upload size (100 MB).</source>
@@ -1874,8 +1878,8 @@
                 <target>Löschen</target>
             </trans-unit>
             <trans-unit id="agent.session.deleteConfirm">
-                <source>Delete?</source>
-                <target>Löschen?</target>
+                <source>Are you sure?</source>
+                <target>Wirklich löschen?</target>
             </trans-unit>
             <trans-unit id="agent.session.started">
                 <source>New conversation started.</source>

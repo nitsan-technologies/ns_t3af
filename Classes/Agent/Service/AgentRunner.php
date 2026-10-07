@@ -409,7 +409,41 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             }
         }
 
-        return $this->translator->translate('agent.turn.orchestratorFailed', [$exception->getMessage()]);
+        if (self::looksLikeContextOverflow($exception->getMessage())) {
+            return $this->translator->translate('agent.credits.contextLength');
+        }
+
+        return $this->translator->translate('agent.turn.orchestratorFailed', [self::readableProviderError($exception->getMessage())]);
+    }
+
+    /** Provider wording for "the request is larger than the model's context window". */
+    private static function looksLikeContextOverflow(string $raw): bool
+    {
+        return preg_match('/context[_ ]length|maximum context|context window|too many tokens|prompt is too long|reduce the length/i', $raw) === 1;
+    }
+
+    /**
+     * Turns a provider failure into one short readable sentence: never a raw JSON body or a long
+     * dump. The full text stays in the logs.
+     *
+     * @internal
+     */
+    public static function readableProviderError(string $raw): string
+    {
+        $raw = trim($raw);
+        $start = strpos($raw, '{');
+        if ($start !== false) {
+            $end = strrpos($raw, '}');
+            $decoded = $end !== false && $end > $start ? json_decode(substr($raw, $start, $end - $start + 1), true) : null;
+            $message = is_array($decoded) ? ($decoded['error']['message'] ?? $decoded['message'] ?? $decoded['error'] ?? null) : null;
+            $raw = is_string($message) && trim($message) !== '' ? trim($message) : trim(substr($raw, 0, $start));
+        }
+        $raw = trim((string) preg_replace('/\s+/u', ' ', $raw), ' :-');
+        if ($raw === '') {
+            return 'The AI provider returned an error. Please try again.';
+        }
+
+        return mb_strlen($raw) > 200 ? rtrim(mb_substr($raw, 0, 200)) . '…' : $raw;
     }
 
     /**

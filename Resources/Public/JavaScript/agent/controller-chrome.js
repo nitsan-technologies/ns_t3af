@@ -886,8 +886,12 @@ export const chromeMethods = {
       }
 
       // One-line docheader-style trail: ancestors / current (icon + label), no "Path:" prefix.
-      const ancestors = chips.slice(0, -1);
-      const current = chips[chips.length - 1];
+      // The bold item is the thing the editor is working on (record, folder or page), never a
+      // trailing setting such as the workspace or language.
+      const current = ['record', 'folder', 'page']
+        .map((key) => chips.find((chip) => String(chip.key ?? '') === key))
+        .find((chip) => chip !== undefined) ?? chips[chips.length - 1];
+      const ancestors = chips.filter((chip) => chip !== current);
       const currentKey = String(current.key ?? '');
       const currentIcon = icons[currentKey]
         ? `<typo3-backend-icon identifier="${icons[currentKey]}" size="small" aria-hidden="true"></typo3-backend-icon> `
