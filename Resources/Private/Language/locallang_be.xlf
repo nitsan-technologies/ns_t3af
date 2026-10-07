@@ -1444,6 +1444,12 @@
       <trans-unit id="agent.credits.toolsUnsupported" resname="agent.credits.toolsUnsupported">
         <source>That Credits model cannot run tools. Choose a tools-capable model (for example agent-standard).</source>
       </trans-unit>
+      <trans-unit id="agent.credits.contentRemoved" resname="agent.credits.contentRemoved">
+        <source>The original result was removed under the data retention policy. Please send your request again to regenerate it.</source>
+      </trans-unit>
+      <trans-unit id="agent.credits.contextLength" resname="agent.credits.contextLength">
+        <source>This conversation is too long for the selected model. Start a new conversation or shorten your request.</source>
+      </trans-unit>
       <trans-unit id="agent.provider.locked" resname="agent.provider.locked">
         <source>The AI provider is fixed for this conversation. Start a new conversation to change it.</source>
       </trans-unit>

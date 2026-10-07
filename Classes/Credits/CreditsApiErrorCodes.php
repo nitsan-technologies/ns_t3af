@@ -58,6 +58,7 @@ final class CreditsApiErrorCodes
     public const TOOLS_UNSUPPORTED = 'tools_unsupported';
     public const REQUEST_TOO_LARGE = 'request_too_large';
     public const UNSUPPORTED_CONTENT = 'unsupported_content';
+    public const CONTEXT_LENGTH_EXCEEDED = 'context_length_exceeded';
 
     /** Client-side codes (not emitted by remote API). */
     public const NETWORK_ERROR = 'network_error';
@@ -67,6 +68,8 @@ final class CreditsApiErrorCodes
     public const FEATURE_KEY_REQUIRED = 'feature_key_required';
     public const CONTACT_REQUIRED = 'contact_required';
     public const API_ERROR = 'api_error';
+    /** Idempotent replay of a request whose stored content was removed under the retention policy. */
+    public const CONTENT_REMOVED = 'content_removed';
 
     public static function httpStatus(string $code, int $responseStatus = 0): int
     {
@@ -81,9 +84,10 @@ final class CreditsApiErrorCodes
             self::RATE_LIMITED, self::CONCURRENCY_LIMIT, self::USAGE_ANOMALY => 429,
             self::IDEMPOTENCY_CONFLICT, self::CHARGE_IN_PROGRESS, self::STREAM_IN_PROGRESS => 409,
             self::REQUEST_TOO_LARGE => 413,
-            self::FEATURE_UNKNOWN, self::REQUIRED_FIELD_MISSING, self::REQUEST_NOT_FOUND, self::MODEL_UNKNOWN, self::TOOLS_UNSUPPORTED, self::UNSUPPORTED_CONTENT => 422,
+            self::FEATURE_UNKNOWN, self::REQUIRED_FIELD_MISSING, self::REQUEST_NOT_FOUND, self::MODEL_UNKNOWN, self::TOOLS_UNSUPPORTED, self::UNSUPPORTED_CONTENT, self::CONTEXT_LENGTH_EXCEEDED => 422,
             self::UPSTREAM_AI_ERROR, self::UPSTREAM_AI_TIMEOUT => 502,
             self::METHOD_NOT_ALLOWED => 405,
+            self::CONTENT_REMOVED => 410,
             self::LICENSE_KEYS_MISSING, self::NO_LICENSES, self::FEATURE_KEY_REQUIRED, self::CONTACT_REQUIRED, self::BATCH_INVALID => 400,
             self::NETWORK_ERROR, self::INVALID_RESPONSE, self::API_ERROR => 502,
             default => 500,

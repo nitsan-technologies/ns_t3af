@@ -26,10 +26,13 @@ use NITSAN\NsT3AF\Api\AiToolDefinition;
 use NITSAN\NsT3AF\Credits\CreditsApiErrorCodes;
 use NITSAN\NsT3AF\Credits\CreditsProviderIdentifier;
 use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
+use NITSAN\NsT3AF\Credits\Exception\CreditsContentRemovedException;
 use NITSAN\NsT3AF\Credits\Exception\InsufficientCreditsException;
+use NITSAN\NsT3AF\Credits\Http\CreditsApiErrorParser;
 use NITSAN\NsT3AF\Credits\Platform\T3PlanetCreditsPlatformFactory;
 use NITSAN\NsT3AF\Credits\Service\CreditsChargeRecorder;
 use NITSAN\NsT3AF\Credits\Service\CreditsMetaJsonBuilder;
+use NITSAN\NsT3AF\Credits\Service\CreditsRetryPolicy;
 use NITSAN\NsT3AF\Credits\Service\T3PlanetCreditsModelsService;
 use NITSAN\NsT3AF\Credits\Service\TokenResolver;
 use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
@@ -82,6 +85,10 @@ class T3PlanetCreditsChatExecutor
             throw $this->mapThrowable($exception);
         }
 
+        if (CreditsContentRemovedException::isContentRemoved($raw)) {
+            throw CreditsContentRemovedException::fromPayload($raw);
+        }
+
         $latencyMs = (int) (microtime(true) * 1000) - $start;
         $this->recordCharge($requestUuid, $raw, $options, $latencyMs, $modelAlias);
 
@@ -118,6 +125,11 @@ class T3PlanetCreditsChatExecutor
             return $this->invokeOnce($messages, $toolPayload, $options, $modelAlias, $requestUuid, $turnId);
         } catch (CreditsApiException $exception) {
             if ($exception->errorCode === CreditsApiErrorCodes::IDEMPOTENCY_CONFLICT) {
+                $requestUuid = Uuid::v4()->toRfc4122();
+
+                return $this->invokeOnce($messages, $toolPayload, $options, $modelAlias, $requestUuid, $turnId);
+            }
+            if (CreditsRetryPolicy::shouldRetryUpstream($exception, 0)) {
                 $requestUuid = Uuid::v4()->toRfc4122();
 
                 return $this->invokeOnce($messages, $toolPayload, $options, $modelAlias, $requestUuid, $turnId);
@@ -595,39 +607,26 @@ class T3PlanetCreditsChatExecutor
      */
     private function exceptionFromOpenAiErrorBody(array $body, \Throwable $previous): CreditsApiException
     {
-        $nested = is_array($body['error'] ?? null) ? $body['error'] : null;
-        $code = (string) ($nested['code'] ?? $body['error_code'] ?? $body['code'] ?? CreditsApiErrorCodes::API_ERROR);
-        $message = (string) ($nested['message'] ?? $body['message'] ?? $code);
-        $topup = (string) ($nested['topup_url'] ?? $body['topup_url'] ?? '');
-        $status = CreditsApiErrorCodes::httpStatus($code);
-
-        // Match T3PlanetHttpClient::throwDecodedApiError — Credits often wraps the
-        // real provider text in upstream_* fields while message stays generic.
+        // Credits often embeds raw provider JSON in upstream_* fields; prefer the provider's own
+        // message there, then let the shared parser build code, status and diagnostic extras.
+        $nested = is_array($body['error'] ?? null);
         foreach (['upstream_message', 'upstream_error', 'upstream_body_snippet', 'detail'] as $detailKey) {
-            $detail = trim((string) ($nested[$detailKey] ?? $body[$detailKey] ?? ''));
-            if ($detail === '' || str_contains($message, $detail)) {
+            $detail = trim((string) ($nested ? ($body['error'][$detailKey] ?? '') : ($body[$detailKey] ?? '')));
+            if ($detail === '') {
                 continue;
             }
             $parsedUpstream = $this->messageFromUpstreamBodySnippet($detail);
-            $detailText = $parsedUpstream !== '' ? $parsedUpstream : $detail;
-            $message = $message !== '' && $message !== $code
-                ? $message . ' — ' . $detailText
-                : $detailText;
-        }
-        if ($message === '' || $message === $code) {
-            $message = $code;
-        }
-
-        if ($code === CreditsApiErrorCodes::INSUFFICIENT_CREDITS || $status === 402) {
-            return new InsufficientCreditsException(
-                $message !== $code ? $message : 'Insufficient credits',
-                $topup,
-                is_array($nested) ? $nested : $body,
-                $previous,
-            );
+            if ($parsedUpstream === '') {
+                continue;
+            }
+            if ($nested) {
+                $body['error'][$detailKey] = $parsedUpstream;
+            } else {
+                $body[$detailKey] = $parsedUpstream;
+            }
         }
 
-        return new CreditsApiException($code, $status, $message, is_array($nested) ? $nested : [], $previous);
+        return CreditsApiErrorParser::toException($body, 0, $previous);
     }
 
     /**

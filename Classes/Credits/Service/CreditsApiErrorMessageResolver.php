@@ -84,8 +84,26 @@ final class CreditsApiErrorMessageResolver
                 $this->formatRetryAfter(max(1, (int) ($exception->extra['retry_after'] ?? 60))),
             ),
             'insufficient_credits' => $this->appendTopupHint($label, $exception),
-            default => $label,
+            default => $this->fillPlaceholders($label, $exception),
         };
+    }
+
+    /**
+     * Fills {model} / {param} (and other scalar extras) in translated labels.
+     */
+    private function fillPlaceholders(string $label, CreditsApiException $exception): string
+    {
+        if (!str_contains($label, '{')) {
+            return $label;
+        }
+
+        $replace = [];
+        foreach (['model', 'param'] as $key) {
+            $value = $exception->extra[$key] ?? '';
+            $replace['{' . $key . '}'] = is_scalar($value) && (string) $value !== '' ? (string) $value : '?';
+        }
+
+        return strtr($label, $replace);
     }
 
     private function formatRetryAfter(int $seconds): string

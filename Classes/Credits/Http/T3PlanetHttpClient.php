@@ -21,7 +21,6 @@ namespace NITSAN\NsT3AF\Credits\Http;
 
 use NITSAN\NsT3AF\Credits\CreditsApiErrorCodes;
 use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
-use NITSAN\NsT3AF\Credits\Exception\InsufficientCreditsException;
 use NITSAN\NsT3AF\Credits\Service\RuntimeSettingsService;
 use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Core\Http\RequestFactory;
@@ -418,66 +417,7 @@ class T3PlanetHttpClient
      */
     private function throwDecodedApiError(int $status, array $decoded): never
     {
-        $nested = is_array($decoded['error'] ?? null) ? $decoded['error'] : null;
-        if ($nested !== null) {
-            $errorCode = (string) ($nested['code'] ?? $decoded['error_code'] ?? CreditsApiErrorCodes::API_ERROR);
-            $message = (string) ($nested['message'] ?? $decoded['message'] ?? '');
-            $topupUrl = (string) ($nested['topup_url'] ?? $decoded['topup_url'] ?? '');
-        } else {
-            $errorField = $decoded['error'] ?? null;
-            $errorCode = is_string($errorField) && $errorField !== ''
-                ? $errorField
-                : (string) ($decoded['error_code'] ?? CreditsApiErrorCodes::API_ERROR);
-            $message = (string) ($decoded['message'] ?? '');
-            $topupUrl = (string) ($decoded['topup_url'] ?? '');
-        }
-
-        foreach (['upstream_message', 'upstream_error', 'upstream_body_snippet', 'detail'] as $detailKey) {
-            $detail = trim((string) ($decoded[$detailKey] ?? ($nested[$detailKey] ?? '')));
-            if ($detail !== '' && !str_contains($message, $detail)) {
-                $message = $message !== '' && $message !== $errorCode
-                    ? $message . ' — ' . $detail
-                    : $detail;
-            }
-        }
-        if ($message === '' || $message === $errorCode) {
-            $message = $errorCode;
-        }
-
-        $extra = [];
-        foreach (
-            [
-                'retry_after',
-                'topup_url',
-                'feature_key',
-                'credits',
-                'request_uuid',
-                'cost',
-                'cost_units',
-                'credits_needed',
-                'credits_needed_units',
-                'pricing',
-            ] as $key
-        ) {
-            if (array_key_exists($key, $decoded)) {
-                $extra[$key] = $decoded[$key];
-            } elseif ($nested !== null && array_key_exists($key, $nested)) {
-                $extra[$key] = $nested[$key];
-            }
-        }
-        if ($topupUrl !== '' && !isset($extra['topup_url'])) {
-            $extra['topup_url'] = $topupUrl;
-        }
-
-        if ($status === 402 || $errorCode === CreditsApiErrorCodes::INSUFFICIENT_CREDITS) {
-            throw new InsufficientCreditsException(
-                $message !== $errorCode ? $message : 'Insufficient credits',
-                $topupUrl,
-                $extra,
-            );
-        }
-
-        throw new CreditsApiException($errorCode, $status, $message, $extra);
+        throw CreditsApiErrorParser::toException($decoded, $status);
     }
 
     private function extractEtag(ResponseInterface $response): ?string

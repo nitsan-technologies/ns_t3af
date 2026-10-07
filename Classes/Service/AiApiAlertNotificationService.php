@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Service;
 
+use NITSAN\NsT3AF\Credits\CreditsProviderIdentifier;
 use NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface;
 use NITSAN\NsT3AF\Domain\Repository\ProviderRepository;
 use NITSAN\NsT3AF\Utility\AiUniverseUtilityHelper;
@@ -149,6 +150,9 @@ final class AiApiAlertNotificationService
             'usage limit',
             'credit balance',
             'out of credits',
+            'insufficient_credits',
+            'insufficient credits',
+            'credits have been exhausted',
         ];
         foreach ($quotaPatterns as $pattern) {
             if (str_contains($lower, $pattern)) {
@@ -245,7 +249,7 @@ final class AiApiAlertNotificationService
         $timeLabel = LocalizationUtility::translate('email.apiAlert.timestamp', 'ns_t3af') ?: 'Time';
 
         $aiEngineEscaped = htmlspecialchars($aiEngine, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-        $errorMessageEscaped = htmlspecialchars(trim($errorMessage), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $errorMessageEscaped = htmlspecialchars(preg_replace('/^Error\\s+/', '', trim($errorMessage)) ?? trim($errorMessage), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $occurFromEscaped = htmlspecialchars($occurFrom, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $timestamp = $this->formatTimestampWithTimezone();
 
@@ -258,6 +262,10 @@ final class AiApiAlertNotificationService
 
     private function resolveAiEngineForNotification(?string $aiEngine, string $occurFrom): string
     {
+        if ($aiEngine === CreditsProviderIdentifier::IDENTIFIER) {
+            // Requests served by the T3Planet Credits proxy: the configured BYO engine is not involved.
+            return 'T3Planet Credits';
+        }
         if ($aiEngine !== null && trim($aiEngine) !== '') {
             return $this->normalizeEngineName($aiEngine);
         }

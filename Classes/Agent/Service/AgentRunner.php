@@ -31,6 +31,7 @@ use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Api\AiToolCallingServiceInterface;
 use NITSAN\NsT3AF\Credits\CreditsApiErrorCodes;
 use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
+use NITSAN\NsT3AF\Credits\Exception\CreditsContentRemovedException;
 use NITSAN\NsT3AF\Credits\Exception\InsufficientCreditsException;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use Symfony\AI\Agent\Agent;
@@ -356,15 +357,37 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             ]);
             $state->pause('loop_limit');
         } catch (\Throwable $exception) {
-            $state->addMessage([
-                'role' => 'assistant',
-                'content' => $this->creditsErrorMessage($exception),
-                'meta' => ['type' => 'error', 'correlationId' => $correlationId, 'degraded' => true],
-            ]);
-            $state->failed = true;
+            if (self::causedByContentRemoved($exception)) {
+                // Redacted idempotent replay: not an orchestration failure. Nothing was charged or saved;
+                // the editor simply resends (the next turn uses a fresh request_uuid).
+                $state->addMessage([
+                    'role' => 'assistant',
+                    'content' => $this->translator->translate('agent.credits.contentRemoved'),
+                    'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'contentRemoved' => true],
+                ]);
+            } else {
+                $state->addMessage([
+                    'role' => 'assistant',
+                    'content' => $this->creditsErrorMessage($exception),
+                    'meta' => ['type' => 'error', 'correlationId' => $correlationId, 'degraded' => true],
+                ]);
+                $state->failed = true;
+            }
         }
 
         return [$state, $finalText];
+    }
+
+    /** The agent runtime may wrap platform exceptions, so look through the previous chain. */
+    private static function causedByContentRemoved(\Throwable $exception): bool
+    {
+        for ($current = $exception; $current !== null; $current = $current->getPrevious()) {
+            if ($current instanceof CreditsContentRemovedException) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function creditsErrorMessage(\Throwable $exception): string
@@ -379,6 +402,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 CreditsApiErrorCodes::MODEL_UNKNOWN => 'agent.credits.modelUnknown',
                 CreditsApiErrorCodes::MODEL_NOT_ALLOWED => 'agent.credits.modelNotAllowed',
                 CreditsApiErrorCodes::TOOLS_UNSUPPORTED => 'agent.credits.toolsUnsupported',
+                CreditsApiErrorCodes::CONTEXT_LENGTH_EXCEEDED => 'agent.credits.contextLength',
                 default => null,
             };
             if ($key !== null) {

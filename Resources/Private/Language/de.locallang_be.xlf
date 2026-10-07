@@ -1777,6 +1777,14 @@
                 <source>That Credits model cannot run tools. Choose a tools-capable model (for example agent-standard).</source>
                 <target>Dieses Credits-Modell kann keine Tools ausführen. Wählen Sie ein modell mit Tool-Unterstützung (z. B. agent-standard).</target>
             </trans-unit>
+            <trans-unit id="agent.credits.contentRemoved">
+                <source>The original result was removed under the data retention policy. Please send your request again to regenerate it.</source>
+                <target>Das ursprüngliche Ergebnis wurde gemäß Datenaufbewahrungsrichtlinie entfernt. Bitte senden Sie Ihre Anfrage erneut, um es neu zu erzeugen.</target>
+            </trans-unit>
+            <trans-unit id="agent.credits.contextLength">
+                <source>This conversation is too long for the selected model. Start a new conversation or shorten your request.</source>
+                <target>Diese Unterhaltung ist für das gewählte Modell zu lang. Starten Sie eine neue Unterhaltung oder kürzen Sie Ihre Anfrage.</target>
+            </trans-unit>
             <trans-unit id="agent.provider.locked">
                 <source>The AI provider is fixed for this conversation. Start a new conversation to change it.</source>
                 <target>Der KI-Provider ist für diese Unterhaltung festgelegt. Starten Sie eine neue Unterhaltung, um ihn zu wechseln.</target>
