@@ -479,9 +479,15 @@ export const chromeMethods = {
 
       try {
         const response = await new AjaxRequest(url).get().then((r) => r.resolve());
-        if (response?.ok && response.href) {
+        if (response?.ok && response.visible !== false && response.href) {
           this.settingsHref = response.href;
           this.settingsLink.href = response.href;
+          this.settingsLink.hidden = false;
+          this.settingsAllowed = true;
+          // "Extension required" cards that were drawn before the answer arrived.
+          this.root?.querySelectorAll('[data-nst3af-agent-settings-upsell]').forEach((link) => {
+            link.hidden = false;
+          });
         }
       } catch {
         // Settings link stays as placeholder until route is reachable.

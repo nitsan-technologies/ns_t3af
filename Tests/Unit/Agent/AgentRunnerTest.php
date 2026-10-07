@@ -723,4 +723,27 @@ final class AgentRunnerTest extends TestCase
         );
         self::assertLessThanOrEqual(201, mb_strlen(AgentRunner::readableProviderError(str_repeat('word ', 200))));
     }
+
+    #[Test]
+    public function permissionRefusalInATurnIsRecognised(): void
+    {
+        $denied = 'You do not have permission to change this page or its content.';
+
+        self::assertTrue(AgentRunner::turnWasRefusedByPermissions(
+            [['role' => 'assistant', 'content' => $denied . ' Ask an administrator.', 'meta' => ['type' => 'error']]],
+            $denied,
+        ));
+        self::assertTrue(AgentRunner::turnWasRefusedByPermissions(
+            [['role' => 'assistant', 'content' => "Could not prepare this change: You don't have access to this page.", 'meta' => ['type' => 'error']]],
+        ));
+        // Only failed tool results count: a normal reply that mentions the words does not.
+        self::assertFalse(AgentRunner::turnWasRefusedByPermissions(
+            [['role' => 'assistant', 'content' => "You don't have access to this page.", 'meta' => ['type' => 'nl_reply']]],
+        ));
+        self::assertFalse(AgentRunner::turnWasRefusedByPermissions(
+            [['role' => 'assistant', 'content' => 'Rate limit reached', 'meta' => ['type' => 'error']]],
+            $denied,
+        ));
+        self::assertFalse(AgentRunner::turnWasRefusedByPermissions([]));
+    }
 }

@@ -156,12 +156,18 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $finalText = '';
         }
 
+        $permissionRefused = self::turnWasRefusedByPermissions(
+            $state->messages,
+            $this->translator->translate('agent.tool.permissionDenied'),
+        );
+
         $workPlan = $state->plan !== [] ? $state->plan : self::planCarriedIntoTurn($userMessage, $historyMessages);
         // The history holds the conversation *before* this message, so its newest user message is the
         // previous request: gating on it re-opened an old request's steps on every later question.
         $requestForGate = self::requestForGate($userMessage, $historyMessages);
         if (
             $finalText !== ''
+            && !$permissionRefused
             && AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $requestForGate)
         ) {
             $finalText = '';
@@ -187,10 +193,15 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         } elseif ($workPlan !== []) {
             $nlMeta['plan'] = $workPlan;
         }
+        // A permission refusal ends the request: say so plainly instead of "open steps".
         $nlContent = $finalText !== '' ? $finalText : (
-            AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $requestForGate)
-                ? $this->translator->translate('agent.turn.stepsStillOpen')
-                : $this->translator->translate('agent.turn.emptyModelReply')
+            $permissionRefused
+                ? $this->translator->translate('agent.turn.notAllowed')
+                : (
+                    AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $requestForGate)
+                        ? $this->translator->translate('agent.turn.stepsStillOpen')
+                        : $this->translator->translate('agent.turn.emptyModelReply')
+                )
         );
         // Keep open Progress steps when the model answers in text: auto-completing them
         // made multi-element requests look finished after the first apply.
@@ -420,6 +431,30 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     private static function looksLikeContextOverflow(string $raw): bool
     {
         return preg_match('/context[_ ]length|maximum context|context window|too many tokens|prompt is too long|reduce the length/i', $raw) === 1;
+    }
+
+    /**
+     * True when a tool of this turn failed because the editor lacks the permission, so the reply
+     * has to say "not allowed" and the request must not stay open.
+     *
+     * @param list<array<string, mixed>> $messages
+     */
+    public static function turnWasRefusedByPermissions(array $messages, string $permissionDeniedText = ''): bool
+    {
+        foreach ($messages as $message) {
+            if (($message['meta']['type'] ?? '') !== 'error') {
+                continue;
+            }
+            $content = (string) ($message['content'] ?? '');
+            if ($permissionDeniedText !== '' && str_contains($content, $permissionDeniedText)) {
+                return true;
+            }
+            if (preg_match('/(?:don\'t|do not) have (?:access|permission)|insufficient permissions|not allowed/i', $content) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

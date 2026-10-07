@@ -744,6 +744,9 @@
       <trans-unit id="agent.turn.alreadyRunning" resname="agent.turn.alreadyRunning">
         <source>The AI Agent is still working on your previous request. Please wait until it has finished, then send your message again.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.notAllowed" resname="agent.turn.notAllowed">
+        <source>You are not allowed to do this with your backend account. Ask an administrator if you need the permission.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.stepsStillOpen" resname="agent.turn.stepsStillOpen">
         <source>There are still open steps (for example attaching an image). Send another message or pick a suggested action to continue.</source>
       </trans-unit>
@@ -878,6 +881,9 @@
       </trans-unit>
       <trans-unit id="agent.upload.empty" resname="agent.upload.empty">
         <source>The uploaded file is empty.</source>
+      </trans-unit>
+      <trans-unit id="agent.upload.typeNotAllowed" resname="agent.upload.typeNotAllowed">
+        <source>This file type is not allowed (SVG files can contain scripts). Please attach a PNG, JPG or WebP image instead.</source>
       </trans-unit>
       <trans-unit id="agent.upload.serverRejected" resname="agent.upload.serverRejected">
         <source>The server could not accept this file. It may be larger than the server upload limit.</source>

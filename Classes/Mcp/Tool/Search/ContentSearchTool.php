@@ -111,6 +111,6 @@ readonly class ContentSearchTool implements McpNonAiToolInterface
             return SearchConditionParser::fromArray($jsonData, $allowedFields);
         }
 
-        return ['header' => ['operator' => 'like', 'value' => $search]];
+        return ['header' => ['operator' => 'like', 'value' => SearchConditionParser::plainTerm($search)]];
     }
 }

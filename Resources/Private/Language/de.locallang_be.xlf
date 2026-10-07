@@ -679,6 +679,10 @@
                 <source>The AI Agent is still working on your previous request. Please wait until it has finished, then send your message again.</source>
                 <target>Der KI-Agent bearbeitet noch Ihre vorherige Anfrage. Bitte warten Sie, bis er fertig ist, und senden Sie Ihre Nachricht dann erneut.</target>
             </trans-unit>
+            <trans-unit id="agent.turn.notAllowed">
+                <source>You are not allowed to do this with your backend account. Ask an administrator if you need the permission.</source>
+                <target>Das ist mit Ihrem Backend-Konto nicht erlaubt. Fragen Sie einen Administrator, wenn Sie die Berechtigung benötigen.</target>
+            </trans-unit>
             <trans-unit id="agent.turn.stepsStillOpen">
                 <source>There are still open steps (for example attaching an image). Send another message or pick a suggested action to continue.</source>
                 <target>Es sind noch offene Schritte vorhanden (zum Beispiel ein Bild anhängen). Senden Sie eine weitere Nachricht oder wählen Sie eine vorgeschlagene Aktion, um fortzufahren.</target>
@@ -1064,6 +1068,10 @@
             <trans-unit id="agent.upload.empty">
                 <source>The uploaded file is empty.</source>
                 <target>Die hochgeladene Datei ist leer.</target>
+            </trans-unit>
+            <trans-unit id="agent.upload.typeNotAllowed">
+                <source>This file type is not allowed (SVG files can contain scripts). Please attach a PNG, JPG or WebP image instead.</source>
+                <target>Dieser Dateityp ist nicht erlaubt (SVG-Dateien können Skripte enthalten). Bitte hängen Sie stattdessen ein PNG-, JPG- oder WebP-Bild an.</target>
             </trans-unit>
             <trans-unit id="agent.upload.serverRejected">
                 <source>The server could not accept this file. It may be larger than the server upload limit.</source>

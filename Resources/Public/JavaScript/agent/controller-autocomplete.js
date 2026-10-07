@@ -83,7 +83,6 @@ export const autocompleteMethods = {
           }
           const formData = new FormData();
           formData.append('file', file);
-          formData.append('directoryPath', '/user_upload/');
 
           const response = await fetch(url, {
             method: 'POST',
@@ -308,7 +307,8 @@ export const autocompleteMethods = {
       // addresses typed in a message never contact the server.
       const value = this.input.value;
       const slash = value.match(/(?:^|\s)\/(\S*)$/);
-      const at = value.match(/(?:^|\s)@(\S*)$/);
+      // A record query may hold several words ("@QA Mounted"): everything after the "@" up to the end of the line.
+      const at = value.match(/(?:^|\s)@([^@\n]{0,80})$/);
 
       window.clearTimeout(this.autocompleteTimer);
       if (slash) {

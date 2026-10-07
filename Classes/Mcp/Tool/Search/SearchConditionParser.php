@@ -41,6 +41,28 @@ final class SearchConditionParser
         return $conditions;
     }
 
+    /**
+     * A plain search word as the model sends it: models often wrap the term in quotes
+     * ('QA', "QA", “QA”), which would then be matched literally and find nothing.
+     */
+    public static function plainTerm(string $search): string
+    {
+        $term = trim($search);
+        // A JSON string literal such as "\"QA\"" decodes to the bare term.
+        if (preg_match('/^"(?:[^"\\\\]|\\\\.)*"$/s', $term) === 1) {
+            $decoded = json_decode($term);
+            if (is_string($decoded)) {
+                $term = trim($decoded);
+            }
+        }
+
+        while (mb_strlen($term) >= 2 && preg_match('/^([\'"“‘«])(.*)([\'"”’»])$/su', $term, $m) === 1) {
+            $term = trim($m[2]);
+        }
+
+        return $term;
+    }
+
     /** @return array{operator: string, value: string} */
     private static function parseCondition(mixed $value): array
     {

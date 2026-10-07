@@ -442,7 +442,7 @@ export const streamMethods = {
         <div class="nst3af-agent-upsell">
           <div class="nst3af-agent-upsell__title">${escapeHtml(lang('agent.upsell.title', 'Extension required'))}</div>
           <p class="nst3af-agent-upsell__body">${escapeHtml(String(message.content ?? '')).replace(/\n\n/g, '</p><p class="nst3af-agent-upsell__body">')}</p>
-          <a class="btn btn-default btn-sm" href="${settingsHref}">${settingsLabel}</a>
+          ${settingsHref === '#' ? '' : `<a class="btn btn-default btn-sm" href="${settingsHref}" data-nst3af-agent-settings-upsell${this.settingsAllowed === true ? '' : ' hidden'}>${settingsLabel}</a>`}
           <span class="visually-hidden">${toolName} ${ownerLabel}</span>
         </div>
       </div>`;

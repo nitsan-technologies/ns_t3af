@@ -68,6 +68,7 @@ use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use TYPO3\CMS\Core\Database\Query\QueryHelper;
 use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
 use TYPO3\CMS\Core\Database\Query\Restriction\WorkspaceRestriction;
@@ -84,6 +85,9 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
 final class AgentAjaxController
 {
     private const UPLOAD_MAX_BYTES = 104857600;
+
+    /** @var list<string> */
+    private const UPLOAD_BLOCKED_EXTENSIONS = ['svg'];
 
     private const ATTACH_SEARCH_CANDIDATES = 200;
 
@@ -360,6 +364,11 @@ final class AgentAjaxController
             return $denied;
         }
 
+        // Editors get no link instead of a dead end.
+        if (!$this->canOpenSettings($this->resolveBackendUser())) {
+            return new JsonResponse(['ok' => true, 'visible' => false]);
+        }
+
         $pageId = (int) ($request->getQueryParams()['pageId'] ?? 0);
         $route = $this->moduleTabUtility->routeFor('aiAgent') ?? 't3af_dashboard.overview';
         $parameters = [];
@@ -369,10 +378,38 @@ final class AgentAjaxController
 
         return new JsonResponse([
             'ok' => true,
+            'visible' => true,
             'route' => $route,
             'href' => (string) $this->uriBuilder->buildUriFromRoute($route, $parameters),
             'label' => $this->translator->translate('agent.modal.settings'),
         ]);
+    }
+
+    /**
+     * @return array{0: int, 1: string}
+     */
+    private function defaultUploadTarget(BackendUserAuthentication $user): array
+    {
+        try {
+            $folder = GeneralUtility::makeInstance(\TYPO3\CMS\Core\Resource\DefaultUploadFolderResolver::class)
+                ->resolve($user);
+        } catch (\Throwable) {
+            $folder = null;
+        }
+        if ($folder instanceof \TYPO3\CMS\Core\Resource\Folder) {
+            return [$folder->getStorage()->getUid(), $folder->getIdentifier()];
+        }
+
+        return [1, '/user_upload/'];
+    }
+
+    /**
+     * The AI Agent settings page configures the agent for everyone, so only administrators get the
+     * link (the AI Agent tab has no permission of its own that an editor group could be given).
+     */
+    private function canOpenSettings(?BackendUserAuthentication $user): bool
+    {
+        return $user !== null && $user->isAdmin();
     }
 
     public function applyDraftAction(ServerRequestInterface $request): ResponseInterface
@@ -652,10 +689,12 @@ final class AgentAjaxController
         }
 
         $parsedBody = $request->getParsedBody();
-        $storageUid = (int) (is_array($parsedBody) ? ($parsedBody['storageUid'] ?? 1) : 1);
-        $directoryPath = trim((string) (is_array($parsedBody) ? ($parsedBody['directoryPath'] ?? '/user_upload/') : '/user_upload/'));
-        if ($directoryPath === '') {
-            $directoryPath = '/user_upload/';
+        $storageUid = (int) (is_array($parsedBody) ? ($parsedBody['storageUid'] ?? 0) : 0);
+        $directoryPath = trim((string) (is_array($parsedBody) ? ($parsedBody['directoryPath'] ?? '') : ''));
+        if ($directoryPath === '' || $storageUid <= 0) {
+            // No folder chosen: use the editor's own default upload folder (TYPO3 resolves it
+            // from the file mounts and TSconfig), never a folder the editor cannot write to.
+            [$storageUid, $directoryPath] = $this->defaultUploadTarget($user);
         }
         if (!str_starts_with($directoryPath, '/')) {
             $directoryPath = '/' . $directoryPath;
@@ -665,6 +704,12 @@ final class AgentAjaxController
         $fileName = $this->sanitizeUploadFileName($clientName);
         if ($fileName === '') {
             return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.upload.invalidName')], 400);
+        }
+
+        // Chat attachments are raw user input: SVG can carry script, so it is refused here
+        // the same way HTML or PHP is (images such as PNG/JPG/WebP stay allowed).
+        if (in_array(strtolower(pathinfo($fileName, PATHINFO_EXTENSION)), self::UPLOAD_BLOCKED_EXTENSIONS, true)) {
+            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.upload.typeNotAllowed')], 400);
         }
 
         $content = (string) $upload->getStream()->getContents();
@@ -1310,13 +1355,28 @@ final class AgentAjaxController
             ->setMaxResults(self::ATTACH_SEARCH_CANDIDATES)
             ->orderBy('title');
 
-        if ($query !== '') {
+        if (!$user->isAdmin()) {
+            // Let the database drop pages the editor may not see, so they cannot crowd the
+            // candidate window and hide the pages the editor can open.
+            $permsClause = QueryHelper::stripLogicalOperatorPrefix($user->getPagePermsClause(Permission::PAGE_SHOW));
+            if ($permsClause !== '') {
+                $queryBuilder->andWhere($permsClause);
+            }
+        }
+
+        // Every typed word has to appear in the title ("QA Moun" finds "QA Mounted").
+        $words = $this->searchWords($query);
+        if ($words !== []) {
+            $wordConditions = [];
+            foreach ($words as $word) {
+                $wordConditions[] = $queryBuilder->expr()->like(
+                    'title',
+                    $queryBuilder->createNamedParameter('%' . $queryBuilder->escapeLikeWildcards($word) . '%'),
+                );
+            }
             $queryBuilder->andWhere(
                 $queryBuilder->expr()->or(
-                    $queryBuilder->expr()->like(
-                        'title',
-                        $queryBuilder->createNamedParameter('%' . $queryBuilder->escapeLikeWildcards($query) . '%'),
-                    ),
+                    $queryBuilder->expr()->and(...$wordConditions),
                     $queryBuilder->expr()->eq(
                         'uid',
                         $queryBuilder->createNamedParameter((int) $query, Connection::PARAM_INT),
@@ -1358,13 +1418,15 @@ final class AgentAjaxController
                 ->setMaxResults(self::ATTACH_SEARCH_CONTENT_LIMIT)
                 ->orderBy('sorting');
 
-            if ($query !== '') {
-                $contentQuery->andWhere(
-                    $contentQuery->expr()->like(
+            if ($words !== []) {
+                $headerConditions = [];
+                foreach ($words as $word) {
+                    $headerConditions[] = $contentQuery->expr()->like(
                         'header',
-                        $contentQuery->createNamedParameter('%' . $contentQuery->escapeLikeWildcards($query) . '%'),
-                    ),
-                );
+                        $contentQuery->createNamedParameter('%' . $contentQuery->escapeLikeWildcards($word) . '%'),
+                    );
+                }
+                $contentQuery->andWhere($contentQuery->expr()->and(...$headerConditions));
             }
 
             foreach ($contentQuery->executeQuery()->fetchAllAssociative() as $row) {
@@ -1382,6 +1444,16 @@ final class AgentAjaxController
         }
 
         return $records;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function searchWords(string $query): array
+    {
+        $words = preg_split('/\s+/u', trim($query), -1, PREG_SPLIT_NO_EMPTY);
+
+        return $words === false ? [] : array_slice($words, 0, 6);
     }
 
     /**

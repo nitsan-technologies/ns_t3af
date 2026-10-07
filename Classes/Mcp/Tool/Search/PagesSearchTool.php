@@ -100,6 +100,6 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
             return SearchConditionParser::fromArray($jsonData, $allowedFields);
         }
 
-        return ['title' => ['operator' => 'like', 'value' => $search]];
+        return ['title' => ['operator' => 'like', 'value' => SearchConditionParser::plainTerm($search)]];
     }
 }
