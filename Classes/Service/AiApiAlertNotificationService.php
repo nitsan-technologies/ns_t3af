@@ -169,7 +169,7 @@ final class AiApiAlertNotificationService
             return null;
         }
 
-        usort($rows, static fn (array $a, array $b): int => (int) ($a['pid'] ?? 0) <=> (int) ($b['pid'] ?? 0));
+        usort($rows, static fn(array $a, array $b): int => (int) ($a['pid'] ?? 0) <=> (int) ($b['pid'] ?? 0));
         foreach ($rows as $row) {
             if ((int) ($row['pid'] ?? 0) <= 0) {
                 continue;
