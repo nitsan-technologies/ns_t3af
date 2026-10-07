@@ -1521,7 +1521,7 @@ final class AiService implements AiServiceInterface
     private function extractEmbedHttpStatus(array $raw): int
     {
         foreach (['status', 'status_code', 'statusCode'] as $key) {
-            $status = (int)($raw[$key] ?? 0);
+            $status = (int) ($raw[$key] ?? 0);
             if ($status >= 400 && $status <= 599) {
                 return $status;
             }

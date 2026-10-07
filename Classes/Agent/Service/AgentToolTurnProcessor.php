@@ -55,6 +55,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         private AgentTranslator $translator,
         private McpToolIntrospectorService $toolIntrospector,
         private ?AgentMediaPreviewService $mediaPreviews = null,
+        private ?AgentWorkspaceTarget $workspaceTarget = null,
     ) {}
 
     /**
@@ -587,9 +588,19 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             }
         }
 
-        $workspaceId = (int) ($context['workspaceId'] ?? 0);
-        if ($workspaceId > 0) {
-            $arguments['workspaceId'] ??= $workspaceId;
+        // The workspace follows the editor: the one they work in, otherwise "MCP Server > Workspace
+        // selection" (Live when none is chosen). It is applied for this call only and never replaced
+        // by a model-supplied value; the workspace_* tools take their own workspaceId argument.
+        if (!str_starts_with(strtolower(trim($toolName)), 'workspace_')) {
+            $workspaceId = (int) ($context['workspaceId'] ?? 0);
+            $beUser = $GLOBALS['BE_USER'] ?? null;
+            if (isset($this->workspaceTarget) && $beUser instanceof BackendUserAuthentication) {
+                $workspaceId = $this->workspaceTarget->resolve($workspaceId, $beUser);
+            }
+            unset($arguments['workspaceId']);
+            if ($workspaceId > 0) {
+                $arguments['workspaceId'] = $workspaceId;
+            }
         }
 
         $storageUid = (int) ($context['storageUid'] ?? 0);

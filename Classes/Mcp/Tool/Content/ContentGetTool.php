@@ -29,6 +29,7 @@ use Mcp\Capability\Attribute\McpTool;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 
@@ -38,6 +39,7 @@ readonly class ContentGetTool implements McpNonAiToolInterface
     public function __construct(
         private RecordService $recordService,
         private TcaSchemaService $tcaSchemaService,
+        private PageAccessService $pageAccess,
     ) {}
 
     #[McpTool(
@@ -63,7 +65,7 @@ readonly class ContentGetTool implements McpNonAiToolInterface
         $record = $this->recordService->findByUid('tt_content', $uid, $fields);
 
         if ($record === null) {
-            return json_encode(['error' => 'Content element not found'], JSON_THROW_ON_ERROR);
+            return json_encode(['error' => $this->pageAccess->isUnrestricted() ? 'Content element not found' : 'Content element not found or you don\'t have access to its page.'], JSON_THROW_ON_ERROR);
         }
 
         $sysLanguageUid = $record[$languageField ?? ''] ?? -1;

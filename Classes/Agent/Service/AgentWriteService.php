@@ -36,6 +36,9 @@ final class AgentWriteService
 {
     private const FLOW_AGENT_PREVIEW = 'agent_preview';
 
+    /** A prepared change that was not executed within this time is treated as outdated. */
+    private const DRAFT_MAX_AGE_SECONDS = 3600;
+
     public function __construct(
         private readonly DataHandlerService $dataHandlerService,
         private readonly RecordService $recordService,
@@ -52,6 +55,65 @@ final class AgentWriteService
     }
 
     /**
+     * Old change cards (e.g. from a chat reopened later) must not apply stale content.
+     *
+     * @param array<string, mixed> $stored
+     */
+    private function assertDraftIsRecent(array $stored): void
+    {
+        $createdAt = (int) ($stored['createdAt'] ?? 0);
+        if ($createdAt > 0 && time() - $createdAt > self::DRAFT_MAX_AGE_SECONDS) {
+            throw new \RuntimeException($this->translator->translate('agent.write.draftTooOld'), 1712003220);
+        }
+    }
+
+    /**
+     * Refuse to overwrite a value somebody else changed after the agent prepared the change:
+     * the value the plan was built from must still be what is stored now.
+     *
+     * @param list<string> $keptFieldKeys
+     */
+    private function assertRecordsUnchangedSincePlan(ToolPlan $plan, array $keptFieldKeys): void
+    {
+        if ($plan->action !== 'update') {
+            return;
+        }
+
+        $changed = [];
+        foreach ($plan->keptFields($keptFieldKeys) as $field) {
+            if ($field->field === '' || str_starts_with($field->field, '_') || $field->uid <= 0 || $field->currentValue === null) {
+                continue;
+            }
+            $record = $this->recordService->findByUid($field->table, $field->uid, [$field->field]);
+            if ($record === null || !array_key_exists($field->field, $record)) {
+                continue;
+            }
+            if (self::comparable($record[$field->field]) !== self::comparable($field->currentValue)) {
+                $changed[] = sprintf('%s #%d (%s)', $field->table, $field->uid, $field->field);
+            }
+        }
+
+        if ($changed !== []) {
+            throw new \RuntimeException(
+                $this->translator->translate('agent.write.changedSince', [implode(', ', array_slice($changed, 0, 5))]),
+                1712003221,
+            );
+        }
+    }
+
+    private static function comparable(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+        if (is_scalar($value)) {
+            return trim((string) $value);
+        }
+
+        return (string) json_encode($value);
+    }
+
+    /**
      * @param list<string> $keptFieldKeys
      * @return array<string, mixed>
      */
@@ -65,6 +127,7 @@ final class AgentWriteService
         if ((string) ($stored['flow'] ?? '') === self::FLOW_AGENT_PREVIEW) {
             throw new \RuntimeException($this->translator->translate('agent.write.previewNeedsSelections'), 1712003212);
         }
+        $this->assertDraftIsRecent($stored);
 
         $severity = (string) ($stored['severity'] ?? '');
         if ($severity === 'destructive' && ($stored['destructiveArmed'] ?? false) !== true) {
@@ -78,6 +141,8 @@ final class AgentWriteService
             return $this->applyToolConfirmation($plan, $stored, $correlationId, $draftId);
         }
 
+        $this->assertRecordsUnchangedSincePlan($plan, $keptFieldKeys);
+
         $applyResult = $this->dataHandlerService->applyFilteredPlan($plan, $keptFieldKeys, $correlationId);
         $readback = $this->readBack($plan, $keptFieldKeys, $applyResult['affected'] ?? []);
 
@@ -86,7 +151,7 @@ final class AgentWriteService
             'correlationId' => $correlationId,
             'plan' => $plan->toArray(),
             'keptFieldKeys' => $keptFieldKeys,
-            'undoFields' => $this->buildUndoFields($plan, $keptFieldKeys),
+            'undoFields' => $this->buildUndoFields($plan, $keptFieldKeys, $applyResult['affected'] ?? []),
             'appliedAt' => time(),
         ]);
         $this->draftSession->removeDraft($draftId);
@@ -124,6 +189,7 @@ final class AgentWriteService
         if ((string) ($stored['flow'] ?? '') !== self::FLOW_AGENT_PREVIEW) {
             throw new \RuntimeException($this->translator->translate('agent.write.notPreviewDraft'), 1712003213);
         }
+        $this->assertDraftIsRecent($stored);
 
         $severity = (string) ($stored['severity'] ?? '');
         if ($severity === 'destructive' && ($stored['destructiveArmed'] ?? false) !== true) {
@@ -364,11 +430,31 @@ final class AgentWriteService
 
     /**
      * @param list<string> $keptFieldKeys
+     * @param list<array<string, mixed>> $affected records written by the apply (table, uid)
      * @return list<array{table: string, uid: int, field: string, previousValue: mixed, action: string}>
      */
-    private function buildUndoFields(ToolPlan $plan, array $keptFieldKeys): array
+    private function buildUndoFields(ToolPlan $plan, array $keptFieldKeys, array $affected = []): array
     {
         $undo = [];
+        if ($plan->action === 'create') {
+            // The plan only knows the proposed values; the record's uid exists after the write.
+            // Undoing a create means deleting exactly the records that were just created.
+            foreach ($affected as $record) {
+                if (!is_array($record) || (int) ($record['uid'] ?? 0) <= 0) {
+                    continue;
+                }
+                $undo[] = [
+                    'table' => (string) ($record['table'] ?? ''),
+                    'uid' => (int) $record['uid'],
+                    'field' => '_record',
+                    'previousValue' => null,
+                    'action' => 'create',
+                ];
+            }
+
+            return $undo;
+        }
+
         foreach ($plan->keptFields($keptFieldKeys) as $field) {
             $undo[] = [
                 'table' => $field->table,

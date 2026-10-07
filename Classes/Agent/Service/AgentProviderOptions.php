@@ -64,6 +64,10 @@ final readonly class AgentProviderOptions
 
         $storagePid = $this->storagePid($pageId);
         $default = $storagePid !== null ? $this->providers->findDefault($storagePid) : null;
+        if (!$default instanceof Provider && $storagePid !== null) {
+            // No default configured: "Default" stands for the highest-priority usable provider.
+            $default = $this->fallbackProvider($storagePid, $pageId, $user);
+        }
         $options = [[
             'value' => self::DEFAULT,
             'label' => $default instanceof Provider
@@ -81,6 +85,42 @@ final readonly class AgentProviderOptions
         }
 
         return $options;
+    }
+
+    /**
+     * The concrete provider a "default" choice runs with. Without a default provider (two active
+     * providers, none marked default) "default" resolves to nothing and the turn cannot start, so
+     * it maps to the highest-priority provider the editor may use. Other identifiers pass through.
+     */
+    public function resolveIdentifier(string $identifier, int $pageId, ?BackendUserAuthentication $user): string
+    {
+        if (($identifier !== '' && $identifier !== self::DEFAULT) || $this->creditModeResolver->isActive()) {
+            return $identifier;
+        }
+
+        $storagePid = $this->storagePid($pageId);
+        if ($storagePid === null) {
+            return $identifier;
+        }
+        $default = $this->providers->findDefault($storagePid);
+        if ($default instanceof Provider && $this->isUsable($default, $pageId, $user)) {
+            return $identifier;
+        }
+        $fallback = $this->fallbackProvider($storagePid, $pageId, $user);
+
+        return $fallback instanceof Provider ? $fallback->identifier : $identifier;
+    }
+
+    private function fallbackProvider(int $storagePid, int $pageId, ?BackendUserAuthentication $user): ?Provider
+    {
+        // findAllByStoragePid() orders by is_default, priority, title.
+        foreach ($this->providers->findAllByStoragePid($storagePid) as $provider) {
+            if ($this->isUsable($provider, $pageId, $user)) {
+                return $provider;
+            }
+        }
+
+        return null;
     }
 
     /**

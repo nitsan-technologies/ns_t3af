@@ -156,11 +156,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $finalText = '';
         }
 
-        $workPlan = $state->plan !== [] ? $state->plan : AgentPlan::latest($historyMessages);
-        $requestForGate = AgentPromptBuilder::latestUserRequestText($historyMessages);
-        if ($requestForGate === '') {
-            $requestForGate = $userMessage;
-        }
+        $workPlan = $state->plan !== [] ? $state->plan : self::planCarriedIntoTurn($userMessage, $historyMessages);
+        // The history holds the conversation *before* this message, so its newest user message is the
+        // previous request: gating on it re-opened an old request's steps on every later question.
+        $requestForGate = self::requestForGate($userMessage, $historyMessages);
         if (
             $finalText !== ''
             && AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $requestForGate)
@@ -233,7 +232,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if ($requestForChecklist === '' || str_starts_with(trim($userMessage), '[The editor ')) {
             $requestForChecklist = AgentPromptBuilder::latestUserRequestText($historyMessages);
         }
-        $modelPlan = AgentPlan::latest($historyMessages);
+        $modelPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
         $continuation = is_array($body['continuation'] ?? null) ? $body['continuation'] : [];
         if ($modelPlan !== [] && ($continuation['outcome'] ?? '') === 'applied' && AgentPlan::hasOpenSteps($modelPlan)) {
             $modelPlan = AgentPlan::advance($modelPlan);
@@ -543,7 +542,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if ($createContent) {
             $found = [...self::createContentTools($executableTools, $offeredNames), ...$found];
         }
-        $workPlan = AgentPlan::latest($historyMessages);
+        $workPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
         if (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $query)) {
             $found = [...self::imageWorkTools($executableTools, $offeredNames), ...$found];
         } elseif (AgentPromptBuilder::pendingImageAttachNote($historyMessages) !== '') {
@@ -636,6 +635,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
      */
     private const ONLY_WHEN_ASKED = [
         'pages_copy' => '/\b(copy|copies|duplicate|duplicat\w*|clone|kopier\w*|kopie|dupliz\w*|klon\w*)\b/iu',
+        // Persists the editor's backend workspace: only when the editor asks to change it.
+        'workspace_switch' => '/\b(workspaces?|arbeitsbereich\w*|switch\w*|wechsel\w*)\b/iu',
     ];
 
     /**
@@ -686,6 +687,42 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return array_values($picked);
+    }
+
+    /**
+     * The request the "is anything still open?" gate must judge: the current message (plus the
+     * earlier turn for short replies), or the original request when this is a confirm/decline
+     * continuation.
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    private static function requestForGate(string $userMessage, array $historyMessages): string
+    {
+        $request = trim(self::requestQuery($userMessage, $historyMessages));
+        if ($request === '' || str_starts_with(trim($userMessage), '[The editor ')) {
+            $request = AgentPromptBuilder::latestUserRequestText($historyMessages);
+        }
+
+        return $request !== '' ? $request : $userMessage;
+    }
+
+    /**
+     * Progress plan of an earlier request only carries over into a continuation or a short reply
+     * ("yes", "go on"). A new, self-contained request starts without the old plan — otherwise an
+     * open step left by one request answered every later message with "There are still open steps".
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     * @return list<array{title: string, status: string}>
+     */
+    private static function planCarriedIntoTurn(string $userMessage, array $historyMessages): array
+    {
+        $message = trim($userMessage);
+        $isContinuation = str_starts_with($message, '[The editor ');
+        if (!$isContinuation && mb_strlen($message) >= self::SHORT_REPLY_CHARS) {
+            return [];
+        }
+
+        return AgentPlan::latest($historyMessages);
     }
 
     /**

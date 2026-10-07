@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Tool\Pages;
 
+use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Pages\PagesGetTool;
@@ -66,7 +67,7 @@ final class PagesGetToolTest extends TestCase
                 'sys_language_uid' => 1,
             ]);
 
-        $tool = new PagesGetTool($recordService, $tca);
+        $tool = new PagesGetTool($recordService, $tca, $this->accessibleGate());
         $decoded = json_decode($tool->execute(1739, 'title'), true, 512, JSON_THROW_ON_ERROR);
 
         self::assertSame(1739, $decoded['uid']);
@@ -90,7 +91,7 @@ final class PagesGetToolTest extends TestCase
             ->with('pages', 5, ['title', 'categories'])
             ->willReturn(['uid' => 5, 'title' => 'Home', 'categories' => '126']);
 
-        $tool = new PagesGetTool($recordService, $tca);
+        $tool = new PagesGetTool($recordService, $tca, $this->accessibleGate());
         $decoded = json_decode($tool->execute(5), true, 512, JSON_THROW_ON_ERROR);
 
         self::assertSame('126', $decoded['categories']);
@@ -112,7 +113,7 @@ final class PagesGetToolTest extends TestCase
             ->with('pages', 42, ['title'])
             ->willReturn(['uid' => 42, 'title' => 'About']);
 
-        $tool = new PagesGetTool($recordService, $tca);
+        $tool = new PagesGetTool($recordService, $tca, $this->accessibleGate());
         $decoded = json_decode($tool->execute(0, '', 42), true, 512, JSON_THROW_ON_ERROR);
 
         self::assertSame(42, $decoded['uid']);
@@ -125,9 +126,35 @@ final class PagesGetToolTest extends TestCase
         $tool = new PagesGetTool(
             $this->createMock(RecordService::class),
             $this->createMock(TcaSchemaService::class),
+            $this->accessibleGate(),
         );
         $decoded = json_decode($tool->execute(), true, 512, JSON_THROW_ON_ERROR);
 
         self::assertSame('Missing required argument: uid (or pageId)', $decoded['error']);
+    }
+
+    #[Test]
+    public function pageOutsideEditorAccessReturnsAccessDeniedWithoutLoadingTheRecord(): void
+    {
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->expects(self::never())->method('findByUid');
+        $recordService->expects(self::never())->method('findTranslations');
+
+        $gate = $this->createMock(PageAccessService::class);
+        $gate->method('canReadPage')->with(77)->willReturn(false);
+
+        $tool = new PagesGetTool($recordService, $this->createMock(TcaSchemaService::class), $gate);
+        $decoded = json_decode($tool->execute(77), true, 512, JSON_THROW_ON_ERROR);
+
+        self::assertSame(PageAccessService::ACCESS_DENIED_MESSAGE, $decoded['error']);
+        self::assertArrayNotHasKey('title', $decoded);
+    }
+
+    private function accessibleGate(): PageAccessService
+    {
+        $gate = $this->createMock(PageAccessService::class);
+        $gate->method('canReadPage')->willReturn(true);
+
+        return $gate;
     }
 }

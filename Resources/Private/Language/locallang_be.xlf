@@ -741,6 +741,9 @@
       <trans-unit id="agent.turn.emptyModelReply" resname="agent.turn.emptyModelReply">
         <source>I could not produce a reply. Try rephrasing or use / to run a specific tool.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.alreadyRunning" resname="agent.turn.alreadyRunning">
+        <source>The AI Agent is still working on your previous request. Please wait until it has finished, then send your message again.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.stepsStillOpen" resname="agent.turn.stepsStillOpen">
         <source>There are still open steps (for example attaching an image). Send another message or pick a suggested action to continue.</source>
       </trans-unit>
@@ -1321,6 +1324,12 @@
       <trans-unit id="agent.write.draftNotFound" resname="agent.write.draftNotFound">
         <source>Draft not found or expired.</source>
       </trans-unit>
+      <trans-unit id="agent.write.draftTooOld" resname="agent.write.draftTooOld">
+        <source>This change was prepared a while ago and is outdated. Ask the agent again to prepare a fresh change.</source>
+      </trans-unit>
+      <trans-unit id="agent.write.changedSince" resname="agent.write.changedSince">
+        <source>Not applied: %1$s was changed after the agent prepared this change. Applying it would overwrite the newer edit. Ask the agent again to prepare a change from the current content.</source>
+      </trans-unit>
       <trans-unit id="agent.write.destructiveNeedsConfirmation" resname="agent.write.destructiveNeedsConfirmation">
         <source>This destructive draft has to be confirmed first.</source>
       </trans-unit>
@@ -1329,6 +1338,9 @@
       </trans-unit>
       <trans-unit id="agent.write.toolInvocationFailed" resname="agent.write.toolInvocationFailed">
         <source>Running the tool failed.</source>
+      </trans-unit>
+      <trans-unit id="agent.undo.nothingToRevert" resname="agent.undo.nothingToRevert">
+        <source>Nothing could be undone for this change. Please revert it manually in the backend.</source>
       </trans-unit>
       <trans-unit id="agent.undo.changeNotFound" resname="agent.undo.changeNotFound">
         <source>Change not found or already undone.</source>

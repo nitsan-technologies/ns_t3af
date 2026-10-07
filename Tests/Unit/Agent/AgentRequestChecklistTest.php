@@ -149,4 +149,24 @@ TXT;
         self::assertSame([], AgentRequestChecklist::parse('What is this page about?'));
         self::assertSame([], AgentRequestChecklist::parse('Translate this page to German'));
     }
+
+    #[Test]
+    public function readOnlyRequestsNamingAContentTypeYieldNoChecklist(): void
+    {
+        foreach ([
+            'list the headers on this page',
+            'Show me all tables on this page',
+            'How many text elements does this page have?',
+            'Zeige alle Überschriften dieser Seite',
+        ] as $message) {
+            self::assertSame([], AgentRequestChecklist::parse($message), $message);
+        }
+    }
+
+    #[Test]
+    public function createRequestsStillYieldAChecklist(): void
+    {
+        $steps = AgentRequestChecklist::parse('Add a header and a table to this page');
+        self::assertSame(['header', 'table'], array_column($steps, 'cType'));
+    }
 }

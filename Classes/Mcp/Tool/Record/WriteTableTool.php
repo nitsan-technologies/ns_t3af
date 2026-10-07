@@ -34,6 +34,7 @@ use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordPayloadNormalizer;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyResult;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
@@ -66,6 +67,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         private RecordService $recordService,
         TcaSchemaService $tcaSchemaService,
         private RecordsApplyService $recordsApply,
+        private ?PageAccessService $pageAccess = null,
     ) {
         $this->normalizer = new RecordPayloadNormalizer($tcaSchemaService);
     }
@@ -190,6 +192,9 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         $pid = (int) $payload['pid'];
+        if (!$this->targetIsReadable($tableName, $pid)) {
+            throw new \InvalidArgumentException(PageAccessService::ACCESS_DENIED_MESSAGE);
+        }
         unset($payload['pid']);
         $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
 
@@ -264,6 +269,18 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         ]);
     }
 
+    /** Refuses a create target page the backend user cannot read (negative pid = after record uid). */
+    private function targetIsReadable(string $tableName, int $pid): bool
+    {
+        if ($this->pageAccess === null || $this->pageAccess->isUnrestricted() || $pid === 0) {
+            return true;
+        }
+
+        return $pid < 0
+            ? $this->recordService->findByUid($tableName, abs($pid), ['uid']) !== null
+            : $this->pageAccess->canReadPage($pid);
+    }
+
     /** @param array<string, mixed> $payload */
     private function create(string $tableName, array $payload): string
     {
@@ -272,6 +289,9 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         $pid = (int) $payload['pid'];
+        if (!$this->targetIsReadable($tableName, $pid)) {
+            return $this->encodeError(PageAccessService::ACCESS_DENIED_MESSAGE);
+        }
         unset($payload['pid']);
 
         [$payload, $fileFields] = $this->normalizer->extractFileFields($tableName, $payload);

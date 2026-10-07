@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Service;
 
 use NITSAN\NsT3AF\Mcp\Service\McpRecordPlanService;
+use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use PHPUnit\Framework\Attributes\Test;
@@ -71,5 +72,39 @@ final class McpRecordPlanServiceTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Use file_reference_add');
         $service->planUpdate('tt_content', 480, ['assets' => [['uid_local' => 93]]], 'write_table');
+    }
+
+    #[Test]
+    public function planCreateOnPageOutsideTheEditorsAccessIsRefused(): void
+    {
+        $access = $this->createMock(PageAccessService::class);
+        $access->method('isUnrestricted')->willReturn(false);
+        $access->method('canReadPage')->with(225)->willReturn(false);
+
+        $service = new McpRecordPlanService(
+            $this->createMock(RecordService::class),
+            $this->createMock(TcaSchemaService::class),
+            $access,
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(PageAccessService::ACCESS_DENIED_MESSAGE);
+        $service->planCreate('tt_content', ['pid' => 225, 'header' => 'Hi'], 'write_table');
+    }
+
+    #[Test]
+    public function planCreateOnReadablePageIsAllowed(): void
+    {
+        $access = $this->createMock(PageAccessService::class);
+        $access->method('isUnrestricted')->willReturn(false);
+        $access->method('canReadPage')->with(224)->willReturn(true);
+
+        $tca = $this->createMock(TcaSchemaService::class);
+        $tca->method('getWritableFields')->willReturn(['header']);
+
+        $service = new McpRecordPlanService($this->createMock(RecordService::class), $tca, $access);
+        $plan = $service->planCreate('tt_content', ['pid' => 224, 'header' => 'Hi'], 'write_table');
+
+        self::assertSame('create', $plan->action);
     }
 }

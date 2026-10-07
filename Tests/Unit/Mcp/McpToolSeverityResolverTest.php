@@ -46,6 +46,7 @@ final class McpToolSeverityResolverTest extends TestCase
         $severity = $this->resolver->resolveForHandler(new PagesGetTool(
             $this->createStub(\NITSAN\NsT3AF\Mcp\Service\RecordService::class),
             $this->createStub(\NITSAN\NsT3AF\Mcp\Service\TcaSchemaService::class),
+            $this->createStub(\NITSAN\NsT3AF\Mcp\Service\PageAccessService::class),
         ));
 
         self::assertSame(ToolSeverity::Read, $severity);

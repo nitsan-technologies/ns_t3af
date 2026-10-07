@@ -35,6 +35,7 @@ readonly class RecordService
         private ConnectionPool $connectionPool,
         private WorkspaceContextService $workspaceContext,
         private RelationUidListResolver $relationUidListResolver,
+        private PageAccessService $pageAccess,
     ) {}
 
     /**
@@ -51,8 +52,15 @@ readonly class RecordService
         $queryBuilder->getRestrictions()->removeAll();
         $this->workspaceContext->applyRestriction($queryBuilder, $table);
 
+        $selectFields = $this->workspaceContext->withOverlayFields($table, $fields);
+        $anchorColumn = $this->pageAccess->anchorColumn($table);
+        $anchorWasRequested = in_array($anchorColumn, $selectFields, true) || in_array('*', $selectFields, true);
+        if (!$anchorWasRequested) {
+            $selectFields[] = $anchorColumn;
+        }
+
         $row = $queryBuilder
-            ->select(...$this->workspaceContext->withOverlayFields($table, $fields))
+            ->select(...$selectFields)
             ->from($table)
             ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, ParameterType::INTEGER)))
             ->executeQuery()
@@ -66,7 +74,13 @@ readonly class RecordService
         if ($row === null) {
             return null;
         }
+        if (!$this->pageAccess->canReadRecord($table, $row)) {
+            return null;
+        }
         $row = $this->workspaceContext->stripOverlayFields($row, $fields);
+        if (!$anchorWasRequested) {
+            unset($row[$anchorColumn]);
+        }
 
         return $this->relationUidListResolver->enrichRecord($table, $row);
     }
@@ -89,7 +103,7 @@ readonly class RecordService
 
         /** @var list<array{uid: int|string}> $rows */
         $rows = $queryBuilder
-            ->select('uid')
+            ->select('uid', $this->pageAccess->anchorColumn($table))
             ->from($table)
             ->where($queryBuilder->expr()->in(
                 'uid',
@@ -98,7 +112,9 @@ readonly class RecordService
             ->executeQuery()
             ->fetchAllAssociative();
 
-        return array_map(static fn(array $row): int => (int) $row['uid'], $rows);
+        $rows = array_filter($rows, fn(array $row): bool => $this->pageAccess->canReadRecord($table, $row));
+
+        return array_values(array_map(static fn(array $row): int => (int) $row['uid'], $rows));
     }
 
     /**
@@ -133,6 +149,9 @@ readonly class RecordService
             ->select(...$this->workspaceContext->withOverlayFields($table, $fields))
             ->from($table)
             ->where($queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pid, ParameterType::INTEGER)));
+
+        $this->applyPageAccessConstraint($queryBuilder, $table, $pid);
+        $this->applyPageAccessConstraint($countQueryBuilder, $table, $pid);
 
         if ($sysLanguageUid !== null && $languageField !== null) {
             $countQueryBuilder->andWhere(
@@ -226,6 +245,9 @@ readonly class RecordService
             $this->applyCondition($countQueryBuilder, $field, $condition);
         }
 
+        $this->applyPageAccessConstraint($queryBuilder, $table, $pid);
+        $this->applyPageAccessConstraint($countQueryBuilder, $table, $pid);
+
         /** @var int|string $totalResult */
         $totalResult = $countQueryBuilder->executeQuery()->fetchOne();
 
@@ -244,6 +266,55 @@ readonly class RecordService
             'records' => $records,
             'total' => (int) $totalResult,
         ];
+    }
+
+    /**
+     * Restrict a query to records the current backend user may read through the
+     * page they live on (web mounts + "show" permission). Admins are unrestricted.
+     *
+     * For pages the anchor is the page uid itself, for every other table its pid;
+     * the distinct anchors of the table are resolved against the page permissions
+     * once and then applied as an IN() constraint so limit/offset/total stay correct.
+     */
+    private function applyPageAccessConstraint(QueryBuilder $queryBuilder, string $table, ?int $pid): void
+    {
+        if ($this->pageAccess->isUnrestricted()) {
+            return;
+        }
+
+        $column = $this->pageAccess->anchorColumn($table);
+
+        // Non-page table scoped to one page: a single page check is enough.
+        if ($table !== 'pages' && $pid !== null) {
+            if ($pid !== 0 && !$this->pageAccess->canReadPage($pid)) {
+                $queryBuilder->andWhere('1 = 0');
+            }
+
+            return;
+        }
+
+        $anchorQuery = $this->connectionPool->getQueryBuilderForTable($table);
+        $anchorQuery->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($anchorQuery, $table);
+        $anchorQuery->select($column)->distinct()->from($table);
+        if ($pid !== null) {
+            $anchorQuery->andWhere($anchorQuery->expr()->eq('pid', $anchorQuery->createNamedParameter($pid, ParameterType::INTEGER)));
+        }
+
+        /** @var list<int|string> $anchors */
+        $anchors = $anchorQuery->executeQuery()->fetchFirstColumn();
+        $allowed = $this->pageAccess->filterAllowedAnchors($table, array_map('intval', $anchors));
+
+        if ($allowed === []) {
+            $queryBuilder->andWhere('1 = 0');
+
+            return;
+        }
+
+        $queryBuilder->andWhere($queryBuilder->expr()->in(
+            $column,
+            $queryBuilder->createNamedParameter($allowed, ArrayParameterType::INTEGER),
+        ));
     }
 
     /** @param array{operator: string, value: string} $condition */
@@ -296,6 +367,8 @@ readonly class RecordService
             $this->applyCondition($queryBuilder, $field, $condition);
         }
 
+        $this->applyPageAccessConstraint($queryBuilder, $table, $pid);
+
         /** @var int|string $result */
         $result = $queryBuilder->executeQuery()->fetchOne();
 
@@ -309,6 +382,10 @@ readonly class RecordService
      */
     public function findFileReferences(string $table, int $uid, string $fieldName): array
     {
+        if ($this->findByUid($table, $uid, ['uid']) === null) {
+            return [];
+        }
+
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('sys_file_reference');
         $queryBuilder->getRestrictions()->removeAll();
         $this->workspaceContext->applyRestriction($queryBuilder, 'sys_file_reference');
@@ -333,6 +410,10 @@ readonly class RecordService
      */
     public function findTranslations(string $table, int $uid, string $languageField, string $transOrigPointerField): array
     {
+        if ($this->findByUid($table, $uid, ['uid']) === null) {
+            return [];
+        }
+
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
         $queryBuilder->getRestrictions()->removeAll();
         $this->workspaceContext->applyRestriction($queryBuilder, $table);

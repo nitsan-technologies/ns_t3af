@@ -30,13 +30,18 @@ use Mcp\Capability\Attribute\McpTool;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 
 #[McpToolSeverity(ToolSeverity::Read)]
 readonly class ContentListTool implements McpNonAiToolInterface
 {
-    public function __construct(private RecordService $recordService, private TcaSchemaService $tcaSchemaService) {}
+    public function __construct(
+        private RecordService $recordService,
+        private TcaSchemaService $tcaSchemaService,
+        private PageAccessService $pageAccess,
+    ) {}
 
     #[McpTool(
         name: 'content_list',
@@ -45,6 +50,10 @@ readonly class ContentListTool implements McpNonAiToolInterface
     )]
     public function execute(int $pid, int $limit = 20, int $offset = 0, int $sysLanguageUid = -1, string $selectFields = ''): string
     {
+        if ($pid > 0 && !$this->pageAccess->canReadPage($pid)) {
+            return json_encode(['error' => PageAccessService::ACCESS_DENIED_MESSAGE, 'pageId' => $pid], JSON_THROW_ON_ERROR);
+        }
+
         $translationConfig = $this->tcaSchemaService->getTranslationConfig('tt_content');
 
         if ($selectFields !== '') {

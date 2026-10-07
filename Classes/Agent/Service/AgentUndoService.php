@@ -81,6 +81,11 @@ final class AgentUndoService
             $reverted[] = ['table' => $table, 'uid' => $uid, 'field' => $field, 'reverted' => 'restored'];
         }
 
+        if ($reverted === []) {
+            // Never report a successful undo when nothing was reverted.
+            throw new \RuntimeException($this->translator->translate('agent.undo.nothingToRevert'), 1712003302);
+        }
+
         $this->draftSession->removeChange($changeId);
 
         return [

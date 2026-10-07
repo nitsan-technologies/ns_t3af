@@ -25,6 +25,7 @@ use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
 use TYPO3\CMS\Backend\Module\ModuleProvider;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Type\Bitmask\Permission;
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Site\SiteFinder;
@@ -62,7 +63,7 @@ final readonly class AgentContextPresenter
 
         $details = [
             'module' => ['route' => $resolved->module, 'label' => $this->moduleLabel($resolved->module, $user)],
-            'page' => $resolved->pageId > 0 ? $this->pageDetails($resolved->pageId) : null,
+            'page' => $resolved->pageId > 0 ? $this->pageDetails($resolved->pageId, $user) : null,
             'language' => null,
             'siteLanguages' => $this->siteLanguages($resolved->pageId, $user),
             'record' => $resolved->focusedRecord !== null ? $this->recordDetails($resolved->focusedRecord, $user) : null,
@@ -210,11 +211,15 @@ final readonly class AgentContextPresenter
     /**
      * @return array{uid: int, title: string, slug: string, parent: array{uid: int, title: string}|null}
      */
-    private function pageDetails(int $pageId): array
+    private function pageDetails(int $pageId, ?BackendUserAuthentication $user = null): array
     {
         $row = BackendUtility::getRecord('pages', $pageId, 'uid,pid,title,slug') ?? [];
         $parentId = (int) ($row['pid'] ?? 0);
-        $parent = $parentId > 0 ? BackendUtility::getRecord('pages', $parentId, 'uid,title') : null;
+        // The parent of a mounted page can lie outside the editor's mount: its title is not theirs to see.
+        $parentReadable = $user === null
+            || $user->isAdmin()
+            || BackendUtility::readPageAccess($parentId, $user->getPagePermsClause(Permission::PAGE_SHOW)) !== false;
+        $parent = $parentId > 0 && $parentReadable ? BackendUtility::getRecord('pages', $parentId, 'uid,title') : null;
 
         return [
             'uid' => $pageId,

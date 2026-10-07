@@ -42,6 +42,11 @@ final class AgentRequestChecklist
         }
 
         $segments = self::requestSegments($message);
+        // A numbered / bulleted list spells out what to create; only a free-text single request can
+        // be a pure read ("list the headers on this page").
+        if (count($segments) === 1 && self::isReadOnlyRequest($message)) {
+            return [];
+        }
         $creates = [];
         if (count($segments) === 1) {
             foreach (self::detectCTypesInOrder($segments[0]) as $cType) {
@@ -221,6 +226,24 @@ final class AgentRequestChecklist
         }
 
         return $modelPlan;
+    }
+
+    /**
+     * "List the headers on this page" names a content type but asks to read, not to create —
+     * it must not open a "Create Header element" step that can never be completed.
+     */
+    private static function isReadOnlyRequest(string $message): bool
+    {
+        $s = mb_strtolower($message);
+        $creates = '/\b(add|create|insert|make|build|generate|write|append|draft|new|erstell\w*|f(?:ü|ue)ge?\w*|hinzu\w*|anleg\w*|neue[rsn]?)\b/u';
+        if (preg_match($creates, $s) === 1) {
+            return false;
+        }
+
+        return preg_match(
+            '/\b(list|show|display|read|get|find|search|count|summari[sz]e|explain|describe|tell|what|which|who|where|when|how\s+many|zeig\w*|liste?\w*|such\w*|finde\w*|welche\w*|was|wie\s+viele|erkl(?:ä|ae)r\w*)\b/u',
+            $s,
+        ) === 1;
     }
 
     /**

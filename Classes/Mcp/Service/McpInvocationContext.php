@@ -200,7 +200,11 @@ final class McpInvocationContext
         }
 
         if (AiUniverseUtilityHelper::isExtensionLoaded('workspaces')) {
-            $backendUser->setWorkspace($workspaceId);
+            // Per-call override: setWorkspace() would write the choice to the user's record and keep
+            // the editor in that workspace across the whole backend after the call.
+            if (!$backendUser->setTemporaryWorkspace($workspaceId)) {
+                throw new \RuntimeException(sprintf('Workspace uid %d is not accessible to the current user.', $workspaceId));
+            }
         }
     }
 

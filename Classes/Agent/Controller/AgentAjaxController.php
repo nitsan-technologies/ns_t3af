@@ -45,6 +45,7 @@ use NITSAN\NsT3AF\Agent\Service\AgentSettingsService;
 use NITSAN\NsT3AF\Agent\Service\AgentStarterBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentTargetPageResolver;
 use NITSAN\NsT3AF\Agent\Service\AgentTranslator;
+use NITSAN\NsT3AF\Agent\Service\AgentTurnConcurrencyGuard;
 use NITSAN\NsT3AF\Agent\Service\AgentTurnRepository;
 use NITSAN\NsT3AF\Agent\Service\AgentTurnRouter;
 use NITSAN\NsT3AF\Agent\Service\AgentUndoService;
@@ -66,9 +67,14 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
+use TYPO3\CMS\Core\Database\Query\Restriction\HiddenRestriction;
+use TYPO3\CMS\Core\Database\Query\Restriction\WorkspaceRestriction;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use TYPO3\CMS\Core\Http\Response;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * JSON endpoints for the global AI Agent chat surface.
@@ -78,6 +84,12 @@ use TYPO3\CMS\Core\Type\Bitmask\Permission;
 final class AgentAjaxController
 {
     private const UPLOAD_MAX_BYTES = 104857600;
+
+    private const ATTACH_SEARCH_CANDIDATES = 200;
+
+    private const ATTACH_SEARCH_PAGE_LIMIT = 12;
+
+    private const ATTACH_SEARCH_CONTENT_LIMIT = 8;
 
     /** Turn events that are not sent to the agent window. */
     private const INTERNAL_TURN_EVENTS = ['tool_call', 'model_request'];
@@ -117,6 +129,7 @@ final class AgentAjaxController
         private readonly AgentTargetPageResolver $targetPageResolver,
         private readonly AgentTranslator $translator,
         private readonly AgentToolIndexInterface $agentToolIndex,
+        private readonly AgentTurnConcurrencyGuard $turnGuard,
     ) {}
 
     public function toolsAction(ServerRequestInterface $request): ResponseInterface
@@ -839,20 +852,36 @@ final class AgentAjaxController
             ]);
         }
 
-        $correlationId = $this->turnRepository->startTurn((int) ($user->user['uid'] ?? 0));
-        $turn = $this->prepareTurn($request, $body, $message, $user, $correlationId);
-        if ($turn instanceof JsonResponse) {
-            return $turn;
+        $lease = $this->turnGuard->acquire((int) ($user->user['uid'] ?? 0));
+        if ($lease === null) {
+            return new JsonResponse([
+                'ok' => true,
+                'messages' => [[
+                    'role' => 'assistant',
+                    'content' => $this->translator->translate('agent.turn.alreadyRunning'),
+                    'meta' => ['type' => 'governance_blocked'],
+                ]],
+            ]);
         }
 
-        $assistantMessages = $this->turnRouter->route(
-            $turn['message'],
-            $turn['turnContext'],
-            $turn['body'],
-            $user,
-            $correlationId,
-            $turn['history'],
-        );
+        try {
+            $correlationId = $this->turnRepository->startTurn((int) ($user->user['uid'] ?? 0));
+            $turn = $this->prepareTurn($request, $body, $message, $user, $correlationId);
+            if ($turn instanceof JsonResponse) {
+                return $turn;
+            }
+
+            $assistantMessages = $this->turnRouter->route(
+                $turn['message'],
+                $turn['turnContext'],
+                $turn['body'],
+                $user,
+                $correlationId,
+                $turn['history'],
+            );
+        } finally {
+            $lease->release();
+        }
 
         $allMessages = [...$turn['messages'], ...$assistantMessages];
         $this->conversationSession->save($user, $allMessages, $turn['context'], $turn['provider']);
@@ -900,13 +929,27 @@ final class AgentAjaxController
             ]);
         }
 
+        $lease = $this->turnGuard->acquire((int) ($user->user['uid'] ?? 0));
+        if ($lease === null) {
+            return new JsonResponse([
+                'ok' => true,
+                'messages' => [[
+                    'role' => 'assistant',
+                    'content' => $this->translator->translate('agent.turn.alreadyRunning'),
+                    'meta' => ['type' => 'governance_blocked'],
+                ]],
+            ]);
+        }
+
         $correlationId = $this->turnRepository->startTurn((int) ($user->user['uid'] ?? 0));
         $turn = $this->prepareTurn($request, $body, $message, $user, $correlationId);
         if ($turn instanceof JsonResponse) {
+            $lease->release();
+
             return $turn;
         }
 
-        $streamBody = new PumpStream(function () use ($turn, $user, $correlationId): false {
+        $streamBody = new PumpStream(function () use ($turn, $user, $correlationId, $lease): false {
             static $emitted = false;
             if ($emitted) {
                 return false;
@@ -951,6 +994,8 @@ final class AgentAjaxController
                     'ok' => false,
                     'message' => $exception->getMessage(),
                 ]);
+            } finally {
+                $lease->release();
             }
 
             // PumpStream forbids ''; false = EOF (SSE already flushed via emitSseEvent).
@@ -1078,6 +1123,7 @@ final class AgentAjaxController
         $locked = $this->conversationSession->providerIdentifier();
         $provider = $locked !== '' ? $locked : trim((string) ($body['provider'] ?? ''));
         $provider = $provider !== '' ? $provider : AgentProviderOptions::DEFAULT;
+        $provider = $this->providerOptions->resolveIdentifier($provider, (int) ($context['pageId'] ?? 0), $user);
         if (!$this->providerOptions->isAllowed($provider, (int) ($context['pageId'] ?? 0), $user)) {
             return new JsonResponse([
                 'ok' => true,
@@ -1255,17 +1301,13 @@ final class AgentAjaxController
             return [];
         }
 
-        $connection = $this->connectionPool->getConnectionForTable('pages');
-        $queryBuilder = $connection->createQueryBuilder();
-        $queryBuilder->getRestrictions()->removeAll();
-
+        $queryBuilder = $this->createVisibleRecordQuery('pages', $user);
         $queryBuilder
             ->select('uid', 'title')
             ->from('pages')
-            ->where(
-                $queryBuilder->expr()->eq('deleted', 0),
-            )
-            ->setMaxResults(12)
+            // Over-fetch: rows the editor may not read are dropped below, so the
+            // visible limit must be applied after that filter, not before.
+            ->setMaxResults(self::ATTACH_SEARCH_CANDIDATES)
             ->orderBy('title');
 
         if ($query !== '') {
@@ -1295,20 +1337,25 @@ final class AgentAjaxController
                 'label' => trim((string) ($row['title'] ?? '')) !== '' ? (string) $row['title'] : 'Page ' . $uid,
                 'severity' => ToolSeverity::Read->value,
             ];
+            if (count($records) >= self::ATTACH_SEARCH_PAGE_LIMIT) {
+                break;
+            }
         }
 
-        if ($pageId > 0 && $this->recordAccessGate->canSelectTable($user, 'tt_content')) {
-            $contentConnection = $this->connectionPool->getConnectionForTable('tt_content');
-            $contentQuery = $contentConnection->createQueryBuilder();
-            $contentQuery->getRestrictions()->removeAll();
+        // Content elements are listed only for a page the editor may actually read.
+        if (
+            $pageId > 0
+            && $this->userCanReadPage($pageId)
+            && $this->recordAccessGate->canSelectTable($user, 'tt_content')
+        ) {
+            $contentQuery = $this->createVisibleRecordQuery('tt_content', $user);
             $contentQuery
                 ->select('uid', 'header')
                 ->from('tt_content')
                 ->where(
                     $contentQuery->expr()->eq('pid', $contentQuery->createNamedParameter($pageId, Connection::PARAM_INT)),
-                    $contentQuery->expr()->eq('deleted', 0),
                 )
-                ->setMaxResults(8)
+                ->setMaxResults(self::ATTACH_SEARCH_CONTENT_LIMIT)
                 ->orderBy('sorting');
 
             if ($query !== '') {
@@ -1335,6 +1382,23 @@ final class AgentAjaxController
         }
 
         return $records;
+    }
+
+    /**
+     * Query limited to records the "@" picker may offer: not deleted, not hidden,
+     * and only live rows plus the versions of the editor's own workspace (no other
+     * workspace's drafts, no replaced live rows).
+     */
+    private function createVisibleRecordQuery(string $table, BackendUserAuthentication $user): QueryBuilder
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
+        $restrictions = $queryBuilder->getRestrictions();
+        $restrictions->removeAll();
+        $restrictions->add(GeneralUtility::makeInstance(DeletedRestriction::class));
+        $restrictions->add(GeneralUtility::makeInstance(HiddenRestriction::class));
+        $restrictions->add(GeneralUtility::makeInstance(WorkspaceRestriction::class, (int) $user->workspace));
+
+        return $queryBuilder;
     }
 
     private function userCanReadPage(int $pageId): bool

@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Tool\Record;
 
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
@@ -187,5 +188,29 @@ final class WriteTableToolTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('data must be a JSON object of field values');
         \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData('title=A', 'create');
+    }
+
+    #[Test]
+    public function planCreateOnPageOutsideEditorAccessIsRefused(): void
+    {
+        $access = $this->createMock(PageAccessService::class);
+        $access->method('isUnrestricted')->willReturn(false);
+        $access->method('canReadPage')->with(225)->willReturn(false);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $this->createMock(RecordService::class),
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+            $access,
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(PageAccessService::ACCESS_DENIED_MESSAGE);
+        $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'data' => ['pid' => 225, 'header' => 'Test'],
+        ]);
     }
 }

@@ -675,6 +675,10 @@
                 <source>I could not produce a reply. Try rephrasing or use / to run a specific tool.</source>
                 <target>Ich konnte keine Antwort erzeugen. Formulieren Sie um oder verwenden Sie / für ein bestimmtes Tool.</target>
             </trans-unit>
+            <trans-unit id="agent.turn.alreadyRunning">
+                <source>The AI Agent is still working on your previous request. Please wait until it has finished, then send your message again.</source>
+                <target>Der KI-Agent bearbeitet noch Ihre vorherige Anfrage. Bitte warten Sie, bis er fertig ist, und senden Sie Ihre Nachricht dann erneut.</target>
+            </trans-unit>
             <trans-unit id="agent.turn.stepsStillOpen">
                 <source>There are still open steps (for example attaching an image). Send another message or pick a suggested action to continue.</source>
                 <target>Es sind noch offene Schritte vorhanden (zum Beispiel ein Bild anhängen). Senden Sie eine weitere Nachricht oder wählen Sie eine vorgeschlagene Aktion, um fortzufahren.</target>
@@ -1609,6 +1613,14 @@
                 <source>Doktype %1$s</source>
                 <target>Seitentyp %1$s</target>
             </trans-unit>
+            <trans-unit id="agent.write.draftTooOld">
+                <source>This change was prepared a while ago and is outdated. Ask the agent again to prepare a fresh change.</source>
+                <target>Diese Änderung wurde vor einiger Zeit vorbereitet und ist veraltet. Bitten Sie den Agenten erneut, eine aktuelle Änderung vorzubereiten.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.changedSince">
+                <source>Not applied: %1$s was changed after the agent prepared this change. Applying it would overwrite the newer edit. Ask the agent again to prepare a change from the current content.</source>
+                <target>Nicht angewendet: %1$s wurde geändert, nachdem der Agent diese Änderung vorbereitet hat. Das Anwenden würde die neuere Bearbeitung überschreiben. Bitten Sie den Agenten erneut, eine Änderung auf Basis des aktuellen Inhalts vorzubereiten.</target>
+            </trans-unit>
             <trans-unit id="agent.write.draftNotFound">
                 <source>Draft not found or expired.</source>
                 <target>Entwurf nicht gefunden oder abgelaufen.</target>
@@ -1624,6 +1636,10 @@
             <trans-unit id="agent.write.toolInvocationFailed">
                 <source>Running the tool failed.</source>
                 <target>Das Ausführen des Tools ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.undo.nothingToRevert">
+                <source>Nothing could be undone for this change. Please revert it manually in the backend.</source>
+                <target>Für diese Änderung konnte nichts rückgängig gemacht werden. Bitte machen Sie sie manuell im Backend rückgängig.</target>
             </trans-unit>
             <trans-unit id="agent.undo.changeNotFound">
                 <source>Change not found or already undone.</source>

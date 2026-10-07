@@ -32,7 +32,27 @@ final class McpRecordPlanService
     public function __construct(
         private readonly RecordService $recordService,
         private readonly TcaSchemaService $tcaSchemaService,
+        private readonly ?PageAccessService $pageAccess = null,
     ) {}
+
+    /**
+     * Refuses a write target (pid for create, target for move) the backend user cannot read.
+     * A negative value means "after record uid" in TYPO3 and is checked through that record.
+     */
+    private function assertTargetAccessible(string $tableName, int $target): void
+    {
+        if ($this->pageAccess === null || $this->pageAccess->isUnrestricted()) {
+            return;
+        }
+
+        $allowed = $target < 0
+            ? $this->recordService->findByUid($tableName, abs($target), ['uid']) !== null
+            : ($target === 0 || $this->pageAccess->canReadPage($target));
+
+        if (!$allowed) {
+            throw new \InvalidArgumentException(PageAccessService::ACCESS_DENIED_MESSAGE);
+        }
+    }
 
     /**
      * @param array<string, mixed> $payload
@@ -45,6 +65,7 @@ final class McpRecordPlanService
         }
 
         $pid = (int) $payload['pid'];
+        $this->assertTargetAccessible($tableName, $pid);
         unset($payload['pid']);
         $filteredData = $this->filterWritableFields($tableName, $payload, $allowedFields);
 
@@ -149,6 +170,7 @@ final class McpRecordPlanService
             throw new \InvalidArgumentException('Record not found: ' . $tableName . ' uid ' . $uid);
         }
 
+        $this->assertTargetAccessible($tableName, $target);
         $current = $this->recordService->findByUid($tableName, $uid, ['pid']) ?? [];
 
         return new ToolPlan('move', $toolName, [

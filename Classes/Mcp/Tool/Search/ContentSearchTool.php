@@ -29,6 +29,7 @@ use Mcp\Capability\Attribute\McpTool;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 
@@ -38,6 +39,7 @@ readonly class ContentSearchTool implements McpNonAiToolInterface
     public function __construct(
         private RecordService $recordService,
         private TcaSchemaService $tcaSchemaService,
+        private PageAccessService $pageAccess,
     ) {}
 
     #[McpTool(
@@ -57,6 +59,10 @@ readonly class ContentSearchTool implements McpNonAiToolInterface
         string $orderBy = '',
         string $orderDirection = 'ASC',
     ): string {
+        if ($pid > 0 && !$this->pageAccess->canReadPage($pid)) {
+            return json_encode(['error' => PageAccessService::ACCESS_DENIED_MESSAGE, 'pageId' => $pid], JSON_THROW_ON_ERROR);
+        }
+
         $readFields = $this->tcaSchemaService->getReadFields('tt_content');
         $allowedFields = array_merge(['uid', 'pid'], $readFields);
         $searchConditions = $this->parseSearch($search, $allowedFields);

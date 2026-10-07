@@ -30,13 +30,18 @@ use Mcp\Capability\Attribute\McpTool;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 
 #[McpToolSeverity(ToolSeverity::Read)]
 readonly class PagesGetTool implements McpNonAiToolInterface
 {
-    public function __construct(private RecordService $recordService, private TcaSchemaService $tcaSchemaService) {}
+    public function __construct(
+        private RecordService $recordService,
+        private TcaSchemaService $tcaSchemaService,
+        private PageAccessService $pageAccess,
+    ) {}
 
     #[McpTool(
         name: 'pages_get',
@@ -49,6 +54,10 @@ readonly class PagesGetTool implements McpNonAiToolInterface
         $resolvedUid = $uid > 0 ? $uid : $pageId;
         if ($resolvedUid <= 0) {
             return json_encode(['error' => 'Missing required argument: uid (or pageId)'], JSON_THROW_ON_ERROR);
+        }
+
+        if (!$this->pageAccess->canReadPage($resolvedUid)) {
+            return json_encode(['error' => PageAccessService::ACCESS_DENIED_MESSAGE], JSON_THROW_ON_ERROR);
         }
 
         $translationConfig = $this->tcaSchemaService->getTranslationConfig('pages');
