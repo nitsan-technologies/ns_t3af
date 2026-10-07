@@ -694,7 +694,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
                         'Authorization:${SITE_BASIC_AUTH}',
                     ],
                     'env' => [
-                        'SITE_BASIC_AUTH' => 'Basic dDNwbGFuZXQ6dDNwbGFuZXQjMjAyNg==',
+                        'SITE_BASIC_AUTH' => 'Basic YOUR_GENERATED_AUTH',
                     ],
                 ],
             ],
