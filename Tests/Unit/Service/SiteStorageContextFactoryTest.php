@@ -23,6 +23,7 @@ use NITSAN\NsT3AF\Service\SiteStorageContext;
 use NITSAN\NsT3AF\Service\SiteStorageContextFactory;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Http\ServerRequest;
+use TYPO3\CMS\Core\Routing\PageArguments;
 use TYPO3\CMS\Core\Site\Entity\Site;
 use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -73,5 +74,13 @@ final class SiteStorageContextFactoryTest extends TestCase
             ->withQueryParams(['pageId' => '68', 'uid' => '70']);
 
         self::assertSame(68, SiteStorageContext::extractPageIdFromRequest($request));
+    }
+
+    public function testExtractPageIdFromRequestUsesFrontendRouteWhenQueryHasNoPageId(): void
+    {
+        $request = (new ServerRequest('http://localhost/?type=123'))
+            ->withAttribute('routing', new PageArguments(48, '0', []));
+
+        self::assertSame(48, SiteStorageContext::extractPageIdFromRequest($request));
     }
 }
