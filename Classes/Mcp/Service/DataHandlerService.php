@@ -504,13 +504,15 @@ readonly class DataHandlerService
             throw new \RuntimeException('Create plan is missing table context.', 1712003102);
         }
 
-        $pid = (int) ($plan->context['pid'] ?? 0);
-        if ($pid === 0) {
+        // pid 0 is the tree root, where root-level tables such as system categories live; TYPO3 itself
+        // refuses it for tables that may not be created there. A negative pid inserts directly after that record.
+        if (!isset($plan->context['pid']) || !is_numeric($plan->context['pid'])) {
             throw new \RuntimeException('Create plan is missing pid.', 1712003103);
         }
+        $pid = (int) $plan->context['pid'];
         if ($pid > 0) {
             $this->recordService->assertParentPageExists($pid);
-        } else {
+        } elseif ($pid < 0) {
             $this->recordService->assertInsertAfterExists($table, abs($pid));
         }
 

@@ -996,6 +996,15 @@
       <trans-unit id="agent.draft.titleChange" resname="agent.draft.titleChange">
         <source>Change %1$s</source>
       </trans-unit>
+      <trans-unit id="agent.draft.titleCreate" resname="agent.draft.titleCreate">
+        <source>Create %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.titleDelete" resname="agent.draft.titleDelete">
+        <source>Delete %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.titleMove" resname="agent.draft.titleMove">
+        <source>Move %1$s</source>
+      </trans-unit>
       <trans-unit id="agent.draft.undoneLabel" resname="agent.draft.undoneLabel">
         <source>Undone</source>
       </trans-unit>

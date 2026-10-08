@@ -19,8 +19,10 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Mcp\Service;
 
+use NITSAN\NsT3AF\Access\RecordAccessGate;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
+use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
  * Shared TCA record planning for write_table and dynamic per-table tools.
@@ -55,11 +57,28 @@ final class McpRecordPlanService
     }
 
     /**
+     * Refuses a change to a table the backend user's groups may not modify, before any draft is offered.
+     * Without a backend user in the request (unit tests, CLI helpers) nothing is checked here: the
+     * DataHandler still enforces the permission when the change is applied.
+     */
+    private function assertTableModifiable(string $tableName): void
+    {
+        $user = $GLOBALS['BE_USER'] ?? null;
+        if (!$user instanceof BackendUserAuthentication) {
+            return;
+        }
+        if (!(new RecordAccessGate())->canModifyTable($user, $tableName)) {
+            throw new \InvalidArgumentException('You are not allowed to change this kind of record with your backend account.');
+        }
+    }
+
+    /**
      * @param array<string, mixed> $payload
      * @param list<string>|null $allowedFields
      */
     public function planCreate(string $tableName, array $payload, string $toolName, ?array $allowedFields = null): ToolPlan
     {
+        $this->assertTableModifiable($tableName);
         if (!isset($payload['pid']) || !is_numeric($payload['pid'])) {
             throw new \InvalidArgumentException('Create requires numeric "pid" in data.');
         }
@@ -95,6 +114,7 @@ final class McpRecordPlanService
      */
     public function planUpdate(string $tableName, int $uid, array $payload, string $toolName, ?array $allowedFields = null): ToolPlan
     {
+        $this->assertTableModifiable($tableName);
         if ($uid <= 0) {
             throw new \InvalidArgumentException('Update requires uid > 0.');
         }
@@ -145,6 +165,7 @@ final class McpRecordPlanService
 
     public function planDelete(string $tableName, int $uid, string $toolName): ToolPlan
     {
+        $this->assertTableModifiable($tableName);
         if ($uid <= 0) {
             throw new \InvalidArgumentException('Delete requires uid > 0.');
         }

@@ -63,6 +63,11 @@ readonly class ContentSearchTool implements McpNonAiToolInterface
             return json_encode(['error' => PageAccessService::ACCESS_DENIED_MESSAGE, 'pageId' => $pid], JSON_THROW_ON_ERROR);
         }
 
+        if (trim($search) === '') {
+            // An empty term used to come back as a silent "nothing found"; say what is missing instead.
+            return json_encode(['error' => 'Pass the text to look for in the "search" argument.'], JSON_THROW_ON_ERROR);
+        }
+
         $readFields = $this->tcaSchemaService->getReadFields('tt_content');
         $allowedFields = array_merge(['uid', 'pid'], $readFields);
         $searchConditions = $this->parseSearch($search, $allowedFields);

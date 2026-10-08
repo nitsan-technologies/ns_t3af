@@ -81,6 +81,7 @@ final class AgentDraftService
                 'field' => $field->field,
                 // Editor-facing: "Content element „Welcome“" · "Header"
                 'recordLabel' => $recordLabels[$recordKey],
+                'tableLabel' => $this->recordLabeler?->tableLabel($field->table) ?? $field->table,
                 'fieldLabel' => $this->recordLabeler?->fieldLabel($field->table, $field->field) ?? $field->field,
                 'current' => $this->formatValue($field->currentValue),
                 'proposed' => $this->formatValue($field->proposedValue),
