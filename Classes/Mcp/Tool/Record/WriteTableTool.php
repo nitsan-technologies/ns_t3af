@@ -36,6 +36,7 @@ use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordPayloadNormalizer;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyResult;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyValidationException;
@@ -48,7 +49,8 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 /**
  * One record per call. The write itself runs on the records_apply engine (preflight, one DataHandler
  * run in a transaction, audit, AI Label marking), so a single write and a batch behave the same way.
- * Not strict: fields that cannot be written are dropped and reported in "ignoredFields", as before.
+ * Not strict by default: fields that cannot be written are dropped and reported in "ignoredFields", as before.
+ * With strict=true the call is refused instead, and names those fields.
  * New records are appended after the existing ones of their page (give a negative pid to place one).
  * File fields are attached afterwards, outside that transaction.
  */
@@ -68,6 +70,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         TcaSchemaService $tcaSchemaService,
         private RecordsApplyService $recordsApply,
         private ?PageAccessService $pageAccess = null,
+        private ?RecordsApplyFileAccess $fileAccess = null,
     ) {
         $this->normalizer = new RecordPayloadNormalizer($tcaSchemaService);
     }
@@ -107,6 +110,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             . ' For create, include "pid" in the JSON data object; the new record is appended after the existing ones on that page'
             . ' (negative pid = insert after that uid instead).'
             . ' For update/delete, pass the record uid.'
+            . ' strict=true refuses the whole call and names the fields that are unknown or that you may not change; by default they are dropped and reported in "ignoredFields".'
             . ' Category/MM relations (categories, authors, tags, …) accept a comma-separated UID string, e.g. "126" or "8,12".'
             . ' File/image fields accept [{"uid_local": <sys_file uid>, "alternative": "..."}]'
             . ' (full replace on update; empty array clears attachments).'
@@ -124,6 +128,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         string $tableName,
         string $data = '{}',
         int $uid = 0,
+        bool $strict = false,
     ): string {
         if (!in_array($action, self::ALLOWED_ACTIONS, true)) {
             return $this->encodeError('Invalid action. Use create, update, or delete.');
@@ -149,8 +154,8 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return match ($action) {
-            'create' => $this->create($tableName, $payload),
-            'update' => $this->update($tableName, $uid, $payload),
+            'create' => $this->create($tableName, $payload, $strict),
+            'update' => $this->update($tableName, $uid, $payload, $strict),
             'delete' => $this->delete($tableName, $uid),
         };
     }
@@ -282,7 +287,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     }
 
     /** @param array<string, mixed> $payload */
-    private function create(string $tableName, array $payload): string
+    private function create(string $tableName, array $payload, bool $strict = false): string
     {
         if (!isset($payload['pid']) || !is_numeric($payload['pid'])) {
             return $this->encodeError('Create requires numeric "pid" in data.');
@@ -299,6 +304,18 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
         $ignoredFields = $this->normalizer->ignoredFields($payload, $filteredData);
 
+        if ($strict && $ignoredFields !== []) {
+            return $this->encodeError(
+                'Strict mode: these fields are unknown or not writable: ' . implode(', ', $ignoredFields) . '. Nothing was written.',
+                $this->normalizer->ignoredFieldsContext($tableName, $ignoredFields),
+            );
+        }
+
+        $unreadable = $this->unreadableFile($fileFields);
+        if ($unreadable !== null) {
+            return $this->encodeError($unreadable);
+        }
+
         if ($filteredData === [] && $fileFields === []) {
             return $this->encodeError(
                 'No valid writable fields provided.',
@@ -307,7 +324,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         try {
-            $result = $this->write([$tableName => [self::NEW_ID => ['pid' => $pid] + $filteredData]], []);
+            $result = $this->write([$tableName => [self::NEW_ID => ['pid' => $pid] + $filteredData]], [], $strict);
             $newUid = $result->created[self::NEW_ID] ?? 0;
             if ($newUid <= 0) {
                 throw new \RuntimeException('Failed to create record: no uid returned', 1712000020);
@@ -339,7 +356,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     }
 
     /** @param array<string, mixed> $payload */
-    private function update(string $tableName, int $uid, array $payload): string
+    private function update(string $tableName, int $uid, array $payload, bool $strict = false): string
     {
         if ($uid <= 0) {
             return $this->encodeError('Update requires uid > 0.');
@@ -354,6 +371,18 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
         $ignoredFields = $this->normalizer->ignoredFields($payload, $filteredData);
 
+        if ($strict && $ignoredFields !== []) {
+            return $this->encodeError(
+                'Strict mode: these fields are unknown or not writable: ' . implode(', ', $ignoredFields) . '. Nothing was written.',
+                $this->normalizer->ignoredFieldsContext($tableName, $ignoredFields),
+            );
+        }
+
+        $unreadable = $this->unreadableFile($fileFields);
+        if ($unreadable !== null) {
+            return $this->encodeError($unreadable);
+        }
+
         if ($filteredData === [] && $fileFields === []) {
             return $this->encodeError(
                 'No valid writable fields provided.',
@@ -365,7 +394,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
         try {
             if ($filteredData !== []) {
-                $result = $this->write([$tableName => [$uid => $filteredData]], []);
+                $result = $this->write([$tableName => [$uid => $filteredData]], [], $strict);
             }
             $fileFieldUids = $this->applyFileFields($tableName, $uid, $fileFields);
         } catch (\Throwable $exception) {
@@ -418,9 +447,9 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
      * @param array<string, array<int|string, array<string, mixed>>> $datamap
      * @param array<string, array<int, array<string, int>>> $cmdmap
      */
-    private function write(array $datamap, array $cmdmap): RecordsApplyResult
+    private function write(array $datamap, array $cmdmap, bool $strict = false): RecordsApplyResult
     {
-        return $this->recordsApply->apply($datamap, $cmdmap, false, false, true, [], 'write_table');
+        return $this->recordsApply->apply($datamap, $cmdmap, false, $strict, true, [], 'write_table');
     }
 
     /**
@@ -468,6 +497,29 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return $exception->getMessage();
+    }
+
+    /**
+     * The first file reference that points at a file the backend user may not read, as an error message.
+     *
+     * @param array<string, list<array{uid_local: int}>> $fileFields
+     */
+    private function unreadableFile(array $fileFields): ?string
+    {
+        if ($this->fileAccess === null) {
+            return null;
+        }
+
+        foreach ($fileFields as $references) {
+            foreach ($references as $reference) {
+                $fileUid = (int) ($reference['uid_local'] ?? 0);
+                if ($fileUid > 0 && !$this->fileAccess->canRead($fileUid)) {
+                    return sprintf('File %d was not found or is not accessible to you. Nothing was written.', $fileUid);
+                }
+            }
+        }
+
+        return null;
     }
 
     /**

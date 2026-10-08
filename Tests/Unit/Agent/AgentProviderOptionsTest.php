@@ -77,7 +77,7 @@ final class AgentProviderOptionsTest extends TestCase
     {
         $options = $this->subject($this->repository(null, []))->options(self::PAGE_ID, null);
 
-        self::assertSame([['value' => 'default', 'label' => 'Default provider']], $options);
+        self::assertSame([['value' => 'default', 'label' => 'Default']], $options);
     }
 
     #[Test]

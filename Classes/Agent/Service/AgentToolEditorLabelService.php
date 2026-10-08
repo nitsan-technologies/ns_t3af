@@ -101,6 +101,34 @@ final readonly class AgentToolEditorLabelService
         return $this->humanizeToolName($toolName);
     }
 
+    /**
+     * One plain sentence for the "/" menu: the curated `agent.tool.desc.<tool_name>` text, else the
+     * first sentence of the AI-facing description when it already reads like editor language, else
+     * nothing (the menu then shows only who provides the action).
+     *
+     * @param array<string, mixed> $tool
+     */
+    public function resolveDescription(array $tool): string
+    {
+        $toolName = trim((string) ($tool['name'] ?? ''));
+        if ($toolName === '') {
+            return '';
+        }
+
+        $key = 'agent.tool.desc.' . $toolName;
+        $translated = $this->translator->translate($key);
+        if ($translated !== '' && $translated !== $key) {
+            return $translated;
+        }
+
+        $sentence = trim((string) (preg_split('/[.!?]\s+/u', trim((string) ($tool['description'] ?? '')), 2)[0] ?? ''));
+        if ($sentence === '' || strlen($sentence) > 90 || !$this->isEditorFriendlyDescription($sentence)) {
+            return '';
+        }
+
+        return rtrim($sentence, '.') . '.';
+    }
+
     private function labelFromDescription(string $description): ?string
     {
         $description = trim($description);

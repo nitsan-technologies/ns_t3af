@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Service\RecordsApply;
 
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyPreflight;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyValidationException;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
@@ -466,5 +467,77 @@ final class RecordsApplyPreflightTest extends TestCase
         }
 
         self::fail('Expected a validation exception.');
+    }
+
+    #[Test]
+    public function strictModeRefusesAFieldTheEditorMayNotChange(): void
+    {
+        $GLOBALS['TCA']['tt_content']['columns']['nickname'] = ['exclude' => true, 'config' => ['type' => 'input']];
+        $this->userDeniedExcludeFields();
+
+        try {
+            $this->preflight->check(['tt_content' => ['5' => ['header' => 'A', 'nickname' => 'N']]], [], true);
+            self::fail('Expected strict mode to refuse a field the editor may not change.');
+        } catch (RecordsApplyValidationException $exception) {
+            self::assertSame(['nickname'], $exception->getProblems()[0]['fields']);
+        }
+    }
+
+    #[Test]
+    public function withoutStrictAFieldTheEditorMayNotChangeIsDroppedAndReported(): void
+    {
+        $GLOBALS['TCA']['tt_content']['columns']['nickname'] = ['exclude' => true, 'config' => ['type' => 'input']];
+        $this->userDeniedExcludeFields();
+
+        $checked = $this->preflight->check(['tt_content' => ['5' => ['header' => 'A', 'nickname' => 'N']]], [], false);
+
+        self::assertSame(['header' => 'A'], $checked['datamap']['tt_content']['5']);
+        self::assertSame([['table' => 'tt_content', 'id' => '5', 'fields' => ['nickname']]], $checked['ignored']);
+    }
+
+    #[Test]
+    public function aPageTypeTheGroupMayNotUseIsRefusedInStrictMode(): void
+    {
+        $GLOBALS['TCA']['pages']['columns']['doktype'] = ['config' => ['type' => 'input']];
+        $backendUser = $this->createMock(BackendUserAuthentication::class);
+        $backendUser->method('check')
+            ->willReturnCallback(static fn(string $type, string $value): bool => $type !== 'pagetypes_select' || $value === '1');
+        $GLOBALS['BE_USER'] = $backendUser;
+
+        $this->preflight->check(['pages' => ['NEWp' => ['pid' => '1', 'doktype' => 1]]], [], true);
+
+        try {
+            $this->preflight->check(['pages' => ['NEWp' => ['pid' => '1', 'doktype' => 4]]], [], true);
+            self::fail('Expected the shortcut page type to be refused.');
+        } catch (RecordsApplyValidationException $exception) {
+            self::assertSame(['doktype'], $exception->getProblems()[0]['fields']);
+        }
+    }
+
+    #[Test]
+    public function aFileReferenceToAFileOutsideTheEditorsMountsIsRefused(): void
+    {
+        $GLOBALS['TCA']['sys_file_reference']['columns']['uid_local'] = ['config' => ['type' => 'input']];
+        $fileAccess = $this->createMock(RecordsApplyFileAccess::class);
+        $fileAccess->method('canRead')->willReturnCallback(static fn(int $uid): bool => $uid === 12);
+        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $this->recordService, $this->connectionPool, $fileAccess);
+
+        $checked = $preflight->check(['sys_file_reference' => ['NEWr1' => ['pid' => '1', 'uid_local' => 12]]], [], true);
+        self::assertSame(12, $checked['datamap']['sys_file_reference']['NEWr1']['uid_local']);
+
+        try {
+            $preflight->check(['sys_file_reference' => ['NEWr1' => ['pid' => '1', 'uid_local' => 99]]], [], true);
+            self::fail('Expected a file the editor cannot read to be refused.');
+        } catch (RecordsApplyValidationException $exception) {
+            self::assertSame(['uid_local'], $exception->getProblems()[0]['fields']);
+        }
+    }
+
+    private function userDeniedExcludeFields(): void
+    {
+        $backendUser = $this->createMock(BackendUserAuthentication::class);
+        $backendUser->method('check')
+            ->willReturnCallback(static fn(string $type, string $value): bool => $type !== 'non_exclude_fields');
+        $GLOBALS['BE_USER'] = $backendUser;
     }
 }

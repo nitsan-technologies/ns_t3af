@@ -79,4 +79,25 @@ final class AgentToolEditorLabelServiceTest extends TestCase
             ),
         );
     }
+
+    #[Test]
+    public function resolveDescriptionPrefersTheCuratedEditorText(): void
+    {
+        $service = new AgentToolEditorLabelService($this->createAgentTranslator());
+
+        self::assertSame(
+            'Lists the content elements on a page.',
+            $service->resolveDescription(['name' => 'content_list', 'description' => 'Query tt_content rows as JSON for a pid.']),
+        );
+    }
+
+    #[Test]
+    public function resolveDescriptionNeverShowsTechnicalOrLongAiText(): void
+    {
+        $service = new AgentToolEditorLabelService($this->createAgentTranslator());
+
+        self::assertSame('', $service->resolveDescription(['name' => 'custom_tool', 'description' => 'Find image files in sys_file_metadata where alt text is empty.']));
+        self::assertSame('', $service->resolveDescription(['name' => 'custom_tool', 'description' => trim(str_repeat('word ', 30))]));
+        self::assertSame('Sorts the list.', $service->resolveDescription(['name' => 'custom_tool', 'description' => 'Sorts the list. Extra detail for the AI.']));
+    }
 }

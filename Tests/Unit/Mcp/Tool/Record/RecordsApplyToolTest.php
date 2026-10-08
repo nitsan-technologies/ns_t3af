@@ -346,4 +346,36 @@ final class RecordsApplyToolTest extends TestCase
             self::assertSame(3, $payload['moreProblems']);
         }
     }
+
+    #[Test]
+    public function anEmptyMapIsAnObjectNotAList(): void
+    {
+        $this->service->method('apply')->willReturn(new RecordsApplyResult('ra-abc', false, true, [], [], ['tt_content' => ['update' => 1]], []));
+
+        $json = $this->tool->execute('{"tt_content":{"5":{"header":"x"}}}');
+
+        self::assertStringContainsString('"map":{}', $json);
+    }
+
+    #[Test]
+    public function theWorkspaceTheCallRanInIsReported(): void
+    {
+        $this->service->method('apply')->willReturn(
+            (new RecordsApplyResult('ra-abc', true, false, [], [], [], []))->withWorkspace(2, 'QA Draft WS'),
+        );
+
+        $response = json_decode($this->tool->execute('{"tt_content":{"5":{"header":"x"}}}', '{}', true), true);
+
+        self::assertSame(['id' => 2, 'title' => 'QA Draft WS'], $response['workspace']);
+    }
+
+    #[Test]
+    public function aStoredAnswerKeepsItsWorkspaceWhenReplayed(): void
+    {
+        $result = (new RecordsApplyResult('ra-abc', false, true, ['NEWa' => 5], [], [], []))->withWorkspace(0, 'Live');
+
+        $again = RecordsApplyResult::fromStored($result->toArray());
+
+        self::assertSame(['id' => 0, 'title' => 'Live'], $again->workspace);
+    }
 }

@@ -37,6 +37,7 @@ final readonly class AgentSessionPresenter
         private AgentSettingsService $settings,
         private AgentContextPresenter $contextPresenter,
         private AgentProviderOptions $providerOptions,
+        private AgentConversationTitleService $titles,
     ) {}
 
     /**
@@ -74,7 +75,7 @@ final readonly class AgentSessionPresenter
 
         return [
             'uuid' => (string) ($row['session_uuid'] ?? ''),
-            'title' => (string) ($row['title'] ?? ''),
+            'title' => $this->titles->displayTitle((string) ($row['title'] ?? '')),
             'pageId' => $pageId,
             'pageTitle' => $pageId > 0 ? $this->pageTitle($pageId, $user) : '',
             'moduleRoute' => $module,

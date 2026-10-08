@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
 use NITSAN\NsT3AF\Agent\Service\AgentConversationTitleService;
 use NITSAN\NsT3AF\Agent\Service\AgentLanguageResolver;
+use NITSAN\NsT3AF\Agent\Service\AgentToolEditorLabelService;
 use NITSAN\NsT3AF\Api\AiServiceInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -30,6 +31,14 @@ use PHPUnit\Framework\TestCase;
  */
 final class AgentConversationTitleServiceTest extends TestCase
 {
+    use AgentTranslatorTrait;
+
+    protected function tearDown(): void
+    {
+        $this->releaseAgentTranslator();
+        parent::tearDown();
+    }
+
     #[Test]
     public function suggestWithoutLlmDoesNotCallAiService(): void
     {
@@ -46,5 +55,20 @@ final class AgentConversationTitleServiceTest extends TestCase
 
         self::assertNotNull($title);
         self::assertNotSame('', $title);
+    }
+
+    #[Test]
+    public function aPickedSlashCommandIsTitledByTheActionName(): void
+    {
+        $ai = $this->createMock(AiServiceInterface::class);
+        $language = (new \ReflectionClass(AgentLanguageResolver::class))->newInstanceWithoutConstructor();
+        $service = new AgentConversationTitleService($ai, $language, new AgentToolEditorLabelService($this->createAgentTranslator()));
+
+        self::assertSame(
+            'Check page permissions',
+            $service->suggestWithoutLlm([['role' => 'user', 'content' => '/permission_check_page', 'meta' => []]], 2),
+        );
+        self::assertSame('Check page permissions', $service->displayTitle('/permission_check_page'));
+        self::assertSame('Rename About page', $service->displayTitle('Rename About page'));
     }
 }

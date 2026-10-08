@@ -185,7 +185,7 @@ final readonly class AgentContextPresenter
         };
 
         if (is_array($details['page'] ?? null)) {
-            $add('page', sprintf('%s [%d]', $details['page']['title'], $details['page']['uid']));
+            $add('page', $this->chipValue('agent.context.pageValue', '%1$s (ID %2$s)', [(string) $details['page']['title'], (string) $details['page']['uid']]));
         }
         if (($details['module']['route'] ?? '') !== '') {
             $add('module', (string) $details['module']['label']);
@@ -201,11 +201,23 @@ final readonly class AgentContextPresenter
             $add('folder', sprintf('%s [storage %d]', $details['folder']['identifier'], $details['folder']['storageUid']));
         }
         if (is_string($details['brand'] ?? null)) {
-            $add('brand', $details['brand']);
+            $add('brand', $this->chipValue('agent.context.brandValue', 'Brand: %1$s', [$details['brand']]));
         }
-        $add('workspace', (string) ($details['workspace']['title'] ?? ''));
+        $add('workspace', $this->chipValue('agent.context.workspaceValue', 'Workspace: %1$s', [(string) ($details['workspace']['title'] ?? '')]));
 
         return $chips;
+    }
+
+    /**
+     * A chip value with its explanation ("Brand: T3planet"); falls back to English when no label file is loaded.
+     *
+     * @param list<string> $arguments
+     */
+    private function chipValue(string $key, string $fallback, array $arguments): string
+    {
+        $value = $this->translator->translate($key, $arguments);
+
+        return $value === $key ? sprintf($fallback, ...$arguments) : $value;
     }
 
     /**

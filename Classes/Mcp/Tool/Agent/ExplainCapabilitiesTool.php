@@ -149,7 +149,7 @@ final readonly class ExplainCapabilitiesTool implements McpNonAiToolInterface
         $candidates = array_merge($ordered, $reads, $writes);
 
         $lines = [];
-        $lines[] = $pageId > 0 ? 'On this page I can help with:' : 'In this module I can help with:';
+        $lines[] = $pageId > 0 ? 'On this page I can help with (just ask in your own words):' : 'In this module I can help with (just ask in your own words):';
 
         $listed = 0;
         $shown = [];
@@ -172,19 +172,20 @@ final readonly class ExplainCapabilitiesTool implements McpNonAiToolInterface
 
         $remaining = max(0, count($candidates) - $listed);
         if ($remaining > 0) {
-            $lines[] = sprintf('…and %d more via / or a more specific ask.', $remaining);
+            $lines[] = sprintf('…and %d more: type / to browse all actions.', $remaining);
         }
         if ($listed === 0) {
-            $lines[] = '- (none — check entitlements / installed extensions)';
+            $lines[] = '- Nothing is available to your account yet. Ask your administrator to check your access.';
         }
         if ($locked !== []) {
             $lines[] = sprintf('%d actions need another extension or plan.', count($locked));
         }
-        $lines[] = 'Tip: try a starter chip, or type / to pick a tool.';
+        $lines[] = 'Tip: pick a suggestion, or type / to choose an action.';
 
         return json_encode([
             'ok' => true,
             'summary' => implode("\n", $lines),
+            'replyGuidance' => 'Answer in the editor\'s language as a short, friendly list of what they can ask, each with a short example request. Do not mention tool names or technical terms.',
             'executableCount' => count($executable),
             'listedCount' => $listed,
             'listedTools' => $shown,
