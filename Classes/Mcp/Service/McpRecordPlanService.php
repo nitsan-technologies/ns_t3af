@@ -66,6 +66,7 @@ final class McpRecordPlanService
 
         $pid = (int) $payload['pid'];
         $this->assertTargetAccessible($tableName, $pid);
+        $this->recordService->assertParentPageExists($pid);
         unset($payload['pid']);
         $filteredData = $this->filterWritableFields($tableName, $payload, $allowedFields);
 
@@ -171,6 +172,9 @@ final class McpRecordPlanService
         }
 
         $this->assertTargetAccessible($tableName, $target);
+        if ($target > 0) {
+            $this->recordService->assertParentPageExists($target);
+        }
         $current = $this->recordService->findByUid($tableName, $uid, ['pid']) ?? [];
 
         return new ToolPlan('move', $toolName, [

@@ -45,7 +45,6 @@
   inset: 0;
   background: color-mix(in srgb, var(--nst3af-agent-text-strong) 55%, transparent);
   z-index: 1080;
-  backdrop-filter: blur(2px);
 }
 
 .nst3af-agent-panel {

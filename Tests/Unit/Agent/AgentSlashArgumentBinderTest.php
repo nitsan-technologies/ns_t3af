@@ -152,6 +152,30 @@ final class AgentSlashArgumentBinderTest extends TestCase
     }
 
     #[Test]
+    public function fileRenameEmptyRemainderLeavesArgumentsUnchanged(): void
+    {
+        self::assertSame([], $this->binder->bind([], '', $this->fileRenameParams()));
+    }
+
+    #[Test]
+    public function fileRenameOneTokenFillsOnlyTheFile(): void
+    {
+        self::assertSame(
+            ['fileIdentifier' => '/user_upload/test.txt'],
+            $this->binder->bind([], '/user_upload/test.txt', $this->fileRenameParams()),
+        );
+    }
+
+    #[Test]
+    public function fileRenameTwoTokensFillFileAndNewName(): void
+    {
+        self::assertSame(
+            ['fileIdentifier' => '/user_upload/test.txt', 'newName' => 'renamed.txt'],
+            $this->binder->bind([], '/user_upload/test.txt renamed.txt', $this->fileRenameParams()),
+        );
+    }
+
+    #[Test]
     #[DataProvider('emptyRemainderProvider')]
     public function emptyRemainderIsNoop(string $remainder): void
     {
@@ -170,5 +194,17 @@ final class AgentSlashArgumentBinderTest extends TestCase
     {
         yield 'empty' => [''];
         yield 'whitespace' => ['   '];
+    }
+
+    /**
+     * @return list<array{name: string, type: string, required: bool, default: string|null}>
+     */
+    private function fileRenameParams(): array
+    {
+        return [
+            ['name' => 'fileIdentifier', 'type' => 'string', 'required' => true, 'default' => null],
+            ['name' => 'newName', 'type' => 'string', 'required' => true, 'default' => null],
+            ['name' => 'storageUid', 'type' => 'int', 'required' => false, 'default' => '1'],
+        ];
     }
 }

@@ -163,6 +163,37 @@ final class AgentTurnRouterTest extends TestCase
     }
 
     #[Test]
+    public function folderRenameSlashUsesDirectoryRename(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $this->toolTurnProcessor->expects(self::once())
+            ->method('execute')
+            ->with(
+                'directory_rename',
+                self::isType('array'),
+                self::isType('array'),
+                $user,
+                'corr-folder',
+            )
+            ->willReturn([
+                'role' => 'assistant',
+                'content' => 'Review changes',
+                'meta' => ['type' => 'inline_draft', 'tool' => 'directory_rename'],
+            ]);
+        $this->turnOrchestrator->expects(self::never())->method('runTurn');
+
+        $messages = $this->router->route(
+            '/folder_rename /user_upload/reports/ archive',
+            ['pageId' => 1],
+            [],
+            $user,
+            'corr-folder',
+        );
+
+        self::assertSame('inline_draft', $messages[0]['meta']['type'] ?? null);
+    }
+
+    #[Test]
     public function freeTextRoutesToOrchestratorOnly(): void
     {
         $user = $this->createMock(BackendUserAuthentication::class);
