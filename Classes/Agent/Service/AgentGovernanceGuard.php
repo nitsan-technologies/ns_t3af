@@ -35,6 +35,9 @@ final readonly class AgentGovernanceGuard
     public const TURN_GUARD_WARN = 20;
     public const TURN_GUARD_ABORT = 40;
 
+    /** Placeholder allowlist entry used when the groups of a user share no provider; matches nothing. */
+    public const NO_PROVIDER_ALLOWED = '__none__';
+
     public function __construct(
         private GroupSettingsRepository $groupSettingsRepository,
         private RequestLogRepository $requestLogRepository,
@@ -61,7 +64,9 @@ final readonly class AgentGovernanceGuard
 
         if ($limits->providerAllowlistEnabled && $limits->allowedProviders !== []) {
             $provider = trim((string) ($body['provider'] ?? $body['providerId'] ?? ''));
-            if ($provider !== '' && !in_array($provider, $limits->allowedProviders, true)) {
+            // "default" is resolved to a concrete provider (which is checked against the allowlist) when the
+            // turn is prepared, so the literal placeholder must not be compared here.
+            if ($provider !== '' && $provider !== AgentProviderOptions::DEFAULT && !in_array($provider, $limits->allowedProviders, true)) {
                 return $this->translator->translate('agent.governance.providerBlocked');
             }
         }
@@ -180,6 +185,52 @@ final readonly class AgentGovernanceGuard
         ) ?? $masked;
     }
 
+    /**
+     * Masks everything of a presented tool result that reaches the model or the editor's window: the text,
+     * the summaries (the model receives them), the facts, the details and the error.
+     *
+     * @param array<string, mixed> $presented
+     * @return array<string, mixed>
+     */
+    public function maskPresentedResult(array $presented): array
+    {
+        foreach (['content', 'summary', 'llmSummary', 'error'] as $key) {
+            if (isset($presented[$key]) && is_string($presented[$key])) {
+                $presented[$key] = $this->maskPii($presented[$key]);
+            }
+        }
+        if (is_array($presented['facts'] ?? null)) {
+            $presented['facts'] = array_map(
+                fn(array $fact): array => [
+                    'label' => (string) ($fact['label'] ?? ''),
+                    'value' => $this->maskPii((string) ($fact['value'] ?? '')),
+                ],
+                $presented['facts'],
+            );
+        }
+        if (($presented['details'] ?? null) !== null) {
+            $presented['details'] = $this->maskAnything($presented['details']);
+        }
+
+        return $presented;
+    }
+
+    private function maskAnything(mixed $value): mixed
+    {
+        try {
+            $encoded = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return is_string($value) ? $this->maskPii($value) : $value;
+        }
+
+        $masked = $this->maskPii($encoded);
+        try {
+            return json_decode($masked, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return $masked;
+        }
+    }
+
     public function resolveSchedulerBatchLimit(BackendUserAuthentication $user): int
     {
         if ($user->isAdmin()) {
@@ -258,15 +309,24 @@ final readonly class AgentGovernanceGuard
             $b->schedulerBatchLimit,
         );
 
-        $allowedProviders = $a->allowedProviders;
-        if ($b->providerAllowlistEnabled) {
-            $allowedProviders = $allowedProviders === []
-                ? $b->allowedProviders
-                : array_values(array_intersect($allowedProviders, $b->allowedProviders));
+        // A group restricts providers only when its allowlist is on and not empty. Groups that restrict
+        // are combined strictly (intersection). Providers allowed by no group must never be usable, so an
+        // empty intersection becomes a list nothing can match instead of "no restriction".
+        $restrictsA = $a->providerAllowlistEnabled && $a->allowedProviders !== [];
+        $restrictsB = $b->providerAllowlistEnabled && $b->allowedProviders !== [];
+        if ($restrictsA && $restrictsB) {
+            $allowedProviders = array_values(array_intersect($a->allowedProviders, $b->allowedProviders));
+            if ($allowedProviders === []) {
+                $allowedProviders = [self::NO_PROVIDER_ALLOWED];
+            }
+        } elseif ($restrictsB) {
+            $allowedProviders = $b->allowedProviders;
+        } else {
+            $allowedProviders = $restrictsA ? $a->allowedProviders : [];
         }
 
         return new LimitsConfig(
-            providerAllowlistEnabled: $a->providerAllowlistEnabled || $b->providerAllowlistEnabled,
+            providerAllowlistEnabled: $restrictsA || $restrictsB,
             allowedProviders: $allowedProviders,
             allowModelOverride: $a->allowModelOverride && $b->allowModelOverride,
             creditCapEnabled: $creditCap['enabled'],

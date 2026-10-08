@@ -25,6 +25,10 @@ use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use TYPO3\CMS\Core\Locking\Exception\LockAcquireWouldBlockException;
+use TYPO3\CMS\Core\Locking\LockFactory;
+use TYPO3\CMS\Core\Locking\LockingStrategyInterface;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Applies kept draft fields via DataHandler and read-backs results (T13).
@@ -37,7 +41,7 @@ final class AgentWriteService
     private const FLOW_AGENT_PREVIEW = 'agent_preview';
 
     /** A prepared change that was not executed within this time is treated as outdated. */
-    private const DRAFT_MAX_AGE_SECONDS = 3600;
+    public const DRAFT_MAX_AGE_SECONDS = 3600;
 
     public function __construct(
         private readonly DataHandlerService $dataHandlerService,
@@ -49,6 +53,72 @@ final class AgentWriteService
         private readonly AgentLowRiskFieldMatrix $lowRiskFieldMatrix,
         private readonly ?AgentCreatePlacement $placement = null,
     ) {}
+
+    /** @var array<string, LockingStrategyInterface> */
+    private array $draftLocks = [];
+
+    /**
+     * Takes the draft for this apply: one request holds the lock and the draft is removed up front, so a
+     * double click or a second tab finds it gone instead of writing the same change twice. A failed apply
+     * puts it back ({@see releaseDraft()}).
+     *
+     * @return array<string, mixed>
+     */
+    private function claimDraft(string $draftId): array
+    {
+        $locker = null;
+        try {
+            $locker = GeneralUtility::makeInstance(LockFactory::class)->createLocker(
+                'nst3af-agent-draft-' . sha1($draftId),
+                LockingStrategyInterface::LOCK_CAPABILITY_EXCLUSIVE | LockingStrategyInterface::LOCK_CAPABILITY_NOBLOCK,
+            );
+            if (!$locker->acquire(LockingStrategyInterface::LOCK_CAPABILITY_EXCLUSIVE | LockingStrategyInterface::LOCK_CAPABILITY_NOBLOCK)) {
+                throw new \RuntimeException($this->translator->translate('agent.write.alreadyApplying'), 1712003230);
+            }
+            $this->draftLocks[$draftId] = $locker;
+        } catch (LockAcquireWouldBlockException) {
+            // Another request is applying this very draft right now.
+            throw new \RuntimeException($this->translator->translate('agent.write.alreadyApplying'), 1712003230);
+        } catch (\RuntimeException $exception) {
+            if ($exception->getCode() === 1712003230) {
+                throw $exception;
+            }
+            // No lock available (unit tests, broken lock directory): the up-front removal below still guards.
+        } catch (\Throwable) {
+        }
+
+        $stored = $this->draftSession->getDraft($draftId);
+        if ($stored === null) {
+            $this->unlockDraft($draftId);
+            throw new \RuntimeException($this->translator->translate('agent.write.draftNotFound'), 1712003200);
+        }
+        $this->draftSession->removeDraft($draftId);
+
+        return $stored;
+    }
+
+    /**
+     * @param array<string, mixed> $stored
+     */
+    private function releaseDraft(string $draftId, array $stored, bool $restore): void
+    {
+        if ($restore) {
+            $this->draftSession->storeDraft($draftId, $stored);
+        }
+        $this->unlockDraft($draftId);
+    }
+
+    private function unlockDraft(string $draftId): void
+    {
+        $locker = $this->draftLocks[$draftId] ?? null;
+        unset($this->draftLocks[$draftId]);
+        if ($locker instanceof LockingStrategyInterface) {
+            try {
+                $locker->release();
+            } catch (\Throwable) {
+            }
+        }
+    }
 
     public function generateCorrelationId(): string
     {
@@ -133,11 +203,25 @@ final class AgentWriteService
      */
     public function apply(string $draftId, array $keptFieldKeys, ?string $correlationId = null): array
     {
-        $stored = $this->draftSession->getDraft($draftId);
-        if ($stored === null) {
-            throw new \RuntimeException($this->translator->translate('agent.write.draftNotFound'), 1712003200);
+        $stored = $this->claimDraft($draftId);
+        try {
+            $result = $this->applyClaimed($draftId, $stored, $keptFieldKeys, $correlationId);
+        } catch (\Throwable $exception) {
+            $this->releaseDraft($draftId, $stored, true);
+            throw $exception;
         }
+        $this->releaseDraft($draftId, $stored, false);
 
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $stored
+     * @param list<string> $keptFieldKeys
+     * @return array<string, mixed>
+     */
+    private function applyClaimed(string $draftId, array $stored, array $keptFieldKeys, ?string $correlationId): array
+    {
         if ((string) ($stored['flow'] ?? '') === self::FLOW_AGENT_PREVIEW) {
             throw new \RuntimeException($this->translator->translate('agent.write.previewNeedsSelections'), 1712003212);
         }
@@ -151,7 +235,7 @@ final class AgentWriteService
         $plan = ToolPlan::fromArray(is_array($stored['plan'] ?? null) ? $stored['plan'] : []);
         $correlationId ??= $this->generateCorrelationId();
 
-        if (($plan->context['planKind'] ?? '') === SatelliteToolPlanService::PLAN_KIND_TOOL_CONFIRMATION) {
+        if (($plan->context['planKind'] ?? '') === SatelliteToolPlanService::PLAN_KIND_TOOL_CONFIRMATION || self::isFalToolPlan($plan)) {
             return $this->applyToolConfirmation($plan, $stored, $correlationId, $draftId);
         }
 
@@ -161,13 +245,15 @@ final class AgentWriteService
         $readback = $this->readBack($plan, $keptFieldKeys, $applyResult['affected'] ?? []);
 
         $changeId = bin2hex(random_bytes(8));
-        $undoFields = $this->buildUndoFields($plan, $keptFieldKeys, $applyResult['affected'] ?? []);
+        $undoFields = $this->buildUndoFields($plan, $keptFieldKeys, $applyResult['affected'] ?? [], $readback);
         $this->draftSession->storeChange($changeId, [
             'correlationId' => $correlationId,
             'plan' => $plan->toArray(),
             'keptFieldKeys' => $keptFieldKeys,
             'undoFields' => $undoFields,
             'appliedAt' => time(),
+            // Undo runs in the workspace the change was made in, not in whichever one is active later.
+            'workspaceId' => self::currentWorkspaceId(),
         ]);
         $this->draftSession->removeDraft($draftId);
 
@@ -182,6 +268,32 @@ final class AgentWriteService
             'tool' => $plan->toolName,
             'placement' => $this->placementOf($plan),
         ];
+    }
+
+    /**
+     * File and folder changes (create folder, rename, move, copy) are plans over pseudo fields of sys_file
+     * ("_create", "_rename", ...). They are not records DataHandler can write, so they are applied by running
+     * the tool itself, like every other confirmed tool.
+     */
+    private static function isFalToolPlan(ToolPlan $plan): bool
+    {
+        if ($plan->toolName === '' || $plan->fields === []) {
+            return false;
+        }
+        foreach ($plan->fields as $field) {
+            if ($field->table !== 'sys_file' || !str_starts_with($field->field, '_')) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static function currentWorkspaceId(): int
+    {
+        $user = $GLOBALS['BE_USER'] ?? null;
+
+        return $user instanceof \TYPO3\CMS\Core\Authentication\BackendUserAuthentication ? max(0, (int) $user->workspace) : 0;
     }
 
     private function placementOf(ToolPlan $plan): string
@@ -214,10 +326,33 @@ final class AgentWriteService
         string $applyMode = 'all',
         ?string $correlationId = null,
     ): array {
-        $stored = $this->draftSession->getDraft($draftId);
-        if ($stored === null) {
-            throw new \RuntimeException($this->translator->translate('agent.write.draftNotFound'), 1712003200);
+        $stored = $this->claimDraft($draftId);
+        try {
+            $result = $this->applySuggestionsClaimed($draftId, $stored, $selections, $edits, $editedByEditor, $applyMode, $correlationId);
+        } catch (\Throwable $exception) {
+            $this->releaseDraft($draftId, $stored, true);
+            throw $exception;
         }
+        $this->releaseDraft($draftId, $stored, false);
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed>  $stored
+     * @param array<string, int>    $selections
+     * @param array<string, string> $edits
+     * @return array<string, mixed>
+     */
+    private function applySuggestionsClaimed(
+        string $draftId,
+        array $stored,
+        array $selections,
+        array $edits,
+        bool $editedByEditor,
+        string $applyMode,
+        ?string $correlationId,
+    ): array {
         if ((string) ($stored['flow'] ?? '') !== self::FLOW_AGENT_PREVIEW) {
             throw new \RuntimeException($this->translator->translate('agent.write.notPreviewDraft'), 1712003213);
         }
@@ -465,14 +600,16 @@ final class AgentWriteService
     /**
      * @param list<string> $keptFieldKeys
      * @param list<array<string, mixed>> $affected records written by the apply (table, uid)
-     * @return list<array{table: string, uid: int, field: string, previousValue: mixed, action: string}>
+     * @param list<array<string, mixed>> $readback values stored by the apply, to detect later edits
+     * @return list<array<string, mixed>>
      */
-    private function buildUndoFields(ToolPlan $plan, array $keptFieldKeys, array $affected = []): array
+    private function buildUndoFields(ToolPlan $plan, array $keptFieldKeys, array $affected = [], array $readback = []): array
     {
         $undo = [];
-        if ($plan->action === 'create') {
-            // The plan only knows the proposed values; the record's uid exists after the write.
-            // Undoing a create means deleting exactly the records that were just created.
+        if ($plan->action === 'create' || $plan->action === 'copy') {
+            // The plan only knows the proposed values (and, for a copy, the SOURCE record); the new record's
+            // uid exists after the write. Undoing a create or copy means deleting exactly the records that
+            // were just written, never the source.
             foreach ($affected as $record) {
                 if (!is_array($record) || (int) ($record['uid'] ?? 0) <= 0) {
                     continue;
@@ -489,14 +626,26 @@ final class AgentWriteService
             return $undo;
         }
 
+        $stored = [];
+        foreach ($readback as $row) {
+            if (is_array($row) && is_array($row['values'] ?? null)) {
+                $stored[(string) ($row['table'] ?? '') . '#' . (int) ($row['uid'] ?? 0)] = $row['values'];
+            }
+        }
+
         foreach ($plan->keptFields($keptFieldKeys) as $field) {
-            $undo[] = [
+            $entry = [
                 'table' => $field->table,
                 'uid' => $field->uid,
                 'field' => $field->field,
                 'previousValue' => $field->currentValue,
                 'action' => $plan->action,
             ];
+            $values = $stored[$field->table . '#' . $field->uid] ?? null;
+            if ($plan->action === 'update' && is_array($values) && array_key_exists($field->field, $values)) {
+                $entry['appliedValue'] = $values[$field->field];
+            }
+            $undo[] = $entry;
         }
 
         return $undo;
@@ -518,7 +667,7 @@ final class AgentWriteService
             $arguments = $plan->context['arguments'];
         }
 
-        $invokeResult = $this->playgroundService->invoke($toolName, $arguments);
+        $invokeResult = $this->playgroundService->invoke($toolName, $arguments, true);
         if (($invokeResult['success'] ?? false) !== true) {
             throw new \RuntimeException(
                 (string) ($invokeResult['message'] ?? $this->translator->translate('agent.write.toolInvocationFailed')),

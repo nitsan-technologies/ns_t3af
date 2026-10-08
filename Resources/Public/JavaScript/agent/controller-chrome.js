@@ -921,7 +921,7 @@ export const chromeMethods = {
         ? `<typo3-backend-icon identifier="${icons[currentKey]}" size="small" aria-hidden="true"></typo3-backend-icon> `
         : '';
       const pathTitle = ancestors.length > 0
-        ? escapeHtml(ancestors.map((chip) => `${String(chip.label ?? '')}: ${String(chip.value ?? '')}`).join(' · '))
+        ? escapeHtml(ancestors.map((chip) => (['brand', 'workspace'].includes(String(chip.key ?? '')) ? String(chip.value ?? '') : `${String(chip.label ?? '')}: ${String(chip.value ?? '')}`)).join(' · '))
         : '';
       const currentHint = escapeHtml(String(current.hint ?? ''));
       const pathHtml = ancestors.length > 0

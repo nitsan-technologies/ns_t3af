@@ -114,6 +114,12 @@ export const turnMethods = {
         if (preferStream) {
           const streamResult = await this.submitTurnStreaming(body, signal);
           if (streamResult !== null) {
+            if (streamResult.interrupted === true) {
+              // The request reached the server and may still be running (or is done). Sending it again would
+              // run every tool twice and charge twice, so only reload what the server has saved.
+              await this.recoverInterruptedTurn();
+              return;
+            }
             payload = streamResult.payload;
             streamed = true;
           }
@@ -183,7 +189,9 @@ export const turnMethods = {
           this.greeting = payload.greeting;
         }
       } catch (error) {
-        if (error?.name === 'AbortError' || signal.aborted) {
+        if (this.adoptedServerState === true) {
+          this.adoptedServerState = false;
+        } else if (error?.name === 'AbortError' || signal.aborted) {
           for (let i = this.messages.length - 1; i >= 0; i--) {
             const row = this.messages[i];
             if (row?.meta?.streaming === true) {
@@ -206,8 +214,58 @@ export const turnMethods = {
         this.turnAbort = null;
         this.isRunning = false;
         this.showProgress(false);
+        // The turn is over: the plan saved with the answer is the truth. Keeping the last live plan would
+        // leave a finished step looking in progress.
+        this.livePlan = null;
+        this.renderPlan();
         this.renderStream();
       }
+    },
+
+  /**
+     * After a stream ended without its final event: reload the conversation from the server instead of
+     * running the turn a second time.
+     */
+  async recoverInterruptedTurn() {
+      const uuid = String(this.session?.uuid ?? '').trim();
+      await this.restoreSession(uuid !== '' ? { sessionUuid: uuid } : {});
+      const last = this.messages[this.messages.length - 1];
+      if (last?.role === 'user') {
+        this.messages.push({
+          role: 'assistant',
+          content: lang('agent.turn.streamInterrupted', 'The connection was interrupted. Your request may still be running. Reload the conversation in a moment to see the result.'),
+          meta: { type: 'info' },
+        });
+      }
+      this.renderContext();
+      this.renderStream();
+    },
+
+  /**
+     * The tab became visible again: redraw Progress and the stream, and when a turn has been silent for a
+     * while, check whether the server already finished it.
+     */
+  async resyncAfterTabVisible() {
+      this.renderPlan();
+      this.renderStream();
+      if (this.isRunning !== true || !this.lastStreamEventAt || Date.now() - this.lastStreamEventAt < 45000) {
+        return;
+      }
+      const uuid = String(this.session?.uuid ?? '').trim();
+      if (uuid === '') {
+        return;
+      }
+      const localCount = this.messages.length;
+      const snapshot = this.messages;
+      await this.restoreSession({ sessionUuid: uuid });
+      if (this.messages.length > localCount) {
+        // The server has more than this window: the turn finished while the tab was in the background.
+        this.adoptedServerState = true;
+        this.turnAbort?.abort();
+      } else {
+        this.messages = snapshot;
+      }
+      this.renderStream();
     },
 
   stopTurn() {
@@ -318,6 +376,7 @@ export const turnMethods = {
       };
 
       const flushEvent = (eventName, dataText) => {
+        this.lastStreamEventAt = Date.now();
         if (dataText === '') {
           return;
         }
@@ -413,33 +472,44 @@ export const turnMethods = {
         }
       };
 
+      const handleChunk = (chunk) => {
+        const lines = chunk.split('\n');
+        let eventName = 'message';
+        const dataLines = [];
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            eventName = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            dataLines.push(line.slice(5).trim());
+          }
+        }
+        flushEvent(eventName, dataLines.join('\n'));
+      };
+
+      this.lastStreamEventAt = Date.now();
       while (true) {
         const { value, done } = await reader.read();
         if (done) {
           break;
         }
+        this.lastStreamEventAt = Date.now();
         buffer += decoder.decode(value, { stream: true });
         const chunks = buffer.split('\n\n');
         buffer = chunks.pop() ?? '';
-        for (const chunk of chunks) {
-          const lines = chunk.split('\n');
-          let eventName = 'message';
-          const dataLines = [];
-          for (const line of lines) {
-            if (line.startsWith('event:')) {
-              eventName = line.slice(6).trim();
-            } else if (line.startsWith('data:')) {
-              dataLines.push(line.slice(5).trim());
-            }
-          }
-          flushEvent(eventName, dataLines.join('\n'));
-        }
+        chunks.forEach(handleChunk);
+      }
+      // The last event may arrive without its closing blank line, or the connection may close right after it.
+      buffer += decoder.decode();
+      if (buffer.trim() !== '') {
+        handleChunk(buffer);
       }
 
       if (streamingMessage !== null) {
         streamingMessage.meta = { ...(streamingMessage.meta ?? {}), streaming: false };
       }
 
-      return donePayload !== null ? { payload: donePayload } : null;
+      // The stream was accepted by the server, so a missing final event is an interrupted turn, not a request
+      // that never arrived: it must not be sent again.
+      return donePayload !== null ? { payload: donePayload } : { payload: null, interrupted: true };
     },
 };

@@ -65,6 +65,14 @@ final class AgentTurnState
 
     private bool $planChanged = false;
 
+    /**
+     * Steps worked out from the editor's request. When set, the model's own plan can not swap them for
+     * another list in the middle of the request (the Progress count must not jump from 3 to 2 and back).
+     *
+     * @var list<array{title: string, status: string}>
+     */
+    private array $anchorPlan = [];
+
     private ?string $pauseReason = null;
 
     private ?string $cancelledReason = null;
@@ -96,9 +104,25 @@ final class AgentTurnState
      */
     public function setPlan(array $steps): void
     {
+        if ($this->anchorPlan !== []) {
+            // Which steps are done follows from what was applied, not from the model's own list: the
+            // model's list is not allowed to replace or tick off the steps of the request.
+            $steps = $this->anchorPlan;
+        }
         $this->plan = $steps;
         $this->planChanged = true;
         $this->emit('plan', ['steps' => $steps]);
+    }
+
+    /**
+     * Sets the plan derived from the request and keeps it as the fixed list of steps for this turn.
+     *
+     * @param list<array{title: string, status: string}> $steps
+     */
+    public function setAnchoredPlan(array $steps): void
+    {
+        $this->anchorPlan = $steps;
+        $this->setPlan($steps);
     }
 
     /**

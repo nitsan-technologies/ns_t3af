@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
 
 /**
  * Reverts a single applied agent change via DataHandler (T14).
@@ -32,7 +33,21 @@ final class AgentUndoService
         private readonly DataHandlerService $dataHandlerService,
         private readonly AgentDraftSession $draftSession,
         private readonly AgentTranslator $translator,
+        private readonly RecordService $recordService,
     ) {}
+
+    /**
+     * Workspace the change was applied in (0 = Live); null for changes stored before it was recorded.
+     */
+    public function workspaceOf(string $changeId): ?int
+    {
+        $stored = $this->draftSession->getChange($changeId);
+        if ($stored === null || !array_key_exists('workspaceId', $stored)) {
+            return null;
+        }
+
+        return (int) $stored['workspaceId'];
+    }
 
     /**
      * Whether undo can bring the change back. A delete cannot be undone from here (the editor has
@@ -64,6 +79,47 @@ final class AgentUndoService
     }
 
     /**
+     * Refuse to put an old value back over something somebody else saved after the agent's change: the
+     * value the agent wrote must still be what is stored now.
+     *
+     * @param array<int|string, mixed> $undoFields
+     */
+    private function assertNotChangedSince(array $undoFields): void
+    {
+        foreach ($undoFields as $entry) {
+            if (!is_array($entry) || !array_key_exists('appliedValue', $entry) || ($entry['action'] ?? '') !== 'update') {
+                continue;
+            }
+            $table = (string) ($entry['table'] ?? '');
+            $uid = (int) ($entry['uid'] ?? 0);
+            $field = (string) ($entry['field'] ?? '');
+            if ($table === '' || $uid <= 0 || $field === '' || str_starts_with($field, '_')) {
+                continue;
+            }
+
+            $record = $this->recordService->findByUid($table, $uid, [$field]);
+            if ($record === null || !array_key_exists($field, $record)) {
+                continue;
+            }
+            if (self::comparable($record[$field]) !== self::comparable($entry['appliedValue'])) {
+                throw new \RuntimeException(
+                    $this->translator->translate('agent.undo.changedSince', [$field, self::comparable($record[$field])]),
+                    1712003303,
+                );
+            }
+        }
+    }
+
+    private static function comparable(mixed $value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        return is_scalar($value) ? trim((string) $value) : (string) json_encode($value);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function undo(string $changeId): array
@@ -74,6 +130,7 @@ final class AgentUndoService
         }
 
         $undoFields = is_array($stored['undoFields'] ?? null) ? $stored['undoFields'] : [];
+        $this->assertNotChangedSince($undoFields);
         $reverted = [];
 
         foreach ($undoFields as $entry) {

@@ -214,6 +214,11 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         );
         // Keep open Progress steps when the model answers in text: auto-completing them
         // made multi-element requests look finished after the first apply.
+        // The window shows the plan of the last live event; make that the plan saved with the answer, so Progress
+        // is the same while the turn runs, when it ends and after a reload.
+        if (is_array($nlMeta['plan'] ?? null) && $nlMeta['plan'] !== []) {
+            $state->emit('plan', ['steps' => $nlMeta['plan']]);
+        }
         $state->addMessage([
             'role' => 'assistant',
             'content' => $nlContent,
@@ -260,7 +265,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $checklist = AgentRequestChecklist::reconcile($historyMessages, $requestForChecklist);
         if ($checklist !== []) {
             $plan = AgentRequestChecklist::toPlan($checklist);
-            $state->setPlan($plan);
+            $state->setAnchoredPlan($plan);
         } elseif ($modelPlan !== []) {
             $plan = $modelPlan;
             if (($continuation['outcome'] ?? '') === 'applied') {
@@ -902,6 +907,23 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * Whether a short message names its own action or question instead of answering the previous turn
+     * ("yes", "do it", "the second one").
+     */
+    private static function isStandaloneRequest(string $message): bool
+    {
+        // "Create it" / "delete that one" only make sense with the turn before them.
+        if (preg_match_all('/\S+/u', $message) < 3 || preg_match('/\b(?:it|that|this|them|those|these|one|es|das|dies\w*|diese\w*)\b/iu', $message) === 1) {
+            return false;
+        }
+
+        return preg_match(
+            '/^\s*(?:please\s+|bitte\s+)?(?:list|show|display|get|find|search|count|open|create|add|make|write|delete|remove|rename|change|update|set|move|copy|translate|publish|switch|explain|describe|summari[sz]e|which|what|who|where|when|how|why|zeig\w*|liste?\w*|such\w*|finde\w*|erstell\w*|f(?:ü|ue)ge?\w*|l(?:ö|oe)sch\w*|benenn\w*|(?:ä|ae)nder\w*|verschieb\w*|kopier\w*|(?:ü|ue)bersetz\w*|welche\w*|was|wer|wo|wie)\b/iu',
+            $message,
+        ) === 1;
+    }
+
+    /**
      * @param list<array<string, mixed>> $historyMessages
      */
     public static function requestQuery(string $userMessage, array $historyMessages): string
@@ -909,6 +931,13 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $message = trim($userMessage);
         $isContinuation = str_starts_with($message, '[The editor ');
         if (!$isContinuation && mb_strlen($message) >= self::SHORT_REPLY_CHARS) {
+            return $message;
+        }
+
+        // A short message that is a complete request of its own ("List all workspaces") is not a reply to the
+        // previous turn: gluing the earlier question and answer to it would turn words from them (content
+        // element names, for example) into steps of a request nobody made.
+        if (!$isContinuation && self::isStandaloneRequest($message)) {
             return $message;
         }
 
@@ -921,7 +950,12 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 continue;
             }
             $isRequest = ($entry['role'] ?? '') === 'user';
-            $isReply = ($entry['role'] ?? '') === 'assistant' && ($meta['type'] ?? '') === 'nl_reply' && $earlier === [];
+            // After a confirm / decline only the editor's own request counts; the assistant's wording of the last
+            // answer must not add steps (an edit must not start "creating" the elements the answer mentioned).
+            $isReply = !$isContinuation
+                && ($entry['role'] ?? '') === 'assistant'
+                && ($meta['type'] ?? '') === 'nl_reply'
+                && $earlier === [];
             if ($isRequest || $isReply) {
                 array_unshift($earlier, mb_substr($content, 0, 300));
             }

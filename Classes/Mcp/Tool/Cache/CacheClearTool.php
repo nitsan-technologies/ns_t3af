@@ -50,6 +50,11 @@ readonly class CacheClearTool implements McpNonAiToolInterface, McpPlannableTool
         $scope = (string) ($arguments['scope'] ?? 'pages');
         $pageId = (int) ($arguments['pageId'] ?? 0);
 
+        $denied = $this->cacheService->denialReason($scope, $pageId);
+        if ($denied !== null) {
+            throw new \InvalidArgumentException($denied, 1712003400);
+        }
+
         $proposed = match ($scope) {
             'all' => 'clear all caches',
             'page' => 'clear cache for page ' . $pageId,
@@ -82,6 +87,11 @@ readonly class CacheClearTool implements McpNonAiToolInterface, McpPlannableTool
 
         if ($scope === 'page' && $pageId === 0) {
             return json_encode(['error' => 'pageId is required when scope is "page"'], JSON_THROW_ON_ERROR);
+        }
+
+        $denied = $this->cacheService->denialReason($scope, $pageId);
+        if ($denied !== null) {
+            return json_encode(['error' => $denied], JSON_THROW_ON_ERROR);
         }
 
         match ($scope) {

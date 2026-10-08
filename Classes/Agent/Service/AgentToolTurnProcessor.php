@@ -102,6 +102,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             ];
         }
 
+        // Content blocked for the group: the generic record tools must not read the same table.
+        $tool = $this->contentTableLock($tool, $arguments, $catalog) ?? $tool;
+
         if (($tool['executable'] ?? false) !== true) {
             $this->demandCounter->recordActivation(
                 (string) ($tool['ownerExtensionKey'] ?? ''),
@@ -195,17 +198,14 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             (string) ($result['message'] ?? ''),
             $pageId > 0 ? $pageId : null,
             // Inside the agent loop the model reads the data itself; an extra summary call only costs time.
-            ($body['skipLlmSummary'] ?? false) !== true,
+            // With PII masking on, the raw record data must not be sent to the provider for a summary at all.
+            ($body['skipLlmSummary'] ?? false) !== true && !$this->governanceGuard->requiresPiiMasking($user),
         );
 
+        $presented = $this->maskPresented($user, $presented);
         $content = (string) $presented['content'];
         $facts = $presented['facts'];
         $details = $presented['details'];
-        if ($this->governanceGuard->requiresPiiMasking($user)) {
-            $content = $this->governanceGuard->maskPii($content);
-            $facts = $this->maskPresentedFacts($facts);
-            $details = $this->maskPresentedDetails($details);
-        }
 
         $meta = [
             'type' => 'tool_result',
@@ -248,6 +248,35 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             'content' => $content,
             'meta' => $meta,
         ];
+    }
+
+    /**
+     * record_search / record_count on tt_content read what content_list/content_get/content_search read.
+     * When the group blocks those, return the locked content tool so the editor gets the group message.
+     *
+     * @param array<string, mixed> $tool
+     * @param array<string, mixed> $arguments
+     * @param array{executable: list<array<string, mixed>>, locked: list<array<string, mixed>>} $catalog
+     * @return array<string, mixed>|null
+     */
+    private function contentTableLock(array $tool, array $arguments, array $catalog): ?array
+    {
+        if (!in_array((string) ($tool['name'] ?? ''), ['record_search', 'record_count'], true)) {
+            return null;
+        }
+        if (strtolower(trim((string) ($arguments['tableName'] ?? ''))) !== 'tt_content') {
+            return null;
+        }
+        foreach ($catalog['locked'] as $locked) {
+            if (
+                in_array((string) ($locked['name'] ?? ''), ['content_list', 'content_get', 'content_search'], true)
+                && (string) ($locked['lockKind'] ?? '') === 'group'
+            ) {
+                return $locked;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -311,8 +340,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             (string) ($result['message'] ?? ''),
             $pageId > 0 ? $pageId : null,
             // Inside the agent loop the model reads the data itself; an extra summary call only costs time.
-            ($body['skipLlmSummary'] ?? false) !== true,
+            // With PII masking on, the raw record data must not be sent to the provider for a summary at all.
+            ($body['skipLlmSummary'] ?? false) !== true && !$this->governanceGuard->requiresPiiMasking($user),
         );
+
+        $presented = $this->maskPresented($user, $presented);
 
         $meta = [
             'type' => 'tool_result',
@@ -790,36 +822,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
-     * @param list<array{label: string, value: string}> $facts
-     * @return list<array{label: string, value: string}>
+     * Masks a presented tool result once, right after presenting and before any of it is used.
+     *
+     * @param array<string, mixed> $presented
+     * @return array<string, mixed>
      */
-    private function maskPresentedFacts(array $facts): array
+    private function maskPresented(BackendUserAuthentication $user, array $presented): array
     {
-        return array_map(
-            fn(array $fact): array => [
-                'label' => (string) ($fact['label'] ?? ''),
-                'value' => $this->governanceGuard->maskPii((string) ($fact['value'] ?? '')),
-            ],
-            $facts,
-        );
-    }
-
-    private function maskPresentedDetails(mixed $details): mixed
-    {
-        try {
-            $encoded = json_encode($details, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            return is_string($details)
-                ? $this->governanceGuard->maskPii($details)
-                : $details;
-        }
-
-        $masked = $this->governanceGuard->maskPii($encoded);
-        try {
-            return json_decode($masked, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            return $masked;
-        }
+        return $this->governanceGuard->requiresPiiMasking($user)
+            ? $this->governanceGuard->maskPresentedResult($presented)
+            : $presented;
     }
 
     /**
