@@ -30,7 +30,6 @@ use NITSAN\NsT3AF\Mcp\Service\AdvancedSettingsService;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpRuntimeContext;
 use NITSAN\NsT3AF\Mcp\Service\McpPathProvider;
 use NITSAN\NsT3AF\Mcp\Service\WorkspacePreferenceService;
-use NITSAN\NsT3AF\Utility\AiUniverseUtilityHelper;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -105,9 +104,9 @@ readonly class McpServerMiddleware implements MiddlewareInterface
             );
             $this->backendUserBootstrap->bootstrap($context['beUser'], $context['workspaceId']);
             $workspaceId = $this->workspacePreferenceService->getForUser($context['beUser']);
-            if (AiUniverseUtilityHelper::isExtensionLoaded('workspaces')) {
-                $GLOBALS['BE_USER']->setWorkspace($workspaceId);
-            }
+            // This call only: setWorkspace() would write the module choice to the user's record and move
+            // the editor's own backend session into that workspace.
+            $this->backendUserBootstrap->applyWorkspace($GLOBALS['BE_USER'], $workspaceId);
         } catch (\RuntimeException) {
             return $this->withCorsHeaders($this->createUnauthorizedResponse($request, 'Authentication failed'));
         }
