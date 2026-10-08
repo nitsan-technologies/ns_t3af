@@ -1181,6 +1181,18 @@
                 <source>Change %1$s</source>
                 <target>%1$s ändern</target>
             </trans-unit>
+            <trans-unit id="agent.draft.titleCreate">
+                <source>Create %1$s</source>
+                <target>%1$s anlegen</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.titleDelete">
+                <source>Delete %1$s</source>
+                <target>%1$s löschen</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.titleMove">
+                <source>Move %1$s</source>
+                <target>%1$s verschieben</target>
+            </trans-unit>
             <trans-unit id="agent.draft.undoneLabel">
                 <source>Undone</source>
                 <target>Zurückgenommen</target>

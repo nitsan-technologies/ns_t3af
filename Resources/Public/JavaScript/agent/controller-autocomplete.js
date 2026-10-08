@@ -308,7 +308,8 @@ export const autocompleteMethods = {
       const value = this.input.value;
       const slash = value.match(/(?:^|\s)\/(\S*)$/);
       // A record query may hold several words ("@QA Mounted"): everything after the "@" up to the end of the line.
-      const at = value.match(/(?:^|\s)@([^@\n]{0,80})$/);
+      // The query must start right after the "@": "mail me @ noon" is plain text and sends nothing.
+      const at = value.match(/(?:^|\s)@((?:[^\s@][^@\n]{0,79})?)$/);
 
       window.clearTimeout(this.autocompleteTimer);
       if (slash) {
