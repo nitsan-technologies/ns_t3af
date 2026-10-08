@@ -422,6 +422,15 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function bothWordingsOfTheDraftReviewLineAreRecognisedAsBoilerplate(): void
+    {
+        self::assertTrue(AgentPromptBuilder::isDraftReviewBoilerplate('Review this change before anything is written.'));
+        self::assertTrue(AgentPromptBuilder::isCardHistoryEcho('Review this change before anything is written'));
+        self::assertTrue(AgentPromptBuilder::isDraftReviewBoilerplate('Review the proposed changes for Rename Page before anything is written.'));
+        self::assertFalse(AgentPromptBuilder::isDraftReviewBoilerplate('Please review this change with the team.'));
+    }
+
+    #[Test]
     public function anAppliedChangeTellsTheModelTheNewRecordUid(): void
     {
         $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();

@@ -2702,3 +2702,17 @@
 [data-bs-theme=dark] .nst3af-agent-backdrop {
   background: color-mix(in srgb, #000 72%, transparent);
 }
+
+/* A card whose change was undone shows a label instead of the Undo button. */
+.nst3af-agent-applied__undone {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+/* Hint under a change card when every field was left out. */
+.nst3af-agent-draft__hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  opacity: 0.8;
+}

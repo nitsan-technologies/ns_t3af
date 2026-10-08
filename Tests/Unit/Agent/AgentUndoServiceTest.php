@@ -132,6 +132,22 @@ final class AgentUndoServiceTest extends TestCase
         $service->undo('change-4');
     }
 
+    #[Test]
+    public function onlyRevertibleChangesOfferUndo(): void
+    {
+        self::assertTrue(AgentUndoService::isUndoable([
+            ['table' => 'tt_content', 'uid' => 42, 'field' => 'header', 'previousValue' => 'Old', 'action' => 'update'],
+        ]));
+        self::assertTrue(AgentUndoService::isUndoable([
+            ['table' => 'pages', 'uid' => 99, 'field' => '_record', 'previousValue' => null, 'action' => 'create'],
+        ]));
+        // A delete cannot be brought back from here, so no Undo button.
+        self::assertFalse(AgentUndoService::isUndoable([
+            ['table' => 'tt_content', 'uid' => 5, 'field' => '_record', 'previousValue' => 'exists', 'action' => 'delete'],
+        ]));
+        self::assertFalse(AgentUndoService::isUndoable([]));
+    }
+
     /**
      * @return array{0: AgentUndoService, 1: AgentDraftSession}
      */

@@ -2144,8 +2144,8 @@
                 <target>Max. POST-Body-Größe (Bytes)</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.advanced.maxBodyBytesHint">
-                <source>Upper limit for Streamable HTTP request bodies. Default 16 MiB (16777216). Minimum 4 MiB (4194304).</source>
-                <target>Obergrenze für Streamable-HTTP-Anfragekörper. Standard 16 MiB (16777216). Minimum 4 MiB (4194304).</target>
+                <source>Upper limit for Streamable HTTP request bodies. Default 100 MiB (104857600). Minimum 4 MiB (4194304).</source>
+                <target>Obergrenze für Streamable-HTTP-Anfragekörper. Standard 100 MiB (104857600). Minimum 4 MiB (4194304).</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.advanced.enableServer">
                 <source>Enable MCP Server</source>

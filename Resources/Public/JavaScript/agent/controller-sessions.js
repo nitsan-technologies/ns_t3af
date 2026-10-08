@@ -123,7 +123,15 @@ export const sessionMethods = {
       const scope = stored.scope === 'module' || stored.scope === 'user' || stored.scope === 'page'
         ? stored.scope
         : 'page';
-      if (uuid === '' || scopeKey === '' || this.rememberScopeKey(scope) !== scopeKey) {
+      if (scopeKey === '' || this.rememberScopeKey(scope) !== scopeKey) {
+        return {};
+      }
+      // A new chat that has no message yet exists only in the browser: reopen it empty
+      // instead of falling back to the latest saved conversation.
+      if (uuid === '' && (stored.fresh === true || stored.fresh === 'true' || stored.fresh === 1 || stored.fresh === '1')) {
+        return { fresh: true };
+      }
+      if (uuid === '') {
         return {};
       }
 
@@ -145,6 +153,21 @@ export const sessionMethods = {
         scopeKey: this.rememberScopeKey(scope),
       }).catch((error) => {
         console.warn('Agent last conversation could not be saved:', errorMessage(error));
+      });
+    },
+
+  /**
+     * Remember that the editor started a new chat that has no saved row yet.
+     */
+    rememberFreshSession() {
+      const scope = this.sessionListSettings.scope ?? 'page';
+      void Persistent.set(STORAGE_LAST_SESSION_KEY, {
+        uuid: '',
+        fresh: true,
+        scope,
+        scopeKey: this.rememberScopeKey(scope),
+      }).catch((error) => {
+        console.warn('Agent new conversation could not be remembered:', errorMessage(error));
       });
     },
 
@@ -210,6 +233,8 @@ export const sessionMethods = {
       this.panel?.removeAttribute('aria-busy');
       this.renderContext();
       this.renderStream();
+      // The active row in the Conversations rail follows the conversation that was just loaded.
+      this.renderSessions?.();
     },
 
   /**
@@ -267,7 +292,7 @@ export const sessionMethods = {
           return;
         }
         if (options.fresh) {
-          this.clearRememberedLastSession();
+          this.rememberFreshSession();
         } else {
           this.rememberLastSession();
         }

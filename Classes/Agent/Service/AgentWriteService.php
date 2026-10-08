@@ -80,17 +80,30 @@ final class AgentWriteService
         }
 
         $changed = [];
+        $gone = [];
         foreach ($plan->keptFields($keptFieldKeys) as $field) {
             if ($field->field === '' || str_starts_with($field->field, '_') || $field->uid <= 0 || $field->currentValue === null) {
                 continue;
             }
             $record = $this->recordService->findByUid($field->table, $field->uid, [$field->field]);
-            if ($record === null || !array_key_exists($field->field, $record)) {
+            if ($record === null) {
+                // Deleted (or no longer readable) since the agent prepared the change.
+                $gone[$field->table . '#' . $field->uid] = sprintf('%s #%d', $field->table, $field->uid);
+                continue;
+            }
+            if (!array_key_exists($field->field, $record)) {
                 continue;
             }
             if (self::comparable($record[$field->field]) !== self::comparable($field->currentValue)) {
                 $changed[] = sprintf('%s #%d (%s)', $field->table, $field->uid, $field->field);
             }
+        }
+
+        if ($gone !== []) {
+            throw new \RuntimeException(
+                $this->translator->translate('agent.write.recordGone', [implode(', ', array_slice(array_values($gone), 0, 5))]),
+                1712003222,
+            );
         }
 
         if ($changed !== []) {
@@ -147,17 +160,19 @@ final class AgentWriteService
         $readback = $this->readBack($plan, $keptFieldKeys, $applyResult['affected'] ?? []);
 
         $changeId = bin2hex(random_bytes(8));
+        $undoFields = $this->buildUndoFields($plan, $keptFieldKeys, $applyResult['affected'] ?? []);
         $this->draftSession->storeChange($changeId, [
             'correlationId' => $correlationId,
             'plan' => $plan->toArray(),
             'keptFieldKeys' => $keptFieldKeys,
-            'undoFields' => $this->buildUndoFields($plan, $keptFieldKeys, $applyResult['affected'] ?? []),
+            'undoFields' => $undoFields,
             'appliedAt' => time(),
         ]);
         $this->draftSession->removeDraft($draftId);
 
         return [
             'changeId' => $changeId,
+            'undoable' => AgentUndoService::isUndoable($undoFields),
             'correlationId' => $correlationId,
             'appliedCount' => count($applyResult['appliedFieldKeys'] ?? []),
             'totalCount' => count($plan->fields),
@@ -262,11 +277,12 @@ final class AgentWriteService
         );
 
         $changeId = bin2hex(random_bytes(8));
+        $undoFields = $this->buildPreviewUndoFields($preview, $resolved);
         $this->draftSession->storeChange($changeId, [
             'correlationId' => $correlationId,
             'previewResult' => $preview->toArray(),
             'appliedValues' => $resolved,
-            'undoFields' => $this->buildPreviewUndoFields($preview, $resolved),
+            'undoFields' => $undoFields,
             'appliedAt' => time(),
             'suggestionsApply' => true,
         ]);
@@ -274,6 +290,7 @@ final class AgentWriteService
 
         return [
             'changeId' => $changeId,
+            'undoable' => AgentUndoService::isUndoable($undoFields),
             'correlationId' => $correlationId,
             'appliedCount' => count($resolved),
             'totalCount' => count($preview->fields),
@@ -518,6 +535,7 @@ final class AgentWriteService
 
         return [
             'changeId' => $changeId,
+            'undoable' => false,
             'correlationId' => $correlationId,
             'appliedCount' => 1,
             'totalCount' => 1,

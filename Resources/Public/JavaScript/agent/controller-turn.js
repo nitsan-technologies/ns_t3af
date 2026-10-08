@@ -14,12 +14,38 @@ export const turnMethods = {
      * @returns {string}
      */
     expandSlashLabel(text) {
+      const mentions = this.recordMentions ?? [];
+      this.recordMentions = [];
+      let expanded = text;
+      const used = [];
+      // Longest names first, so "@QA Mounted Child" is not cut short by "@QA Mounted".
+      for (const mention of [...mentions].sort((a, b) => b.label.length - a.label.length)) {
+        if (expanded.includes(mention.label)) {
+          used.push({ mention, at: expanded.lastIndexOf(mention.label) });
+          expanded = expanded.split(mention.label).join(mention.token);
+        }
+      }
+      // The record context follows what is really in the message: a picked name the editor
+      // deleted or retyped no longer points at that record, and with several picks the last
+      // one mentioned is the context.
+      if (mentions.length > 0 && mentions.some((m) => m.record)) {
+        const withRecord = used.filter((u) => u.mention.record).sort((a, b) => a.at - b.at);
+        const context = { ...(this.context ?? {}) };
+        if (withRecord.length === 0) {
+          delete context.record;
+        } else {
+          context.record = withRecord[withRecord.length - 1].mention.record;
+        }
+        this.context = context;
+        this.renderContext?.();
+      }
+
       const picked = this.slashLabel;
       this.slashLabel = null;
-      if (!picked || picked.label === '' || !text.startsWith(picked.label)) {
-        return text;
+      if (!picked || picked.label === '' || !expanded.startsWith(picked.label)) {
+        return expanded;
       }
-      const rest = text.slice(picked.label.length).trim();
+      const rest = expanded.slice(picked.label.length).trim();
       return rest === '' ? picked.command : `${picked.command} ${rest}`;
     },
 
@@ -39,7 +65,8 @@ export const turnMethods = {
       }
 
       const continuation = options.continuation ?? null;
-      const message = continuation !== null ? 'continue' : this.expandSlashLabel(this.input.value.trim());
+      const typed = this.input.value.trim();
+      const message = continuation !== null ? 'continue' : this.expandSlashLabel(typed);
       if (message === '') {
         return;
       }
@@ -77,7 +104,7 @@ export const turnMethods = {
 
       const userMessage = continuation !== null
         ? { role: 'user', content: message, meta: { hidden: true, type: 'continuation' } }
-        : { role: 'user', content: message, meta: {} };
+        : { role: 'user', content: typed !== '' ? typed : message, meta: {} };
       try {
         this.messages.push(userMessage);
         this.renderStream();
@@ -124,8 +151,13 @@ export const turnMethods = {
         }
         this.context = payload.context ?? this.context;
         if (payload.userMessage && typeof payload.userMessage === 'object') {
-          // The server's copy carries where it was written (and the continuation text).
+          // The server's copy carries where it was written (and the continuation text). The bubble
+          // keeps what the editor typed ("@QA Mounted"), not the expanded "@pages:224" token.
+          const shown = userMessage.content;
           Object.assign(userMessage, payload.userMessage);
+          if (continuation === null && typeof shown === 'string' && shown !== '') {
+            userMessage.content = shown;
+          }
         }
         if (payload.credits !== undefined) {
           this.credits = payload.credits;
@@ -307,6 +339,16 @@ export const turnMethods = {
             // No specific tool yet (the model is still deciding, or the toolbox is looking one up):
             // cycle a few short phrases instead of freezing on one word for a long "Thinking…" stretch.
             this.startThinkingRotation();
+          }
+          return;
+        }
+
+        if (eventName === 'session') {
+          if (data.session && typeof data.session === 'object' && data.session.uuid) {
+            this.session = data.session;
+            this.freshSession = false;
+            this.rememberLastSession();
+            this.ensureSessionInList(data.session);
           }
           return;
         }

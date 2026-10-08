@@ -505,13 +505,31 @@ export const autocompleteMethods = {
 
       const value = this.input.value;
       const mode = this.autocompleteMode;
-      const pattern = mode === 'records' ? /(^|\s)@(\S*)$/ : /(^|\s)\/(\S*)$/;
+      const pattern = mode === 'records' ? /(^|\s)@([^@\n]{0,80})$/ : /(^|\s)\/(\S*)$/;
       // A picked tool shows its readable name in the box; the real "/tool_name" command is
       // restored when the message is sent (see expandSlashLabel in submitTurn).
       const label = mode === 'tools' && !locked ? String(item.dataset.label ?? '').trim() : '';
+      // A picked page / record shows its name ("@QA Mounted"), not the "@pages:224" code; the code
+      // is restored on send (see expandSlashLabel).
+      const recordName = mode === 'records'
+        ? String(item.querySelector('.nst3af-agent-autocomplete__item-title')?.textContent ?? '').trim()
+        : '';
       if (label !== '') {
         this.slashLabel = { label, command: insert.trim() };
         this.input.value = value.replace(pattern, (_m, lead) => `${lead}${label} `);
+      } else if (recordName !== '' && !recordName.includes('@')) {
+        const mention = `@${recordName}`;
+        this.recordMentions = [
+          ...(this.recordMentions ?? []).filter((m) => m.label !== mention),
+          {
+            label: mention,
+            token: insert.trim(),
+            record: item.dataset.recordTable && item.dataset.recordUid
+              ? { table: item.dataset.recordTable, uid: Number.parseInt(item.dataset.recordUid, 10) }
+              : null,
+          },
+        ];
+        this.input.value = value.replace(pattern, (_m, lead) => `${lead}${mention} `);
       } else {
         this.input.value = value.replace(pattern, (_m, lead) => `${lead}${insert}`);
       }

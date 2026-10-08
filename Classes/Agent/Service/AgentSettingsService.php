@@ -90,12 +90,12 @@ final class AgentSettingsService
 
     public function getMaxReadToolsPerTurn(): int
     {
-        return max(1, (int) ($this->all()['agentMaxReadToolsPerTurn'] ?? 5));
+        return max(1, (int) ($this->all()['agentMaxReadToolsPerTurn'] ?? 10));
     }
 
     public function getMaxWriteDraftsPerTurn(): int
     {
-        return max(0, (int) ($this->all()['agentMaxWriteDraftsPerTurn'] ?? 2));
+        return max(0, (int) ($this->all()['agentMaxWriteDraftsPerTurn'] ?? 10));
     }
 
     public function isProviderThinkingVisible(): bool

@@ -221,9 +221,10 @@ final class AgentAjaxController
             (string) ($query['fresh'] ?? '') === '1',
         );
 
-        $messages = array_map(static function (array $message): array {
+        $messages = array_map(function (array $message) use ($user): array {
             if (is_array($message['meta'] ?? null)) {
                 $message['meta'] = self::sanitizeMessageMetaStatic($message['meta']);
+                $message['meta'] = $this->withFreshResultLinks($message['meta'], $user);
             }
 
             return $message;
@@ -616,7 +617,7 @@ final class AgentAjaxController
      *
      * @param array<string, mixed> $result
      * @param array<string, mixed> $storedDraft
-     * @return list<array{record: string, links: list<array{kind: string, label: string, href: string}>}>
+     * @return list<array{record: string, table: string, uid: int, links: list<array{kind: string, label: string, href: string}>}>
      */
     private function resultLinks(array $result, array $storedDraft): array
     {
@@ -650,7 +651,7 @@ final class AgentAjaxController
             $seen[$key] = true;
             $links = $this->recordLabeler->links($table, $uid);
             if ($links !== []) {
-                $out[] = ['record' => $this->recordLabeler->recordLabel($table, $uid), 'links' => $links];
+                $out[] = ['record' => $this->recordLabeler->recordLabel($table, $uid), 'table' => $table, 'uid' => $uid, 'links' => $links];
             }
             if (count($out) >= 3) {
                 break;
@@ -811,7 +812,7 @@ final class AgentAjaxController
         $message = $this->translator->translate('agent.draft.undone');
         $user = $this->resolveBackendUser();
         if ($user !== null) {
-            $this->recordInConversation($user, $body, fn(array $messages): array => $this->conversationRecorder->undone($messages, $message));
+            $this->recordInConversation($user, $body, fn(array $messages): array => $this->conversationRecorder->undone($messages, $message, $changeId));
         }
 
         return new JsonResponse([
@@ -915,6 +916,8 @@ final class AgentAjaxController
             if ($turn instanceof JsonResponse) {
                 return $turn;
             }
+            // Keep the question even if the page is reloaded before the answer is ready.
+            $this->conversationSession->save($user, $turn['messages'], $turn['context'], $turn['provider']);
 
             $assistantMessages = $this->turnRouter->route(
                 $turn['message'],
@@ -994,6 +997,9 @@ final class AgentAjaxController
             return $turn;
         }
 
+        // Keep the question even if the page is reloaded before the answer is ready.
+        $this->conversationSession->save($user, $turn['messages'], $turn['context'], $turn['provider']);
+
         $streamBody = new PumpStream(function () use ($turn, $user, $correlationId, $lease): false {
             static $emitted = false;
             if ($emitted) {
@@ -1002,6 +1008,20 @@ final class AgentAjaxController
             $emitted = true;
 
             $this->configureSseStream();
+            // A reload closes the stream, but the turn is finished and saved so the answer is
+            // there when the editor reopens the conversation.
+            ignore_user_abort(true);
+
+            // Tell the window which conversation this turn belongs to right away, so a reload
+            // before the answer is ready reopens it (a brand-new chat has no id until now).
+            try {
+                $this->emitSseEvent('session', [
+                    'ok' => true,
+                    'session' => $this->activeSessionSummary($turn['context'], $user),
+                ]);
+            } catch (\Throwable) {
+                // Only a convenience for reloads; the turn goes on without it.
+            }
 
             try {
                 $assistantMessages = $this->turnRouter->route(
@@ -1250,6 +1270,37 @@ final class AgentAjaxController
             'module' => (string) ($context['module'] ?? ''),
             'workspaceId' => (int) ($context['workspaceId'] ?? 0),
         ], $user);
+    }
+
+    /**
+     * Result-card links carry backend security tokens that belong to the login they were built in.
+     * When a saved conversation is opened later they are rebuilt, so "Open page" and "Edit" work
+     * after a new login. Cards saved before the record was stored with the link keep their old links.
+     *
+     * @param array<string, mixed> $meta
+     * @return array<string, mixed>
+     */
+    private function withFreshResultLinks(array $meta, BackendUserAuthentication $user): array
+    {
+        if (!is_array($meta['links'] ?? null)) {
+            return $meta;
+        }
+        foreach ($meta['links'] as $index => $group) {
+            if (!is_array($group)) {
+                continue;
+            }
+            $table = (string) ($group['table'] ?? '');
+            $uid = (int) ($group['uid'] ?? 0);
+            if ($table === '' || $uid <= 0 || !$this->recordAccessGate->canSelectTable($user, $table)) {
+                continue;
+            }
+            $fresh = $this->recordLabeler->links($table, $uid);
+            if ($fresh !== []) {
+                $meta['links'][$index]['links'] = $fresh;
+            }
+        }
+
+        return $meta;
     }
 
     /**

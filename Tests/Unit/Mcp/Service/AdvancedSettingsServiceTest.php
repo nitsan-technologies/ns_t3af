@@ -33,7 +33,7 @@ final class AdvancedSettingsServiceTest extends TestCase
         $service = new AdvancedSettingsService($extensionSettings);
 
         self::assertSame(AdvancedSettingsService::DEFAULT_MAX_BODY_BYTES, $service->maxBodyBytes());
-        self::assertSame(16 * 1024 * 1024, $service->maxBodyBytes());
+        self::assertSame(100 * 1024 * 1024, $service->maxBodyBytes());
     }
 
     public function testMaxBodyBytesUsesConfiguredValue(): void

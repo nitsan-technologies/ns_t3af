@@ -117,6 +117,9 @@ final readonly class AgentTurnRouter
         }
 
         $followUp = $this->messageParser->stripComposerTokens($message);
+        if ($followUp !== '') {
+            $followUp = $this->messageParser->describeComposerTokens($message);
+        }
         $attachmentMessages = $this->processRecordAttachmentTurns(
             $recordAttachments,
             $context,

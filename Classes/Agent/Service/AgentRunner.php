@@ -131,6 +131,11 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         [$state, $finalText] = $this->runAgent($userMessage, $historyMessages, $context, $body, $user, $correlationId, $emitEvent, $offeredTools, $executableTools, $severities);
 
+        // After "Decline" the model must not offer the same change again.
+        if (($continuation['outcome'] ?? '') === 'declined') {
+            $state->messages = self::withoutRepeatedDeclinedDrafts($state->messages, $historyMessages);
+        }
+
         $state->attachPendingPlan();
 
         if ($state->isCancelled()) {
@@ -431,6 +436,57 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     private static function looksLikeContextOverflow(string $raw): bool
     {
         return preg_match('/context[_ ]length|maximum context|context window|too many tokens|prompt is too long|reduce the length/i', $raw) === 1;
+    }
+
+    /**
+     * Drops change cards of this turn that are identical to a card the editor declined earlier in
+     * the conversation (the model sometimes proposes the same change again after "Decline").
+     *
+     * @param list<array{role: string, content: string, meta: array<string, mixed>}> $messages messages added by this turn
+     * @param list<array<string, mixed>> $history the conversation before this turn
+     * @return list<array{role: string, content: string, meta: array<string, mixed>}>
+     */
+    public static function withoutRepeatedDeclinedDrafts(array $messages, array $history): array
+    {
+        $declined = [];
+        foreach ($history as $message) {
+            $draft = $message['meta']['draft'] ?? null;
+            if (($message['meta']['type'] ?? '') === 'inline_draft' && is_array($draft) && ($draft['discarded'] ?? false) === true) {
+                $declined[self::draftSignature($draft)] = true;
+            }
+        }
+        if ($declined === []) {
+            return array_values($messages);
+        }
+
+        return array_values(array_filter($messages, static function (array $message) use ($declined): bool {
+            $draft = $message['meta']['draft'] ?? null;
+            if (($message['meta']['type'] ?? '') !== 'inline_draft' || !is_array($draft)) {
+                return true;
+            }
+
+            return !isset($declined[self::draftSignature($draft)]);
+        }));
+    }
+
+    /**
+     * @param array<string, mixed> $draft
+     */
+    private static function draftSignature(array $draft): string
+    {
+        $fields = [];
+        foreach (is_array($draft['fields'] ?? null) ? $draft['fields'] : [] as $field) {
+            if (is_array($field)) {
+                $fields[] = [$field['table'] ?? '', $field['uid'] ?? 0, $field['field'] ?? '', $field['proposed'] ?? ''];
+            }
+        }
+
+        return md5((string) json_encode([
+            $draft['tool'] ?? '',
+            $draft['kind'] ?? '',
+            $fields,
+            $draft['arguments'] ?? [],
+        ]));
     }
 
     /**

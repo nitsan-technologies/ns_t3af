@@ -111,6 +111,35 @@ final class AgentWriteServiceGuardsTest extends TestCase
     }
 
     #[Test]
+    public function deletedRecordIsReportedInsteadOfBeingWrittenTo(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->willReturn(null);
+        $dataHandler = $this->createMock(DataHandlerService::class);
+        $dataHandler->expects(self::never())->method('applyFilteredPlan');
+        $service = $this->service($dataHandler, $records, time());
+
+        try {
+            $service->apply('draft-1', [self::FIELD_KEY]);
+            self::fail('A record that no longer exists must stop the apply.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame(1712003222, $exception->getCode());
+            self::assertStringContainsString('tt_content #42', $exception->getMessage());
+            self::assertStringContainsString('no longer exists', $exception->getMessage());
+        }
+    }
+
+    #[Test]
+    public function applyResultSaysWhetherTheChangeCanBeUndone(): void
+    {
+        $service = $this->service($this->dataHandlerApplying(), $this->recordsWithHeader('Old'), time());
+
+        $result = $service->apply('draft-1', [self::FIELD_KEY]);
+
+        self::assertTrue($result['undoable']);
+    }
+
+    #[Test]
     public function whitespaceOnlyDifferenceIsNotAConflict(): void
     {
         $service = $this->service($this->dataHandlerApplying(), $this->recordsWithHeader("Old \n"), time());

@@ -184,8 +184,17 @@ final readonly class AgentConversationRecorder
      * @param list<array<string, mixed>> $messages
      * @return list<array<string, mixed>>
      */
-    public function undone(array $messages, string $message): array
+    public function undone(array $messages, string $message, string $changeId = ''): array
     {
+        if ($changeId !== '') {
+            // The card that offered Undo shows "Undone" instead of a button that no longer works.
+            foreach ($messages as $index => $card) {
+                if (is_array($card['meta'] ?? null) && (string) ($card['meta']['changeId'] ?? '') === $changeId) {
+                    $messages[$index]['meta']['undone'] = true;
+                }
+            }
+        }
+
         $messages[] = [
             'role' => 'assistant',
             'content' => $message !== '' ? $message : $this->translator->translate('agent.draft.undone'),
@@ -247,6 +256,7 @@ final readonly class AgentConversationRecorder
                 'type' => 'readback_result',
                 'readback' => array_values(is_array($result['readback'] ?? null) ? $result['readback'] : []),
                 'changeId' => (string) ($result['changeId'] ?? ''),
+                'undoable' => ($result['undoable'] ?? true) !== false,
                 'correlationId' => (string) ($result['correlationId'] ?? $cardCorrelationId),
                 'schedulerHandoff' => $handoff,
                 'links' => $links,

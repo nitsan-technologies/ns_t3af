@@ -196,6 +196,12 @@ export const chromeMethods = {
 
         if (event.key === 'Escape') {
           event.preventDefault();
+          // Escape closes the innermost thing first: an open "@" / "/" list, then the info
+          // drawer, and only then the whole panel.
+          if (this.autocomplete && !this.autocomplete.hidden) {
+            this.hideAutocomplete();
+            return;
+          }
           if (this.closeInfoDrawer()) {
             return;
           }
