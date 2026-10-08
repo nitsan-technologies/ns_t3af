@@ -25,12 +25,55 @@ use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
  * @internal
  */
 final class McpRecordPlanServiceTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        unset($GLOBALS['BE_USER']);
+        parent::tearDown();
+    }
+
+    #[Test]
+    public function planCreateIsRefusedForATableTheEditorMayNotModify(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $user->method('isAdmin')->willReturn(false);
+        $user->method('check')->with('tables_modify', 'sys_category')->willReturn(false);
+        $GLOBALS['BE_USER'] = $user;
+
+        $tcaSchemaService = $this->createMock(TcaSchemaService::class);
+        $tcaSchemaService->expects(self::never())->method('getWritableFields');
+
+        $service = new McpRecordPlanService($this->createMock(RecordService::class), $tcaSchemaService);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('not allowed');
+        $service->planCreate('sys_category', ['pid' => 0, 'title' => 'RT category'], 'write_table');
+    }
+
+    #[Test]
+    public function planCreateAllowsTheRootForATableTheEditorMayModify(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $user->method('isAdmin')->willReturn(false);
+        $user->method('check')->willReturn(true);
+        $GLOBALS['BE_USER'] = $user;
+
+        $tcaSchemaService = $this->createMock(TcaSchemaService::class);
+        $tcaSchemaService->method('getWritableFields')->willReturn(['title']);
+
+        $service = new McpRecordPlanService($this->createMock(RecordService::class), $tcaSchemaService);
+        $plan = $service->planCreate('sys_category', ['pid' => 0, 'title' => 'RT category'], 'write_table');
+
+        self::assertSame('create', $plan->action);
+        self::assertSame(0, $plan->context['pid']);
+    }
+
     #[Test]
     public function planUpdateBuildsBeforeAfterFields(): void
     {

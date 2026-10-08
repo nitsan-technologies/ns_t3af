@@ -47,6 +47,31 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
     }
 
     #[Test]
+    public function mergeContextMapsQueryToSearchForSearchTools(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke($processor, ['query' => 'QA Mounted'], ['pageId' => 3], 'pages_search');
+
+        self::assertSame('QA Mounted', $merged['search']);
+        self::assertArrayNotHasKey('query', $merged);
+        self::assertArrayNotHasKey('pid', $merged);
+    }
+
+    #[Test]
+    public function mergeContextKeepsAnExplicitSearchWord(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke($processor, ['search' => 'QA', 'query' => 'other'], [], 'content_search');
+
+        self::assertSame('QA', $merged['search']);
+        self::assertArrayNotHasKey('query', $merged);
+    }
+
+    #[Test]
     public function mergeContextMapsPageIdToUidForPagesGet(): void
     {
         $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
