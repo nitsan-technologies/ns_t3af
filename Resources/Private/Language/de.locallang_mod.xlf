@@ -2039,17 +2039,17 @@
                 <source>Server URL: %1$s</source>
                 <target>Server URL: %1$s</target>
             </trans-unit>
-            <trans-unit id="module.mcpServer.snippet.openaiGpts.step1">
-                <source>In ChatGPT, Go to: Settings → Apps → Advanced Settings → Developer Mode</source>
-                <target>In ChatGPT, gehen Sie zu: Einstellungen → Apps → Erweiterte Einstellungen → Entwicklermodus</target>
+            <trans-unit id="module.mcpServer.snippet.openaiGpts.step1" resname="module.mcpServer.snippet.openaiGpts.step1">
+              <source>In ChatGPT, Go to: Settings → Search Apps → Search Plugins → Browser directory → Click Add</source>
+              <target>In ChatGPT, gehen Sie zu: Einstellungen → Suche Apps → Suche Plugins → Browser-Verzeichnis → Klicken Sie auf Hinzufügen</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.openaiGpts.step3" resname="module.mcpServer.snippet.openaiGpts.step3">
-              <source>Create a custom app/connector and provide:</source>
-              <target>Erstellen Sie eine benutzerdefinierte App oder einen Connector und geben Sie an:</target>
+              <source>Add custom MCP server:</source>
+              <target>Benutzerdefinierten MCP-Server hinzufügen:</target>
             </trans-unit>
-            <trans-unit id="module.mcpServer.snippet.openaiGpts.endpoint">
-                <source>MCP server endpoint - Get from Local Bridge &gt; Click on 'Create mcp-remote Token'</source>
-                <target>MCP-Server-Endpunkt — holen Sie ihn unter Lokale Brücke über „Erstellen Sie mcp-remote Token“</target>
+            <trans-unit id="module.mcpServer.snippet.openaiGpts.endpoint" resname="module.mcpServer.snippet.openaiGpts.endpoint">
+              <source>Paste the MCP server URL - </source>
+              <target>Fügen Sie die MCP-Server-URL ein - </target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.openaiGpts.auth">
                 <source>Authentication method, if required</source>
@@ -2188,12 +2188,12 @@
                 <target>Claude Desktop übernimmt automatisch die OAuth-Authentifizierung.</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.httpAuth.title">
-                <source>With HTTP Auth (While your site is in HTTP Auth.)</source>
-                <target>Mit HTTP-Auth (Während Ihre Website mit HTTP-Auth geschützt ist.)</target>
+                <source>With HTTP Auth (While your site is protected)</source>
+                <target>Mit HTTP-Authentifizierung (sofern Ihre Website geschützt ist)</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.httpAuth.build">
-                <source>Build the Basic Auth header value:</source>
-                <target>Basic-Auth-Header-Wert erzeugen:</target>
+                <source>Build the Basic Auth header value in the terminal:</source>
+                <target>Basic-Auth-Header-Wert im Terminal erzeugen:</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.httpAuth.use">
                 <source>Use: Basic + the base64 output (e.g. Basic dDNwbGFuZXQ6...).</source>
