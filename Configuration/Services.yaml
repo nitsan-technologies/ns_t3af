@@ -517,6 +517,8 @@ services:
     exclude:
       - '../Classes/Mcp/Domain/Enum/*'
       - '../Classes/Mcp/Domain/Model/*'
+      # Built by hand in McpServeCommand around the CLI streams, never a container service.
+      - '../Classes/Mcp/Server/BufferedStdioTransport.php'
 
   # Shared across MCP tools and TranslateHook (makeInstance / DataHandler localize).
   NITSAN\NsT3AF\Mcp\Service\McpInvocationContext:
