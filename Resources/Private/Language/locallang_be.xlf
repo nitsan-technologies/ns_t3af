@@ -1486,6 +1486,12 @@
       <trans-unit id="agent.session.list" resname="agent.session.list">
         <source>Conversations</source>
       </trans-unit>
+      <trans-unit id="agent.session.show" resname="agent.session.show">
+        <source>Show conversations</source>
+      </trans-unit>
+      <trans-unit id="agent.session.hide" resname="agent.session.hide">
+        <source>Hide conversations</source>
+      </trans-unit>
       <trans-unit id="agent.session.new" resname="agent.session.new">
         <source>New conversation</source>
       </trans-unit>

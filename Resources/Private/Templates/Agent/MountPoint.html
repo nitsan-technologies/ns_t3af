@@ -28,8 +28,8 @@
                         data-nst3af-agent-sessions-toggle
                         aria-pressed="false"
                         aria-controls="nst3af-agent-sessions"
-                        title="{f:translate(key: '{ll}:agent.session.list', default: 'Conversations')}"
-                        aria-label="{f:translate(key: '{ll}:agent.session.list', default: 'Conversations')}"
+                        title="{f:translate(key: '{ll}:agent.session.show', default: 'Show conversations')}"
+                        aria-label="{f:translate(key: '{ll}:agent.session.show', default: 'Show conversations')}"
                         hidden>
                     <core:icon identifier="actions-menu" size="small" alternativeMarkupIdentifier="inline" />
                 </button>
@@ -89,8 +89,9 @@
                     </a>
                 </div>
                 <button type="button"
-                        class="btn btn-link nst3af-agent-header__close"
+                        class="btn btn-default btn-sm nst3af-agent-header__close"
                         data-nst3af-agent-close
+                        title="{f:translate(key: '{ll}:agent.modal.close', default: 'Close dialog')}"
                         aria-label="{f:translate(key: '{ll}:agent.modal.close', default: 'Close dialog')}">
                     <core:icon identifier="actions-close" size="small" alternativeMarkupIdentifier="inline" />
                 </button>
@@ -219,7 +220,7 @@
                  hidden>
             <div class="nst3af-agent-drawer__head">
                 <h3 class="nst3af-agent-drawer__title"><f:translate key="{ll}:agent.info.title" default="How the AI Agent works" /></h3>
-                <button type="button" class="btn btn-link btn-sm nst3af-agent-drawer__close" data-nst3af-agent-drawer-close
+                <button type="button" class="btn btn-default btn-sm nst3af-agent-drawer__close" data-nst3af-agent-drawer-close
                         aria-label="{f:translate(key: '{ll}:agent.modal.close', default: 'Close dialog')}">
                     <core:icon identifier="actions-close" size="small" alternativeMarkupIdentifier="inline" />
                 </button>

@@ -1833,6 +1833,14 @@
                 <source>Conversations</source>
                 <target>Unterhaltungen</target>
             </trans-unit>
+            <trans-unit id="agent.session.show">
+                <source>Show conversations</source>
+                <target>Unterhaltungen einblenden</target>
+            </trans-unit>
+            <trans-unit id="agent.session.hide">
+                <source>Hide conversations</source>
+                <target>Unterhaltungen ausblenden</target>
+            </trans-unit>
             <trans-unit id="agent.session.new">
                 <source>New conversation</source>
                 <target>Neue Unterhaltung</target>

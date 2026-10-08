@@ -678,7 +678,14 @@ export const chromeMethods = {
       if (resizeHandle instanceof HTMLElement) {
         resizeHandle.hidden = !open;
       }
-      this.sessionsToggle?.setAttribute('aria-pressed', String(open));
+      if (this.sessionsToggle instanceof HTMLElement) {
+        const toggleLabel = open
+          ? lang('agent.session.hide', 'Hide conversations')
+          : lang('agent.session.show', 'Show conversations');
+        this.sessionsToggle.setAttribute('aria-pressed', String(open));
+        this.sessionsToggle.setAttribute('title', toggleLabel);
+        this.sessionsToggle.setAttribute('aria-label', toggleLabel);
+      }
       if (!open) {
         this.renamingUuid = '';
       }

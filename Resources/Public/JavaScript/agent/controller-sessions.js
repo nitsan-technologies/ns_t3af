@@ -389,6 +389,7 @@ export const sessionMethods = {
         .filter((part) => String(part ?? '') !== '')
         .map((part) => escapeHtml(String(part)))
         .join(' · ');
+      const meta = `${where}${where !== '' ? ' · ' : ''}${escapeHtml(this.relativeTime(Number(row.lastActivity ?? 0)))}`;
       if (this.renamingUuid === row.uuid) {
         return `<li class="nst3af-agent-sessions__item is-editing">
           <input type="text" class="form-control form-control-sm" maxlength="255" value="${escapeHtml(title)}"
@@ -397,8 +398,8 @@ export const sessionMethods = {
       }
       return `<li class="nst3af-agent-sessions__item${active ? ' is-active' : ''}">
         <button type="button" class="nst3af-agent-sessions__open" data-nst3af-agent-session-open="${uuid}"${active ? ' aria-current="true"' : ''}>
-          <span class="nst3af-agent-sessions__title">${escapeHtml(title)}</span>
-          <span class="nst3af-agent-sessions__meta">${where}${where !== '' ? ' · ' : ''}${escapeHtml(this.relativeTime(Number(row.lastActivity ?? 0)))}</span>
+          <span class="nst3af-agent-sessions__title" title="${escapeHtml(title)}">${escapeHtml(title)}</span>
+          <span class="nst3af-agent-sessions__meta" title="${meta}">${meta}</span>
         </button>
         <span class="nst3af-agent-sessions__actions">
           <button type="button" class="btn btn-link btn-sm" data-nst3af-agent-session-rename="${uuid}"

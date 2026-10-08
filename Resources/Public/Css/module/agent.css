@@ -220,16 +220,15 @@
   gap: 8px;
 }
 
+/* Decorative brand mark next to the title — plain accent glyph, no button-like filled box. */
 .nst3af-agent-header__mark {
-  width: 24px;
+  width: 20px;
   height: 24px;
-  border-radius: 7px;
-  background: var(--nst3af-agent-accent-fill);
-  color: var(--nst3af-agent-on-accent);
+  color: var(--nst3af-agent-accent);
   display: grid;
   place-items: center;
-  font-size: 12px;
   flex-shrink: 0;
+  pointer-events: none;
 }
 
 .nst3af-agent-header__title {
@@ -806,7 +805,7 @@
   left: 0;
   bottom: calc(100% + 6px);
   min-width: 180px;
-  background: var(--nst3af-agent-surface);
+  background: var(--typo3-component-bg, var(--nst3af-agent-surface));
   border: 1px solid var(--nst3af-agent-border);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(16, 24, 40, 0.14);
@@ -824,11 +823,25 @@
   border-radius: 8px;
   font-size: 13px;
   color: var(--nst3af-agent-text-strong);
+  cursor: pointer;
 }
 
-.nst3af-agent-attach-menu__item:hover,
+/* Same tokens as core .dropdown-item hover/focus (list-item → component → state-default). */
+.nst3af-agent-attach-menu__item:hover {
+  background: var(--typo3-component-hover-bg, #e6e6e6);
+  color: var(--typo3-component-hover-color, var(--nst3af-agent-text-strong));
+}
+
 .nst3af-agent-attach-menu__item:focus-visible {
-  background: var(--nst3af-agent-surface-soft);
+  background: var(--typo3-component-focus-bg, var(--typo3-component-hover-bg, #e6e6e6));
+  color: var(--typo3-component-focus-color, var(--nst3af-agent-text-strong));
+  outline: 1px solid var(--typo3-component-focus-border-color, var(--nst3af-agent-accent));
+  outline-offset: -1px;
+}
+
+[data-color-scheme=dark] .nst3af-agent-attach-menu__item:hover,
+[data-bs-theme=dark] .nst3af-agent-attach-menu__item:hover {
+  background: var(--typo3-component-hover-bg, #333);
 }
 
 .nst3af-agent-composer--dragover {
@@ -1819,8 +1832,8 @@
   border: 1px solid var(--nst3af-agent-border);
   border-radius: 12px;
   background: var(--nst3af-agent-surface);
-  /* Clip the bar's square fill to the radius. Autocomplete is position:fixed (not clipped). */
-  overflow: hidden;
+  /* Visible so the attach menu (opens upward) is not clipped; the bar rounds its own corners. */
+  overflow: visible;
   padding: 0;
   box-shadow: 0 2px 14px color-mix(in srgb, var(--nst3af-agent-text-strong) 9%, transparent);
   position: relative;
