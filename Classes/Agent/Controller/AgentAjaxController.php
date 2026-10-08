@@ -25,6 +25,7 @@ use NITSAN\NsT3AF\Agent\Context\AgentContextPresenter;
 use NITSAN\NsT3AF\Agent\Contract\AgentToolIndexInterface;
 use NITSAN\NsT3AF\Agent\Service\AgentAuditLogger;
 use NITSAN\NsT3AF\Agent\Service\AgentAvailabilityService;
+use NITSAN\NsT3AF\Agent\Service\AgentChangeMessageBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentConversationRecorder;
 use NITSAN\NsT3AF\Agent\Service\AgentConversationSession;
 use NITSAN\NsT3AF\Agent\Service\AgentConversationSummarizer;
@@ -134,6 +135,7 @@ final class AgentAjaxController
         private readonly AgentTranslator $translator,
         private readonly AgentToolIndexInterface $agentToolIndex,
         private readonly AgentTurnConcurrencyGuard $turnGuard,
+        private readonly AgentChangeMessageBuilder $changeMessages,
     ) {}
 
     public function toolsAction(ServerRequestInterface $request): ResponseInterface
@@ -521,19 +523,16 @@ final class AgentAjaxController
             ? $this->schedulerHandoff->buildHandoffForApplyResult($result, [], $user, $flow !== '' ? $flow : null)
             : null;
 
+        $labelledResult = $this->labelReadback($result);
         $message = ($result['toolConfirmation'] ?? false) === true
             ? $this->translator->translate('agent.draft.toolApplied')
-            : $this->translator->translate('agent.draft.applied', [
-                (string) ($result['appliedCount'] ?? 0),
-                (string) ($result['totalCount'] ?? 0),
-            ]);
+            : $this->changeMessages->applied($labelledResult);
         if (($result['suggestionsApply'] ?? false) === true) {
             $message = $this->translator->translate('agent.suggestions.applied', [
                 (string) ($result['appliedCount'] ?? 0),
             ]);
         }
 
-        $labelledResult = $this->labelReadback($result);
         $links = $this->resultLinks($result, $storedDraft);
         if ($user !== null) {
             $this->recordInConversation($user, $body, fn(array $messages): array => $this->conversationRecorder->applied(
@@ -809,7 +808,7 @@ final class AgentAjaxController
             return new JsonResponse(['ok' => false, 'message' => $exception->getMessage()], 400);
         }
 
-        $message = $this->translator->translate('agent.draft.undone');
+        $message = $this->changeMessages->undone($result);
         $user = $this->resolveBackendUser();
         if ($user !== null) {
             $this->recordInConversation($user, $body, fn(array $messages): array => $this->conversationRecorder->undone($messages, $message, $changeId));
@@ -1446,6 +1445,7 @@ final class AgentAjaxController
                 'table' => 'pages',
                 'uid' => $uid,
                 'label' => trim((string) ($row['title'] ?? '')) !== '' ? (string) $row['title'] : 'Page ' . $uid,
+                'typeLabel' => $this->translator->translate('agent.record.typePages'),
                 'severity' => ToolSeverity::Read->value,
             ];
             if (count($records) >= self::ATTACH_SEARCH_PAGE_LIMIT) {
@@ -1489,6 +1489,7 @@ final class AgentAjaxController
                     'table' => 'tt_content',
                     'uid' => $uid,
                     'label' => trim((string) ($row['header'] ?? '')) !== '' ? (string) $row['header'] : 'Content ' . $uid,
+                    'typeLabel' => $this->translator->translate('agent.record.typeContent'),
                     'severity' => ToolSeverity::Read->value,
                 ];
             }

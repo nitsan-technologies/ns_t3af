@@ -37,7 +37,37 @@ final readonly class AgentConversationTitleService
     public function __construct(
         private AiServiceInterface $aiService,
         private AgentLanguageResolver $languageResolver,
+        private ?AgentToolEditorLabelService $toolLabels = null,
     ) {}
+
+    /**
+     * A message that starts with a picked "/tool_name" is titled by the action's plain name
+     * ("Check page permissions"), never by the tool id. Any other text is returned unchanged.
+     */
+    public function readable(string $userLine): string
+    {
+        if ($this->toolLabels === null || preg_match('/^\/([a-z][a-z0-9_]*)(?:\s+(.*))?$/su', trim($userLine), $match) !== 1) {
+            return $userLine;
+        }
+
+        $label = trim($this->toolLabels->resolveByName($match[1]));
+        if ($label === '') {
+            return $userLine;
+        }
+        $rest = trim($match[2] ?? '');
+
+        return $rest !== '' ? $label . ' ' . $rest : $label;
+    }
+
+    /**
+     * Title as shown in the conversation list; also repairs older conversations that were titled with a tool id.
+     */
+    public function displayTitle(string $stored): string
+    {
+        $readable = $this->readable($stored);
+
+        return $readable === $stored ? $stored : (string) $this->normalizeTitle($readable);
+    }
 
     /**
      * Fast list title from the first user message — no LLM (hot path).
@@ -80,6 +110,7 @@ final readonly class AgentConversationTitleService
         if ($userLine === '') {
             return null;
         }
+        $userLine = $this->readable($userLine);
 
         try {
             $prompt = implode("\n", [
@@ -137,7 +168,7 @@ final readonly class AgentConversationTitleService
 
     public function heuristicTitle(string $userLine, int $pageId = 0): ?string
     {
-        $title = $this->normalizeTitle($userLine);
+        $title = $this->normalizeTitle($this->readable($userLine));
         if ($title !== null) {
             return $title;
         }

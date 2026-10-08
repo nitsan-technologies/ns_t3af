@@ -358,7 +358,7 @@ export const draftMethods = {
         if (next?.meta?.type === 'readback_result') {
           return '';
         }
-        const appliedLabel = lang('agent.draft.applied', 'Applied %1$s of %2$s fields.')
+        const appliedLabel = lang('agent.draft.applied', 'Saved %1$s of %2$s changes.')
           .replace('%1$s', String(keptCount))
           .replace('%2$s', String(fields.length));
         return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant"><div class="nst3af-agent-msg__who">AI Agent</div><div class="nst3af-agent-msg__body">${escapeHtml(appliedLabel)}</div></div>`;
@@ -690,7 +690,7 @@ export const draftMethods = {
             role: 'assistant',
             content: messageContent(
               payload.message,
-              lang('agent.draft.applied', 'Applied %1$s of %2$s fields.', [appliedCount, totalCount]),
+              lang('agent.draft.applied', 'Saved %1$s of %2$s changes.', [appliedCount, totalCount]),
             ),
             meta: {
               type: 'readback_result',
@@ -977,7 +977,7 @@ export const draftMethods = {
         this.markChangeUndone(changeId);
         this.messages.push({
           role: 'assistant',
-          content: messageContent(payload.message, lang('agent.draft.undone', 'Change undone.')),
+          content: messageContent(payload.message, lang('agent.draft.undone', 'Undone. Your previous version is back.')),
           meta: { type: 'info' },
         });
         this.renderStream();

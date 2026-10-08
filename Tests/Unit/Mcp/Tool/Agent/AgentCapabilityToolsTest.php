@@ -66,7 +66,7 @@ final class AgentCapabilityToolsTest extends TestCase
         self::assertSame(49, $decoded['pageId'] ?? 0);
         self::assertSame(['pages_get', 't3ai_generate_all_seo'], $decoded['listedTools'] ?? null);
         $summary = (string) ($decoded['summary'] ?? '');
-        self::assertStringContainsString('On this page I can help with:', $summary);
+        self::assertStringContainsString('On this page I can help with (just ask in your own words):', $summary);
         self::assertStringContainsString('Inspect this page', $summary);
         self::assertStringContainsString('Generate SEO metadata', $summary);
         self::assertStringContainsString('1 actions need another extension or plan.', $summary);
