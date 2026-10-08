@@ -57,6 +57,7 @@ use Psr\EventDispatcher\EventDispatcherInterface;
  */
 final class AiService implements AiServiceInterface
 {
+    private string $lastEmbedPlatformError = '';
     private const CALL_COMPLETE = 'complete';
     private const CALL_STREAM = 'stream';
     private const CALL_EMBED = 'embed';
@@ -301,14 +302,11 @@ final class AiService implements AiServiceInterface
             raw: $this->extractEmbedRawPayload($invocation['result']),
         );
 
+        $textForTelemetry = is_array($text) ? implode("\n", $text) : $text;
         if ($response->vectors === []) {
-            $apiError = $this->extractEmbedApiErrorMessage($response->raw);
-            if ($apiError !== '') {
-                throw new AdapterRuntimeException($this->formatEmbeddingProviderError($apiError, $provider));
-            }
+            $this->failEmptyEmbedding($provider, $before->getOptions(), $textForTelemetry, $response);
         }
 
-        $textForTelemetry = is_array($text) ? implode("\n", $text) : $text;
         $this->telemetry?->logEmbedding($provider, $before->getOptions(), $textForTelemetry, $response);
         // Budget/usage listeners bind to AfterProviderResponseEvent; embedding
         // token usage must count against per-user budgets too (CTX-14).
@@ -420,6 +418,7 @@ final class AiService implements AiServiceInterface
             );
         }
 
+        $this->lastEmbedPlatformError = '';
         $this->materializePlatformResult($raw);
 
         return [
@@ -455,8 +454,8 @@ final class AiService implements AiServiceInterface
                 if (is_array($vectors)) {
                     return $this->normaliseVectorObjects($vectors);
                 }
-            } catch (\Throwable) {
-                // Fall through to other extraction strategies.
+            } catch (\Throwable $e) {
+                $this->rememberEmbedPlatformError($e);
             }
         }
 
@@ -466,8 +465,8 @@ final class AiService implements AiServiceInterface
                 if (is_array($content)) {
                     return $this->normaliseVectorObjects($content);
                 }
-            } catch (\Throwable) {
-                // Fall through.
+            } catch (\Throwable $e) {
+                $this->rememberEmbedPlatformError($e);
             }
         }
 
@@ -1280,16 +1279,16 @@ final class AiService implements AiServiceInterface
                 $result->getResult();
 
                 return;
-            } catch (\Throwable) {
-                // Fall through to asVectors().
+            } catch (\Throwable $e) {
+                $this->rememberEmbedPlatformError($e);
             }
         }
 
         if (method_exists($result, 'asVectors')) {
             try {
                 $result->asVectors();
-            } catch (\Throwable) {
-                // Best effort only.
+            } catch (\Throwable $e) {
+                $this->rememberEmbedPlatformError($e);
             }
         }
     }
@@ -1370,23 +1369,105 @@ final class AiService implements AiServiceInterface
         return [];
     }
 
+    private function failEmptyEmbedding(
+        Provider $provider,
+        AiOptions $options,
+        string $text,
+        EmbeddingResponse $response,
+    ): never {
+        $apiError = $this->extractEmbedApiErrorMessage($response->raw);
+        if ($apiError === '') {
+            $apiError = $this->lastEmbedPlatformError;
+        }
+        $status = $this->extractEmbedHttpStatus($response->raw);
+        if ($apiError === '' && $status >= 400) {
+            $apiError = ($status === 401 || $status === 403)
+                ? 'Unauthorized (HTTP ' . $status . ')'
+                : sprintf('Embedding request failed with HTTP %d', $status);
+        }
+        if ($apiError === '') {
+            $apiError = sprintf(
+                'Embedding provider "%s" returned an empty vector (model: %s)',
+                $provider->identifier,
+                $response->modelId !== '' ? $response->modelId : 'unknown',
+            );
+        }
+
+        $exception = new AdapterRuntimeException(
+            $this->formatEmbeddingProviderError($apiError, $provider),
+            ($status >= 400 && $status <= 599) ? $status : 0,
+        );
+        $this->telemetry?->logFailure(
+            provider: $provider,
+            options: $options,
+            prompt: $text,
+            requestType: self::CALL_EMBED,
+            error: $exception,
+            latencyMs: $response->latencyMs,
+        );
+        $this->events->dispatch(new ProviderRequestFailedEvent($provider, $exception, self::CALL_EMBED));
+        throw $exception;
+    }
+
+    private function rememberEmbedPlatformError(\Throwable $error): void
+    {
+        if ($this->lastEmbedPlatformError !== '') {
+            return;
+        }
+        $message = trim($error->getMessage());
+        if ($message !== '') {
+            $this->lastEmbedPlatformError = $message;
+        }
+    }
+
     /**
      * @param array<string, mixed> $raw
      */
     private function extractEmbedApiErrorMessage(array $raw): string
     {
-        $error = $raw['error'] ?? '';
-        if (is_string($error) && trim($error) !== '') {
-            return trim($error);
-        }
-        if (is_array($error)) {
-            $message = $error['message'] ?? $error[0] ?? '';
-            if (is_string($message) && trim($message) !== '') {
-                return trim($message);
+        foreach (['error', 'detail', 'message'] as $key) {
+            $message = $this->stringifyEmbedErrorValue($raw[$key] ?? null);
+            if ($message !== '') {
+                return $message;
             }
         }
 
         return '';
+    }
+
+    private function stringifyEmbedErrorValue(mixed $value): string
+    {
+        if (is_string($value)) {
+            return trim($value);
+        }
+        if (!is_array($value)) {
+            return '';
+        }
+
+        $nested = $value['message'] ?? $value['detail'] ?? $value[0] ?? '';
+        if (is_string($nested)) {
+            return trim($nested);
+        }
+        if (is_array($nested)) {
+            return $this->stringifyEmbedErrorValue($nested);
+        }
+
+        return '';
+    }
+
+    /**
+     * @param array<string, mixed> $raw
+     */
+    private function extractEmbedHttpStatus(array $raw): int
+    {
+        foreach (['status', 'status_code', 'statusCode'] as $key) {
+            $status = (int) ($raw[$key] ?? 0);
+            if ($status >= 400 && $status <= 599) {
+                return $status;
+            }
+        }
+
+        return 0;
     }
 
     private function formatEmbeddingProviderError(string $message, Provider $provider): string

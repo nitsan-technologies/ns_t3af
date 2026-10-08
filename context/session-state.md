@@ -2,6 +2,30 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-07 — Alert mail without a page id, and visible send failures
+
+**Done:** CLI, scheduler, and backend (no frontend route) use the site row where API alert mail is enabled, instead of pid 0 or the selected backend page. A failed send is written to the PSR log and does not start the one-hour cooldown. A routed frontend page still uses that site.
+
+**Last touched:** 2026-10-07
+
+---
+
+## 2026-10-06 — Alert mail reads the site from the frontend route
+
+**Done:** `extractPageIdFromRequest()` uses the frontend `PageArguments` page id when the chat URL has no `?id=`. API alert settings saved on that site root are then visible. Query `id` still wins.
+
+**Last touched:** 2026-10-06
+
+---
+
+## 2026-10-06 — Embedding auth errors reach the API alert mail
+
+**Done:** An empty embedding result is a failed request (`logFailure`, `success = 0`). The message is taken from `error`, `detail`, or `message`, or from the platform exception. Chatbot and AI Search pass that text to `reportApiError()`, so an invalid key or quota error sends the existing alert mail. A normal vector is unchanged.
+
+**Last touched:** 2026-10-06
+
+---
+
 ## 2026-10-02 — Empty capabilities: required except translate-only
 
 **Done:** Save still rejects empty capabilities for LLM/media adapters. DeepL / Google Translate (`getDefaultCapabilities() === []`) may save with none selected. Documented in `providers.md`.
