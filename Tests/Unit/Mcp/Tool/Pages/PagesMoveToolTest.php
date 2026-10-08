@@ -48,6 +48,25 @@ final class PagesMoveToolTest extends TestCase
     }
 
     #[Test]
+    public function afterUidWinsWhenTargetPidIsAlsoSent(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->method('findExistingUids')->willReturn([48]);
+        $records->method('findByUid')->willReturnCallback(
+            static fn(string $table, int $uid, array $fields): array => $uid === 75
+                ? ['title' => 'Sample', 'pid' => 68]
+                : ['title' => 'test', 'pid' => 1],
+        );
+        $records->expects(self::once())->method('assertInsertAfterExists')->with('pages', 75);
+
+        $plan = (new PagesMoveTool($this->createMock(DataHandlerService::class), $records))
+            ->plan(['uid' => 48, 'afterUid' => 75, 'targetPid' => 1]);
+
+        self::assertSame(-75, $plan->context['target']);
+        self::assertSame('after Sample [75]', $plan->fields[0]->proposedValue);
+    }
+
+    #[Test]
     public function beforeUidPlacesThePageDirectlyBeforeThatPage(): void
     {
         $records = $this->createMock(RecordService::class);
