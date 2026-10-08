@@ -248,6 +248,27 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function unattachedFileFromEarlierDoesNotBlockAnUnrelatedRequest(): void
+    {
+        $history = [
+            [
+                'role' => 'assistant',
+                'content' => 'Image saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 114],
+                ],
+            ],
+            ['role' => 'user', 'content' => 'Rename the header of element 5 to Welcome.', 'meta' => ['type' => 'message']],
+        ];
+
+        self::assertFalse(AgentPromptBuilder::hasBlockingRemainingWork($history, [], 'Rename the header of element 5 to Welcome.'));
+        self::assertTrue(AgentPromptBuilder::hasBlockingRemainingWork($history, [], 'Now attach the image to the page.'));
+    }
+
+    #[Test]
     public function continuationRemindsToAttachImageWhenTextMediaHasNoFileYet(): void
     {
         $history = [

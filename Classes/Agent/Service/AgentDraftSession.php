@@ -20,6 +20,8 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Registry;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Session storage for pending agent drafts and applied changes (undo).
@@ -30,6 +32,7 @@ final class AgentDraftSession
 {
     private const DRAFTS_KEY = 'nst3af_agent_drafts';
     private const CHANGES_KEY = 'nst3af_agent_changes';
+    private const REGISTRY_NAMESPACE = 'tx_nst3af_agent_change';
 
     /**
      * @param array<string, mixed> $payload
@@ -97,6 +100,18 @@ final class AgentDraftSession
         $changes = $this->readChanges($user);
         $changes[$changeId] = $payload;
         $user->setAndSaveSessionData(self::CHANGES_KEY, $changes);
+
+        // The session copy is lost when the backend session is replaced (new login, switched language,
+        // two requests saving the session at once); Undo must still find the change then.
+        try {
+            GeneralUtility::makeInstance(Registry::class)->set(
+                self::REGISTRY_NAMESPACE,
+                $changeId,
+                ['userUid' => (int) ($user->user['uid'] ?? 0), 'payload' => $payload],
+            );
+        } catch (\Throwable) {
+            // Registry not reachable (unit tests, broken database): the session copy still works.
+        }
     }
 
     /**
@@ -110,8 +125,23 @@ final class AgentDraftSession
         }
 
         $changes = $this->readChanges($user);
+        if (is_array($changes[$changeId] ?? null)) {
+            return $changes[$changeId];
+        }
 
-        return is_array($changes[$changeId] ?? null) ? $changes[$changeId] : null;
+        try {
+            $stored = GeneralUtility::makeInstance(Registry::class)->get(self::REGISTRY_NAMESPACE, $changeId);
+        } catch (\Throwable) {
+            return null;
+        }
+        if (is_array($stored)
+            && (int) ($stored['userUid'] ?? 0) === (int) ($user->user['uid'] ?? -1)
+            && is_array($stored['payload'] ?? null)
+        ) {
+            return $stored['payload'];
+        }
+
+        return null;
     }
 
     public function removeChange(string $changeId, ?BackendUserAuthentication $user = null): void
@@ -124,6 +154,12 @@ final class AgentDraftSession
         $changes = $this->readChanges($user);
         unset($changes[$changeId]);
         $user->setAndSaveSessionData(self::CHANGES_KEY, $changes);
+
+        try {
+            GeneralUtility::makeInstance(Registry::class)->remove(self::REGISTRY_NAMESPACE, $changeId);
+        } catch (\Throwable) {
+            // See storeChange().
+        }
     }
 
     /**

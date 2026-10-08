@@ -42,6 +42,11 @@ final class AgentRequestChecklist
         }
 
         $segments = self::requestSegments($message);
+        // "Rename the header of element 5" changes an existing record; the word "header" must not turn it
+        // into a request to create a header element that then stays open forever.
+        if (count($segments) === 1 && self::isChangeOfExistingRecord($message)) {
+            return [];
+        }
         // A numbered / bulleted list spells out what to create; only a free-text single request can
         // be a pure read ("list the headers on this page").
         if (count($segments) === 1 && self::isReadOnlyRequest($message)) {
@@ -232,11 +237,29 @@ final class AgentRequestChecklist
      * "List the headers on this page" names a content type but asks to read, not to create —
      * it must not open a "Create Header element" step that can never be completed.
      */
+    private const CREATE_VERBS = '/\b(add|create|insert|make|build|generate|write|append|draft|new|erstell\w*|f(?:ü|ue)ge?\w*|hinzu\w*|anleg\w*|neue[rsn]?)\b/u';
+
+    /**
+     * An edit of something that already exists (rename, change, delete, translate…) with no word that asks
+     * for a new element.
+     */
+    private static function isChangeOfExistingRecord(string $message): bool
+    {
+        $s = mb_strtolower($message);
+        if (preg_match(self::CREATE_VERBS, $s) === 1) {
+            return false;
+        }
+
+        return preg_match(
+            '/\b(rename|change|update|edit|set|delete|remove|translate|move|replace|fix|correct|[äa]ndere\w*|umbenenn\w*|l[öo]sch\w*|entfern\w*|[üu]bersetz\w*|verschieb\w*)\b/u',
+            $s,
+        ) === 1;
+    }
+
     private static function isReadOnlyRequest(string $message): bool
     {
         $s = mb_strtolower($message);
-        $creates = '/\b(add|create|insert|make|build|generate|write|append|draft|new|erstell\w*|f(?:ü|ue)ge?\w*|hinzu\w*|anleg\w*|neue[rsn]?)\b/u';
-        if (preg_match($creates, $s) === 1) {
+        if (preg_match(self::CREATE_VERBS, $s) === 1) {
             return false;
         }
 

@@ -73,6 +73,16 @@ final class AgentProviderOptionsTest extends TestCase
     }
 
     #[Test]
+    public function singleUsableProviderLeavesOnlyTheDefaultSoTheMenuStaysHidden(): void
+    {
+        $repository = $this->repository(null, [$this->provider('openai', 'OpenAI GPT')]);
+
+        $options = $this->subject($repository)->options(self::PAGE_ID, null);
+
+        self::assertSame(['default'], array_column($options, 'value'));
+    }
+
+    #[Test]
     public function defaultOptionStaysGenericWhenNoProviderIsUsable(): void
     {
         $options = $this->subject($this->repository(null, []))->options(self::PAGE_ID, null);

@@ -509,6 +509,9 @@ final class AgentAjaxController
             return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.workspace.noAccess')], 403);
         }
 
+        // Names as the editor knows them now: after a rename the record would otherwise be called by its new name.
+        $labelsBefore = $isPreviewDraft ? [] : $this->recordLabelsOfPlan($storedDraft);
+
         try {
             $result = $isPreviewDraft
                 ? $this->writeService->applySuggestions(
@@ -550,7 +553,7 @@ final class AgentAjaxController
             ? $this->schedulerHandoff->buildHandoffForApplyResult($result, [], $user, $flow !== '' ? $flow : null)
             : null;
 
-        $labelledResult = $this->labelReadback($result);
+        $labelledResult = $this->labelReadback($result, $labelsBefore);
         $message = ($result['toolConfirmation'] ?? false) === true
             ? $this->translator->translate('agent.draft.toolApplied')
             : $this->changeMessages->applied($labelledResult);
@@ -614,12 +617,35 @@ final class AgentAjaxController
     }
 
     /**
+     * @param array<string, mixed> $storedDraft
+     * @return array<string, string> record labels keyed "table:uid" for the existing records the draft changes
+     */
+    private function recordLabelsOfPlan(array $storedDraft): array
+    {
+        $labels = [];
+        $planData = is_array($storedDraft['plan'] ?? null) ? $storedDraft['plan'] : [];
+        try {
+            $plan = ToolPlan::fromArray($planData);
+            foreach ($plan->fields as $field) {
+                if ($field->uid > 0 && !isset($labels[$field->table . ':' . $field->uid])) {
+                    $labels[$field->table . ':' . $field->uid] = $this->recordLabeler->recordLabel($field->table, $field->uid);
+                }
+            }
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return $labels;
+    }
+
+    /**
      * Editor-facing names for the read-back records and fields.
      *
      * @param array<string, mixed> $result
+     * @param array<string, string> $labelsBefore record labels before the write, keyed "table:uid"
      * @return array<string, mixed>
      */
-    private function labelReadback(array $result): array
+    private function labelReadback(array $result, array $labelsBefore = []): array
     {
         foreach (is_array($result['readback'] ?? null) ? $result['readback'] : [] as $index => $entry) {
             if (!is_array($entry)) {
@@ -628,6 +654,9 @@ final class AgentAjaxController
             $table = (string) ($entry['table'] ?? '');
             $uid = (int) ($entry['uid'] ?? 0);
             $result['readback'][$index]['recordLabel'] = $this->recordLabeler->recordLabel($table, $uid);
+            if (($labelsBefore[$table . ':' . $uid] ?? '') !== '') {
+                $result['readback'][$index]['recordLabelBefore'] = $labelsBefore[$table . ':' . $uid];
+            }
             $fieldLabels = [];
             foreach (array_keys(is_array($entry['values'] ?? null) ? $entry['values'] : []) as $field) {
                 $fieldLabels[(string) $field] = $this->recordLabeler->fieldLabel($table, (string) $field);
@@ -832,7 +861,11 @@ final class AgentAjaxController
         try {
             $result = $this->undoService->undo($changeId);
         } catch (\Throwable $exception) {
-            return new JsonResponse(['ok' => false, 'message' => $exception->getMessage()], 400);
+            // 404: the stored change is gone (the card must not claim it was undone); 400: anything else.
+            return new JsonResponse(
+                ['ok' => false, 'message' => $exception->getMessage()],
+                $exception->getCode() === 1712003300 ? 404 : 400,
+            );
         }
 
         $message = $this->changeMessages->undone($result);

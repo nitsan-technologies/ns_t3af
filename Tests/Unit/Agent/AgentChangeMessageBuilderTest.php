@@ -64,6 +64,19 @@ final class AgentChangeMessageBuilderTest extends TestCase
     }
 
     #[Test]
+    public function appliedNamesTheRecordByItsOldLabelAfterARename(): void
+    {
+        $result = $this->applyResult('update', ['header' => 'QA Rename v1']);
+        $result['readback'][0]['recordLabel'] = 'Page Content „QA Rename v1“';
+        $result['readback'][0]['recordLabelBefore'] = 'Page Content „QA visible element“';
+
+        self::assertSame(
+            'Done: Page Content „QA visible element“ was updated. Header is now “QA Rename v1”.',
+            $this->subject->applied($result),
+        );
+    }
+
+    #[Test]
     public function appliedListsTheFieldsOfAMultiFieldChange(): void
     {
         $message = $this->subject->applied($this->applyResult('update', ['header' => 'A', 'bodytext' => 'B']));

@@ -1019,10 +1019,8 @@ export const draftMethods = {
         this.refreshBackendContent();
       } catch (error) {
         const text = await errorText(error);
-        // "Already undone" (or the change is gone): the button must not stay clickable.
-        if (error?.response?.status === 400) {
-          this.markChangeUndone(changeId);
-        }
+        // Only a real undo marks the card as undone: "change not found" (404) or any other refusal
+        // must not make the card claim something that did not happen.
         this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
         this.renderStream();
       } finally {

@@ -537,8 +537,9 @@ export const streamMethods = {
   /**
      * @param {boolean} running
      * @param {string} [label]
+     * @param {boolean} [rotate] start with the plain progress words ("Looking at your page…") instead of a fixed text
      */
-    showProgress(running, label = '') {
+    showProgress(running, label = '', rotate = false) {
       if (!this.stream) {
         return;
       }
@@ -553,7 +554,9 @@ export const streamMethods = {
         return;
       }
 
-      const text = label !== '' ? label : lang('agent.live.running', 'Assistant is working…');
+      const text = label !== ''
+        ? label
+        : (rotate ? this.thinkingWords()[0] : lang('agent.live.running', 'Assistant is working…'));
       this._progressLabel = text;
       const node = document.createElement('div');
       node.dataset.nst3afAgentProgress = '1';
@@ -567,6 +570,11 @@ export const streamMethods = {
       this.stream.scrollTop = this.stream.scrollHeight;
       this.announce(text);
       this.startProgressClock();
+      if (rotate && label === '') {
+        // The first words show at once and keep changing, whether or not the server reports a step.
+        this.stopThinkingRotation();
+        this.startThinkingRotation();
+      }
     },
 
   /**

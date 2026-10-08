@@ -185,7 +185,7 @@ final readonly class ExplainCapabilitiesTool implements McpNonAiToolInterface
         return json_encode([
             'ok' => true,
             'summary' => implode("\n", $lines),
-            'replyGuidance' => 'Answer in the editor\'s language as a short, friendly list of what they can ask, each with a short example request. Do not mention tool names or technical terms.',
+            'replyGuidance' => 'Answer in the editor\'s language as a short, friendly list. Every item has the form: what you can do, then one example request in quotation marks the editor can copy. Always end with one closing line: pick a suggestion or type / to choose an action. In German address the editor formally (Sie). Do not mention tool names or technical terms.',
             'executableCount' => count($executable),
             'listedCount' => $listed,
             'listedTools' => $shown,
