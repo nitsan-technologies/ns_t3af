@@ -4,6 +4,7 @@
 
 import { lang, hasTurnGuardWarning, errorText, escapeHtml, formatWorkDuration } from './format.js';
 import { ajaxUrl } from './context.js';
+import { selectWebPage } from './module-state.js';
 import { resolveToolDisplayLabel, renderMessageBody, renderImagePreviews } from './render-helpers.js';
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
 
@@ -150,9 +151,13 @@ export const streamMethods = {
       return `<div class="nst3af-agent-links">${groups.map((group) => `
         <div class="nst3af-agent-links__group">
           <span class="nst3af-agent-links__record">${escapeHtml(String(group.record ?? ''))}</span>
-          ${(Array.isArray(group.links) ? group.links : []).map((link) => (
-            `<a class="btn btn-default btn-sm" href="${escapeHtml(String(link.href ?? '#'))}" data-nst3af-agent-link="${escapeHtml(String(link.kind ?? 'module'))}"${link.kind === 'frontend' ? ' target="_blank" rel="noopener"' : ''}>${escapeHtml(String(link.label ?? ''))}</a>`
-          )).join('')}
+          ${(Array.isArray(group.links) ? group.links : []).map((link) => {
+            const pageId = Number.parseInt(String(link.pageId ?? '0'), 10);
+            const moduleName = String(link.module ?? '');
+            const pageAttr = Number.isFinite(pageId) && pageId > 0 ? ` data-page-id="${pageId}"` : '';
+            const moduleAttr = moduleName !== '' ? ` data-module="${escapeHtml(moduleName)}"` : '';
+            return `<a class="btn btn-default btn-sm" href="${escapeHtml(String(link.href ?? '#'))}" data-nst3af-agent-link="${escapeHtml(String(link.kind ?? 'module'))}"${pageAttr}${moduleAttr}${link.kind === 'frontend' ? ' target="_blank" rel="noopener"' : ''}>${escapeHtml(String(link.label ?? ''))}</a>`;
+          }).join('')}
         </div>`).join('')}</div>`;
     },
 
@@ -169,10 +174,22 @@ export const streamMethods = {
       try {
         const container = window.top?.TYPO3?.Backend?.ContentContainer;
         if (container && typeof container.setUrl === 'function') {
-          container.setUrl(link.href);
-          // The agent panel covers the content area: close it so the opened page is in front.
-          // The conversation is saved and comes back when the panel is reopened.
+          const pageId = pageIdFromResultLink(link);
+          const moduleName = moduleNameFromResultLink(link);
+          const navigate = () => {
+            if (moduleName !== '') {
+              container.setUrl(link.href, undefined, moduleName);
+            } else {
+              container.setUrl(link.href);
+            }
+          };
+          // Close first. A page-tree update while the panel is open reloads the conversation.
           this.close();
+          if (pageId > 0) {
+            void selectWebPage(pageId).then(navigate);
+          } else {
+            navigate();
+          }
           return true;
         }
       } catch {
@@ -625,3 +642,49 @@ export const streamMethods = {
       node.textContent = elapsed >= 3000 ? `(${formatWorkDuration(elapsed)})` : '';
     },
 };
+
+/**
+ * @param {HTMLAnchorElement} link
+ * @returns {number}
+ */
+function pageIdFromResultLink(link) {
+  const fromData = Number.parseInt(link.dataset.pageId ?? '', 10);
+  if (Number.isFinite(fromData) && fromData > 0) {
+    return fromData;
+  }
+  try {
+    const url = new URL(link.href, window.location.href);
+    const fromQuery = Number.parseInt(url.searchParams.get('id') ?? '', 10);
+    if (Number.isFinite(fromQuery) && fromQuery > 0) {
+      return fromQuery;
+    }
+    for (const [key, value] of url.searchParams) {
+      const match = key.match(/^edit\[pages\]\[(\d+)\]$/);
+      if (match && value === 'edit') {
+        return Number.parseInt(match[1], 10);
+      }
+    }
+  } catch {
+    // Malformed href: the content container still receives the raw URL.
+  }
+  return 0;
+}
+
+/**
+ * @param {HTMLAnchorElement} link
+ * @returns {string}
+ */
+function moduleNameFromResultLink(link) {
+  const fromData = String(link.dataset.module ?? '');
+  if (fromData !== '') {
+    return fromData;
+  }
+  const href = link.href;
+  if (href.includes('/module/web/layout')) {
+    return 'web_layout';
+  }
+  if (href.includes('/record/edit') || href.includes('record_edit')) {
+    return 'record_edit';
+  }
+  return '';
+}

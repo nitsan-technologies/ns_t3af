@@ -573,9 +573,10 @@ tools:
     category: Files
     status: ready
     tagline: Rename a FAL directory
-    notes: Provide directory identifier and new name.
+    notes: Provide directory identifier and new name. Slash alias /folder_rename.
     searchTerms:
       - 'rename folder'
+      - 'folder_rename'
       - 'Ordner umbenennen'
 
   backend_user_get:

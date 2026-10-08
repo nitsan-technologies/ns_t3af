@@ -770,7 +770,36 @@ final class AgentRunnerTest extends TestCase
         self::assertCount(2, $kept);
         self::assertSame('Something else', $kept[0]['meta']['draft']['fields'][0]['proposed']);
         self::assertSame($info, $kept[1]);
-        // Nothing was declined before: nothing is removed.
+        // A still-open update is not a duplicate create, so it stays.
         self::assertCount(3, AgentRunner::withoutRepeatedDeclinedDrafts([$card('Renamed'), $card('Other'), $info], [$card('Renamed')]));
+    }
+
+    #[Test]
+    public function aPendingCreateIsNotOfferedAgain(): void
+    {
+        $create = static fn(string $title, bool $applied = false): array => [
+            'role' => 'assistant',
+            'content' => 'Create page',
+            'meta' => [
+                'type' => 'inline_draft',
+                'applied' => $applied,
+                'draft' => [
+                    'tool' => 'write_table',
+                    'action' => 'create',
+                    'applied' => $applied,
+                    'fields' => [['table' => 'pages', 'uid' => 0, 'field' => 'title', 'proposed' => $title]],
+                ],
+            ],
+        ];
+        $info = ['role' => 'assistant', 'content' => 'ok', 'meta' => ['type' => 'nl_reply']];
+
+        $kept = AgentRunner::withoutRepeatedDeclinedDrafts([$create('Agent Test'), $info], [$create('Agent Test')]);
+
+        self::assertCount(1, $kept);
+        self::assertSame($info, $kept[0]);
+        // The page was already created: a later request may create another one.
+        self::assertCount(2, AgentRunner::withoutRepeatedDeclinedDrafts([$create('Agent Test'), $info], [$create('Agent Test', true)]));
+        // One reply that proposes the same create twice keeps a single card.
+        self::assertCount(2, AgentRunner::withoutRepeatedDeclinedDrafts([$create('Agent Test'), $create('Agent Test'), $info], []));
     }
 }

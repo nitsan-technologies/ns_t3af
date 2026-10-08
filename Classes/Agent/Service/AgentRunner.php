@@ -137,10 +137,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         [$state, $finalText] = $this->runAgent($userMessage, $historyMessages, $context, $body, $user, $correlationId, $emitEvent, $offeredTools, $executableTools, $severities);
 
-        // After "Decline" the model must not offer the same change again.
-        if (($continuation['outcome'] ?? '') === 'declined') {
-            $state->messages = self::withoutRepeatedDeclinedDrafts($state->messages, $historyMessages);
-        }
+        // Drop a card the editor already declined, and a second copy of a create that is still waiting.
+        $state->messages = self::withoutRepeatedDeclinedDrafts($state->messages, $historyMessages);
 
         $state->attachPendingPlan();
 
@@ -445,8 +443,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
-     * Drops change cards of this turn that are identical to a card the editor declined earlier in
-     * the conversation (the model sometimes proposes the same change again after "Decline").
+     * Drops change cards that repeat a declined card, or a create that is still waiting to be
+     * executed. A follow-up ("check now") otherwise adds a second identical page draft, and
+     * Execute all writes both.
      *
      * @param list<array{role: string, content: string, meta: array<string, mixed>}> $messages messages added by this turn
      * @param list<array<string, mixed>> $history the conversation before this turn
@@ -454,25 +453,40 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
      */
     public static function withoutRepeatedDeclinedDrafts(array $messages, array $history): array
     {
-        $declined = [];
+        $blocked = [];
         foreach ($history as $message) {
-            $draft = $message['meta']['draft'] ?? null;
-            if (($message['meta']['type'] ?? '') === 'inline_draft' && is_array($draft) && ($draft['discarded'] ?? false) === true) {
-                $declined[self::draftSignature($draft)] = true;
+            if (!is_array($message)) {
+                continue;
             }
-        }
-        if ($declined === []) {
-            return array_values($messages);
-        }
-
-        return array_values(array_filter($messages, static function (array $message) use ($declined): bool {
             $draft = $message['meta']['draft'] ?? null;
             if (($message['meta']['type'] ?? '') !== 'inline_draft' || !is_array($draft)) {
-                return true;
+                continue;
             }
+            $discarded = ($draft['discarded'] ?? false) === true;
+            $applied = ($draft['applied'] ?? false) === true || ($message['meta']['applied'] ?? false) === true;
+            $pendingCreate = !$discarded && !$applied && (string) ($draft['action'] ?? '') === 'create';
+            if ($discarded || $pendingCreate) {
+                $blocked[self::draftSignature($draft)] = true;
+            }
+        }
 
-            return !isset($declined[self::draftSignature($draft)]);
-        }));
+        $kept = [];
+        foreach ($messages as $message) {
+            $draft = $message['meta']['draft'] ?? null;
+            if (($message['meta']['type'] ?? '') === 'inline_draft' && is_array($draft)) {
+                $signature = self::draftSignature($draft);
+                if (isset($blocked[$signature])) {
+                    continue;
+                }
+                // Two identical creates in the same reply count as one card.
+                if ((string) ($draft['action'] ?? '') === 'create') {
+                    $blocked[$signature] = true;
+                }
+            }
+            $kept[] = $message;
+        }
+
+        return $kept;
     }
 
     /**
