@@ -41,13 +41,6 @@
                 </h2>
                 <div class="nst3af-agent-header__tools">
                     <span class="nst3af-agent-credits" data-nst3af-agent-credits role="status" hidden></span>
-                    <label class="visually-hidden" for="nst3af-agent-provider">
-                        <f:translate key="{ll}:agent.provider.label" default="AI provider" />
-                    </label>
-                    <select id="nst3af-agent-provider"
-                            class="form-select form-select-sm nst3af-agent-header__provider"
-                            data-nst3af-agent-provider
-                            hidden></select>
                     <button type="button"
                             class="btn btn-default btn-sm nst3af-agent-header__icon"
                             data-nst3af-agent-summarize
@@ -191,6 +184,13 @@
                             <p class="nst3af-agent-composer__note">
                                 <f:translate key="{ll}:agent.composer.disclaimer" default="AI-generated content can be wrong. Please verify before you approve." />
                             </p>
+                            <label class="visually-hidden" for="nst3af-agent-provider">
+                                <f:translate key="{ll}:agent.provider.label" default="AI provider" />
+                            </label>
+                            <select id="nst3af-agent-provider"
+                                    class="form-select form-select-sm nst3af-agent-composer__provider"
+                                    data-nst3af-agent-provider
+                                    hidden></select>
                             <button type="button"
                                     class="btn btn-primary nst3af-agent-composer__send"
                                     data-nst3af-agent-send
