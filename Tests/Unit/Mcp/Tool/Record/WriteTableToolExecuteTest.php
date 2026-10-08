@@ -388,4 +388,26 @@ final class WriteTableToolExecuteTest extends TestCase
         $backendUser->method('check')->willReturn($mayModify);
         $GLOBALS['BE_USER'] = $backendUser;
     }
+
+    #[Test]
+    public function strictRefusesUnknownFieldsAndWritesNothing(): void
+    {
+        $this->engine->expects(self::never())->method('apply');
+
+        $result = json_decode($this->tool->execute('create', 'tt_content', '{"pid":5,"header":"Hi","bogus":1}', 0, true), true);
+
+        self::assertStringContainsString('bogus', $result['error']);
+        self::assertSame(['bogus'], $result['ignoredFields']);
+    }
+
+    #[Test]
+    public function strictIsHandedToTheEngineSoItCanRefuseFieldsTheEditorMayNotChange(): void
+    {
+        $this->engine->expects(self::once())
+            ->method('apply')
+            ->with(self::anything(), [], false, true, true, [], 'write_table')
+            ->willReturn($this->created(77));
+
+        $this->tool->execute('create', 'tt_content', '{"pid":5,"header":"Hi"}', 0, true);
+    }
 }

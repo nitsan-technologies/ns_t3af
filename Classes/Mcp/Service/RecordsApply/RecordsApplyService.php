@@ -22,6 +22,8 @@ namespace NITSAN\NsT3AF\Mcp\Service\RecordsApply;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Exception\ToolCallException;
+use NITSAN\NsT3AF\Mcp\Service\WorkspaceContextService;
+use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
 use Psr\Log\LoggerInterface;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -60,6 +62,8 @@ readonly class RecordsApplyService
         private RecordsApplyIdempotency $idempotency,
         private ConnectionPool $connectionPool,
         private LoggerInterface $logger,
+        private ?WorkspaceContextService $workspaceContext = null,
+        private ?WorkspaceListService $workspaceList = null,
     ) {}
 
     /**
@@ -206,6 +210,12 @@ readonly class RecordsApplyService
             $checked['ignored'],
         );
 
+        // Say where the change went. It is stored with a requestId's answer, so a replay names the same workspace.
+        $workspaceId = $this->workspaceContext?->getCurrentWorkspaceId();
+        if ($workspaceId !== null) {
+            $result = $result->withWorkspace($workspaceId, $this->workspaceTitle($workspaceId));
+        }
+
         if ($dryRun) {
             $this->rollBack($connection);
         } else {
@@ -246,6 +256,15 @@ readonly class RecordsApplyService
         $this->audit->log($tool, $batchId, $dryRun, true, $dryRun ? 'dry-run' : 'applied', $operations, $fieldNames);
 
         return $result->withAiLabelled($aiLabelled);
+    }
+
+    private function workspaceTitle(int $workspaceId): string
+    {
+        try {
+            return $this->workspaceList?->resolveTitle($workspaceId) ?? ($workspaceId === 0 ? 'Live' : 'Workspace #' . $workspaceId);
+        } catch (\Throwable) {
+            return $workspaceId === 0 ? 'Live' : 'Workspace #' . $workspaceId;
+        }
     }
 
     /** A retry of a finished call: nothing is written, the audit entry says so. */

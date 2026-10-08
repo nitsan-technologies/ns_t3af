@@ -235,6 +235,19 @@ export const streamMethods = {
     },
 
   /**
+     * Whether a prepared change (any severity) still waits for the editor's Apply or Cancel.
+     *
+     * @returns {boolean}
+     */
+    hasPendingDraft() {
+      return this.messages.some((message) => {
+        const draft = message.meta?.draft;
+        return message.meta?.type === 'inline_draft' && Boolean(draft)
+          && !draft.applied && !draft.discarded && !draft.applying;
+      });
+    },
+
+  /**
      * "Progress" checklist above the input: done steps checked, the current step marked, the rest open.
      */
     renderPlan() {
@@ -245,8 +258,12 @@ export const streamMethods = {
       if (steps.length === 0) {
         this.planPanel.hidden = true;
         this.planPanel.innerHTML = '';
+        this.planPanel.classList.remove('nst3af-agent-plan--waiting');
         return;
       }
+      // A prepared change is waiting for Apply / Cancel: say so and stop the spinner, the agent is not working.
+      const waiting = this.isRunning !== true && this.hasPendingDraft();
+      this.planPanel.classList.toggle('nst3af-agent-plan--waiting', waiting);
       const done = steps.filter((step) => step.status === 'completed').length;
       const open = this.planOpen ?? done < steps.length;
       const items = steps.map((step) => {
@@ -262,6 +279,7 @@ export const streamMethods = {
       this.planPanel.hidden = false;
       this.planPanel.innerHTML = `<details class="nst3af-agent-plan__details"${open ? ' open' : ''}>`
         + `<summary class="nst3af-agent-plan__summary"><span>${escapeHtml(lang('agent.plan.title', 'Progress'))}</span>`
+        + (waiting ? `<span class="nst3af-agent-plan__waiting">${escapeHtml(lang('agent.plan.waiting', 'Waiting for your approval'))}</span>` : '')
         + `<span class="nst3af-agent-plan__count">${done}/${steps.length}</span></summary>`
         + `<ol class="nst3af-agent-plan__list">${items}</ol></details>`;
     },
@@ -381,9 +399,17 @@ export const streamMethods = {
       lead.className = 'nst3af-agent-empty__lead';
       lead.textContent = lang(
         'agent.greeting.lead',
-        'Ask about this page or pick a starting point. The agent drafts changes, and nothing is saved until you approve.',
+        'Ask about this page or pick a suggestion below. The agent only prepares changes: nothing is saved until you approve it.',
       );
       wrap.appendChild(lead);
+
+      const limits = document.createElement('p');
+      limits.className = 'nst3af-agent-empty__limits';
+      limits.textContent = lang(
+        'agent.greeting.limits',
+        'Good to know: the agent only sees and changes what your account may edit. Undo cannot bring back deleted items, and big jobs for many pages go to the Scheduler.',
+      );
+      wrap.appendChild(limits);
 
       const executable = Array.isArray(this.starters.executable) ? this.starters.executable : [];
       const locked = Array.isArray(this.starters.locked) ? this.starters.locked : [];
@@ -415,7 +441,7 @@ export const streamMethods = {
       tip.className = 'nst3af-agent-empty__tip';
       tip.innerHTML = lang(
         'agent.greeting.tip',
-        'Type %1$s for tools or %2$s to reference a record.',
+        'Tip: type %1$s to pick an action, or %2$s to point at a page or content element.',
         ['<kbd>/</kbd>', '<kbd>@</kbd>'],
       );
       wrap.appendChild(tip);
@@ -572,12 +598,17 @@ export const streamMethods = {
      * @returns {string[]}
      */
     thinkingWords() {
-      if (!this._thinkingWordsCache) {
+      // Plain progress words, no "Thinking…". With a page open the first one says what is being looked at.
+      const hasPage = Number(this.context?.pageId ?? 0) > 0;
+      if (!this._thinkingWordsCache || this._thinkingWordsHasPage !== hasPage) {
+        this._thinkingWordsHasPage = hasPage;
         this._thinkingWordsCache = [
-          lang('agent.live.thinking', 'Thinking…'),
-          lang('agent.live.thinking2', 'Reasoning…'),
-          lang('agent.live.thinking3', 'Working it out…'),
-          lang('agent.live.thinking4', 'Piecing it together…'),
+          hasPage
+            ? lang('agent.live.lookingAtPage', 'Looking at your page…')
+            : lang('agent.live.thinking', 'Reading your request…'),
+          lang('agent.live.thinking2', 'Checking the details…'),
+          lang('agent.live.thinking3', 'Working on your request…'),
+          lang('agent.live.thinking4', 'Preparing your answer…'),
           lang('agent.live.thinking5', 'One moment…'),
         ];
       }

@@ -107,7 +107,13 @@ final class AgentUndoService
             }
 
             $this->dataHandlerService->updateRecord($table, $uid, [$field => $previousValue]);
-            $reverted[] = ['table' => $table, 'uid' => $uid, 'field' => $field, 'reverted' => 'restored'];
+            $reverted[] = [
+                'table' => $table,
+                'uid' => $uid,
+                'field' => $field,
+                'reverted' => 'restored',
+                'previousValue' => is_scalar($previousValue) ? (string) $previousValue : '',
+            ];
         }
 
         if ($reverted === []) {

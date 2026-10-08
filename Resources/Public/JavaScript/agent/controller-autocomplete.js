@@ -150,7 +150,7 @@ export const autocompleteMethods = {
       if (executable.length > 0) {
         const label = document.createElement('div');
         label.className = 'nst3af-agent-starter-group-label';
-        label.textContent = lang('agent.starters.executable', 'MCP Tools');
+        label.textContent = lang('agent.starters.executable', 'What I can do');
         container.appendChild(label);
         executable.forEach((tool) => container.appendChild(this.createStarterButton(tool, false)));
       }
@@ -419,9 +419,9 @@ export const autocompleteMethods = {
 
       if (moduleExec.length > 0 || moduleLocked.length > 0) {
         pushGroup('agent.tools.module', 'On this module', moduleExec, moduleLocked);
-        pushGroup('agent.tools.rest', 'All tools', restExec, restLocked);
+        pushGroup('agent.tools.rest', 'All actions', restExec, restLocked);
       } else {
-        pushGroup('agent.starters.executable', 'MCP Tools', restExec, restLocked);
+        pushGroup('agent.starters.executable', 'What I can do', restExec, restLocked);
       }
 
       this.autocomplete.innerHTML = sections.join('');
@@ -439,7 +439,13 @@ export const autocompleteMethods = {
       const severityText = this.severityLabel(tool.severity);
       const displayLabel = resolveToolDisplayLabel(tool);
       const aria = this.buildToolAriaLabel(tool, locked);
-      return `<button type="button" class="nst3af-agent-autocomplete__item${locked ? ' nst3af-agent-autocomplete__item--locked' : ''}" data-nst3af-agent-ac-item="1" data-locked="${locked ? '1' : '0'}" data-insert="/${escapeHtml(String(tool.name ?? ''))} " data-label="${escapeHtml(displayLabel)}" aria-label="${escapeHtml(aria)}" role="option"><span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(String(tool.severity ?? 'read'))}" aria-hidden="true"></span><span><span class="nst3af-agent-autocomplete__item-title">${escapeHtml(displayLabel)}</span><span class="nst3af-agent-autocomplete__item-desc">${escapeHtml(String(tool.description ?? ''))} · ${escapeHtml(String(tool.ownerLabel ?? ''))} · ${escapeHtml(severityText)}</span></span></button>`;
+      // Plain-language line for editors: what it does, who provides it, whether it asks first.
+      // (tool.description is written for the AI and is not shown.)
+      const descLine = [String(tool.editorDescription ?? ''), String(tool.ownerLabel ?? ''), severityText]
+        .map((part) => part.trim())
+        .filter((part) => part !== '')
+        .join(' · ');
+      return `<button type="button" class="nst3af-agent-autocomplete__item${locked ? ' nst3af-agent-autocomplete__item--locked' : ''}" data-nst3af-agent-ac-item="1" data-locked="${locked ? '1' : '0'}" data-insert="/${escapeHtml(String(tool.name ?? ''))} " data-label="${escapeHtml(displayLabel)}" aria-label="${escapeHtml(aria)}" role="option"><span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(String(tool.severity ?? 'read'))}" aria-hidden="true"></span><span><span class="nst3af-agent-autocomplete__item-title">${escapeHtml(displayLabel)}</span><span class="nst3af-agent-autocomplete__item-desc">${escapeHtml(descLine)}</span></span></button>`;
     },
 
   /**
@@ -456,9 +462,15 @@ export const autocompleteMethods = {
       }
 
       const heading = `<div class="nst3af-agent-autocomplete__heading">${escapeHtml(lang('agent.context.record', 'Record'))}</div>`;
-      const items = records.map((record) => (
-        `<button type="button" class="nst3af-agent-autocomplete__item" data-nst3af-agent-ac-item="1" data-insert="@${escapeHtml(String(record.table ?? ''))}:${Number(record.uid ?? 0)} " data-record-table="${escapeHtml(String(record.table ?? ''))}" data-record-uid="${Number(record.uid ?? 0)}"><span><span class="nst3af-agent-autocomplete__item-title">${escapeHtml(String(record.label ?? ''))}</span><span class="nst3af-agent-autocomplete__item-desc">${escapeHtml(String(record.table ?? ''))}:${Number(record.uid ?? 0)}</span></span></button>`
-      )).join('');
+      const items = records.map((record) => {
+        // "Page · ID 224" instead of the code name "pages:224".
+        const typeLabel = String(record.typeLabel ?? '').trim();
+        const idLabel = lang('agent.record.idLabel', 'ID %1$s', [String(Number(record.uid ?? 0))]);
+        const descLine = typeLabel !== '' ? `${typeLabel} · ${idLabel}` : idLabel;
+        return (
+        `<button type="button" class="nst3af-agent-autocomplete__item" data-nst3af-agent-ac-item="1" data-insert="@${escapeHtml(String(record.table ?? ''))}:${Number(record.uid ?? 0)} " data-record-table="${escapeHtml(String(record.table ?? ''))}" data-record-uid="${Number(record.uid ?? 0)}"><span><span class="nst3af-agent-autocomplete__item-title">${escapeHtml(String(record.label ?? ''))}</span><span class="nst3af-agent-autocomplete__item-desc">${escapeHtml(descLine)}</span></span></button>`
+        );
+      }).join('');
 
       this.autocomplete.innerHTML = heading + items;
       this.autocomplete.hidden = false;

@@ -538,10 +538,10 @@
         <source>Start a conversation</source>
       </trans-unit>
       <trans-unit id="agent.greeting.lead" resname="agent.greeting.lead">
-        <source>Ask about this page or pick a starting point. The agent drafts changes, and nothing is saved until you approve.</source>
+        <source>Ask about this page or pick a suggestion below. The agent only prepares changes: nothing is saved until you approve it.</source>
       </trans-unit>
       <trans-unit id="agent.greeting.tip" resname="agent.greeting.tip">
-        <source>Type %1$s for tools or %2$s to reference a record.</source>
+        <source>Tip: type %1$s to pick an action, or %2$s to point at a page or content element.</source>
       </trans-unit>
       <trans-unit id="agent.greeting.page" resname="agent.greeting.page">
         <source>Page</source>
@@ -583,16 +583,16 @@
         <source>Changes applied</source>
       </trans-unit>
       <trans-unit id="agent.starters.executable" resname="agent.starters.executable">
-        <source>MCP Tools</source>
+        <source>What I can do</source>
       </trans-unit>
       <trans-unit id="agent.tools.module" resname="agent.tools.module">
         <source>On this module</source>
       </trans-unit>
       <trans-unit id="agent.tools.rest" resname="agent.tools.rest">
-        <source>All tools</source>
+        <source>All actions</source>
       </trans-unit>
       <trans-unit id="agent.attach.mcpTools" resname="agent.attach.mcpTools">
-        <source>MCP Tools</source>
+        <source>Actions</source>
       </trans-unit>
       <trans-unit id="agent.panel.fullscreen" resname="agent.panel.fullscreen">
         <source>Full screen</source>
@@ -736,7 +736,7 @@
         <source>No executable tools are available for your account. Use / to see what is locked or contact an administrator.</source>
       </trans-unit>
       <trans-unit id="agent.turn.governanceBlocked" resname="agent.turn.governanceBlocked">
-        <source>This request was blocked by the AI permissions of your backend group: %1$s</source>
+        <source>This request was blocked by the AI permissions of your backend group: %1$s Ask your administrator to allow it under AI Permissions, or try a different request.</source>
       </trans-unit>
       <trans-unit id="agent.turn.orchestratorFailed" resname="agent.turn.orchestratorFailed">
         <source>The agent could not complete this turn: %1$s</source>
@@ -751,7 +751,7 @@
         <source>You are not allowed to do this with your backend account. Ask an administrator if you need the permission.</source>
       </trans-unit>
       <trans-unit id="agent.turn.stepsStillOpen" resname="agent.turn.stepsStillOpen">
-        <source>There are still open steps (for example attaching an image). Send another message or pick a suggested action to continue.</source>
+        <source>I am not finished yet (for example, an image still has to be attached). Say “continue” or pick one of the suggested actions.</source>
       </trans-unit>
       <trans-unit id="agent.turn.emptyModelReplyWithTools" resname="agent.turn.emptyModelReplyWithTools">
         <source>I could not produce a reply. Closest tools: %1$s. Try rephrasing, pick a suggested action, or use / to run a specific tool.</source>
@@ -778,10 +778,10 @@
         <source>No read tool is available for @%1$s:%2$s. Try /content_get %2$s for content elements or pick a tool with /.</source>
       </trans-unit>
       <trans-unit id="agent.turn.unknownTool" resname="agent.turn.unknownTool">
-        <source>Unknown tool: %1$s</source>
+        <source>I do not know the action “%1$s”. Type / to see the available actions, or describe what you want in your own words.</source>
       </trans-unit>
       <trans-unit id="agent.turn.lockedTool" resname="agent.turn.lockedTool">
-        <source>%1$s is locked: %2$s</source>
+        <source>“%1$s” is not available to you: %2$s Type / to see what you can use.</source>
       </trans-unit>
       <trans-unit id="agent.turn.writeRequiresApproval" resname="agent.turn.writeRequiresApproval">
         <source>Write and destructive tools require your approval before anything is saved. That workflow arrives in the next release.</source>
@@ -799,16 +799,16 @@
         <source>Assistant is working…</source>
       </trans-unit>
       <trans-unit id="agent.live.thinking" resname="agent.live.thinking">
-        <source>Thinking…</source>
+        <source>Reading your request…</source>
       </trans-unit>
       <trans-unit id="agent.live.thinking2" resname="agent.live.thinking2">
-        <source>Reasoning…</source>
+        <source>Checking the details…</source>
       </trans-unit>
       <trans-unit id="agent.live.thinking3" resname="agent.live.thinking3">
-        <source>Working it out…</source>
+        <source>Working on your request…</source>
       </trans-unit>
       <trans-unit id="agent.live.thinking4" resname="agent.live.thinking4">
-        <source>Piecing it together…</source>
+        <source>Preparing your answer…</source>
       </trans-unit>
       <trans-unit id="agent.live.thinking5" resname="agent.live.thinking5">
         <source>One moment…</source>
@@ -832,28 +832,28 @@
         <source>AI Agent closed.</source>
       </trans-unit>
       <trans-unit id="agent.severity.read" resname="agent.severity.read">
-        <source>Read-only</source>
+        <source>Only reads</source>
       </trans-unit>
       <trans-unit id="agent.severity.write" resname="agent.severity.write">
-        <source>Write</source>
+        <source>Asks before changing</source>
       </trans-unit>
       <trans-unit id="agent.severity.destructive" resname="agent.severity.destructive">
-        <source>Destructive</source>
+        <source>Asks before deleting</source>
       </trans-unit>
       <trans-unit id="agent.severity.unclassified" resname="agent.severity.unclassified">
         <source>Unclassified</source>
       </trans-unit>
       <trans-unit id="agent.governance.providerBlocked" resname="agent.governance.providerBlocked">
-        <source>Your group policy blocks this AI provider for agent use.</source>
+        <source>Your group policy blocks this AI provider for the agent. Choose another provider or ask your administrator.</source>
       </trans-unit>
       <trans-unit id="agent.governance.modelOverrideBlocked" resname="agent.governance.modelOverrideBlocked">
-        <source>Model override is disabled for your backend user group.</source>
+        <source>Choosing a different model is turned off for your backend user group. Use the default model or ask your administrator.</source>
       </trans-unit>
       <trans-unit id="agent.governance.dailyCapReached" resname="agent.governance.dailyCapReached">
-        <source>Daily agent request limit reached for your backend user group.</source>
+        <source>The daily request limit for your backend user group is reached. Try again tomorrow or ask your administrator to raise the limit.</source>
       </trans-unit>
       <trans-unit id="agent.governance.creditCapReached" resname="agent.governance.creditCapReached">
-        <source>Monthly AI credit cap reached for your backend user group.</source>
+        <source>The monthly AI credit limit for your backend user group is reached. Ask your administrator to raise the limit or top up credits.</source>
       </trans-unit>
       <trans-unit id="agent.governance.turnGuardWarn" resname="agent.governance.turnGuardWarn">
         <source>Warning: this turn has reached %1$s tool calls (%2$s so far). The agent will stop at 40 calls.</source>
@@ -955,10 +955,10 @@
         <source>The agent cannot show a preview for this change yet, so it will not run it. Do it in the matching backend module instead.</source>
       </trans-unit>
       <trans-unit id="agent.turn.planUnsupported" resname="agent.turn.planUnsupported">
-        <source>%1$s cannot be planned for approval yet.</source>
+        <source>The agent cannot prepare “%1$s” for your approval yet. Please do it in the matching backend module, or ask for something similar that I can prepare.</source>
       </trans-unit>
       <trans-unit id="agent.turn.planFailed" resname="agent.turn.planFailed">
-        <source>Could not plan %1$s: %2$s</source>
+        <source>I could not prepare “%1$s”: %2$s Check the details and try again, or describe the change differently.</source>
       </trans-unit>
       <trans-unit id="agent.draft.proposed" resname="agent.draft.proposed">
         <source>Review this change before anything is written.</source>
@@ -979,13 +979,13 @@
         <source>Destructive action armed. Click Apply again to proceed.</source>
       </trans-unit>
       <trans-unit id="agent.draft.applied" resname="agent.draft.applied">
-        <source>Applied %1$s of %2$s fields.</source>
+        <source>Saved %1$s of %2$s changes.</source>
       </trans-unit>
       <trans-unit id="agent.draft.discarded" resname="agent.draft.discarded">
         <source>Draft discarded. Nothing was written.</source>
       </trans-unit>
       <trans-unit id="agent.draft.undone" resname="agent.draft.undone">
-        <source>Change undone. A new history entry was written.</source>
+        <source>Undone. Your previous version is back.</source>
       </trans-unit>
       <trans-unit id="agent.draft.nothingKept" resname="agent.draft.nothingKept">
         <source>Nothing is selected. Include at least one change or cancel.</source>
@@ -1049,7 +1049,7 @@
         <source>Please enter a message.</source>
       </trans-unit>
       <trans-unit id="agent.error.generic" resname="agent.error.generic">
-        <source>Something went wrong.</source>
+        <source>Something went wrong. Please try again; if it keeps happening, tell your administrator.</source>
       </trans-unit>
       <trans-unit id="agent.error.turnFailed" resname="agent.error.turnFailed">
         <source>The request failed.</source>
@@ -1346,7 +1346,7 @@
         <source>Doktype %1$s</source>
       </trans-unit>
       <trans-unit id="agent.write.draftNotFound" resname="agent.write.draftNotFound">
-        <source>Draft not found or expired.</source>
+        <source>This change was not found or has expired. Ask the agent again to prepare it.</source>
       </trans-unit>
       <trans-unit id="agent.write.draftTooOld" resname="agent.write.draftTooOld">
         <source>This change was prepared a while ago and is outdated. Ask the agent again to prepare a fresh change.</source>
@@ -1373,7 +1373,7 @@
         <source>Change not found or already undone.</source>
       </trans-unit>
       <trans-unit id="agent.undo.deleteUnsupported" resname="agent.undo.deleteUnsupported">
-        <source>Undoing a deletion is not supported.</source>
+        <source>Undo cannot bring back a deleted item. Restore it from the Recycler module instead.</source>
       </trans-unit>
       <trans-unit id="agent.plan.pageHint" resname="agent.plan.pageHint">
         <source> for page %1$s</source>
@@ -1415,7 +1415,7 @@
         <source>%1$s is not available in the AI Agent yet. Use the MCP Playground or the extension backend module instead.</source>
       </trans-unit>
       <trans-unit id="agent.turn.previewFailed" resname="agent.turn.previewFailed">
-        <source>Could not generate a preview for %1$s: %2$s</source>
+        <source>I could not show a preview for “%1$s”: %2$s Try again or describe the change differently.</source>
       </trans-unit>
       <trans-unit id="agent.tool.permissionDenied" resname="agent.tool.permissionDenied">
         <source>You do not have permission to change this page or its content. Ask an administrator for page or content edit rights, then try again.</source>
@@ -1457,13 +1457,13 @@
         <source>Inline edits require editedByEditor confirmation.</source>
       </trans-unit>
       <trans-unit id="agent.context.chipHint" resname="agent.context.chipHint">
-        <source>The agent works on this unless you name something else.</source>
+        <source>The agent works on this page and site unless you name something else.</source>
       </trans-unit>
       <trans-unit id="agent.provider.label" resname="agent.provider.label">
-        <source>AI provider</source>
+        <source>AI model (the service that answers you)</source>
       </trans-unit>
       <trans-unit id="agent.provider.default" resname="agent.provider.default">
-        <source>Default provider</source>
+        <source>Default</source>
       </trans-unit>
       <trans-unit id="agent.provider.defaultNamed" resname="agent.provider.defaultNamed">
         <source>Default: %1$s</source>
@@ -1490,7 +1490,7 @@
         <source>This conversation is too long for the selected model. Start a new conversation or shorten your request.</source>
       </trans-unit>
       <trans-unit id="agent.provider.locked" resname="agent.provider.locked">
-        <source>The AI provider is fixed for this conversation. Start a new conversation to change it.</source>
+        <source>The AI model is fixed for this conversation. Start a new conversation to use a different one.</source>
       </trans-unit>
       <trans-unit id="agent.provider.notAllowed" resname="agent.provider.notAllowed">
         <source>This AI provider is not available for your backend group. Choose another provider or ask your administrator.</source>
@@ -2264,7 +2264,7 @@
         <source>Open image in a new tab</source>
       </trans-unit>
       <trans-unit id="agent.turn.planInvalid" resname="agent.turn.planInvalid">
-        <source>Could not prepare this change: %s</source>
+        <source>I could not prepare this change: %s Check the details and try again, or describe the change differently.</source>
       </trans-unit>
       <trans-unit id="agent.error.applyFailedDetail" resname="agent.error.applyFailedDetail">
         <source>The change could not be saved: %s</source>
@@ -2277,6 +2277,153 @@
       </trans-unit>
       <trans-unit id="agent.tool.label.t3ac_chatbot_list" resname="agent.tool.label.t3ac_chatbot_list">
         <source>List chatbots</source>
+      </trans-unit>
+      <trans-unit id="agent.greeting.limits" resname="agent.greeting.limits">
+        <source>Good to know: the agent only sees and changes what your account may edit. Undo cannot bring back deleted items, and big jobs for many pages go to the Scheduler.</source>
+      </trans-unit>
+      <trans-unit id="agent.live.lookingAtPage" resname="agent.live.lookingAtPage">
+        <source>Looking at your page…</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.waiting" resname="agent.plan.waiting">
+        <source>Waiting for your approval</source>
+      </trans-unit>
+      <trans-unit id="agent.context.pageValue" resname="agent.context.pageValue">
+        <source>%1$s (ID %2$s)</source>
+      </trans-unit>
+      <trans-unit id="agent.context.brandValue" resname="agent.context.brandValue">
+        <source>Brand: %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.context.workspaceValue" resname="agent.context.workspaceValue">
+        <source>Workspace: %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.record.typePages" resname="agent.record.typePages">
+        <source>Page</source>
+      </trans-unit>
+      <trans-unit id="agent.record.typeContent" resname="agent.record.typeContent">
+        <source>Content element</source>
+      </trans-unit>
+      <trans-unit id="agent.record.idLabel" resname="agent.record.idLabel">
+        <source>ID %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.doneOneField" resname="agent.draft.doneOneField">
+        <source>Done: %1$s was updated. %2$s is now “%3$s”.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.doneFields" resname="agent.draft.doneFields">
+        <source>Done: %1$s was updated (%2$s).</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.doneRecords" resname="agent.draft.doneRecords">
+        <source>Done: %1$s records were updated.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.doneCreated" resname="agent.draft.doneCreated">
+        <source>Done: %1$s was created.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.undoneField" resname="agent.draft.undoneField">
+        <source>Undone: %1$s is back to “%2$s”.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.undoneFieldEmpty" resname="agent.draft.undoneFieldEmpty">
+        <source>Undone: %1$s is empty again.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.undoneFields" resname="agent.draft.undoneFields">
+        <source>Undone: %1$s changes were reverted.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.undoneCreated" resname="agent.draft.undoneCreated">
+        <source>Undone: the new item was removed again.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.pages_get" resname="agent.tool.desc.pages_get">
+        <source>Shows details of a page: title, address and settings.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.pages_list" resname="agent.tool.desc.pages_list">
+        <source>Lists the subpages below a page.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.pages_search" resname="agent.tool.desc.pages_search">
+        <source>Finds pages by title.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.pages_tree" resname="agent.tool.desc.pages_tree">
+        <source>Shows the page tree.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.pages_copy" resname="agent.tool.desc.pages_copy">
+        <source>Copies a page with its content.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.content_list" resname="agent.tool.desc.content_list">
+        <source>Lists the content elements on a page.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.content_get" resname="agent.tool.desc.content_get">
+        <source>Shows one content element.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.content_search" resname="agent.tool.desc.content_search">
+        <source>Finds content elements by text.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.content_delete" resname="agent.tool.desc.content_delete">
+        <source>Deletes a content element after you confirm.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.content_move" resname="agent.tool.desc.content_move">
+        <source>Moves a content element to another place.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.record_search" resname="agent.tool.desc.record_search">
+        <source>Finds records such as news or addresses.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.write_table" resname="agent.tool.desc.write_table">
+        <source>Creates or changes a record after you review it.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.file_list" resname="agent.tool.desc.file_list">
+        <source>Lists the files in a folder.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.file_search" resname="agent.tool.desc.file_search">
+        <source>Finds files by name.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.file_get_info" resname="agent.tool.desc.file_get_info">
+        <source>Shows details of a file.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.file_upload" resname="agent.tool.desc.file_upload">
+        <source>Uploads a file.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.redirect_list" resname="agent.tool.desc.redirect_list">
+        <source>Lists the redirects of the site.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.redirect_create" resname="agent.tool.desc.redirect_create">
+        <source>Creates a redirect after you review it.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.scheduler_list" resname="agent.tool.desc.scheduler_list">
+        <source>Lists the scheduled tasks.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.workspace_changes_list" resname="agent.tool.desc.workspace_changes_list">
+        <source>Lists the changes waiting in a workspace.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.permission_check_page" resname="agent.tool.desc.permission_check_page">
+        <source>Checks what you are allowed to do on a page.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.cache_clear" resname="agent.tool.desc.cache_clear">
+        <source>Clears the TYPO3 cache.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.explain_capabilities" resname="agent.tool.desc.explain_capabilities">
+        <source>Explains what the agent can do here.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.t3ai_generate_all_seo" resname="agent.tool.desc.t3ai_generate_all_seo">
+        <source>Writes the SEO title, description and keywords for a page.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.t3ai_generate_meta_description" resname="agent.tool.desc.t3ai_generate_meta_description">
+        <source>Writes the description shown in search results.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.t3ai_translate_content" resname="agent.tool.desc.t3ai_translate_content">
+        <source>Translates content into another language.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.t3ai_translate_page" resname="agent.tool.desc.t3ai_translate_page">
+        <source>Translates a whole page into another language.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.t3ai_create_page_simple" resname="agent.tool.desc.t3ai_create_page_simple">
+        <source>Creates a new page from a short description.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.t3ai_create_content_element" resname="agent.tool.desc.t3ai_create_content_element">
+        <source>Writes a new content element.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.t3aa_summarize_content" resname="agent.tool.desc.t3aa_summarize_content">
+        <source>Summarizes the content of a page.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.t3aa_list_files_missing_alt_text" resname="agent.tool.desc.t3aa_list_files_missing_alt_text">
+        <source>Finds images that have no alt text.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.t3aa_accessibility_scan_run" resname="agent.tool.desc.t3aa_accessibility_scan_run">
+        <source>Checks a page for accessibility problems.</source>
       </trans-unit>
     </body>
   </file>
