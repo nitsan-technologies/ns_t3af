@@ -105,9 +105,119 @@ final class ModuleTabUtilityTest extends TestCase
 
     public function testFirstVisibleNonDashboardTabRouteSkipsDashboard(): void
     {
+        $user = $this->createUserWithTabs('nst3af_tab:providers,nst3af_tab:ai_logs');
+
+        self::assertSame(
+            't3af_dashboard.providers',
+            $this->utility->firstVisibleNonDashboardTabRoute($user),
+        );
+    }
+
+    public function testBuildNavigationTabGroupsCollapsesMcpTabsIntoOneEntry(): void
+    {
+        $groups = $this->utility->buildNavigationTabGroups(
+            'providers',
+            static fn(string $key): string => $key,
+            $this->buildUri(...),
+        );
+
+        $primaryKeys = array_keys($groups['primary']);
+        self::assertContains('mcp', $primaryKeys);
+        self::assertNotContains('mcpServer', $primaryKeys);
+        self::assertNotContains('mcpTools', $primaryKeys);
+        self::assertSame(array_search('aiAgent', $primaryKeys, true) + 1, array_search('mcp', $primaryKeys, true));
+        self::assertSame('module.menu.mcp', $groups['primary']['mcp']['title']);
+        self::assertSame('/typo3/module/t3af_dashboard/mcp_server', $groups['primary']['mcp']['href']);
+        self::assertFalse($groups['primary']['mcp']['active']);
+    }
+
+    public function testMcpEntryIsActiveOnEitherMcpPage(): void
+    {
+        foreach (['mcpServer', 'mcpTools'] as $active) {
+            $groups = $this->utility->buildNavigationTabGroups(
+                $active,
+                static fn(string $key): string => $key,
+                $this->buildUri(...),
+            );
+
+            self::assertTrue($groups['primary']['mcp']['active'], $active);
+            self::assertFalse($groups['primary']['providers']['active'], $active);
+        }
+    }
+
+    public function testMcpEntryLinksToToolsWhenOnlyToolsIsGranted(): void
+    {
+        $user = $this->createUserWithTabs('nst3af_tab:providers,nst3af_tab:mcp_tools');
+
+        $groups = $this->utility->buildNavigationTabGroups(
+            'mcpTools',
+            static fn(string $key): string => $key,
+            $this->buildUri(...),
+            $user,
+        );
+
+        self::assertSame('/typo3/module/t3af_dashboard/mcp_tools', $groups['primary']['mcp']['href']);
+        self::assertTrue($groups['primary']['mcp']['active']);
+
+        $sections = $this->utility->buildGroupSections(
+            'mcpTools',
+            static fn(string $key): string => $key,
+            $this->buildUri(...),
+            $user,
+        );
+        self::assertCount(1, $sections);
+        self::assertSame('mcpTools', $sections[0]['key']);
+    }
+
+    public function testMcpEntryIsOmittedWhenNoMcpTabIsGranted(): void
+    {
+        $user = $this->createUserWithTabs('nst3af_tab:providers');
+
+        $groups = $this->utility->buildNavigationTabGroups(
+            'providers',
+            static fn(string $key): string => $key,
+            $this->buildUri(...),
+            $user,
+        );
+
+        self::assertArrayNotHasKey('mcp', $groups['primary']);
+    }
+
+    public function testBuildGroupSectionsListsMcpPagesWithActiveFlag(): void
+    {
+        $sections = $this->utility->buildGroupSections(
+            'mcpTools',
+            static fn(string $key): string => $key,
+            $this->buildUri(...),
+        );
+
+        self::assertSame(['mcpServer', 'mcpTools'], array_column($sections, 'key'));
+        self::assertSame('module.menu.mcpServer', $sections[0]['title']);
+        self::assertSame('module.mcpServer.intro', $sections[0]['intro']);
+        self::assertSame('/typo3/module/t3af_dashboard/mcp_server', $sections[0]['href']);
+        self::assertFalse($sections[0]['active']);
+        self::assertTrue($sections[1]['active']);
+    }
+
+    public function testBuildGroupSectionsIsEmptyForUngroupedTab(): void
+    {
+        self::assertSame([], $this->utility->buildGroupSections(
+            'providers',
+            static fn(string $key): string => $key,
+            $this->buildUri(...),
+        ));
+    }
+
+    private function buildUri(string $route): string
+    {
+        return '/typo3/module/' . str_replace('.', '/', $route);
+    }
+
+    private function createUserWithTabs(string $customOptions): \TYPO3\CMS\Core\Authentication\BackendUserAuthentication
+    {
         $user = $this->createMock(\TYPO3\CMS\Core\Authentication\BackendUserAuthentication::class);
         $user->method('isAdmin')->willReturn(false);
-        $user->groupData = ['custom_options' => 'nst3af_tab:providers,nst3af_tab:ai_logs'];
+        $user->groupData = ['custom_options' => $customOptions];
         $user->method('check')->willReturnCallback(
             static function (string $type, string $value) use ($user): bool {
                 if ($type === 'custom_options') {
@@ -118,9 +228,6 @@ final class ModuleTabUtilityTest extends TestCase
             },
         );
 
-        self::assertSame(
-            't3af_dashboard.providers',
-            $this->utility->firstVisibleNonDashboardTabRoute($user),
-        );
+        return $user;
     }
 }
