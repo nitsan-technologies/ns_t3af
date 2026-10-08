@@ -45,7 +45,7 @@ function getPageIdFromTreeState() {
  */
 function appendPageIdToNavLinks(pageId) {
   const pageIdString = String(pageId);
-  document.querySelectorAll('.aiu-module-nav-tabs a.nav-link[href]').forEach((link) => {
+  document.querySelectorAll('.aiu-module-nav-tabs a.nav-link[href], .aiu-nav-switch a[href]').forEach((link) => {
     if (!(link instanceof HTMLAnchorElement)) {
       return;
     }

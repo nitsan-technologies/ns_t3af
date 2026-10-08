@@ -47,6 +47,18 @@
                 <source>MCP Tools</source>
                 <target>MCP Tools</target>
             </trans-unit>
+            <trans-unit id="module.menu.mcp">
+                <source>MCP</source>
+                <target>MCP</target>
+            </trans-unit>
+            <trans-unit id="module.mcp.heading">
+                <source>MCP Server &amp; Tools</source>
+                <target>MCP-Server &amp; Tools</target>
+            </trans-unit>
+            <trans-unit id="module.mcp.switch.aria">
+                <source>MCP sections</source>
+                <target>MCP-Bereiche</target>
+            </trans-unit>
             <trans-unit id="module.menu.mcpConnectors">
                 <source>MCP Connectors</source>
                 <target>MCP Connectors</target>
