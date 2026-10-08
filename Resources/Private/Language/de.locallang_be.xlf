@@ -344,8 +344,8 @@
                 <target>Lebensdauer der MCP-Request-ID (Stunden): Wie lange records_apply eine requestId und ihre Antwort speichert, damit ein wiederholter Aufruf nicht doppelt ausgeführt wird (Standard 24).</target>
             </trans-unit>
             <trans-unit id="extmng.mcpMaxBodyBytes">
-                <source>Max MCP POST body size (bytes): Upper limit for Streamable HTTP request bodies (default 16 MiB).</source>
-                <target>Max. MCP-POST-Body-Größe (Bytes): Obergrenze für Streamable-HTTP-Anfragen (Standard 16 MiB).</target>
+                <source>Max MCP POST body size (bytes): Upper limit for Streamable HTTP request bodies (default 100 MiB).</source>
+                <target>Max. MCP-POST-Body-Größe (Bytes): Obergrenze für Streamable-HTTP-Anfragen (Standard 100 MiB).</target>
             </trans-unit>
             <trans-unit id="extmng.rateLimitEnabled">
                 <source>Enable per-endpoint rate limits: Apply detailed OAuth endpoint rate limit counters.</source>
@@ -658,6 +658,10 @@
             <trans-unit id="agent.turn.noToolCalling">
                 <source>Your current AI provider cannot run tools for natural-language requests. Use / to pick a tool or @ to attach a record instead.</source>
                 <target>Ihr aktueller KI-Anbieter kann keine Tools für natürlichsprachliche Anfragen ausführen. Verwenden Sie / für ein Tool oder @, um einen Datensatz anzuhängen.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.noProvider">
+                <source>AI provider is not configured. Please configure an AI provider to use the AI Agent.</source>
+                <target>Es ist kein KI-Anbieter konfiguriert. Bitte konfigurieren Sie einen KI-Anbieter, um den KI-Agenten zu nutzen.</target>
             </trans-unit>
             <trans-unit id="agent.turn.noExecutableTools">
                 <source>No executable tools are available for your account. Use / to see what is locked or contact an administrator.</source>
@@ -1130,8 +1134,8 @@
                 <target>%1$s konnte nicht geplant werden: %2$s</target>
             </trans-unit>
             <trans-unit id="agent.draft.proposed">
-                <source>Review the proposed changes for %1$s before anything is written.</source>
-                <target>Prüfen Sie die vorgeschlagenen Änderungen für %1$s, bevor etwas geschrieben wird.</target>
+                <source>Review this change before anything is written.</source>
+                <target>Prüfen Sie diese Änderung, bevor etwas geschrieben wird.</target>
             </trans-unit>
             <trans-unit id="agent.draft.apply">
                 <source>Apply</source>
@@ -1165,12 +1169,28 @@
                 <source>Change undone. A new history entry was written.</source>
                 <target>Änderung zurückgenommen. Ein neuer Verlaufseintrag wurde geschrieben.</target>
             </trans-unit>
+            <trans-unit id="agent.draft.nothingKept">
+                <source>Nothing is selected. Include at least one change or cancel.</source>
+                <target>Nichts ausgewählt. Beziehen Sie mindestens eine Änderung ein oder brechen Sie ab.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.titleRename">
+                <source>Rename %1$s</source>
+                <target>%1$s umbenennen</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.titleChange">
+                <source>Change %1$s</source>
+                <target>%1$s ändern</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.undoneLabel">
+                <source>Undone</source>
+                <target>Zurückgenommen</target>
+            </trans-unit>
             <trans-unit id="agent.draft.keep">
-                <source>Keep</source>
-                <target>Übernehmen</target>
+                <source>Include</source>
+                <target>Einbeziehen</target>
             </trans-unit>
             <trans-unit id="agent.draft.drop">
-                <source>Drop</source>
+                <source>Leave out</source>
                 <target>Weglassen</target>
             </trans-unit>
             <trans-unit id="agent.draft.elicitation">
@@ -1629,6 +1649,10 @@
                 <source>This change was prepared a while ago and is outdated. Ask the agent again to prepare a fresh change.</source>
                 <target>Diese Änderung wurde vor einiger Zeit vorbereitet und ist veraltet. Bitten Sie den Agenten erneut, eine aktuelle Änderung vorzubereiten.</target>
             </trans-unit>
+            <trans-unit id="agent.write.recordGone">
+                <source>Not applied: %1$s no longer exists (it was deleted after the agent prepared this change) or you can no longer access it. Ask the agent again to prepare a new change.</source>
+                <target>Nicht angewendet: %1$s existiert nicht mehr (wurde gelöscht, nachdem der Agent diese Änderung vorbereitet hat) oder Sie haben keinen Zugriff mehr darauf. Bitten Sie den Agenten erneut, eine neue Änderung vorzubereiten.</target>
+            </trans-unit>
             <trans-unit id="agent.write.changedSince">
                 <source>Not applied: %1$s was changed after the agent prepared this change. Applying it would overwrite the newer edit. Ask the agent again to prepare a change from the current content.</source>
                 <target>Nicht angewendet: %1$s wurde geändert, nachdem der Agent diese Änderung vorbereitet hat. Das Anwenden würde die neuere Bearbeitung überschreiben. Bitten Sie den Agenten erneut, eine Änderung auf Basis des aktuellen Inhalts vorzubereiten.</target>
@@ -2086,16 +2110,16 @@
                 <target>Neu</target>
             </trans-unit>
             <trans-unit id="agent.draft.decline">
-                <source>Decline</source>
-                <target>Ablehnen</target>
+                <source>Cancel</source>
+                <target>Abbrechen</target>
             </trans-unit>
             <trans-unit id="agent.draft.execute">
-                <source>Execute</source>
-                <target>Ausführen</target>
+                <source>Apply</source>
+                <target>Anwenden</target>
             </trans-unit>
             <trans-unit id="agent.draft.executeAll">
-                <source>Execute all (%1$s)</source>
-                <target>Alle ausführen (%1$s)</target>
+                <source>Apply all (%1$s)</source>
+                <target>Alle anwenden (%1$s)</target>
             </trans-unit>
             <trans-unit id="agent.draft.previewBadge">
                 <source>Preview — nothing changed yet</source>

@@ -746,4 +746,31 @@ final class AgentRunnerTest extends TestCase
         ));
         self::assertFalse(AgentRunner::turnWasRefusedByPermissions([]));
     }
+
+    #[Test]
+    public function aDeclinedChangeIsNotOfferedAgain(): void
+    {
+        $card = static fn(string $proposed, bool $discarded = false): array => [
+            'role' => 'assistant',
+            'content' => 'Rename page',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => [
+                    'tool' => 'write_table',
+                    'discarded' => $discarded,
+                    'fields' => [['table' => 'pages', 'uid' => 3, 'field' => 'title', 'proposed' => $proposed]],
+                ],
+            ],
+        ];
+        $history = [$card('Renamed', true)];
+        $info = ['role' => 'assistant', 'content' => 'ok', 'meta' => ['type' => 'nl_reply']];
+
+        $kept = AgentRunner::withoutRepeatedDeclinedDrafts([$card('Renamed'), $card('Something else'), $info], $history);
+
+        self::assertCount(2, $kept);
+        self::assertSame('Something else', $kept[0]['meta']['draft']['fields'][0]['proposed']);
+        self::assertSame($info, $kept[1]);
+        // Nothing was declined before: nothing is removed.
+        self::assertCount(3, AgentRunner::withoutRepeatedDeclinedDrafts([$card('Renamed'), $card('Other'), $info], [$card('Renamed')]));
+    }
 }

@@ -280,7 +280,7 @@
         <source>Session lifetime (seconds): Sliding TTL for MCP session storage.</source>
       </trans-unit>
       <trans-unit id="extmng.mcpMaxBodyBytes" resname="extmng.mcpMaxBodyBytes">
-        <source>Max MCP POST body size (bytes): Upper limit for Streamable HTTP request bodies (default 16 MiB).</source>
+        <source>Max MCP POST body size (bytes): Upper limit for Streamable HTTP request bodies (default 100 MiB).</source>
       </trans-unit>
       <trans-unit id="extmng.mcpMaxFileSizeMb" resname="extmng.mcpMaxFileSizeMb">
         <source>Max MCP file size (MiB): Upper limit for URL downloads and pre-signed uploads (default 500).</source>
@@ -298,7 +298,7 @@
         <source>MCP upload token lifetime (seconds): Single-use pre-signed upload token TTL (default 900).</source>
       </trans-unit>
       <trans-unit id="extmng.mcpMaxBase64UploadBytes" resname="extmng.mcpMaxBase64UploadBytes">
-        <source>Max inline base64 upload (bytes): Cap for base64 payloads in MCP tools (default 16384).</source>
+        <source>Max inline base64 upload (bytes): Cap for base64 payloads in MCP tools (default 104857600 = 100 MiB).</source>
       </trans-unit>
       <trans-unit id="extmng.rateLimitEnabled" resname="extmng.rateLimitEnabled">
         <source>Enable per-endpoint rate limits: Apply detailed OAuth endpoint rate limit counters.</source>
@@ -729,6 +729,9 @@
       <trans-unit id="agent.turn.noToolCalling" resname="agent.turn.noToolCalling">
         <source>Your current AI provider cannot run tools for natural-language requests. Use / to pick a tool or @ to attach a record instead.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.noProvider" resname="agent.turn.noProvider">
+        <source>AI provider is not configured. Please configure an AI provider to use the AI Agent.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.noExecutableTools" resname="agent.turn.noExecutableTools">
         <source>No executable tools are available for your account. Use / to see what is locked or contact an administrator.</source>
       </trans-unit>
@@ -958,7 +961,7 @@
         <source>Could not plan %1$s: %2$s</source>
       </trans-unit>
       <trans-unit id="agent.draft.proposed" resname="agent.draft.proposed">
-        <source>Review the proposed changes for %1$s before anything is written.</source>
+        <source>Review this change before anything is written.</source>
       </trans-unit>
       <trans-unit id="agent.draft.apply" resname="agent.draft.apply">
         <source>Apply</source>
@@ -984,11 +987,23 @@
       <trans-unit id="agent.draft.undone" resname="agent.draft.undone">
         <source>Change undone. A new history entry was written.</source>
       </trans-unit>
+      <trans-unit id="agent.draft.nothingKept" resname="agent.draft.nothingKept">
+        <source>Nothing is selected. Include at least one change or cancel.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.titleRename" resname="agent.draft.titleRename">
+        <source>Rename %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.titleChange" resname="agent.draft.titleChange">
+        <source>Change %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.undoneLabel" resname="agent.draft.undoneLabel">
+        <source>Undone</source>
+      </trans-unit>
       <trans-unit id="agent.draft.keep" resname="agent.draft.keep">
-        <source>Keep</source>
+        <source>Include</source>
       </trans-unit>
       <trans-unit id="agent.draft.drop" resname="agent.draft.drop">
-        <source>Drop</source>
+        <source>Leave out</source>
       </trans-unit>
       <trans-unit id="agent.draft.elicitation" resname="agent.draft.elicitation">
         <source>MCP elicitation</source>
@@ -1336,6 +1351,9 @@
       <trans-unit id="agent.write.draftTooOld" resname="agent.write.draftTooOld">
         <source>This change was prepared a while ago and is outdated. Ask the agent again to prepare a fresh change.</source>
       </trans-unit>
+      <trans-unit id="agent.write.recordGone" resname="agent.write.recordGone">
+        <source>Not applied: %1$s no longer exists (it was deleted after the agent prepared this change) or you can no longer access it. Ask the agent again to prepare a new change.</source>
+      </trans-unit>
       <trans-unit id="agent.write.changedSince" resname="agent.write.changedSince">
         <source>Not applied: %1$s was changed after the agent prepared this change. Applying it would overwrite the newer edit. Ask the agent again to prepare a change from the current content.</source>
       </trans-unit>
@@ -1676,13 +1694,13 @@
         <source>New</source>
       </trans-unit>
       <trans-unit id="agent.draft.decline" resname="agent.draft.decline">
-        <source>Decline</source>
+        <source>Cancel</source>
       </trans-unit>
       <trans-unit id="agent.draft.execute" resname="agent.draft.execute">
-        <source>Execute</source>
+        <source>Apply</source>
       </trans-unit>
       <trans-unit id="agent.draft.executeAll" resname="agent.draft.executeAll">
-        <source>Execute all (%1$s)</source>
+        <source>Apply all (%1$s)</source>
       </trans-unit>
       <trans-unit id="agent.draft.previewBadge" resname="agent.draft.previewBadge">
         <source>Preview — nothing changed yet</source>

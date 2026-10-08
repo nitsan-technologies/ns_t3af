@@ -26,8 +26,7 @@ use TYPO3\CMS\Core\Site\SiteFinder;
 /**
  * Resolves the two languages an agent turn has to respect:
  *
- * - the reply language: the language of the editor's message, falling back to
- *   the backend user's language
+ * - the reply language: the backend user's language (the one the panel itself uses)
  * - the backend user's language, used for texts shown without a message (summaries)
  * - the target record's site language, used for content that gets stored
  *
@@ -74,16 +73,17 @@ final readonly class AgentLanguageResolver
     }
 
     /**
-     * Prompt rule for chat replies: answer in the language of the editor's message,
-     * so an English question gets an English answer even in a German backend.
-     * The backend language is only the fallback for messages without language
-     * (slash commands, ids, single words).
+     * Prompt rule for chat replies: one language for everything the editor reads (answers,
+     * questions and their options) — the backend user language, the same one the panel's own
+     * labels use (TYPO3 treats an empty backend language as English). Neither the page content
+     * nor the language of the message changes it; only an explicit request for another language does.
      */
     public function replyLanguageInstruction(?BackendUserAuthentication $user = null): string
     {
         return sprintf(
-            'Reply in the language of the editor\'s latest message.'
-            . ' If that language is unclear (for example only a command, a name or ids), reply in %s.'
+            'Always reply in %1$s: answers, questions to the editor and the options you offer.'
+            . ' The language of the page content or of the editor\'s message does not change that;'
+            . ' switch only when the editor explicitly asks for another language.'
             . ' Keep tool names, field keys and ids unchanged.',
             $this->resolveBackendLanguageName($user),
         );

@@ -291,6 +291,45 @@ export const draftMethods = {
     },
 
   /**
+     * A specific card title ("Rename QA Mounted") instead of the generic tool name
+     * ("Change a record") when the card changes one existing record.
+     *
+     * @param {object} draft
+     * @returns {string}
+     */
+    draftCardTitle(draft) {
+      const fallback = resolveToolDisplayLabel(draft);
+      const fields = Array.isArray(draft.fields) ? draft.fields : [];
+      if (draft.kind === 'tool_confirmation' || fields.length === 0) {
+        return fallback;
+      }
+      const first = fields[0];
+      const sameRecord = fields.every((f) => f.table === first.table && Number(f.uid ?? 0) === Number(first.uid ?? 0));
+      const recordLabel = String(first.recordLabel ?? '').trim();
+      if (!sameRecord || Number(first.uid ?? 0) <= 0 || recordLabel === '') {
+        return fallback;
+      }
+      const renameOnly = fields.length === 1 && ['title', 'header', 'name'].includes(String(first.field ?? ''));
+      return renameOnly
+        ? lang('agent.draft.titleRename', 'Rename %1$s', [recordLabel])
+        : lang('agent.draft.titleChange', 'Change %1$s', [recordLabel]);
+    },
+
+  /**
+     * Reload what the editor is looking at (and the page tree) after the agent changed or restored
+     * something, so the page behind the panel shows the new state.
+     */
+    refreshBackendContent() {
+      try {
+        const top = window.top;
+        top?.TYPO3?.Backend?.ContentContainer?.refresh?.();
+        top?.document?.dispatchEvent(new CustomEvent('typo3:pagetree:refresh'));
+      } catch {
+        // Cross-origin or no backend shell: nothing to refresh.
+      }
+    },
+
+  /**
      * @param {object} message
      * @param {number} messageIndex
      * @returns {string}
@@ -332,7 +371,7 @@ export const draftMethods = {
         return renderWorkTraceHtml({
           working: true,
           toolName: toolLabel,
-          summary: lang('agent.draft.proposed', 'Review the proposed changes for %1$s before anything is written.').replace('%1$s', toolLabel),
+          summary: lang('agent.draft.proposed', 'Review this change before anything is written.'),
           open: true,
         }) + `<span class="visually-hidden">${escapeHtml(severity)}</span>`;
       }
@@ -345,7 +384,7 @@ export const draftMethods = {
         const keepLabel = kept
           ? '<typo3-backend-icon identifier="actions-check" size="small"></typo3-backend-icon>'
           : '<typo3-backend-icon identifier="actions-close" size="small"></typo3-backend-icon>';
-        const keepTitle = kept ? lang('agent.draft.drop', 'Drop') : lang('agent.draft.keep', 'Keep');
+        const keepTitle = kept ? lang('agent.draft.drop', 'Leave out') : lang('agent.draft.keep', 'Include');
         return `<div class="nst3af-agent-draft__fld${dropClass}" data-field-key="${escapeHtml(String(field.key ?? ''))}">
           <div class="nst3af-agent-draft__fld-label">${label}</div>
           <div class="nst3af-agent-draft__fld-current">${escapeHtml(String(field.current ?? ''))}</div>
@@ -358,7 +397,9 @@ export const draftMethods = {
 
       const applyLabel = isDestructive
         ? (armed ? lang('agent.draft.confirmSecond', 'Apply (2 of 2)') : lang('agent.draft.confirmFirst', 'Confirm (1 of 2)'))
-        : lang('agent.draft.execute', 'Execute');
+        : lang('agent.draft.execute', 'Apply');
+      // Every change was left out: Apply would only fail, so it is disabled with a hint.
+      const nothingKept = fields.length > 0 && keptCount === 0;
       const safeFieldCount = Number(draft.safeFieldCount ?? fields.filter((field) => field.safe === true).length);
       const safeApplyBtn = safeFieldCount > 0 && !isDestructive
         ? `<button type="button" class="btn btn-default btn-sm" data-nst3af-agent-draft-apply-safe="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(lang('agent.draft.applySafe', 'Apply safe fields'))}</button>`
@@ -372,7 +413,7 @@ export const draftMethods = {
         <div class="nst3af-agent-draft${severityClass}${armedClass}" data-nst3af-agent-draft="1" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}" data-message-index="${messageIndex}" data-severity="${escapeHtml(severity)}">
           <div class="nst3af-agent-draft__header">
             <span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(severity)}" aria-hidden="true"></span>
-            <span class="nst3af-agent-draft__title">${escapeHtml(resolveToolDisplayLabel(draft))}</span>
+            <span class="nst3af-agent-draft__title">${escapeHtml(this.draftCardTitle(draft))}</span>
             <span class="nst3af-agent-draft__badge">${escapeHtml(lang('agent.draft.previewBadge', 'Preview'))}</span>
           </div>
           <p class="nst3af-agent-draft__lead">${renderMessageBody(String(message.content ?? ''))}</p>
@@ -380,10 +421,11 @@ export const draftMethods = {
           <div class="nst3af-agent-draft__cols" aria-hidden="true"><span></span><span>${escapeHtml(lang('agent.draft.colCurrent', 'Now'))}</span><span>${escapeHtml(lang('agent.draft.colProposed', 'New'))}</span><span></span></div>
           <div class="nst3af-agent-draft__fields">${rows}</div>
           ${this.renderDraftTarget(isDestructive)}
+          ${nothingKept ? `<p class="nst3af-agent-draft__hint" role="status">${escapeHtml(lang('agent.draft.nothingKept', 'Nothing is selected. Include at least one change or cancel.'))}</p>` : ''}
           <div class="nst3af-agent-draft__actions">
-            <button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-draft-apply="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(applyLabel)}</button>
+            <button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-draft-apply="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}"${nothingKept ? ' disabled' : ''}>${escapeHtml(applyLabel)}</button>
             ${safeApplyBtn}
-            <button type="button" class="btn btn-default btn-sm" data-nst3af-agent-draft-discard="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(lang('agent.draft.decline', 'Decline'))}</button>
+            <button type="button" class="btn btn-default btn-sm" data-nst3af-agent-draft-discard="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(lang('agent.draft.decline', 'Cancel'))}</button>
           </div>
         </div>
       </div>`;
@@ -435,7 +477,7 @@ export const draftMethods = {
 
       const applyLabel = isDestructive
         ? (armed ? lang('agent.draft.confirmSecond', 'Apply (2 of 2)') : lang('agent.draft.confirmFirst', 'Confirm (1 of 2)'))
-        : lang('agent.draft.execute', 'Execute');
+        : lang('agent.draft.execute', 'Apply');
 
       const severityClass = isDestructive ? ' nst3af-agent-draft--destructive' : ' nst3af-agent-draft--write';
       const armedClass = armed ? ' nst3af-agent-draft--armed' : '';
@@ -454,7 +496,7 @@ export const draftMethods = {
           ${this.renderDraftTarget(isDestructive)}
           <div class="nst3af-agent-draft__actions">
             <button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-draft-apply="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(applyLabel)}</button>
-            <button type="button" class="btn btn-default btn-sm" data-nst3af-agent-draft-discard="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(lang('agent.draft.decline', 'Decline'))}</button>
+            <button type="button" class="btn btn-default btn-sm" data-nst3af-agent-draft-discard="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(lang('agent.draft.decline', 'Cancel'))}</button>
           </div>
         </div>
       </div>`;
@@ -477,9 +519,12 @@ export const draftMethods = {
         return `<div class="nst3af-agent-readback__record"><strong>${escapeHtml(recordLabel)}</strong><table>${cells}</table></div>`;
       }).join('');
 
-      const undoBtn = meta.changeId
-        ? `<button type="button" class="btn btn-default btn-sm" data-nst3af-agent-undo="1" data-change-id="${escapeHtml(String(meta.changeId))}">${escapeHtml(lang('agent.draft.undo', 'Undo'))}</button>`
-        : '';
+      const undone = meta.undone === true;
+      const undoBtn = undone
+        ? `<span class="nst3af-agent-applied__undone">${escapeHtml(lang('agent.draft.undoneLabel', 'Undone'))}</span>`
+        : (meta.changeId && meta.undoable !== false
+          ? `<button type="button" class="btn btn-default btn-sm" data-nst3af-agent-undo="1" data-change-id="${escapeHtml(String(meta.changeId))}">${escapeHtml(lang('agent.draft.undo', 'Undo'))}</button>`
+          : '');
 
       const handoffHtml = meta.schedulerHandoff
         ? this.renderHandoffCard(meta.schedulerHandoff)
@@ -489,7 +534,7 @@ export const draftMethods = {
         <div class="nst3af-agent-msg__who">AI Agent</div>
         <div class="nst3af-agent-applied">
           <details class="nst3af-agent-applied__details">
-            <summary class="nst3af-agent-applied__title"><typo3-backend-icon identifier="actions-check" size="small" aria-hidden="true"></typo3-backend-icon> ${escapeHtml(lang('agent.applied.title', 'Changes applied'))}<span class="nst3af-agent-applied__summary">${escapeHtml(String(message.content ?? ''))}</span></summary>
+            <summary class="nst3af-agent-applied__title"><typo3-backend-icon identifier="actions-check" size="small" aria-hidden="true"></typo3-backend-icon> ${escapeHtml(undone ? lang('agent.draft.undoneLabel', 'Undone') : lang('agent.applied.title', 'Changes applied'))}<span class="nst3af-agent-applied__summary">${escapeHtml(String(message.content ?? ''))}</span></summary>
             ${rows}
             ${handoffHtml}
           </details>
@@ -578,6 +623,11 @@ export const draftMethods = {
         })
         : keptFieldKeys;
 
+      if (draft.kind !== 'tool_confirmation' && safeKeptFieldKeys.length === 0) {
+        this.announce(lang('agent.draft.nothingKept', 'Nothing is selected. Include at least one change or cancel.'));
+        return;
+      }
+
       const url = ajaxUrl('nst3af_agent_apply_draft');
       if (url === '') {
         return;
@@ -631,6 +681,7 @@ export const draftMethods = {
             fromRunner: message.meta?.fromRunner === true,
           };
           this.renderStream();
+          this.refreshBackendContent();
           this.queueContinuation(message, 'applied', String(message.content ?? ''));
         } else {
           const appliedCount = String(result.appliedCount ?? 0);
@@ -645,12 +696,14 @@ export const draftMethods = {
               type: 'readback_result',
               readback: result.readback ?? [],
               changeId: result.changeId ?? '',
+              undoable: result.undoable !== false,
               correlationId: result.correlationId ?? '',
               schedulerHandoff: payload.schedulerHandoff ?? null,
               links: Array.isArray(payload.links) ? payload.links : [],
             },
           });
           this.renderStream();
+          this.refreshBackendContent();
           this.queueContinuation(message, 'applied', String(payload.message ?? ''));
         }
       } catch (error) {
@@ -844,6 +897,7 @@ export const draftMethods = {
             type: 'readback_result',
             readback: result.readback ?? [],
             changeId: result.changeId ?? '',
+            undoable: result.undoable !== false,
             correlationId: result.correlationId ?? meta.correlationId ?? '',
             schedulerHandoff: payload.schedulerHandoff ?? null,
             appliedValues: result.appliedValues ?? {},
@@ -851,6 +905,7 @@ export const draftMethods = {
           },
         });
         this.renderStream();
+        this.refreshBackendContent();
         this.queueContinuation(message, 'applied', String(payload.message ?? ''));
       } catch (error) {
         meta.applying = false;
@@ -919,19 +974,36 @@ export const draftMethods = {
         if (!payload?.ok) {
           throw new Error(payload?.message ?? lang('agent.error.undoFailed', 'Undo failed'));
         }
+        this.markChangeUndone(changeId);
         this.messages.push({
           role: 'assistant',
           content: messageContent(payload.message, lang('agent.draft.undone', 'Change undone.')),
           meta: { type: 'info' },
         });
         this.renderStream();
+        this.refreshBackendContent();
       } catch (error) {
         const text = await errorText(error);
+        // "Already undone" (or the change is gone): the button must not stay clickable.
+        if (error?.response?.status === 400) {
+          this.markChangeUndone(changeId);
+        }
         this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
         this.renderStream();
       } finally {
         this.isRunning = false;
         this.renderStream();
+      }
+    },
+
+  /**
+     * @param {string} changeId
+     */
+    markChangeUndone(changeId) {
+      for (const message of this.messages) {
+        if (message?.meta?.changeId === changeId) {
+          message.meta.undone = true;
+        }
       }
     },
 };

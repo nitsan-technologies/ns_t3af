@@ -73,9 +73,11 @@ final readonly class AgentTurnRouter
         $starterAction = trim((string) ($body['action'] ?? ''));
         $slashRemainder = '';
 
+        $typedSlash = false;
         if ($selectedTool === '') {
             $parsed = $this->messageParser->extractSlashCommand($message);
             $selectedTool = $parsed['name'];
+            $typedSlash = $selectedTool !== '';
             if ($toolArguments === [] && $parsed['arguments'] !== []) {
                 $toolArguments = $parsed['arguments'];
             }
@@ -84,6 +86,20 @@ final readonly class AgentTurnRouter
 
         $recordAttachments = $this->recordAttachmentResolver->extractAttachments($message);
         $fileAttachments = $this->recordAttachmentResolver->extractFileAttachments($message);
+        // "/page tree" is not a command when no tool has that name: treat the text as a normal
+        // request instead of answering "Unknown tool".
+        if (
+            $typedSlash
+            && $selectedTool !== self::LEGACY_SEO_ACTION
+            && $selectedTool !== self::LEGACY_FILE_METADATA_ACTION
+            && !$this->isKnownTool($selectedTool)
+        ) {
+            $message = ltrim($this->messageParser->stripComposerTokens($message), '/ ');
+            $selectedTool = '';
+            $toolArguments = [];
+            $slashRemainder = '';
+        }
+
         if ($selectedTool !== '' && $toolArguments === [] && $recordAttachments !== []) {
             $toolArguments = $this->recordAttachmentResolver->mergeUidFromAttachments($selectedTool, $recordAttachments);
         }
@@ -117,6 +133,9 @@ final readonly class AgentTurnRouter
         }
 
         $followUp = $this->messageParser->stripComposerTokens($message);
+        if ($followUp !== '') {
+            $followUp = $this->messageParser->describeComposerTokens($message);
+        }
         $attachmentMessages = $this->processRecordAttachmentTurns(
             $recordAttachments,
             $context,
@@ -350,6 +369,19 @@ final readonly class AgentTurnRouter
         }
 
         return $messages;
+    }
+
+    /**
+     * Whether a tool with this name is in the catalog. When the catalog cannot be built, the
+     * name counts as known, so a typed command keeps its old structural handling.
+     */
+    private function isKnownTool(string $toolName): bool
+    {
+        try {
+            return $this->findTool($this->permittedActionProvider->buildCatalog(), $toolName) !== null;
+        } catch (\Throwable) {
+            return true;
+        }
     }
 
     /**

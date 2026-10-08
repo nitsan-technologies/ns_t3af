@@ -352,7 +352,8 @@ readonly class AgentPromptBuilder
         }
 
         $message = sprintf(
-            '[The editor confirmed "%s" and it was applied.%s] Continue with the remaining steps of my request.'
+            '[The editor confirmed "%s" and it was applied.%s] Continue with the remaining steps of my request, if there are any;'
+            . ' if this change already completed it, just confirm that in one short sentence.'
             . ' Do not create another content element of the same CType you just applied; prepare the next distinct type from my request, or attach a pending image.'
             . ' Only when every part of my original request is already done through tools, confirm in one short sentence without calling tools.'
             . ' Never claim a file or image is attached unless a file-reference step succeeded.'
@@ -368,6 +369,9 @@ readonly class AgentPromptBuilder
             );
         }
         $request = self::latestUserRequestText($history);
+        if ($request !== '') {
+            $message .= sprintf(' My request was: "%s".', mb_substr(preg_replace('/\s+/u', ' ', $request) ?? $request, 0, 300));
+        }
         $reminder = self::remainingWorkReminder($history, AgentPlan::latest($history), $request);
 
         return $reminder !== '' ? $message . ' ' . $reminder : $message;
@@ -830,7 +834,7 @@ readonly class AgentPromptBuilder
     public static function isDraftReviewBoilerplate(string $text): bool
     {
         return preg_match(
-            '/^Review the proposed changes for .+ before anything is written\.?$/iu',
+            '/^Review (?:the proposed changes for .+|this change) before anything is written\.?$/iu',
             trim($text),
         ) === 1;
     }

@@ -107,6 +107,7 @@ class AgentController {
     this.autocompleteMode = null;
     this.settingsHref = '#';
     this.settingsAllowed = false;
+    this.recordMentions = [];
     this.disclosureShown = false;
     this.disclosureDismissed = false;
     this.greeting = null;

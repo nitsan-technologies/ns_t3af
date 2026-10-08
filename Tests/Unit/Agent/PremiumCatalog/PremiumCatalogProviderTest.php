@@ -45,6 +45,17 @@ final class PremiumCatalogProviderTest extends TestCase
         self::assertSame('ns_t3ai', $match->extensionKey);
     }
 
+    public function testAWordInsideAnotherWordIsNotACapabilityRequest(): void
+    {
+        // "rag" sits inside "paragraphs" and "average"; an essay request must reach the model.
+        $this->resetLoadedExtensions();
+        $provider = new PremiumCatalogProvider(new ExtensionAvailability());
+
+        self::assertNull($provider->findMatch('Write a long essay of ten paragraphs about the average rainfall'));
+        self::assertNotNull($provider->findMatch('translated pages please'));
+        self::assertNotNull($provider->findMatch('add the chatbots to the site'));
+    }
+
     public function testFindsAccessibilityCapability(): void
     {
         $this->resetLoadedExtensions();

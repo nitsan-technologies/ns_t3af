@@ -65,7 +65,7 @@ mcpRemoteTokenLifetime = 2592000
 sessionLifetime = 86400
 
 # cat=MCP Server//35; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mcpMaxBodyBytes
-mcpMaxBodyBytes = 16777216
+mcpMaxBodyBytes = 104857600
 
 # cat=MCP Server//36; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mcpMaxFileSizeMb
 mcpMaxFileSizeMb = 500
@@ -83,7 +83,7 @@ mcpIdempotencyTtlHours = 24
 mcpUploadTokenTtl = 900
 
 # cat=MCP Server//39; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.mcpMaxBase64UploadBytes
-mcpMaxBase64UploadBytes = 16384
+mcpMaxBase64UploadBytes = 104857600
 
 # cat=MCP Server//40; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.rateLimitEnabled
 rateLimitEnabled = 1
@@ -177,10 +177,10 @@ ailabelSecondInfoLayer = off
 ailabelApplicableTables =
 
 # cat=AI Agent//10; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentMaxReadToolsPerTurn
-agentMaxReadToolsPerTurn = 5
+agentMaxReadToolsPerTurn = 10
 
 # cat=AI Agent//20; type=int+; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentMaxWriteDraftsPerTurn
-agentMaxWriteDraftsPerTurn = 2
+agentMaxWriteDraftsPerTurn = 10
 
 # cat=AI Agent//30; type=boolean; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.agentShowProviderThinking
 agentShowProviderThinking = 1

@@ -84,6 +84,16 @@ final class AgentMessageParserTest extends TestCase
     }
 
     #[Test]
+    public function describeComposerTokensKeepsRecordReferencesReadable(): void
+    {
+        self::assertSame(
+            'Compare page #224 with page #225 in one sentence.',
+            $this->parser->describeComposerTokens('Compare @pages:224 with @pages:225 in one sentence.'),
+        );
+        self::assertSame('explain this', $this->parser->describeComposerTokens('@file:1:user_upload/image.png explain this'));
+    }
+
+    #[Test]
     public function stripComposerTokensRemovesAttachments(): void
     {
         self::assertSame(

@@ -35,6 +35,35 @@ final class AgentUndoService
     ) {}
 
     /**
+     * Whether undo can bring the change back. A delete cannot be undone from here (the editor has
+     * to restore it from the recycle bin), so the card must not offer an Undo button for it.
+     *
+     * @param array<int|string, mixed> $undoFields
+     */
+    public static function isUndoable(array $undoFields): bool
+    {
+        $revertible = false;
+        foreach ($undoFields as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $action = (string) ($entry['action'] ?? '');
+            if ($action === 'delete') {
+                return false;
+            }
+            $field = (string) ($entry['field'] ?? '');
+            if (($action === 'create' || $action === 'copy' || !str_starts_with($field, '_'))
+                && (string) ($entry['table'] ?? '') !== ''
+                && (int) ($entry['uid'] ?? 0) > 0
+            ) {
+                $revertible = true;
+            }
+        }
+
+        return $revertible;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function undo(string $changeId): array

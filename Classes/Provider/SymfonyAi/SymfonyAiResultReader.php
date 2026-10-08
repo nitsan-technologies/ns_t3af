@@ -65,7 +65,7 @@ final class SymfonyAiResultReader
     }
 
     /**
-     * @return list<array{id: string, name: string, arguments: array<string, mixed>}>
+     * @return list<array{id: string, name: string, arguments: array<string, mixed>, signature?: string}>
      */
     public static function toolCalls(object $result): array
     {
@@ -89,7 +89,13 @@ final class SymfonyAiResultReader
                     $normalized[(string) $key] = $value;
                 }
                 $id = (string) $call->getId();
-                $calls[] = ['id' => $id !== '' ? $id : uniqid('call_', true), 'name' => $name, 'arguments' => $normalized];
+                $row = ['id' => $id !== '' ? $id : uniqid('call_', true), 'name' => $name, 'arguments' => $normalized];
+                // Gemini signs its function calls and wants the signature back on the next request.
+                $signature = method_exists($call, 'getSignature') ? $call->getSignature() : null;
+                if (is_string($signature) && $signature !== '') {
+                    $row['signature'] = $signature;
+                }
+                $calls[] = $row;
             }
         }
 

@@ -42,6 +42,23 @@ final class AgentMessageParser
     }
 
     /**
+     * Like stripComposerTokens(), but keeps record references readable ("@pages:224" becomes
+     * "page #224") so an instruction such as "compare @pages:224 with @pages:225" still says
+     * which records it is about. File tokens are dropped.
+     */
+    public function describeComposerTokens(string $message): string
+    {
+        $message = preg_replace('/@file:\d+:\S+/i', '', $message) ?? $message;
+        $message = preg_replace_callback(
+            '/@([a-z0-9_]+):(\d+)/i',
+            static fn(array $m): string => (strtolower($m[1]) === 'pages' ? 'page' : strtolower($m[1])) . ' #' . $m[2],
+            $message,
+        ) ?? $message;
+
+        return trim(preg_replace('/\s+/u', ' ', $message) ?? $message);
+    }
+
+    /**
      * Slash commands must lead the message (after stripping attachments), e.g. "/pages_get 49".
      *
      * @return array{name: string, arguments: array<string, mixed>, remainder: string}

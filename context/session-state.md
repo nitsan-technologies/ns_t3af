@@ -282,7 +282,7 @@ Also fixed two pre-existing failures surfaced by `composer test`/`composer stan`
 
 ## 2026-08-17 — Post-upgrade hardening (Azure 0.12 + MCP 0.7)
 
-**Done:** Azure dual-deployment uses Symfony AI 0.12 `Responses\ModelClient` + `OpenAi\EmbeddingsModelClient` (throws on missing classes; no silent fallback). MCP Streamable HTTP: `mcpMaxBodyBytes` extension setting (default 16 MiB); transport code targets `mcp/sdk ^0.7` only. Agent context: `FEATURE_McpServer.md` + `mcp-server.md` updated to SDK `^0.7`.
+**Done:** Azure dual-deployment uses Symfony AI 0.12 `Responses\ModelClient` + `OpenAi\EmbeddingsModelClient` (throws on missing classes; no silent fallback). MCP Streamable HTTP: `mcpMaxBodyBytes` extension setting (default 100 MiB); transport code targets `mcp/sdk ^0.7` only. Agent context: `FEATURE_McpServer.md` + `mcp-server.md` updated to SDK `^0.7`.
 
 **Last touched:** 2026-08-17
 

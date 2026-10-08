@@ -94,7 +94,7 @@ final class GovernedPlatform implements PlatformInterface
         if ($response->toolCalls !== []) {
             $calls = [];
             foreach ($response->toolCalls as $call) {
-                $calls[] = new ToolCall($call->id !== '' ? $call->id : uniqid('call_', true), $call->name, $call->arguments);
+                $calls[] = new ToolCall($call->id !== '' ? $call->id : uniqid('call_', true), $call->name, $call->arguments, $call->signature);
             }
 
             $result = new ToolCallResult($calls);
@@ -133,6 +133,7 @@ final class GovernedPlatform implements PlatformInterface
                             'id' => $call->getId(),
                             'name' => $call->getName(),
                             'arguments' => $call->getArguments(),
+                            ...($call->getSignature() !== null ? ['signature' => $call->getSignature()] : []),
                         ],
                         array_values($message->getToolCalls()),
                     );

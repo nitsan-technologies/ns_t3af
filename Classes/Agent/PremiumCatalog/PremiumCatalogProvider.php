@@ -119,7 +119,7 @@ final readonly class PremiumCatalogProvider
             }
             $score = 0;
             foreach ($entry->searchTerms as $term) {
-                if (str_contains($needle, $term)) {
+                if (self::containsTerm($needle, $term)) {
                     ++$score;
                 }
             }
@@ -153,6 +153,18 @@ final readonly class PremiumCatalogProvider
     public function findStandaloneMatch(string $query): ?PremiumCatalogEntry
     {
         return $this->looksCompound($query) ? null : $this->findMatch($query);
+    }
+
+    /**
+     * Whole-word match, so "rag" does not fire inside "paragraphs" or "seo" inside another word.
+     * Longer terms may carry an ending ("translate" finds "translated", "chatbot" finds
+     * "chatbots"); short ones (up to 4 letters) only an optional plural "s".
+     */
+    private static function containsTerm(string $needle, string $term): bool
+    {
+        $ending = mb_strlen($term) > 4 ? '[\\p{L}]*' : 's?';
+
+        return preg_match('/(?<![\\p{L}\\p{N}])' . preg_quote($term, '/') . $ending . '(?![\\p{L}\\p{N}])/u', $needle) === 1;
     }
 
     private function looksCompound(string $query): bool

@@ -144,8 +144,8 @@ Draft cards carry `editorLabel` for UI; destructive = two-step confirm.
 
 ## ext_conf (Extension Configuration)
 
-- `agentMaxReadToolsPerTurn` (default 5)
-- `agentMaxWriteDraftsPerTurn` (default 2)
+- `agentMaxReadToolsPerTurn` (default 10)
+- `agentMaxWriteDraftsPerTurn` (default 10)
 - `agentShowProviderThinking`
 - `agentConversationRetentionDays` (default 90; soft delete, removed 7 days later by `t3af:agent:conversations:cleanup`)
 - `agentContinueAfterConfirm` (default on)

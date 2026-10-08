@@ -75,7 +75,7 @@ final class AiToolCallingService implements AiToolCallingServiceInterface
                     $this->siteStorageContext->resolveStoragePidFromPageId($pageId ?? 0),
                 );
             }
-            if ($provider === null) {
+            if ($provider === null || !$provider->isEnabled) {
                 return false;
             }
         } catch (\Throwable) {
@@ -188,6 +188,7 @@ final class AiToolCallingService implements AiToolCallingServiceInterface
                 id: isset($row['id']) && is_string($row['id']) ? $row['id'] : uniqid('call_', true),
                 name: $name,
                 arguments: is_array($row['arguments'] ?? null) ? $row['arguments'] : [],
+                signature: isset($row['signature']) && is_string($row['signature']) && $row['signature'] !== '' ? $row['signature'] : null,
             );
         }
 

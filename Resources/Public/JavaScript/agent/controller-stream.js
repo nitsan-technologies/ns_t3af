@@ -157,7 +157,7 @@ export const streamMethods = {
     },
 
   /**
-     * Backend links open in the content area (the agent stays open), frontend links in a new tab.
+     * Backend links open in the content area (the agent panel closes so the page is visible), frontend links in a new tab.
      *
      * @param {HTMLAnchorElement} link
      * @returns {boolean} true when handled
@@ -170,6 +170,9 @@ export const streamMethods = {
         const container = window.top?.TYPO3?.Backend?.ContentContainer;
         if (container && typeof container.setUrl === 'function') {
           container.setUrl(link.href);
+          // The agent panel covers the content area: close it so the opened page is in front.
+          // The conversation is saved and comes back when the panel is reopened.
+          this.close();
           return true;
         }
       } catch {
@@ -318,7 +321,7 @@ export const streamMethods = {
 
       const pending = this.pendingExecutableDrafts();
       const executeAllBar = pending.length >= 2 && !this.isRunning
-        ? `<div class="nst3af-agent-execute-all"><button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-execute-all>${escapeHtml(lang('agent.draft.executeAll', 'Execute all (%1$s)', [String(pending.length)]))}</button></div>`
+        ? `<div class="nst3af-agent-execute-all"><button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-execute-all>${escapeHtml(lang('agent.draft.executeAll', 'Apply all (%1$s)', [String(pending.length)]))}</button></div>`
         : '';
       this.stream.innerHTML = this.renderHomeNotice() + html + executeAllBar + this.renderContextNotice();
       this.stream.classList.toggle('nst3af-agent-stream--empty', this.messages.length === 0 && !this.isRunning);
