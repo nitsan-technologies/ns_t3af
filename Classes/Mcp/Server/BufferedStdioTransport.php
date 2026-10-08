@@ -45,16 +45,30 @@ class BufferedStdioTransport extends StdioTransport
     /** True while the rest of a line that was too long is still coming in, to be thrown away. */
     private bool $discarding = false;
 
+    /** @var resource */
+    private $stdin;
+
     /**
-     * @param resource $stdin
-     * @param resource $stdout
+     * STDIN / STDOUT only exist when PHP runs on the command line, so they must not be parameter defaults:
+     * the container compiler reads defaults by reflection, and in a web request (cache flush in the Install
+     * Tool, non-composer setups) that crashed with "Undefined constant STDIN". They are looked up here instead.
+     *
+     * @param resource|null $stdin
+     * @param resource|null $stdout
      */
     public function __construct(
-        private $stdin = \STDIN,
-        $stdout = \STDOUT,
+        $stdin = null,
+        $stdout = null,
         ?LoggerInterface $logger = null,
         private readonly int $maxMessageBytes = self::DEFAULT_MAX_MESSAGE_BYTES,
     ) {
+        $stdin ??= \defined('STDIN') ? \STDIN : \fopen('php://stdin', 'r');
+        $stdout ??= \defined('STDOUT') ? \STDOUT : \fopen('php://stdout', 'w');
+        if ($stdin === false || $stdout === false) {
+            throw new \RuntimeException('Cannot open the standard input/output streams.', 1712000020);
+        }
+        $this->stdin = $stdin;
+
         parent::__construct($stdin, $stdout, $logger);
     }
 

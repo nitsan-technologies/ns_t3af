@@ -315,6 +315,24 @@ export const draftMethods = {
         return fallback;
       }
       const first = fields[0];
+      const action = String(draft.action ?? '');
+      if (action === 'create' || action === 'delete' || action === 'move') {
+        const typeLabel = String(first.tableLabel ?? '').trim();
+        if (action === 'create') {
+          const nameField = fields.find((f) => ['title', 'header', 'name', 'username', 'slug'].includes(String(f.field ?? '')) && String(f.proposed ?? '').trim() !== '');
+          const created = typeLabel === '' ? '' : (nameField ? `${typeLabel} „${String(nameField.proposed).trim()}“` : typeLabel);
+          if (created !== '') {
+            return lang('agent.draft.titleCreate', 'Create %1$s', [created]);
+          }
+        } else {
+          const recordLabel = String(first.recordLabel ?? '').trim();
+          if (recordLabel !== '' && Number(first.uid ?? 0) > 0) {
+            return action === 'delete'
+              ? lang('agent.draft.titleDelete', 'Delete %1$s', [recordLabel])
+              : lang('agent.draft.titleMove', 'Move %1$s', [recordLabel]);
+          }
+        }
+      }
       const sameRecord = fields.every((f) => f.table === first.table && Number(f.uid ?? 0) === Number(first.uid ?? 0));
       const recordLabel = String(first.recordLabel ?? '').trim();
       const renameField = fields.length === 1 && String(first.field ?? '') === '_rename';
@@ -983,11 +1001,15 @@ export const draftMethods = {
 
       this.isRunning = true;
       try {
-        const payload = await new AjaxRequest(url).post({ changeId, sessionUuid: this.activeSessionUuid() }).then((r) => r.resolve());
+        const payload = await new AjaxRequest(url).post({ changeId, sessionUuid: this.activeSessionUuid(), context: this.context ?? {} }).then((r) => r.resolve());
         if (!payload?.ok) {
           throw new Error(payload?.message ?? lang('agent.error.undoFailed', 'Undo failed'));
         }
-        this.markChangeUndone(changeId);
+        this.markChangeUndone(changeId, payload.result?.reverted);
+        if (payload.context && typeof payload.context === 'object') {
+          this.context = payload.context;
+          this.renderContext?.();
+        }
         this.messages.push({
           role: 'assistant',
           content: messageContent(payload.message, lang('agent.draft.undone', 'Undone. Your previous version is back.')),
@@ -1011,11 +1033,21 @@ export const draftMethods = {
 
   /**
      * @param {string} changeId
+     * @param {Array<object>} [reverted]
      */
-    markChangeUndone(changeId) {
+    markChangeUndone(changeId, reverted = []) {
+      const restored = Array.isArray(reverted) ? reverted.filter((entry) => entry?.reverted === 'restored') : [];
       for (const message of this.messages) {
         if (message?.meta?.changeId === changeId) {
           message.meta.undone = true;
+          // The card shows the state the record is in now: the values before the change.
+          for (const entry of Array.isArray(message.meta.readback) ? message.meta.readback : []) {
+            for (const back of restored) {
+              if (back.table === entry.table && Number(back.uid) === Number(entry.uid) && entry.values && back.field in entry.values) {
+                entry.values[back.field] = back.previousValue ?? '';
+              }
+            }
+          }
         }
       }
     },
