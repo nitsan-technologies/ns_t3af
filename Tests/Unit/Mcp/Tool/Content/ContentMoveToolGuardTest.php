@@ -61,4 +61,21 @@ final class ContentMoveToolGuardTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $tool->execute(20, 0);
     }
+
+    #[Test]
+    public function aPageUidIsPlannedAsAPageMove(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->method('findExistingUids')->willReturnCallback(
+            static fn(string $table): array => $table === 'pages' ? [80] : [],
+        );
+        $records->method('findByUid')->willReturn(['title' => 'Page between 1 and 2', 'pid' => 1]);
+
+        $plan = (new ContentMoveTool($this->createMock(DataHandlerService::class), $records))
+            ->plan(['uid' => 80, 'target' => -68]);
+
+        self::assertSame('pages_move', $plan->toolName);
+        self::assertSame('pages', $plan->fields[0]->table);
+        self::assertSame(-68, $plan->context['target']);
+    }
 }

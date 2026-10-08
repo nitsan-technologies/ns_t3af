@@ -213,4 +213,76 @@ final class WriteTableToolTest extends TestCase
             'data' => ['pid' => 225, 'header' => 'Test'],
         ]);
     }
+
+    #[Test]
+    public function planCreateAfterAMissingRecordIsRefused(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())
+            ->method('assertInsertAfterExists')
+            ->with('tt_content', 12)
+            ->willThrowException(new \InvalidArgumentException('Record not found: tt_content uid 12'));
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Record not found');
+        $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'data' => ['pid' => -12, 'header' => 'After'],
+        ]);
+    }
+
+    #[Test]
+    public function planCreateAfterARecordKeepsTheNegativePid(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())->method('assertInsertAfterExists')->with('tt_content', 12);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'data' => ['pid' => -12, 'header' => 'After'],
+        ]);
+
+        self::assertSame(-12, $plan->context['pid']);
+    }
+
+    #[Test]
+    public function planCreateAfterAPageTheEditorCannotReadIsRefused(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->willReturn(null);
+        $access = $this->createMock(PageAccessService::class);
+        $access->method('isUnrestricted')->willReturn(false);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+            $access,
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage(PageAccessService::ACCESS_DENIED_MESSAGE);
+        $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'data' => ['pid' => -12, 'header' => 'After'],
+        ]);
+    }
 }

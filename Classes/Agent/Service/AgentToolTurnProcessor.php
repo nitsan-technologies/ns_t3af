@@ -499,7 +499,10 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             ];
         }
 
-        $editorLabel = $this->editorLabelService->resolve($tool);
+        $shownTool = $plan->toolName !== '' && $plan->toolName !== $toolName ? $plan->toolName : $toolName;
+        $editorLabel = $shownTool === $toolName
+            ? $this->editorLabelService->resolve($tool)
+            : $this->editorLabelService->resolveByName($shownTool);
         $draftCard = $this->draftService->buildDraftCard($plan, $severity);
         $draftCard['editorLabel'] = $editorLabel;
         $this->draftService->persistDraft($draftCard, $plan, $arguments, $this->draftSession);
@@ -513,7 +516,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             'content' => $content,
             'meta' => [
                 'type' => 'inline_draft',
-                'tool' => $toolName,
+                'tool' => $shownTool,
                 'editorLabel' => $editorLabel,
                 'severity' => $severity,
                 'draft' => $draftCard,

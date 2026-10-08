@@ -61,19 +61,55 @@ readonly class ContentMoveTool implements McpNonAiToolInterface, McpPlannableToo
         }
 
         if ($this->recordService->findExistingUids('tt_content', [$uid]) === []) {
+            if ($this->recordService->findExistingUids('pages', [$uid]) !== []) {
+                return $this->planPageMove($uid, $target);
+            }
+
             throw new \InvalidArgumentException('Content element not found: uid ' . $uid);
         }
 
         $current = $this->recordService->findByUid('tt_content', $uid, ['header', 'pid']) ?? [];
         $label = trim((string) ($current['header'] ?? '')) !== '' ? (string) $current['header'] : 'Content ' . $uid;
 
-        return new ToolPlan('move', 'content_move', [
+        return $this->contentMovePlan($uid, $target, $label, (string) ($current['pid'] ?? ''));
+    }
+
+    private function planPageMove(int $uid, int $target): ToolPlan
+    {
+        if ($target > 0) {
+            $this->recordService->assertParentPageExists($target);
+        } else {
+            $this->recordService->assertInsertAfterExists('pages', abs($target));
+        }
+
+        $current = $this->recordService->findByUid('pages', $uid, ['title', 'pid']) ?? [];
+        $title = trim((string) ($current['title'] ?? ''));
+
+        return $this->contentMovePlan(
+            $uid,
+            $target,
+            $title !== '' ? $title : 'Page ' . $uid,
+            (string) ($current['pid'] ?? ''),
+            'pages',
+            'pages_move',
+        );
+    }
+
+    private function contentMovePlan(
+        int $uid,
+        int $target,
+        string $label,
+        string $currentPid,
+        string $table = 'tt_content',
+        string $toolName = 'content_move',
+    ): ToolPlan {
+        return new ToolPlan('move', $toolName, [
             new ToolPlanField(
-                ToolPlanField::buildKey('tt_content', $uid, '_move'),
-                'tt_content',
+                ToolPlanField::buildKey($table, $uid, '_move'),
+                $table,
                 $uid,
                 '_move',
-                (string) ($current['pid'] ?? ''),
+                $currentPid,
                 'move to target ' . $target,
             ),
         ], [
@@ -88,7 +124,8 @@ readonly class ContentMoveTool implements McpNonAiToolInterface, McpPlannableToo
             . ' Requires uid of the tt_content record and target ≠ 0.'
             . ' Use a positive target to move to the top of a page (target = page pid).'
             . ' Use a negative target to move after another content element (target = -uid of the element to place after).'
-            . ' Do not use this tool to delete content — use content_delete instead.',
+            . ' Do not use this tool to delete content — use content_delete instead.'
+            . ' Do not use this tool for a page. Moving a page is pages_move.',
     )]
     public function execute(int $uid, int $target): string
     {

@@ -129,6 +129,84 @@ readonly class RecordService
     }
 
     /**
+     * The record a negative pid inserts after: present, not deleted, and visible in this workspace.
+     */
+    public function assertInsertAfterExists(string $table, int $uid): void
+    {
+        if ($uid <= 0) {
+            throw new \InvalidArgumentException('Create requires a record to insert after.');
+        }
+
+        if ($table === 'pages') {
+            if ($this->parentPageExists($uid)) {
+                return;
+            }
+
+            throw new \InvalidArgumentException(
+                'Page ' . $uid . ' does not exist or was deleted. Choose another page.',
+            );
+        }
+
+        if ($this->findExistingUids($table, [$uid]) === []) {
+            throw new \InvalidArgumentException('Record not found: ' . $table . ' uid ' . $uid);
+        }
+    }
+
+    /**
+     * DataHandler target that places a record directly before this page.
+     * The previous default-language sibling becomes a negative "after" target.
+     * The page being moved is skipped. The first child uses the parent pid.
+     */
+    public function targetBeforePage(int $pageUid, int $movingUid = 0): int
+    {
+        if ($pageUid <= 0 || !$this->parentPageExists($pageUid)) {
+            throw new \InvalidArgumentException(
+                'Page ' . $pageUid . ' does not exist or was deleted. Choose another page.',
+            );
+        }
+
+        $page = $this->findByUid('pages', $pageUid, ['pid', 'sorting']);
+        if ($page === null) {
+            throw new \InvalidArgumentException(
+                'Page ' . $pageUid . ' does not exist or was deleted. Choose another page.',
+            );
+        }
+
+        $pid = (int) ($page['pid'] ?? 0);
+        $sorting = (int) ($page['sorting'] ?? 0);
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($queryBuilder, 'pages');
+
+        $constraints = [
+            $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pid, ParameterType::INTEGER)),
+            $queryBuilder->expr()->eq('sys_language_uid', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER)),
+            $queryBuilder->expr()->lt('sorting', $queryBuilder->createNamedParameter($sorting, ParameterType::INTEGER)),
+        ];
+        if ($movingUid > 0) {
+            $constraints[] = $queryBuilder->expr()->neq(
+                'uid',
+                $queryBuilder->createNamedParameter($movingUid, ParameterType::INTEGER),
+            );
+        }
+
+        $previous = $queryBuilder
+            ->select('uid')
+            ->from('pages')
+            ->where(...$constraints)
+            ->orderBy('sorting', 'DESC')
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchAssociative();
+
+        if ($previous !== false) {
+            return -((int) $previous['uid']);
+        }
+
+        return $pid;
+    }
+
+    /**
      * Return the subset of UIDs that actually exist in the given table.
      *
      * @param list<int> $uids

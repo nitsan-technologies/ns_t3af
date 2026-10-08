@@ -51,7 +51,7 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
  * run in a transaction, audit, AI Label marking), so a single write and a batch behave the same way.
  * Not strict by default: fields that cannot be written are dropped and reported in "ignoredFields", as before.
  * With strict=true the call is refused instead, and names those fields.
- * New records are appended after the existing ones of their page (give a negative pid to place one).
+ * A positive pid creates the record as the first child of that page. A negative pid places it directly after that record.
  * File fields are attached afterwards, outside that transaction.
  */
 #[McpToolSeverity(ToolSeverity::Write)]
@@ -107,8 +107,10 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         name: 'write_table',
         description: 'Create, update, or delete records in a TYPO3 table via DataHandler.'
             . ' Use table_schema first to discover valid field names and types.'
-            . ' For create, include "pid" in the JSON data object; the new record is appended after the existing ones on that page'
-            . ' (negative pid = insert after that uid instead).'
+            . ' For create, include "pid" in the JSON data object. A positive pid creates the record as the first child of that page.'
+            . ' A negative pid (-uid) creates it directly after that record: "after page 68" is {"pid": -68}, not the parent uid.'
+            . ' "Before a record" is the negative uid of the record before it, or the parent uid when it is already first.'
+            . ' "Last under a page" is the negative uid of that page\'s last child. "Subpage of page 68" is {"pid": 68}.'
             . ' For update/delete, pass the record uid.'
             . ' strict=true refuses the whole call and names the fields that are unknown or that you may not change; by default they are dropped and reported in "ignoredFields".'
             . ' Category/MM relations (categories, authors, tags, …) accept a comma-separated UID string, e.g. "126" or "8,12".'
@@ -197,6 +199,9 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         $pid = (int) $payload['pid'];
+        if ($pid < 0) {
+            $this->recordService->assertInsertAfterExists($tableName, abs($pid));
+        }
         if (!$this->targetIsReadable($tableName, $pid)) {
             throw new \InvalidArgumentException(PageAccessService::ACCESS_DENIED_MESSAGE);
         }

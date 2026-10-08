@@ -31,6 +31,7 @@ final class AgentDraftService
     public function __construct(
         private readonly AgentLowRiskFieldMatrix $lowRiskFieldMatrix,
         private readonly ?AgentRecordLabeler $recordLabeler = null,
+        private readonly ?AgentCreatePlacement $placement = null,
     ) {}
 
     /**
@@ -89,11 +90,20 @@ final class AgentDraftService
             ];
         }
 
+        $table = '';
+        foreach ($plan->fields as $field) {
+            $table = $field->table;
+            break;
+        }
+
         return [
             'draftId' => $draftId,
             'tool' => $plan->toolName,
             'action' => $plan->action,
             'severity' => $severity,
+            'location' => $plan->action === 'create' && $this->placement !== null
+                ? $this->placement->describe($table, (int) ($plan->context['pid'] ?? 0))
+                : '',
             'fields' => $fields,
             'destructiveArmed' => false,
             'elicitation' => true,

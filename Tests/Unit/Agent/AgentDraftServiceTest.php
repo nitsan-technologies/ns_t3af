@@ -19,9 +19,12 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
+use NITSAN\NsT3AF\Agent\Service\AgentCreatePlacement;
 use NITSAN\NsT3AF\Agent\Service\AgentDraftService;
 use NITSAN\NsT3AF\Agent\Service\AgentLowRiskFieldMatrix;
+use NITSAN\NsT3AF\Agent\Service\AgentRecordLabeler;
 use NITSAN\NsT3AF\Agent\Service\SatelliteToolPlanService;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
 use PHPUnit\Framework\Attributes\Test;
@@ -32,12 +35,19 @@ use PHPUnit\Framework\TestCase;
  */
 final class AgentDraftServiceTest extends TestCase
 {
+    use AgentTranslatorTrait;
     private AgentDraftService $service;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->service = new AgentDraftService(new AgentLowRiskFieldMatrix());
+    }
+
+    protected function tearDown(): void
+    {
+        $this->releaseAgentTranslator();
+        parent::tearDown();
     }
 
     #[Test]
@@ -105,5 +115,28 @@ final class AgentDraftServiceTest extends TestCase
         self::assertSame([], $card['fields']);
         self::assertSame('Generate and apply all SEO metadata for page 8.', $card['summary']);
         self::assertSame([['key' => 'pageId', 'value' => '8']], $card['arguments']);
+    }
+
+    #[Test]
+    public function buildDraftCardShowsWhereACreateWillBePlaced(): void
+    {
+        $labeler = $this->createMock(AgentRecordLabeler::class);
+        $labeler->method('recordLabel')->willReturnCallback(
+            static fn(string $table, int $uid): string => match ($uid) {
+                1 => 'Page „Home“',
+                68 => 'Page „Page 1“',
+                default => 'Page #' . $uid,
+            },
+        );
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->willReturn(['pid' => 1]);
+        $placement = new AgentCreatePlacement($this->createAgentTranslator(), $labeler, $records);
+
+        $service = new AgentDraftService(new AgentLowRiskFieldMatrix(), null, $placement);
+        $card = $service->buildDraftCard(new ToolPlan('create', 'write_table', [
+            new ToolPlanField('pages:0:title', 'pages', 0, 'title', null, 'Page between 1 and 2'),
+        ], ['pid' => -68]), 'write');
+
+        self::assertSame('Location: inside Page „Home“ [1], after Page „Page 1“ [68]', $card['location']);
     }
 }
