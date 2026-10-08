@@ -80,12 +80,14 @@
                             aria-label="{f:translate(key: '{ll}:agent.info.title', default: 'How the AI Agent works')}">
                         <core:icon identifier="actions-info-circle" size="small" alternativeMarkupIdentifier="inline" />
                     </button>
-                    <a class="btn btn-default btn-sm nst3af-agent-header__settings"
+                    <a class="btn btn-default btn-sm nst3af-agent-header__icon nst3af-agent-header__settings"
                        href="#"
                        hidden
                        data-nst3af-agent-settings
-                       data-nst3af-agent-settings-label="{f:translate(key: '{ll}:agent.modal.settings', default: 'Settings')}">
-                        <f:translate key="{ll}:agent.modal.settings" default="Settings" />
+                       data-nst3af-agent-settings-label="{f:translate(key: '{ll}:agent.modal.settings', default: 'Settings')}"
+                       title="{f:translate(key: '{ll}:agent.modal.settings', default: 'Settings')}"
+                       aria-label="{f:translate(key: '{ll}:agent.modal.settings', default: 'Settings')}">
+                        <core:icon identifier="actions-cog" size="small" alternativeMarkupIdentifier="inline" />
                     </a>
                 </div>
                 <button type="button"
@@ -186,9 +188,6 @@
                                        multiple
                                        accept="image/*,.pdf,.txt,.md,.doc,.docx" />
                             </div>
-                            <span class="nst3af-agent-composer__hint">
-                                <kbd class="nst3af-agent-kbd" data-nst3af-agent-hotkey-kbd>Ctrl/Cmd+Shift+K</kbd>
-                            </span>
                             <button type="button"
                                     class="btn btn-primary nst3af-agent-composer__send"
                                     data-nst3af-agent-send
