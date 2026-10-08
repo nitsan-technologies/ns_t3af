@@ -51,6 +51,32 @@ final readonly class AgentCoreToolSet
 
     public const MAX_MODULE_TOOLS = 20;
 
+    /**
+     * Order for the "/" menu: tools whose name or label matches the typed text come before tools
+     * that only mention it in their description ("/tree" lists "Read the page tree" before
+     * "Copy a page"). Keeps the given order inside each group.
+     *
+     * @param list<array<string, mixed>> $tools
+     * @return list<array<string, mixed>>
+     */
+    public static function rankByNameMatch(array $tools, string $needle): array
+    {
+        $needle = strtolower($needle);
+        $first = [];
+        $rest = [];
+        foreach ($tools as $tool) {
+            $inName = str_contains(strtolower((string) ($tool['name'] ?? '')), $needle)
+                || str_contains(strtolower((string) ($tool['editorLabel'] ?? '')), $needle);
+            if ($inName) {
+                $first[] = $tool;
+            } else {
+                $rest[] = $tool;
+            }
+        }
+
+        return [...$first, ...$rest];
+    }
+
     public const MAX_RECENT_TOOLS = 4;
 
     private const RECENT_MESSAGES = 6;

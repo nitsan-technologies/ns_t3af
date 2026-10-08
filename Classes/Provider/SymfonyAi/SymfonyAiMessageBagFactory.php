@@ -108,10 +108,13 @@ final class SymfonyAiMessageBagFactory
             $arguments = is_array($decoded) ? $decoded : [];
         }
 
+        $signature = isset($call['signature']) && is_string($call['signature']) && $call['signature'] !== '' ? $call['signature'] : null;
+
         return new $toolCallClass(
             (string) ($call['id'] ?? ''),
             (string) ($call['name'] ?? ''),
             is_array($arguments) ? $arguments : [],
+            $signature,
         );
     }
 

@@ -52,6 +52,17 @@ final class SymfonyAiResultReaderTest extends TestCase
     }
 
     #[Test]
+    public function aGeminiSignatureOnAToolCallIsKept(): void
+    {
+        $deferred = $this->deferred(new ToolCallResult([new ToolCall('call_1', 'pages_get', ['uid' => 49], 'sig-abc')]));
+
+        self::assertSame(
+            [['id' => 'call_1', 'name' => 'pages_get', 'arguments' => ['uid' => 49], 'signature' => 'sig-abc']],
+            SymfonyAiResultReader::toolCalls($deferred),
+        );
+    }
+
+    #[Test]
     public function toolCallsAreReadFromTheResultObjects(): void
     {
         $deferred = $this->deferred(new MultiPartResult([

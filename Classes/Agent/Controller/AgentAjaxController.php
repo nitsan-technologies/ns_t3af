@@ -150,8 +150,8 @@ final class AgentAjaxController
             $filter = static fn(array $tool): bool => str_contains(strtolower((string) ($tool['name'] ?? '')), $needle)
                 || str_contains(strtolower((string) ($tool['description'] ?? '')), $needle)
                 || str_contains(strtolower((string) ($tool['editorLabel'] ?? '')), $needle);
-            $catalog['executable'] = array_values(array_filter($catalog['executable'], $filter));
-            $catalog['locked'] = array_values(array_filter($catalog['locked'], $filter));
+            $catalog['executable'] = AgentCoreToolSet::rankByNameMatch(array_values(array_filter($catalog['executable'], $filter)), $needle);
+            $catalog['locked'] = AgentCoreToolSet::rankByNameMatch(array_values(array_filter($catalog['locked'], $filter)), $needle);
         }
 
         $executableParts = $this->coreToolSet->partitionByModule($catalog['executable'], $module);

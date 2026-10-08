@@ -81,6 +81,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         private AgentTranslator $translator,
         private PremiumCatalogProvider $premiumCatalog,
         private AgentEntitlementExplanation $entitlementExplanation,
+        private ?AgentProviderOptions $providerOptions = null,
     ) {}
 
     public function runTurn(
@@ -111,7 +112,12 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         $pageId = (int) ($context['pageId'] ?? 0);
         if (!$this->toolCallingService->supportsToolCalling(self::providerFromBody($body), $pageId > 0 ? $pageId : null)) {
-            return $this->single($emitEvent, $this->info('agent.turn.noToolCalling', $correlationId, ['degraded' => true]));
+            // "Nothing configured yet" is a different problem from "this provider cannot run tools".
+            $key = $this->providerOptions instanceof AgentProviderOptions && !$this->providerOptions->hasConfiguredProvider($pageId)
+                ? 'agent.turn.noProvider'
+                : 'agent.turn.noToolCalling';
+
+            return $this->single($emitEvent, $this->info($key, $correlationId, ['degraded' => true]));
         }
 
         $catalog = $this->actionCatalog->buildCatalog();

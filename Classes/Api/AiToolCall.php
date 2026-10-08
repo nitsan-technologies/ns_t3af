@@ -28,10 +28,13 @@ final readonly class AiToolCall
 {
     /**
      * @param array<string, mixed> $arguments
+     * @param string|null $signature Provider-scoped signature (Gemini's thoughtSignature) that has to be
+     *                               sent back unchanged with this call on the next request of the turn.
      */
     public function __construct(
         public string $id,
         public string $name,
         public array $arguments,
+        public ?string $signature = null,
     ) {}
 }

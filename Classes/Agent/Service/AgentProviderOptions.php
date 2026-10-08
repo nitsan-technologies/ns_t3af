@@ -155,6 +155,29 @@ final readonly class AgentProviderOptions
     }
 
     /**
+     * Whether any enabled provider is configured at all (it may still be unable to call tools).
+     * Tells "nothing configured yet" apart from "the configured provider cannot run tools".
+     */
+    public function hasConfiguredProvider(int $pageId): bool
+    {
+        if ($this->creditModeResolver->isActive()) {
+            return true;
+        }
+
+        $storagePid = $this->storagePid($pageId);
+        if ($storagePid === null) {
+            return false;
+        }
+        foreach ($this->providers->findAllByStoragePid($storagePid) as $provider) {
+            if ($provider->isEnabled) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Whether the editor may run the agent with this provider ("default" / empty always).
      */
     public function isAllowed(string $identifier, int $pageId, ?BackendUserAuthentication $user): bool

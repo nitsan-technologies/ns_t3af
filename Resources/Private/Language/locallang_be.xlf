@@ -729,6 +729,9 @@
       <trans-unit id="agent.turn.noToolCalling" resname="agent.turn.noToolCalling">
         <source>Your current AI provider cannot run tools for natural-language requests. Use / to pick a tool or @ to attach a record instead.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.noProvider" resname="agent.turn.noProvider">
+        <source>AI provider is not configured. Please configure an AI provider to use the AI Agent.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.noExecutableTools" resname="agent.turn.noExecutableTools">
         <source>No executable tools are available for your account. Use / to see what is locked or contact an administrator.</source>
       </trans-unit>

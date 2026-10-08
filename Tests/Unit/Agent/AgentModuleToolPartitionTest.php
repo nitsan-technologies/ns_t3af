@@ -99,4 +99,15 @@ final class AgentModuleToolPartitionTest extends TestCase
             ),
         );
     }
+
+    #[Test]
+    public function slashMenuListsNameMatchesBeforeDescriptionMatches(): void
+    {
+        $ranked = AgentCoreToolSet::rankByNameMatch([
+            ['name' => 'pages_copy', 'editorLabel' => 'Copy a page', 'description' => 'Copy a page to a new tree position'],
+            ['name' => 'pages_tree', 'editorLabel' => 'Read the page tree', 'description' => 'Get the page tree'],
+        ], 'tree');
+
+        self::assertSame(['pages_tree', 'pages_copy'], array_column($ranked, 'name'));
+    }
 }

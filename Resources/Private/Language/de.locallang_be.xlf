@@ -659,6 +659,10 @@
                 <source>Your current AI provider cannot run tools for natural-language requests. Use / to pick a tool or @ to attach a record instead.</source>
                 <target>Ihr aktueller KI-Anbieter kann keine Tools für natürlichsprachliche Anfragen ausführen. Verwenden Sie / für ein Tool oder @, um einen Datensatz anzuhängen.</target>
             </trans-unit>
+            <trans-unit id="agent.turn.noProvider">
+                <source>AI provider is not configured. Please configure an AI provider to use the AI Agent.</source>
+                <target>Es ist kein KI-Anbieter konfiguriert. Bitte konfigurieren Sie einen KI-Anbieter, um den KI-Agenten zu nutzen.</target>
+            </trans-unit>
             <trans-unit id="agent.turn.noExecutableTools">
                 <source>No executable tools are available for your account. Use / to see what is locked or contact an administrator.</source>
                 <target>Für Ihr Konto sind keine ausführbaren Tools verfügbar. Verwenden Sie /, um gesperrte Tools zu sehen, oder wenden Sie sich an einen Administrator.</target>
