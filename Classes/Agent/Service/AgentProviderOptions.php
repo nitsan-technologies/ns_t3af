@@ -86,6 +86,12 @@ final readonly class AgentProviderOptions
             }
         }
 
+        if (count($byIdentifier) <= 1) {
+            // One usable provider: "Default" already is that provider, so there is nothing to choose and the
+            // menu stays hidden (it needs at least two entries).
+            return [$options[0]];
+        }
+
         return $this->disambiguate($options, $byIdentifier);
     }
 

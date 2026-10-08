@@ -819,6 +819,10 @@
                 <source>„%1$s“ cannot be used by the agent yet.</source>
                 <target>„%1$s“ kann vom Agenten noch nicht genutzt werden.</target>
             </trans-unit>
+            <trans-unit id="agent.entitlement.groupLockedLead">
+                <source>„%1$s“ is not allowed for your user group. Ask your administrator to allow it under AI Permissions, or try a different request.</source>
+                <target>„%1$s“ ist für Ihre Benutzergruppe nicht erlaubt. Bitten Sie Ihren Administrator, es unter „KI-Berechtigungen“ freizugeben, oder versuchen Sie eine andere Anfrage.</target>
+            </trans-unit>
             <trans-unit id="agent.entitlement.toolCount">
                 <source>With %2$s active you get %1$s more actions here.</source>
                 <target>Mit aktivem %2$s stehen Ihnen hier %1$s weitere Aktionen zur Verfügung.</target>

@@ -99,5 +99,14 @@ final class AgentToolEditorLabelServiceTest extends TestCase
         self::assertSame('', $service->resolveDescription(['name' => 'custom_tool', 'description' => 'Find image files in sys_file_metadata where alt text is empty.']));
         self::assertSame('', $service->resolveDescription(['name' => 'custom_tool', 'description' => trim(str_repeat('word ', 30))]));
         self::assertSame('Sorts the list.', $service->resolveDescription(['name' => 'custom_tool', 'description' => 'Sorts the list. Extra detail for the AI.']));
+        foreach ([
+            'List backend users (be_users).',
+            'Remove a glossary term by termId.',
+            'Remove file references by their UIDs.',
+            'Download a file into FAL storage.',
+            'Read AI search settings (tx_nst3as_domain_model_settings).',
+        ] as $technical) {
+            self::assertSame('', $service->resolveDescription(['name' => 'custom_tool', 'description' => $technical]), $technical);
+        }
     }
 }

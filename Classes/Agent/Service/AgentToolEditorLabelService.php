@@ -169,7 +169,9 @@ final readonly class AgentToolEditorLabelService
             }
         }
 
-        return true;
+        // Table, field and tool ids (be_users, tx_nst3ai_…, file_reference_list), camelCase arguments (termId,
+        // fileUid) and developer words (UID, FAL, TCA, JSON) mean the sentence was written for the AI, not for editors.
+        return preg_match('/\b[a-z0-9]+_[a-z0-9_]+\b|(?-i:\b[a-z]+[A-Z][A-Za-z]*\b)|\b(?:uid|uids|pid|fal|tca|json|api|sql|ids?)\b/i', $text) !== 1;
     }
 
     private function humanizeToolName(string $name): string

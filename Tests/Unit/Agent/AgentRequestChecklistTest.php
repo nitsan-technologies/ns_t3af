@@ -148,6 +148,8 @@ TXT;
     {
         self::assertSame([], AgentRequestChecklist::parse('What is this page about?'));
         self::assertSame([], AgentRequestChecklist::parse('Translate this page to German'));
+        self::assertSame([], AgentRequestChecklist::parse('Rename the header of element 5 to Welcome.'));
+        self::assertNotSame([], AgentRequestChecklist::parse('Add a header and change the text.'));
     }
 
     #[Test]

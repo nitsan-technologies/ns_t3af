@@ -36,6 +36,7 @@ final readonly class AgentEntitlementExplanation
     private const LOCK_KIND_PLAN = 'plan';
     private const LOCK_KIND_SEVERITY = 'severity';
     private const LOCK_KIND_COMPOSER = 'composer';
+    private const LOCK_KIND_GROUP = 'group';
 
     public function __construct(
         private EntitlementResolver $entitlementResolver,
@@ -54,6 +55,7 @@ final readonly class AgentEntitlementExplanation
             self::LOCK_KIND_PLAN => $this->buildPlanLockedMessage($tool),
             self::LOCK_KIND_SEVERITY => $this->buildSeverityLockedMessage($tool),
             self::LOCK_KIND_COMPOSER => $this->buildComposerLockedMessage($tool),
+            self::LOCK_KIND_GROUP => $this->translator->translate('agent.entitlement.groupLockedLead', [$this->toolLabel($tool)]),
             default => $this->buildExtensionLockedMessage($tool),
         };
     }
@@ -67,7 +69,7 @@ final readonly class AgentEntitlementExplanation
         $ownerKey = (string) ($tool['ownerExtensionKey'] ?? 'ns_t3af');
         $lockKind = $this->resolveLockKind($tool);
 
-        if ($lockKind === self::LOCK_KIND_PLAN || $lockKind === self::LOCK_KIND_SEVERITY || $lockKind === self::LOCK_KIND_COMPOSER) {
+        if (in_array($lockKind, [self::LOCK_KIND_PLAN, self::LOCK_KIND_SEVERITY, self::LOCK_KIND_COMPOSER, self::LOCK_KIND_GROUP], true)) {
             return [
                 'type' => 'info',
                 'tool' => (string) ($tool['name'] ?? ''),

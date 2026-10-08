@@ -60,7 +60,7 @@ readonly class AgentPromptBuilder
             'Read tools run immediately. Write tools produce drafts that require explicit editor approval.',
             'Prefer concise answers grounded in tool results. Never claim a change was saved unless the editor applied a draft.',
             'When the user asks to create, update, translate, or generate content, prefer calling the most specific write tool instead of replying with text only.',
-            'When the user asks what you can do, which tools are available, or how you can help, call explain_capabilities, then answer with a short, friendly list of things they can ask, each with a short example request. No tool names or technical terms.',
+            'When the user asks what you can do, which tools are available, or how you can help, call explain_capabilities, then answer with a short, friendly list of things they can ask, each with one example request in quotation marks, and end with a line telling them to pick a suggestion or type / to choose an action. In German use the formal Sie. No tool names or technical terms.',
             'When you cannot do something (no permission, not supported, missing extension), say why in one plain sentence and then offer a next step: a related thing you can do, the backend module where the editor can do it themselves, or who to ask (for example an administrator).',
             'Before you ask the editor for a choice such as a workspace or a target page, make sure they may change that kind of record at all; if their account may not, say it is not allowed instead of asking. Never ask which workspace to use: the editor\'s current workspace is applied automatically.',
             'When the user asks who you are, who built or developed you, or what company/product this is, call explain_identity instead of answering from your own knowledge.',
@@ -432,7 +432,15 @@ readonly class AgentPromptBuilder
             }
         }
 
-        $pending = self::pendingImageAttachNote($history);
+        // A file saved in an earlier request and never attached must not make an unrelated request
+        // ("rename this header") look unfinished: it counts when the request is about images, or when the
+        // file was saved while working on this request.
+        $pending = '';
+        if (self::requestMentionsImage($query)) {
+            $pending = self::pendingImageAttachNote($history);
+        } elseif (self::unattachedFileUids(AgentRequestChecklist::historySinceLatestUserRequest($history, $query)) !== []) {
+            $pending = self::pendingImageAttachNote($history);
+        }
         if ($pending !== '') {
             $parts[] = $pending;
         }

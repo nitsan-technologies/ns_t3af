@@ -60,6 +60,11 @@ final readonly class AgentChangeMessageBuilder
 
         $entry = $readback[0];
         $recordLabel = trim((string) ($entry['recordLabel'] ?? ''));
+        // An update names the record as it was called before the change (a rename must not rename the record in the message).
+        $labelBefore = trim((string) ($entry['recordLabelBefore'] ?? ''));
+        if ($action !== 'create' && $labelBefore !== '') {
+            $recordLabel = $labelBefore;
+        }
         if ($recordLabel === '') {
             return $fallback;
         }

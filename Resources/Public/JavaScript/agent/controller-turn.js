@@ -108,7 +108,7 @@ export const turnMethods = {
       try {
         this.messages.push(userMessage);
         this.renderStream();
-        this.showProgress(true);
+        this.showProgress(true, '', true);
         let payload = null;
         let streamed = false;
         if (preferStream) {
