@@ -25,7 +25,7 @@
         <div class="aiu-mcp-topbar aiu-tab-page-header">
             <div class="aiu-tab-page-header__main min-w-0">
                 <div class="aiu-providers__heading aiu-mcp-topbar__text">
-                    <h1 class="mb-0">{tabHeading}</h1>
+                    <h1 class="mb-0"><f:translate key="{ll}:module.mcp.heading" /></h1>
                     <p class="text-variant mb-0">{tabIntro}</p>
                 </div>
             </div>
@@ -33,6 +33,8 @@
                 <f:render partial="Module/PageBreadcrumb" arguments="{_all}" />
             </div>
         </div>
+
+        <f:render partial="Module/NavGroupSwitch" arguments="{navGroupSections: navGroupSections}" />
 
         <div class="aiu-mcp-status-bar aiu-mcp-tools__stats">
             <div class="aiu-mcp-status-bar__cell">

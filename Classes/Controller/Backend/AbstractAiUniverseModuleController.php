@@ -206,6 +206,15 @@ abstract class AbstractAiUniverseModuleController
                 $tabGroups[$group][$key]['active'] = self::fluidFlag((bool) ($tab['active'] ?? false));
             }
         }
+        $navGroupSections = $this->moduleTabUtility->buildGroupSections(
+            $activeTabKey,
+            fn(string $key): string => $this->translateModule($key),
+            fn(string $route): string => (string) $this->uriBuilder->buildUriFromRoute($route, $routeParams),
+            $backendUser,
+        );
+        foreach ($navGroupSections as $index => $section) {
+            $navGroupSections[$index]['active'] = self::fluidFlag($section['active']);
+        }
 
         $tabContent = $this->moduleTabUtility->buildTabContent(
             $activeTabKey,
@@ -263,6 +272,7 @@ abstract class AbstractAiUniverseModuleController
                 'tabs' => $tabs,
                 'primaryTabs' => $tabGroups['primary'],
                 'utilityTabs' => $tabGroups['utility'],
+                'navGroupSections' => $navGroupSections,
                 'tabAccessDenied' => $tabAccessDenied,
             ],
             $tabContent,

@@ -108,7 +108,7 @@ readonly class PagesMoveTool implements McpNonAiToolInterface, McpPlannableToolI
         description: 'Move an existing page to a new position in the page tree. A hidden page can be moved.'
             . ' Provide exactly one of beforeUid, afterUid, or targetPid.'
             . ' beforeUid places the page directly before that page.'
-            . ' afterUid places the page directly after that page.'
+            . ' afterUid places the page directly after that page. When afterUid is set, targetPid is ignored.'
             . ' targetPid places the page as the first child of that page.'
             . ' Do not use content_move for a page, and do not update the pid field.',
     )]
@@ -153,9 +153,12 @@ readonly class PagesMoveTool implements McpNonAiToolInterface, McpPlannableToolI
     public static function resolveExplicitTarget(array $arguments): int
     {
         $afterUid = (int) ($arguments['afterUid'] ?? 0);
-        if ($afterUid > 0 || array_key_exists('targetPid', $arguments)) {
-            $targetPid = array_key_exists('targetPid', $arguments) ? (int) $arguments['targetPid'] : -1;
-            $resolved = MoveTarget::resolve($targetPid, $afterUid);
+        if ($afterUid > 0) {
+            return -$afterUid;
+        }
+
+        if (array_key_exists('targetPid', $arguments)) {
+            $resolved = MoveTarget::resolve((int) $arguments['targetPid'], 0);
             if ($resolved instanceof ErrorResult) {
                 throw new \InvalidArgumentException($resolved->error);
             }
