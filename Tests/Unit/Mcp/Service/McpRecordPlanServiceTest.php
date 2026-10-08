@@ -147,4 +147,38 @@ final class McpRecordPlanServiceTest extends TestCase
         $this->expectExceptionMessage('was deleted');
         $service->planMove('tt_content', 20, 64, 'content_move');
     }
+
+    #[Test]
+    public function planCreateAfterADeletedPageIsRefused(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())
+            ->method('assertInsertAfterExists')
+            ->with('pages', 68)
+            ->willThrowException(new \InvalidArgumentException(
+                'Page 68 does not exist or was deleted. Choose another page.',
+            ));
+
+        $service = new McpRecordPlanService($records, $this->createMock(TcaSchemaService::class));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('was deleted');
+        $service->planCreate('pages', ['pid' => -68, 'title' => 'Page between 1 and 2'], 'write_table');
+    }
+
+    #[Test]
+    public function planCreateAfterAnExistingPageKeepsTheNegativePid(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())->method('assertInsertAfterExists')->with('pages', 68);
+
+        $tca = $this->createMock(TcaSchemaService::class);
+        $tca->method('getWritableFields')->willReturn(['title']);
+
+        $service = new McpRecordPlanService($records, $tca);
+        $plan = $service->planCreate('pages', ['pid' => -68, 'title' => 'Page between 1 and 2'], 'write_table');
+
+        self::assertSame(-68, $plan->context['pid']);
+        self::assertSame('create', $plan->action);
+    }
 }

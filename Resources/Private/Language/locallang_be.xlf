@@ -1732,6 +1732,9 @@
       <trans-unit id="agent.field.rename" resname="agent.field.rename">
         <source>Rename</source>
       </trans-unit>
+      <trans-unit id="agent.field.move" resname="agent.field.move">
+        <source>Move</source>
+      </trans-unit>
       <trans-unit id="agent.result.technical" resname="agent.result.technical">
         <source>Technical details</source>
       </trans-unit>
@@ -1773,6 +1776,9 @@
       </trans-unit>
       <trans-unit id="agent.tool.label.content_move" resname="agent.tool.label.content_move">
         <source>Move a content element</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.label.pages_move" resname="agent.tool.label.pages_move">
+        <source>Move a page</source>
       </trans-unit>
       <trans-unit id="agent.tool.label.content_search" resname="agent.tool.label.content_search">
         <source>Search content</source>
@@ -2316,6 +2322,21 @@
       </trans-unit>
       <trans-unit id="agent.draft.doneCreated" resname="agent.draft.doneCreated">
         <source>Done: %1$s was created.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.doneCreatedAt" resname="agent.draft.doneCreatedAt">
+        <source>Done: %1$s was created. %2$s</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.placeFirstPage" resname="agent.draft.placeFirstPage">
+        <source>Location: first page inside %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.placeFirst" resname="agent.draft.placeFirst">
+        <source>Location: first item inside %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.placeAfter" resname="agent.draft.placeAfter">
+        <source>Location: inside %1$s, after %2$s</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.placeAfterRecord" resname="agent.draft.placeAfterRecord">
+        <source>Location: after %1$s</source>
       </trans-unit>
       <trans-unit id="agent.draft.undoneField" resname="agent.draft.undoneField">
         <source>Undone: %1$s is back to “%2$s”.</source>

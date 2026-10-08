@@ -361,6 +361,26 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function aPageMoveRequestKeepsPagesMoveInTheToolbox(): void
+    {
+        self::assertTrue(AgentRunner::isPageMoveRequest('move page Page between 1 and 2 with uid 80 before page Page 2 with uid 69'));
+        self::assertFalse(AgentRunner::isPageMoveRequest('Create the page "About" under Home'));
+
+        $catalog = [
+            ['name' => 'pages_tree'],
+            ['name' => 'pages_move'],
+            ['name' => 'content_move'],
+        ];
+        $names = array_map(
+            static fn(array $t): string => (string) $t['name'],
+            AgentRunner::pageMoveTools($catalog, ['pages_tree' => 0]),
+        );
+
+        self::assertSame(['pages_move'], $names);
+        self::assertSame([], AgentRunner::pageMoveTools($catalog, ['pages_move' => 0]));
+    }
+
+    #[Test]
     public function pendingAttachToolsOffersFileReferenceAdd(): void
     {
         $catalog = [

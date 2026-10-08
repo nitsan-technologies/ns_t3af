@@ -2161,6 +2161,10 @@
                 <source>Rename</source>
                 <target>Umbenennen</target>
             </trans-unit>
+            <trans-unit id="agent.field.move">
+                <source>Move</source>
+                <target>Verschieben</target>
+            </trans-unit>
             <trans-unit id="agent.result.technical">
                 <source>Technical details</source>
                 <target>Technische Details</target>
@@ -2216,6 +2220,10 @@
             <trans-unit id="agent.tool.label.content_move">
                 <source>Move a content element</source>
                 <target>Inhaltselement verschieben</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.label.pages_move">
+                <source>Move a page</source>
+                <target>Seite verschieben</target>
             </trans-unit>
             <trans-unit id="agent.tool.label.content_search">
                 <source>Search content</source>
@@ -2940,6 +2948,26 @@
             <trans-unit id="agent.draft.doneCreated">
                 <source>Done: %1$s was created.</source>
                 <target>Erledigt: %1$s wurde angelegt.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.doneCreatedAt">
+                <source>Done: %1$s was created. %2$s</source>
+                <target>Erledigt: %1$s wurde angelegt. %2$s</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.placeFirstPage">
+                <source>Location: first page inside %1$s</source>
+                <target>Position: erste Seite in %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.placeFirst">
+                <source>Location: first item inside %1$s</source>
+                <target>Position: erstes Element in %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.placeAfter">
+                <source>Location: inside %1$s, after %2$s</source>
+                <target>Position: in %1$s, nach %2$s</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.placeAfterRecord">
+                <source>Location: after %1$s</source>
+                <target>Position: nach %1$s</target>
             </trans-unit>
             <trans-unit id="agent.draft.undoneField">
                 <source>Undone: %1$s is back to “%2$s”.</source>

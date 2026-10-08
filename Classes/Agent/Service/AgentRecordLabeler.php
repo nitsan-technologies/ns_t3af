@@ -51,6 +51,11 @@ readonly class AgentRecordLabeler
 
             return $label !== 'agent.field.rename' ? $label : 'Rename';
         }
+        if ($field === '_move') {
+            $label = $this->translator->translate('agent.field.move');
+
+            return $label !== 'agent.field.move' ? $label : 'Move';
+        }
 
         $label = (string) ($GLOBALS['TCA'][$table]['columns'][$field]['label'] ?? '');
 

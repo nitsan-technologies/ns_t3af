@@ -687,6 +687,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if ($createContent) {
             $found = [...self::createContentTools($executableTools, $offeredNames), ...$found];
         }
+        if (self::isPageMoveRequest($query)) {
+            $found = [...self::pageMoveTools($executableTools, $offeredNames), ...$found];
+        }
         $workPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
         if (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $query)) {
             $found = [...self::imageWorkTools($executableTools, $offeredNames), ...$found];
@@ -832,6 +835,34 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return array_values($picked);
+    }
+
+    public static function isPageMoveRequest(string $query): bool
+    {
+        $q = mb_strtolower(trim($query));
+        if ($q === '' || preg_match('/\b(move|verschieb\w*)\b/u', $q) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(page|pages|seite|seiten)\b/u', $q) === 1;
+    }
+
+    /**
+     * Keep pages_move in the toolbox when the editor asks to move a page, even if the module cap left it out.
+     *
+     * @param list<array<string, mixed>> $executableTools
+     * @param array<string, int|string> $alreadyOffered
+     * @return list<array<string, mixed>>
+     */
+    public static function pageMoveTools(array $executableTools, array $alreadyOffered = []): array
+    {
+        foreach ($executableTools as $tool) {
+            if ((string) ($tool['name'] ?? '') === 'pages_move' && !isset($alreadyOffered['pages_move'])) {
+                return [$tool];
+            }
+        }
+
+        return [];
     }
 
     /**

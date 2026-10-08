@@ -414,6 +414,14 @@ readonly class TcaSchemaService
      */
     public function describeIgnoredField(string $tableName, string $fieldName): array
     {
+        if ($fieldName === 'pid') {
+            return [
+                'field' => 'pid',
+                'reason' => 'system_field',
+                'hint' => 'pid is a system field and cannot be updated. To move a page, call pages_move with beforeUid (directly before that page), afterUid (directly after that page), or targetPid (first child of that page).',
+            ];
+        }
+
         $tca = $this->getTca($tableName);
         $columnConfig = is_array($tca) ? ($tca['columns'][$fieldName] ?? null) : null;
         if (is_array($columnConfig)) {

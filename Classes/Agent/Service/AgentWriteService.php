@@ -47,6 +47,7 @@ final class AgentWriteService
         private readonly AgentToolResultPresenter $toolResultPresenter,
         private readonly AgentTranslator $translator,
         private readonly AgentLowRiskFieldMatrix $lowRiskFieldMatrix,
+        private readonly ?AgentCreatePlacement $placement = null,
     ) {}
 
     public function generateCorrelationId(): string
@@ -179,7 +180,23 @@ final class AgentWriteService
             'readback' => $readback,
             'action' => $plan->action,
             'tool' => $plan->toolName,
+            'placement' => $this->placementOf($plan),
         ];
+    }
+
+    private function placementOf(ToolPlan $plan): string
+    {
+        if ($plan->action !== 'create' || $this->placement === null) {
+            return '';
+        }
+
+        $table = '';
+        foreach ($plan->fields as $field) {
+            $table = $field->table;
+            break;
+        }
+
+        return $this->placement->describe($table, (int) ($plan->context['pid'] ?? 0));
     }
 
     /**

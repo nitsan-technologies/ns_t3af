@@ -1370,6 +1370,12 @@
   margin: 0 0 10px;
 }
 
+.nst3af-agent-draft__location {
+  font-size: 12px;
+  font-weight: 600;
+  margin: -4px 0 10px;
+}
+
 .nst3af-agent-draft__table {
   width: 100%;
   border-collapse: collapse;

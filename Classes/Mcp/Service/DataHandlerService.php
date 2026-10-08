@@ -58,9 +58,16 @@ readonly class DataHandlerService
 
         try {
             if ($table === 'pages') {
-                $pid = $this->resolveLivePageUid($pid);
-                $fields['pid'] = $pid;
-                $this->attachSiteAttribute($pid);
+                if ($pid < 0) {
+                    $liveAnchor = $this->resolveLivePageUid(abs($pid));
+                    $pid = -$liveAnchor;
+                    $fields['pid'] = $pid;
+                    $this->attachSiteAttribute($liveAnchor);
+                } else {
+                    $pid = $this->resolveLivePageUid($pid);
+                    $fields['pid'] = $pid;
+                    $this->attachSiteAttribute($pid);
+                }
             }
 
             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
@@ -498,10 +505,14 @@ readonly class DataHandlerService
         }
 
         $pid = (int) ($plan->context['pid'] ?? 0);
-        if ($pid <= 0) {
+        if ($pid === 0) {
             throw new \RuntimeException('Create plan is missing pid.', 1712003103);
         }
-        $this->recordService->assertParentPageExists($pid);
+        if ($pid > 0) {
+            $this->recordService->assertParentPageExists($pid);
+        } else {
+            $this->recordService->assertInsertAfterExists($table, abs($pid));
+        }
 
         $fields = [];
         foreach ($keptFields as $field) {
@@ -572,6 +583,8 @@ readonly class DataHandlerService
         $target = (int) ($context['target'] ?? $field->proposedValue ?? 0);
         if ($target > 0) {
             $this->recordService->assertParentPageExists($target);
+        } elseif ($target < 0 && $field->table === 'pages') {
+            $this->recordService->assertInsertAfterExists('pages', abs($target));
         }
         $this->moveRecord($field->table, $field->uid, $target);
 

@@ -64,6 +64,11 @@ final readonly class AgentChangeMessageBuilder
             return $fallback;
         }
         if ($action === 'create') {
+            $placement = trim((string) ($result['placement'] ?? ''));
+            if ($placement !== '') {
+                return $this->translator->translate('agent.draft.doneCreatedAt', [$recordLabel, $placement]);
+            }
+
             return $this->translator->translate('agent.draft.doneCreated', [$recordLabel]);
         }
 

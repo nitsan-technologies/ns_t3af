@@ -80,6 +80,18 @@ final class AgentChangeMessageBuilderTest extends TestCase
     }
 
     #[Test]
+    public function appliedCreateMentionsWhereTheRecordWasPlaced(): void
+    {
+        $result = $this->applyResult('create', ['title' => 'Page between 1 and 2']);
+        $result['placement'] = 'Location: inside Page „Home“ [1], after Page „Page 1“ [68]';
+
+        self::assertSame(
+            'Done: Page Content „QA visible element“ was created. Location: inside Page „Home“ [1], after Page „Page 1“ [68]',
+            $this->subject->applied($result),
+        );
+    }
+
+    #[Test]
     public function appliedKeepsTheCounterWhenOnlyPartOfTheChangeWasSaved(): void
     {
         $result = $this->applyResult('update', ['header' => 'A']);

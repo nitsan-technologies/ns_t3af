@@ -82,7 +82,7 @@ tools:
     category: Records
     status: ready
     tagline: Create, update, or delete records in any workspace-capable table
-    notes: 'Scalar and relation field writes go through DataHandler via the records_apply engine (one transaction). File fields are attached after that commit in a separate pass, so a file-attach failure does not roll back the create/update. New records are appended after the existing ones on their page. Does not return a batchId. Records written by an MCP client are marked as AI-involved in the AI Label module (setting mcpMarkWritesAsAi). Category/MM fields accept "126" or "8,12". File fields accept [{"uid_local": N, "alternative": "..."}] (replace on update; [] clears). Collections: write child table rows with foreign_table_parent_uid (see ignoredFieldDetails).'
+    notes: 'Scalar and relation field writes go through DataHandler via the records_apply engine (one transaction). File fields are attached after that commit in a separate pass, so a file-attach failure does not roll back the create/update. A positive pid creates the record as the first child of that page. A negative pid (-uid) places it directly after that record. Does not return a batchId. Records written by an MCP client are marked as AI-involved in the AI Label module (setting mcpMarkWritesAsAi). Category/MM fields accept "126" or "8,12". File fields accept [{"uid_local": N, "alternative": "..."}] (replace on update; [] clears). Collections: write child table rows with foreign_table_parent_uid (see ignoredFieldDetails).'
     examplePrompts:
       - 'Create a news article titled Summer Sale 2026 on the News page'
       - 'Add a new text content element to the homepage'
@@ -492,10 +492,19 @@ tools:
     category: Content
     status: ready
     tagline: Move a content element to a new position
-    notes: Positive target = top of page. Negative target = after element uid. Never target 0. Not for delete — use content_delete.
+    notes: Positive target = top of page. Negative target = after element uid. Never target 0. Not for delete — use content_delete. Not for a page — use pages_move.
     searchTerms:
       - 'move content element, change column or order'
       - 'Inhaltselement verschieben, Reihenfolge ändern'
+
+  pages_move:
+    category: Content
+    status: ready
+    tagline: Move a page to a new position in the page tree
+    notes: 'Use for a page, including a hidden page. beforeUid places it directly before that page. afterUid places it directly after that page. targetPid places it as the first child of that page. When the page uids are already known, call this tool and do not read the tree again. Do not use content_move, and do not update pid.'
+    searchTerms:
+      - 'move a page, put a page before or after another page, change page position'
+      - 'Seite verschieben, Seite vor oder nach einer anderen Seite setzen'
 
   content_delete:
     category: Content
