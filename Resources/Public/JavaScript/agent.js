@@ -34,6 +34,18 @@ class AgentController {
     this.planPanel = root.querySelector('[data-nst3af-agent-plan]');
     // Plan sent live by the running turn; null = use the newest plan saved in the messages.
     this.livePlan = null;
+    // When the running turn last sent something, and whether a background check already took its result.
+    this.lastStreamEventAt = 0;
+    this.adoptedServerState = false;
+    // A tab in the background throttles timers and may freeze a stream; when it is shown again, redraw the
+    // state and check whether the turn finished meanwhile.
+    const onTabVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        void this.resyncAfterTabVisible();
+      }
+    };
+    document.addEventListener('visibilitychange', onTabVisible);
+    window.addEventListener('pageshow', onTabVisible);
     // null = automatic (open while steps remain), true/false = the editor's choice
     this.planOpen = null;
     this.planPanel?.addEventListener('click', (event) => {

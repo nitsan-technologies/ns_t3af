@@ -411,6 +411,33 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function aShortRequestOfItsOwnIsNotGluedToThePreviousTurn(): void
+    {
+        $history = [
+            ['role' => 'user', 'content' => 'Which content element types can an editor create on this page?', 'meta' => []],
+            ['role' => 'assistant', 'content' => '1. Header 2. Text 3. Text & Media', 'meta' => ['type' => 'nl_reply']],
+        ];
+
+        self::assertSame('List all workspaces', AgentRunner::requestQuery('List all workspaces', $history));
+        // A bare "create it" still needs the turn before it.
+        self::assertStringContainsString('Which content element types', AgentRunner::requestQuery('create it', $history));
+    }
+
+    #[Test]
+    public function aContinuationUsesTheEditorsRequestNotTheLastAnswer(): void
+    {
+        $history = [
+            ['role' => 'user', 'content' => 'Change the header of content element uid 153 to QA', 'meta' => []],
+            ['role' => 'assistant', 'content' => 'Done. The Text element was updated.', 'meta' => ['type' => 'nl_reply']],
+        ];
+
+        self::assertSame(
+            'Change the header of content element uid 153 to QA',
+            AgentRunner::requestQuery('[The editor confirmed the change]', $history),
+        );
+    }
+
+    #[Test]
     public function everyToolCallIsReportedWithItsOutcome(): void
     {
         $responses = [

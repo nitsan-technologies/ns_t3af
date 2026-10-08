@@ -469,13 +469,13 @@ readonly class DataHandlerService
                 $affected = array_merge($affected, $this->applyPlanUpdate($keptFields));
                 break;
             case 'delete':
-                $affected[] = $this->applyPlanDelete($keptFields);
+                $affected = array_merge($affected, $this->applyPlanDelete($keptFields));
                 break;
             case 'move':
-                $affected[] = $this->applyPlanMove($keptFields, $plan->context);
+                $affected = array_merge($affected, $this->applyPlanMove($keptFields, $plan->context));
                 break;
             case 'copy':
-                $affected[] = $this->applyPlanCopy($keptFields, $plan->context);
+                $affected = array_merge($affected, $this->applyPlanCopy($keptFields, $plan->context));
                 break;
             default:
                 throw new \RuntimeException('Unsupported plan action: ' . $plan->action, 1712003101);
@@ -564,51 +564,82 @@ readonly class DataHandlerService
 
     /**
      * @param list<ToolPlanField> $keptFields
-     * @return array{table: string, uid: int}
+     * @return list<array{table: string, uid: int}>
      */
     private function applyPlanDelete(array $keptFields): array
     {
-        $field = $keptFields[0];
-        $this->deleteRecord($field->table, $field->uid);
+        $affected = [];
+        foreach ($this->distinctRecords($keptFields) as $field) {
+            $this->deleteRecord($field->table, $field->uid);
+            $affected[] = ['table' => $field->table, 'uid' => $field->uid];
+        }
 
-        return ['table' => $field->table, 'uid' => $field->uid];
+        return $affected;
     }
 
     /**
      * @param list<ToolPlanField> $keptFields
      * @param array<string, mixed> $context
-     * @return array{table: string, uid: int}
+     * @return list<array{table: string, uid: int}>
      */
     private function applyPlanMove(array $keptFields, array $context): array
     {
-        $field = $keptFields[0];
-        $target = (int) ($context['target'] ?? $field->proposedValue ?? 0);
-        if ($target > 0) {
-            $this->recordService->assertParentPageExists($target);
-        } elseif ($target < 0 && $field->table === 'pages') {
-            $this->recordService->assertInsertAfterExists('pages', abs($target));
+        $affected = [];
+        foreach ($this->distinctRecords($keptFields) as $field) {
+            $target = (int) ($context['target'] ?? $field->proposedValue ?? 0);
+            if ($target > 0) {
+                $this->recordService->assertParentPageExists($target);
+            } elseif ($target < 0 && $field->table === 'pages') {
+                $this->recordService->assertInsertAfterExists('pages', abs($target));
+            }
+            $this->moveRecord($field->table, $field->uid, $target);
+            $affected[] = ['table' => $field->table, 'uid' => $field->uid];
         }
-        $this->moveRecord($field->table, $field->uid, $target);
 
-        return ['table' => $field->table, 'uid' => $field->uid];
+        return $affected;
     }
 
     /**
      * @param list<ToolPlanField> $keptFields
      * @param array<string, mixed> $context
-     * @return array{table: string, uid: int}
+     * @return list<array{table: string, uid: int}> the NEW records
      */
     private function applyPlanCopy(array $keptFields, array $context): array
     {
-        $field = $keptFields[0];
-        $target = (int) ($context['target'] ?? $field->proposedValue ?? 0);
-        if ($target > 0) {
-            $this->recordService->assertParentPageExists($target);
+        $affected = [];
+        foreach ($this->distinctRecords($keptFields) as $field) {
+            $target = (int) ($context['target'] ?? $field->proposedValue ?? 0);
+            if ($target > 0) {
+                $this->recordService->assertParentPageExists($target);
+            }
+            $copyTreeDepth = (int) ($context['copyTreeDepth'] ?? 0);
+            $newUid = $this->copyRecord($field->table, $field->uid, $target, $copyTreeDepth);
+            $affected[] = ['table' => $field->table, 'uid' => $newUid];
         }
-        $copyTreeDepth = (int) ($context['copyTreeDepth'] ?? 0);
-        $newUid = $this->copyRecord($field->table, $field->uid, $target, $copyTreeDepth);
 
-        return ['table' => $field->table, 'uid' => $newUid];
+        return $affected;
+    }
+
+    /**
+     * One entry per record: a batch plan names every record once, and a record is never handled twice.
+     *
+     * @param list<ToolPlanField> $keptFields
+     * @return list<ToolPlanField>
+     */
+    private function distinctRecords(array $keptFields): array
+    {
+        $seen = [];
+        $records = [];
+        foreach ($keptFields as $field) {
+            $key = $field->table . '#' . $field->uid;
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $records[] = $field;
+        }
+
+        return $records;
     }
 
     /**

@@ -1661,6 +1661,10 @@
                 <source>Doktype %1$s</source>
                 <target>Seitentyp %1$s</target>
             </trans-unit>
+            <trans-unit id="agent.write.alreadyApplying">
+                <source>This change is already being applied. Wait a moment before trying again.</source>
+                <target>Diese Änderung wird bereits ausgeführt. Warten Sie einen Moment, bevor Sie es erneut versuchen.</target>
+            </trans-unit>
             <trans-unit id="agent.write.draftTooOld">
                 <source>This change was prepared a while ago and is outdated. Ask the agent again to prepare a fresh change.</source>
                 <target>Diese Änderung wurde vor einiger Zeit vorbereitet und ist veraltet. Bitten Sie den Agenten erneut, eine aktuelle Änderung vorzubereiten.</target>
@@ -1696,6 +1700,18 @@
             <trans-unit id="agent.undo.changeNotFound">
                 <source>Change not found or already undone.</source>
                 <target>Änderung nicht gefunden oder bereits zurückgenommen.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.expired">
+                <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
+                <target>Dieser Vorschlag ist veraltet und wurde nicht ausgeführt. Fragen Sie erneut, um einen aktuellen zu erhalten.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.streamInterrupted">
+                <source>The connection was interrupted. Your request may still be running. Reload the conversation in a moment to see the result.</source>
+                <target>Die Verbindung wurde unterbrochen. Ihre Anfrage läuft möglicherweise noch. Laden Sie die Unterhaltung gleich neu, um das Ergebnis zu sehen.</target>
+            </trans-unit>
+            <trans-unit id="agent.undo.changedSince">
+                <source>Not undone: "%1$s" was changed after the agent's change (it now reads "%2$s"). Change it back yourself if you want the old value.</source>
+                <target>Nicht rückgängig gemacht: „%1$s“ wurde nach der Änderung des Agenten geändert (aktuell: „%2$s“). Ändern Sie es selbst zurück, wenn Sie den alten Wert möchten.</target>
             </trans-unit>
             <trans-unit id="agent.undo.deleteUnsupported">
                 <source>Undo cannot bring back a deleted item. Restore it from the Recycler module instead.</source>

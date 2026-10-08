@@ -259,6 +259,11 @@ final class AgentRequestChecklist
     private static function isReadOnlyRequest(string $message): bool
     {
         $s = mb_strtolower($message);
+        // A question ("Which content element types can an editor create here?") asks for information even
+        // though it names an element type and the word "create".
+        if (preg_match('/^\s*(?:which|what|who|where|when|why|how\s+many|how\s+much|welche\w*|was|wer|wo|wann|warum|wie\s+viele)\b/u', $s) === 1) {
+            return true;
+        }
         if (preg_match(self::CREATE_VERBS, $s) === 1) {
             return false;
         }

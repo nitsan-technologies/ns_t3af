@@ -213,6 +213,36 @@ export const streamMethods = {
       if (stop instanceof HTMLElement) {
         stop.hidden = !running;
       }
+      this.syncActionButtons(running);
+    },
+
+  /**
+     * While a turn runs or a change is being applied, clicks on a card's Apply / Cancel / Include buttons are
+     * ignored. Show that: the buttons are disabled (and enabled again afterwards unless the card itself
+     * disabled them, for example when nothing is selected).
+     *
+     * @param {boolean} running
+     */
+    syncActionButtons(running) {
+      const buttons = this.stream?.querySelectorAll?.(
+        '[data-nst3af-agent-draft-apply], [data-nst3af-agent-draft-apply-safe], [data-nst3af-agent-draft-discard], [data-nst3af-agent-draft-toggle], [data-nst3af-agent-execute-all]',
+      ) ?? [];
+      buttons.forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) {
+          return;
+        }
+        if (running) {
+          if (!button.disabled) {
+            button.disabled = true;
+            button.setAttribute('aria-disabled', 'true');
+            button.dataset.nst3afBusy = '1';
+          }
+        } else if (button.dataset.nst3afBusy === '1') {
+          button.disabled = false;
+          button.removeAttribute('aria-disabled');
+          delete button.dataset.nst3afBusy;
+        }
+      });
     },
 
   /**
@@ -359,6 +389,7 @@ export const streamMethods = {
         ? `<div class="nst3af-agent-execute-all"><button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-execute-all>${escapeHtml(lang('agent.draft.executeAll', 'Apply all (%1$s)', [String(pending.length)]))}</button></div>`
         : '';
       this.stream.innerHTML = this.renderHomeNotice() + html + executeAllBar + this.renderContextNotice();
+      this.syncActionButtons(this._isRunning === true);
       this.stream.classList.toggle('nst3af-agent-stream--empty', this.messages.length === 0 && !this.isRunning);
       this.updateSummarizeButton();
       if (this.messages.length === 0) {
@@ -367,7 +398,7 @@ export const streamMethods = {
         this.renderStarters(this.starters);
       }
       if (this.isRunning) {
-        this.showProgress(true, this._progressLabel || '');
+        this.showProgress(true, this._progressLabel || '', !this._progressLabel);
       }
       this.stream.scrollTop = this.messages.length === 0 ? 0 : this.stream.scrollHeight;
     },

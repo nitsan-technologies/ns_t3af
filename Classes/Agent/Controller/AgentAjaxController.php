@@ -229,7 +229,7 @@ final class AgentAjaxController
                 $message['meta'] = $this->withFreshResultLinks($message['meta'], $user);
             }
 
-            return $message;
+            return $this->markExpiredDraft($message);
         }, $this->conversationSession->getMessages());
         $starters = $this->buildStarters($context);
 
@@ -856,6 +856,21 @@ final class AgentAjaxController
         $changeId = trim((string) ($body['changeId'] ?? ''));
         if ($changeId === '') {
             return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.missingChangeId')], 400);
+        }
+
+        // Undo in the workspace the change was made in (a change made in a workspace must not be undone in Live).
+        $undoUser = $this->resolveBackendUser();
+        $changeWorkspace = $this->undoService->workspaceOf($changeId);
+        if ($undoUser !== null && $changeWorkspace !== null) {
+            $blocked = $this->governanceGuard->requiresWorkspaceEnforcement($undoUser) && $changeWorkspace <= 0
+                ? $this->governanceGuard->assertDraftApplyAllowed($undoUser, $changeWorkspace)
+                : null;
+            if ($blocked !== null) {
+                return new JsonResponse(['ok' => false, 'message' => $blocked], 403);
+            }
+            if (AiUniverseUtilityHelper::isExtensionLoaded('workspaces') && !$undoUser->setTemporaryWorkspace($changeWorkspace)) {
+                return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.forbidden')], 403);
+            }
         }
 
         try {
@@ -1661,6 +1676,35 @@ final class AgentAjaxController
      * Switches the workspace for this request only (setWorkspace() would also change the
      * editor's backend workspace). False when the editor may not use that workspace.
      */
+    /**
+     * A reopened conversation still lists proposals that nobody applied. When the server no longer holds the
+     * draft (the session ended) or it is too old to apply, the card must not offer Apply.
+     *
+     * @param array<string, mixed> $message
+     * @return array<string, mixed>
+     */
+    private function markExpiredDraft(array $message): array
+    {
+        $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
+        $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : null;
+        if (($meta['type'] ?? '') !== 'inline_draft' || $draft === null) {
+            return $message;
+        }
+        if (($draft['applied'] ?? false) === true || ($draft['discarded'] ?? false) === true || ($draft['applying'] ?? false) === true) {
+            return $message;
+        }
+
+        $draftId = (string) ($draft['draftId'] ?? '');
+        $stored = $draftId !== '' ? $this->draftSession->getDraft($draftId) : null;
+        $createdAt = (int) ($stored['createdAt'] ?? 0);
+        $tooOld = $createdAt > 0 && time() - $createdAt > AgentWriteService::DRAFT_MAX_AGE_SECONDS;
+        if ($stored === null || $tooOld) {
+            $message['meta']['draft']['expired'] = true;
+        }
+
+        return $message;
+    }
+
     private function applyWorkspaceContext(BackendUserAuthentication $user, int $workspaceId): bool
     {
         if ($workspaceId <= 0 || !AiUniverseUtilityHelper::isExtensionLoaded('workspaces')) {

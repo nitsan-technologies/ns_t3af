@@ -153,6 +153,14 @@ TXT;
     }
 
     #[Test]
+    public function aQuestionAboutContentTypesIsNotARequestToCreateThem(): void
+    {
+        self::assertSame([], AgentRequestChecklist::parse(
+            'Which content element types can an editor create on this page? Answer as a short numbered list with the type names in bold.',
+        ));
+    }
+
+    #[Test]
     public function readOnlyRequestsNamingAContentTypeYieldNoChecklist(): void
     {
         foreach ([

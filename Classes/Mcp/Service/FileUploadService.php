@@ -40,7 +40,6 @@ use TYPO3\CMS\Core\Resource\Folder;
 use TYPO3\CMS\Core\Resource\Index\FileIndexRepository;
 use TYPO3\CMS\Core\Resource\MimeTypeDetector;
 use TYPO3\CMS\Core\Resource\OnlineMedia\Helpers\OnlineMediaHelperRegistry;
-use TYPO3\CMS\Core\Resource\ResourceFactory;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
 use TYPO3\CMS\Core\Resource\StorageRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
@@ -586,15 +585,12 @@ readonly class FileUploadService
                     continue;
                 }
                 $file = $storage->getFile($identifier);
-                if ($file instanceof File) {
+                if ($file instanceof File && $storage->checkFileActionPermission('read', $file)) {
                     return $file;
                 }
             } catch (\Exception) {
-                try {
-                    return GeneralUtility::makeInstance(ResourceFactory::class)->getFileObject($uid, $row);
-                } catch (\Exception) {
-                    continue;
-                }
+                // The editor may not read this file (or it can not be loaded): never hand it back anyway.
+                continue;
             }
         }
 

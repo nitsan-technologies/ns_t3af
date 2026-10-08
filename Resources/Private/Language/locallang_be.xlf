@@ -1360,6 +1360,9 @@
       <trans-unit id="agent.write.draftNotFound" resname="agent.write.draftNotFound">
         <source>This change was not found or has expired. Ask the agent again to prepare it.</source>
       </trans-unit>
+      <trans-unit id="agent.write.alreadyApplying" resname="agent.write.alreadyApplying">
+        <source>This change is already being applied. Wait a moment before trying again.</source>
+      </trans-unit>
       <trans-unit id="agent.write.draftTooOld" resname="agent.write.draftTooOld">
         <source>This change was prepared a while ago and is outdated. Ask the agent again to prepare a fresh change.</source>
       </trans-unit>
@@ -1383,6 +1386,15 @@
       </trans-unit>
       <trans-unit id="agent.undo.changeNotFound" resname="agent.undo.changeNotFound">
         <source>Change not found or already undone.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.expired" resname="agent.draft.expired">
+        <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.streamInterrupted" resname="agent.turn.streamInterrupted">
+        <source>The connection was interrupted. Your request may still be running. Reload the conversation in a moment to see the result.</source>
+      </trans-unit>
+      <trans-unit id="agent.undo.changedSince" resname="agent.undo.changedSince">
+        <source>Not undone: "%1$s" was changed after the agent's change (it now reads "%2$s"). Change it back yourself if you want the old value.</source>
       </trans-unit>
       <trans-unit id="agent.undo.deleteUnsupported" resname="agent.undo.deleteUnsupported">
         <source>Undo cannot bring back a deleted item. Restore it from the Recycler module instead.</source>

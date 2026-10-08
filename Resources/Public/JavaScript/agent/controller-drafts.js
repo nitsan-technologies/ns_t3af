@@ -360,6 +360,16 @@ export const draftMethods = {
     },
 
   /**
+     * A proposal from an earlier session or too long ago: the server no longer holds it, so Apply would
+     * only fail. Say so instead of offering buttons that do nothing.
+     *
+     * @returns {string}
+     */
+    renderExpiredDraft() {
+      return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant"><div class="nst3af-agent-msg__who">AI Agent</div><div class="nst3af-agent-msg__body">${escapeHtml(lang('agent.draft.expired', 'This proposal is out of date and was not applied. Ask again to get a fresh one.'))}</div></div>`;
+    },
+
+  /**
      * @param {object} message
      * @param {number} messageIndex
      * @returns {string}
@@ -380,6 +390,10 @@ export const draftMethods = {
 
       if (discarded) {
         return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant"><div class="nst3af-agent-msg__who">AI Agent</div><div class="nst3af-agent-msg__body">${escapeHtml(lang('agent.draft.discarded', 'Draft discarded. Nothing was written.'))}</div></div>`;
+      }
+
+      if (draft.expired === true && !applied) {
+        return this.renderExpiredDraft();
       }
 
       if (applied) {
@@ -491,6 +505,10 @@ export const draftMethods = {
 
       if (discarded) {
         return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant"><div class="nst3af-agent-msg__who">AI Agent</div><div class="nst3af-agent-msg__body">${escapeHtml(lang('agent.draft.discarded', 'Draft discarded. Nothing was written.'))}</div></div>`;
+      }
+
+      if (draft.expired === true && !applied) {
+        return this.renderExpiredDraft();
       }
 
       if (applied) {

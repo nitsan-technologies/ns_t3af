@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 use NITSAN\NsT3AF\Agent\Service\AgentDraftSession;
 use NITSAN\NsT3AF\Agent\Service\AgentUndoService;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
@@ -82,6 +83,46 @@ final class AgentUndoServiceTest extends TestCase
 
         self::assertSame('restored', $result['reverted'][0]['reverted']);
         self::assertNull($session->getChange('change-2'));
+    }
+
+    #[Test]
+    public function undoIsRefusedWhenTheFieldWasChangedAfterTheAgent(): void
+    {
+        $dataHandler = $this->createMock(DataHandlerService::class);
+        $dataHandler->expects(self::never())->method('updateRecord');
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->willReturn(['header' => 'Manual newer edit']);
+        [$service, $session] = $this->subject($dataHandler, $records);
+        $session->storeChange('change-5', [
+            'undoFields' => [
+                ['table' => 'tt_content', 'uid' => 42, 'field' => 'header', 'previousValue' => 'Old', 'appliedValue' => 'Agent', 'action' => 'update'],
+            ],
+        ]);
+
+        try {
+            $service->undo('change-5');
+            self::fail('Undo must not overwrite a newer edit.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame(1712003303, $exception->getCode());
+        }
+        self::assertNotNull($session->getChange('change-5'));
+    }
+
+    #[Test]
+    public function undoRunsWhenTheFieldStillHoldsTheAgentValue(): void
+    {
+        $dataHandler = $this->createMock(DataHandlerService::class);
+        $dataHandler->expects(self::once())->method('updateRecord')->with('tt_content', 42, ['header' => 'Old']);
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->willReturn(['header' => 'Agent']);
+        [$service, $session] = $this->subject($dataHandler, $records);
+        $session->storeChange('change-6', [
+            'undoFields' => [
+                ['table' => 'tt_content', 'uid' => 42, 'field' => 'header', 'previousValue' => 'Old', 'appliedValue' => 'Agent', 'action' => 'update'],
+            ],
+        ]);
+
+        $service->undo('change-6');
     }
 
     #[Test]
@@ -151,7 +192,7 @@ final class AgentUndoServiceTest extends TestCase
     /**
      * @return array{0: AgentUndoService, 1: AgentDraftSession}
      */
-    private function subject(DataHandlerService $dataHandler): array
+    private function subject(DataHandlerService $dataHandler, ?RecordService $recordService = null): array
     {
         $user = $this->createMock(BackendUserAuthentication::class);
         $user->method('getSessionData')->willReturnCallback(
@@ -165,6 +206,6 @@ final class AgentUndoServiceTest extends TestCase
         $GLOBALS['BE_USER'] = $user;
         $session = new AgentDraftSession();
 
-        return [new AgentUndoService($dataHandler, $session, $this->createAgentTranslator()), $session];
+        return [new AgentUndoService($dataHandler, $session, $this->createAgentTranslator(), $recordService ?? $this->createMock(RecordService::class)), $session];
     }
 }

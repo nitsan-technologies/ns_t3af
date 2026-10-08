@@ -125,7 +125,7 @@ readonly class McpPlaygroundService
      * @param array<string, mixed> $arguments
      * @return array{success: bool, result: mixed, latencyMs: int, message: string}
      */
-    public function invoke(string $toolName, array $arguments): array
+    public function invoke(string $toolName, array $arguments, bool $errorPayloadIsFailure = false): array
     {
         $handler = $this->findHandler($toolName);
         if ($handler === null) {
@@ -143,6 +143,21 @@ readonly class McpPlaygroundService
         try {
             $result = $this->invokeHandler($handler, $arguments);
             $latencyMs = (int) round((hrtime(true) - $start) / 1_000_000);
+
+            // A write that was confirmed must not be recorded as done when the tool answered with an error
+            // (for example "folder does not exist"): tools report such problems as {"error": "..."}.
+            $errorMessage = $errorPayloadIsFailure ? self::errorMessageOf($result) : null;
+            if ($errorMessage !== null) {
+                $this->toolLogService->logFailure($handler, 'playground', array_values($arguments), $latencyMs, $errorMessage);
+
+                return [
+                    'success' => false,
+                    'result' => $result,
+                    'latencyMs' => $latencyMs,
+                    'message' => $errorMessage,
+                ];
+            }
+
             $this->toolLogService->logSuccess($handler, 'playground', array_values($arguments), $latencyMs);
 
             return [
@@ -235,6 +250,25 @@ readonly class McpPlaygroundService
             $mode,
             fn(): array => $this->invoke($toolName, $arguments),
         );
+    }
+
+    /**
+     * The error text of a tool result shaped like {"error": "..."}, or null for a normal result.
+     */
+    public static function errorMessageOf(mixed $result): ?string
+    {
+        if (is_string($result)) {
+            $decoded = json_decode($result, true);
+            $result = is_array($decoded) ? $decoded : null;
+        }
+        if (!is_array($result) || !isset($result['error']) || !is_string($result['error']) || trim($result['error']) === '') {
+            return null;
+        }
+        if (($result['success'] ?? null) === true) {
+            return null;
+        }
+
+        return trim($result['error']);
     }
 
     private function findHandler(string $toolName): ?object
