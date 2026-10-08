@@ -35,6 +35,12 @@ readonly class RecordsApplyAudit
     private const MAX_FIELD_NAMES = 20;
 
     /**
+     * Error codes of the failures this class logs. The MCP error proxy writes one generic entry for every failed tool call;
+     * for these it skips that entry, so a refused batch leaves ONE entry, not two.
+     */
+    public const AUDITED_ERROR_CODES = [1790500002, 1790500003, 1790500004, 1790500005, 1790500006];
+
+    /**
      * @param array<string, array<string, int>> $operations
      * @param array<string, list<string>> $fieldNames
      */
@@ -62,7 +68,7 @@ readonly class RecordsApplyAudit
                 ),
             ];
             if ($error !== '') {
-                $data['error'] = mb_substr($error, 0, 300);
+                $data['error'] = mb_substr(self::redact($error), 0, 300);
             }
 
             SysLogWriterUtility::insert(
@@ -74,5 +80,16 @@ readonly class RecordsApplyAudit
         } catch (\Throwable) {
             // Audit logging must never break the call itself.
         }
+    }
+
+    /**
+     * DataHandler words its refusals around the record: "Attempt to modify record 'My title' …".
+     * The log keeps the sentence but not the quoted value, because it can be page or content text.
+     */
+    private static function redact(string $text): string
+    {
+        $text = preg_replace('/"[^"]*"/u', '"…"', $text) ?? '';
+
+        return preg_replace('/(?<![\p{L}\p{N}])\'[^\']*\'/u', '\'…\'', $text) ?? '';
     }
 }

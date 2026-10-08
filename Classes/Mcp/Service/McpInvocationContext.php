@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Mcp\Service;
 
+use Mcp\Exception\ToolCallException;
 use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Credits\CreditsProviderIdentifier;
 use NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface;
@@ -35,6 +36,13 @@ final class McpInvocationContext
     private bool $active = false;
 
     private ?string $providerIdentifier = null;
+
+    /**
+     * The workspace the backend user was in before a per-call override, or null when none is active.
+     * A long-lived process (the local stdio server) keeps ONE backend user for every call, so the override
+     * has to be taken back after the call, or the next call without a workspaceId would still run in it.
+     */
+    private ?int $workspaceBeforeOverride = null;
 
     /**
      * @param array<string, mixed> $arguments
@@ -77,6 +85,7 @@ final class McpInvocationContext
     {
         $this->active = false;
         $this->providerIdentifier = null;
+        $this->restoreWorkspace();
     }
 
     public function getProviderIdentifier(): ?string
@@ -195,17 +204,39 @@ final class McpInvocationContext
                 }
             }
             if (!$known) {
-                throw new \RuntimeException(sprintf('Workspace uid %d was not found.', $workspaceId));
+                throw new ToolCallException(sprintf('Workspace %d does not exist. Nothing was written.', $workspaceId), 1790500040);
             }
         }
 
         if (AiUniverseUtilityHelper::isExtensionLoaded('workspaces')) {
             // Per-call override: setWorkspace() would write the choice to the user's record and keep
             // the editor in that workspace across the whole backend after the call.
+            $before = (int) $backendUser->workspace;
             if (!$backendUser->setTemporaryWorkspace($workspaceId)) {
-                throw new \RuntimeException(sprintf('Workspace uid %d is not accessible to the current user.', $workspaceId));
+                throw new ToolCallException(
+                    sprintf('You are not a member of workspace %d, or it is not open to you. Nothing was written.', $workspaceId),
+                    1790500041,
+                );
             }
+
+            // Only the first override of a call remembers where the user came from.
+            $this->workspaceBeforeOverride ??= $before;
         }
     }
 
+    /** Puts the backend user back into the workspace it was in before this call's override. */
+    private function restoreWorkspace(): void
+    {
+        if ($this->workspaceBeforeOverride === null) {
+            return;
+        }
+
+        $workspaceId = $this->workspaceBeforeOverride;
+        $this->workspaceBeforeOverride = null;
+
+        $backendUser = $GLOBALS['BE_USER'] ?? null;
+        if ($backendUser instanceof BackendUserAuthentication && (int) $backendUser->workspace !== $workspaceId) {
+            $backendUser->setTemporaryWorkspace($workspaceId);
+        }
+    }
 }

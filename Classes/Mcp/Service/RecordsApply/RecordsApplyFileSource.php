@@ -46,6 +46,7 @@ readonly class RecordsApplyFileSource
     public function __construct(
         private ResourceFactory $resourceFactory,
         private AdvancedSettingsService $settings,
+        private ?RecordsApplyFileAccess $fileAccess = null,
     ) {}
 
     /**
@@ -67,7 +68,9 @@ readonly class RecordsApplyFileSource
             $storage = $file->getStorage();
             $allowed = isset($backendUser->getFileStorages()[$storage->getUid()])
                 && $storage->isWithinFileMountBoundaries($file)
-                && $storage->checkFileActionPermission('read', $file);
+                && $storage->checkFileActionPermission('read', $file)
+                // TYPO3 checks file mounts only for a backend request; the MCP server has none.
+                && ($this->fileAccess?->canReadFile($file) ?? true);
         } catch (\Throwable) {
             $allowed = false;
         }

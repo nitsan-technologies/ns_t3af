@@ -53,6 +53,7 @@ readonly class RecordsApplyPreflight
         private TcaSchemaService $tcaSchemaService,
         private RecordService $recordService,
         private ConnectionPool $connectionPool,
+        private ?RecordsApplyFileAccess $fileAccess = null,
     ) {}
 
     /**
@@ -217,6 +218,24 @@ readonly class RecordsApplyPreflight
                     $fields = array_diff_key($fields, array_flip($unwritable));
                 }
 
+                $denied = [];
+                foreach ($fields as $fieldName => $fieldValue) {
+                    if (!self::userMayWrite($backendUser, $table, (string) $fieldName, $fieldValue)) {
+                        $denied[] = (string) $fieldName;
+                    }
+                }
+
+                if ($denied !== []) {
+                    $names = array_map(RecordsApplyProblems::safe(...), $denied);
+                    if ($strict) {
+                        $problems->add($where + ['error' => 'Your backend user may not change these fields, or not to this value (strict mode refuses the whole call).', 'fields' => $names]);
+                        continue;
+                    }
+
+                    $ignored[] = ['table' => $table, 'id' => RecordsApplyProblems::safe($id), 'fields' => $names];
+                    $fields = array_diff_key($fields, array_flip($denied));
+                }
+
                 if ($fields === [] && !$isNew) {
                     $problems->add($where + ['error' => 'No writable fields left to update.']);
                     continue;
@@ -253,6 +272,14 @@ readonly class RecordsApplyPreflight
 
                 if (!$valid) {
                     continue;
+                }
+
+                if ($table === 'sys_file_reference' && isset($fields['uid_local']) && $this->fileAccess !== null) {
+                    $fileUid = self::fileUid($fields['uid_local']);
+                    if ($fileUid === null || !$this->fileAccess->canRead($fileUid)) {
+                        $problems->add($where + ['error' => 'The file was not found or is not accessible to you.', 'fields' => ['uid_local']]);
+                        continue;
+                    }
                 }
 
                 $clean[$table][$id] = $pid === null ? $fields : ['pid' => $pid] + $fields;
@@ -459,6 +486,56 @@ readonly class RecordsApplyPreflight
         }
 
         return true;
+    }
+
+    /**
+     * Does DataHandler let this backend user set this field to this value? It skips the rest without a word,
+     * so strict mode has to ask first: exclude fields the group did not allow, admin-only fields, select values
+     * behind authMode, and the page types (doktype) the group may use.
+     */
+    private static function userMayWrite(BackendUserAuthentication $backendUser, string $table, string $field, mixed $value): bool
+    {
+        $column = $GLOBALS['TCA'][$table]['columns'][$field] ?? null;
+        if (!is_array($column)) {
+            return true;
+        }
+
+        if (($column['exclude'] ?? false) && !$backendUser->check('non_exclude_fields', $table . ':' . $field)) {
+            return false;
+        }
+
+        if (($column['displayCond'] ?? '') === 'HIDE_FOR_NON_ADMINS' && !$backendUser->isAdmin()) {
+            return false;
+        }
+
+        $scalar = is_int($value) || is_string($value) ? (string) $value : null;
+        if ($scalar === null) {
+            return true;
+        }
+
+        if ($table === 'pages' && $field === 'doktype') {
+            return $backendUser->check('pagetypes_select', $scalar);
+        }
+
+        $config = $column['config'] ?? [];
+        if (is_array($config) && ($config['type'] ?? '') === 'select' && ($config['authMode'] ?? false)) {
+            return $backendUser->checkAuthMode($table, $field, $scalar);
+        }
+
+        return true;
+    }
+
+    private static function fileUid(mixed $value): ?int
+    {
+        if (is_int($value)) {
+            return $value > 0 ? $value : null;
+        }
+
+        if (is_string($value) && preg_match('/^(?:sys_file_)?(\d+)$/', trim($value), $match) === 1 && (int) $match[1] > 0) {
+            return (int) $match[1];
+        }
+
+        return null;
     }
 
     /** @return string|null comma-separated list, or null when the value is not a valid uid list */
