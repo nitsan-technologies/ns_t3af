@@ -389,6 +389,10 @@ final class AgentAjaxController
     }
 
     /**
+     * Where an attached file is stored: the editor's default upload folder when TYPO3 gives one they may
+     * write to, otherwise the first writable folder inside their own file mounts (an editor whose only
+     * mount is /qa_uploads/ must not be sent to /user_upload/), and /user_upload/ only as a last resort.
+     *
      * @return array{0: int, 1: string}
      */
     private function defaultUploadTarget(BackendUserAuthentication $user): array
@@ -399,11 +403,34 @@ final class AgentAjaxController
         } catch (\Throwable) {
             $folder = null;
         }
-        if ($folder instanceof \TYPO3\CMS\Core\Resource\Folder) {
+        if ($folder instanceof \TYPO3\CMS\Core\Resource\Folder && $this->canWriteTo($folder)) {
             return [$folder->getStorage()->getUid(), $folder->getIdentifier()];
         }
 
+        try {
+            foreach ($user->getFileStorages() as $storage) {
+                foreach ($storage->getFileMounts() as $mount) {
+                    $mountFolder = $mount['folder'] ?? null;
+                    if ($mountFolder instanceof \TYPO3\CMS\Core\Resource\Folder && $this->canWriteTo($mountFolder)) {
+                        return [$storage->getUid(), $mountFolder->getIdentifier()];
+                    }
+                }
+            }
+        } catch (\Throwable) {
+            // Fall through to the legacy default.
+        }
+
         return [1, '/user_upload/'];
+    }
+
+    private function canWriteTo(\TYPO3\CMS\Core\Resource\Folder $folder): bool
+    {
+        try {
+            return $folder->getStorage()->isWithinFileMountBoundaries($folder)
+                && $folder->checkActionPermission('write');
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
@@ -818,6 +845,8 @@ final class AgentAjaxController
             'ok' => true,
             'result' => $result,
             'message' => $message,
+            // Fresh page title / record chips: an undone rename must not leave the old name in the context line.
+            'context' => $this->resolveContext($request, is_array($body['context'] ?? null) ? $body['context'] : []),
         ]);
     }
 

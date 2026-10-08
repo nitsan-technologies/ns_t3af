@@ -248,6 +248,11 @@ export const chromeMethods = {
 
       this.input?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' && !event.shiftKey) {
+          // A highlighted "@" / "/" entry is picked by the document-level handler
+          // (handleAutocompleteKeydown); sending here as well would submit the half-typed "/list".
+          if (this.autocomplete && !this.autocomplete.hidden && this.autocompleteIndex >= 0) {
+            return;
+          }
           event.preventDefault();
           this.submitTurn();
         }

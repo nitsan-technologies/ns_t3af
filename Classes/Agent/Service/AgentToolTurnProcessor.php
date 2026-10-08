@@ -561,6 +561,17 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             }
         }
 
+        // Models often call the search word "query" (or "q"); these tools only know "search", and a
+        // missing word must not turn into an empty result.
+        if (in_array(strtolower(trim($toolName)), ['pages_search', 'content_search', 'record_search'], true)) {
+            foreach (['query', 'q', 'term', 'keyword', 'text'] as $alias) {
+                if (trim((string) ($arguments['search'] ?? '')) === '' && isset($arguments[$alias]) && is_string($arguments[$alias])) {
+                    $arguments['search'] = $arguments[$alias];
+                }
+                unset($arguments[$alias]);
+            }
+        }
+
         $pageId = (int) ($context['pageId'] ?? 0);
         // The model named another page by URL: the page on screen must not be added as a second, conflicting target.
         $namesPageByUrl = trim((string) ($arguments['pageUrl'] ?? '')) !== '' && !isset($arguments['pageId']);
