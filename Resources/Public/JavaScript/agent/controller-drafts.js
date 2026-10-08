@@ -448,6 +448,7 @@ export const draftMethods = {
             <span class="nst3af-agent-draft__badge">${escapeHtml(lang('agent.draft.previewBadge', 'Preview'))}</span>
           </div>
           <p class="nst3af-agent-draft__lead">${renderMessageBody(String(message.content ?? ''))}</p>
+          ${String(draft.location ?? '').trim() !== '' ? `<p class="nst3af-agent-draft__location">${escapeHtml(String(draft.location))}</p>` : ''}
           ${renderImagePreviews(message.meta?.previews)}
           <div class="nst3af-agent-draft__cols" aria-hidden="true"><span></span><span>${escapeHtml(lang('agent.draft.colCurrent', 'Now'))}</span><span>${escapeHtml(lang('agent.draft.colProposed', 'New'))}</span><span></span></div>
           <div class="nst3af-agent-draft__fields">${rows}</div>

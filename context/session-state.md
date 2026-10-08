@@ -2,6 +2,22 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-08 — Move a page with pages_move
+
+**Done:** Moving a page uses `pages_move`. `beforeUid` places it directly before that page using the previous default-language sibling, and Execute checks that sibling again. `afterUid` / `targetPid` still work. A page-move request keeps `pages_move` in the toolbox. A hidden page can be moved. A page uid sent to `content_move` is planned as a page move. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-08
+
+---
+
+## 2026-10-08 — Create a page after another page
+
+**Done:** A negative `pid` places a new page directly after that page, and Execute accepts it. The preview and the success sentence show the parent and the position. A positive `pid` is still the first child. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-08
+
+---
+
 ## 2026-10-08 — No new records under a deleted page
 
 **Done:** Creating, moving, or copying under a page that is missing or deleted is refused before the draft and again on apply, including for admins. That page is dropped from the agent context. See `context/features/ai-agent.md`.

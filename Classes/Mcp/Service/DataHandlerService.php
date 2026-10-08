@@ -58,9 +58,16 @@ readonly class DataHandlerService
 
         try {
             if ($table === 'pages') {
-                $pid = $this->resolveLivePageUid($pid);
-                $fields['pid'] = $pid;
-                $this->attachSiteAttribute($pid);
+                if ($pid < 0) {
+                    $liveAnchor = $this->resolveLivePageUid(abs($pid));
+                    $pid = -$liveAnchor;
+                    $fields['pid'] = $pid;
+                    $this->attachSiteAttribute($liveAnchor);
+                } else {
+                    $pid = $this->resolveLivePageUid($pid);
+                    $fields['pid'] = $pid;
+                    $this->attachSiteAttribute($pid);
+                }
             }
 
             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
@@ -498,12 +505,16 @@ readonly class DataHandlerService
         }
 
         // pid 0 is the tree root, where root-level tables such as system categories live; TYPO3 itself
-        // refuses it for tables that may not be created there.
-        if (!isset($plan->context['pid']) || !is_numeric($plan->context['pid']) || (int) $plan->context['pid'] < 0) {
+        // refuses it for tables that may not be created there. A negative pid inserts directly after that record.
+        if (!isset($plan->context['pid']) || !is_numeric($plan->context['pid'])) {
             throw new \RuntimeException('Create plan is missing pid.', 1712003103);
         }
         $pid = (int) $plan->context['pid'];
-        $this->recordService->assertParentPageExists($pid);
+        if ($pid > 0) {
+            $this->recordService->assertParentPageExists($pid);
+        } elseif ($pid < 0) {
+            $this->recordService->assertInsertAfterExists($table, abs($pid));
+        }
 
         $fields = [];
         foreach ($keptFields as $field) {
@@ -574,6 +585,8 @@ readonly class DataHandlerService
         $target = (int) ($context['target'] ?? $field->proposedValue ?? 0);
         if ($target > 0) {
             $this->recordService->assertParentPageExists($target);
+        } elseif ($target < 0 && $field->table === 'pages') {
+            $this->recordService->assertInsertAfterExists('pages', abs($target));
         }
         $this->moveRecord($field->table, $field->uid, $target);
 

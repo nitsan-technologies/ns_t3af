@@ -114,6 +114,10 @@ A second identical `action=create` card is dropped while the first is still pend
 
 A create, move, or copy under a page id greater than 0 is refused when that page is missing or deleted, including for an admin (`RecordService::assertParentPageExists()`, used again when the draft is applied). A deleted page is not kept as the current page.
 
+A positive create `pid` is the first child of that page. A negative `pid` (`-uid`) places the new record directly after that record, including on apply (`DataHandlerService::applyPlanCreate()`). The preview card and the success sentence show that place (`AgentCreatePlacement`). "After Page 1" is `-uid` of Page 1, "before" is the negative uid of the previous sibling (or the parent uid when that page is first), "last under Home" is the negative uid of the last subpage, and "subpage of Page 1" stays a positive pid.
+
+Moving an existing page uses `pages_move` (`beforeUid` places it directly before that page, `afterUid` places it directly after that page, `targetPid` makes it the first child). The previous sibling is a default-language page, and the page being moved is not used as its own anchor. Execute checks that sibling again. A request that already names both pages offers `pages_move` so the turn does not keep reading the tree. A hidden page can be moved. `content_move` is only for a content element; a page uid sent there is planned as `pages_move` instead.
+
 ---
 
 ## NL tool selection

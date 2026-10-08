@@ -85,7 +85,11 @@ final class McpRecordPlanService
 
         $pid = (int) $payload['pid'];
         $this->assertTargetAccessible($tableName, $pid);
-        $this->recordService->assertParentPageExists($pid);
+        if ($pid > 0) {
+            $this->recordService->assertParentPageExists($pid);
+        } elseif ($pid < 0) {
+            $this->recordService->assertInsertAfterExists($tableName, abs($pid));
+        }
         unset($payload['pid']);
         $filteredData = $this->filterWritableFields($tableName, $payload, $allowedFields);
 
