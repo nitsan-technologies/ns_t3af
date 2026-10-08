@@ -27,6 +27,7 @@ namespace NITSAN\NsT3AF\Mcp\Server;
 use Mcp\Exception\ToolCallException;
 use NITSAN\NsT3AF\Mcp\Logging\AuditLogger;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpToolLogService;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyAudit;
 use Psr\Log\LoggerInterface;
 use ReflectionClass;
 
@@ -57,7 +58,10 @@ final class ErrorHandlingProxy
         } catch (ToolCallException $e) {
             $executionTimeMs = (int) ((hrtime(true) - $startTime) / 1000000);
             $handlerName = $this->getHandlerName();
-            $this->auditLogger->logFailure($handlerName, $this->type, $arguments, $executionTimeMs, $e->getMessage());
+            // A refused batch is already in the log, written by the batch engine without field values.
+            if (!in_array($e->getCode(), RecordsApplyAudit::AUDITED_ERROR_CODES, true)) {
+                $this->auditLogger->logFailure($handlerName, $this->type, $arguments, $executionTimeMs, $e->getMessage());
+            }
             $this->toolLogService->logFailure($this->inner, $this->type, $arguments, $executionTimeMs, $e->getMessage());
 
             throw $e;

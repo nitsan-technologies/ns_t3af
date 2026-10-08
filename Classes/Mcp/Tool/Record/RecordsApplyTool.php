@@ -65,6 +65,7 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
             . ' All-or-nothing: any refusal or error rolls back every change. Limit: 500 records per call (data + cmd), split larger batches.'
             . ' requestId (e.g. a UUID) makes a retry safe: resend the SAME request with the SAME requestId after a timeout and it is applied once;'
             . ' you get the first answer back with replayed=true. A requestId used with a different request is refused. Dry runs ignore it.'
+            . ' Inline, data + cmd + bulk may weigh 2 MB together.'
             . ' fromFile = the sys_file uid of a .json file you uploaded, holding {"data": {...}, "cmd": {...}, "bulk": [...]} (each optional), for batches too big to send inline'
             . ' (up to 10 MB). Then leave data, cmd and bulk empty. The file is checked exactly like inline arguments and you need read access to it.'
             . ' Your own backend permissions apply. Returns "map" (NEW id => uid) and a batchId.',
@@ -125,7 +126,13 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
             throw new ToolCallException(json_encode($payload, JSON_THROW_ON_ERROR), 1790500006, $exception);
         }
 
-        return json_encode($result->toArray(), JSON_THROW_ON_ERROR);
+        $response = $result->toArray();
+        if (($response['map'] ?? null) === []) {
+            // "map" is NEW id => uid. An empty one is an empty object, not an empty list.
+            $response['map'] = new \stdClass();
+        }
+
+        return json_encode($response, JSON_THROW_ON_ERROR);
     }
 
     /**

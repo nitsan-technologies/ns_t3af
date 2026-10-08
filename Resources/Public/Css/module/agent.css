@@ -1464,6 +1464,14 @@
   color: var(--nst3af-agent-text-muted);
 }
 
+.nst3af-agent-empty__limits {
+  margin: -0.75rem auto 1.5rem;
+  max-width: 26rem;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--nst3af-agent-text-muted);
+}
+
 .nst3af-agent-empty__tip {
   margin: 1.25rem 0 0;
   font-size: 12px;
@@ -2628,6 +2636,21 @@
 
 .nst3af-agent-plan--running .nst3af-agent-plan__step--in_progress .nst3af-agent-plan__mark {
   animation: nst3af-agent-plan-spin 0.9s linear infinite;
+}
+
+/* Waiting for the editor's approval: the agent is idle, so no spinner and a calm "waiting" label. */
+.nst3af-agent-plan--waiting .nst3af-agent-plan__step--in_progress .nst3af-agent-plan__mark {
+  animation: none;
+  border-top-color: var(--nst3af-agent-info-fg);
+  border-style: dashed;
+}
+
+.nst3af-agent-plan__waiting {
+  margin-left: auto;
+  margin-right: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--nst3af-agent-text-muted);
 }
 
 .nst3af-agent-plan__step--failed .nst3af-agent-plan__mark {

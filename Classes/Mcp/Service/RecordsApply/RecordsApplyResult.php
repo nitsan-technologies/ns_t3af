@@ -34,6 +34,7 @@ final readonly class RecordsApplyResult
      * @param list<array{table: string, id: string, fields: list<string>}> $ignoredFields non-strict mode only
      * @param int $aiLabelled how many records were marked as AI-involved in the AI Label module
      * @param bool $replayed true when this is the stored answer of an earlier call with the same requestId; nothing was written now
+     * @param array{id: int, title: string}|null $workspace the workspace the call ran in (0 = Live), so the client can see where the change went
      */
     public function __construct(
         public string $batchId,
@@ -45,6 +46,7 @@ final readonly class RecordsApplyResult
         public array $ignoredFields,
         public int $aiLabelled = 0,
         public bool $replayed = false,
+        public ?array $workspace = null,
     ) {}
 
     public function withAiLabelled(int $aiLabelled): self
@@ -59,6 +61,23 @@ final readonly class RecordsApplyResult
             $this->ignoredFields,
             $aiLabelled,
             $this->replayed,
+            $this->workspace,
+        );
+    }
+
+    public function withWorkspace(int $id, string $title): self
+    {
+        return new self(
+            $this->batchId,
+            $this->dryRun,
+            $this->written,
+            $this->created,
+            $this->copied,
+            $this->operations,
+            $this->ignoredFields,
+            $this->aiLabelled,
+            $this->replayed,
+            ['id' => $id, 'title' => $title],
         );
     }
 
@@ -74,6 +93,7 @@ final readonly class RecordsApplyResult
             $this->ignoredFields,
             0,
             true,
+            $this->workspace,
         );
     }
 
@@ -122,6 +142,11 @@ final readonly class RecordsApplyResult
             ];
         }
 
+        $workspace = null;
+        if (is_array($stored['workspace'] ?? null) && is_numeric($stored['workspace']['id'] ?? null)) {
+            $workspace = ['id' => (int) $stored['workspace']['id'], 'title' => (string) ($stored['workspace']['title'] ?? '')];
+        }
+
         return new self(
             is_string($stored['batchId'] ?? null) ? $stored['batchId'] : '',
             false,
@@ -130,6 +155,9 @@ final readonly class RecordsApplyResult
             $copied,
             $operations,
             $ignored,
+            0,
+            false,
+            $workspace,
         );
     }
 
@@ -144,6 +172,10 @@ final readonly class RecordsApplyResult
             'operations' => $this->operations,
             'map' => $this->created,
         ];
+
+        if ($this->workspace !== null) {
+            $result['workspace'] = $this->workspace;
+        }
 
         if ($this->copied !== []) {
             $result['copied'] = $this->copied;

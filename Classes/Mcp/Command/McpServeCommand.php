@@ -25,9 +25,9 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Command;
 
 use Doctrine\DBAL\ParameterType;
-use Mcp\Server\Transport\StdioTransport;
 use NITSAN\NsT3AF\Mcp\Authentication\BackendUserBootstrap;
 use NITSAN\NsT3AF\Mcp\Logging\StderrLogger;
+use NITSAN\NsT3AF\Mcp\Server\BufferedStdioTransport;
 use NITSAN\NsT3AF\Mcp\Server\McpServerFactory;
 use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
 use Psr\Log\LoggerInterface;
@@ -152,7 +152,7 @@ class McpServeCommand extends Command
                 ? new StderrLogger($this->logger)
                 : $this->logger;
 
-            $stdioTransport = new StdioTransport(STDIN, STDOUT, $transportLogger);
+            $stdioTransport = new BufferedStdioTransport(STDIN, STDOUT, $transportLogger);
 
             if ($verbose) {
                 $this->logStderr($output, '[debug] Entering MCP event loop (no output until a client sends JSON-RPC)…');

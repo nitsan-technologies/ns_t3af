@@ -78,13 +78,15 @@ final readonly class AgentProviderOptions
         if ($storagePid === null) {
             return $options;
         }
+        $byIdentifier = [];
         foreach ($this->providers->findAllByStoragePid($storagePid) as $provider) {
             if ($this->isUsable($provider, $pageId, $user)) {
                 $options[] = ['value' => $provider->identifier, 'label' => $this->summary($provider)];
+                $byIdentifier[$provider->identifier] = $provider;
             }
         }
 
-        return $options;
+        return $this->disambiguate($options, $byIdentifier);
     }
 
     /**
@@ -272,10 +274,36 @@ final readonly class AgentProviderOptions
 
     private function summary(Provider $provider): string
     {
+        $title = trim($provider->title);
+        if ($title !== '') {
+            return $title;
+        }
+
         $adapterType = Provider::normalizeAdapterType($provider->adapterType);
         $adapter = $this->providerCatalog->adapterDisplayLabel($adapterType);
 
-        return sprintf('%s (%s, %s)', $provider->title, $adapter !== '' ? $adapter : $adapterType, $provider->modelId);
+        return trim(sprintf('%s %s', $adapter !== '' ? $adapter : $adapterType, $provider->modelId));
+    }
+
+    /**
+     * Editors see the provider's name ("OpenAI"). Two providers with the same name are told apart by
+     * their model, so the list never shows two identical rows.
+     *
+     * @param list<array{value: string, label: string}> $options
+     * @param array<string, Provider> $providersByIdentifier
+     * @return list<array{value: string, label: string}>
+     */
+    private function disambiguate(array $options, array $providersByIdentifier): array
+    {
+        $counts = array_count_values(array_column($options, 'label'));
+        foreach ($options as $index => $option) {
+            $provider = $providersByIdentifier[$option['value']] ?? null;
+            if (($counts[$option['label']] ?? 0) > 1 && $provider instanceof Provider && trim($provider->modelId) !== '') {
+                $options[$index]['label'] = sprintf('%s (%s)', $option['label'], $provider->modelId);
+            }
+        }
+
+        return $options;
     }
 
     private function storagePid(int $pageId): ?int

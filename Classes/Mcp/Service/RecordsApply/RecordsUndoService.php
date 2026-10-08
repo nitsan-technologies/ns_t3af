@@ -82,7 +82,7 @@ readonly class RecordsUndoService
 
         $undoBatchId = self::undoBatchId($batchId);
         if ($this->historyRows($undoBatchId, null, 1) !== []) {
-            throw new ToolCallException(sprintf('Batch %s was already undone (by %s). Nothing was written.', $batchId, $undoBatchId), 1790500018);
+            throw new ToolCallException(sprintf('Batch %s was already undone, so there is nothing to undo. The undo itself is batch %s: undo that one to bring the changes back. Nothing was written.', $batchId, $undoBatchId), 1790500018);
         }
 
         $rows = $this->historyRows($batchId, $backendUser->isAdmin() ? null : (int) ($backendUser->user['uid'] ?? 0), self::MAX_HISTORY_ROWS + 1);
@@ -206,7 +206,7 @@ readonly class RecordsUndoService
         if ($changed !== []) {
             throw new ToolCallException(
                 sprintf(
-                    'Batch %s cannot be undone: %d record(s) were changed after it (%s%s). Reverting them would overwrite that work. This is also what a batch that was undone by hand looks like. Nothing was written.',
+                    'Batch %s cannot be undone: %d record(s) were changed after it (%s%s). Undoing the batch would overwrite those later changes, so nothing was written. If the changes were already taken back by hand, there is nothing left to undo.',
                     $batchId,
                     count($changed),
                     implode(', ', array_slice($changed, 0, self::MAX_LISTED)),
