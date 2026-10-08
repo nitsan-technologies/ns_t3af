@@ -36,6 +36,15 @@
       <trans-unit id="module.menu.mcpTools" resname="module.menu.mcpTools">
         <source>MCP Tools</source>
       </trans-unit>
+      <trans-unit id="module.menu.mcp" resname="module.menu.mcp">
+        <source>MCP</source>
+      </trans-unit>
+      <trans-unit id="module.mcp.heading" resname="module.mcp.heading">
+        <source>MCP Server &amp; Tools</source>
+      </trans-unit>
+      <trans-unit id="module.mcp.switch.aria" resname="module.mcp.switch.aria">
+        <source>MCP sections</source>
+      </trans-unit>
       <trans-unit id="module.menu.mcpConnectors" resname="module.menu.mcpConnectors">
         <source>MCP Connectors</source>
       </trans-unit>

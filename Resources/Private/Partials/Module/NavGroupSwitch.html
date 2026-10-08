@@ -1,0 +1,24 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+<f:if condition="{navGroupSections -> f:count()} > 1">
+    <nav class="card aiu-mode aiu-nav-switch mb-3"
+         aria-label="{f:translate(key: 'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:module.mcp.switch.aria', default: 'MCP sections')}">
+        <div class="aiu-mode__options">
+            <f:for each="{navGroupSections}" as="section">
+                <a class="aiu-mode__card aiu-nav-switch__card{f:if(condition: '{section.active} == 1', then: ' is-active')}"
+                   href="{section.href}"
+                   data-aiu-nav-switch="{section.key}"
+                   aria-current="{f:if(condition: '{section.active} == 1', then: 'page', else: 'false')}">
+                    <div class="aiu-mode__content">
+                        <div class="aiu-mode__title-row">
+                            <span class="aiu-nav-switch__dot" aria-hidden="true"></span>
+                            <span class="aiu-mode__title">{section.title}</span>
+                        </div>
+                        <p class="aiu-mode__desc mb-0">{section.intro}</p>
+                    </div>
+                </a>
+            </f:for>
+        </div>
+    </nav>
+</f:if>
+</html>
