@@ -465,7 +465,7 @@ tools:
     category: Content
     status: ready
     tagline: Search pages by title or JSON conditions
-    notes: Plain text searches title with LIKE. JSON supports advanced operators.
+    notes: Plain text searches title with LIKE across the whole tree. A search limited to the current page, or one that asks only for visible pages, is repeated without that limit when it finds nothing. A hidden page is included and is a real page. JSON supports advanced operators.
     searchTerms:
       - 'find page by title'
       - 'Seite suchen, Seite finden'

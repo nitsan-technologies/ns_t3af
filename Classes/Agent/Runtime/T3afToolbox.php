@@ -247,6 +247,15 @@ final class T3afToolbox implements ToolboxInterface
         $this->state->executedTools[] = $name;
         // Cards from a natural-language turn continue the turn after the editor confirms / declines.
         $message['meta']['fromRunner'] = true;
+        if (self::isRepeatedPlanFailure($message, $this->state->messages)) {
+            $this->state->pause('plan_invalid');
+            $outcome = 'stopped';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: this call already failed for the same reason. Do not call it again. The turn ends.',
+            );
+        }
         $this->state->addMessage($message);
         // The step that was running failed: the Progress list shows it instead of spinning on.
         if (($message['meta']['type'] ?? '') === 'error' && $this->state->plan !== []) {
@@ -275,6 +284,39 @@ final class T3afToolbox implements ToolboxInterface
         ksort($arguments);
 
         return $name . ':' . json_encode($arguments, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+    }
+
+    /**
+     * The same failed prepare was already shown. A later identical failure must not add another message.
+     *
+     * @param array<string, mixed> $message
+     * @param list<array<string, mixed>> $messages
+     */
+    public static function isRepeatedPlanFailure(array $message, array $messages): bool
+    {
+        $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
+        if (($meta['type'] ?? '') !== 'tool_result' || ($meta['success'] ?? true) !== false) {
+            return false;
+        }
+
+        $tool = trim((string) ($meta['tool'] ?? ''));
+        $error = trim((string) ($meta['error'] ?? ''));
+        if ($tool === '' || $error === '') {
+            return false;
+        }
+
+        foreach ($messages as $existing) {
+            $existingMeta = is_array($existing['meta'] ?? null) ? $existing['meta'] : [];
+            if (
+                ($existingMeta['type'] ?? '') === 'tool_result'
+                && trim((string) ($existingMeta['tool'] ?? '')) === $tool
+                && trim((string) ($existingMeta['error'] ?? '')) === $error
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static function findToolsDescription(): string

@@ -314,6 +314,24 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function theSamePrepareFailureIsShownOnlyOnce(): void
+    {
+        $failure = [
+            'role' => 'assistant',
+            'content' => 'Could not prepare this change.',
+            'meta' => [
+                'type' => 'tool_result',
+                'tool' => 'pages_move',
+                'success' => false,
+                'error' => 'Provide exactly one of targetPid or afterUid, not both.',
+            ],
+        ];
+
+        self::assertFalse(T3afToolbox::isRepeatedPlanFailure($failure, []));
+        self::assertTrue(T3afToolbox::isRepeatedPlanFailure($failure, [$failure]));
+    }
+
+    #[Test]
     public function toolsThatFitTheRequestAreOfferedRightAway(): void
     {
         $this->runScripted([new AiToolCallingResponse('Ok', 'gpt-test', 'openai')], message: 'Please update the header of content element 7');

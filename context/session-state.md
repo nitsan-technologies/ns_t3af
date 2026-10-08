@@ -4,7 +4,7 @@
 
 ## 2026-10-08 — Move a page with pages_move
 
-**Done:** Moving a page uses `pages_move`. `beforeUid` places it directly before that page using the previous default-language sibling, and Execute checks that sibling again. `afterUid` / `targetPid` still work. A page-move request keeps `pages_move` in the toolbox. A hidden page can be moved. A page uid sent to `content_move` is planned as a page move. See `context/features/ai-agent.md`.
+**Done:** Moving a page uses `pages_move`. `beforeUid` places it directly before that page using the previous default-language sibling, and Execute checks that sibling again. `afterUid` / `targetPid` still work. A page-move request keeps `pages_move` in the toolbox. A hidden page can be moved. `pages_search` repeats a name search without the current page and without a visible-only filter when the first search finds nothing. A page uid sent to `content_move` is planned as a page move. See `context/features/ai-agent.md`.
 
 **Last touched:** 2026-10-08
 

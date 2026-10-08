@@ -46,7 +46,8 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
             . ' (e.g. "hello") or a JSON object for advanced conditions'
             . ' (e.g. {"doktype":{"op":"eq","value":"1"}, "title":"Home"}).'
             . ' Supports operators: eq, neq, like, gt, gte, lt, lte, in, null, notNull.'
-            . ' Use orderBy and orderDirection for sorting.',
+            . ' Use orderBy and orderDirection for sorting.'
+            . ' Leave pid unset to search the whole tree. A hidden page is included and is a real page.',
     )]
     public function execute(
         string $search,
@@ -78,19 +79,34 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
             $orderDirection = 'ASC';
         }
 
-        return json_encode(
-            $this->recordService->search(
+        $scopedPid = $pid >= 0 ? $pid : null;
+        $result = $this->recordService->search(
+            'pages',
+            $searchConditions,
+            $limit,
+            $offset,
+            $readFields,
+            $scopedPid,
+            $resolvedOrderBy,
+            $orderDirection,
+        );
+
+        // A name on another page, or a hidden page, must still be found.
+        if ((int) ($result['total'] ?? 0) === 0 && ($scopedPid !== null || $this->excludesHiddenPages($searchConditions))) {
+            unset($searchConditions['hidden']);
+            $result = $this->recordService->search(
                 'pages',
                 $searchConditions,
                 $limit,
                 $offset,
                 $readFields,
-                $pid >= 0 ? $pid : null,
+                null,
                 $resolvedOrderBy,
                 $orderDirection,
-            ),
-            JSON_THROW_ON_ERROR,
-        );
+            );
+        }
+
+        return json_encode($result, JSON_THROW_ON_ERROR);
     }
 
     /**
@@ -106,5 +122,18 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
         }
 
         return ['title' => ['operator' => 'like', 'value' => SearchConditionParser::plainTerm($search)]];
+    }
+
+    /**
+     * @param array<string, array{operator: string, value: string}> $searchConditions
+     */
+    private function excludesHiddenPages(array $searchConditions): bool
+    {
+        $hidden = $searchConditions['hidden'] ?? null;
+        if (!is_array($hidden)) {
+            return false;
+        }
+
+        return ($hidden['operator'] ?? '') === 'eq' && (string) ($hidden['value'] ?? '') === '0';
     }
 }
