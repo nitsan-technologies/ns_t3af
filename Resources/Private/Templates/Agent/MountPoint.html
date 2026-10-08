@@ -188,6 +188,9 @@
                                        multiple
                                        accept="image/*,.pdf,.txt,.md,.doc,.docx" />
                             </div>
+                            <p class="nst3af-agent-composer__note">
+                                <f:translate key="{ll}:agent.composer.disclaimer" default="AI-generated content can be wrong. Please verify before you approve." />
+                            </p>
                             <button type="button"
                                     class="btn btn-primary nst3af-agent-composer__send"
                                     data-nst3af-agent-send
@@ -205,9 +208,6 @@
                         </div>
                         <div class="nst3af-agent-autocomplete" data-nst3af-agent-autocomplete hidden role="listbox" aria-label="{f:translate(key: '{ll}:agent.autocomplete.label', default: 'Suggestions')}"></div>
                     </div>
-                    <p class="nst3af-agent-composer__note">
-                        <f:translate key="{ll}:agent.composer.disclaimer" default="AI-generated content can be wrong. Please verify before you approve." />
-                    </p>
                 </footer>
             </div>
         </div>
