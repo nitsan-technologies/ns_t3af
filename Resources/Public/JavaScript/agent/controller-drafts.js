@@ -67,10 +67,21 @@ export const draftMethods = {
      */
     pendingExecutableDrafts() {
       const indexes = [];
+      const seenCreates = new Set();
       this.messages.forEach((message, index) => {
         const draft = message.meta?.draft;
         if (message.meta?.type === 'inline_draft' && draft && !draft.applied && !draft.discarded && !draft.applying
           && String(draft.severity ?? 'write') !== 'destructive') {
+          if (draft.action === 'create') {
+            const fingerprint = createDraftFingerprint(draft);
+            if (seenCreates.has(fingerprint)) {
+              return;
+            }
+            seenCreates.add(fingerprint);
+          }
+          if (keptFieldsLackProposedValue(draft)) {
+            return;
+          }
           indexes.push(index);
         }
       });
@@ -306,10 +317,11 @@ export const draftMethods = {
       const first = fields[0];
       const sameRecord = fields.every((f) => f.table === first.table && Number(f.uid ?? 0) === Number(first.uid ?? 0));
       const recordLabel = String(first.recordLabel ?? '').trim();
-      if (!sameRecord || Number(first.uid ?? 0) <= 0 || recordLabel === '') {
+      const renameField = fields.length === 1 && String(first.field ?? '') === '_rename';
+      if (!sameRecord || recordLabel === '' || (Number(first.uid ?? 0) <= 0 && !renameField)) {
         return fallback;
       }
-      const renameOnly = fields.length === 1 && ['title', 'header', 'name'].includes(String(first.field ?? ''));
+      const renameOnly = fields.length === 1 && ['title', 'header', 'name', '_rename'].includes(String(first.field ?? ''));
       return renameOnly
         ? lang('agent.draft.titleRename', 'Rename %1$s', [recordLabel])
         : lang('agent.draft.titleChange', 'Change %1$s', [recordLabel]);
@@ -400,6 +412,7 @@ export const draftMethods = {
         : lang('agent.draft.execute', 'Apply');
       // Every change was left out: Apply would only fail, so it is disabled with a hint.
       const nothingKept = fields.length > 0 && keptCount === 0;
+      const blankProposed = keptFieldsLackProposedValue(draft);
       const safeFieldCount = Number(draft.safeFieldCount ?? fields.filter((field) => field.safe === true).length);
       const safeApplyBtn = safeFieldCount > 0 && !isDestructive
         ? `<button type="button" class="btn btn-default btn-sm" data-nst3af-agent-draft-apply-safe="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(lang('agent.draft.applySafe', 'Apply safe fields'))}</button>`
@@ -423,7 +436,7 @@ export const draftMethods = {
           ${this.renderDraftTarget(isDestructive)}
           ${nothingKept ? `<p class="nst3af-agent-draft__hint" role="status">${escapeHtml(lang('agent.draft.nothingKept', 'Nothing is selected. Include at least one change or cancel.'))}</p>` : ''}
           <div class="nst3af-agent-draft__actions">
-            <button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-draft-apply="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}"${nothingKept ? ' disabled' : ''}>${escapeHtml(applyLabel)}</button>
+            <button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-draft-apply="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}"${nothingKept || blankProposed ? ' disabled' : ''}>${escapeHtml(applyLabel)}</button>
             ${safeApplyBtn}
             <button type="button" class="btn btn-default btn-sm" data-nst3af-agent-draft-discard="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(lang('agent.draft.decline', 'Cancel'))}</button>
           </div>
@@ -539,7 +552,7 @@ export const draftMethods = {
             ${handoffHtml}
           </details>
           <div class="nst3af-agent-applied__actions">
-            ${this.renderResultLinks(meta.links)}
+            ${undone ? '' : this.renderResultLinks(meta.links)}
             ${undoBtn}
           </div>
         </div>
@@ -623,7 +636,7 @@ export const draftMethods = {
         })
         : keptFieldKeys;
 
-      if (draft.kind !== 'tool_confirmation' && safeKeptFieldKeys.length === 0) {
+      if (draft.kind !== 'tool_confirmation' && (safeKeptFieldKeys.length === 0 || keptFieldsLackProposedValue(draft, safeKeptFieldKeys))) {
         this.announce(lang('agent.draft.nothingKept', 'Nothing is selected. Include at least one change or cancel.'));
         return;
       }
@@ -1007,3 +1020,39 @@ export const draftMethods = {
       }
     },
 };
+
+/**
+ * Same create offered twice (follow-up before Execute) shares this fingerprint.
+ *
+ * @param {object} draft
+ * @returns {string}
+ */
+function createDraftFingerprint(draft) {
+  const fields = (Array.isArray(draft.fields) ? draft.fields : []).map((field) => [
+    String(field?.table ?? ''),
+    Number(field?.uid ?? 0),
+    String(field?.field ?? ''),
+    String(field?.proposed ?? ''),
+  ]);
+  return JSON.stringify([String(draft.tool ?? ''), fields]);
+}
+
+/**
+ * A kept change with no proposed value must not be applied.
+ *
+ * @param {object} draft
+ * @param {string[]|null} keys
+ * @returns {boolean}
+ */
+function keptFieldsLackProposedValue(draft, keys = null) {
+  const fields = Array.isArray(draft?.fields) ? draft.fields : [];
+  return fields.some((field) => {
+    if (field?.kept === false) {
+      return false;
+    }
+    if (Array.isArray(keys) && !keys.includes(String(field?.key ?? ''))) {
+      return false;
+    }
+    return String(field?.proposed ?? '').trim() === '';
+  });
+}

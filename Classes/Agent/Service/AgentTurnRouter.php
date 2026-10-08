@@ -37,6 +37,15 @@ final readonly class AgentTurnRouter
 
     private const LEGACY_FILE_METADATA_ACTION = 'generate_file_metadata';
 
+    /**
+     * Slash names editors type that are not the MCP tool name.
+     *
+     * @var array<string, string>
+     */
+    private const SLASH_TOOL_ALIASES = [
+        'folder_rename' => 'directory_rename',
+    ];
+
     private const SEO_TOOL = 't3ai_generate_all_seo';
 
     private const FILE_METADATA_TOOL = 't3aa_update_file_metadata';
@@ -82,6 +91,10 @@ final readonly class AgentTurnRouter
                 $toolArguments = $parsed['arguments'];
             }
             $slashRemainder = trim((string) ($parsed['remainder'] ?? ''));
+        }
+
+        if ($typedSlash && $selectedTool !== '') {
+            $selectedTool = self::canonicalSlashTool($selectedTool);
         }
 
         $recordAttachments = $this->recordAttachmentResolver->extractAttachments($message);
@@ -375,6 +388,11 @@ final readonly class AgentTurnRouter
      * Whether a tool with this name is in the catalog. When the catalog cannot be built, the
      * name counts as known, so a typed command keeps its old structural handling.
      */
+    private static function canonicalSlashTool(string $toolName): string
+    {
+        return self::SLASH_TOOL_ALIASES[strtolower($toolName)] ?? $toolName;
+    }
+
     private function isKnownTool(string $toolName): bool
     {
         try {

@@ -1729,6 +1729,9 @@
       <trans-unit id="agent.record.new" resname="agent.record.new">
         <source>New %1$s</source>
       </trans-unit>
+      <trans-unit id="agent.field.rename" resname="agent.field.rename">
+        <source>Rename</source>
+      </trans-unit>
       <trans-unit id="agent.result.technical" resname="agent.result.technical">
         <source>Technical details</source>
       </trans-unit>

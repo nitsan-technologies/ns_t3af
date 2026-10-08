@@ -501,6 +501,7 @@ readonly class DataHandlerService
         if ($pid <= 0) {
             throw new \RuntimeException('Create plan is missing pid.', 1712003103);
         }
+        $this->recordService->assertParentPageExists($pid);
 
         $fields = [];
         foreach ($keptFields as $field) {
@@ -569,6 +570,9 @@ readonly class DataHandlerService
     {
         $field = $keptFields[0];
         $target = (int) ($context['target'] ?? $field->proposedValue ?? 0);
+        if ($target > 0) {
+            $this->recordService->assertParentPageExists($target);
+        }
         $this->moveRecord($field->table, $field->uid, $target);
 
         return ['table' => $field->table, 'uid' => $field->uid];
@@ -583,6 +587,9 @@ readonly class DataHandlerService
     {
         $field = $keptFields[0];
         $target = (int) ($context['target'] ?? $field->proposedValue ?? 0);
+        if ($target > 0) {
+            $this->recordService->assertParentPageExists($target);
+        }
         $copyTreeDepth = (int) ($context['copyTreeDepth'] ?? 0);
         $newUid = $this->copyRecord($field->table, $field->uid, $target, $copyTreeDepth);
 
