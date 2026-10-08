@@ -349,6 +349,25 @@ readonly class FileService
         $storage->moveFolder($folder, $targetFolder);
     }
 
+    /**
+     * True when the folder exists in a storage the acting backend user may read.
+     */
+    public function directoryExists(int $storageUid, string $directoryIdentifier): bool
+    {
+        $directoryIdentifier = trim(str_replace('\\', '/', $directoryIdentifier));
+        if ($directoryIdentifier === '' || trim($directoryIdentifier, '/') === '') {
+            return false;
+        }
+        if (!str_starts_with($directoryIdentifier, '/')) {
+            $directoryIdentifier = '/' . $directoryIdentifier;
+        }
+        if (!str_ends_with($directoryIdentifier, '/')) {
+            $directoryIdentifier .= '/';
+        }
+
+        return $this->getStorage($storageUid)->hasFolder($directoryIdentifier);
+    }
+
     public function renameDirectory(int $storageUid, string $directoryIdentifier, string $newName): void
     {
         $this->assertDestructiveAllowed();

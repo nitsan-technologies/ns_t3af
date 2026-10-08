@@ -44,22 +44,23 @@ final class McpFalPlanBuilder
         array $context = [],
     ): ToolPlan {
         $currentPath = $fileIdentifier;
+        $uid = 0;
         try {
             $info = $this->fileService->getFileInfo($storageUid, $fileIdentifier);
-            $name = is_string($info['name'] ?? null) ? $info['name'] : '';
-            $folder = is_string($info['folder'] ?? null) ? $info['folder'] : '';
-            if ($name !== '') {
-                $currentPath = rtrim($folder, '/') . '/' . ltrim($name, '/');
+            $identifier = is_string($info['identifier'] ?? null) ? $info['identifier'] : '';
+            if ($identifier !== '') {
+                $currentPath = $identifier;
             }
+            $uid = (int) ($info['uid'] ?? 0);
         } catch (\Throwable) {
             // Keep identifier as current value when file cannot be resolved.
         }
 
         return new ToolPlan($action, $toolName, [
             new ToolPlanField(
-                ToolPlanField::buildKey('sys_file', 0, $pseudoField),
+                ToolPlanField::buildKey('sys_file', $uid, $pseudoField),
                 'sys_file',
-                0,
+                $uid,
                 $pseudoField,
                 $currentPath,
                 $proposedDescription,

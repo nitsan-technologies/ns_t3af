@@ -21,11 +21,13 @@ namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
 use NITSAN\NsT3AF\Agent\Context\AgentContextResolver;
 use NITSAN\NsT3AF\Domain\Repository\BrandContextProfileRepositoryInterface;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Service\BrandContextProfileOverrideReaderInterface;
 use NITSAN\NsT3AF\Service\BrandContextResolver;
 use NITSAN\NsT3AF\Service\SiteStorageContext;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Site\SiteFinder;
 
 /**
@@ -57,7 +59,23 @@ final class AgentContextResolverTest extends TestCase
         self::assertSame(3, $context->languageId);
     }
 
-    private function resolver(): AgentContextResolver
+    #[Test]
+    public function anAdminDoesNotKeepADeletedPageAsCurrentPage(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $user->method('isAdmin')->willReturn(true);
+        $records = $this->createMock(RecordService::class);
+        $records->method('parentPageExists')->with(64)->willReturn(false);
+
+        $context = $this->resolver($records)->resolve([
+            'module' => 'web_layout',
+            'pageId' => 64,
+        ], $user);
+
+        self::assertSame(0, $context->pageId);
+    }
+
+    private function resolver(?RecordService $records = null): AgentContextResolver
     {
         $siteFinder = $this->createMock(SiteFinder::class);
         $siteFinder->method('getAllSites')->willReturn([]);
@@ -69,6 +87,6 @@ final class AgentContextResolverTest extends TestCase
             $this->createMock(BrandContextProfileOverrideReaderInterface::class),
         );
 
-        return new AgentContextResolver($brand);
+        return new AgentContextResolver($brand, null, $records);
     }
 }

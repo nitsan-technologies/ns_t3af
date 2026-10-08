@@ -86,7 +86,7 @@ Lock reasons (`agent.tool.blockedForGroup`, `extensionUnavailable`, `planUnsuppo
 | Execute / Decline | Draft and tool-confirmation cards; **Execute all (n)** for ≥ 2 pending non-destructive cards |
 | Continue after confirm | `agentContinueAfterConfirm`; client sends `continuation {outcome,label,result}` → hidden user message, `continuationMessage()` tells the model; only for cards the runner made (`meta.fromRunner`) |
 | Ask instead of guess | `ask_clarification(question, options[])` pauses the turn; options render as answer buttons |
-| Links after a change | `applyDraftAction` returns `links` (Open page / Edit / View on website); backend links open in the content frame |
+| Links after a change | `applyDraftAction` returns `links` (Open page / Edit / View on website). Backend links close the panel, select the page in the tree (`selectWebPage()` → `ModuleStateStorage.update('web', pageId)`), then `ContentContainer.setUrl(href, …, module)` (`web_layout` or `record_edit`, from `AgentRecordLabeler`). View stays a new tab. After Undo the links are not rendered (`meta.undone`). The backdrop dims without `backdrop-filter`. |
 | Credits | `AgentCreditsStatus` → header badge (ok/low/critical); at zero the composer is locked with a top-up hint. NL tool-calling uses Credits **v1 chat** (per completions call). Tool-result LLM summaries are skipped in credits mode (deterministic prose only). |
 
 In the agent loop read tools get no extra LLM summary (`present(..., allowLlmSummary: false)`); the model reads the deterministic summary plus the data (JSON, 6000 characters).
@@ -107,6 +107,12 @@ Reasoning models (0.13 `MultiPartResult`: thinking + text / tool calls) are read
 | Classification | `Documentation/Agent/NonDataHandlerToolClassification.md` |
 
 Draft cards carry `editorLabel` for UI; destructive = two-step confirm.
+
+A second identical `action=create` card is dropped while the first is still pending (`AgentRunner::withoutRepeatedDeclinedDrafts()`). Execute all skips that duplicate as well. An already applied create can be requested again. A declined card of any action is still not offered again.
+
+`/file_rename` and `/directory_rename` (alias `/folder_rename`) ask for the file or folder and the new name when either is missing, when the new name contains a slash, or when the target does not exist. No preview card is built in those cases. A complete rename shows the real file path (and file uid) or the folder name, with the field label "Rename". Apply stays disabled when a kept field has an empty proposed value.
+
+A create, move, or copy under a page id greater than 0 is refused when that page is missing or deleted, including for an admin (`RecordService::assertParentPageExists()`, used again when the draft is applied). A deleted page is not kept as the current page.
 
 ---
 

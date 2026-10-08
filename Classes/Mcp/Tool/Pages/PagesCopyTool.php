@@ -59,6 +59,9 @@ readonly class PagesCopyTool implements McpNonAiToolInterface, McpPlannableToolI
         if ($this->recordService->findExistingUids('pages', [$uid]) === []) {
             throw new \InvalidArgumentException('Page not found: uid ' . $uid);
         }
+        if ($target > 0) {
+            $this->recordService->assertParentPageExists($target);
+        }
 
         $currentTitle = $this->recordService->findByUid('pages', $uid, ['title'])['title'] ?? ('Page ' . $uid);
 

@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Context;
 
 use NITSAN\NsT3AF\Agent\Service\AgentWorkspaceTarget;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Service\BrandContextResolver;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
@@ -35,6 +36,7 @@ final readonly class AgentContextResolver
     public function __construct(
         private BrandContextResolver $brandContextResolver,
         private ?AgentWorkspaceTarget $workspaceTarget = null,
+        private ?RecordService $recordService = null,
     ) {}
 
     /**
@@ -97,7 +99,7 @@ final readonly class AgentContextResolver
             return false;
         }
         if ($user->isAdmin()) {
-            return true;
+            return $this->recordService === null || $this->recordService->parentPageExists($pageId);
         }
 
         return BackendUtility::readPageAccess($pageId, $user->getPagePermsClause(Permission::PAGE_SHOW)) !== false;

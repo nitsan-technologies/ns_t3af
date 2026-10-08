@@ -86,6 +86,49 @@ readonly class RecordService
     }
 
     /**
+     * A positive page id the editor may create or move under: present, not deleted, and visible
+     * in the current workspace. Admins are included; a soft-deleted parent is not a valid target.
+     */
+    public function parentPageExists(int $pageId): bool
+    {
+        if ($pageId <= 0) {
+            return false;
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($queryBuilder, 'pages');
+
+        $row = $queryBuilder
+            ->select(...$this->workspaceContext->withOverlayFields('pages', ['uid']))
+            ->from('pages')
+            ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($pageId, ParameterType::INTEGER)))
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchAssociative();
+
+        if ($row === false) {
+            return false;
+        }
+
+        return $this->workspaceContext->overlay('pages', $row) !== null;
+    }
+
+    /**
+     * pid 0 (site root) and negative "insert after" targets are left to the caller.
+     */
+    public function assertParentPageExists(int $pageId): void
+    {
+        if ($pageId <= 0 || $this->parentPageExists($pageId)) {
+            return;
+        }
+
+        throw new \InvalidArgumentException(
+            'Parent page ' . $pageId . ' does not exist or was deleted. Choose another page.',
+        );
+    }
+
+    /**
      * Return the subset of UIDs that actually exist in the given table.
      *
      * @param list<int> $uids

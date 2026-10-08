@@ -2,6 +2,30 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-08 — No new records under a deleted page
+
+**Done:** Creating, moving, or copying under a page that is missing or deleted is refused before the draft and again on apply, including for admins. That page is dropped from the agent context. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-08
+
+---
+
+## 2026-10-08 — Rename slash commands ask before they preview
+
+**Done:** `/file_rename` and `/directory_rename` refuse a preview when the target or the new name is missing, the new name contains a slash, or the file or folder does not exist. `/folder_rename` is an alias of `directory_rename`. A complete rename card shows the real path and the label "Rename". See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-08
+
+---
+
+## 2026-10-08 — Agent result links: no blur, tree sync, no duplicate create
+
+**Done:** Backdrop no longer uses `backdrop-filter`. Open page / Edit close the panel, select the page in the tree, then open `web_layout` or `record_edit`. Undo hides those links. A still-pending identical create is not offered again. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-08
+
+---
+
 ## 2026-10-07 — Alert mail without a page id, and visible send failures
 
 **Done:** CLI, scheduler, and backend (no frontend route) use the site row where API alert mail is enabled, instead of pid 0 or the selected backend page. A failed send is written to the PSR log and does not start the one-hour cooldown. A routed frontend page still uses that site.

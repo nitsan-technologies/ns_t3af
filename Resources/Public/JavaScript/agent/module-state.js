@@ -68,3 +68,26 @@ export function currentWebPageId(iframeUrl = null) {
 
   return pageIdFromIframeUrl(iframeUrl);
 }
+
+/**
+ * Select a page in the page tree. TYPO3 v13 ModuleStateStorage.update takes the
+ * module and the page uid; the tree listens for that update and expands to it.
+ *
+ * @param {number} pageId
+ * @returns {Promise<void>}
+ */
+export async function selectWebPage(pageId) {
+  const id = Number.parseInt(String(pageId), 10);
+  if (!Number.isFinite(id) || id <= 0) {
+    return;
+  }
+  await preloadModuleStateStorage();
+  if (storageClass === null || typeof storageClass.update !== 'function') {
+    return;
+  }
+  try {
+    storageClass.update('web', String(id));
+  } catch {
+    // Storage can be missing in a frame that has no sessionStorage.
+  }
+}

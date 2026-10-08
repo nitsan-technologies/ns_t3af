@@ -46,6 +46,12 @@ readonly class AgentRecordLabeler
 
     public function fieldLabel(string $table, string $field): string
     {
+        if ($field === '_rename') {
+            $label = $this->translator->translate('agent.field.rename');
+
+            return $label !== 'agent.field.rename' ? $label : 'Rename';
+        }
+
         $label = (string) ($GLOBALS['TCA'][$table]['columns'][$field]['label'] ?? '');
 
         return rtrim($this->translateLabel($label) ?: $field, ':');
@@ -82,7 +88,7 @@ readonly class AgentRecordLabeler
     }
 
     /**
-     * @return list<array{kind: string, label: string, href: string}>
+     * @return list<array{kind: string, label: string, href: string, module?: string, pageId?: int}>
      */
     public function links(string $table, int $uid): array
     {
@@ -101,12 +107,16 @@ readonly class AgentRecordLabeler
                 'kind' => 'module',
                 'label' => $this->translator->translate('agent.link.openPage'),
                 'href' => (string) $this->uriBuilder->buildUriFromRoute('web_layout', ['id' => $pageId]),
+                'module' => 'web_layout',
+                'pageId' => $pageId,
             ];
         }
         $links[] = [
             'kind' => 'module',
             'label' => $this->translator->translate('agent.link.edit'),
             'href' => (string) $this->uriBuilder->buildUriFromRoute('record_edit', ['edit' => [$table => [$uid => 'edit']]]),
+            'module' => 'record_edit',
+            'pageId' => $pageId,
         ];
         if ($pageId > 0) {
             try {

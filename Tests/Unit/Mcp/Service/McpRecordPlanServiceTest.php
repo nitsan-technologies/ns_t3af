@@ -107,4 +107,44 @@ final class McpRecordPlanServiceTest extends TestCase
 
         self::assertSame('create', $plan->action);
     }
+
+    #[Test]
+    public function planCreateUnderADeletedParentIsRefusedForAnAdmin(): void
+    {
+        $access = $this->createMock(PageAccessService::class);
+        $access->method('isUnrestricted')->willReturn(true);
+
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())
+            ->method('assertParentPageExists')
+            ->with(64)
+            ->willThrowException(new \InvalidArgumentException(
+                'Parent page 64 does not exist or was deleted. Choose another page.',
+            ));
+
+        $service = new McpRecordPlanService($records, $this->createMock(TcaSchemaService::class), $access);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('was deleted');
+        $service->planCreate('pages', ['pid' => 64, 'title' => 'Agent Test Child'], 'write_table');
+    }
+
+    #[Test]
+    public function planMoveOntoADeletedPageIsRefused(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->method('findExistingUids')->willReturn([20]);
+        $records->expects(self::once())
+            ->method('assertParentPageExists')
+            ->with(64)
+            ->willThrowException(new \InvalidArgumentException(
+                'Parent page 64 does not exist or was deleted. Choose another page.',
+            ));
+
+        $service = new McpRecordPlanService($records, $this->createMock(TcaSchemaService::class));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('was deleted');
+        $service->planMove('tt_content', 20, 64, 'content_move');
+    }
 }

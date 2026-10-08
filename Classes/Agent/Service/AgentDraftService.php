@@ -67,6 +67,12 @@ final class AgentDraftService
         foreach ($plan->fields as $field) {
             $recordKey = $field->table . ':' . $field->uid;
             $recordLabels[$recordKey] ??= $this->recordLabeler?->recordLabel($field->table, $field->uid) ?? '';
+            if ($field->field === '_rename' && $field->uid <= 0) {
+                $pathLabel = $this->pathBaseName($this->formatValue($field->currentValue));
+                if ($pathLabel !== '') {
+                    $recordLabels[$recordKey] = $pathLabel;
+                }
+            }
             $fields[] = [
                 'key' => $field->key,
                 'table' => $field->table,
@@ -123,6 +129,17 @@ final class AgentDraftService
         }
 
         $session->storeDraft($draftId, $payload);
+    }
+
+    private function pathBaseName(string $path): string
+    {
+        $path = rtrim(str_replace('\\', '/', trim($path)), '/');
+        if ($path === '' || $path === '.') {
+            return '';
+        }
+        $base = basename($path);
+
+        return ($base === '' || $base === '.' || $base === '/') ? '' : $base;
     }
 
     private function formatValue(mixed $value): string

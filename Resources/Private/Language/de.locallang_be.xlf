@@ -2157,6 +2157,10 @@
                 <source>New %1$s</source>
                 <target>Neu: %1$s</target>
             </trans-unit>
+            <trans-unit id="agent.field.rename">
+                <source>Rename</source>
+                <target>Umbenennen</target>
+            </trans-unit>
             <trans-unit id="agent.result.technical">
                 <source>Technical details</source>
                 <target>Technische Details</target>
