@@ -500,7 +500,7 @@ final class AgentWriteService
         }
 
         // File metadata DualMode uses discrete #[McpContentParam] args (altText/title/description).
-        if ($toolName === 't3aa_update_file_metadata' || array_key_exists('altText', $resolvedValues)) {
+        if ($toolName === 't3aa_update_file_metadata' || array_key_exists('altText', $resolvedValues) || array_key_exists('schemaContent', $resolvedValues)) {
             return array_merge($arguments, $resolvedValues);
         }
 

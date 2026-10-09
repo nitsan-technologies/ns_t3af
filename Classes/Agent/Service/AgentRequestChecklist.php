@@ -262,7 +262,7 @@ final class AgentRequestChecklist
         }
 
         return preg_match(
-            '/\b(rename|change|update|edit|set|delete|remove|translate|move|replace|fix|correct|[äa]ndere\w*|umbenenn\w*|l[öo]sch\w*|entfern\w*|[üu]bersetz\w*|verschieb\w*)\b/u',
+            '/\b(rename|change|update|edit|set|delete|remove|translate|move|replace|fix|correct|rewrite|reword|rephrase|paraphrase|shorten|simplify|improve|polish|adjust|tweak|modify|umschreib\w*|umformulier\w*|k[üu]rz\w*|verbesser\w*|[üu]berarbeit\w*|anpass\w*|[äa]ndere\w*|umbenenn\w*|l[öo]sch\w*|entfern\w*|[üu]bersetz\w*|verschieb\w*)\b/u',
             $s,
         ) === 1;
     }

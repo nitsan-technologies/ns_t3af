@@ -489,13 +489,24 @@ final class AgentRunnerTest extends TestCase
     #[Test]
     public function copyingAPageIsOfferedOnlyWhenAskedFor(): void
     {
-        self::assertSame(['pages_copy', 'content_move', 'pages_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('I want a new subpage "Eval yes" under this page'));
-        self::assertSame(['pages_copy', 'content_move', 'pages_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('Ändere die Unterüberschrift von Element 12 auf Hallo'));
-        self::assertSame(['pages_copy', 'content_move', 'pages_move'], AgentRunner::toolsNotAskedFor('Switch to the QA Draft workspace'));
+        self::assertSame(['pages_copy', 'content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('I want a new subpage "Eval yes" under this page'));
+        self::assertSame(['pages_copy', 'content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Ändere die Unterüberschrift von Element 12 auf Hallo'));
+        self::assertSame(['pages_copy', 'content_move', 'pages_move', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Switch to the QA Draft workspace'));
         self::assertNotContains('content_move', AgentRunner::toolsNotAskedFor('Move element 12 below element 15'));
-        self::assertSame(['content_move', 'pages_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
-        self::assertSame(['content_move', 'pages_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
-        self::assertSame(['content_move', 'pages_move'], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
+        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
+        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
+        self::assertSame(['content_move', 'pages_move', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
+        self::assertNotContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor('Summarize this page'));
+        self::assertContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor('Rewrite the block so it sounds friendlier'));
+    }
+
+    #[Test]
+    public function newsRequestsDoNotGetTheContentDeleteTool(): void
+    {
+        self::assertTrue(AgentRunner::isNewsOnlyRequest('Delete the Winter Opening Hours news.'));
+        self::assertTrue(AgentRunner::isNewsOnlyRequest('Lösche die Meldung Sommerfest'));
+        self::assertFalse(AgentRunner::isNewsOnlyRequest('Delete the news content element on this page'));
+        self::assertFalse(AgentRunner::isNewsOnlyRequest('Delete element 12'));
     }
 
     #[Test]
@@ -908,5 +919,23 @@ final class AgentRunnerTest extends TestCase
         self::assertTrue(AgentRunner::looksLikeProviderAccountProblem('Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing.'));
         self::assertTrue(AgentRunner::looksLikeProviderAccountProblem('You exceeded your current quota, please check your plan and billing details.'));
         self::assertFalse(AgentRunner::looksLikeProviderAccountProblem('The model is overloaded, try again.'));
+    }
+
+    #[Test]
+    public function offerToApplyWithoutADraftIsRecognised(): void
+    {
+        self::assertTrue(AgentRunner::offersUnbackedApply("Welcome to our QA section!\n\nWould you like to apply this change?"));
+        self::assertTrue(AgentRunner::offersUnbackedApply('Would you like me to save it as the new text?'));
+        self::assertTrue(AgentRunner::offersUnbackedApply('Soll ich diese Änderung übernehmen?'));
+    }
+
+    #[Test]
+    public function plainAnswersAreNeverForcedIntoAWrite(): void
+    {
+        self::assertFalse(AgentRunner::offersUnbackedApply(''));
+        self::assertFalse(AgentRunner::offersUnbackedApply('The page has 3 content elements and 2 translations.'));
+        self::assertFalse(AgentRunner::offersUnbackedApply('Which page do you mean: Home or About?'));
+        self::assertFalse(AgentRunner::offersUnbackedApply('Die Seite hat drei Inhaltselemente.'));
+        self::assertFalse(AgentRunner::offersUnbackedApply('You can use the Content module to review the text.'));
     }
 }

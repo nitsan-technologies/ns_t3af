@@ -2116,6 +2116,9 @@
       <trans-unit id="agent.arg.pageId" resname="agent.arg.pageId">
         <source>Page</source>
       </trans-unit>
+      <trans-unit id="agent.arg.languageConfig" resname="agent.arg.languageConfig">
+        <source>Languages</source>
+      </trans-unit>
       <trans-unit id="agent.arg.pageIds" resname="agent.arg.pageIds">
         <source>Pages</source>
       </trans-unit>

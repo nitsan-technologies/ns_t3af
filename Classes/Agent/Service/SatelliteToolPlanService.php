@@ -160,8 +160,51 @@ final readonly class SatelliteToolPlanService
         return match ($key) {
             'pageId', 'pageIds' => implode(', ', array_map(fn(int $uid): string => $this->pageLabel($uid), $ids)),
             'languageUid', 'targetLanguageUid', 'languageUids' => implode(', ', array_map(fn(int $uid): string => $this->languageLabel($uid, $pageId), $ids)),
+            'languageConfig' => $this->formatLanguageConfig($value, $pageId),
             default => $this->formatArgumentValue($value),
         };
+    }
+
+    /**
+     * T3AI queue tools take {"2":"1"}, [2], "[2]" or a bare "2"; the card shows "German [2]".
+     */
+    private function formatLanguageConfig(mixed $value, int $pageId): string
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = is_array($decoded) ? $decoded : [$value];
+        }
+        if (!is_array($value)) {
+            $value = [$value];
+        }
+
+        // ["2,3"] is a list with one comma string.
+        if (array_is_list($value)) {
+            $flat = [];
+            foreach ($value as $item) {
+                foreach (is_string($item) ? preg_split('/\s*[,;]\s*/', $item, -1, PREG_SPLIT_NO_EMPTY) ?: [] : [$item] as $part) {
+                    $flat[] = $part;
+                }
+            }
+            $value = $flat;
+        }
+
+        $ids = [];
+        foreach ($value as $key => $item) {
+            if (array_is_list($value)) {
+                $candidate = $item;
+            } else {
+                $enabled = $item === true || $item === 1 || $item === '1';
+                $candidate = $enabled ? $key : null;
+            }
+            if (is_numeric($candidate) && (int) $candidate > 0) {
+                $ids[] = (int) $candidate;
+            }
+        }
+
+        return $ids === []
+            ? $this->formatArgumentValue($value)
+            : implode(', ', array_map(fn(int $uid): string => $this->languageLabel($uid, $pageId), array_values(array_unique($ids))));
     }
 
     private function pageLabel(int $uid): string
