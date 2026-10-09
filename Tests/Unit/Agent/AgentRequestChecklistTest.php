@@ -234,6 +234,20 @@ TXT;
     }
 
     #[Test]
+    public function germanTextAndMediaIsOneMediaElement(): void
+    {
+        $creates = static fn(string $prompt): array => array_column(
+            array_filter(AgentRequestChecklist::parse($prompt), static fn(array $s): bool => ($s['kind'] ?? '') === 'create'),
+            'cType',
+        );
+
+        self::assertSame(['textmedia'], $creates('Erstelle ein Text & Medien Element mit Bildern über unsere Torten und einem kurzen Text'));
+        self::assertSame(['textmedia'], $creates('Erstelle ein Text und Medien Element mit der Überschrift Unsere Torten'));
+        self::assertSame(['textpic'], $creates('Erstelle ein Text & Bilder Element mit der Überschrift Unsere Torten'));
+        self::assertSame(['textmedia', 'text'], $creates('Erstelle ein Text & Medien Element und ein separates Text Element'));
+    }
+
+    #[Test]
     public function aTypedContinueKeepsTheRequestItContinues(): void
     {
         $request = 'Create a text & media content element with the heading Our Treats and attach the existing image sys_file uid 145';
