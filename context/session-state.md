@@ -5,6 +5,9 @@
 ## 2026-10-09 — A leaked tool call is not the editor's reply
 
 **Done:** A reply that starts with a tool call (`{"pageId":99999} to=t3ai_generate_all_seo` plus junk) shows the sentence after it. When that sentence says the page is missing, the editor sees "Page 99999 doesn't exist." Removing a page from the SEO queue by name uses that page uid. See `context/features/ai-agent.md`.
+## 2026-10-09 — Image generation uses an image model
+
+**Done:** `ImageGenerationService::imageModelFor()` picks the model for `generate()` and `variation()`: the requested `modelId`, else the provider's model when it is an image model (`gpt-image-*`, `dall-e-*`, `imagen`, `flux`, …), else `gpt-image-1` for `symfony.openai`. Otherwise it stops before any HTTP call with "No image model configured for provider X". The provider's chat model (`gpt-5.4-mini`) is no longer sent to images/generations, and telemetry logs the image model.
 
 **Last touched:** 2026-10-09
 
