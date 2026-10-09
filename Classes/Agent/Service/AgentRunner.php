@@ -439,7 +439,22 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             return $this->translator->translate('agent.credits.contextLength');
         }
 
+        // Account problems of the AI provider (empty balance, quota, invalid key) are for the administrator:
+        // the editor gets a plain sentence, not the provider's billing text.
+        if (self::looksLikeProviderAccountProblem($exception->getMessage())) {
+            return $this->translator->translate('agent.turn.providerUnavailable');
+        }
+
         return $this->translator->translate('agent.turn.orchestratorFailed', [self::readableProviderError($exception->getMessage())]);
+    }
+
+    /** Provider wording for an empty balance, an exhausted quota or a rejected API key. */
+    public static function looksLikeProviderAccountProblem(string $raw): bool
+    {
+        return preg_match(
+            '/credit balance|billing|insufficient[_ ]quota|exceeded your (?:current )?quota|quota exceeded|plans? (?:&|and) billing|invalid[_ ]api[_ ]key|incorrect api key|authentication[_ ]error|invalid x-api-key|payment required/i',
+            $raw,
+        ) === 1;
     }
 
     /** Provider wording for "the request is larger than the model's context window". */

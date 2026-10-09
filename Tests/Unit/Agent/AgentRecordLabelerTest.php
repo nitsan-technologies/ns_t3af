@@ -69,4 +69,16 @@ final class AgentRecordLabelerTest extends TestCase
         self::assertSame('New Demo item', $labeler->recordLabel('tx_demo_item', 0));
         self::assertSame([], $labeler->links('tx_demo_item', 0));
     }
+
+    #[Test]
+    public function internalPlanFieldsReadAsWordsNotKeys(): void
+    {
+        $labeler = new AgentRecordLabeler($this->createMock(UriBuilder::class), $this->createAgentTranslator());
+
+        self::assertSame('Copy', $labeler->fieldLabel('sys_file', '_copy'));
+        self::assertSame('Record', $labeler->fieldLabel('tt_content', '_record'));
+        self::assertSame('Exists', $labeler->displayValue('_record', 'exists'));
+        self::assertSame('Delete', $labeler->displayValue('_record', 'delete'));
+        self::assertSame('exists', $labeler->displayValue('header', 'exists'));
+    }
 }

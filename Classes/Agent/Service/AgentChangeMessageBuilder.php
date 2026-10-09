@@ -41,6 +41,25 @@ final readonly class AgentChangeMessageBuilder
      */
     public function applied(array $result): string
     {
+        $message = $this->appliedBase($result);
+        $notAllowed = is_array($result['notAllowedFields'] ?? null) ? $result['notAllowedFields'] : [];
+        if ($notAllowed === []) {
+            return $message;
+        }
+        $table = (string) ($result['table'] ?? '');
+        $names = array_map(
+            fn(mixed $field): string => $this->recordLabeler->fieldLabel($table, (string) $field),
+            $notAllowed,
+        );
+
+        return $message . ' ' . $this->translator->translate('agent.draft.notSetNotAllowed', [implode(', ', $names)]);
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     */
+    private function appliedBase(array $result): string
+    {
         $applied = (int) ($result['appliedCount'] ?? 0);
         $total = (int) ($result['totalCount'] ?? 0);
         $fallback = $this->translator->translate('agent.draft.applied', [(string) $applied, (string) $total]);

@@ -83,8 +83,8 @@ final class AgentDraftService
                 'recordLabel' => $recordLabels[$recordKey],
                 'tableLabel' => $this->recordLabeler?->tableLabel($field->table) ?? $field->table,
                 'fieldLabel' => $this->recordLabeler?->fieldLabel($field->table, $field->field) ?? $field->field,
-                'current' => $this->formatValue($field->currentValue),
-                'proposed' => $this->formatValue($field->proposedValue),
+                'current' => $this->displayValue($field->field, $this->formatValue($field->currentValue)),
+                'proposed' => $this->displayValue($field->field, $this->formatValue($field->proposedValue)),
                 'kept' => true,
                 'safe' => $this->lowRiskFieldMatrix->isSafeField($field->table, $field->field),
             ];
@@ -110,6 +110,11 @@ final class AgentDraftService
             'totalFields' => count($fields),
             'safeFieldCount' => $this->lowRiskFieldMatrix->countSafeFields($plan),
         ];
+    }
+
+    private function displayValue(string $field, string $value): string
+    {
+        return $field === '_record' ? ($this->recordLabeler?->displayValue($field, $value) ?? $value) : $value;
     }
 
     /**

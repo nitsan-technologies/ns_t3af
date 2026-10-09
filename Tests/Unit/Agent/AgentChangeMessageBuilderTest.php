@@ -93,6 +93,19 @@ final class AgentChangeMessageBuilderTest extends TestCase
     }
 
     #[Test]
+    public function appliedNamesAFieldThatWasLeftOutBecauseTheGroupMayNotEditIt(): void
+    {
+        $result = $this->applyResult('create', ['header' => 'A']);
+        $result['table'] = 'tt_content';
+        $result['notAllowedFields'] = ['subheader'];
+
+        $message = $this->subject->applied($result);
+
+        self::assertStringStartsWith('Done: Page Content', $message);
+        self::assertStringContainsString('Not set, because your account may not edit it: subheader.', $message);
+    }
+
+    #[Test]
     public function appliedCreateMentionsWhereTheRecordWasPlaced(): void
     {
         $result = $this->applyResult('create', ['title' => 'Page between 1 and 2']);
