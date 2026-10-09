@@ -152,7 +152,37 @@ final readonly class PremiumCatalogProvider
      */
     public function findStandaloneMatch(string $query): ?PremiumCatalogEntry
     {
-        return $this->looksCompound($query) ? null : $this->findMatch($query);
+        if ($this->looksCompound($query) || self::placesAFile($query)) {
+            return null;
+        }
+
+        return $this->findMatch($query);
+    }
+
+    /**
+     * Attaching a file, naming a sys_file uid or creating a Text & Media element is core work
+     * (file_reference_add, write_table); an alt text asked for with it goes on the file reference
+     * and needs no AI Accessibility.
+     *
+     * @var list<string>
+     */
+    private const FILE_PLACEMENT_SIGNALS = [
+        '/\battach\w*\b/i',
+        '/\banh(?:ä|ae)ng\w*\b/iu',
+        '/\bsys_file\b/i',
+        '/\b(?:file|datei)[\s-]*uid\b/iu',
+        '/\b(?:text\s*(?:&|and|und)\s*media|textmedia|textpic)\b/iu',
+    ];
+
+    private static function placesAFile(string $query): bool
+    {
+        foreach (self::FILE_PLACEMENT_SIGNALS as $pattern) {
+            if (preg_match($pattern, $query) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

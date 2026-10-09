@@ -54,6 +54,7 @@ export function isSuggestionFieldSafe(table, fieldKey) {
  */
 /**
  * Thumbnails prepared by the server (meta.previews): the image a result or a prepared change is about.
+ * A preview without url (missing or non-image file) shows only its name.
  *
  * @param {Array<{url?: string, href?: string, name?: string, alt?: string}>} previews
  * @returns {string}
@@ -68,11 +69,13 @@ export function renderImagePreviews(previews) {
   };
   const items = previews.map((preview) => {
     const src = safeUrl(preview?.url);
+    const name = String(preview?.name ?? '');
     if (src === '') {
-      return '';
+      return name !== ''
+        ? `<figure class="nst3af-agent-gallery__item nst3af-agent-gallery__item--name-only"><figcaption class="nst3af-agent-gallery__name" title="${escapeHtml(name)}">${escapeHtml(name)}</figcaption></figure>`
+        : '';
     }
     const href = safeUrl(preview?.href) || src;
-    const name = String(preview?.name ?? '');
     const alt = String(preview?.alt ?? '');
     const openLabel = lang('agent.media.open', 'Open image in a new tab');
     return `<figure class="nst3af-agent-gallery__item">

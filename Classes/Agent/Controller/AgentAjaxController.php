@@ -23,6 +23,7 @@ use GuzzleHttp\Psr7\PumpStream;
 use NITSAN\NsT3AF\Access\RecordAccessGate;
 use NITSAN\NsT3AF\Agent\Context\AgentContextPresenter;
 use NITSAN\NsT3AF\Agent\Contract\AgentToolIndexInterface;
+use NITSAN\NsT3AF\Agent\Service\AgentApplyNotRetryableException;
 use NITSAN\NsT3AF\Agent\Service\AgentAuditLogger;
 use NITSAN\NsT3AF\Agent\Service\AgentAvailabilityService;
 use NITSAN\NsT3AF\Agent\Service\AgentChangeMessageBuilder;
@@ -549,6 +550,12 @@ final class AgentAjaxController
             $message = $isOwnSentence || $alreadyLedIn
                 ? $reason
                 : $this->translator->translate('agent.error.applyFailedDetail', [$reason]);
+
+            if ($exception instanceof AgentApplyNotRetryableException) {
+                $this->recordInConversation($user, $body, fn(array $messages): array => $this->conversationRecorder->failed($messages, $draftId, $message));
+
+                return new JsonResponse(['ok' => false, 'message' => $message, 'retryable' => false], 400);
+            }
 
             return new JsonResponse(['ok' => false, 'message' => $message], 400);
         }
@@ -1708,7 +1715,8 @@ final class AgentAjaxController
         if (($meta['type'] ?? '') !== 'inline_draft' || $draft === null) {
             return $message;
         }
-        if (($draft['applied'] ?? false) === true || ($draft['discarded'] ?? false) === true || ($draft['applying'] ?? false) === true) {
+        if (($draft['applied'] ?? false) === true || ($draft['discarded'] ?? false) === true || ($draft['applying'] ?? false) === true
+            || ($draft['failed'] ?? false) === true) {
             return $message;
         }
 

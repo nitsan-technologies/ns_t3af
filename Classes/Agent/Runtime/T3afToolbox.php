@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Runtime;
 
 use NITSAN\NsT3AF\Agent\Service\AgentPlan;
+use NITSAN\NsT3AF\Agent\Service\AgentRequestedFiles;
 use NITSAN\NsT3AF\Agent\Service\PageCreateAfter;
 use NITSAN\NsT3AF\Agent\Service\PageCreateBefore;
 use NITSAN\NsT3AF\Api\AiToolDefinition;
@@ -169,6 +170,17 @@ final class T3afToolbox implements ToolboxInterface
                 $toolCall,
                 'Not executed: this creates a new page. Call write_table with action create, tableName pages, and ' . $place . ' of the page that sets the place. Do not call pages_move.',
             );
+        }
+        // Asked for an AI-generated image, the model otherwise uploads a stock photo from a URL it made up.
+        if ($name === 'file_upload_from_url' && AgentRequestedFiles::asksForGeneratedImage($requestQuery) && !AgentRequestedFiles::namesUrl($requestQuery)) {
+            $outcome = 'invalid';
+
+            return new ToolResult($toolCall, isset($this->catalog[AgentRequestedFiles::GENERATION_TOOL])
+                ? 'Not executed: the editor asked for an AI-generated image. Call ' . AgentRequestedFiles::GENERATION_TOOL
+                    . ' with a description of the image and a short altText, then file_reference_add with the returned fileUid.'
+                    . ' Never use a stock photo or an image URL you found or made up.'
+                : 'Not executed: the editor asked for an AI-generated image, and AI image generation is not available to this editor.'
+                    . ' Do not upload a web image instead: do the rest of the request and tell the editor in one sentence that the image could not be generated.');
         }
         if (!isset($this->catalog[$name])) {
             $outcome = 'unavailable';

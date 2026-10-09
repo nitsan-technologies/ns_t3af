@@ -96,22 +96,25 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
             $files,
         ));
 
+        $texts = self::referenceTexts($arguments);
         $arguments = [
             'table' => $table,
             'uid' => $uid,
             'fieldName' => $fieldName,
             'fileUids' => implode(',', array_map(static fn(File $file): int => $file->getUid(), $files)),
+            ...$texts,
         ];
+        $textNote = self::describeTexts($texts);
 
         return $this->confirmationPlanBuilder->confirmation(
             'update',
             'file_reference_add',
             '_reference',
             $fieldName,
-            'attach file(s) ' . $fileLabels,
+            'attach file(s) ' . $fileLabels . $textNote,
             [
                 'arguments' => $arguments,
-                'summary' => sprintf('Attach file(s) %s to %s uid %d (%s)', $fileLabels, $table, $uid, $fieldName),
+                'summary' => sprintf('Attach file(s) %s to %s uid %d (%s)%s', $fileLabels, $table, $uid, $fieldName, $textNote),
                 ...$arguments,
             ],
             $table,
@@ -123,10 +126,20 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
         name: 'file_reference_add',
         description: 'Attach uploaded files to a record file/image field.'
             . ' Pass sys_file UIDs from file_upload_from_url, file_upload, or file_upload_prepare (comma-separated).'
+            . ' alternative (alt text), title and description are set on every attached file; pass a short alt text'
+            . ' that describes the image whenever the editor asks for one.'
             . ' Updates the parent FAL counter column (e.g. og_image) so SEO generators see the attachment.',
     )]
-    public function execute(string $table, int $uid, string $fieldName, string $fileUids): string
-    {
+    public function execute(
+        string $table,
+        int $uid,
+        string $fieldName,
+        string $fileUids,
+        string $alternative = '',
+        string $title = '',
+        string $description = '',
+    ): string {
+        $texts = self::referenceTexts(['alternative' => $alternative, 'title' => $title, 'description' => $description]);
         $parsedUids = array_values(array_filter(
             array_map(static fn(string $value): int => (int) trim($value), explode(',', $fileUids)),
             static fn(int $value): bool => $value > 0,
@@ -168,6 +181,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
                 $parsedUids,
                 // References live on the page of their record.
                 (int) ($record['pid'] ?? 0),
+                $texts,
             );
             $parentCount = count($this->recordService->findFileReferences($table, $uid, $fieldName));
 
@@ -179,6 +193,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
                 'referencesCreated' => count($referenceUids),
                 'referenceUids' => $referenceUids,
                 'parentFieldCount' => $parentCount,
+                ...$texts,
             ], JSON_THROW_ON_ERROR);
         } catch (\Throwable $exception) {
             return $this->encodeError($exception->getMessage());
@@ -244,6 +259,37 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
             $recordType,
             $usable !== [] ? 'Use fieldName "' . implode('" or "', $usable) . '".' : 'This record type has no file field.',
         ));
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @return array{alternative?: string, title?: string, description?: string} only the texts that were given
+     */
+    private static function referenceTexts(array $arguments): array
+    {
+        $texts = [];
+        foreach (['alternative', 'title', 'description'] as $key) {
+            $value = trim((string) ($arguments[$key] ?? ''));
+            if ($value !== '') {
+                $texts[$key] = $value;
+            }
+        }
+
+        return $texts;
+    }
+
+    /**
+     * @param array{alternative?: string, title?: string, description?: string} $texts
+     */
+    private static function describeTexts(array $texts): string
+    {
+        $labels = ['alternative' => 'alt text', 'title' => 'title', 'description' => 'description'];
+        $parts = [];
+        foreach ($texts as $key => $value) {
+            $parts[] = sprintf('%s "%s"', $labels[$key], $value);
+        }
+
+        return $parts !== [] ? ' with ' . implode(', ', $parts) : '';
     }
 
     /** @return non-empty-list<int> */

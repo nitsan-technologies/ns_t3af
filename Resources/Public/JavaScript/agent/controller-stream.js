@@ -296,7 +296,7 @@ export const streamMethods = {
       return this.messages.some((message, index) => {
         const draft = message.meta?.draft;
         return index > since && message.meta?.type === 'inline_draft' && Boolean(draft)
-          && !draft.applied && !draft.discarded && !draft.applying;
+          && !draft.applied && !draft.discarded && !draft.applying && !draft.failed;
       });
     },
 

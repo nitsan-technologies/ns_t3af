@@ -208,7 +208,8 @@ final class AgentWriteService
         try {
             $result = $this->applyClaimed($draftId, $stored, $keptFieldKeys, $correlationId);
         } catch (\Throwable $exception) {
-            $this->releaseDraft($draftId, $stored, true);
+            // Only a draft another click could still apply goes back.
+            $this->releaseDraft($draftId, $stored, !$exception instanceof AgentApplyNotRetryableException);
             throw $exception;
         }
         $this->releaseDraft($draftId, $stored, false);
@@ -297,6 +298,69 @@ final class AgentWriteService
         }
 
         return true;
+    }
+
+    /**
+     * The tool said the same call would fail again ({"error": "…", "retryable": false}).
+     */
+    public static function failureIsFinal(mixed $result): bool
+    {
+        if (is_string($result)) {
+            try {
+                $result = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                return false;
+            }
+        }
+
+        return is_array($result) && ($result['retryable'] ?? true) === false;
+    }
+
+    /**
+     * What Undo removes after a confirmed tool ran. Attaching files can be undone: exactly the new
+     * references go, never the files or the record they were attached to. Other tools have no undo.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function toolUndoFields(string $toolName, mixed $result): array
+    {
+        if ($toolName !== 'file_reference_add') {
+            return [];
+        }
+        if (is_string($result)) {
+            try {
+                $result = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                return [];
+            }
+        }
+        if (!is_array($result)) {
+            return [];
+        }
+        $parent = [
+            'table' => (string) ($result['table'] ?? ''),
+            'uid' => (int) ($result['uid'] ?? 0),
+            'field' => (string) ($result['fieldName'] ?? ''),
+        ];
+        if ($parent['table'] === '' || $parent['uid'] <= 0 || $parent['field'] === '') {
+            return [];
+        }
+
+        $undo = [];
+        foreach (is_array($result['referenceUids'] ?? null) ? $result['referenceUids'] : [] as $referenceUid) {
+            if (is_numeric($referenceUid) && (int) $referenceUid > 0) {
+                $undo[] = [
+                    'table' => 'sys_file_reference',
+                    'uid' => (int) $referenceUid,
+                    'field' => '_record',
+                    'previousValue' => null,
+                    'action' => 'create',
+                    'parent' => $parent,
+                ];
+            }
+        }
+
+        return $undo;
     }
 
     private static function currentWorkspaceId(): int
@@ -721,10 +785,11 @@ final class AgentWriteService
 
         $invokeResult = $this->playgroundService->invoke($toolName, $arguments, true);
         if (($invokeResult['success'] ?? false) !== true) {
-            throw new \RuntimeException(
-                (string) ($invokeResult['message'] ?? $this->translator->translate('agent.write.toolInvocationFailed')),
-                1712003211,
-            );
+            $message = (string) ($invokeResult['message'] ?? $this->translator->translate('agent.write.toolInvocationFailed'));
+            if (self::failureIsFinal($invokeResult['result'] ?? null)) {
+                throw new AgentApplyNotRetryableException($message, 1712003211);
+            }
+            throw new \RuntimeException($message, 1712003211);
         }
 
         $pageId = isset($arguments['pageId']) ? (int) $arguments['pageId'] : null;
@@ -741,19 +806,21 @@ final class AgentWriteService
         );
 
         $changeId = bin2hex(random_bytes(8));
+        $undoFields = self::toolUndoFields($toolName, $invokeResult['result'] ?? null);
         $this->draftSession->storeChange($changeId, [
             'correlationId' => $correlationId,
             'plan' => $plan->toArray(),
             'keptFieldKeys' => [],
-            'undoFields' => [],
+            'undoFields' => $undoFields,
             'appliedAt' => time(),
+            'workspaceId' => self::currentWorkspaceId(),
             'toolConfirmation' => true,
         ]);
         $this->draftSession->removeDraft($draftId);
 
         return [
             'changeId' => $changeId,
-            'undoable' => false,
+            'undoable' => AgentUndoService::isUndoable($undoFields),
             'correlationId' => $correlationId,
             'appliedCount' => 1,
             'totalCount' => 1,

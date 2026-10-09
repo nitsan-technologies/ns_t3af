@@ -77,6 +77,55 @@ final class AgentRequestedFilesTest extends TestCase
         self::assertStringContainsString('missing from the file storage: cake.png (uid 3), uid 4.', $message['content']);
     }
 
+    /**
+     * @return array<string, array{string, bool}>
+     */
+    public static function imageRequests(): array
+    {
+        return [
+            'ai-generated' => ['Create a text & media content element with an AI-generated image of a red lighthouse at sunset', true],
+            'generate an image' => ['Generate an image of a blue mountain lake', true],
+            'german' => ['Erstelle ein Text & Medien Element und generiere ein Bild von einem Leuchtturm', true],
+            'ki-bild' => ['Füge ein KI-Bild von einem Strand hinzu', true],
+            'existing file' => ['Attach sys_file uid 145 to element 12', false],
+            'generate seo' => ['Generate SEO metadata for this page', false],
+            'image alt text' => ['Set the image alt text of element 5', false],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('imageRequests')]
+    public function anImageTheAiHasToMakeIsRecognised(string $request, bool $expected): void
+    {
+        self::assertSame($expected, AgentRequestedFiles::asksForGeneratedImage($request));
+    }
+
+    #[Test]
+    public function withoutImageGenerationTheAttachStepClosesAndNoWebImageIsFetched(): void
+    {
+        $request = 'Create a text & media content element with an AI-generated image of a red lighthouse at sunset and a short text about coastal travel';
+        $notice = $this->service()->generationUnavailableMessage($request, $this->translator(), 'c1');
+        self::assertNotNull($notice);
+        self::assertStringContainsString('AI image generation is not available', $notice['content']);
+
+        $history = [['role' => 'user', 'content' => $request, 'meta' => []], $notice];
+        self::assertSame(['in_progress', 'failed'], array_column(AgentRequestChecklist::reconcile($history, $request), 'status'));
+        self::assertStringContainsString('Do not search, invent, download or upload an image from the web', AgentRequestedFiles::promptNote($history, $request));
+        // The editor gave a URL or an existing file: that is what gets attached, no notice.
+        self::assertNull($this->service()->generationUnavailableMessage('Generate an image like https://example.com/a.png', $this->translator(), 'c1'));
+    }
+
+    #[Test]
+    public function messageSaysTheOtherFilesAreStillAttached(): void
+    {
+        $message = $this->service()->messageFor('Create a text & media element and attach sys_file uid 145 and 3', $this->translator(), 'c1');
+
+        self::assertNotNull($message);
+        self::assertFalse($message['meta']['noFileLeft']);
+        self::assertStringContainsString('Skipped cake.png (uid 3)', $message['content']);
+        self::assertStringContainsString('continue with the other files (uid 145)', $message['content']);
+    }
+
     protected function tearDown(): void
     {
         $this->releaseAgentTranslator();

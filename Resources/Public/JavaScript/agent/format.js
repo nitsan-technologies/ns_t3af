@@ -54,17 +54,28 @@ export function errorMessage(error) {
  * @returns {Promise<string>}
  */
 export async function errorText(error) {
+  return (await errorDetails(error)).text;
+}
+
+/**
+ * errorText() plus whether the server said another try cannot help (retryable: false).
+ * The response body can only be read once, so callers needing both use this.
+ *
+ * @param {unknown} error
+ * @returns {Promise<{text: string, retryable: boolean}>}
+ */
+export async function errorDetails(error) {
   if (error && typeof error === 'object' && typeof error.resolve === 'function') {
     try {
       const payload = await error.resolve();
       if (payload && typeof payload === 'object' && typeof payload.message === 'string' && payload.message.trim() !== '') {
-        return payload.message;
+        return { text: payload.message, retryable: payload.retryable !== false };
       }
     } catch {
       // Not JSON: fall back to the generic text.
     }
   }
-  return errorMessage(error);
+  return { text: errorMessage(error), retryable: true };
 }
 
 /**

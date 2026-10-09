@@ -23,6 +23,7 @@ use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Api\ImageGenerationOptions;
 use NITSAN\NsT3AF\Api\ImageGenerationResponse;
 use NITSAN\NsT3AF\Api\ImageGenerationServiceInterface;
+use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface;
 use NITSAN\NsT3AF\Event\BeforeProviderRequestEvent;
 use NITSAN\NsT3AF\Event\ProviderRequestFailedEvent;
@@ -47,6 +48,14 @@ final class ImageGenerationService implements ImageGenerationServiceInterface
 {
     private const CALL_KIND = 'image_generation';
 
+    /**
+     * OpenAI retired dall-e-2/dall-e-3 from the Images API; gpt-image-1 is the model ns_t3ai falls back to as well.
+     */
+    public const OPENAI_IMAGE_MODEL = 'gpt-image-1';
+
+    /** Model ids that already name an image model, e.g. `gpt-image-1`, `dall-e-3`, `imagen-3.0`, `flux-pro`. */
+    private const IMAGE_MODEL_PATTERN = '/(?:^|[\/:._-])(?:gpt-image|dall-e|imagen|flux|stable-diffusion|sdxl|sd3)|image/i';
+
     public function __construct(
         private readonly ProviderLookupInterface $providers,
         private readonly AdapterRegistry $adapters,
@@ -61,7 +70,8 @@ final class ImageGenerationService implements ImageGenerationServiceInterface
         $provider = $this->resolveProvider($options);
         $adapter = $this->resolveAdapter($provider);
         [$prompt, $options] = $this->dispatchBefore($provider, $prompt, $options);
-        $modelId = $options->modelId ?? $provider->modelId;
+        $options = $this->withModel($options, self::imageModelFor($provider, $options->modelId));
+        $modelId = (string) $options->modelId;
         $platform = $this->resolveImagePlatform($adapter->platform($provider), $provider);
 
         $start = (int) (microtime(true) * 1000);
@@ -106,7 +116,8 @@ final class ImageGenerationService implements ImageGenerationServiceInterface
         $provider = $this->resolveProvider($options);
         $adapter = $this->resolveAdapter($provider);
         [$imagePath, $options] = $this->dispatchBefore($provider, $imagePath, $options);
-        $modelId = $options->modelId ?? $provider->modelId;
+        $options = $this->withModel($options, self::imageModelFor($provider, $options->modelId));
+        $modelId = (string) $options->modelId;
         $platform = $this->resolveImagePlatform($adapter->platform($provider), $provider);
 
         $start = (int) (microtime(true) * 1000);
@@ -171,6 +182,45 @@ final class ImageGenerationService implements ImageGenerationServiceInterface
             $before->getPrompt(),
             $this->fromAiOptions($options, $before->getOptions()),
         ];
+    }
+
+    /**
+     * The provider row stores a chat model (`gpt-5.4-mini`), which images/generations rejects. Use the
+     * requested model, else the row's model when it is an image model, else the adapter's image model.
+     * Without one the call stops before any HTTP request.
+     */
+    public static function imageModelFor(Provider $provider, ?string $requestedModelId): string
+    {
+        $requested = trim((string) $requestedModelId);
+        if ($requested !== '') {
+            return $requested;
+        }
+        $stored = trim($provider->modelId);
+        if ($stored !== '' && preg_match(self::IMAGE_MODEL_PATTERN, $stored) === 1) {
+            return $stored;
+        }
+        if (Provider::normalizeAdapterType($provider->adapterType) === 'symfony.openai') {
+            return self::OPENAI_IMAGE_MODEL;
+        }
+
+        throw new AdapterRuntimeException(sprintf(
+            'No image model configured for provider "%s": its model "%s" is a chat model. Pass an image model (modelId) or use a provider whose model is an image model.',
+            trim($provider->title) !== '' ? $provider->title : $provider->identifier,
+            $stored,
+        ));
+    }
+
+    private function withModel(ImageGenerationOptions $options, string $modelId): ImageGenerationOptions
+    {
+        return new ImageGenerationOptions(
+            providerIdentifier: $options->providerIdentifier,
+            modelId: $modelId,
+            size: $options->size,
+            count: $options->count,
+            extensionKey: $options->extensionKey,
+            featureKey: $options->featureKey,
+            requestSource: $options->requestSource,
+        );
     }
 
     private function toAiOptions(ImageGenerationOptions $options): AiOptions

@@ -2,6 +2,68 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-09 — A download that cannot work is not offered again
+
+**Done:** `FileUploadService::assertPublicHttpUrl()` resolves a host name once: an unknown host throws `Could not resolve host "…"` (1747320020) instead of "private or reserved network address", and the checked IP is the pinned one. `FileUploadService::isPermanentFailure()` marks bad URL / unknown host / private address / redirect loop / empty body / HTML page / too large / HTTP 4xx (not 408, 429) as final; `FileUploadFromUrlTool` then returns `{"error": …, "retryable": false}`. `AgentWriteService` turns that into `AgentApplyNotRetryableException` (code 1712003211) and does not put the draft back; the apply endpoint answers `retryable: false` and records `draft.failed` + `failureMessage` (`AgentConversationRecorder::failed()`). The window shows the reason and `agent.draft.failedFinal` with no Apply button (`renderFailedDraft`), and Execute all skips it; a reopened chat does not mark it expired. The history note says "failed and would fail again with the same arguments: …", and `withoutRepeatedDeclinedDrafts()` drops the same card (reply `agent.turn.failedNotRepeated`). Tool cards carry no arguments in the window, so `draftSignature()` uses the summary when fields and arguments are empty (before, any two download cards counted as the same one). Network errors, 5xx, 408 and 429 stay retryable. Checked live: unknown host → message, draft gone; next request with a real Wikimedia JPG → new card, uploaded (sys_file 161).
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — AI-generated images: no stock photos, no repeat after decline
+
+**Done:** `AgentRequestedFiles::asksForGeneratedImage()` recognises "AI-generated image", "generate an image", "generiere ein Bild", "KI-Bild". When the editor cannot use `t3ai_generate_image`, `AgentTurnRouter` adds the `agent.turn.imageGenerationUnavailable` notice (`files_unavailable` with `noFileLeft` and `imageGenerationUnavailable`): the attach step closes and `promptNote()` forbids a web image. `T3afToolbox` refuses `file_upload_from_url` for such a request unless the editor gave a URL (pointing to `t3ai_generate_image` when it is there). The checklist hint names `t3ai_generate_image`. A declined tool card (other than `write_table`) is not offered again in the same request, a declined `t3ai_generate_image` closes the attach step, and the "element still has no image" reminder stays quiet; a dropped card with no reply text answers `agent.turn.declinedNotRepeated`. Checked live (OpenAI, Mistral ×3): Apply → one textmedia with one `assets` reference to a new file with alternative; Decline → no file, no new image card.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — A declined create is not proposed again
+
+**Done:** `AgentRequestChecklist::reconcile()` closes (status `failed`) a create step whose card the editor discarded in this request, plus the attach / alt-text steps when every create was declined or the attach card was declined. `AgentRunner::buildMessages()` no longer falls back to the saved model plan once the checklist is closed. Right after a decline, `withoutRepeatedDeclinedDrafts(..., afterDecline: true)` also drops a create of the same tool/table/CType that differs only in a field (the model had added `sys_language_uid`). A `draft_review` pause whose only card was dropped no longer leaves the window waiting; the reply is then `agent.turn.declinedAskInstead`. The decline continuation says nothing else remains when the checklist is closed. Checked live (Mistral ×2, OpenAI): after Discard the agent asks what to do instead, no new card. When only some named files are missing, the notice is `agent.turn.filesPartlyUnavailable` ("Skipped … I will continue with the other files"), so it no longer reads as if the whole request failed.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — Undo on the attach card
+
+**Done:** Applying `file_reference_add` stores undo fields (`AgentWriteService::toolUndoFields()`): one `create` entry per new `sys_file_reference` with its `parent` (table, uid, field). `AgentUndoService` removes exactly those references with `DataHandlerService::removeFileReferences()` (delete via DataHandler, then the parent field gets the remaining references so its counter is right); the file and the record stay. The tool result card keeps `changeId` / `undoable` and shows Undo below the collapsed result, then "Undone". Other confirmed tools still have no undo. Checked live: tt_content 250 assets 2 → 1, reference 106 deleted, reference 99 and sys_file 146 untouched.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — Attach cards show the images
+
+**Done:** `AgentMediaPreviewService` reads `fileUids` ("145,146" in the arguments, `[145]` in the result), so the `file_reference_add` card and its result card show a thumbnail and the file name of every file (up to `MAX_PREVIEWS`). A missing or non-image file in that list is shown by name only (empty `url`); `renderImagePreviews` renders it as a caption without an image. Single `fileUid` keys and file lists keep the old behaviour (no name-only entries), so an audio result still shows its player.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — Alt text on attached images
+
+**Done:** `file_reference_add` takes optional `alternative`, `title` and `description` and writes them on every new `sys_file_reference` (`DataHandlerService::createFileReferences(..., $texts)`). The card summary shows `with alt text "…"` and the result returns the texts. When the request asks for alt text (alt text / alt tag / Alternativtext / Bildbeschreibung), `AgentRequestChecklist` adds an `alt_text` step. It closes only when a successful attach carried `alternative` or a readback of `sys_file_reference` shows one, and fails when no file could be attached. Until then the hint says to set it, or to tell the editor it is not set instead of claiming completion. `t3ai_generate_image` (ns_t3ai) stores its `altText` on the file metadata and now returns it, and the checklist counts it, because a reference without its own alt text shows the metadata one. `PremiumCatalogProvider::findStandaloneMatch()` no longer answers "AI Accessibility is not included" when the message attaches a file, names a sys_file uid or creates a Text & Media element (the alt text then goes on the reference). Live runs (OpenAI, Mistral) with real Apply: create, then `file_reference_add` with `alternative`, then "complete". Once in three runs Mistral attached the same file again after the checklist was closed. Checked: tt_content 250 with sys_file 145 renders `<img alt="…">` on page 198.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — A leaked tool call is not the editor's reply
+
+**Done:** A reply that starts with a tool call (`{"pageId":99999} to=t3ai_generate_all_seo` plus junk) shows the sentence after it. When that sentence says the page is missing, the editor sees "Page 99999 doesn't exist." Removing a page from the SEO queue by name uses that page uid. See `context/features/ai-agent.md`.
+
+---
+
+## 2026-10-09 — Image generation uses an image model
+
+**Done:** `ImageGenerationService::imageModelFor()` picks the model for `generate()` and `variation()`: the requested `modelId`, else the provider's model when it is an image model (`gpt-image-*`, `dall-e-*`, `imagen`, `flux`, …), else `gpt-image-1` for `symfony.openai`. Otherwise it stops before any HTTP call with "No image model configured for provider X". The provider's chat model (`gpt-5.4-mini`) is no longer sent to images/generations, and telemetry logs the image model.
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-09 — A missing named page is not the page on screen
 
 **Done:** "make the Contact page show up in Google" asks which page to use when no page is called Contact, and does not prepare SEO for the open page. "The first one" locks the first offered page (`lockedPageId`). See `context/features/ai-agent.md`.

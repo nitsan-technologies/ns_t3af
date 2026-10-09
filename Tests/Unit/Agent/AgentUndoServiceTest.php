@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
 use NITSAN\NsT3AF\Agent\Service\AgentDraftSession;
 use NITSAN\NsT3AF\Agent\Service\AgentUndoService;
+use NITSAN\NsT3AF\Agent\Service\AgentWriteService;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use PHPUnit\Framework\Attributes\Test;
@@ -65,6 +66,32 @@ final class AgentUndoServiceTest extends TestCase
         self::assertSame('corr-1', $result['correlationId']);
         self::assertSame([['table' => 'pages', 'uid' => 99, 'field' => '_record', 'reverted' => 'deleted']], $result['reverted']);
         self::assertNull($session->getChange('change-1'));
+    }
+
+    #[Test]
+    public function undoOfAnAttachRemovesOnlyTheNewReferences(): void
+    {
+        $dataHandler = $this->createMock(DataHandlerService::class);
+        $dataHandler->expects(self::never())->method('deleteRecord');
+        $dataHandler->expects(self::exactly(2))->method('removeFileReferences')
+            ->willReturnCallback(static function (string $table, int $uid, string $field, array $referenceUids): array {
+                self::assertSame(['tt_content', 255, 'assets'], [$table, $uid, $field]);
+
+                return $referenceUids;
+            });
+        [$service, $session] = $this->subject($dataHandler);
+        $undoFields = AgentWriteService::toolUndoFields(
+            'file_reference_add',
+            '{"table":"tt_content","uid":255,"fieldName":"assets","fileUids":[145,146],"referencesCreated":2,"referenceUids":[100,101]}',
+        );
+        self::assertTrue(AgentUndoService::isUndoable($undoFields));
+        $session->storeChange('change-attach', ['undoFields' => $undoFields]);
+
+        $result = $service->undo('change-attach');
+
+        self::assertSame([100, 101], array_column($result['reverted'], 'uid'));
+        self::assertSame(['sys_file_reference', 'sys_file_reference'], array_column($result['reverted'], 'table'));
+        self::assertSame([], AgentWriteService::toolUndoFields('file_upload_from_url', ['fileUid' => 5]));
     }
 
     #[Test]

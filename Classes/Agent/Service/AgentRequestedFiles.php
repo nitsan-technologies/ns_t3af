@@ -32,7 +32,54 @@ final readonly class AgentRequestedFiles
 {
     public const MESSAGE_TYPE = 'files_unavailable';
 
+    public const GENERATION_TOOL = 't3ai_generate_image';
+
     public function __construct(private ResourceFactory $resourceFactory) {}
+
+    /**
+     * "… with an AI-generated image of a lighthouse", "Generate an image of a mountain lake",
+     * "Generiere ein Bild von …": an image the AI has to make, not one from the web or the fileadmin.
+     */
+    public static function asksForGeneratedImage(string $request): bool
+    {
+        return preg_match(
+            '/\b(?:ai|ki)[\s-]*(?:generated|generiert\w*|created|erstellt\w*|images?|bild\w*)\b'
+            . '|\bgenerat\w*\s+(?:\w+\s+){0,3}(?:images?|pictures?|photos?|illustrations?|graphics?)\b'
+            . '|\bgenerier\w*\s+(?:\w+\s+){0,3}(?:bild|bilder|foto\w*|illustration\w*|grafik\w*)\b/iu',
+            $request,
+        ) === 1;
+    }
+
+    public static function namesUrl(string $request): bool
+    {
+        return preg_match('#\bhttps?://#i', $request) === 1;
+    }
+
+    /**
+     * Notice for a request that wants an AI-generated image while the editor cannot generate one:
+     * it closes the attach step, so the agent neither keeps asking to continue nor fetches a web image.
+     *
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    public function generationUnavailableMessage(string $request, AgentTranslator $translator, string $correlationId): ?array
+    {
+        if (!self::asksForGeneratedImage($request) || self::namesUrl($request) || self::namedFileUids($request) !== []) {
+            return null;
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $translator->translate('agent.turn.imageGenerationUnavailable'),
+            'meta' => [
+                'type' => self::MESSAGE_TYPE,
+                'correlationId' => $correlationId,
+                'request' => self::requestKey($request),
+                'unavailableFiles' => [],
+                'noFileLeft' => true,
+                'imageGenerationUnavailable' => true,
+            ],
+        ];
+    }
 
     /**
      * sys_file uids named in a request to attach or use files. A uid after "tt_content", "page" or
@@ -118,9 +165,17 @@ final readonly class AgentRequestedFiles
             return null;
         }
 
+        $usable = array_values(array_diff($named, array_keys($unavailable)));
+        $content = $usable === []
+            ? $translator->translate('agent.turn.filesUnavailable', [implode(', ', $unavailable)])
+            : $translator->translate('agent.turn.filesPartlyUnavailable', [
+                implode(', ', $unavailable),
+                implode(', ', array_map(static fn(int $uid): string => 'uid ' . $uid, $usable)),
+            ]);
+
         return [
             'role' => 'assistant',
-            'content' => $translator->translate('agent.turn.filesUnavailable', [implode(', ', $unavailable)]),
+            'content' => $content,
             'meta' => [
                 'type' => self::MESSAGE_TYPE,
                 'correlationId' => $correlationId,
@@ -154,6 +209,11 @@ final readonly class AgentRequestedFiles
      */
     public static function promptNote(array $history, string $request): string
     {
+        if ((self::latestMessageMeta($history, $request)['imageGenerationUnavailable'] ?? false) === true) {
+            return 'The editor asked for an AI-generated image, but AI image generation is not available to this editor.'
+                . ' Do not search, invent, download or upload an image from the web instead, and do not attach any file.'
+                . ' Do the rest of the request, then tell the editor in one sentence that the image could not be generated.';
+        }
         $unavailable = self::knownUnavailable($history, $request);
         if ($unavailable === []) {
             return '';

@@ -750,6 +750,9 @@
       <trans-unit id="agent.turn.emptyModelReply" resname="agent.turn.emptyModelReply">
         <source>I could not produce a reply. Try rephrasing or use / to run a specific tool.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.declinedAskInstead" resname="agent.turn.declinedAskInstead">
+        <source>Okay, nothing was written. What should I do instead?</source>
+      </trans-unit>
       <trans-unit id="agent.turn.alreadyRunning" resname="agent.turn.alreadyRunning">
         <source>The AI Agent is still working on your previous request. Please wait until it has finished, then send your message again.</source>
       </trans-unit>
@@ -761,6 +764,18 @@
       </trans-unit>
       <trans-unit id="agent.turn.filesUnavailable" resname="agent.turn.filesUnavailable">
         <source>These files cannot be attached because they do not exist or are missing from the file storage: %s. Please upload them again or choose other files.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.declinedNotRepeated" resname="agent.turn.declinedNotRepeated">
+        <source>I left out the step you declined. What should I do next?</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.failedNotRepeated" resname="agent.turn.failedNotRepeated">
+        <source>That step already failed and would fail the same way again, so I did not offer it again. Give me a different address or file.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.imageGenerationUnavailable" resname="agent.turn.imageGenerationUnavailable">
+        <source>AI image generation is not available to you (it needs T3AI with an image provider and access to T3AI Media), so no image will be generated. I will do the rest of the request.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.filesPartlyUnavailable" resname="agent.turn.filesPartlyUnavailable">
+        <source>Skipped %1$s: the file does not exist or is missing from the file storage. I will continue with the other files (%2$s).</source>
       </trans-unit>
       <trans-unit id="agent.turn.emptyModelReplyWithTools" resname="agent.turn.emptyModelReplyWithTools">
         <source>I could not produce a reply. Closest tools: %1$s. Try rephrasing, pick a suggested action, or use / to run a specific tool.</source>
@@ -1294,6 +1309,9 @@
       <trans-unit id="agent.page.notFound" resname="agent.page.notFound">
         <source>I can't find a page called "%1$s". Which page should I use?</source>
       </trans-unit>
+      <trans-unit id="agent.page.missingUid" resname="agent.page.missingUid">
+        <source>Page %d doesn't exist.</source>
+      </trans-unit>
       <trans-unit id="agent.result.emptyMatchingContentElements" resname="agent.result.emptyMatchingContentElements">
         <source>No matching content elements were found.</source>
       </trans-unit>
@@ -1407,6 +1425,9 @@
       </trans-unit>
       <trans-unit id="agent.draft.expired" resname="agent.draft.expired">
         <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.failedFinal" resname="agent.draft.failedFinal">
+        <source>Trying again would fail the same way, so this step is not offered again. Ask with a different address or file.</source>
       </trans-unit>
       <trans-unit id="agent.turn.streamInterrupted" resname="agent.turn.streamInterrupted">
         <source>The connection was interrupted. Your request may still be running. Reload the conversation in a moment to see the result.</source>

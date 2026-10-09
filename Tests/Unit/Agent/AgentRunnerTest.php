@@ -853,6 +853,44 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function aDownloadThatFailedForGoodIsNotOfferedAgainUnchanged(): void
+    {
+        $download = static fn(string $url, bool $failed = false): array => [
+            'role' => 'assistant',
+            'content' => 'Upload file from URL',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => ['tool' => 'file_upload_from_url', 'failed' => $failed, 'fields' => [], 'arguments' => ['url' => $url]],
+            ],
+        ];
+        $history = [$download('https://no-such-host.invalid/a.jpg', true)];
+        $newRequest = ['role' => 'user', 'content' => 'Try again', 'meta' => ['type' => 'message']];
+
+        $declinedDropped = 0;
+        $failedDropped = 0;
+        $kept = AgentRunner::withoutRepeatedDeclinedDrafts([$download('https://no-such-host.invalid/a.jpg')], [...$history, $newRequest], false, $declinedDropped, $failedDropped);
+
+        self::assertSame([], $kept);
+        self::assertSame(0, $declinedDropped);
+        self::assertSame(1, $failedDropped);
+        // Another address is a new attempt.
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$download('https://upload.wikimedia.org/a.jpg')], $history));
+
+        // Tool cards in the window carry no arguments: the address is only in the summary.
+        $card = static fn(string $url, bool $failed = false): array => [
+            'role' => 'assistant',
+            'content' => 'upload from ' . $url . ' to user_upload',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => ['tool' => 'file_upload_from_url', 'kind' => 'tool_confirmation', 'action' => 'create', 'failed' => $failed, 'fields' => [], 'arguments' => [], 'summary' => 'upload from ' . $url . ' to user_upload'],
+            ],
+        ];
+        $history = [$card('https://no-such-host.invalid/a.jpg', true)];
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$card('https://no-such-host.invalid/a.jpg')], $history));
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$card('https://upload.wikimedia.org/a.jpg')], $history));
+    }
+
+    #[Test]
     public function aPendingCreateIsNotOfferedAgain(): void
     {
         $create = static fn(string $title, bool $applied = false): array => [
@@ -879,6 +917,60 @@ final class AgentRunnerTest extends TestCase
         self::assertCount(2, AgentRunner::withoutRepeatedDeclinedDrafts([$create('Agent Test'), $info], [$create('Agent Test', true)]));
         // One reply that proposes the same create twice keeps a single card.
         self::assertCount(2, AgentRunner::withoutRepeatedDeclinedDrafts([$create('Agent Test'), $create('Agent Test'), $info], []));
+    }
+
+    #[Test]
+    public function aCreateTheEditorJustDeclinedIsNotProposedAgainWithOneFieldMore(): void
+    {
+        $textMedia = static fn(array $extra = [], bool $discarded = false): array => [
+            'role' => 'assistant',
+            'content' => 'Create element',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => [
+                    'tool' => 'write_table',
+                    'action' => 'create',
+                    'discarded' => $discarded,
+                    'fields' => [
+                        ['table' => 'tt_content', 'uid' => 0, 'field' => 'CType', 'proposed' => 'textmedia'],
+                        ['table' => 'tt_content', 'uid' => 0, 'field' => 'header', 'proposed' => 'Preview Test'],
+                        ...$extra,
+                    ],
+                ],
+            ],
+        ];
+        $request = ['role' => 'user', 'content' => 'Create a text & media element', 'meta' => ['type' => 'message']];
+        $declined = ['role' => 'user', 'content' => '[The editor declined …]', 'meta' => ['type' => 'continuation', 'hidden' => true]];
+        $history = [$request, $textMedia([], true), $declined];
+        $again = $textMedia([['table' => 'tt_content', 'uid' => 0, 'field' => 'sys_language_uid', 'proposed' => '0']]);
+
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$again], $history, true));
+        // A new request of the editor may ask for that element after all.
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$again], [...$history, $request], true));
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$again], $history));
+    }
+
+    #[Test]
+    public function aToolCardTheEditorJustDeclinedIsNotProposedAgainInOtherWords(): void
+    {
+        $generate = static fn(string $prompt, bool $discarded = false): array => [
+            'role' => 'assistant',
+            'content' => 'Generate an image',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => ['tool' => 't3ai_generate_image', 'discarded' => $discarded, 'fields' => [], 'arguments' => ['prompt' => $prompt]],
+            ],
+        ];
+        $request = ['role' => 'user', 'content' => 'Create a text & media element with an AI-generated image', 'meta' => ['type' => 'message']];
+        $declined = ['role' => 'user', 'content' => '[The editor declined …]', 'meta' => ['type' => 'continuation', 'hidden' => true]];
+        $history = [$request, $generate('A red lighthouse', true), $declined];
+
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$generate('A red lighthouse on a cliff')], $history, true));
+        // Also later in the same request, after another card was applied.
+        $dropped = 0;
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$generate('A red lighthouse on a cliff')], $history, false, $dropped));
+        self::assertSame(1, $dropped);
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$generate('A red lighthouse on a cliff')], [...$history, $request], true));
     }
 
     #[Test]

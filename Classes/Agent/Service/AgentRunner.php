@@ -136,10 +136,15 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         [$state, $finalText] = $this->runAgent($userMessage, $historyMessages, $context, $body, $user, $correlationId, $emitEvent, $offeredTools, $executableTools, $severities);
+        $rawFinalText = $finalText;
+        $finalText = AgentPromptBuilder::stripLeakedToolCall($finalText);
         $finalText = AgentPromptBuilder::collapseRepeatedReply($finalText);
 
         // Drop a card the editor already declined, and a second copy of a create that is still waiting.
-        $state->messages = self::withoutRepeatedDeclinedDrafts($state->messages, $historyMessages);
+        $declinedDropped = 0;
+        $failedDropped = 0;
+        $state->messages = self::withoutRepeatedDeclinedDrafts($state->messages, $historyMessages, ($continuation['outcome'] ?? '') === 'declined', $declinedDropped, $failedDropped);
+        $cardDropped = $declinedDropped > 0;
 
         $state->attachPendingPlan();
 
@@ -153,8 +158,25 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             return ['messages' => $state->messages, 'paused' => false, 'pauseReason' => null];
         }
 
-        if ($state->isPaused()) {
+        $cardLeft = in_array('inline_draft', array_map(static fn(array $message): string => (string) ($message['meta']['type'] ?? ''), $state->messages), true);
+        // A review pause whose only card was dropped above would leave the window waiting for nothing.
+        if ($state->isPaused() && ($cardLeft || $state->pauseReason() !== 'draft_review')) {
             return ['messages' => $state->messages, 'paused' => true, 'pauseReason' => $state->pauseReason()];
+        }
+
+        if (
+            (($continuation['outcome'] ?? '') === 'declined' || $cardDropped)
+            && !$state->failed
+            && !$cardLeft
+            && (trim($finalText) === '' || AgentPromptBuilder::isCardHistoryEcho($finalText))
+        ) {
+            $finalText = $this->translator->translate(
+                ($continuation['outcome'] ?? '') === 'declined' ? 'agent.turn.declinedAskInstead' : 'agent.turn.declinedNotRepeated',
+            );
+        }
+
+        if ($failedDropped > 0 && !$state->failed && !$cardLeft && (trim($finalText) === '' || AgentPromptBuilder::isCardHistoryEcho($finalText))) {
+            $finalText = $this->translator->translate('agent.turn.failedNotRepeated');
         }
 
         if ($state->failed || ($finalText === '' && $state->executedTools !== [])) {
@@ -181,6 +203,11 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             && AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $requestForGate)
         ) {
             $finalText = '';
+        }
+
+        $missingPageUid = AgentPromptBuilder::leakedMissingPageUid($rawFinalText);
+        if ($missingPageUid > 0) {
+            $finalText = $this->translator->translate('agent.page.missingUid', [$missingPageUid]);
         }
 
         if ($finalText !== '') {
@@ -525,18 +552,29 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     /**
      * Drops change cards that repeat a declined card, or a create that is still waiting to be
      * executed. A follow-up ("check now") otherwise adds a second identical page draft, and
-     * Execute all writes both.
+     * Execute all writes both. A card of a tool the editor declined in this request (other than
+     * write_table) is not offered again in it, and right after a decline a create of the same
+     * content type is dropped too, even when a field or argument differs. A card whose Apply failed
+     * for good (bad URL, unknown host) is not offered again with the same arguments.
      *
      * @param list<array{role: string, content: string, meta: array<string, mixed>}> $messages messages added by this turn
      * @param list<array<string, mixed>> $history the conversation before this turn
+     * @param int $declinedDropped set to the number of cards dropped because the editor declined them
+     * @param int $failedDropped set to the number of cards dropped because the same Apply already failed for good
      * @return list<array{role: string, content: string, meta: array<string, mixed>}>
      */
-    public static function withoutRepeatedDeclinedDrafts(array $messages, array $history): array
+    public static function withoutRepeatedDeclinedDrafts(array $messages, array $history, bool $afterDecline = false, int &$declinedDropped = 0, int &$failedDropped = 0): array
     {
+        $declinedDropped = 0;
+        $failedDropped = 0;
         $blocked = [];
+        $declinedCreates = [];
         foreach ($history as $message) {
             if (!is_array($message)) {
                 continue;
+            }
+            if (($message['role'] ?? '') === 'user' && ($message['meta']['type'] ?? '') !== 'continuation') {
+                $declinedCreates = [];
             }
             $draft = $message['meta']['draft'] ?? null;
             if (($message['meta']['type'] ?? '') !== 'inline_draft' || !is_array($draft)) {
@@ -544,9 +582,20 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             }
             $discarded = ($draft['discarded'] ?? false) === true;
             $applied = ($draft['applied'] ?? false) === true || ($message['meta']['applied'] ?? false) === true;
+            if (!$discarded && !$applied && ($draft['failed'] ?? false) === true) {
+                $blocked[self::draftSignature($draft)] = 'failed';
+                continue;
+            }
             $pendingCreate = !$discarded && !$applied && (string) ($draft['action'] ?? '') === 'create';
             if ($discarded || $pendingCreate) {
-                $blocked[self::draftSignature($draft)] = true;
+                $blocked[self::draftSignature($draft)] = $discarded ? 'declined' : 'pending';
+            }
+            if ($discarded && (string) ($draft['action'] ?? '') === 'create') {
+                $declinedCreates[self::createdKind($draft)] = true;
+            }
+            // A declined tool card ("Generate an image") comes back with other wording, never with the same arguments.
+            if ($discarded && !in_array((string) ($draft['tool'] ?? ''), ['', 'write_table'], true)) {
+                $declinedCreates['tool ' . $draft['tool']] = true;
             }
         }
 
@@ -556,17 +605,48 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             if (($message['meta']['type'] ?? '') === 'inline_draft' && is_array($draft)) {
                 $signature = self::draftSignature($draft);
                 if (isset($blocked[$signature])) {
+                    $declinedDropped += $blocked[$signature] === 'declined' ? 1 : 0;
+                    $failedDropped += $blocked[$signature] === 'failed' ? 1 : 0;
+                    continue;
+                }
+                if (
+                    ($afterDecline && (string) ($draft['action'] ?? '') === 'create' && isset($declinedCreates[self::createdKind($draft)]))
+                    || isset($declinedCreates['tool ' . (string) ($draft['tool'] ?? '')])
+                ) {
+                    ++$declinedDropped;
                     continue;
                 }
                 // Two identical creates in the same reply count as one card.
                 if ((string) ($draft['action'] ?? '') === 'create') {
-                    $blocked[$signature] = true;
+                    $blocked[$signature] = 'pending';
                 }
             }
             $kept[] = $message;
         }
 
         return $kept;
+    }
+
+    /**
+     * What a create card makes: its tool, table and content type ("write_table tt_content textmedia").
+     *
+     * @param array<string, mixed> $draft
+     */
+    private static function createdKind(array $draft): string
+    {
+        $table = '';
+        $type = '';
+        foreach (is_array($draft['fields'] ?? null) ? $draft['fields'] : [] as $field) {
+            if (!is_array($field)) {
+                continue;
+            }
+            $table = $table !== '' ? $table : (string) ($field['table'] ?? '');
+            if (in_array(strtolower((string) ($field['field'] ?? '')), ['ctype', 'doktype'], true)) {
+                $type = strtolower(trim((string) ($field['proposed'] ?? '')));
+            }
+        }
+
+        return implode(' ', [(string) ($draft['tool'] ?? ''), $table, $type]);
     }
 
     /**
@@ -581,11 +661,16 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             }
         }
 
+        $arguments = $draft['arguments'] ?? [];
+        // A tool card keeps its arguments only in the summary ("upload from https://… to user_upload").
+        $summary = $fields === [] && $arguments === [] ? (string) ($draft['summary'] ?? '') : '';
+
         return md5((string) json_encode([
             $draft['tool'] ?? '',
             $draft['kind'] ?? '',
             $fields,
-            $draft['arguments'] ?? [],
+            $arguments,
+            $summary,
         ]));
     }
 
@@ -679,8 +764,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
         $planBlock = AgentPlan::promptBlock($plan);
         $checklist = AgentRequestChecklist::reconcile($historyMessages, $request);
-        if ($checklist !== [] && AgentRequestChecklist::hasOpen($checklist)) {
-            $system .= "\n" . AgentRequestChecklist::promptBlock($checklist, $request);
+        if ($checklist !== []) {
+            // A closed checklist outranks the saved plan: the editor may have declined what that plan still lists.
+            $block = AgentRequestChecklist::promptBlock($checklist, $request);
+            $system .= $block !== '' ? "\n" . $block : '';
         } elseif ($planBlock !== '') {
             $system .= "\n" . $planBlock;
         }

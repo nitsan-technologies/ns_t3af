@@ -104,6 +104,8 @@ final readonly class AgentConversationRecorder
                     'previews' => array_values(is_array($presented['previews'] ?? null) ? $presented['previews'] : []),
                     'autoRan' => false,
                     'correlationId' => (string) ($result['correlationId'] ?? $meta['correlationId'] ?? ''),
+                    'changeId' => (string) ($result['changeId'] ?? ''),
+                    'undoable' => ($result['undoable'] ?? false) === true,
                     'schedulerHandoff' => $handoff,
                     'links' => $links,
                     'fromRunner' => ($meta['fromRunner'] ?? false) === true,
@@ -159,6 +161,24 @@ final readonly class AgentConversationRecorder
         }
         $messages[$index]['meta'] = $meta;
         $messages[$index]['content'] = $this->translator->translate('agent.draft.discarded');
+
+        return $messages;
+    }
+
+    /**
+     * Apply failed in a way another click cannot change: the card keeps the reason and offers no Apply.
+     *
+     * @param list<array<string, mixed>> $messages
+     * @return list<array<string, mixed>>
+     */
+    public function failed(array $messages, string $draftId, string $reason): array
+    {
+        $index = $this->findCard($messages, $draftId);
+        if ($index === null || !is_array($messages[$index]['meta']['draft'] ?? null)) {
+            return $messages;
+        }
+        $messages[$index]['meta']['draft']['failed'] = true;
+        $messages[$index]['meta']['draft']['failureMessage'] = mb_substr($reason, 0, 500);
 
         return $messages;
     }
