@@ -48,6 +48,9 @@ final readonly class AgentMediaPreviewService
     /** Keys whose integer value is a sys_file uid. */
     private const FILE_UID_KEYS = ['fileUid', 'file_uid', 'sysFileUid', 'fileId'];
 
+    /** Keys holding several sys_file uids: "145,146" in tool arguments, [145, 146] in results. */
+    private const FILE_UID_LIST_KEYS = ['fileUids'];
+
     public function __construct(
         private ResourceFactory $resourceFactory,
         private ConnectionPool $connectionPool,
@@ -61,7 +64,7 @@ final readonly class AgentMediaPreviewService
         $previews = [];
         foreach (self::fileReferences($details, self::MAX_PREVIEWS * 2) as $reference) {
             $preview = $reference['uid'] > 0
-                ? $this->previewForFile($reference['uid'])
+                ? $this->previewForFile($reference['uid'], $reference['named'])
                 : self::previewForUrl($reference['url'], $reference['name']);
             if ($preview !== null) {
                 $previews[] = $preview;
@@ -96,8 +99,10 @@ final readonly class AgentMediaPreviewService
 
     /**
      * File uids (and plain image URLs) found in a tool result, in order, without duplicates.
+     * "named" marks the files of a fileUids list (the files to attach); they keep their name on
+     * the card even without a thumbnail.
      *
-     * @return list<array{uid: int, url: string, name: string}>
+     * @return list<array{uid: int, url: string, name: string, named: bool}>
      */
     public static function fileReferences(mixed $details, int $limit = self::MAX_PREVIEWS): array
     {
@@ -108,7 +113,7 @@ final readonly class AgentMediaPreviewService
     }
 
     /**
-     * @param array<string, array{uid: int, url: string, name: string}> $found
+     * @param array<string, array{uid: int, url: string, name: string, named: bool}> $found
      */
     private static function collect(mixed $value, array &$found, int $depth, int $limit): void
     {
@@ -119,18 +124,26 @@ final readonly class AgentMediaPreviewService
 
         foreach (self::FILE_UID_KEYS as $key) {
             if (is_numeric($value[$key] ?? null) && (int) $value[$key] > 0) {
-                $found['uid:' . (int) $value[$key]] ??= ['uid' => (int) $value[$key], 'url' => '', 'name' => $name];
+                $found['uid:' . (int) $value[$key]] ??= ['uid' => (int) $value[$key], 'url' => '', 'name' => $name, 'named' => false];
+            }
+        }
+        foreach (self::FILE_UID_LIST_KEYS as $key) {
+            foreach (self::uidList($value[$key] ?? null) as $fileUid) {
+                if (count($found) >= $limit) {
+                    return;
+                }
+                $found['uid:' . $fileUid] ??= ['uid' => $fileUid, 'url' => '', 'name' => '', 'named' => true];
             }
         }
         // A row of the file list / file info: uid plus file properties.
         if (is_numeric($value['uid'] ?? null) && (int) $value['uid'] > 0
             && (isset($value['mimeType']) || (isset($value['identifier']) && isset($value['extension'])))
         ) {
-            $found['uid:' . (int) $value['uid']] ??= ['uid' => (int) $value['uid'], 'url' => '', 'name' => $name];
+            $found['uid:' . (int) $value['uid']] ??= ['uid' => (int) $value['uid'], 'url' => '', 'name' => $name, 'named' => false];
         } elseif (is_string($value['publicUrl'] ?? null) && !self::hasFileUid($value)) {
             $url = trim($value['publicUrl']);
             if ($url !== '') {
-                $found['url:' . $url] ??= ['uid' => 0, 'url' => $url, 'name' => $name];
+                $found['url:' . $url] ??= ['uid' => 0, 'url' => $url, 'name' => $name, 'named' => false];
             }
         }
 
@@ -142,6 +155,27 @@ final readonly class AgentMediaPreviewService
                 self::collect($child, $found, $depth + 1, $limit);
             }
         }
+    }
+
+    /**
+     * @return list<int>
+     */
+    private static function uidList(mixed $value): array
+    {
+        $items = match (true) {
+            is_string($value) => explode(',', $value),
+            is_array($value) => $value,
+            is_int($value) => [$value],
+            default => [],
+        };
+        $uids = [];
+        foreach ($items as $item) {
+            if (is_numeric($item) && (int) $item > 0) {
+                $uids[] = (int) $item;
+            }
+        }
+
+        return $uids;
     }
 
     /**
@@ -159,17 +193,21 @@ final readonly class AgentMediaPreviewService
     }
 
     /**
+     * A missing or non-image file is shown by name only (empty url) when $nameOnlyFallback is set.
+     *
      * @return array{fileUid: int, url: string, href: string, name: string, alt: string}|null
      */
-    private function previewForFile(int $fileUid): ?array
+    private function previewForFile(int $fileUid, bool $nameOnlyFallback = false): ?array
     {
         try {
             $file = $this->resourceFactory->getFileObject($fileUid);
-            if ($file->isMissing() || !$file->checkActionPermission('read')) {
+            if (!$file->checkActionPermission('read')) {
                 return null;
             }
-            if (!str_starts_with(strtolower($file->getMimeType()), 'image/')) {
-                return null;
+            if ($file->isMissing() || !str_starts_with(strtolower($file->getMimeType()), 'image/')) {
+                return $nameOnlyFallback
+                    ? ['fileUid' => $fileUid, 'url' => '', 'href' => '', 'name' => $file->getName(), 'alt' => '']
+                    : null;
             }
             $original = self::normalizeUrl((string) $file->getPublicUrl());
             $thumbnail = $original;
