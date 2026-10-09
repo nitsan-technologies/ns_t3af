@@ -361,6 +361,131 @@ final class WriteTableToolTest extends TestCase
     }
 
     #[Test]
+    public function planCreateBeforeAPageUsesThePreviousSiblingEvenWhenTheParentPidIsSent(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())->method('targetBeforePage')->with(70)->willReturn(-68);
+        $records->expects(self::once())->method('assertInsertAfterExists')->with('tt_content', 68);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'beforeUid' => 70,
+            'data' => ['pid' => 1, 'header' => 'NB'],
+        ]);
+
+        self::assertSame(-68, $plan->context['pid']);
+    }
+
+    #[Test]
+    public function planCreateBeforeANamedPageIgnoresAnAfterPid(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())->method('findByUid')->with('pages', 113, ['title'])->willReturn(['title' => 'A']);
+        $records->expects(self::once())->method('targetBeforePage')->with(113)->willReturn(1);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'requestQuery' => 'Create NB directly before A',
+            'data' => ['pid' => -113, 'header' => 'NB'],
+        ]);
+
+        self::assertSame(1, $plan->context['pid']);
+    }
+
+    #[Test]
+    public function planCreateBeforeANamedPageIgnoresTheParentPid(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())
+            ->method('findDefaultLanguagePagesByTitle')
+            ->with('C')
+            ->willReturn([['uid' => 111, 'pid' => 1]]);
+        $records->expects(self::once())->method('targetBeforePage')->with(111)->willReturn(-112);
+        $records->expects(self::once())->method('assertInsertAfterExists')->with('tt_content', 112);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'requestQuery' => 'Create NB directly before C',
+            'data' => ['pid' => 1, 'header' => 'NB'],
+        ]);
+
+        self::assertSame(-112, $plan->context['pid']);
+    }
+
+    #[Test]
+    public function planCreateAfterAPageUsesAfterUidEvenWhenThatPageIsSentAsTheParent(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())->method('findByUid')->with('pages', 113, ['title'])->willReturn(['title' => 'A']);
+        $records->expects(self::once())->method('assertInsertAfterExists')->with('tt_content', 113);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'requestQuery' => 'Create a page after A',
+            'data' => ['pid' => 113, 'header' => 'NA'],
+        ]);
+
+        self::assertSame(-113, $plan->context['pid']);
+    }
+
+    #[Test]
+    public function planCreateAsTheLastChildUsesTheLastSubpage(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())->method('findByUid')->with('pages', 1, ['title'])->willReturn(['title' => 'Home']);
+        $records->expects(self::once())->method('lastDefaultLanguageChildUid')->with(1)->willReturn(70);
+        $records->expects(self::once())->method('assertInsertAfterExists')->with('tt_content', 70);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'requestQuery' => 'Create a page as the last page under Home',
+            'data' => ['pid' => 1, 'header' => 'Last'],
+        ]);
+
+        self::assertSame(-70, $plan->context['pid']);
+    }
+
+    #[Test]
     public function planCreateAfterAPageTheEditorCannotReadIsRefused(): void
     {
         $records = $this->createMock(RecordService::class);

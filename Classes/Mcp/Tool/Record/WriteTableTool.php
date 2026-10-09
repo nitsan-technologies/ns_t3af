@@ -34,6 +34,8 @@ use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Agent\Service\PageCreateAfter;
+use NITSAN\NsT3AF\Agent\Service\PageCreateBefore;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordPayloadNormalizer;
@@ -105,9 +107,22 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         $payload = self::decodeData($dataRaw, $action);
+        $beforeUid = (int) ($arguments['beforeUid'] ?? $payload['beforeUid'] ?? 0);
+        $afterUid = (int) ($arguments['afterUid'] ?? $payload['afterUid'] ?? 0);
+        if ($action === 'create') {
+            $query = (string) ($arguments['requestQuery'] ?? '');
+            $beforeUid = $this->beforeUidFromRequest($beforeUid, $payload, $query);
+            $afterUid = $this->afterUidFromRequest($afterUid, $payload, $query);
+            if (PageCreateBefore::isCreateBefore($query)) {
+                $afterUid = 0;
+            }
+            if (PageCreateAfter::isCreateAfter($query) || PageCreateAfter::isLastUnder($query)) {
+                $beforeUid = 0;
+            }
+        }
 
         return match ($action) {
-            'create' => $this->planCreate($tableName, $payload),
+            'create' => $this->planCreate($tableName, $payload, $beforeUid, $afterUid),
             'update' => $this->planUpdate($tableName, $uid, $payload),
             'delete' => $this->planDelete($tableName, $uid),
         };
@@ -118,9 +133,10 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         description: 'Create, update, or delete records in a TYPO3 table via DataHandler.'
             . ' Use table_schema first to discover valid field names and types.'
             . ' For create, include "pid" in the JSON data object. A positive pid creates the record as the first child of that page.'
-            . ' A negative pid (-uid) creates it directly after that record: "after page 68" is {"pid": -68}, not the parent uid.'
-            . ' "Before a record" is the negative uid of the record before it, or the parent uid when it is already first.'
-            . ' "Last under a page" is the negative uid of that page\'s last child. "Subpage of page 68" is {"pid": 68}.'
+            . ' A negative pid (-uid) creates it directly after that record.'
+            . ' To place a new record directly after an existing one, pass afterUid of that record. afterUid is used instead of pid.'
+            . ' To place a new record directly before an existing one, pass beforeUid of that record. beforeUid is used instead of pid.'
+            . ' "Last under a page" is afterUid of that page\'s last child. "Subpage of page 68" is {"pid": 68}.'
             . ' For update/delete, pass the record uid.'
             . ' strict=true refuses the whole call and names the fields that are unknown or that you may not change; by default they are dropped and reported in "ignoredFields".'
             . ' Category/MM relations (categories, authors, tags, …) accept a comma-separated UID string, e.g. "126" or "8,12".'
@@ -141,6 +157,8 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         string $data = '{}',
         int $uid = 0,
         bool $strict = false,
+        int $beforeUid = 0,
+        int $afterUid = 0,
     ): string {
         if (!in_array($action, self::ALLOWED_ACTIONS, true)) {
             return $this->encodeError('Invalid action. Use create, update, or delete.');
@@ -166,7 +184,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return match ($action) {
-            'create' => $this->create($tableName, $payload, $strict),
+            'create' => $this->create($tableName, $payload, $strict, $beforeUid, $afterUid),
             'update' => $this->update($tableName, $uid, $payload, $strict),
             'delete' => $this->delete($tableName, $uid),
         };
@@ -202,20 +220,16 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     }
 
     /** @param array<string, mixed> $payload */
-    private function planCreate(string $tableName, array $payload): ToolPlan
+    private function planCreate(string $tableName, array $payload, int $beforeUid = 0, int $afterUid = 0): ToolPlan
     {
-        if (!isset($payload['pid']) || !is_numeric($payload['pid'])) {
-            throw new \InvalidArgumentException('Create requires numeric "pid" in data.');
-        }
-
-        $pid = (int) $payload['pid'];
+        $pid = $this->resolveCreatePid($payload, $beforeUid, $afterUid);
         if ($pid < 0) {
             $this->recordService->assertInsertAfterExists($tableName, abs($pid));
         }
         if (!$this->targetIsReadable($tableName, $pid)) {
             throw new \InvalidArgumentException(PageAccessService::ACCESS_DENIED_MESSAGE);
         }
-        unset($payload['pid']);
+        unset($payload['pid'], $payload['beforeUid'], $payload['afterUid']);
         $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
         // Fields the group may not edit would be dropped silently at Apply: the card must not offer them,
         // and a create whose requested content fields are all forbidden is refused.
@@ -322,14 +336,120 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             : $this->pageAccess->canReadPage($pid);
     }
 
-    /** @param array<string, mixed> $payload */
-    private function create(string $tableName, array $payload, bool $strict = false): string
+    /**
+     * The editor asked to create a page before another page. That page wins over a parent pid
+     * and over a negative pid, which would place the new page after it.
+     *
+     * @param array<string, mixed> $payload
+     */
+    private function beforeUidFromRequest(int $beforeUid, array $payload, string $query): int
     {
-        if (!isset($payload['pid']) || !is_numeric($payload['pid'])) {
-            return $this->encodeError('Create requires numeric "pid" in data.');
+        if ($beforeUid > 0 || !PageCreateBefore::isCreateBefore($query)) {
+            return $beforeUid;
         }
 
-        $pid = (int) $payload['pid'];
+        $named = $this->namedPageUid(PageCreateBefore::target($query), $payload);
+
+        return $named > 0 ? $named : $beforeUid;
+    }
+
+    /**
+     * The editor asked to create a page after another page, or as the last child of one.
+     * That place wins over a positive pid, which would make the new page a subpage.
+     *
+     * @param array<string, mixed> $payload
+     */
+    private function afterUidFromRequest(int $afterUid, array $payload, string $query): int
+    {
+        if (PageCreateAfter::isLastUnder($query)) {
+            $parentUid = $this->namedPageUid(PageCreateAfter::lastUnderTarget($query), $payload);
+            if ($parentUid <= 0) {
+                return $afterUid;
+            }
+            $lastChild = $this->recordService->lastDefaultLanguageChildUid($parentUid);
+
+            return $lastChild > 0 ? $lastChild : $afterUid;
+        }
+        if (!PageCreateAfter::isCreateAfter($query)) {
+            return $afterUid;
+        }
+
+        $named = $this->namedPageUid(PageCreateAfter::target($query), $payload);
+
+        return $named > 0 ? $named : $afterUid;
+    }
+
+    /**
+     * @param array{title: string, uid: int} $target
+     * @param array<string, mixed> $payload
+     */
+    private function namedPageUid(array $target, array $payload): int
+    {
+        if ($target['uid'] > 0) {
+            return $target['uid'];
+        }
+
+        $pid = isset($payload['pid']) && is_numeric($payload['pid']) ? (int) $payload['pid'] : 0;
+        if ($pid !== 0 && $target['title'] !== '') {
+            $anchor = $this->recordService->findByUid('pages', abs($pid), ['title']);
+            $title = is_array($anchor) ? trim((string) ($anchor['title'] ?? '')) : '';
+            if ($title !== '' && strcasecmp($title, $target['title']) === 0) {
+                return abs($pid);
+            }
+        }
+        if ($target['title'] === '') {
+            return 0;
+        }
+
+        $matches = $this->recordService->findDefaultLanguagePagesByTitle($target['title']);
+        if (count($matches) === 1) {
+            return $matches[0]['uid'];
+        }
+        if ($pid > 0) {
+            $underParent = array_values(array_filter(
+                $matches,
+                static fn(array $page): bool => $page['pid'] === $pid,
+            ));
+            if (count($underParent) === 1) {
+                return $underParent[0]['uid'];
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * afterUid places the new record directly after that page and wins over a positive pid.
+     * beforeUid places it directly before that page.
+     *
+     * @param array<string, mixed> $payload
+     */
+    private function resolveCreatePid(array $payload, int $beforeUid, int $afterUid = 0): int
+    {
+        $beforeUid = $beforeUid > 0 ? $beforeUid : (int) ($payload['beforeUid'] ?? 0);
+        $afterUid = $afterUid > 0 ? $afterUid : (int) ($payload['afterUid'] ?? 0);
+        if ($afterUid > 0 && $beforeUid <= 0) {
+            return -$afterUid;
+        }
+        if ($beforeUid > 0) {
+            return $this->recordService->targetBeforePage($beforeUid);
+        }
+        if (!isset($payload['pid']) || !is_numeric($payload['pid'])) {
+            throw new \InvalidArgumentException('Create requires numeric "pid" in data.');
+        }
+
+        return (int) $payload['pid'];
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function create(string $tableName, array $payload, bool $strict = false, int $beforeUid = 0, int $afterUid = 0): string
+    {
+        try {
+            $pid = $this->resolveCreatePid($payload, $beforeUid, $afterUid);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->encodeError($exception->getMessage());
+        }
+        unset($payload['beforeUid'], $payload['afterUid']);
         if (!$this->targetIsReadable($tableName, $pid)) {
             return $this->encodeError(PageAccessService::ACCESS_DENIED_MESSAGE);
         }
