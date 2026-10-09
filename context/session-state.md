@@ -6,6 +6,18 @@
 
 **Done:** "make the Contact page show up in Google" asks which page to use when no page is called Contact, and does not prepare SEO for the open page. "The first one" locks the first offered page (`lockedPageId`). See `context/features/ai-agent.md`.
 
+## 2026-10-09 — Progress belongs to the newest request
+
+**Done:** The Progress panel (`controller-stream.js`) shows only the plan saved after the newest request the editor typed; hidden continuation rows count as part of it. "Waiting for your approval" needs an open step and an unapplied card of that request, so an old card no longer keeps it on. The panel hides once every step is done and no turn is running.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — Attach card only for files that can be shown
+
+**Done:** `file_reference_add` checks the files in `plan()` and again in `execute()`: numeric sys_file uid, the file exists, the editor may read it, and it is on disk (`File::exists()`). The field must be shown for the record type (`TcaSchemaService::getShownFields()`), so `assets` on an Image element is refused with the field to use. The card lists file names. `file_list` says storageUid 1 is fileadmin.
+
 **Last touched:** 2026-10-09
 
 ---
@@ -22,10 +34,13 @@
 
 **Done:** `file_upload_from_url` (`FileUploadService::downloadFromUrl`) pins the resolved public IP without `stream`, so Guzzle's stream handler is not given a curl option. A transport failure tells the editor the host. AI image generation itself stays `t3ai_generate_image` in ns_t3ai.
 
+<<<<<<< HEAD
 ## 2026-10-09 — SEO Undo restores the page columns
 
 **Done:** Suggestion Undo writes the preview field `column` (`seo_title`, `description`, `og_title`, `og_description`) instead of the suggestion key (`metaTitle`, …). Keywords already matched its column, so only that field was cleared. See `context/features/ai-agent.md`.
 
+=======
+>>>>>>> 8e5b0cb776f83264e72a24c5effa7736dac5340c
 **Last touched:** 2026-10-09
 
 ---

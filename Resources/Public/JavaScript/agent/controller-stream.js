@@ -252,8 +252,23 @@ export const streamMethods = {
     },
 
   /**
-     * The plan the agent is working through: the live one while a turn runs, otherwise the newest
-     * plan saved with the conversation.
+     * Index of the newest request the editor typed. Hidden rows (continuations after Apply) belong to it.
+     *
+     * @returns {number} -1 when the editor has not written yet
+     */
+    latestRequestIndex() {
+      for (let i = this.messages.length - 1; i >= 0; i--) {
+        const message = this.messages[i];
+        if (message?.role === 'user' && message.meta?.hidden !== true) {
+          return i;
+        }
+      }
+      return -1;
+    },
+
+  /**
+     * The plan the agent is working through: the live one while a turn runs, otherwise the plan saved
+     * for the newest request. A plan of an earlier request is not shown for a request without one.
      *
      * @returns {Array<{title: string, status: string}>}
      */
@@ -261,7 +276,8 @@ export const streamMethods = {
       if (Array.isArray(this.livePlan)) {
         return this.livePlan;
       }
-      for (let i = this.messages.length - 1; i >= 0; i--) {
+      const since = this.latestRequestIndex();
+      for (let i = this.messages.length - 1; i > since; i--) {
         const plan = this.messages[i]?.meta?.plan;
         if (Array.isArray(plan)) {
           return plan;
@@ -271,14 +287,15 @@ export const streamMethods = {
     },
 
   /**
-     * Whether a prepared change (any severity) still waits for the editor's Apply or Cancel.
+     * Whether a change prepared for the newest request still waits for the editor's Apply or Cancel.
      *
      * @returns {boolean}
      */
     hasPendingDraft() {
-      return this.messages.some((message) => {
+      const since = this.latestRequestIndex();
+      return this.messages.some((message, index) => {
         const draft = message.meta?.draft;
-        return message.meta?.type === 'inline_draft' && Boolean(draft)
+        return index > since && message.meta?.type === 'inline_draft' && Boolean(draft)
           && !draft.applied && !draft.discarded && !draft.applying;
       });
     },
@@ -291,16 +308,17 @@ export const streamMethods = {
         return;
       }
       const steps = this.currentPlan();
-      if (steps.length === 0) {
+      const done = steps.filter((step) => step.status === 'completed').length;
+      // Once every step is done and the agent has stopped, nothing is left to follow.
+      if (steps.length === 0 || (done === steps.length && this.isRunning !== true)) {
         this.planPanel.hidden = true;
         this.planPanel.innerHTML = '';
         this.planPanel.classList.remove('nst3af-agent-plan--waiting');
         return;
       }
       // A prepared change is waiting for Apply / Cancel: say so and stop the spinner, the agent is not working.
-      const waiting = this.isRunning !== true && this.hasPendingDraft();
+      const waiting = this.isRunning !== true && done < steps.length && this.hasPendingDraft();
       this.planPanel.classList.toggle('nst3af-agent-plan--waiting', waiting);
-      const done = steps.filter((step) => step.status === 'completed').length;
       const open = this.planOpen ?? done < steps.length;
       const items = steps.map((step) => {
         const status = ['completed', 'in_progress', 'failed'].includes(step.status) ? step.status : 'pending';

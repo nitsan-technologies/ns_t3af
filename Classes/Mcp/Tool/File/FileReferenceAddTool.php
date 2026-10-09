@@ -35,6 +35,8 @@ use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use TYPO3\CMS\Core\Resource\File;
+use TYPO3\CMS\Core\Resource\ResourceFactory;
 
 #[McpToolSeverity(ToolSeverity::Write)]
 readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannableToolInterface
@@ -44,6 +46,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
         private TcaSchemaService $tcaSchemaService,
         private McpConfirmationPlanBuilder $confirmationPlanBuilder,
         private RecordService $recordService,
+        private ResourceFactory $resourceFactory,
     ) {}
 
     /**
@@ -78,19 +81,26 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
                 $fileFields !== [] ? implode(', ', $fileFields) : 'none',
             ));
         }
-        if ($this->findRecord($table, $uid) === null) {
+        $record = $this->findRecord($table, $uid);
+        if ($record === null) {
             throw new \InvalidArgumentException(sprintf(
                 'There is no %s record with uid %d. Use the uid of the record itself (for a new content element: the uid from the applied result), not the page uid.',
                 $table,
                 $uid,
             ));
         }
+        $this->assertFieldIsShownForRecord($table, $uid, $record, $fieldName, $fileFields);
+        $files = $this->filesToAttach(self::numericFileUids($fileUids));
+        $fileLabels = implode(', ', array_map(
+            static fn(File $file): string => $file->getName() . ' (uid ' . $file->getUid() . ')',
+            $files,
+        ));
 
         $arguments = [
             'table' => $table,
             'uid' => $uid,
             'fieldName' => $fieldName,
-            'fileUids' => $fileUids,
+            'fileUids' => implode(',', array_map(static fn(File $file): int => $file->getUid(), $files)),
         ];
 
         return $this->confirmationPlanBuilder->confirmation(
@@ -98,10 +108,10 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
             'file_reference_add',
             '_reference',
             $fieldName,
-            'attach file(s) ' . $fileUids,
+            'attach file(s) ' . $fileLabels,
             [
                 'arguments' => $arguments,
-                'summary' => sprintf('Attach file(s) %s to %s uid %d (%s)', $fileUids, $table, $uid, $fieldName),
+                'summary' => sprintf('Attach file(s) %s to %s uid %d (%s)', $fileLabels, $table, $uid, $fieldName),
                 ...$arguments,
             ],
             $table,
@@ -144,6 +154,13 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
         }
 
         try {
+            $this->assertFieldIsShownForRecord($table, $uid, $record, $fieldName, $fileFields);
+            $this->filesToAttach($parsedUids);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->encodeError($exception->getMessage());
+        }
+
+        try {
             $referenceUids = $this->dataHandlerService->createFileReferences(
                 $table,
                 $uid,
@@ -174,13 +191,122 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
     private function findRecord(string $table, int $uid): ?array
     {
         $deleteField = (string) ($GLOBALS['TCA'][$table]['ctrl']['delete'] ?? '');
+        $fields = ['uid', 'pid'];
+        if ($deleteField !== '') {
+            $fields[] = $deleteField;
+        }
+        $typeField = self::typeField($table);
+        if ($typeField !== '') {
+            $fields[] = $typeField;
+        }
         try {
-            $row = $this->recordService->findByUid($table, $uid, $deleteField !== '' ? ['uid', 'pid', $deleteField] : ['uid', 'pid']);
+            $row = $this->recordService->findByUid($table, $uid, $fields);
         } catch (\Throwable) {
             return null;
         }
 
         return $row !== null && ($deleteField === '' || (int) ($row[$deleteField] ?? 0) === 0) ? $row : null;
+    }
+
+    /** Type column of the table, or '' when the type comes from a related record ("uid_local:type"). */
+    private static function typeField(string $table): string
+    {
+        $typeField = (string) ($GLOBALS['TCA'][$table]['ctrl']['type'] ?? '');
+
+        return str_contains($typeField, ':') ? '' : $typeField;
+    }
+
+    /**
+     * "assets" on an Image element is stored but never shown or rendered.
+     *
+     * @param array<string, mixed> $record
+     * @param list<string> $fileFields
+     */
+    private function assertFieldIsShownForRecord(string $table, int $uid, array $record, string $fieldName, array $fileFields): void
+    {
+        $typeField = self::typeField($table);
+        $recordType = $typeField !== '' ? trim((string) ($record[$typeField] ?? '')) : '';
+        if ($recordType === '') {
+            return;
+        }
+        $shown = $this->tcaSchemaService->getShownFields($table, $recordType);
+        if ($shown === [] || in_array($fieldName, $shown, true)) {
+            return;
+        }
+        $usable = array_values(array_intersect($fileFields, $shown));
+
+        throw new \InvalidArgumentException(sprintf(
+            'Field "%s" is not used by %s uid %d (%s "%s"). %s',
+            $fieldName,
+            $table,
+            $uid,
+            $typeField,
+            $recordType,
+            $usable !== [] ? 'Use fieldName "' . implode('" or "', $usable) . '".' : 'This record type has no file field.',
+        ));
+    }
+
+    /** @return non-empty-list<int> */
+    private static function numericFileUids(string $fileUids): array
+    {
+        $uids = [];
+        foreach (explode(',', $fileUids) as $part) {
+            $part = trim($part);
+            if ($part === '') {
+                continue;
+            }
+            if (preg_match('/^[1-9]\d*$/', $part) !== 1) {
+                throw new \InvalidArgumentException(sprintf(
+                    '"%s" is not a sys_file uid. Pass the numeric uid returned by file_upload_from_url, file_upload or file_list (storageUid 1 is fileadmin), not a file name.',
+                    $part,
+                ));
+            }
+            $uids[] = (int) $part;
+        }
+        if ($uids === []) {
+            throw new \InvalidArgumentException('fileUids is required: one or more sys_file uids, comma-separated.');
+        }
+
+        return array_values(array_unique($uids));
+    }
+
+    /**
+     * @param list<int> $fileUids
+     * @return list<File>
+     */
+    private function filesToAttach(array $fileUids): array
+    {
+        $files = [];
+        foreach ($fileUids as $fileUid) {
+            try {
+                $file = $this->resourceFactory->getFileObject($fileUid);
+            } catch (\Throwable) {
+                throw new \InvalidArgumentException(sprintf(
+                    'There is no file with sys_file uid %d. Look the file up with file_list (storageUid 1) and use its uid.',
+                    $fileUid,
+                ));
+            }
+            try {
+                $readable = $file->checkActionPermission('read');
+                $onDisk = $readable && !$file->isMissing() && $file->exists();
+            } catch (\Throwable) {
+                $readable = false;
+                $onDisk = false;
+            }
+            if (!$readable) {
+                throw new \InvalidArgumentException(sprintf('You may not use the file with sys_file uid %d.', $fileUid));
+            }
+            if (!$onDisk) {
+                throw new \InvalidArgumentException(sprintf(
+                    'The file %s (sys_file uid %d) is missing from the storage, so it would show as a broken image. Upload it again or pick another file.',
+                    $file->getName(),
+                    $fileUid,
+                ));
+            }
+            $files[] = $file;
+        }
+
+        return $files;
     }
 
     /** @param array<string, mixed> $context */
