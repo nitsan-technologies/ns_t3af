@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-09 — Undo on the attach card
+
+**Done:** Applying `file_reference_add` stores undo fields (`AgentWriteService::toolUndoFields()`): one `create` entry per new `sys_file_reference` with its `parent` (table, uid, field). `AgentUndoService` removes exactly those references with `DataHandlerService::removeFileReferences()` (delete via DataHandler, then the parent field gets the remaining references so its counter is right); the file and the record stay. The tool result card keeps `changeId` / `undoable` and shows Undo below the collapsed result, then "Undone". Other confirmed tools still have no undo. Checked live: tt_content 250 assets 2 → 1, reference 106 deleted, reference 99 and sys_file 146 untouched.
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-09 — Attach cards show the images
 
 **Done:** `AgentMediaPreviewService` reads `fileUids` ("145,146" in the arguments, `[145]` in the result), so the `file_reference_add` card and its result card show a thumbnail and the file name of every file (up to `MAX_PREVIEWS`). A missing or non-image file in that list is shown by name only (empty `url`); `renderImagePreviews` renders it as a caption without an image. Single `fileUid` keys and file lists keep the old behaviour (no name-only entries), so an audio result still shows its player.

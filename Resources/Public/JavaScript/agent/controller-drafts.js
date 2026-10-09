@@ -167,6 +167,12 @@ export const draftMethods = {
       if (hasTurnGuardWarning(meta)) {
         extra += `<div class="nst3af-agent-msg__warn" role="status">${escapeHtml(String(meta.turnGuardWarning))}</div>`;
       }
+      let undoHtml = '';
+      if (success && meta.undone === true) {
+        undoHtml = `<div class="nst3af-agent-applied__actions"><span class="nst3af-agent-applied__undone">${escapeHtml(lang('agent.draft.undoneLabel', 'Undone'))}</span></div>`;
+      } else if (success && meta.changeId && meta.undoable === true) {
+        undoHtml = `<div class="nst3af-agent-applied__actions"><button type="button" class="btn btn-default btn-sm" data-nst3af-agent-undo="1" data-change-id="${escapeHtml(String(meta.changeId))}">${escapeHtml(lang('agent.draft.undo', 'Undo'))}</button></div>`;
+      }
 
       const autoHtml = autoRan
         ? `<span class="nst3af-agent-tcall__auto">${escapeHtml(lang('agent.toolCall.autoRan', 'completed'))}</span>`
@@ -191,6 +197,7 @@ export const draftMethods = {
             ${detailsHtml}
           </div>
         </details>
+        ${undoHtml}
       </div>`;
     },
 
@@ -723,6 +730,8 @@ export const draftMethods = {
             previews: Array.isArray(presented.previews) ? presented.previews : [],
             autoRan: false,
             correlationId: result.correlationId ?? message.meta?.correlationId ?? '',
+            changeId: result.changeId ?? '',
+            undoable: result.undoable === true,
             schedulerHandoff: payload.schedulerHandoff ?? null,
             fromDraftApply: true,
             workDurationMs,

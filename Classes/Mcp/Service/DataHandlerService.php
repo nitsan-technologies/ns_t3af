@@ -245,6 +245,38 @@ readonly class DataHandlerService
     }
 
     /**
+     * Remove some file references of a TCA file field; the files themselves stay. The parent field
+     * keeps the remaining references, so its counter stays right.
+     *
+     * @param list<int> $referenceUids
+     * @return list<int> UIDs of the removed references (only those still attached to this field)
+     */
+    public function removeFileReferences(string $table, int $recordUid, string $fieldName, array $referenceUids): array
+    {
+        $removed = [];
+        $remaining = [];
+        foreach ($this->recordService->findFileReferences($table, $recordUid, $fieldName) as $row) {
+            $uid = (int) ($row['uid'] ?? 0);
+            if ($uid <= 0) {
+                continue;
+            }
+            if (in_array($uid, $referenceUids, true)) {
+                $removed[] = $uid;
+            } else {
+                $remaining[] = $uid;
+            }
+        }
+        if ($removed === []) {
+            return [];
+        }
+
+        $this->deleteRecords('sys_file_reference', $removed);
+        $this->updateRecord($table, $recordUid, [$fieldName => implode(',', $remaining)]);
+
+        return $removed;
+    }
+
+    /**
      * Replace (or clear) all sys_file_reference rows for a TCA file field.
      *
      * Empty $references clears existing attachments. Non-empty lists delete
