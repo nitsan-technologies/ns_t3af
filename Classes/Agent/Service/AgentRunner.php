@@ -255,7 +255,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $state = new AgentTurnState($correlationId, $emitEvent);
         // Prefer the server checklist from the editor request when it applies; otherwise the model plan.
         $requestForChecklist = trim(self::requestQuery($userMessage, $historyMessages));
-        if ($requestForChecklist === '' || str_starts_with(trim($userMessage), '[The editor ')) {
+        if ($requestForChecklist === '' || str_starts_with(trim($userMessage), '[The editor ') || AgentPromptBuilder::isGoOnReply($userMessage)) {
             $requestForChecklist = AgentPromptBuilder::latestUserRequestText($historyMessages);
         }
         $modelPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
@@ -340,7 +340,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         );
 
         try {
-            $agentResult = $agent->call($this->buildMessages($userMessage, $historyMessages, $context, $plan))->getResult();
+            $agentResult = $agent->call($this->buildMessages($userMessage, $historyMessages, $context, $plan, $requestForChecklist))->getResult();
             $content = $agentResult->getContent();
             $finalText = is_string($content) ? trim($content) : '';
             // Models sometimes parrot draft-history notes as the final answer; never show that, retry once.
@@ -353,7 +353,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $finalText = '';
                 $nudge = $userMessage . "\n\n[System: Do not quote or repeat \"[Prepared change:…]\" or \"Review the proposed changes…\" lines — those are internal history notes, not answers. Call a write tool for my request now, or reply in one short plain sentence about the work.]";
                 $retryPlan = $state->plan !== [] ? $state->plan : $plan;
-                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan))->getResult();
+                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan, $requestForChecklist))->getResult();
                 $content = $agentResult->getContent();
                 $finalText = is_string($content) ? trim($content) : '';
                 if (AgentPromptBuilder::isCardHistoryEcho($finalText)) {
@@ -362,13 +362,13 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             }
             $retryPlan = $state->plan !== [] ? $state->plan : $plan;
             if (
-                $this->shouldRetryForRemainingWork($state, $retryPlan, $historyMessages, $userMessage, $finalText)
+                $this->shouldRetryForRemainingWork($state, $retryPlan, $historyMessages, $requestForChecklist ?: $userMessage, $finalText)
             ) {
-                $reminder = AgentPromptBuilder::remainingWorkReminder($historyMessages, $retryPlan, $userMessage);
+                $reminder = AgentPromptBuilder::remainingWorkReminder($historyMessages, $retryPlan, $requestForChecklist ?: $userMessage);
                 $nudge = $userMessage . "\n\n[System: Open work remains — do not say the request is finished. "
                     . $reminder
                     . ' Call the next write tool now (generate/attach image or the next content step).]';
-                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan))->getResult();
+                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan, $requestForChecklist))->getResult();
                 $content = $agentResult->getContent();
                 $finalText = is_string($content) ? trim($content) : '';
                 if (AgentPromptBuilder::isCardHistoryEcho($finalText)) {
@@ -628,8 +628,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
      * @param array<string, mixed> $context
      * @param list<array{title: string, status: string}> $plan
      */
-    private function buildMessages(string $userMessage, array $historyMessages, array $context, array $plan = []): MessageBag
+    private function buildMessages(string $userMessage, array $historyMessages, array $context, array $plan = [], string $request = ''): MessageBag
     {
+        // A new request is not in the history yet: the latest user message there belongs to the previous one.
+        $request = trim($request) !== '' ? $request : (AgentPromptBuilder::latestUserRequestText($historyMessages) ?: $userMessage);
         $bag = new MessageBag();
         $system = $this->promptBuilder->buildSystemPrompt($context);
         $appliedBlock = AgentPromptBuilder::appliedRecordsBlock($historyMessages);
@@ -637,14 +639,15 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $system .= "\n" . $appliedBlock;
         }
         $planBlock = AgentPlan::promptBlock($plan);
-        $checklist = AgentRequestChecklist::reconcile(
-            $historyMessages,
-            AgentPromptBuilder::latestUserRequestText($historyMessages) ?: $userMessage,
-        );
+        $checklist = AgentRequestChecklist::reconcile($historyMessages, $request);
         if ($checklist !== [] && AgentRequestChecklist::hasOpen($checklist)) {
-            $system .= "\n" . AgentRequestChecklist::promptBlock($checklist);
+            $system .= "\n" . AgentRequestChecklist::promptBlock($checklist, $request);
         } elseif ($planBlock !== '') {
             $system .= "\n" . $planBlock;
+        }
+        $unavailableFiles = AgentRequestedFiles::promptNote($historyMessages, $request);
+        if ($unavailableFiles !== '') {
+            $system .= "\n" . $unavailableFiles;
         }
         if ($system !== '') {
             $bag->add(Message::forSystem($system));
@@ -735,7 +738,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
         $found = [...self::fileActionTools($query, $executableTools, $offeredNames), ...$found];
         $workPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
-        if (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $query)) {
+        if (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, self::requestForGate($userMessage, $historyMessages))) {
             $found = [...self::imageWorkTools($executableTools, $offeredNames), ...$found];
         } elseif (AgentPromptBuilder::pendingImageAttachNote($historyMessages) !== '') {
             $found = [...self::pendingAttachTools($executableTools, $offeredNames), ...$found];
@@ -985,7 +988,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     private static function requestForGate(string $userMessage, array $historyMessages): string
     {
         $request = trim(self::requestQuery($userMessage, $historyMessages));
-        if ($request === '' || str_starts_with(trim($userMessage), '[The editor ')) {
+        if ($request === '' || str_starts_with(trim($userMessage), '[The editor ') || AgentPromptBuilder::isGoOnReply($userMessage)) {
             $request = AgentPromptBuilder::latestUserRequestText($historyMessages);
         }
 

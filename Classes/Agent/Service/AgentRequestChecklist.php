@@ -124,6 +124,7 @@ final class AgentRequestChecklist
         $since = self::historySinceLatestUserRequest($history, $request);
         $appliedCTypes = self::appliedCTypes($since);
         $imageAttached = self::hasSuccessfulMediaAttach($since);
+        $noFileLeft = AgentRequestedFiles::noFileLeftToAttach($since, $request);
 
         foreach ($steps as $index => $step) {
             if (($step['kind'] ?? '') === 'create') {
@@ -135,7 +136,7 @@ final class AgentRequestChecklist
                     $steps[$index]['status'] = 'completed';
                 }
             } elseif (($step['kind'] ?? '') === 'attach_image') {
-                $steps[$index]['status'] = $imageAttached ? 'completed' : 'pending';
+                $steps[$index]['status'] = $imageAttached ? 'completed' : ($noFileLeft ? 'failed' : 'pending');
             }
         }
 
@@ -165,7 +166,7 @@ final class AgentRequestChecklist
     public static function hasOpen(array $steps): bool
     {
         foreach ($steps as $step) {
-            if (($step['status'] ?? '') !== 'completed') {
+            if (!self::isClosed($step)) {
                 return true;
             }
         }
@@ -176,13 +177,22 @@ final class AgentRequestChecklist
     /**
      * @param list<array{kind: string, cType?: string, title: string, status: string}> $steps
      */
-    public static function nextActionHint(array $steps): string
+    public static function nextActionHint(array $steps, string $request = ''): string
     {
         foreach ($steps as $step) {
-            if (($step['status'] ?? '') === 'completed') {
+            if (self::isClosed($step)) {
                 continue;
             }
             if (($step['kind'] ?? '') === 'attach_image') {
+                $fileUids = AgentRequestedFiles::namedFileUids($request);
+                if ($fileUids !== []) {
+                    return sprintf(
+                        'Next: call file_reference_add with fileUids "%s" on the Text & Media / Images element (fieldName "assets" or "image").'
+                        . ' The editor chose these existing files: do not upload, download or generate an image. Do not claim the request is finished until that succeeds.',
+                        implode(',', $fileUids),
+                    );
+                }
+
                 return 'Next: generate or upload an image, then call file_reference_add on the Text & Media / Images element (fieldName "assets" or "image"). Do not claim the request is finished until that succeeds.';
             }
             $cType = (string) ($step['cType'] ?? '');
@@ -200,7 +210,7 @@ final class AgentRequestChecklist
     /**
      * @param list<array{kind: string, cType?: string, title: string, status: string}> $steps
      */
-    public static function promptBlock(array $steps): string
+    public static function promptBlock(array $steps, string $request = ''): string
     {
         if ($steps === [] || !self::hasOpen($steps)) {
             return '';
@@ -209,7 +219,7 @@ final class AgentRequestChecklist
         foreach ($steps as $number => $step) {
             $lines[] = sprintf('%d. [%s] %s', $number + 1, $step['status'], $step['title']);
         }
-        $next = self::nextActionHint($steps);
+        $next = self::nextActionHint($steps, $request);
 
         return 'Server checklist from the editor request (authoritative — keep going until every step is completed;'
             . ' do not claim finished while any step is pending or in_progress):'
@@ -470,7 +480,7 @@ final class AgentRequestChecklist
     {
         $found = false;
         foreach ($steps as $index => $step) {
-            if (($step['status'] ?? '') === 'completed') {
+            if (self::isClosed($step)) {
                 continue;
             }
             $steps[$index]['status'] = $found ? 'pending' : 'in_progress';
@@ -478,6 +488,16 @@ final class AgentRequestChecklist
         }
 
         return $steps;
+    }
+
+    /**
+     * Done, or impossible (the files to attach are missing): nothing is left to do for the step.
+     *
+     * @param array{status?: string} $step
+     */
+    private static function isClosed(array $step): bool
+    {
+        return in_array($step['status'] ?? '', ['completed', 'failed'], true);
     }
 
     /**

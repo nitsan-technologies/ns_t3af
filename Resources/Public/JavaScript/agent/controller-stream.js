@@ -309,15 +309,17 @@ export const streamMethods = {
       }
       const steps = this.currentPlan();
       const done = steps.filter((step) => step.status === 'completed').length;
-      // Once every step is done and the agent has stopped, nothing is left to follow.
-      if (steps.length === 0 || (done === steps.length && this.isRunning !== true)) {
+      // A failed step (the files to attach are missing, for example) is over too; the reply says why.
+      const finished = steps.filter((step) => ['completed', 'failed'].includes(step.status)).length;
+      // Once every step is over and the agent has stopped, nothing is left to follow.
+      if (steps.length === 0 || (finished === steps.length && this.isRunning !== true)) {
         this.planPanel.hidden = true;
         this.planPanel.innerHTML = '';
         this.planPanel.classList.remove('nst3af-agent-plan--waiting');
         return;
       }
       // A prepared change is waiting for Apply / Cancel: say so and stop the spinner, the agent is not working.
-      const waiting = this.isRunning !== true && done < steps.length && this.hasPendingDraft();
+      const waiting = this.isRunning !== true && finished < steps.length && this.hasPendingDraft();
       this.planPanel.classList.toggle('nst3af-agent-plan--waiting', waiting);
       const open = this.planOpen ?? done < steps.length;
       const items = steps.map((step) => {

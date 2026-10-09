@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
 
 /**
  * Builds inline draft card payloads from tool plans (BE-INLINE-DRAFT).
@@ -66,6 +67,9 @@ final class AgentDraftService
         $recordLabels = [];
 
         foreach ($plan->fields as $field) {
+            if (!self::isShownOnCard($plan, $field)) {
+                continue;
+            }
             $recordKey = $field->table . ':' . $field->uid;
             $recordLabels[$recordKey] ??= $this->recordLabeler?->recordLabel($field->table, $field->uid) ?? '';
             if ($field->field === '_rename' && $field->uid <= 0) {
@@ -156,6 +160,20 @@ final class AgentDraftService
         $base = basename($path);
 
         return ($base === '' || $base === '.' || $base === '/') ? '' : $base;
+    }
+
+    /**
+     * A new record keeps its default for a blank value: the card leaves that field out (an empty row only
+     * made Apply look blocked), and "Saved n of m" must not count it either.
+     */
+    public static function isShownOnCard(ToolPlan $plan, ToolPlanField $field): bool
+    {
+        if ($plan->action !== 'create' || $field->field === '_rename') {
+            return true;
+        }
+        $value = $field->proposedValue;
+
+        return !($value === null || (is_scalar($value) && trim((string) $value) === '') || $value === []);
     }
 
     private function formatValue(mixed $value): string

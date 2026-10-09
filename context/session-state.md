@@ -6,6 +6,26 @@
 
 **Done:** "make the Contact page show up in Google" asks which page to use when no page is called Contact, and does not prepare SEO for the open page. "The first one" locks the first offered page (`lockedPageId`). See `context/features/ai-agent.md`.
 
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — No made-up download URL for a missing file
+
+**Done:** After a missing-file refusal the agent invented `https://example.com/cake.png` and offered an upload card that failed with 404. The refusal now tells the agent to report the missing file, a prompt rule allows only URLs the editor wrote or a tool returned, and `file_upload_from_url` gives no card for placeholder hosts (example.com/.net/.org, *.example, *.test, *.invalid, localhost).
+
+**Done:** A request that names sys_file uids is checked before the model runs (`AgentRequestedFiles`, called from `AgentTurnRouter`). Unknown or missing files get a visible `files_unavailable` message and a system prompt note; when none of the named files is left, the checklist marks the attach step `failed`, so the turn ends without "Say continue" and Progress closes.
+
+**Done:** A create card no longer shows fields with a blank value (the model sent an empty `bodytext`), and a blank value on a create no longer disables Apply. On an edit Apply stays disabled for a blank value, now with the hint `agent.draft.blankProposed`.
+
+**Done:** A typed "continue" / "weiter" no longer replaces the request (`AgentPromptBuilder::isGoOnReply`, skipped by `latestUserRequestText` and the runner's gate), so the server checklist survives it. Files a read tool only showed (`file_list` thumbnails) no longer count as "saved but not attached" — that kept the turn open after a successful attach and made the agent attach the same files twice. `file_reference_add` names every unusable file in one refusal, and those refusals also close the attach step when they cover every file the request named.
+
+**Done:** With existing sys_file uids in the request the attach hint now says "call file_reference_add with fileUids …; do not upload, download or generate" (it always said "generate or upload an image", so the agent offered an upload card with an empty URL). `file_upload_from_url` gives no card without a full http(s) URL. `buildMessages` reconciles the checklist with this turn's request (a new request is not in the history yet, so it used the previous one). "Saved n of m" no longer counts the blank fields a create card leaves out.
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-09 — Progress belongs to the newest request
 
 **Done:** The Progress panel (`controller-stream.js`) shows only the plan saved after the newest request the editor typed; hidden continuation rows count as part of it. "Waiting for your approval" needs an open step and an unapplied card of that request, so an old card no longer keeps it on. The panel hides once every step is done and no turn is running.

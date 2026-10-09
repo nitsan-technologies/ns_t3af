@@ -222,4 +222,59 @@ TXT;
             array_column(array_filter($steps, static fn(array $s): bool => ($s['kind'] ?? '') === 'create'), 'cType'),
         );
     }
+
+    #[Test]
+    public function aTypedContinueKeepsTheRequestItContinues(): void
+    {
+        $request = 'Create a text & media content element with the heading Our Treats and attach the existing image sys_file uid 145';
+        $history = [
+            ['role' => 'user', 'content' => $request, 'meta' => ['type' => 'message']],
+            ['role' => 'assistant', 'content' => 'I am not finished yet.', 'meta' => ['type' => 'nl_reply']],
+            ['role' => 'user', 'content' => 'continue', 'meta' => ['type' => 'message']],
+        ];
+
+        self::assertSame($request, AgentPromptBuilder::latestUserRequestText($history));
+        self::assertTrue(AgentPromptBuilder::isGoOnReply('Weiter!'));
+        self::assertFalse(AgentPromptBuilder::isGoOnReply('continue with the table element'));
+    }
+
+    #[Test]
+    public function attachHintNamesTheFilesTheEditorChose(): void
+    {
+        $request = 'Create new text & media content element with the heading Our Treats and attach the existing images sys_file uid 114 (ebnodwdxc.png) and uid 115 (Migrate_From_Wordpress_to_TYPO3.png).';
+        $steps = AgentRequestChecklist::reconcile([
+            [
+                'role' => 'assistant',
+                'content' => 'Applied.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tt_content', 'uid' => 250, 'values' => ['CType' => 'textmedia']]],
+                ],
+            ],
+        ], $request);
+
+        $block = AgentRequestChecklist::promptBlock($steps, $request);
+        self::assertStringContainsString('file_reference_add with fileUids "114,115"', $block);
+        self::assertStringContainsString('do not upload, download or generate', $block);
+        self::assertStringContainsString('generate or upload an image', AgentRequestChecklist::promptBlock($steps, 'Create a text & media element with an image'));
+    }
+
+    #[Test]
+    public function filesALookupOnlyShowedAreNotWaitingToBeAttached(): void
+    {
+        $history = [
+            [
+                'role' => 'assistant',
+                'content' => 'This folder contains 2 file(s).',
+                'meta' => ['type' => 'tool_result', 'tool' => 'file_list', 'severity' => 'read', 'success' => true, 'previews' => [['fileUid' => 128], ['fileUid' => 129]]],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Image generated.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3ai_generate_image', 'severity' => 'write', 'success' => true, 'previews' => [['fileUid' => 150]]],
+            ],
+        ];
+
+        self::assertSame([150], AgentPromptBuilder::unattachedFileUids($history));
+    }
 }

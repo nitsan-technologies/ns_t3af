@@ -25,6 +25,7 @@ use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
 use TYPO3\CMS\Core\Locking\Exception\LockAcquireWouldBlockException;
 use TYPO3\CMS\Core\Locking\LockFactory;
 use TYPO3\CMS\Core\Locking\LockingStrategyInterface;
@@ -269,7 +270,7 @@ final class AgentWriteService
             'undoable' => AgentUndoService::isUndoable($undoFields),
             'correlationId' => $correlationId,
             'appliedCount' => $keptCount - $notSaved,
-            'totalCount' => count($plan->fields),
+            'totalCount' => count(array_filter($plan->fields, static fn(ToolPlanField $field): bool => AgentDraftService::isShownOnCard($plan, $field))),
             'readback' => $readback,
             'action' => $plan->action,
             'tool' => $plan->toolName,

@@ -277,14 +277,14 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
     private function filesToAttach(array $fileUids): array
     {
         $files = [];
+        $problems = [];
+        $missing = false;
         foreach ($fileUids as $fileUid) {
             try {
                 $file = $this->resourceFactory->getFileObject($fileUid);
             } catch (\Throwable) {
-                throw new \InvalidArgumentException(sprintf(
-                    'There is no file with sys_file uid %d. Look the file up with file_list (storageUid 1) and use its uid.',
-                    $fileUid,
-                ));
+                $problems[] = sprintf('There is no file with sys_file uid %d.', $fileUid);
+                continue;
             }
             try {
                 $readable = $file->checkActionPermission('read');
@@ -294,16 +294,21 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
                 $onDisk = false;
             }
             if (!$readable) {
-                throw new \InvalidArgumentException(sprintf('You may not use the file with sys_file uid %d.', $fileUid));
+                $problems[] = sprintf('You may not use the file with sys_file uid %d.', $fileUid);
+                continue;
             }
             if (!$onDisk) {
-                throw new \InvalidArgumentException(sprintf(
-                    'The file %s (sys_file uid %d) is missing from the storage, so it would show as a broken image. Upload it again or pick another file.',
-                    $file->getName(),
-                    $fileUid,
-                ));
+                $problems[] = sprintf('The file %s (sys_file uid %d) is missing from the storage, so it would show as a broken image.', $file->getName(), $fileUid);
+                $missing = true;
+                continue;
             }
             $files[] = $file;
+        }
+        // Every unusable file is named at once: the agent must not find them one call at a time.
+        if ($problems !== []) {
+            throw new \InvalidArgumentException(implode(' ', $problems) . ($missing
+                ? ' Tell the editor which files are missing; do not download, generate or pick a replacement.'
+                : ' Unless the editor named this uid, look the file up with file_list (storageUid 1) and use its uid.'));
         }
 
         return $files;
