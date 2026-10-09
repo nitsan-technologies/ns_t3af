@@ -33,8 +33,9 @@ Admin checklist
 For editors
 -----------
 
-Editors usually do not configure providers directly. They interact with
-features built by other extensions that depend on AI Foundation.
+Editors usually do not configure providers directly. They can use the built-in
+:ref:`AI Agent <ai-agent>` (toolbar :guilabel:`Ask AI Agent` or
+**Ctrl/Cmd+Shift+K**) and features from child extensions that depend on AI Foundation.
 
 When AI features fail in a backend module:
 
@@ -63,4 +64,5 @@ Known boundaries
 ----------------
 
 * No standalone frontend plugin is provided by this extension.
-* This package is a service layer; UI features come from dependent extensions.
+* Backend UI includes the :ref:`AI Agent <ai-agent>` and AI Foundation modules;
+  additional editor workflows come from dependent extensions.
