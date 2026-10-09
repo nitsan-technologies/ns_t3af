@@ -19,18 +19,21 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
+use NITSAN\NsT3AF\Agent\Service\AgentApplyNotRetryableException;
 use NITSAN\NsT3AF\Agent\Service\AgentDraftSession;
 use NITSAN\NsT3AF\Agent\Service\AgentLanguageResolver;
 use NITSAN\NsT3AF\Agent\Service\AgentLowRiskFieldMatrix;
 use NITSAN\NsT3AF\Agent\Service\AgentToolEditorLabelService;
 use NITSAN\NsT3AF\Agent\Service\AgentToolResultPresenter;
 use NITSAN\NsT3AF\Agent\Service\AgentWriteService;
+use NITSAN\NsT3AF\Agent\Service\SatelliteToolPlanService;
 use NITSAN\NsT3AF\Api\AiServiceInterface;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPlaygroundService;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -183,6 +186,74 @@ final class AgentWriteServiceGuardsTest extends TestCase
         self::assertSame('create', $result['action']);
     }
 
+    #[Test]
+    public function downloadThatCanNeverWorkIsNotOfferedAgain(): void
+    {
+        $service = $this->downloadService('{"error":"Could not resolve host \"no-such-host.invalid\".","retryable":false}');
+
+        try {
+            $service->apply('draft-1', []);
+            self::fail('A failed download must be reported.');
+        } catch (AgentApplyNotRetryableException $exception) {
+            self::assertSame(1712003211, $exception->getCode());
+            self::assertStringContainsString('Could not resolve host', $exception->getMessage());
+        }
+
+        self::assertNull((new AgentDraftSession())->getDraft('draft-1'));
+    }
+
+    #[Test]
+    public function downloadThatMayWorkLaterStaysOnTheCard(): void
+    {
+        $service = $this->downloadService('{"error":"Could not download the file from example.com."}');
+
+        try {
+            $service->apply('draft-1', []);
+            self::fail('A failed download must be reported.');
+        } catch (\RuntimeException $exception) {
+            self::assertNotInstanceOf(AgentApplyNotRetryableException::class, $exception);
+        }
+
+        self::assertNotNull((new AgentDraftSession())->getDraft('draft-1'));
+    }
+
+    /**
+     * @return iterable<string, array{mixed, bool}>
+     */
+    public static function failureResults(): iterable
+    {
+        yield 'json string, final' => ['{"error":"x","retryable":false}', true];
+        yield 'array, final' => [['error' => 'x', 'retryable' => false], true];
+        yield 'no flag' => ['{"error":"x"}', false];
+        yield 'retryable true' => ['{"error":"x","retryable":true}', false];
+        yield 'not json' => ['boom', false];
+        yield 'null' => [null, false];
+    }
+
+    #[Test]
+    #[DataProvider('failureResults')]
+    public function failureIsFinalOnlyWhenTheToolSaysSo(mixed $result, bool $expected): void
+    {
+        self::assertSame($expected, AgentWriteService::failureIsFinal($result));
+    }
+
+    private function downloadService(string $toolResult): AgentWriteService
+    {
+        $plan = new ToolPlan('create', 'file_upload_from_url', [], [
+            'planKind' => SatelliteToolPlanService::PLAN_KIND_TOOL_CONFIRMATION,
+            'arguments' => ['url' => 'https://no-such-host.invalid/a.jpg', 'directoryPath' => 'user_upload'],
+        ]);
+        $playground = $this->createMock(McpPlaygroundService::class);
+        $playground->method('invoke')->willReturn([
+            'success' => false,
+            'result' => $toolResult,
+            'latencyMs' => 1,
+            'message' => (string) (json_decode($toolResult, true)['error'] ?? 'failed'),
+        ]);
+
+        return $this->service($this->createMock(DataHandlerService::class), $this->createMock(RecordService::class), time(), $plan, $playground);
+    }
+
     /** @return DataHandlerService&MockObject */
     private function dataHandlerApplying(): DataHandlerService
     {
@@ -227,6 +298,7 @@ final class AgentWriteServiceGuardsTest extends TestCase
         RecordService $records,
         ?int $createdAt,
         ?ToolPlan $plan = null,
+        ?McpPlaygroundService $playground = null,
     ): AgentWriteService {
         $plan ??= new ToolPlan('update', 'write_table', [
             new ToolPlanField(self::FIELD_KEY, 'tt_content', 42, 'header', 'Old', 'New'),
@@ -234,7 +306,7 @@ final class AgentWriteServiceGuardsTest extends TestCase
         $stored = [
             'plan' => $plan->toArray(),
             'severity' => 'write',
-            'tool' => 'write_table',
+            'tool' => $plan->toolName,
             'destructiveArmed' => false,
         ];
         if ($createdAt !== null) {
@@ -249,7 +321,7 @@ final class AgentWriteServiceGuardsTest extends TestCase
             $dataHandler,
             $records,
             $draftSession,
-            $this->createMock(McpPlaygroundService::class),
+            $playground ?? $this->createMock(McpPlaygroundService::class),
             new AgentToolResultPresenter(
                 $this->createMock(AiServiceInterface::class),
                 new AgentToolEditorLabelService($translator),

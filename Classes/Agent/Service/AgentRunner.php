@@ -142,7 +142,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         // Drop a card the editor already declined, and a second copy of a create that is still waiting.
         $declinedDropped = 0;
-        $state->messages = self::withoutRepeatedDeclinedDrafts($state->messages, $historyMessages, ($continuation['outcome'] ?? '') === 'declined', $declinedDropped);
+        $failedDropped = 0;
+        $state->messages = self::withoutRepeatedDeclinedDrafts($state->messages, $historyMessages, ($continuation['outcome'] ?? '') === 'declined', $declinedDropped, $failedDropped);
         $cardDropped = $declinedDropped > 0;
 
         $state->attachPendingPlan();
@@ -172,6 +173,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $finalText = $this->translator->translate(
                 ($continuation['outcome'] ?? '') === 'declined' ? 'agent.turn.declinedAskInstead' : 'agent.turn.declinedNotRepeated',
             );
+        }
+
+        if ($failedDropped > 0 && !$state->failed && !$cardLeft && (trim($finalText) === '' || AgentPromptBuilder::isCardHistoryEcho($finalText))) {
+            $finalText = $this->translator->translate('agent.turn.failedNotRepeated');
         }
 
         if ($state->failed || ($finalText === '' && $state->executedTools !== [])) {
@@ -510,16 +515,19 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
      * executed. A follow-up ("check now") otherwise adds a second identical page draft, and
      * Execute all writes both. A card of a tool the editor declined in this request (other than
      * write_table) is not offered again in it, and right after a decline a create of the same
-     * content type is dropped too, even when a field or argument differs.
+     * content type is dropped too, even when a field or argument differs. A card whose Apply failed
+     * for good (bad URL, unknown host) is not offered again with the same arguments.
      *
      * @param list<array{role: string, content: string, meta: array<string, mixed>}> $messages messages added by this turn
      * @param list<array<string, mixed>> $history the conversation before this turn
      * @param int $declinedDropped set to the number of cards dropped because the editor declined them
+     * @param int $failedDropped set to the number of cards dropped because the same Apply already failed for good
      * @return list<array{role: string, content: string, meta: array<string, mixed>}>
      */
-    public static function withoutRepeatedDeclinedDrafts(array $messages, array $history, bool $afterDecline = false, int &$declinedDropped = 0): array
+    public static function withoutRepeatedDeclinedDrafts(array $messages, array $history, bool $afterDecline = false, int &$declinedDropped = 0, int &$failedDropped = 0): array
     {
         $declinedDropped = 0;
+        $failedDropped = 0;
         $blocked = [];
         $declinedCreates = [];
         foreach ($history as $message) {
@@ -535,6 +543,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             }
             $discarded = ($draft['discarded'] ?? false) === true;
             $applied = ($draft['applied'] ?? false) === true || ($message['meta']['applied'] ?? false) === true;
+            if (!$discarded && !$applied && ($draft['failed'] ?? false) === true) {
+                $blocked[self::draftSignature($draft)] = 'failed';
+                continue;
+            }
             $pendingCreate = !$discarded && !$applied && (string) ($draft['action'] ?? '') === 'create';
             if ($discarded || $pendingCreate) {
                 $blocked[self::draftSignature($draft)] = $discarded ? 'declined' : 'pending';
@@ -555,6 +567,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $signature = self::draftSignature($draft);
                 if (isset($blocked[$signature])) {
                     $declinedDropped += $blocked[$signature] === 'declined' ? 1 : 0;
+                    $failedDropped += $blocked[$signature] === 'failed' ? 1 : 0;
                     continue;
                 }
                 if (
@@ -609,11 +622,16 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             }
         }
 
+        $arguments = $draft['arguments'] ?? [];
+        // A tool card keeps its arguments only in the summary ("upload from https://… to user_upload").
+        $summary = $fields === [] && $arguments === [] ? (string) ($draft['summary'] ?? '') : '';
+
         return md5((string) json_encode([
             $draft['tool'] ?? '',
             $draft['kind'] ?? '',
             $fields,
-            $draft['arguments'] ?? [],
+            $arguments,
+            $summary,
         ]));
     }
 

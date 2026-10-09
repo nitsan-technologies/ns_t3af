@@ -711,6 +711,10 @@
                 <source>I left out the step you declined. What should I do next?</source>
                 <target>Den Schritt, den Sie abgelehnt haben, habe ich ausgelassen. Was soll ich als Nächstes tun?</target>
             </trans-unit>
+            <trans-unit id="agent.turn.failedNotRepeated">
+                <source>That step already failed and would fail the same way again, so I did not offer it again. Give me a different address or file.</source>
+                <target>Dieser Schritt ist bereits gescheitert und würde genauso wieder scheitern, daher habe ich ihn nicht erneut angeboten. Nennen Sie eine andere Adresse oder Datei.</target>
+            </trans-unit>
             <trans-unit id="agent.turn.imageGenerationUnavailable">
                 <source>AI image generation is not available to you (it needs T3AI with an image provider and access to T3AI Media), so no image will be generated. I will do the rest of the request.</source>
                 <target>KI-Bildgenerierung steht Ihnen nicht zur Verfügung (sie benötigt T3AI mit einem Bild-Anbieter und Zugriff auf T3AI Media), daher wird kein Bild erzeugt. Den Rest der Anfrage erledige ich.</target>
@@ -1748,6 +1752,10 @@
             <trans-unit id="agent.draft.expired">
                 <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
                 <target>Dieser Vorschlag ist veraltet und wurde nicht ausgeführt. Fragen Sie erneut, um einen aktuellen zu erhalten.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.failedFinal">
+                <source>Trying again would fail the same way, so this step is not offered again. Ask with a different address or file.</source>
+                <target>Ein erneuter Versuch würde genauso scheitern, daher wird dieser Schritt nicht noch einmal angeboten. Fragen Sie mit einer anderen Adresse oder Datei.</target>
             </trans-unit>
             <trans-unit id="agent.turn.streamInterrupted">
                 <source>The connection was interrupted. Your request may still be running. Reload the conversation in a moment to see the result.</source>

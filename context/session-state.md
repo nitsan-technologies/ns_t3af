@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-09 — A download that cannot work is not offered again
+
+**Done:** `FileUploadService::assertPublicHttpUrl()` resolves a host name once: an unknown host throws `Could not resolve host "…"` (1747320020) instead of "private or reserved network address", and the checked IP is the pinned one. `FileUploadService::isPermanentFailure()` marks bad URL / unknown host / private address / redirect loop / empty body / HTML page / too large / HTTP 4xx (not 408, 429) as final; `FileUploadFromUrlTool` then returns `{"error": …, "retryable": false}`. `AgentWriteService` turns that into `AgentApplyNotRetryableException` (code 1712003211) and does not put the draft back; the apply endpoint answers `retryable: false` and records `draft.failed` + `failureMessage` (`AgentConversationRecorder::failed()`). The window shows the reason and `agent.draft.failedFinal` with no Apply button (`renderFailedDraft`), and Execute all skips it; a reopened chat does not mark it expired. The history note says "failed and would fail again with the same arguments: …", and `withoutRepeatedDeclinedDrafts()` drops the same card (reply `agent.turn.failedNotRepeated`). Tool cards carry no arguments in the window, so `draftSignature()` uses the summary when fields and arguments are empty (before, any two download cards counted as the same one). Network errors, 5xx, 408 and 429 stay retryable. Checked live: unknown host → message, draft gone; next request with a real Wikimedia JPG → new card, uploaded (sys_file 161).
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-09 — AI-generated images: no stock photos, no repeat after decline
 
 **Done:** `AgentRequestedFiles::asksForGeneratedImage()` recognises "AI-generated image", "generate an image", "generiere ein Bild", "KI-Bild". When the editor cannot use `t3ai_generate_image`, `AgentTurnRouter` adds the `agent.turn.imageGenerationUnavailable` notice (`files_unavailable` with `noFileLeft` and `imageGenerationUnavailable`): the attach step closes and `promptNote()` forbids a web image. `T3afToolbox` refuses `file_upload_from_url` for such a request unless the editor gave a URL (pointing to `t3ai_generate_image` when it is there). The checklist hint names `t3ai_generate_image`. A declined tool card (other than `write_table`) is not offered again in the same request, a declined `t3ai_generate_image` closes the attach step, and the "element still has no image" reminder stays quiet; a dropped card with no reply text answers `agent.turn.declinedNotRepeated`. Checked live (OpenAI, Mistral ×3): Apply → one textmedia with one `assets` reference to a new file with alternative; Decline → no file, no new image card.

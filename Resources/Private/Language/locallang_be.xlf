@@ -768,6 +768,9 @@
       <trans-unit id="agent.turn.declinedNotRepeated" resname="agent.turn.declinedNotRepeated">
         <source>I left out the step you declined. What should I do next?</source>
       </trans-unit>
+      <trans-unit id="agent.turn.failedNotRepeated" resname="agent.turn.failedNotRepeated">
+        <source>That step already failed and would fail the same way again, so I did not offer it again. Give me a different address or file.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.imageGenerationUnavailable" resname="agent.turn.imageGenerationUnavailable">
         <source>AI image generation is not available to you (it needs T3AI with an image provider and access to T3AI Media), so no image will be generated. I will do the rest of the request.</source>
       </trans-unit>
@@ -1422,6 +1425,9 @@
       </trans-unit>
       <trans-unit id="agent.draft.expired" resname="agent.draft.expired">
         <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.failedFinal" resname="agent.draft.failedFinal">
+        <source>Trying again would fail the same way, so this step is not offered again. Ask with a different address or file.</source>
       </trans-unit>
       <trans-unit id="agent.turn.streamInterrupted" resname="agent.turn.streamInterrupted">
         <source>The connection was interrupted. Your request may still be running. Reload the conversation in a moment to see the result.</source>

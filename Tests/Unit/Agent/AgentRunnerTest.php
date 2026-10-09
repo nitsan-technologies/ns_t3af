@@ -842,6 +842,44 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function aDownloadThatFailedForGoodIsNotOfferedAgainUnchanged(): void
+    {
+        $download = static fn(string $url, bool $failed = false): array => [
+            'role' => 'assistant',
+            'content' => 'Upload file from URL',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => ['tool' => 'file_upload_from_url', 'failed' => $failed, 'fields' => [], 'arguments' => ['url' => $url]],
+            ],
+        ];
+        $history = [$download('https://no-such-host.invalid/a.jpg', true)];
+        $newRequest = ['role' => 'user', 'content' => 'Try again', 'meta' => ['type' => 'message']];
+
+        $declinedDropped = 0;
+        $failedDropped = 0;
+        $kept = AgentRunner::withoutRepeatedDeclinedDrafts([$download('https://no-such-host.invalid/a.jpg')], [...$history, $newRequest], false, $declinedDropped, $failedDropped);
+
+        self::assertSame([], $kept);
+        self::assertSame(0, $declinedDropped);
+        self::assertSame(1, $failedDropped);
+        // Another address is a new attempt.
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$download('https://upload.wikimedia.org/a.jpg')], $history));
+
+        // Tool cards in the window carry no arguments: the address is only in the summary.
+        $card = static fn(string $url, bool $failed = false): array => [
+            'role' => 'assistant',
+            'content' => 'upload from ' . $url . ' to user_upload',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => ['tool' => 'file_upload_from_url', 'kind' => 'tool_confirmation', 'action' => 'create', 'failed' => $failed, 'fields' => [], 'arguments' => [], 'summary' => 'upload from ' . $url . ' to user_upload'],
+            ],
+        ];
+        $history = [$card('https://no-such-host.invalid/a.jpg', true)];
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$card('https://no-such-host.invalid/a.jpg')], $history));
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$card('https://upload.wikimedia.org/a.jpg')], $history));
+    }
+
+    #[Test]
     public function aPendingCreateIsNotOfferedAgain(): void
     {
         $create = static fn(string $title, bool $applied = false): array => [

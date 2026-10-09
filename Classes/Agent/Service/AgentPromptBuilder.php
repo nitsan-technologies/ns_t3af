@@ -323,6 +323,11 @@ readonly class AgentPromptBuilder
         if (($state['discarded'] ?? false) === true) {
             return 'declined';
         }
+        if (($state['failed'] ?? false) === true) {
+            $reason = trim((string) ($state['failureMessage'] ?? ''));
+
+            return 'failed and would fail again with the same arguments' . ($reason !== '' ? ': ' . $reason : '');
+        }
 
         return 'waiting for the editor';
     }
