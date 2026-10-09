@@ -25,10 +25,14 @@ use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
 use TYPO3\CMS\Backend\Module\ModuleProvider;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Database\Connection;
+use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
 use TYPO3\CMS\Core\Exception\SiteNotFoundException;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * The editor's current backend context for the AI Agent: what the window shows (chips)
@@ -134,6 +138,25 @@ final readonly class AgentContextPresenter
                 $line .= sprintf(', parent "%s" [%d]', $page['parent']['title'] ?? '', (int) ($page['parent']['uid'] ?? 0));
             }
             $lines[] = $line;
+            $translations = is_array($page['translations'] ?? null) ? $page['translations'] : [];
+            if ($translations !== []) {
+                $titles = [];
+                foreach (is_array($details['siteLanguages'] ?? null) ? $details['siteLanguages'] : [] as $siteLanguage) {
+                    if (is_array($siteLanguage)) {
+                        $titles[(int) ($siteLanguage['id'] ?? 0)] = (string) ($siteLanguage['title'] ?? '');
+                    }
+                }
+                $lines[] = '- Translations of this page (change these uids to show/hide/edit a translation): ' . implode(', ', array_map(
+                    static fn(array $t): string => sprintf(
+                        '%s [language %d] = page uid %d%s',
+                        $titles[(int) $t['languageId']] ?? 'Language',
+                        (int) $t['languageId'],
+                        (int) $t['uid'],
+                        ($t['hidden'] ?? false) === true ? ' (hidden)' : ' (visible)',
+                    ),
+                    array_filter($translations, 'is_array'),
+                ));
+            }
         } else {
             $lines[] = '- Page: none selected';
         }
@@ -221,7 +244,7 @@ final readonly class AgentContextPresenter
     }
 
     /**
-     * @return array{uid: int, title: string, slug: string, parent: array{uid: int, title: string}|null}
+     * @return array{uid: int, title: string, slug: string, parent: array{uid: int, title: string}|null, translations?: list<array{uid: int, languageId: int, hidden: bool}>}
      */
     private function pageDetails(int $pageId, ?BackendUserAuthentication $user = null): array
     {
@@ -233,12 +256,44 @@ final readonly class AgentContextPresenter
             || BackendUtility::readPageAccess($parentId, $user->getPagePermsClause(Permission::PAGE_SHOW)) !== false;
         $parent = $parentId > 0 && $parentReadable ? BackendUtility::getRecord('pages', $parentId, 'uid,title') : null;
 
-        return [
+        $details = [
             'uid' => $pageId,
             'title' => trim((string) ($row['title'] ?? '')) !== '' ? (string) $row['title'] : 'Page ' . $pageId,
             'slug' => (string) ($row['slug'] ?? ''),
             'parent' => is_array($parent) ? ['uid' => $parentId, 'title' => (string) ($parent['title'] ?? '')] : null,
         ];
+
+        // Translations sit next to the page (own pid), not below it; the model cannot find them with a
+        // search below the page and then reports "the German version does not exist".
+        $translations = [];
+        try {
+            $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('pages');
+            $queryBuilder->getRestrictions()->removeAll()->add(GeneralUtility::makeInstance(DeletedRestriction::class));
+            $rows = $queryBuilder
+                ->select('uid', 'sys_language_uid', 'hidden')
+                ->from('pages')
+                ->where(
+                    $queryBuilder->expr()->eq('l10n_parent', $queryBuilder->createNamedParameter($pageId, Connection::PARAM_INT)),
+                    $queryBuilder->expr()->gt('sys_language_uid', 0),
+                )
+                ->orderBy('sys_language_uid')
+                ->executeQuery()
+                ->fetchAllAssociative();
+        } catch (\Throwable) {
+            $rows = [];
+        }
+        foreach ($rows as $translation) {
+            $translations[] = [
+                'uid' => (int) $translation['uid'],
+                'languageId' => (int) $translation['sys_language_uid'],
+                'hidden' => (int) ($translation['hidden'] ?? 0) === 1,
+            ];
+        }
+        if ($translations !== []) {
+            $details['translations'] = $translations;
+        }
+
+        return $details;
     }
 
     /**

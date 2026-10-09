@@ -765,6 +765,15 @@
       <trans-unit id="agent.turn.filesUnavailable" resname="agent.turn.filesUnavailable">
         <source>These files cannot be attached because they do not exist or are missing from the file storage: %s. Please upload them again or choose other files.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.declinedNotRepeated" resname="agent.turn.declinedNotRepeated">
+        <source>I left out the step you declined. What should I do next?</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.failedNotRepeated" resname="agent.turn.failedNotRepeated">
+        <source>That step already failed and would fail the same way again, so I did not offer it again. Give me a different address or file.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.imageGenerationUnavailable" resname="agent.turn.imageGenerationUnavailable">
+        <source>AI image generation is not available to you (it needs T3AI with an image provider and access to T3AI Media), so no image will be generated. I will do the rest of the request.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.filesPartlyUnavailable" resname="agent.turn.filesPartlyUnavailable">
         <source>Skipped %1$s: the file does not exist or is missing from the file storage. I will continue with the other files (%2$s).</source>
       </trans-unit>
@@ -1416,6 +1425,9 @@
       </trans-unit>
       <trans-unit id="agent.draft.expired" resname="agent.draft.expired">
         <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.failedFinal" resname="agent.draft.failedFinal">
+        <source>Trying again would fail the same way, so this step is not offered again. Ask with a different address or file.</source>
       </trans-unit>
       <trans-unit id="agent.turn.streamInterrupted" resname="agent.turn.streamInterrupted">
         <source>The connection was interrupted. Your request may still be running. Reload the conversation in a moment to see the result.</source>
@@ -2124,6 +2136,9 @@
       </trans-unit>
       <trans-unit id="agent.arg.pageId" resname="agent.arg.pageId">
         <source>Page</source>
+      </trans-unit>
+      <trans-unit id="agent.arg.languageConfig" resname="agent.arg.languageConfig">
+        <source>Languages</source>
       </trans-unit>
       <trans-unit id="agent.arg.pageIds" resname="agent.arg.pageIds">
         <source>Pages</source>

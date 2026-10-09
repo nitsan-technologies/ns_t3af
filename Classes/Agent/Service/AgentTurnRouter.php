@@ -211,6 +211,9 @@ final readonly class AgentTurnRouter
         $isContinuation = is_array($body['continuation'] ?? null) || str_starts_with(trim($message), '[The editor ');
         if (!$isContinuation && $this->requestedFiles !== null) {
             $notice = $this->requestedFiles->messageFor($message, $this->translator, $correlationId);
+            if ($notice === null && AgentRequestedFiles::asksForGeneratedImage($message) && !$this->canGenerateImages()) {
+                $notice = $this->requestedFiles->generationUnavailableMessage($message, $this->translator, $correlationId);
+            }
             if ($notice !== null) {
                 $unavailableFiles = [$notice];
                 $this->emitMessages($emitEvent, $unavailableFiles);
@@ -532,6 +535,17 @@ final readonly class AgentTurnRouter
     private static function canonicalSlashTool(string $toolName): string
     {
         return self::SLASH_TOOL_ALIASES[strtolower($toolName)] ?? $toolName;
+    }
+
+    private function canGenerateImages(): bool
+    {
+        try {
+            $executable = $this->permittedActionProvider->buildCatalog()['executable'];
+        } catch (\Throwable) {
+            return true;
+        }
+
+        return in_array(AgentRequestedFiles::GENERATION_TOOL, array_map(static fn(array $tool): string => (string) ($tool['name'] ?? ''), $executable), true);
     }
 
     private function isKnownTool(string $toolName): bool

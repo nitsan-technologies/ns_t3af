@@ -141,7 +141,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $finalText = AgentPromptBuilder::collapseRepeatedReply($finalText);
 
         // Drop a card the editor already declined, and a second copy of a create that is still waiting.
-        $state->messages = self::withoutRepeatedDeclinedDrafts($state->messages, $historyMessages, ($continuation['outcome'] ?? '') === 'declined');
+        $declinedDropped = 0;
+        $failedDropped = 0;
+        $state->messages = self::withoutRepeatedDeclinedDrafts($state->messages, $historyMessages, ($continuation['outcome'] ?? '') === 'declined', $declinedDropped, $failedDropped);
+        $cardDropped = $declinedDropped > 0;
 
         $state->attachPendingPlan();
 
@@ -162,12 +165,18 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         if (
-            ($continuation['outcome'] ?? '') === 'declined'
+            (($continuation['outcome'] ?? '') === 'declined' || $cardDropped)
             && !$state->failed
             && !$cardLeft
             && (trim($finalText) === '' || AgentPromptBuilder::isCardHistoryEcho($finalText))
         ) {
-            $finalText = $this->translator->translate('agent.turn.declinedAskInstead');
+            $finalText = $this->translator->translate(
+                ($continuation['outcome'] ?? '') === 'declined' ? 'agent.turn.declinedAskInstead' : 'agent.turn.declinedNotRepeated',
+            );
+        }
+
+        if ($failedDropped > 0 && !$state->failed && !$cardLeft && (trim($finalText) === '' || AgentPromptBuilder::isCardHistoryEcho($finalText))) {
+            $finalText = $this->translator->translate('agent.turn.failedNotRepeated');
         }
 
         if ($state->failed || ($finalText === '' && $state->executedTools !== [])) {
@@ -361,6 +370,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $agentResult = $agent->call($this->buildMessages($userMessage, $historyMessages, $context, $plan, $requestForChecklist))->getResult();
             $content = $agentResult->getContent();
             $finalText = is_string($content) ? trim($content) : '';
+            $retried = false;
             // Models sometimes parrot draft-history notes as the final answer; never show that, retry once.
             if (
                 AgentPromptBuilder::isCardHistoryEcho($finalText)
@@ -377,6 +387,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 if (AgentPromptBuilder::isCardHistoryEcho($finalText)) {
                     $finalText = '';
                 }
+                $retried = true;
             }
             $retryPlan = $state->plan !== [] ? $state->plan : $plan;
             if (
@@ -392,6 +403,23 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 if (AgentPromptBuilder::isCardHistoryEcho($finalText)) {
                     $finalText = '';
                 }
+                $retried = true;
+            }
+            // The model pasted the new text into chat and offered to apply it, but sent no draft: nothing can
+            // be applied from chat text. Ask once for the write tool; a normal answer is never forced.
+            if (
+                !$retried
+                && self::offersUnbackedApply($finalText)
+                && !$state->isPaused()
+                && !$state->failed
+                && !$state->isCancelled()
+            ) {
+                $nudge = $userMessage . "\n\n[System: You wrote the new text in chat and offered to apply it, but no change was prepared, so nothing can be applied. Call the write tool now with the new text so the editor gets an approval card. Do not paste the text in chat again.]";
+                $retryPlan = $state->plan !== [] ? $state->plan : $plan;
+                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan, $requestForChecklist))->getResult();
+                $content = $agentResult->getContent();
+                $retryText = is_string($content) ? trim($content) : '';
+                $finalText = AgentPromptBuilder::isCardHistoryEcho($retryText) ? '' : $retryText;
             }
         } catch (MaxIterationsExceededException) {
             $state->addMessage([
@@ -480,6 +508,26 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         ) === 1;
     }
 
+    /**
+     * True when a reply offers to apply a change ("Would you like to apply this change?") — which is only
+     * honest when a draft card came with it.
+     */
+    public static function offersUnbackedApply(string $text): bool
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return false;
+        }
+
+        return preg_match(
+            '/\b(?:would\s+you\s+like(?:\s+me)?\s+to|shall\s+i|should\s+i|want\s+me\s+to|do\s+you\s+want(?:\s+me)?\s+to)\s+(?:go\s+ahead\s+and\s+)?(?:apply|save|update|replace|write|use)\b/iu',
+            $text,
+        ) === 1 || preg_match(
+            '/\b(?:soll\s+ich|m[öo]chten\s+sie|m[öo]chtest\s+du|willst\s+du)\b[^.?!]{0,60}\b(?:anwenden|[üu]bernehm\w*|speicher\w*|ersetz\w*|aktualisier\w*)\b/iu',
+            $text,
+        ) === 1;
+    }
+
     /** The provider did not answer in time (idle timeout, request timeout), however the platform wrapped it. */
     public static function looksLikeTimeout(\Throwable $exception): bool
     {
@@ -504,15 +552,21 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     /**
      * Drops change cards that repeat a declined card, or a create that is still waiting to be
      * executed. A follow-up ("check now") otherwise adds a second identical page draft, and
-     * Execute all writes both. Right after a decline, a create of the same content type the
-     * editor just declined in this request is dropped too, even when a field differs.
+     * Execute all writes both. A card of a tool the editor declined in this request (other than
+     * write_table) is not offered again in it, and right after a decline a create of the same
+     * content type is dropped too, even when a field or argument differs. A card whose Apply failed
+     * for good (bad URL, unknown host) is not offered again with the same arguments.
      *
      * @param list<array{role: string, content: string, meta: array<string, mixed>}> $messages messages added by this turn
      * @param list<array<string, mixed>> $history the conversation before this turn
+     * @param int $declinedDropped set to the number of cards dropped because the editor declined them
+     * @param int $failedDropped set to the number of cards dropped because the same Apply already failed for good
      * @return list<array{role: string, content: string, meta: array<string, mixed>}>
      */
-    public static function withoutRepeatedDeclinedDrafts(array $messages, array $history, bool $afterDecline = false): array
+    public static function withoutRepeatedDeclinedDrafts(array $messages, array $history, bool $afterDecline = false, int &$declinedDropped = 0, int &$failedDropped = 0): array
     {
+        $declinedDropped = 0;
+        $failedDropped = 0;
         $blocked = [];
         $declinedCreates = [];
         foreach ($history as $message) {
@@ -528,12 +582,20 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             }
             $discarded = ($draft['discarded'] ?? false) === true;
             $applied = ($draft['applied'] ?? false) === true || ($message['meta']['applied'] ?? false) === true;
+            if (!$discarded && !$applied && ($draft['failed'] ?? false) === true) {
+                $blocked[self::draftSignature($draft)] = 'failed';
+                continue;
+            }
             $pendingCreate = !$discarded && !$applied && (string) ($draft['action'] ?? '') === 'create';
             if ($discarded || $pendingCreate) {
-                $blocked[self::draftSignature($draft)] = true;
+                $blocked[self::draftSignature($draft)] = $discarded ? 'declined' : 'pending';
             }
             if ($discarded && (string) ($draft['action'] ?? '') === 'create') {
                 $declinedCreates[self::createdKind($draft)] = true;
+            }
+            // A declined tool card ("Generate an image") comes back with other wording, never with the same arguments.
+            if ($discarded && !in_array((string) ($draft['tool'] ?? ''), ['', 'write_table'], true)) {
+                $declinedCreates['tool ' . $draft['tool']] = true;
             }
         }
 
@@ -543,14 +605,20 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             if (($message['meta']['type'] ?? '') === 'inline_draft' && is_array($draft)) {
                 $signature = self::draftSignature($draft);
                 if (isset($blocked[$signature])) {
+                    $declinedDropped += $blocked[$signature] === 'declined' ? 1 : 0;
+                    $failedDropped += $blocked[$signature] === 'failed' ? 1 : 0;
                     continue;
                 }
-                if ($afterDecline && (string) ($draft['action'] ?? '') === 'create' && isset($declinedCreates[self::createdKind($draft)])) {
+                if (
+                    ($afterDecline && (string) ($draft['action'] ?? '') === 'create' && isset($declinedCreates[self::createdKind($draft)]))
+                    || isset($declinedCreates['tool ' . (string) ($draft['tool'] ?? '')])
+                ) {
+                    ++$declinedDropped;
                     continue;
                 }
                 // Two identical creates in the same reply count as one card.
                 if ((string) ($draft['action'] ?? '') === 'create') {
-                    $blocked[$signature] = true;
+                    $blocked[$signature] = 'pending';
                 }
             }
             $kept[] = $message;
@@ -593,11 +661,16 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             }
         }
 
+        $arguments = $draft['arguments'] ?? [];
+        // A tool card keeps its arguments only in the summary ("upload from https://… to user_upload").
+        $summary = $fields === [] && $arguments === [] ? (string) ($draft['summary'] ?? '') : '';
+
         return md5((string) json_encode([
             $draft['tool'] ?? '',
             $draft['kind'] ?? '',
             $fields,
-            $draft['arguments'] ?? [],
+            $arguments,
+            $summary,
         ]));
     }
 
@@ -761,7 +834,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         $createContent = AgentCoreToolSet::isCreateContentRequest($query);
         $notAskedFor = array_flip(self::toolsNotAskedFor($query));
-        if ($createContent || self::isPlainEditRequest($query)) {
+        if ($createContent || self::isPlainEditRequest($query) || self::isNewsOnlyRequest($query)) {
             // "Change the header of element 5" is an update: with the delete tool at hand the model sometimes
             // answers with a delete card plus a create card instead.
             $notAskedFor['content_delete'] = true;
@@ -807,6 +880,20 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         ksort($byName);
 
         return array_values($byName);
+    }
+
+    /**
+     * "Delete the Winter news" is about a news record. With the tt_content delete tool at hand a model
+     * (Mistral) took the news uid for a content element on another site.
+     */
+    public static function isNewsOnlyRequest(string $query): bool
+    {
+        $s = mb_strtolower($query);
+        if (preg_match('/\b(news|newsartikel|nachricht\w*|meldung\w*)\b/u', $s) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(content\s+elements?|inhaltselement\w*|text\s*block|textblock|block|element|header|[üu]berschrift)\b/u', $s) !== 1;
     }
 
     /**
@@ -888,6 +975,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         'content_move' => '/\b(move|moves|moved|moving|reorder\w*|reposition\w*|relocate\w*|verschieb\w*|versetz\w*|umsortier\w*|nach\s+(?:oben|unten)|position)\b/iu',
         'pages_move' => '/\b(move|moves|moved|moving|verschieb\w*)\b/iu',
         'workspace_switch' => '/\b(workspaces?|arbeitsbereich\w*|switch\w*|wechsel\w*)\b/iu',
+        // A rewrite or edit is not a summary: the summarize tool answered "rewrite friendlier" with an unrelated welcome text.
+        't3aa_summarize_content' => '/\b(summar\w*|tl;?dr|zusammenfass\w*|kurzfassung|abstract|gist)\b/iu',
     ];
 
     /**

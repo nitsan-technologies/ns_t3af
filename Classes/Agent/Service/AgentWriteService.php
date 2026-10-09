@@ -208,7 +208,8 @@ final class AgentWriteService
         try {
             $result = $this->applyClaimed($draftId, $stored, $keptFieldKeys, $correlationId);
         } catch (\Throwable $exception) {
-            $this->releaseDraft($draftId, $stored, true);
+            // Only a draft another click could still apply goes back.
+            $this->releaseDraft($draftId, $stored, !$exception instanceof AgentApplyNotRetryableException);
             throw $exception;
         }
         $this->releaseDraft($draftId, $stored, false);
@@ -297,6 +298,22 @@ final class AgentWriteService
         }
 
         return true;
+    }
+
+    /**
+     * The tool said the same call would fail again ({"error": "…", "retryable": false}).
+     */
+    public static function failureIsFinal(mixed $result): bool
+    {
+        if (is_string($result)) {
+            try {
+                $result = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                return false;
+            }
+        }
+
+        return is_array($result) && ($result['retryable'] ?? true) === false;
     }
 
     /**
@@ -547,7 +564,7 @@ final class AgentWriteService
         }
 
         // File metadata DualMode uses discrete #[McpContentParam] args (altText/title/description).
-        if ($toolName === 't3aa_update_file_metadata' || array_key_exists('altText', $resolvedValues)) {
+        if ($toolName === 't3aa_update_file_metadata' || array_key_exists('altText', $resolvedValues) || array_key_exists('schemaContent', $resolvedValues)) {
             return array_merge($arguments, $resolvedValues);
         }
 
@@ -768,10 +785,11 @@ final class AgentWriteService
 
         $invokeResult = $this->playgroundService->invoke($toolName, $arguments, true);
         if (($invokeResult['success'] ?? false) !== true) {
-            throw new \RuntimeException(
-                (string) ($invokeResult['message'] ?? $this->translator->translate('agent.write.toolInvocationFailed')),
-                1712003211,
-            );
+            $message = (string) ($invokeResult['message'] ?? $this->translator->translate('agent.write.toolInvocationFailed'));
+            if (self::failureIsFinal($invokeResult['result'] ?? null)) {
+                throw new AgentApplyNotRetryableException($message, 1712003211);
+            }
+            throw new \RuntimeException($message, 1712003211);
         }
 
         $pageId = isset($arguments['pageId']) ? (int) $arguments['pageId'] : null;
