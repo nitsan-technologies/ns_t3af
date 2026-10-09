@@ -422,6 +422,26 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function historyTellsTheModelThatAFailedCardWouldFailAgain(): void
+    {
+        $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();
+        $history = $builder->buildHistory([[
+            'role' => 'assistant',
+            'content' => 'upload from https://no-such-host.invalid/a.jpg to user_upload',
+            'meta' => ['type' => 'inline_draft', 'draft' => [
+                'editorLabel' => 'Upload a file from a URL',
+                'failed' => true,
+                'failureMessage' => 'Could not resolve host "no-such-host.invalid".',
+            ]],
+        ]]);
+
+        self::assertSame(
+            '[Prepared change: Upload a file from a URL — failed and would fail again with the same arguments: Could not resolve host "no-such-host.invalid".] upload from https://no-such-host.invalid/a.jpg to user_upload',
+            $history[0]['content'],
+        );
+    }
+
+    #[Test]
     public function historyOmitsDraftReviewBoilerplateSoModelsDoNotParrotIt(): void
     {
         $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();
@@ -551,6 +571,24 @@ final class AgentSessionContextTest extends TestCase
         self::assertSame($text, AgentPromptBuilder::collapseRepeatedReply($text . "\n\n" . $text));
         self::assertSame($text . ' Ask an administrator.', AgentPromptBuilder::collapseRepeatedReply($text . ' Ask an administrator.'));
         self::assertSame('Done.', AgentPromptBuilder::collapseRepeatedReply('Done.'));
+    }
+
+    #[Test]
+    public function aLeakedToolCallIsNotShownToTheEditor(): void
+    {
+        $leaked = '{"pageId":99999} to=t3ai_generate_all_seo 天天中彩票实名_code:46 】!【I can’t generate SEO texts for page 99999 because it does not exist.';
+
+        self::assertSame(
+            'I can’t generate SEO texts for page 99999 because it does not exist.',
+            AgentPromptBuilder::stripLeakedToolCall($leaked),
+        );
+        self::assertSame(99999, AgentPromptBuilder::leakedMissingPageUid($leaked));
+        self::assertSame(
+            'The SEO card is ready for this page.',
+            AgentPromptBuilder::stripLeakedToolCall('{"pageId":5} to=t3ai_generate_all_seo The SEO card is ready for this page.'),
+        );
+        self::assertSame(0, AgentPromptBuilder::leakedMissingPageUid('{"pageId":5} to=t3ai_generate_all_seo The SEO card is ready for this page.'));
+        self::assertSame('Page 2 is ready.', AgentPromptBuilder::stripLeakedToolCall('Page 2 is ready.'));
     }
 
     #[Test]

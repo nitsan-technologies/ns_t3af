@@ -226,20 +226,54 @@ readonly class DataHandlerService
      *
      * @param list<int> $fileUids sys_file UIDs to attach
      * @param int $pid page of the record (references are stored there)
+     * @param array{alternative?: string, title?: string, description?: string} $texts set on every created reference
      * @return list<int> UIDs of the created sys_file_reference records
      */
-    public function createFileReferences(string $table, int $recordUid, string $fieldName, array $fileUids, int $pid = 0): array
+    public function createFileReferences(string $table, int $recordUid, string $fieldName, array $fileUids, int $pid = 0, array $texts = []): array
     {
         if ($fileUids === []) {
             throw new \RuntimeException('No file UIDs provided for file reference creation.', 1712002100);
         }
 
+        $texts = array_filter($texts, static fn(string $value): bool => trim($value) !== '');
         $references = [];
         foreach ($fileUids as $fileUid) {
-            $references[] = ['uid_local' => $fileUid];
+            $references[] = ['uid_local' => $fileUid, ...$texts];
         }
 
         return $this->writeFileFieldReferences($table, $recordUid, $fieldName, $references, replaceExisting: false, pid: $pid);
+    }
+
+    /**
+     * Remove some file references of a TCA file field; the files themselves stay. The parent field
+     * keeps the remaining references, so its counter stays right.
+     *
+     * @param list<int> $referenceUids
+     * @return list<int> UIDs of the removed references (only those still attached to this field)
+     */
+    public function removeFileReferences(string $table, int $recordUid, string $fieldName, array $referenceUids): array
+    {
+        $removed = [];
+        $remaining = [];
+        foreach ($this->recordService->findFileReferences($table, $recordUid, $fieldName) as $row) {
+            $uid = (int) ($row['uid'] ?? 0);
+            if ($uid <= 0) {
+                continue;
+            }
+            if (in_array($uid, $referenceUids, true)) {
+                $removed[] = $uid;
+            } else {
+                $remaining[] = $uid;
+            }
+        }
+        if ($removed === []) {
+            return [];
+        }
+
+        $this->deleteRecords('sys_file_reference', $removed);
+        $this->updateRecord($table, $recordUid, [$fieldName => implode(',', $remaining)]);
+
+        return $removed;
     }
 
     /**

@@ -120,6 +120,10 @@ Moving an existing page uses `pages_move` (`beforeUid` places it directly before
 
 A request that names a page ("the Contact page") does not use the page on screen when that name is missing. The turn asks which page to use and offers the closest titles. "The first one", or a clicked title, locks that page for the next turn (`lockedPageId`), including for SEO. Creating a page is unchanged.
 
+A model reply that leaks a tool call (`to=tool_name`, including the JSON in front of it) is stripped before the editor sees it (`AgentPromptBuilder::stripLeakedToolCall`). When that leak is about a page uid that does not exist, the reply is `agent.page.missingUid` ("Page 99999 doesn't exist."). A normal reply is unchanged.
+
+Removing a named page from the SEO queue uses that page's uid as `pageIds` on `t3ai_mass_seo_queue_remove`. The queue list uses the same uid. SEO for one language version passes that language's id as `sysLanguageUid`.
+
 ---
 
 ## NL tool selection
@@ -127,7 +131,7 @@ A request that names a page ("the Contact page") does not use the page on screen
 - Child tools declare `#[McpToolIntent(modules, summary, examples (EN + DE), category)]`; core tools get `searchTerms` (EN + DE) in `Configuration/McpToolMetadata.yaml`.
 - `AgentCoreToolSet` picks the start set; `find_tools` (`AgentToolSearch`) ranks the rest via embeddings + BM25. See `Documentation/Agent/Routing.md`.
 - Starter chips are context requests in the editor's language (`AgentStarterBuilder::choose`: page → SEO / translate / add content / accessibility; open record → improve / translate; file → alt text / missing alt text / generate image; draft workspace → changes). A click sends the text as a normal message; a chip only shows when a permitted tool can do it.
-- Image previews: `AgentMediaPreviewService` adds `meta.previews` (processed thumbnails, read permission checked) to tool results, suggestion cards and drafts about a file; `agent.js` renders them as a gallery.
+- Image previews: `AgentMediaPreviewService` adds `meta.previews` (processed thumbnails, read permission checked) to tool results, suggestion cards and drafts about a file; `agent.js` renders them as a gallery. Files of a `fileUids` list (attach cards) that are missing or no image show their name only.
 
 ---
 

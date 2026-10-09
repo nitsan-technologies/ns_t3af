@@ -100,6 +100,13 @@ final class AgentRequestChecklist
                 'title' => 'Attach an image to the media content element',
                 'status' => 'pending',
             ];
+            if (self::asksForAltText($message)) {
+                $unique[] = [
+                    'kind' => 'alt_text',
+                    'title' => 'Set the alt text of the image',
+                    'status' => 'pending',
+                ];
+            }
         }
 
         return self::markFirstInProgress($unique);
@@ -123,20 +130,36 @@ final class AgentRequestChecklist
 
         $since = self::historySinceLatestUserRequest($history, $request);
         $appliedCTypes = self::appliedCTypes($since);
+        $declined = self::declinedCards($since);
         $imageAttached = self::hasSuccessfulMediaAttach($since);
         $noFileLeft = AgentRequestedFiles::noFileLeftToAttach($since, $request);
+        $createSteps = 0;
+        $declinedCreates = 0;
 
         foreach ($steps as $index => $step) {
             if (($step['kind'] ?? '') === 'create') {
+                ++$createSteps;
                 $cType = (string) ($step['cType'] ?? '');
                 $pos = array_search($cType, $appliedCTypes, true);
+                $declinedPos = array_search($cType, $declined['cTypes'], true);
                 if ($pos !== false) {
                     unset($appliedCTypes[$pos]);
                     $appliedCTypes = array_values($appliedCTypes);
                     $steps[$index]['status'] = 'completed';
+                } elseif ($declinedPos !== false) {
+                    // The editor said no to this element: it is not open work the agent has to push again.
+                    unset($declined['cTypes'][$declinedPos]);
+                    $declined['cTypes'] = array_values($declined['cTypes']);
+                    $steps[$index]['status'] = 'failed';
+                    ++$declinedCreates;
                 }
             } elseif (($step['kind'] ?? '') === 'attach_image') {
-                $steps[$index]['status'] = $imageAttached ? 'completed' : ($noFileLeft ? 'failed' : 'pending');
+                // No image without the element it goes into, nor after the editor declined the attach.
+                $noTarget = $createSteps > 0 && $declinedCreates === $createSteps;
+                $steps[$index]['status'] = $imageAttached ? 'completed' : ($noFileLeft || $noTarget || $declined['attach'] ? 'failed' : 'pending');
+            } elseif (($step['kind'] ?? '') === 'alt_text') {
+                $attachClosed = $noFileLeft || ($createSteps > 0 && $declinedCreates === $createSteps) || $declined['attach'];
+                $steps[$index]['status'] = self::hasAltTextSet($since) ? 'completed' : ($attachClosed && !$imageAttached ? 'failed' : 'pending');
             }
         }
 
@@ -179,6 +202,9 @@ final class AgentRequestChecklist
      */
     public static function nextActionHint(array $steps, string $request = ''): string
     {
+        $altText = in_array('alt_text', array_column($steps, 'kind'), true)
+            ? ' Pass alternative: a short alt text that describes what the image shows.'
+            : '';
         foreach ($steps as $step) {
             if (self::isClosed($step)) {
                 continue;
@@ -187,13 +213,25 @@ final class AgentRequestChecklist
                 $fileUids = AgentRequestedFiles::namedFileUids($request);
                 if ($fileUids !== []) {
                     return sprintf(
-                        'Next: call file_reference_add with fileUids "%s" on the Text & Media / Images element (fieldName "assets" or "image").'
+                        'Next: call file_reference_add with fileUids "%s" on the Text & Media / Images element (fieldName "assets" or "image").%s'
                         . ' The editor chose these existing files: do not upload, download or generate an image. Do not claim the request is finished until that succeeds.',
                         implode(',', $fileUids),
+                        $altText,
                     );
                 }
 
-                return 'Next: generate or upload an image, then call file_reference_add on the Text & Media / Images element (fieldName "assets" or "image"). Do not claim the request is finished until that succeeds.';
+                if (AgentRequestedFiles::asksForGeneratedImage($request)) {
+                    return 'Next: call ' . AgentRequestedFiles::GENERATION_TOOL . ' with a description of the image and a short altText,'
+                        . ' then file_reference_add with the returned fileUid on the Text & Media / Images element (fieldName "assets" or "image").'
+                        . ' Never use a stock photo or an image URL you found or made up. Do not claim the request is finished until the attach succeeds.';
+                }
+
+                return 'Next: generate or upload an image, then call file_reference_add on the Text & Media / Images element (fieldName "assets" or "image").'
+                    . $altText . ' Do not claim the request is finished until that succeeds.';
+            }
+            if (($step['kind'] ?? '') === 'alt_text') {
+                return 'Next: the image is attached without alt text. Set "alternative" on its sys_file_reference (write_table, table sys_file_reference, the uid from referenceUids)'
+                    . ' to a short text that describes the image. If that is not possible, tell the editor the alt text is not set — do not claim the request is finished.';
             }
             $cType = (string) ($step['cType'] ?? '');
             if ($cType !== '') {
@@ -554,6 +592,96 @@ final class AgentRequestChecklist
         }
 
         return $types;
+    }
+
+    /**
+     * The editor declined attaching or generating an image for this request.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function imageWasDeclined(array $history, string $request): bool
+    {
+        return self::declinedCards(self::historySinceLatestUserRequest($history, $request))['attach'];
+    }
+
+    /**
+     * Cards the editor declined: the content types of declined creates, and whether an attach was declined.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array{cTypes: list<string>, attach: bool}
+     */
+    private static function declinedCards(array $history): array
+    {
+        $declined = ['cTypes' => [], 'attach' => false];
+        foreach ($history as $entry) {
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            if (($entry['role'] ?? '') !== 'assistant' || ($meta['type'] ?? '') !== 'inline_draft' || ($draft['discarded'] ?? false) !== true) {
+                continue;
+            }
+            if (in_array((string) ($draft['tool'] ?? $meta['tool'] ?? ''), ['file_reference_add', AgentRequestedFiles::GENERATION_TOOL], true)) {
+                $declined['attach'] = true;
+                continue;
+            }
+            if ((string) ($draft['action'] ?? '') !== 'create') {
+                continue;
+            }
+            foreach (is_array($draft['fields'] ?? null) ? $draft['fields'] : [] as $field) {
+                if (is_array($field) && ($field['table'] ?? '') === 'tt_content' && strtolower((string) ($field['field'] ?? '')) === 'ctype') {
+                    $cType = strtolower(trim((string) ($field['proposed'] ?? '')));
+                    if ($cType !== '') {
+                        $declined['cTypes'][] = $cType;
+                    }
+                }
+            }
+        }
+
+        return $declined;
+    }
+
+    /**
+     * "… and set a sensible alt text", "mit Alternativtext", "alt attribute".
+     */
+    private static function asksForAltText(string $message): bool
+    {
+        return preg_match('/\b(?:alt[\s-]?(?:text|tag|attribute?)s?|alternative?\s*text|alternativtext\w*|bildbeschreibung)\b/ui', $message) === 1;
+    }
+
+    /**
+     * An attach that carried an alt text, or an alt text written to a file reference afterwards.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    private static function hasAltTextSet(array $history): bool
+    {
+        foreach ($history as $entry) {
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $type = (string) ($meta['type'] ?? '');
+            if ($type === 'tool_result' && ($meta['success'] ?? true) !== false) {
+                $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+                $tool = (string) ($meta['tool'] ?? '');
+                if ($tool === 'file_reference_add' && trim((string) ($details['alternative'] ?? '')) !== '') {
+                    return true;
+                }
+                // A reference without its own alt text shows the alt text of the file metadata.
+                if ($tool === 't3ai_generate_image' && trim((string) ($details['altText'] ?? '')) !== '') {
+                    return true;
+                }
+            }
+            if ($type === 'readback_result') {
+                foreach (is_array($meta['readback'] ?? null) ? $meta['readback'] : [] as $record) {
+                    if (is_array($record) && ($record['table'] ?? '') === 'sys_file_reference'
+                        && trim((string) ($record['values']['alternative'] ?? '')) !== '') {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

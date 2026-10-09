@@ -2,7 +2,7 @@
  * AgentController mixin: draft and suggestion apply/discard, tool-confirmation, readback.
  */
 
-import { lang, hasTurnGuardWarning, errorText, messageContent, escapeHtml, humanizeKey } from './format.js';
+import { lang, hasTurnGuardWarning, errorText, errorDetails, messageContent, escapeHtml, humanizeKey } from './format.js';
 import { ajaxUrl } from './context.js';
 import { isSuggestionFieldSafe, renderImagePreviews, renderMediaPreview, resolveToolDisplayLabel, renderToolTrace, renderWorkTraceHtml, renderMessageBody } from './render-helpers.js';
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
@@ -70,7 +70,7 @@ export const draftMethods = {
       const seenCreates = new Set();
       this.messages.forEach((message, index) => {
         const draft = message.meta?.draft;
-        if (message.meta?.type === 'inline_draft' && draft && !draft.applied && !draft.discarded && !draft.applying
+        if (message.meta?.type === 'inline_draft' && draft && !draft.applied && !draft.discarded && !draft.applying && !draft.failed
           && String(draft.severity ?? 'write') !== 'destructive') {
           if (draft.action === 'create') {
             const fingerprint = createDraftFingerprint(draft);
@@ -167,6 +167,12 @@ export const draftMethods = {
       if (hasTurnGuardWarning(meta)) {
         extra += `<div class="nst3af-agent-msg__warn" role="status">${escapeHtml(String(meta.turnGuardWarning))}</div>`;
       }
+      let undoHtml = '';
+      if (success && meta.undone === true) {
+        undoHtml = `<div class="nst3af-agent-applied__actions"><span class="nst3af-agent-applied__undone">${escapeHtml(lang('agent.draft.undoneLabel', 'Undone'))}</span></div>`;
+      } else if (success && meta.changeId && meta.undoable === true) {
+        undoHtml = `<div class="nst3af-agent-applied__actions"><button type="button" class="btn btn-default btn-sm" data-nst3af-agent-undo="1" data-change-id="${escapeHtml(String(meta.changeId))}">${escapeHtml(lang('agent.draft.undo', 'Undo'))}</button></div>`;
+      }
 
       const autoHtml = autoRan
         ? `<span class="nst3af-agent-tcall__auto">${escapeHtml(lang('agent.toolCall.autoRan', 'completed'))}</span>`
@@ -191,6 +197,7 @@ export const draftMethods = {
             ${detailsHtml}
           </div>
         </details>
+        ${undoHtml}
       </div>`;
     },
 
@@ -370,6 +377,18 @@ export const draftMethods = {
     },
 
   /**
+     * Apply failed for a reason another click cannot change (bad URL, unknown host): no Apply button.
+     *
+     * @param {object} draft
+     * @returns {string}
+     */
+    renderFailedDraft(draft) {
+      const reason = String(draft.failureMessage ?? '').trim() || lang('agent.error.applyFailed', 'Apply failed');
+      const hint = lang('agent.draft.failedFinal', 'Trying again would fail the same way, so this step is not offered again. Ask with a different address or file.');
+      return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant" role="alert"><div class="nst3af-agent-msg__who">AI Agent</div><div class="nst3af-agent-msg__body">${escapeHtml(reason)}<br>${escapeHtml(hint)}</div></div>`;
+    },
+
+  /**
      * @param {object} message
      * @param {number} messageIndex
      * @returns {string}
@@ -394,6 +413,10 @@ export const draftMethods = {
 
       if (draft.expired === true && !applied) {
         return this.renderExpiredDraft();
+      }
+
+      if (draft.failed === true && !applied) {
+        return this.renderFailedDraft(draft);
       }
 
       if (applied) {
@@ -510,6 +533,10 @@ export const draftMethods = {
 
       if (draft.expired === true && !applied) {
         return this.renderExpiredDraft();
+      }
+
+      if (draft.failed === true && !applied) {
+        return this.renderFailedDraft(draft);
       }
 
       if (applied) {
@@ -723,6 +750,8 @@ export const draftMethods = {
             previews: Array.isArray(presented.previews) ? presented.previews : [],
             autoRan: false,
             correlationId: result.correlationId ?? message.meta?.correlationId ?? '',
+            changeId: result.changeId ?? '',
+            undoable: result.undoable === true,
             schedulerHandoff: payload.schedulerHandoff ?? null,
             fromDraftApply: true,
             workDurationMs,
@@ -759,8 +788,14 @@ export const draftMethods = {
         }
       } catch (error) {
         draft.applying = false;
-        const text = await errorText(error);
-        this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
+        const { text, retryable } = await errorDetails(error);
+        if (retryable) {
+          this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
+        } else {
+          draft.failed = true;
+          draft.failureMessage = text;
+          this.announce(text);
+        }
         this.renderStream();
       } finally {
         this.clearWorkTraceTimer();

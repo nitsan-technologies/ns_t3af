@@ -529,23 +529,48 @@ readonly class FileUploadService
             throw new \InvalidArgumentException('Only http:// and https:// URLs can be downloaded. Got: ' . $url, 1747320018);
         }
 
-        if (!$this->publicUrlValidator->isPublicUrl($url)) {
-            throw new \InvalidArgumentException(
-                'The URL points to a private or reserved network address and cannot be downloaded.',
-                1747320019,
-            );
-        }
-
+        $privateAddress = new \InvalidArgumentException(
+            'The URL points to a private or reserved network address and cannot be downloaded.',
+            1747320019,
+        );
         if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+            if (!$this->publicUrlValidator->isPublicUrl($url)) {
+                throw $privateAddress;
+            }
+
             return null;
         }
 
+        // Resolved once: the address that is checked is the address the download is pinned to.
         $resolvedIp = gethostbyname($host);
         if ($resolvedIp === $host) {
             throw new \InvalidArgumentException('Could not resolve host "' . $host . '".', 1747320020);
         }
+        $ipHost = str_contains($resolvedIp, ':') ? '[' . $resolvedIp . ']' : $resolvedIp;
+        if (!$this->publicUrlValidator->isPublicUrl($scheme . '://' . $ipHost . '/')) {
+            throw $privateAddress;
+        }
 
         return $resolvedIp;
+    }
+
+    /**
+     * A download that fails the same way on every try: the URL, the host, the answer or the file is
+     * wrong. Network trouble, timeouts and server errors (5xx, 408, 429) may pass on a retry.
+     */
+    public static function isPermanentFailure(\Throwable $exception): bool
+    {
+        $code = $exception->getCode();
+        if ($code === 1747320013) {
+            if (preg_match('/HTTP status (\d{3})/', $exception->getMessage(), $match) !== 1) {
+                return false;
+            }
+            $status = (int) $match[1];
+
+            return $status >= 400 && $status < 500 && !in_array($status, [408, 429], true);
+        }
+
+        return in_array($code, [1747320011, 1747320012, 1747320015, 1747320016, 1747320017, 1747320018, 1747320019, 1747320020], true);
     }
 
     private function looksLikeHtmlDocument(string $tempPath): bool

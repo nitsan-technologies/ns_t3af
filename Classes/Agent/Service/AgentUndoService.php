@@ -148,6 +148,21 @@ final class AgentUndoService
                 continue;
             }
 
+            $parent = is_array($entry['parent'] ?? null) ? $entry['parent'] : [];
+            if ($action === 'create' && $table === 'sys_file_reference' && $parent !== []) {
+                // Only the reference goes; the file and the record it was attached to stay.
+                $removed = $this->dataHandlerService->removeFileReferences(
+                    (string) ($parent['table'] ?? ''),
+                    (int) ($parent['uid'] ?? 0),
+                    (string) ($parent['field'] ?? ''),
+                    [$uid],
+                );
+                if ($removed !== []) {
+                    $reverted[] = ['table' => $table, 'uid' => $uid, 'field' => $field, 'reverted' => 'deleted'];
+                }
+                continue;
+            }
+
             if ($action === 'create' || $action === 'copy') {
                 $this->dataHandlerService->deleteRecord($table, $uid);
                 $reverted[] = ['table' => $table, 'uid' => $uid, 'field' => $field, 'reverted' => 'deleted'];
