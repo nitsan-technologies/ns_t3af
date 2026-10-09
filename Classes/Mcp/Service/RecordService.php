@@ -207,6 +207,71 @@ readonly class RecordService
     }
 
     /**
+     * Default-language pages with this exact title.
+     *
+     * @return list<array{uid: int, pid: int}>
+     */
+    public function findDefaultLanguagePagesByTitle(string $title): array
+    {
+        $title = trim($title);
+        if ($title === '') {
+            return [];
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($queryBuilder, 'pages');
+
+        $rows = $queryBuilder
+            ->select('uid', 'pid')
+            ->from('pages')
+            ->where(
+                $queryBuilder->expr()->eq('title', $queryBuilder->createNamedParameter($title)),
+                $queryBuilder->expr()->eq('sys_language_uid', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER)),
+                $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER)),
+            )
+            ->setMaxResults(10)
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        $pages = [];
+        foreach ($rows as $row) {
+            $pages[] = ['uid' => (int) $row['uid'], 'pid' => (int) $row['pid']];
+        }
+
+        return $pages;
+    }
+
+    /**
+     * The last default-language child of this page, or 0 when it has none.
+     */
+    public function lastDefaultLanguageChildUid(int $parentPid): int
+    {
+        if ($parentPid <= 0) {
+            return 0;
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($queryBuilder, 'pages');
+
+        $row = $queryBuilder
+            ->select('uid')
+            ->from('pages')
+            ->where(
+                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($parentPid, ParameterType::INTEGER)),
+                $queryBuilder->expr()->eq('sys_language_uid', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER)),
+                $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER)),
+            )
+            ->orderBy('sorting', 'DESC')
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchAssociative();
+
+        return $row === false ? 0 : (int) $row['uid'];
+    }
+
+    /**
      * Return the subset of UIDs that actually exist in the given table.
      *
      * @param list<int> $uids

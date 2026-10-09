@@ -1708,11 +1708,6 @@
 }
 
 /* Draft field rows (prototype .fld) */
-.nst3af-agent-draft--write {
-  border-color: var(--nst3af-agent-warning-bg);
-  background: var(--nst3af-agent-warning-bg);
-}
-
 .nst3af-agent-draft__fields {
   display: grid;
   gap: 8px;

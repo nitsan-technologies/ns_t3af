@@ -20,6 +20,8 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Runtime;
 
 use NITSAN\NsT3AF\Agent\Service\AgentPlan;
+use NITSAN\NsT3AF\Agent\Service\PageCreateAfter;
+use NITSAN\NsT3AF\Agent\Service\PageCreateBefore;
 use NITSAN\NsT3AF\Api\AiToolDefinition;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Tool\Agent\AskClarificationTool;
@@ -157,6 +159,16 @@ final class T3afToolbox implements ToolboxInterface
         }
         if ($name === self::FIND_TOOLS) {
             return new ToolResult($toolCall, $this->findTools((string) ($toolCall->getArguments()['query'] ?? '')));
+        }
+        $requestQuery = trim((string) ($this->runtime->body['requestQuery'] ?? ''));
+        if ($name === 'pages_move' && (PageCreateBefore::isCreateBefore($requestQuery) || PageCreateAfter::isCreateAfter($requestQuery) || PageCreateAfter::isLastUnder($requestQuery))) {
+            $outcome = 'invalid';
+            $place = PageCreateAfter::isCreateAfter($requestQuery) || PageCreateAfter::isLastUnder($requestQuery) ? 'afterUid' : 'beforeUid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: this creates a new page. Call write_table with action create, tableName pages, and ' . $place . ' of the page that sets the place. Do not call pages_move.',
+            );
         }
         if (!isset($this->catalog[$name])) {
             $outcome = 'unavailable';
