@@ -207,7 +207,8 @@ final readonly class SatelliteToolPlanService
     private function buildSummary(string $toolName, array $arguments): string
     {
         $pageId = (int) ($arguments['pageId'] ?? 0);
-        $pageHint = $pageId > 0 ? $this->translator->translate('agent.plan.pageHint', [$this->pageLabel($pageId)]) : '';
+        // The separating space lives here: TYPO3 v14 trims leading/trailing whitespace from XLIFF labels.
+        $pageHint = $pageId > 0 ? ' ' . $this->translator->translate('agent.plan.pageHint', [$this->pageLabel($pageId)]) : '';
 
         $labelKey = match ($toolName) {
             't3ai_generate_all_seo' => 'agent.plan.generateAllSeo',
