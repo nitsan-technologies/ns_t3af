@@ -100,6 +100,13 @@ final class AgentRequestChecklist
                 'title' => 'Attach an image to the media content element',
                 'status' => 'pending',
             ];
+            if (self::asksForAltText($message)) {
+                $unique[] = [
+                    'kind' => 'alt_text',
+                    'title' => 'Set the alt text of the image',
+                    'status' => 'pending',
+                ];
+            }
         }
 
         return self::markFirstInProgress($unique);
@@ -137,6 +144,8 @@ final class AgentRequestChecklist
                 }
             } elseif (($step['kind'] ?? '') === 'attach_image') {
                 $steps[$index]['status'] = $imageAttached ? 'completed' : ($noFileLeft ? 'failed' : 'pending');
+            } elseif (($step['kind'] ?? '') === 'alt_text') {
+                $steps[$index]['status'] = self::hasAltTextSet($since) ? 'completed' : ($noFileLeft && !$imageAttached ? 'failed' : 'pending');
             }
         }
 
@@ -179,6 +188,9 @@ final class AgentRequestChecklist
      */
     public static function nextActionHint(array $steps, string $request = ''): string
     {
+        $altText = in_array('alt_text', array_column($steps, 'kind'), true)
+            ? ' Pass alternative: a short alt text that describes what the image shows.'
+            : '';
         foreach ($steps as $step) {
             if (self::isClosed($step)) {
                 continue;
@@ -187,13 +199,19 @@ final class AgentRequestChecklist
                 $fileUids = AgentRequestedFiles::namedFileUids($request);
                 if ($fileUids !== []) {
                     return sprintf(
-                        'Next: call file_reference_add with fileUids "%s" on the Text & Media / Images element (fieldName "assets" or "image").'
+                        'Next: call file_reference_add with fileUids "%s" on the Text & Media / Images element (fieldName "assets" or "image").%s'
                         . ' The editor chose these existing files: do not upload, download or generate an image. Do not claim the request is finished until that succeeds.',
                         implode(',', $fileUids),
+                        $altText,
                     );
                 }
 
-                return 'Next: generate or upload an image, then call file_reference_add on the Text & Media / Images element (fieldName "assets" or "image"). Do not claim the request is finished until that succeeds.';
+                return 'Next: generate or upload an image, then call file_reference_add on the Text & Media / Images element (fieldName "assets" or "image").'
+                    . $altText . ' Do not claim the request is finished until that succeeds.';
+            }
+            if (($step['kind'] ?? '') === 'alt_text') {
+                return 'Next: the image is attached without alt text. Set "alternative" on its sys_file_reference (write_table, table sys_file_reference, the uid from referenceUids)'
+                    . ' to a short text that describes the image. If that is not possible, tell the editor the alt text is not set — do not claim the request is finished.';
             }
             $cType = (string) ($step['cType'] ?? '');
             if ($cType !== '') {
@@ -554,6 +572,51 @@ final class AgentRequestChecklist
         }
 
         return $types;
+    }
+
+    /**
+     * "… and set a sensible alt text", "mit Alternativtext", "alt attribute".
+     */
+    private static function asksForAltText(string $message): bool
+    {
+        return preg_match('/\b(?:alt[\s-]?(?:text|tag|attribute?)s?|alternative?\s*text|alternativtext\w*|bildbeschreibung)\b/ui', $message) === 1;
+    }
+
+    /**
+     * An attach that carried an alt text, or an alt text written to a file reference afterwards.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    private static function hasAltTextSet(array $history): bool
+    {
+        foreach ($history as $entry) {
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $type = (string) ($meta['type'] ?? '');
+            if ($type === 'tool_result' && ($meta['success'] ?? true) !== false) {
+                $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+                $tool = (string) ($meta['tool'] ?? '');
+                if ($tool === 'file_reference_add' && trim((string) ($details['alternative'] ?? '')) !== '') {
+                    return true;
+                }
+                // A reference without its own alt text shows the alt text of the file metadata.
+                if ($tool === 't3ai_generate_image' && trim((string) ($details['altText'] ?? '')) !== '') {
+                    return true;
+                }
+            }
+            if ($type === 'readback_result') {
+                foreach (is_array($meta['readback'] ?? null) ? $meta['readback'] : [] as $record) {
+                    if (is_array($record) && ($record['table'] ?? '') === 'sys_file_reference'
+                        && trim((string) ($record['values']['alternative'] ?? '')) !== '') {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

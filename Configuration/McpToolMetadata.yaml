@@ -180,9 +180,10 @@ tools:
     category: Files
     status: ready
     tagline: Attach uploaded files to a record file or image field
-    notes: Pass comma-separated sys_file UIDs from file_upload_from_url, file_upload, or file_upload_prepare.
+    notes: Pass comma-separated sys_file UIDs from file_upload_from_url, file_upload, or file_upload_prepare. Optional alternative (alt text), title and description are stored on every attached file.
     examplePrompts:
       - 'Attach file UID 88 to the hero image field on content element 45'
+      - 'Attach image 145 to element 172 with the alt text "Snowy mountain lake at sunrise"'
       - 'Link the uploaded banner image to this news record'
       - 'Add the new PDF to the downloads field on page 12'
       - 'Connect the uploaded logo to the header media field'
