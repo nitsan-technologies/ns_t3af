@@ -175,7 +175,8 @@ Phase 4 child tools (all with `McpToolSeverity`, `McpToolIntent` EN/DE, `agent.t
 | ns_t3ai | `t3ai_mass_seo_queue_remove`, `t3ai_mass_translation_queue_remove`, `…_requeue`, `…_clear_completed` (`McpQueueManagementService`, catalog ids bulkSeo/bulkTranslation) |
 | ns_t3ai | `t3ai_translate_page` — page + all content, several languages, always native generation (`McpPageTranslationService`) |
 | ns_t3ai | `t3ai_glossary_list` / `_save` / `_delete` (`McpGlossaryService`, catalog id translationGlossary) |
-| ns_t3ai | `t3ai_generate_image` — one image into the fileadmin, T3AI Media permission; result card shows the image (`previewImageUrl`) |
+| ns_t3ai | `t3ai_generate_image` — one image into the fileadmin, T3AI Media permission; result card shows the image (`previewImageUrl`). Saving the provider URL stays in ns_t3ai `FileService`. |
+| ns_t3af | `file_upload_from_url` — downloads a public URL into FAL. A hostname is pinned with `CURLOPT_RESOLVE` and is not streamed, because the stream handler rejects curl options. A failed download names the host. |
 | ns_t3aa | `t3aa_alt_text_queue_folder`, `t3aa_alt_text_drafts_list`, `t3aa_alt_text_approve`, `t3aa_mark_image_decorative` (`McpAltTextService`) |
 | ns_t3aa | `t3aa_accessibility_scan_run`, `t3aa_accessibility_issues` (`McpAccessibilityService`) |
 | ns_t3aa | `t3aa_generate_voice_over` — text or page text to MP3, T3AA Media permission; result card plays it (`McpVoiceOverService`) |

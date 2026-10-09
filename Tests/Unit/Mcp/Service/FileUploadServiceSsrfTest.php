@@ -19,6 +19,8 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Service;
 
+use GuzzleHttp\Exception\TransferException;
+use GuzzleHttp\Psr7\Request;
 use NITSAN\NsT3AF\Mcp\Service\AdvancedSettingsService;
 use NITSAN\NsT3AF\Mcp\Service\FileUploadService;
 use NITSAN\NsT3AF\Mcp\Service\McpPublicUrlService;
@@ -69,5 +71,48 @@ final class FileUploadServiceSsrfTest extends TestCase
         $this->expectExceptionMessageMatches('/private|reserved|http/i');
 
         $service->downloadFromUrl($url);
+    }
+
+    #[Test]
+    public function downloadFromUrlPinsDnsWithoutStreamingTheBody(): void
+    {
+        $captured = null;
+        $requestFactory = $this->createMock(RequestFactory::class);
+        $requestFactory->expects(self::once())
+            ->method('request')
+            ->willReturnCallback(static function (string $uri, string $method, array $options) use (&$captured): never {
+                $captured = $options;
+
+                throw new TransferException('network down', new Request('GET', $uri));
+            });
+
+        $service = $this->serviceWith($requestFactory);
+
+        try {
+            $service->downloadFromUrl('https://example.com/photo.jpg', 'qa-photo.jpg');
+            self::fail('A failed download must be reported to the editor.');
+        } catch (\InvalidArgumentException $exception) {
+            self::assertSame('Could not download the file from example.com.', $exception->getMessage());
+        }
+
+        self::assertIsArray($captured);
+        self::assertArrayNotHasKey('stream', $captured);
+        self::assertArrayHasKey('curl', $captured);
+        self::assertArrayHasKey(\CURLOPT_RESOLVE, $captured['curl']);
+    }
+
+    private function serviceWith(RequestFactory $requestFactory): FileUploadService
+    {
+        $advanced = $this->createMock(AdvancedSettingsService::class);
+        $advanced->method('maxFileSizeMb')->willReturn(10);
+
+        return new FileUploadService(
+            $this->createMock(ConnectionPool::class),
+            $this->createMock(StorageRepository::class),
+            $advanced,
+            new PublicUrlValidator(),
+            $this->createMock(McpPublicUrlService::class),
+            $requestFactory,
+        );
     }
 }
