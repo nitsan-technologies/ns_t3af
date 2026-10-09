@@ -699,6 +699,10 @@
                 <source>I am not finished yet (for example, an image still has to be attached). Say “continue” or pick one of the suggested actions.</source>
                 <target>Ich bin noch nicht fertig (zum Beispiel muss noch ein Bild angehängt werden). Schreiben Sie „weiter“ oder wählen Sie eine vorgeschlagene Aktion.</target>
             </trans-unit>
+            <trans-unit id="agent.turn.filesUnavailable">
+                <source>These files cannot be attached because they do not exist or are missing from the file storage: %s. Please upload them again or choose other files.</source>
+                <target>Diese Dateien können nicht angehängt werden, weil sie nicht existieren oder im Dateispeicher fehlen: %s. Bitte laden Sie sie erneut hoch oder wählen Sie andere Dateien.</target>
+            </trans-unit>
             <trans-unit id="agent.turn.loopLimit">
                 <source>I could not finish this in one go. Tell me a bit more precisely what I should do, for example which page it is about.</source>
                 <target>Das konnte ich nicht in einem Schritt abschließen. Sagen Sie mir bitte etwas genauer, was ich tun soll, zum Beispiel um welche Seite es geht.</target>
@@ -1184,6 +1188,10 @@
             <trans-unit id="agent.draft.nothingKept">
                 <source>Nothing is selected. Include at least one change or cancel.</source>
                 <target>Nichts ausgewählt. Beziehen Sie mindestens eine Änderung ein oder brechen Sie ab.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.blankProposed">
+                <source>A change has no new value. Leave it out or cancel.</source>
+                <target>Eine Änderung hat keinen neuen Wert. Lassen Sie sie weg oder brechen Sie ab.</target>
             </trans-unit>
             <trans-unit id="agent.draft.titleRename">
                 <source>Rename %1$s</source>

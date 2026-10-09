@@ -85,6 +85,7 @@ readonly class AgentPromptBuilder
             'To add an image to a new content element: first prepare the element (e.g. a text & media element), after it is applied attach the image to its uid with the file reference tool (field "assets" for text & media, "image" for text & images). The page uid is never a content element uid.',
             'Do not call image generation until a Text & Media (textmedia) element for that image was applied, unless the editor asked only for a standalone image file. Mark a Text & Media plan step completed only after its element exists (and attach when they asked for an image).',
             'Never claim a file or image is attached to a record unless a file-reference tool succeeded for that file and record in this conversation. Generating or uploading a file alone does not attach it.',
+            'Only download a file from a URL the editor wrote or a tool returned. Never make up a URL (such as example.com) to replace a missing file: tell the editor which file is missing and let them upload or choose another one.',
             'To create a new page, prepare a new record in the pages table (or use a create-page tool); copying a page is only for "copy" or "duplicate" requests. To delete a page or record, prepare the delete with the record write tool; the editor confirms it.',
             'Page position uses pid. A positive pid creates the page as the first child of that page. A negative pid (-uid) creates it directly after that page. "After Page 1" is write_table create with afterUid set to Page 1\'s uid. Do not send Page 1\'s uid as a positive pid for an after request. "Before Page 2" is write_table create with beforeUid set to Page 2\'s uid. Do not send the parent uid as pid for a before request. "Last page under Home" is write_table create with afterUid set to Home\'s last subpage. "Subpage of Page 1" is Page 1\'s uid as a positive pid.',
             'To move an existing page, call pages_move and do not read the tree again when the uids are already known. beforeUid places it directly before that page. afterUid places it directly after that page. targetPid places it as the first child of that page. A hidden page can be moved. Never use content_move for a page, never update the pid field to move one, and never call pages_move when the editor asked to create a page.',
@@ -436,7 +437,8 @@ readonly class AgentPromptBuilder
             }
             $text = trim((string) ($history[$i]['content'] ?? ''));
             // The follow-up after a confirmed card is not a request: its quoted label must never be read as one.
-            if (str_starts_with($text, '[The editor ')) {
+            // Neither is a typed "continue": the request it continues still decides what is left to do.
+            if (str_starts_with($text, '[The editor ') || self::isGoOnReply($text)) {
                 continue;
             }
 
@@ -444,6 +446,17 @@ readonly class AgentPromptBuilder
         }
 
         return '';
+    }
+
+    /**
+     * "continue", "go on", "weiter" — the editor asks to finish the previous request, not for something new.
+     */
+    public static function isGoOnReply(string $message): bool
+    {
+        return preg_match(
+            '/^\s*(?:please\s+|bitte\s+)?(?:continue|go\s+on|carry\s+on|keep\s+going|proceed|resume|next|weiter(?:\s+machen)?|mach(?:e)?\s+weiter|fortfahren|fortsetzen)\s*(?:please|bitte)?\s*[.!]*\s*$/iu',
+            $message,
+        ) === 1;
     }
 
     public static function requestMentionsImage(string $query): bool
@@ -465,7 +478,7 @@ readonly class AgentPromptBuilder
 
         $checklist = AgentRequestChecklist::reconcile($history, $query);
         if ($checklist !== []) {
-            $block = AgentRequestChecklist::promptBlock($checklist);
+            $block = AgentRequestChecklist::promptBlock($checklist, $query);
             if ($block !== '') {
                 $parts[] = $block;
             }
@@ -686,6 +699,10 @@ readonly class AgentPromptBuilder
                 foreach (self::fileUidsFromDetails($details) as $uid) {
                     $attached[$uid] = true;
                 }
+                continue;
+            }
+            // Files a lookup only showed (file_list thumbnails) were not saved for this request.
+            if (($meta['severity'] ?? '') === 'read' || ($meta['readWithoutConfirmation'] ?? false) === true) {
                 continue;
             }
             foreach (self::fileUidsFromDetails($details) as $uid) {

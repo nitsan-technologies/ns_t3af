@@ -468,6 +468,7 @@ export const draftMethods = {
           <div class="nst3af-agent-draft__fields">${rows}</div>
           ${this.renderDraftTarget(isDestructive)}
           ${nothingKept ? `<p class="nst3af-agent-draft__hint" role="status">${escapeHtml(lang('agent.draft.nothingKept', 'Nothing is selected. Include at least one change or cancel.'))}</p>` : ''}
+          ${!nothingKept && blankProposed ? `<p class="nst3af-agent-draft__hint" role="status">${escapeHtml(lang('agent.draft.blankProposed', 'A change has no new value. Leave it out or cancel.'))}</p>` : ''}
           <div class="nst3af-agent-draft__actions">
             <button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-draft-apply="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}"${nothingKept || blankProposed ? ' disabled' : ''}>${escapeHtml(applyLabel)}</button>
             ${safeApplyBtn}
@@ -1095,8 +1096,13 @@ function createDraftFingerprint(draft) {
  */
 function keptFieldsLackProposedValue(draft, keys = null) {
   const fields = Array.isArray(draft?.fields) ? draft.fields : [];
+  const isCreate = String(draft?.action ?? '') === 'create';
   return fields.some((field) => {
     if (field?.kept === false) {
+      return false;
+    }
+    // A blank value on a new record is just the field's default; only a rename or an edit to nothing is refused.
+    if (isCreate && String(field?.field ?? '') !== '_rename') {
       return false;
     }
     if (Array.isArray(keys) && !keys.includes(String(field?.key ?? ''))) {

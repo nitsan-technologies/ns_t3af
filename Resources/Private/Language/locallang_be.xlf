@@ -759,6 +759,9 @@
       <trans-unit id="agent.turn.stepsStillOpen" resname="agent.turn.stepsStillOpen">
         <source>I am not finished yet (for example, an image still has to be attached). Say “continue” or pick one of the suggested actions.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.filesUnavailable" resname="agent.turn.filesUnavailable">
+        <source>These files cannot be attached because they do not exist or are missing from the file storage: %s. Please upload them again or choose other files.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.emptyModelReplyWithTools" resname="agent.turn.emptyModelReplyWithTools">
         <source>I could not produce a reply. Closest tools: %1$s. Try rephrasing, pick a suggested action, or use / to run a specific tool.</source>
       </trans-unit>
@@ -998,6 +1001,9 @@
       </trans-unit>
       <trans-unit id="agent.draft.nothingKept" resname="agent.draft.nothingKept">
         <source>Nothing is selected. Include at least one change or cancel.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.blankProposed" resname="agent.draft.blankProposed">
+        <source>A change has no new value. Leave it out or cancel.</source>
       </trans-unit>
       <trans-unit id="agent.draft.titleRename" resname="agent.draft.titleRename">
         <source>Rename %1$s</source>

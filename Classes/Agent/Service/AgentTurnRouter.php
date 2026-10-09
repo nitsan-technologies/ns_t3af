@@ -60,6 +60,7 @@ final readonly class AgentTurnRouter
         private FileService $fileService,
         private AgentTranslator $translator,
         private AgentTargetPageResolver $targetPageResolver,
+        private ?AgentRequestedFiles $requestedFiles = null,
     ) {}
 
     /**
@@ -204,6 +205,19 @@ final readonly class AgentTurnRouter
             return array_merge($attachmentMessages, $orchestratorResult['messages']);
         }
 
+        // Files the request names that cannot be attached are reported before the model runs; the
+        // checklist then closes the attach step instead of asking the editor to "continue".
+        $unavailableFiles = [];
+        $isContinuation = is_array($body['continuation'] ?? null) || str_starts_with(trim($message), '[The editor ');
+        if (!$isContinuation && $this->requestedFiles !== null) {
+            $notice = $this->requestedFiles->messageFor($message, $this->translator, $correlationId);
+            if ($notice !== null) {
+                $unavailableFiles = [$notice];
+                $this->emitMessages($emitEvent, $unavailableFiles);
+                $historyMessages[] = $notice;
+            }
+        }
+
         $orchestratorResult = $this->turnOrchestrator->runTurn(
             $message,
             $historyMessages,
@@ -214,7 +228,7 @@ final readonly class AgentTurnRouter
             $emitEvent,
         );
 
-        return $orchestratorResult['messages'];
+        return array_merge($unavailableFiles, $orchestratorResult['messages']);
     }
 
     /**
