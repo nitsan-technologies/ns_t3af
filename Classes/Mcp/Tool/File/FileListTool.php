@@ -36,7 +36,11 @@ readonly class FileListTool implements McpFalStorageToolInterface
 {
     public function __construct(private FileService $fileService) {}
 
-    #[McpTool(name: 'file_list', description: 'List files and directories in a storage directory with pagination.')]
+    #[McpTool(
+        name: 'file_list',
+        description: 'List files and directories in a storage directory with pagination.'
+            . ' storageUid 1 is fileadmin; 0 is not a storage.',
+    )]
     public function execute(string $directoryPath = '/', int $storageUid = 1, int $limit = 20, int $offset = 0): string
     {
         return json_encode(
