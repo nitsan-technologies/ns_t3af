@@ -363,8 +363,8 @@ final class AgentRequestChecklist
         );
         $hits = [];
         $patterns = [
-            'textmedia' => '/\b(text\s*&\s*media|text\s+and\s+media|textmedia)\b/u',
-            'textpic' => '/\b(text\s*&\s*images|text\s+and\s+images|textpic)\b/u',
+            'textmedia' => '/\b(text\s*(?:&|and|und)\s*(?:media|medien)|textmedia)\b/u',
+            'textpic' => '/\b(text\s*(?:&|and|und)\s*(?:images|bilder)|textpic)\b/u',
             'images' => '/\b(images|bilder)\b/u',
             'bullets' => '/\b(bullets?|bullet\s*points?|liste|aufzählung|aufzaehlung)\b/u',
             'table' => '/\b(tables?|tabelle)\b/u',
@@ -376,17 +376,17 @@ final class AgentRequestChecklist
                 continue;
             }
             $mapped = $cType === 'images' ? 'textpic' : $cType;
-            if ($mapped === 'text' && preg_match('/\b(text\s*&\s*media|text\s+and\s+media|textmedia|textpic)\b/u', $s) === 1) {
+            if ($mapped === 'text' && preg_match('/\b(text\s*(?:&|and|und)\s*(?:media|medien|images|bilder)|textmedia|textpic)\b/u', $s) === 1) {
                 // Skip the "Text" inside "Text & Media" — only count a later bare Text if present after.
                 $offset = (int) $m[0][1];
                 $before = mb_substr($s, max(0, $offset - 20), 40);
-                if (preg_match('/text\s*&\s*media|text\s+and\s+media|textmedia/u', $before) === 1) {
+                if (preg_match('/text\s*(?:&|and|und)\s*(?:media|medien|images|bilder)|textmedia/u', $before) === 1) {
                     // find next bare "text" that is not part of textmedia
                     if (preg_match_all('/\btext\b/u', $s, $all, PREG_OFFSET_CAPTURE) > 0) {
                         foreach ($all[0] as $hit) {
                             $pos = (int) $hit[1];
                             $window = mb_substr($s, $pos, 20);
-                            if (preg_match('/^text\s*&\s*media|^text\s+and\s+media|^textmedia/u', $window) === 1) {
+                            if (preg_match('/^text\s*(?:&|and|und)\s*(?:media|medien|images|bilder)|^textmedia/u', $window) === 1) {
                                 continue;
                             }
                             $hits[] = ['cType' => 'text', 'source' => 'text', 'pos' => $pos];
