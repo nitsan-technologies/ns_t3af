@@ -1665,6 +1665,10 @@
                 <source>This change is already being applied. Wait a moment before trying again.</source>
                 <target>Diese Änderung wird bereits ausgeführt. Warten Sie einen Moment, bevor Sie es erneut versuchen.</target>
             </trans-unit>
+            <trans-unit id="agent.write.nothingSaved">
+                <source>Nothing was saved: your user group may not edit the field of this change. Ask your administrator if you need access.</source>
+                <target>Es wurde nichts gespeichert: Ihre Benutzergruppe darf das Feld dieser Änderung nicht bearbeiten. Wenden Sie sich bei Bedarf an Ihren Administrator.</target>
+            </trans-unit>
             <trans-unit id="agent.write.draftTooOld">
                 <source>This change was prepared a while ago and is outdated. Ask the agent again to prepare a fresh change.</source>
                 <target>Diese Änderung wurde vor einiger Zeit vorbereitet und ist veraltet. Bitten Sie den Agenten erneut, eine aktuelle Änderung vorzubereiten.</target>
@@ -3100,6 +3104,14 @@
             <trans-unit id="agent.tool.desc.permission_check_page">
                 <source>Checks what you are allowed to do on a page.</source>
                 <target>Prüft, was Sie auf einer Seite tun dürfen.</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.desc.workspace_publish">
+                <source>Publishes the changes of a workspace so they go live.</source>
+                <target>Veröffentlicht die Änderungen eines Workspaces, sodass sie live gehen.</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.desc.explain_identity">
+                <source>Tells you who built this AI Agent.</source>
+                <target>Sagt Ihnen, wer diesen AI Agent entwickelt hat.</target>
             </trans-unit>
             <trans-unit id="agent.tool.desc.cache_clear">
                 <source>Clears the TYPO3 cache.</source>

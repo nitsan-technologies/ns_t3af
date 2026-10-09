@@ -517,4 +517,29 @@ final class AgentSessionContextTest extends TestCase
             ['role' => 'user', 'content' => 'And now page 14?'],
         ], $history);
     }
+
+    #[Test]
+    public function continuationAfterAnEditAsksForNothingNew(): void
+    {
+        $history = [['role' => 'user', 'content' => 'Change the header of content element uid 153 to the text QA Phantom Check R2.', 'meta' => []]];
+        $message = AgentPromptBuilder::continuationMessage(
+            ['outcome' => 'applied', 'label' => 'Change header', 'result' => 'Saved.'],
+            $history,
+        );
+
+        self::assertStringContainsString('do not create any record or content element', $message);
+        self::assertStringNotContainsString('prepare the next distinct type', $message);
+    }
+
+    #[Test]
+    public function aReplySentTwiceIsShownOnce(): void
+    {
+        $text = 'You are not allowed to change this kind of record with your backend account.';
+
+        self::assertSame($text, AgentPromptBuilder::collapseRepeatedReply($text . $text));
+        self::assertSame($text, AgentPromptBuilder::collapseRepeatedReply($text . ' ' . $text));
+        self::assertSame($text, AgentPromptBuilder::collapseRepeatedReply($text . "\n\n" . $text));
+        self::assertSame($text . ' Ask an administrator.', AgentPromptBuilder::collapseRepeatedReply($text . ' Ask an administrator.'));
+        self::assertSame('Done.', AgentPromptBuilder::collapseRepeatedReply('Done.'));
+    }
 }

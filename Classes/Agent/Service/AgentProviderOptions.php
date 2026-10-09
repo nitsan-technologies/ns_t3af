@@ -64,6 +64,10 @@ final readonly class AgentProviderOptions
 
         $storagePid = $this->storagePid($pageId);
         $default = $storagePid !== null ? $this->providers->findDefault($storagePid) : null;
+        if ($default instanceof Provider && !$this->isUsable($default, $pageId, $user)) {
+            // The default provider is not for this editor: "Default" runs with the fallback, so name that one.
+            $default = null;
+        }
         if (!$default instanceof Provider && $storagePid !== null) {
             // No default configured: "Default" stands for the highest-priority usable provider.
             $default = $this->fallbackProvider($storagePid, $pageId, $user);
@@ -186,12 +190,15 @@ final readonly class AgentProviderOptions
     }
 
     /**
-     * Whether the editor may run the agent with this provider ("default" / empty always).
+     * Whether the editor may run the agent with this provider ("default" / empty unless the allowlist leaves no provider).
      */
     public function isAllowed(string $identifier, int $pageId, ?BackendUserAuthentication $user): bool
     {
         if ($identifier === '' || $identifier === self::DEFAULT) {
-            return true;
+            // An allowlist that leaves no usable provider also closes "Default".
+            return $this->creditModeResolver->isActive()
+                || $this->governanceGuard->allowedProviders($user) === null
+                || $this->hasUsableProvider($pageId, $user);
         }
         if ($this->creditModeResolver->isActive()) {
             if ($identifier === CreditsProviderIdentifier::IDENTIFIER) {

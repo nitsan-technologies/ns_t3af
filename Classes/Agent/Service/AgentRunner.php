@@ -136,6 +136,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         [$state, $finalText] = $this->runAgent($userMessage, $historyMessages, $context, $body, $user, $correlationId, $emitEvent, $offeredTools, $executableTools, $severities);
+        $finalText = AgentPromptBuilder::collapseRepeatedReply($finalText);
 
         // Drop a card the editor already declined, and a second copy of a create that is still waiting.
         $state->messages = self::withoutRepeatedDeclinedDrafts($state->messages, $historyMessages);
@@ -669,7 +670,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         $createContent = AgentCoreToolSet::isCreateContentRequest($query);
         $notAskedFor = array_flip(self::toolsNotAskedFor($query));
-        if ($createContent) {
+        if ($createContent || self::isPlainEditRequest($query)) {
+            // "Change the header of element 5" is an update: with the delete tool at hand the model sometimes
+            // answers with a delete card plus a create card instead.
             $notAskedFor['content_delete'] = true;
         }
         $offeredTools = array_values(array_filter(
@@ -695,6 +698,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if (self::isPageMoveRequest($query)) {
             $found = [...self::pageMoveTools($executableTools, $offeredNames), ...$found];
         }
+        $found = [...self::fileActionTools($query, $executableTools, $offeredNames), ...$found];
         $workPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
         if (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $query)) {
             $found = [...self::imageWorkTools($executableTools, $offeredNames), ...$found];
@@ -868,6 +872,69 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return [];
+    }
+
+    /**
+     * A request that changes something that exists and does not ask to delete, remove or replace anything.
+     */
+    public static function isPlainEditRequest(string $query): bool
+    {
+        $q = mb_strtolower(trim($query));
+        if ($q === '' || preg_match('/\b(delete|remove|replace|clear|erase|trash|l[öo]sch\w*|entfern\w*|ersetz\w*)/u', $q) === 1) {
+            return false;
+        }
+
+        return preg_match('/\b(change|update|edit|rename|set|[äa]ndere\w*|aktualisier\w*|umbenenn\w*)\b/u', $q) === 1;
+    }
+
+    /**
+     * File and folder tools for a plain file request ("copy the file ...", "Ordner anlegen"). The tool
+     * search caps the extra tools per request and can rank an unrelated tool above file_copy.
+     *
+     * @param list<array<string, mixed>> $executableTools
+     * @param array<string, int|string> $alreadyOffered
+     * @return list<array<string, mixed>>
+     */
+    public static function fileActionTools(string $query, array $executableTools, array $alreadyOffered = []): array
+    {
+        $q = mb_strtolower(trim($query));
+        if ($q === '') {
+            return [];
+        }
+        $file = preg_match('/\b(file|files|datei|dateien)\b/u', $q) === 1;
+        $folder = preg_match('/\b(folder|folders|directory|directories|ordner|verzeichnis\w*)\b/u', $q) === 1;
+        if (!$file && !$folder) {
+            return [];
+        }
+        $wanted = [];
+        $verbs = [
+            'copy' => '/\b(copy|duplicate|kopier\w*|dupliz\w*)/u',
+            'move' => '/\b(move|verschieb\w*)/u',
+            'rename' => '/\b(rename|umbenenn\w*)/u',
+        ];
+        foreach ($verbs as $verb => $pattern) {
+            if (preg_match($pattern, $q) !== 1) {
+                continue;
+            }
+            if ($file) {
+                $wanted[] = 'file_' . $verb;
+            }
+            if ($folder && $verb !== 'copy') {
+                $wanted[] = 'directory_' . $verb;
+            }
+        }
+        if ($folder && preg_match('/\b(create|new|add|anlegen|erstell\w*|neu\w*)\b/u', $q) === 1) {
+            $wanted[] = 'directory_create';
+        }
+        $picked = [];
+        foreach ($executableTools as $tool) {
+            $name = (string) ($tool['name'] ?? '');
+            if (in_array($name, $wanted, true) && !isset($alreadyOffered[$name])) {
+                $picked[] = $tool;
+            }
+        }
+
+        return $picked;
     }
 
     /**

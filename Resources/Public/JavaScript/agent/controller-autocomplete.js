@@ -223,7 +223,7 @@ export const autocompleteMethods = {
 
       const severity = document.createElement('span');
       severity.className = 'visually-hidden';
-      severity.textContent = this.severityLabel(tool.severity);
+      severity.textContent = this.severityLabel(tool.editorSeverity || tool.severity);
       btn.appendChild(severity);
 
       if (locked && tool.ownerLabel) {
@@ -437,7 +437,7 @@ export const autocompleteMethods = {
      * @param {boolean} locked
      */
     renderToolItem(tool, locked) {
-      const severityText = this.severityLabel(tool.severity);
+      const severityText = this.severityLabel(tool.editorSeverity || tool.severity);
       const displayLabel = resolveToolDisplayLabel(tool);
       const aria = this.buildToolAriaLabel(tool, locked);
       // Plain-language line for editors: what it does, who provides it, whether it asks first.
@@ -612,7 +612,7 @@ export const autocompleteMethods = {
     buildToolAriaLabel(tool, locked) {
       const parts = [
         resolveToolDisplayLabel(tool),
-        this.severityLabel(tool.severity),
+        this.severityLabel(tool.editorSeverity || tool.severity),
       ];
       if (locked) {
         parts.push(lang('agent.starters.locked', 'Needs another extension'));

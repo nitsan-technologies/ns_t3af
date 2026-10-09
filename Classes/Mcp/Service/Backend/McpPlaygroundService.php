@@ -146,7 +146,14 @@ readonly class McpPlaygroundService
 
             // A write that was confirmed must not be recorded as done when the tool answered with an error
             // (for example "folder does not exist"): tools report such problems as {"error": "..."}.
-            $errorMessage = $errorPayloadIsFailure ? self::errorMessageOf($result) : null;
+            $errorMessage = self::errorMessageOf($result);
+            $logged = false;
+            if ($errorMessage !== null && !$errorPayloadIsFailure) {
+                // Other callers keep their result shape, but the log must not call a refused call a success.
+                $this->toolLogService->logFailure($handler, 'playground', array_values($arguments), $latencyMs, $errorMessage);
+                $errorMessage = null;
+                $logged = true;
+            }
             if ($errorMessage !== null) {
                 $this->toolLogService->logFailure($handler, 'playground', array_values($arguments), $latencyMs, $errorMessage);
 
@@ -158,7 +165,9 @@ readonly class McpPlaygroundService
                 ];
             }
 
-            $this->toolLogService->logSuccess($handler, 'playground', array_values($arguments), $latencyMs);
+            if (!$logged) {
+                $this->toolLogService->logSuccess($handler, 'playground', array_values($arguments), $latencyMs);
+            }
 
             return [
                 'success' => true,

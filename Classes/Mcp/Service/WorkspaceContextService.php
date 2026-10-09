@@ -98,6 +98,13 @@ readonly class WorkspaceContextService
      */
     public function stripOverlayFields(array $row, array $requested): array
     {
+        // workspaceOL() adds _ORIG_* bookkeeping keys to an overlaid row; they are not record fields and must not
+        // end up in a read-back, a diff or a message to the editor.
+        foreach (array_keys($row) as $key) {
+            if (is_string($key) && str_starts_with($key, '_ORIG_') && !in_array($key, $requested, true)) {
+                unset($row[$key]);
+            }
+        }
         if (in_array('*', $requested, true)) {
             return $row;
         }

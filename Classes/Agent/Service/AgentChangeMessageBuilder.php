@@ -78,6 +78,8 @@ final readonly class AgentChangeMessageBuilder
         }
 
         $values = is_array($entry['values'] ?? null) ? $entry['values'] : [];
+        // Bookkeeping keys of a workspace overlay (_ORIG_uid, …) are not fields the editor changed.
+        $values = array_filter($values, static fn(mixed $value, mixed $key): bool => !is_string($key) || !str_starts_with($key, '_'), ARRAY_FILTER_USE_BOTH);
         $fieldLabels = is_array($entry['fieldLabels'] ?? null) ? $entry['fieldLabels'] : [];
         if ($values === []) {
             return $fallback;
