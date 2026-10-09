@@ -52,6 +52,7 @@ readonly class DataHandlerService
     {
         $newId = 'NEW' . bin2hex(random_bytes(8));
         $fields['pid'] = $pid;
+        $fields = self::withContentColumn($table, $fields);
 
         $hadRequest = isset($GLOBALS['TYPO3_REQUEST']);
         $originalRequest = $GLOBALS['TYPO3_REQUEST'] ?? null;
@@ -88,6 +89,22 @@ readonly class DataHandlerService
                 $this->restoreRequest($hadRequest, $originalRequest);
             }
         }
+    }
+
+    /**
+     * content_defender reads colPos on a new tt_content row. The normal column is 0 when the plan omitted it.
+     *
+     * @param array<string, mixed> $fields
+     * @return array<string, mixed>
+     */
+    public static function withContentColumn(string $table, array $fields): array
+    {
+        if ($table !== 'tt_content' || array_key_exists('colPos', $fields)) {
+            return $fields;
+        }
+        $fields['colPos'] = 0;
+
+        return $fields;
     }
 
     /** @param array<string, mixed> $fields */

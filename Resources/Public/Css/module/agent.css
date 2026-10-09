@@ -2656,28 +2656,37 @@
   text-decoration: line-through;
 }
 
+/* Idle in-progress is a selected radio: the agent is waiting, not still working. */
 .nst3af-agent-plan__step--in_progress .nst3af-agent-plan__mark {
   border-color: var(--nst3af-agent-info-fg);
-  border-top-color: transparent;
+  background: var(--nst3af-agent-surface);
+  position: relative;
+}
+
+.nst3af-agent-plan__step--in_progress .nst3af-agent-plan__mark::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--nst3af-agent-info-fg);
 }
 
 .nst3af-agent-plan--running .nst3af-agent-plan__step--in_progress .nst3af-agent-plan__mark {
+  background: transparent;
+  border-top-color: transparent;
   animation: nst3af-agent-plan-spin 0.9s linear infinite;
 }
 
-/* Waiting for the editor's approval: the agent is idle, so no spinner and a calm "waiting" label. */
-.nst3af-agent-plan--waiting .nst3af-agent-plan__step--in_progress .nst3af-agent-plan__mark {
-  animation: none;
-  border-top-color: var(--nst3af-agent-info-fg);
-  border-style: dashed;
+.nst3af-agent-plan--running .nst3af-agent-plan__step--in_progress .nst3af-agent-plan__mark::after {
+  content: none;
 }
 
 .nst3af-agent-plan__waiting {
   margin-left: auto;
   margin-right: 8px;
   font-size: 12px;
-  font-weight: 400;
-  color: var(--nst3af-agent-text-muted);
+  font-weight: 600;
+  color: var(--nst3af-agent-info-fg);
 }
 
 .nst3af-agent-plan__step--failed .nst3af-agent-plan__mark {
@@ -2700,9 +2709,14 @@
 @media (prefers-reduced-motion: reduce) {
   .nst3af-agent-plan--running .nst3af-agent-plan__step--in_progress .nst3af-agent-plan__mark {
     animation: none;
+    border-top-color: var(--nst3af-agent-info-fg);
+    background: var(--nst3af-agent-surface);
+  }
+
+  .nst3af-agent-plan--running .nst3af-agent-plan__step--in_progress .nst3af-agent-plan__mark::after {
+    content: '';
   }
 }
-
 
 /* Explicit dark — hex fallbacks when soft tokens / --aiu-* are missing */
 [data-color-scheme=dark] .nst3af-agent-root,
