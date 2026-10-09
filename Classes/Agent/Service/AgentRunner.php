@@ -280,6 +280,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
         $pageId = (int) ($context['pageId'] ?? 0);
         $providerIdentifier = self::providerFromBody($body);
+        $body['requestQuery'] = self::requestQuery($userMessage, $historyMessages);
 
         $toolbox = new T3afToolbox(
             $this->toolDefinitionMapper->mapExecutableTools($offeredTools),
@@ -810,6 +811,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         // Persists the editor's backend workspace: only when the editor asks to change it.
         // A move card for "change the subheader" was applied as an edit and then reported as done.
         'content_move' => '/\b(move|moves|moved|moving|reorder\w*|reposition\w*|relocate\w*|verschieb\w*|versetz\w*|umsortier\w*|nach\s+(?:oben|unten)|position)\b/iu',
+        'pages_move' => '/\b(move|moves|moved|moving|verschieb\w*)\b/iu',
         'workspace_switch' => '/\b(workspaces?|arbeitsbereich\w*|switch\w*|wechsel\w*)\b/iu',
     ];
 
