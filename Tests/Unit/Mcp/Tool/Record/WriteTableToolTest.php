@@ -517,4 +517,30 @@ final class WriteTableToolTest extends TestCase
             'data' => ['pid' => -12, 'header' => 'After'],
         ]);
     }
+
+    #[Test]
+    public function aRewriteThatLostTheOriginalWordsIsRefused(): void
+    {
+        $old = 'Visible content for QA editor regression tests.';
+
+        self::assertFalse(WriteTableTool::rewriteKeepsMeaning($old, "Hello there! We're here to make your experience delightful and smooth."));
+        self::assertTrue(WriteTableTool::rewriteKeepsMeaning($old, 'Here you can find visible content that we use for our editor regression tests.'));
+        self::assertTrue(WriteTableTool::rewriteKeepsMeaning('Normal text inside the mount (QA)', 'Here is the regular text inside our mount (QA).'));
+    }
+
+    #[Test]
+    public function veryShortOriginalsAreNotJudged(): void
+    {
+        self::assertTrue(WriteTableTool::rewriteKeepsMeaning('Welcome', 'Hello and good day to you'));
+        self::assertTrue(WriteTableTool::rewriteKeepsMeaning('', 'Anything'));
+    }
+
+    #[Test]
+    public function onlyRewriteRequestsAreChecked(): void
+    {
+        self::assertTrue(WriteTableTool::isRewriteRequest('Rewrite the text of the block so it sounds friendlier'));
+        self::assertTrue(WriteTableTool::isRewriteRequest('Formuliere den Text freundlicher um, bitte umschreiben'));
+        self::assertFalse(WriteTableTool::isRewriteRequest('Replace the text of the block with: Opening hours 9-5'));
+        self::assertFalse(WriteTableTool::isRewriteRequest('Make the German page visible'));
+    }
 }

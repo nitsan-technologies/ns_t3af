@@ -1795,6 +1795,9 @@
       <trans-unit id="agent.field.rename" resname="agent.field.rename">
         <source>Rename</source>
       </trans-unit>
+      <trans-unit id="agent.field.hidden" resname="agent.field.hidden">
+        <source>Hidden (1 = hidden, 0 = visible)</source>
+      </trans-unit>
       <trans-unit id="agent.field.copy" resname="agent.field.copy">
         <source>Copy</source>
       </trans-unit>

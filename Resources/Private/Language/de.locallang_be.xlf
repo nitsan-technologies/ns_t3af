@@ -2245,6 +2245,10 @@
                 <source>Rename</source>
                 <target>Umbenennen</target>
             </trans-unit>
+            <trans-unit id="agent.field.hidden">
+                <source>Hidden (1 = hidden, 0 = visible)</source>
+                <target>Versteckt (1 = versteckt, 0 = sichtbar)</target>
+            </trans-unit>
             <trans-unit id="agent.field.copy">
                 <source>Copy</source>
                 <target>Kopieren</target>

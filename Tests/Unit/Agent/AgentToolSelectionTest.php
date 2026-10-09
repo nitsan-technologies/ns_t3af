@@ -247,4 +247,14 @@ final class AgentToolSelectionTest extends TestCase
             $settings,
         );
     }
+
+    #[Test]
+    public function recordChangeRequestsAreRecognisedForTheRecordWriter(): void
+    {
+        self::assertTrue(AgentToolSearch::asksForRecordChange('make the German page visible'));
+        self::assertTrue(AgentToolSearch::asksForRecordChange('Seite sichtbar machen'));
+        self::assertTrue(AgentToolSearch::asksForRecordChange('rename the page title'));
+        self::assertFalse(AgentToolSearch::asksForRecordChange('clear the cache'));
+        self::assertFalse(AgentToolSearch::asksForRecordChange('list backend users'));
+    }
 }
