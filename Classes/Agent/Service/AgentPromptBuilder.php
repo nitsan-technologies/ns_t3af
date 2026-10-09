@@ -628,7 +628,11 @@ readonly class AgentPromptBuilder
      */
     public static function missingMediaImageNote(array $history, string $requestQuery, array $plan = []): string
     {
-        if (self::unattachedFileUids($history) !== []) {
+        if (
+            self::unattachedFileUids($history) !== []
+            || AgentRequestedFiles::noFileLeftToAttach($history, $requestQuery)
+            || AgentRequestChecklist::imageWasDeclined($history, $requestQuery)
+        ) {
             return '';
         }
         $uid = self::unattachedMediaContentElementUid($history);

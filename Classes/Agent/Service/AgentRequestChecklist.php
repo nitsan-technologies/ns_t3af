@@ -220,6 +220,12 @@ final class AgentRequestChecklist
                     );
                 }
 
+                if (AgentRequestedFiles::asksForGeneratedImage($request)) {
+                    return 'Next: call ' . AgentRequestedFiles::GENERATION_TOOL . ' with a description of the image and a short altText,'
+                        . ' then file_reference_add with the returned fileUid on the Text & Media / Images element (fieldName "assets" or "image").'
+                        . ' Never use a stock photo or an image URL you found or made up. Do not claim the request is finished until the attach succeeds.';
+                }
+
                 return 'Next: generate or upload an image, then call file_reference_add on the Text & Media / Images element (fieldName "assets" or "image").'
                     . $altText . ' Do not claim the request is finished until that succeeds.';
             }
@@ -589,6 +595,16 @@ final class AgentRequestChecklist
     }
 
     /**
+     * The editor declined attaching or generating an image for this request.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function imageWasDeclined(array $history, string $request): bool
+    {
+        return self::declinedCards(self::historySinceLatestUserRequest($history, $request))['attach'];
+    }
+
+    /**
      * Cards the editor declined: the content types of declined creates, and whether an attach was declined.
      *
      * @param list<array<string, mixed>> $history
@@ -603,7 +619,7 @@ final class AgentRequestChecklist
             if (($entry['role'] ?? '') !== 'assistant' || ($meta['type'] ?? '') !== 'inline_draft' || ($draft['discarded'] ?? false) !== true) {
                 continue;
             }
-            if ((string) ($draft['tool'] ?? $meta['tool'] ?? '') === 'file_reference_add') {
+            if (in_array((string) ($draft['tool'] ?? $meta['tool'] ?? ''), ['file_reference_add', AgentRequestedFiles::GENERATION_TOOL], true)) {
                 $declined['attach'] = true;
                 continue;
             }
