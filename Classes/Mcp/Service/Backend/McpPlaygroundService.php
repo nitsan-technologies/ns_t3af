@@ -257,7 +257,9 @@ readonly class McpPlaygroundService
     {
         return $this->modeOverride->run(
             $mode,
-            fn(): array => $this->invoke($toolName, $arguments),
+            // Agent Apply must not treat {"error": ...} as a saved change. The playground
+            // invoke() default keeps that payload as success for its own result panel.
+            fn(): array => $this->invoke($toolName, $arguments, true),
         );
     }
 
