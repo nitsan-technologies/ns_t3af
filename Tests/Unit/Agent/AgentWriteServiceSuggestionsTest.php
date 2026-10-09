@@ -35,6 +35,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Site\SiteFinder;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * @internal
@@ -49,6 +50,8 @@ final class AgentWriteServiceSuggestionsTest extends TestCase
     protected function tearDown(): void
     {
         unset($GLOBALS['BE_USER']);
+        // apply() creates the real LockFactory singleton; drop it so later tests find a clean list.
+        GeneralUtility::resetSingletonInstances([]);
         $this->releaseAgentTranslator();
         parent::tearDown();
     }
