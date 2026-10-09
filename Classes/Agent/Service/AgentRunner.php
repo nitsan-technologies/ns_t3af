@@ -136,6 +136,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         [$state, $finalText] = $this->runAgent($userMessage, $historyMessages, $context, $body, $user, $correlationId, $emitEvent, $offeredTools, $executableTools, $severities);
+        $rawFinalText = $finalText;
+        $finalText = AgentPromptBuilder::stripLeakedToolCall($finalText);
         $finalText = AgentPromptBuilder::collapseRepeatedReply($finalText);
 
         // Drop a card the editor already declined, and a second copy of a create that is still waiting.
@@ -181,6 +183,11 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             && AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $requestForGate)
         ) {
             $finalText = '';
+        }
+
+        $missingPageUid = AgentPromptBuilder::leakedMissingPageUid($rawFinalText);
+        if ($missingPageUid > 0) {
+            $finalText = $this->translator->translate('agent.page.missingUid', [$missingPageUid]);
         }
 
         if ($finalText !== '') {

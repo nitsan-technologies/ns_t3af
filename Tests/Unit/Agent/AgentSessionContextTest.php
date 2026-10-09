@@ -554,6 +554,24 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function aLeakedToolCallIsNotShownToTheEditor(): void
+    {
+        $leaked = '{"pageId":99999} to=t3ai_generate_all_seo 天天中彩票实名_code:46 】!【I can’t generate SEO texts for page 99999 because it does not exist.';
+
+        self::assertSame(
+            'I can’t generate SEO texts for page 99999 because it does not exist.',
+            AgentPromptBuilder::stripLeakedToolCall($leaked),
+        );
+        self::assertSame(99999, AgentPromptBuilder::leakedMissingPageUid($leaked));
+        self::assertSame(
+            'The SEO card is ready for this page.',
+            AgentPromptBuilder::stripLeakedToolCall('{"pageId":5} to=t3ai_generate_all_seo The SEO card is ready for this page.'),
+        );
+        self::assertSame(0, AgentPromptBuilder::leakedMissingPageUid('{"pageId":5} to=t3ai_generate_all_seo The SEO card is ready for this page.'));
+        self::assertSame('Page 2 is ready.', AgentPromptBuilder::stripLeakedToolCall('Page 2 is ready.'));
+    }
+
+    #[Test]
     public function theFollowUpAfterAConfirmedCardIsNotARequest(): void
     {
         $followUp = '[The editor confirmed "Create Text element" and it was applied.] Continue.';
