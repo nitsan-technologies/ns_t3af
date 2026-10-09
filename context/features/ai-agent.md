@@ -100,7 +100,7 @@ Reasoning models (0.13 `MultiPartResult`: thinking + text / tool calls) are read
 | Piece | Path |
 |---|---|
 | Preview DualMode | `McpPlaygroundService::preview` + `McpModeOverride` → suggestions meta |
-| Suggestions apply | `AgentWriteService::applySuggestions` (context mode content params). A tool `{"error": ...}` (for example an editor without SEO field rights) is a failed apply, not "Applied". |
+| Suggestions apply | `AgentWriteService::applySuggestions` (context mode content params). A tool `{"error": ...}` (for example an editor without SEO field rights) is a failed apply, not "Applied". Undo writes the preview field `column` (pages `seo_title`, not the suggestion key `metaTitle`). |
 | Plan + draft card | `AgentToolPlanResolver`, `AgentDraftService`, `SatelliteToolPlanService` |
 | Apply (non-preview) | `AgentWriteService::apply` → DataHandler or tool confirmation invoke |
 | Tool confirmation kind | `PLAN_KIND_TOOL_CONFIRMATION` — run-after-confirm for non-DataHandler tools |

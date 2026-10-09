@@ -34,7 +34,7 @@ final readonly class PreviewResult
 
     /**
      * @param array{table: string, uid: int, languageId: int}                                                         $target
-     * @param list<array{key: string, label: string, current: string, limits?: array<string, mixed>}>                   $fields
+     * @param list<array{key: string, label: string, current: string, column?: string, limits?: array<string, mixed>}>   $fields
      * @param list<array{label: string, angle: string, values: array<string, string>}>                                  $variants
      * @param list<array{table: string, uid: int, languageId: int}>                                                     $targets
      */
@@ -88,6 +88,10 @@ final readonly class PreviewResult
                 'label' => (string) ($field['label'] ?? ''),
                 'current' => (string) ($field['current'] ?? ''),
             ];
+            $column = trim((string) ($field['column'] ?? ''));
+            if ($column !== '') {
+                $entry['column'] = $column;
+            }
             if (isset($field['limits']) && is_array($field['limits'])) {
                 $entry['limits'] = $field['limits'];
             }

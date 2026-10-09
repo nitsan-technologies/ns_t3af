@@ -542,10 +542,16 @@ final class AgentWriteService
     private function buildPreviewUndoFields(PreviewResult $preview, array $resolved): array
     {
         $currentByKey = [];
+        $columnByKey = [];
         foreach ($preview->fields as $field) {
             $key = (string) ($field['key'] ?? '');
-            if ($key !== '') {
-                $currentByKey[$key] = (string) ($field['current'] ?? '');
+            if ($key === '') {
+                continue;
+            }
+            $currentByKey[$key] = (string) ($field['current'] ?? '');
+            $column = trim((string) ($field['column'] ?? ''));
+            if ($column !== '') {
+                $columnByKey[$key] = $column;
             }
         }
 
@@ -553,10 +559,14 @@ final class AgentWriteService
         $uid = (int) ($preview->target['uid'] ?? 0);
         $undo = [];
         foreach ($resolved as $fieldKey => $_) {
+            $fieldUid = $uid;
+            if (preg_match('/^(\d+):/', $fieldKey, $pagePrefix) === 1 && (int) $pagePrefix[1] > 0) {
+                $fieldUid = (int) $pagePrefix[1];
+            }
             $undo[] = [
                 'table' => $table,
-                'uid' => $uid,
-                'field' => $fieldKey,
+                'uid' => $fieldUid,
+                'field' => $columnByKey[$fieldKey] ?? $fieldKey,
                 'previousValue' => $currentByKey[$fieldKey] ?? '',
                 'action' => 'update',
             ];
