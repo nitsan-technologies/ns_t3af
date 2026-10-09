@@ -1726,8 +1726,8 @@
                 <target>„Rückgängig“ kann ein gelöschtes Element nicht wiederherstellen. Stellen Sie es stattdessen im Modul „Papierkorb“ wieder her.</target>
             </trans-unit>
             <trans-unit id="agent.plan.pageHint">
-                <source> for page %1$s</source>
-                <target> für Seite %1$s</target>
+                <source>for page %1$s</source>
+                <target>für Seite %1$s</target>
             </trans-unit>
             <trans-unit id="agent.plan.generateAllSeo">
                 <source>Generate and apply all SEO metadata%1$s.</source>
