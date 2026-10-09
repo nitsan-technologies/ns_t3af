@@ -6,6 +6,10 @@
 
 **Done:** `file_upload_from_url` (`FileUploadService::downloadFromUrl`) pins the resolved public IP without `stream`, so Guzzle's stream handler is not given a curl option. A transport failure tells the editor the host. AI image generation itself stays `t3ai_generate_image` in ns_t3ai.
 
+## 2026-10-09 — SEO Apply no longer claims a refused save
+
+**Done:** Agent suggestion Apply uses `invokeWithMode`, which now treats a tool `{"error": ...}` as a failure. An editor without SEO field rights sees the refusal instead of "Applied 5 suggestion field(s)" with nothing saved. See `context/features/ai-agent.md`.
+
 **Last touched:** 2026-10-09
 
 ---
