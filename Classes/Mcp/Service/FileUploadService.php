@@ -360,7 +360,6 @@ readonly class FileUploadService
             $options = [
                 'allow_redirects' => false,
                 'http_errors' => false,
-                'stream' => true,
                 'connect_timeout' => 10,
                 'timeout' => 300,
                 'headers' => ['User-Agent' => 'TYPO3-AI-Foundation-MCP/1.0'],
@@ -369,21 +368,50 @@ readonly class FileUploadService
             $parts = parse_url($currentUrl);
             $host = is_string($parts['host'] ?? null) ? $parts['host'] : '';
             $proxyConfigured = !empty($GLOBALS['TYPO3_CONF_VARS']['HTTP']['proxy']);
-            if (!$proxyConfigured && $resolvedIp !== null && $host !== ''
+            $pinDns = !$proxyConfigured && $resolvedIp !== null && $host !== ''
                 && filter_var($host, FILTER_VALIDATE_IP) === false
-                && defined('CURLOPT_RESOLVE')
-            ) {
+                && defined('CURLOPT_RESOLVE');
+            if ($pinDns) {
+                // A streamed body is handled by Guzzle's stream handler, which
+                // rejects every curl option. DNS pinning needs CURLOPT_RESOLVE,
+                // so this hop is not streamed. The progress callback stops the
+                // transfer once the body passes the size limit.
                 $port = $parts['port'] ?? (($parts['scheme'] ?? 'https') === 'https' ? 443 : 80);
                 $pinnedIp = filter_var($resolvedIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false
                     ? '[' . $resolvedIp . ']'
                     : $resolvedIp;
                 $options['curl'] = [\CURLOPT_RESOLVE => [$host . ':' . $port . ':' . $pinnedIp]];
+                $options['progress'] = static function (int $downloadTotal, int $downloaded) use ($maxBytes): void {
+                    if ($downloaded > $maxBytes) {
+                        throw new \InvalidArgumentException(
+                            'The file exceeds the maximum size of ' . round($maxBytes / 1048576) . ' MiB '
+                            . '(configurable via mcpMaxFileSizeMb).',
+                            1747320015,
+                        );
+                    }
+                };
+            } else {
+                $options['stream'] = true;
             }
 
             try {
                 $response = $requestFactory->request($currentUrl, 'GET', $options);
             } catch (GuzzleException $e) {
-                throw new \InvalidArgumentException('Downloading the URL failed: ' . $e->getMessage(), 1747320010, $e);
+                $cause = $e;
+                while ($cause !== null) {
+                    if ($cause instanceof \InvalidArgumentException && $cause->getCode() === 1747320015) {
+                        throw $cause;
+                    }
+                    $cause = $cause->getPrevious();
+                }
+                $failedHost = parse_url($currentUrl, PHP_URL_HOST);
+                $failedHost = is_string($failedHost) && $failedHost !== '' ? $failedHost : 'that address';
+
+                throw new \InvalidArgumentException(
+                    'Could not download the file from ' . $failedHost . '.',
+                    1747320010,
+                    $e,
+                );
             }
 
             if (!in_array($response->getStatusCode(), [301, 302, 303, 307, 308], true)) {
