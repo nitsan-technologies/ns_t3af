@@ -540,7 +540,17 @@ final class AgentAjaxController
                 mb_substr($exception->getMessage(), 0, 250),
             );
 
-            return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.applyFailedDetail', [$reason])], 400);
+            // The write service already words its own refusals as full sentences ("Nothing was saved: …");
+            // only a raw tool message gets the "could not be saved" lead-in, and never twice.
+            $code = (int) $exception->getCode();
+            $isOwnSentence = $code >= 1712003200 && $code <= 1712003299 && $code !== 1712003211;
+            $lead = $this->translator->translate('agent.error.applyFailedDetail', ['']);
+            $alreadyLedIn = $lead !== '' && str_starts_with($reason, trim($lead));
+            $message = $isOwnSentence || $alreadyLedIn
+                ? $reason
+                : $this->translator->translate('agent.error.applyFailedDetail', [$reason]);
+
+            return new JsonResponse(['ok' => false, 'message' => $message], 400);
         }
 
         $this->auditLogger->logToolInvocation(

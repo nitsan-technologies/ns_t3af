@@ -893,4 +893,12 @@ final class AgentRunnerTest extends TestCase
         self::assertFalse(AgentRunner::isPlainEditRequest('Delete the old header and change the title'));
         self::assertFalse(AgentRunner::isPlainEditRequest('Create a text element'));
     }
+
+    #[Test]
+    public function providerBillingTextIsRecognisedSoEditorsDoNotSeeIt(): void
+    {
+        self::assertTrue(AgentRunner::looksLikeProviderAccountProblem('Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing.'));
+        self::assertTrue(AgentRunner::looksLikeProviderAccountProblem('You exceeded your current quota, please check your plan and billing details.'));
+        self::assertFalse(AgentRunner::looksLikeProviderAccountProblem('The model is overloaded, try again.'));
+    }
 }

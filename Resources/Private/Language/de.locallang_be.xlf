@@ -671,6 +671,10 @@
                 <source>This request was blocked by the AI permissions of your backend group: %1$s Ask your administrator to allow it under AI Permissions, or try a different request.</source>
                 <target>Diese Anfrage wurde durch die KI-Berechtigungen Ihrer Backend-Gruppe blockiert: %1$s Bitten Sie Ihre Administration, sie unter KI-Berechtigungen zu erlauben, oder versuchen Sie eine andere Anfrage.</target>
             </trans-unit>
+            <trans-unit id="agent.turn.providerUnavailable">
+                <source>The AI provider is not available right now. Please try again later or ask your administrator to check the provider account.</source>
+                <target>Der KI-Anbieter ist im Moment nicht verfügbar. Bitte versuchen Sie es später erneut oder bitten Sie Ihre Administration, das Anbieterkonto zu prüfen.</target>
+            </trans-unit>
             <trans-unit id="agent.turn.orchestratorFailed">
                 <source>The agent could not complete this turn: %1$s</source>
                 <target>Der Agent konnte diese Runde nicht abschließen: %1$s</target>
@@ -808,19 +812,19 @@
                 <target>Turn gestoppt: Das Limit von %1$s Tool-Aufrufen wurde erreicht. Starten Sie eine neue Nachricht, um fortzufahren.</target>
             </trans-unit>
             <trans-unit id="agent.entitlement.lockedLead">
-                <source>„%1$s“ comes from %2$s, which is not available on this installation.</source>
+                <source>“%1$s” comes from %2$s, which is not available on this installation.</source>
                 <target>„%1$s“ gehört zu %2$s, das in dieser Installation nicht verfügbar ist.</target>
             </trans-unit>
             <trans-unit id="agent.entitlement.planLockedLead">
-                <source>„%1$s“ changes data, and the agent cannot show you a preview of it yet, so it will not run it. Do it in the matching backend module instead.</source>
+                <source>“%1$s” changes data, and the agent cannot show you a preview of it yet, so it will not run it. Do it in the matching backend module instead.</source>
                 <target>„%1$s“ ändert Daten, und der Agent kann dafür noch keine Vorschau zeigen – deshalb führt er es nicht aus. Nutzen Sie stattdessen das passende Backend-Modul.</target>
             </trans-unit>
             <trans-unit id="agent.entitlement.severityLockedLead">
-                <source>„%1$s“ cannot be used by the agent yet.</source>
+                <source>“%1$s” cannot be used by the agent yet.</source>
                 <target>„%1$s“ kann vom Agenten noch nicht genutzt werden.</target>
             </trans-unit>
             <trans-unit id="agent.entitlement.groupLockedLead">
-                <source>„%1$s“ is not allowed for your user group. Ask your administrator to allow it under AI Permissions, or try a different request.</source>
+                <source>“%1$s” is not allowed for your user group. Ask your administrator to allow it under AI Permissions, or try a different request.</source>
                 <target>„%1$s“ ist für Ihre Benutzergruppe nicht erlaubt. Bitten Sie Ihren Administrator, es unter „KI-Berechtigungen“ freizugeben, oder versuchen Sie eine andere Anfrage.</target>
             </trans-unit>
             <trans-unit id="agent.entitlement.toolCount">
@@ -1098,7 +1102,7 @@
                 <target>Nutzen Sie die Schaltfläche + neben dem Nachrichtenfeld, um Dateien hochzuladen.</target>
             </trans-unit>
             <trans-unit id="agent.entitlement.composerLockedLead">
-                <source>„%1$s“ works through the + button next to the message field.</source>
+                <source>“%1$s” works through the + button next to the message field.</source>
                 <target>„%1$s“ funktioniert über die Schaltfläche + neben dem Nachrichtenfeld.</target>
             </trans-unit>
             <trans-unit id="agent.draft.applySafe">
@@ -2170,7 +2174,7 @@
                 <target>Nach der Bestätigung ist das sofort auf der Website sichtbar.</target>
             </trans-unit>
             <trans-unit id="agent.draft.targetWorkspace">
-                <source>On confirm this is saved as a draft in the workspace „%1$s“.</source>
+                <source>On confirm this is saved as a draft in the workspace “%1$s”.</source>
                 <target>Nach der Bestätigung wird das als Entwurf im Arbeitsbereich „%1$s“ gespeichert.</target>
             </trans-unit>
             <trans-unit id="agent.link.edit">
@@ -2196,6 +2200,30 @@
             <trans-unit id="agent.field.rename">
                 <source>Rename</source>
                 <target>Umbenennen</target>
+            </trans-unit>
+            <trans-unit id="agent.field.copy">
+                <source>Copy</source>
+                <target>Kopieren</target>
+            </trans-unit>
+            <trans-unit id="agent.field.record">
+                <source>Record</source>
+                <target>Datensatz</target>
+            </trans-unit>
+            <trans-unit id="agent.value.exists">
+                <source>Exists</source>
+                <target>Vorhanden</target>
+            </trans-unit>
+            <trans-unit id="agent.value.delete">
+                <source>Delete</source>
+                <target>Löschen</target>
+            </trans-unit>
+            <trans-unit id="agent.quote.wrap">
+                <source>“%1$s”</source>
+                <target>„%1$s“</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.notSetNotAllowed">
+                <source>Not set, because your account may not edit it: %1$s. Do not try to set it again.</source>
+                <target>Nicht gesetzt, weil Ihr Konto es nicht bearbeiten darf: %1$s. Versuchen Sie nicht erneut, es zu setzen.</target>
             </trans-unit>
             <trans-unit id="agent.field.move">
                 <source>Move</source>

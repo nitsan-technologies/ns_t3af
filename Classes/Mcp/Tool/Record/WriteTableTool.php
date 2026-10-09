@@ -58,6 +58,9 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 #[McpToolSeverity(ToolSeverity::Write)]
 readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableToolInterface
 {
+    /** Fields every create carries; they do not count as content the editor asked for. */
+    private const STRUCTURAL_FIELDS = ['CType', 'colPos', 'sys_language_uid', 'l18n_parent', 'hidden', 'sorting', 'list_type'];
+
     private const ALLOWED_ACTIONS = ['create', 'update', 'delete'];
 
     /** A NEW id for the one record of a create. */
@@ -214,6 +217,18 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
         unset($payload['pid']);
         $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
+        // Fields the group may not edit would be dropped silently at Apply: the card must not offer them,
+        // and a create whose requested content fields are all forbidden is refused.
+        $notAllowed = [];
+        $user = $GLOBALS['BE_USER'] ?? null;
+        if ($user instanceof BackendUserAuthentication && $filteredData !== []) {
+            $allowed = (new RecordAccessGate())->withoutForbiddenFields($user, $tableName, $filteredData);
+            $notAllowed = array_values(array_map('strval', array_keys(array_diff_key($filteredData, $allowed))));
+            if ($notAllowed !== [] && array_diff(array_keys($allowed), self::STRUCTURAL_FIELDS) === []) {
+                throw new \InvalidArgumentException('You are not allowed to change this field with your backend account: ' . implode(', ', $notAllowed) . '.');
+            }
+            $filteredData = $allowed;
+        }
 
         $fields = [];
         foreach ($filteredData as $fieldName => $value) {
@@ -227,7 +242,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             );
         }
 
-        return new ToolPlan('create', 'write_table', $fields, ['pid' => $pid]);
+        return new ToolPlan('create', 'write_table', $fields, ['pid' => $pid] + ($notAllowed !== [] ? ['notAllowedFields' => $notAllowed] : []));
     }
 
     /** @param array<string, mixed> $payload */
@@ -244,6 +259,15 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
         if ($filteredData === []) {
             throw new \InvalidArgumentException($this->normalizer->noWritableFieldsMessage($tableName, $payload, $filteredData));
+        }
+        // A field the group may not edit would only fail at Apply: say so now, before a card is shown.
+        $user = $GLOBALS['BE_USER'] ?? null;
+        if ($user instanceof BackendUserAuthentication) {
+            $allowed = (new RecordAccessGate())->withoutForbiddenFields($user, $tableName, $filteredData);
+            if ($allowed === []) {
+                throw new \InvalidArgumentException('You are not allowed to change this field with your backend account: ' . implode(', ', array_keys($filteredData)) . '.');
+            }
+            $filteredData = $allowed;
         }
 
         $fieldNames = array_keys($filteredData);
