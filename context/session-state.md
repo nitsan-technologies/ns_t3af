@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-09 — Progress belongs to the newest request
+
+**Done:** The Progress panel (`controller-stream.js`) shows only the plan saved after the newest request the editor typed; hidden continuation rows count as part of it. "Waiting for your approval" needs an open step and an unapplied card of that request, so an old card no longer keeps it on. The panel hides once every step is done and no turn is running.
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-09 — Attach card only for files that can be shown
 
 **Done:** `file_reference_add` checks the files in `plan()` and again in `execute()`: numeric sys_file uid, the file exists, the editor may read it, and it is on disk (`File::exists()`). The field must be shown for the record type (`TcaSchemaService::getShownFields()`), so `assets` on an Image element is refused with the field to use. The card lists file names. `file_list` says storageUid 1 is fileadmin.
