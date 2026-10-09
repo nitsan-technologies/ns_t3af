@@ -489,13 +489,24 @@ final class AgentRunnerTest extends TestCase
     #[Test]
     public function copyingAPageIsOfferedOnlyWhenAskedFor(): void
     {
-        self::assertSame(['pages_copy', 'content_move', 'pages_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('I want a new subpage "Eval yes" under this page'));
-        self::assertSame(['pages_copy', 'content_move', 'pages_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('Ändere die Unterüberschrift von Element 12 auf Hallo'));
-        self::assertSame(['pages_copy', 'content_move', 'pages_move'], AgentRunner::toolsNotAskedFor('Switch to the QA Draft workspace'));
+        self::assertSame(['pages_copy', 'content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('I want a new subpage "Eval yes" under this page'));
+        self::assertSame(['pages_copy', 'content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Ändere die Unterüberschrift von Element 12 auf Hallo'));
+        self::assertSame(['pages_copy', 'content_move', 'pages_move', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Switch to the QA Draft workspace'));
         self::assertNotContains('content_move', AgentRunner::toolsNotAskedFor('Move element 12 below element 15'));
-        self::assertSame(['content_move', 'pages_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
-        self::assertSame(['content_move', 'pages_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
-        self::assertSame(['content_move', 'pages_move'], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
+        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
+        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
+        self::assertSame(['content_move', 'pages_move', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
+        self::assertNotContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor('Summarize this page'));
+        self::assertContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor('Rewrite the block so it sounds friendlier'));
+    }
+
+    #[Test]
+    public function newsRequestsDoNotGetTheContentDeleteTool(): void
+    {
+        self::assertTrue(AgentRunner::isNewsOnlyRequest('Delete the Winter Opening Hours news.'));
+        self::assertTrue(AgentRunner::isNewsOnlyRequest('Lösche die Meldung Sommerfest'));
+        self::assertFalse(AgentRunner::isNewsOnlyRequest('Delete the news content element on this page'));
+        self::assertFalse(AgentRunner::isNewsOnlyRequest('Delete element 12'));
     }
 
     #[Test]
@@ -842,6 +853,44 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function aDownloadThatFailedForGoodIsNotOfferedAgainUnchanged(): void
+    {
+        $download = static fn(string $url, bool $failed = false): array => [
+            'role' => 'assistant',
+            'content' => 'Upload file from URL',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => ['tool' => 'file_upload_from_url', 'failed' => $failed, 'fields' => [], 'arguments' => ['url' => $url]],
+            ],
+        ];
+        $history = [$download('https://no-such-host.invalid/a.jpg', true)];
+        $newRequest = ['role' => 'user', 'content' => 'Try again', 'meta' => ['type' => 'message']];
+
+        $declinedDropped = 0;
+        $failedDropped = 0;
+        $kept = AgentRunner::withoutRepeatedDeclinedDrafts([$download('https://no-such-host.invalid/a.jpg')], [...$history, $newRequest], false, $declinedDropped, $failedDropped);
+
+        self::assertSame([], $kept);
+        self::assertSame(0, $declinedDropped);
+        self::assertSame(1, $failedDropped);
+        // Another address is a new attempt.
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$download('https://upload.wikimedia.org/a.jpg')], $history));
+
+        // Tool cards in the window carry no arguments: the address is only in the summary.
+        $card = static fn(string $url, bool $failed = false): array => [
+            'role' => 'assistant',
+            'content' => 'upload from ' . $url . ' to user_upload',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => ['tool' => 'file_upload_from_url', 'kind' => 'tool_confirmation', 'action' => 'create', 'failed' => $failed, 'fields' => [], 'arguments' => [], 'summary' => 'upload from ' . $url . ' to user_upload'],
+            ],
+        ];
+        $history = [$card('https://no-such-host.invalid/a.jpg', true)];
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$card('https://no-such-host.invalid/a.jpg')], $history));
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$card('https://upload.wikimedia.org/a.jpg')], $history));
+    }
+
+    #[Test]
     public function aPendingCreateIsNotOfferedAgain(): void
     {
         $create = static fn(string $title, bool $applied = false): array => [
@@ -902,6 +951,29 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function aToolCardTheEditorJustDeclinedIsNotProposedAgainInOtherWords(): void
+    {
+        $generate = static fn(string $prompt, bool $discarded = false): array => [
+            'role' => 'assistant',
+            'content' => 'Generate an image',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => ['tool' => 't3ai_generate_image', 'discarded' => $discarded, 'fields' => [], 'arguments' => ['prompt' => $prompt]],
+            ],
+        ];
+        $request = ['role' => 'user', 'content' => 'Create a text & media element with an AI-generated image', 'meta' => ['type' => 'message']];
+        $declined = ['role' => 'user', 'content' => '[The editor declined …]', 'meta' => ['type' => 'continuation', 'hidden' => true]];
+        $history = [$request, $generate('A red lighthouse', true), $declined];
+
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$generate('A red lighthouse on a cliff')], $history, true));
+        // Also later in the same request, after another card was applied.
+        $dropped = 0;
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$generate('A red lighthouse on a cliff')], $history, false, $dropped));
+        self::assertSame(1, $dropped);
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$generate('A red lighthouse on a cliff')], [...$history, $request], true));
+    }
+
+    #[Test]
     public function fileRequestsKeepTheMatchingFileTools(): void
     {
         $tools = [['name' => 'file_copy'], ['name' => 'file_move'], ['name' => 'directory_create'], ['name' => 'content_get']];
@@ -939,5 +1011,23 @@ final class AgentRunnerTest extends TestCase
         self::assertTrue(AgentRunner::looksLikeProviderAccountProblem('Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing.'));
         self::assertTrue(AgentRunner::looksLikeProviderAccountProblem('You exceeded your current quota, please check your plan and billing details.'));
         self::assertFalse(AgentRunner::looksLikeProviderAccountProblem('The model is overloaded, try again.'));
+    }
+
+    #[Test]
+    public function offerToApplyWithoutADraftIsRecognised(): void
+    {
+        self::assertTrue(AgentRunner::offersUnbackedApply("Welcome to our QA section!\n\nWould you like to apply this change?"));
+        self::assertTrue(AgentRunner::offersUnbackedApply('Would you like me to save it as the new text?'));
+        self::assertTrue(AgentRunner::offersUnbackedApply('Soll ich diese Änderung übernehmen?'));
+    }
+
+    #[Test]
+    public function plainAnswersAreNeverForcedIntoAWrite(): void
+    {
+        self::assertFalse(AgentRunner::offersUnbackedApply(''));
+        self::assertFalse(AgentRunner::offersUnbackedApply('The page has 3 content elements and 2 translations.'));
+        self::assertFalse(AgentRunner::offersUnbackedApply('Which page do you mean: Home or About?'));
+        self::assertFalse(AgentRunner::offersUnbackedApply('Die Seite hat drei Inhaltselemente.'));
+        self::assertFalse(AgentRunner::offersUnbackedApply('You can use the Content module to review the text.'));
     }
 }

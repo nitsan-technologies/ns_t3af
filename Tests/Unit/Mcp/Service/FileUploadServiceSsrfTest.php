@@ -101,6 +101,58 @@ final class FileUploadServiceSsrfTest extends TestCase
         self::assertArrayHasKey(\CURLOPT_RESOLVE, $captured['curl']);
     }
 
+    #[Test]
+    public function unknownHostSaysSoInsteadOfPrivateAddress(): void
+    {
+        $requestFactory = $this->createMock(RequestFactory::class);
+        $requestFactory->expects(self::never())->method('request');
+
+        try {
+            $this->serviceWith($requestFactory)->downloadFromUrl('https://no-such-host.invalid/photo.jpg');
+            self::fail('An unknown host must be reported.');
+        } catch (\InvalidArgumentException $exception) {
+            self::assertSame('Could not resolve host "no-such-host.invalid".', $exception->getMessage());
+            self::assertTrue(FileUploadService::isPermanentFailure($exception));
+        }
+    }
+
+    #[Test]
+    public function hostNameOfAPrivateAddressIsStillRefused(): void
+    {
+        $requestFactory = $this->createMock(RequestFactory::class);
+        $requestFactory->expects(self::never())->method('request');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('private or reserved network address');
+
+        $this->serviceWith($requestFactory)->downloadFromUrl('http://localhost/secret.jpg');
+    }
+
+    /**
+     * @return iterable<string, array{\Throwable, bool}>
+     */
+    public static function failures(): iterable
+    {
+        yield 'unknown host' => [new \InvalidArgumentException('x', 1747320020), true];
+        yield 'private address' => [new \InvalidArgumentException('x', 1747320019), true];
+        yield 'not http' => [new \InvalidArgumentException('x', 1747320018), true];
+        yield 'web page, not a file' => [new \InvalidArgumentException('x', 1747320017), true];
+        yield 'too large' => [new \InvalidArgumentException('x', 1747320015), true];
+        yield '404' => [new \InvalidArgumentException('Downloading the URL failed with HTTP status 404.', 1747320013), true];
+        yield '403' => [new \InvalidArgumentException('Downloading the URL failed with HTTP status 403.', 1747320013), true];
+        yield '429' => [new \InvalidArgumentException('Downloading the URL failed with HTTP status 429.', 1747320013), false];
+        yield '503' => [new \InvalidArgumentException('Downloading the URL failed with HTTP status 503.', 1747320013), false];
+        yield 'network down' => [new \InvalidArgumentException('Could not download the file from example.com.', 1747320010), false];
+        yield 'other error' => [new \RuntimeException('disk full', 1), false];
+    }
+
+    #[Test]
+    #[DataProvider('failures')]
+    public function onlyFailuresThatRepeatOnRetryArePermanent(\Throwable $exception, bool $permanent): void
+    {
+        self::assertSame($permanent, FileUploadService::isPermanentFailure($exception));
+    }
+
     private function serviceWith(RequestFactory $requestFactory): FileUploadService
     {
         $advanced = $this->createMock(AdvancedSettingsService::class);

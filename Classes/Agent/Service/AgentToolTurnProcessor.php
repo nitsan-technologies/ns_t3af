@@ -420,7 +420,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'role' => 'assistant',
                 'content' => $this->translator->translate(
                     'agent.turn.previewFailed',
-                    [$toolName, $failureDetail],
+                    [$this->editorLabelService->resolve($tool) ?: $toolName, $failureDetail],
                 ),
                 'meta' => [
                     'type' => 'error',
