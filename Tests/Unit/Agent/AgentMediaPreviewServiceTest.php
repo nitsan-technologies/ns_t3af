@@ -22,6 +22,9 @@ namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 use NITSAN\NsT3AF\Agent\Service\AgentMediaPreviewService;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Resource\File;
+use TYPO3\CMS\Core\Resource\ResourceFactory;
 
 /**
  * Finding the images a tool result is about.
@@ -35,7 +38,48 @@ final class AgentMediaPreviewServiceTest extends TestCase
     {
         $references = AgentMediaPreviewService::fileReferences(['fileUid' => 42, 'publicUrl' => '/fileadmin/ai/image.png', 'name' => 'image.png']);
 
-        self::assertSame([['uid' => 42, 'url' => '', 'name' => 'image.png']], $references);
+        self::assertSame([['uid' => 42, 'url' => '', 'name' => 'image.png', 'named' => false]], $references);
+    }
+
+    #[Test]
+    public function theFilesToAttachAreFoundInArgumentsAndResult(): void
+    {
+        $fromArguments = AgentMediaPreviewService::fileReferences(['table' => 'tt_content', 'uid' => 255, 'fieldName' => 'assets', 'fileUids' => '145, 146,x']);
+        $fromResult = AgentMediaPreviewService::fileReferences(['table' => 'tt_content', 'uid' => 255, 'fileUids' => [145], 'referenceUids' => [99]]);
+
+        self::assertSame([145, 146], array_column($fromArguments, 'uid'));
+        self::assertSame([true, true], array_column($fromArguments, 'named'));
+        self::assertSame([145], array_column($fromResult, 'uid'));
+    }
+
+    #[Test]
+    public function anAttachedFileWithoutThumbnailKeepsItsName(): void
+    {
+        $image = $this->file('lake.jpg', 'image/jpeg', '/fileadmin/lake.jpg');
+        $pdf = $this->file('price-list.pdf', 'application/pdf', '/fileadmin/price-list.pdf');
+        $resourceFactory = $this->createMock(ResourceFactory::class);
+        $resourceFactory->method('getFileObject')->willReturnMap([[145, [], $image], [146, [], $pdf]]);
+        $service = new AgentMediaPreviewService($resourceFactory, $this->createMock(ConnectionPool::class));
+
+        $previews = $service->forDetails(['fileUids' => '145,146']);
+
+        self::assertSame(['lake.jpg', 'price-list.pdf'], array_column($previews, 'name'));
+        self::assertSame('/fileadmin/lake.jpg', $previews[0]['href']);
+        self::assertSame('', $previews[1]['url']);
+        self::assertSame([], $service->forDetails(['files' => [['uid' => 146, 'mimeType' => 'application/pdf']]]));
+    }
+
+    private function file(string $name, string $mimeType, string $publicUrl): File
+    {
+        $file = $this->createMock(File::class);
+        $file->method('checkActionPermission')->willReturn(true);
+        $file->method('isMissing')->willReturn(false);
+        $file->method('getMimeType')->willReturn($mimeType);
+        $file->method('getName')->willReturn($name);
+        $file->method('getPublicUrl')->willReturn($publicUrl);
+        $file->method('process')->willThrowException(new \RuntimeException('No image processing in unit tests'));
+
+        return $file;
     }
 
     #[Test]
@@ -58,7 +102,7 @@ final class AgentMediaPreviewServiceTest extends TestCase
     {
         $references = AgentMediaPreviewService::fileReferences(['result' => ['publicUrl' => 'fileadmin/x.webp']]);
 
-        self::assertSame([['uid' => 0, 'url' => 'fileadmin/x.webp', 'name' => '']], $references);
+        self::assertSame([['uid' => 0, 'url' => 'fileadmin/x.webp', 'name' => '', 'named' => false]], $references);
     }
 
     #[Test]

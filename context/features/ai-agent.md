@@ -131,7 +131,7 @@ Removing a named page from the SEO queue uses that page's uid as `pageIds` on `t
 - Child tools declare `#[McpToolIntent(modules, summary, examples (EN + DE), category)]`; core tools get `searchTerms` (EN + DE) in `Configuration/McpToolMetadata.yaml`.
 - `AgentCoreToolSet` picks the start set; `find_tools` (`AgentToolSearch`) ranks the rest via embeddings + BM25. See `Documentation/Agent/Routing.md`.
 - Starter chips are context requests in the editor's language (`AgentStarterBuilder::choose`: page → SEO / translate / add content / accessibility; open record → improve / translate; file → alt text / missing alt text / generate image; draft workspace → changes). A click sends the text as a normal message; a chip only shows when a permitted tool can do it.
-- Image previews: `AgentMediaPreviewService` adds `meta.previews` (processed thumbnails, read permission checked) to tool results, suggestion cards and drafts about a file; `agent.js` renders them as a gallery.
+- Image previews: `AgentMediaPreviewService` adds `meta.previews` (processed thumbnails, read permission checked) to tool results, suggestion cards and drafts about a file; `agent.js` renders them as a gallery. Files of a `fileUids` list (attach cards) that are missing or no image show their name only.
 
 ---
 

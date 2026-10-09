@@ -2542,6 +2542,14 @@
   white-space: nowrap;
 }
 
+.nst3af-agent-gallery__item--name-only .nst3af-agent-gallery__name {
+  margin-top: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--nst3af-agent-border-soft);
+  border-radius: 8px;
+  background: var(--nst3af-agent-surface-soft);
+}
+
 /* Conversation summary */
 .nst3af-agent-summary {
   margin: 10px 0;
