@@ -144,18 +144,18 @@ Recommended root ``composer.json`` settings:
        "minimum-stability": "stable",
        "prefer-stable": true,
        "require": {
-           "nitsan/ns-t3af": "^1.1"
+           "nitsan/ns-t3af": "^2.0"
        }
    }
 
 If an audit or ``composer.lock`` review shows a dev branch reference, pin
-``^1.1`` explicitly and refresh the lock:
+``^2.0`` explicitly and refresh the lock:
 
 .. code-block:: bash
 
    composer update nitsan/ns-t3af --with-dependencies
 
-Verify the lock entry lists a ``1.1.x`` version and a tag commit reference,
+Verify the lock entry lists a ``2.0.x`` version and a tag commit reference,
 not ``dev-dep/...``.
 
 Local monorepo development may use path repositories with ``@dev``; that is
