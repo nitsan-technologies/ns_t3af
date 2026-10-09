@@ -260,6 +260,44 @@ TXT;
     }
 
     #[Test]
+    public function anAltTextRequestStaysOpenUntilTheAltTextIsSet(): void
+    {
+        $request = 'Create a text & media content element with the heading Frontend Check and a short sentence, attach the existing image sys_file uid 145 and set a sensible alt text for the image';
+        $created = [
+            'role' => 'assistant',
+            'content' => 'Applied.',
+            'meta' => ['type' => 'readback_result', 'readback' => [['table' => 'tt_content', 'uid' => 172, 'values' => ['CType' => 'textmedia']]]],
+        ];
+        $attached = static fn(array $details): array => [
+            'role' => 'assistant',
+            'content' => 'Attached.',
+            'meta' => ['type' => 'tool_result', 'tool' => 'file_reference_add', 'success' => true, 'details' => ['table' => 'tt_content', 'uid' => 172, 'referenceUids' => [78], ...$details]],
+        ];
+
+        $steps = AgentRequestChecklist::parse($request);
+        self::assertSame(['create', 'attach_image', 'alt_text'], array_column($steps, 'kind'));
+        self::assertStringContainsString('Pass alternative', AgentRequestChecklist::promptBlock(AgentRequestChecklist::reconcile([$created], $request), $request));
+
+        $withoutAlt = AgentRequestChecklist::reconcile([$created, $attached([])], $request);
+        self::assertSame(['completed', 'completed', 'in_progress'], array_column($withoutAlt, 'status'));
+        self::assertTrue(AgentPromptBuilder::hasBlockingRemainingWork([$created, $attached([])], [], $request));
+        self::assertStringContainsString('tell the editor the alt text is not set', AgentRequestChecklist::nextActionHint($withoutAlt));
+
+        $withAlt = AgentRequestChecklist::reconcile([$created, $attached(['alternative' => 'Snowy mountain lake'])], $request);
+        self::assertFalse(AgentRequestChecklist::hasOpen($withAlt));
+
+        $generated = [
+            'role' => 'assistant',
+            'content' => 'Image generated.',
+            'meta' => ['type' => 'tool_result', 'tool' => 't3ai_generate_image', 'success' => true, 'details' => ['fileUid' => 150, 'altText' => 'Team meeting in a bright office']],
+        ];
+        self::assertFalse(AgentRequestChecklist::hasOpen(AgentRequestChecklist::reconcile([$created, $generated, $attached([])], $request)));
+
+        self::assertSame(['create', 'attach_image'], array_column(AgentRequestChecklist::parse('Create a text & media element with an image of a lake'), 'kind'));
+        self::assertContains('alt_text', array_column(AgentRequestChecklist::parse('Erstelle ein Text & Media Element mit einem Bild und einem passenden Alternativtext'), 'kind'));
+    }
+
+    #[Test]
     public function filesALookupOnlyShowedAreNotWaitingToBeAttached(): void
     {
         $history = [

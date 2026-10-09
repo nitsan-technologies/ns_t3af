@@ -226,17 +226,19 @@ readonly class DataHandlerService
      *
      * @param list<int> $fileUids sys_file UIDs to attach
      * @param int $pid page of the record (references are stored there)
+     * @param array{alternative?: string, title?: string, description?: string} $texts set on every created reference
      * @return list<int> UIDs of the created sys_file_reference records
      */
-    public function createFileReferences(string $table, int $recordUid, string $fieldName, array $fileUids, int $pid = 0): array
+    public function createFileReferences(string $table, int $recordUid, string $fieldName, array $fileUids, int $pid = 0, array $texts = []): array
     {
         if ($fileUids === []) {
             throw new \RuntimeException('No file UIDs provided for file reference creation.', 1712002100);
         }
 
+        $texts = array_filter($texts, static fn(string $value): bool => trim($value) !== '');
         $references = [];
         foreach ($fileUids as $fileUid) {
-            $references[] = ['uid_local' => $fileUid];
+            $references[] = ['uid_local' => $fileUid, ...$texts];
         }
 
         return $this->writeFileFieldReferences($table, $recordUid, $fieldName, $references, replaceExisting: false, pid: $pid);

@@ -166,4 +166,15 @@ final class PremiumCatalogProviderTest extends TestCase
 
         self::assertNull($provider->findStandaloneMatch('Translate this page to German. Also check the images.'));
     }
+
+    public function testStandaloneMatchIsNullWhenTheAltTextComesWithAnAttachedFile(): void
+    {
+        $this->resetLoadedExtensions();
+        $provider = new PremiumCatalogProvider(new ExtensionAvailability());
+
+        self::assertNull($provider->findStandaloneMatch('Create a text & media content element with the heading Frontend Check and a short sentence, attach the existing image sys_file uid 145 and set a sensible alt text for the image'));
+        self::assertNull($provider->findStandaloneMatch('Attach the existing image sys_file uid 145 to the content element uid 250 and set a sensible alt text for the image'));
+        self::assertNull($provider->findStandaloneMatch('Hänge das Bild mit der Datei-UID 145 an das Element 250 an und setze einen Alttext'));
+        self::assertSame('ns_t3aa', $provider->findStandaloneMatch('Generate alt text for all images on this page')?->extensionKey);
+    }
 }

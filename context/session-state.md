@@ -2,9 +2,20 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-09 — Alt text on attached images
+
+**Done:** `file_reference_add` takes optional `alternative`, `title` and `description` and writes them on every new `sys_file_reference` (`DataHandlerService::createFileReferences(..., $texts)`). The card summary shows `with alt text "…"` and the result returns the texts. When the request asks for alt text (alt text / alt tag / Alternativtext / Bildbeschreibung), `AgentRequestChecklist` adds an `alt_text` step. It closes only when a successful attach carried `alternative` or a readback of `sys_file_reference` shows one, and fails when no file could be attached. Until then the hint says to set it, or to tell the editor it is not set instead of claiming completion. `t3ai_generate_image` (ns_t3ai) stores its `altText` on the file metadata and now returns it, and the checklist counts it, because a reference without its own alt text shows the metadata one. `PremiumCatalogProvider::findStandaloneMatch()` no longer answers "AI Accessibility is not included" when the message attaches a file, names a sys_file uid or creates a Text & Media element (the alt text then goes on the reference). Live runs (OpenAI, Mistral) with real Apply: create, then `file_reference_add` with `alternative`, then "complete". Once in three runs Mistral attached the same file again after the checklist was closed. Checked: tt_content 250 with sys_file 145 renders `<img alt="…">` on page 198.
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-09 — A leaked tool call is not the editor's reply
 
 **Done:** A reply that starts with a tool call (`{"pageId":99999} to=t3ai_generate_all_seo` plus junk) shows the sentence after it. When that sentence says the page is missing, the editor sees "Page 99999 doesn't exist." Removing a page from the SEO queue by name uses that page uid. See `context/features/ai-agent.md`.
+
+---
+
 ## 2026-10-09 — Image generation uses an image model
 
 **Done:** `ImageGenerationService::imageModelFor()` picks the model for `generate()` and `variation()`: the requested `modelId`, else the provider's model when it is an image model (`gpt-image-*`, `dall-e-*`, `imagen`, `flux`, …), else `gpt-image-1` for `symfony.openai`. Otherwise it stops before any HTTP call with "No image model configured for provider X". The provider's chat model (`gpt-5.4-mini`) is no longer sent to images/generations, and telemetry logs the image model.

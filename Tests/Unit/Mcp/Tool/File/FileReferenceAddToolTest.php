@@ -312,4 +312,43 @@ final class FileReferenceAddToolTest extends TestCase
 
         self::assertSame([900], $result['referenceUids'] ?? null);
     }
+
+    #[Test]
+    public function theAltTextIsShownOnTheCardAndStoredOnTheReference(): void
+    {
+        $tool = $this->tool(
+            $this->record(['uid' => 172, 'pid' => 198, 'deleted' => 0, 'CType' => 'textmedia']),
+            $this->files([145 => ['name' => 'lake.jpg']]),
+            null,
+            $this->tca(['assets']),
+        );
+
+        $plan = $tool->plan([
+            'table' => 'tt_content',
+            'uid' => 172,
+            'fieldName' => 'assets',
+            'fileUids' => '145',
+            'alternative' => '  Snowy mountain lake at sunrise ',
+            'title' => '',
+        ]);
+
+        self::assertSame('Snowy mountain lake at sunrise', $plan->context['arguments']['alternative'] ?? null);
+        self::assertArrayNotHasKey('title', $plan->context['arguments'] ?? []);
+        self::assertStringContainsString('with alt text "Snowy mountain lake at sunrise"', (string) ($plan->context['summary'] ?? ''));
+
+        $dataHandlerService = $this->createMock(DataHandlerService::class);
+        $dataHandlerService->expects(self::once())->method('createFileReferences')
+            ->with('tt_content', 172, 'assets', [145], 198, ['alternative' => 'Snowy mountain lake at sunrise'])
+            ->willReturn([78]);
+        $tool = $this->tool(
+            $this->record(['uid' => 172, 'pid' => 198, 'deleted' => 0, 'CType' => 'textmedia']),
+            $this->files([145 => ['name' => 'lake.jpg']]),
+            $dataHandlerService,
+            $this->tca(['assets']),
+        );
+
+        $result = json_decode($tool->execute('tt_content', 172, 'assets', '145', 'Snowy mountain lake at sunrise'), true);
+
+        self::assertSame('Snowy mountain lake at sunrise', $result['alternative'] ?? null);
+    }
 }
