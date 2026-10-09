@@ -305,6 +305,13 @@ final class AgentRequestChecklist
     private static function detectCTypesInOrder(string $text): array
     {
         $s = mb_strtolower($text);
+        // "…a text element with the header X" / "…mit der Überschrift X" names a FIELD of the element, not a second
+        // Header element: it must not open a step that nothing will ever complete.
+        $s = (string) preg_replace(
+            '/\b(?:with|having|including|titled|mit|inklusive)\s+(?:(?:the|a|an|its|der|die|dem|einer|einem|dessen)\s+)?(?:headers?|headline|überschrift|ueberschrift)\b/u',
+            ' ',
+            $s,
+        );
         $hits = [];
         $patterns = [
             'textmedia' => '/\b(text\s*&\s*media|text\s+and\s+media|textmedia)\b/u',
