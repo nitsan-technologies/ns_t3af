@@ -277,6 +277,14 @@ final class WriteTableToolTest extends TestCase
     }
 
     #[Test]
+    public function rawLineBreaksInsideStringsAreAccepted(): void
+    {
+        $payload = \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData("{\"title\":\"A\nB\",\n \"x\": 1}", 'update');
+
+        self::assertSame(['title' => "A\nB", 'x' => 1], $payload);
+    }
+
+    #[Test]
     public function deleteNeedsNoDataAndBadDataIsExplained(): void
     {
         self::assertSame([], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData('', 'delete'));

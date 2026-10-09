@@ -203,7 +203,15 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             return [];
         }
         try {
-            $payload = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
+            try {
+                $payload = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException $exception) {
+                if ($exception->getCode() !== JSON_ERROR_CTRL_CHAR) {
+                    throw $exception;
+                }
+                // Some models (Mistral) put raw line breaks or tabs inside a string value.
+                $payload = json_decode(self::escapeControlCharsInStrings($data), true, 512, JSON_THROW_ON_ERROR);
+            }
         } catch (\JsonException $exception) {
             throw new \InvalidArgumentException(
                 'data must be a JSON object of field values, e.g. {"pid": 12, "title": "News"} (' . $exception->getMessage() . ').',
@@ -217,6 +225,33 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
         /** @var array<string, mixed> $payload */
         return $payload;
+    }
+
+    /** Escapes raw control characters inside JSON string literals only; whitespace between tokens stays. */
+    private static function escapeControlCharsInStrings(string $json): string
+    {
+        $out = '';
+        $inString = false;
+        $escaped = false;
+        $length = strlen($json);
+        for ($i = 0; $i < $length; ++$i) {
+            $char = $json[$i];
+            if ($inString && !$escaped && ord($char) < 0x20) {
+                $out .= sprintf('\\u%04x', ord($char));
+                continue;
+            }
+            if ($inString) {
+                $escaped = !$escaped && $char === '\\';
+                if (!$escaped && $char === '"') {
+                    $inString = false;
+                }
+            } elseif ($char === '"') {
+                $inString = true;
+            }
+            $out .= $char;
+        }
+
+        return $out;
     }
 
     /** @param array<string, mixed> $payload */

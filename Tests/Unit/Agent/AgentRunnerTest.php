@@ -895,6 +895,14 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function providerTimeoutsAreRecognised(): void
+    {
+        self::assertTrue(AgentRunner::looksLikeTimeout(new \RuntimeException('Idle timeout reached for "https://api.mistral.ai/v1/chat/completions".')));
+        self::assertTrue(AgentRunner::looksLikeTimeout(new \RuntimeException('wrapped', 0, new \RuntimeException('Operation timed out after 30000 ms'))));
+        self::assertFalse(AgentRunner::looksLikeTimeout(new \RuntimeException('The model is overloaded.')));
+    }
+
+    #[Test]
     public function providerBillingTextIsRecognisedSoEditorsDoNotSeeIt(): void
     {
         self::assertTrue(AgentRunner::looksLikeProviderAccountProblem('Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing.'));

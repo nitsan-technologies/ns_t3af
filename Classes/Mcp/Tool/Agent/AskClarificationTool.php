@@ -59,7 +59,7 @@ final readonly class AskClarificationTool implements McpNonAiToolInterface
     )]
     public function execute(string $question, array $options = []): string
     {
-        $question = trim($question);
+        [$question, $options] = self::liftInlineOptions(trim($question), $options);
         $options = self::normalizeOptions($options);
         if ($question === '') {
             return json_encode([
@@ -74,6 +74,27 @@ final readonly class AskClarificationTool implements McpNonAiToolInterface
             'clarification' => $question,
             'options' => $options,
         ], JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * Models sometimes paste the choices into the question as a JSON list (["A", "B"]) and send no
+     * options. The list becomes buttons and is removed from the sentence.
+     *
+     * @param  array<mixed>                 $options
+     * @return array{0: string, 1: array<mixed>}
+     */
+    public static function liftInlineOptions(string $question, array $options): array
+    {
+        if ($options !== [] || preg_match('/\[\s*"[^\]]*\]/u', $question, $match) !== 1) {
+            return [$question, $options];
+        }
+        $decoded = json_decode($match[0], true);
+        if (!is_array($decoded) || $decoded === [] || !array_is_list($decoded)) {
+            return [$question, $options];
+        }
+        $question = trim((string) preg_replace('/\s*:?\s*' . preg_quote($match[0], '/') . '/u', '', $question));
+
+        return [$question, $decoded];
     }
 
     /**

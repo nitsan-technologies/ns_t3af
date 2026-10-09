@@ -675,6 +675,10 @@
                 <source>The AI provider is not available right now. Please try again later or ask your administrator to check the provider account.</source>
                 <target>Der KI-Anbieter ist im Moment nicht verfügbar. Bitte versuchen Sie es später erneut oder bitten Sie Ihre Administration, das Anbieterkonto zu prüfen.</target>
             </trans-unit>
+            <trans-unit id="agent.turn.timeout">
+                <source>The AI took too long to answer. Please try again.</source>
+                <target>Die KI hat zu lange für die Antwort gebraucht. Bitte versuchen Sie es erneut.</target>
+            </trans-unit>
             <trans-unit id="agent.turn.orchestratorFailed">
                 <source>The agent could not complete this turn: %1$s</source>
                 <target>Der Agent konnte diese Runde nicht abschließen: %1$s</target>
