@@ -195,4 +195,31 @@ TXT;
             array_column(AgentRequestChecklist::parse('Add a header and a text element to this page'), 'title'),
         );
     }
+
+    #[Test]
+    public function aShortTextOrAttachedImagesStayFieldsOfTextAndMedia(): void
+    {
+        $prompts = [
+            'Create a text & media content element with an AI-generated image of a red lighthouse at sunset and a short text about coastal travel',
+            'Create a text & media content element with the heading Our Treats and attach the existing images sys_file uid 3 (cake.png) and uid 4 (csm_cabin.png)',
+            'Create a text & media content element with the heading Frontend Check and a short sentence, attach the existing image sys_file uid 145 and set a sensible alt text',
+        ];
+        foreach ($prompts as $prompt) {
+            $steps = AgentRequestChecklist::parse($prompt);
+            self::assertSame(
+                ['textmedia'],
+                array_column(array_filter($steps, static fn(array $s): bool => ($s['kind'] ?? '') === 'create'), 'cType'),
+                $prompt,
+            );
+            self::assertContains('attach_image', array_column($steps, 'kind'), $prompt);
+        }
+
+        $steps = AgentRequestChecklist::parse(
+            'Create two elements: a text & media element and a text element about the coast',
+        );
+        self::assertSame(
+            ['textmedia', 'text'],
+            array_column(array_filter($steps, static fn(array $s): bool => ($s['kind'] ?? '') === 'create'), 'cType'),
+        );
+    }
 }
