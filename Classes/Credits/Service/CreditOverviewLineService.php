@@ -58,6 +58,19 @@ final class CreditOverviewLineService
      */
     public function resolveBadge(): ?array
     {
+        $status = $this->resolveStatus();
+
+        return is_array($status['badge'] ?? null) ? $status['badge'] : null;
+    }
+
+    /**
+     * Like {@see resolveBadge()}, but tells an empty balance apart from an unavailable one.
+     *
+     * @return array{badge: array{creditsLabel: string, usedFormatted: string, totalFormatted: string, remainingFormatted: string, percentLeft: int, level: string}|null, empty: bool}|null
+     *         null = credits mode off or balance not available
+     */
+    public function resolveStatus(): ?array
+    {
         if (!$this->creditModeResolver->isActive()) {
             return null;
         }
@@ -83,7 +96,7 @@ final class CreditOverviewLineService
         $summary = $this->dashboardAssembler->summarizeBalance($balance, $plan, $products);
 
         if ($summary['remainingUnits'] <= 0 && $summary['remaining'] <= 0.0) {
-            return null;
+            return ['badge' => null, 'empty' => true];
         }
 
         $remaining = (float) $summary['remaining'];
@@ -92,7 +105,7 @@ final class CreditOverviewLineService
         $usedFormatted = AiCreditUnits::formatCredits($used);
         $percentLeft = max(0, min(100, (int) $summary['percentLeft']));
 
-        return $this->mapSummaryToBadge($summary, $used, $usedFormatted, $percentLeft);
+        return ['badge' => $this->mapSummaryToBadge($summary, $used, $usedFormatted, $percentLeft), 'empty' => false];
     }
 
     /**

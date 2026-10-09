@@ -85,4 +85,4 @@ This extension is developed and maintained by:
 
 **T3Planet project by NITSAN**: https://nitsantech.de/typo3-agentur
 
-Developed with modern AI tooling by the NITSAN/T3Planet team — following TYPO3 coding standards, reviewed by certified TYPO3 developers, and tested across TYPO3 v12, v13 and v14.
+Developed with modern AI tooling by the NITSAN/T3Planet team — following TYPO3 coding standards, reviewed by certified TYPO3 developers, and tested across TYPO3 v13 and v14.

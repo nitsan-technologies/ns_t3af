@@ -28,7 +28,7 @@ use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
 /**
  * @internal
  */
-final class TokenResolver
+class TokenResolver
 {
     private const CACHE_IDENTIFIER = 't3planet_bearer_token';
 
@@ -72,6 +72,26 @@ final class TokenResolver
     }
 
     /**
+     * `token_ip_conflict`: BindIp for a stored bearer collides with the account that owns this server IP.
+     */
+    public static function isIpConflict(CreditsApiException $exception): bool
+    {
+        return $exception->errorCode === CreditsApiErrorCodes::TOKEN_IP_CONFLICT;
+    }
+
+    /**
+     * Replace the stored bearer with the token of the account bound to this server IP.
+     *
+     * @param array{name?: string, email?: string}|null $contactOverride
+     */
+    public function adoptIpBoundAccount(?array $contactOverride = null): string
+    {
+        $this->invalidate();
+
+        return $this->issueFreshToken($contactOverride);
+    }
+
+    /**
      * @param array{name?: string, email?: string}|null $contactOverride Form contact when no license; null = resolve from ns_license
      */
     public function issueFreshToken(?array $contactOverride = null): string
@@ -93,13 +113,27 @@ final class TokenResolver
      *
      * @param array{name?: string, email?: string}|null $contactOverride
      *
-     * @return array{action: 'minted'|'unchanged', token: string, already_bound?: bool, bound_ip?: string}
+     * @return array{action: 'minted'|'unchanged'|'adopted', token: string, already_bound?: bool, bound_ip?: string}
      */
     public function activateTrialToken(?array $contactOverride = null): array
     {
         $token = $this->runtimeSettings->getTokenPlain();
         if ($token !== null && $token !== '') {
-            $bind = $this->ensureIpBound($token);
+            try {
+                $bind = $this->ensureIpBound($token);
+            } catch (CreditsApiException $exception) {
+                if (!self::isIpConflict($exception)) {
+                    throw $exception;
+                }
+
+                // This server IP already belongs to another (trial) account, so the stored bearer can
+                // never bind. The server mints idempotently per observed IP: dropping the bearer and
+                // asking again returns that IP owner's token (one trial account per public IP).
+                return [
+                    'action' => 'adopted',
+                    'token' => $this->adoptIpBoundAccount($contactOverride),
+                ];
+            }
 
             return [
                 'action' => 'unchanged',

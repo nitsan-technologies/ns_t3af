@@ -1,0 +1,31 @@
+{
+  "id": "12-short-yes",
+  "title": "\"Yes\" after a question still leads to the change",
+  "turns": [
+    {
+      "message": "I want a new subpage \"Eval yes\" under this page",
+      "expect": {
+        "card": "orClarification",
+        "forbidTools": [
+          "pages_copy"
+        ]
+      },
+      "lenient": true
+    },
+    {
+      "message": "Yes, please create it",
+      "skipIfCard": true,
+      "expect": {
+        "anyTool": [
+          "write_table",
+          "t3ai_create_page_simple",
+          "t3ai_create_page_advanced"
+        ],
+        "card": true,
+        "forbidTools": [
+          "pages_copy"
+        ]
+      }
+    }
+  ]
+}

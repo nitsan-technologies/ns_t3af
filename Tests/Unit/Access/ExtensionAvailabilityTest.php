@@ -33,7 +33,17 @@ final class ExtensionAvailabilityTest extends TestCase
         parent::tearDown();
     }
 
-    public function testEmbeddingModelConfigurationRequiresT3CsT3AsOrT3Ac(): void
+    public function testEmbeddingModelConfigurationAvailableWithFoundationProvider(): void
+    {
+        $availability = new ExtensionAvailability([
+            new \NITSAN\NsT3AF\Feature\T3AfEmbeddingCapabilityProvider(),
+        ]);
+
+        $this->resetLoadedExtensions([]);
+        self::assertTrue($availability->isEmbeddingModelConfigurationAvailable());
+    }
+
+    public function testEmbeddingModelConfigurationRequiresT3CsT3AsOrT3AcWhenOnlyChildProviders(): void
     {
         $availability = new ExtensionAvailability(ProviderTestStubs::embeddingCapabilityProviders());
 

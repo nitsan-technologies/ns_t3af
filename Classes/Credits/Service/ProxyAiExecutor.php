@@ -29,6 +29,7 @@ use NITSAN\NsT3AF\Credits\CreditsApiErrorCodes;
 use NITSAN\NsT3AF\Credits\CreditsFeatureMapping;
 use NITSAN\NsT3AF\Credits\CreditsProviderIdentifier;
 use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
+use NITSAN\NsT3AF\Credits\Exception\CreditsContentRemovedException;
 use NITSAN\NsT3AF\Credits\Exception\InsufficientCreditsException;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetSseStreamParser;
@@ -52,6 +53,9 @@ class ProxyAiExecutor
     private const CALL_EMBED = 'embed';
     private const CALL_STREAM = 'stream';
 
+    /** @var callable(float): void */
+    private $sleeper;
+
     public function __construct(
         private readonly T3PlanetApiClient $apiClient,
         private readonly T3PlanetSseStreamParser $sseParser,
@@ -62,7 +66,15 @@ class ProxyAiExecutor
         private readonly RequestTelemetryService $telemetry,
         private readonly CreditsFeatureKeyMapper $featureKeyMapper,
         private readonly LoggerInterface $logger,
-    ) {}
+        ?callable $sleeper = null,
+    ) {
+        $this->sleeper = $sleeper ?? static function (float $seconds): void {
+            if ($seconds <= 0) {
+                return;
+            }
+            usleep((int) max(1, (int) round($seconds * 1_000_000)));
+        };
+    }
 
     /**
      * @return \Generator<int, string, mixed, StreamSummary>
@@ -108,6 +120,7 @@ class ProxyAiExecutor
             /** @var array<string, mixed> $payload */
             $payload = $events->getReturn();
             $settled = true;
+            $this->assertContentNotRemoved($payload);
             $latencyMs = (int) (microtime(true) * 1000) - $start;
             $summary = $this->mapUsageToStreamSummary($payload, $requestUuid);
             $this->chargeRecorder->record(
@@ -138,9 +151,11 @@ class ProxyAiExecutor
             );
             throw $e;
         } catch (CreditsApiException $e) {
-            $reason = $e->errorCode === CreditsApiErrorCodes::UPSTREAM_AI_ERROR
-                ? 'credits.upstream_ai_error'
-                : 'credits.api_error';
+            $reason = match ($e->errorCode) {
+                CreditsApiErrorCodes::UPSTREAM_AI_ERROR => 'credits.upstream_ai_error',
+                CreditsApiErrorCodes::CONTENT_REMOVED => 'credits.content_removed',
+                default => 'credits.api_error',
+            };
             $this->dispatchFailure(
                 $provider,
                 $e,
@@ -217,7 +232,11 @@ class ProxyAiExecutor
             );
             throw $e;
         } catch (CreditsApiException $e) {
-            $reason = $e->errorCode === 'upstream_ai_error' ? 'credits.upstream_ai_error' : 'credits.api_error';
+            $reason = match ($e->errorCode) {
+                CreditsApiErrorCodes::UPSTREAM_AI_ERROR => 'credits.upstream_ai_error',
+                CreditsApiErrorCodes::CONTENT_REMOVED => 'credits.content_removed',
+                default => 'credits.api_error',
+            };
             $this->dispatchFailure(
                 $provider,
                 $e,
@@ -241,6 +260,8 @@ class ProxyAiExecutor
             );
             throw $e;
         }
+
+        $this->assertContentNotRemoved($payload);
 
         $response = $this->mapChargeToAiResponse(
             $payload,
@@ -342,6 +363,8 @@ class ProxyAiExecutor
             );
             throw $e;
         }
+
+        $this->assertContentNotRemoved($payload);
 
         $response = $this->mapEmbedToEmbeddingResponse($payload, $requestUuid, (int) (microtime(true) * 1000) - $start);
         $this->chargeRecorder->record(
@@ -449,14 +472,55 @@ class ProxyAiExecutor
      */
     private function postJsonWithRetries(callable $call, string $requestUuid): array
     {
-        try {
-            return $call($requestUuid);
-        } catch (CreditsApiException $e) {
-            if ($e->errorCode !== CreditsApiErrorCodes::IDEMPOTENCY_CONFLICT) {
-                throw $e;
-            }
+        $uuid = $requestUuid;
+        $attempt = 0;
+        $upstreamRetries = 0;
 
-            return $call(Uuid::v4()->toRfc4122());
+        while (true) {
+            ++$attempt;
+            try {
+                return $call($uuid);
+            } catch (CreditsApiException $e) {
+                if ($e->errorCode === CreditsApiErrorCodes::IDEMPOTENCY_CONFLICT) {
+                    if ($attempt >= CreditsRateLimitBackoff::MAX_ATTEMPTS) {
+                        throw $e;
+                    }
+                    $uuid = Uuid::v4()->toRfc4122();
+                    continue;
+                }
+
+                if (CreditsRetryPolicy::shouldRetryUpstream($e, $upstreamRetries)) {
+                    ++$upstreamRetries;
+                    $this->logger->warning('Credits API transient upstream failure; retrying once with a fresh request_uuid.', [
+                        'error_code' => $e->errorCode,
+                        'http_status' => $e->httpStatus,
+                        'upstream_status' => $e->extra['upstream_status'] ?? null,
+                    ]);
+                    $uuid = Uuid::v4()->toRfc4122();
+                    continue;
+                }
+
+                if (!CreditsRateLimitBackoff::isRateLimited($e->errorCode, $e->httpStatus)) {
+                    throw $e;
+                }
+
+                if ($attempt >= CreditsRateLimitBackoff::MAX_ATTEMPTS) {
+                    throw $e;
+                }
+
+                $retryAfter = (int) ($e->extra['retry_after'] ?? 0);
+                $delay = CreditsRateLimitBackoff::delaySeconds($attempt, $retryAfter);
+                $this->logger->warning('Credits API rate limited; retrying after backoff.', [
+                    'error_code' => $e->errorCode,
+                    'http_status' => $e->httpStatus,
+                    'attempt' => $attempt,
+                    'delay_seconds' => $delay,
+                    'retry_after' => $retryAfter,
+                ]);
+                ($this->sleeper)($delay);
+                // Fresh uuid: failed rate-limited calls are not settled; avoids rare idempotency collisions.
+                $uuid = Uuid::v4()->toRfc4122();
+            }
         }
     }
 
@@ -566,6 +630,19 @@ class ProxyAiExecutor
         }
 
         return $metaJson;
+    }
+
+    /**
+     * Redacted idempotent replay: success body without usable content. Never map it to an
+     * (empty) AiResponse or record a receipt — callers must regenerate with a fresh request_uuid.
+     *
+     * @param array<string, mixed> $payload
+     */
+    private function assertContentNotRemoved(array $payload): void
+    {
+        if (CreditsContentRemovedException::isContentRemoved($payload)) {
+            throw CreditsContentRemovedException::fromPayload($payload);
+        }
     }
 
     private function requestUuid(AiOptions $options): string

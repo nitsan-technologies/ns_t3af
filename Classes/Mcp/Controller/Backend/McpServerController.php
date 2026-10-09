@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Controller\Backend;
 
 use NITSAN\NsT3AF\Access\AiUniverseRecordMap;
+use NITSAN\NsT3AF\Access\ModuleTabAccessService;
 use NITSAN\NsT3AF\Access\RecordAccessEnforcer;
 use NITSAN\NsT3AF\Mcp\Domain\Model\OAuthToken;
 use NITSAN\NsT3AF\Mcp\Domain\Repository\TokenRepository;
@@ -73,6 +74,23 @@ final class McpServerController
             $user instanceof \TYPO3\CMS\Core\Authentication\BackendUserAuthentication ? $user : null,
             AiUniverseRecordMap::OAUTH_CLIENTS,
         );
+    }
+
+    /**
+     * The MCP server settings are installation-wide: admins, or users whose group opens the AI Foundation module
+     * and its MCP Server tab. Having any backend login is not enough.
+     */
+    private function denyUnlessCanManageMcpServer(): ?JsonResponse
+    {
+        $user = $GLOBALS['BE_USER'] ?? null;
+        if ($user instanceof \TYPO3\CMS\Core\Authentication\BackendUserAuthentication
+            && ($user->isAdmin()
+                || ($user->check('modules', 't3af_dashboard') && (new ModuleTabAccessService())->isTabVisible('mcpServer', $user)))
+        ) {
+            return null;
+        }
+
+        return new JsonResponse(['success' => false, 'message' => 'Access denied'], 403);
     }
 
     public function createWorkspaceAction(ServerRequestInterface $request): ResponseInterface
@@ -131,9 +149,8 @@ final class McpServerController
 
     public function saveMcpModeAction(ServerRequestInterface $request): ResponseInterface
     {
-        $user = $GLOBALS['BE_USER'] ?? null;
-        if (!$user instanceof \TYPO3\CMS\Core\Authentication\BackendUserAuthentication) {
-            return new JsonResponse(['success' => false, 'message' => 'Access denied'], 403);
+        if ($denied = $this->denyUnlessCanManageMcpServer()) {
+            return $denied;
         }
 
         $body = $request->getParsedBody();
@@ -160,11 +177,17 @@ final class McpServerController
 
     public function statusAction(ServerRequestInterface $request): ResponseInterface
     {
+        if ($denied = $this->denyUnlessCanManageMcpServer()) {
+            return $denied;
+        }
         return new JsonResponse($this->statusService->build($request));
     }
 
     public function connectionsAction(ServerRequestInterface $request): ResponseInterface
     {
+        if ($denied = $this->denyUnlessCanManageMcpServer()) {
+            return $denied;
+        }
         return new JsonResponse(['connections' => $this->connectionsService->listActive()]);
     }
 
@@ -304,6 +327,9 @@ final class McpServerController
 
     public function saveAdvancedSettingsAction(ServerRequestInterface $request): ResponseInterface
     {
+        if ($denied = $this->denyUnlessCanManageMcpServer()) {
+            return $denied;
+        }
         $body = $request->getParsedBody();
         if (!is_array($body)) {
             return new JsonResponse(['success' => false], 400);
@@ -317,6 +343,9 @@ final class McpServerController
 
     public function securityScopesSaveAction(ServerRequestInterface $request): ResponseInterface
     {
+        if ($denied = $this->denyUnlessCanManageMcpServer()) {
+            return $denied;
+        }
         $body = $request->getParsedBody();
         if (!is_array($body)) {
             return new JsonResponse(['success' => false], 400);
@@ -335,6 +364,9 @@ final class McpServerController
 
     public function ipAllowlistAddAction(ServerRequestInterface $request): ResponseInterface
     {
+        if ($denied = $this->denyUnlessCanManageMcpServer()) {
+            return $denied;
+        }
         $body = $request->getParsedBody();
         if (!is_array($body)) {
             return new JsonResponse(['success' => false], 400);
@@ -353,6 +385,9 @@ final class McpServerController
 
     public function ipAllowlistRemoveAction(ServerRequestInterface $request): ResponseInterface
     {
+        if ($denied = $this->denyUnlessCanManageMcpServer()) {
+            return $denied;
+        }
         $body = $request->getParsedBody();
         $uid = (int) (is_array($body) ? ($body['uid'] ?? 0) : 0);
         if ($uid <= 0) {
@@ -366,6 +401,9 @@ final class McpServerController
 
     public function ipAllowlistToggleAction(ServerRequestInterface $request): ResponseInterface
     {
+        if ($denied = $this->denyUnlessCanManageMcpServer()) {
+            return $denied;
+        }
         $body = $request->getParsedBody();
         if (!is_array($body)) {
             return new JsonResponse(['success' => false], 400);
@@ -392,6 +430,9 @@ final class McpServerController
 
     public function mtlsSaveAction(ServerRequestInterface $request): ResponseInterface
     {
+        if ($denied = $this->denyUnlessCanManageMcpServer()) {
+            return $denied;
+        }
         if (!$this->securityService->isMtlsFeatureAvailable()) {
             return new JsonResponse([
                 'success' => false,
@@ -435,6 +476,9 @@ final class McpServerController
 
     public function analyticsExportAction(ServerRequestInterface $request): ResponseInterface
     {
+        if ($denied = $this->denyUnlessCanManageMcpServer()) {
+            return $denied;
+        }
         $query = $request->getQueryParams();
         $period = (string) ($query['period'] ?? '7d');
         $csv = $this->analyticsService->exportCsv($period);
@@ -448,6 +492,9 @@ final class McpServerController
 
     public function healthPingAllAction(ServerRequestInterface $request): ResponseInterface
     {
+        if ($denied = $this->denyUnlessCanManageMcpServer()) {
+            return $denied;
+        }
         return new JsonResponse([
             'success' => true,
             'connections' => $this->healthService->pingAll($request),
@@ -456,7 +503,7 @@ final class McpServerController
 
     private function translate(string $key): string
     {
-        return (string) ($GLOBALS['LANG']?->sL(
+        return (string) (($GLOBALS['LANG'] ?? null)?->sL(
             'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:' . $key,
         ) ?? $key);
     }

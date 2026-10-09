@@ -47,6 +47,23 @@ readonly class McpPublicUrlService
         return rtrim($this->resolveOrigin($request), '/') . $pathProvider->getBasePath();
     }
 
+    /**
+     * Turn a FAL public path into an absolute URL agents can fetch.
+     * Relative paths are prefixed with {@see resolveOrigin()}; already-absolute URLs pass through.
+     */
+    public function makeAbsoluteUrl(?string $url, ?ServerRequestInterface $request = null): ?string
+    {
+        if ($url === null || $url === '') {
+            return $url;
+        }
+
+        if (preg_match('#^[a-z][a-z0-9+\-.]*://#i', $url) === 1 || str_starts_with($url, '//')) {
+            return $url;
+        }
+
+        return rtrim($this->resolveOrigin($request), '/') . '/' . ltrim($url, '/');
+    }
+
     private function originFromRequest(?ServerRequestInterface $request): ?string
     {
         if ($request === null) {

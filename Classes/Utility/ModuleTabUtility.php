@@ -34,6 +34,18 @@ final class ModuleTabUtility
      */
     private const SITE_SCOPED_TAB_KEYS = ['providers', 'aiContext', 'aiFeatures', 'aiPrompts'];
 
+    /**
+     * Tabs shown as one entry in the primary navigation. Members keep their own
+     * routes and access keys; the page switches between them via
+     * {@see buildGroupSections()}. The entry links to the first visible member.
+     */
+    private const NAV_GROUPS = [
+        'mcp' => [
+            'labelKey' => 'module.menu.mcp',
+            'members' => ['mcpServer', 'mcpTools'],
+        ],
+    ];
+
     private const TABS = [
         'dashboard' => [
             'labelKey' => 'module.menu.dashboard',
@@ -58,6 +70,14 @@ final class ModuleTabUtility
             'headingKey' => 'module.aiContext.heading',
             'introKey' => 'module.aiContext.intro',
             'icon' => 'context',
+        ],
+        'aiAgent' => [
+            'labelKey' => 'module.menu.aiAgent',
+            'route' => 't3af_dashboard.ai_agent',
+            'path' => '/module/t3af/dashboard/ai-agent',
+            'headingKey' => 'module.aiAgent.heading',
+            'introKey' => 'module.aiAgent.intro',
+            'icon' => 'sparkles',
         ],
         'mcpServer' => [
             'labelKey' => 'module.menu.mcpServer',
@@ -214,9 +234,96 @@ final class ModuleTabUtility
         $utilityKeys = array_flip(self::UTILITY_TAB_KEYS);
 
         return [
-            'primary' => array_diff_key($tabs, $utilityKeys),
+            'primary' => $this->collapseNavigationGroups(array_diff_key($tabs, $utilityKeys), $translate),
             'utility' => array_intersect_key($tabs, $utilityKeys),
         ];
+    }
+
+    /**
+     * Visible members of the navigation group the active tab belongs to, for
+     * the in-page section switcher. Empty when the active tab is not grouped.
+     *
+     * @param callable(string): string $translate
+     * @param callable(string $route): string $buildUri
+     * @return list<array{key: string, title: string, intro: string, href: string, active: bool, iconIdentifier: string}>
+     */
+    public function buildGroupSections(
+        string $active,
+        callable $translate,
+        callable $buildUri,
+        ?BackendUserAuthentication $user = null,
+    ): array {
+        $members = $this->groupMembersFor($active);
+        $items = [];
+
+        foreach ($members as $key) {
+            if (!isset(self::TABS[$key]) || !$this->tabAccessService->isTabVisible($key, $user)) {
+                continue;
+            }
+            $tab = self::TABS[$key];
+            $items[] = [
+                'key' => $key,
+                'title' => (string) $translate($tab['labelKey']),
+                'intro' => (string) $translate($tab['introKey']),
+                'href' => (string) $buildUri($tab['route']),
+                'active' => $key === $active,
+                'iconIdentifier' => $this->resolveIconIdentifier($tab['icon']),
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
+     * @param array<string, array{title: string, route: string, path: string, href: string, active: bool, iconIdentifier: string}> $tabs
+     * @param callable(string): string $translate
+     * @return array<string, array{title: string, route: string, path: string, href: string, active: bool, iconIdentifier: string}>
+     */
+    private function collapseNavigationGroups(array $tabs, callable $translate): array
+    {
+        foreach (self::NAV_GROUPS as $groupKey => $group) {
+            $visibleMembers = array_values(array_filter(
+                $group['members'],
+                static fn(string $member): bool => isset($tabs[$member]),
+            ));
+            if ($visibleMembers === []) {
+                continue;
+            }
+
+            $active = false;
+            foreach ($visibleMembers as $member) {
+                $active = $active || $tabs[$member]['active'];
+            }
+
+            $collapsed = [];
+            foreach ($tabs as $key => $tab) {
+                if ($key === $visibleMembers[0]) {
+                    $collapsed[$groupKey] = array_merge($tab, [
+                        'title' => (string) $translate($group['labelKey']),
+                        'active' => $active,
+                    ]);
+                } elseif (!in_array($key, $visibleMembers, true)) {
+                    $collapsed[$key] = $tab;
+                }
+            }
+            $tabs = $collapsed;
+        }
+
+        return $tabs;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function groupMembersFor(string $tabKey): array
+    {
+        foreach (self::NAV_GROUPS as $group) {
+            if (in_array($tabKey, $group['members'], true)) {
+                return $group['members'];
+            }
+        }
+
+        return [];
     }
 
     /**

@@ -31,7 +31,12 @@ use TYPO3\CMS\Core\Database\Query\QueryBuilder;
 
 readonly class RecordService
 {
-    public function __construct(private ConnectionPool $connectionPool, private WorkspaceContextService $workspaceContext) {}
+    public function __construct(
+        private ConnectionPool $connectionPool,
+        private WorkspaceContextService $workspaceContext,
+        private RelationUidListResolver $relationUidListResolver,
+        private PageAccessService $pageAccess,
+    ) {}
 
     /**
      * @param list<string> $fields
@@ -39,12 +44,23 @@ readonly class RecordService
      */
     public function findByUid(string $table, int $uid, array $fields): ?array
     {
+        if ($fields === []) {
+            throw new \InvalidArgumentException('fields must not be empty when loading a record.', 1790400010);
+        }
+
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
         $queryBuilder->getRestrictions()->removeAll();
         $this->workspaceContext->applyRestriction($queryBuilder, $table);
 
+        $selectFields = $this->workspaceContext->withOverlayFields($table, $fields);
+        $anchorColumn = $this->pageAccess->anchorColumn($table);
+        $anchorWasRequested = in_array($anchorColumn, $selectFields, true) || in_array('*', $selectFields, true);
+        if (!$anchorWasRequested) {
+            $selectFields[] = $anchorColumn;
+        }
+
         $row = $queryBuilder
-            ->select(...$fields)
+            ->select(...$selectFields)
             ->from($table)
             ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, ParameterType::INTEGER)))
             ->executeQuery()
@@ -54,7 +70,205 @@ readonly class RecordService
             return null;
         }
 
-        return $this->workspaceContext->overlay($table, $row);
+        $row = $this->workspaceContext->overlay($table, $row);
+        if ($row === null) {
+            return null;
+        }
+        if (!$this->pageAccess->canReadRecord($table, $row)) {
+            return null;
+        }
+        $row = $this->workspaceContext->stripOverlayFields($row, $fields);
+        if (!$anchorWasRequested) {
+            unset($row[$anchorColumn]);
+        }
+
+        return $this->relationUidListResolver->enrichRecord($table, $row);
+    }
+
+    /**
+     * A positive page id the editor may create or move under: present, not deleted, and visible
+     * in the current workspace. Admins are included; a soft-deleted parent is not a valid target.
+     */
+    public function parentPageExists(int $pageId): bool
+    {
+        if ($pageId <= 0) {
+            return false;
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($queryBuilder, 'pages');
+
+        $row = $queryBuilder
+            ->select(...$this->workspaceContext->withOverlayFields('pages', ['uid']))
+            ->from('pages')
+            ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($pageId, ParameterType::INTEGER)))
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchAssociative();
+
+        if ($row === false) {
+            return false;
+        }
+
+        return $this->workspaceContext->overlay('pages', $row) !== null;
+    }
+
+    /**
+     * pid 0 (site root) and negative "insert after" targets are left to the caller.
+     */
+    public function assertParentPageExists(int $pageId): void
+    {
+        if ($pageId <= 0 || $this->parentPageExists($pageId)) {
+            return;
+        }
+
+        throw new \InvalidArgumentException(
+            'Parent page ' . $pageId . ' does not exist or was deleted. Choose another page.',
+        );
+    }
+
+    /**
+     * The record a negative pid inserts after: present, not deleted, and visible in this workspace.
+     */
+    public function assertInsertAfterExists(string $table, int $uid): void
+    {
+        if ($uid <= 0) {
+            throw new \InvalidArgumentException('Create requires a record to insert after.');
+        }
+
+        if ($table === 'pages') {
+            if ($this->parentPageExists($uid)) {
+                return;
+            }
+
+            throw new \InvalidArgumentException(
+                'Page ' . $uid . ' does not exist or was deleted. Choose another page.',
+            );
+        }
+
+        if ($this->findExistingUids($table, [$uid]) === []) {
+            throw new \InvalidArgumentException('Record not found: ' . $table . ' uid ' . $uid);
+        }
+    }
+
+    /**
+     * DataHandler target that places a record directly before this page.
+     * The previous default-language sibling becomes a negative "after" target.
+     * The page being moved is skipped. The first child uses the parent pid.
+     */
+    public function targetBeforePage(int $pageUid, int $movingUid = 0): int
+    {
+        if ($pageUid <= 0 || !$this->parentPageExists($pageUid)) {
+            throw new \InvalidArgumentException(
+                'Page ' . $pageUid . ' does not exist or was deleted. Choose another page.',
+            );
+        }
+
+        $page = $this->findByUid('pages', $pageUid, ['pid', 'sorting']);
+        if ($page === null) {
+            throw new \InvalidArgumentException(
+                'Page ' . $pageUid . ' does not exist or was deleted. Choose another page.',
+            );
+        }
+
+        $pid = (int) ($page['pid'] ?? 0);
+        $sorting = (int) ($page['sorting'] ?? 0);
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($queryBuilder, 'pages');
+
+        $constraints = [
+            $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pid, ParameterType::INTEGER)),
+            $queryBuilder->expr()->eq('sys_language_uid', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER)),
+            $queryBuilder->expr()->lt('sorting', $queryBuilder->createNamedParameter($sorting, ParameterType::INTEGER)),
+        ];
+        if ($movingUid > 0) {
+            $constraints[] = $queryBuilder->expr()->neq(
+                'uid',
+                $queryBuilder->createNamedParameter($movingUid, ParameterType::INTEGER),
+            );
+        }
+
+        $previous = $queryBuilder
+            ->select('uid')
+            ->from('pages')
+            ->where(...$constraints)
+            ->orderBy('sorting', 'DESC')
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchAssociative();
+
+        if ($previous !== false) {
+            return -((int) $previous['uid']);
+        }
+
+        return $pid;
+    }
+
+    /**
+     * Default-language pages with this exact title.
+     *
+     * @return list<array{uid: int, pid: int}>
+     */
+    public function findDefaultLanguagePagesByTitle(string $title): array
+    {
+        $title = trim($title);
+        if ($title === '') {
+            return [];
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($queryBuilder, 'pages');
+
+        $rows = $queryBuilder
+            ->select('uid', 'pid')
+            ->from('pages')
+            ->where(
+                $queryBuilder->expr()->eq('title', $queryBuilder->createNamedParameter($title)),
+                $queryBuilder->expr()->eq('sys_language_uid', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER)),
+                $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER)),
+            )
+            ->setMaxResults(10)
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        $pages = [];
+        foreach ($rows as $row) {
+            $pages[] = ['uid' => (int) $row['uid'], 'pid' => (int) $row['pid']];
+        }
+
+        return $pages;
+    }
+
+    /**
+     * The last default-language child of this page, or 0 when it has none.
+     */
+    public function lastDefaultLanguageChildUid(int $parentPid): int
+    {
+        if ($parentPid <= 0) {
+            return 0;
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($queryBuilder, 'pages');
+
+        $row = $queryBuilder
+            ->select('uid')
+            ->from('pages')
+            ->where(
+                $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($parentPid, ParameterType::INTEGER)),
+                $queryBuilder->expr()->eq('sys_language_uid', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER)),
+                $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER)),
+            )
+            ->orderBy('sorting', 'DESC')
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchAssociative();
+
+        return $row === false ? 0 : (int) $row['uid'];
     }
 
     /**
@@ -75,7 +289,7 @@ readonly class RecordService
 
         /** @var list<array{uid: int|string}> $rows */
         $rows = $queryBuilder
-            ->select('uid')
+            ->select('uid', $this->pageAccess->anchorColumn($table))
             ->from($table)
             ->where($queryBuilder->expr()->in(
                 'uid',
@@ -84,7 +298,9 @@ readonly class RecordService
             ->executeQuery()
             ->fetchAllAssociative();
 
-        return array_map(static fn(array $row): int => (int) $row['uid'], $rows);
+        $rows = array_filter($rows, fn(array $row): bool => $this->pageAccess->canReadRecord($table, $row));
+
+        return array_values(array_map(static fn(array $row): int => (int) $row['uid'], $rows));
     }
 
     /**
@@ -116,9 +332,12 @@ readonly class RecordService
             ->where($countQueryBuilder->expr()->eq('pid', $countQueryBuilder->createNamedParameter($pid, ParameterType::INTEGER)));
 
         $queryBuilder
-            ->select(...$fields)
+            ->select(...$this->workspaceContext->withOverlayFields($table, $fields))
             ->from($table)
             ->where($queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pid, ParameterType::INTEGER)));
+
+        $this->applyPageAccessConstraint($queryBuilder, $table, $pid);
+        $this->applyPageAccessConstraint($countQueryBuilder, $table, $pid);
 
         if ($sysLanguageUid !== null && $languageField !== null) {
             $countQueryBuilder->andWhere(
@@ -143,6 +362,8 @@ readonly class RecordService
             ->fetchAllAssociative();
 
         $records = $this->workspaceContext->overlayMany($table, $records);
+        $records = array_map(fn(array $r): array => $this->workspaceContext->stripOverlayFields($r, $fields), $records);
+        $records = $this->relationUidListResolver->enrichRecords($table, $records);
 
         return [
             'records' => $records,
@@ -193,7 +414,7 @@ readonly class RecordService
         $countQueryBuilder->getRestrictions()->removeAll();
         $this->workspaceContext->applyRestriction($countQueryBuilder, $table);
 
-        $queryBuilder->select(...$fields)->from($table);
+        $queryBuilder->select(...$this->workspaceContext->withOverlayFields($table, $fields))->from($table);
         $countQueryBuilder->count('uid')->from($table);
 
         if ($pid !== null) {
@@ -210,6 +431,9 @@ readonly class RecordService
             $this->applyCondition($countQueryBuilder, $field, $condition);
         }
 
+        $this->applyPageAccessConstraint($queryBuilder, $table, $pid);
+        $this->applyPageAccessConstraint($countQueryBuilder, $table, $pid);
+
         /** @var int|string $totalResult */
         $totalResult = $countQueryBuilder->executeQuery()->fetchOne();
 
@@ -221,11 +445,62 @@ readonly class RecordService
             ->fetchAllAssociative();
 
         $records = $this->workspaceContext->overlayMany($table, $records);
+        $records = array_map(fn(array $r): array => $this->workspaceContext->stripOverlayFields($r, $fields), $records);
+        $records = $this->relationUidListResolver->enrichRecords($table, $records);
 
         return [
             'records' => $records,
             'total' => (int) $totalResult,
         ];
+    }
+
+    /**
+     * Restrict a query to records the current backend user may read through the
+     * page they live on (web mounts + "show" permission). Admins are unrestricted.
+     *
+     * For pages the anchor is the page uid itself, for every other table its pid;
+     * the distinct anchors of the table are resolved against the page permissions
+     * once and then applied as an IN() constraint so limit/offset/total stay correct.
+     */
+    private function applyPageAccessConstraint(QueryBuilder $queryBuilder, string $table, ?int $pid): void
+    {
+        if ($this->pageAccess->isUnrestricted()) {
+            return;
+        }
+
+        $column = $this->pageAccess->anchorColumn($table);
+
+        // Non-page table scoped to one page: a single page check is enough.
+        if ($table !== 'pages' && $pid !== null) {
+            if ($pid !== 0 && !$this->pageAccess->canReadPage($pid)) {
+                $queryBuilder->andWhere('1 = 0');
+            }
+
+            return;
+        }
+
+        $anchorQuery = $this->connectionPool->getQueryBuilderForTable($table);
+        $anchorQuery->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($anchorQuery, $table);
+        $anchorQuery->select($column)->distinct()->from($table);
+        if ($pid !== null) {
+            $anchorQuery->andWhere($anchorQuery->expr()->eq('pid', $anchorQuery->createNamedParameter($pid, ParameterType::INTEGER)));
+        }
+
+        /** @var list<int|string> $anchors */
+        $anchors = $anchorQuery->executeQuery()->fetchFirstColumn();
+        $allowed = $this->pageAccess->filterAllowedAnchors($table, array_map('intval', $anchors));
+
+        if ($allowed === []) {
+            $queryBuilder->andWhere('1 = 0');
+
+            return;
+        }
+
+        $queryBuilder->andWhere($queryBuilder->expr()->in(
+            $column,
+            $queryBuilder->createNamedParameter($allowed, ArrayParameterType::INTEGER),
+        ));
     }
 
     /** @param array{operator: string, value: string} $condition */
@@ -278,6 +553,8 @@ readonly class RecordService
             $this->applyCondition($queryBuilder, $field, $condition);
         }
 
+        $this->applyPageAccessConstraint($queryBuilder, $table, $pid);
+
         /** @var int|string $result */
         $result = $queryBuilder->executeQuery()->fetchOne();
 
@@ -291,6 +568,10 @@ readonly class RecordService
      */
     public function findFileReferences(string $table, int $uid, string $fieldName): array
     {
+        if ($this->findByUid($table, $uid, ['uid']) === null) {
+            return [];
+        }
+
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('sys_file_reference');
         $queryBuilder->getRestrictions()->removeAll();
         $this->workspaceContext->applyRestriction($queryBuilder, 'sys_file_reference');
@@ -315,6 +596,10 @@ readonly class RecordService
      */
     public function findTranslations(string $table, int $uid, string $languageField, string $transOrigPointerField): array
     {
+        if ($this->findByUid($table, $uid, ['uid']) === null) {
+            return [];
+        }
+
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
         $queryBuilder->getRestrictions()->removeAll();
         $this->workspaceContext->applyRestriction($queryBuilder, $table);

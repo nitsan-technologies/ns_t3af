@@ -1,9 +1,9 @@
-# TYPO3 Core Backend Design Adoption Guide (v12 · v13 · v14)
+# TYPO3 Core Backend Design Adoption Guide (v13 · v14)
 
 Project-agnostic reference for building **any** TYPO3 backend module so it looks and behaves like native TYPO3. Drop this file into any extension/project. When implementing a new extension or feature, follow this guide to adopt TYPO3 core design **automatically** — use core markup and `--typo3-*` tokens first; add extension CSS only when core cannot express the layout.
 
 **Scope:** Backend module UI (Fluid templates, module CSS, JS toggles).
-**Supported TYPO3:** `^12.4 || ^13.4 || ^14.3`.
+**Supported TYPO3:** `^13.4 || ^14.3`.
 **Source of truth:** TYPO3 core `backend.css` (always) + **styleguide** when installed (optional live reference). Styleguide is **not** required in production — see fallbacks below.
 
 ---
@@ -14,7 +14,7 @@ When asked to build or restyle any backend UI:
 
 1. **Find the core pattern first.** Open **System → Styleguide → Components** on the target TYPO3 version and copy the matching markup (Cards, Buttons, Tables, Forms, Modals, Badges).
 2. **Use core classes, not custom skins.** `.card`, `.btn`, `.badge`, `.callout`, `.table`, `.card-container` already match the backend.
-3. **Use `--typo3-*` tokens for any CSS** (with sensible fallbacks for v12). Never hardcode colours.
+3. **Use `--typo3-*` tokens for any CSS** (with sensible fallbacks). Never hardcode colours.
 4. **Extension CSS = layout only** (margin, grid, flex, gap). Never re-theme core components or typography.
 5. **Test light + dark theme on each supported version** before declaring done.
 
@@ -26,14 +26,14 @@ If a pattern exists in core, you do not need sign-off — adopt it. Only escalat
 
 1. **Look native** — users should not notice a "custom skin" inside the TYPO3 backend.
 2. **Survive upgrades** — prefer core classes and `--typo3-*` tokens over hard-coded colours (`#f8fafc`, `#fff`).
-3. **Support v12–v14** — one template set with progressive enhancement on v14; avoid v14-only markup without a fallback.
+3. **Support v13–v14** — one template set with progressive enhancement on v14; avoid v14-only markup without a fallback.
 4. **Use TYPO3 core typography** — inherit backend font stack, sizes, and line-height from `backend.css`. Never ship a parallel type scale.
 
 ---
 
 ## Cross-version strategy
 
-Target **v14 core patterns** as the design baseline, with graceful degradation on v12 and v13.
+Target **v14 core patterns** as the design baseline, with graceful degradation on v13.
 
 ```
 Design (v14 styleguide + SubmoduleOverview)
@@ -42,13 +42,13 @@ Markup (core classes, one Fluid template set)
     ↓
 CSS (layout + --typo3-* tokens with fallbacks)
     ↓
-Test v12 + v13 + v14 (light + dark backend theme)
+Test v13 + v14 (light + dark backend theme)
 ```
 
 | Principle | Rationale |
 |-----------|-----------|
 | **Target v14 markup** | Newest patterns (`card-container`, structured `card-header`, `callout`) |
-| **Token + fallback CSS** | `--typo3-*` on v13+; v12 gets sensible defaults |
+| **Token + fallback CSS** | `--typo3-*` tokens with sensible fallbacks |
 | **One template set** | No version-specific Fluid files unless unavoidable |
 | **Extension CSS = layout only** | Do not re-skin `.card`, `.btn`, `.badge` |
 | **Toggle `active` + `is-active`** | Segmented controls work with core JS and custom scripts |
@@ -171,7 +171,7 @@ The backend already defines font family, size, weight, and line-height via `back
 <code>vendor/bin/typo3 cache:flush</code>
 ```
 
-### Core typography tokens (v12 · v13 · v14)
+### Core typography tokens (v13 · v14)
 
 Source: `backend/Resources/Public/Css/backend.css` (`:root`). Live preview: **Styleguide → Styles**.
 
@@ -421,7 +421,7 @@ Wrapper class names (`page-header`, `page-title`, `page-description`, `page-acti
 - [ ] Description uses `text-variant`
 - [ ] Primary action is `btn btn-primary`; others `btn btn-default`
 - [ ] Any custom tab emphasis uses `--typo3-*` tokens + both dark selectors
-- [ ] Header verified in light + dark on v12 · v13 · v14
+- [ ] Header verified in light + dark on v13 · v14
 
 ---
 
@@ -475,7 +475,7 @@ If the module has a sticky-looking footer, make the module a flex column so the 
 .your-module.module .module-footer { flex: 0 0 auto; margin-top: auto; order: 3; }
 ```
 
-`:has()` is supported on the browsers TYPO3 v12–v14 target. If you must support older engines, apply the flex container via a controller-added class instead.
+`:has()` is supported on the browsers TYPO3 v13–v14 target. If you must support older engines, apply the flex container via a controller-added class instead.
 
 ---
 
@@ -534,7 +534,7 @@ Optional separator + colour styling (layout + tokens only):
 - [ ] Footer uses `module-footer border-top t3js-module-footer` + `footer-links` `btn-link`
 - [ ] Footer holds secondary links only (no primary actions / form submits)
 - [ ] Footer colours/borders use `--typo3-*` tokens (no hardcoded grey)
-- [ ] Body + footer verified in light + dark on v12 · v13 · v14
+- [ ] Body + footer verified in light + dark on v13 · v14
 
 ---
 
@@ -694,7 +694,7 @@ Prefer callouts over custom banner divs.
 
 **JS:** toggle both `active` and `is-active` for compatibility with core and custom scripts. Avoid custom ghost/outline buttons — use `btn btn-default`.
 
-### Table row icon actions (v12 · v13 · v14)
+### Table row icon actions (v13 · v14)
 
 Reference: `beuser/Resources/Private/Partials/BackendUser/PaginatedList.fluid.html`. Use core control column + segmented icon buttons.
 
@@ -803,7 +803,7 @@ Core has no dedicated accordion. Pattern:
 
 ## CSS rules for extension modules
 
-### Prefer tokens with fallbacks (v12–v14)
+### Prefer tokens with fallbacks (v13–v14)
 
 ```css
 .my-block {

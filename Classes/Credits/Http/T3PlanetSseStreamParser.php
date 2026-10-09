@@ -161,29 +161,20 @@ final class T3PlanetSseStreamParser
      */
     private function throwUpstreamUsageFailure(array $usagePayload): never
     {
-        $message = (string) ($usagePayload['upstream_message'] ?? $usagePayload['message'] ?? CreditsApiErrorCodes::UPSTREAM_AI_ERROR);
-        $extra = [];
-        foreach (
-            [
-                'content',
-                'cost',
-                'cost_units',
-                'credits',
-                'charged',
-                'request_uuid',
-                'pricing',
-            ] as $key
-        ) {
+        $additional = [];
+        foreach (['content', 'cost', 'cost_units', 'credits', 'charged', 'request_uuid', 'pricing'] as $key) {
             if (array_key_exists($key, $usagePayload)) {
-                $extra[$key] = $usagePayload[$key];
+                $additional[$key] = $usagePayload[$key];
             }
         }
 
-        throw new CreditsApiException(
-            (string) ($usagePayload['error_code'] ?? CreditsApiErrorCodes::UPSTREAM_AI_ERROR),
-            502,
-            $message,
-            $extra,
-        );
+        if (!isset($usagePayload['error_code']) && !isset($usagePayload['error'])) {
+            $usagePayload['error_code'] = CreditsApiErrorCodes::UPSTREAM_AI_ERROR;
+        }
+        if (!isset($usagePayload['message']) && isset($usagePayload['upstream_message'])) {
+            $usagePayload['message'] = $usagePayload['upstream_message'];
+        }
+
+        throw CreditsApiErrorParser::toException($usagePayload, 0, null, $additional);
     }
 }

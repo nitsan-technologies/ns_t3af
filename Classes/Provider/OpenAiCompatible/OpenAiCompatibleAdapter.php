@@ -24,6 +24,7 @@ use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 use NITSAN\NsT3AF\Exception\CipherException;
 use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
+use NITSAN\NsT3AF\Provider\Contract\ToolCallingCapableInterface;
 use NITSAN\NsT3AF\Provider\Contract\VerifyResult;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use TYPO3\CMS\Core\Http\RequestFactory;
@@ -37,7 +38,7 @@ use TYPO3\CMS\Core\Http\RequestFactory;
  *
  * @internal
  */
-final class OpenAiCompatibleAdapter implements AdapterInterface
+final class OpenAiCompatibleAdapter implements AdapterInterface, ToolCallingCapableInterface
 {
     public function __construct(
         private readonly CredentialCipher $cipher,
@@ -71,6 +72,16 @@ final class OpenAiCompatibleAdapter implements AdapterInterface
             Capability::TTS,
             Capability::IMAGE_GENERATION,
         ];
+    }
+
+    public function supportsToolCalling(Provider $provider): bool
+    {
+        if ($provider->capabilities === []) {
+            return true;
+        }
+
+        return $provider->hasCapability(Capability::CHAT)
+            || $provider->hasCapability(Capability::COMPLETION);
     }
 
     public function testConnection(Provider $provider): VerifyResult

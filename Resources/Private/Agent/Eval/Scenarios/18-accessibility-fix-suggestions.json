@@ -1,0 +1,20 @@
+{
+  "id": "18-accessibility-fix-suggestions",
+  "title": "\"How do I fix these accessibility issues?\" gives AI fix suggestions",
+  "requires": [
+    "t3aa_accessibility_fix_suggestions"
+  ],
+  "turns": [
+    {
+      "message": "How do I fix the accessibility issues on this page?",
+      "expect": {
+        "anyTool": [
+          "t3aa_accessibility_fix_suggestions"
+        ],
+        "reply": true,
+        "card": false,
+        "maxSeconds": 150
+      }
+    }
+  ]
+}

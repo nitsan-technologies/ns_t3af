@@ -26,15 +26,20 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Search;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 
+#[McpToolSeverity(ToolSeverity::Read)]
 readonly class RecordSearchTool implements McpNonAiToolInterface
 {
     public function __construct(
         private RecordService $recordService,
         private TcaSchemaService $tcaSchemaService,
+        private PageAccessService $pageAccess,
     ) {}
 
     #[McpTool(
@@ -55,16 +60,20 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
         string $orderBy = '',
         string $orderDirection = 'ASC',
     ): string {
+        if ($pid > 0 && $tableName !== 'pages' && !$this->pageAccess->canReadPage($pid)) {
+            return json_encode(['error' => PageAccessService::ACCESS_DENIED_MESSAGE, 'pageId' => $pid], JSON_THROW_ON_ERROR);
+        }
+
         $readFields = $this->tcaSchemaService->getReadFields($tableName);
         if ($readFields === ['uid', 'pid']) {
             return json_encode(['error' => 'Table not found or has no readable fields: ' . $tableName], JSON_THROW_ON_ERROR);
         }
 
         try {
-            /** @var array<string, mixed> $searchData */
-            $searchData = json_decode($search, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            return json_encode(['error' => 'Invalid JSON in search parameter: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
+            $labelField = (string) ($GLOBALS['TCA'][$tableName]['ctrl']['label'] ?? '');
+            $searchData = SearchParamParser::parse($search, $labelField, array_merge(['uid', 'pid'], $readFields));
+        } catch (\InvalidArgumentException $e) {
+            return json_encode(['error' => 'Invalid search parameter: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
         }
 
         $allowedFields = array_merge(['uid', 'pid'], $readFields);

@@ -73,7 +73,7 @@ final class CreditsApiErrorMessageResolver
 
     private function translate(string $errorCode, CreditsApiException $exception): string
     {
-        $label = (string) ($GLOBALS['LANG']?->sL(self::LANGUAGE_FILE . 'credits.api.error.' . $errorCode) ?? '');
+        $label = (string) (($GLOBALS['LANG'] ?? null)?->sL(self::LANGUAGE_FILE . 'credits.api.error.' . $errorCode) ?? '');
         if ($label === '' || $label === 'credits.api.error.' . $errorCode) {
             return '';
         }
@@ -84,8 +84,26 @@ final class CreditsApiErrorMessageResolver
                 $this->formatRetryAfter(max(1, (int) ($exception->extra['retry_after'] ?? 60))),
             ),
             'insufficient_credits' => $this->appendTopupHint($label, $exception),
-            default => $label,
+            default => $this->fillPlaceholders($label, $exception),
         };
+    }
+
+    /**
+     * Fills {model} / {param} (and other scalar extras) in translated labels.
+     */
+    private function fillPlaceholders(string $label, CreditsApiException $exception): string
+    {
+        if (!str_contains($label, '{')) {
+            return $label;
+        }
+
+        $replace = [];
+        foreach (['model', 'param'] as $key) {
+            $value = $exception->extra[$key] ?? '';
+            $replace['{' . $key . '}'] = is_scalar($value) && (string) $value !== '' ? (string) $value : '?';
+        }
+
+        return strtr($label, $replace);
     }
 
     private function formatRetryAfter(int $seconds): string
@@ -111,7 +129,7 @@ final class CreditsApiErrorMessageResolver
             return $label;
         }
 
-        $hint = (string) ($GLOBALS['LANG']?->sL(self::LANGUAGE_FILE . 'credits.api.error.insufficient_credits.topup_hint') ?? '');
+        $hint = (string) (($GLOBALS['LANG'] ?? null)?->sL(self::LANGUAGE_FILE . 'credits.api.error.insufficient_credits.topup_hint') ?? '');
         if ($hint === '' || $hint === 'credits.api.error.insufficient_credits.topup_hint') {
             return $label . ' ' . $exception->topupUrl;
         }

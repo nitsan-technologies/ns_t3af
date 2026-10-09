@@ -48,4 +48,16 @@ final class SearchConditionParserTest extends TestCase
             $result,
         );
     }
+
+    #[Test]
+    public function plainTermStripsQuotesTheModelWrapsAroundTheWord(): void
+    {
+        self::assertSame('QA', SearchConditionParser::plainTerm('QA'));
+        self::assertSame('QA', SearchConditionParser::plainTerm("'QA'"));
+        self::assertSame('QA', SearchConditionParser::plainTerm('"QA"'));
+        self::assertSame('QA', SearchConditionParser::plainTerm('“QA”'));
+        self::assertSame('QA Mounted', SearchConditionParser::plainTerm('  "QA Mounted" '));
+        self::assertSame("it's", SearchConditionParser::plainTerm("it's"));
+        self::assertSame('', SearchConditionParser::plainTerm('""'));
+    }
 }

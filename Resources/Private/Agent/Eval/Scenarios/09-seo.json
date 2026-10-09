@@ -1,0 +1,20 @@
+{
+  "id": "09-seo",
+  "title": "SEO for the page prepares suggestions",
+  "requires": [
+    "t3ai_generate_all_seo",
+    "t3ai_generate_meta_description"
+  ],
+  "turns": [
+    {
+      "message": "Generate SEO meta tags for this page",
+      "expect": {
+        "anyTool": [
+          "t3ai_generate_all_seo",
+          "t3ai_generate_meta_description"
+        ],
+        "card": true
+      }
+    }
+  ]
+}

@@ -238,7 +238,7 @@ final class AiLabelRecordDrawerService
         foreach (Involvement::cases() as $case) {
             $options[] = [
                 'value' => $case->value,
-                'label' => (string) ($GLOBALS['LANG']?->sL($ll . $case->value) ?? $case->value),
+                'label' => (string) (($GLOBALS['LANG'] ?? null)?->sL($ll . $case->value) ?? $case->value),
             ];
         }
 
@@ -255,7 +255,7 @@ final class AiLabelRecordDrawerService
         foreach (LabellingMode::cases() as $case) {
             $options[] = [
                 'value' => $case->value,
-                'label' => (string) ($GLOBALS['LANG']?->sL($ll . $case->value) ?? $case->value),
+                'label' => (string) (($GLOBALS['LANG'] ?? null)?->sL($ll . $case->value) ?? $case->value),
             ];
         }
 

@@ -1,0 +1,30 @@
+{
+  "id": "16-search-settings-color",
+  "title": "A search setting change sends only that setting (no switch reset)",
+  "requires": [
+    "t3as_search_settings"
+  ],
+  "turns": [
+    {
+      "message": "Change the primary color of the AI search on this site to #1a73e8",
+      "expect": {
+        "anyTool": [
+          "t3as_search_settings"
+        ],
+        "card": true,
+        "argumentsContain": {
+          "primaryColor|primary_color": "#1a73e8"
+        },
+        "argumentsExclude": [
+          "enableAiSearch|enable_ai_search",
+          "enableSearchHistory|enable_search_history",
+          "enableVoiceover|enable_voiceover",
+          "enableChatbotMode|enable_chatbot_mode",
+          "widgetHideOnDesktop|widget_hide_on_desktop",
+          "widgetHideOnMobile|widget_hide_on_mobile",
+          "allowAnyDomain|allow_any_domain"
+        ]
+      }
+    }
+  ]
+}

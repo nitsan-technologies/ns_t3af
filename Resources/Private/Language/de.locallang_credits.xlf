@@ -28,8 +28,8 @@
                 <target>Diese TYPO3-Installationsdomäne ist für T3Planet Credits nicht autorisiert.</target>
             </trans-unit>
             <trans-unit id="credits.api.error.insufficient_credits">
-                <source>Your T3Planet credit balance is too low for this request.</source>
-                <target>Ihr T3Planet-Guthaben ist für diese Anfrage zu niedrig.</target>
+                <source>Your T3Planet AI credits have been exhausted. Please purchase additional credits to continue using AI features.</source>
+                <target>Ihr T3Planet-KI-Guthaben ist aufgebraucht. Bitte erwerben Sie zusätzliche Credits, um die KI-Funktionen weiter zu nutzen.</target>
             </trans-unit>
             <trans-unit id="credits.api.error.insufficient_credits.topup_hint">
                 <source>Purchase more credits: %s</source>
@@ -110,6 +110,42 @@
             <trans-unit id="credits.api.error.unexpected">
                 <source>An unexpected error occurred while contacting T3Planet Credits.</source>
                 <target>Bei der Kontaktaufnahme mit T3Planet Credits ist ein unerwarteter Fehler aufgetreten.</target>
+            </trans-unit>
+            <trans-unit id="credits.api.error.context_length_exceeded">
+                <source>The request is too long for the selected AI model. Shorten the input and try again.</source>
+                <target>Die Anfrage ist für das gewählte KI-Modell zu lang. Bitte kürzen Sie die Eingabe und versuchen Sie es erneut.</target>
+            </trans-unit>
+            <trans-unit id="credits.api.error.tools_unsupported">
+                <source>The model "{model}" does not support the requested feature ({param}). Choose another model.</source>
+                <target>Das Modell "{model}" unterstützt die angeforderte Funktion ({param}) nicht. Bitte wählen Sie ein anderes Modell.</target>
+            </trans-unit>
+            <trans-unit id="credits.api.error.model_unknown">
+                <source>The AI model "{model}" is not known to T3Planet Credits.</source>
+                <target>Das KI-Modell "{model}" ist T3Planet-Credits nicht bekannt.</target>
+            </trans-unit>
+            <trans-unit id="credits.api.error.model_not_allowed">
+                <source>The AI model "{model}" is not included in your T3Planet plan.</source>
+                <target>Das KI-Modell "{model}" ist in Ihrem T3Planet-Tarif nicht enthalten.</target>
+            </trans-unit>
+            <trans-unit id="credits.api.error.request_too_large">
+                <source>The request is too large. Reduce the amount of content and try again.</source>
+                <target>Die Anfrage ist zu groß. Bitte reduzieren Sie den Inhalt und versuchen Sie es erneut.</target>
+            </trans-unit>
+            <trans-unit id="credits.api.error.unsupported_content">
+                <source>The request contains content that the selected AI model cannot process.</source>
+                <target>Die Anfrage enthält Inhalte, die das gewählte KI-Modell nicht verarbeiten kann.</target>
+            </trans-unit>
+            <trans-unit id="credits.api.error.content_removed">
+                <source>The original AI result was removed under the data retention policy. Please generate it again.</source>
+                <target>Das ursprüngliche KI-Ergebnis wurde gemäß Datenaufbewahrungsrichtlinie entfernt. Bitte erzeugen Sie es erneut.</target>
+            </trans-unit>
+            <trans-unit id="credits.visitor.unavailable">
+                <source>AI features are temporarily unavailable. Please try again later.</source>
+                <target>KI-Funktionen sind vorübergehend nicht verfügbar. Bitte versuchen Sie es später erneut.</target>
+            </trans-unit>
+            <trans-unit id="credits.admin.purchase_hint">
+                <source>Administrators can buy more credits in the TYPO3 backend under AI Foundation &gt; AI Providers &gt; AI Credit Bundles.</source>
+                <target>Administratoren können weitere Credits im TYPO3-Backend unter AI Foundation &gt; AI Providers &gt; AI Credit Bundles kaufen.</target>
             </trans-unit>
         </body>
     </file>
