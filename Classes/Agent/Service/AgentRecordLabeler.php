@@ -57,6 +57,13 @@ readonly class AgentRecordLabeler
             return $label !== 'agent.field.move' ? $label : 'Move';
         }
 
+        // The TCA label of the hidden column reads "Enabled", which turns "1 → 0" into the opposite of what happens.
+        if ($field === 'hidden') {
+            $label = $this->translator->translate('agent.field.hidden');
+
+            return $label !== 'agent.field.hidden' ? $label : 'Hidden (1 = hidden, 0 = visible)';
+        }
+
         // Internal plan fields of copy and delete: the editor sees a word, not the key.
         $internal = ['_copy' => ['agent.field.copy', 'Copy'], '_record' => ['agent.field.record', 'Record']];
         if (isset($internal[$field])) {

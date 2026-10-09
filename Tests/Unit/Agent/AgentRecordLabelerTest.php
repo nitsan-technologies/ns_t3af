@@ -81,4 +81,12 @@ final class AgentRecordLabelerTest extends TestCase
         self::assertSame('Delete', $labeler->displayValue('_record', 'delete'));
         self::assertSame('exists', $labeler->displayValue('header', 'exists'));
     }
+
+    #[Test]
+    public function hiddenFieldIsLabelledSoTheArrowReadsRight(): void
+    {
+        $labeler = new AgentRecordLabeler($this->createMock(UriBuilder::class), $this->createAgentTranslator());
+
+        self::assertStringStartsWith('Hidden', $labeler->fieldLabel('pages', 'hidden'));
+    }
 }

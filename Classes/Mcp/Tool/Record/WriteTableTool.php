@@ -65,6 +65,9 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
     private const ALLOWED_ACTIONS = ['create', 'update', 'delete'];
 
+    /** Text fields where a rewrite must stay about the same thing. */
+    private const REWRITE_CHECKED_FIELDS = ['bodytext', 'header', 'subheader', 'teaser'];
+
     /** A NEW id for the one record of a create. */
     private const NEW_ID = 'NEWrecord';
 
@@ -123,7 +126,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
         return match ($action) {
             'create' => $this->planCreate($tableName, $payload, $beforeUid, $afterUid),
-            'update' => $this->planUpdate($tableName, $uid, $payload),
+            'update' => $this->planUpdate($tableName, $uid, $payload, (string) ($arguments['requestQuery'] ?? '')),
             'delete' => $this->planDelete($tableName, $uid),
         };
     }
@@ -295,7 +298,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     }
 
     /** @param array<string, mixed> $payload */
-    private function planUpdate(string $tableName, int $uid, array $payload): ToolPlan
+    private function planUpdate(string $tableName, int $uid, array $payload, string $requestQuery = ''): ToolPlan
     {
         if ($uid <= 0) {
             throw new \InvalidArgumentException('Update requires uid > 0.');
@@ -322,6 +325,21 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         $fieldNames = array_keys($filteredData);
         $current = $this->recordService->findByUid($tableName, $uid, $fieldNames) ?? [];
 
+        // A rewrite keeps the facts of the original. A draft that shares nothing with it is refused here, so
+        // the model corrects the call instead of the editor approving an unrelated text.
+        if (self::isRewriteRequest($requestQuery)) {
+            foreach (self::REWRITE_CHECKED_FIELDS as $textField) {
+                if (isset($filteredData[$textField], $current[$textField]) && is_string($filteredData[$textField]) && is_string($current[$textField])
+                    && !self::rewriteKeepsMeaning($current[$textField], $filteredData[$textField])
+                ) {
+                    throw new \InvalidArgumentException(sprintf(
+                        'The new "%s" shares none of the key words of the current text. A rewrite must keep the meaning and every fact of the original and only change wording, tone or length. Rewrite the current text again and call write_table with that.',
+                        $textField,
+                    ));
+                }
+            }
+        }
+
         $fields = [];
         foreach ($filteredData as $fieldName => $value) {
             $fields[] = new ToolPlanField(
@@ -335,6 +353,48 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return new ToolPlan('update', 'write_table', $fields);
+    }
+
+    public static function isRewriteRequest(string $query): bool
+    {
+        return preg_match(
+            '/\b(rewrite|reword|rephrase|paraphrase|shorten|simplify|polish|improve|friendlier|more\s+friendly|more\s+formal|umschreib\w*|umformulier\w*|k[üu]rz\w*|freundlicher|verbesser\w*|[üu]berarbeit\w*)\b/iu',
+            $query,
+        ) === 1;
+    }
+
+    /**
+     * False when the new text shares (almost) none of the significant words of the old one, i.e. it is not a
+     * rewrite of it. Short originals (fewer than 3 significant words) cannot be judged and pass.
+     */
+    public static function rewriteKeepsMeaning(string $old, string $new): bool
+    {
+        $oldWords = self::significantWords($old);
+        if (count($oldWords) < 3) {
+            return true;
+        }
+        $newWords = self::significantWords($new);
+        $kept = 0;
+        foreach ($oldWords as $word) {
+            foreach ($newWords as $candidate) {
+                if ($candidate === $word || (mb_strlen($word) >= 5 && mb_strlen($candidate) >= 5 && mb_substr($candidate, 0, 5) === mb_substr($word, 0, 5))) {
+                    ++$kept;
+                    break;
+                }
+            }
+        }
+
+        return $kept / count($oldWords) >= 0.34;
+    }
+
+    /** @return list<string> */
+    private static function significantWords(string $text): array
+    {
+        $plain = mb_strtolower(html_entity_decode(strip_tags($text)));
+        preg_match_all('/[\p{L}\p{N}]{4,}/u', $plain, $matches);
+        $stop = ['this', 'that', 'with', 'from', 'your', 'have', 'will', 'dies', 'diese', 'dieser', 'eine', 'einen', 'sind', 'oder', 'sowie'];
+
+        return array_values(array_unique(array_diff($matches[0], $stop)));
     }
 
     private function planDelete(string $tableName, int $uid): ToolPlan

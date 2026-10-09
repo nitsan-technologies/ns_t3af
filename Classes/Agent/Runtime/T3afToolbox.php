@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Agent\Runtime;
 
 use NITSAN\NsT3AF\Agent\Service\AgentPlan;
 use NITSAN\NsT3AF\Agent\Service\AgentRequestedFiles;
+use NITSAN\NsT3AF\Agent\Service\AgentToolSearch;
 use NITSAN\NsT3AF\Agent\Service\PageCreateAfter;
 use NITSAN\NsT3AF\Agent\Service\PageCreateBefore;
 use NITSAN\NsT3AF\Api\AiToolDefinition;
@@ -453,7 +454,17 @@ final class T3afToolbox implements ToolboxInterface
 
         $candidates = array_values(array_diff_key($this->catalog, $this->definitions));
         $result = $this->runtime->toolSearch->search($query, $candidates, self::FOUND_TOOLS_LIMIT);
-        $found = $this->addDefinitions($result['tools']);
+        $foundTools = $result['tools'];
+        // "Make the page visible" ranks page and cache tools; the record writer is what changes a field.
+        if (AgentToolSearch::asksForRecordChange($query)) {
+            $foundNames = array_map(static fn(array $tool): string => (string) ($tool['name'] ?? ''), $foundTools);
+            foreach ($candidates as $candidate) {
+                if (($candidate['name'] ?? '') === 'write_table' && !in_array('write_table', $foundNames, true)) {
+                    $foundTools[] = $candidate;
+                }
+            }
+        }
+        $found = $this->addDefinitions($foundTools);
         $this->state->trace[] = [
             'tool' => self::FIND_TOOLS,
             'query' => $query,
