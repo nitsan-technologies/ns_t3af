@@ -341,15 +341,16 @@ final class AgentRequestChecklist
                             if (preg_match('/^text\s*&\s*media|^text\s+and\s+media|^textmedia/u', $window) === 1) {
                                 continue;
                             }
-                            $hits[] = ['cType' => 'text', 'pos' => $pos];
+                            $hits[] = ['cType' => 'text', 'source' => 'text', 'pos' => $pos];
                             break;
                         }
                     }
                     continue;
                 }
             }
-            $hits[] = ['cType' => $mapped, 'pos' => (int) $m[0][1]];
+            $hits[] = ['cType' => $mapped, 'source' => $cType, 'pos' => (int) $m[0][1]];
         }
+        $hits = self::dropFieldMentionsOfAMediaElement($s, $hits);
         usort($hits, static fn(array $a, array $b): int => $a['pos'] <=> $b['pos']);
         $ordered = [];
         $seen = [];
@@ -363,6 +364,64 @@ final class AgentRequestChecklist
         }
 
         return $ordered;
+    }
+
+    /**
+     * "a short text", "alt text" and "attach the existing images" name fields of a
+     * Text & Media or Text & Images element. A later bare word is a second element
+     * only when the editor asks for one ("a separate text element", "two elements").
+     *
+     * @param list<array{cType: string, source: string, pos: int}> $hits
+     * @return list<array{cType: string, source: string, pos: int}>
+     */
+    private static function dropFieldMentionsOfAMediaElement(string $text, array $hits): array
+    {
+        $hasMediaElement = false;
+        foreach ($hits as $hit) {
+            if ($hit['source'] === 'textmedia' || $hit['source'] === 'textpic') {
+                $hasMediaElement = true;
+                break;
+            }
+        }
+        if (!$hasMediaElement) {
+            return $hits;
+        }
+        if (preg_match(
+            '/\b(?:two|three|several|multiple|zwei|drei|mehrere|\d+)\s+(?:different\s+)?(?:content\s+)?elements?\b/u',
+            $text,
+        ) === 1) {
+            return $hits;
+        }
+
+        $kept = [];
+        foreach ($hits as $hit) {
+            if (($hit['source'] === 'text' || $hit['source'] === 'images')
+                && !self::namesAnExtraElement($text, $hit['pos'], $hit['source'])
+            ) {
+                continue;
+            }
+            $kept[] = $hit;
+        }
+
+        return $kept;
+    }
+
+    private static function namesAnExtraElement(string $text, int $pos, string $source): bool
+    {
+        $before = mb_substr($text, max(0, $pos - 32), min(32, $pos));
+        $after = mb_substr($text, $pos, 28);
+        $word = $source === 'images' ? '(?:images|bilder)' : 'text';
+        if (preg_match('/^' . $word . '(?:\s+content)?\s+elements?\b/u', $after) === 1) {
+            return true;
+        }
+        if ($source === 'text' && preg_match('/^textelements?\b/u', $after) === 1) {
+            return true;
+        }
+
+        return preg_match(
+            '/\b(?:separate|another|additional|extra|second|eigenes|eigenen|separates|separaten|weiteres|weiteren)\s+$/u',
+            $before,
+        ) === 1;
     }
 
     private static function titleForCreate(string $cType, string $segment): string
