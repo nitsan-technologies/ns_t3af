@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-09 — AI-generated images: no stock photos, no repeat after decline
+
+**Done:** `AgentRequestedFiles::asksForGeneratedImage()` recognises "AI-generated image", "generate an image", "generiere ein Bild", "KI-Bild". When the editor cannot use `t3ai_generate_image`, `AgentTurnRouter` adds the `agent.turn.imageGenerationUnavailable` notice (`files_unavailable` with `noFileLeft` and `imageGenerationUnavailable`): the attach step closes and `promptNote()` forbids a web image. `T3afToolbox` refuses `file_upload_from_url` for such a request unless the editor gave a URL (pointing to `t3ai_generate_image` when it is there). The checklist hint names `t3ai_generate_image`. A declined tool card (other than `write_table`) is not offered again in the same request, a declined `t3ai_generate_image` closes the attach step, and the "element still has no image" reminder stays quiet; a dropped card with no reply text answers `agent.turn.declinedNotRepeated`. Checked live (OpenAI, Mistral ×3): Apply → one textmedia with one `assets` reference to a new file with alternative; Decline → no file, no new image card.
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-09 — A declined create is not proposed again
 
 **Done:** `AgentRequestChecklist::reconcile()` closes (status `failed`) a create step whose card the editor discarded in this request, plus the attach / alt-text steps when every create was declined or the attach card was declined. `AgentRunner::buildMessages()` no longer falls back to the saved model plan once the checklist is closed. Right after a decline, `withoutRepeatedDeclinedDrafts(..., afterDecline: true)` also drops a create of the same tool/table/CType that differs only in a field (the model had added `sys_language_uid`). A `draft_review` pause whose only card was dropped no longer leaves the window waiting; the reply is then `agent.turn.declinedAskInstead`. The decline continuation says nothing else remains when the checklist is closed. Checked live (Mistral ×2, OpenAI): after Discard the agent asks what to do instead, no new card. When only some named files are missing, the notice is `agent.turn.filesPartlyUnavailable` ("Skipped … I will continue with the other files"), so it no longer reads as if the whole request failed.

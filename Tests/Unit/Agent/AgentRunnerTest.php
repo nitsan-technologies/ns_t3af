@@ -902,6 +902,29 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function aToolCardTheEditorJustDeclinedIsNotProposedAgainInOtherWords(): void
+    {
+        $generate = static fn(string $prompt, bool $discarded = false): array => [
+            'role' => 'assistant',
+            'content' => 'Generate an image',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => ['tool' => 't3ai_generate_image', 'discarded' => $discarded, 'fields' => [], 'arguments' => ['prompt' => $prompt]],
+            ],
+        ];
+        $request = ['role' => 'user', 'content' => 'Create a text & media element with an AI-generated image', 'meta' => ['type' => 'message']];
+        $declined = ['role' => 'user', 'content' => '[The editor declined …]', 'meta' => ['type' => 'continuation', 'hidden' => true]];
+        $history = [$request, $generate('A red lighthouse', true), $declined];
+
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$generate('A red lighthouse on a cliff')], $history, true));
+        // Also later in the same request, after another card was applied.
+        $dropped = 0;
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$generate('A red lighthouse on a cliff')], $history, false, $dropped));
+        self::assertSame(1, $dropped);
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$generate('A red lighthouse on a cliff')], [...$history, $request], true));
+    }
+
+    #[Test]
     public function fileRequestsKeepTheMatchingFileTools(): void
     {
         $tools = [['name' => 'file_copy'], ['name' => 'file_move'], ['name' => 'directory_create'], ['name' => 'content_get']];

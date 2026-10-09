@@ -765,6 +765,12 @@
       <trans-unit id="agent.turn.filesUnavailable" resname="agent.turn.filesUnavailable">
         <source>These files cannot be attached because they do not exist or are missing from the file storage: %s. Please upload them again or choose other files.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.declinedNotRepeated" resname="agent.turn.declinedNotRepeated">
+        <source>I left out the step you declined. What should I do next?</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.imageGenerationUnavailable" resname="agent.turn.imageGenerationUnavailable">
+        <source>AI image generation is not available to you (it needs T3AI with an image provider and access to T3AI Media), so no image will be generated. I will do the rest of the request.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.filesPartlyUnavailable" resname="agent.turn.filesPartlyUnavailable">
         <source>Skipped %1$s: the file does not exist or is missing from the file storage. I will continue with the other files (%2$s).</source>
       </trans-unit>

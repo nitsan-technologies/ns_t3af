@@ -141,7 +141,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $finalText = AgentPromptBuilder::collapseRepeatedReply($finalText);
 
         // Drop a card the editor already declined, and a second copy of a create that is still waiting.
-        $state->messages = self::withoutRepeatedDeclinedDrafts($state->messages, $historyMessages, ($continuation['outcome'] ?? '') === 'declined');
+        $declinedDropped = 0;
+        $state->messages = self::withoutRepeatedDeclinedDrafts($state->messages, $historyMessages, ($continuation['outcome'] ?? '') === 'declined', $declinedDropped);
+        $cardDropped = $declinedDropped > 0;
 
         $state->attachPendingPlan();
 
@@ -162,12 +164,14 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         if (
-            ($continuation['outcome'] ?? '') === 'declined'
+            (($continuation['outcome'] ?? '') === 'declined' || $cardDropped)
             && !$state->failed
             && !$cardLeft
             && (trim($finalText) === '' || AgentPromptBuilder::isCardHistoryEcho($finalText))
         ) {
-            $finalText = $this->translator->translate('agent.turn.declinedAskInstead');
+            $finalText = $this->translator->translate(
+                ($continuation['outcome'] ?? '') === 'declined' ? 'agent.turn.declinedAskInstead' : 'agent.turn.declinedNotRepeated',
+            );
         }
 
         if ($state->failed || ($finalText === '' && $state->executedTools !== [])) {
@@ -504,15 +508,18 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     /**
      * Drops change cards that repeat a declined card, or a create that is still waiting to be
      * executed. A follow-up ("check now") otherwise adds a second identical page draft, and
-     * Execute all writes both. Right after a decline, a create of the same content type the
-     * editor just declined in this request is dropped too, even when a field differs.
+     * Execute all writes both. A card of a tool the editor declined in this request (other than
+     * write_table) is not offered again in it, and right after a decline a create of the same
+     * content type is dropped too, even when a field or argument differs.
      *
      * @param list<array{role: string, content: string, meta: array<string, mixed>}> $messages messages added by this turn
      * @param list<array<string, mixed>> $history the conversation before this turn
+     * @param int $declinedDropped set to the number of cards dropped because the editor declined them
      * @return list<array{role: string, content: string, meta: array<string, mixed>}>
      */
-    public static function withoutRepeatedDeclinedDrafts(array $messages, array $history, bool $afterDecline = false): array
+    public static function withoutRepeatedDeclinedDrafts(array $messages, array $history, bool $afterDecline = false, int &$declinedDropped = 0): array
     {
+        $declinedDropped = 0;
         $blocked = [];
         $declinedCreates = [];
         foreach ($history as $message) {
@@ -530,10 +537,14 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $applied = ($draft['applied'] ?? false) === true || ($message['meta']['applied'] ?? false) === true;
             $pendingCreate = !$discarded && !$applied && (string) ($draft['action'] ?? '') === 'create';
             if ($discarded || $pendingCreate) {
-                $blocked[self::draftSignature($draft)] = true;
+                $blocked[self::draftSignature($draft)] = $discarded ? 'declined' : 'pending';
             }
             if ($discarded && (string) ($draft['action'] ?? '') === 'create') {
                 $declinedCreates[self::createdKind($draft)] = true;
+            }
+            // A declined tool card ("Generate an image") comes back with other wording, never with the same arguments.
+            if ($discarded && !in_array((string) ($draft['tool'] ?? ''), ['', 'write_table'], true)) {
+                $declinedCreates['tool ' . $draft['tool']] = true;
             }
         }
 
@@ -543,14 +554,19 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             if (($message['meta']['type'] ?? '') === 'inline_draft' && is_array($draft)) {
                 $signature = self::draftSignature($draft);
                 if (isset($blocked[$signature])) {
+                    $declinedDropped += $blocked[$signature] === 'declined' ? 1 : 0;
                     continue;
                 }
-                if ($afterDecline && (string) ($draft['action'] ?? '') === 'create' && isset($declinedCreates[self::createdKind($draft)])) {
+                if (
+                    ($afterDecline && (string) ($draft['action'] ?? '') === 'create' && isset($declinedCreates[self::createdKind($draft)]))
+                    || isset($declinedCreates['tool ' . (string) ($draft['tool'] ?? '')])
+                ) {
+                    ++$declinedDropped;
                     continue;
                 }
                 // Two identical creates in the same reply count as one card.
                 if ((string) ($draft['action'] ?? '') === 'create') {
-                    $blocked[$signature] = true;
+                    $blocked[$signature] = 'pending';
                 }
             }
             $kept[] = $message;
