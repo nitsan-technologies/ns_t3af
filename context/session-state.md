@@ -34,13 +34,10 @@
 
 **Done:** `file_upload_from_url` (`FileUploadService::downloadFromUrl`) pins the resolved public IP without `stream`, so Guzzle's stream handler is not given a curl option. A transport failure tells the editor the host. AI image generation itself stays `t3ai_generate_image` in ns_t3ai.
 
-<<<<<<< HEAD
 ## 2026-10-09 — SEO Undo restores the page columns
 
 **Done:** Suggestion Undo writes the preview field `column` (`seo_title`, `description`, `og_title`, `og_description`) instead of the suggestion key (`metaTitle`, …). Keywords already matched its column, so only that field was cleared. See `context/features/ai-agent.md`.
 
-=======
->>>>>>> 8e5b0cb776f83264e72a24c5effa7736dac5340c
 **Last touched:** 2026-10-09
 
 ---
