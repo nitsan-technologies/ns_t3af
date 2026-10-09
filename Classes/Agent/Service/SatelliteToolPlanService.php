@@ -175,7 +175,7 @@ final readonly class SatelliteToolPlanService
             $title = '';
         }
 
-        return $title !== '' ? sprintf('„%s“ [%d]', $title, $uid) : (string) $uid;
+        return $title !== '' ? sprintf('%s [%d]', AgentQuote::wrap($title), $uid) : (string) $uid;
     }
 
     private function languageLabel(int $uid, int $pageId): string

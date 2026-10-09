@@ -738,6 +738,9 @@
       <trans-unit id="agent.turn.governanceBlocked" resname="agent.turn.governanceBlocked">
         <source>This request was blocked by the AI permissions of your backend group: %1$s Ask your administrator to allow it under AI Permissions, or try a different request.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.providerUnavailable" resname="agent.turn.providerUnavailable">
+        <source>The AI provider is not available right now. Please try again later or ask your administrator to check the provider account.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.orchestratorFailed" resname="agent.turn.orchestratorFailed">
         <source>The agent could not complete this turn: %1$s</source>
       </trans-unit>
@@ -901,7 +904,7 @@
         <source>Use the + button next to the message field to upload files.</source>
       </trans-unit>
       <trans-unit id="agent.entitlement.composerLockedLead" resname="agent.entitlement.composerLockedLead">
-        <source>„%1$s“ works through the + button next to the message field.</source>
+        <source>“%1$s” works through the + button next to the message field.</source>
       </trans-unit>
       <trans-unit id="agent.draft.applySafe" resname="agent.draft.applySafe">
         <source>Apply safe fields</source>
@@ -913,16 +916,16 @@
         <source>Could not read attached file %1$s.</source>
       </trans-unit>
       <trans-unit id="agent.entitlement.lockedLead" resname="agent.entitlement.lockedLead">
-        <source>„%1$s“ comes from %2$s, which is not available on this installation.</source>
+        <source>“%1$s” comes from %2$s, which is not available on this installation.</source>
       </trans-unit>
       <trans-unit id="agent.entitlement.planLockedLead" resname="agent.entitlement.planLockedLead">
-        <source>„%1$s“ changes data, and the agent cannot show you a preview of it yet, so it will not run it. Do it in the matching backend module instead.</source>
+        <source>“%1$s” changes data, and the agent cannot show you a preview of it yet, so it will not run it. Do it in the matching backend module instead.</source>
       </trans-unit>
       <trans-unit id="agent.entitlement.severityLockedLead" resname="agent.entitlement.severityLockedLead">
-        <source>„%1$s“ cannot be used by the agent yet.</source>
+        <source>“%1$s” cannot be used by the agent yet.</source>
       </trans-unit>
       <trans-unit id="agent.entitlement.groupLockedLead" resname="agent.entitlement.groupLockedLead">
-        <source>„%1$s“ is not allowed for your user group. Ask your administrator to allow it under AI Permissions, or try a different request.</source>
+        <source>“%1$s” is not allowed for your user group. Ask your administrator to allow it under AI Permissions, or try a different request.</source>
       </trans-unit>
       <trans-unit id="agent.entitlement.toolCount" resname="agent.entitlement.toolCount">
         <source>With %2$s active you get %1$s more actions here.</source>
@@ -1739,7 +1742,7 @@
         <source>On confirm this goes live on the website.</source>
       </trans-unit>
       <trans-unit id="agent.draft.targetWorkspace" resname="agent.draft.targetWorkspace">
-        <source>On confirm this is saved as a draft in the workspace „%1$s“.</source>
+        <source>On confirm this is saved as a draft in the workspace “%1$s”.</source>
       </trans-unit>
       <trans-unit id="agent.link.edit" resname="agent.link.edit">
         <source>Edit</source>
@@ -1758,6 +1761,24 @@
       </trans-unit>
       <trans-unit id="agent.field.rename" resname="agent.field.rename">
         <source>Rename</source>
+      </trans-unit>
+      <trans-unit id="agent.field.copy" resname="agent.field.copy">
+        <source>Copy</source>
+      </trans-unit>
+      <trans-unit id="agent.field.record" resname="agent.field.record">
+        <source>Record</source>
+      </trans-unit>
+      <trans-unit id="agent.value.exists" resname="agent.value.exists">
+        <source>Exists</source>
+      </trans-unit>
+      <trans-unit id="agent.value.delete" resname="agent.value.delete">
+        <source>Delete</source>
+      </trans-unit>
+      <trans-unit id="agent.quote.wrap" resname="agent.quote.wrap">
+        <source>“%1$s”</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.notSetNotAllowed" resname="agent.draft.notSetNotAllowed">
+        <source>Not set, because your account may not edit it: %1$s. Do not try to set it again.</source>
       </trans-unit>
       <trans-unit id="agent.field.move" resname="agent.field.move">
         <source>Move</source>

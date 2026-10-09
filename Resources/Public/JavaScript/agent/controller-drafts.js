@@ -19,7 +19,7 @@ export const draftMethods = {
       const live = workspace === null || workspace.live !== false;
       const text = live
         ? lang('agent.draft.targetLive', 'On confirm this goes live on the website.')
-        : lang('agent.draft.targetWorkspace', 'On confirm this is saved as a draft in the workspace „%1$s“.', [String(workspace.title ?? '')]);
+        : lang('agent.draft.targetWorkspace', 'On confirm this is saved as a draft in the workspace “%1$s”.', [String(workspace.title ?? '')]);
       const warn = destructive ? ` ${lang('agent.draft.targetDestructive', 'This cannot be undone.')}` : '';
       return `<p class="nst3af-agent-draft__target nst3af-agent-draft__target--${live ? 'live' : 'draft'}">${escapeHtml(text + warn)}</p>`;
     },
@@ -320,7 +320,7 @@ export const draftMethods = {
         const typeLabel = String(first.tableLabel ?? '').trim();
         if (action === 'create') {
           const nameField = fields.find((f) => ['title', 'header', 'name', 'username', 'slug'].includes(String(f.field ?? '')) && String(f.proposed ?? '').trim() !== '');
-          const created = typeLabel === '' ? '' : (nameField ? `${typeLabel} „${String(nameField.proposed).trim()}“` : typeLabel);
+          const created = typeLabel === '' ? '' : (nameField ? `${typeLabel} ${lang('agent.quote.wrap', '“%1$s”', [String(nameField.proposed).trim()])}` : typeLabel);
           if (created !== '') {
             return lang('agent.draft.titleCreate', 'Create %1$s', [created]);
           }

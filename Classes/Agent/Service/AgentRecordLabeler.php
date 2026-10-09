@@ -57,9 +57,39 @@ readonly class AgentRecordLabeler
             return $label !== 'agent.field.move' ? $label : 'Move';
         }
 
+        // Internal plan fields of copy and delete: the editor sees a word, not the key.
+        $internal = ['_copy' => ['agent.field.copy', 'Copy'], '_record' => ['agent.field.record', 'Record']];
+        if (isset($internal[$field])) {
+            [$key, $fallback] = $internal[$field];
+            $label = $this->translator->translate($key);
+
+            return $label !== $key ? $label : $fallback;
+        }
+
         $label = (string) ($GLOBALS['TCA'][$table]['columns'][$field]['label'] ?? '');
 
         return rtrim($this->translateLabel($label) ?: $field, ':');
+    }
+
+    /**
+     * The value of an internal plan field as the editor reads it ("exists" / "delete" of a delete card).
+     */
+    public function displayValue(string $field, string $value): string
+    {
+        if ($field !== '_record') {
+            return $value;
+        }
+        $key = match ($value) {
+            'exists' => 'agent.value.exists',
+            'delete' => 'agent.value.delete',
+            default => '',
+        };
+        if ($key === '') {
+            return $value;
+        }
+        $label = $this->translator->translate($key);
+
+        return $label !== $key ? $label : ucfirst($value);
     }
 
     /**
@@ -89,7 +119,7 @@ readonly class AgentRecordLabeler
             return $this->translator->translate('agent.record.new', [$this->tableLabel($table)]);
         }
 
-        return $title !== '' ? sprintf('%s „%s“', $this->tableLabel($table), $title) : sprintf('%s #%d', $this->tableLabel($table), $uid);
+        return $title !== '' ? sprintf('%s %s', $this->tableLabel($table), AgentQuote::wrap($title)) : sprintf('%s #%d', $this->tableLabel($table), $uid);
     }
 
     /**
