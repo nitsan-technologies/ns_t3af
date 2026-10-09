@@ -274,6 +274,8 @@ final class AgentWriteService
             'action' => $plan->action,
             'tool' => $plan->toolName,
             'placement' => $this->placementOf($plan),
+            'table' => $plan->fields[0]->table ?? '',
+            'notAllowedFields' => is_array($plan->context['notAllowedFields'] ?? null) ? array_values(array_map('strval', $plan->context['notAllowedFields'])) : [],
         ];
     }
 

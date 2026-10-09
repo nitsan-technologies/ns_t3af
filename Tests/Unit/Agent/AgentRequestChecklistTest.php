@@ -179,4 +179,17 @@ TXT;
         $steps = AgentRequestChecklist::parse('Add a header and a table to this page');
         self::assertSame(['header', 'table'], array_column($steps, 'cType'));
     }
+
+    #[Test]
+    public function aHeaderNamedAsAFieldOfTheElementIsNotASecondElement(): void
+    {
+        $steps = AgentRequestChecklist::parse('Create a new text element on this page with the header QA R5 create gap and the subheader Sub.');
+
+        self::assertSame(['Create Text element'], array_column($steps, 'title'));
+        self::assertSame([], AgentRequestChecklist::parse('Erstelle ein Textelement mit der Überschrift QA Test.'));
+        self::assertSame(
+            ['Create Header element', 'Create Text element'],
+            array_column(AgentRequestChecklist::parse('Add a header and a text element to this page'), 'title'),
+        );
+    }
 }

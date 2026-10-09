@@ -53,7 +53,10 @@ final class McpFalPlanBuilder
             }
             $uid = (int) ($info['uid'] ?? 0);
         } catch (\Throwable) {
-            // Keep identifier as current value when file cannot be resolved.
+            // A card for a file that cannot be found only fails at Apply: refuse now, so the model can correct the path.
+            throw new \InvalidArgumentException(
+                'File not found: ' . $fileIdentifier . '. Use the full file identifier from file_search or file_list, for example /user_upload/name.jpg.',
+            );
         }
 
         return new ToolPlan($action, $toolName, [

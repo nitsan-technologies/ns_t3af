@@ -72,6 +72,9 @@ final class McpRecordPlanService
         }
     }
 
+    /** Fields every create carries; they do not count as content the editor asked for. */
+    private const STRUCTURAL_FIELDS = ['CType', 'colPos', 'sys_language_uid', 'l18n_parent', 'hidden', 'sorting', 'list_type'];
+
     /**
      * @param array<string, mixed> $payload
      * @param list<string>|null $allowedFields
@@ -92,6 +95,18 @@ final class McpRecordPlanService
         }
         unset($payload['pid']);
         $filteredData = $this->filterWritableFields($tableName, $payload, $allowedFields);
+        // Fields the group may not edit would be dropped silently at Apply: the card must not offer them,
+        // and a create whose requested content fields are all forbidden is refused.
+        $notAllowed = [];
+        $user = $GLOBALS['BE_USER'] ?? null;
+        if ($user instanceof BackendUserAuthentication && $filteredData !== []) {
+            $allowed = (new RecordAccessGate())->withoutForbiddenFields($user, $tableName, $filteredData);
+            $notAllowed = array_values(array_map('strval', array_keys(array_diff_key($filteredData, $allowed))));
+            if ($notAllowed !== [] && array_diff(array_keys($allowed), self::STRUCTURAL_FIELDS) === []) {
+                throw new \InvalidArgumentException('You are not allowed to change this field with your backend account: ' . implode(', ', $notAllowed) . '.');
+            }
+            $filteredData = $allowed;
+        }
 
         $fields = [];
         foreach ($filteredData as $fieldName => $value) {
@@ -105,7 +120,7 @@ final class McpRecordPlanService
             );
         }
 
-        return new ToolPlan('create', $toolName, $fields, ['pid' => $pid]);
+        return new ToolPlan('create', $toolName, $fields, ['pid' => $pid] + ($notAllowed !== [] ? ['notAllowedFields' => $notAllowed] : []));
     }
 
     /**
@@ -143,6 +158,15 @@ final class McpRecordPlanService
                     ? 'No valid writable fields provided. ' . implode(' ', $hints)
                     : 'No valid writable fields provided.',
             );
+        }
+
+        $user = $GLOBALS['BE_USER'] ?? null;
+        if ($user instanceof BackendUserAuthentication) {
+            $allowed = (new RecordAccessGate())->withoutForbiddenFields($user, $tableName, $filteredData);
+            if ($allowed === []) {
+                throw new \InvalidArgumentException('You are not allowed to change this field with your backend account: ' . implode(', ', array_keys($filteredData)) . '.');
+            }
+            $filteredData = $allowed;
         }
 
         $fieldNames = array_keys($filteredData);

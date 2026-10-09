@@ -64,6 +64,7 @@ final class AgentDraftServiceRenameLabelTest extends TestCase
         $labeler = $this->createMock(AgentRecordLabeler::class);
         $labeler->method('recordLabel')->willReturn($recordLabel);
         $labeler->method('fieldLabel')->willReturn($fieldLabel);
+        $labeler->method('displayValue')->willReturnCallback(static fn(string $field, string $value): string => $value);
 
         return new AgentDraftService(new AgentLowRiskFieldMatrix(), $labeler);
     }

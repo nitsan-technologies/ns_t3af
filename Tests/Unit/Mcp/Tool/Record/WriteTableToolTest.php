@@ -170,6 +170,105 @@ final class WriteTableToolTest extends TestCase
         }
     }
 
+    #[Test]
+    public function aTableTheUserMayNotChangeIsRefusedBeforeAnyPageOrFieldCheck(): void
+    {
+        $backendUser = $this->createMock(BackendUserAuthentication::class);
+        $backendUser->method('isAdmin')->willReturn(false);
+        $backendUser->method('check')->willReturn(false);
+        $GLOBALS['BE_USER'] = $backendUser;
+
+        // No pid and a page the user cannot read: neither may be mentioned, the table decides first.
+        foreach ([[], ['pid' => 999999, 'title' => 'X']] as $data) {
+            try {
+                $this->tool->plan(['action' => 'create', 'tableName' => 'tt_content', 'data' => json_encode($data)]);
+                self::fail('A table without modify rights must be refused.');
+            } catch (\InvalidArgumentException $exception) {
+                self::assertSame('You are not allowed to change this kind of record with your backend account.', $exception->getMessage());
+            }
+        }
+    }
+
+    #[Test]
+    public function aUserWhoMayChangeTheTableStillGetsThePidHint(): void
+    {
+        $backendUser = $this->createMock(BackendUserAuthentication::class);
+        $backendUser->method('isAdmin')->willReturn(false);
+        $backendUser->method('check')->willReturn(true);
+        $GLOBALS['BE_USER'] = $backendUser;
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Create requires numeric "pid" in data.');
+        $this->tool->plan(['action' => 'create', 'tableName' => 'tt_content', 'data' => '{}']);
+    }
+
+    #[Test]
+    public function aFieldTheGroupMayNotEditIsRefusedWhenThePlanIsBuilt(): void
+    {
+        $GLOBALS['TCA']['tt_content']['columns']['subheader'] = ['exclude' => true, 'config' => ['type' => 'input']];
+        $backendUser = $this->createMock(BackendUserAuthentication::class);
+        $backendUser->method('isAdmin')->willReturn(false);
+        $backendUser->method('check')->willReturnCallback(
+            static fn(string $type, string $value): bool => $type === 'tables_modify',
+        );
+        $GLOBALS['BE_USER'] = $backendUser;
+
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->method('findExistingUids')->willReturn([42]);
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $recordService,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('You are not allowed to change this field with your backend account: subheader.');
+        $tool->plan(['action' => 'update', 'tableName' => 'tt_content', 'uid' => 42, 'data' => ['subheader' => 'Neu']]);
+    }
+
+    #[Test]
+    public function aCreateCardDoesNotOfferAFieldTheGroupMayNotEdit(): void
+    {
+        $GLOBALS['TCA']['tt_content']['columns']['subheader'] = ['exclude' => true, 'config' => ['type' => 'input']];
+        $backendUser = $this->createMock(BackendUserAuthentication::class);
+        $backendUser->method('isAdmin')->willReturn(false);
+        $backendUser->method('check')->willReturnCallback(
+            static fn(string $type, string $value): bool => $type === 'tables_modify',
+        );
+        $GLOBALS['BE_USER'] = $backendUser;
+
+        $plan = $this->tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'data' => ['pid' => 1, 'header' => 'Hello', 'subheader' => 'Sub'],
+        ]);
+
+        self::assertSame(['header'], array_map(static fn($field): string => $field->field, $plan->fields));
+        self::assertSame(['subheader'], $plan->context['notAllowedFields'] ?? null);
+    }
+
+    #[Test]
+    public function aCreateOfOnlyForbiddenFieldsIsRefusedEvenWhenTheTypeIsKept(): void
+    {
+        $GLOBALS['TCA']['tt_content']['columns']['subheader'] = ['exclude' => true, 'config' => ['type' => 'input']];
+        $GLOBALS['TCA']['tt_content']['columns']['CType'] = ['config' => ['type' => 'select']];
+        $backendUser = $this->createMock(BackendUserAuthentication::class);
+        $backendUser->method('isAdmin')->willReturn(false);
+        $backendUser->method('check')->willReturnCallback(
+            static fn(string $type, string $value): bool => $type === 'tables_modify',
+        );
+        $GLOBALS['BE_USER'] = $backendUser;
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('You are not allowed to change this field with your backend account: subheader.');
+        $this->tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'data' => ['pid' => 1, 'CType' => 'text', 'subheader' => 'Sub'],
+        ]);
+    }
+
     private function bootstrapAdminUser(): void
     {
         $backendUser = $this->createMock(BackendUserAuthentication::class);

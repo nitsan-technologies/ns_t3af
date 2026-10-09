@@ -54,6 +54,44 @@ final class RecordAccessGate
         return BackendPermissionCheck::isGranted($user, 'tables_modify', $table);
     }
 
+    /**
+     * Whether the user's group may edit one field: fields marked "exclude" in the TCA need a "non_exclude_fields" grant.
+     */
+    public function canModifyField(?BackendUserAuthentication $user, string $table, string $field): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+        if ($user->isAdmin()) {
+            return true;
+        }
+        $column = $GLOBALS['TCA'][$table]['columns'][$field] ?? null;
+        if (!is_array($column) || !($column['exclude'] ?? false)) {
+            return true;
+        }
+
+        return BackendPermissionCheck::isGranted($user, 'non_exclude_fields', $table . ':' . $field);
+    }
+
+    /**
+     * The data without the fields the user's group may not edit.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    public function withoutForbiddenFields(?BackendUserAuthentication $user, string $table, array $data): array
+    {
+        if ($user === null) {
+            return $data;
+        }
+
+        return array_filter(
+            $data,
+            fn(string|int $field): bool => $this->canModifyField($user, $table, (string) $field),
+            ARRAY_FILTER_USE_KEY,
+        );
+    }
+
     public function canSelectCatalogRow(?BackendUserAuthentication $user, string $catalogId): bool
     {
         if ($user === null) {
