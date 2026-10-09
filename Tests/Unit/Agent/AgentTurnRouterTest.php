@@ -24,9 +24,11 @@ use NITSAN\NsT3AF\Agent\Contract\AgentTurnRunnerInterface;
 use NITSAN\NsT3AF\Agent\Service\AgentMessageParser;
 use NITSAN\NsT3AF\Agent\Service\AgentRecordAttachmentResolver;
 use NITSAN\NsT3AF\Agent\Service\AgentSlashArgumentBinder;
+use NITSAN\NsT3AF\Agent\Service\AgentTargetPageResolver;
 use NITSAN\NsT3AF\Agent\Service\AgentTranslator;
 use NITSAN\NsT3AF\Agent\Service\AgentTurnRouter;
 use NITSAN\NsT3AF\Agent\Service\PermittedActionProvider;
+use NITSAN\NsT3AF\Mcp\Service\Backend\McpPlaygroundService;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
 use PHPUnit\Framework\Attributes\Test;
@@ -62,6 +64,7 @@ final class AgentTurnRouterTest extends TestCase
             (new \ReflectionClass(PermittedActionProvider::class))->newInstanceWithoutConstructor(),
             $this->createMock(FileService::class),
             (new \ReflectionClass(AgentTranslator::class))->newInstanceWithoutConstructor(),
+            new AgentTargetPageResolver($this->createMock(McpPlaygroundService::class)),
         );
     }
 
@@ -279,5 +282,60 @@ final class AgentTurnRouterTest extends TestCase
         self::assertStringNotContainsString('AgentNlIntentResolver', $source);
         self::assertStringNotContainsString('AgentReadFastPathService', $source);
         self::assertStringNotContainsString('resolveCompoundSteps', $source);
+    }
+
+    #[Test]
+    public function aMissingNamedPageAsksInsteadOfUsingTheOpenPage(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $this->turnOrchestrator->expects(self::never())->method('runTurn');
+
+        $messages = $this->router->route(
+            'make the Contact page show up in Google',
+            ['pageId' => 2, 'details' => ['page' => ['uid' => 2, 'title' => 'QA Mounted']]],
+            [],
+            $user,
+            'corr-missing',
+        );
+
+        self::assertSame('clarification', $messages[0]['meta']['type'] ?? null);
+        self::assertTrue($messages[0]['meta']['missingPage'] ?? false);
+        self::assertSame('Contact', $messages[0]['meta']['missingPageName'] ?? null);
+        self::assertStringContainsString('Contact', $messages[0]['content']);
+    }
+
+    #[Test]
+    public function theFirstSimilarPageBecomesThePageOfTheNextTurn(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $this->turnOrchestrator->expects(self::once())
+            ->method('runTurn')
+            ->with(
+                'the first one',
+                self::isType('array'),
+                self::callback(static fn(array $context): bool => (int) ($context['lockedPageId'] ?? 0) === 4 && (int) ($context['pageId'] ?? 0) === 4),
+                self::isType('array'),
+                $user,
+                'corr-choice',
+                null,
+            )
+            ->willReturn(['messages' => [], 'paused' => false, 'pauseReason' => null]);
+
+        $this->router->route(
+            'the first one',
+            ['pageId' => 2, 'details' => ['page' => ['uid' => 2, 'title' => 'QA Mounted']]],
+            [],
+            $user,
+            'corr-choice',
+            [[
+                'role' => 'assistant',
+                'content' => 'Which page?',
+                'meta' => [
+                    'type' => 'clarification',
+                    'missingPage' => true,
+                    'options' => ['About us [4]', 'Home [1]'],
+                ],
+            ]],
+        );
     }
 }

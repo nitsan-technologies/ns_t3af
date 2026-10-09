@@ -629,6 +629,14 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             }
         }
 
+        // The editor named a page, or picked one after "I can't find that page". That page wins
+        // over the page on screen and over a page id the model guessed.
+        $lockedPageId = (int) ($context['lockedPageId'] ?? 0);
+        if ($lockedPageId > 0) {
+            $context['pageId'] = $lockedPageId;
+            unset($arguments['pageId'], $arguments['pageUrl']);
+        }
+
         $pageId = (int) ($context['pageId'] ?? 0);
         // The model named another page by URL: the page on screen must not be added as a second, conflicting target.
         $namesPageByUrl = trim((string) ($arguments['pageUrl'] ?? '')) !== '' && !isset($arguments['pageId']);

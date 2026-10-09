@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-09 — A missing named page is not the page on screen
+
+**Done:** "make the Contact page show up in Google" asks which page to use when no page is called Contact, and does not prepare SEO for the open page. "The first one" locks the first offered page (`lockedPageId`). See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-09 — Text & Media field words are not a second element
 
 **Done:** `AgentRequestChecklist` keeps "a short text", "alt text" and "attach the existing images" on the Text & Media step. A second create step still appears for "a separate text element" or "two elements".
