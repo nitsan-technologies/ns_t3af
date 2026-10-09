@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-09 — New content elements include a column
+
+**Done:** A new `tt_content` row gets `colPos` 0 when the plan left it out, so content_defender does not warn on save. An explicit column is kept. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-08 — Move a page with pages_move
 
 **Done:** Moving a page uses `pages_move`. `beforeUid` places it directly before that page using the previous default-language sibling, and Execute checks that sibling again. `afterUid` / `targetPid` still work. A page-move request keeps `pages_move` in the toolbox. A hidden page can be moved. `pages_search` repeats a name search without the current page and without a visible-only filter when the first search finds nothing. A page uid sent to `content_move` is planned as a page move. See `context/features/ai-agent.md`.
