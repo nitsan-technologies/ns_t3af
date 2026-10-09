@@ -48,4 +48,51 @@ final class AgentTargetPageResolverTest extends TestCase
         self::assertSame('12', $resolver->extractPageReference('Optimise SEO for page uid 12'));
         self::assertSame('5', $resolver->extractPageReference('@pages:5'));
     }
+
+    #[Test]
+    public function namedPageTitleIsTheWordsBeforePage(): void
+    {
+        self::assertSame('Contact', AgentTargetPageResolver::namedPageTitle('make the Contact page show up in Google'));
+        self::assertSame('Contact', AgentTargetPageResolver::namedPageTitle('page called Contact'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('Generate SEO for this page'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('the first one'));
+    }
+
+    #[Test]
+    public function creatingAPageIsNotALookup(): void
+    {
+        self::assertTrue(AgentTargetPageResolver::isCreatePageRequest('Create a page called Contact'));
+        self::assertFalse(AgentTargetPageResolver::isCreatePageRequest('make the Contact page show up in Google'));
+    }
+
+    #[Test]
+    public function theFirstChoiceIsTheFirstSimilarPage(): void
+    {
+        $history = [[
+            'role' => 'assistant',
+            'content' => 'I can\'t find a page called "Contact". Which page should I use?',
+            'meta' => [
+                'type' => 'clarification',
+                'missingPage' => true,
+                'options' => ['About us [4]', 'QA Mounted [2]'],
+            ],
+        ]];
+
+        self::assertSame(4, AgentTargetPageResolver::pageIdFromChoice('the first one', $history));
+        self::assertSame(2, AgentTargetPageResolver::pageIdFromChoice('QA Mounted', $history));
+    }
+
+    #[Test]
+    public function similarPagesAreTheClosestTitles(): void
+    {
+        $labels = AgentTargetPageResolver::rankPageLabels('Contact', [
+            ['uid' => 2, 'title' => 'QA Mounted'],
+            ['uid' => 8, 'title' => 'Contacts'],
+            ['uid' => 4, 'title' => 'About'],
+            ['uid' => 9, 'title' => 'Contact'],
+        ]);
+
+        self::assertSame('Contacts [8]', $labels[0]);
+        self::assertNotContains('Contact [9]', $labels);
+    }
 }

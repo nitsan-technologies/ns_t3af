@@ -59,6 +59,7 @@ final readonly class AgentTurnRouter
         private PermittedActionProvider $permittedActionProvider,
         private FileService $fileService,
         private AgentTranslator $translator,
+        private AgentTargetPageResolver $targetPageResolver,
     ) {}
 
     /**
@@ -173,6 +174,17 @@ final readonly class AgentTurnRouter
             return $attachmentMessages;
         }
 
+        $nlMessage = $followUp !== '' ? $followUp : $message;
+        $namedPage = $this->applyNamedPage($nlMessage, $historyMessages, $context, $user, $correlationId);
+        if ($namedPage['messages'] !== null) {
+            $this->emitMessages($emitEvent, $namedPage['messages']);
+
+            return $attachmentMessages === []
+                ? $namedPage['messages']
+                : array_merge($attachmentMessages, $namedPage['messages']);
+        }
+        $context = $namedPage['context'];
+
         if ($followUp !== '' && $attachmentMessages !== []) {
             $this->emitMessages($emitEvent, $attachmentMessages);
             $history = $historyMessages;
@@ -263,6 +275,121 @@ final readonly class AgentTurnRouter
         }
 
         return [$selectedTool, $toolArguments, $starterAction];
+    }
+
+    /**
+     * A named page that does not exist is not replaced by the page on screen.
+     * The editor is asked which page to use. A later "the first one" locks that page.
+     *
+     * @param list<array<string, mixed>> $history
+     * @param array<string, mixed> $context
+     * @return array{context: array<string, mixed>, messages: list<array{role: string, content: string, meta: array<string, mixed>}>|null}
+     */
+    private function applyNamedPage(
+        string $message,
+        array $history,
+        array $context,
+        BackendUserAuthentication $user,
+        string $correlationId,
+    ): array {
+        $choice = AgentTargetPageResolver::pageIdFromChoice($message, $history);
+        if ($choice > 0) {
+            return ['context' => $this->lockPage($context, $choice, self::titleFromChoice($message, $history)), 'messages' => null];
+        }
+        if (AgentTargetPageResolver::isCreatePageRequest($message)) {
+            return ['context' => $context, 'messages' => null];
+        }
+
+        $title = AgentTargetPageResolver::namedPageTitle($message);
+        if ($title === null) {
+            return ['context' => $context, 'messages' => null];
+        }
+
+        $details = is_array($context['details'] ?? null) ? $context['details'] : [];
+        $openPage = is_array($details['page'] ?? null) ? $details['page'] : [];
+        $openTitle = trim((string) ($openPage['title'] ?? ''));
+        if ($openTitle !== '' && mb_strtolower($openTitle) === mb_strtolower($title)) {
+            return ['context' => $context, 'messages' => null];
+        }
+
+        $match = $this->targetPageResolver->matchingPage($title, $user);
+        if ($match !== null) {
+            return ['context' => $this->lockPage($context, $match['uid'], $match['title']), 'messages' => null];
+        }
+
+        $options = $this->targetPageResolver->similarPageLabels($title, $user);
+
+        return [
+            'context' => $context,
+            'messages' => [[
+                'role' => 'assistant',
+                'content' => $this->missingPageQuestion($title),
+                'meta' => [
+                    'type' => 'clarification',
+                    'tool' => 'ask_clarification',
+                    'options' => $options,
+                    'missingPage' => true,
+                    'missingPageName' => $title,
+                    'correlationId' => $correlationId,
+                    'orchestratorPause' => true,
+                ],
+            ]],
+        ];
+    }
+
+    private function missingPageQuestion(string $title): string
+    {
+        try {
+            $question = $this->translator->translate('agent.page.notFound', [$title]);
+        } catch (\Throwable) {
+            $question = '';
+        }
+        if ($question === '' || $question === 'agent.page.notFound') {
+            return sprintf('I can\'t find a page called "%s". Which page should I use?', $title);
+        }
+
+        return $question;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    private static function titleFromChoice(string $message, array $history): string
+    {
+        $uid = AgentTargetPageResolver::pageIdFromChoice($message, $history);
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            $options = is_array($meta['options'] ?? null) ? $meta['options'] : [];
+            foreach ($options as $option) {
+                if (!is_string($option) || !str_ends_with($option, '[' . $uid . ']')) {
+                    continue;
+                }
+
+                return trim((string) preg_replace('/\s*\[\d+\]\s*$/', '', $option));
+            }
+        }
+
+        return trim((string) preg_replace('/\s*\[\d+\]\s*$/', '', $message));
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @return array<string, mixed>
+     */
+    private function lockPage(array $context, int $pageId, string $title): array
+    {
+        $context['pageId'] = $pageId;
+        $context['lockedPageId'] = $pageId;
+        $details = is_array($context['details'] ?? null) ? $context['details'] : [];
+        $page = is_array($details['page'] ?? null) ? $details['page'] : [];
+        $page['uid'] = $pageId;
+        if ($title !== '') {
+            $page['title'] = $title;
+        }
+        $details['page'] = $page;
+        $context['details'] = $details;
+
+        return $context;
     }
 
     /**

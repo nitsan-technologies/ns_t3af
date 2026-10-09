@@ -118,6 +118,8 @@ A new `tt_content` row gets `colPos` 0 when the plan omitted it (`DataHandlerSer
 
 Moving an existing page uses `pages_move` (`beforeUid` places it directly before that page, `afterUid` places it directly after that page, `targetPid` makes it the first child). The previous sibling is a default-language page, and the page being moved is not used as its own anchor. Execute checks that sibling again. A request that already names both pages offers `pages_move` so the turn does not keep reading the tree. A hidden page can be moved, and `pages_search` still returns it when a name search was limited to the current page or to visible pages. `content_move` is only for a content element; a page uid sent there is planned as `pages_move` instead.
 
+A request that names a page ("the Contact page") does not use the page on screen when that name is missing. The turn asks which page to use and offers the closest titles. "The first one", or a clicked title, locks that page for the next turn (`lockedPageId`), including for SEO. Creating a page is unchanged.
+
 ---
 
 ## NL tool selection

@@ -1565,6 +1565,10 @@
                 <source>No matching pages were found.</source>
                 <target>Es wurden keine passenden Seiten gefunden.</target>
             </trans-unit>
+            <trans-unit id="agent.page.notFound">
+                <source>I can't find a page called "%1$s". Which page should I use?</source>
+                <target>Ich finde keine Seite mit dem Namen „%1$s“. Welche Seite soll ich verwenden?</target>
+            </trans-unit>
             <trans-unit id="agent.result.emptyMatchingContentElements">
                 <source>No matching content elements were found.</source>
                 <target>Es wurden keine passenden Inhaltselemente gefunden.</target>

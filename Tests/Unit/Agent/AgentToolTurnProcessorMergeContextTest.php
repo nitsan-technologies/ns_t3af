@@ -72,6 +72,22 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
     }
 
     #[Test]
+    public function mergeContextUsesTheLockedPageInsteadOfTheOpenPage(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            ['pageId' => 2],
+            ['pageId' => 2, 'lockedPageId' => 4],
+            't3ai_generate_all_seo',
+        );
+
+        self::assertSame(4, $merged['pageId']);
+    }
+
+    #[Test]
     public function mergeContextMapsPageIdToUidForPagesGet(): void
     {
         $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();

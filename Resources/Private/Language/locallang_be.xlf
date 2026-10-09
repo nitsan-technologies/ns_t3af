@@ -1285,6 +1285,9 @@
       <trans-unit id="agent.result.emptyMatchingPages" resname="agent.result.emptyMatchingPages">
         <source>No matching pages were found.</source>
       </trans-unit>
+      <trans-unit id="agent.page.notFound" resname="agent.page.notFound">
+        <source>I can't find a page called "%1$s". Which page should I use?</source>
+      </trans-unit>
       <trans-unit id="agent.result.emptyMatchingContentElements" resname="agent.result.emptyMatchingContentElements">
         <source>No matching content elements were found.</source>
       </trans-unit>
