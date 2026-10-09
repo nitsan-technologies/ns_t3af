@@ -871,6 +871,37 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function aCreateTheEditorJustDeclinedIsNotProposedAgainWithOneFieldMore(): void
+    {
+        $textMedia = static fn(array $extra = [], bool $discarded = false): array => [
+            'role' => 'assistant',
+            'content' => 'Create element',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => [
+                    'tool' => 'write_table',
+                    'action' => 'create',
+                    'discarded' => $discarded,
+                    'fields' => [
+                        ['table' => 'tt_content', 'uid' => 0, 'field' => 'CType', 'proposed' => 'textmedia'],
+                        ['table' => 'tt_content', 'uid' => 0, 'field' => 'header', 'proposed' => 'Preview Test'],
+                        ...$extra,
+                    ],
+                ],
+            ],
+        ];
+        $request = ['role' => 'user', 'content' => 'Create a text & media element', 'meta' => ['type' => 'message']];
+        $declined = ['role' => 'user', 'content' => '[The editor declined …]', 'meta' => ['type' => 'continuation', 'hidden' => true]];
+        $history = [$request, $textMedia([], true), $declined];
+        $again = $textMedia([['table' => 'tt_content', 'uid' => 0, 'field' => 'sys_language_uid', 'proposed' => '0']]);
+
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$again], $history, true));
+        // A new request of the editor may ask for that element after all.
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$again], [...$history, $request], true));
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$again], $history));
+    }
+
+    #[Test]
     public function fileRequestsKeepTheMatchingFileTools(): void
     {
         $tools = [['name' => 'file_copy'], ['name' => 'file_move'], ['name' => 'directory_create'], ['name' => 'content_get']];

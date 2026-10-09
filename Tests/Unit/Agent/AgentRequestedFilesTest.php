@@ -77,6 +77,17 @@ final class AgentRequestedFilesTest extends TestCase
         self::assertStringContainsString('missing from the file storage: cake.png (uid 3), uid 4.', $message['content']);
     }
 
+    #[Test]
+    public function messageSaysTheOtherFilesAreStillAttached(): void
+    {
+        $message = $this->service()->messageFor('Create a text & media element and attach sys_file uid 145 and 3', $this->translator(), 'c1');
+
+        self::assertNotNull($message);
+        self::assertFalse($message['meta']['noFileLeft']);
+        self::assertStringContainsString('Skipped cake.png (uid 3)', $message['content']);
+        self::assertStringContainsString('continue with the other files (uid 145)', $message['content']);
+    }
+
     protected function tearDown(): void
     {
         $this->releaseAgentTranslator();

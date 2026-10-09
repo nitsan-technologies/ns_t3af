@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-09 — A declined create is not proposed again
+
+**Done:** `AgentRequestChecklist::reconcile()` closes (status `failed`) a create step whose card the editor discarded in this request, plus the attach / alt-text steps when every create was declined or the attach card was declined. `AgentRunner::buildMessages()` no longer falls back to the saved model plan once the checklist is closed. Right after a decline, `withoutRepeatedDeclinedDrafts(..., afterDecline: true)` also drops a create of the same tool/table/CType that differs only in a field (the model had added `sys_language_uid`). A `draft_review` pause whose only card was dropped no longer leaves the window waiting; the reply is then `agent.turn.declinedAskInstead`. The decline continuation says nothing else remains when the checklist is closed. Checked live (Mistral ×2, OpenAI): after Discard the agent asks what to do instead, no new card. When only some named files are missing, the notice is `agent.turn.filesPartlyUnavailable` ("Skipped … I will continue with the other files"), so it no longer reads as if the whole request failed.
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-09 — Undo on the attach card
 
 **Done:** Applying `file_reference_add` stores undo fields (`AgentWriteService::toolUndoFields()`): one `create` entry per new `sys_file_reference` with its `parent` (table, uid, field). `AgentUndoService` removes exactly those references with `DataHandlerService::removeFileReferences()` (delete via DataHandler, then the parent field gets the remaining references so its counter is right); the file and the record stay. The tool result card keeps `changeId` / `undoable` and shows Undo below the collapsed result, then "Undone". Other confirmed tools still have no undo. Checked live: tt_content 250 assets 2 → 1, reference 106 deleted, reference 99 and sys_file 146 untouched.

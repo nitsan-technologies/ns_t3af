@@ -687,6 +687,10 @@
                 <source>I could not produce a reply. Try rephrasing or use / to run a specific tool.</source>
                 <target>Ich konnte keine Antwort erzeugen. Formulieren Sie um oder verwenden Sie / für ein bestimmtes Tool.</target>
             </trans-unit>
+            <trans-unit id="agent.turn.declinedAskInstead">
+                <source>Okay, nothing was written. What should I do instead?</source>
+                <target>In Ordnung, es wurde nichts gespeichert. Was soll ich stattdessen tun?</target>
+            </trans-unit>
             <trans-unit id="agent.turn.alreadyRunning">
                 <source>The AI Agent is still working on your previous request. Please wait until it has finished, then send your message again.</source>
                 <target>Der KI-Agent bearbeitet noch Ihre vorherige Anfrage. Bitte warten Sie, bis er fertig ist, und senden Sie Ihre Nachricht dann erneut.</target>
@@ -702,6 +706,10 @@
             <trans-unit id="agent.turn.filesUnavailable">
                 <source>These files cannot be attached because they do not exist or are missing from the file storage: %s. Please upload them again or choose other files.</source>
                 <target>Diese Dateien können nicht angehängt werden, weil sie nicht existieren oder im Dateispeicher fehlen: %s. Bitte laden Sie sie erneut hoch oder wählen Sie andere Dateien.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.filesPartlyUnavailable">
+                <source>Skipped %1$s: the file does not exist or is missing from the file storage. I will continue with the other files (%2$s).</source>
+                <target>%1$s übersprungen: Die Datei existiert nicht oder fehlt im Dateispeicher. Ich mache mit den anderen Dateien weiter (%2$s).</target>
             </trans-unit>
             <trans-unit id="agent.turn.loopLimit">
                 <source>I could not finish this in one go. Tell me a bit more precisely what I should do, for example which page it is about.</source>

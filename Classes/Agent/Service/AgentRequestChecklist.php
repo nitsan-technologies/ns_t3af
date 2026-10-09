@@ -130,22 +130,36 @@ final class AgentRequestChecklist
 
         $since = self::historySinceLatestUserRequest($history, $request);
         $appliedCTypes = self::appliedCTypes($since);
+        $declined = self::declinedCards($since);
         $imageAttached = self::hasSuccessfulMediaAttach($since);
         $noFileLeft = AgentRequestedFiles::noFileLeftToAttach($since, $request);
+        $createSteps = 0;
+        $declinedCreates = 0;
 
         foreach ($steps as $index => $step) {
             if (($step['kind'] ?? '') === 'create') {
+                ++$createSteps;
                 $cType = (string) ($step['cType'] ?? '');
                 $pos = array_search($cType, $appliedCTypes, true);
+                $declinedPos = array_search($cType, $declined['cTypes'], true);
                 if ($pos !== false) {
                     unset($appliedCTypes[$pos]);
                     $appliedCTypes = array_values($appliedCTypes);
                     $steps[$index]['status'] = 'completed';
+                } elseif ($declinedPos !== false) {
+                    // The editor said no to this element: it is not open work the agent has to push again.
+                    unset($declined['cTypes'][$declinedPos]);
+                    $declined['cTypes'] = array_values($declined['cTypes']);
+                    $steps[$index]['status'] = 'failed';
+                    ++$declinedCreates;
                 }
             } elseif (($step['kind'] ?? '') === 'attach_image') {
-                $steps[$index]['status'] = $imageAttached ? 'completed' : ($noFileLeft ? 'failed' : 'pending');
+                // No image without the element it goes into, nor after the editor declined the attach.
+                $noTarget = $createSteps > 0 && $declinedCreates === $createSteps;
+                $steps[$index]['status'] = $imageAttached ? 'completed' : ($noFileLeft || $noTarget || $declined['attach'] ? 'failed' : 'pending');
             } elseif (($step['kind'] ?? '') === 'alt_text') {
-                $steps[$index]['status'] = self::hasAltTextSet($since) ? 'completed' : ($noFileLeft && !$imageAttached ? 'failed' : 'pending');
+                $attachClosed = $noFileLeft || ($createSteps > 0 && $declinedCreates === $createSteps) || $declined['attach'];
+                $steps[$index]['status'] = self::hasAltTextSet($since) ? 'completed' : ($attachClosed && !$imageAttached ? 'failed' : 'pending');
             }
         }
 
@@ -572,6 +586,41 @@ final class AgentRequestChecklist
         }
 
         return $types;
+    }
+
+    /**
+     * Cards the editor declined: the content types of declined creates, and whether an attach was declined.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array{cTypes: list<string>, attach: bool}
+     */
+    private static function declinedCards(array $history): array
+    {
+        $declined = ['cTypes' => [], 'attach' => false];
+        foreach ($history as $entry) {
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            if (($entry['role'] ?? '') !== 'assistant' || ($meta['type'] ?? '') !== 'inline_draft' || ($draft['discarded'] ?? false) !== true) {
+                continue;
+            }
+            if ((string) ($draft['tool'] ?? $meta['tool'] ?? '') === 'file_reference_add') {
+                $declined['attach'] = true;
+                continue;
+            }
+            if ((string) ($draft['action'] ?? '') !== 'create') {
+                continue;
+            }
+            foreach (is_array($draft['fields'] ?? null) ? $draft['fields'] : [] as $field) {
+                if (is_array($field) && ($field['table'] ?? '') === 'tt_content' && strtolower((string) ($field['field'] ?? '')) === 'ctype') {
+                    $cType = strtolower(trim((string) ($field['proposed'] ?? '')));
+                    if ($cType !== '') {
+                        $declined['cTypes'][] = $cType;
+                    }
+                }
+            }
+        }
+
+        return $declined;
     }
 
     /**

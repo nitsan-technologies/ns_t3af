@@ -118,9 +118,17 @@ final readonly class AgentRequestedFiles
             return null;
         }
 
+        $usable = array_values(array_diff($named, array_keys($unavailable)));
+        $content = $usable === []
+            ? $translator->translate('agent.turn.filesUnavailable', [implode(', ', $unavailable)])
+            : $translator->translate('agent.turn.filesPartlyUnavailable', [
+                implode(', ', $unavailable),
+                implode(', ', array_map(static fn(int $uid): string => 'uid ' . $uid, $usable)),
+            ]);
+
         return [
             'role' => 'assistant',
-            'content' => $translator->translate('agent.turn.filesUnavailable', [implode(', ', $unavailable)]),
+            'content' => $content,
             'meta' => [
                 'type' => self::MESSAGE_TYPE,
                 'correlationId' => $correlationId,
