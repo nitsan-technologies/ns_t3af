@@ -61,6 +61,14 @@ final class CacheServicePermissionTest extends TestCase
         $GLOBALS['BE_USER'] = $this->user(false, []);
 
         self::assertNotNull($this->service()->denialReason('all'));
+        self::assertNotNull($this->service()->denialReason('pages'));
+    }
+
+    #[Test]
+    public function editorWithPagesSwitchedOnMayClearPageCaches(): void
+    {
+        $GLOBALS['BE_USER'] = $this->user(false, ['options.' => ['clearCache.' => ['pages' => '1']]]);
+
         self::assertNull($this->service()->denialReason('pages'));
     }
 

@@ -31,7 +31,7 @@ readonly class CacheService
     /**
      * Why the current backend user may not clear this scope, or null when allowed. Follows the core cache
      * menu: admins may clear everything; editors need options.clearCache.all for "all" and
-     * options.clearCache.pages (on unless switched off) for page caches, and a single page needs edit rights.
+     * options.clearCache.pages = 1 (off by default, as in core) to flush all page caches, and a single page needs edit rights.
      */
     public function denialReason(string $scope, int $pageId = 0): ?string
     {
@@ -48,6 +48,12 @@ readonly class CacheService
             return !empty($options['all'])
                 ? null
                 : 'Only administrators (or users with options.clearCache.all) may clear all caches. Use scope "pages" instead.';
+        }
+        $pagesAllowed = !empty($options['pages']);
+        if ($scope === 'pages' && !$pagesAllowed) {
+            // Like core: an editor flushes the frontend caches of the whole installation only when
+            // options.clearCache.pages = 1 is set explicitly.
+            return 'Only administrators (or users with options.clearCache.pages) may clear the page caches of all pages. Use scope "page" for a page you can edit.';
         }
         if (($options['pages'] ?? 1) === 0 || ($options['pages'] ?? 1) === '0') {
             return 'You are not allowed to clear page caches.';
