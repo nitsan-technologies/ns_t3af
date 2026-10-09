@@ -2,6 +2,22 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-09 — Create after a page uses afterUid
+
+**Done:** A create with `afterUid` is placed directly after that page, including when the plan sent that page as a positive pid. "After A named U" uses page A. "Inside … at the end" uses the last child, the same as "under". See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — Create before a page uses beforeUid
+
+**Done:** A create with `beforeUid` is placed directly before that page, including when a parent pid or an after pid is also sent. A create-before request does not use `pages_move`. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-09 — New content elements include a column
 
 **Done:** A new `tt_content` row gets `colPos` 0 when the plan left it out, so content_defender does not warn on save. An explicit column is kept. See `context/features/ai-agent.md`.

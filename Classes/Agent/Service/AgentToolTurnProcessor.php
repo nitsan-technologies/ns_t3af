@@ -512,6 +512,10 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             (string) ($body['provider'] ?? ''),
         );
         $arguments = $this->normalizeWriteToolArguments($toolName, $arguments);
+        $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
+        if ($toolName === 'write_table' && $requestQuery !== '') {
+            $arguments['requestQuery'] = $requestQuery;
+        }
 
         try {
             $plan = $this->toolPlanResolver->plan($toolName, $arguments);
