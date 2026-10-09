@@ -62,6 +62,7 @@ readonly class AgentPromptBuilder
             'When the user asks to create, update, translate, or generate content, prefer calling the most specific write tool instead of replying with text only.',
             'When the user asks what you can do, which tools are available, or how you can help, call explain_capabilities, then answer with a short, friendly list of things they can ask, each with one example request in quotation marks, and end with a line telling them to pick a suggestion or type / to choose an action. In German use the formal Sie. No tool names or technical terms.',
             'When you cannot do something (no permission, not supported, missing extension), say why in one plain sentence and then offer a next step: a related thing you can do, the backend module where the editor can do it themselves, or who to ask (for example an administrator).',
+            'When the editor asks to create, change or delete a kind of record that no offered tool covers (for example a system category or a backend user), call find_tools or the record write tool once before you answer. If it is refused or nothing fits, answer exactly in this spirit: "You are not allowed to change this kind of record with your backend account." Do not say that tools are missing, do not suggest doing it manually in a module and do not suggest asking an administrator to enable a tool. Say it once, in one short sentence.',
             'Before you ask the editor for a choice such as a workspace or a target page, make sure they may change that kind of record at all; if their account may not, say it is not allowed instead of asking. Never ask which workspace to use: the editor\'s current workspace is applied automatically.',
             'When the user asks who you are, who built or developed you, or what company/product this is, call explain_identity instead of answering from your own knowledge.',
             'When a required choice is missing (target language, which of several pages, which fields), call ask_clarification with the real choices as options instead of guessing; take them from the context or a tool result.',
@@ -356,15 +357,22 @@ readonly class AgentPromptBuilder
             );
         }
 
+        $requestText = self::latestUserRequestText($history);
+        // An edit of existing records ("change the header of element 5") has no create step: nothing new may follow.
+        $changesExistingOnly = $requestText !== '' && AgentRequestChecklist::parse($requestText) === [];
         $message = sprintf(
             '[The editor confirmed "%s" and it was applied.%s] Continue with the remaining steps of my request, if there are any;'
             . ' if this change already completed it, just confirm that in one short sentence.'
-            . ' Do not create another content element of the same CType you just applied; prepare the next distinct type from my request, or attach a pending image.'
+            . '%s'
             . ' Only when every part of my original request is already done through tools, confirm in one short sentence without calling tools.'
             . ' Never claim a file or image is attached unless a file-reference step succeeded.'
             . ' Do not re-check finished results or list what else you can do.',
             $label,
             $result !== '' ? ' Result: ' . $result : '',
+            $changesExistingOnly
+                ? ' My request changes existing records and asks for nothing new: do not create any record or content element.'
+                    . ' Prepare another change only if my request names one that is not applied yet.'
+                : ' Do not create another content element of the same CType you just applied; prepare the next distinct type from my request, or attach a pending image.',
         );
         $lastCType = self::lastAppliedTtContentCType($history);
         if ($lastCType !== '') {
@@ -380,6 +388,32 @@ readonly class AgentPromptBuilder
         $reminder = self::remainingWorkReminder($history, AgentPlan::latest($history), $request);
 
         return $reminder !== '' ? $message . ' ' . $reminder : $message;
+    }
+
+    /**
+     * Some models send the same answer twice in one message ("…ask your administrator.…ask your administrator.").
+     * Returns the text once when it is two identical halves, otherwise unchanged.
+     */
+    public static function collapseRepeatedReply(string $text): string
+    {
+        $text = trim($text);
+        $length = strlen($text);
+        if ($length < 20) {
+            return $text;
+        }
+        foreach (['', ' ', "\n", "\n\n"] as $separator) {
+            $rest = $length - strlen($separator);
+            if ($rest <= 0 || $rest % 2 !== 0) {
+                continue;
+            }
+            $half = intdiv($rest, 2);
+            $first = substr($text, 0, $half);
+            if ($first !== '' && substr($text, $half, strlen($separator)) === $separator && substr($text, $half + strlen($separator)) === $first) {
+                return trim($first);
+            }
+        }
+
+        return $text;
     }
 
     /**

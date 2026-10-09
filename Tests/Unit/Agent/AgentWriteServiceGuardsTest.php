@@ -77,7 +77,7 @@ final class AgentWriteServiceGuardsTest extends TestCase
     #[Test]
     public function recentCardIsApplied(): void
     {
-        $service = $this->service($this->dataHandlerApplying(), $this->recordsWithHeader('Old'), time() - 60);
+        $service = $this->service($this->dataHandlerApplying(), $this->recordsSavingHeader('Old', 'New'), time() - 60);
 
         $result = $service->apply('draft-1', [self::FIELD_KEY]);
 
@@ -87,7 +87,7 @@ final class AgentWriteServiceGuardsTest extends TestCase
     #[Test]
     public function cardWithoutTimestampStillWorks(): void
     {
-        $service = $this->service($this->dataHandlerApplying(), $this->recordsWithHeader('Old'), null);
+        $service = $this->service($this->dataHandlerApplying(), $this->recordsSavingHeader('Old', 'New'), null);
 
         $result = $service->apply('draft-1', [self::FIELD_KEY]);
 
@@ -132,7 +132,7 @@ final class AgentWriteServiceGuardsTest extends TestCase
     #[Test]
     public function applyResultSaysWhetherTheChangeCanBeUndone(): void
     {
-        $service = $this->service($this->dataHandlerApplying(), $this->recordsWithHeader('Old'), time());
+        $service = $this->service($this->dataHandlerApplying(), $this->recordsSavingHeader('Old', 'New'), time());
 
         $result = $service->apply('draft-1', [self::FIELD_KEY]);
 
@@ -147,6 +147,20 @@ final class AgentWriteServiceGuardsTest extends TestCase
         $result = $service->apply('draft-1', [self::FIELD_KEY]);
 
         self::assertSame(1, $result['appliedCount']);
+    }
+
+    #[Test]
+    public function fieldTheGroupMayNotEditIsNotReportedAsSaved(): void
+    {
+        // DataHandler skips the field silently: the read-back still shows the old value.
+        $service = $this->service($this->dataHandlerApplying(), $this->recordsSavingHeader('Old', 'Old'), time());
+
+        try {
+            $service->apply('draft-1', [self::FIELD_KEY]);
+            self::fail('A change that saved nothing must not be reported as applied.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame(1712003231, $exception->getCode());
+        }
     }
 
     #[Test]
@@ -176,6 +190,24 @@ final class AgentWriteServiceGuardsTest extends TestCase
         ]);
 
         return $dataHandler;
+    }
+
+    /**
+     * The first read is the conflict check before the write, later reads are the read-back after it.
+     *
+     * @return RecordService&MockObject
+     */
+    private function recordsSavingHeader(string $before, string $after): RecordService
+    {
+        $reads = 0;
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->willReturnCallback(
+            static function () use (&$reads, $before, $after): array {
+                return ['header' => ++$reads === 1 ? $before : $after];
+            },
+        );
+
+        return $records;
     }
 
     /** @return RecordService&MockObject */

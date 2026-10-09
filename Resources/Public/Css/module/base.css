@@ -319,6 +319,20 @@
 
 .aiu-module-docheader__row {
     min-height: 2.75rem;
+    /* One compact line: the tabs scroll sideways when the window is narrow instead of wrapping onto more rows. */
+    flex-wrap: nowrap !important;
+}
+
+.aiu-module-docheader__row > .aiu-module-nav {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+}
+
+.aiu-module-docheader__aside {
+    flex-wrap: nowrap !important;
 }
 
 .aiu-module-docheader__aside {
@@ -329,7 +343,7 @@
 
 
 .aiu-module-nav-tabs {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     margin-bottom: 0;
     gap: 0.25rem !important;
 }
@@ -343,6 +357,7 @@
     margin-bottom: -1px;
     padding: 8px 8px 6px 8px;
     text-decoration: none;
+    white-space: nowrap;
 }
 
 .aiu-module-nav-tabs .nav-link.active {

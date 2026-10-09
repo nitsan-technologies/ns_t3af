@@ -1363,6 +1363,9 @@
       <trans-unit id="agent.write.alreadyApplying" resname="agent.write.alreadyApplying">
         <source>This change is already being applied. Wait a moment before trying again.</source>
       </trans-unit>
+      <trans-unit id="agent.write.nothingSaved" resname="agent.write.nothingSaved">
+        <source>Nothing was saved: your user group may not edit the field of this change. Ask your administrator if you need access.</source>
+      </trans-unit>
       <trans-unit id="agent.write.draftTooOld" resname="agent.write.draftTooOld">
         <source>This change was prepared a while ago and is outdated. Ask the agent again to prepare a fresh change.</source>
       </trans-unit>
@@ -2436,6 +2439,12 @@
       </trans-unit>
       <trans-unit id="agent.tool.desc.permission_check_page" resname="agent.tool.desc.permission_check_page">
         <source>Checks what you are allowed to do on a page.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.workspace_publish" resname="agent.tool.desc.workspace_publish">
+        <source>Publishes the changes of a workspace so they go live.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.desc.explain_identity" resname="agent.tool.desc.explain_identity">
+        <source>Tells you who built this AI Agent.</source>
       </trans-unit>
       <trans-unit id="agent.tool.desc.cache_clear" resname="agent.tool.desc.cache_clear">
         <source>Clears the TYPO3 cache.</source>

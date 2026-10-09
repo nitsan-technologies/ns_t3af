@@ -214,6 +214,12 @@ export const streamMethods = {
         stop.hidden = !running;
       }
       this.syncActionButtons(running);
+      if (!running) {
+        // Nothing runs any more (turn, undo, apply): the rotating words and the clock must not keep going.
+        this._progressLabel = '';
+        this.stopThinkingRotation();
+        this.clearProgressClock();
+      }
     },
 
   /**
@@ -612,6 +618,9 @@ export const streamMethods = {
      * @param {string} label
      */
     updateProgressLabel(label) {
+      if (this.isRunning !== true) {
+        return;
+      }
       this._progressLabel = label;
       if (!this.stream) {
         return;

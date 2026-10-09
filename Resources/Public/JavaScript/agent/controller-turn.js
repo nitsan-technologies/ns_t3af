@@ -487,8 +487,21 @@ export const turnMethods = {
       };
 
       this.lastStreamEventAt = Date.now();
+      let connectionLost = false;
       while (true) {
-        const { value, done } = await reader.read();
+        let chunkResult;
+        try {
+          chunkResult = await reader.read();
+        } catch (error) {
+          if (error?.name === 'AbortError' || signal?.aborted) {
+            throw error;
+          }
+          // The connection dropped while the answer was coming (network change, proxy, sleep): the server
+          // may have finished the turn, so this is an interrupted turn, not a failed one.
+          connectionLost = true;
+          break;
+        }
+        const { value, done } = chunkResult;
         if (done) {
           break;
         }
@@ -500,7 +513,7 @@ export const turnMethods = {
       }
       // The last event may arrive without its closing blank line, or the connection may close right after it.
       buffer += decoder.decode();
-      if (buffer.trim() !== '') {
+      if (buffer.trim() !== '' && !connectionLost) {
         handleChunk(buffer);
       }
 

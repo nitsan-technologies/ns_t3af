@@ -867,4 +867,28 @@ final class AgentRunnerTest extends TestCase
         // One reply that proposes the same create twice keeps a single card.
         self::assertCount(2, AgentRunner::withoutRepeatedDeclinedDrafts([$create('Agent Test'), $create('Agent Test'), $info], []));
     }
+
+    #[Test]
+    public function fileRequestsKeepTheMatchingFileTools(): void
+    {
+        $tools = [['name' => 'file_copy'], ['name' => 'file_move'], ['name' => 'directory_create'], ['name' => 'content_get']];
+
+        $copy = AgentRunner::fileActionTools('Copy the file a.jpg to the folder b', $tools);
+        self::assertSame(['file_copy'], array_column($copy, 'name'));
+
+        $folder = AgentRunner::fileActionTools('Ordner "neu" anlegen', $tools);
+        self::assertSame(['directory_create'], array_column($folder, 'name'));
+
+        self::assertSame([], AgentRunner::fileActionTools('Change the header', $tools));
+        self::assertSame([], AgentRunner::fileActionTools('Copy the file a.jpg', $tools, ['file_copy' => 1]));
+    }
+
+    #[Test]
+    public function aPlainEditDoesNotKeepTheDeleteTool(): void
+    {
+        self::assertTrue(AgentRunner::isPlainEditRequest('Change the header of content element uid 1647 to QA Btn A2'));
+        self::assertTrue(AgentRunner::isPlainEditRequest('Ändere die Überschrift von Element 5'));
+        self::assertFalse(AgentRunner::isPlainEditRequest('Delete the old header and change the title'));
+        self::assertFalse(AgentRunner::isPlainEditRequest('Create a text element'));
+    }
 }

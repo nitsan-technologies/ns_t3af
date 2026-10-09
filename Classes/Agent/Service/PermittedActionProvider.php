@@ -177,6 +177,7 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
             'editorDescription' => $this->editorLabelService->resolveDescription($tool),
             'severity' => $severity?->value,
             'severityLabel' => $severity?->label() ?? '',
+            'editorSeverity' => self::editorSeverity($toolName, $severity),
             'ownerExtensionKey' => $ownerKey,
             'ownerLabel' => $this->formatOwnerLabel($ownerKey),
             'executable' => $executable,
@@ -187,6 +188,19 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
             'dualMode' => ($tool['dualMode'] ?? false) === true,
             'previewable' => ($tool['previewable'] ?? false) === true,
         ];
+    }
+
+    /**
+     * The safety wording of the "/" menu. These two tools still ask twice (destructive), but an editor does not
+     * expect "Asks before deleting" for clearing a cache or publishing a workspace.
+     */
+    private static function editorSeverity(string $toolName, ?ToolSeverity $severity): string
+    {
+        if ($severity === ToolSeverity::Destructive && in_array($toolName, ['cache_clear', 'workspace_publish'], true)) {
+            return ToolSeverity::Write->value;
+        }
+
+        return $severity === null ? '' : $severity->value;
     }
 
     private function formatOwnerLabel(string $ownerKey): string

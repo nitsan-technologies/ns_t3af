@@ -244,6 +244,13 @@ final class AgentWriteService
         $applyResult = $this->dataHandlerService->applyFilteredPlan($plan, $keptFieldKeys, $correlationId);
         $readback = $this->readBack($plan, $keptFieldKeys, $applyResult['affected'] ?? []);
 
+        // DataHandler silently skips a field the editor's group may not edit: the card must not claim it was saved.
+        $notSaved = $this->notSavedFieldCount($plan, $keptFieldKeys, $readback);
+        $keptCount = count($applyResult['appliedFieldKeys'] ?? []);
+        if ($notSaved > 0 && $notSaved >= $keptCount) {
+            throw new \RuntimeException($this->translator->translate('agent.write.nothingSaved'), 1712003231);
+        }
+
         $changeId = bin2hex(random_bytes(8));
         $undoFields = $this->buildUndoFields($plan, $keptFieldKeys, $applyResult['affected'] ?? [], $readback);
         $this->draftSession->storeChange($changeId, [
@@ -261,7 +268,7 @@ final class AgentWriteService
             'changeId' => $changeId,
             'undoable' => AgentUndoService::isUndoable($undoFields),
             'correlationId' => $correlationId,
-            'appliedCount' => count($applyResult['appliedFieldKeys'] ?? []),
+            'appliedCount' => $keptCount - $notSaved,
             'totalCount' => count($plan->fields),
             'readback' => $readback,
             'action' => $plan->action,
@@ -554,6 +561,38 @@ final class AgentWriteService
         }
 
         return $undo;
+    }
+
+    /**
+     * Kept fields of an update that are unchanged after the write (value still the old one, not the proposed one).
+     *
+     * @param list<string> $keptFieldKeys
+     * @param list<array<string, mixed>> $readback
+     */
+    private function notSavedFieldCount(ToolPlan $plan, array $keptFieldKeys, array $readback): int
+    {
+        if ($plan->action !== 'update') {
+            return 0;
+        }
+        $stored = [];
+        foreach ($readback as $row) {
+            if (is_array($row) && is_array($row['values'] ?? null)) {
+                $stored[(string) ($row['table'] ?? '') . '#' . (int) ($row['uid'] ?? 0)] = $row['values'];
+            }
+        }
+        $count = 0;
+        foreach ($plan->keptFields($keptFieldKeys) as $field) {
+            $values = $stored[$field->table . '#' . $field->uid] ?? null;
+            if (!is_array($values) || !array_key_exists($field->field, $values) || !is_scalar($field->proposedValue)) {
+                continue;
+            }
+            $now = (string) $values[$field->field];
+            if ($now !== (string) $field->proposedValue && is_scalar($field->currentValue ?? '') && $now === (string) ($field->currentValue ?? '')) {
+                ++$count;
+            }
+        }
+
+        return $count;
     }
 
     /**
