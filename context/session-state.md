@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-09 — Attach card only for files that can be shown
+
+**Done:** `file_reference_add` checks the files in `plan()` and again in `execute()`: numeric sys_file uid, the file exists, the editor may read it, and it is on disk (`File::exists()`). The field must be shown for the record type (`TcaSchemaService::getShownFields()`), so `assets` on an Image element is refused with the field to use. The card lists file names. `file_list` says storageUid 1 is fileadmin.
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-09 — Text & Media field words are not a second element
 
 **Done:** `AgentRequestChecklist` keeps "a short text", "alt text" and "attach the existing images" on the Text & Media step. A second create step still appears for "a separate text element" or "two elements".
@@ -13,6 +21,10 @@
 ## 2026-10-09 — URL upload no longer mixes streaming with DNS pinning
 
 **Done:** `file_upload_from_url` (`FileUploadService::downloadFromUrl`) pins the resolved public IP without `stream`, so Guzzle's stream handler is not given a curl option. A transport failure tells the editor the host. AI image generation itself stays `t3ai_generate_image` in ns_t3ai.
+
+**Last touched:** 2026-10-09
+
+---
 
 ## 2026-10-09 — SEO Apply no longer claims a refused save
 

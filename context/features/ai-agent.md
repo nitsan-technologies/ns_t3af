@@ -177,6 +177,7 @@ Phase 4 child tools (all with `McpToolSeverity`, `McpToolIntent` EN/DE, `agent.t
 | ns_t3ai | `t3ai_glossary_list` / `_save` / `_delete` (`McpGlossaryService`, catalog id translationGlossary) |
 | ns_t3ai | `t3ai_generate_image` — one image into the fileadmin, T3AI Media permission; result card shows the image (`previewImageUrl`). Saving the provider URL stays in ns_t3ai `FileService`. |
 | ns_t3af | `file_upload_from_url` — downloads a public URL into FAL. A hostname is pinned with `CURLOPT_RESOLVE` and is not streamed, because the stream handler rejects curl options. A failed download names the host. |
+| ns_t3af | `file_reference_add` — no card for a file name instead of a uid, an unknown or unreadable file, a file missing on disk, or a field the record type does not show (`assets` on Image). The card lists file names. |
 | ns_t3aa | `t3aa_alt_text_queue_folder`, `t3aa_alt_text_drafts_list`, `t3aa_alt_text_approve`, `t3aa_mark_image_decorative` (`McpAltTextService`) |
 | ns_t3aa | `t3aa_accessibility_scan_run`, `t3aa_accessibility_issues` (`McpAccessibilityService`) |
 | ns_t3aa | `t3aa_generate_voice_over` — text or page text to MP3, T3AA Media permission; result card plays it (`McpVoiceOverService`) |
