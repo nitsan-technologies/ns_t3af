@@ -489,11 +489,13 @@ final class AgentRunnerTest extends TestCase
     #[Test]
     public function copyingAPageIsOfferedOnlyWhenAskedFor(): void
     {
-        self::assertSame(['pages_copy', 'workspace_switch'], AgentRunner::toolsNotAskedFor('I want a new subpage "Eval yes" under this page'));
-        self::assertSame(['pages_copy'], AgentRunner::toolsNotAskedFor('Switch to the QA Draft workspace'));
-        self::assertSame(['workspace_switch'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
-        self::assertSame(['workspace_switch'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
-        self::assertSame([], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
+        self::assertSame(['pages_copy', 'content_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('I want a new subpage "Eval yes" under this page'));
+        self::assertSame(['pages_copy', 'content_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('Ändere die Unterüberschrift von Element 12 auf Hallo'));
+        self::assertSame(['pages_copy', 'content_move'], AgentRunner::toolsNotAskedFor('Switch to the QA Draft workspace'));
+        self::assertNotContains('content_move', AgentRunner::toolsNotAskedFor('Move element 12 below element 15'));
+        self::assertSame(['content_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
+        self::assertSame(['content_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
+        self::assertSame(['content_move'], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
     }
 
     #[Test]

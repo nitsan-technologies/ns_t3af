@@ -37,7 +37,8 @@ final class AgentRequestChecklist
     public static function parse(string $message): array
     {
         $message = trim($message);
-        if ($message === '') {
+        // "[The editor confirmed "Create …" …]" reports a result; it asks for nothing.
+        if ($message === '' || str_starts_with($message, '[The editor ')) {
             return [];
         }
 

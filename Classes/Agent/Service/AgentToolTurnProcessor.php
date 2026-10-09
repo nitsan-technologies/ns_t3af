@@ -81,6 +81,8 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
 
         $rawTool = $this->findRawTool($toolName);
         if ($rawTool !== null && $this->permittedActionProvider->isHiddenFromAgent($rawTool)) {
+            $this->auditLogger->logToolInvocation($correlationId, $toolName, $arguments, false, 0, 'not_available_in_agent');
+
             return [
                 'role' => 'assistant',
                 'content' => $this->translator->translate('agent.turn.notAvailableInAgent', [$toolName]),
@@ -106,6 +108,8 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $tool = $this->contentTableLock($tool, $arguments, $catalog) ?? $tool;
 
         if (($tool['executable'] ?? false) !== true) {
+            // A refused call is part of the audit trail too: the log shows what the editor tried and was denied.
+            $this->auditLogger->logToolInvocation($correlationId, (string) ($tool['name'] ?? $toolName), $arguments, false, 0, 'not_permitted');
             $this->demandCounter->recordActivation(
                 (string) ($tool['ownerExtensionKey'] ?? ''),
                 (string) ($tool['name'] ?? ''),
