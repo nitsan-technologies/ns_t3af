@@ -256,4 +256,64 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
 
         self::assertSame('claude', $merged['aiProvider']);
     }
+
+    #[Test]
+    public function mergeContextDropsPidZeroOnRecordSearch(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            [
+                'tableName' => 'tx_news_domain_model_news',
+                'search' => '',
+                'pid' => 0,
+            ],
+            ['pageId' => 224],
+            'record_search',
+        );
+
+        self::assertArrayNotHasKey('pid', $merged);
+    }
+
+    #[Test]
+    public function mergeContextDropsNewsPidWhenItIsTheOpenPage(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            [
+                'tableName' => 'tx_news_domain_model_news',
+                'search' => 'Summer Sale',
+                'pid' => 224,
+            ],
+            ['pageId' => 224],
+            'record_search',
+        );
+
+        self::assertArrayNotHasKey('pid', $merged);
+    }
+
+    #[Test]
+    public function mergeContextKeepsNewsPidWhenItIsAStorageFolder(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            [
+                'tableName' => 'tx_news_domain_model_news',
+                'search' => 'Summer Sale',
+                'pid' => 173,
+            ],
+            ['pageId' => 224],
+            'record_search',
+        );
+
+        self::assertSame(173, $merged['pid']);
+    }
 }

@@ -405,6 +405,26 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 }
                 $retried = true;
             }
+            // Some models write the tool call as text ("to=functions.t3ai_translate_news {…}") plus garbage
+            // instead of calling the tool. That is never an answer: ask once for a real call, else show nothing.
+            if (
+                !$retried
+                && self::looksLikeLeakedToolCall($finalText)
+                && !$state->isPaused()
+                && !$state->failed
+                && !$state->isCancelled()
+            ) {
+                $nudge = $userMessage . "\n\n[System: Your last reply contained a tool call written as text. Never write tool calls in the reply: call the tool itself now, or answer in one short plain sentence.]";
+                $retryPlan = $state->plan !== [] ? $state->plan : $plan;
+                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan, $requestForChecklist))->getResult();
+                $content = $agentResult->getContent();
+                $retryText = is_string($content) ? trim($content) : '';
+                $finalText = AgentPromptBuilder::isCardHistoryEcho($retryText) ? '' : $retryText;
+                $retried = true;
+            }
+            if (self::looksLikeLeakedToolCall($finalText)) {
+                $finalText = '';
+            }
             // The model pasted the new text into chat and offered to apply it, but sent no draft: nothing can
             // be applied from chat text. Ask once for the write tool; a normal answer is never forced.
             if (
@@ -506,6 +526,24 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             '/credit balance|billing|insufficient[_ ]quota|exceeded your (?:current )?quota|quota exceeded|plans? (?:&|and) billing|invalid[_ ]api[_ ]key|incorrect api key|authentication[_ ]error|invalid x-api-key|payment required/i',
             $raw,
         ) === 1;
+    }
+
+    /** A tool call (or its channel markers) written into the reply text instead of being called. */
+    public static function looksLikeLeakedToolCall(string $text): bool
+    {
+        return preg_match('/\bto=functions\.[a-z0-9_]+|<\|(?:channel|message|constrain|call|start)\|>|\bfunctions\.[a-z0-9_]+\s*\{/iu', $text) === 1;
+    }
+
+    /**
+     * Asks to write or draft a new news article (not to change, list or delete one).
+     */
+    public static function isNewsCreateRequest(string $query): bool
+    {
+        $s = mb_strtolower($query);
+
+        return preg_match('/\b(news|newsartikel|nachricht\w*|meldung\w*)\b/u', $s) === 1
+            && preg_match('/\b(write|create|draft|compose|add|make|new|schreib\w*|verfass\w*|erstell\w*|anleg\w*|neue[rsn]?)\b/u', $s) === 1
+            && preg_match('/\b(delete|remove|translate|rename|list|show|l[öo]sch\w*|entfern\w*|[üu]bersetz\w*|umbenenn\w*|zeig\w*)\b/u', $s) !== 1;
     }
 
     /**
@@ -834,6 +872,16 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         $createContent = AgentCoreToolSet::isCreateContentRequest($query);
         $notAskedFor = array_flip(self::toolsNotAskedFor($query));
+        $newsCreate = self::isNewsCreateRequest($query);
+        if ($newsCreate) {
+            // A news article is a news record: not a page element, and no picture card unless a picture was asked for.
+            // DualMode create-news tools stay agent-hidden; write_table is the create path — do not stall on capabilities.
+            $notAskedFor['t3ai_create_content_element'] = true;
+            $notAskedFor['explain_capabilities'] = true;
+            if (preg_match('/\b(picture|pictures|image|images|photo|photos|illustration|bild\w*|foto\w*|grafik\w*)\b/iu', $query) !== 1) {
+                $notAskedFor['t3ai_generate_image'] = true;
+            }
+        }
         if ($createContent || self::isPlainEditRequest($query) || self::isNewsOnlyRequest($query)) {
             // "Change the header of element 5" is an update: with the delete tool at hand the model sometimes
             // answers with a delete card plus a create card instead.
@@ -861,6 +909,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
         if (self::isPageMoveRequest($query)) {
             $found = [...self::pageMoveTools($executableTools, $offeredNames), ...$found];
+        }
+        if ($newsCreate) {
+            $found = [...self::newsCreateTools($executableTools, $offeredNames), ...$found];
         }
         $found = [...self::fileActionTools($query, $executableTools, $offeredNames), ...$found];
         $workPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
@@ -1024,6 +1075,29 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             ) {
                 $picked[$name] = $tool;
             }
+        }
+
+        return array_values($picked);
+    }
+
+    /**
+     * News create uses write_table (DualMode create-news tools stay agent-hidden without Previewable).
+     * Still picks those create tools if they ever appear in the executable catalog.
+     *
+     * @param list<array<string, mixed>> $executableTools
+     * @param array<string, int|string> $alreadyOffered
+     * @return list<array<string, mixed>>
+     */
+    public static function newsCreateTools(array $executableTools, array $alreadyOffered = []): array
+    {
+        $wanted = ['write_table' => true, 't3ai_create_news_simple' => true, 't3ai_create_news_advanced' => true];
+        $picked = [];
+        foreach ($executableTools as $tool) {
+            $name = (string) ($tool['name'] ?? '');
+            if ($name === '' || !isset($wanted[$name]) || isset($alreadyOffered[$name]) || isset($picked[$name])) {
+                continue;
+            }
+            $picked[$name] = $tool;
         }
 
         return array_values($picked);
