@@ -124,6 +124,8 @@ A model reply that leaks a tool call (`to=tool_name`, including the JSON in fron
 
 Removing a named page from the SEO queue uses that page's uid as `pageIds` on `t3ai_mass_seo_queue_remove`. The queue list uses the same uid. SEO for one language version passes that language's id as `sysLanguageUid`.
 
+Writing SEO texts for the subpages of the open page uses `t3ai_generate_seo_batch`. An empty `entries` list uses the subpages of the open page, including pages that do not have Mass SEO enabled. The SEO queue is for background generation. A recursive add only includes pages with Mass SEO enabled, and the reply names any page that was skipped.
+
 ---
 
 ## NL tool selection
