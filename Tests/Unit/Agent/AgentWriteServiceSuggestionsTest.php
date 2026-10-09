@@ -147,6 +147,84 @@ final class AgentWriteServiceSuggestionsTest extends TestCase
     }
 
     #[Test]
+    public function seoUndoRestoresDatabaseColumnsNotSuggestionKeys(): void
+    {
+        $preview = new PreviewResult(
+            tool: 't3ai_generate_all_seo',
+            target: ['table' => 'pages', 'uid' => 3, 'languageId' => 0],
+            fields: [
+                ['key' => 'metaTitle', 'column' => 'seo_title', 'label' => 'SEO title', 'current' => ''],
+                ['key' => 'metaDescription', 'column' => 'description', 'label' => 'Description', 'current' => ''],
+                ['key' => 'keywords', 'column' => 'keywords', 'label' => 'Keywords', 'current' => ''],
+                ['key' => 'ogTitle', 'column' => 'og_title', 'label' => 'OG title', 'current' => ''],
+                ['key' => 'ogDescription', 'column' => 'og_description', 'label' => 'OG description', 'current' => ''],
+            ],
+            variants: [[
+                'label' => 'Variant 1',
+                'angle' => '',
+                'values' => [
+                    'metaTitle' => 'Mounted child',
+                    'metaDescription' => 'A mounted page',
+                    'keywords' => 'mount, child',
+                    'ogTitle' => 'Mounted',
+                    'ogDescription' => 'Open graph text',
+                ],
+            ]],
+        );
+
+        $draftSession = $this->createDraftSession();
+        $draftSession->storeDraft('draft-seo', [
+            'flow' => 'agent_preview',
+            'previewResult' => $preview->toArray(),
+            'arguments' => ['pageId' => 3],
+            'severity' => 'write',
+            'tool' => 't3ai_generate_all_seo',
+            'destructiveArmed' => false,
+        ]);
+
+        $playground = $this->createMock(McpPlaygroundService::class);
+        $playground->method('invokeWithMode')->willReturn([
+            'success' => true,
+            'result' => ['ok' => true],
+            'latencyMs' => 1,
+            'message' => '',
+        ]);
+
+        $service = new AgentWriteService(
+            $this->createMock(DataHandlerService::class),
+            $this->createMock(RecordService::class),
+            $draftSession,
+            $playground,
+            $this->createPresenter(),
+            $this->createAgentTranslator(),
+            new AgentLowRiskFieldMatrix(),
+        );
+
+        $result = $service->applySuggestions('draft-seo', [
+            'metaTitle' => 0,
+            'metaDescription' => 0,
+            'keywords' => 0,
+            'ogTitle' => 0,
+            'ogDescription' => 0,
+        ]);
+
+        $stored = $draftSession->getChange((string) ($result['changeId'] ?? ''));
+        self::assertIsArray($stored);
+        $undoFields = is_array($stored['undoFields'] ?? null) ? $stored['undoFields'] : [];
+        $columns = [];
+        foreach ($undoFields as $entry) {
+            if (is_array($entry)) {
+                $columns[] = (string) ($entry['field'] ?? '');
+            }
+        }
+
+        self::assertSame(
+            ['seo_title', 'description', 'keywords', 'og_title', 'og_description'],
+            $columns,
+        );
+    }
+
+    #[Test]
     public function applyOnPreviewDraftRequiresSuggestionsPath(): void
     {
         $preview = new PreviewResult(
