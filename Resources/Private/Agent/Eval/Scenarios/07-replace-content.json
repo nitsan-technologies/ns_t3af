@@ -1,0 +1,17 @@
+{
+  "id": "07-replace-content",
+  "title": "Replacing content may delete, with a card to confirm",
+  "turns": [
+    {
+      "message": "Delete the first content element on this page and create a new text element instead",
+      "expect": {
+        "anyTool": [
+          "content_delete",
+          "write_table",
+          "t3ai_create_content_element"
+        ],
+        "card": true
+      }
+    }
+  ]
+}

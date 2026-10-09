@@ -27,10 +27,13 @@ use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
 use Mcp\Exception\ToolCallException;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\PermissionService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 
+#[McpToolSeverity(ToolSeverity::Read)]
 readonly class BackendUserGetTool implements McpNonAiToolInterface
 {
     /** @var list<string> */

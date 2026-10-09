@@ -50,13 +50,20 @@ final class CreditsApiResponseCache implements CreditsApiResponseCacheInterface
     /** Feature catalog (~server 1h ETag); local TTL avoids hammering on every backend page load. */
     public const TTL_FEATURES = 1800;
 
-    public static function scopeProducts(string $redirectTo): string
+    public static function scopeProducts(string $redirectTo, string $language = CreditsCatalogLanguageResolver::EN): string
     {
         $redirectTo = trim($redirectTo);
-
-        return $redirectTo === ''
+        $language = CreditsCatalogLanguageResolver::normalize($language);
+        $base = $redirectTo === ''
             ? self::SCOPE_PRODUCTS
             : self::SCOPE_PRODUCTS . '_' . substr(hash('sha256', $redirectTo), 0, 16);
+
+        return $base . '_' . $language;
+    }
+
+    public static function scopeFeatures(string $language = CreditsCatalogLanguageResolver::EN): string
+    {
+        return self::SCOPE_FEATURES . '_' . CreditsCatalogLanguageResolver::normalize($language);
     }
 
     public function __construct(

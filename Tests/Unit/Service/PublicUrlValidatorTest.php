@@ -35,6 +35,7 @@ final class PublicUrlValidatorTest extends TestCase
         yield 'rfc1918 10.x' => ['http://10.0.0.1/'];
         yield 'rfc1918 192.168.x' => ['https://192.168.1.1/admin'];
         yield 'rfc1918 172.16.x' => ['http://172.16.0.1/'];
+        yield 'cgnat 100.64' => ['http://100.100.100.200/'];
         yield 'ipv6 loopback' => ['http://[::1]/'];
         yield 'non-http scheme' => ['ftp://93.184.216.34/'];
         yield 'file scheme' => ['file:///etc/passwd'];

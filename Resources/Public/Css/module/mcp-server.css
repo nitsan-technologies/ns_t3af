@@ -649,6 +649,8 @@
     flex-direction: column;
     gap: .25rem;
     padding: .5rem;
+    position: sticky;
+    top: 0;
 }
 
 .aiu-mcp-transport-card {

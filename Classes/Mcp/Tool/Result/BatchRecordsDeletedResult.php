@@ -25,5 +25,10 @@ readonly class BatchRecordsDeletedResult
      * @param list<int> $uids
      * @param list<int> $skippedUids
      */
-    public function __construct(public array $uids, public int $count, public array $skippedUids = []) {}
+    public function __construct(
+        public array $uids,
+        public int $count,
+        public array $skippedUids = [],
+        public string $batchId = '',
+    ) {}
 }

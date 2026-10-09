@@ -31,7 +31,7 @@
         <source>This TYPO3 installation domain is not authorized for T3Planet Credits.</source>
       </trans-unit>
       <trans-unit id="credits.api.error.insufficient_credits" resname="credits.api.error.insufficient_credits">
-        <source>Your T3Planet credit balance is too low for this request.</source>
+        <source>Your T3Planet AI credits have been exhausted. Please purchase additional credits to continue using AI features.</source>
       </trans-unit>
       <trans-unit id="credits.api.error.insufficient_credits.topup_hint" resname="credits.api.error.insufficient_credits.topup_hint">
         <source>Purchase more credits: %s</source>
@@ -107,6 +107,33 @@
       </trans-unit>
       <trans-unit id="credits.api.error.unexpected" resname="credits.api.error.unexpected">
         <source>An unexpected error occurred while contacting T3Planet Credits.</source>
+      </trans-unit>
+      <trans-unit id="credits.api.error.context_length_exceeded" resname="credits.api.error.context_length_exceeded">
+        <source>The request is too long for the selected AI model. Shorten the input and try again.</source>
+      </trans-unit>
+      <trans-unit id="credits.api.error.tools_unsupported" resname="credits.api.error.tools_unsupported">
+        <source>The model "{model}" does not support the requested feature ({param}). Choose another model.</source>
+      </trans-unit>
+      <trans-unit id="credits.api.error.model_unknown" resname="credits.api.error.model_unknown">
+        <source>The AI model "{model}" is not known to T3Planet Credits.</source>
+      </trans-unit>
+      <trans-unit id="credits.api.error.model_not_allowed" resname="credits.api.error.model_not_allowed">
+        <source>The AI model "{model}" is not included in your T3Planet plan.</source>
+      </trans-unit>
+      <trans-unit id="credits.api.error.request_too_large" resname="credits.api.error.request_too_large">
+        <source>The request is too large. Reduce the amount of content and try again.</source>
+      </trans-unit>
+      <trans-unit id="credits.api.error.unsupported_content" resname="credits.api.error.unsupported_content">
+        <source>The request contains content that the selected AI model cannot process.</source>
+      </trans-unit>
+      <trans-unit id="credits.api.error.content_removed" resname="credits.api.error.content_removed">
+        <source>The original AI result was removed under the data retention policy. Please generate it again.</source>
+      </trans-unit>
+      <trans-unit id="credits.visitor.unavailable" resname="credits.visitor.unavailable">
+        <source>AI features are temporarily unavailable. Please try again later.</source>
+      </trans-unit>
+      <trans-unit id="credits.admin.purchase_hint" resname="credits.admin.purchase_hint">
+        <source>Administrators can buy more credits in the TYPO3 backend under AI Foundation &gt; AI Providers &gt; AI Credit Bundles.</source>
       </trans-unit>
     </body>
   </file>

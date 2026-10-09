@@ -25,7 +25,7 @@ child extensions such as AI Assistant or AI Chatbot.
 
 **Which TYPO3 and PHP versions are supported?**
 
-TYPO3 12.4–14.x with PHP 8.2 or higher. See
+TYPO3 13.4–14.x with PHP 8.2 or higher. See
 :ref:`System Requirements <system-requirements>`.
 
 Installation

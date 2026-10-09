@@ -22,12 +22,15 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Site;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
-use NITSAN\NsT3AF\Mcp\Service\SiteLanguagesListService;
-
 /**
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Service\SiteLanguagesListService;
+
+#[McpToolSeverity(ToolSeverity::Read)]
 readonly class SiteLanguagesListTool implements McpNonAiToolInterface
 {
     public function __construct(

@@ -19,8 +19,10 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Service;
 
+use NITSAN\NsT3AF\Mcp\Service\AdvancedSettingsService;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
-use NITSAN\NsT3AF\Service\PublicUrlValidator;
+use NITSAN\NsT3AF\Mcp\Service\FileUploadService;
+use NITSAN\NsT3AF\Mcp\Service\McpPublicUrlService;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -58,6 +60,7 @@ final class FileServiceStorageAccessTest extends TestCase
         $file->method('getExtension')->willReturn('pdf');
         $file->method('getModificationTime')->willReturn(1);
         $file->method('getPublicUrl')->willReturn(null);
+        $file->method('getSha1')->willReturn('abc123');
         $storage->method('getFileByIdentifier')->with('/doc.pdf')->willReturn($file);
 
         $backendUser = $this->createMock(BackendUserAuthentication::class);
@@ -67,13 +70,16 @@ final class FileServiceStorageAccessTest extends TestCase
         $service = new FileService(
             $this->createMock(StorageRepository::class),
             $this->createMock(ConnectionPool::class),
-            new PublicUrlValidator(),
+            $this->createMock(FileUploadService::class),
+            $this->createMock(AdvancedSettingsService::class),
+            $this->createMock(McpPublicUrlService::class),
         );
 
         $info = $service->getFileInfo(1, '/doc.pdf');
 
         self::assertSame('doc.pdf', $info['name']);
         self::assertSame(10, $info['uid']);
+        self::assertSame('abc123', $info['sha1']);
     }
 
     /**
@@ -95,7 +101,9 @@ final class FileServiceStorageAccessTest extends TestCase
         $service = new FileService(
             $storageRepository,
             $this->createMock(ConnectionPool::class),
-            new PublicUrlValidator(),
+            $this->createMock(FileUploadService::class),
+            $this->createMock(AdvancedSettingsService::class),
+            $this->createMock(McpPublicUrlService::class),
         );
 
         $this->expectException(\RuntimeException::class);
@@ -110,7 +118,9 @@ final class FileServiceStorageAccessTest extends TestCase
         $service = new FileService(
             $this->createMock(StorageRepository::class),
             $this->createMock(ConnectionPool::class),
-            new PublicUrlValidator(),
+            $this->createMock(FileUploadService::class),
+            $this->createMock(AdvancedSettingsService::class),
+            $this->createMock(McpPublicUrlService::class),
         );
 
         $this->expectException(\RuntimeException::class);

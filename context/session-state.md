@@ -2,6 +2,78 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-09 — Release 2.0.0 (9 October 2026)
+
+**Done:** Release notes for 2.0.0 rewritten for the final date (AI Agent listed as new features, MCP batch writes, security items); `CHANGELOG.md` date set; `Documentation/Agent/PreviewApply.md` and `Documentation/Integrations/MCPTools/Index.rst` updated. Closing fixes before the release: header value in the request checklist (14zervyucgh), page cache scope default off (14zervyucgk), MCP Server settings access and module route token (14zervyuhge), `records_undo` empty map as `{}` (14zervyub6n), clear message for 256 KB+ unbroken text (14zervyub6r). Version stays 2.0.0.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — Create after a page uses afterUid
+
+**Done:** A create with `afterUid` is placed directly after that page, including when the plan sent that page as a positive pid. "After A named U" uses page A. "Inside … at the end" uses the last child, the same as "under". See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — Create before a page uses beforeUid
+
+**Done:** A create with `beforeUid` is placed directly before that page, including when a parent pid or an after pid is also sent. A create-before request does not use `pages_move`. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — New content elements include a column
+
+**Done:** A new `tt_content` row gets `colPos` 0 when the plan left it out, so content_defender does not warn on save. An explicit column is kept. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-08 — Move a page with pages_move
+
+**Done:** Moving a page uses `pages_move`. `beforeUid` places it directly before that page using the previous default-language sibling, and Execute checks that sibling again. `afterUid` / `targetPid` still work. A page-move request keeps `pages_move` in the toolbox. A hidden page can be moved. `pages_search` repeats a name search without the current page and without a visible-only filter when the first search finds nothing. A page uid sent to `content_move` is planned as a page move. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-08
+
+---
+
+## 2026-10-08 — Create a page after another page
+
+**Done:** A negative `pid` places a new page directly after that page, and Execute accepts it. The preview and the success sentence show the parent and the position. A positive `pid` is still the first child. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-08
+
+---
+
+## 2026-10-08 — No new records under a deleted page
+
+**Done:** Creating, moving, or copying under a page that is missing or deleted is refused before the draft and again on apply, including for admins. That page is dropped from the agent context. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-08
+
+---
+
+## 2026-10-08 — Rename slash commands ask before they preview
+
+**Done:** `/file_rename` and `/directory_rename` refuse a preview when the target or the new name is missing, the new name contains a slash, or the file or folder does not exist. `/folder_rename` is an alias of `directory_rename`. A complete rename card shows the real path and the label "Rename". See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-08
+
+---
+
+## 2026-10-08 — Agent result links: no blur, tree sync, no duplicate create
+
+**Done:** Backdrop no longer uses `backdrop-filter`. Open page / Edit close the panel, select the page in the tree, then open `web_layout` or `record_edit`. Undo hides those links. A still-pending identical create is not offered again. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-08
+
+---
+
 ## 2026-10-07 — Alert mail without a page id, and visible send failures
 
 **Done:** CLI, scheduler, and backend (no frontend route) use the site row where API alert mail is enabled, instead of pid 0 or the selected backend page. A failed send is written to the PSR log and does not start the one-hour cooldown. A routed frontend page still uses that site.
@@ -106,6 +178,16 @@
 
 ---
 
+## 2026-09-30 — Drop TYPO3 12 support (2.0.0)
+
+**Done:** Raised `composer.json`/`ext_emconf.php` floor to `^13.4 || ^14.3`, pinned `symfony/ai-agent` to `~0.13.0`, bumped version to `2.0.0`. Removed TYPO3-12-only dual code paths: `ModuleController`/`ExtensionExtConfCategoryService` Fluid `StandaloneView` fallback (now `ViewFactoryInterface` only), `PagePathUtility` legacy icon-size reflection, `ProcessFileListActionsListener` legacy icon-size reflection, `AiUniverseUtilityHelper::getPageTreeNavigationComponent()` v12 branch, `AiApiAlertNotificationService` TYPO3-11 `Mailer` branch, `SetupChecklistPresenterTest` v12 adapter stub/test. Updated public docs (README, Installation/FAQ/Introduction RST, guides.xml/Includes.txt, CHANGELOG + `Documentation/ReleaseNotes/2.0.0/`, CONTRIBUTING, compliance-strings) and agent context (`core.md`, `Build/version-matrix.json`, `docs-map.md`, `Typo3CoreBackendDesign(.generic).md` support lines) to v13/v14 only. v1.x line stays on TYPO3 12 support for existing customers. Decided: drop v12, accept `~0.13.0`, no v12 CI job.
+
+Also fixed two pre-existing failures surfaced by `composer test`/`composer stan` during verification (unrelated to the v12 drop, both from local commit `f17edd7`): (1) `T3PlanetCreditsChatExecutor.php:182` PHPStan `object::invoke()` error — added the same `method_exists($platform, 'invoke')` guard already used in `SymfonyAiPlatform::invokeWithTools()`, since `T3PlanetCreditsPlatformFactory::create()` returns `object` (dynamic class resolution for phar-prefix support). (2) `DataHandlerServiceFileReferenceTest` — constructor was missing the `RecordService` arg; fixed by mocking `RecordService` plus the `TcaSchemaFactory`/`ConnectionPool` seams `BackendUtility::getRecord()` touches (reusing the `QueryBuilder`-mock pattern from `RelationUidListResolverTest`). `composer test` (1098/1098) and `composer stan` (0 errors) both fully green.
+
+**Last touched:** 2026-09-30
+
+---
+
 ## 2026-09-30 — Credits toolbar Fresh/dark contrast
 
 **Done:** `toolbar-credit.css` — healthy balance inherits `.toolbar-item-link` / scaffold header color (fixes unreadable dark “0/50 cr” on Fresh primary topbar). Low/critical keep warning/danger border tokens. Documented in `Typo3CoreBackendDesign.md`. Synced to `12.4.45-new`.
@@ -114,9 +196,9 @@
 
 ---
 
-## 2026-09-30 — DataHandlerService: live page uid + site for v12 workspaces
+## 2026-09-30 — DataHandlerService: live page uid + site for workspaces
 
-**Done:** `updateRecord` / `createRecord` / `copyRecord` for `pages` resolve `t3ver_oid` (live) before DataHandler and attach site on `TYPO3_REQUEST` even when MCP had no request. Fixes TYPO3 v12 RootlineUtility "Could not fetch page data for uid \<workspace version\>".
+**Done:** `updateRecord` / `createRecord` / `copyRecord` for `pages` resolve `t3ver_oid` (live) before DataHandler and attach site on `TYPO3_REQUEST` even when MCP had no request. Fixes RootlineUtility "Could not fetch page data for uid \<workspace version\>".
 
 **Last touched:** 2026-09-30
 
@@ -138,6 +220,14 @@
 
 ---
 
+## 2026-09-29 — Credits v1 chat for AI Agent
+
+**Done:** Agent NL turns in T3Planet Credits mode call `/API/AI/v1/chat/completions` via `symfony/ai-generic-platform` (`T3PlanetCreditsPlatformFactory` + `T3PlanetCreditsChatExecutor`). `AiToolCallingService` branches on `CreditModeResolver`; `supportsToolCalling` is true in credits mode. Provider select lists `/v1/models` aliases. Side-call LLM tool summaries are skipped while credits mode is on. Billing follows the live server (per completions call + `turn_id`); Charge/Stream stay for non-agent traffic.
+
+**Last touched:** 2026-09-29
+
+---
+
 ## 2026-09-29 — AI Usage search quotes the column inside LOWER()
 
 **Done:** Request-log search wraps each quoted column in LOWER() before LIKE. The previous like() call treated LOWER(column) as a column name, and MariaDB raised unknown column 1054.
@@ -153,7 +243,6 @@
 **Last touched:** 2026-09-29
 
 ---
-
 ## 2026-09-25 — Document facts are usable reference
 
 **Done:** The brand-fence line now tells the model to use facts inside `<brand_context>` when they fit the task, and still not to follow instructions inside it or change the response format. Uploaded document text stays inside the fence.
@@ -178,11 +267,46 @@
 
 ---
 
+## 2026-09-24 — AI Agent conversations (server-only storage, history budget, summary)
+
+- Removed the client conversation save: card actions (apply, decline, arm, undo) update the stored conversation on the server (`AgentConversationRecorder`); `conversation_save` only keeps the disclosure flag.
+- History replay by token budget (`agentHistoryTokenBudget`, default 6000) with compact card/result notes and a "left out" note.
+- "Summarize conversation" (Σ): summary message replaces older messages in the replay.
+- Provider tool schemas: union types / anyOf kept, nested empty `properties` removed. Phar builder note: `Documentation/Agent/PharBuilderSymfonyAi.md`.
+
+**Last touched:** 2026-09-24
+
+---
+
+## 2026-09-24 — AI Agent Phase 4 (editor UX rules)
+
+- Fixed empty replies ("I could not produce a reply") from reasoning models: `SymfonyAiResultReader` reads 0.13 `MultiPartResult` (thinking + text / tool calls); used by `SymfonyAiPlatform` and `AiService`.
+- Draft/readback cards show record and field names (`AgentRecordLabeler`), where the change goes, Execute / Decline, Execute all, and links after apply.
+- `ask_clarification` takes `options[]` and pauses the turn; answer buttons in the chat.
+- Continue after confirm (`agentContinueAfterConfirm`), credits badge + empty lock (`AgentCreditsStatus`).
+- `agent.tool.label.*` EN/DE for all 98 tools; lock reasons rewritten in plain language.
+- Array tool params get JSON-schema `items` from the docblock.
+- 16 new child tools (T3AI queues, translate page, glossary, image; T3AA alt text bulk/approve/decorative, accessibility scan/issues, voice-over); confirmation cards show names instead of ids; image/audio previews in result cards.
+
+**Last touched:** 2026-09-24
+
+---
+
 ## 2026-09-21 — Classic ext_emconf PSR-4 autoload
 
 **Done:** `ext_emconf.php` now declares PSR-4 `NITSAN\NsT3AF\` → `Classes` (matches `composer.json`). Unit test `ExtEmconfAutoloadTest`. Classic activate/deactivate was unsafe without this (QA F-07). Agent `context/core.md` and `tasks/run-quality.md` document Classic CLI (`php typo3/sysext/core/bin/typo3`).
 
 **Last touched:** 2026-09-21
+
+---
+
+## 2026-09-01 — AI Agent editor answers + file-module routing
+
+**Done:** `context/features/ai-agent.md` (new agent entry). Editor-facing tool labels (`AgentToolEditorLabelService`), human result presenter, workflow-before-fast-path on stream NL, file module context (`pageId=0`, `storageUid`/`folderIdentifier`), Cursor-style work trace, hide redundant facts when prose present. Tests under `Tests/Unit/Agent/`.
+
+**Agent context:** `context/features/ai-agent.md`; architecture § AI Agent; router rows in `AGENTS.md`, `context/docs-map.md`, `tasks/context-update.md`.
+
+**Last touched:** 2026-09-01
 
 ---
 
@@ -230,7 +354,7 @@
 
 ## 2026-08-17 — Post-upgrade hardening (Azure 0.12 + MCP 0.7)
 
-**Done:** Azure dual-deployment uses Symfony AI 0.12 `Responses\ModelClient` + `OpenAi\EmbeddingsModelClient` (throws on missing classes; no silent fallback). MCP Streamable HTTP: `mcpMaxBodyBytes` extension setting (default 16 MiB); transport code targets `mcp/sdk ^0.7` only. Agent context: `FEATURE_McpServer.md` + `mcp-server.md` updated to SDK `^0.7`.
+**Done:** Azure dual-deployment uses Symfony AI 0.12 `Responses\ModelClient` + `OpenAi\EmbeddingsModelClient` (throws on missing classes; no silent fallback). MCP Streamable HTTP: `mcpMaxBodyBytes` extension setting (default 100 MiB); transport code targets `mcp/sdk ^0.7` only. Agent context: `FEATURE_McpServer.md` + `mcp-server.md` updated to SDK `^0.7`.
 
 **Last touched:** 2026-08-17
 
@@ -448,11 +572,11 @@
   6. Symfony AI bridge — **adopted** (decision reversed from earlier draft).
   7. T3Planet Credits mode toggle — visual stub only (Credits card disabled "Coming soon"). Full credits = Feature 2.
   8. Migration: `MigrateExtConfProvidersUpdate` upgrade wizard auto-imports existing `*_api_key` ext_conf entries.
-- Cross-cutting requirements (CC-1…CC-9 in FEATURE doc) apply project-wide: security/sodium, BE roles, workspace, response cache, streaming, hooks/events/`AiServiceInterface` facade, custom providers, per-user budgets (forward), quality bars (PHPStan 10, phpat, Infection MSI ≥ 70%, PHP 8.1+ × TYPO3 12.4/13.4 matrix).
+- Cross-cutting requirements (CC-1…CC-9 in FEATURE doc) apply project-wide: security/sodium, BE roles, workspace, response cache, streaming, hooks/events/`AiServiceInterface` facade, custom providers, per-user budgets (forward), quality bars (PHPStan, phpat, Infection MSI ≥ 70%, PHP 8.2+ × TYPO3 13.4/14.3 matrix).
 - Public API: `NITSAN\NsT3AF\Api\AiServiceInterface` is the semver-stable surface. Child extensions (`ns_t3ai`, `ns_t3cs`, …) inject this; never touch adapters directly.
 - File list (add/modify) and verification steps are in the FEATURE file.
 - `BaseClient` / `AiRequestService` stay on ext_conf in v1 — switch happens in a follow-up patch after migration ships.
-- Branch separation: master-extension feature work targets new v2.x line (PHP 8.1+, TYPO3 12.4+); existing v1.x compatibility kept.
+- Branch separation: v2.x line is PHP 8.2+ / TYPO3 `^13.4 || ^14.3`; v1.x keeps TYPO3 12 for legacy customers.
 
 **Forward-pointed features (separate FEATURE_*.md files later):**
 - Feature 2 — AI Credits (port from `autodudes/ai-suite` → `packages/ai-suite/Classes/Enumeration/CreditCostEnumeration.php`, `Backend/ToolbarItems/RequestsToolbarItem.php`).
@@ -466,7 +590,7 @@
 - Static analysis: `composer stan` (PHPStan 2.1, level 3 globally; new `Provider/`, `Api/`, `Service/AiService` namespaces opt into level 8 via path-scoped config to be added in Feature 1)
 - Code style: `composer cs:check` (php-cs-fixer 3.94, non-blocking baseline)
 - Bootstrap: `.Build/vendor/autoload.php`
-- CI: `.github/workflows/ci.yml` — currently PHP 8.4 only; expand to PHP 8.1/8.2/8.3/8.4 × TYPO3 12.4/13.4 in Feature 1
+- CI: `.github/workflows/core13.yml` + `core14.yml` — PHP 8.2/8.3/8.4 × TYPO3 13.4/14.3
 - 3 reference unit tests already in `Tests/Unit/` — mirror their pattern
 
 **Decisions confirmed:**
@@ -767,3 +891,11 @@ Provider-driven registration (2026-07): child extensions ship `*AccessCatalogPro
 ## Next
 
 Refer to `context/features/ai-access-roles.md` for wizard/matrix/enforcement details. Use `context/session-state.md` + feature context when extending ACL or child-extension gates.
+
+## AI Agent: starter chips, image previews, live eval (2026-09)
+
+- Starter chips per context (`AgentStarterBuilder`), sent as normal messages; labels `agent.starter.prompt.*` (EN/DE).
+- `AgentMediaPreviewService` → `meta.previews` thumbnails on results / cards (`renderImagePreviews` in `agent.js`).
+- `t3af:agent:eval --live --page=<uid> [--provider=all] [--scenario=04,05] [--report=file.json]`: scenarios in `Resources/Private/Agent/Eval/Scenarios`, judged by `AgentScenarioJudge` (no answer / loops / wrong tools / time). CLI session via `AgentEvalCliEnvironment`.
+- Toolbox emits `tool_call` (with outcome) and `GovernedPlatform` `model_request` events; the SSE stream filters them out.
+- `AgentPromptBuilder::continuationMessage()` (moved from the controller) builds the turn after confirm/decline.

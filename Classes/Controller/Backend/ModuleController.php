@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Controller\Backend;
 
 use NITSAN\NsT3AF\Access\AiUniverseRecordMap;
 use NITSAN\NsT3AF\Access\RecordAccessEnforcer;
+use NITSAN\NsT3AF\Agent\Service\AgentSettingsPresenter;
 use NITSAN\NsT3AF\Credits\CreditsProviderIdentifier;
 use NITSAN\NsT3AF\Credits\Service\CreditModeResolver;
 use NITSAN\NsT3AF\Credits\Service\CreditOverviewLineService;
@@ -92,7 +93,8 @@ use TYPO3\CMS\Core\Http\RedirectResponse;
 use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Pagination\SimplePagination;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use TYPO3\CMS\Fluid\View\StandaloneView;
+use TYPO3\CMS\Core\View\ViewFactoryData;
+use TYPO3\CMS\Core\View\ViewFactoryInterface;
 
 /**
  * Backend module controller for AI Foundation.
@@ -157,6 +159,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
         private readonly FeatureExtensionHealthService $featureExtensionHealthService,
         private readonly AiFeatureCardProviderRegistry $aiFeatureCardProviderRegistry,
         private readonly ExtensionSettingsRegistry $extensionSettingsRegistry,
+        private readonly AgentSettingsPresenter $agentSettingsPresenter,
         ModuleStateService $moduleStateService,
         WizardProviderCatalog $wizardProviderCatalog,
         WizardExtensionCatalogService $wizardExtensionCatalog,
@@ -495,6 +498,14 @@ final class ModuleController extends AbstractAiUniverseModuleController
     public function mcpServerAction(ServerRequestInterface $request): ResponseInterface
     {
         $view = $this->createModuleView($request, 'mcpServer');
+
+        // The shell hides the content for a hidden tab, but the code below issues tokens,
+        // so a user without the tab must stop here.
+        $tabUser = $this->getBackendUser();
+        if ($tabUser === null || !$this->moduleTabUtility->isTabVisible('mcpServer', $tabUser)) {
+            return $view->renderResponse('Module/McpServer');
+        }
+
         $this->pageRenderer->loadJavaScriptModule('@nitsan/nst3af/mcp-server.js');
 
         $beUser = $GLOBALS['BE_USER'] ?? null;
@@ -1405,6 +1416,15 @@ final class ModuleController extends AbstractAiUniverseModuleController
         return $view->renderResponse('Backend/ForDevelopers');
     }
 
+    public function aiAgentAction(ServerRequestInterface $request): ResponseInterface
+    {
+        $view = $this->createModuleView($request, 'aiAgent');
+        $this->pageRenderer->loadJavaScriptModule('@nitsan/nst3af/ai-agent-settings.js');
+        $view->assignMultiple($this->agentSettingsPresenter->build());
+
+        return $view->renderResponse('Backend/AiAgent');
+    }
+
     public function schedulerCliAction(ServerRequestInterface $request): ResponseInterface
     {
         $view = $this->createModuleView($request, 'schedulerCli');
@@ -1542,69 +1562,14 @@ final class ModuleController extends AbstractAiUniverseModuleController
 
     private function renderCreditsCheckoutFrame(ServerRequestInterface $request, string $checkoutUrl): string
     {
-        // ViewFactoryInterface is TYPO3 13+; StandaloneView covers TYPO3 12.
-        // Build FQNs dynamically so PHPStan (per CI TYPO3 matrix job) cannot
-        // prove class_exists() always true/false.
-        $viewFactoryInterface = implode('\\', ['TYPO3', 'CMS', 'Core', 'View', 'ViewFactoryInterface']);
-        $viewFactoryDataClass = implode('\\', ['TYPO3', 'CMS', 'Core', 'View', 'ViewFactoryData']);
-        if (class_exists($viewFactoryInterface) && class_exists($viewFactoryDataClass)) {
-            return $this->renderCreditsCheckoutFrameWithCoreViewFactory(
-                $request,
-                $checkoutUrl,
-                $viewFactoryInterface,
-                $viewFactoryDataClass,
-            );
-        }
-
-        return $this->renderCreditsCheckoutFrameWithStandaloneView($request, $checkoutUrl);
-    }
-
-    /**
-     * @param class-string $viewFactoryInterface
-     * @param class-string $viewFactoryDataClass
-     */
-    private function renderCreditsCheckoutFrameWithCoreViewFactory(
-        ServerRequestInterface $request,
-        string $checkoutUrl,
-        string $viewFactoryInterface,
-        string $viewFactoryDataClass,
-    ): string {
-        $viewFactory = GeneralUtility::makeInstance($viewFactoryInterface);
-        $create = [$viewFactory, 'create'];
-        if (!is_callable($create)) {
-            throw new \RuntimeException('ViewFactoryInterface::create() is not callable.');
-        }
-
-        $view = $create(new $viewFactoryDataClass(
+        $viewFactory = GeneralUtility::makeInstance(ViewFactoryInterface::class);
+        $view = $viewFactory->create(new ViewFactoryData(
             templateRootPaths: ['EXT:ns_t3af/Resources/Private/Templates/'],
             request: $request,
         ));
-        $assign = [$view, 'assign'];
-        $render = [$view, 'render'];
-        if (!is_callable($assign) || !is_callable($render)) {
-            throw new \RuntimeException('ViewFactory view is missing assign()/render().');
-        }
-
-        $assign('checkoutUrl', $checkoutUrl);
-
-        return $render('Module/CreditsCheckoutFrame');
-    }
-
-    private function renderCreditsCheckoutFrameWithStandaloneView(ServerRequestInterface $request, string $checkoutUrl): string
-    {
-        if (!class_exists(StandaloneView::class)) {
-            throw new \RuntimeException('No compatible Fluid view renderer available for credits checkout frame.');
-        }
-
-        $view = GeneralUtility::makeInstance(StandaloneView::class);
-        $view->setRequest($request);
-        $view->setTemplateRootPaths(['EXT:ns_t3af/Resources/Private/Templates/']);
-        $view->setLayoutRootPaths(['EXT:ns_t3af/Resources/Private/Layouts/']);
-        $view->setPartialRootPaths(['EXT:ns_t3af/Resources/Private/Partials/']);
-        $view->setTemplate('Module/CreditsCheckoutFrame');
         $view->assign('checkoutUrl', $checkoutUrl);
 
-        return $view->render();
+        return $view->render('Module/CreditsCheckoutFrame');
     }
 
     /**

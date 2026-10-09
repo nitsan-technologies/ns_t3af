@@ -1,8 +1,7 @@
-[![Latest Stable Version](https://img.shields.io/badge/Stable-1.1.5-success)](https://extensions.typo3.org/extension/ns_t3af)
+[![Latest Stable Version](https://img.shields.io/badge/Stable-2.0.0-success)](https://extensions.typo3.org/extension/ns_t3af)
 [![AI Foundation Github](https://img.shields.io/badge/AI--Foundation-informational?logo=github)](https://github.com/nitsan-technologies/ns_t3af)
 [![TYPO3 14](https://img.shields.io/badge/TYPO3-14-important.svg?logo=typo3)](https://get.typo3.org/version/14)
 [![TYPO3 13](https://img.shields.io/badge/TYPO3-13-important.svg?logo=typo3)](https://get.typo3.org/version/13)
-[![TYPO3 12](https://img.shields.io/badge/TYPO3-12-important.svg?logo=typo3)](https://get.typo3.org/version/12)
 [![PHP](https://img.shields.io/badge/PHP-8.2%20to%208.5-777BB4?logo=php&logoColor=white)](https://www.php.net/)
 [![core 13](https://github.com/nitsan-technologies/ns_t3af/actions/workflows/core13.yml/badge.svg)](https://github.com/nitsan-technologies/ns_t3af/actions/workflows/core13.yml)
 [![core 14](https://github.com/nitsan-technologies/ns_t3af/actions/workflows/core14.yml/badge.svg)](https://github.com/nitsan-technologies/ns_t3af/actions/workflows/core14.yml)
@@ -73,7 +72,8 @@ It includes these features:
 
 | T3AF Version | TYPO3 Compatibility | PHP Version | Support Level                          |
 |--------------|---------------------|-------------|----------------------------------------|
-| v1.x         | 12.4 - 14.x         | 8.2 - 8.5   | Features, Bugfixes, Security Updates   |
+| v2.x         | 13.4 - 14.x         | 8.2 - 8.5   | Features, Bugfixes, Security Updates   |
+| v1.x         | 12.4 - 14.x         | 8.2 - 8.5   | Security Updates (legacy)              |
 
 ## Compatible Extensions
 

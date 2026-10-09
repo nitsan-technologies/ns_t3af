@@ -1,6 +1,6 @@
 {
   "description": "Cross-version smoke matrix for AI Label (Stage 0)",
-  "typo3Versions": ["12.4", "13.4", "14.3"],
+  "typo3Versions": ["13.4", "14.3"],
   "phpVersions": ["8.2", "8.3"],
   "checks": [
     "event.listener tags in Services.yaml",

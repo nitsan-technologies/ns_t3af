@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Credits;
 
 use NITSAN\NsT3AF\Api\TtsOptions;
+use NITSAN\NsT3AF\Credits\Exception\CreditsContentRemovedException;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
 use NITSAN\NsT3AF\Credits\Service\ProxyTtsExecutor;
 use PHPUnit\Framework\TestCase;
@@ -71,5 +72,35 @@ final class ProxyTtsExecutorTest extends TestCase
 
         self::assertSame('fake-mp3', $response->audio);
         self::assertSame('tts-1-hd', $response->modelId);
+    }
+
+    public function testSpeakThrowsContentRemovedWithoutReceipt(): void
+    {
+        $apiClient = $this->createMock(T3PlanetApiClient::class);
+        $apiClient->method('speak')->willReturn([
+            'status' => true,
+            'content_removed' => true,
+            'credits' => [],
+            'charged' => ['amount' => 1],
+        ]);
+
+        $connection = $this->createMock(\TYPO3\CMS\Core\Database\Connection::class);
+        $connection->expects(self::never())->method('insert');
+        $pool = $this->createMock(\TYPO3\CMS\Core\Database\ConnectionPool::class);
+        $pool->method('getConnectionForTable')->willReturn($connection);
+
+        $executor = new ProxyTtsExecutor(
+            $apiClient,
+            $this->tokenResolverWithBearer(),
+            $this->domainResolver(),
+            $this->featureKeyMapper(),
+            new \NITSAN\NsT3AF\Credits\Service\CreditsChargeRecorder(new \NITSAN\NsT3AF\Credits\Service\LocalReceiptCache($pool)),
+            $this->createMock(EventDispatcherInterface::class),
+            $this->telemetryService(),
+            $this->createMock(LoggerInterface::class),
+        );
+
+        $this->expectException(CreditsContentRemovedException::class);
+        $executor->speak('Hello', new TtsOptions(extensionKey: 'ns_t3aa', featureKey: 'media.tts'));
     }
 }

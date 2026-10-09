@@ -19,6 +19,8 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Mcp\Service\Backend;
 
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+
 /**
  * CRUD facade for user-defined MCP custom tools (backend UI).
  */
@@ -36,6 +38,7 @@ readonly class McpCustomToolService
      *     description: string,
      *     handlerType: string,
      *     handlerValue: string,
+     *     severity: string,
      *     parameters: list<array<string, mixed>>,
      *     hidden: bool,
      *     deleted: bool,
@@ -56,6 +59,7 @@ readonly class McpCustomToolService
         string $description,
         string $handlerType,
         string $handlerValue,
+        string $severity,
         array $parameters,
     ): int {
         $label = trim($label);
@@ -65,6 +69,7 @@ readonly class McpCustomToolService
         }
 
         $handlerType = $this->normalizeHandlerType($handlerType);
+        $severityValue = $this->normalizeSeverity($severity);
         $toolKey = $this->buildUniqueToolKey($label);
 
         return $this->customToolRepository->insert(
@@ -73,6 +78,7 @@ readonly class McpCustomToolService
             trim($description),
             $handlerType,
             $handlerValue,
+            $severityValue,
             $parameters,
         );
     }
@@ -86,6 +92,7 @@ readonly class McpCustomToolService
         string $description,
         string $handlerType,
         string $handlerValue,
+        string $severity,
         array $parameters,
     ): void {
         if ($uid <= 0) {
@@ -108,6 +115,7 @@ readonly class McpCustomToolService
             trim($description),
             $this->normalizeHandlerType($handlerType),
             $handlerValue,
+            $this->normalizeSeverity($severity),
             $parameters,
         );
     }
@@ -132,6 +140,16 @@ readonly class McpCustomToolService
             'rest', 'webhook' => strtolower(trim($handlerType)),
             default => 'php',
         };
+    }
+
+    private function normalizeSeverity(string $severity): string
+    {
+        $resolved = ToolSeverity::tryFromString($severity);
+        if (!$resolved instanceof ToolSeverity) {
+            throw new \InvalidArgumentException('Tool severity is required and must be read, write, or destructive');
+        }
+
+        return $resolved->value;
     }
 
     private function buildUniqueToolKey(string $label): string

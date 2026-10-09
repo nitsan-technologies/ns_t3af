@@ -43,7 +43,8 @@ final class McpToolMetadataService
      *     status: string,
      *     tagline: string,
      *     notes: string,
-     *     examplePrompts: list<string>
+     *     examplePrompts: list<string>,
+     *     searchTerms: list<string>
      * }
      */
     public function getForTool(string $name): array
@@ -57,6 +58,16 @@ final class McpToolMetadataService
         }
 
         return $this->mergeToolDefaults($defaults, $toolConfig);
+    }
+
+    /**
+     * Whether Configuration/McpToolMetadata.yaml has an entry for this tool (getForTool() falls back to defaults).
+     */
+    public function isDescribed(string $name): bool
+    {
+        $tools = $this->loadConfig()['tools'] ?? [];
+
+        return is_array($tools) && is_array($tools[$name] ?? null);
     }
 
     /**
@@ -118,7 +129,8 @@ final class McpToolMetadataService
      *     status: string,
      *     tagline: string,
      *     notes: string,
-     *     examplePrompts: list<string>
+     *     examplePrompts: list<string>,
+     *     searchTerms: list<string>
      * }
      */
     private function normalizeDefaults(array $defaults): array
@@ -129,6 +141,7 @@ final class McpToolMetadataService
             'tagline' => (string) ($defaults['tagline'] ?? ''),
             'notes' => (string) ($defaults['notes'] ?? ''),
             'examplePrompts' => $this->normalizeExamplePrompts($defaults['examplePrompts'] ?? []),
+            'searchTerms' => [],
         ];
     }
 
@@ -138,7 +151,8 @@ final class McpToolMetadataService
      *     status: string,
      *     tagline: string,
      *     notes: string,
-     *     examplePrompts: list<string>
+     *     examplePrompts: list<string>,
+     *     searchTerms: list<string>
      * } $defaults
      * @param array<string, mixed> $toolConfig
      * @return array{
@@ -146,7 +160,8 @@ final class McpToolMetadataService
      *     status: string,
      *     tagline: string,
      *     notes: string,
-     *     examplePrompts: list<string>
+     *     examplePrompts: list<string>,
+     *     searchTerms: list<string>
      * }
      */
     private function mergeToolDefaults(array $defaults, array $toolConfig): array
@@ -171,6 +186,11 @@ final class McpToolMetadataService
 
         if (isset($toolConfig['examplePrompts'])) {
             $merged['examplePrompts'] = $this->normalizeExamplePrompts($toolConfig['examplePrompts']);
+        }
+
+        // Not displayed: extra words (EN + DE) for the AI Agent tool search.
+        if (isset($toolConfig['searchTerms'])) {
+            $merged['searchTerms'] = $this->normalizeExamplePrompts($toolConfig['searchTerms']);
         }
 
         return $merged;

@@ -1,0 +1,22 @@
+{
+  "id": "04-create-page",
+  "title": "Creating a page prepares the page right away (no \"Shall I?\")",
+  "turns": [
+    {
+      "message": "Create a new subpage called \"Eval test page\"",
+      "expect": {
+        "anyTool": [
+          "write_table",
+          "t3ai_create_page_simple",
+          "t3ai_create_page_advanced"
+        ],
+        "card": true,
+        "forbidTools": [
+          "content_delete",
+          "pages_copy"
+        ],
+        "maxToolCalls": 5
+      }
+    }
+  ]
+}

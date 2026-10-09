@@ -23,6 +23,7 @@ use NITSAN\NsT3AF\Mcp\Domain\Repository\CodeRepository;
 use NITSAN\NsT3AF\Mcp\Domain\Repository\SessionRepository;
 use NITSAN\NsT3AF\Mcp\Domain\Repository\TokenRepository;
 use NITSAN\NsT3AF\Mcp\OAuth\RateLimitService;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyIdempotency;
 use NITSAN\NsT3AF\Settings\ExtensionSettingsService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -33,7 +34,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 /**
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
-#[AsCommand(name: 't3af:mcp:cleanup|nst3af:mcp:cleanup', description: 'Remove expired OAuth tokens/codes and stale MCP sessions')]
+#[AsCommand(name: 't3af:mcp:cleanup|nst3af:mcp:cleanup', description: 'Remove expired OAuth tokens/codes, stale MCP sessions and expired records_apply request ids')]
 class CleanupCommand extends Command
 {
     private const DEFAULT_SESSION_LIFETIME = 86400;
@@ -45,6 +46,7 @@ class CleanupCommand extends Command
         private readonly CodeRepository $codeRepository,
         private readonly RateLimitService $rateLimitService,
         private readonly SessionRepository $sessionRepository,
+        private readonly RecordsApplyIdempotency $recordsApplyIdempotency,
         ExtensionSettingsService $extensionSettingsService,
     ) {
         parent::__construct();
@@ -70,6 +72,9 @@ class CleanupCommand extends Command
 
         $deletedRateLimits = $this->rateLimitService->deleteExpiredEntries();
         $io->writeln(sprintf('Deleted %d expired rate limit entries.', $deletedRateLimits));
+
+        $deletedRequestIds = $this->recordsApplyIdempotency->deleteExpired();
+        $io->writeln(sprintf('Deleted %d expired records_apply request ids.', $deletedRequestIds));
 
         $io->success('Cleanup completed.');
 

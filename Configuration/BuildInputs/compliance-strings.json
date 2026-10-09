@@ -2,7 +2,7 @@
   "_README": "Build input for Feature 03 (AI Label). FAIL CLOSED: missing values fail the build.",
   "_generated": "2026-08-18",
   "typo3": {
-    "versionRange": "TYPO3 v12–v14"
+    "versionRange": "TYPO3 v13–v14"
   },
   "php": {
     "versionRange": "PHP 8.2+"

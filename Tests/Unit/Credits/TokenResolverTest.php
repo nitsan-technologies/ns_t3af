@@ -299,6 +299,75 @@ final class TokenResolverTest extends TestCase
         return new LicenseContactResolver(null);
     }
 
+    public function testActivateTrialTokenAdoptsIpOwnerOnIpConflict(): void
+    {
+        $api = $this->createMock(T3PlanetApiClient::class);
+        $api->expects(self::once())->method('bindIp')->willThrowException(
+            new \NITSAN\NsT3AF\Credits\Exception\CreditsApiException('token_ip_conflict', 403),
+        );
+        $api->expects(self::once())->method('issueTrialToken')->willReturn(['token' => 'ip-owner-token']);
+
+        $cipher = new CredentialCipher();
+        $repository = $this->createMock(RuntimeSettingsRepository::class);
+        $repository->method('findSingleton')->willReturn([
+            'token_enc' => $cipher->encrypt('stale-token'),
+            't3planet_api_base_url' => 'https://composer.example',
+        ]);
+
+        $runtime = new RuntimeSettingsService(
+            $repository,
+            $cipher,
+            new \TYPO3\CMS\Core\Configuration\ExtensionConfiguration(),
+        );
+        $cache = new \NITSAN\NsT3AF\Cache\Typo3CacheFacade(new NullFrontend('test'));
+        $apiResponseCache = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class);
+
+        $resolver = new TokenResolver(
+            $api,
+            $runtime,
+            $cache,
+            $apiResponseCache,
+            $this->domainResolver($runtime),
+            $this->contactResolver(),
+        );
+        $result = $resolver->activateTrialToken();
+
+        self::assertSame('adopted', $result['action']);
+        self::assertSame('ip-owner-token', $result['token']);
+    }
+
+    public function testActivateTrialTokenRethrowsOtherBindErrors(): void
+    {
+        $api = $this->createMock(T3PlanetApiClient::class);
+        $api->method('bindIp')->willThrowException(
+            new \NITSAN\NsT3AF\Credits\Exception\CreditsApiException('token_ip_mismatch', 403),
+        );
+        $api->expects(self::never())->method('issueTrialToken');
+
+        $cipher = new CredentialCipher();
+        $repository = $this->createMock(RuntimeSettingsRepository::class);
+        $repository->method('findSingleton')->willReturn([
+            'token_enc' => $cipher->encrypt('some-token'),
+            't3planet_api_base_url' => 'https://composer.example',
+        ]);
+        $runtime = new RuntimeSettingsService(
+            $repository,
+            $cipher,
+            new \TYPO3\CMS\Core\Configuration\ExtensionConfiguration(),
+        );
+        $resolver = new TokenResolver(
+            $api,
+            $runtime,
+            new \NITSAN\NsT3AF\Cache\Typo3CacheFacade(new NullFrontend('test')),
+            $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class),
+            $this->domainResolver($runtime),
+            $this->contactResolver(),
+        );
+
+        $this->expectException(\NITSAN\NsT3AF\Credits\Exception\CreditsApiException::class);
+        $resolver->activateTrialToken();
+    }
+
     /**
      * @return array{0: RuntimeSettingsService, 1: \NITSAN\NsT3AF\Cache\Typo3CacheFacade, 2: \NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface&\PHPUnit\Framework\MockObject\MockObject}
      */

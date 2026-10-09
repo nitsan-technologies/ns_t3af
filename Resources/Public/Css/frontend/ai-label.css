@@ -56,12 +56,14 @@
     display: inline-block;
     max-width: 100%;
     position: relative;
+    width: fit-content;
 }
 
 .nst3af-ailabel-media .image-embed-item {
     display: block;
     height: auto;
     max-width: 100%;
+    width: auto;
 }
 
 .nst3af-ailabel-media .nst3af-ailabel {

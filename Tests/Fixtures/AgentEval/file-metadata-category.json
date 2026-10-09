@@ -1,0 +1,29 @@
+{
+    "id": "file-metadata-category",
+    "userMessage": "Update missing alt text for this image",
+    "mocked": {
+        "tool": "t3aa_update_file_metadata",
+        "routingSource": "category_pick",
+        "fieldKeys": [
+            "altText",
+            "title"
+        ],
+        "arguments": {
+            "fieldKeys": [
+                "altText",
+                "title"
+            ],
+            "variants": 2
+        },
+        "variantsComplete": true
+    },
+    "expect": {
+        "tool": "t3aa_update_file_metadata",
+        "routingSource": "category_pick",
+        "fieldKeys": [
+            "altText",
+            "title"
+        ],
+        "variantsComplete": true
+    }
+}
