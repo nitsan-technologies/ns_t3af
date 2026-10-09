@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Middleware;
 
 use Mcp\Server\Transport\StreamableHttpTransport;
 use NITSAN\NsT3AF\Mcp\Authentication\BackendUserBootstrap;
+use NITSAN\NsT3AF\Mcp\Http\FileUploadEndpoint;
 use NITSAN\NsT3AF\Mcp\Middleware\McpServerMiddleware;
 use NITSAN\NsT3AF\Mcp\OAuth\AuthorizationService;
 use NITSAN\NsT3AF\Mcp\Server\McpServerFactory;
@@ -47,17 +48,22 @@ final class McpServerMiddlewareTest extends TestCase
         $siteFinder = $this->createMock(SiteFinder::class);
         $siteFinder->method('getAllSites')->willReturn([]);
 
+        $pathProvider = $this->createMock(McpPathProvider::class);
+        $pathProvider->method('getBasePath')->willReturn('/mcp');
+        $pathProvider->method('getUploadPath')->willReturn('/mcp_upload');
+
         $middleware = new McpServerMiddleware(
             $this->createMock(AuthorizationService::class),
             $this->createMock(BackendUserBootstrap::class),
             $this->createMock(McpServerFactory::class),
-            $this->createMock(McpPathProvider::class),
+            $pathProvider,
             $settings,
             new McpRuntimeContext(),
             $this->createMock(WorkspacePreferenceService::class),
             $responseFactory,
             $streamFactory,
             $siteFinder,
+            $this->createMock(FileUploadEndpoint::class),
         );
 
         $request = (new ServerRequest('https://example.com/mcp', 'POST'));
@@ -79,6 +85,7 @@ final class McpServerMiddlewareTest extends TestCase
 
         $pathProvider = $this->createMock(McpPathProvider::class);
         $pathProvider->method('getBasePath')->willReturn('/mcp');
+        $pathProvider->method('getUploadPath')->willReturn('/mcp_upload');
         $pathProvider->method('getResourceMetadataPath')->willReturn('/.well-known/oauth-protected-resource/mcp');
 
         $middleware = new McpServerMiddleware(
@@ -92,6 +99,7 @@ final class McpServerMiddlewareTest extends TestCase
             new ResponseFactory(),
             new StreamFactory(),
             $this->createMock(SiteFinder::class),
+            $this->createMock(FileUploadEndpoint::class),
         );
 
         $handler = $this->createMock(RequestHandlerInterface::class);

@@ -221,10 +221,9 @@ Options:
             - 15    maintained until 2027-11-11
             - 16    maintained until 2028-11-09
 
-    -t <12|13|14>
+    -t <13|14>
         Only with -s composerInstall|composerInstallLowest|composerInstallHighest
         Specifies the TYPO3 major version used for Composer constraints
-            - 12: use TYPO3 v12 (composer pins in this script)
             - 13: use TYPO3 v13 (default)
             - 14: use TYPO3 v14
 
@@ -317,7 +316,7 @@ EXTRA_TEST_OPTIONS=""
 DRY_RUN=0
 DATABASE_DRIVER=""
 CONTAINER_BIN=""
-COMPOSER_ROOT_VERSION="12.0.0-dev"
+COMPOSER_ROOT_VERSION="2.0.0-dev"
 CONTAINER_INTERACTIVE="-it --init"
 HOST_UID=$(id -u)
 HOST_PID=$(id -g)
@@ -368,7 +367,7 @@ while getopts "a:b:s:d:i:p:e:t:xy:nhu" OPT; do
             ;;
         t)
             TYPO3_VERSION=${OPTARG}
-            if ! [[ ${TYPO3_VERSION} =~ ^(12|13|14)$ ]]; then
+            if ! [[ ${TYPO3_VERSION} =~ ^(13|14)$ ]]; then
                 INVALID_OPTIONS+=("-t ${OPTARG}")
             fi
             ;;
@@ -521,13 +520,6 @@ case ${TEST_SUITE} in
         cleanComposer
         stashComposerFiles
         ${CONTAINER_BIN} run "${CONTAINER_COMMON_PARAMS[@]}" --name composer-install-highest-${SUFFIX} -e COMPOSER_CACHE_DIR=.cache/composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} ${IMAGE_PHP} /bin/bash -c "
-            if [ ${TYPO3_VERSION} -eq 12 ]; then
-              composer require --no-ansi --no-interaction --no-progress --no-install \
-                typo3/cms-core:^12.4 \
-                typo3/cms-backend:^12.4 \
-                typo3/cms-fluid:^12.4 \
-                typo3/cms-frontend:^12.4 || exit 1
-            fi
             if [ ${TYPO3_VERSION} -eq 13 ]; then
               composer require --no-ansi --no-interaction --no-progress --no-install \
                 typo3/cms-core:^13.4 \
@@ -552,13 +544,6 @@ case ${TEST_SUITE} in
         cleanComposer
         stashComposerFiles
         ${CONTAINER_BIN} run "${CONTAINER_COMMON_PARAMS[@]}" --name composer-install-lowest-${SUFFIX} -e COMPOSER_CACHE_DIR=.cache/composer -e COMPOSER_ROOT_VERSION=${COMPOSER_ROOT_VERSION} ${IMAGE_PHP} /bin/bash -c "
-            if [ ${TYPO3_VERSION} -eq 12 ]; then
-              composer require --no-ansi --no-interaction --no-progress --no-install \
-                typo3/cms-core:^12.4 \
-                typo3/cms-backend:^12.4 \
-                typo3/cms-fluid:^12.4 \
-                typo3/cms-frontend:^12.4 || exit 1
-            fi
             if [ ${TYPO3_VERSION} -eq 13 ]; then
               composer require --no-ansi --no-interaction --no-progress --no-install \
                 typo3/cms-core:^13.4 \

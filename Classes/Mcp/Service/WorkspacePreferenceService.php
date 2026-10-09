@@ -62,6 +62,39 @@ readonly class WorkspacePreferenceService
         return $this->normalizeWorkspaceId((int) ($uc[self::UC_KEY] ?? 0));
     }
 
+    /**
+     * The workspace the editor chose under "MCP Server > Workspace selection": 0 = Live chosen
+     * explicitly, null = never chosen. Not checked against the existing workspaces, so a deleted
+     * workspace stays visible to the caller instead of turning into Live.
+     */
+    public function getStoredForBackendUser(BackendUserAuthentication $user): ?int
+    {
+        if (array_key_exists(self::UC_KEY, $user->uc)) {
+            return max(0, (int) $user->uc[self::UC_KEY]);
+        }
+
+        $beUserUid = (int) ($user->user['uid'] ?? 0);
+        if ($beUserUid <= 0) {
+            return null;
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('be_users');
+        $queryBuilder->getRestrictions()->removeAll();
+        $row = $queryBuilder
+            ->select('uc')
+            ->from('be_users')
+            ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($beUserUid, ParameterType::INTEGER)))
+            ->executeQuery()
+            ->fetchAssociative();
+        if ($row === false) {
+            return null;
+        }
+
+        $uc = $this->parseUserConfiguration($row['uc'] ?? '');
+
+        return array_key_exists(self::UC_KEY, $uc) ? max(0, (int) $uc[self::UC_KEY]) : null;
+    }
+
     public function getForCurrentUser(): int
     {
         $user = $GLOBALS['BE_USER'] ?? null;

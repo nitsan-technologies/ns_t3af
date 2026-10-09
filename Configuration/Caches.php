@@ -67,6 +67,13 @@ return [
         ],
         'groups' => ['system', 'nst3af'],
     ],
+    'nst3af_agent_tool_index' => [
+        'frontend' => \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend::class,
+        'options' => [
+            'defaultLifetime' => 0,
+        ],
+        'groups' => ['system', 'nst3af'],
+    ],
     'nst3af_ailabel_iptc' => [
         'frontend' => \TYPO3\CMS\Core\Cache\Frontend\VariableFrontend::class,
         'options' => [

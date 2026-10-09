@@ -27,9 +27,12 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Schema;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 
+#[McpToolSeverity(ToolSeverity::Read)]
 readonly class TableSchemaTool implements McpNonAiToolInterface
 {
     public function __construct(private TcaSchemaService $tcaSchemaService) {}
@@ -37,7 +40,9 @@ readonly class TableSchemaTool implements McpNonAiToolInterface
     #[McpTool(
         name: 'table_schema',
         description: 'Get the schema of a database table including field types, labels, select options, and constraints.'
-            . ' Use this to discover valid field values before creating or updating records.',
+            . ' Use this to discover valid field values before creating or updating records.'
+            . ' Includes category/MM relations (writableAs=uid_list), file fields (writableAs=file_references),'
+            . ' and Content Blocks collections (type=collection, write child table via foreignField).',
     )]
     public function execute(string $tableName): string
     {

@@ -15,6 +15,7 @@
 | MCP transport / OAuth / tools | `context/features/mcp-server.md` |
 | ACL / logging / alerts | `context/features/governance.md` |
 | Dashboard / AI Features drawer | `context/features/backend-module.md` |
+| Backend AI Agent | `context/features/ai-agent.md` |
 | ns_t3ai / ns_t3cs / ns_t3aa wiring | `context/features/child-extensions.md` |
 | AI Access / Roles / provider registry | `context/features/ai-access-roles.md` |
 | Test / CI commands | `tasks/run-quality.md` |

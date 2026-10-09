@@ -62,12 +62,31 @@ readonly class BackendUserBootstrap
 
         $GLOBALS['BE_USER'] = $backendUser;
 
-        if (AiUniverseUtilityHelper::isExtensionLoaded('workspaces')) {
-            $backendUser->setWorkspace($workspaceId);
-        }
+        $this->applyWorkspace($backendUser, $workspaceId);
 
         $GLOBALS['LANG'] = $this->languageServiceFactory->createFromUserPreferences($backendUser);
 
         return $backendUser;
+    }
+
+    /**
+     * Puts the backend user into a workspace for this process only.
+     *
+     * setWorkspace() would also write the choice to be_users.workspace_id, so an MCP call (or the
+     * stdio server) would move the editor's own backend session into that workspace for good. The
+     * temporary switch leaves the user record alone. A workspace the user may not use falls back
+     * to Live; only when even that is refused does TYPO3 pick the user's default workspace.
+     */
+    public function applyWorkspace(BackendUserAuthentication $backendUser, int $workspaceId): void
+    {
+        if (!AiUniverseUtilityHelper::isExtensionLoaded('workspaces')) {
+            return;
+        }
+
+        if ($backendUser->setTemporaryWorkspace($workspaceId) || $backendUser->setTemporaryWorkspace(0)) {
+            return;
+        }
+
+        $backendUser->setWorkspace($workspaceId);
     }
 }

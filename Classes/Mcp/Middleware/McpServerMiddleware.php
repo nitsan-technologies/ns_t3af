@@ -23,13 +23,13 @@ use const JSON_THROW_ON_ERROR;
 
 use Mcp\Server\Transport\StreamableHttpTransport;
 use NITSAN\NsT3AF\Mcp\Authentication\BackendUserBootstrap;
+use NITSAN\NsT3AF\Mcp\Http\FileUploadEndpoint;
 use NITSAN\NsT3AF\Mcp\OAuth\AuthorizationService;
 use NITSAN\NsT3AF\Mcp\Server\McpServerFactory;
 use NITSAN\NsT3AF\Mcp\Service\AdvancedSettingsService;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpRuntimeContext;
 use NITSAN\NsT3AF\Mcp\Service\McpPathProvider;
 use NITSAN\NsT3AF\Mcp\Service\WorkspacePreferenceService;
-use NITSAN\NsT3AF\Utility\AiUniverseUtilityHelper;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -54,12 +54,24 @@ readonly class McpServerMiddleware implements MiddlewareInterface
         private ResponseFactoryInterface $responseFactory,
         private StreamFactoryInterface $streamFactory,
         private SiteFinder $siteFinder,
+        private FileUploadEndpoint $fileUploadEndpoint,
     ) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $path = $request->getUri()->getPath();
         $basePath = $this->pathProvider->getBasePath();
+        $uploadPath = $this->pathProvider->getUploadPath();
+
+        // Pre-signed uploads use their own token — do not require OAuth access token.
+        if ($path === $uploadPath) {
+            if (!$this->settingsService->isMcpServerEnabled()) {
+                return $this->withCorsHeaders($this->createJsonResponse(['error' => 'MCP server is disabled'], 503));
+            }
+
+            return ($this->fileUploadEndpoint)($request);
+        }
+
         $urlToken = $this->extractUrlToken($path, $basePath);
 
         if ($path !== $basePath && $urlToken === null) {
@@ -92,9 +104,9 @@ readonly class McpServerMiddleware implements MiddlewareInterface
             );
             $this->backendUserBootstrap->bootstrap($context['beUser'], $context['workspaceId']);
             $workspaceId = $this->workspacePreferenceService->getForUser($context['beUser']);
-            if (AiUniverseUtilityHelper::isExtensionLoaded('workspaces')) {
-                $GLOBALS['BE_USER']->setWorkspace($workspaceId);
-            }
+            // This call only: setWorkspace() would write the module choice to the user's record and move
+            // the editor's own backend session into that workspace.
+            $this->backendUserBootstrap->applyWorkspace($GLOBALS['BE_USER'], $workspaceId);
         } catch (\RuntimeException) {
             return $this->withCorsHeaders($this->createUnauthorizedResponse($request, 'Authentication failed'));
         }

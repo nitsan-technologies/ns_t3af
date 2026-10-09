@@ -36,6 +36,7 @@ final class CreditsApiErrorMessageResolverTest extends TestCase
             {
                 return match (true) {
                     str_contains($label, 'rate_limited') => 'Wait %s.',
+                    str_contains($label, 'tools_unsupported') => 'Model {model} lacks {param}.',
                     str_contains($label, 'api_error') => 'Generic API error.',
                     default => '',
                 };
@@ -91,5 +92,18 @@ final class CreditsApiErrorMessageResolverTest extends TestCase
         self::assertSame('api_error', $payload['error_code']);
         self::assertSame('Generic API error.', $payload['userMessage']);
         self::assertSame('upstream failed', $payload['message']);
+    }
+
+    public function testResolveFillsModelAndParamPlaceholders(): void
+    {
+        $resolver = new CreditsApiErrorMessageResolver();
+        $message = $resolver->resolve(new CreditsApiException(
+            'tools_unsupported',
+            422,
+            'tools_unsupported',
+            ['model' => 'gpt-x', 'param' => 'tools'],
+        ));
+
+        self::assertSame('Model gpt-x lacks tools.', $message);
     }
 }

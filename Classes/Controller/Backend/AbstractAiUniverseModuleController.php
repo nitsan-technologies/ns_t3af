@@ -93,7 +93,7 @@ abstract class AbstractAiUniverseModuleController
         $docHeader->disable();
         $docHeader->setMetaInformation([]);
 
-        // TYPO3 14+ only (Feature #108008). Reflection keeps this safe on 12.4 / 13.4
+        // TYPO3 14+ only (Feature #108008). Reflection keeps this safe on 13.4
         // without version-specific PHPStan ignores that break the CI matrix.
         try {
             (new \ReflectionMethod($docHeader, 'setShortcutContext'))->invoke(
@@ -122,14 +122,14 @@ abstract class AbstractAiUniverseModuleController
 
     protected function translateModule(string $key): string
     {
-        return (string) ($GLOBALS['LANG']?->sL(
+        return (string) (($GLOBALS['LANG'] ?? null)?->sL(
             'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:' . $key,
         ) ?? $key);
     }
 
     protected function translateDashboard(string $key): string
     {
-        return (string) ($GLOBALS['LANG']?->sL(
+        return (string) (($GLOBALS['LANG'] ?? null)?->sL(
             'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:' . $key,
         ) ?? $key);
     }
@@ -139,7 +139,7 @@ abstract class AbstractAiUniverseModuleController
      */
     protected function translateJs(string $key): string
     {
-        return (string) ($GLOBALS['LANG']?->sL(
+        return (string) (($GLOBALS['LANG'] ?? null)?->sL(
             'LLL:' . self::LOCALLANG_JS . ':' . $key,
         ) ?? $key);
     }
@@ -206,6 +206,15 @@ abstract class AbstractAiUniverseModuleController
                 $tabGroups[$group][$key]['active'] = self::fluidFlag((bool) ($tab['active'] ?? false));
             }
         }
+        $navGroupSections = $this->moduleTabUtility->buildGroupSections(
+            $activeTabKey,
+            fn(string $key): string => $this->translateModule($key),
+            fn(string $route): string => (string) $this->uriBuilder->buildUriFromRoute($route, $routeParams),
+            $backendUser,
+        );
+        foreach ($navGroupSections as $index => $section) {
+            $navGroupSections[$index]['active'] = self::fluidFlag($section['active']);
+        }
 
         $tabContent = $this->moduleTabUtility->buildTabContent(
             $activeTabKey,
@@ -263,6 +272,7 @@ abstract class AbstractAiUniverseModuleController
                 'tabs' => $tabs,
                 'primaryTabs' => $tabGroups['primary'],
                 'utilityTabs' => $tabGroups['utility'],
+                'navGroupSections' => $navGroupSections,
                 'tabAccessDenied' => $tabAccessDenied,
             ],
             $tabContent,

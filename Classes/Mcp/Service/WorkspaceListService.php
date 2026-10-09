@@ -85,7 +85,7 @@ readonly class WorkspaceListService
 
     private function translateLiveTitle(): string
     {
-        return (string) ($GLOBALS['LANG']?->sL(
+        return (string) (($GLOBALS['LANG'] ?? null)?->sL(
             'LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:module.mcpServer.workspace.live',
         ) ?? 'Live');
     }

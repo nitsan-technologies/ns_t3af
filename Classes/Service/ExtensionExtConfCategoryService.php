@@ -31,7 +31,6 @@ use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\View\ViewFactoryData;
 use TYPO3\CMS\Core\View\ViewFactoryInterface;
-use TYPO3\CMS\Fluid\View\StandaloneView;
 
 /**
  * Reads and writes extension configuration for AI Features drawer scopes (provider-driven).
@@ -971,38 +970,16 @@ final class ExtensionExtConfCategoryService
      */
     private function renderNamedTemplate(string $template, array $variables, ?ServerRequestInterface $request = null): string
     {
-        $templateRootPaths = ['EXT:ns_t3af/Resources/Private/Templates/'];
-        $partialRootPaths = ['EXT:ns_t3af/Resources/Private/Partials/'];
-        $layoutRootPaths = ['EXT:ns_t3af/Resources/Private/Layouts/'];
-
-        if (interface_exists(ViewFactoryInterface::class) && class_exists(ViewFactoryData::class)) {
-            $viewFactory = GeneralUtility::makeInstance(ViewFactoryInterface::class);
-            $view = $viewFactory->create(new ViewFactoryData(
-                templateRootPaths: $templateRootPaths,
-                partialRootPaths: $partialRootPaths,
-                layoutRootPaths: $layoutRootPaths,
-                request: $request,
-            ));
-            $view->assignMultiple($variables);
-
-            return $view->render($template);
-        }
-
-        if (!class_exists(StandaloneView::class)) {
-            return '';
-        }
-
-        $view = GeneralUtility::makeInstance(StandaloneView::class);
-        if ($request !== null) {
-            $view->setRequest($request);
-        }
-        $view->setTemplateRootPaths($templateRootPaths);
-        $view->setPartialRootPaths($partialRootPaths);
-        $view->setLayoutRootPaths($layoutRootPaths);
-        $view->setTemplate($template);
+        $viewFactory = GeneralUtility::makeInstance(ViewFactoryInterface::class);
+        $view = $viewFactory->create(new ViewFactoryData(
+            templateRootPaths: ['EXT:ns_t3af/Resources/Private/Templates/'],
+            partialRootPaths: ['EXT:ns_t3af/Resources/Private/Partials/'],
+            layoutRootPaths: ['EXT:ns_t3af/Resources/Private/Layouts/'],
+            request: $request,
+        ));
         $view->assignMultiple($variables);
 
-        return $view->render();
+        return $view->render($template);
     }
 
     /**

@@ -121,6 +121,27 @@ final class ModelDiscoveryServiceTest extends TestCase
         self::assertSame([], $models);
     }
 
+    public function testGeminiLivePrefixedIdDedupesCatalogEntry(): void
+    {
+        $cache = $this->createMock(CacheFacadeInterface::class);
+        $cache->method('get')->willReturn(false);
+
+        $probe = $this->createMock(LiveModelProbe::class);
+        $probe->method('probe')->willReturn(['gemini-3.5-flash']);
+        $reader = $this->createMock(SymfonyAiCatalogReader::class);
+        $reader->method('read')->willReturn([
+            new ModelInfo('gemini-3.5-flash', 'gemini-3.5-flash', [Capability::CHAT], 'catalog'),
+            new ModelInfo('gemini-embedding-001', 'gemini-embedding-001', [Capability::EMBEDDINGS], 'catalog'),
+        ]);
+
+        $service = new ModelDiscoveryService($probe, $reader, new CapabilityInferrer(), $cache, new ModelCatalogFilter());
+        $models = $service->discover($this->provider('symfony.gemini'));
+
+        $ids = array_map(static fn(ModelInfo $m): string => $m->id, $models);
+        self::assertCount(1, array_filter($ids, static fn(string $id): bool => $id === 'gemini-3.5-flash'));
+        self::assertNotContains('models/gemini-3.5-flash', $ids);
+    }
+
     public function testMergeFiltersRetiredCatalogModels(): void
     {
         $cache = $this->createMock(CacheFacadeInterface::class);

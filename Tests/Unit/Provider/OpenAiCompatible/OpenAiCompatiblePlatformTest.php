@@ -374,6 +374,38 @@ final class OpenAiCompatiblePlatformTest extends TestCase
         }
     }
 
+    public function testToolRoundsAreSentInOpenAiShape(): void
+    {
+        $sent = null;
+        $factory = $this->createMock(RequestFactory::class);
+        $factory->expects(self::once())
+            ->method('request')
+            ->willReturnCallback(static function (string $url, string $method, array $options) use (&$sent): Response {
+                $sent = $options['json'] ?? null;
+
+                return new Response(200, [], '{"choices":[{"message":{"content":"Done"}}]}');
+            });
+
+        $adapter = new OpenAiCompatibleAdapter(new CredentialCipher(), $factory);
+        $provider = $this->makeProvider(Provider::ADAPTER_OPENAI_COMPATIBLE, 'https://api.example.com/v1', '');
+
+        $this->platform($adapter, $provider)->invokeWithTools('gpt-4o', [
+            ['role' => 'user', 'content' => 'Title of page 49?'],
+            ['role' => 'assistant', 'content' => null, 'tool_calls' => [['id' => 'call_1', 'name' => 'pages_get', 'arguments' => ['uid' => 49]]]],
+            ['role' => 'tool', 'tool_call_id' => 'call_1', 'name' => 'pages_get', 'content' => 'AI ChEddi'],
+            ['role' => 'assistant', 'content' => null, 'tool_calls' => [['id' => 'call_2', 'name' => 'site_languages_list', 'arguments' => []]]],
+        ], []);
+
+        self::assertIsArray($sent);
+        self::assertSame([
+            'role' => 'assistant',
+            'content' => null,
+            'tool_calls' => [['id' => 'call_1', 'type' => 'function', 'function' => ['name' => 'pages_get', 'arguments' => '{"uid":49}']]],
+        ], $sent['messages'][1]);
+        self::assertSame(['role' => 'tool', 'tool_call_id' => 'call_1', 'content' => 'AI ChEddi'], $sent['messages'][2]);
+        self::assertSame('{}', $sent['messages'][3]['tool_calls'][0]['function']['arguments']);
+    }
+
     private function platform(OpenAiCompatibleAdapter $adapter, Provider $provider): OpenAiCompatiblePlatform
     {
         $platform = $adapter->platform($provider);
