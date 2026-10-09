@@ -185,6 +185,8 @@ Phase 4 child tools (all with `McpToolSeverity`, `McpToolIntent` EN/DE, `agent.t
 - **Entitlements** — `EntitlementResolver` locks tools when owner extension inactive.
 - **Satellite write tools** — implement planning in child or use `write_table` / confirmation flow per classification doc.
 
+Permissions and refusals (2.0.0): the table is checked before the page; a field the editor may not change (`exclude` fields need the `non_exclude_fields` grant, structural fields such as CType, colPos, hidden, sorting stay unchanged on a create the user may not make) is left out of the card and the card is dropped when nothing is left (`WriteTableTool`, `McpRecordPlanService`, `RecordAccessGate::canModifyField()/withoutForbiddenFields()`; plan context `notAllowedFields`). Refused, hidden, not-permitted, preview-failed and failed-apply requests are logged with success 0 (`AgentToolTurnProcessor::logRefusedPlan()`, `AgentAjaxController`). The "[The editor confirmed …]" follow-up is ignored by `AgentRequestChecklist`, and so is a header named as a field of the requested element ("with the header X", including the value that follows it, which may contain the word "header").
+
 ---
 
 ## Do / Don't

@@ -25,6 +25,14 @@ DualMode write tools that implement `McpPreviewableToolInterface` never blind-ap
 - The apply response carries `result.readback[*].recordLabel` + `fieldLabels` and `links` (per record: Open page, Edit, View on website; at most 3 records, only readable tables).
 - With `agentContinueAfterConfirm` on, a confirm or decline on a card the runner produced sends one `continuation` turn (`{outcome: applied|declined, label, result}`). The server stores it as a hidden user message and tells the model what happened, so a multi-step request continues without the editor typing "continue". **Execute all** merges the confirmed cards into one continuation.
 
+## What the editor may change
+
+- The agent checks the editor's own rights before it prepares a card: table, page, field (`exclude` fields need the grant) and file. A request that is not allowed is refused up front, with the reason in plain words, and no card is shown.
+- A field the editor may not change is left out of the card. If nothing is left, there is no card.
+- Every refused, hidden or failed request (including a change that could not be prepared or applied) is written to the AI logs with `success = 0`.
+- A new content element gets `colPos` 0 when the plan leaves the column out. A new page can be placed before or after a named page; "after A named U" uses page A.
+- The word "header" as a field of a requested element ("a text element with the header X") is not a second Create Header step, whatever the value contains.
+
 ## Array parameters
 
 Tool parameters typed `array` get a JSON-schema `items` (or `type: object` for `array<string, …>`) from the `@param` docblock (`AgentToolDefinitionMapper::arrayShape`). OpenAI rejects array parameters without `items`. Put the docblock above the `#[McpTool]` attribute.

@@ -121,6 +121,12 @@ not by the tool name in the audit log).
 (``[{"uid_local": N, ...}]``) are attached **after** that commit in a separate DataHandler pass, so a
 file-attach failure does not roll back the create or update. ``write_table`` does not return a ``batchId``.
 
+``records_apply`` and ``write_table`` refuse a table, and a field, that the backend user may not edit (a field
+marked ``exclude`` in the TCA needs the field grant, and structural fields such as ``CType``, ``colPos`` or
+``hidden`` are not changed through a create the user may not make). A text field that holds one run of more than
+256 KB without a space or line break is refused with a clear message, because TYPO3 cannot index it. ``map`` in
+the reply is an empty object (``{}``) when nothing new was created, also after ``records_undo``.
+
 Records written through MCP tools are recorded as AI-involved in the AI Label module (source ``mcp``). Switch this
 off with the extension setting ``mcpMarkWritesAsAi``.
 
@@ -169,6 +175,10 @@ Security
 --------
 
 * Tools respect backend user permissions and workspace context
+* The MCP Server settings (mode, advanced settings, scopes, IP allowlist, mTLS, analytics export, health ping)
+  need an administrator, or the AI Foundation module with the MCP Server tab visible
+* ``cache_clear`` with scope ``pages`` (all page caches) needs ``options.clearCache.pages = 1`` for non-admins,
+  as in TYPO3 core; scope ``all`` needs ``options.clearCache.all``; one page needs edit rights on it
 * OAuth and URL tokens are configured on the :ref:`MCP Server <mcp-server>` screen
 * Limit which admin users may authorize external agents
 * Use draft workspaces for ``write_table`` tests
