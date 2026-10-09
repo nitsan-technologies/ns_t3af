@@ -24,6 +24,7 @@ Key capabilities
 ----------------
 
 * **AI Providers** — Connect OpenAI, Claude, Gemini, and other vendors with encrypted API keys
+* **AI Agent** — Backend right-edge assistant (Ctrl/Cmd+Shift+K): ask, preview, then apply
 * **MCP Server** — Expose TYPO3 to Cursor, Claude Desktop, and other MCP clients
 * **AI Context** — Store brand voice once for on-brand AI output
 * **AI Prompts & Features** — Shared prompt templates and per-feature provider assignment
