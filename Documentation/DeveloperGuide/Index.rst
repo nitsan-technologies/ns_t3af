@@ -31,5 +31,6 @@ Reference extension
    CustomFeatureCards/Index
    FeatureProviderOverrides/Index
    CustomMcpTools/Index
+   McpFileUploads/Index
    CustomAccessCatalogs/Index
    AiLabelIntegration/Index

@@ -27,6 +27,7 @@ use NITSAN\NsT3AF\Api\ImageGenerationResponse;
 use NITSAN\NsT3AF\Credits\CreditsApiEndpoint;
 use NITSAN\NsT3AF\Credits\CreditsProviderIdentifier;
 use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
+use NITSAN\NsT3AF\Credits\Exception\CreditsContentRemovedException;
 use NITSAN\NsT3AF\Credits\Exception\InsufficientCreditsException;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
 use NITSAN\NsT3AF\Domain\Model\Provider;
@@ -119,6 +120,11 @@ class ProxyImageExecutor
         }
 
         $latencyMs = (int) (microtime(true) * 1000) - $start;
+        if (CreditsContentRemovedException::isContentRemoved($payload)) {
+            // Redacted idempotent replay: never decode/save empty media or record a receipt.
+            throw CreditsContentRemovedException::fromPayload($payload);
+        }
+
         $images = $this->decodeImages($payload, $provider, $options, $input, $latencyMs, $mode);
         $credits = is_array($payload['credits'] ?? null) ? $payload['credits'] : [];
         $charged = is_array($payload['charged'] ?? null) ? $payload['charged'] : [];

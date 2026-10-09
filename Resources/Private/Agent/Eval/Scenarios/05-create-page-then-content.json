@@ -1,0 +1,46 @@
+{
+  "id": "05-create-page-then-content",
+  "title": "Page first, then its content with the new page uid as pid",
+  "turns": [
+    {
+      "message": "Create a new subpage \"Eval: AI Universe vs Symfony\" with two short text content elements",
+      "expect": {
+        "anyTool": [
+          "write_table",
+          "t3ai_create_page_simple",
+          "t3ai_create_page_advanced",
+          "t3ai_create_page_structure"
+        ],
+        "card": true,
+        "forbidTools": [
+          "content_delete"
+        ]
+      }
+    },
+    {
+      "applied": {
+        "table": "pages",
+        "uid": 990001,
+        "values": {
+          "title": "Eval: AI Universe vs Symfony",
+          "pid": "{{pageId}}"
+        }
+      },
+      "expect": {
+        "anyTool": [
+          "write_table",
+          "t3ai_create_content_element"
+        ],
+        "card": true,
+        "argumentsContain": {
+          "pid": 990001
+        },
+        "forbidTools": [
+          "content_delete",
+          "pages_search",
+          "pages_tree"
+        ]
+      }
+    }
+  ]
+}

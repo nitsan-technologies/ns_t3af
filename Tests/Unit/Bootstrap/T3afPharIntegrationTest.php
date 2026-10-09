@@ -137,23 +137,80 @@ final class T3afPharIntegrationTest extends TestCase
     }
 
     /**
+     * Dummy factory arguments per bridge type.
+     *
+     * Most bridges take an API key and nothing else. Ollama takes a base URL,
+     * and Azure is addressed per deployment rather than per key, so it needs
+     * four. Types absent here fall back to a single dummy key.
+     *
+     * @var array<string, list<string>>
+     */
+    private const FACTORY_ARGS = [
+        'symfony.ollama' => ['http://localhost:11434'],
+        'symfony.azure' => [
+            'https://example.openai.azure.com',
+            'test-deployment',
+            '2024-10-21',
+            'sk-test-dummy-key',
+        ],
+    ];
+
+    /** @var list<string> */
+    private const DEFAULT_FACTORY_ARGS = ['sk-test-dummy-key'];
+
+    /**
      * @param class-string $factory
      */
     private static function createTestPlatform(string $factory, string $type): object
     {
-        if (method_exists($factory, 'createPlatform')) {
-            if ($type === 'symfony.ollama') {
-                return $factory::createPlatform('http://localhost:11434');
+        $args = self::FACTORY_ARGS[$type] ?? self::DEFAULT_FACTORY_ARGS;
+
+        foreach (['createPlatform', 'createProvider', 'create'] as $method) {
+            if (!method_exists($factory, $method)) {
+                continue;
             }
 
-            return $factory::createPlatform('sk-test-dummy-key');
+            self::assertFactoryArgsSufficient($factory, $method, $type, $args);
+
+            return $factory::$method(...$args);
         }
 
-        if (method_exists($factory, 'createProvider')) {
-            return $factory::createProvider('sk-test-dummy-key');
+        self::fail(sprintf('%s: %s exposes no known factory method', $type, $factory));
+    }
+
+    /**
+     * Report a changed factory signature instead of an ArgumentCountError.
+     *
+     * Upstream grew Azure's factory to four required arguments; the raw error
+     * names neither the bridge nor what it now wants, so it reads as a phar
+     * fault rather than a signature change. Add the type to FACTORY_ARGS when
+     * this trips.
+     *
+     * @param class-string $factory
+     * @param list<string> $args
+     */
+    private static function assertFactoryArgsSufficient(string $factory, string $method, string $type, array $args): void
+    {
+        $reflection = new \ReflectionMethod($factory, $method);
+        $required = $reflection->getNumberOfRequiredParameters();
+        if ($required <= count($args)) {
+            return;
         }
 
-        return $factory::create('sk-test-dummy-key');
+        $missing = [];
+        foreach (array_slice($reflection->getParameters(), count($args), $required - count($args)) as $parameter) {
+            $missing[] = $parameter->getName();
+        }
+
+        self::fail(sprintf(
+            '%s: %s::%s() requires %d args but the test supplies %d (missing: %s) — add it to FACTORY_ARGS.',
+            $type,
+            $factory,
+            $method,
+            $required,
+            count($args),
+            implode(', ', $missing),
+        ));
     }
 
     /**

@@ -21,8 +21,11 @@ namespace NITSAN\NsT3AF\Tests\Unit\Credits;
 
 use NITSAN\NsT3AF\Api\AiOptions;
 use NITSAN\NsT3AF\Credits\CreditsFeatureKeyCatalog;
+use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
+use NITSAN\NsT3AF\Credits\Exception\CreditsContentRemovedException;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetSseStreamParser;
+use NITSAN\NsT3AF\Credits\Service\CreditsChargeRecorder;
 use NITSAN\NsT3AF\Credits\Service\ProxyAiExecutor;
 use PHPUnit\Framework\TestCase;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -83,5 +86,99 @@ final class ProxyAiExecutorLegacyUnwrapTest extends TestCase
         );
 
         self::assertSame('A concise summary', $response->content);
+    }
+
+    public function testCompleteThrowsContentRemovedOnRedactedReplayWithoutReceipt(): void
+    {
+        $apiClient = $this->createMock(T3PlanetApiClient::class);
+        $apiClient->method('charge')->willReturn([
+            'status' => true,
+            'content' => '',
+            'content_removed' => true,
+            'warnings' => [['code' => 'content_redacted_retention', 'message' => 'removed']],
+            'credits' => [],
+            'charged' => ['amount' => 1],
+        ]);
+
+        $connection = $this->createMock(\TYPO3\CMS\Core\Database\Connection::class);
+        $connection->expects(self::never())->method('insert');
+        $pool = $this->createMock(\TYPO3\CMS\Core\Database\ConnectionPool::class);
+        $pool->method('getConnectionForTable')->willReturn($connection);
+
+        $executor = new ProxyAiExecutor(
+            $apiClient,
+            new T3PlanetSseStreamParser(),
+            $this->tokenResolverWithBearer(),
+            $this->domainResolver(),
+            new \NITSAN\NsT3AF\Credits\Service\CreditsChargeRecorder(new \NITSAN\NsT3AF\Credits\Service\LocalReceiptCache($pool)),
+            $this->createMock(EventDispatcherInterface::class),
+            $this->telemetryService(),
+            $this->featureKeyMapper(),
+            $this->createMock(LoggerInterface::class),
+        );
+
+        try {
+            $executor->complete('Page about TYPO3', new AiOptions(featureKey: 'seo.meta_description', extensionKey: 'ns_t3ai'));
+            self::fail('Expected CreditsContentRemovedException');
+        } catch (CreditsContentRemovedException $exception) {
+            self::assertSame('content_removed', $exception->errorCode);
+            self::assertSame('content_redacted_retention', $exception->extra['warnings'][0]['code']);
+        }
+    }
+
+    public function testCompleteRetriesTransientUpstreamErrorOnceWithFreshUuid(): void
+    {
+        $uuids = [];
+        $apiClient = $this->createMock(T3PlanetApiClient::class);
+        $apiClient->expects(self::exactly(2))
+            ->method('charge')
+            ->willReturnCallback(static function (string $domain, string $uuid) use (&$uuids): array {
+                $uuids[] = $uuid;
+                if (count($uuids) === 1) {
+                    throw new CreditsApiException('upstream_ai_error', 502, 'boom', ['upstream_status' => 503]);
+                }
+
+                return [
+                    'status' => true,
+                    'model' => 'gpt-4o',
+                    'content' => 'ok',
+                    'credits' => [],
+                    'charged' => ['amount' => 1, 'feature_key' => CreditsFeatureKeyCatalog::SEO_PAGE_METADATA],
+                ];
+            });
+
+        $executor = $this->executorFor($apiClient);
+        $response = $executor->complete('Page', new AiOptions(featureKey: 'seo.meta_description', extensionKey: 'ns_t3ai'));
+
+        self::assertSame('ok', $response->content);
+        self::assertNotSame($uuids[0], $uuids[1]);
+    }
+
+    public function testCompleteDoesNotRetryContextLengthExceeded(): void
+    {
+        $apiClient = $this->createMock(T3PlanetApiClient::class);
+        $apiClient->expects(self::once())
+            ->method('charge')
+            ->willThrowException(new CreditsApiException('context_length_exceeded', 422, 'too long', ['upstream_status' => 503]));
+
+        $executor = $this->executorFor($apiClient);
+
+        $this->expectException(CreditsApiException::class);
+        $executor->complete('Page', new AiOptions(featureKey: 'seo.meta_description', extensionKey: 'ns_t3ai'));
+    }
+
+    private function executorFor(T3PlanetApiClient $apiClient): ProxyAiExecutor
+    {
+        return new ProxyAiExecutor(
+            $apiClient,
+            new T3PlanetSseStreamParser(),
+            $this->tokenResolverWithBearer(),
+            $this->domainResolver(),
+            $this->createMock(CreditsChargeRecorder::class),
+            $this->createMock(EventDispatcherInterface::class),
+            $this->telemetryService(),
+            $this->featureKeyMapper(),
+            $this->createMock(LoggerInterface::class),
+        );
     }
 }

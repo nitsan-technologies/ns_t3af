@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Credits;
 
 use NITSAN\NsT3AF\Api\ImageGenerationOptions;
+use NITSAN\NsT3AF\Credits\Exception\CreditsContentRemovedException;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
 use NITSAN\NsT3AF\Credits\Service\ProxyImageExecutor;
 use PHPUnit\Framework\TestCase;
@@ -73,5 +74,36 @@ final class ProxyImageExecutorTest extends TestCase
 
         self::assertSame('gpt-image-1', $response->modelId);
         self::assertCount(1, $response->images);
+    }
+
+    public function testGenerateThrowsContentRemovedWithoutReceipt(): void
+    {
+        $apiClient = $this->createMock(T3PlanetApiClient::class);
+        $apiClient->method('generateImage')->willReturn([
+            'status' => true,
+            'content_removed' => true,
+            'warnings' => [['code' => 'content_redacted_retention']],
+            'credits' => [],
+            'charged' => ['amount' => 50],
+        ]);
+
+        $connection = $this->createMock(\TYPO3\CMS\Core\Database\Connection::class);
+        $connection->expects(self::never())->method('insert');
+        $pool = $this->createMock(\TYPO3\CMS\Core\Database\ConnectionPool::class);
+        $pool->method('getConnectionForTable')->willReturn($connection);
+
+        $executor = new ProxyImageExecutor(
+            $apiClient,
+            $this->tokenResolverWithBearer(),
+            $this->domainResolver(),
+            $this->featureKeyMapper(),
+            new \NITSAN\NsT3AF\Credits\Service\CreditsChargeRecorder(new \NITSAN\NsT3AF\Credits\Service\LocalReceiptCache($pool)),
+            $this->createMock(EventDispatcherInterface::class),
+            $this->telemetryService(),
+            $this->createMock(LoggerInterface::class),
+        );
+
+        $this->expectException(CreditsContentRemovedException::class);
+        $executor->generate('A red balloon', new ImageGenerationOptions(extensionKey: 'ns_t3ai', featureKey: 'media.dalle'));
     }
 }

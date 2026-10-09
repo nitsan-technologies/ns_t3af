@@ -202,18 +202,13 @@ class AiUniverseUtilityHelper
     }
 
     /**
-     * Page-tree navigation component id for backend modules (v12–v14).
-     *
-     * v13.1+ / v14: @typo3/backend/tree/page-tree-element
-     * v12: @typo3/backend/page-tree/page-tree-element
+     * Page-tree navigation component id for backend modules (v13+).
      *
      * @api
      */
     public static function getPageTreeNavigationComponent(): string
     {
-        return self::getTypo3MajorVersion() >= 13
-            ? '@typo3/backend/tree/page-tree-element'
-            : '@typo3/backend/page-tree/page-tree-element';
+        return '@typo3/backend/tree/page-tree-element';
     }
 
     /**

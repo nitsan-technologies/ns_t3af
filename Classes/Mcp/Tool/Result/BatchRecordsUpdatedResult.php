@@ -33,5 +33,6 @@ readonly class BatchRecordsUpdatedResult
         public array $updatedFields,
         public array $ignoredFields = [],
         public array $skippedUids = [],
+        public string $batchId = '',
     ) {}
 }

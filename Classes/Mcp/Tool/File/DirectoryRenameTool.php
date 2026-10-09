@@ -26,24 +26,114 @@ namespace NITSAN\NsT3AF\Mcp\Tool\File;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
+use NITSAN\NsT3AF\Mcp\Contract\McpArgumentCheckInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpFalStorageToolInterface;
+use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
+use NITSAN\NsT3AF\Mcp\Service\McpFalPlanBuilder;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 
-readonly class DirectoryRenameTool implements McpFalStorageToolInterface
+#[McpToolSeverity(ToolSeverity::Write)]
+readonly class DirectoryRenameTool implements McpArgumentCheckInterface, McpFalStorageToolInterface, McpPlannableToolInterface
 {
-    public function __construct(private FileService $fileService) {}
+    public function __construct(
+        private FileService $fileService,
+        private McpFalPlanBuilder $falPlanBuilder,
+    ) {}
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public function checkArguments(array $arguments): void
+    {
+        $storageUid = (int) ($arguments['storageUid'] ?? 1);
+        $directoryIdentifier = trim((string) ($arguments['directoryIdentifier'] ?? ''));
+        $newName = trim((string) ($arguments['newName'] ?? ''));
+
+        if ($directoryIdentifier === '' && $newName === '') {
+            throw new \InvalidArgumentException(
+                'Which folder should be renamed, and what should the new name be? Example: /folder_rename /user_upload/reports/ archive',
+            );
+        }
+        if ($directoryIdentifier === '') {
+            throw new \InvalidArgumentException(
+                'Which folder should be renamed to "' . $newName . '"? Give the folder path, for example /user_upload/reports/.',
+            );
+        }
+        if ($this->isStorageRoot($directoryIdentifier)) {
+            throw new \InvalidArgumentException('The storage root cannot be renamed.');
+        }
+        if ($newName === '') {
+            throw new \InvalidArgumentException(
+                'What should the new name of "' . $directoryIdentifier . '" be? The name must not contain a slash.',
+            );
+        }
+        if ($this->nameIsInvalid($newName)) {
+            throw new \InvalidArgumentException('The new name must be a single folder name without a slash or backslash.');
+        }
+        try {
+            $exists = $this->fileService->directoryExists($storageUid, $directoryIdentifier);
+        } catch (\Throwable $exception) {
+            throw new \InvalidArgumentException($exception->getMessage(), 0, $exception);
+        }
+        if (!$exists) {
+            throw new \InvalidArgumentException('That folder was not found: ' . $directoryIdentifier);
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public function plan(array $arguments): ToolPlan
+    {
+        $this->checkArguments($arguments);
+        $storageUid = (int) ($arguments['storageUid'] ?? 1);
+        $directoryIdentifier = trim((string) ($arguments['directoryIdentifier'] ?? ''));
+        $newName = trim((string) ($arguments['newName'] ?? ''));
+
+        return $this->falPlanBuilder->directoryPathChange(
+            'rename',
+            'directory_rename',
+            '_rename',
+            $storageUid,
+            $directoryIdentifier,
+            'rename to ' . $newName,
+            ['newName' => $newName],
+        );
+    }
 
     #[McpTool(
         name: 'directory_rename',
-        description: 'Rename a directory. Provide the directory identifier and the new name.',
+        description: 'Rename a directory. Provide the directory identifier and the new name. Requires mcpAllowDestructiveFileOps.',
     )]
     public function execute(string $directoryIdentifier, string $newName, int $storageUid = 1): string
     {
-        $this->fileService->renameDirectory($storageUid, $directoryIdentifier, $newName);
+        try {
+            $this->fileService->renameDirectory($storageUid, $directoryIdentifier, $newName);
 
-        return json_encode(
-            ['directoryIdentifier' => $directoryIdentifier, 'newName' => $newName, 'renamed' => true],
-            JSON_THROW_ON_ERROR,
-        );
+            return json_encode(
+                ['directoryIdentifier' => $directoryIdentifier, 'newName' => $newName, 'renamed' => true],
+                JSON_THROW_ON_ERROR,
+            );
+        } catch (\Throwable $exception) {
+            return json_encode(['error' => $exception->getMessage()], JSON_THROW_ON_ERROR);
+        }
+    }
+
+    private function nameIsInvalid(string $newName): bool
+    {
+        return $newName === '.'
+            || $newName === '..'
+            || str_contains($newName, '/')
+            || str_contains($newName, '\\');
+    }
+
+    private function isStorageRoot(string $directoryIdentifier): bool
+    {
+        $normalized = trim(str_replace('\\', '/', $directoryIdentifier), '/');
+
+        return $normalized === '';
     }
 }

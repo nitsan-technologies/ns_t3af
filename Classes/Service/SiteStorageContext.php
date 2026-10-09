@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Service;
 
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
+use TYPO3\CMS\Core\Routing\PageArguments;
 use TYPO3\CMS\Core\Site\SiteFinder;
 
 /**
@@ -66,6 +67,12 @@ final class SiteStorageContext
             $body = $request->getParsedBody();
             if (is_array($body)) {
                 $pageId = (int) ($body['id'] ?? $body['pageId'] ?? $body['pid'] ?? $body['uid'] ?? 0);
+            }
+        }
+        if ($pageId <= 0) {
+            $routing = $request->getAttribute('routing');
+            if ($routing instanceof PageArguments) {
+                $pageId = $routing->getPageId();
             }
         }
 

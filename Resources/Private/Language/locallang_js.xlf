@@ -36,6 +36,9 @@
       <trans-unit id="credits.js.checkout.openNewTab" resname="credits.js.checkout.openNewTab">
         <source>Open in new tab</source>
       </trans-unit>
+      <trans-unit id="credits.js.checkout.iframeBlocked" resname="credits.js.checkout.iframeBlocked">
+        <source>Checkout could not open in this window (browser security). It was opened in a new tab instead.</source>
+      </trans-unit>
       <trans-unit id="credits.js.modal.switchTitle" resname="credits.js.modal.switchTitle">
         <source>Switch AI Provider Mode?</source>
       </trans-unit>

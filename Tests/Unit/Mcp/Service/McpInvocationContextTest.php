@@ -158,4 +158,37 @@ final class McpInvocationContextTest extends TestCase
 
         self::assertSame(1, $backendUser->workspace);
     }
+
+    #[Test]
+    public function clearPutsTheBackendUserBackIntoTheWorkspaceItWasIn(): void
+    {
+        $backendUser = $this->createMock(BackendUserAuthentication::class);
+        $backendUser->workspace = 3;
+        $backendUser->expects(self::once())->method('setTemporaryWorkspace')->with(0)->willReturn(true);
+        $GLOBALS['BE_USER'] = $backendUser;
+
+        $context = new McpInvocationContext($this->createMock(WorkspaceListService::class));
+        // What applyFromArguments() remembers when a call overrides the workspace.
+        $property = new \ReflectionProperty($context, 'workspaceBeforeOverride');
+        $property->setValue($context, 0);
+
+        $context->clear();
+
+        self::assertNull($property->getValue($context));
+    }
+
+    #[Test]
+    public function clearLeavesTheWorkspaceAloneWhenNothingWasOverridden(): void
+    {
+        $backendUser = $this->createMock(BackendUserAuthentication::class);
+        $backendUser->workspace = 3;
+        $backendUser->expects(self::never())->method('setTemporaryWorkspace');
+        $GLOBALS['BE_USER'] = $backendUser;
+
+        $context = new McpInvocationContext($this->createMock(WorkspaceListService::class));
+        $context->applyFromArguments(['workspaceId' => 0]);
+        $context->clear();
+
+        self::assertSame(3, $backendUser->workspace);
+    }
 }

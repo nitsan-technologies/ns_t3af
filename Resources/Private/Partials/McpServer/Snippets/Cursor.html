@@ -1,5 +1,11 @@
-<ol class="aiu-mcp-steps small mb-0" xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers">
-    <li><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:module.mcpServer.snippet.cursor.step1" /></li>
-    <li><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:module.mcpServer.snippet.cursor.step2" arguments="{0: serverUrl}" /></li>
-    <li><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:module.mcpServer.snippet.cursor.step3" /></li>
-</ol>
+<div xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers">
+    <ol class="aiu-mcp-steps small mb-0">
+        <li><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:module.mcpServer.snippet.cursor.step1" /></li>
+        <li><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:module.mcpServer.snippet.cursor.step2" arguments="{0: serverUrl}" /></li>
+        <li><f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf:module.mcpServer.snippet.cursor.step3" /></li>
+    </ol>
+    <f:render partial="McpServer/Snippets/HttpAuthIntro" />
+    <div class="aiu-mcp-code mt-2">
+        <pre class="aiu-mcp-code__pre mb-0">{httpAuthCursorJson}</pre>
+    </div>
+</div>

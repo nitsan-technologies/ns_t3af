@@ -116,12 +116,12 @@ Governance ships UserTSconfig budgets (period / maxCost / maxTokens / maxRequest
 ### CC-9 — Quality bars
 Reconciled with upstream `52258c7` ("[TASK] code improvements") tooling:
 - **Existing tooling (already in repo).** `composer test` (PHPUnit 13), `composer stan` (PHPStan 2.1), `composer cs:check` (php-cs-fixer 3.94). Vendor at `.Build/vendor/`. Tests under `Tests/Unit/...` with three reference tests (`BaseClientTest`, `AiEngineConfigurationTest`, `AiUniverseChartHelperTest`). **Use these — do not introduce a parallel `runTests.sh` toolchain.**
-- **PHP / TYPO3 floors.** Bumped on v2.x branch to **PHP 8.1+ / TYPO3 12.4+**. Update `composer.json` `require` (currently `^7.4 || ^8` + `^11 || ^12 || ^13`) and `ext_emconf.php` constraints as part of Feature 1. v1.x branch retains upstream floors.
+- **PHP / TYPO3 floors.** v2.x line: **PHP 8.2+ / TYPO3 `^13.4 || ^14.3`** (see `composer.json` / `ext_emconf.php`). v1.x stays on TYPO3 12 for legacy customers.
 - **strict_types.** `declare(strict_types=1);` mandatory in every new PHP file. Existing files migrated opportunistically when touched.
 - **PHPStan.** Repo baseline stays at level 3 globally (upstream `phpstan.neon`). New namespaces `NITSAN\NsT3AF\Provider\*`, `NITSAN\NsT3AF\Api\*`, `NITSAN\NsT3AF\Service\AiService` opt into **level 8** via a path-scoped second config `phpstan-strict.neon` (or a `paths` override in the existing file). New code must pass level 8; legacy untouched at level 3.
 - **Architecture tests (phpat).** Controllers cannot import adapters directly — must go through `AdapterRegistry`. Add `composer require --dev phpat/phpat` + `Tests/Architecture/` (port from `nr_llm`).
 - **Test coverage targets.** Unit ≥ 80% on new code; mutation MSI ≥ 70% (Infection) — Infection install deferred to Feature 2 if not yet present.
-- **CI matrix.** Expand `.github/workflows/ci.yml` from current single PHP 8.4 entry to PHP 8.1 / 8.2 / 8.3 / 8.4 × TYPO3 12.4 / 13.4. Run `cs:check` (still non-blocking on baseline), `stan`, `test` per cell. Architecture tests added once phpat is wired.
+- **CI matrix.** `.github/workflows/core13.yml` + `core14.yml` — PHP 8.2 / 8.3 / 8.4 × TYPO3 13.4 / 14.3.
 
 ## Architecture
 
@@ -316,7 +316,7 @@ Header in each ported file:
 - `ext_localconf.php` — register upgrade wizard, register Services.php compiler pass
 - `Classes/Controller/Backend/ModuleController.php` — link Dashboard "Providers" card to new route
 - `Resources/Private/Language/locallang_mod.xlf` — add `provider.*` keys (form labels, status strings, capability labels, errors)
-- `composer.json` — bump v2.x branch (`"branch-alias": {"dev-main": "2.0.x-dev"}`); raise floor to PHP 8.1+, TYPO3 12.4+ for v2 line. Add `suggest` block for `lochmueller/seal_ai`, `lochmueller/seal`, `symfony/ai-platform`. v1.x stays on existing constraints. (User confirmation of branch separation can happen during implementation.)
+- `composer.json` — v2.x line: PHP `>=8.2 <9`, TYPO3 `^13.4 || ^14.3`; package version `2.0.0`. Add `suggest` block for `lochmueller/seal_ai`, `lochmueller/seal`, `symfony/ai-platform` as needed. v1.x stays on TYPO3 12 for legacy customers.
 
 ## Upstream merge notes (commit `52258c7`)
 
@@ -327,8 +327,8 @@ This commit ("[TASK] code improvements", merged 2026-05-07) landed dev tooling t
 - **3 unit tests already exist** as reference for new tests: `Tests/Unit/Client/BaseClientTest.php`, `Tests/Unit/Configuration/AiEngineConfigurationTest.php`, `Tests/Unit/Helper/AiUniverseChartHelperTest.php`. Match their style (PHPUnit 13, no Functional layer yet).
 - **`.Build/vendor/` is the autoload root.** Run `composer install` to populate before tests.
 - **`composer.json` `require-dev`** locked to `phpunit/phpunit ^13.0`, `phpstan/phpstan ^2.1`, `friendsofphp/php-cs-fixer ^3.94`. Don't downgrade.
-- **PHP / TYPO3 floors in upstream `composer.json` (`^7.4 || ^8` + `^11 || ^12 || ^13`)** to be raised by Feature 1 — open PR with floor bump + corresponding ext_emconf change.
-- **CI is currently PHP 8.4 only** — expand matrix as part of Feature 1 alongside floor bump.
+- **PHP / TYPO3 floors** are `^13.4 || ^14.3` / PHP 8.2+ on the v2.x line (see `composer.json` / `ext_emconf.php`).
+- **CI** runs `core13.yml` + `core14.yml` (PHP 8.2–8.4 × TYPO3 13/14).
 
 ## Verification
 

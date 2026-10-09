@@ -51,6 +51,19 @@ final class T3AfAiFeatureCardProvider implements AiFeatureCardProviderInterface
                 description: 'HTTP basic authentication, API quota email alerts, and the default model for auto-translate operations.',
                 sortPriority: 900,
             ),
+            new AiFeatureCardDescriptor(
+                id: 'ai-agent',
+                name: 'AI Agent',
+                subtitle: 'Conversations, workspace, limits',
+                extKey: 'ns_t3af',
+                settingsScope: 'ai agent',
+                icon: 'actions-message',
+                iconBg: 'aiu-feature-card__icon--violet',
+                iconColor: 'aiu-feature-card__glyph--violet',
+                tags: ['agent', 'chat', 'assistant', 'workspace', 'conversations', 'tools'],
+                description: 'Where the agent writes (draft workspace or Live), continue after confirm, conversation history and retention, tool search and per-turn limits.',
+                sortPriority: 100,
+            ),
         ];
     }
 }

@@ -21,7 +21,6 @@ namespace NITSAN\NsT3AF\Credits\Http;
 
 use NITSAN\NsT3AF\Credits\CreditsApiErrorCodes;
 use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
-use NITSAN\NsT3AF\Credits\Exception\InsufficientCreditsException;
 use NITSAN\NsT3AF\Credits\Service\RuntimeSettingsService;
 use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Core\Http\RequestFactory;
@@ -29,7 +28,7 @@ use TYPO3\CMS\Core\Http\RequestFactory;
 /**
  * @internal
  */
-final class T3PlanetHttpClient
+class T3PlanetHttpClient
 {
     private const TIMEOUT_SECONDS = 30;
 
@@ -58,9 +57,27 @@ final class T3PlanetHttpClient
         ?string $bearerToken = null,
         ?string $ifNoneMatch = null,
         ?int $timeoutSeconds = null,
+        ?string $domainHeader = null,
     ): array {
         return $this->decodeResponse(
-            $this->sendRequest($endpoint, $body, $bearerToken, $ifNoneMatch, $timeoutSeconds),
+            $this->sendRequest($endpoint, $body, $bearerToken, $ifNoneMatch, $timeoutSeconds, $domainHeader),
+        );
+    }
+
+    /**
+     * GET JSON (e.g. {@see /API/AI/v1/models}).
+     *
+     * @return array<string, mixed>
+     */
+    public function getJson(
+        string $endpoint,
+        #[\SensitiveParameter]
+        ?string $bearerToken = null,
+        ?string $domainHeader = null,
+        ?int $timeoutSeconds = null,
+    ): array {
+        return $this->decodeResponse(
+            $this->sendGetRequest($endpoint, $bearerToken, $domainHeader, $timeoutSeconds),
         );
     }
 
@@ -194,14 +211,9 @@ final class T3PlanetHttpClient
         ?string $bearerToken,
         ?string $ifNoneMatch,
         ?int $timeoutSeconds = null,
+        ?string $domainHeader = null,
     ): ResponseInterface {
-        $headers = ['Content-Type' => 'application/json', 'Accept' => 'application/json'];
-        if ($bearerToken !== null && $bearerToken !== '') {
-            $headers['Authorization'] = 'Bearer ' . $bearerToken;
-        }
-        if ($ifNoneMatch !== null && $ifNoneMatch !== '') {
-            $headers['If-None-Match'] = $ifNoneMatch;
-        }
+        $headers = $this->jsonRequestHeaders($bearerToken, $ifNoneMatch, $domainHeader);
 
         try {
             return $this->requestFactory->request(
@@ -223,6 +235,61 @@ final class T3PlanetHttpClient
                 $exception,
             );
         }
+    }
+
+    /**
+     * @return ResponseInterface
+     */
+    private function sendGetRequest(
+        string $endpoint,
+        #[\SensitiveParameter]
+        ?string $bearerToken,
+        ?string $domainHeader = null,
+        ?int $timeoutSeconds = null,
+    ): ResponseInterface {
+        try {
+            return $this->requestFactory->request(
+                $this->buildUrl($endpoint),
+                'GET',
+                [
+                    'headers' => $this->jsonRequestHeaders($bearerToken, null, $domainHeader),
+                    'timeout' => $timeoutSeconds ?? self::TIMEOUT_SECONDS,
+                    'http_errors' => false,
+                ],
+            );
+        } catch (\Throwable $exception) {
+            throw new CreditsApiException(
+                CreditsApiErrorCodes::NETWORK_ERROR,
+                0,
+                $exception->getMessage(),
+                [],
+                $exception,
+            );
+        }
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function jsonRequestHeaders(
+        #[\SensitiveParameter]
+        ?string $bearerToken,
+        ?string $ifNoneMatch = null,
+        ?string $domainHeader = null,
+    ): array {
+        $headers = ['Content-Type' => 'application/json', 'Accept' => 'application/json'];
+        if ($bearerToken !== null && $bearerToken !== '') {
+            $headers['Authorization'] = 'Bearer ' . $bearerToken;
+        }
+        if ($ifNoneMatch !== null && $ifNoneMatch !== '') {
+            $headers['If-None-Match'] = $ifNoneMatch;
+        }
+        $domain = trim((string) $domainHeader);
+        if ($domain !== '') {
+            $headers['X-T3P-Domain'] = $domain;
+        }
+
+        return $headers;
     }
 
     /**
@@ -350,49 +417,7 @@ final class T3PlanetHttpClient
      */
     private function throwDecodedApiError(int $status, array $decoded): never
     {
-        $errorCode = (string) ($decoded['error_code'] ?? $decoded['error'] ?? CreditsApiErrorCodes::API_ERROR);
-        $message = (string) ($decoded['message'] ?? '');
-        foreach (['upstream_message', 'upstream_error', 'upstream_body_snippet', 'detail'] as $detailKey) {
-            $detail = trim((string) ($decoded[$detailKey] ?? ''));
-            if ($detail !== '' && !str_contains($message, $detail)) {
-                $message = $message !== '' && $message !== $errorCode
-                    ? $message . ' — ' . $detail
-                    : $detail;
-            }
-        }
-        if ($message === '' || $message === $errorCode) {
-            $message = $errorCode;
-        }
-
-        $extra = [];
-        foreach (
-            [
-                'retry_after',
-                'topup_url',
-                'feature_key',
-                'credits',
-                'request_uuid',
-                'cost',
-                'cost_units',
-                'credits_needed',
-                'credits_needed_units',
-                'pricing',
-            ] as $key
-        ) {
-            if (array_key_exists($key, $decoded)) {
-                $extra[$key] = $decoded[$key];
-            }
-        }
-
-        if ($status === 402 || $errorCode === CreditsApiErrorCodes::INSUFFICIENT_CREDITS) {
-            throw new InsufficientCreditsException(
-                $message !== $errorCode ? $message : 'Insufficient credits',
-                (string) ($decoded['topup_url'] ?? ''),
-                $extra,
-            );
-        }
-
-        throw new CreditsApiException($errorCode, $status, $message, $extra);
+        throw CreditsApiErrorParser::toException($decoded, $status);
     }
 
     private function extractEtag(ResponseInterface $response): ?string

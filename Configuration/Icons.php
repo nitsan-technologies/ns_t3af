@@ -40,7 +40,7 @@ return [
         'provider' => SvgIconProvider::class,
         'source' => 'EXT:ns_t3af/Resources/Public/Icons/ModuleV14.svg',
     ],
-    // TYPO3 v12/v13 backend module menu (purple badge tile)
+    // TYPO3 v13 backend module menu (purple badge tile)
     'ns-t3af-module13' => [
         'provider' => SvgIconProvider::class,
         'source' => 'EXT:ns_t3af/Resources/Public/Icons/AI_Uni_Icon_v13.svg',
@@ -50,7 +50,7 @@ return [
         'provider' => SvgIconProvider::class,
         'source' => 'EXT:ns_t3af/Resources/Public/Icons/FoundationModuleV14.svg',
     ],
-    // TYPO3 v12/v13 AI Foundation submodule
+    // TYPO3 v13 AI Foundation submodule
     'ns-t3af-foundation-module13' => [
         'provider' => SvgIconProvider::class,
         'source' => 'EXT:ns_t3af/Resources/Public/Icons/Extension.svg',
@@ -60,5 +60,15 @@ return [
         'source' => $isV14OrHigher
             ? 'EXT:ns_t3af/Resources/Public/Icons/HeaderLogoV14.svg'
             : 'EXT:ns_t3af/Resources/Public/Icons/HeaderLogo.svg',
+    ],
+    // AI Agent toolbar (replaces EXT:ns_t3ai sidebar mark)
+    'ns-t3af-agent' => [
+        'provider' => SvgIconProvider::class,
+        'source' => 'EXT:ns_t3af/Resources/Public/Icons/t3ai-grey.svg',
+    ],
+    // Agent mark (core actions-wand-sparkles exists only from v14; ship our copy for v13)
+    'ns-t3af-agent-wand' => [
+        'provider' => SvgIconProvider::class,
+        'source' => 'EXT:ns_t3af/Resources/Public/Icons/AgentWandSparkles.svg',
     ],
 ];

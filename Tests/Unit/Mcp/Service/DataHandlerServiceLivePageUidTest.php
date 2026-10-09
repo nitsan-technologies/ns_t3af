@@ -24,6 +24,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Service;
 
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Site\SiteFinder;
@@ -36,10 +37,30 @@ final class DataHandlerServiceLivePageUidTest extends TestCase
     #[Test]
     public function resolveLivePageUidKeepsNonPositiveIds(): void
     {
-        $service = new DataHandlerService($this->createMock(SiteFinder::class));
+        $service = new DataHandlerService(
+            $this->createMock(SiteFinder::class),
+            $this->createMock(RecordService::class),
+        );
         $method = new \ReflectionMethod(DataHandlerService::class, 'resolveLivePageUid');
 
         self::assertSame(0, $method->invoke($service, 0));
         self::assertSame(-1, $method->invoke($service, -1));
+    }
+
+    #[Test]
+    public function aNewContentElementGetsTheNormalColumnWhenColPosIsMissing(): void
+    {
+        self::assertSame(
+            ['header' => 'About AI', 'colPos' => 0],
+            DataHandlerService::withContentColumn('tt_content', ['header' => 'About AI']),
+        );
+        self::assertSame(
+            ['colPos' => 2],
+            DataHandlerService::withContentColumn('tt_content', ['colPos' => 2]),
+        );
+        self::assertSame(
+            ['title' => 'Page'],
+            DataHandlerService::withContentColumn('pages', ['title' => 'Page']),
+        );
     }
 }

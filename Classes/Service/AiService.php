@@ -37,6 +37,7 @@ use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
 use NITSAN\NsT3AF\Provider\OpenAiCompatible\OpenAiCompatiblePlatform;
 use NITSAN\NsT3AF\Provider\ProviderCapabilityGuard;
 use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiBridgeAdapter;
+use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiResultReader;
 use Psr\EventDispatcher\EventDispatcherInterface;
 
 /**
@@ -57,6 +58,7 @@ use Psr\EventDispatcher\EventDispatcherInterface;
  */
 final class AiService implements AiServiceInterface
 {
+    private string $lastEmbedPlatformError = '';
     private const CALL_COMPLETE = 'complete';
     private const CALL_STREAM = 'stream';
     private const CALL_EMBED = 'embed';
@@ -238,6 +240,20 @@ final class AiService implements AiServiceInterface
 
     public function embed(string|array $text, AiOptions $options = new AiOptions()): EmbeddingResponse
     {
+        if (is_string($text) && trim($text) === '') {
+            throw new AdapterRuntimeException('Empty embedding input: expected a non-empty string.');
+        }
+        if (is_array($text)) {
+            $filtered = array_values(array_filter(
+                $text,
+                static fn(mixed $item): bool => is_string($item) && trim($item) !== '',
+            ));
+            if ($filtered === []) {
+                throw new AdapterRuntimeException('Empty embedding input: expected a non-empty string or token array.');
+            }
+            $text = count($text) === 1 ? $filtered[0] : $filtered;
+        }
+
         $provider = $this->provider($options->providerIdentifier, $options->pageId);
         ProviderCapabilityGuard::assertCallAllowed($provider, ProviderCapabilityGuard::CALL_EMBED, $options);
         $adapter = $this->resolveAdapter($provider);
@@ -301,14 +317,11 @@ final class AiService implements AiServiceInterface
             raw: $this->extractEmbedRawPayload($invocation['result']),
         );
 
+        $textForTelemetry = is_array($text) ? implode("\n", $text) : $text;
         if ($response->vectors === []) {
-            $apiError = $this->extractEmbedApiErrorMessage($response->raw);
-            if ($apiError !== '') {
-                throw new AdapterRuntimeException($this->formatEmbeddingProviderError($apiError, $provider));
-            }
+            $this->failEmptyEmbedding($provider, $before->getOptions(), $textForTelemetry, $response);
         }
 
-        $textForTelemetry = is_array($text) ? implode("\n", $text) : $text;
         $this->telemetry?->logEmbedding($provider, $before->getOptions(), $textForTelemetry, $response);
         // Budget/usage listeners bind to AfterProviderResponseEvent; embedding
         // token usage must count against per-user budgets too (CTX-14).
@@ -390,13 +403,15 @@ final class AiService implements AiServiceInterface
             $invokeOptions = ['task' => 'feature-extraction'];
         }
 
-        // The built-in OpenAI-compatible platform implements both invoke() (chat)
-        // and embed() (embeddings); embeddings must never go through invoke(),
-        // which posts to /chat/completions and returns chat content.
-        if ($platform instanceof OpenAiCompatiblePlatform) {
+        // Prefer embed() when present. OpenAiCompatiblePlatform posts to /embeddings
+        // (invoke would hit /chat/completions). SymfonyAiPlatform::embed() passes the
+        // raw string through; its invoke() wraps strings as MessageBag and OpenAI
+        // embeddings reject that with: Invalid 'input': expected a string or token array.
+        if (method_exists($platform, 'embed')) {
             $raw = $platform->embed($modelId, $text);
         } elseif (method_exists($platform, 'invoke')) {
-            // Prefer invoke() for Symfony AI Platform (DeferredResult + TokenUsageExtractor metadata).
+            // Platforms without a dedicated embed() still use invoke() + payload fallbacks
+            // (DeferredResult + TokenUsageExtractor metadata on Symfony AI).
             $raw = $this->invokeWithPayloadFallbacks(
                 $platform,
                 'invoke',
@@ -404,8 +419,6 @@ final class AiService implements AiServiceInterface
                 $payloads,
                 $invokeOptions,
             );
-        } elseif (method_exists($platform, 'embed')) {
-            $raw = $platform->embed($modelId, $text);
         } elseif (method_exists($platform, 'request')) {
             $raw = $this->invokeWithPayloadFallbacks(
                 $platform,
@@ -420,6 +433,7 @@ final class AiService implements AiServiceInterface
             );
         }
 
+        $this->lastEmbedPlatformError = '';
         $this->materializePlatformResult($raw);
 
         return [
@@ -434,11 +448,14 @@ final class AiService implements AiServiceInterface
      */
     private function embeddingPayloads(string|array $text): array
     {
+        // OpenAI Embeddings\ModelClient sets JSON `input` to $payload as-is.
+        // Never pass ['input' => $text] — that becomes input: {input: "..."} and
+        // OpenAI rejects with: Invalid 'input': expected a string or token array.
         if (is_array($text)) {
-            return [$text, ['input' => $text]];
+            return [$text];
         }
 
-        return [$text, ['input' => $text], [$text]];
+        return [$text, [$text]];
     }
 
     /**
@@ -455,8 +472,8 @@ final class AiService implements AiServiceInterface
                 if (is_array($vectors)) {
                     return $this->normaliseVectorObjects($vectors);
                 }
-            } catch (\Throwable) {
-                // Fall through to other extraction strategies.
+            } catch (\Throwable $e) {
+                $this->rememberEmbedPlatformError($e);
             }
         }
 
@@ -466,8 +483,8 @@ final class AiService implements AiServiceInterface
                 if (is_array($content)) {
                     return $this->normaliseVectorObjects($content);
                 }
-            } catch (\Throwable) {
-                // Fall through.
+            } catch (\Throwable $e) {
+                $this->rememberEmbedPlatformError($e);
             }
         }
 
@@ -578,6 +595,12 @@ final class AiService implements AiServiceInterface
 
     private function extractContentFromInvokeResult(object $result): string
     {
+        // Reasoning models return several parts (thinking + text); asText() throws for those.
+        $text = SymfonyAiResultReader::text($result);
+        if (trim($text) !== '') {
+            return $text;
+        }
+
         $conversionError = null;
 
         if (method_exists($result, 'asText')) {
@@ -1090,19 +1113,45 @@ final class AiService implements AiServiceInterface
     private function yieldFromStreamResult(mixed $result, AdapterInterface $adapter): \Generator
     {
         if (is_object($result) && method_exists($result, 'asTextStream')) {
-            foreach ($result->asTextStream() as $delta) {
-                yield $this->coerceStreamChunk($delta);
-            }
+            try {
+                foreach ($result->asTextStream() as $delta) {
+                    yield $this->coerceStreamChunk($delta);
+                }
 
-            return;
+                return;
+            } catch (\Throwable $e) {
+                // Some bridges ignore stream:true and return TextResult; fall back below.
+                if (!$this->isUnexpectedStreamTypeError($e)) {
+                    throw $e;
+                }
+            }
         }
 
         if (is_object($result) && method_exists($result, 'asStream')) {
-            foreach ($result->asStream() as $delta) {
-                yield $this->coerceStreamChunk($delta);
-            }
+            try {
+                foreach ($result->asStream() as $delta) {
+                    yield $this->coerceStreamChunk($delta);
+                }
 
-            return;
+                return;
+            } catch (\Throwable $e) {
+                if (!$this->isUnexpectedStreamTypeError($e)) {
+                    throw $e;
+                }
+            }
+        }
+
+        if (is_object($result) && method_exists($result, 'asText')) {
+            try {
+                $text = trim((string) $result->asText());
+                if ($text !== '') {
+                    yield $text;
+                }
+
+                return;
+            } catch (\Throwable) {
+                // Continue to iterable / error paths.
+            }
         }
 
         if (is_iterable($result)) {
@@ -1117,6 +1166,14 @@ final class AiService implements AiServiceInterface
             'Adapter "%s" invoke(stream) did not return a streamable result.',
             $adapter->getType(),
         ));
+    }
+
+    private function isUnexpectedStreamTypeError(\Throwable $throwable): bool
+    {
+        $message = $throwable->getMessage();
+
+        return str_contains($message, 'Unexpected response type:')
+            && str_contains($message, 'StreamResult');
     }
 
     private function coerceStreamChunk(mixed $chunk): string
@@ -1169,7 +1226,9 @@ final class AiService implements AiServiceInterface
             || str_contains($message, 'string given')
             || str_contains($message, 'array given')
             || str_contains($message, 'could not normalize object of type')
-            || str_contains($message, 'no supporting normalizer found');
+            || str_contains($message, 'no supporting normalizer found')
+            || str_contains($message, "invalid 'input'")
+            || str_contains($message, 'expected a string or token array');
     }
 
     private function mapRuntimeException(Provider $provider, string $callType, \Throwable $error): AdapterRuntimeException
@@ -1280,16 +1339,16 @@ final class AiService implements AiServiceInterface
                 $result->getResult();
 
                 return;
-            } catch (\Throwable) {
-                // Fall through to asVectors().
+            } catch (\Throwable $e) {
+                $this->rememberEmbedPlatformError($e);
             }
         }
 
         if (method_exists($result, 'asVectors')) {
             try {
                 $result->asVectors();
-            } catch (\Throwable) {
-                // Best effort only.
+            } catch (\Throwable $e) {
+                $this->rememberEmbedPlatformError($e);
             }
         }
     }
@@ -1370,23 +1429,105 @@ final class AiService implements AiServiceInterface
         return [];
     }
 
+    private function failEmptyEmbedding(
+        Provider $provider,
+        AiOptions $options,
+        string $text,
+        EmbeddingResponse $response,
+    ): never {
+        $apiError = $this->extractEmbedApiErrorMessage($response->raw);
+        if ($apiError === '') {
+            $apiError = $this->lastEmbedPlatformError;
+        }
+        $status = $this->extractEmbedHttpStatus($response->raw);
+        if ($apiError === '' && $status >= 400) {
+            $apiError = ($status === 401 || $status === 403)
+                ? 'Unauthorized (HTTP ' . $status . ')'
+                : sprintf('Embedding request failed with HTTP %d', $status);
+        }
+        if ($apiError === '') {
+            $apiError = sprintf(
+                'Embedding provider "%s" returned an empty vector (model: %s)',
+                $provider->identifier,
+                $response->modelId !== '' ? $response->modelId : 'unknown',
+            );
+        }
+
+        $exception = new AdapterRuntimeException(
+            $this->formatEmbeddingProviderError($apiError, $provider),
+            ($status >= 400 && $status <= 599) ? $status : 0,
+        );
+        $this->telemetry?->logFailure(
+            provider: $provider,
+            options: $options,
+            prompt: $text,
+            requestType: self::CALL_EMBED,
+            error: $exception,
+            latencyMs: $response->latencyMs,
+        );
+        $this->events->dispatch(new ProviderRequestFailedEvent($provider, $exception, self::CALL_EMBED));
+        throw $exception;
+    }
+
+    private function rememberEmbedPlatformError(\Throwable $error): void
+    {
+        if ($this->lastEmbedPlatformError !== '') {
+            return;
+        }
+        $message = trim($error->getMessage());
+        if ($message !== '') {
+            $this->lastEmbedPlatformError = $message;
+        }
+    }
+
     /**
      * @param array<string, mixed> $raw
      */
     private function extractEmbedApiErrorMessage(array $raw): string
     {
-        $error = $raw['error'] ?? '';
-        if (is_string($error) && trim($error) !== '') {
-            return trim($error);
-        }
-        if (is_array($error)) {
-            $message = $error['message'] ?? $error[0] ?? '';
-            if (is_string($message) && trim($message) !== '') {
-                return trim($message);
+        foreach (['error', 'detail', 'message'] as $key) {
+            $message = $this->stringifyEmbedErrorValue($raw[$key] ?? null);
+            if ($message !== '') {
+                return $message;
             }
         }
 
         return '';
+    }
+
+    private function stringifyEmbedErrorValue(mixed $value): string
+    {
+        if (is_string($value)) {
+            return trim($value);
+        }
+        if (!is_array($value)) {
+            return '';
+        }
+
+        $nested = $value['message'] ?? $value['detail'] ?? $value[0] ?? '';
+        if (is_string($nested)) {
+            return trim($nested);
+        }
+        if (is_array($nested)) {
+            return $this->stringifyEmbedErrorValue($nested);
+        }
+
+        return '';
+    }
+
+    /**
+     * @param array<string, mixed> $raw
+     */
+    private function extractEmbedHttpStatus(array $raw): int
+    {
+        foreach (['status', 'status_code', 'statusCode'] as $key) {
+            $status = (int) ($raw[$key] ?? 0);
+            if ($status >= 400 && $status <= 599) {
+                return $status;
+            }
+        }
+
+        return 0;
     }
 
     private function formatEmbeddingProviderError(string $message, Provider $provider): string

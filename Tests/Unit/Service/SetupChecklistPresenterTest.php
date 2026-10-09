@@ -45,10 +45,6 @@ final class SetupChecklistPresenterTest extends TestCase
 
     public function testConfigureExtbaseViewPartialsAddsAiUniversePartialRootOnFluidViewAdapter(): void
     {
-        if (!class_exists(FluidViewAdapter::class)) {
-            self::markTestSkipped('FluidViewAdapter is available from TYPO3 13+ only.');
-        }
-
         $renderingContext = new RenderingContext();
         $renderingContext->getTemplatePaths()->setPartialRootPaths(['/tmp/example-partials']);
         $fluidView = new TemplateView($renderingContext);
@@ -78,21 +74,6 @@ final class SetupChecklistPresenterTest extends TestCase
         self::assertContains($expected, $partialRoots);
     }
 
-    public function testConfigureExtbaseViewPartialsAddsAiUniversePartialRootOnV12StyleAdapter(): void
-    {
-        $renderingContext = new RenderingContext();
-        $renderingContext->getTemplatePaths()->setPartialRootPaths([]);
-        $fluidView = new TemplateView($renderingContext);
-        $adapter = new V12FluidViewAdapterStub($fluidView);
-
-        $this->createPresenter()->configureExtbaseViewPartials($adapter);
-
-        $partialRoots = $fluidView->getRenderingContext()->getTemplatePaths()->getPartialRootPaths();
-        $expected = GeneralUtility::getFileAbsFileName('EXT:ns_t3af/Resources/Private/Partials/');
-
-        self::assertContains($expected, $partialRoots);
-    }
-
     private function createPresenter(): SetupChecklistPresenter
     {
         $reflection = new \ReflectionClass(SetupChecklistPresenter::class);
@@ -109,27 +90,5 @@ final class SetupChecklistPresenterTest extends TestCase
         $package = new Package($packageManager, 'ns_t3af', $extensionRoot);
         $packageManager->registerPackage($package);
         $packageManager->activatePackage('ns_t3af');
-    }
-}
-
-/**
- * Minimal stub of TYPO3 v12 Core\View\FluidViewAdapter (assign/render only, no getRenderingContext).
- */
-final class V12FluidViewAdapterStub
-{
-    public function __construct(
-        protected TemplateView $view,
-    ) {}
-
-    public function assign(string $key, mixed $value): self
-    {
-        $this->view->assign($key, $value);
-
-        return $this;
-    }
-
-    public function render(string $templateFileName = ''): string
-    {
-        return $this->view->render($templateFileName);
     }
 }

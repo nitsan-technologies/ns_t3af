@@ -94,7 +94,7 @@ use NITSAN\NsT3AF\Utility\BackendModuleLinkUtility;
 $pageId = (int) ($request->getQueryParams()['id'] ?? 0);
 $assign['aiUniverseLogsUri'] = BackendModuleLinkUtility::buildAiLogsUri($pageId, 'ns_t3cs');
 
-// TYPO3 v12+ ModuleTemplate — register ns_t3af partial root:
+// TYPO3 ModuleTemplate — register ns_t3af partial root:
 GeneralUtility::makeInstance(SetupChecklistPresenter::class)->configureViewPartials($view);
 ```
 

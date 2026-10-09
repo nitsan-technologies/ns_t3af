@@ -39,7 +39,7 @@ By signing off you agree to the DCO (https://developercertificate.org/).
    composer test        # unit tests
    composer test:functional  # functional tests when DB paths touched
    ```
-   (See `composer.json` scripts. CI runs the same checks on PHP 8.2 to 8.4 and TYPO3 v12 to v14.)
+   (See `composer.json` scripts. CI runs the same checks on PHP 8.2 to 8.4 and TYPO3 v13 to v14.)
 4. **Add or update tests** for any behaviour you change.
 5. **Keep the GPL file header** on every source file (php-cs-fixer inserts and enforces it).
 6. **Open a pull request** with a clear description of what changed and why. Link the related issue.

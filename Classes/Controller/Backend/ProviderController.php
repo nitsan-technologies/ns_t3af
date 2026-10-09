@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Controller\Backend;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use NITSAN\NsT3AF\Access\ExtensionAvailability;
 use NITSAN\NsT3AF\Access\RecordAccessGate;
+use NITSAN\NsT3AF\Agent\Contract\AgentToolIndexInterface;
 use NITSAN\NsT3AF\Credits\CreditsReceiptEntryType;
 use NITSAN\NsT3AF\Credits\Service\CreditModeResolver;
 use NITSAN\NsT3AF\Credits\Service\CreditOverviewLineService;
@@ -98,6 +99,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
         private readonly ProviderImportService $providerImportService,
         private readonly RecordAccessGate $recordAccessGate,
         private readonly ExtensionAvailability $extensionAvailability,
+        private readonly AgentToolIndexInterface $agentToolIndex,
     ) {
         parent::__construct(
             $moduleTemplateFactory,
@@ -358,6 +360,12 @@ final class ProviderController extends AbstractAiUniverseModuleController
                 $provider->title,
                 $uid === 0,
             );
+        }
+
+        try {
+            $this->agentToolIndex->rebuild();
+        } catch (\Throwable) {
+            // Warming the agent tool index must not block saving a provider.
         }
 
         return new RedirectResponse(

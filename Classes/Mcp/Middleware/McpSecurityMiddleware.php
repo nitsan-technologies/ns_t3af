@@ -74,7 +74,11 @@ readonly class McpSecurityMiddleware implements MiddlewareInterface
         $path = $request->getUri()->getPath();
         $basePath = $this->pathProvider->getBasePath();
 
-        if ($path === $basePath || str_starts_with($path, rtrim($basePath, '/') . '/r/')) {
+        if (
+            $path === $basePath
+            || $path === $this->pathProvider->getUploadPath()
+            || str_starts_with($path, rtrim($basePath, '/') . '/r/')
+        ) {
             return true;
         }
 

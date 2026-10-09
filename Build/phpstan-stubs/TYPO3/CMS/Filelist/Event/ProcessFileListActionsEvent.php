@@ -8,7 +8,7 @@ use TYPO3\CMS\Core\Resource\ResourceInterface;
 
 /**
  * PHPStan stub: typo3/cms-filelist is optional and not in this package's .Build vendor.
- * Covers both v12/v13 (action items) and v14+ (Buttons API).
+ * Covers both v13 (action items) and v14+ (Buttons API).
  */
 final class ProcessFileListActionsEvent
 {

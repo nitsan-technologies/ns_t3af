@@ -26,24 +26,57 @@ namespace NITSAN\NsT3AF\Mcp\Tool\File;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpFalStorageToolInterface;
+use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
+use NITSAN\NsT3AF\Mcp\Service\McpFalPlanBuilder;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 
-readonly class DirectoryMoveTool implements McpFalStorageToolInterface
+#[McpToolSeverity(ToolSeverity::Write)]
+readonly class DirectoryMoveTool implements McpFalStorageToolInterface, McpPlannableToolInterface
 {
-    public function __construct(private FileService $fileService) {}
+    public function __construct(
+        private FileService $fileService,
+        private McpFalPlanBuilder $falPlanBuilder,
+    ) {}
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public function plan(array $arguments): ToolPlan
+    {
+        $storageUid = (int) ($arguments['storageUid'] ?? 1);
+        $directoryIdentifier = (string) ($arguments['directoryIdentifier'] ?? '');
+        $targetDirectory = (string) ($arguments['targetDirectory'] ?? '');
+
+        return $this->falPlanBuilder->directoryPathChange(
+            'move',
+            'directory_move',
+            '_move',
+            $storageUid,
+            $directoryIdentifier,
+            'move to ' . $targetDirectory,
+            ['targetDirectory' => $targetDirectory],
+        );
+    }
 
     #[McpTool(
         name: 'directory_move',
-        description: 'Move a directory to a different parent directory within the same storage.',
+        description: 'Move a directory to a different parent directory within the same storage. Requires mcpAllowDestructiveFileOps.',
     )]
     public function execute(string $directoryIdentifier, string $targetDirectory, int $storageUid = 1): string
     {
-        $this->fileService->moveDirectory($storageUid, $directoryIdentifier, $targetDirectory);
+        try {
+            $this->fileService->moveDirectory($storageUid, $directoryIdentifier, $targetDirectory);
 
-        return json_encode(
-            ['directoryIdentifier' => $directoryIdentifier, 'targetDirectory' => $targetDirectory, 'moved' => true],
-            JSON_THROW_ON_ERROR,
-        );
+            return json_encode(
+                ['directoryIdentifier' => $directoryIdentifier, 'targetDirectory' => $targetDirectory, 'moved' => true],
+                JSON_THROW_ON_ERROR,
+            );
+        } catch (\Throwable $exception) {
+            return json_encode(['error' => $exception->getMessage()], JSON_THROW_ON_ERROR);
+        }
     }
 }

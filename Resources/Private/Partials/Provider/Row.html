@@ -1,7 +1,7 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
       xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       data-namespace-typo3-fluid="true">
-<tr class="aiu-provider-row" data-aiu-provider-row data-uid="{provider.uid}"
+<tr class="aiu-provider-row{f:if(condition: '{provider.isEnabled} != 1', then: ' aiu-provider-row--inactive')}" data-aiu-provider-row data-uid="{provider.uid}"
     data-identifier="{provider.identifier}"
     data-title="{provider.title}"
     data-model="{provider.modelId}">
@@ -12,6 +12,18 @@
                     <span class="name">{provider.title}</span>
                     <f:if condition="{provider.isDefault} == 1">
                         <span class="badge badge-primary">Default</span>
+                    </f:if>
+                    <f:if condition="{provider.isEnabled} == 1">
+                        <f:then>
+                            <span class="badge badge-success">
+                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:dashboard.provider.status.active" default="Active" />
+                            </span>
+                        </f:then>
+                        <f:else>
+                            <span class="badge badge-default">
+                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:dashboard.provider.status.offline" default="Inactive" />
+                            </span>
+                        </f:else>
                     </f:if>
                 </div>
                 <div class="identifier">{provider.identifier}</div>

@@ -86,6 +86,51 @@
                         <f:translate key="{ll}:module.mcpServer.advanced.maxBodyBytesHint" />
                     </p>
                 </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="aiu-mcp-max-file-size-mb">
+                        <f:translate key="{ll}:module.mcpServer.advanced.maxFileSizeMb" />
+                    </label>
+                    <input class="form-control"
+                           type="number"
+                           min="1"
+                           step="1"
+                           id="aiu-mcp-max-file-size-mb"
+                           name="mcpMaxFileSizeMb"
+                           value="{mcpAdvancedSettings.mcpMaxFileSizeMb}" />
+                    <p class="form-text text-variant small mb-0">
+                        <f:translate key="{ll}:module.mcpServer.advanced.maxFileSizeMbHint" />
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="aiu-mcp-upload-token-ttl">
+                        <f:translate key="{ll}:module.mcpServer.advanced.uploadTokenTtl" />
+                    </label>
+                    <input class="form-control"
+                           type="number"
+                           min="60"
+                           step="1"
+                           id="aiu-mcp-upload-token-ttl"
+                           name="mcpUploadTokenTtl"
+                           value="{mcpAdvancedSettings.mcpUploadTokenTtl}" />
+                    <p class="form-text text-variant small mb-0">
+                        <f:translate key="{ll}:module.mcpServer.advanced.uploadTokenTtlHint" />
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="aiu-mcp-max-base64-bytes">
+                        <f:translate key="{ll}:module.mcpServer.advanced.maxBase64UploadBytes" />
+                    </label>
+                    <input class="form-control"
+                           type="number"
+                           min="1024"
+                           step="1"
+                           id="aiu-mcp-max-base64-bytes"
+                           name="mcpMaxBase64UploadBytes"
+                           value="{mcpAdvancedSettings.mcpMaxBase64UploadBytes}" />
+                    <p class="form-text text-variant small mb-0">
+                        <f:translate key="{ll}:module.mcpServer.advanced.maxBase64UploadBytesHint" />
+                    </p>
+                </div>
             </div>
 
             <div class="aiu-mcp-oauth-settings__options mt-4">
@@ -102,6 +147,17 @@
                                {f:if(condition: '{mcpAdvancedSettings.enableMcpServer} == 1', then: 'checked="checked"')} />
                         <label class="form-check-label" for="aiu-mcp-enable-server">
                             <f:translate key="{ll}:module.mcpServer.advanced.enableServer" />
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input"
+                               type="checkbox"
+                               id="aiu-mcp-allow-destructive-files"
+                               name="mcpAllowDestructiveFileOps"
+                               value="1"
+                               {f:if(condition: '{mcpAdvancedSettings.mcpAllowDestructiveFileOps} == 1', then: 'checked="checked"')} />
+                        <label class="form-check-label" for="aiu-mcp-allow-destructive-files">
+                            <f:translate key="{ll}:module.mcpServer.advanced.allowDestructiveFileOps" />
                         </label>
                     </div>
                     <div class="form-check">
@@ -157,6 +213,9 @@
                     <f:translate key="{ll}:module.mcpServer.action.saveSettings" />
                 </button>
             </div>
+            <p class="form-text text-variant small mt-3 mb-0">
+                <f:translate key="{ll}:module.mcpServer.advanced.fileUploadPrepareHint" />
+            </p>
         </form>
     </div>
 </div>

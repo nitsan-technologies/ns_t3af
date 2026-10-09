@@ -27,9 +27,9 @@ use TYPO3\CMS\Core\Http\NormalizedParams;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * Writes to sys_log across TYPO3 v12–v14 schema differences.
+ * Writes to sys_log across TYPO3 v13–v14 schema differences.
  *
- * v12–v13: details_nr + details
+ * v13: details_nr + details
  * v14+: message + data (+ component)
  */
 final class SysLogWriterUtility
@@ -159,7 +159,7 @@ final class SysLogWriterUtility
     }
 
     /**
-     * Client IP from the current request. NormalizedParams exists on v12–v14 and
+     * Client IP from the current request. NormalizedParams exists on v13–v14 and
      * honors a trusted reverse proxy. CLI and scheduler runs have no request,
      * so the log row stores an empty IP.
      */

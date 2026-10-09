@@ -1,0 +1,19 @@
+{
+  "id": "06-add-content",
+  "title": "Adding content never deletes",
+  "turns": [
+    {
+      "message": "Add a text element with a short welcome text to this page",
+      "expect": {
+        "anyTool": [
+          "write_table",
+          "t3ai_create_content_element"
+        ],
+        "card": true,
+        "forbidTools": [
+          "content_delete"
+        ]
+      }
+    }
+  ]
+}

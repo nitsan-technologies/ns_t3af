@@ -28,8 +28,20 @@ readonly class AdvancedSettingsService
 {
     private const EXTENSION_KEY = 'ns_t3af';
 
-    /** Default MCP Streamable HTTP POST body limit (16 MiB). */
-    public const DEFAULT_MAX_BODY_BYTES = 16 * 1024 * 1024;
+    /** Default MCP Streamable HTTP POST body limit (100 MiB). */
+    public const DEFAULT_MAX_BODY_BYTES = 100 * 1024 * 1024;
+
+    /** Default max file size for MCP uploads / URL downloads (MiB). */
+    public const DEFAULT_MAX_FILE_SIZE_MB = 500;
+
+    /** Default single-use upload token lifetime (seconds). */
+    public const DEFAULT_UPLOAD_TOKEN_TTL = 900;
+
+    /** Default time a records_apply requestId is remembered (hours). */
+    public const DEFAULT_IDEMPOTENCY_TTL_HOURS = 24;
+
+    /** Default max decoded base64 payload accepted inline via MCP tools (bytes). */
+    public const DEFAULT_MAX_BASE64_UPLOAD_BYTES = 100 * 1024 * 1024;
 
     public function __construct(private ExtensionSettingsService $extensionSettingsService) {}
 
@@ -88,6 +100,55 @@ readonly class AdvancedSettingsService
         return $configured;
     }
 
+    public function maxFileSizeMb(): int
+    {
+        $configured = $this->int('mcpMaxFileSizeMb', self::DEFAULT_MAX_FILE_SIZE_MB);
+        if ($configured < 1) {
+            return self::DEFAULT_MAX_FILE_SIZE_MB;
+        }
+
+        return $configured;
+    }
+
+    public function allowDestructiveFileOps(): bool
+    {
+        return $this->bool('mcpAllowDestructiveFileOps', true);
+    }
+
+    /** Mark records written through MCP tools as AI-involved in the AI Label module. */
+    public function markWritesAsAi(): bool
+    {
+        return $this->bool('mcpMarkWritesAsAi', true);
+    }
+
+    /** How long records_apply remembers a requestId and its answer, in seconds. */
+    public function idempotencyTtlSeconds(): int
+    {
+        $hours = $this->int('mcpIdempotencyTtlHours', self::DEFAULT_IDEMPOTENCY_TTL_HOURS);
+
+        return ($hours < 1 ? self::DEFAULT_IDEMPOTENCY_TTL_HOURS : $hours) * 3600;
+    }
+
+    public function uploadTokenTtl(): int
+    {
+        $configured = $this->int('mcpUploadTokenTtl', self::DEFAULT_UPLOAD_TOKEN_TTL);
+        if ($configured < 1) {
+            return self::DEFAULT_UPLOAD_TOKEN_TTL;
+        }
+
+        return $configured;
+    }
+
+    public function maxBase64UploadBytes(): int
+    {
+        $configured = $this->int('mcpMaxBase64UploadBytes', self::DEFAULT_MAX_BASE64_UPLOAD_BYTES);
+        if ($configured < 1) {
+            return self::DEFAULT_MAX_BASE64_UPLOAD_BYTES;
+        }
+
+        return $configured;
+    }
+
     public function oauthDefaultScopes(): string
     {
         return $this->string('oauthDefaultScopes', 'mcp:read mcp:write mcp:tools');
@@ -114,6 +175,12 @@ readonly class AdvancedSettingsService
             'oauthMaxActiveTokensPerUser' => $this->int('oauthMaxActiveTokensPerUser', 5),
             'accessTokenLifetime' => $this->int('accessTokenLifetime', 3600),
             'mcpMaxBodyBytes' => $this->maxBodyBytes(),
+            'mcpMaxFileSizeMb' => $this->maxFileSizeMb(),
+            'mcpAllowDestructiveFileOps' => $this->allowDestructiveFileOps() ? 1 : 0,
+            'mcpMarkWritesAsAi' => $this->markWritesAsAi() ? 1 : 0,
+            'mcpIdempotencyTtlHours' => intdiv($this->idempotencyTtlSeconds(), 3600),
+            'mcpUploadTokenTtl' => $this->uploadTokenTtl(),
+            'mcpMaxBase64UploadBytes' => $this->maxBase64UploadBytes(),
         ];
     }
 

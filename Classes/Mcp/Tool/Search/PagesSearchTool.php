@@ -26,10 +26,13 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Search;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 
+#[McpToolSeverity(ToolSeverity::Read)]
 readonly class PagesSearchTool implements McpNonAiToolInterface
 {
     public function __construct(
@@ -43,7 +46,8 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
             . ' (e.g. "hello") or a JSON object for advanced conditions'
             . ' (e.g. {"doktype":{"op":"eq","value":"1"}, "title":"Home"}).'
             . ' Supports operators: eq, neq, like, gt, gte, lt, lte, in, null, notNull.'
-            . ' Use orderBy and orderDirection for sorting.',
+            . ' Use orderBy and orderDirection for sorting.'
+            . ' Leave pid unset to search the whole tree. A hidden page is included and is a real page.',
     )]
     public function execute(
         string $search,
@@ -53,6 +57,11 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
         string $orderBy = '',
         string $orderDirection = 'ASC',
     ): string {
+        if (trim($search) === '') {
+            // An empty term used to come back as a silent "nothing found"; say what is missing instead.
+            return json_encode(['error' => 'Pass the text to look for in the "search" argument.'], JSON_THROW_ON_ERROR);
+        }
+
         $readFields = $this->tcaSchemaService->getReadFields('pages');
         $allowedFields = array_merge(['uid', 'pid'], $readFields);
         $searchConditions = $this->parseSearch($search, $allowedFields);
@@ -70,19 +79,34 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
             $orderDirection = 'ASC';
         }
 
-        return json_encode(
-            $this->recordService->search(
+        $scopedPid = $pid >= 0 ? $pid : null;
+        $result = $this->recordService->search(
+            'pages',
+            $searchConditions,
+            $limit,
+            $offset,
+            $readFields,
+            $scopedPid,
+            $resolvedOrderBy,
+            $orderDirection,
+        );
+
+        // A name on another page, or a hidden page, must still be found.
+        if ((int) ($result['total'] ?? 0) === 0 && ($scopedPid !== null || $this->excludesHiddenPages($searchConditions))) {
+            unset($searchConditions['hidden']);
+            $result = $this->recordService->search(
                 'pages',
                 $searchConditions,
                 $limit,
                 $offset,
                 $readFields,
-                $pid >= 0 ? $pid : null,
+                null,
                 $resolvedOrderBy,
                 $orderDirection,
-            ),
-            JSON_THROW_ON_ERROR,
-        );
+            );
+        }
+
+        return json_encode($result, JSON_THROW_ON_ERROR);
     }
 
     /**
@@ -97,6 +121,19 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
             return SearchConditionParser::fromArray($jsonData, $allowedFields);
         }
 
-        return ['title' => ['operator' => 'like', 'value' => $search]];
+        return ['title' => ['operator' => 'like', 'value' => SearchConditionParser::plainTerm($search)]];
+    }
+
+    /**
+     * @param array<string, array{operator: string, value: string}> $searchConditions
+     */
+    private function excludesHiddenPages(array $searchConditions): bool
+    {
+        $hidden = $searchConditions['hidden'] ?? null;
+        if (!is_array($hidden)) {
+            return false;
+        }
+
+        return ($hidden['operator'] ?? '') === 'eq' && (string) ($hidden['value'] ?? '') === '0';
     }
 }
