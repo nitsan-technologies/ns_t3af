@@ -1030,4 +1030,49 @@ final class AgentRunnerTest extends TestCase
         self::assertFalse(AgentRunner::offersUnbackedApply('Die Seite hat drei Inhaltselemente.'));
         self::assertFalse(AgentRunner::offersUnbackedApply('You can use the Content module to review the text.'));
     }
+
+    #[Test]
+    public function aToolCallWrittenAsTextIsRecognised(): void
+    {
+        self::assertTrue(AgentRunner::looksLikeLeakedToolCall('{"newsId":1,"targetLanguageUid":1} to=functions.t3ai_translate_news 天天爱彩票'));
+        self::assertTrue(AgentRunner::looksLikeLeakedToolCall('<|channel|>commentary functions.pages_get {"uid":3}'));
+        self::assertFalse(AgentRunner::looksLikeLeakedToolCall('I translated the news article into German.'));
+        self::assertFalse(AgentRunner::looksLikeLeakedToolCall(''));
+    }
+
+    #[Test]
+    public function newsCreateRequestsAreToldApartFromOtherNewsRequests(): void
+    {
+        self::assertTrue(AgentRunner::isNewsCreateRequest('Write a short news article about our summer team party.'));
+        self::assertTrue(AgentRunner::isNewsCreateRequest('Now write a longer, detailed news story about our anniversary, with a few sections and a picture.'));
+        self::assertTrue(AgentRunner::isNewsCreateRequest('Create a news article titled Winter Opening Hours'));
+        self::assertTrue(AgentRunner::isNewsCreateRequest('Erstelle einen neuen Newsartikel zum Sommerfest'));
+        self::assertFalse(AgentRunner::isNewsCreateRequest('Delete the Winter news'));
+        self::assertFalse(AgentRunner::isNewsCreateRequest('Translate the news into German'));
+        self::assertFalse(AgentRunner::isNewsCreateRequest('Show me all my news articles'));
+        self::assertFalse(AgentRunner::isNewsCreateRequest('Create a new text element'));
+    }
+
+    #[Test]
+    public function newsCreateToolsPreferWriteTableWhenCreateNewsToolsAreHidden(): void
+    {
+        $catalog = [
+            ['name' => 'write_table'],
+            ['name' => 't3ai_create_content_element'],
+            ['name' => 'explain_capabilities'],
+            ['name' => 't3ai_create_news_simple'],
+        ];
+
+        self::assertSame(
+            [
+                ['name' => 'write_table'],
+                ['name' => 't3ai_create_news_simple'],
+            ],
+            AgentRunner::newsCreateTools($catalog),
+        );
+        self::assertSame(
+            [['name' => 'write_table']],
+            AgentRunner::newsCreateTools($catalog, ['t3ai_create_news_simple' => 0]),
+        );
+    }
 }

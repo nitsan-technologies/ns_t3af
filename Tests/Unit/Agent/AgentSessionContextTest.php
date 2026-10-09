@@ -605,4 +605,13 @@ final class AgentSessionContextTest extends TestCase
             ]),
         );
     }
+
+    #[Test]
+    public function anEmptyListInTheQuestionIsDropped(): void
+    {
+        [$question, $options] = AskClarificationTool::liftInlineOptions('[]I need the target language confirmed.', []);
+
+        self::assertSame('I need the target language confirmed.', $question);
+        self::assertSame([], $options);
+    }
 }

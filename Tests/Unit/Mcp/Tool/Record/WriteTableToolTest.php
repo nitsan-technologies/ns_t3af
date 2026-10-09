@@ -543,4 +543,15 @@ final class WriteTableToolTest extends TestCase
         self::assertFalse(WriteTableTool::isRewriteRequest('Replace the text of the block with: Opening hours 9-5'));
         self::assertFalse(WriteTableTool::isRewriteRequest('Make the German page visible'));
     }
+
+    #[Test]
+    public function aNewNewsArticleGetsTodayUnlessTheEditorNamedADate(): void
+    {
+        $now = (int) strtotime('2026-10-09 10:00:00');
+
+        self::assertSame('2026-10-09 10:00:00', WriteTableTool::withSaneNewsDate(['title' => 'A'], 'Create a news', $now)['datetime']);
+        self::assertSame('2026-10-09 10:00:00', WriteTableTool::withSaneNewsDate(['title' => 'A', 'datetime' => '2023-12-01 00:00:00'], 'We are open 10 to 4 in December', $now)['datetime']);
+        self::assertSame('2023-12-01 00:00:00', WriteTableTool::withSaneNewsDate(['title' => 'A', 'datetime' => '2023-12-01 00:00:00'], 'Dated 1.12.2023, create a news', $now)['datetime']);
+        self::assertSame('2026-11-01 00:00:00', WriteTableTool::withSaneNewsDate(['datetime' => '2026-11-01 00:00:00'], 'Create a news', $now)['datetime']);
+    }
 }

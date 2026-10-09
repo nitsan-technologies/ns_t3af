@@ -125,7 +125,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return match ($action) {
-            'create' => $this->planCreate($tableName, $payload, $beforeUid, $afterUid),
+            'create' => $this->planCreate($tableName, $payload, $beforeUid, $afterUid, (string) ($arguments['requestQuery'] ?? '')),
             'update' => $this->planUpdate($tableName, $uid, $payload, (string) ($arguments['requestQuery'] ?? '')),
             'delete' => $this->planDelete($tableName, $uid),
         };
@@ -258,8 +258,11 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     }
 
     /** @param array<string, mixed> $payload */
-    private function planCreate(string $tableName, array $payload, int $beforeUid = 0, int $afterUid = 0): ToolPlan
+    private function planCreate(string $tableName, array $payload, int $beforeUid = 0, int $afterUid = 0, string $requestQuery = ''): ToolPlan
     {
+        if ($tableName === 'tx_news_domain_model_news') {
+            $payload = self::withSaneNewsDate($payload, $requestQuery);
+        }
         $pid = $this->resolveCreatePid($payload, $beforeUid, $afterUid);
         if ($pid < 0) {
             $this->recordService->assertInsertAfterExists($tableName, abs($pid));
@@ -353,6 +356,31 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return new ToolPlan('update', 'write_table', $fields);
+    }
+
+    /**
+     * A new news article is dated today unless the editor named a date. Models invent one (2023-12-01) that
+     * sorts the article years into the past.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    public static function withSaneNewsDate(array $payload, string $requestQuery, ?int $now = null): array
+    {
+        $now ??= time();
+        $given = $payload['datetime'] ?? null;
+        if ($given === null || $given === '' || $given === 0 || $given === '0') {
+            $payload['datetime'] = date('Y-m-d H:i:s', $now);
+
+            return $payload;
+        }
+        $timestamp = is_numeric($given) ? (int) $given : strtotime((string) $given);
+        $namedByEditor = preg_match('/\b(?:19|20)\d{2}\b|\d{1,2}\.\d{1,2}\.|\b(?:today|tomorrow|yesterday|heute|morgen|gestern)\b/iu', $requestQuery) === 1;
+        if (!$namedByEditor && ($timestamp === false || $timestamp < $now - 86400 * 183)) {
+            $payload['datetime'] = date('Y-m-d H:i:s', $now);
+        }
+
+        return $payload;
     }
 
     public static function isRewriteRequest(string $query): bool

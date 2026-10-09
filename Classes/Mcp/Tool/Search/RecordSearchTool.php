@@ -69,9 +69,11 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
             return json_encode(['error' => 'Table not found or has no readable fields: ' . $tableName], JSON_THROW_ON_ERROR);
         }
 
+        // "Show me all my news": an empty search lists the table (still limited by page access and rights).
+        $listAll = in_array(trim($search), ['', '{}', '[]', '*'], true);
         try {
             $labelField = (string) ($GLOBALS['TCA'][$tableName]['ctrl']['label'] ?? '');
-            $searchData = SearchParamParser::parse($search, $labelField, array_merge(['uid', 'pid'], $readFields));
+            $searchData = $listAll ? [] : SearchParamParser::parse($search, $labelField, array_merge(['uid', 'pid'], $readFields));
         } catch (\InvalidArgumentException $e) {
             return json_encode(['error' => 'Invalid search parameter: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
         }
@@ -80,7 +82,7 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
         $validSearch = SearchConditionParser::fromArray($searchData, $allowedFields);
         $ignoredFields = array_values(array_diff(array_keys($searchData), $allowedFields));
 
-        if ($validSearch === []) {
+        if ($validSearch === [] && !$listAll) {
             return json_encode(
                 ['error' => 'No valid search fields provided', 'ignoredFields' => $ignoredFields],
                 JSON_THROW_ON_ERROR,
@@ -102,13 +104,15 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
             $orderDirection = 'ASC';
         }
 
+        // pid 0 (and the default -1) mean "do not filter by storage page". Listing all also
+        // ignores an incidental pid so "show all my news" is not scoped to the page on screen.
         $result = $this->recordService->search(
             $tableName,
             $validSearch,
             $limit,
             $offset,
             $readFields,
-            $pid >= 0 ? $pid : null,
+            self::resolveSearchPid($pid, $listAll),
             $resolvedOrderBy,
             $orderDirection,
         );
@@ -118,5 +122,17 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
         }
 
         return json_encode($result, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @internal used by unit tests
+     */
+    public static function resolveSearchPid(int $pid, bool $listAll): ?int
+    {
+        if ($listAll || $pid <= 0) {
+            return null;
+        }
+
+        return $pid;
     }
 }

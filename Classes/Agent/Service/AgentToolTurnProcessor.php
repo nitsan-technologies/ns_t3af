@@ -652,6 +652,22 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             }
         }
 
+        // News lives in storage folders, not on the Layout page. Models often send the open page
+        // as pid (or 0); that empties the search. Drop those so record_search is site-wide (page access).
+        if (strtolower(trim($toolName)) === 'record_search') {
+            $table = strtolower(trim((string) ($arguments['tableName'] ?? $arguments['table'] ?? '')));
+            $pidArg = array_key_exists('pid', $arguments) ? (int) $arguments['pid'] : -1;
+            if ($pidArg <= 0) {
+                unset($arguments['pid']);
+            } elseif (
+                $table === 'tx_news_domain_model_news'
+                && $pageId > 0
+                && $pidArg === $pageId
+            ) {
+                unset($arguments['pid']);
+            }
+        }
+
         $languageId = (int) ($context['languageId'] ?? 0);
         if ($languageId > 0) {
             $arguments['targetLanguageUid'] ??= $languageId;
