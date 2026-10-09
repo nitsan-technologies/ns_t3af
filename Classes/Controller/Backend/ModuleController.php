@@ -498,6 +498,14 @@ final class ModuleController extends AbstractAiUniverseModuleController
     public function mcpServerAction(ServerRequestInterface $request): ResponseInterface
     {
         $view = $this->createModuleView($request, 'mcpServer');
+
+        // The shell hides the content for a hidden tab, but the code below issues tokens,
+        // so a user without the tab must stop here.
+        $tabUser = $this->getBackendUser();
+        if ($tabUser === null || !$this->moduleTabUtility->isTabVisible('mcpServer', $tabUser)) {
+            return $view->renderResponse('Module/McpServer');
+        }
+
         $this->pageRenderer->loadJavaScriptModule('@nitsan/nst3af/mcp-server.js');
 
         $beUser = $GLOBALS['BE_USER'] ?? null;

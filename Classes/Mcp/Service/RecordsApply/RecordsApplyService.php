@@ -156,6 +156,19 @@ readonly class RecordsApplyService
             $summary = sprintf('%s (code %d)', $throwable::class, (int) $throwable->getCode());
             $this->audit->log($tool, $batchId, $dryRun, false, 'datahandler', $operations, $fieldNames, $summary);
 
+            $unbroken = self::unbrokenRunHint($datamap);
+            if ($unbroken !== null) {
+                throw new ToolCallException(
+                    sprintf(
+                        'The batch was rolled back and nothing was written: %s TYPO3 scans rich text for links and e-mail addresses and cannot handle one extremely long run of characters without spaces or line breaks. Add spaces or line breaks to the text and try again (batch %s).',
+                        $unbroken,
+                        $batchId,
+                    ),
+                    1790500003,
+                    $throwable,
+                );
+            }
+
             throw new ToolCallException(
                 sprintf(
                     'DataHandler threw %s while applying the batch. The whole call was rolled back and nothing was written. The details are in the TYPO3 log (batch %s).',
@@ -395,5 +408,39 @@ readonly class RecordsApplyService
         }
 
         return $errors;
+    }
+
+    /**
+     * Finds a text value with one very long run of characters without whitespace.
+     *
+     * @param array<mixed> $datamap
+     */
+    private static function unbrokenRunHint(array $datamap): ?string
+    {
+        foreach ($datamap as $table => $rows) {
+            if (!is_array($rows)) {
+                continue;
+            }
+
+            foreach ($rows as $id => $fields) {
+                if (!is_array($fields)) {
+                    continue;
+                }
+
+                foreach ($fields as $field => $value) {
+                    if (!is_string($value) || strlen($value) <= 262144) {
+                        continue;
+                    }
+
+                    foreach (preg_split('/\\s+/', $value) ?: [] as $word) {
+                        if (strlen($word) > 262144) {
+                            return sprintf('The field "%s" of %s %s contains a run of more than 256 KB without any space.', $field, $table, $id);
+                        }
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 }

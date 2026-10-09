@@ -80,6 +80,11 @@ readonly class RecordsUndoTool implements McpNonAiToolInterface
         }
 
         $response = $outcome['result']->toArray();
+        if (($response['map'] ?? null) === []) {
+            // "map" is NEW id => uid. An empty one is an empty object, not an empty list.
+            $response['map'] = new \stdClass();
+        }
+
         $response['undoes'] = $outcome['undoes'];
         if ($outcome['notRestored'] !== []) {
             $response['notRestored'] = $outcome['notRestored'];
