@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-09 — Release 2.0.0 (9 October 2026)
+
+**Done:** Release notes for 2.0.0 rewritten for the final date (AI Agent listed as new features, MCP batch writes, security items); `CHANGELOG.md` date set; `Documentation/Agent/PreviewApply.md` and `Documentation/Integrations/MCPTools/Index.rst` updated. Closing fixes before the release: header value in the request checklist (14zervyucgh), page cache scope default off (14zervyucgk), MCP Server settings access and module route token (14zervyuhge), `records_undo` empty map as `{}` (14zervyub6n), clear message for 256 KB+ unbroken text (14zervyub6r). Version stays 2.0.0.
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-09 — Create after a page uses afterUid
 
 **Done:** A create with `afterUid` is placed directly after that page, including when the plan sent that page as a positive pid. "After A named U" uses page A. "Inside … at the end" uses the last child, the same as "under". See `context/features/ai-agent.md`.
