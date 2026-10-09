@@ -104,6 +104,8 @@ final readonly class AgentConversationRecorder
                     'previews' => array_values(is_array($presented['previews'] ?? null) ? $presented['previews'] : []),
                     'autoRan' => false,
                     'correlationId' => (string) ($result['correlationId'] ?? $meta['correlationId'] ?? ''),
+                    'changeId' => (string) ($result['changeId'] ?? ''),
+                    'undoable' => ($result['undoable'] ?? false) === true,
                     'schedulerHandoff' => $handoff,
                     'links' => $links,
                     'fromRunner' => ($meta['fromRunner'] ?? false) === true,

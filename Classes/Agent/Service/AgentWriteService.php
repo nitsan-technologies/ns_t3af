@@ -299,6 +299,53 @@ final class AgentWriteService
         return true;
     }
 
+    /**
+     * What Undo removes after a confirmed tool ran. Attaching files can be undone: exactly the new
+     * references go, never the files or the record they were attached to. Other tools have no undo.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function toolUndoFields(string $toolName, mixed $result): array
+    {
+        if ($toolName !== 'file_reference_add') {
+            return [];
+        }
+        if (is_string($result)) {
+            try {
+                $result = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                return [];
+            }
+        }
+        if (!is_array($result)) {
+            return [];
+        }
+        $parent = [
+            'table' => (string) ($result['table'] ?? ''),
+            'uid' => (int) ($result['uid'] ?? 0),
+            'field' => (string) ($result['fieldName'] ?? ''),
+        ];
+        if ($parent['table'] === '' || $parent['uid'] <= 0 || $parent['field'] === '') {
+            return [];
+        }
+
+        $undo = [];
+        foreach (is_array($result['referenceUids'] ?? null) ? $result['referenceUids'] : [] as $referenceUid) {
+            if (is_numeric($referenceUid) && (int) $referenceUid > 0) {
+                $undo[] = [
+                    'table' => 'sys_file_reference',
+                    'uid' => (int) $referenceUid,
+                    'field' => '_record',
+                    'previousValue' => null,
+                    'action' => 'create',
+                    'parent' => $parent,
+                ];
+            }
+        }
+
+        return $undo;
+    }
+
     private static function currentWorkspaceId(): int
     {
         $user = $GLOBALS['BE_USER'] ?? null;
@@ -741,19 +788,21 @@ final class AgentWriteService
         );
 
         $changeId = bin2hex(random_bytes(8));
+        $undoFields = self::toolUndoFields($toolName, $invokeResult['result'] ?? null);
         $this->draftSession->storeChange($changeId, [
             'correlationId' => $correlationId,
             'plan' => $plan->toArray(),
             'keptFieldKeys' => [],
-            'undoFields' => [],
+            'undoFields' => $undoFields,
             'appliedAt' => time(),
+            'workspaceId' => self::currentWorkspaceId(),
             'toolConfirmation' => true,
         ]);
         $this->draftSession->removeDraft($draftId);
 
         return [
             'changeId' => $changeId,
-            'undoable' => false,
+            'undoable' => AgentUndoService::isUndoable($undoFields),
             'correlationId' => $correlationId,
             'appliedCount' => 1,
             'totalCount' => 1,
