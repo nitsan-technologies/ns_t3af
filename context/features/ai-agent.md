@@ -120,6 +120,10 @@ Moving an existing page uses `pages_move` (`beforeUid` places it directly before
 
 A request that names a page ("the Contact page") does not use the page on screen when that name is missing. The turn asks which page to use and offers the closest titles. "The first one", or a clicked title, locks that page for the next turn (`lockedPageId`), including for SEO. Creating a page is unchanged.
 
+A model reply that leaks a tool call (`to=tool_name`, including the JSON in front of it) is stripped before the editor sees it (`AgentPromptBuilder::stripLeakedToolCall`). When that leak is about a page uid that does not exist, the reply is `agent.page.missingUid` ("Page 99999 doesn't exist."). A normal reply is unchanged.
+
+Removing a named page from the SEO queue uses that page's uid as `pageIds` on `t3ai_mass_seo_queue_remove`. The queue list uses the same uid. SEO for one language version passes that language's id as `sysLanguageUid`.
+
 ---
 
 ## NL tool selection

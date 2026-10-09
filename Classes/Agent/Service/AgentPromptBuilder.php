@@ -90,6 +90,9 @@ readonly class AgentPromptBuilder
             'Page position uses pid. A positive pid creates the page as the first child of that page. A negative pid (-uid) creates it directly after that page. "After Page 1" is write_table create with afterUid set to Page 1\'s uid. Do not send Page 1\'s uid as a positive pid for an after request. "Before Page 2" is write_table create with beforeUid set to Page 2\'s uid. Do not send the parent uid as pid for a before request. "Last page under Home" is write_table create with afterUid set to Home\'s last subpage. "Subpage of Page 1" is Page 1\'s uid as a positive pid.',
             'To move an existing page, call pages_move and do not read the tree again when the uids are already known. beforeUid places it directly before that page. afterUid places it directly after that page. targetPid places it as the first child of that page. A hidden page can be moved. Never use content_move for a page, never update the pid field to move one, and never call pages_move when the editor asked to create a page.',
             'To find a page by name, call pages_search with that name only and no pid. A hidden match is a real page: use its uid. When no page has that name, say it was not found and ask which page to use. Do not change the page that is currently open instead. "After page Sample" is pages_move with afterUid of that uid.',
+            'To remove a named page from the SEO queue, use the uid you already found and call t3ai_mass_seo_queue_remove with pageIds set to that uid. The queue list uses the same page uid. Do not ask the editor for another id.',
+            'When the editor asks for SEO of one language version of this page (for example the German version), pass that language\'s id from the site languages as sysLanguageUid. The translated page is updated. Do not write those texts onto the default-language page.',
+            'When a page uid does not exist, say that the page does not exist. Do not show tool-call text, JSON, or tool names.',
             'To create a page with content: first prepare the new page (only the page). After the editor applies it, the result gives the new page uid; then prepare the content elements with that uid as their pid.',
             'When the editor asks to create or add content elements, use a create/write tool. Do not call content_delete unless they asked to remove or replace something.',
             'To change or delete a content element, use its uid from the latest content_list or content_get result; uids from older messages may no longer exist. The uid of a record you just created (from the applied result) is valid.',
@@ -418,6 +421,59 @@ readonly class AgentPromptBuilder
         }
 
         return $text;
+    }
+
+    /**
+     * Some models write the tool call into the answer ("{"pageId":99999} to=t3ai_generate_all_seo …").
+     * The editor sees the sentence after that call. A reply without a leaked call is unchanged.
+     */
+    public static function stripLeakedToolCall(string $text): string
+    {
+        $text = trim($text);
+        if ($text === '' || preg_match('/to=[A-Za-z0-9_]+/', $text) !== 1) {
+            return $text;
+        }
+
+        $stripped = preg_replace('/\{[^{}]{0,500}\}\s*to=[A-Za-z0-9_]+|to=[A-Za-z0-9_]+/u', ' ', $text);
+        if (!is_string($stripped)) {
+            return $text;
+        }
+        $stripped = trim($stripped);
+        if (preg_match('/[A-Za-zÄÖÜäöü][A-Za-zÄÖÜäöü\'’\-]*(?:\s+[A-Za-zÄÖÜäöü0-9][A-Za-zÄÖÜäöü0-9\'’\-]*){2,}.*/u', $stripped, $sentence) === 1) {
+            return trim($sentence[0]);
+        }
+
+        return $stripped;
+    }
+
+    /**
+     * Page uid from a leaked tool call whose sentence says that page is missing. 0 otherwise.
+     */
+    public static function leakedMissingPageUid(string $text): int
+    {
+        if (preg_match('/to=[A-Za-z0-9_]+/', $text) !== 1) {
+            return 0;
+        }
+        $prose = self::stripLeakedToolCall($text);
+        if (!self::isMissingPageProse($prose) && !self::isMissingPageProse($text)) {
+            return 0;
+        }
+        if (preg_match('/"pageId"\s*:\s*(\d+)/', $text, $match) === 1) {
+            return (int) $match[1];
+        }
+        if (preg_match('/\b(?:page|seite)(?:\s+uid)?\s+(\d+)/iu', $prose, $match) === 1) {
+            return (int) $match[1];
+        }
+
+        return 0;
+    }
+
+    private static function isMissingPageProse(string $text): bool
+    {
+        return preg_match(
+            '/was not found|does(?:\s*n[\'’]t| not) exist|can(?:\s*n[\'’]t|not) generate|nicht gefunden|gibt es nicht|kann .{0,40}nicht/iu',
+            $text,
+        ) === 1;
     }
 
     /**
