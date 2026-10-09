@@ -422,6 +422,26 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function historyTellsTheModelThatAFailedCardWouldFailAgain(): void
+    {
+        $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();
+        $history = $builder->buildHistory([[
+            'role' => 'assistant',
+            'content' => 'upload from https://no-such-host.invalid/a.jpg to user_upload',
+            'meta' => ['type' => 'inline_draft', 'draft' => [
+                'editorLabel' => 'Upload a file from a URL',
+                'failed' => true,
+                'failureMessage' => 'Could not resolve host "no-such-host.invalid".',
+            ]],
+        ]]);
+
+        self::assertSame(
+            '[Prepared change: Upload a file from a URL — failed and would fail again with the same arguments: Could not resolve host "no-such-host.invalid".] upload from https://no-such-host.invalid/a.jpg to user_upload',
+            $history[0]['content'],
+        );
+    }
+
+    #[Test]
     public function historyOmitsDraftReviewBoilerplateSoModelsDoNotParrotIt(): void
     {
         $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();

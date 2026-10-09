@@ -86,4 +86,32 @@ final class FileUploadFromUrlToolTest extends TestCase
 
         self::assertSame(McpConfirmationPlanBuilder::PLAN_KIND_TOOL_CONFIRMATION, $plan->context['planKind'] ?? null);
     }
+
+    #[Test]
+    public function unknownHostIsReportedAsNotWorthRetrying(): void
+    {
+        $result = $this->executeFailingWith(new \InvalidArgumentException('Could not resolve host "no-such-host.invalid".', 1747320020));
+
+        self::assertSame(['error' => 'Could not resolve host "no-such-host.invalid".', 'retryable' => false], $result);
+    }
+
+    #[Test]
+    public function networkTroubleMayBeRetried(): void
+    {
+        $result = $this->executeFailingWith(new \InvalidArgumentException('Could not download the file from example.com.', 1747320010));
+
+        self::assertSame(['error' => 'Could not download the file from example.com.'], $result);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function executeFailingWith(\Throwable $exception): array
+    {
+        $fileService = $this->createMock(FileService::class);
+        $fileService->method('uploadFileFromUrl')->willThrowException($exception);
+        $tool = new FileUploadFromUrlTool($fileService, new McpConfirmationPlanBuilder());
+
+        return json_decode($tool->execute('https://no-such-host.invalid/a.jpg', 'user_upload'), true, 512, JSON_THROW_ON_ERROR);
+    }
 }
