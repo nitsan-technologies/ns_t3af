@@ -299,6 +299,41 @@ readonly class TcaSchemaService
     }
 
     /**
+     * Fields the record type shows in the backend form, palettes included. Empty when the
+     * table has no form for that type, so callers cannot tell a hidden field from an unknown one.
+     *
+     * @return list<string>
+     */
+    public function getShownFields(string $tableName, string $recordType): array
+    {
+        $tca = $this->getTca($tableName);
+        $type = $tca['types'][$recordType] ?? null;
+        $showitem = is_array($type) ? ($type['showitem'] ?? '') : '';
+        if (!is_string($showitem) || trim($showitem) === '') {
+            return [];
+        }
+        $palettes = is_array($tca['palettes'] ?? null) ? $tca['palettes'] : [];
+
+        $fields = [];
+        foreach (explode(',', $showitem) as $item) {
+            $parts = array_map('trim', explode(';', $item));
+            if ($parts[0] === '--palette--') {
+                $paletteItems = $palettes[$parts[2] ?? '']['showitem'] ?? '';
+                foreach (explode(',', is_string($paletteItems) ? $paletteItems : '') as $paletteItem) {
+                    $fields[] = trim(explode(';', $paletteItem)[0]);
+                }
+                continue;
+            }
+            $fields[] = $parts[0];
+        }
+
+        return array_values(array_unique(array_filter(
+            $fields,
+            static fn(string $field): bool => $field !== '' && !str_starts_with($field, '--'),
+        )));
+    }
+
+    /**
      * Relation fields writable as a comma-separated list of UIDs (category / MM select / MM group).
      *
      * @return list<string>
