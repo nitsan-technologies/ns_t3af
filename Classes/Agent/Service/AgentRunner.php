@@ -343,6 +343,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $agentResult = $agent->call($this->buildMessages($userMessage, $historyMessages, $context, $plan, $requestForChecklist))->getResult();
             $content = $agentResult->getContent();
             $finalText = is_string($content) ? trim($content) : '';
+            $retried = false;
             // Models sometimes parrot draft-history notes as the final answer; never show that, retry once.
             if (
                 AgentPromptBuilder::isCardHistoryEcho($finalText)
@@ -359,6 +360,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 if (AgentPromptBuilder::isCardHistoryEcho($finalText)) {
                     $finalText = '';
                 }
+                $retried = true;
             }
             $retryPlan = $state->plan !== [] ? $state->plan : $plan;
             if (
@@ -374,6 +376,23 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 if (AgentPromptBuilder::isCardHistoryEcho($finalText)) {
                     $finalText = '';
                 }
+                $retried = true;
+            }
+            // The model pasted the new text into chat and offered to apply it, but sent no draft: nothing can
+            // be applied from chat text. Ask once for the write tool; a normal answer is never forced.
+            if (
+                !$retried
+                && self::offersUnbackedApply($finalText)
+                && !$state->isPaused()
+                && !$state->failed
+                && !$state->isCancelled()
+            ) {
+                $nudge = $userMessage . "\n\n[System: You wrote the new text in chat and offered to apply it, but no change was prepared, so nothing can be applied. Call the write tool now with the new text so the editor gets an approval card. Do not paste the text in chat again.]";
+                $retryPlan = $state->plan !== [] ? $state->plan : $plan;
+                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan, $requestForChecklist))->getResult();
+                $content = $agentResult->getContent();
+                $retryText = is_string($content) ? trim($content) : '';
+                $finalText = AgentPromptBuilder::isCardHistoryEcho($retryText) ? '' : $retryText;
             }
         } catch (MaxIterationsExceededException) {
             $state->addMessage([
@@ -459,6 +478,26 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         return preg_match(
             '/credit balance|billing|insufficient[_ ]quota|exceeded your (?:current )?quota|quota exceeded|plans? (?:&|and) billing|invalid[_ ]api[_ ]key|incorrect api key|authentication[_ ]error|invalid x-api-key|payment required/i',
             $raw,
+        ) === 1;
+    }
+
+    /**
+     * True when a reply offers to apply a change ("Would you like to apply this change?") — which is only
+     * honest when a draft card came with it.
+     */
+    public static function offersUnbackedApply(string $text): bool
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return false;
+        }
+
+        return preg_match(
+            '/\b(?:would\s+you\s+like(?:\s+me)?\s+to|shall\s+i|should\s+i|want\s+me\s+to|do\s+you\s+want(?:\s+me)?\s+to)\s+(?:go\s+ahead\s+and\s+)?(?:apply|save|update|replace|write|use)\b/iu',
+            $text,
+        ) === 1 || preg_match(
+            '/\b(?:soll\s+ich|m[öo]chten\s+sie|m[öo]chtest\s+du|willst\s+du)\b[^.?!]{0,60}\b(?:anwenden|[üu]bernehm\w*|speicher\w*|ersetz\w*|aktualisier\w*)\b/iu',
+            $text,
         ) === 1;
     }
 
@@ -708,7 +747,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         $createContent = AgentCoreToolSet::isCreateContentRequest($query);
         $notAskedFor = array_flip(self::toolsNotAskedFor($query));
-        if ($createContent || self::isPlainEditRequest($query)) {
+        if ($createContent || self::isPlainEditRequest($query) || self::isNewsOnlyRequest($query)) {
             // "Change the header of element 5" is an update: with the delete tool at hand the model sometimes
             // answers with a delete card plus a create card instead.
             $notAskedFor['content_delete'] = true;
@@ -754,6 +793,20 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         ksort($byName);
 
         return array_values($byName);
+    }
+
+    /**
+     * "Delete the Winter news" is about a news record. With the tt_content delete tool at hand a model
+     * (Mistral) took the news uid for a content element on another site.
+     */
+    public static function isNewsOnlyRequest(string $query): bool
+    {
+        $s = mb_strtolower($query);
+        if (preg_match('/\b(news|newsartikel|nachricht\w*|meldung\w*)\b/u', $s) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(content\s+elements?|inhaltselement\w*|text\s*block|textblock|block|element|header|[üu]berschrift)\b/u', $s) !== 1;
     }
 
     /**
@@ -835,6 +888,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         'content_move' => '/\b(move|moves|moved|moving|reorder\w*|reposition\w*|relocate\w*|verschieb\w*|versetz\w*|umsortier\w*|nach\s+(?:oben|unten)|position)\b/iu',
         'pages_move' => '/\b(move|moves|moved|moving|verschieb\w*)\b/iu',
         'workspace_switch' => '/\b(workspaces?|arbeitsbereich\w*|switch\w*|wechsel\w*)\b/iu',
+        // A rewrite or edit is not a summary: the summarize tool answered "rewrite friendlier" with an unrelated welcome text.
+        't3aa_summarize_content' => '/\b(summar\w*|tl;?dr|zusammenfass\w*|kurzfassung|abstract|gist)\b/iu',
     ];
 
     /**
