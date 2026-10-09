@@ -187,6 +187,9 @@ TXT;
 
         self::assertSame(['Create Text element'], array_column($steps, 'title'));
         self::assertSame([], AgentRequestChecklist::parse('Erstelle ein Textelement mit der Überschrift QA Test.'));
+        // The value itself may contain the word "header" (ticket 14zervyucgh).
+        $steps = AgentRequestChecklist::parse('Create a new Text content element on this page with the header QA Header Check Cx and the text Hello');
+        self::assertSame(['Create Text element'], array_column($steps, 'title'));
         self::assertSame(
             ['Create Header element', 'Create Text element'],
             array_column(AgentRequestChecklist::parse('Add a header and a text element to this page'), 'title'),

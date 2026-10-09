@@ -306,9 +306,10 @@ final class AgentRequestChecklist
     {
         $s = mb_strtolower($text);
         // "…a text element with the header X" / "…mit der Überschrift X" names a FIELD of the element, not a second
-        // Header element: it must not open a step that nothing will ever complete.
+        // Header element: it must not open a step that nothing will ever complete. The value that follows
+        // ("…the header QA Header Check") is dropped too, as it may contain the word "header" itself.
         $s = (string) preg_replace(
-            '/\b(?:with|having|including|titled|mit|inklusive)\s+(?:(?:the|a|an|its|der|die|dem|einer|einem|dessen)\s+)?(?:headers?|headline|überschrift|ueberschrift)\b/u',
+            '/\b(?:with|having|including|titled|mit|inklusive)\s+(?:(?:the|a|an|its|der|die|dem|einer|einem|dessen)\s+)?(?:headers?|headline|überschrift|ueberschrift)\b.*?(?=\s+(?:and|und)\s+(?:the|a|an|with|mit|der|die|das|ein|eine)\b|[,;.]|$)/u',
             ' ',
             $s,
         );
