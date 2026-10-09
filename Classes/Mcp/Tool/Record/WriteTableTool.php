@@ -29,6 +29,7 @@ use Mcp\Capability\Attribute\McpTool;
 use Mcp\Capability\Attribute\Schema;
 use Mcp\Exception\ToolCallException;
 use Mcp\Schema\ToolAnnotations;
+use NITSAN\NsT3AF\Access\RecordAccessGate;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
@@ -92,6 +93,12 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
         if (!$this->tableExists($tableName)) {
             throw new \InvalidArgumentException('Table not found: ' . $tableName);
+        }
+
+        // The table comes first: a user who may not change this kind of record must hear that, not a page error.
+        $user = $GLOBALS['BE_USER'] ?? null;
+        if ($user instanceof BackendUserAuthentication && !(new RecordAccessGate())->canModifyTable($user, $tableName)) {
+            throw new \InvalidArgumentException('You are not allowed to change this kind of record with your backend account.');
         }
 
         $payload = self::decodeData($dataRaw, $action);

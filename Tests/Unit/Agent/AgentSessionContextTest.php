@@ -542,4 +542,19 @@ final class AgentSessionContextTest extends TestCase
         self::assertSame($text . ' Ask an administrator.', AgentPromptBuilder::collapseRepeatedReply($text . ' Ask an administrator.'));
         self::assertSame('Done.', AgentPromptBuilder::collapseRepeatedReply('Done.'));
     }
+
+    #[Test]
+    public function theFollowUpAfterAConfirmedCardIsNotARequest(): void
+    {
+        $followUp = '[The editor confirmed "Create Text element" and it was applied.] Continue.';
+
+        self::assertSame([], \NITSAN\NsT3AF\Agent\Service\AgentRequestChecklist::parse($followUp));
+        self::assertSame(
+            'Change the header of element 5 to Hello.',
+            AgentPromptBuilder::latestUserRequestText([
+                ['role' => 'user', 'content' => 'Change the header of element 5 to Hello.', 'meta' => []],
+                ['role' => 'user', 'content' => $followUp, 'meta' => []],
+            ]),
+        );
+    }
 }

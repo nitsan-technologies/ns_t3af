@@ -531,6 +531,14 @@ final class AgentAjaxController
             // Paths inside the project are shortened; the editor sees what failed, not where it lives.
             $reason = str_replace(Environment::getProjectPath() . '/', '', $exception->getMessage());
             $reason = AgentPermissionMessage::rewrite($reason, $this->translator);
+            $this->auditLogger->logToolInvocation(
+                $correlationId,
+                'agent_draft_apply',
+                ['draftId' => $draftId, 'keptFieldKeys' => $keptFieldKeys],
+                false,
+                0,
+                mb_substr($exception->getMessage(), 0, 250),
+            );
 
             return new JsonResponse(['ok' => false, 'message' => $this->translator->translate('agent.error.applyFailedDetail', [$reason])], 400);
         }

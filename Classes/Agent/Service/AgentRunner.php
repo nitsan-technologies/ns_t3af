@@ -793,6 +793,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     private const ONLY_WHEN_ASKED = [
         'pages_copy' => '/\b(copy|copies|duplicate|duplicat\w*|clone|kopier\w*|kopie|dupliz\w*|klon\w*)\b/iu',
         // Persists the editor's backend workspace: only when the editor asks to change it.
+        // A move card for "change the subheader" was applied as an edit and then reported as done.
+        'content_move' => '/\b(move|moves|moved|moving|reorder\w*|reposition\w*|relocate\w*|verschieb\w*|versetz\w*|umsortier\w*|nach\s+(?:oben|unten)|position)\b/iu',
         'workspace_switch' => '/\b(workspaces?|arbeitsbereich\w*|switch\w*|wechsel\w*)\b/iu',
     ];
 
