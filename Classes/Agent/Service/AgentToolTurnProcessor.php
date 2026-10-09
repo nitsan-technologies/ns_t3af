@@ -161,7 +161,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         if ($severity === ToolSeverity::Write->value || $severity === ToolSeverity::Destructive->value) {
-            $draftMessage = $this->processWriteToolTurn($tool, $context, $body, $severity);
+            $draftMessage = $this->processWriteToolTurn($tool, $context, $body, $severity, $correlationId);
             $draftMessage['meta']['correlationId'] = $correlationId;
             $this->applyTurnGuardMeta($draftMessage['meta'], $guard['message']);
 
@@ -414,6 +414,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 (string) ($result['message'] ?? ''),
                 $this->translator,
             );
+            $this->auditLogger->logToolInvocation($correlationId, $toolName, $arguments, false, 0, mb_substr((string) ($result['message'] ?? ''), 0, 250));
 
             return [
                 'role' => 'assistant',
@@ -477,12 +478,22 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * A change that could not be prepared (refused, wrong arguments) still belongs in the log.
+     *
+     * @param array<string, mixed> $arguments
+     */
+    private function logRefusedPlan(string $correlationId, string $toolName, array $arguments, \Throwable $exception): void
+    {
+        $this->auditLogger->logToolInvocation($correlationId, $toolName, $arguments, false, 0, mb_substr($exception->getMessage(), 0, 250));
+    }
+
+    /**
      * @param array<string, mixed> $tool
      * @param array<string, mixed> $context
      * @param array<string, mixed> $body
      * @return array{role: string, content: string, meta: array<string, mixed>}
      */
-    private function processWriteToolTurn(array $tool, array $context, array $body, string $severity): array
+    private function processWriteToolTurn(array $tool, array $context, array $body, string $severity, string $correlationId = ''): array
     {
         $toolName = (string) ($tool['name'] ?? '');
         if (!$this->toolPlanResolver->supportsPlanning($toolName)) {
@@ -505,6 +516,8 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         try {
             $plan = $this->toolPlanResolver->plan($toolName, $arguments);
         } catch (UnsupportedPlanException $exception) {
+            $this->logRefusedPlan($correlationId, $toolName, $arguments, $exception);
+
             return [
                 'role' => 'assistant',
                 'content' => $exception->getMessage(),
@@ -513,6 +526,8 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         } catch (\InvalidArgumentException $exception) {
             // Wrong arguments (a record that does not exist, a wrong field): no card, and the turn
             // goes on so the model can correct the call.
+            $this->logRefusedPlan($correlationId, $toolName, $arguments, $exception);
+
             return [
                 'role' => 'assistant',
                 'content' => $this->translator->translate('agent.turn.planInvalid', [$exception->getMessage()]),
@@ -528,6 +543,8 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 ],
             ];
         } catch (\Throwable $exception) {
+            $this->logRefusedPlan($correlationId, $toolName, $arguments, $exception);
+
             return [
                 'role' => 'assistant',
                 'content' => $this->translator->translate('agent.turn.planFailed', [$toolName, $exception->getMessage()]),
