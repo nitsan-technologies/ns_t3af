@@ -298,6 +298,39 @@ TXT;
     }
 
     #[Test]
+    public function aDeclinedCreateIsNotPushedAgain(): void
+    {
+        $request = 'Create a text & media content element with the heading Preview Test and attach the existing images sys_file uid 145 and 5';
+        $declinedCard = static fn(string $tool, string $action, array $fields): array => [
+            'role' => 'assistant',
+            'content' => 'Draft discarded. Nothing was written.',
+            'meta' => ['type' => 'inline_draft', 'tool' => $tool, 'draft' => ['tool' => $tool, 'action' => $action, 'discarded' => true, 'fields' => $fields]],
+        ];
+        $history = [
+            ['role' => 'user', 'content' => $request, 'meta' => ['type' => 'message']],
+            $declinedCard('write_table', 'create', [
+                ['table' => 'tt_content', 'field' => 'colPos', 'proposed' => '0'],
+                ['table' => 'tt_content', 'field' => 'CType', 'proposed' => 'textmedia'],
+                ['table' => 'tt_content', 'field' => 'header', 'proposed' => 'Preview Test'],
+            ]),
+            ['role' => 'user', 'content' => '[The editor declined "Change a record". Nothing was written.] Do not repeat it.', 'meta' => ['type' => 'continuation', 'hidden' => true]],
+        ];
+
+        $steps = AgentRequestChecklist::reconcile($history, $request);
+
+        self::assertSame(['failed', 'failed'], array_column($steps, 'status'));
+        self::assertFalse(AgentPromptBuilder::hasBlockingRemainingWork($history, [], $request));
+        self::assertStringContainsString(
+            'nothing else remains',
+            AgentPromptBuilder::continuationMessage(['outcome' => 'declined', 'label' => 'Change a record'], array_slice($history, 0, 2)),
+        );
+
+        $created = ['role' => 'assistant', 'content' => 'Applied.', 'meta' => ['type' => 'readback_result', 'readback' => [['table' => 'tt_content', 'uid' => 260, 'values' => ['CType' => 'textmedia']]]]];
+        $attachDeclined = $declinedCard('file_reference_add', '', []);
+        self::assertSame(['completed', 'failed'], array_column(AgentRequestChecklist::reconcile([$history[0], $created, $attachDeclined], $request), 'status'));
+    }
+
+    #[Test]
     public function filesALookupOnlyShowedAreNotWaitingToBeAttached(): void
     {
         $history = [

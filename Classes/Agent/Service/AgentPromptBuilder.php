@@ -357,6 +357,15 @@ readonly class AgentPromptBuilder
             }
         }
         if (($continuation['outcome'] ?? '') === 'declined') {
+            $checklist = AgentRequestChecklist::reconcile($history, self::latestUserRequestText($history));
+            if ($checklist !== [] && !AgentRequestChecklist::hasOpen($checklist)) {
+                return sprintf(
+                    '[The editor declined "%s". Nothing was written.] The rest of my request depended on it, so nothing else remains:'
+                    . ' do not call tools and do not propose it again in another form. Ask in one short sentence what to do instead.',
+                    $label,
+                );
+            }
+
             return sprintf(
                 '[The editor declined "%s". Nothing was written.] Do not repeat it. If other steps of my request remain, continue with them;'
                 . ' otherwise ask in one short sentence what to do instead.',
