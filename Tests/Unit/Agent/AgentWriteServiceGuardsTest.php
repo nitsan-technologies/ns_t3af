@@ -36,6 +36,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Site\SiteFinder;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Safety checks before a change card is applied: old cards expire (ticket 14zervyu2kg) and a value
@@ -55,6 +56,8 @@ final class AgentWriteServiceGuardsTest extends TestCase
     protected function tearDown(): void
     {
         unset($GLOBALS['BE_USER']);
+        // apply() creates the real LockFactory singleton; drop it so later tests find a clean list.
+        GeneralUtility::resetSingletonInstances([]);
         $this->releaseAgentTranslator();
         parent::tearDown();
     }
