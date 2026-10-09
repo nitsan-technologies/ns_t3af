@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-09 — Image generation uses an image model
+
+**Done:** `ImageGenerationService::imageModelFor()` picks the model for `generate()` and `variation()`: the requested `modelId`, else the provider's model when it is an image model (`gpt-image-*`, `dall-e-*`, `imagen`, `flux`, …), else `gpt-image-1` for `symfony.openai`. Otherwise it stops before any HTTP call with "No image model configured for provider X". The provider's chat model (`gpt-5.4-mini`) is no longer sent to images/generations, and telemetry logs the image model.
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-09 — A missing named page is not the page on screen
 
 **Done:** "make the Contact page show up in Google" asks which page to use when no page is called Contact, and does not prepare SEO for the open page. "The first one" locks the first offered page (`lockedPageId`). See `context/features/ai-agent.md`.
