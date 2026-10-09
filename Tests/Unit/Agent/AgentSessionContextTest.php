@@ -392,6 +392,16 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function choicesPastedIntoTheQuestionBecomeOptions(): void
+    {
+        [$question, $options] = AskClarificationTool::liftInlineOptions('Which element? ["RT A", "RT B"]', []);
+
+        self::assertSame('Which element?', $question);
+        self::assertSame(['RT A', 'RT B'], $options);
+        self::assertSame(['Which?', ['X']], AskClarificationTool::liftInlineOptions('Which?', ['X']));
+    }
+
+    #[Test]
     public function historyReplaysCardsAsShortNotes(): void
     {
         $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();

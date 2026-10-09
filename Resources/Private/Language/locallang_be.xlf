@@ -741,6 +741,9 @@
       <trans-unit id="agent.turn.providerUnavailable" resname="agent.turn.providerUnavailable">
         <source>The AI provider is not available right now. Please try again later or ask your administrator to check the provider account.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.timeout" resname="agent.turn.timeout">
+        <source>The AI took too long to answer. Please try again.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.orchestratorFailed" resname="agent.turn.orchestratorFailed">
         <source>The agent could not complete this turn: %1$s</source>
       </trans-unit>

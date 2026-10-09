@@ -436,6 +436,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             }
         }
 
+        if (self::looksLikeTimeout($exception)) {
+            return $this->translator->translate('agent.turn.timeout');
+        }
+
         if (self::looksLikeContextOverflow($exception->getMessage())) {
             return $this->translator->translate('agent.credits.contextLength');
         }
@@ -456,6 +460,21 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             '/credit balance|billing|insufficient[_ ]quota|exceeded your (?:current )?quota|quota exceeded|plans? (?:&|and) billing|invalid[_ ]api[_ ]key|incorrect api key|authentication[_ ]error|invalid x-api-key|payment required/i',
             $raw,
         ) === 1;
+    }
+
+    /** The provider did not answer in time (idle timeout, request timeout), however the platform wrapped it. */
+    public static function looksLikeTimeout(\Throwable $exception): bool
+    {
+        for ($current = $exception; $current !== null; $current = $current->getPrevious()) {
+            if ($current instanceof \Symfony\Contracts\HttpClient\Exception\TimeoutExceptionInterface) {
+                return true;
+            }
+            if (preg_match('/idle timeout|timed out|timeout reached|operation timed out/i', $current->getMessage()) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** Provider wording for "the request is larger than the model's context window". */

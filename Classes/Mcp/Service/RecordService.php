@@ -604,9 +604,18 @@ readonly class RecordService
         $queryBuilder->getRestrictions()->removeAll();
         $this->workspaceContext->applyRestriction($queryBuilder, $table);
 
-        /** @var list<array{uid: int|string, sys_language_uid: int|string}> $rows */
+        // The enable column tells the model whether a translation is visible; without it a hidden
+        // translation looks like any other and "make it visible" is answered with "already visible".
+        $disabled = $GLOBALS['TCA'][$table]['ctrl']['enablecolumns']['disabled'] ?? null;
+        $hiddenField = is_string($disabled) && $disabled !== '' ? $disabled : null;
+        $select = ['uid', $languageField . ' AS sys_language_uid'];
+        if ($hiddenField !== null) {
+            $select[] = $hiddenField . ' AS hidden_flag';
+        }
+
+        /** @var list<array{uid: int|string, sys_language_uid: int|string, hidden_flag?: int|string}> $rows */
         $rows = $queryBuilder
-            ->select('uid', $languageField . ' AS sys_language_uid')
+            ->select(...$select)
             ->from($table)
             ->where($queryBuilder->expr()->eq($transOrigPointerField, $queryBuilder->createNamedParameter($uid, ParameterType::INTEGER)))
             ->orderBy($languageField, 'ASC')
@@ -614,10 +623,17 @@ readonly class RecordService
             ->fetchAllAssociative();
 
         return array_map(
-            static fn(array $row): array => [
-                'uid' => (int) $row['uid'],
-                'sys_language_uid' => (int) $row['sys_language_uid'],
-            ],
+            static function (array $row) use ($hiddenField): array {
+                $entry = [
+                    'uid' => (int) $row['uid'],
+                    'sys_language_uid' => (int) $row['sys_language_uid'],
+                ];
+                if ($hiddenField !== null) {
+                    $entry['hidden'] = (int) ($row['hidden_flag'] ?? 0);
+                }
+
+                return $entry;
+            },
             $rows,
         );
     }
