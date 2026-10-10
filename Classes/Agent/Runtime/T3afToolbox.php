@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Runtime;
 
 use NITSAN\NsT3AF\Agent\Service\AgentPlan;
+use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentRequestedFiles;
 use NITSAN\NsT3AF\Agent\Service\AgentToolSearch;
 use NITSAN\NsT3AF\Agent\Service\PageCreateAfter;
@@ -183,6 +184,39 @@ final class T3afToolbox implements ToolboxInterface
                 : 'Not executed: the editor asked for an AI-generated image, and AI image generation is not available to this editor.'
                     . ' Do not upload a web image instead: do the rest of the request and tell the editor in one sentence that the image could not be generated.');
         }
+        $conversationHistory = $this->conversationHistory();
+        if (
+            in_array($name, ['t3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3aa_generate_voice_over'], true)
+            && (
+                preg_match('/\b(picture|pictures|image|images|photo|photos|illustration|bild\w*|foto\w*|grafik\w*)\b/iu', $requestQuery) === 1
+                || AgentPromptBuilder::pendingImageAttachNote($conversationHistory) !== ''
+            )
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for a picture, not SEO or voice-over. Call t3ai_generate_image (then file_reference_add), or wait for the open generate card to be applied.',
+            );
+        }
+        if ($name === 'file_reference_add') {
+            if (AgentPromptBuilder::hasOpenFileReferenceDraft($conversationHistory)) {
+                $outcome = 'invalid';
+
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: an attach card is already open for the editor. Wait until they Apply or Decline it. Do not prepare another attach.',
+                );
+            }
+            if (AgentPromptBuilder::unattachedFileUids($conversationHistory) === []) {
+                $outcome = 'invalid';
+
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: every generated file in this conversation is already attached (or none exists yet). Do not call file_reference_add again.',
+                );
+            }
+        }
         if (!isset($this->catalog[$name])) {
             $outcome = 'unavailable';
 
@@ -263,6 +297,7 @@ final class T3afToolbox implements ToolboxInterface
 
         $body = $this->runtime->body;
         $body['arguments'] = $validation['arguments'];
+        $body['conversationHistory'] = $this->conversationHistory();
         $body['skipLlmSummary'] = true;
         $message = $this->runtime->executor->execute($name, $this->runtime->context, $body, $this->runtime->user, $this->state->correlationId);
 
@@ -299,6 +334,26 @@ final class T3afToolbox implements ToolboxInterface
         }
 
         return new ToolResult($toolCall, $forModel);
+    }
+
+    /**
+     * Prior conversation plus messages produced in this turn (readbacks, open drafts, applied tools).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function conversationHistory(): array
+    {
+        $prior = is_array($this->runtime->body['conversationHistory'] ?? null)
+            ? $this->runtime->body['conversationHistory']
+            : [];
+        $merged = [];
+        foreach ([...array_values($prior), ...$this->state->messages] as $entry) {
+            if (is_array($entry)) {
+                $merged[] = $entry;
+            }
+        }
+
+        return $merged;
     }
 
     /**

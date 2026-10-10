@@ -71,7 +71,8 @@ readonly class AgentPromptBuilder
             'When you search for a record or element by name, use a limit of at least 5. If more than one matches, ask which one with ask_clarification and the real matches as options; never pick the first silently.',
             'The translations of a page are listed in the `translations` of pages_get (uid, language, hidden); they are not subpages. To show or hide a translated page, change the `hidden` field of that translation uid. When the editor wants the page itself visible or hidden, also look for hidden content elements on that translation (content_list) and include them in the same change, or ask if only the page was meant; never conclude that a translation does not exist from a search below the page.',
             'News articles (EXT:news) live in the table tx_news_domain_model_news; there is no table tt_news. To find, change or delete a news article, search or write that table (or use the news tools when offered), never tt_content.',
-            'To create a news article call write_table create on tx_news_domain_model_news right away (do not call explain_capabilities first). A news article is never a content element, a page heading or an image card. Every new article gets a title, a short teaser and the text. Do not invent a date: leave datetime out (it defaults to today) unless the editor named a date.',
+            'To create a news article call write_table create on tx_news_domain_model_news right away (do not call explain_capabilities first). A news article is never a content element, a page heading or an image card. Every new article gets a title, a short teaser and the text. Do not invent a date: leave datetime out (it defaults to today) unless the editor named a date. For bodytext use simple HTML (p, h2, ul), not Markdown. If the editor asked for a picture, create the news first, then generate one image and attach it to that news uid with file_reference_add fieldName fal_media — never create a content element on the Layout page for a news picture, and call generate/attach only once each.',
+            'When creating news, set data.pid to a news storage folder (a page that already holds news, from a prior list). Never use pid 0 and never use the Layout page on screen unless it is that storage folder. If you do not know a storage pid, omit pid and the tool picks one.',
             'When searching news with record_search, omit pid unless the editor named a news storage folder. News is not stored on the page open in Layout. An empty search lists all news the editor may read.',
             'Say "not allowed" only when a tool call was actually refused for permission. When a search finds no record with the name the editor gave, say "I can\'t find a … called …" and offer to list the ones that exist; never blame rights for a record that does not exist.',
             'When the editor asks for "all" records of a kind (all my news, all pages), call record_search on that table with an empty search and no pid: it lists them.',
@@ -726,7 +727,7 @@ readonly class AgentPromptBuilder
     }
 
     /**
-     * When a generated/uploaded file still has no file reference and a content element exists,
+     * When a generated/uploaded file still has no file reference and a target record exists,
      * tell the model that attach is still open (do not let it declare the request done early).
      *
      * @param list<array<string, mixed>> $history
@@ -738,6 +739,15 @@ readonly class AgentPromptBuilder
             return '';
         }
         $fileUidList = implode(', ', array_map(static fn(int $uid): string => (string) $uid, $fileUids));
+        $newsUid = self::latestAppliedNewsUid($history);
+        if ($newsUid !== null) {
+            return sprintf(
+                'Remaining: attach fileUid %s to tx_news_domain_model_news uid %d with file_reference_add (fieldName "fal_media").'
+                . ' Do not create a content element, do not attach to the Layout page, and do not call generate or attach again once it succeeds.',
+                $fileUidList,
+                $newsUid,
+            );
+        }
         $contentUid = self::latestAppliedContentElementUid($history);
         if ($contentUid === null) {
             return sprintf(
@@ -756,6 +766,57 @@ readonly class AgentPromptBuilder
             $fileUidList,
             $contentUid,
         );
+    }
+
+    /**
+     * Newest applied EXT:news uid in this conversation, or null.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function latestAppliedNewsUid(array $history): ?int
+    {
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            if (($history[$i]['role'] ?? '') !== 'assistant' || ($meta['type'] ?? '') !== 'readback_result') {
+                continue;
+            }
+            foreach (is_array($meta['readback'] ?? null) ? $meta['readback'] : [] as $entry) {
+                if (!is_array($entry) || (string) ($entry['table'] ?? '') !== 'tx_news_domain_model_news') {
+                    continue;
+                }
+                $uid = (int) ($entry['uid'] ?? 0);
+                if ($uid > 0) {
+                    return $uid;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * True when an attach card is still waiting for Apply/Decline.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function hasOpenFileReferenceDraft(array $history): bool
+    {
+        foreach ($history as $entry) {
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($meta['type'] ?? '') !== 'inline_draft') {
+                continue;
+            }
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            $tool = (string) ($meta['tool'] ?? ($draft['tool'] ?? ''));
+            if ($tool === 'file_reference_add' && ($draft['discarded'] ?? false) !== true) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

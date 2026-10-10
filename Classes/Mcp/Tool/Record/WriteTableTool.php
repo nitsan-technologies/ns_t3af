@@ -262,6 +262,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     {
         if ($tableName === 'tx_news_domain_model_news') {
             $payload = self::withSaneNewsDate($payload, $requestQuery);
+            $payload = $this->withNewsStoragePid($payload);
         }
         $pid = $this->resolveCreatePid($payload, $beforeUid, $afterUid);
         if ($pid < 0) {
@@ -356,6 +357,44 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return new ToolPlan('update', 'write_table', $fields);
+    }
+
+    /**
+     * News create needs a storage folder pid. Models omit it (or send 0) after being told not to use the
+     * Layout page for news search — DataHandler then fails on pages:0.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function withNewsStoragePid(array $payload): array
+    {
+        $pid = isset($payload['pid']) && is_numeric($payload['pid']) ? (int) $payload['pid'] : 0;
+        // Keep only a real news storage folder. A guessed Layout page (e.g. Privacy) must not win.
+        if ($pid > 0 && $this->recordService->isSuitableNewsStoragePid($pid)) {
+            return $payload;
+        }
+
+        $fallback = $this->recordService->preferredPidForTable('tx_news_domain_model_news');
+        if ($fallback <= 0) {
+            throw new \InvalidArgumentException(
+                'Creating a news article needs a news storage folder (pid). None was found that you can use.',
+            );
+        }
+        $payload['pid'] = $fallback;
+
+        return $payload;
+    }
+
+    /**
+     * True when create data has no usable pid yet (missing/zero). Unsuitable positive pids are
+     * rewritten in {@see withNewsStoragePid()} via page type, not here.
+     *
+     * @param array<string, mixed> $payload
+     * @internal used by unit tests
+     */
+    public static function newsCreateNeedsStoragePid(array $payload): bool
+    {
+        return !isset($payload['pid']) || !is_numeric($payload['pid']) || (int) $payload['pid'] <= 0;
     }
 
     /**
@@ -568,6 +607,9 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     private function create(string $tableName, array $payload, bool $strict = false, int $beforeUid = 0, int $afterUid = 0): string
     {
         try {
+            if ($tableName === 'tx_news_domain_model_news') {
+                $payload = $this->withNewsStoragePid($payload);
+            }
             $pid = $this->resolveCreatePid($payload, $beforeUid, $afterUid);
         } catch (\InvalidArgumentException $exception) {
             return $this->encodeError($exception->getMessage());
