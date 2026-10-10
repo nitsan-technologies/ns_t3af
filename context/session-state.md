@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-10 — Taking this page out of the SEO list prepares a card
+
+**Done:** "Take this page out of that list" calls `t3ai_mass_seo_queue_remove` with the open page as `pageIds`. A reply that only writes `[Prepare change` / `[Prepared change` or "this draft has not been applied" is retried as a real tool call, so the Apply card is shown. An explicit `pageIds` list is kept. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-10
+
+---
+
 ## 2026-10-10 — Several pages go on one SEO queue card
 
 **Done:** "Add pages 2, 3, 4, 7, 9 and 24 to the SEO queue" sends every uid as `pageIds` on one `t3ai_mass_seo_queue_add` call. The open page is not substituted for that list. See `context/features/ai-agent.md`.

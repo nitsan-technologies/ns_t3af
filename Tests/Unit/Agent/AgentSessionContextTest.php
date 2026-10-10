@@ -470,6 +470,10 @@ final class AgentSessionContextTest extends TestCase
             'Review the proposed changes for Change a record before anything is written.',
         ));
         self::assertFalse(AgentPromptBuilder::isCardHistoryEcho('All requested content elements have been added.'));
+        self::assertTrue(AgentPromptBuilder::isCardHistoryEcho(
+            '[Prepare change: Remove pages from the SEO queue] Page 2 is queued for removal. This draft has not been applied yet.',
+        ));
+        self::assertTrue(AgentPromptBuilder::isCardHistoryEcho('[Prepared change] The page is set to be removed from the SEO queue.'));
     }
 
     #[Test]
