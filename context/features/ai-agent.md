@@ -124,6 +124,8 @@ A model reply that leaks a tool call (`to=tool_name`, including the JSON in fron
 
 Removing a named page from the SEO queue uses that page's uid as `pageIds` on `t3ai_mass_seo_queue_remove`. The queue list uses the same uid. "Take this page out of that list" uses the open page as `pageIds` when the call omitted the list. A reply that only describes a prepared change (`[Prepare change` or `[Prepared change`) is treated as a history note and retried as a real tool call. Adding several named pages uses `pageIds` on `t3ai_mass_seo_queue_add` in one call, so the open page is not substituted for that list. SEO for one language version passes that language's id as `sysLanguageUid`.
 
+Asking when queued SEO or translation texts will be written follows `QueueAutomationStatus`: an enabled, not-deleted scheduler task (`tx_scheduler_task.tasktype`) counts as automatic processing on. A disabled task counts as off, and the reply says an admin has to enable that scheduler task, and offers to write the texts now. It does not say a scheduled job will run. Showing the SEO or translation queue calls the list tool again, because a scheduler run can empty the queue between questions.
+
 Writing SEO texts for the subpages of the open page uses `t3ai_generate_seo_batch`. An empty `entries` list uses the subpages of the open page, including pages that do not have Mass SEO enabled. The SEO queue is for background generation. A recursive add only includes pages with Mass SEO enabled, and the reply names any page that was skipped.
 
 ---

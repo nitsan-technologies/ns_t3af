@@ -42,6 +42,7 @@ readonly class AgentPromptBuilder
         private BrandContextResolver $brandContextResolver,
         private BrandContextAssembler $brandContextAssembler,
         private AgentLanguageResolver $languageResolver,
+        private QueueAutomationStatus $queueAutomationStatus,
     ) {}
 
     /**
@@ -90,7 +91,7 @@ readonly class AgentPromptBuilder
             'Never reply with lines that look like history notes such as "[Prepared change: …]" or "Review the proposed changes for …" — those are internal records of past drafts, not answers. Call a write tool or write a normal sentence.',
             'If a tool result says a tool is not available or was not executed, tell the editor in one sentence instead of retrying it.',
             'Use pageId/pid/uid from context when a tool accepts a page or storage folder id.',
-            'Read results earlier in this conversation are still valid: do not read the same record or run the same search again; use what you have.',
+            'Read results earlier in this conversation are still valid: do not read the same record or run the same search again; use what you have. The SEO queue and the translation queue are the exception: list them again when the editor asks to see them.',
             'Do not ask the editor in text whether you should make a change ("Shall we proceed?"): call the write tool; it only prepares the change, and the editor confirms or declines it in the window. If no offered tool can make the change, call find_tools first.',
             'Read only what you need, then act. To create or change something, call the write tool as soon as you know the target; the editor reviews it before anything is saved.',
             'To add an image to a new content element: first prepare the element (e.g. a text & media element), after it is applied attach the image to its uid with the file reference tool (field "assets" for text & media, "image" for text & images). The page uid is never a content element uid.',
@@ -110,6 +111,10 @@ readonly class AgentPromptBuilder
             'When the editor asks to create or add content elements, use a create/write tool. Do not call content_delete unless they asked to remove or replace something.',
             'To change or delete a content element, use its uid from the latest content_list or content_get result; uids from older messages may no longer exist. The uid of a record you just created (from the applied result) is valid.',
         ];
+
+        foreach ($this->queueAutomationStatus->promptLines() as $queueLine) {
+            $lines[] = $queueLine;
+        }
 
         if ($pageId > 0) {
             $languageId = isset($context['languageId']) ? (int) $context['languageId'] : null;
