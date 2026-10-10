@@ -64,6 +64,41 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
     }
 
     #[Test]
+    public function mergeContextUsesTheOpenPageWhenSeoQueueRemoveOmitsPageIds(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            [],
+            ['pageId' => 2, 'module' => 'web_layout'],
+            't3ai_mass_seo_queue_remove',
+        );
+
+        self::assertSame([2], $merged['pageIds']);
+        self::assertArrayNotHasKey('pageId', $merged);
+        self::assertArrayNotHasKey('pid', $merged);
+    }
+
+    #[Test]
+    public function mergeContextKeepsAnExplicitSeoQueueRemoveList(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            ['pageIds' => [14]],
+            ['pageId' => 2, 'module' => 'web_layout'],
+            't3ai_mass_seo_queue_remove',
+        );
+
+        self::assertSame([14], $merged['pageIds']);
+        self::assertArrayNotHasKey('pageId', $merged);
+    }
+
+    #[Test]
     public function mergeContextDoesNotCopyPageIdIntoUidForContentTools(): void
     {
         $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();

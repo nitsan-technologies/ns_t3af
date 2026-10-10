@@ -122,7 +122,7 @@ A request that names a page ("the Contact page") does not use the page on screen
 
 A model reply that leaks a tool call (`to=tool_name`, including the JSON in front of it) is stripped before the editor sees it (`AgentPromptBuilder::stripLeakedToolCall`). When that leak is about a page uid that does not exist, the reply is `agent.page.missingUid` ("Page 99999 doesn't exist."). A normal reply is unchanged.
 
-Removing a named page from the SEO queue uses that page's uid as `pageIds` on `t3ai_mass_seo_queue_remove`. The queue list uses the same uid. Adding several named pages uses `pageIds` on `t3ai_mass_seo_queue_add` in one call, so the open page is not substituted for that list. SEO for one language version passes that language's id as `sysLanguageUid`.
+Removing a named page from the SEO queue uses that page's uid as `pageIds` on `t3ai_mass_seo_queue_remove`. The queue list uses the same uid. "Take this page out of that list" uses the open page as `pageIds` when the call omitted the list. A reply that only describes a prepared change (`[Prepare change` or `[Prepared change`) is treated as a history note and retried as a real tool call. Adding several named pages uses `pageIds` on `t3ai_mass_seo_queue_add` in one call, so the open page is not substituted for that list. SEO for one language version passes that language's id as `sysLanguageUid`.
 
 Writing SEO texts for the subpages of the open page uses `t3ai_generate_seo_batch`. An empty `entries` list uses the subpages of the open page, including pages that do not have Mass SEO enabled. The SEO queue is for background generation. A recursive add only includes pages with Mass SEO enabled, and the reply names any page that was skipped.
 

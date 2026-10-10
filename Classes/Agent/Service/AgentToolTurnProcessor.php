@@ -648,7 +648,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         // The model named another page by URL: the page on screen must not be added as a second, conflicting target.
         $namesPageByUrl = trim((string) ($arguments['pageUrl'] ?? '')) !== '' && !isset($arguments['pageId']);
         // An explicit SEO queue list is the whole request. The open page must not replace it.
-        $namesSeoQueuePages = strtolower(trim($toolName)) === 't3ai_mass_seo_queue_add'
+        $namesSeoQueuePages = in_array(strtolower(trim($toolName)), ['t3ai_mass_seo_queue_add', 't3ai_mass_seo_queue_remove'], true)
             && self::hasExplicitPageIdList($arguments['pageIds'] ?? null);
         if ($pageId > 0 && !$namesPageByUrl && !$namesSeoQueuePages) {
             $arguments['pageId'] ??= $pageId;
@@ -710,6 +710,17 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             && (!isset($arguments['aiProvider']) || trim((string) $arguments['aiProvider']) === '')
         ) {
             $arguments['aiProvider'] = $provider;
+        }
+
+        // The remove tool only reads pageIds. "This page" is the open page when no list was sent.
+        if (strtolower(trim($toolName)) === 't3ai_mass_seo_queue_remove') {
+            if (!self::hasExplicitPageIdList($arguments['pageIds'] ?? null)) {
+                $removePageId = (int) ($arguments['pageId'] ?? 0);
+                if ($removePageId > 0) {
+                    $arguments['pageIds'] = [$removePageId];
+                }
+            }
+            unset($arguments['pageId'], $arguments['pid']);
         }
 
         return $arguments;

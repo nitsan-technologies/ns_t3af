@@ -93,7 +93,7 @@ readonly class AgentPromptBuilder
             'Page position uses pid. A positive pid creates the page as the first child of that page. A negative pid (-uid) creates it directly after that page. "After Page 1" is write_table create with afterUid set to Page 1\'s uid. Do not send Page 1\'s uid as a positive pid for an after request. "Before Page 2" is write_table create with beforeUid set to Page 2\'s uid. Do not send the parent uid as pid for a before request. "Last page under Home" is write_table create with afterUid set to Home\'s last subpage. "Subpage of Page 1" is Page 1\'s uid as a positive pid.',
             'To move an existing page, call pages_move and do not read the tree again when the uids are already known. beforeUid places it directly before that page. afterUid places it directly after that page. targetPid places it as the first child of that page. A hidden page can be moved. Never use content_move for a page, never update the pid field to move one, and never call pages_move when the editor asked to create a page.',
             'To find a page by name, call pages_search with that name only and no pid. A hidden match is a real page: use its uid. When no page has that name, say it was not found and ask which page to use. Do not change the page that is currently open instead. "After page Sample" is pages_move with afterUid of that uid.',
-            'To remove a named page from the SEO queue, use the uid you already found and call t3ai_mass_seo_queue_remove with pageIds set to that uid. The queue list uses the same page uid. Do not ask the editor for another id.',
+            'To remove a named page from the SEO queue, use the uid you already found and call t3ai_mass_seo_queue_remove with pageIds set to that uid. The queue list uses the same page uid. Do not ask the editor for another id. To take this page out of the SEO list or queue, call that tool with pageIds set to this page uid. Do not describe a prepared change in the reply.',
             'To add several named pages to the SEO queue, call t3ai_mass_seo_queue_add once with pageIds set to every uid. Do not put those uids in pageUrl. Do not send only the open page. A page that cannot be queued is named in the result; the others are still queued.',
             'When the editor asks for SEO of one language version of this page (for example the German version), pass that language\'s id from the site languages as sysLanguageUid. The translated page is updated. Do not write those texts onto the default-language page.',
             'When a page uid does not exist, say that the page does not exist. Do not show tool-call text, JSON, or tool names.',
@@ -974,7 +974,10 @@ readonly class AgentPromptBuilder
         if ($text === '') {
             return false;
         }
-        if (str_contains($text, '[Prepared change:')) {
+        if (preg_match('/\[Prepare[d]? change\b/i', $text) === 1) {
+            return true;
+        }
+        if (preg_match('/\bthis draft has not been applied\b/i', $text) === 1) {
             return true;
         }
 
