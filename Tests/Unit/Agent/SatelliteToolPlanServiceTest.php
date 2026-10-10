@@ -154,4 +154,32 @@ final class SatelliteToolPlanServiceTest extends TestCase
             $plan->context['displayArguments'] ?? null,
         );
     }
+
+    #[Test]
+    public function aNewGlossarySaveDoesNotShowTermIdZero(): void
+    {
+        $service = new SatelliteToolPlanService(
+            $this->severityLookup(['t3ai_glossary_save' => ToolSeverity::Write]),
+            new McpConfirmationPlanBuilder(),
+            $this->createAgentTranslator(),
+        );
+        $plan = $service->plan('t3ai_glossary_save', [
+            'sourceTerm' => 'Test 123',
+            'targetTerm' => 'Agent 123',
+            'languageUid' => 2,
+            'termId' => 0,
+        ]);
+        $keys = array_map(
+            static fn(mixed $row): string => is_array($row) ? (string) ($row['key'] ?? '') : '',
+            is_array($plan->context['displayArguments'] ?? null) ? $plan->context['displayArguments'] : [],
+        );
+
+        self::assertNotContains('termId', $keys);
+        self::assertSame([
+            'sourceTerm' => 'Test 123',
+            'targetTerm' => 'Agent 123',
+            'languageUid' => 2,
+            'termId' => 0,
+        ], $plan->context['arguments'] ?? null);
+    }
 }

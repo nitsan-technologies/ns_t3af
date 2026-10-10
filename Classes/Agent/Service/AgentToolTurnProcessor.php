@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Agent\Service;
 use NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface;
 use NITSAN\NsT3AF\Mcp\Dto\PreviewResult;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Exception\NoChangeRequiredException;
 use NITSAN\NsT3AF\Mcp\Exception\UnsupportedPlanException;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPlaygroundService;
 use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
@@ -529,6 +530,17 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'role' => 'assistant',
                 'content' => $exception->getMessage(),
                 'meta' => ['type' => 'error', 'tool' => $toolName, 'orchestratorPause' => true],
+            ];
+        } catch (NoChangeRequiredException $exception) {
+            return [
+                'role' => 'assistant',
+                'content' => $exception->getMessage(),
+                'meta' => [
+                    'type' => 'info',
+                    'tool' => $toolName,
+                    'success' => true,
+                    'orchestratorPause' => true,
+                ],
             ];
         } catch (\InvalidArgumentException $exception) {
             // Wrong arguments (a record that does not exist, a wrong field): no card, and the turn
