@@ -76,6 +76,9 @@ final readonly class SatelliteToolPlanService
 
         $severity = $this->severityLookup->severityFor($toolName);
         $action = $severity === ToolSeverity::Destructive ? 'delete' : 'update';
+        if (in_array($toolName, ['t3ai_mass_seo_queue_add', 't3ai_mass_seo_queue_remove'], true)) {
+            unset($arguments['pid']);
+        }
         $displayArguments = $this->normalizeDisplayArguments($arguments);
         $summary = $this->buildSummary($toolName, $displayArguments);
 

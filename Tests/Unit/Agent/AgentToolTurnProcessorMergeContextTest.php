@@ -29,6 +29,24 @@ use PHPUnit\Framework\TestCase;
 final class AgentToolTurnProcessorMergeContextTest extends TestCase
 {
     #[Test]
+    public function mergeContextDropsPidFromAnSeoQueueAdd(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            ['pageId' => 45, 'recursive' => true, 'pid' => 3],
+            ['pageId' => 3, 'module' => 'web_layout'],
+            't3ai_mass_seo_queue_add',
+        );
+
+        self::assertSame(45, $merged['pageId']);
+        self::assertTrue($merged['recursive']);
+        self::assertArrayNotHasKey('pid', $merged);
+    }
+
+    #[Test]
     public function mergeContextLeavesAnSeoQueueListWithoutTheOpenPage(): void
     {
         $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();

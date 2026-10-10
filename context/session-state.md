@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-10 — An empty SEO queue add explains the skip
+
+**Done:** Applying `t3ai_mass_seo_queue_add` when nothing was queued keeps the skip sentence (Mass SEO is not enabled) and does not start a follow-up that says “Done.” The card does not show `pid`. Recursive adds still queue only pages with Mass SEO enabled. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-10
+
+---
+
 ## 2026-10-10 — A guessed glossary language does not open a card
 
 **Done:** `GlossarySaveLanguage` checks the editor's request before a `t3ai_glossary_save` card. Several site languages and no named language ask which one. A named language is used even if the model sent another id. One other site language is unchanged. See `context/features/ai-agent.md`.
