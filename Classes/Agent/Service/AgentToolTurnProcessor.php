@@ -511,7 +511,10 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $toolName,
             (string) ($body['provider'] ?? ''),
         );
+        /** @var list<array<string, mixed>> $history */
+        $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
         $arguments = $this->normalizeWriteToolArguments($toolName, $arguments);
+        $arguments = $this->enrichPlannedToolArguments($toolName, $arguments, $history);
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
         if ($toolName === 'write_table' && $requestQuery !== '') {
             $arguments['requestQuery'] = $requestQuery;
@@ -640,7 +643,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $pageId = (int) ($context['pageId'] ?? 0);
         // The model named another page by URL: the page on screen must not be added as a second, conflicting target.
         $namesPageByUrl = trim((string) ($arguments['pageUrl'] ?? '')) !== '' && !isset($arguments['pageId']);
-        if ($pageId > 0 && !$namesPageByUrl) {
+        if ($pageId > 0 && !$namesPageByUrl && !$this->toolIgnoresLayoutPageContext($toolName)) {
             $arguments['pageId'] ??= $pageId;
             // Do not force pid onto *_search tools — that scoped site-wide searches to the current page only.
             if (!$this->toolUsesOptionalSearchPid($toolName)) {
@@ -726,6 +729,195 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $toolName = strtolower(trim($toolName));
 
         return $toolName !== '' && str_ends_with($toolName, '_search');
+    }
+
+    /**
+     * Layout page context (open page in Page module) must not label file-only satellite steps.
+     */
+    private function toolIgnoresLayoutPageContext(string $toolName): bool
+    {
+        return match (strtolower(trim($toolName))) {
+            't3ai_generate_image' => true,
+            default => false,
+        };
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @param list<array<string, mixed>> $history
+     * @return array<string, mixed>
+     */
+    private function enrichPlannedToolArguments(string $toolName, array $arguments, array $history): array
+    {
+        $toolName = strtolower(trim($toolName));
+        if ($toolName === 't3ai_generate_image') {
+            unset($arguments['pageId'], $arguments['pid']);
+            $newsUid = AgentPromptBuilder::latestAppliedNewsUid($history);
+            if ($newsUid !== null) {
+                $arguments['newsArticleUid'] = $newsUid;
+            }
+
+            return $arguments;
+        }
+
+        if ($toolName === 't3aa_update_file_metadata') {
+            return $this->enrichFileMetadataArguments($arguments, $history);
+        }
+
+        if ($toolName !== 'file_reference_add') {
+            return $arguments;
+        }
+
+        if (AgentPromptBuilder::hasOpenFileReferenceDraft($history)) {
+            throw new \InvalidArgumentException(
+                'An attach card is already open for the editor. Wait until they Apply or Decline it; do not prepare another attach.',
+            );
+        }
+
+        $fileUidsRaw = trim((string) ($arguments['fileUids'] ?? ''));
+        if ($fileUidsRaw !== '' && !self::fileUidsArgumentIsNumericList($fileUidsRaw)) {
+            $resolved = AgentPromptBuilder::unattachedFileUids($history);
+            if ($resolved === []) {
+                throw new \InvalidArgumentException(
+                    'No generated file is available yet. Call t3ai_generate_image first and wait until the editor applies it, then attach using the numeric sys_file uid from that result.',
+                );
+            }
+            $arguments['fileUids'] = implode(',', array_map(static fn(int $uid): string => (string) $uid, $resolved));
+            $fileUidsRaw = (string) $arguments['fileUids'];
+        }
+
+        $pending = AgentPromptBuilder::unattachedFileUids($history);
+        if ($pending === []) {
+            throw new \InvalidArgumentException(
+                'Every generated file in this conversation is already attached (or none exists yet). Do not call file_reference_add again.',
+            );
+        }
+        if ($fileUidsRaw !== '' && self::fileUidsArgumentIsNumericList($fileUidsRaw)) {
+            $requested = [];
+            foreach (explode(',', $fileUidsRaw) as $part) {
+                $uid = (int) trim($part);
+                if ($uid > 0) {
+                    $requested[] = $uid;
+                }
+            }
+            $stillOpen = array_values(array_intersect($requested, $pending));
+            if ($stillOpen === []) {
+                throw new \InvalidArgumentException(
+                    'Those files are already attached. Do not attach the same file again.',
+                );
+            }
+            $arguments['fileUids'] = implode(',', array_map(static fn(int $uid): string => (string) $uid, $stillOpen));
+        }
+
+        $newsUid = AgentPromptBuilder::latestAppliedNewsUid($history);
+        if ($newsUid !== null) {
+            $table = strtolower(trim((string) ($arguments['table'] ?? '')));
+            if ($table === '' || $table === 'tx_news_domain_model_news') {
+                $arguments['table'] = 'tx_news_domain_model_news';
+                if ((int) ($arguments['uid'] ?? 0) <= 0) {
+                    $arguments['uid'] = $newsUid;
+                }
+                $arguments['fieldName'] ??= 'fal_media';
+            }
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @param list<array<string, mixed>> $history
+     * @return array<string, mixed>
+     */
+    private function enrichFileMetadataArguments(array $arguments, array $history): array
+    {
+        $fileUid = (int) ($arguments['fileUid'] ?? 0);
+        $fileUrl = trim((string) ($arguments['fileUrl'] ?? ''));
+        if ($fileUid > 0) {
+            unset($arguments['fileUrl']);
+
+            return $arguments;
+        }
+
+        if ($fileUrl !== '' && !self::isPlaceholderFileLocator($fileUrl)) {
+            return $arguments;
+        }
+
+        $resolved = AgentPromptBuilder::unattachedFileUids($history);
+        if ($resolved === []) {
+            // Latest generate may already be attached; still allow editing its texts by uid.
+            $resolved = self::latestGeneratedFileUids($history);
+        }
+        if ($resolved === []) {
+            throw new \InvalidArgumentException(
+                'No sys_file uid is available for image texts. Pass fileUid from t3ai_generate_image (or file_list), not a placeholder path like /generated-image.jpg.',
+            );
+        }
+        $arguments['fileUid'] = $resolved[0];
+        unset($arguments['fileUrl']);
+
+        return $arguments;
+    }
+
+    private static function isPlaceholderFileLocator(string $value): bool
+    {
+        $value = strtolower(trim($value));
+        if ($value === '') {
+            return true;
+        }
+
+        return (bool) preg_match(
+            '#^(?:\[?image(?:uid|id|url)?\]?|/generated[-_]?image\.(?:jpg|jpeg|png|webp)|generated[-_]?image\.(?:jpg|jpeg|png|webp)|placeholder)$#',
+            $value,
+        );
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @return list<int>
+     */
+    private static function latestGeneratedFileUids(array $history): array
+    {
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            if (($history[$i]['role'] ?? '') !== 'assistant'
+                || ($meta['type'] ?? '') !== 'tool_result'
+                || ($meta['success'] ?? true) === false
+                || (string) ($meta['tool'] ?? '') !== 't3ai_generate_image'
+            ) {
+                continue;
+            }
+            $uids = [];
+            $fileUid = (int) (($meta['details']['fileUid'] ?? 0));
+            if ($fileUid > 0) {
+                $uids[] = $fileUid;
+            }
+            foreach (is_array($meta['previews'] ?? null) ? $meta['previews'] : [] as $preview) {
+                if (is_array($preview) && (int) ($preview['fileUid'] ?? 0) > 0) {
+                    $uids[] = (int) $preview['fileUid'];
+                }
+            }
+            if ($uids !== []) {
+                return array_values(array_unique($uids));
+            }
+        }
+
+        return [];
+    }
+
+    private static function fileUidsArgumentIsNumericList(string $fileUids): bool
+    {
+        foreach (explode(',', $fileUids) as $part) {
+            $part = trim($part);
+            if ($part === '') {
+                continue;
+            }
+            if (preg_match('/^[1-9]\d*$/', $part) !== 1) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

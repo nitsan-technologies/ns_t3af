@@ -416,6 +416,42 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function imageWorkToolsOmitsAttachWhenEveryFileIsAlreadyLinked(): void
+    {
+        $catalog = [
+            ['name' => 't3ai_generate_image'],
+            ['name' => 'file_reference_add'],
+        ];
+        $history = [
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 5],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 'file_reference_add',
+                    'success' => true,
+                    'details' => ['fileUid' => 5],
+                ],
+            ],
+        ];
+
+        $names = array_map(
+            static fn(array $t): string => (string) $t['name'],
+            AgentRunner::imageWorkTools($catalog, [], $history),
+        );
+
+        self::assertSame(['t3ai_generate_image'], $names);
+    }
+
+    #[Test]
     public function aShortReplyIsSearchedWithThePreviousRequest(): void
     {
         $query = AgentRunner::requestQuery('Yes', [
@@ -489,15 +525,40 @@ final class AgentRunnerTest extends TestCase
     #[Test]
     public function copyingAPageIsOfferedOnlyWhenAskedFor(): void
     {
-        self::assertSame(['pages_copy', 'content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('I want a new subpage "Eval yes" under this page'));
-        self::assertSame(['pages_copy', 'content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Ändere die Unterüberschrift von Element 12 auf Hallo'));
-        self::assertSame(['pages_copy', 'content_move', 'pages_move', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Switch to the QA Draft workspace'));
+        $gated = ['pages_copy', 'content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3aa_generate_voice_over'];
+        self::assertSame($gated, AgentRunner::toolsNotAskedFor('I want a new subpage "Eval yes" under this page'));
+        self::assertSame($gated, AgentRunner::toolsNotAskedFor('Ändere die Unterüberschrift von Element 12 auf Hallo'));
+        self::assertSame(['pages_copy', 'content_move', 'pages_move', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Switch to the QA Draft workspace'));
         self::assertNotContains('content_move', AgentRunner::toolsNotAskedFor('Move element 12 below element 15'));
-        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
-        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
-        self::assertSame(['content_move', 'pages_move', 't3aa_summarize_content'], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
+        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
+        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
+        self::assertSame(['content_move', 'pages_move', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
         self::assertNotContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor('Summarize this page'));
         self::assertContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor('Rewrite the block so it sounds friendlier'));
+        self::assertContains('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor('Generate a picture and attach it to the news'));
+        self::assertNotContains('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor('Write alt text for this image'));
+        self::assertContains('t3ai_generate_all_seo', AgentRunner::toolsNotAskedFor('Yes, generate the picture and attach it to the new news article'));
+        self::assertNotContains('t3ai_generate_all_seo', AgentRunner::toolsNotAskedFor('Write all SEO texts for this page'));
+        self::assertContains('t3aa_generate_voice_over', AgentRunner::toolsNotAskedFor('Generate a picture for the news'));
+        self::assertNotContains('t3aa_generate_voice_over', AgentRunner::toolsNotAskedFor('Create a voice-over for this page'));
+    }
+
+    #[Test]
+    public function hasOpenGenerateImageDraftDetectsWaitingCard(): void
+    {
+        $history = [
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'inline_draft',
+                    'tool' => 't3ai_generate_image',
+                    'draft' => ['tool' => 't3ai_generate_image', 'discarded' => false],
+                ],
+            ],
+        ];
+
+        self::assertTrue(AgentRunner::hasOpenGenerateImageDraft($history));
+        self::assertFalse(AgentRunner::hasOpenGenerateImageDraft([]));
     }
 
     #[Test]
@@ -1051,6 +1112,38 @@ final class AgentRunnerTest extends TestCase
         self::assertFalse(AgentRunner::isNewsCreateRequest('Translate the news into German'));
         self::assertFalse(AgentRunner::isNewsCreateRequest('Show me all my news articles'));
         self::assertFalse(AgentRunner::isNewsCreateRequest('Create a new text element'));
+    }
+
+    #[Test]
+    public function imageAlreadyGeneratedThisRequestBlocksASecondGenerate(): void
+    {
+        $withFile = [
+            [
+                'role' => 'assistant',
+                'content' => 'Image saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 155],
+                ],
+            ],
+        ];
+        $withOpenCard = [
+            [
+                'role' => 'assistant',
+                'content' => 'Review.',
+                'meta' => [
+                    'type' => 'inline_draft',
+                    'tool' => 't3ai_generate_image',
+                    'draft' => ['tool' => 't3ai_generate_image', 'discarded' => false],
+                ],
+            ],
+        ];
+
+        self::assertTrue(AgentRunner::imageAlreadyGeneratedThisRequest('Yes, generate the picture.', $withFile));
+        self::assertTrue(AgentRunner::imageAlreadyGeneratedThisRequest('Yes, generate the picture.', $withOpenCard));
+        self::assertFalse(AgentRunner::imageAlreadyGeneratedThisRequest('Write a news story with a picture.', []));
     }
 
     #[Test]

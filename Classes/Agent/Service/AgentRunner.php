@@ -308,6 +308,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $pageId = (int) ($context['pageId'] ?? 0);
         $providerIdentifier = self::providerFromBody($body);
         $body['requestQuery'] = self::requestQuery($userMessage, $historyMessages);
+        // Prior turns (news readback, generated fileUid) must reach write-tool enrichment.
+        $body['conversationHistory'] = $historyMessages;
 
         $toolbox = new T3afToolbox(
             $this->toolDefinitionMapper->mapExecutableTools($offeredTools),
@@ -882,6 +884,20 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $notAskedFor['t3ai_generate_image'] = true;
             }
         }
+        // One generate per open request: a second card is often applied together and doubles files/credits.
+        if (self::imageAlreadyGeneratedThisRequest($userMessage, $historyMessages)) {
+            $notAskedFor['t3ai_generate_image'] = true;
+        }
+        // Open generate card or remaining picture work: never detour into SEO / voice-over.
+        if (
+            self::hasOpenGenerateImageDraft($historyMessages)
+            || AgentPromptBuilder::pendingImageAttachNote($historyMessages) !== ''
+            || preg_match('/\b(picture|pictures|image|images|photo|photos|illustration|bild\w*|foto\w*|grafik\w*)\b/iu', $query) === 1
+        ) {
+            $notAskedFor['t3ai_generate_all_seo'] = true;
+            $notAskedFor['t3ai_generate_seo_batch'] = true;
+            $notAskedFor['t3aa_generate_voice_over'] = true;
+        }
         if ($createContent || self::isPlainEditRequest($query) || self::isNewsOnlyRequest($query)) {
             // "Change the header of element 5" is an update: with the delete tool at hand the model sometimes
             // answers with a delete card plus a create card instead.
@@ -916,7 +932,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $found = [...self::fileActionTools($query, $executableTools, $offeredNames), ...$found];
         $workPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
         if (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, self::requestForGate($userMessage, $historyMessages))) {
-            $found = [...self::imageWorkTools($executableTools, $offeredNames), ...$found];
+            $found = [...self::imageWorkTools($executableTools, $offeredNames, $historyMessages), ...$found];
         } elseif (AgentPromptBuilder::pendingImageAttachNote($historyMessages) !== '') {
             $found = [...self::pendingAttachTools($executableTools, $offeredNames), ...$found];
         }
@@ -927,6 +943,12 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             if ($name !== '') {
                 $byName[$name] = $tool;
             }
+        }
+        if (
+            AgentPromptBuilder::unattachedFileUids($historyMessages) === []
+            || AgentPromptBuilder::hasOpenFileReferenceDraft($historyMessages)
+        ) {
+            unset($byName['file_reference_add']);
         }
         ksort($byName);
 
@@ -974,17 +996,23 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
      *
      * @param list<array<string, mixed>> $executableTools
      * @param array<string, int|string> $alreadyOffered
+     * @param list<array<string, mixed>> $historyMessages
      * @return list<array<string, mixed>>
      */
-    public static function imageWorkTools(array $executableTools, array $alreadyOffered = []): array
+    public static function imageWorkTools(array $executableTools, array $alreadyOffered = [], array $historyMessages = []): array
     {
+        $needsAttach = AgentPromptBuilder::unattachedFileUids($historyMessages) !== [];
         $picked = [];
         foreach ($executableTools as $tool) {
             $name = (string) ($tool['name'] ?? '');
             if ($name === '' || isset($alreadyOffered[$name]) || isset($picked[$name])) {
                 continue;
             }
-            if ($name === 't3ai_generate_image' || $name === 'file_reference_add') {
+            if ($name === 't3ai_generate_image') {
+                $picked[$name] = $tool;
+                continue;
+            }
+            if ($name === 'file_reference_add' && $needsAttach) {
                 $picked[$name] = $tool;
             }
         }
@@ -1028,6 +1056,12 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         'workspace_switch' => '/\b(workspaces?|arbeitsbereich\w*|switch\w*|wechsel\w*)\b/iu',
         // A rewrite or edit is not a summary: the summarize tool answered "rewrite friendlier" with an unrelated welcome text.
         't3aa_summarize_content' => '/\b(summar\w*|tl;?dr|zusammenfass\w*|kurzfassung|abstract|gist)\b/iu',
+        // Generate+attach must not detour into a metadata card with a fake /generated-image.jpg path.
+        't3aa_update_file_metadata' => '/\b(alt\s*text|image\s*texts?|file\s*meta|metadata|bildtext\w*|alternativtext\w*|datei\s*meta)\b/iu',
+        // "Generate the picture" must not become Write all SEO texts / SEO batch.
+        't3ai_generate_all_seo' => '/\b(seo|meta\s*desc|meta\s*title|og\s*title|og\s*desc|open\s*graph|schema\s*markup|suchmaschinen\w*|metadaten)\b/iu',
+        't3ai_generate_seo_batch' => '/\b(seo|meta\s*desc|meta\s*title|og\s*title|og\s*desc|open\s*graph|schema\s*markup|suchmaschinen\w*|metadaten)\b/iu',
+        't3aa_generate_voice_over' => '/\b(voice\s*-?\s*over|voiceover|audio\s*narrat\w*|sprachausgabe|vorlesen|vorlese\w*)\b/iu',
     ];
 
     /**
@@ -1078,6 +1112,44 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return array_values($picked);
+    }
+
+    /**
+     * True when an image generate card is still open, or a generated/uploaded file is waiting to attach.
+     * Stops a second generate card that the editor would Apply together with the first.
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function imageAlreadyGeneratedThisRequest(string $userMessage, array $historyMessages): bool
+    {
+        unset($userMessage);
+
+        return self::hasOpenGenerateImageDraft($historyMessages)
+            || AgentPromptBuilder::unattachedFileUids($historyMessages) !== [];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function hasOpenGenerateImageDraft(array $historyMessages): bool
+    {
+        foreach ($historyMessages as $entry) {
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            $tool = (string) ($meta['tool'] ?? ($draft['tool'] ?? ''));
+            if (
+                $tool === AgentRequestedFiles::GENERATION_TOOL
+                && ($meta['type'] ?? '') === 'inline_draft'
+                && ($draft['discarded'] ?? false) !== true
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

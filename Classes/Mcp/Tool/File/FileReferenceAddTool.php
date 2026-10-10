@@ -90,7 +90,12 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
             ));
         }
         $this->assertFieldIsShownForRecord($table, $uid, $record, $fieldName, $fileFields);
-        $files = $this->filesToAttach(self::numericFileUids($fileUids));
+        $files = $this->filesToAttach(self::withoutAlreadyAttached(
+            $table,
+            $uid,
+            $fieldName,
+            self::numericFileUids($fileUids),
+        ));
         $fileLabels = implode(', ', array_map(
             static fn(File $file): string => $file->getName() . ' (uid ' . $file->getUid() . ')',
             $files,
@@ -168,6 +173,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
 
         try {
             $this->assertFieldIsShownForRecord($table, $uid, $record, $fieldName, $fileFields);
+            $parsedUids = $this->withoutAlreadyAttached($table, $uid, $fieldName, $parsedUids);
             $this->filesToAttach($parsedUids);
         } catch (\InvalidArgumentException $exception) {
             return $this->encodeError($exception->getMessage());
@@ -290,6 +296,39 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
         }
 
         return $parts !== [] ? ' with ' . implode(', ', $parts) : '';
+    }
+
+    /**
+     * Drop file uids already referenced on this record field so a second Apply cannot duplicate.
+     *
+     * @param list<int> $fileUids
+     * @return non-empty-list<int>
+     */
+    private function withoutAlreadyAttached(string $table, int $uid, string $fieldName, array $fileUids): array
+    {
+        $already = [];
+        foreach ($this->recordService->findFileReferences($table, $uid, $fieldName) as $ref) {
+            $local = (int) ($ref['uid_local'] ?? 0);
+            if ($local > 0) {
+                $already[$local] = true;
+            }
+        }
+        $fresh = [];
+        foreach ($fileUids as $fileUid) {
+            if (!isset($already[$fileUid])) {
+                $fresh[] = $fileUid;
+            }
+        }
+        if ($fresh === []) {
+            throw new \InvalidArgumentException(sprintf(
+                'Those files are already attached to %s uid %d (%s). Do not attach the same file again.',
+                $table,
+                $uid,
+                $fieldName,
+            ));
+        }
+
+        return $fresh;
     }
 
     /** @return non-empty-list<int> */

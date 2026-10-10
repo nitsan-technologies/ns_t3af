@@ -554,4 +554,125 @@ final class WriteTableToolTest extends TestCase
         self::assertSame('2023-12-01 00:00:00', WriteTableTool::withSaneNewsDate(['title' => 'A', 'datetime' => '2023-12-01 00:00:00'], 'Dated 1.12.2023, create a news', $now)['datetime']);
         self::assertSame('2026-11-01 00:00:00', WriteTableTool::withSaneNewsDate(['datetime' => '2026-11-01 00:00:00'], 'Create a news', $now)['datetime']);
     }
+
+    #[Test]
+    public function newsCreateNeedsStoragePidWhenMissingOrZero(): void
+    {
+        self::assertTrue(WriteTableTool::newsCreateNeedsStoragePid(['title' => 'A']));
+        self::assertTrue(WriteTableTool::newsCreateNeedsStoragePid(['title' => 'A', 'pid' => 0]));
+        self::assertTrue(WriteTableTool::newsCreateNeedsStoragePid(['title' => 'A', 'pid' => '0']));
+        self::assertFalse(WriteTableTool::newsCreateNeedsStoragePid(['title' => 'A', 'pid' => 53]));
+    }
+
+    #[Test]
+    public function newsCreateWithoutPidUsesPreferredStorageFolder(): void
+    {
+        $this->bootstrapAdminUser();
+        $GLOBALS['TCA']['tx_news_domain_model_news'] = [
+            'ctrl' => ['label' => 'title'],
+            'columns' => [
+                'title' => ['config' => ['type' => 'input']],
+                'teaser' => ['config' => ['type' => 'text']],
+                'bodytext' => ['config' => ['type' => 'text']],
+                'datetime' => ['config' => ['type' => 'input']],
+                'pid' => ['config' => ['type' => 'passthrough']],
+            ],
+        ];
+
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->expects(self::never())->method('isSuitableNewsStoragePid');
+        $recordService->expects(self::once())->method('preferredPidForTable')
+            ->with('tx_news_domain_model_news')
+            ->willReturn(53);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $recordService,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tx_news_domain_model_news',
+            'data' => json_encode(['title' => 'Anniversary', 'teaser' => 'Ten years', 'pid' => 0], JSON_THROW_ON_ERROR),
+            'requestQuery' => 'Write a news story with a picture',
+        ]);
+
+        self::assertSame(53, (int) ($plan->context['pid'] ?? 0));
+    }
+
+    #[Test]
+    public function newsCreateOnOrdinaryPageIsRewrittenToPreferredStorage(): void
+    {
+        $this->bootstrapAdminUser();
+        $GLOBALS['TCA']['tx_news_domain_model_news'] = [
+            'ctrl' => ['label' => 'title'],
+            'columns' => [
+                'title' => ['config' => ['type' => 'input']],
+                'teaser' => ['config' => ['type' => 'text']],
+                'bodytext' => ['config' => ['type' => 'text']],
+                'datetime' => ['config' => ['type' => 'input']],
+                'pid' => ['config' => ['type' => 'passthrough']],
+            ],
+        ];
+
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->expects(self::once())->method('isSuitableNewsStoragePid')->with(4)->willReturn(false);
+        $recordService->expects(self::once())->method('preferredPidForTable')
+            ->with('tx_news_domain_model_news')
+            ->willReturn(53);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $recordService,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tx_news_domain_model_news',
+            'data' => json_encode(['title' => 'Anniversary', 'teaser' => 'Ten years', 'pid' => 4], JSON_THROW_ON_ERROR),
+            'requestQuery' => 'Write a news story with a picture',
+        ]);
+
+        self::assertSame(53, (int) ($plan->context['pid'] ?? 0));
+    }
+
+    #[Test]
+    public function newsCreateKeepsSuitableStoragePid(): void
+    {
+        $this->bootstrapAdminUser();
+        $GLOBALS['TCA']['tx_news_domain_model_news'] = [
+            'ctrl' => ['label' => 'title'],
+            'columns' => [
+                'title' => ['config' => ['type' => 'input']],
+                'teaser' => ['config' => ['type' => 'text']],
+                'bodytext' => ['config' => ['type' => 'text']],
+                'datetime' => ['config' => ['type' => 'input']],
+                'pid' => ['config' => ['type' => 'passthrough']],
+            ],
+        ];
+
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->expects(self::once())->method('isSuitableNewsStoragePid')->with(53)->willReturn(true);
+        $recordService->expects(self::never())->method('preferredPidForTable');
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $recordService,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tx_news_domain_model_news',
+            'data' => json_encode(['title' => 'Anniversary', 'teaser' => 'Ten years', 'pid' => 53], JSON_THROW_ON_ERROR),
+            'requestQuery' => 'Write a news story with a picture',
+        ]);
+
+        self::assertSame(53, (int) ($plan->context['pid'] ?? 0));
+    }
 }
