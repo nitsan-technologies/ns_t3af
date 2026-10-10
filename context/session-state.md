@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-10 — A named glossary word is saved without asking
+
+**Done:** When the editor names the source word, the translation, and the language, the prompt tells the agent to call `t3ai_glossary_save` with the open page and that site language id. The reply does not ask for either and does not start with “Done”. A missing language still asks which site language to use. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-10
+
+---
+
 ## 2026-10-10 — An unchanged glossary word has no Apply card
 
 **Done:** When `t3ai_glossary_save` matches a word already in the list, the turn shows that sentence and stops. No draft is stored. A save card omits `termId` 0. See `packages/ns_t3ai/context/features/translation.md`.
