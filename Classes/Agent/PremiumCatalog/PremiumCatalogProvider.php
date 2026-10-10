@@ -111,22 +111,39 @@ final readonly class PremiumCatalogProvider
             return null;
         }
 
+        if ($this->makesAnImageItself($query)) {
+            return null;
+        }
+
         $best = null;
         $bestScore = 0;
+        $bestInstalledScore = 0;
         foreach ($this->all() as $entry) {
-            if ($this->extensionAvailability->isLoaded($entry->extensionKey)) {
-                continue;
-            }
             $score = 0;
             foreach ($entry->searchTerms as $term) {
                 if (self::containsTerm($needle, $term)) {
                     ++$score;
                 }
             }
+            // Installed extensions are scored too, but never returned: they are not something to
+            // sell. Their score decides whether this is an upsell at all — see below.
+            if ($this->extensionAvailability->isLoaded($entry->extensionKey)) {
+                $bestInstalledScore = max($bestInstalledScore, $score);
+                continue;
+            }
             if ($score > $bestScore) {
                 $bestScore = $score;
                 $best = $entry;
             }
+        }
+
+        // An installed extension that matches the request at least as well owns it, so the real
+        // tool/entitlement path decides. Otherwise "generate an image … with the alt text X" is
+        // answered with an AI Accessibility upsell ("alt text" scores 1) even though the installed
+        // ns_t3ai can generate the image ("generate image" scores 1 too) — a purchased feature
+        // refused to sell another product.
+        if ($bestInstalledScore >= $bestScore) {
+            return null;
         }
 
         return $best;
@@ -173,6 +190,29 @@ final readonly class PremiumCatalogProvider
         '/\b(?:file|datei)[\s-]*uid\b/iu',
         '/\b(?:text\s*(?:&|and|und)\s*media|textmedia|textpic)\b/iu',
     ];
+
+    /**
+     * Asking for a made image while ns_t3ai is installed is T3AI work (`t3ai_generate_image`), and an
+     * alt text named with it goes on the generated file — so it is not an AI Accessibility request.
+     *
+     * Deliberately broader than {@see \NITSAN\NsT3AF\Agent\Service\AgentRequestedFiles::asksForGeneratedImage()},
+     * which only knows "generate …": editors also write "create a hero image of …". That matcher is
+     * shared with the attach/checklist flow and must stay narrow, while the only cost of being
+     * generous here is skipping an upsell.
+     */
+    private function makesAnImageItself(string $query): bool
+    {
+        if (!$this->extensionAvailability->isLoaded('ns_t3ai')) {
+            return false;
+        }
+
+        return preg_match(
+            '/\b(?:generat\w*|creat\w*|mak\w*|draw\w*|generier\w*|erzeug\w*|erstell\w*|zeichn\w*)'
+            . '\s+(?:\w+\s+){0,3}'
+            . '(?:images?|pictures?|photos?|illustrations?|graphics?|bild|bilder|foto|fotos|grafik\w*)\b/iu',
+            $query,
+        ) === 1;
+    }
 
     private static function placesAFile(string $query): bool
     {

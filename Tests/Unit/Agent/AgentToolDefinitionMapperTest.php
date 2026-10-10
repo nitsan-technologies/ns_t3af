@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
+use Mcp\Capability\Attribute\Schema;
 use NITSAN\NsT3AF\Agent\Service\AgentToolDefinitionMapper;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
 use PHPUnit\Framework\Attributes\Test;
@@ -105,6 +106,51 @@ final class AgentToolDefinitionMapperTest extends TestCase
         self::assertSame(['type' => 'object'], $shape->invoke($mapper, $execute, 'fields'));
         // No docblock type: OpenAI still needs "items".
         self::assertSame(['items' => ['type' => 'string']], $shape->invoke($mapper, $execute, 'untyped'));
+    }
+
+    #[Test]
+    public function aMixedParameterPublishesItsSchemaDefinitionInsteadOfString(): void
+    {
+        $introspector = $this->createMock(McpToolIntrospectorService::class);
+        $introspector->method('listTools')->willReturn([
+            [
+                'name' => 'queue_add',
+                'description' => 'Queue a translation',
+                'className' => AgentToolDefinitionMapperSchemaFixture::class,
+                'params' => [
+                    ['name' => 'languageConfig', 'description' => 'Target languages.'],
+                ],
+            ],
+        ]);
+
+        $mapper = new AgentToolDefinitionMapper($introspector);
+        $definitions = $mapper->mapExecutableTools([['name' => 'queue_add']]);
+
+        $languageConfig = $definitions[0]->parameters['properties']['languageConfig'] ?? null;
+        self::assertIsArray($languageConfig);
+        // Was mapJsonType()'s 'string' fallback for `mixed`, so this required structured argument
+        // reached the model as plain text and mass translation could never succeed.
+        self::assertArrayNotHasKey('type', $languageConfig);
+        self::assertSame(
+            [['type' => 'string'], ['type' => 'object'], ['type' => 'array']],
+            $languageConfig['oneOf'] ?? null,
+        );
+        self::assertSame('Target languages.', $languageConfig['description'] ?? null);
+        self::assertContains('languageConfig', $definitions[0]->parameters['required'] ?? []);
+    }
+}
+
+/**
+ * @internal
+ */
+final class AgentToolDefinitionMapperSchemaFixture
+{
+    public function execute(
+        #[Schema(definition: ['oneOf' => [['type' => 'string'], ['type' => 'object'], ['type' => 'array']]])]
+        mixed $languageConfig,
+        ?int $pageId = null,
+    ): string {
+        return '';
     }
 }
 

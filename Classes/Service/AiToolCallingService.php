@@ -89,6 +89,11 @@ final class AiToolCallingService implements AiToolCallingServiceInterface
             return false;
         }
 
+        // A provider whose adapter is not installed (e.g. ns_t3aa.alttext_ai without EXT:ns_t3aa)
+        // must not abort Agent open / provider listing — just skip it.
+        if (!$this->adapters->has($provider->adapterType)) {
+            return false;
+        }
         $adapter = $this->adapters->get($provider->adapterType);
 
         return $adapter instanceof ToolCallingCapableInterface

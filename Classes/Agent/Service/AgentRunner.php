@@ -34,6 +34,7 @@ use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
 use NITSAN\NsT3AF\Credits\Exception\CreditsContentRemovedException;
 use NITSAN\NsT3AF\Credits\Exception\InsufficientCreditsException;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Tool\Agent\AskClarificationTool;
 use Symfony\AI\Agent\Agent;
 use Symfony\AI\Agent\Exception\MaxIterationsExceededException;
 use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
@@ -139,6 +140,33 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $rawFinalText = $finalText;
         $finalText = AgentPromptBuilder::stripLeakedToolCall($finalText);
         $finalText = AgentPromptBuilder::collapseRepeatedReply($finalText);
+        $finalText = AgentPromptBuilder::stripGluedToolResultPrefix($finalText);
+
+        // Model wrote ask_clarification as JSON text instead of calling the tool — show buttons.
+        $embeddedClarification = AskClarificationTool::parseEmbeddedClarification($finalText);
+        if (
+            $embeddedClarification !== null
+            && !$state->isPaused()
+            && !$state->failed
+            && !$state->isCancelled()
+        ) {
+            $options = AskClarificationTool::normalizeOptions($embeddedClarification['options']);
+            $state->addMessage([
+                'role' => 'assistant',
+                'content' => $embeddedClarification['question'],
+                'meta' => [
+                    'type' => 'clarification',
+                    'tool' => 'ask_clarification',
+                    'options' => $options,
+                    'correlationId' => $correlationId,
+                    'orchestratorPause' => true,
+                    'llmSummary' => 'Asked the editor: ' . $embeddedClarification['question']
+                        . ($options !== [] ? ' Options: ' . implode(' | ', $options) : ''),
+                ],
+            ]);
+            $state->pause('clarification');
+            $finalText = '';
+        }
 
         // Drop a card the editor already declined, and a second copy of a create that is still waiting.
         $declinedDropped = 0;
@@ -391,6 +419,30 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 }
                 $retried = true;
             }
+            // Invented "[Remove from translation queue] …" with no tool call this turn — retry once.
+            if (
+                !$retried
+                && $state->executedTools === []
+                && AgentPromptBuilder::isFabricatedToolResultEcho($finalText)
+                && !$state->isPaused()
+                && !$state->failed
+                && !$state->isCancelled()
+            ) {
+                $nudge = $userMessage . "\n\n[System: You wrote a fake tool result in brackets without calling a tool. Never invent \"[…]\" result lines. Call the matching write/queue tool now so the editor gets an approval card, or say in one plain sentence that there is nothing to do.]";
+                $retryPlan = $state->plan !== [] ? $state->plan : $plan;
+                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan, $requestForChecklist))->getResult();
+                $content = $agentResult->getContent();
+                $finalText = is_string($content) ? trim($content) : '';
+                // Still a fake bracketed result after the nudge: drop it (do not re-check executedTools —
+                // PHPStan cannot see that the agent call may have filled it via the toolbox).
+                if (
+                    AgentPromptBuilder::isCardHistoryEcho($finalText)
+                    || AgentPromptBuilder::isFabricatedToolResultEcho($finalText)
+                ) {
+                    $finalText = '';
+                }
+                $retried = true;
+            }
             $retryPlan = $state->plan !== [] ? $state->plan : $plan;
             if (
                 $this->shouldRetryForRemainingWork($state, $retryPlan, $historyMessages, $requestForChecklist ?: $userMessage, $finalText)
@@ -544,7 +596,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $s = mb_strtolower($query);
 
         return preg_match('/\b(news|newsartikel|nachricht\w*|meldung\w*)\b/u', $s) === 1
-            && preg_match('/\b(write|create|draft|compose|add|make|new|schreib\w*|verfass\w*|erstell\w*|anleg\w*|neue[rsn]?)\b/u', $s) === 1
+            // "generate" is how editors phrase this at least as often as "create"; without it the
+            // turn misses newsCreateTools() and drifts to whatever the module start set offers (SEO).
+            && preg_match('/\b(write|create|generate|draft|compose|add|make|new|schreib\w*|verfass\w*|erstell\w*|generier\w*|erzeug\w*|anleg\w*|neue[rsn]?)\b/u', $s) === 1
             && preg_match('/\b(delete|remove|translate|rename|list|show|l[öo]sch\w*|entfern\w*|[üu]bersetz\w*|umbenenn\w*|zeig\w*)\b/u', $s) !== 1;
     }
 

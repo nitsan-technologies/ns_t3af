@@ -156,6 +156,22 @@ final class SatelliteToolPlanServiceTest extends TestCase
     }
 
     #[Test]
+    public function translatePageSummaryKeepsSpaceBeforeForPage(): void
+    {
+        $service = new SatelliteToolPlanService(
+            $this->severityLookup(['t3ai_translate_page' => ToolSeverity::Write]),
+            new McpConfirmationPlanBuilder(),
+            $this->createAgentTranslator(),
+        );
+        $plan = $service->plan('t3ai_translate_page', ['pageId' => 213, 'languageUids' => [1]]);
+
+        $summary = (string) ($plan->context['summary'] ?? '');
+        self::assertStringContainsString('Translate the whole page for page', $summary);
+        self::assertStringNotContainsString('pagefor page', $summary);
+        self::assertStringContainsString('213', $summary);
+    }
+
+    #[Test]
     public function aNewGlossarySaveDoesNotShowTermIdZero(): void
     {
         $service = new SatelliteToolPlanService(

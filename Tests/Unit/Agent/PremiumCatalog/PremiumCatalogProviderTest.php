@@ -67,6 +67,34 @@ final class PremiumCatalogProviderTest extends TestCase
         self::assertSame('ns_t3aa', $match->extensionKey);
     }
 
+    public function testAnInstalledExtensionThatMatchesSuppressesTheUpsell(): void
+    {
+        // "generate an image … alt text" matched ns_t3ai ("generate image") and ns_t3aa ("alt text")
+        // equally. ns_t3aa was returned because loaded entries were skipped outright, so a
+        // purchased T3AI image request was answered with an AI Accessibility upsell.
+        $this->mockLoadedExtensions(['ns_t3ai']);
+        $provider = new PremiumCatalogProvider(new ExtensionAvailability());
+
+        self::assertNull($provider->findMatch(
+            "Generate an image of a modern house with solar panels on the roof and give it the alt text 'House with solar panels'.",
+        ));
+        self::assertNull($provider->findStandaloneMatch(
+            "Create a hero image of a wind turbine at sunset with alt text 'Wind turbine at sunset'.",
+        ));
+    }
+
+    public function testAnInstalledExtensionDoesNotSuppressAnUnrelatedUpsell(): void
+    {
+        // ns_t3ai installed must not silence a real ns_t3aa-only request: it scores 0 here.
+        $this->mockLoadedExtensions(['ns_t3ai']);
+        $provider = new PremiumCatalogProvider(new ExtensionAvailability());
+
+        $match = $provider->findMatch('generate a voice over for this page');
+
+        self::assertNotNull($match);
+        self::assertSame('ns_t3aa', $match->extensionKey);
+    }
+
     public function testFindsContentSourceCapabilityViaSearchExtension(): void
     {
         // ns_t3cs is the shared backend for ns_t3as/ns_t3ac and is never sold on its own —
