@@ -136,7 +136,7 @@ final readonly class AskClarificationTool implements McpNonAiToolInterface
             return null;
         }
         $question = trim((string) ($decoded['question'] ?? ''));
-        $options = is_array($decoded['options'] ?? null) ? $decoded['options'] : [];
+        $options = is_array($decoded['options'] ?? null) ? array_values($decoded['options']) : [];
         if ($question === '' || $options === []) {
             return null;
         }
