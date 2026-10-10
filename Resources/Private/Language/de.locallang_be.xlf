@@ -1597,6 +1597,10 @@
                 <source>I can't find a page called "%1$s". Which page should I use?</source>
                 <target>Ich finde keine Seite mit dem Namen „%1$s“. Welche Seite soll ich verwenden?</target>
             </trans-unit>
+            <trans-unit id="agent.glossary.whichLanguage">
+                <source>Which language should I save this word in?</source>
+                <target>In welcher Sprache soll ich dieses Wort speichern?</target>
+            </trans-unit>
             <trans-unit id="agent.page.missingUid">
                 <source>Page %d doesn't exist.</source>
                 <target>Seite %d gibt es nicht.</target>
