@@ -101,6 +101,9 @@ final readonly class SatelliteToolPlanService
     private function normalizeDisplayArguments(array $arguments): array
     {
         $display = $arguments;
+        if ((int) ($display['newsArticleUid'] ?? 0) > 0) {
+            unset($display['pageId'], $display['pid']);
+        }
         if (isset($display['pageId'])) {
             $pageId = (int) $display['pageId'];
             if ($pageId > 0) {
@@ -221,6 +224,20 @@ final readonly class SatelliteToolPlanService
         return $title !== '' ? sprintf('%s [%d]', AgentQuote::wrap($title), $uid) : (string) $uid;
     }
 
+    private function newsArticleLabel(int $uid): string
+    {
+        if ($uid <= 0) {
+            return (string) $uid;
+        }
+        try {
+            $title = trim((string) (BackendUtility::getRecord('tx_news_domain_model_news', $uid, 'title')['title'] ?? ''));
+        } catch (\Throwable) {
+            $title = '';
+        }
+
+        return $title !== '' ? sprintf('%s [%d]', AgentQuote::wrap($title), $uid) : (string) $uid;
+    }
+
     private function languageLabel(int $uid, int $pageId): string
     {
         if ($uid < 0) {
@@ -249,6 +266,19 @@ final readonly class SatelliteToolPlanService
      */
     private function buildSummary(string $toolName, array $arguments): string
     {
+        if ($toolName === 't3ai_generate_image') {
+            $newsUid = (int) ($arguments['newsArticleUid'] ?? 0);
+            $toolLabel = $this->translator->translate('agent.tool.label.t3ai_generate_image');
+            if ($toolLabel === 'agent.tool.label.t3ai_generate_image' || $toolLabel === '') {
+                $toolLabel = 'Generate an image';
+            }
+            $targetHint = $newsUid > 0
+                ? ' ' . $this->translator->translate('agent.plan.newsHint', [$this->newsArticleLabel($newsUid)])
+                : '';
+
+            return $this->translator->translate('agent.plan.namedTool', [$toolLabel, $targetHint]);
+        }
+
         $pageId = (int) ($arguments['pageId'] ?? 0);
         // The separating space lives here: TYPO3 v14 trims leading/trailing whitespace from XLIFF labels.
         $pageHint = $pageId > 0 ? ' ' . $this->translator->translate('agent.plan.pageHint', [$this->pageLabel($pageId)]) : '';

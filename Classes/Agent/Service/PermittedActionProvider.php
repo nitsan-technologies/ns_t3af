@@ -25,6 +25,7 @@ use NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
 /**
  * Permitted tool catalog for the AI Agent (T4).
@@ -104,6 +105,10 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
         if (in_array($name, self::AGENT_HIDDEN_TOOL_NAMES, true)) {
             return true;
         }
+        // News tools only fail with "EXT:news is required" when EXT:news is not installed: do not offer them.
+        if (self::isNewsTool($tool) && !ExtensionManagementUtility::isLoaded('news')) {
+            return true;
+        }
 
         if (($tool['dualMode'] ?? false) !== true || ($tool['previewable'] ?? false) === true) {
             return false;
@@ -113,6 +118,17 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
 
         // Read DualMode: native execute as a read — keep in catalog.
         return $severity !== ToolSeverity::Read;
+    }
+
+    /**
+     * @param array<string, mixed> $tool
+     */
+    public static function isNewsTool(array $tool): bool
+    {
+        $intent = is_array($tool['intent'] ?? null) ? $tool['intent'] : [];
+
+        return strtolower((string) ($intent['category'] ?? '')) === 'news'
+            || (string) ($tool['name'] ?? '') === 't3ai_translate_news';
     }
 
     /**

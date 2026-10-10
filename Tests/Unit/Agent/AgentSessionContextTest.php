@@ -178,6 +178,56 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function pendingAttachForNewsUsesFalMediaNotAContentElement(): void
+    {
+        $history = [
+            [
+                'role' => 'assistant',
+                'content' => 'Done.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tx_news_domain_model_news', 'uid' => 41, 'values' => ['title' => 'Anniversary']]],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Image saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 155],
+                ],
+            ],
+        ];
+
+        self::assertSame(41, AgentPromptBuilder::latestAppliedNewsUid($history));
+        $note = AgentPromptBuilder::pendingImageAttachNote($history);
+        self::assertStringContainsString('tx_news_domain_model_news uid 41', $note);
+        self::assertStringContainsString('fal_media', $note);
+        self::assertStringContainsString('Do not create a content element', $note);
+        self::assertStringNotContainsString('textmedia', $note);
+        self::assertFalse(AgentPromptBuilder::hasOpenFileReferenceDraft($history));
+    }
+
+    #[Test]
+    public function hasOpenFileReferenceDraftDetectsWaitingAttachCard(): void
+    {
+        $history = [
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'inline_draft',
+                    'tool' => 'file_reference_add',
+                    'draft' => ['tool' => 'file_reference_add', 'discarded' => false],
+                ],
+            ],
+        ];
+
+        self::assertTrue(AgentPromptBuilder::hasOpenFileReferenceDraft($history));
+    }
+
+    #[Test]
     public function pendingAttachPrefersTextMediaOverALaterPlainTextElement(): void
     {
         $history = [
@@ -608,5 +658,14 @@ final class AgentSessionContextTest extends TestCase
                 ['role' => 'user', 'content' => $followUp, 'meta' => []],
             ]),
         );
+    }
+
+    #[Test]
+    public function anEmptyListInTheQuestionIsDropped(): void
+    {
+        [$question, $options] = AskClarificationTool::liftInlineOptions('[]I need the target language confirmed.', []);
+
+        self::assertSame('I need the target language confirmed.', $question);
+        self::assertSame([], $options);
     }
 }

@@ -531,6 +531,112 @@ readonly class RecordService
     }
 
     /**
+     * Prefer a real storage folder over a random page that happens to hold more rows:
+     * pages.module=news, then sysfolder (doktype 254), then highest row count.
+     * Used when a create omits storage (e.g. news while the Layout page is open).
+     */
+    public function preferredPidForTable(string $table): int
+    {
+        if ($table === '' || $table === 'pages') {
+            return 0;
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
+        $queryBuilder->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($queryBuilder, $table);
+        $queryBuilder
+            ->select('pid')
+            ->addSelectLiteral('COUNT(*) AS c')
+            ->from($table)
+            ->andWhere($queryBuilder->expr()->gt('pid', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER)))
+            ->groupBy('pid')
+            ->orderBy('c', 'DESC')
+            ->setMaxResults(50);
+
+        /** @var list<array{pid: int|string, c: int|string}> $rows */
+        $rows = $queryBuilder->executeQuery()->fetchAllAssociative();
+        $bestPid = 0;
+        $bestScore = -1;
+        foreach ($rows as $row) {
+            $pid = (int) ($row['pid'] ?? 0);
+            if ($pid <= 0 || !$this->pageAccess->canReadPage($pid)) {
+                continue;
+            }
+            $page = $this->pageMeta($pid);
+            $score = self::scorePreferredStoragePid(
+                (int) ($row['c'] ?? 0),
+                (int) ($page['doktype'] ?? 0),
+                (string) ($page['module'] ?? ''),
+            );
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestPid = $pid;
+            }
+        }
+
+        return $bestPid;
+    }
+
+    /**
+     * True when the page is a news storage folder (module=news) or a sysfolder (doktype 254).
+     * Ordinary pages (e.g. Privacy) must not keep a model-supplied pid on news create.
+     */
+    public function isSuitableNewsStoragePid(int $pid): bool
+    {
+        if ($pid <= 0) {
+            return false;
+        }
+        $page = $this->pageMeta($pid);
+
+        return self::isSuitableNewsStorage(
+            (int) ($page['doktype'] ?? 0),
+            (string) ($page['module'] ?? ''),
+        );
+    }
+
+    /**
+     * @internal unit-tested
+     */
+    public static function isSuitableNewsStorage(int $doktype, string $module): bool
+    {
+        return strtolower(trim($module)) === 'news' || $doktype === 254;
+    }
+
+    /**
+     * @internal unit-tested
+     */
+    public static function scorePreferredStoragePid(int $recordCount, int $doktype, string $module): int
+    {
+        $score = max(0, $recordCount);
+        if (strtolower(trim($module)) === 'news') {
+            $score += 10000;
+        }
+        // 254 = sysfolder — typical EXT:news storage, beat a higher count on a normal page.
+        if ($doktype === 254) {
+            $score += 1000;
+        }
+
+        return $score;
+    }
+
+    /**
+     * @return array{doktype?: int|string, module?: string}
+     */
+    private function pageMeta(int $pageUid): array
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()->removeAll();
+        $row = $queryBuilder
+            ->select('doktype', 'module')
+            ->from('pages')
+            ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($pageUid, ParameterType::INTEGER)))
+            ->executeQuery()
+            ->fetchAssociative();
+
+        return is_array($row) ? $row : [];
+    }
+
+    /**
      * Count records matching optional conditions without fetching them.
      *
      * @param array<string, array{operator: string, value: string}> $searchConditions

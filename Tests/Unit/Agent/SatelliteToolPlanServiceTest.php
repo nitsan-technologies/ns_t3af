@@ -42,6 +42,7 @@ final class SatelliteToolPlanServiceTest extends TestCase
                 't3ai_generate_meta_description' => ToolSeverity::Write,
                 't3ai_apply_schema_markup' => ToolSeverity::Write,
                 't3ai_generate_all_seo' => ToolSeverity::Write,
+                't3ai_generate_image' => ToolSeverity::Write,
                 't3cs_save_datasource' => ToolSeverity::Write,
                 't3cs_list_datasources' => ToolSeverity::Read,
                 't3ac_chatbot_settings' => ToolSeverity::Write,
@@ -111,6 +112,26 @@ final class SatelliteToolPlanServiceTest extends TestCase
             : [];
 
         self::assertSame([['key' => 'pageId', 'value' => '8', 'label' => 'Page']], $displayArguments);
+    }
+
+    #[Test]
+    public function generateImagePlanDoesNotMentionLayoutPage(): void
+    {
+        $service = new SatelliteToolPlanService(
+            $this->severityLookup(['t3ai_generate_image' => ToolSeverity::Write]),
+            new McpConfirmationPlanBuilder(),
+            $this->createAgentTranslator(),
+        );
+        $plan = $service->plan('t3ai_generate_image', [
+            'prompt' => 'Office team',
+            'newsArticleUid' => 42,
+        ]);
+
+        $summary = (string) ($plan->context['summary'] ?? '');
+        self::assertStringContainsString('Generate an image', $summary);
+        self::assertStringNotContainsString('for page', $summary);
+        self::assertStringContainsString('news article', $summary);
+        self::assertStringContainsString('42', $summary);
     }
 
     #[Test]

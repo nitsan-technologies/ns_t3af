@@ -85,6 +85,8 @@ final readonly class AskClarificationTool implements McpNonAiToolInterface
      */
     public static function liftInlineOptions(string $question, array $options): array
     {
+        // An empty list pasted into the question ("[]I need the language…") is noise, not a choice.
+        $question = trim((string) preg_replace('/\[\s*\]/u', '', $question));
         if ($options !== [] || preg_match('/\[\s*"[^\]]*\]/u', $question, $match) !== 1) {
             return [$question, $options];
         }
