@@ -639,6 +639,26 @@
                 <source>AI Foundation</source>
                 <target>AI Foundation</target>
             </trans-unit>
+            <trans-unit id="agent.owner.ns_t3ai">
+                <source>T3AI</source>
+                <target>T3AI</target>
+            </trans-unit>
+            <trans-unit id="agent.owner.ns_t3aa">
+                <source>T3AA</source>
+                <target>T3AA</target>
+            </trans-unit>
+            <trans-unit id="agent.owner.ns_t3cs">
+                <source>T3CS</source>
+                <target>T3CS</target>
+            </trans-unit>
+            <trans-unit id="agent.owner.ns_t3ac">
+                <source>T3AC</source>
+                <target>T3AC</target>
+            </trans-unit>
+            <trans-unit id="agent.owner.ns_t3as">
+                <source>T3AS</source>
+                <target>T3AS</target>
+            </trans-unit>
             <trans-unit id="agent.tool.blockedForGroup">
                 <source>Your user group may not use this. Ask your administrator to allow it under AI Permissions.</source>
                 <target>Ihre Benutzergruppe darf das nicht verwenden. Bitten Sie Ihren Administrator, es unter „KI-Berechtigungen“ freizugeben.</target>

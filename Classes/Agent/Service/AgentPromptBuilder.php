@@ -77,6 +77,7 @@ readonly class AgentPromptBuilder
             'To create a news article call write_table create on tx_news_domain_model_news right away (do not call explain_capabilities first). A news article is never a content element, a page heading or an image card. Every new article gets a title, a short teaser and the text. Do not invent a date: leave datetime out (it defaults to today) unless the editor named a date. For bodytext use simple HTML (p, h2, ul), not Markdown. If the editor asked for a picture, create the news first, then generate one image and attach it to that news uid with file_reference_add fieldName fal_media — never create a content element on the Layout page for a news picture, and call generate/attach only once each.',
             'When creating news, set data.pid to a news storage folder (a page that already holds news, from a prior list). Never use pid 0 and never use the Layout page on screen unless it is that storage folder. If you do not know a storage pid, omit pid and the tool picks one.',
             'When searching news with record_search, omit pid unless the editor named a news storage folder. News is not stored on the page open in Layout. An empty search lists all news the editor may read.',
+            'A blog post is a page with doktype 137, not a normal page and not a content element. To create one call write_table create on pages with data.doktype 137 and the title the editor gave, then add the text as content elements on that new page. A plain page (doktype 1) is not a blog post: never leave doktype out when the editor asked for a blog, a blog post or a Blogbeitrag.',
             'Say "not allowed" only when a tool call was actually refused for permission. When a search finds no record with the name the editor gave, say "I can\'t find a … called …" and offer to list the ones that exist; never blame rights for a record that does not exist.',
             'When the editor asks for "all" records of a kind (all my news, all pages), call record_search on that table with an empty search and no pid: it lists them.',
             'Before translating, get the target language from site_languages_list. If the site has it, use its uid and go on; if not, tell the editor which languages the site has. Never ask the editor to confirm a language with an empty list of choices.',
@@ -1073,6 +1074,29 @@ readonly class AgentPromptBuilder
             '/^\[[^\]\n]{3,80}\]\s+.+/u',
             $text,
         ) === 1;
+    }
+
+    /**
+     * After a real tool call, models sometimes paste "[Search pages] … [3]The page is already…"
+     * into the final answer with no space. Keep the human sentence; drop the glued prefix.
+     */
+    public static function stripGluedToolResultPrefix(string $text): string
+    {
+        $text = trim($text);
+        if ($text === '' || preg_match('/^\[[^\]\n]{3,80}\]\s+/u', $text) !== 1) {
+            return $text;
+        }
+
+        // "[Label] …uid]Next sentence" — capital letter glued after a closing bracket.
+        if (preg_match('/^\[[^\]\n]{3,80}\]\s+.+\[[0-9]+\]([A-ZÀ-ÖØ-Þ].+)$/su', $text, $match) === 1) {
+            return trim($match[1]);
+        }
+        // "[Label] …factsNext sentence" — lowercase/punct glued to a new capital sentence.
+        if (preg_match('/^\[[^\]\n]{3,80}\]\s+.+[a-z0-9.→»…]([A-ZÀ-ÖØ-Þ].+)$/su', $text, $match) === 1) {
+            return trim($match[1]);
+        }
+
+        return $text;
     }
 
     public static function isDraftReviewBoilerplate(string $text): bool

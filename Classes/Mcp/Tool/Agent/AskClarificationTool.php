@@ -79,12 +79,22 @@ final readonly class AskClarificationTool implements McpNonAiToolInterface
     /**
      * Models sometimes paste the choices into the question as a JSON list (["A", "B"]) and send no
      * options. The list becomes buttons and is removed from the sentence.
+     * They also dump the whole ask_clarification payload as text:
+     * {"question":"…","options":["A","B"]} — lift that into a real clarification.
      *
      * @param  array<mixed>                 $options
      * @return array{0: string, 1: array<mixed>}
      */
     public static function liftInlineOptions(string $question, array $options): array
     {
+        $embedded = self::parseEmbeddedClarification($question);
+        if ($embedded !== null) {
+            return [
+                $embedded['question'],
+                $options !== [] ? $options : $embedded['options'],
+            ];
+        }
+
         // An empty list pasted into the question ("[]I need the language…") is noise, not a choice.
         $question = trim((string) preg_replace('/\[\s*\]/u', '', $question));
         if ($options !== [] || preg_match('/\[\s*"[^\]]*\]/u', $question, $match) !== 1) {
@@ -97,6 +107,47 @@ final readonly class AskClarificationTool implements McpNonAiToolInterface
         $question = trim((string) preg_replace('/\s*:?\s*' . preg_quote($match[0], '/') . '/u', '', $question));
 
         return [$question, $decoded];
+    }
+
+    /**
+     * When the model writes ask_clarification as JSON in the reply instead of calling the tool.
+     *
+     * @return array{question: string, options: list<mixed>, remainder: string}|null
+     */
+    public static function parseEmbeddedClarification(string $text): ?array
+    {
+        $text = trim($text);
+        if ($text === '' || !str_contains($text, '"question"')) {
+            return null;
+        }
+
+        if (preg_match('/\{[^{}]*"question"\s*:\s*"(?:\\\\.|[^"\\\\])*"\s*,\s*"options"\s*:\s*\[[^\]]*\]\s*\}/su', $text, $match) !== 1
+            && preg_match('/\{[^{}]*"options"\s*:\s*\[[^\]]*\]\s*,\s*"question"\s*:\s*"(?:\\\\.|[^"\\\\])*"\s*\}/su', $text, $match) !== 1
+        ) {
+            return null;
+        }
+
+        try {
+            $decoded = json_decode($match[0], true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+        if (!is_array($decoded)) {
+            return null;
+        }
+        $question = trim((string) ($decoded['question'] ?? ''));
+        $options = is_array($decoded['options'] ?? null) ? $decoded['options'] : [];
+        if ($question === '' || $options === []) {
+            return null;
+        }
+
+        $remainder = trim(str_replace($match[0], '', $text));
+
+        return [
+            'question' => $question,
+            'options' => $options,
+            'remainder' => $remainder,
+        ];
     }
 
     /**

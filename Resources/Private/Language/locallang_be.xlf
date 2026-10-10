@@ -714,6 +714,21 @@
       <trans-unit id="agent.owner.core" resname="agent.owner.core">
         <source>AI Foundation</source>
       </trans-unit>
+      <trans-unit id="agent.owner.ns_t3ai" resname="agent.owner.ns_t3ai">
+        <source>T3AI</source>
+      </trans-unit>
+      <trans-unit id="agent.owner.ns_t3aa" resname="agent.owner.ns_t3aa">
+        <source>T3AA</source>
+      </trans-unit>
+      <trans-unit id="agent.owner.ns_t3cs" resname="agent.owner.ns_t3cs">
+        <source>T3CS</source>
+      </trans-unit>
+      <trans-unit id="agent.owner.ns_t3ac" resname="agent.owner.ns_t3ac">
+        <source>T3AC</source>
+      </trans-unit>
+      <trans-unit id="agent.owner.ns_t3as" resname="agent.owner.ns_t3as">
+        <source>T3AS</source>
+      </trans-unit>
       <trans-unit id="agent.tool.unclassified" resname="agent.tool.unclassified">
         <source>The agent cannot use this yet because its extension does not say whether it changes data. Ask your developer to update the extension.</source>
       </trans-unit>

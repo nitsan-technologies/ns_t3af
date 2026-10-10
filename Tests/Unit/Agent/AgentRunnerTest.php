@@ -1108,6 +1108,9 @@ final class AgentRunnerTest extends TestCase
         self::assertTrue(AgentRunner::isNewsCreateRequest('Now write a longer, detailed news story about our anniversary, with a few sections and a picture.'));
         self::assertTrue(AgentRunner::isNewsCreateRequest('Create a news article titled Winter Opening Hours'));
         self::assertTrue(AgentRunner::isNewsCreateRequest('Erstelle einen neuen Newsartikel zum Sommerfest'));
+        // "generate" used to miss, so the turn offered the SEO tools instead of write_table.
+        self::assertTrue(AgentRunner::isNewsCreateRequest('I want to generate a news about our new office'));
+        self::assertTrue(AgentRunner::isNewsCreateRequest('Generiere eine Nachricht zum Tag der offenen Tür'));
         self::assertFalse(AgentRunner::isNewsCreateRequest('Delete the Winter news'));
         self::assertFalse(AgentRunner::isNewsCreateRequest('Translate the news into German'));
         self::assertFalse(AgentRunner::isNewsCreateRequest('Show me all my news articles'));
