@@ -1441,6 +1441,9 @@
       <trans-unit id="agent.plan.pageHint" resname="agent.plan.pageHint">
         <source>for page %1$s</source>
       </trans-unit>
+      <trans-unit id="agent.plan.newsHint" resname="agent.plan.newsHint">
+        <source>for news article %1$s</source>
+      </trans-unit>
       <trans-unit id="agent.plan.generateAllSeo" resname="agent.plan.generateAllSeo">
         <source>Generate and apply all SEO metadata%1$s.</source>
       </trans-unit>

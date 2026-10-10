@@ -326,4 +326,250 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
 
         self::assertSame('claude', $merged['aiProvider']);
     }
+
+    #[Test]
+    public function mergeContextDropsPidZeroOnRecordSearch(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            [
+                'tableName' => 'tx_news_domain_model_news',
+                'search' => '',
+                'pid' => 0,
+            ],
+            ['pageId' => 224],
+            'record_search',
+        );
+
+        self::assertArrayNotHasKey('pid', $merged);
+    }
+
+    #[Test]
+    public function mergeContextDropsNewsPidWhenItIsTheOpenPage(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            [
+                'tableName' => 'tx_news_domain_model_news',
+                'search' => 'Summer Sale',
+                'pid' => 224,
+            ],
+            ['pageId' => 224],
+            'record_search',
+        );
+
+        self::assertArrayNotHasKey('pid', $merged);
+    }
+
+    #[Test]
+    public function mergeContextKeepsNewsPidWhenItIsAStorageFolder(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            [
+                'tableName' => 'tx_news_domain_model_news',
+                'search' => 'Summer Sale',
+                'pid' => 173,
+            ],
+            ['pageId' => 224],
+            'record_search',
+        );
+
+        self::assertSame(173, $merged['pid']);
+    }
+
+    #[Test]
+    public function mergeContextDoesNotInjectLayoutPageOntoGenerateImage(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            ['prompt' => 'A sunny office'],
+            ['pageId' => 224, 'module' => 'web_layout'],
+            't3ai_generate_image',
+        );
+
+        self::assertArrayNotHasKey('pageId', $merged);
+        self::assertArrayNotHasKey('pid', $merged);
+    }
+
+    #[Test]
+    public function enrichPlannedToolArgumentsTagsNewsArticleForGenerateImage(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'enrichPlannedToolArguments');
+        $history = [
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tx_news_domain_model_news', 'uid' => 42]],
+                ],
+            ],
+        ];
+
+        $enriched = $method->invoke(
+            $processor,
+            't3ai_generate_image',
+            ['pageId' => 224, 'prompt' => 'Team photo'],
+            $history,
+        );
+
+        self::assertSame(42, $enriched['newsArticleUid']);
+        self::assertArrayNotHasKey('pageId', $enriched);
+    }
+
+    #[Test]
+    public function enrichPlannedToolArgumentsResolvesPlaceholderFileUidsFromHistory(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'enrichPlannedToolArguments');
+        $history = [
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 88],
+                ],
+            ],
+        ];
+
+        $enriched = $method->invoke(
+            $processor,
+            'file_reference_add',
+            [
+                'table' => 'tx_news_domain_model_news',
+                'uid' => 42,
+                'fieldName' => 'fal_media',
+                'fileUids' => '[imageUid]',
+            ],
+            $history,
+        );
+
+        self::assertSame('88', $enriched['fileUids']);
+    }
+
+    #[Test]
+    public function enrichPlannedToolArgumentsResolvesGeneratedImagePlaceholderForMetadata(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'enrichPlannedToolArguments');
+        $history = [
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 159],
+                ],
+            ],
+        ];
+
+        $enriched = $method->invoke(
+            $processor,
+            't3aa_update_file_metadata',
+            ['fileUrl' => '/generated-image.jpg', 'altText' => 'Celebration'],
+            $history,
+        );
+
+        self::assertSame(159, $enriched['fileUid']);
+        self::assertArrayNotHasKey('fileUrl', $enriched);
+    }
+
+    #[Test]
+    public function enrichPlannedToolArgumentsRefusesSecondAttachWhenOneIsAlreadyOpen(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'enrichPlannedToolArguments');
+        $history = [
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 159],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'inline_draft',
+                    'tool' => 'file_reference_add',
+                    'draft' => ['tool' => 'file_reference_add', 'discarded' => false],
+                ],
+            ],
+        ];
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('already open');
+
+        $method->invoke(
+            $processor,
+            'file_reference_add',
+            [
+                'table' => 'tx_news_domain_model_news',
+                'uid' => 43,
+                'fieldName' => 'fal_media',
+                'fileUids' => '159',
+            ],
+            $history,
+        );
+    }
+
+    #[Test]
+    public function enrichPlannedToolArgumentsRefusesAttachWhenFileAlreadyLinkedInHistory(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'enrichPlannedToolArguments');
+        $history = [
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 159],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 'file_reference_add',
+                    'success' => true,
+                    'details' => ['fileUids' => [159]],
+                ],
+            ],
+        ];
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('already attached');
+
+        $method->invoke(
+            $processor,
+            'file_reference_add',
+            [
+                'table' => 'tx_news_domain_model_news',
+                'uid' => 43,
+                'fieldName' => 'fal_media',
+                'fileUids' => '159',
+            ],
+            $history,
+        );
+    }
 }

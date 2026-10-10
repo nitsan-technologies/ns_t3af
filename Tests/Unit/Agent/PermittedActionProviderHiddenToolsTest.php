@@ -79,4 +79,13 @@ final class PermittedActionProviderHiddenToolsTest extends TestCase
         // isHiddenFromAgent only reads the tool array + private constants.
         return (new ReflectionClass(PermittedActionProvider::class))->newInstanceWithoutConstructor();
     }
+
+    #[Test]
+    public function newsToolsAreRecognisedByCategoryOrName(): void
+    {
+        self::assertTrue(PermittedActionProvider::isNewsTool(['name' => 't3ai_create_news_simple', 'intent' => ['category' => 'news']]));
+        self::assertTrue(PermittedActionProvider::isNewsTool(['name' => 't3ai_translate_news', 'intent' => ['category' => 'translation']]));
+        self::assertFalse(PermittedActionProvider::isNewsTool(['name' => 't3ai_translate_content', 'intent' => ['category' => 'translation']]));
+        self::assertFalse(PermittedActionProvider::isNewsTool(['name' => 'pages_get']));
+    }
 }

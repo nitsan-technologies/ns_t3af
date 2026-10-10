@@ -308,6 +308,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $pageId = (int) ($context['pageId'] ?? 0);
         $providerIdentifier = self::providerFromBody($body);
         $body['requestQuery'] = self::requestQuery($userMessage, $historyMessages);
+        // Prior turns (news readback, generated fileUid) must reach write-tool enrichment.
+        $body['conversationHistory'] = $historyMessages;
 
         $toolbox = new T3afToolbox(
             $this->toolDefinitionMapper->mapExecutableTools($offeredTools),
@@ -404,6 +406,26 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                     $finalText = '';
                 }
                 $retried = true;
+            }
+            // Some models write the tool call as text ("to=functions.t3ai_translate_news {…}") plus garbage
+            // instead of calling the tool. That is never an answer: ask once for a real call, else show nothing.
+            if (
+                !$retried
+                && self::looksLikeLeakedToolCall($finalText)
+                && !$state->isPaused()
+                && !$state->failed
+                && !$state->isCancelled()
+            ) {
+                $nudge = $userMessage . "\n\n[System: Your last reply contained a tool call written as text. Never write tool calls in the reply: call the tool itself now, or answer in one short plain sentence.]";
+                $retryPlan = $state->plan !== [] ? $state->plan : $plan;
+                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan, $requestForChecklist))->getResult();
+                $content = $agentResult->getContent();
+                $retryText = is_string($content) ? trim($content) : '';
+                $finalText = AgentPromptBuilder::isCardHistoryEcho($retryText) ? '' : $retryText;
+                $retried = true;
+            }
+            if (self::looksLikeLeakedToolCall($finalText)) {
+                $finalText = '';
             }
             // The model pasted the new text into chat and offered to apply it, but sent no draft: nothing can
             // be applied from chat text. Ask once for the write tool; a normal answer is never forced.
@@ -506,6 +528,24 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             '/credit balance|billing|insufficient[_ ]quota|exceeded your (?:current )?quota|quota exceeded|plans? (?:&|and) billing|invalid[_ ]api[_ ]key|incorrect api key|authentication[_ ]error|invalid x-api-key|payment required/i',
             $raw,
         ) === 1;
+    }
+
+    /** A tool call (or its channel markers) written into the reply text instead of being called. */
+    public static function looksLikeLeakedToolCall(string $text): bool
+    {
+        return preg_match('/\bto=functions\.[a-z0-9_]+|<\|(?:channel|message|constrain|call|start)\|>|\bfunctions\.[a-z0-9_]+\s*\{/iu', $text) === 1;
+    }
+
+    /**
+     * Asks to write or draft a new news article (not to change, list or delete one).
+     */
+    public static function isNewsCreateRequest(string $query): bool
+    {
+        $s = mb_strtolower($query);
+
+        return preg_match('/\b(news|newsartikel|nachricht\w*|meldung\w*)\b/u', $s) === 1
+            && preg_match('/\b(write|create|draft|compose|add|make|new|schreib\w*|verfass\w*|erstell\w*|anleg\w*|neue[rsn]?)\b/u', $s) === 1
+            && preg_match('/\b(delete|remove|translate|rename|list|show|l[öo]sch\w*|entfern\w*|[üu]bersetz\w*|umbenenn\w*|zeig\w*)\b/u', $s) !== 1;
     }
 
     /**
@@ -834,6 +874,30 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         $createContent = AgentCoreToolSet::isCreateContentRequest($query);
         $notAskedFor = array_flip(self::toolsNotAskedFor($query));
+        $newsCreate = self::isNewsCreateRequest($query);
+        if ($newsCreate) {
+            // A news article is a news record: not a page element, and no picture card unless a picture was asked for.
+            // DualMode create-news tools stay agent-hidden; write_table is the create path — do not stall on capabilities.
+            $notAskedFor['t3ai_create_content_element'] = true;
+            $notAskedFor['explain_capabilities'] = true;
+            if (preg_match('/\b(picture|pictures|image|images|photo|photos|illustration|bild\w*|foto\w*|grafik\w*)\b/iu', $query) !== 1) {
+                $notAskedFor['t3ai_generate_image'] = true;
+            }
+        }
+        // One generate per open request: a second card is often applied together and doubles files/credits.
+        if (self::imageAlreadyGeneratedThisRequest($userMessage, $historyMessages)) {
+            $notAskedFor['t3ai_generate_image'] = true;
+        }
+        // Open generate card or remaining picture work: never detour into SEO / voice-over.
+        if (
+            self::hasOpenGenerateImageDraft($historyMessages)
+            || AgentPromptBuilder::pendingImageAttachNote($historyMessages) !== ''
+            || preg_match('/\b(picture|pictures|image|images|photo|photos|illustration|bild\w*|foto\w*|grafik\w*)\b/iu', $query) === 1
+        ) {
+            $notAskedFor['t3ai_generate_all_seo'] = true;
+            $notAskedFor['t3ai_generate_seo_batch'] = true;
+            $notAskedFor['t3aa_generate_voice_over'] = true;
+        }
         if ($createContent || self::isPlainEditRequest($query) || self::isNewsOnlyRequest($query)) {
             // "Change the header of element 5" is an update: with the delete tool at hand the model sometimes
             // answers with a delete card plus a create card instead.
@@ -862,10 +926,13 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if (self::isPageMoveRequest($query)) {
             $found = [...self::pageMoveTools($executableTools, $offeredNames), ...$found];
         }
+        if ($newsCreate) {
+            $found = [...self::newsCreateTools($executableTools, $offeredNames), ...$found];
+        }
         $found = [...self::fileActionTools($query, $executableTools, $offeredNames), ...$found];
         $workPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
         if (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, self::requestForGate($userMessage, $historyMessages))) {
-            $found = [...self::imageWorkTools($executableTools, $offeredNames), ...$found];
+            $found = [...self::imageWorkTools($executableTools, $offeredNames, $historyMessages), ...$found];
         } elseif (AgentPromptBuilder::pendingImageAttachNote($historyMessages) !== '') {
             $found = [...self::pendingAttachTools($executableTools, $offeredNames), ...$found];
         }
@@ -876,6 +943,12 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             if ($name !== '') {
                 $byName[$name] = $tool;
             }
+        }
+        if (
+            AgentPromptBuilder::unattachedFileUids($historyMessages) === []
+            || AgentPromptBuilder::hasOpenFileReferenceDraft($historyMessages)
+        ) {
+            unset($byName['file_reference_add']);
         }
         ksort($byName);
 
@@ -923,17 +996,23 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
      *
      * @param list<array<string, mixed>> $executableTools
      * @param array<string, int|string> $alreadyOffered
+     * @param list<array<string, mixed>> $historyMessages
      * @return list<array<string, mixed>>
      */
-    public static function imageWorkTools(array $executableTools, array $alreadyOffered = []): array
+    public static function imageWorkTools(array $executableTools, array $alreadyOffered = [], array $historyMessages = []): array
     {
+        $needsAttach = AgentPromptBuilder::unattachedFileUids($historyMessages) !== [];
         $picked = [];
         foreach ($executableTools as $tool) {
             $name = (string) ($tool['name'] ?? '');
             if ($name === '' || isset($alreadyOffered[$name]) || isset($picked[$name])) {
                 continue;
             }
-            if ($name === 't3ai_generate_image' || $name === 'file_reference_add') {
+            if ($name === 't3ai_generate_image') {
+                $picked[$name] = $tool;
+                continue;
+            }
+            if ($name === 'file_reference_add' && $needsAttach) {
                 $picked[$name] = $tool;
             }
         }
@@ -977,6 +1056,12 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         'workspace_switch' => '/\b(workspaces?|arbeitsbereich\w*|switch\w*|wechsel\w*)\b/iu',
         // A rewrite or edit is not a summary: the summarize tool answered "rewrite friendlier" with an unrelated welcome text.
         't3aa_summarize_content' => '/\b(summar\w*|tl;?dr|zusammenfass\w*|kurzfassung|abstract|gist)\b/iu',
+        // Generate+attach must not detour into a metadata card with a fake /generated-image.jpg path.
+        't3aa_update_file_metadata' => '/\b(alt\s*text|image\s*texts?|file\s*meta|metadata|bildtext\w*|alternativtext\w*|datei\s*meta)\b/iu',
+        // "Generate the picture" must not become Write all SEO texts / SEO batch.
+        't3ai_generate_all_seo' => '/\b(seo|meta\s*desc|meta\s*title|og\s*title|og\s*desc|open\s*graph|schema\s*markup|suchmaschinen\w*|metadaten)\b/iu',
+        't3ai_generate_seo_batch' => '/\b(seo|meta\s*desc|meta\s*title|og\s*title|og\s*desc|open\s*graph|schema\s*markup|suchmaschinen\w*|metadaten)\b/iu',
+        't3aa_generate_voice_over' => '/\b(voice\s*-?\s*over|voiceover|audio\s*narrat\w*|sprachausgabe|vorlesen|vorlese\w*)\b/iu',
     ];
 
     /**
@@ -1024,6 +1109,67 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             ) {
                 $picked[$name] = $tool;
             }
+        }
+
+        return array_values($picked);
+    }
+
+    /**
+     * True when an image generate card is still open, or a generated/uploaded file is waiting to attach.
+     * Stops a second generate card that the editor would Apply together with the first.
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function imageAlreadyGeneratedThisRequest(string $userMessage, array $historyMessages): bool
+    {
+        unset($userMessage);
+
+        return self::hasOpenGenerateImageDraft($historyMessages)
+            || AgentPromptBuilder::unattachedFileUids($historyMessages) !== [];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function hasOpenGenerateImageDraft(array $historyMessages): bool
+    {
+        foreach ($historyMessages as $entry) {
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            $tool = (string) ($meta['tool'] ?? ($draft['tool'] ?? ''));
+            if (
+                $tool === AgentRequestedFiles::GENERATION_TOOL
+                && ($meta['type'] ?? '') === 'inline_draft'
+                && ($draft['discarded'] ?? false) !== true
+            ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * News create uses write_table (DualMode create-news tools stay agent-hidden without Previewable).
+     * Still picks those create tools if they ever appear in the executable catalog.
+     *
+     * @param list<array<string, mixed>> $executableTools
+     * @param array<string, int|string> $alreadyOffered
+     * @return list<array<string, mixed>>
+     */
+    public static function newsCreateTools(array $executableTools, array $alreadyOffered = []): array
+    {
+        $wanted = ['write_table' => true, 't3ai_create_news_simple' => true, 't3ai_create_news_advanced' => true];
+        $picked = [];
+        foreach ($executableTools as $tool) {
+            $name = (string) ($tool['name'] ?? '');
+            if ($name === '' || !isset($wanted[$name]) || isset($alreadyOffered[$name]) || isset($picked[$name])) {
+                continue;
+            }
+            $picked[$name] = $tool;
         }
 
         return array_values($picked);
