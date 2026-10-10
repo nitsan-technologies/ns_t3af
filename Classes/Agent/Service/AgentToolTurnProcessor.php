@@ -520,6 +520,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($toolName === 'write_table' && $requestQuery !== '') {
             $arguments['requestQuery'] = $requestQuery;
         }
+        if (strtolower($toolName) === 't3ai_glossary_save') {
+            $choice = GlossarySaveLanguage::resolve($requestQuery, GlossarySaveLanguage::siteLanguages($context));
+            $options = $choice['options'] ?? null;
+            if (is_array($options)) {
+                return $this->glossaryLanguageQuestion(array_values(array_filter($options, 'is_string')), $correlationId);
+            }
+            if (isset($choice['languageUid'])) {
+                $arguments['languageUid'] = (int) $choice['languageUid'];
+            }
+        }
 
         try {
             $plan = $this->toolPlanResolver->plan($toolName, $arguments);
@@ -593,6 +603,30 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'severity' => $severity,
                 'draft' => $draftCard,
                 'previews' => $this->previewsForChange($arguments, []),
+                'orchestratorPause' => true,
+            ],
+        ];
+    }
+
+    /**
+     * @param list<string> $options
+     * @return array{role: string, content: string, meta: array<string, mixed>}
+     */
+    private function glossaryLanguageQuestion(array $options, string $correlationId): array
+    {
+        $question = $this->translator->translate('agent.glossary.whichLanguage');
+        if ($question === '' || $question === 'agent.glossary.whichLanguage') {
+            $question = 'Which language should I save this word in?';
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $question,
+            'meta' => [
+                'type' => 'clarification',
+                'tool' => 'ask_clarification',
+                'options' => array_values($options),
+                'correlationId' => $correlationId,
                 'orchestratorPause' => true,
             ],
         ];

@@ -1324,6 +1324,9 @@
       <trans-unit id="agent.page.notFound" resname="agent.page.notFound">
         <source>I can't find a page called "%1$s". Which page should I use?</source>
       </trans-unit>
+      <trans-unit id="agent.glossary.whichLanguage" resname="agent.glossary.whichLanguage">
+        <source>Which language should I save this word in?</source>
+      </trans-unit>
       <trans-unit id="agent.page.missingUid" resname="agent.page.missingUid">
         <source>Page %d doesn't exist.</source>
       </trans-unit>
