@@ -67,7 +67,9 @@ final class AgentPromptBuilderGlossarySaveTest extends TestCase
         self::assertStringContainsString('call t3ai_glossary_save at once', $prompt);
         self::assertStringContainsString('this page\'s uid as pageId', $prompt);
         self::assertStringContainsString('matching site language id from the context as languageUid', $prompt);
-        self::assertStringContainsString('Do not ask for the page or the language', $prompt);
-        self::assertStringContainsString('do not start the reply with "Done"', $prompt);
+        self::assertStringContainsString('Do not ask which page', $prompt);
+        self::assertStringContainsString('When the language was named, do not ask for it', $prompt);
+        self::assertStringContainsString('call ask_clarification with those site languages as options and do not pick one', $prompt);
+        self::assertStringContainsString('Do not start the reply with "Done"', $prompt);
     }
 }
