@@ -104,6 +104,9 @@ final readonly class SatelliteToolPlanService
         if ((int) ($display['newsArticleUid'] ?? 0) > 0) {
             unset($display['pageId'], $display['pid']);
         }
+        if ((int) ($display['termId'] ?? 0) <= 0) {
+            unset($display['termId']);
+        }
         if (isset($display['pageId'])) {
             $pageId = (int) $display['pageId'];
             if ($pageId > 0) {

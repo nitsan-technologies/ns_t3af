@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-10 — An unchanged glossary word has no Apply card
+
+**Done:** When `t3ai_glossary_save` matches a word already in the list, the turn shows that sentence and stops. No draft is stored. A save card omits `termId` 0. See `packages/ns_t3ai/context/features/translation.md`.
+
+**Last touched:** 2026-10-10
+
+---
+
 ## 2026-10-10 — Queue timing follows the enabled scheduler task
 
 **Done:** The agent says queued SEO or translation texts are written on the next automatic run only when that scheduler task is enabled. A disabled task is described as off: an admin has to enable it, and the reply offers to write the texts now. Showing either queue lists it again. See `context/features/ai-agent.md`.
