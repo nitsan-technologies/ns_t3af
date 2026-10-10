@@ -7,6 +7,18 @@ import { ajaxUrl } from './context.js';
 import { isSuggestionFieldSafe, renderImagePreviews, renderMediaPreview, resolveToolDisplayLabel, renderToolTrace, renderWorkTraceHtml, renderMessageBody } from './render-helpers.js';
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
 
+/**
+ * An SEO queue add that queued nothing already explains why. A follow-up turn
+ * would replace that with "Done."
+ *
+ * @param {string} tool
+ * @param {string} content
+ * @returns {boolean}
+ */
+export function seoQueueAddSkipsFollowUp(tool, content) {
+  return tool === 't3ai_mass_seo_queue_add' && String(content ?? '').startsWith('No pages added');
+}
+
 export const draftMethods = {
   /**
      * Where a confirmed change goes: live website or the current draft workspace.
@@ -762,7 +774,9 @@ export const draftMethods = {
           };
           this.renderStream();
           this.refreshBackendContent();
-          this.queueContinuation(message, 'applied', String(message.content ?? ''));
+          if (!seoQueueAddSkipsFollowUp(String(result.tool ?? draft.tool ?? ''), message.content)) {
+            this.queueContinuation(message, 'applied', String(message.content ?? ''));
+          }
         } else {
           const appliedCount = String(result.appliedCount ?? 0);
           const totalCount = String(result.totalCount ?? 0);

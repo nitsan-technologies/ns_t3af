@@ -182,4 +182,26 @@ final class SatelliteToolPlanServiceTest extends TestCase
             'termId' => 0,
         ], $plan->context['arguments'] ?? null);
     }
+
+    #[Test]
+    public function anSeoQueueAddCardDoesNotShowPid(): void
+    {
+        $service = new SatelliteToolPlanService(
+            $this->severityLookup(['t3ai_mass_seo_queue_add' => ToolSeverity::Write]),
+            new McpConfirmationPlanBuilder(),
+            $this->createAgentTranslator(),
+        );
+        $plan = $service->plan('t3ai_mass_seo_queue_add', [
+            'pageId' => 45,
+            'pid' => 3,
+            'recursive' => true,
+        ]);
+        $keys = array_map(
+            static fn(mixed $row): string => is_array($row) ? (string) ($row['key'] ?? '') : '',
+            is_array($plan->context['displayArguments'] ?? null) ? $plan->context['displayArguments'] : [],
+        );
+
+        self::assertNotContains('pid', $keys);
+        self::assertArrayNotHasKey('pid', is_array($plan->context['arguments'] ?? null) ? $plan->context['arguments'] : []);
+    }
 }

@@ -128,7 +128,7 @@ Saving a glossary word when the editor names the source, the translation, and th
 
 Asking when queued SEO or translation texts will be written follows `QueueAutomationStatus`: an enabled, not-deleted scheduler task (`tx_scheduler_task.tasktype`) counts as automatic processing on. A disabled task counts as off, and the reply says an admin has to enable that scheduler task, and offers to write the texts now. It does not say a scheduled job will run. Showing the SEO or translation queue calls the list tool again, because a scheduler run can empty the queue between questions.
 
-Writing SEO texts for the subpages of the open page uses `t3ai_generate_seo_batch`. An empty `entries` list uses the subpages of the open page, including pages that do not have Mass SEO enabled. The SEO queue is for background generation. A recursive add only includes pages with Mass SEO enabled, and the reply names any page that was skipped.
+Writing SEO texts for the subpages of the open page uses `t3ai_generate_seo_batch`. An empty `entries` list uses the subpages of the open page, including pages that do not have Mass SEO enabled. The SEO queue is for background generation. A recursive add only includes pages with Mass SEO enabled, and the reply names any page that was skipped. When that add queues nothing, the Apply reply is that skip sentence and no follow-up turn says “Done.” The card does not show `pid`.
 
 ---
 

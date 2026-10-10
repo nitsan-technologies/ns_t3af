@@ -716,6 +716,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             }
         }
 
+        // The SEO queue add does not read pid. The open page must not appear as "Pid" on the card.
+        if (strtolower(trim($toolName)) === 't3ai_mass_seo_queue_add') {
+            unset($arguments['pid']);
+        }
+
         // News lives in storage folders, not on the Layout page. Models often send the open page
         // as pid (or 0); that empties the search. Drop those so record_search is site-wide (page access).
         if (strtolower(trim($toolName)) === 'record_search') {
