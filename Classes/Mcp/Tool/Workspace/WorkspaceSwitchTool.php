@@ -31,6 +31,7 @@ use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
+use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
@@ -38,13 +39,29 @@ use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 #[McpToolSeverity(ToolSeverity::Write)]
 readonly class WorkspaceSwitchTool implements McpNonAiToolInterface, McpPlannableToolInterface
 {
-    public function __construct(private McpConfirmationPlanBuilder $confirmationPlanBuilder) {}
+    public function __construct(
+        private McpConfirmationPlanBuilder $confirmationPlanBuilder,
+        private WorkspaceListService $workspaceListService,
+    ) {}
 
     /**
      * @param array<string, mixed> $arguments
      */
     public function plan(array $arguments): ToolPlan
     {
+        if (!ExtensionManagementUtility::isLoaded('workspaces')) {
+            throw new \RuntimeException('Workspaces are not available (cms-workspaces is not installed).');
+        }
+
+        $drafts = array_values(array_filter(
+            $this->workspaceListService->list(),
+            static fn(array $workspace): bool => (int) ($workspace['uid'] ?? 0) > 0,
+        ));
+        if ($drafts === []) {
+            // No Apply card when there is nothing to switch to — Live alone is not a draft workspace.
+            throw new \RuntimeException('There are no workspaces created.');
+        }
+
         $workspaceId = (int) ($arguments['workspaceId'] ?? 0);
         $currentWorkspaceId = 0;
         $backendUser = $GLOBALS['BE_USER'] ?? null;

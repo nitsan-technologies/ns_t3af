@@ -132,6 +132,9 @@ final class AgentUndoService
         $undoFields = is_array($stored['undoFields'] ?? null) ? $stored['undoFields'] : [];
         $this->assertNotChangedSince($undoFields);
         $reverted = [];
+        // One DataHandler write per record: empty SEO restores stick when batched (field-at-a-time often no-ops).
+        /** @var array<string, array{table: string, uid: int, fields: array<string, mixed>}> $updatesByRecord */
+        $updatesByRecord = [];
 
         foreach ($undoFields as $entry) {
             if (!is_array($entry)) {
@@ -178,14 +181,35 @@ final class AgentUndoService
                 continue;
             }
 
-            $this->dataHandlerService->updateRecord($table, $uid, [$field => $previousValue]);
-            $reverted[] = [
-                'table' => $table,
-                'uid' => $uid,
-                'field' => $field,
-                'reverted' => 'restored',
-                'previousValue' => is_scalar($previousValue) ? (string) $previousValue : '',
-            ];
+            $key = $table . '#' . $uid;
+            $updatesByRecord[$key]['table'] = $table;
+            $updatesByRecord[$key]['uid'] = $uid;
+            $updatesByRecord[$key]['fields'][$field] = $previousValue;
+        }
+
+        foreach ($updatesByRecord as $batch) {
+            $table = $batch['table'];
+            $uid = $batch['uid'];
+            $fields = $batch['fields'];
+            if ($fields === []) {
+                continue;
+            }
+            $this->dataHandlerService->updateRecord($table, $uid, $fields);
+            $after = $this->recordService->findByUid($table, $uid, array_keys($fields));
+            foreach ($fields as $field => $previousValue) {
+                if ($after === null || !array_key_exists($field, $after)
+                    || self::comparable($after[$field]) !== self::comparable($previousValue)
+                ) {
+                    continue;
+                }
+                $reverted[] = [
+                    'table' => $table,
+                    'uid' => $uid,
+                    'field' => $field,
+                    'reverted' => 'restored',
+                    'previousValue' => is_scalar($previousValue) ? (string) $previousValue : '',
+                ];
+            }
         }
 
         if ($reverted === []) {

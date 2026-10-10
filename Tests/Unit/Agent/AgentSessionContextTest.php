@@ -452,6 +452,39 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function fullClarificationJsonInTheReplyBecomesQuestionAndOptions(): void
+    {
+        $json = '{"question":"Do you want me to create just the image, or add it to the page?","options":["Create image only","Create image and add to page","Cancel"]}';
+        $parsed = AskClarificationTool::parseEmbeddedClarification($json . ' Extra chatter.');
+
+        self::assertNotNull($parsed);
+        self::assertSame('Do you want me to create just the image, or add it to the page?', $parsed['question']);
+        self::assertSame(['Create image only', 'Create image and add to page', 'Cancel'], $parsed['options']);
+
+        [$question, $options] = AskClarificationTool::liftInlineOptions($json, []);
+        self::assertSame('Do you want me to create just the image, or add it to the page?', $question);
+        self::assertSame(['Create image only', 'Create image and add to page', 'Cancel'], $options);
+    }
+
+    #[Test]
+    public function gluedToolResultPrefixIsStrippedFromFinalAnswer(): void
+    {
+        self::assertSame(
+            'The page is already in the SEO queue.',
+            AgentPromptBuilder::stripGluedToolResultPrefix(
+                '[Search pages] Matching pages: 1 Examples: QA Mounted Child [3]The page is already in the SEO queue.',
+            ),
+        );
+        self::assertSame(
+            'I can remove glossary terms when you name one that exists.',
+            AgentPromptBuilder::stripGluedToolResultPrefix(
+                '[Show the translation glossary] Items: 1 Examples: Agent → AssistentI can remove glossary terms when you name one that exists.',
+            ),
+        );
+        self::assertSame('Plain answer.', AgentPromptBuilder::stripGluedToolResultPrefix('Plain answer.'));
+    }
+
+    #[Test]
     public function historyReplaysCardsAsShortNotes(): void
     {
         $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();
@@ -524,6 +557,23 @@ final class AgentSessionContextTest extends TestCase
             '[Prepare change: Remove pages from the SEO queue] Page 2 is queued for removal. This draft has not been applied yet.',
         ));
         self::assertTrue(AgentPromptBuilder::isCardHistoryEcho('[Prepared change] The page is set to be removed from the SEO queue.'));
+    }
+
+    #[Test]
+    public function fabricatedBracketedToolResultsAreDetected(): void
+    {
+        self::assertTrue(AgentPromptBuilder::isFabricatedToolResultEcho(
+            '[Remove from translation queue] Removed 1 page(s) from the queue. “QA Mounted Child” has been removed.',
+        ));
+        self::assertTrue(AgentPromptBuilder::isFabricatedToolResultEcho(
+            '[Retry failed translations] Requeued: 0 entries.',
+        ));
+        self::assertFalse(AgentPromptBuilder::isFabricatedToolResultEcho(
+            'The translation queue is empty — nothing to remove.',
+        ));
+        self::assertFalse(AgentPromptBuilder::isFabricatedToolResultEcho(
+            '[Prepared change: Change a record — applied] Review the proposed changes for Change a record before anything is written.',
+        ));
     }
 
     #[Test]

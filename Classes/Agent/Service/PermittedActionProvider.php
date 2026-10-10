@@ -24,6 +24,7 @@ use NITSAN\NsT3AF\Agent\Contract\AgentActionCatalogInterface;
 use NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
+use NITSAN\NsT3AF\Mcp\Service\McpToolOwnershipResolver;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
@@ -56,6 +57,7 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
         private AgentToolEditorLabelService $editorLabelService,
         private AgentTranslator $translator,
         private AgentGovernanceGuard $governanceGuard,
+        private McpToolOwnershipResolver $ownershipResolver = new McpToolOwnershipResolver(),
     ) {}
 
     /**
@@ -138,10 +140,11 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
     private function normalizeToolEntry(array $tool, AgentToolPolicy $policy): array
     {
         $toolName = (string) ($tool['name'] ?? '');
-        $ownerKey = (string) ($tool['ownerExtensionKey'] ?? self::CORE_EXTENSION_KEY);
-        if ($ownerKey === '') {
-            $ownerKey = self::CORE_EXTENSION_KEY;
-        }
+        $ownerKey = $this->ownershipResolver->resolve([
+            'name' => $toolName,
+            'className' => (string) ($tool['className'] ?? ''),
+            'ownerExtensionKey' => $tool['ownerExtensionKey'] ?? null,
+        ], []) ?? self::CORE_EXTENSION_KEY;
 
         $severity = ToolSeverity::tryFromString((string) ($tool['severity'] ?? ''));
         $lockReason = '';
@@ -225,7 +228,10 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
             return $this->translator->translate('agent.owner.core');
         }
 
-        return $ownerKey;
+        $labelKey = 'agent.owner.' . $ownerKey;
+        $label = $this->translator->translate($labelKey);
+
+        return ($label !== '' && $label !== $labelKey) ? $label : $ownerKey;
     }
 
 }
