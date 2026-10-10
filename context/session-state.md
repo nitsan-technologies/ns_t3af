@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-10 — Several pages go on one SEO queue card
+
+**Done:** "Add pages 2, 3, 4, 7, 9 and 24 to the SEO queue" sends every uid as `pageIds` on one `t3ai_mass_seo_queue_add` call. The open page is not substituted for that list. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-10
+
+---
+
 ## 2026-10-09 — Subpage SEO is not an empty batch call
 
 **Done:** "Write SEO texts for all subpages" prepares `t3ai_generate_seo_batch`. An empty entries list uses the open page's subpages, including pages without Mass SEO enabled. The SEO queue stays the background path and only includes pages with Mass SEO enabled. See `context/features/ai-agent.md`.
