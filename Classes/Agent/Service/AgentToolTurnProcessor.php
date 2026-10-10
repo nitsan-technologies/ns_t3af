@@ -641,9 +641,24 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         $pageId = (int) ($context['pageId'] ?? 0);
+        if (strtolower(trim($toolName)) === 't3ai_mass_seo_queue_add') {
+            $fromUrl = self::pageIdsWrittenAsUrl((string) ($arguments['pageUrl'] ?? ''));
+            if ($fromUrl !== [] && !self::hasExplicitPageIdList($arguments['pageIds'] ?? null)) {
+                $arguments['pageIds'] = $fromUrl;
+                unset($arguments['pageUrl']);
+            }
+        }
         // The model named another page by URL: the page on screen must not be added as a second, conflicting target.
         $namesPageByUrl = trim((string) ($arguments['pageUrl'] ?? '')) !== '' && !isset($arguments['pageId']);
-        if ($pageId > 0 && !$namesPageByUrl && !$this->toolIgnoresLayoutPageContext($toolName)) {
+        // An explicit SEO queue list is the whole request. The open page must not replace it.
+        $namesSeoQueuePages = strtolower(trim($toolName)) === 't3ai_mass_seo_queue_add'
+            && self::hasExplicitPageIdList($arguments['pageIds'] ?? null);
+        if (
+            $pageId > 0
+            && !$namesPageByUrl
+            && !$namesSeoQueuePages
+            && !$this->toolIgnoresLayoutPageContext($toolName)
+        ) {
             $arguments['pageId'] ??= $pageId;
             // Do not force pid onto *_search tools — that scoped site-wide searches to the current page only.
             if (!$this->toolUsesOptionalSearchPid($toolName)) {
@@ -722,6 +737,44 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return $arguments;
+    }
+
+    private static function hasExplicitPageIdList(mixed $pageIds): bool
+    {
+        if (is_string($pageIds)) {
+            $pageIds = preg_split('/[\s,;]+/', trim($pageIds, " \t\n\r\0\x0B\"'[]")) ?: [];
+        }
+        if (!is_array($pageIds)) {
+            return false;
+        }
+        foreach ($pageIds as $pageId) {
+            if ((int) $pageId > 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private static function pageIdsWrittenAsUrl(string $pageUrl): array
+    {
+        $trimmed = trim($pageUrl);
+        if ($trimmed === '' || preg_match('/^\d+(?:[\s,;]+\d+)*$/', $trimmed) !== 1) {
+            return [];
+        }
+
+        $ids = [];
+        foreach (preg_split('/[\s,;]+/', $trimmed) ?: [] as $pageId) {
+            $pageId = (int) $pageId;
+            if ($pageId > 0) {
+                $ids[$pageId] = $pageId;
+            }
+        }
+
+        return array_values($ids);
     }
 
     private function toolUsesOptionalSearchPid(string $toolName): bool
