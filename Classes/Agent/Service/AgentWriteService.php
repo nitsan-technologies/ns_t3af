@@ -503,7 +503,12 @@ final class AgentWriteService
         );
 
         $changeId = bin2hex(random_bytes(8));
-        $undoFields = $this->buildPreviewUndoFields($preview, $resolved);
+        $undoFields = $this->refineSuggestionUndoFields(
+            $toolName,
+            $invokeResult['result'] ?? null,
+            $this->buildPreviewUndoFields($preview, $resolved),
+            $preview,
+        );
         $this->draftSession->storeChange($changeId, [
             'correlationId' => $correlationId,
             'previewResult' => $preview->toArray(),
@@ -511,6 +516,7 @@ final class AgentWriteService
             'undoFields' => $undoFields,
             'appliedAt' => time(),
             'suggestionsApply' => true,
+            'workspaceId' => self::currentWorkspaceId(),
         ]);
         $this->draftSession->removeDraft($draftId);
 
@@ -602,7 +608,7 @@ final class AgentWriteService
 
     /**
      * @param array<string, string> $resolved
-     * @return list<array{table: string, uid: int, field: string, previousValue: mixed, action: string}>
+     * @return list<array{table: string, uid: int, field: string, previousValue: mixed, action: string, appliedValue?: string}>
      */
     private function buildPreviewUndoFields(PreviewResult $preview, array $resolved): array
     {
@@ -623,7 +629,7 @@ final class AgentWriteService
         $table = (string) ($preview->target['table'] ?? '');
         $uid = (int) ($preview->target['uid'] ?? 0);
         $undo = [];
-        foreach ($resolved as $fieldKey => $_) {
+        foreach ($resolved as $fieldKey => $appliedValue) {
             $fieldUid = $uid;
             if (preg_match('/^(\d+):/', $fieldKey, $pagePrefix) === 1 && (int) $pagePrefix[1] > 0) {
                 $fieldUid = (int) $pagePrefix[1];
@@ -633,11 +639,75 @@ final class AgentWriteService
                 'uid' => $fieldUid,
                 'field' => $columnByKey[$fieldKey] ?? $fieldKey,
                 'previousValue' => $currentByKey[$fieldKey] ?? '',
+                'appliedValue' => (string) $appliedValue,
                 'action' => 'update',
             ];
         }
 
         return $undo;
+    }
+
+    /**
+     * Translation DualMode previews the source record but writes a localization overlay.
+     * Undo must delete that overlay (create), never blank the source (update).
+     *
+     * @param list<array{table: string, uid: int, field: string, previousValue: mixed, action: string, appliedValue?: string}> $undoFields
+     * @return list<array<string, mixed>>
+     */
+    private function refineSuggestionUndoFields(
+        string $toolName,
+        mixed $result,
+        array $undoFields,
+        PreviewResult $preview,
+    ): array {
+        if (!str_starts_with($toolName, 't3ai_translate_') && $toolName !== 't3ai_record_translate') {
+            return $undoFields;
+        }
+
+        $payload = self::decodeToolResultPayload($result);
+        $localizedUid = (int) (
+            $payload['localizedContentUid']
+            ?? $payload['localizedNewsId']
+            ?? $payload['localizedUid']
+            ?? 0
+        );
+        if ($localizedUid <= 0) {
+            return $undoFields;
+        }
+
+        $table = (string) ($preview->target['table'] ?? '');
+        if ($table === '' && $undoFields !== []) {
+            $table = (string) ($undoFields[0]['table'] ?? '');
+        }
+        if ($table === '') {
+            return $undoFields;
+        }
+
+        // Fresh localization (or re-apply that materialised an overlay): take the overlay back.
+        return [[
+            'table' => $table,
+            'uid' => $localizedUid,
+            'field' => '_record',
+            'previousValue' => null,
+            'action' => 'create',
+        ]];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function decodeToolResultPayload(mixed $result): array
+    {
+        if (is_string($result)) {
+            try {
+                $decoded = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                return [];
+            }
+            $result = $decoded;
+        }
+
+        return is_array($result) ? $result : [];
     }
 
     /**

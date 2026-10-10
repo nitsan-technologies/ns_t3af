@@ -391,6 +391,30 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 }
                 $retried = true;
             }
+            // Invented "[Remove from translation queue] …" with no tool call this turn — retry once.
+            if (
+                !$retried
+                && $state->executedTools === []
+                && AgentPromptBuilder::isFabricatedToolResultEcho($finalText)
+                && !$state->isPaused()
+                && !$state->failed
+                && !$state->isCancelled()
+            ) {
+                $nudge = $userMessage . "\n\n[System: You wrote a fake tool result in brackets without calling a tool. Never invent \"[…]\" result lines. Call the matching write/queue tool now so the editor gets an approval card, or say in one plain sentence that there is nothing to do.]";
+                $retryPlan = $state->plan !== [] ? $state->plan : $plan;
+                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan, $requestForChecklist))->getResult();
+                $content = $agentResult->getContent();
+                $finalText = is_string($content) ? trim($content) : '';
+                // Still a fake bracketed result after the nudge: drop it (do not re-check executedTools —
+                // PHPStan cannot see that the agent call may have filled it via the toolbox).
+                if (
+                    AgentPromptBuilder::isCardHistoryEcho($finalText)
+                    || AgentPromptBuilder::isFabricatedToolResultEcho($finalText)
+                ) {
+                    $finalText = '';
+                }
+                $retried = true;
+            }
             $retryPlan = $state->plan !== [] ? $state->plan : $plan;
             if (
                 $this->shouldRetryForRemainingWork($state, $retryPlan, $historyMessages, $requestForChecklist ?: $userMessage, $finalText)

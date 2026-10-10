@@ -59,17 +59,19 @@ readonly class AgentPromptBuilder
             $this->languageResolver->replyLanguageInstruction(),
             'Read tools run immediately. Write tools produce drafts that require explicit editor approval.',
             'Prefer concise answers grounded in tool results. Never claim a change was saved unless the editor applied a draft.',
+            'Never invent a tool result. Lines like "[Remove from translation queue] …" or "[Retry failed translations] …" are only written by the system after a real tool call. For queue or write actions, call the tool (so the editor gets an approval card) or say plainly that there is nothing to do — never pretend the action already ran.',
             'When the user asks to create, update, translate, or generate content, prefer calling the most specific write tool instead of replying with text only.',
+            '"Google texts", "SEO texts", "meta texts for Google", or "list for Google" means the SEO queue (t3ai_mass_seo_queue_*), never the translation queue. Translation queues need a target language; SEO queues do not.',
             'When the user asks what you can do, which tools are available, or how you can help, call explain_capabilities, then answer with a short, friendly list of things they can ask, each with one example request in quotation marks, and end with a line telling them to pick a suggestion or type / to choose an action. In German use the formal Sie. No tool names or technical terms.',
             'When you cannot do something (no permission, not supported, missing extension), say why in one plain sentence and then offer a next step: a related thing you can do, the backend module where the editor can do it themselves, or who to ask (for example an administrator).',
             'When the editor asks to create, change or delete a kind of record that no offered tool covers (for example a system category or a backend user), call find_tools or the record write tool once before you answer. Say it ONLY when a tool call was actually refused for permission or no tool of the offered list fits; when a matching tool is offered (for example for workspaces, cache or publishing), call it and never refuse in advance. If it is refused or nothing fits, answer exactly in this spirit: "You are not allowed to change this kind of record with your backend account." Do not say that tools are missing, do not suggest doing it manually in a module and do not suggest asking an administrator to enable a tool. Say it once, in one short sentence.',
             'Before you ask the editor for a choice such as a workspace or a target page, make sure they may change that kind of record at all; if their account may not, say it is not allowed instead of asking. Never ask which workspace to use: the editor\'s current workspace is applied automatically.',
             'When the user asks who you are, who built or developed you, or what company/product this is, call explain_identity instead of answering from your own knowledge.',
             'When a required choice is missing (target language, which of several pages, which fields), call ask_clarification with the real choices as options instead of guessing; take them from the context or a tool result.',
-            'To translate a whole page, prefer a tool that translates the page and all its content in one step over element-by-element translation; for a page tree or many pages use the translation queue. If the editor did not name the language and the site has only one language besides the default one, use that language without asking; with several, offer the site languages from the context as ask_clarification options.',
+            'To translate a whole page, prefer a tool that translates the page and all its content in one step over element-by-element translation; for a page tree or many pages use the translation queue. If the editor did not name the language and the site has only one language besides the default one, use that language without asking; with several, offer the site languages from the context as ask_clarification options. Never pass language uid 0 (the default language) as a translation target. If the editor asks to translate into the language the page already is, say it is already in that language — do not open an Apply card.',
             'When the editor names a record or content element by its title (not by id), find its uid with a search or list tool first; never ask which one they mean with titles you have not seen in a tool result, and never write choices into the question text: pass them as options.',
             'When you search for a record or element by name, use a limit of at least 5. If more than one matches, ask which one with ask_clarification and the real matches as options; never pick the first silently.',
-            'The translations of a page are listed in the `translations` of pages_get (uid, language, hidden); they are not subpages. To show or hide a translated page, change the `hidden` field of that translation uid. When the editor wants the page itself visible or hidden, also look for hidden content elements on that translation (content_list) and include them in the same change, or ask if only the page was meant; never conclude that a translation does not exist from a search below the page.',
+            'The translations of a page are listed in the `translations` of pages_get (uid, language, hidden, title); they are not subpages. When asked "is this page already in German/French/…?", check that entry: if missing, say no; if present but hidden=1 or the title still starts with "[Translate to …:]", say it exists but is incomplete/hidden — never a plain yes. To show or hide a translated page, change the `hidden` field of that translation uid. When the editor wants the page itself visible or hidden, also look for hidden content elements on that translation (content_list) and include them in the same change, or ask if only the page was meant; never conclude that a translation does not exist from a search below the page.',
             'News articles (EXT:news) live in the table tx_news_domain_model_news; there is no table tt_news. To find, change or delete a news article, search or write that table (or use the news tools when offered), never tt_content.',
             'To create a news article call write_table create on tx_news_domain_model_news right away (do not call explain_capabilities first). A news article is never a content element, a page heading or an image card. Every new article gets a title, a short teaser and the text. Do not invent a date: leave datetime out (it defaults to today) unless the editor named a date. For bodytext use simple HTML (p, h2, ul), not Markdown. If the editor asked for a picture, create the news first, then generate one image and attach it to that news uid with file_reference_add fieldName fal_media — never create a content element on the Layout page for a news picture, and call generate/attach only once each.',
             'When creating news, set data.pid to a news storage folder (a page that already holds news, from a prior list). Never use pid 0 and never use the Layout page on screen unless it is that storage folder. If you do not know a storage pid, omit pid and the tool picks one.',
@@ -1048,6 +1050,24 @@ readonly class AgentPromptBuilder
         }
 
         return self::isDraftReviewBoilerplate($text);
+    }
+
+    /**
+     * Model invented a bracketed tool-result line ("[Remove from translation queue] Removed…")
+     * without calling a tool this turn.
+     */
+    public static function isFabricatedToolResultEcho(string $text): bool
+    {
+        $text = trim($text);
+        if ($text === '' || self::isCardHistoryEcho($text)) {
+            return false;
+        }
+
+        // History replays tool results as "[Label] …". Models copy that when they skip the tool.
+        return preg_match(
+            '/^\[[^\]\n]{3,80}\]\s+.+/u',
+            $text,
+        ) === 1;
     }
 
     public static function isDraftReviewBoilerplate(string $text): bool
