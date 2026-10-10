@@ -527,6 +527,23 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function fabricatedBracketedToolResultsAreDetected(): void
+    {
+        self::assertTrue(AgentPromptBuilder::isFabricatedToolResultEcho(
+            '[Remove from translation queue] Removed 1 page(s) from the queue. “QA Mounted Child” has been removed.',
+        ));
+        self::assertTrue(AgentPromptBuilder::isFabricatedToolResultEcho(
+            '[Retry failed translations] Requeued: 0 entries.',
+        ));
+        self::assertFalse(AgentPromptBuilder::isFabricatedToolResultEcho(
+            'The translation queue is empty — nothing to remove.',
+        ));
+        self::assertFalse(AgentPromptBuilder::isFabricatedToolResultEcho(
+            '[Prepared change: Change a record — applied] Review the proposed changes for Change a record before anything is written.',
+        ));
+    }
+
+    #[Test]
     public function bothWordingsOfTheDraftReviewLineAreRecognisedAsBoilerplate(): void
     {
         self::assertTrue(AgentPromptBuilder::isDraftReviewBoilerplate('Review this change before anything is written.'));

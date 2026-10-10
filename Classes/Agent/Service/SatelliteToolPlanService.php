@@ -273,15 +273,17 @@ final readonly class SatelliteToolPlanService
                 $toolLabel = 'Generate an image';
             }
             $targetHint = $newsUid > 0
-                ? ' ' . $this->translator->translate('agent.plan.newsHint', [$this->newsArticleLabel($newsUid)])
+                ? $this->translator->translate('agent.plan.newsHint', [$this->newsArticleLabel($newsUid)])
                 : '';
 
-            return $this->translator->translate('agent.plan.namedTool', [$toolLabel, $targetHint]);
+            return self::joinNamedToolSummary($toolLabel, $targetHint);
         }
 
         $pageId = (int) ($arguments['pageId'] ?? 0);
-        // The separating space lives here: TYPO3 v14 trims leading/trailing whitespace from XLIFF labels.
-        $pageHint = $pageId > 0 ? ' ' . $this->translator->translate('agent.plan.pageHint', [$this->pageLabel($pageId)]) : '';
+        // Join the space in PHP: TYPO3 v14 trims XLIFF whitespace, so "%1$s%2$s" + "for page" became "pagefor page".
+        $pageHint = $pageId > 0
+            ? $this->translator->translate('agent.plan.pageHint', [$this->pageLabel($pageId)])
+            : '';
 
         $labelKey = match ($toolName) {
             't3ai_generate_all_seo' => 'agent.plan.generateAllSeo',
@@ -298,11 +300,27 @@ final readonly class SatelliteToolPlanService
             // Any other child tool: its editor label ("Translate the whole page") instead of "Run this tool".
             $toolLabel = $this->translator->translate('agent.tool.label.' . $toolName);
             if ($toolLabel !== 'agent.tool.label.' . $toolName && $toolLabel !== '') {
-                return $this->translator->translate('agent.plan.namedTool', [$toolLabel, $pageHint]);
+                return self::joinNamedToolSummary($toolLabel, $pageHint);
             }
         }
 
-        return $this->translator->translate($labelKey, [$pageHint]);
+        // Templates like "Generate … metadata%1$s." need a leading space on the hint, or nothing.
+        $hintForTemplate = $pageHint !== '' ? ' ' . ltrim($pageHint) : '';
+
+        return $this->translator->translate($labelKey, [$hintForTemplate]);
+    }
+
+    /**
+     * "Translate the whole page" + "for page Home" → "Translate the whole page for page Home."
+     * Never "pagefor page".
+     */
+    private static function joinNamedToolSummary(string $toolLabel, string $targetHint): string
+    {
+        $toolLabel = rtrim($toolLabel, ". \t");
+        $targetHint = trim($targetHint);
+        $summary = $targetHint === '' ? $toolLabel : $toolLabel . ' ' . $targetHint;
+
+        return $summary . '.';
     }
 
     private function formatArgumentValue(mixed $value): string

@@ -714,12 +714,17 @@ readonly class RecordService
         // translation looks like any other and "make it visible" is answered with "already visible".
         $disabled = $GLOBALS['TCA'][$table]['ctrl']['enablecolumns']['disabled'] ?? null;
         $hiddenField = is_string($disabled) && $disabled !== '' ? $disabled : null;
+        $labelField = $GLOBALS['TCA'][$table]['ctrl']['label'] ?? null;
+        $titleField = is_string($labelField) && $labelField !== '' ? $labelField : null;
         $select = ['uid', $languageField . ' AS sys_language_uid'];
         if ($hiddenField !== null) {
             $select[] = $hiddenField . ' AS hidden_flag';
         }
+        if ($titleField !== null) {
+            $select[] = $titleField . ' AS title_label';
+        }
 
-        /** @var list<array{uid: int|string, sys_language_uid: int|string, hidden_flag?: int|string}> $rows */
+        /** @var list<array{uid: int|string, sys_language_uid: int|string, hidden_flag?: int|string, title_label?: string}> $rows */
         $rows = $queryBuilder
             ->select(...$select)
             ->from($table)
@@ -729,13 +734,16 @@ readonly class RecordService
             ->fetchAllAssociative();
 
         return array_map(
-            static function (array $row) use ($hiddenField): array {
+            static function (array $row) use ($hiddenField, $titleField): array {
                 $entry = [
                     'uid' => (int) $row['uid'],
                     'sys_language_uid' => (int) $row['sys_language_uid'],
                 ];
                 if ($hiddenField !== null) {
                     $entry['hidden'] = (int) ($row['hidden_flag'] ?? 0);
+                }
+                if ($titleField !== null) {
+                    $entry['title'] = (string) ($row['title_label'] ?? '');
                 }
 
                 return $entry;

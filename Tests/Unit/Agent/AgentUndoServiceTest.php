@@ -99,7 +99,9 @@ final class AgentUndoServiceTest extends TestCase
     {
         $dataHandler = $this->createMock(DataHandlerService::class);
         $dataHandler->expects(self::once())->method('updateRecord')->with('tt_content', 42, ['header' => 'Old']);
-        [$service, $session] = $this->subject($dataHandler);
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->willReturn(['header' => 'Old']);
+        [$service, $session] = $this->subject($dataHandler, $records);
         $session->storeChange('change-2', [
             'undoFields' => [
                 ['table' => 'tt_content', 'uid' => 42, 'field' => 'header', 'previousValue' => 'Old', 'action' => 'update'],
@@ -141,7 +143,10 @@ final class AgentUndoServiceTest extends TestCase
         $dataHandler = $this->createMock(DataHandlerService::class);
         $dataHandler->expects(self::once())->method('updateRecord')->with('tt_content', 42, ['header' => 'Old']);
         $records = $this->createMock(RecordService::class);
-        $records->method('findByUid')->willReturn(['header' => 'Agent']);
+        $records->method('findByUid')->willReturnOnConsecutiveCalls(
+            ['header' => 'Agent'],
+            ['header' => 'Old'],
+        );
         [$service, $session] = $this->subject($dataHandler, $records);
         $session->storeChange('change-6', [
             'undoFields' => [
@@ -150,6 +155,44 @@ final class AgentUndoServiceTest extends TestCase
         ]);
 
         $service->undo('change-6');
+    }
+
+    #[Test]
+    public function undoBatchesSeoFieldRestoresIntoOneWrite(): void
+    {
+        $dataHandler = $this->createMock(DataHandlerService::class);
+        $dataHandler->expects(self::once())->method('updateRecord')->with('pages', 203, [
+            'seo_title' => '',
+            'description' => '',
+            'keywords' => '',
+        ]);
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->willReturnCallback(
+            static function (string $table, int $uid, array $fields): array {
+                unset($table, $uid);
+                // Before undo: still the agent values. After: restored empties.
+                $agent = ['seo_title' => 'AI', 'description' => 'AI', 'keywords' => 'AI'];
+                $restored = ['seo_title' => '', 'description' => '', 'keywords' => ''];
+                static $calls = 0;
+                ++$calls;
+
+                return $calls <= 3
+                    ? array_intersect_key($agent, array_flip($fields))
+                    : array_intersect_key($restored, array_flip($fields));
+            },
+        );
+        [$service, $session] = $this->subject($dataHandler, $records);
+        $session->storeChange('change-seo', [
+            'undoFields' => [
+                ['table' => 'pages', 'uid' => 203, 'field' => 'seo_title', 'previousValue' => '', 'appliedValue' => 'AI', 'action' => 'update'],
+                ['table' => 'pages', 'uid' => 203, 'field' => 'description', 'previousValue' => '', 'appliedValue' => 'AI', 'action' => 'update'],
+                ['table' => 'pages', 'uid' => 203, 'field' => 'keywords', 'previousValue' => '', 'appliedValue' => 'AI', 'action' => 'update'],
+            ],
+        ]);
+
+        $result = $service->undo('change-seo');
+
+        self::assertCount(3, $result['reverted']);
     }
 
     #[Test]
