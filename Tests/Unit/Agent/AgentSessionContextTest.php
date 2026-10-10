@@ -452,6 +452,39 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function fullClarificationJsonInTheReplyBecomesQuestionAndOptions(): void
+    {
+        $json = '{"question":"Do you want me to create just the image, or add it to the page?","options":["Create image only","Create image and add to page","Cancel"]}';
+        $parsed = AskClarificationTool::parseEmbeddedClarification($json . ' Extra chatter.');
+
+        self::assertNotNull($parsed);
+        self::assertSame('Do you want me to create just the image, or add it to the page?', $parsed['question']);
+        self::assertSame(['Create image only', 'Create image and add to page', 'Cancel'], $parsed['options']);
+
+        [$question, $options] = AskClarificationTool::liftInlineOptions($json, []);
+        self::assertSame('Do you want me to create just the image, or add it to the page?', $question);
+        self::assertSame(['Create image only', 'Create image and add to page', 'Cancel'], $options);
+    }
+
+    #[Test]
+    public function gluedToolResultPrefixIsStrippedFromFinalAnswer(): void
+    {
+        self::assertSame(
+            'The page is already in the SEO queue.',
+            AgentPromptBuilder::stripGluedToolResultPrefix(
+                '[Search pages] Matching pages: 1 Examples: QA Mounted Child [3]The page is already in the SEO queue.',
+            ),
+        );
+        self::assertSame(
+            'I can remove glossary terms when you name one that exists.',
+            AgentPromptBuilder::stripGluedToolResultPrefix(
+                '[Show the translation glossary] Items: 1 Examples: Agent → AssistentI can remove glossary terms when you name one that exists.',
+            ),
+        );
+        self::assertSame('Plain answer.', AgentPromptBuilder::stripGluedToolResultPrefix('Plain answer.'));
+    }
+
+    #[Test]
     public function historyReplaysCardsAsShortNotes(): void
     {
         $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();

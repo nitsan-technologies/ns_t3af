@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Service;
 
+use Mcp\Capability\Attribute\Schema;
 use NITSAN\NsT3AF\Api\AiToolDefinition;
 use NITSAN\NsT3AF\Mcp\Attribute\McpContentParam;
 use NITSAN\NsT3AF\Mcp\Attribute\McpDualModeTool;
@@ -127,13 +128,24 @@ final readonly class AgentToolDefinitionMapper
                 if (in_array($name, self::HIDDEN_PARAM_NAMES, true)) {
                     continue;
                 }
-                $properties[$name] = [
-                    'type' => $this->mapJsonType($this->parameterTypeName($parameter)),
-                    // Introspected @param text; the model chooses arguments from it.
-                    'description' => $described[$name] ?? '',
-                ];
-                if ($properties[$name]['type'] === 'array') {
-                    $properties[$name] = array_merge($properties[$name], $this->arrayShape($reflection, $name));
+                // Introspected @param text; the model chooses arguments from it.
+                $description = $described[$name] ?? '';
+                $definition = self::schemaDefinition($parameter);
+                if ($definition !== null) {
+                    // A `mixed` parameter carries its real shape in #[Schema(definition: …)] (a
+                    // oneOf of string/object/array). Without this it fell to mapJsonType()'s
+                    // default of 'string', so a required structured argument such as
+                    // t3ai_mass_translation_queue_add's languageConfig was published to the model
+                    // as plain text and could never be built correctly.
+                    $properties[$name] = array_merge(['description' => $description], $definition);
+                } else {
+                    $properties[$name] = [
+                        'type' => $this->mapJsonType($this->parameterTypeName($parameter)),
+                        'description' => $description,
+                    ];
+                    if ($properties[$name]['type'] === 'array') {
+                        $properties[$name] = array_merge($properties[$name], $this->arrayShape($reflection, $name));
+                    }
                 }
                 if (!$parameter->isOptional() && !$parameter->isDefaultValueAvailable()) {
                     $required[] = $name;
@@ -186,6 +198,27 @@ final readonly class AgentToolDefinitionMapper
         }
 
         return $schema;
+    }
+
+    /**
+     * The JSON schema a parameter declares with #[Schema(definition: …)], or null when it has none.
+     *
+     * mcp/sdk only honours `definition` at method level when publishing `tools/list`, but the
+     * attribute is still the single place a tool states the shape of a `mixed` argument, so the
+     * agent schema reads it here.
+     *
+     * @return array<string, mixed>|null
+     */
+    private static function schemaDefinition(ReflectionParameter $parameter): ?array
+    {
+        $attributes = $parameter->getAttributes(Schema::class);
+        if ($attributes === []) {
+            return null;
+        }
+
+        $definition = $attributes[0]->newInstance()->definition;
+
+        return is_array($definition) && $definition !== [] ? $definition : null;
     }
 
     private function parameterTypeName(ReflectionParameter $parameter): string
