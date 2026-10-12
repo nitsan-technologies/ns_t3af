@@ -1329,6 +1329,10 @@
                 <source>The request failed.</source>
                 <target>Die Anfrage ist fehlgeschlagen.</target>
             </trans-unit>
+            <trans-unit id="agent.error.serverPage">
+                <source>The server answered with an error page instead of a reply, so nothing was changed. Please try again; if it keeps happening, tell your administrator.</source>
+                <target>Der Server hat statt einer Antwort eine Fehlerseite geliefert, daher wurde nichts geändert. Bitte versuchen Sie es erneut; wenn es weiter auftritt, informieren Sie Ihre Administration.</target>
+            </trans-unit>
             <trans-unit id="agent.error.applyFailed">
                 <source>Applying the draft failed.</source>
                 <target>Das Anwenden des Entwurfs ist fehlgeschlagen.</target>
@@ -1620,6 +1624,14 @@
             <trans-unit id="agent.glossary.whichLanguage">
                 <source>Which language should I save this word in?</source>
                 <target>In welcher Sprache soll ich dieses Wort speichern?</target>
+            </trans-unit>
+            <trans-unit id="agent.translate.defaultProvider">
+                <source>your default AI provider</source>
+                <target>Ihren Standard-KI-Anbieter</target>
+            </trans-unit>
+            <trans-unit id="agent.translate.providerNotice">
+                <source>%1$s can't be used in the agent, so this translation uses %2$s. For %1$s, use the page translation dialog.</source>
+                <target>%1$s kann im Agenten nicht verwendet werden, daher nutzt diese Übersetzung %2$s. Für %1$s den Dialog zur Seitenübersetzung verwenden.</target>
             </trans-unit>
             <trans-unit id="agent.page.missingUid">
                 <source>Page %d doesn't exist.</source>

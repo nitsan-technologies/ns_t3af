@@ -47,6 +47,22 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
     }
 
     #[Test]
+    public function mergeContextMakesTheOpenPageTheParentOfANewPage(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke($processor, ['topic' => 'Opening hours'], ['pageId' => 2, 'module' => 'web_layout'], 't3ai_create_page_simple');
+        self::assertSame(2, $merged['parentPageId'] ?? null);
+
+        $named = $method->invoke($processor, ['topic' => 'Opening hours', 'parentPageId' => 9], ['pageId' => 2], 't3ai_create_page_simple');
+        self::assertSame(9, $named['parentPageId']);
+
+        $byUrl = $method->invoke($processor, ['prompt' => 'Bakery', 'parentPageUrl' => '/shop'], ['pageId' => 2], 't3ai_create_page_structure');
+        self::assertArrayNotHasKey('parentPageId', $byUrl);
+    }
+
+    #[Test]
     public function mergeContextLeavesAnSeoQueueListWithoutTheOpenPage(): void
     {
         $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();

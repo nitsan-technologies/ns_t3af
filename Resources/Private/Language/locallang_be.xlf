@@ -1108,6 +1108,9 @@
       <trans-unit id="agent.error.turnFailed" resname="agent.error.turnFailed">
         <source>The request failed.</source>
       </trans-unit>
+      <trans-unit id="agent.error.serverPage" resname="agent.error.serverPage">
+        <source>The server answered with an error page instead of a reply, so nothing was changed. Please try again; if it keeps happening, tell your administrator.</source>
+      </trans-unit>
       <trans-unit id="agent.error.applyFailed" resname="agent.error.applyFailed">
         <source>Applying the draft failed.</source>
       </trans-unit>
@@ -1326,6 +1329,12 @@
       </trans-unit>
       <trans-unit id="agent.glossary.whichLanguage" resname="agent.glossary.whichLanguage">
         <source>Which language should I save this word in?</source>
+      </trans-unit>
+      <trans-unit id="agent.translate.defaultProvider" resname="agent.translate.defaultProvider">
+        <source>your default AI provider</source>
+      </trans-unit>
+      <trans-unit id="agent.translate.providerNotice" resname="agent.translate.providerNotice">
+        <source>%1$s can't be used in the agent, so this translation uses %2$s. For %1$s, use the page translation dialog.</source>
       </trans-unit>
       <trans-unit id="agent.page.missingUid" resname="agent.page.missingUid">
         <source>Page %d doesn't exist.</source>

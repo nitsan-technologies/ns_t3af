@@ -42,7 +42,7 @@ final readonly class AgentStarterBuilder
      * @var array<string, array{0: string, 1: list<string>}>
      */
     private const STARTERS = [
-        'recordImprove' => ['agent.starter.prompt.recordImprove', ['t3ai_apply_content_analysis', 'write_table']],
+        'recordImprove' => ['agent.starter.prompt.recordImprove', ['t3ai_analyze_content', 'write_table']],
         'recordTranslate' => ['agent.starter.prompt.recordTranslate', ['t3ai_record_translate', 't3ai_translate_content']],
         'newsTranslate' => ['agent.starter.prompt.newsTranslate', ['t3ai_translate_news', 't3ai_record_translate']],
         'fileAltText' => ['agent.starter.prompt.fileAltText', ['t3aa_update_file_metadata']],

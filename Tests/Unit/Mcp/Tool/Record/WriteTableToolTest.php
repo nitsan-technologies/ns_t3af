@@ -269,6 +269,44 @@ final class WriteTableToolTest extends TestCase
         ]);
     }
 
+    #[Test]
+    public function aCreateLeavesOutBlankFieldsAndZerosThatAreTheDefaultAnyway(): void
+    {
+        $GLOBALS['TCA']['tt_content']['columns'] += [
+            'bodytext' => ['config' => ['type' => 'text']],
+            'starttime' => ['config' => ['type' => 'datetime']],
+            'list_type' => ['config' => ['type' => 'select']],
+            'colPos' => ['config' => ['type' => 'select']],
+        ];
+        $this->bootstrapAdminUser();
+
+        $plan = $this->tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'data' => ['pid' => 1, 'header' => 'Hi', 'bodytext' => '', 'starttime' => 0, 'list_type' => '0', 'colPos' => 0],
+        ]);
+
+        self::assertEqualsCanonicalizing(['header', 'colPos'], array_map(static fn($field): string => $field->field, $plan->fields));
+    }
+
+    #[Test]
+    public function aTextElementWithNoTextAtAllIsRefusedBeforeACardIsShown(): void
+    {
+        $GLOBALS['TCA']['tt_content']['columns'] += [
+            'CType' => ['config' => ['type' => 'select']],
+            'bodytext' => ['config' => ['type' => 'text']],
+        ];
+        $this->bootstrapAdminUser();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('A text element needs a header or a text.');
+        $this->tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'data' => ['pid' => 1, 'CType' => 'text', 'header' => '', 'bodytext' => ''],
+        ]);
+    }
+
     private function bootstrapAdminUser(): void
     {
         $backendUser = $this->createMock(BackendUserAuthentication::class);

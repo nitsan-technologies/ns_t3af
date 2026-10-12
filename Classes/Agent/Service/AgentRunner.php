@@ -496,6 +496,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $retryText = is_string($content) ? trim($content) : '';
                 $finalText = AgentPromptBuilder::isCardHistoryEcho($retryText) ? '' : $retryText;
             }
+            $finalText = self::withoutLeadingHistoryTag($finalText);
         } catch (MaxIterationsExceededException) {
             $state->addMessage([
                 'role' => 'assistant',
@@ -581,6 +582,17 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             '/credit balance|billing|insufficient[_ ]quota|exceeded your (?:current )?quota|quota exceeded|plans? (?:&|and) billing|invalid[_ ]api[_ ]key|incorrect api key|authentication[_ ]error|invalid x-api-key|payment required/i',
             $raw,
         ) === 1;
+    }
+
+    /**
+     * History notes read "[Read the translation queue] …"; a model that copies one starts its answer with
+     * that tag. The tag is internal, so it is dropped when real text follows it.
+     */
+    public static function withoutLeadingHistoryTag(string $text): string
+    {
+        $stripped = preg_replace('/^\s*\[(?:Read|Prepared|Applied|Searched|Listed|Checked|Ran)[^\]\n]{0,80}\]\s*/u', '', $text);
+
+        return is_string($stripped) && trim($stripped) !== '' ? $stripped : $text;
     }
 
     /** A tool call (or its channel markers) written into the reply text instead of being called. */
@@ -1117,6 +1129,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         // "Generate the picture" must not become Write all SEO texts / SEO batch.
         't3ai_generate_all_seo' => '/\b(seo|meta\s*desc|meta\s*title|og\s*title|og\s*desc|open\s*graph|schema\s*markup|suchmaschinen\w*|metadaten)\b/iu',
         't3ai_generate_seo_batch' => '/\b(seo|meta\s*desc|meta\s*title|og\s*title|og\s*desc|open\s*graph|schema\s*markup|suchmaschinen\w*|metadaten)\b/iu',
+        // A read-only report that spends AI credits: only when the editor asks for an analysis.
+        't3ai_analyze_content' => '/\b(analy[sz]\w*|analysis|readab\w*|inhaltsanalyse|auswert\w*|bewert\w*|how good)\b/iu',
         't3aa_generate_voice_over' => '/\b(voice\s*-?\s*over|voiceover|audio\s*narrat\w*|sprachausgabe|vorlesen|vorlese\w*)\b/iu',
     ];
 
