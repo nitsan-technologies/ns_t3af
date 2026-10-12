@@ -422,6 +422,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         );
 
         $arguments = self::openPageAsParent($arguments, (int) ($context['pageId'] ?? 0), $toolName, trim((string) ($body['requestQuery'] ?? '')));
+        $arguments = self::withEditorRequestAsStructurePrompt($arguments, $toolName, trim((string) ($body['requestQuery'] ?? '')));
+        $languageTurn = $this->unavailableLanguageTurn($toolName, $context, trim((string) ($body['requestQuery'] ?? '')), $correlationId);
+        if ($languageTurn !== null) {
+            return $languageTurn;
+        }
         $variants = max(1, min(5, (int) ($arguments['variants'] ?? 3)));
         unset($arguments['variants']);
 
@@ -534,6 +539,8 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $arguments = $this->normalizeWriteToolArguments($toolName, $arguments);
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
         $arguments = self::openPageAsParent($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
+        $arguments = self::openPageAsCreatePid($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
+        $arguments = self::pinOpenPageForQueueRemove($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $gateRequest = trim((string) ($body['requestForGate'] ?? ''));
         $arguments = $this->enrichPlannedToolArguments($toolName, $arguments, $history, $gateRequest !== '' ? $gateRequest : $requestQuery);
         if ($toolName === 'write_table' && $requestQuery !== '') {
@@ -556,6 +563,10 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
         if (strtolower($toolName) === 't3ai_mass_translation_queue_requeue') {
             $arguments = self::requeueFailedOnly($arguments, $requestQuery);
+        }
+        $languageTurn = $this->unavailableLanguageTurn($toolName, $context, $requestQuery, $correlationId);
+        if ($languageTurn !== null) {
+            return $languageTurn;
         }
         if (strtolower($toolName) === 't3ai_glossary_save') {
             $choice = GlossarySaveLanguage::resolve($requestQuery, GlossarySaveLanguage::siteLanguages($context));
@@ -644,6 +655,83 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'orchestratorPause' => true,
             ],
         ];
+    }
+
+    /**
+     * A new page made with write_table needs a place. Without a pid (an editor's group cannot insert on page 0) or
+     * with the site root the model took for "Home", the page belongs under the open page, unless the request says
+     * "root" or "top level".
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function openPageAsCreatePid(array $arguments, int $openPageId, string $toolName, string $requestQuery): array
+    {
+        if ($openPageId <= 0 || strtolower(trim($toolName)) !== 'write_table') {
+            return $arguments;
+        }
+        $table = strtolower(trim((string) ($arguments['tableName'] ?? $arguments['table'] ?? '')));
+        if ($table !== 'pages' || strtolower(trim((string) ($arguments['action'] ?? ''))) !== 'create') {
+            return $arguments;
+        }
+        if (isset($arguments['beforeUid']) || isset($arguments['afterUid'])) {
+            return $arguments;
+        }
+        $data = $arguments['data'] ?? [];
+        $wasString = is_string($data);
+        if ($wasString) {
+            $decoded = json_decode($data, true);
+            $data = is_array($decoded) ? $decoded : null;
+        }
+        if (!is_array($data) || isset($data['beforeUid']) || isset($data['afterUid'])) {
+            return $arguments;
+        }
+        $pid = isset($data['pid']) && is_numeric($data['pid']) ? (int) $data['pid'] : 0;
+        $useOpenPage = $pid <= 0;
+        if (
+            !$useOpenPage
+            && $pid !== $openPageId
+            && preg_match('/\b(root|top[- ]?level|site\s*root|wurzel|oberste\w*)\b/iu', $requestQuery) !== 1
+        ) {
+            try {
+                $parent = \TYPO3\CMS\Backend\Utility\BackendUtility::getRecord('pages', $pid, 'pid,is_siteroot');
+            } catch (\Throwable) {
+                $parent = null;
+            }
+            $useOpenPage = is_array($parent) && ((int) ($parent['pid'] ?? 1) === 0 || (int) ($parent['is_siteroot'] ?? 0) === 1);
+        }
+        if (!$useOpenPage) {
+            return $arguments;
+        }
+        $data['pid'] = $openPageId;
+        $arguments['data'] = $wasString ? json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : $data;
+
+        return $arguments;
+    }
+
+    /**
+     * The page tree is written from the prompt alone. A model that sends a short prompt ("Home") for
+     * "a structure with Home, About, Services, Contact" gets a tree with one page, so the editor's own
+     * request is part of the prompt.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function withEditorRequestAsStructurePrompt(array $arguments, string $toolName, string $requestQuery): array
+    {
+        if (strtolower(trim($toolName)) !== 't3ai_create_page_structure' || $requestQuery === '') {
+            return $arguments;
+        }
+        $prompt = trim((string) ($arguments['prompt'] ?? ''));
+        if ($prompt !== '' && mb_stripos($prompt, $requestQuery) !== false) {
+            return $arguments;
+        }
+        if ($prompt !== '' && mb_strlen($prompt) >= mb_strlen($requestQuery)) {
+            return $arguments;
+        }
+        $arguments['prompt'] = trim($requestQuery . ($prompt !== '' ? "\n" . $prompt : ''));
+
+        return $arguments;
     }
 
     /**
@@ -768,6 +856,38 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     public static function isTranslateTool(string $toolName): bool
     {
         return in_array(strtolower(trim($toolName)), ['t3ai_translate_content', 't3ai_translate_page', 't3ai_translate_news', 't3ai_record_translate'], true);
+    }
+
+    /**
+     * The turn that ends a request for a language the site does not have, or null.
+     *
+     * @param array<string, mixed> $context
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function unavailableLanguageTurn(string $toolName, array $context, string $requestQuery, string $correlationId): ?array
+    {
+        if ($requestQuery === '' || !RequestedLanguage::isLanguageTool($toolName)) {
+            return null;
+        }
+        $siteLanguages = GlossarySaveLanguage::siteLanguages($context);
+        $missing = RequestedLanguage::unavailable($requestQuery, $siteLanguages);
+        if ($missing === null) {
+            return null;
+        }
+        $message = $this->translator->translate('agent.language.notAvailable', [$missing, RequestedLanguage::titles($siteLanguages)]);
+        if ($message === 'agent.language.notAvailable') {
+            $message = sprintf(
+                "%s isn't a language of this site (available: %s). Nothing was changed. Pick one of the site languages.",
+                $missing,
+                RequestedLanguage::titles($siteLanguages),
+            );
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $message,
+            'meta' => ['type' => 'error', 'tool' => $toolName, 'correlationId' => $correlationId, 'orchestratorPause' => true],
+        ];
     }
 
     /**
@@ -960,7 +1080,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         // The remove tool only reads pageIds. "This page" is the open page when no list was sent.
-        if (strtolower(trim($toolName)) === 't3ai_mass_seo_queue_remove') {
+        if (in_array(strtolower(trim($toolName)), ['t3ai_mass_seo_queue_remove', 't3ai_mass_translation_queue_remove'], true)) {
             if (!self::hasExplicitPageIdList($arguments['pageIds'] ?? null)) {
                 $removePageId = (int) ($arguments['pageId'] ?? 0);
                 if ($removePageId > 0) {
@@ -969,6 +1089,29 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             }
             unset($arguments['pageId'], $arguments['pid']);
         }
+
+        return $arguments;
+    }
+
+    /**
+     * "Remove this page from the queue" means the open page. A model may pick another row from the
+     * list, so the open page replaces its choice when the request names no page number.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function pinOpenPageForQueueRemove(array $arguments, int $openPageId, string $toolName, string $requestQuery): array
+    {
+        if ($openPageId <= 0 || !in_array(strtolower(trim($toolName)), ['t3ai_mass_seo_queue_remove', 't3ai_mass_translation_queue_remove'], true)) {
+            return $arguments;
+        }
+        if (preg_match('/\d/', $requestQuery) === 1) {
+            return $arguments;
+        }
+        if (preg_match('/\b(this|current|open)\s+page\b|\b(diese|aktuelle)\s+seite\b/iu', $requestQuery) !== 1) {
+            return $arguments;
+        }
+        $arguments['pageIds'] = [$openPageId];
 
         return $arguments;
     }

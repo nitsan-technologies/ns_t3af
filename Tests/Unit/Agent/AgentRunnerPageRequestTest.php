@@ -68,4 +68,33 @@ final class AgentRunnerPageRequestTest extends TestCase
 
         self::assertSame(['includeFinished' => false], $arguments);
     }
+
+    #[Test]
+    public function aShortStructurePromptGetsTheEditorRequest(): void
+    {
+        $request = 'Create a page structure for a company website with Home, About, Services, Contact and 2 subpages under Services.';
+
+        $arguments = AgentToolTurnProcessor::withEditorRequestAsStructurePrompt(['prompt' => 'Home'], 't3ai_create_page_structure', $request);
+        self::assertStringContainsString('About, Services, Contact', (string) $arguments['prompt']);
+
+        $full = ['prompt' => $request . ' Keep titles short.'];
+        self::assertSame($full, AgentToolTurnProcessor::withEditorRequestAsStructurePrompt($full, 't3ai_create_page_structure', $request));
+        self::assertSame(['prompt' => 'Home'], AgentToolTurnProcessor::withEditorRequestAsStructurePrompt(['prompt' => 'Home'], 'write_table', $request));
+    }
+
+    #[Test]
+    public function aPageCreateWithoutPidGetsTheOpenPage(): void
+    {
+        $arguments = ['action' => 'create', 'tableName' => 'pages', 'data' => '{"title":"Post","doktype":137}'];
+
+        $result = AgentToolTurnProcessor::openPageAsCreatePid($arguments, 33, 'write_table', 'Create a blog post titled Post');
+        self::assertSame(33, json_decode((string) $result['data'], true)['pid']);
+
+        $keep = ['action' => 'create', 'tableName' => 'pages', 'data' => '{"title":"Post","pid":33}'];
+        self::assertSame($keep, AgentToolTurnProcessor::openPageAsCreatePid($keep, 33, 'write_table', 'Create a page'));
+        $update = ['action' => 'update', 'tableName' => 'pages', 'uid' => 4, 'data' => '{"title":"X"}'];
+        self::assertSame($update, AgentToolTurnProcessor::openPageAsCreatePid($update, 33, 'write_table', 'Rename page'));
+        $content = ['action' => 'create', 'tableName' => 'tt_content', 'data' => '{"header":"X"}'];
+        self::assertSame($content, AgentToolTurnProcessor::openPageAsCreatePid($content, 33, 'write_table', 'Add text'));
+    }
 }

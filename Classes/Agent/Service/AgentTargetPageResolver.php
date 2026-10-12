@@ -119,6 +119,12 @@ final readonly class AgentTargetPageResolver
             }
         }
 
+        // "add QA Secret Outside to the list for Google texts": the page is named without the word "page".
+        $queued = self::titleBeforeQueueWord($message);
+        if ($queued !== null) {
+            return $queued;
+        }
+
         if (preg_match_all(
             '/\b((?:[\p{L}\p{N}][\p{L}\p{N}\'’.\-]*\s+){1,6})pages?\b/iu',
             $message,
@@ -325,6 +331,32 @@ final readonly class AgentTargetPageResolver
         return $title !== '' && $needle !== '' && $title === $needle;
     }
 
+    /**
+     * "add X to the list/queue", "remove X from the queue": X is a page title when it is not a pronoun or the word page.
+     */
+    private static function titleBeforeQueueWord(string $message): ?string
+    {
+        if (preg_match(
+            '/\b(?:add|queue|put|remove|delete|hinzufügen|füge|entferne)\s+["“]?(.{2,80}?)["”]?\s+(?:to|into|from|in|zur|zum|zu|aus|von)\s+(?:the\s+|die\s+|der\s+|den\s+|dem\s+)?(?:[\p{L}\p{N}\- ]{0,40}?)(?:list|queue|liste|warteschlange)\b/iu',
+            $message,
+            $match,
+        ) !== 1) {
+            return null;
+        }
+        $title = trim((string) $match[1], " \t\"“”'.,");
+        if ($title === '' || preg_match('/\b(?:pages?|seiten?|all|everything|alle|alles)\b/iu', $title) === 1) {
+            return null;
+        }
+        if (in_array(mb_strtolower($title), ['it', 'them', 'es', 'sie', 'this', 'that', 'diese', 'dies'], true)) {
+            return null;
+        }
+        if (preg_match('/^[\d\s,;]+$/', $title) === 1) {
+            return null;
+        }
+
+        return self::cleanTitle($title);
+    }
+
     private static function titleBeforePage(string $raw): ?string
     {
         $words = preg_split('/\s+/u', trim($raw)) ?: [];
@@ -358,7 +390,7 @@ final readonly class AgentTargetPageResolver
         return in_array(mb_strtolower($word), [
             'the', 'a', 'an', 'this', 'that', 'these', 'those', 'current', 'same', 'whole', 'entire',
             'new', 'my', 'our', 'your', 'for', 'on', 'to', 'of', 'in', 'up', 'and', 'or', 'its', 'their',
-            'make', 'show', 'get', 'first', 'last', 'next', 'previous', 'other',
+            'make', 'show', 'get', 'first', 'last', 'next', 'previous', 'other', 'all', 'every', 'each', 'alle',
             'die', 'der', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'einer', 'einen', 'einem',
             'dieser', 'diese', 'dieses', 'diesen', 'aktuelle', 'aktuellen', 'neuer', 'neue', 'neuen',
             'erste', 'letzter', 'letzte', 'letzten', 'nächste', 'naechste',
