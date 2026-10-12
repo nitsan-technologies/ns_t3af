@@ -713,4 +713,13 @@ final class WriteTableToolTest extends TestCase
 
         self::assertSame(53, (int) ($plan->context['pid'] ?? 0));
     }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function decodeDataAcceptsACodeFenceAndDoubleEncodedJson(): void
+    {
+        $fenced = "```json\n{\"title\":\"A\"}\n```";
+        self::assertSame(['title' => 'A'], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData($fenced, 'create'));
+        $double = json_encode('{"title":"B"}', JSON_THROW_ON_ERROR);
+        self::assertSame(['title' => 'B'], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData($double, 'create'));
+    }
 }

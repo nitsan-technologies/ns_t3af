@@ -39,6 +39,12 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     /** Characters of a tool response kept in the stored trace. */
     private const TRACE_RESPONSE_CHARS = 1500;
 
+    /** Queue tools whose rows are read for the whole site, so a draft workspace must not add to them. */
+    private const SITE_WIDE_QUEUE_TOOLS = [
+        't3ai_mass_seo_queue_add',
+        't3ai_mass_translation_queue_add',
+    ];
+
     /** Tools that create pages under a parent page (argument parentPageId). */
     private const PARENT_PAGE_TOOLS = [
         't3ai_create_page_simple',
@@ -415,6 +421,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             (string) ($body['provider'] ?? ''),
         );
 
+        $arguments = self::openPageAsParent($arguments, (int) ($context['pageId'] ?? 0), $toolName, trim((string) ($body['requestQuery'] ?? '')));
         $variants = max(1, min(5, (int) ($arguments['variants'] ?? 3)));
         unset($arguments['variants']);
 
@@ -526,10 +533,26 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
         $arguments = $this->normalizeWriteToolArguments($toolName, $arguments);
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
+        $arguments = self::openPageAsParent($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $gateRequest = trim((string) ($body['requestForGate'] ?? ''));
         $arguments = $this->enrichPlannedToolArguments($toolName, $arguments, $history, $gateRequest !== '' ? $gateRequest : $requestQuery);
         if ($toolName === 'write_table' && $requestQuery !== '') {
             $arguments['requestQuery'] = $requestQuery;
+        }
+        if (in_array(strtolower($toolName), self::SITE_WIDE_QUEUE_TOOLS, true)) {
+            $workspaceUser = $GLOBALS['BE_USER'] ?? null;
+            if ($workspaceUser instanceof \TYPO3\CMS\Core\Authentication\BackendUserAuthentication && (int) $workspaceUser->workspace > 0) {
+                $message = $this->translator->translate('agent.queue.draftWorkspace');
+                if ($message === 'agent.queue.draftWorkspace') {
+                    $message = 'The queues are shared by the whole site and cannot be changed from a draft workspace. Switch to the Live workspace first. Nothing was added.';
+                }
+
+                return [
+                    'role' => 'assistant',
+                    'content' => $message,
+                    'meta' => ['type' => 'error', 'tool' => $toolName, 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ];
+            }
         }
         if (strtolower($toolName) === 't3ai_mass_translation_queue_requeue') {
             $arguments = self::requeueFailedOnly($arguments, $requestQuery);
@@ -624,6 +647,37 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * The model reads "Home" in "a structure with Home, About, Services" as the existing start page and
+     * sends it as the parent. Without a word like "root" or "top level", the pages belong under the open page.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function openPageAsParent(array $arguments, int $openPageId, string $toolName, string $requestQuery): array
+    {
+        $parentId = (int) ($arguments['parentPageId'] ?? 0);
+        if (
+            $openPageId <= 0
+            || $parentId <= 0
+            || $parentId === $openPageId
+            || !in_array(strtolower(trim($toolName)), self::PARENT_PAGE_TOOLS, true)
+            || preg_match('/\b(root|top[- ]?level|site\s*root|wurzel|oberste\w*)\b/iu', $requestQuery) === 1
+        ) {
+            return $arguments;
+        }
+        try {
+            $parent = \TYPO3\CMS\Backend\Utility\BackendUtility::getRecord('pages', $parentId, 'pid,is_siteroot');
+        } catch (\Throwable) {
+            return $arguments;
+        }
+        if (is_array($parent) && ((int) ($parent['pid'] ?? 1) === 0 || (int) ($parent['is_siteroot'] ?? 0) === 1)) {
+            $arguments['parentPageId'] = $openPageId;
+        }
+
+        return $arguments;
+    }
+
+    /**
      * "Retry the failed ones" means every failed row. A page id the model copied from the open page or
      * from a finished row would requeue nothing, so the list is dropped unless the editor gave numbers.
      *
@@ -639,7 +693,8 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             preg_match('/\b(fail\w*|fehlgeschlag\w*|fehler\w*|errors?)\b/iu', $requestQuery) === 1
             && preg_match('/\d/', $requestQuery) !== 1
         ) {
-            unset($arguments['pageIds'], $arguments['pageId']);
+            unset($arguments['pageIds'], $arguments['pageId'], $arguments['pid']);
+            $arguments['includeFinished'] = false;
         }
 
         return $arguments;
@@ -677,6 +732,37 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return "\n\n" . $label;
+    }
+
+    /**
+     * The model sometimes sends the languages as {"languageUids":[1]} or {"languageUid":1}. The card and
+     * the queue tool both want the plain list.
+     */
+    public static function unwrapLanguageConfig(mixed $value): mixed
+    {
+        if (is_string($value)) {
+            $trimmed = trim($value);
+            if ($trimmed === '' || !in_array($trimmed[0], ['{', '['], true)) {
+                return $value;
+            }
+            $decoded = json_decode($trimmed, true);
+            if (!is_array($decoded)) {
+                return $value;
+            }
+            $value = $decoded;
+        }
+        if (!is_array($value) || array_is_list($value)) {
+            return $value;
+        }
+        foreach (['languageUids', 'languageUid', 'languageIds', 'languageId', 'languages', 'language'] as $key) {
+            if (array_key_exists($key, $value)) {
+                $inner = $value[$key];
+
+                return is_array($inner) ? $inner : [$inner];
+            }
+        }
+
+        return $value;
     }
 
     public static function isTranslateTool(string $toolName): bool
@@ -1166,6 +1252,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      */
     private function normalizeWriteToolArguments(string $toolName, array $arguments): array
     {
+        if (strtolower($toolName) === 't3ai_mass_translation_queue_add' && isset($arguments['languageConfig'])) {
+            $arguments['languageConfig'] = self::unwrapLanguageConfig($arguments['languageConfig']);
+        }
         if ($toolName !== 'write_table') {
             return $arguments;
         }

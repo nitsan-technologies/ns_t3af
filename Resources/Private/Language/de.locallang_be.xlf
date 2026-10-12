@@ -1625,6 +1625,10 @@
                 <source>Which language should I save this word in?</source>
                 <target>In welcher Sprache soll ich dieses Wort speichern?</target>
             </trans-unit>
+            <trans-unit id="agent.queue.draftWorkspace">
+                <source>The queues are shared by the whole site and cannot be changed from a draft workspace. Switch to the Live workspace first. Nothing was added.</source>
+                <target>Die Warteschlangen gelten für die ganze Website und können nicht aus einem Entwurfs-Workspace geändert werden. Zuerst in den Live-Workspace wechseln. Es wurde nichts hinzugefügt.</target>
+            </trans-unit>
             <trans-unit id="agent.translate.defaultProvider">
                 <source>your default AI provider</source>
                 <target>Ihren Standard-KI-Anbieter</target>

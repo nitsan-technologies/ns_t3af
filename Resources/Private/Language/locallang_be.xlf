@@ -1330,6 +1330,9 @@
       <trans-unit id="agent.glossary.whichLanguage" resname="agent.glossary.whichLanguage">
         <source>Which language should I save this word in?</source>
       </trans-unit>
+      <trans-unit id="agent.queue.draftWorkspace" resname="agent.queue.draftWorkspace">
+        <source>The queues are shared by the whole site and cannot be changed from a draft workspace. Switch to the Live workspace first. Nothing was added.</source>
+      </trans-unit>
       <trans-unit id="agent.translate.defaultProvider" resname="agent.translate.defaultProvider">
         <source>your default AI provider</source>
       </trans-unit>
