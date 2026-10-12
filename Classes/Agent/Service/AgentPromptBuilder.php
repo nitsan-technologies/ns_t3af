@@ -74,8 +74,8 @@ readonly class AgentPromptBuilder
             'When you search for a record or element by name, use a limit of at least 5. If more than one matches, ask which one with ask_clarification and the real matches as options; never pick the first silently.',
             'The translations of a page are listed in the `translations` of pages_get (uid, language, hidden, title); they are not subpages. When asked "is this page already in German/French/…?", check that entry: if missing, say no; if present but hidden=1 or the title still starts with "[Translate to …:]", say it exists but is incomplete/hidden — never a plain yes. To show or hide a translated page, change the `hidden` field of that translation uid. When the editor wants the page itself visible or hidden, also look for hidden content elements on that translation (content_list) and include them in the same change, or ask if only the page was meant; never conclude that a translation does not exist from a search below the page.',
             'News articles (EXT:news) live in the table tx_news_domain_model_news; there is no table tt_news. To find, change or delete a news article, search or write that table (or use the news tools when offered), never tt_content.',
-            'Schema markup, structured data or "a Person/Organization/Article schema" for a page or news article is ONE call of t3ai_apply_schema_markup with schemaType and the page (or newsId). It is not a folder, a file or a record you create with write_table: never call a directory tool or tell the editor to create it manually.',
-            'An uploaded or named image that the editor wants "in the news" / "in that news" goes onto the news record (file_reference_add, tableName tx_news_domain_model_news, fieldName fal_media), never onto a content element. When a news article was just created or applied in this conversation, or the editor named it by title, use that news uid and do not ask which record to attach to; ask only when several news match.',
+            'Schema markup, structured data or "a Person/Organization/Article schema" for a page or news article is ONE call of t3ai_apply_schema_markup with schemaType and the page (or newsId). It is not a folder, a file or a record you create with write_table: never call a directory tool or tell the editor to create it manually. "Selected page" / "this page" means the open page — never treat the word Selected as a page title. Fill schema fields only from the page (or news) content; do not invent names, jobs or contact data that are not there.',
+            'An uploaded or named image that the editor wants "in the news" / "in that news" goes onto the news record (file_reference_add, tableName tx_news_domain_model_news, fieldName fal_media), never onto a content element. When a news article was just created or applied in this conversation, or the editor named it by title, use that news uid and do not ask which record to attach to; ask only when several news match. A file the editor attached in the composer (or "this image" after an upload) is not attached until file_reference_add succeeds: never say it is already attached, and never stop after only file_reference_list. To put that image on a new content element: create textmedia with write_table (header/body only), Apply, then file_reference_add fieldName assets — do not put the image in write_table data.',
             'To create a news article call write_table create on tx_news_domain_model_news right away (do not call explain_capabilities first). A news article is never a content element, a page heading or an image card. Every new article gets a title, a short teaser and the text. Do not invent a date: leave datetime out (it defaults to today) unless the editor named a date. For bodytext use simple HTML (p, h2, ul), not Markdown. If the editor asked for a picture, create the news first, then generate one image and attach it to that news uid with file_reference_add fieldName fal_media — never create a content element on the Layout page for a news picture, and call generate/attach only once each.',
             'To add a paragraph, an intro or any text to the open page, create ONE content element: write_table create on tt_content with CType text, the page as pid, and header and bodytext in the same call. Never create a new page for it. If the editor gave no topic, write the text from the page title and its existing content instead of asking what it should be about.',
             'When creating news, set data.pid to a news storage folder (a page that already holds news, from a prior list). Never use pid 0 and never use the Layout page on screen unless it is that storage folder. If you do not know a storage pid, omit pid and the tool picks one.',
@@ -879,8 +879,16 @@ readonly class AgentPromptBuilder
     {
         $created = [];
         $attached = self::attachedFileUids($history);
+        $lastUserRequest = '';
         foreach ($history as $entry) {
-            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+            if (!is_array($entry)) {
+                continue;
+            }
+            if (($entry['role'] ?? '') === 'user') {
+                $lastUserRequest = (string) ($entry['content'] ?? '');
+                continue;
+            }
+            if (($entry['role'] ?? '') !== 'assistant') {
                 continue;
             }
             $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
@@ -892,12 +900,22 @@ readonly class AgentPromptBuilder
             if ($tool === 'file_reference_add') {
                 continue;
             }
+            // Composer @file:… runs file_get_info (read). Count it only when the editor asked to place it.
+            $composerAttach = ($meta['triggeredByAttachment'] ?? false) === true
+                && $tool === 'file_get_info'
+                && AgentRequestedFiles::asksToAttachOrPlaceFile($lastUserRequest);
             // Files a lookup only showed (file_list thumbnails) were not saved for this request.
-            if (($meta['severity'] ?? '') === 'read' || ($meta['readWithoutConfirmation'] ?? false) === true) {
+            if (
+                !$composerAttach
+                && (($meta['severity'] ?? '') === 'read' || ($meta['readWithoutConfirmation'] ?? false) === true)
+            ) {
                 continue;
             }
             foreach (self::fileUidsFromDetails($details) as $uid) {
                 $created[$uid] = true;
+            }
+            if ($composerAttach && is_array($details) && (int) ($details['uid'] ?? 0) > 0) {
+                $created[(int) $details['uid']] = true;
             }
             foreach (is_array($meta['previews'] ?? null) ? $meta['previews'] : [] as $preview) {
                 if (is_array($preview) && (int) ($preview['fileUid'] ?? 0) > 0) {

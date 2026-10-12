@@ -292,7 +292,7 @@ final class T3afToolbox implements ToolboxInterface
 
                 return new ToolResult(
                     $toolCall,
-                    'Not executed: every generated file in this conversation is already attached (or none exists yet). Do not call file_reference_add again.',
+                    'Not executed: there is no file left to attach from this conversation (uploads, generated images, or named sys_file uids). Do not claim the image is already attached — call file_reference_list if you need to check.',
                 );
             }
         }

@@ -71,6 +71,18 @@ final readonly class AgentRequestedFiles
     }
 
     /**
+     * "Add / attach / put this image on …": the composer file should become a file_reference_add.
+     * "What is in this image?" / rename / alt text alone do not.
+     */
+    public static function asksToAttachOrPlaceFile(string $request): bool
+    {
+        return preg_match(
+            '/\b(?:attach|add|insert|put|place|use|set|embed|include|füg\w*|häng\w*|setz\w*|verwend\w*|einbind\w*)\b/iu',
+            $request,
+        ) === 1;
+    }
+
+    /**
      * Notice for a request that wants an AI-generated image while the editor cannot generate one:
      * it closes the attach step, so the agent neither keeps asking to continue nor fetches a web image.
      *
