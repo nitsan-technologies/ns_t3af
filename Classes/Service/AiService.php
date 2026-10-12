@@ -384,8 +384,8 @@ final class AiService implements AiServiceInterface
         if ($options->modelId !== null && $options->modelId !== '') {
             return $options->modelId;
         }
-        if ($callType === self::CALL_EMBED) {
-            return $provider->effectiveEmbeddingModel();
+        if ($callType === self::CALL_EMBED && $provider->embeddingModelId !== '') {
+            return $provider->embeddingModelId;
         }
 
         return $provider->modelId;

@@ -2,14 +2,6 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
-## 2026-10-12 — An empty embedding model uses the vendor's embedding model
-
-**Done:** `Provider::effectiveEmbeddingModel()` and `AiService` embed calls use `Provider::DEFAULT_EMBEDDING_MODELS` when `embedding_model_id` is empty (OpenAI `text-embedding-3-small`, Mistral `mistral-embed`, Gemini `gemini-embedding-001`, Hugging Face MiniLM). Ollama, Azure and custom endpoints still use the chat model. `t3af:agent:index-tools` prints one line with the model and HTTP status for 400/404/422 and drops raw JSON bodies. Field help (EN/DE) and `Documentation/Configuration/AIProviders` updated. See `context/features/providers.md`.
-
-**Last touched:** 2026-10-12
-
----
-
 ## 2026-10-10 — An empty SEO queue add explains the skip
 
 **Done:** Applying `t3ai_mass_seo_queue_add` when nothing was queued keeps the skip sentence (Mass SEO is not enabled) and does not start a follow-up that says “Done.” The card does not show `pid`. Recursive adds still queue only pages with Mass SEO enabled. See `context/features/ai-agent.md`.
