@@ -136,4 +136,16 @@ final class AgentRecordAttachmentResolverTest extends TestCase
             $invocation,
         );
     }
+
+    #[Test]
+    public function fileReadAddsTheLeadingSlashOfAComposerToken(): void
+    {
+        $invocation = $this->resolver->resolveFileReadInvocation(
+            1,
+            'user_upload/logo.png',
+            static fn(string $tool): bool => $tool === 'file_get_info',
+        );
+
+        self::assertSame('/user_upload/logo.png', $invocation['arguments']['fileIdentifier'] ?? null);
+    }
 }

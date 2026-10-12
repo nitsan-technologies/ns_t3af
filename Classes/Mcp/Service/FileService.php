@@ -96,6 +96,8 @@ readonly class FileService
     public function getFileInfo(int $storageUid, string $fileIdentifier): array
     {
         $storage = $this->getStorage($storageUid);
+        // FAL identifiers start with a slash; a composer token (@file:1:user_upload/a.jpg) carries it without.
+        $fileIdentifier = '/' . ltrim($fileIdentifier, '/');
         $file = $storage->getFileByIdentifier($fileIdentifier);
 
         if (!$file instanceof File) {
