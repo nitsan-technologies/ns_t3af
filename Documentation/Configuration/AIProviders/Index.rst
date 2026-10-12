@@ -243,9 +243,7 @@ Connection
     :name: provider-embedding-model-id
     :type: string
 
-    Default embedding model ID when embeddings are enabled. When empty,
-    OpenAI uses ``text-embedding-3-small``, Mistral ``mistral-embed`` and
-    Gemini ``gemini-embedding-001``. Other adapters use the chat model.
+    Default embedding model ID when embeddings are enabled.
 
 Optional configuration
 ----------------------

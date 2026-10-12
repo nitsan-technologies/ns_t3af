@@ -648,9 +648,9 @@ final class AiServiceTest extends TestCase
         self::assertSame('text-embedding-3-small', $response->modelId);
     }
 
-    public function testEmbedUsesVendorDefaultWhenEmbeddingModelEmpty(): void
+    public function testEmbedFallsBackToChatModelWhenEmbeddingModelEmpty(): void
     {
-        $provider = $this->makeProvider(adapterType: 'symfony.mistral');
+        $provider = $this->makeProvider();
         $platform = new class {
             public string $seenModel = '';
 
@@ -665,38 +665,7 @@ final class AiServiceTest extends TestCase
                 return [[0.1]];
             }
         };
-        $adapter = $this->makeAdapter('symfony.mistral', $platform);
-        $service = new AiService(
-            new StaticProviderLookup($provider),
-            new AdapterRegistry([$adapter]),
-            new CapturingDispatcher(),
-            $this->makeSiteStorageContext(),
-        );
-
-        $response = $service->embed(['tool one', 'tool two']);
-
-        self::assertSame('mistral-embed', $platform->seenModel);
-        self::assertSame('mistral-embed', $response->modelId);
-    }
-
-    public function testEmbedFallsBackToChatModelForAdapterWithoutVendorDefault(): void
-    {
-        $provider = $this->makeProvider(adapterType: Provider::ADAPTER_SYMFONY_OLLAMA);
-        $platform = new class {
-            public string $seenModel = '';
-
-            /**
-             * @param string|list<string> $text
-             * @return array<int|string, mixed>
-             */
-            public function embed(string $model, string|array $text): array
-            {
-                $this->seenModel = $model;
-
-                return [[0.1]];
-            }
-        };
-        $adapter = $this->makeAdapter(Provider::ADAPTER_SYMFONY_OLLAMA, $platform);
+        $adapter = $this->makeAdapter('symfony.openai', $platform);
         $service = new AiService(
             new StaticProviderLookup($provider),
             new AdapterRegistry([$adapter]),
@@ -1182,7 +1151,7 @@ final class AiServiceTest extends TestCase
         $response = $service->embed('hello');
 
         self::assertSame([[0.1, 0.2, 0.3]], $response->vectors);
-        self::assertSame('text-embedding-3-small', $response->modelId);
+        self::assertSame('gpt-4o', $response->modelId);
     }
 
     /**

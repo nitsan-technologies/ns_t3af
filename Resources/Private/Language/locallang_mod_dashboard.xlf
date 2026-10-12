@@ -1445,7 +1445,7 @@
         <source>Embedding model</source>
       </trans-unit>
       <trans-unit id="provider.field.embeddingModelId.subnote" resname="provider.field.embeddingModelId.subnote">
-        <source>Leave blank to use the vendor default (OpenAI: text-embedding-3-small, Mistral: mistral-embed, Gemini: gemini-embedding-001). Other providers use the chat model.</source>
+        <source>Leave blank to use the chat model for embeddings.</source>
       </trans-unit>
       <trans-unit id="provider.field.capabilities" resname="provider.field.capabilities">
         <source>Capabilities</source>
@@ -1496,7 +1496,7 @@
         <source>Choose the model that writes answers and other text for this connection. A model is one specific AI version, such as gpt-4o or claude-sonnet. On Azure, type the deployment name from the Azure portal, which is often different from the public model name.</source>
       </trans-unit>
       <trans-unit id="provider.field.embeddingModelId.help" resname="provider.field.embeddingModelId.help">
-        <source>Choose the model used when the site searches or looks for similar content. If you leave this empty, OpenAI, Mistral and Gemini use their standard embedding model (text-embedding-3-small, mistral-embed, gemini-embedding-001). Other providers use the chat model above. You can skip this if you only use the AI for writing.</source>
+        <source>Choose the model used when the site searches or looks for similar content. If you leave this empty, the chat model above is used for that too. For example: text-embedding-3-small. You can skip this if you only use the AI for writing.</source>
       </trans-unit>
       <trans-unit id="provider.field.apiVersion" resname="provider.field.apiVersion">
         <source>API version</source>
