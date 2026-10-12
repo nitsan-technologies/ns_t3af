@@ -1453,6 +1453,9 @@
       <trans-unit id="agent.undo.changeNotFound" resname="agent.undo.changeNotFound">
         <source>Change not found or already undone.</source>
       </trans-unit>
+      <trans-unit id="agent.undo.useButton" resname="agent.undo.useButton">
+        <source>Use the Undo button on the applied change to put the old text back.</source>
+      </trans-unit>
       <trans-unit id="agent.draft.expired" resname="agent.draft.expired">
         <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
       </trans-unit>

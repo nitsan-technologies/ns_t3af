@@ -128,6 +128,10 @@ Saving a glossary word when the editor names the source, the translation, and th
 
 Asking when queued SEO or translation texts will be written follows `QueueAutomationStatus`: an enabled, not-deleted scheduler task (`tx_scheduler_task.tasktype`) counts as automatic processing on. A disabled task counts as off, and the reply says an admin has to enable that scheduler task, and offers to write the texts now. It does not say a scheduled job will run. Showing the SEO or translation queue calls the list tool again, because a scheduler run can empty the queue between questions.
 
+“Make this page look better in Google” or “write SEO texts for this page” calls `t3ai_generate_all_seo` and prepares suggestions. Nothing is written until Apply. That request does not add the page to the SEO queue. The queue is only for an explicit add, list, or “list for Google” request.
+
+Asking to put the old text back, to undo, or to revert restores the latest applied change that still has Undo. That uses the same restore as the Undo button and does not generate new SEO texts. When no such change is left, the reply points at the Undo button. A request for better or new Google texts still generates suggestions.
+
 Writing SEO texts for the subpages of the open page uses `t3ai_generate_seo_batch`. An empty `entries` list uses the subpages of the open page, including pages that do not have Mass SEO enabled. The SEO queue is for background generation. A recursive add only includes pages with Mass SEO enabled, and the reply names any page that was skipped. When that add queues nothing, the Apply reply is that skip sentence and no follow-up turn says “Done.” The card does not show `pid`.
 
 ---
