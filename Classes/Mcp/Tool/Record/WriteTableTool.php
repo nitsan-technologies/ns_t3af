@@ -66,8 +66,6 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     /** A 0 on these fields is what a new record has anyway; a card row "Publish Date 0" only confuses the editor. */
     private const ZERO_IS_DEFAULT_FIELDS = ['list_type', 'l18n_parent', 'l10n_parent', 'starttime', 'endtime', 'fe_group', 'sorting', 'editlock'];
 
-    private const ALLOWED_ACTIONS = ['create', 'update', 'delete'];
-
     /** Text fields where a rewrite must stay about the same thing. */
     private const REWRITE_CHECKED_FIELDS = ['bodytext', 'header', 'subheader', 'teaser'];
 
@@ -92,14 +90,14 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
      */
     public function plan(array $arguments): ToolPlan
     {
-        $action = (string) ($arguments['action'] ?? '');
         $tableName = (string) ($arguments['tableName'] ?? ($arguments['table'] ?? ''));
         $uid = (int) ($arguments['uid'] ?? 0);
         $dataRaw = $arguments['data'] ?? '{}';
         $dataRaw = is_string($dataRaw) ? $dataRaw : json_encode($dataRaw, JSON_THROW_ON_ERROR);
-
-        if (!in_array($action, self::ALLOWED_ACTIONS, true)) {
-            throw new \InvalidArgumentException('Invalid action. Use create, update, or delete.');
+        $payloadHint = self::decodeDataLoose($dataRaw);
+        $action = self::normalizeAction((string) ($arguments['action'] ?? ''), $payloadHint);
+        if ($payloadHint !== []) {
+            $dataRaw = json_encode($payloadHint, JSON_THROW_ON_ERROR);
         }
 
         if (!$this->tableExists($tableName)) {
@@ -166,8 +164,14 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         int $beforeUid = 0,
         int $afterUid = 0,
     ): string {
-        if (!in_array($action, self::ALLOWED_ACTIONS, true)) {
-            return $this->encodeError('Invalid action. Use create, update, or delete.');
+        $payloadHint = self::decodeDataLoose($data);
+        try {
+            $action = self::normalizeAction($action, $payloadHint);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->encodeError($exception->getMessage());
+        }
+        if ($payloadHint !== []) {
+            $data = json_encode($payloadHint, JSON_THROW_ON_ERROR);
         }
 
         if (!$this->tableExists($tableName)) {
@@ -200,6 +204,58 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
      * The "data" JSON object. A delete needs none (empty or invalid data is ignored there);
      * empty data is an empty object.
      *
+     * Map model synonyms to create|update|delete. Unhide/hide become update and set hidden when missing.
+     *
+     * @param array<string, mixed> $payload
+     * @return 'create'|'update'|'delete'
+     */
+    public static function normalizeAction(string $action, array &$payload): string
+    {
+        $normalized = strtolower(trim($action));
+        if ($normalized === 'create' || $normalized === 'update' || $normalized === 'delete') {
+            return $normalized;
+        }
+
+        $unhide = ['unhide', 'show', 'enable', 'reveal'];
+        $hide = ['hide', 'disable'];
+        $update = ['change', 'modify', 'set', 'edit'];
+
+        if (in_array($normalized, $unhide, true)) {
+            if (!array_key_exists('hidden', $payload)) {
+                $payload['hidden'] = 0;
+            }
+
+            return 'update';
+        }
+        if (in_array($normalized, $hide, true)) {
+            if (!array_key_exists('hidden', $payload)) {
+                $payload['hidden'] = 1;
+            }
+
+            return 'update';
+        }
+        if (in_array($normalized, $update, true)) {
+            return 'update';
+        }
+
+        throw new \InvalidArgumentException('Invalid action. Use create, update, or delete.');
+    }
+
+    /**
+     * Best-effort decode for action aliases; empty on bad JSON (normalizeAction still runs).
+     *
+     * @return array<string, mixed>
+     */
+    public static function decodeDataLoose(string $data): array
+    {
+        try {
+            return self::decodeData($data === '' ? '{}' : $data, 'update');
+        } catch (\InvalidArgumentException) {
+            return [];
+        }
+    }
+
+    /**
      * @return array<string, mixed>
      * @throws \InvalidArgumentException when create/update data is not a JSON object
      */

@@ -76,6 +76,23 @@ final class WriteTableToolTest extends TestCase
     }
 
     #[Test]
+    public function unhideAliasBecomesUpdateWithHiddenZero(): void
+    {
+        $payload = [];
+        self::assertSame('update', WriteTableTool::normalizeAction('unhide', $payload));
+        self::assertSame(0, $payload['hidden']);
+    }
+
+    #[Test]
+    public function hideAliasBecomesUpdateWithHiddenOne(): void
+    {
+        $payload = ['title' => 'X'];
+        self::assertSame('update', WriteTableTool::normalizeAction('hide', $payload));
+        self::assertSame(1, $payload['hidden']);
+        self::assertSame('X', $payload['title']);
+    }
+
+    #[Test]
     public function rejectsUnknownTable(): void
     {
         $this->bootstrapAdminUser();

@@ -112,6 +112,9 @@ final class AgentToolSelectionTest extends TestCase
         self::assertTrue(AgentCoreToolSet::isCreateContentRequest('Create all elements in the this page'));
         self::assertTrue(AgentCoreToolSet::isCreateContentRequest('Add a text element here'));
         self::assertTrue(AgentCoreToolSet::isCreateContentRequest('Neues Inhaltselement anlegen'));
+        self::assertTrue(AgentCoreToolSet::isCreateContentRequest(
+            'Write a short friendly intro paragraph for this page and add it to the page.',
+        ));
         self::assertFalse(AgentCoreToolSet::isCreateContentRequest('Delete content element 449'));
         self::assertFalse(AgentCoreToolSet::isCreateContentRequest('Delete the old elements and create new ones'));
         self::assertFalse(AgentCoreToolSet::isCreateContentRequest('Replace the text element with a new one'));
