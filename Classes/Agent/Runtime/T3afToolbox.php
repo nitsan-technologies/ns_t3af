@@ -208,7 +208,7 @@ final class T3afToolbox implements ToolboxInterface
                     'Not executed: an attach card is already open for the editor. Wait until they Apply or Decline it. Do not prepare another attach.',
                 );
             }
-            if (AgentPromptBuilder::unattachedFileUids($conversationHistory) === []) {
+            if (AgentPromptBuilder::pendingAttachFileUids($conversationHistory, $this->gateRequest()) === []) {
                 $outcome = 'invalid';
 
                 return new ToolResult(
@@ -334,6 +334,16 @@ final class T3afToolbox implements ToolboxInterface
         }
 
         return new ToolResult($toolCall, $forModel);
+    }
+
+    /**
+     * The editor's request this turn works on (the original one during a confirm/decline continuation).
+     */
+    private function gateRequest(): string
+    {
+        $request = trim((string) ($this->runtime->body['requestForGate'] ?? ''));
+
+        return $request !== '' ? $request : trim((string) ($this->runtime->body['requestQuery'] ?? ''));
     }
 
     /**

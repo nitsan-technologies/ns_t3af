@@ -834,6 +834,30 @@ readonly class AgentPromptBuilder
     }
 
     /**
+     * Files still to attach: saved in this conversation and not attached yet, plus existing files the
+     * request names ("attach sys_file uid 3") that are not missing and not attached while working on it.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return list<int>
+     */
+    public static function pendingAttachFileUids(array $history, string $request): array
+    {
+        $pending = self::unattachedFileUids($history);
+        $named = AgentRequestedFiles::attachableNamedFileUids($history, $request);
+        if ($named === []) {
+            return $pending;
+        }
+        $attached = self::attachedFileUids(AgentRequestChecklist::historySinceLatestUserRequest($history, $request));
+        foreach ($named as $uid) {
+            if (!isset($attached[$uid]) && !in_array($uid, $pending, true)) {
+                $pending[] = $uid;
+            }
+        }
+
+        return $pending;
+    }
+
+    /**
      * sys_file uids from successful writes that are not yet covered by a successful file_reference_add.
      *
      * @param list<array<string, mixed>> $history
@@ -842,7 +866,7 @@ readonly class AgentPromptBuilder
     public static function unattachedFileUids(array $history): array
     {
         $created = [];
-        $attached = [];
+        $attached = self::attachedFileUids($history);
         foreach ($history as $entry) {
             if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
                 continue;
@@ -854,9 +878,6 @@ readonly class AgentPromptBuilder
             $tool = (string) ($meta['tool'] ?? '');
             $details = $meta['details'] ?? null;
             if ($tool === 'file_reference_add') {
-                foreach (self::fileUidsFromDetails($details) as $uid) {
-                    $attached[$uid] = true;
-                }
                 continue;
             }
             // Files a lookup only showed (file_list thumbnails) were not saved for this request.
@@ -880,6 +901,34 @@ readonly class AgentPromptBuilder
         }
 
         return $pending;
+    }
+
+    /**
+     * sys_file uids of successful file_reference_add results.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array<int, true>
+     */
+    private static function attachedFileUids(array $history): array
+    {
+        $attached = [];
+        foreach ($history as $entry) {
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($meta['type'] ?? '') !== 'tool_result' || ($meta['success'] ?? true) === false) {
+                continue;
+            }
+            if ((string) ($meta['tool'] ?? '') !== 'file_reference_add') {
+                continue;
+            }
+            foreach (self::fileUidsFromDetails($meta['details'] ?? null) as $uid) {
+                $attached[$uid] = true;
+            }
+        }
+
+        return $attached;
     }
 
     /**
