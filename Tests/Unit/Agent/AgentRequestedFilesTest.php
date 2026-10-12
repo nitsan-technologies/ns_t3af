@@ -100,6 +100,46 @@ final class AgentRequestedFilesTest extends TestCase
         self::assertSame($expected, AgentRequestedFiles::asksForGeneratedImage($request));
     }
 
+    /**
+     * @return array<string, array{string, bool}>
+     */
+    public static function imageOnlyRequests(): array
+    {
+        return [
+            'just an image' => ['Generate an image of a red apple on a wooden table', true],
+            'german' => ['Generiere ein Bild von einem roten Apfel auf einem Holztisch', true],
+            'into an element' => ['Create a text & media content element with an AI-generated image of a red lighthouse at sunset', false],
+            'add it' => ['Generate an image of a lake and add it to element 12', false],
+            'for this page' => ['Generate an image for this page', false],
+            'not generated' => ['Attach sys_file uid 145 to element 12', false],
+        ];
+    }
+
+    #[Test]
+    #[DataProvider('imageOnlyRequests')]
+    public function aRequestForJustAnImageIsRecognised(string $request, bool $expected): void
+    {
+        self::assertSame($expected, AgentRequestedFiles::asksOnlyForGeneratedImage($request));
+    }
+
+    #[Test]
+    public function aSavedImageLeavesNothingToDoWhenOnlyAnImageWasAsked(): void
+    {
+        $request = 'Generate an image of a red apple on a wooden table';
+        $history = [
+            ['role' => 'user', 'content' => $request, 'meta' => []],
+            [
+                'role' => 'assistant',
+                'content' => 'Image saved.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3ai_generate_image', 'success' => true, 'severity' => 'write', 'details' => ['fileUid' => 171]],
+            ],
+        ];
+
+        self::assertSame([171], AgentPromptBuilder::unattachedFileUids($history));
+        self::assertSame('', AgentPromptBuilder::remainingWorkReminder($history, [], $request));
+        self::assertFalse(AgentPromptBuilder::hasBlockingRemainingWork($history, [], $request));
+    }
+
     #[Test]
     public function withoutImageGenerationTheAttachStepClosesAndNoWebImageIsFetched(): void
     {

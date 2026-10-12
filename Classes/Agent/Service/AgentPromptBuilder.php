@@ -588,7 +588,9 @@ readonly class AgentPromptBuilder
         // ("rename this header") look unfinished: it counts when the request is about images, or when the
         // file was saved while working on this request.
         $pending = '';
-        if (self::requestMentionsImage($query)) {
+        if (AgentRequestedFiles::asksOnlyForGeneratedImage($query)) {
+            // Just an image was asked for: the request is done once the file is saved.
+        } elseif (self::requestMentionsImage($query)) {
             $pending = self::pendingImageAttachNote($history);
         } elseif (self::unattachedFileUids(AgentRequestChecklist::historySinceLatestUserRequest($history, $query)) !== []) {
             $pending = self::pendingImageAttachNote($history);
