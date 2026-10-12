@@ -139,7 +139,13 @@ export const turnMethods = {
             credentials: 'same-origin',
             signal,
           });
-          payload = await response.json();
+          const raw = await response.text();
+          try {
+            payload = JSON.parse(raw);
+          } catch (parseError) {
+            // An error page (PHP error, expired login) instead of JSON: never show "Unexpected token '<'".
+            throw new Error(lang('agent.error.serverPage', 'The server answered with an error page instead of a reply, so nothing was changed. Please try again; if it keeps happening, tell your administrator.'));
+          }
         }
         if (!payload?.ok) {
           throw new Error(payload?.message ?? lang('agent.error.turnFailed', 'Turn failed'));

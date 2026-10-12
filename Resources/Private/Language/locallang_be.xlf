@@ -1108,6 +1108,9 @@
       <trans-unit id="agent.error.turnFailed" resname="agent.error.turnFailed">
         <source>The request failed.</source>
       </trans-unit>
+      <trans-unit id="agent.error.serverPage" resname="agent.error.serverPage">
+        <source>The server answered with an error page instead of a reply, so nothing was changed. Please try again; if it keeps happening, tell your administrator.</source>
+      </trans-unit>
       <trans-unit id="agent.error.applyFailed" resname="agent.error.applyFailed">
         <source>Applying the draft failed.</source>
       </trans-unit>

@@ -1180,4 +1180,13 @@ final class AgentRunnerTest extends TestCase
         self::assertFalse(AgentRunner::isPlainEditRequest('Make a new page called About'));
         self::assertFalse(AgentRunner::isPlainEditRequest('Delete the opening hours text'));
     }
+
+    #[Test]
+    public function aCopiedHistoryTagIsDroppedFromTheAnswer(): void
+    {
+        self::assertSame('Nothing has failed.', AgentRunner::withoutLeadingHistoryTag('[Read the translation queue] Nothing has failed.'));
+        self::assertSame('Nothing has failed.', AgentRunner::withoutLeadingHistoryTag("[Prepared change: Page] \nNothing has failed."));
+        self::assertSame('Hello [Read] world', AgentRunner::withoutLeadingHistoryTag('Hello [Read] world'));
+        self::assertSame('[Read the page]', AgentRunner::withoutLeadingHistoryTag('[Read the page]'));
+    }
 }

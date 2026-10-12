@@ -495,6 +495,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $retryText = is_string($content) ? trim($content) : '';
                 $finalText = AgentPromptBuilder::isCardHistoryEcho($retryText) ? '' : $retryText;
             }
+            $finalText = self::withoutLeadingHistoryTag($finalText);
         } catch (MaxIterationsExceededException) {
             $state->addMessage([
                 'role' => 'assistant',
@@ -580,6 +581,17 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             '/credit balance|billing|insufficient[_ ]quota|exceeded your (?:current )?quota|quota exceeded|plans? (?:&|and) billing|invalid[_ ]api[_ ]key|incorrect api key|authentication[_ ]error|invalid x-api-key|payment required/i',
             $raw,
         ) === 1;
+    }
+
+    /**
+     * History notes read "[Read the translation queue] …"; a model that copies one starts its answer with
+     * that tag. The tag is internal, so it is dropped when real text follows it.
+     */
+    public static function withoutLeadingHistoryTag(string $text): string
+    {
+        $stripped = preg_replace('/^\s*\[(?:Read|Prepared|Applied|Searched|Listed|Checked|Ran)[^\]\n]{0,80}\]\s*/u', '', $text);
+
+        return is_string($stripped) && trim($stripped) !== '' ? $stripped : $text;
     }
 
     /** A tool call (or its channel markers) written into the reply text instead of being called. */
