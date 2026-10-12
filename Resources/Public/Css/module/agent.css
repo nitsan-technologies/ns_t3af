@@ -2015,7 +2015,6 @@
   font-weight: 700;
   background: light-dark(#fff, #000);
   border-color: light-dark(var(--nst3af-agent-border-soft), var(--nst3af-agent-border-soft));
-  color: var(--nst3af-agent-text-muted);
 }
 
 .nst3af-agent-header__icon:hover,
