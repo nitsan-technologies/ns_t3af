@@ -1551,6 +1551,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             if ($newsUid !== null) {
                 $arguments['newsArticleUid'] = $newsUid;
             }
+            // Smaller models send count 1 for "make 3 pictures".
+            $count = AgentRequestedFiles::requestedImageCount($request);
+            if ($count > 1 && (int) ($arguments['count'] ?? 1) <= 1) {
+                $arguments['count'] = $count;
+            }
 
             return $arguments;
         }
