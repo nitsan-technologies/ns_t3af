@@ -2,6 +2,22 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-12 — A named page uid is the page that is removed
+
+**Done:** "Remove page 138" and `/t3ai_mass_seo_queue_remove 138` use page 138. The page open in Layout is used only when the request names no page number. A title with no number is still looked up by `namedPageTitle()`. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
+## 2026-10-12 — A page already out of the SEO queue is not removed again
+
+**Done:** Removing pages that are not in the SEO queue replies with that fact and does not prepare an Apply card. A page that is still queued still gets the card. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
 ## 2026-10-12 — Improving a page for Google prepares suggestions
 
 **Done:** “Make this page look better in Google” and “write SEO texts for this page” call `t3ai_generate_all_seo` and prepare suggestions. Nothing is written until Apply. The SEO queue is only for an explicit add, list, or “list for Google” request. See `context/features/ai-agent.md`.
