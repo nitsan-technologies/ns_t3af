@@ -139,6 +139,39 @@ final readonly class AgentTargetPageResolver
     }
 
     /**
+     * Page uids written in the request ("page 138", "pages 12 and 14", "Seite 12").
+     * A title with no number stays with namedPageTitle().
+     *
+     * @return list<int>
+     */
+    public static function mentionedPageUids(string $message): array
+    {
+        $message = trim($message);
+        if ($message === '' || preg_match_all(
+            '/\b(?:pages?|seiten?)\s+(?:(?:uid|id|#)\s*)?(\d+(?:\s*(?:,|and|und)\s*(?:#\s*)?\d+)*)/iu',
+            $message,
+            $matches,
+        ) < 1) {
+            return [];
+        }
+
+        $ids = [];
+        foreach ($matches[1] as $group) {
+            if (preg_match_all('/\d+/', (string) $group, $numbers) < 1) {
+                continue;
+            }
+            foreach ($numbers[0] as $number) {
+                $uid = (int) $number;
+                if ($uid > 0) {
+                    $ids[$uid] = $uid;
+                }
+            }
+        }
+
+        return array_values($ids);
+    }
+
+    /**
      * "Create a page called Contact" is a new page, not a lookup of an existing one.
      */
     public static function isCreatePageRequest(string $message): bool

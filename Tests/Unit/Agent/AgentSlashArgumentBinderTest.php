@@ -96,6 +96,37 @@ final class AgentSlashArgumentBinderTest extends TestCase
     }
 
     #[Test]
+    public function mapsADigitListToPageIdsWhenThatIsTheOnlyPageArgument(): void
+    {
+        $params = [
+            ['name' => 'pageIds', 'type' => 'array', 'required' => true, 'default' => null],
+        ];
+
+        self::assertSame(
+            ['pageIds' => [138]],
+            $this->binder->bind([], '138', $params),
+        );
+        self::assertSame(
+            ['pageIds' => [12, 14]],
+            $this->binder->bind([], '12, 14', $params),
+        );
+    }
+
+    #[Test]
+    public function aToolWithPageIdKeepsTheSingleIdBinding(): void
+    {
+        $params = [
+            ['name' => 'pageId', 'type' => 'int', 'required' => false, 'default' => null],
+            ['name' => 'pageIds', 'type' => 'array', 'required' => false, 'default' => '[]'],
+        ];
+
+        self::assertSame(
+            ['pageId' => 45],
+            $this->binder->bind([], '45', $params),
+        );
+    }
+
+    #[Test]
     public function mapsLeadingDigitToUidAndRestToString(): void
     {
         $params = [
