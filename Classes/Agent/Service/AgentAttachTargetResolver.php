@@ -69,14 +69,50 @@ final readonly class AgentAttachTargetResolver implements AgentAttachTargetResol
         if (isset($target['uid'])) {
             $query->andWhere($query->expr()->eq('uid', $query->createNamedParameter((int) $target['uid'], Connection::PARAM_INT)));
         } else {
-            $query->andWhere($query->expr()->eq('TRIM(' . $query->quoteIdentifier('title') . ')', $query->createNamedParameter(trim((string) ($target['title'] ?? '')))));
+            $title = trim((string) ($target['title'] ?? ''));
+            if ($title === '') {
+                return null;
+            }
+            // Exact first (case-insensitive), then a unique contains match — titles from chat often differ in case.
+            $query->andWhere($query->expr()->comparison(
+                'LOWER(' . $query->quoteIdentifier('title') . ')',
+                '=',
+                $query->createNamedParameter(mb_strtolower($title)),
+            ));
         }
         $rows = $query->executeQuery()->fetchAllAssociative();
+        if (count($rows) !== 1 && !isset($target['uid'])) {
+            $rows = $this->newsByTitleContains(trim((string) ($target['title'] ?? '')));
+        }
         if (count($rows) !== 1) {
             return null;
         }
 
         return ['table' => self::NEWS_TABLE, 'uid' => (int) $rows[0]['uid'], 'fieldName' => 'fal_media'];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function newsByTitleContains(string $title): array
+    {
+        if ($title === '') {
+            return [];
+        }
+        $query = $this->connectionPool->getQueryBuilderForTable(self::NEWS_TABLE);
+        $query->getRestrictions()->removeAll();
+        $query->select('uid')->from(self::NEWS_TABLE)
+            ->where(
+                $query->expr()->eq('deleted', 0),
+                $query->expr()->eq('sys_language_uid', 0),
+                $query->expr()->like(
+                    'LOWER(' . $query->quoteIdentifier('title') . ')',
+                    $query->createNamedParameter('%' . $query->escapeLikeWildcards(mb_strtolower($title)) . '%'),
+                ),
+            )
+            ->setMaxResults(3);
+
+        return $query->executeQuery()->fetchAllAssociative();
     }
 
     /**
@@ -96,18 +132,54 @@ final readonly class AgentAttachTargetResolver implements AgentAttachTargetResol
             if ($openPageId <= 0) {
                 return null;
             }
+            $title = trim((string) ($target['title'] ?? ''));
+            if ($title === '') {
+                return null;
+            }
             $query->andWhere(
                 $query->expr()->eq('pid', $query->createNamedParameter($openPageId, Connection::PARAM_INT)),
-                $query->expr()->eq('TRIM(' . $query->quoteIdentifier('header') . ')', $query->createNamedParameter(trim((string) ($target['title'] ?? '')))),
+                $query->expr()->comparison(
+                    'LOWER(' . $query->quoteIdentifier('header') . ')',
+                    '=',
+                    $query->createNamedParameter(mb_strtolower($title)),
+                ),
             );
         }
         $rows = $query->executeQuery()->fetchAllAssociative();
+        if (count($rows) !== 1 && !isset($target['uid']) && $openPageId > 0) {
+            $rows = $this->contentByHeaderContains($openPageId, trim((string) ($target['title'] ?? '')));
+        }
         if (count($rows) !== 1) {
             return null;
         }
         $fieldName = $this->contentFileField((string) $rows[0]['CType']);
 
         return $fieldName === null ? null : ['table' => 'tt_content', 'uid' => (int) $rows[0]['uid'], 'fieldName' => $fieldName];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function contentByHeaderContains(int $openPageId, string $title): array
+    {
+        if ($title === '') {
+            return [];
+        }
+        $query = $this->connectionPool->getQueryBuilderForTable('tt_content');
+        $query->getRestrictions()->removeAll();
+        $query->select('uid', 'CType')->from('tt_content')
+            ->where(
+                $query->expr()->eq('deleted', 0),
+                $query->expr()->eq('sys_language_uid', 0),
+                $query->expr()->eq('pid', $query->createNamedParameter($openPageId, Connection::PARAM_INT)),
+                $query->expr()->like(
+                    'LOWER(' . $query->quoteIdentifier('header') . ')',
+                    $query->createNamedParameter('%' . $query->escapeLikeWildcards(mb_strtolower($title)) . '%'),
+                ),
+            )
+            ->setMaxResults(3);
+
+        return $query->executeQuery()->fetchAllAssociative();
     }
 
     private function contentFileField(string $cType): ?string

@@ -43,7 +43,7 @@ final class AgentAttachTargetRequest
             return null;
         }
         // A new element is created first and gets the image after Apply (a later step).
-        if (preg_match('/\b(?:new|another|neue[nrsm]?|weitere[nrsm]?)\s+(?:\w+\s+){0,2}(?:content\s+)?(?:element|inhaltselement)\b/iu', $request) === 1) {
+        if (self::asksForNewContentElementAttach($request)) {
             return null;
         }
 
@@ -109,6 +109,15 @@ final class AgentAttachTargetRequest
         ));
 
         return count($waiting) === 1 ? $waiting[0] : null;
+    }
+
+    /**
+     * "Add this image to a new content element on this page" — create first, attach after Apply.
+     */
+    public static function asksForNewContentElementAttach(string $request): bool
+    {
+        return AgentRequestedFiles::asksToAttachOrPlaceFile($request)
+            && preg_match('/\b(?:new|another|neue[nrsm]?|weitere[nrsm]?)\s+(?:\w+\s+){0,2}(?:content\s+)?(?:element|inhaltselement)\b/iu', $request) === 1;
     }
 
     private static function cleanTitle(string $raw): string

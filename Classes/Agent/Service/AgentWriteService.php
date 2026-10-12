@@ -263,6 +263,16 @@ final class AgentWriteService
             throw new \RuntimeException($this->translator->translate('agent.write.nothingSaved'), 1712003231);
         }
 
+        $attachNote = $this->attachPendingFileAfterCreate(
+            $stored,
+            $plan,
+            $readback,
+            is_array($applyResult['affected'] ?? null) ? $applyResult['affected'] : [],
+        );
+        if ($attachNote !== '') {
+            $readback[] = ['table' => '_note', 'uid' => 0, 'values' => ['summary' => $attachNote]];
+        }
+
         $changeId = bin2hex(random_bytes(8));
         $undoFields = $this->buildUndoFields($plan, $keptFieldKeys, $applyResult['affected'] ?? [], $readback);
         $this->draftSession->storeChange($changeId, [
@@ -288,7 +298,75 @@ final class AgentWriteService
             'placement' => $this->placementOf($plan),
             'table' => $plan->fields[0]->table ?? '',
             'notAllowedFields' => is_array($plan->context['notAllowedFields'] ?? null) ? array_values(array_map('strval', $plan->context['notAllowedFields'])) : [],
+            'attachNote' => $attachNote,
         ];
+    }
+
+    /**
+     * After "new content element" create Apply: attach the uploaded file that waited on the draft.
+     *
+     * @param array<string, mixed>                 $stored
+     * @param list<array<string, mixed>>           $readback
+     * @param list<array{table: string, uid: int}> $affected
+     */
+    private function attachPendingFileAfterCreate(array $stored, ToolPlan $plan, array $readback, array $affected): string
+    {
+        $fileUid = (int) ($stored['pendingAttachFileUid'] ?? 0);
+        if ($fileUid <= 0 || $plan->action !== 'create' || $plan->toolName !== 'write_table') {
+            return '';
+        }
+        $contentUid = 0;
+        $cType = '';
+        foreach ($affected as $record) {
+            if (($record['table'] ?? '') === 'tt_content' && (int) ($record['uid'] ?? 0) > 0) {
+                $contentUid = (int) $record['uid'];
+                break;
+            }
+        }
+        foreach ($readback as $entry) {
+            if (!is_array($entry) || ($entry['table'] ?? '') !== 'tt_content') {
+                continue;
+            }
+            if ($contentUid <= 0) {
+                $contentUid = (int) ($entry['uid'] ?? 0);
+            }
+            $values = is_array($entry['values'] ?? null) ? $entry['values'] : [];
+            $cType = strtolower(trim((string) ($values['CType'] ?? '')));
+            if ($contentUid > 0) {
+                break;
+            }
+        }
+        if ($cType === '') {
+            foreach ($plan->fields as $field) {
+                if ($field->table === 'tt_content' && strtolower($field->field) === 'ctype') {
+                    $cType = strtolower(trim((string) $field->proposedValue));
+                    break;
+                }
+            }
+        }
+        if ($contentUid <= 0) {
+            return '';
+        }
+        $fieldName = AgentAttachTargetResolver::pickField($cType !== '' ? $cType : 'textmedia', ['assets', 'image']) ?? 'assets';
+        try {
+            $result = $this->playgroundService->invokeWithMode(
+                'file_reference_add',
+                [
+                    'table' => 'tt_content',
+                    'uid' => $contentUid,
+                    'fieldName' => $fieldName,
+                    'fileUids' => (string) $fileUid,
+                ],
+                McpModeResolver::MODE_NATIVE,
+            );
+        } catch (\Throwable) {
+            return '';
+        }
+        if (($result['success'] ?? false) !== true) {
+            return '';
+        }
+
+        return sprintf('Attached file uid %d to tt_content uid %d (%s).', $fileUid, $contentUid, $fieldName);
     }
 
     /**
@@ -516,6 +594,10 @@ final class AgentWriteService
             // Page-structure cards show a bullet outline; accept that outline, or fall back to the draft JSON.
             if ($toolName === 't3ai_create_page_structure' && $fieldKey === 'structure') {
                 $draftJson = (string) ($resolved['structure'] ?? '');
+                // Custom is selected alone (no variant selection): the draft JSON lives on the preview variants.
+                if ($draftJson === '') {
+                    $draftJson = self::structureDraftFromPreview($preview);
+                }
                 $resolvedStructure = AgentPageStructureOutline::resolveEdit((string) $value, $draftJson);
                 $resolved['structure'] = $resolvedStructure['structure'];
                 $structureFellBackToDraft = $resolvedStructure['fellBackToDraft'];
@@ -643,6 +725,10 @@ final class AgentWriteService
             $current[$key] = $seo ? self::storedSeoText($stored) : trim($stored);
         }
         foreach ($resolved as $key => $value) {
+            // A page tree is always a create: never treat the structure JSON as "already on the page".
+            if ($toolName === 't3ai_create_page_structure' && $key === 'structure') {
+                continue;
+            }
             $chosen = $seo ? self::storedSeoText($value) : trim($value);
             if (array_key_exists($key, $current) && $chosen === $current[$key]) {
                 unset($resolved[$key]);
@@ -650,6 +736,25 @@ final class AgentWriteService
         }
 
         return $resolved;
+    }
+
+    /**
+     * Variant 0's structure JSON from a page-structure preview (used when Custom was selected alone).
+     */
+    public static function structureDraftFromPreview(PreviewResult $preview): string
+    {
+        foreach ($preview->variants as $variant) {
+            if (!is_array($variant)) {
+                continue;
+            }
+            $values = is_array($variant['values'] ?? null) ? $variant['values'] : [];
+            $structure = trim((string) ($values['structure'] ?? ''));
+            if ($structure !== '') {
+                return $structure;
+            }
+        }
+
+        return '';
     }
 
     /**

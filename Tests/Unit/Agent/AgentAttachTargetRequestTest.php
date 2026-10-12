@@ -55,6 +55,17 @@ final class AgentAttachTargetRequestTest extends TestCase
         yield 'no target' => ['Add this image', null];
     }
 
+    #[Test]
+    public function newContentElementAttachIsDetected(): void
+    {
+        self::assertTrue(AgentAttachTargetRequest::asksForNewContentElementAttach(
+            'Add this image to a new content element on this page.',
+        ));
+        self::assertFalse(AgentAttachTargetRequest::asksForNewContentElementAttach(
+            'Add this image to the content element Textmedia with image',
+        ));
+    }
+
     /**
      * @param array<string, mixed>|null $expected
      */

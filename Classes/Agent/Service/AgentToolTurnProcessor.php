@@ -737,7 +737,28 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             : $this->editorLabelService->resolveByName($shownTool);
         $draftCard = $this->draftService->buildDraftCard($plan, $severity);
         $draftCard['editorLabel'] = $editorLabel;
-        $this->draftService->persistDraft($draftCard, $plan, $arguments, $this->draftSession);
+        $extra = [];
+        // "new content element" + uploaded file: after Apply, attach that file to the created element.
+        if (
+            $shownTool === 'write_table'
+            && $plan->action === 'create'
+            && AgentAttachTargetRequest::asksForNewContentElementAttach($requestQuery)
+        ) {
+            $pending = AgentPromptBuilder::pendingAttachFileUids($history, $requestQuery);
+            $fileUid = $pending[0] ?? 0;
+            if ($fileUid <= 0) {
+                $uploaded = AgentAttachTargetRequest::uploadedFileUids($history);
+                $fileUid = $uploaded[0] ?? 0;
+            }
+            if ($fileUid <= 0) {
+                $router = is_array($body['routerFileUids'] ?? null) ? $body['routerFileUids'] : [];
+                $fileUid = (int) ($router[0] ?? 0);
+            }
+            if ($fileUid > 0) {
+                $extra['pendingAttachFileUid'] = $fileUid;
+            }
+        }
+        $this->draftService->persistDraft($draftCard, $plan, $arguments, $this->draftSession, null, $extra);
 
         $content = ($draftCard['kind'] ?? '') === SatelliteToolPlanService::PLAN_KIND_TOOL_CONFIRMATION
             ? (string) ($draftCard['summary'] ?? $this->translator->translate('agent.draft.proposed', [$editorLabel]))
