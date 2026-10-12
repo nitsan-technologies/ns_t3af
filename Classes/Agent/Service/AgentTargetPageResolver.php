@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPlaygroundService;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
@@ -33,6 +34,7 @@ final readonly class AgentTargetPageResolver
 {
     public function __construct(
         private McpPlaygroundService $playgroundService,
+        private ?RecordService $recordService = null,
     ) {}
 
     public function resolveFromMessage(
@@ -277,6 +279,16 @@ final readonly class AgentTargetPageResolver
      */
     public function matchingPage(string $title, BackendUserAuthentication $user): ?array
     {
+        // Exact DB title first — pages_search can miss a page the editor named for a queue.
+        if ($this->recordService !== null) {
+            foreach ($this->recordService->findDefaultLanguagePagesByTitle($title) as $page) {
+                $uid = (int) ($page['uid'] ?? 0);
+                if ($uid > 0 && $this->userCanReadPage($uid, $user)) {
+                    return ['uid' => $uid, 'title' => $title];
+                }
+            }
+        }
+
         foreach ($this->searchRecords($title, 10) as $record) {
             $uid = (int) ($record['uid'] ?? 0);
             $pageTitle = trim((string) ($record['title'] ?? ''));
@@ -288,6 +300,29 @@ final readonly class AgentTargetPageResolver
         }
 
         return null;
+    }
+
+    /**
+     * True when a default-language page has this exact title but the editor may not see it.
+     */
+    public function namedPageExistsButUnreadable(string $title, BackendUserAuthentication $user): bool
+    {
+        if ($this->recordService === null) {
+            return false;
+        }
+        $found = false;
+        foreach ($this->recordService->findDefaultLanguagePagesByTitle($title) as $page) {
+            $uid = (int) ($page['uid'] ?? 0);
+            if ($uid <= 0) {
+                continue;
+            }
+            $found = true;
+            if ($this->userCanReadPage($uid, $user)) {
+                return false;
+            }
+        }
+
+        return $found;
     }
 
     /**
@@ -435,6 +470,7 @@ final readonly class AgentTargetPageResolver
             'the', 'a', 'an', 'this', 'that', 'these', 'those', 'current', 'same', 'whole', 'entire',
             'new', 'my', 'our', 'your', 'for', 'on', 'to', 'of', 'in', 'up', 'and', 'or', 'its', 'their',
             'make', 'show', 'get', 'first', 'last', 'next', 'previous', 'other', 'all', 'every', 'each', 'alle',
+            'which', 'what', 'how', 'many', 'much', 'any', 'some', 'selected', 'included', 'generated', 'affected', 'these', 'both', 'several', 'more', 'those', 'welche', 'welcher', 'welches', 'wie', 'viele', 'alle', 'beide',
             'die', 'der', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'einer', 'einen', 'einem',
             'dieser', 'diese', 'dieses', 'diesen', 'aktuelle', 'aktuellen', 'neuer', 'neue', 'neuen',
             'erste', 'letzter', 'letzte', 'letzten', 'nächste', 'naechste',

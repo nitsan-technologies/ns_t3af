@@ -124,4 +124,31 @@ final class AgentRunnerPageRequestTest extends TestCase
         self::assertSame([['name' => 't3ai_apply_schema_markup']], AgentRunner::schemaTools($tools));
         self::assertSame([], AgentRunner::schemaTools($tools, ['t3ai_apply_schema_markup' => 1]));
     }
+
+    #[Test]
+    public function seoForAllPagesIsNotTheOpenPage(): void
+    {
+        self::assertTrue(AgentRunner::asksSeoForAllPages('Generate SEO metadata for all pages.'));
+        self::assertTrue(AgentRunner::asksSeoForAllPages('Erzeuge SEO für alle Seiten'));
+        self::assertFalse(AgentRunner::asksSeoForAllPages('Generate SEO for this page'));
+        self::assertFalse(AgentRunner::asksSeoForAllPages('Translate all pages into German'));
+    }
+
+    #[Test]
+    public function massSeoEnableRequestIsRecognised(): void
+    {
+        self::assertTrue(AgentRunner::isMassSeoEnableRequest('Enable the Mass SEO feature for all pages.'));
+        self::assertFalse(AgentRunner::isMassSeoEnableRequest('Add this page to the SEO queue'));
+    }
+
+    #[Test]
+    public function toolsByNameKeepsOnlyTheMissingWantedTools(): void
+    {
+        $tools = [['name' => 'pages_tree'], ['name' => 'pages_get'], ['name' => 't3ai_generate_seo_batch']];
+
+        self::assertSame(
+            [['name' => 'pages_tree']],
+            AgentRunner::toolsByName(['pages_tree', 't3ai_generate_seo_batch'], $tools, ['t3ai_generate_seo_batch' => 1]),
+        );
+    }
 }

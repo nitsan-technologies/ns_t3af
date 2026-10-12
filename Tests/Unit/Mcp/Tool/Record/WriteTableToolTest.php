@@ -84,6 +84,16 @@ final class WriteTableToolTest extends TestCase
     }
 
     #[Test]
+    public function visibleAndMakeVisibleAliasesBecomeUpdate(): void
+    {
+        foreach (['visible', 'activate', 'publish', 'make visible', 'make_visible'] as $action) {
+            $payload = [];
+            self::assertSame('update', WriteTableTool::normalizeAction($action, $payload), $action);
+            self::assertSame(0, $payload['hidden'], $action);
+        }
+    }
+
+    #[Test]
     public function hideAliasBecomesUpdateWithHiddenOne(): void
     {
         $payload = ['title' => 'X'];
