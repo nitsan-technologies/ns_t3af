@@ -452,6 +452,24 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function imageWorkToolsOffersAttachForExistingFilesNamedInTheRequest(): void
+    {
+        $catalog = [
+            ['name' => 't3ai_generate_image'],
+            ['name' => 'file_reference_add'],
+        ];
+        $request = 'Create a text & media content element with the heading Our Treats and attach the existing images sys_file uid 3 and uid 11';
+        $history = [['role' => 'user', 'content' => $request, 'meta' => []]];
+
+        $names = array_map(
+            static fn(array $t): string => (string) $t['name'],
+            AgentRunner::imageWorkTools($catalog, [], $history, $request),
+        );
+
+        self::assertSame(['t3ai_generate_image', 'file_reference_add'], $names);
+    }
+
+    #[Test]
     public function aShortReplyIsSearchedWithThePreviousRequest(): void
     {
         $query = AgentRunner::requestQuery('Yes', [

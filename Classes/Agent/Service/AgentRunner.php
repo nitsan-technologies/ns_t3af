@@ -336,6 +336,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $pageId = (int) ($context['pageId'] ?? 0);
         $providerIdentifier = self::providerFromBody($body);
         $body['requestQuery'] = self::requestQuery($userMessage, $historyMessages);
+        $body['requestForGate'] = $requestForChecklist;
         // Prior turns (news readback, generated fileUid) must reach write-tool enrichment.
         $body['conversationHistory'] = $historyMessages;
 
@@ -985,8 +986,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
         $found = [...self::fileActionTools($query, $executableTools, $offeredNames), ...$found];
         $workPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
-        if (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, self::requestForGate($userMessage, $historyMessages))) {
-            $found = [...self::imageWorkTools($executableTools, $offeredNames, $historyMessages), ...$found];
+        $gateRequest = self::requestForGate($userMessage, $historyMessages);
+        if (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $gateRequest)) {
+            $found = [...self::imageWorkTools($executableTools, $offeredNames, $historyMessages, $gateRequest), ...$found];
         } elseif (AgentPromptBuilder::pendingImageAttachNote($historyMessages) !== '') {
             $found = [...self::pendingAttachTools($executableTools, $offeredNames), ...$found];
         }
@@ -999,7 +1001,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             }
         }
         if (
-            AgentPromptBuilder::unattachedFileUids($historyMessages) === []
+            AgentPromptBuilder::pendingAttachFileUids($historyMessages, $gateRequest) === []
             || AgentPromptBuilder::hasOpenFileReferenceDraft($historyMessages)
         ) {
             unset($byName['file_reference_add']);
@@ -1053,9 +1055,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
      * @param list<array<string, mixed>> $historyMessages
      * @return list<array<string, mixed>>
      */
-    public static function imageWorkTools(array $executableTools, array $alreadyOffered = [], array $historyMessages = []): array
+    public static function imageWorkTools(array $executableTools, array $alreadyOffered = [], array $historyMessages = [], string $request = ''): array
     {
-        $needsAttach = AgentPromptBuilder::unattachedFileUids($historyMessages) !== [];
+        $needsAttach = AgentPromptBuilder::pendingAttachFileUids($historyMessages, $request) !== [];
         $picked = [];
         foreach ($executableTools as $tool) {
             $name = (string) ($tool['name'] ?? '');

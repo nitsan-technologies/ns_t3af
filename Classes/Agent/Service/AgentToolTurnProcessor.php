@@ -515,8 +515,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         /** @var list<array<string, mixed>> $history */
         $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
         $arguments = $this->normalizeWriteToolArguments($toolName, $arguments);
-        $arguments = $this->enrichPlannedToolArguments($toolName, $arguments, $history);
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
+        $gateRequest = trim((string) ($body['requestForGate'] ?? ''));
+        $arguments = $this->enrichPlannedToolArguments($toolName, $arguments, $history, $gateRequest !== '' ? $gateRequest : $requestQuery);
         if ($toolName === 'write_table' && $requestQuery !== '') {
             $arguments['requestQuery'] = $requestQuery;
         }
@@ -862,7 +863,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      * @param list<array<string, mixed>> $history
      * @return array<string, mixed>
      */
-    private function enrichPlannedToolArguments(string $toolName, array $arguments, array $history): array
+    private function enrichPlannedToolArguments(string $toolName, array $arguments, array $history, string $request = ''): array
     {
         $toolName = strtolower(trim($toolName));
         if ($toolName === 't3ai_generate_image') {
@@ -889,9 +890,10 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             );
         }
 
+        $pending = AgentPromptBuilder::pendingAttachFileUids($history, $request);
         $fileUidsRaw = trim((string) ($arguments['fileUids'] ?? ''));
         if ($fileUidsRaw !== '' && !self::fileUidsArgumentIsNumericList($fileUidsRaw)) {
-            $resolved = AgentPromptBuilder::unattachedFileUids($history);
+            $resolved = $pending;
             if ($resolved === []) {
                 throw new \InvalidArgumentException(
                     'No generated file is available yet. Call t3ai_generate_image first and wait until the editor applies it, then attach using the numeric sys_file uid from that result.',
@@ -901,7 +903,6 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $fileUidsRaw = (string) $arguments['fileUids'];
         }
 
-        $pending = AgentPromptBuilder::unattachedFileUids($history);
         if ($pending === []) {
             throw new \InvalidArgumentException(
                 'Every generated file in this conversation is already attached (or none exists yet). Do not call file_reference_add again.',
