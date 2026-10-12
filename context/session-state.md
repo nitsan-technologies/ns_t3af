@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-12 — A custom SEO text that stores the same is not saved
+
+**Done:** Apply compares a custom SEO text with the value the save would store. A preview URL or repeated spaces that clean away do not count as a change. When every chosen text matches, the card stays. A wording change is still saved. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
 ## 2026-10-12 — SEO for all subpages uses the subpages
 
 **Done:** "Write SEO texts for all subpages of this page" drops a page list that is only the open page. The card is filled with the subpages. A list that names other pages is kept. See `context/features/ai-agent.md`.
