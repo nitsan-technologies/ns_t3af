@@ -209,6 +209,21 @@ TXT;
     }
 
     #[Test]
+    public function elementWordsInsideAnImageDescriptionAreNotCreateSteps(): void
+    {
+        self::assertSame([], AgentRequestChecklist::parse('Generate an image of a red apple on a wooden table'));
+        self::assertSame([], AgentRequestChecklist::parse('Make a picture showing a table with a header of flowers.'));
+        self::assertSame(
+            ['textmedia'],
+            array_column(array_filter(
+                AgentRequestChecklist::parse('Generate an image of a red apple on a wooden table and add it to a text & media element'),
+                static fn(array $s): bool => ($s['kind'] ?? '') === 'create',
+            ), 'cType'),
+        );
+        self::assertSame(['table'], array_column(AgentRequestChecklist::parse('Add a table with our opening hours'), 'cType'));
+    }
+
+    #[Test]
     public function aShortTextOrAttachedImagesStayFieldsOfTextAndMedia(): void
     {
         $prompts = [
