@@ -56,6 +56,26 @@ final readonly class Provider
     /** Default Azure OpenAI API version when none is stored. */
     public const AZURE_DEFAULT_API_VERSION = '2024-10-21';
 
+    /**
+     * Embedding model per vendor when `embedding_model_id` is empty. Chat models
+     * are rejected by these vendors' embedding endpoints (e.g. Mistral HTTP 422).
+     * Adapters without an entry (Ollama, Azure, custom endpoints) keep the chat
+     * model, because their models are install-specific.
+     *
+     * @var array<string, string>
+     */
+    public const DEFAULT_EMBEDDING_MODELS = [
+        'symfony.openai' => 'text-embedding-3-small',
+        'symfony.mistral' => 'mistral-embed',
+        'symfony.gemini' => 'gemini-embedding-001',
+        'symfony.huggingface' => 'sentence-transformers/all-MiniLM-L6-v2',
+    ];
+
+    public static function defaultEmbeddingModel(string $adapterType): string
+    {
+        return self::DEFAULT_EMBEDDING_MODELS[self::normalizeAdapterType($adapterType)] ?? '';
+    }
+
     public static function adapterRequiresEndpoint(string $adapterType): bool
     {
         $adapterType = self::normalizeAdapterType($adapterType);
@@ -195,7 +215,13 @@ final readonly class Provider
      */
     public function effectiveEmbeddingModel(): string
     {
-        return $this->embeddingModelId !== '' ? $this->embeddingModelId : $this->modelId;
+        $configured = trim($this->embeddingModelId);
+        if ($configured !== '') {
+            return $configured;
+        }
+        $vendorDefault = self::defaultEmbeddingModel($this->adapterType);
+
+        return $vendorDefault !== '' ? $vendorDefault : $this->modelId;
     }
 
     /**
