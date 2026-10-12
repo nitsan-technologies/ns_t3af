@@ -1755,6 +1755,18 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             if ($count > 1 && (int) ($arguments['count'] ?? 1) <= 1) {
                 $arguments['count'] = $count;
             }
+            // "description" is a common alias; an empty prompt with a picture request uses the editor's words.
+            $prompt = trim((string) ($arguments['prompt'] ?? ''));
+            if ($prompt === '') {
+                $prompt = trim((string) ($arguments['description'] ?? ''));
+            }
+            if ($prompt === '' && $request !== '' && AgentRequestedFiles::asksForGeneratedImage($request)) {
+                $prompt = $request;
+            }
+            if ($prompt !== '') {
+                $arguments['prompt'] = $prompt;
+                unset($arguments['description']);
+            }
 
             return $arguments;
         }

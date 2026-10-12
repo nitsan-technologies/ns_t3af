@@ -202,6 +202,26 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: the editor asked for a picture, not SEO or voice-over. Call t3ai_generate_image (then file_reference_add), or wait for the open generate card to be applied.',
             );
         }
+        // EXT:news missing: do not search or write the news table, and do not run news MCP tools.
+        if (!\TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('news')) {
+            $newsTable = strtolower((string) ($toolCall->getArguments()['tableName'] ?? $toolCall->getArguments()['table'] ?? ''));
+            $isNewsMcp = str_contains($name, 'news') && str_starts_with($name, 't3ai_');
+            if (
+                $isNewsMcp
+                || $newsTable === 'tx_news_domain_model_news'
+                || (
+                    in_array($name, ['record_search', 'write_table', 'records_apply'], true)
+                    && AgentRunner::isNewsRelatedRequest($requestQuery)
+                )
+            ) {
+                $outcome = 'invalid';
+
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: News isn\'t available on this site (EXT:news is not installed).',
+                );
+            }
+        }
         // "Generiere eine Nachricht ..." is a news article. The model otherwise answers it with SEO or schema markup.
         if (
             AgentRunner::isNewsCreateRequest($requestQuery)

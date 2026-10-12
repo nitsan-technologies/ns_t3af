@@ -43,6 +43,7 @@ use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\Result\TextResult;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
 /**
  * Runs one natural-language turn of the AI Agent with the Symfony AI Agent loop.
@@ -108,6 +109,14 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                     'role' => 'assistant',
                     'content' => $this->entitlementExplanation->buildNotPurchasedMessage($premiumMatch, $user),
                     'meta' => ['type' => 'not_purchased', 'correlationId' => $correlationId],
+                ]);
+            }
+            // Menu already hides news tools; free-text still tried record_search on the news table.
+            if (!ExtensionManagementUtility::isLoaded('news') && self::isNewsRelatedRequest($userMessage)) {
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => 'News isn\'t available on this site (EXT:news is not installed).',
+                    'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
                 ]);
             }
         }
@@ -619,6 +628,23 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             // turn misses newsCreateTools() and drifts to whatever the module start set offers (SEO).
             && preg_match('/\b(write|create|generate|draft|compose|add|make|new|schreib\w*|verfass\w*|erstell\w*|generier\w*|erzeug\w*|anleg\w*|neue[rsn]?)\b/u', $s) === 1
             && preg_match('/\b(delete|remove|translate|rename|list|show|l[öo]sch\w*|entfern\w*|[üu]bersetz\w*|umbenenn\w*|zeig\w*)\b/u', $s) !== 1;
+    }
+
+    /**
+     * Any ask that needs EXT:news (create, translate, find, delete a news article).
+     */
+    public static function isNewsRelatedRequest(string $query): bool
+    {
+        $s = mb_strtolower(trim($query));
+        if ($s === '') {
+            return false;
+        }
+        if (preg_match('/\b(news\s*articles?|news\s*records?|tx_news|newsartikel|nachricht\w*|meldung\w*)\b/u', $s) === 1) {
+            return true;
+        }
+
+        return preg_match('/\bnews\b/u', $s) === 1
+            && preg_match('/\b(translate|[üu]bersetz\w*|create|erstell\w*|write|schreib\w*|generate|generier\w*|delete|l[öo]sch\w*|find|search|list|zeig\w*)\b/u', $s) === 1;
     }
 
     /**

@@ -675,6 +675,34 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
     }
 
     #[Test]
+    public function enrichPlannedToolArgumentsFillsImagePromptAndCountFromTheRequest(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'enrichPlannedToolArguments');
+
+        $fromDescription = $method->invoke(
+            $processor,
+            't3ai_generate_image',
+            ['description' => 'happy dogs', 'count' => 1],
+            [],
+            'Make 3 different pictures of happy dogs.',
+        );
+        self::assertSame('happy dogs', $fromDescription['prompt']);
+        self::assertSame(3, $fromDescription['count']);
+        self::assertArrayNotHasKey('description', $fromDescription);
+
+        $fromRequest = $method->invoke(
+            $processor,
+            't3ai_generate_image',
+            [],
+            [],
+            'Make 3 different pictures of happy dogs.',
+        );
+        self::assertSame('Make 3 different pictures of happy dogs.', $fromRequest['prompt']);
+        self::assertSame(3, $fromRequest['count']);
+    }
+
+    #[Test]
     public function enrichPlannedToolArgumentsResolvesPlaceholderFileUidsFromHistory(): void
     {
         $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
