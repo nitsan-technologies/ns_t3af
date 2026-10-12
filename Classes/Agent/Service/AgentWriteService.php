@@ -541,7 +541,7 @@ final class AgentWriteService
             throw new \RuntimeException($this->translator->translate('agent.write.editsNeedEditorFlag'), 1712003216);
         }
 
-        $resolved = self::withoutUnchangedSuggestions($resolved, $preview->fields);
+        $resolved = self::withoutUnchangedSuggestions($resolved, $preview->fields, $toolName);
         if ($resolved === []) {
             return [
                 'unchanged' => true,
@@ -624,28 +624,48 @@ final class AgentWriteService
 
     /**
      * A chosen suggestion that matches the text already stored is not a change.
+     * SEO apply stores a cleaned value, so that cleanup is used for the comparison.
      *
      * @param array<string, string> $resolved
      * @param list<array<string, mixed>> $fields
      * @return array<string, string>
      */
-    public static function withoutUnchangedSuggestions(array $resolved, array $fields): array
+    public static function withoutUnchangedSuggestions(array $resolved, array $fields, string $toolName = ''): array
     {
+        $seo = $toolName === 't3ai_generate_all_seo' || $toolName === 't3ai_generate_seo_batch';
         $current = [];
         foreach ($fields as $field) {
             $key = trim((string) ($field['key'] ?? ''));
             if ($key === '') {
                 continue;
             }
-            $current[$key] = trim((string) ($field['current'] ?? ''));
+            $stored = (string) ($field['current'] ?? '');
+            $current[$key] = $seo ? self::storedSeoText($stored) : trim($stored);
         }
         foreach ($resolved as $key => $value) {
-            if (array_key_exists($key, $current) && trim($value) === $current[$key]) {
+            $chosen = $seo ? self::storedSeoText($value) : trim($value);
+            if (array_key_exists($key, $current) && $chosen === $current[$key]) {
                 unset($resolved[$key]);
             }
         }
 
         return $resolved;
+    }
+
+    /**
+     * The value SEO apply stores: trim, drop a leaked preview URL, collapse repeated spaces,
+     * and drop separators from the start. Kept in step with MassSeoOptimizationService::buildSaveSuggestions().
+     */
+    public static function storedSeoText(string $value): string
+    {
+        $value = trim($value);
+        $withoutPreviewUrl = preg_replace('#\S*\?type=1696828748\S*#', '', $value);
+        $value = is_string($withoutPreviewUrl) ? $withoutPreviewUrl : $value;
+        $collapsed = preg_replace('#\s{2,}#', ' ', $value);
+        $value = is_string($collapsed) ? $collapsed : $value;
+        $value = ltrim($value, " \t\n\r,.:;–—-");
+
+        return trim($value);
     }
 
     /**
