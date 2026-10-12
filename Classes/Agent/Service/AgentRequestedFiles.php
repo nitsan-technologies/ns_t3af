@@ -72,12 +72,24 @@ final readonly class AgentRequestedFiles
 
     /**
      * "Add / attach / put this image on …": the composer file should become a file_reference_add.
-     * "What is in this image?" / rename / alt text alone do not.
+     * Needs a place (page, news, element, …) after the verb, or a German add/attach compound.
+     * "What is in this image?" / "Set the alt text…" / rename alone do not.
      */
     public static function asksToAttachOrPlaceFile(string $request): bool
     {
         return preg_match(
-            '/\b(?:attach|add|insert|put|place|use|set|embed|include|füg\w*|häng\w*|setz\w*|verwend\w*|einbind\w*)\b/iu',
+            // Hinzufügen / einfügen / anhängen / anfügen / einbinden (compound forms)
+            '/\b(?:hinzufüg\w*|einfüg\w*|anhäng\w*|anfüg\w*|einbind\w*)\b'
+            // Separable: füge … hinzu
+            . '|\bfüg\w*\b(?:\W+\w+){0,6}\W+hinzu\b'
+            // Verb … prep (+ article) + place noun — not "set … for this image"
+            . '|\b(?:attach|add|insert|put|place|use|set|embed|include|füg\w*|häng\w*|setz\w*|verwend\w*)\b'
+            . '(?:\W+\w+){0,8}\W+'
+            . '(?:to|on|in|into|onto|for|an|auf|zu|zum|zur|für)\s+'
+            // "to news" | "to the news" | "to the Services page" (title words only after an article)
+            . '(?:(?:the|this|that|a|an|my|our|die|der|das|den|dem|diese\w*|eine\w*)\s+(?:\w+\s+){0,4})?'
+            . '(?:page|element|header|content|news|article|record|seite|inhalt\w*|artikel|nachricht\w*)\b'
+            . '/iu',
             $request,
         ) === 1;
     }
