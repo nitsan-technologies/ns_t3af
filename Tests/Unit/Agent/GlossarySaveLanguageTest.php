@@ -161,6 +161,66 @@ final class GlossarySaveLanguageTest extends TestCase
 
         self::assertSame(2, $probe->languageUid);
     }
+
+    #[Test]
+    public function aRememberedPairThatIsAlreadyStoredDoesNotOpenACard(): void
+    {
+        $message = $this->glossaryTurn(
+            'remember that we say Layoutansicht not Layout',
+            ['sourceTerm' => 'Layout -> Layoutansicht', 'targetTerm' => 'Layout -> Layoutansicht', 'languageUid' => 1],
+        );
+
+        self::assertSame('info', $message['meta']['type'] ?? null);
+        self::assertTrue($message['meta']['orchestratorPause'] ?? false);
+        self::assertArrayNotHasKey('draft', $message['meta']);
+        self::assertSame('"Layout" is already in the word list as "Layoutansicht" (German).', $message['content']);
+    }
+
+    #[Test]
+    public function anArrowPairThatIsNewStillAsksForTheLanguage(): void
+    {
+        $message = $this->glossaryTurn(
+            'Add Pagetree → Seitenbaum to the glossary',
+            ['sourceTerm' => 'Pagetree → Seitenbaum', 'targetTerm' => 'Pagetree → Seitenbaum', 'languageUid' => 1],
+        );
+
+        self::assertSame('clarification', $message['meta']['type'] ?? null);
+        self::assertSame(['German', 'French', 'Hindi'], $message['meta']['options'] ?? null);
+        self::assertArrayNotHasKey('draft', $message['meta']);
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @return array{role: string, content: string, meta: array<string, mixed>}
+     */
+    private function glossaryTurn(string $request, array $arguments): array
+    {
+        $translator = $this->createAgentTranslator();
+        $resolver = new AgentToolPlanResolver(
+            [new GlossaryLanguageProbeTool()],
+            (new ReflectionClass(DynamicToolPlanService::class))->newInstanceWithoutConstructor(),
+            (new ReflectionClass(SatelliteToolPlanService::class))->newInstanceWithoutConstructor(),
+        );
+        $reflection = new ReflectionClass(AgentToolTurnProcessor::class);
+        /** @var AgentToolTurnProcessor $processor */
+        $processor = $reflection->newInstanceWithoutConstructor();
+        $reflection->getProperty('toolPlanResolver')->setValue($processor, $resolver);
+        $reflection->getProperty('editorLabelService')->setValue($processor, new AgentToolEditorLabelService($translator));
+        $reflection->getProperty('translator')->setValue($processor, $translator);
+
+        $method = $reflection->getMethod('processWriteToolTurn');
+        /** @var array{role: string, content: string, meta: array<string, mixed>} $message */
+        $message = $method->invoke(
+            $processor,
+            ['name' => 't3ai_glossary_save', 'executable' => true, 'severity' => ToolSeverity::Write->value],
+            ['details' => ['siteLanguages' => self::LANGUAGES]],
+            ['arguments' => $arguments, 'requestQuery' => $request],
+            ToolSeverity::Write->value,
+            'corr-glossary-pair',
+        );
+
+        return $message;
+    }
 }
 
 /**
@@ -184,6 +244,14 @@ final class GlossaryLanguageProbeTool implements McpArgumentCheckInterface, McpP
     public function checkArguments(array $arguments): void
     {
         $this->languageUid = (int) ($arguments['languageUid'] ?? 0);
+        $source = (string) ($arguments['sourceTerm'] ?? '');
+        $target = (string) ($arguments['targetTerm'] ?? '');
+        if ($source === 'Layout' && $target === 'Layoutansicht') {
+            throw new NoChangeRequiredException('"Layout" is already in the word list as "Layoutansicht" (German).');
+        }
+        if ($this->languageUid <= 0) {
+            throw new \InvalidArgumentException('languageUid must be a target site language uid greater than 0.');
+        }
         throw new NoChangeRequiredException('checked');
     }
 }

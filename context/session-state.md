@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-12 — A glossary phrase is read as two words
+
+**Done:** "We say Layoutansicht not Layout" and "Add Layout -> Layoutansicht to the glossary" are saved as Layout and Layoutansicht. When that pair is already in the word list, the reply says so and no card is opened. A new pair still gets the save card, and a language that was not named is still asked for. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
 ## 2026-10-12 — An unchanged SEO suggestion is not saved
 
 **Done:** Apply skips a suggestion that matches the text already stored. When every chosen text matches, the card stays and the reply says nothing was changed. A text that differs is still saved. See `context/features/ai-agent.md`.
