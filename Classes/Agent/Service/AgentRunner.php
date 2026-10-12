@@ -602,6 +602,22 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * Names a page to create (a page, subpage, blog post or page tree) and not just "this page" as the place for
+     * a text: "Add an intro paragraph to this page" and "Introduce our services" are content, not new pages.
+     */
+    public static function asksForNewPage(string $query): bool
+    {
+        $stripped = preg_replace(
+            '/\b(?:to|on|for|of|in|at|from|about|auf|zu|f[üu]r|in|von)\s+(?:this|the\s+(?:current|open)|my|our|diese[rsmn]?|die\s+aktuelle)\s+(?:page|seite)\b/iu',
+            ' ',
+            $query,
+        );
+        $stripped = is_string($stripped) ? $stripped : $query;
+
+        return preg_match('/\b(pages?|subpages?|sub-pages?|seiten?|unterseiten?|blog\s*posts?|blogbeitr\w*|blogartikel|page\s*tree|seitenbaum|seitenstruktur|site\s*tree|structure|struktur|sitemap)\b/iu', $stripped) === 1;
+    }
+
+    /**
      * Asks to write or draft a new news article (not to change, list or delete one).
      */
     public static function isNewsCreateRequest(string $query): bool
@@ -942,11 +958,21 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $createContent = AgentCoreToolSet::isCreateContentRequest($query);
         $notAskedFor = array_flip(self::toolsNotAskedFor($query));
         $newsCreate = self::isNewsCreateRequest($query);
+        if (!self::asksForNewPage($query)) {
+            foreach (self::PAGE_CREATE_TOOL_NAMES as $pageCreateTool) {
+                $notAskedFor[$pageCreateTool] = true;
+            }
+        }
         if ($newsCreate) {
             // A news article is a news record: not a page element, and no picture card unless a picture was asked for.
             // DualMode create-news tools stay agent-hidden; write_table is the create path — do not stall on capabilities.
             $notAskedFor['t3ai_create_content_element'] = true;
             $notAskedFor['explain_capabilities'] = true;
+            if (preg_match('/\b(seo|meta|keywords?|schema|structured\s+data|suchmaschinen\w*|metadaten)\b/iu', $query) !== 1) {
+                $notAskedFor['t3ai_apply_schema_markup'] = true;
+                $notAskedFor['t3ai_generate_keywords'] = true;
+                $notAskedFor['t3ai_generate_meta_description'] = true;
+            }
             if (preg_match('/\b(picture|pictures|image|images|photo|photos|illustration|bild\w*|foto\w*|grafik\w*)\b/iu', $query) !== 1) {
                 $notAskedFor['t3ai_generate_image'] = true;
             }
@@ -1108,6 +1134,15 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         return AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $plan, $userMessage);
     }
+
+    /** Tools that create a page (tree) with AI text: only for a request that names a page to create. */
+    public const PAGE_CREATE_TOOL_NAMES = [
+        't3ai_create_page_simple',
+        't3ai_create_page_advanced',
+        't3ai_create_page_structure',
+        't3ai_create_blog_simple',
+        't3ai_create_blog_advanced',
+    ];
 
     /**
      * Tools that fit only when the editor says so, and the words that ask for them.

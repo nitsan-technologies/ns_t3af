@@ -733,8 +733,14 @@ final class AgentWriteService
                 : [];
         }
         if ($toolName === 't3ai_create_page_structure') {
-            // A whole tree has no list of the new pages in its result, so there is nothing exact to take back.
-            return [];
+            // The result lists every new page. Newest first, so a subpage goes before its parent.
+            $ids = array_values(array_filter(array_map('intval', (array) (self::decodeToolResultPayload($result)['createdPageIds'] ?? [])), static fn(int $uid): bool => $uid > 0));
+            rsort($ids);
+
+            return array_map(
+                static fn(int $uid): array => ['table' => 'pages', 'uid' => $uid, 'field' => '_record', 'previousValue' => null, 'action' => 'create'],
+                $ids,
+            );
         }
         if (!str_starts_with($toolName, 't3ai_translate_') && $toolName !== 't3ai_record_translate') {
             return $undoFields;

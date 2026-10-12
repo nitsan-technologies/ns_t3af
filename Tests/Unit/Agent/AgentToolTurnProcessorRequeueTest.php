@@ -59,4 +59,13 @@ final class AgentToolTurnProcessorRequeueTest extends TestCase
         self::assertTrue(AgentToolTurnProcessor::isTranslateTool('T3AI_TRANSLATE_PAGE'));
         self::assertFalse(AgentToolTurnProcessor::isTranslateTool('t3ai_glossary_save'));
     }
+
+    #[Test]
+    public function wrappedLanguageConfigBecomesAPlainList(): void
+    {
+        self::assertSame([1], AgentToolTurnProcessor::unwrapLanguageConfig(['languageUids' => [1]]));
+        self::assertSame([1], AgentToolTurnProcessor::unwrapLanguageConfig('{"languageUid":1}'));
+        self::assertSame(['1' => '1'], AgentToolTurnProcessor::unwrapLanguageConfig(['1' => '1']));
+        self::assertSame([2, 3], AgentToolTurnProcessor::unwrapLanguageConfig([2, 3]));
+    }
 }

@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Agent\Runtime;
 use NITSAN\NsT3AF\Agent\Service\AgentPlan;
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentRequestedFiles;
+use NITSAN\NsT3AF\Agent\Service\AgentRunner;
 use NITSAN\NsT3AF\Agent\Service\AgentToolSearch;
 use NITSAN\NsT3AF\Agent\Service\PageCreateAfter;
 use NITSAN\NsT3AF\Agent\Service\PageCreateBefore;
@@ -197,6 +198,32 @@ final class T3afToolbox implements ToolboxInterface
             return new ToolResult(
                 $toolCall,
                 'Not executed: the editor asked for a picture, not SEO or voice-over. Call t3ai_generate_image (then file_reference_add), or wait for the open generate card to be applied.',
+            );
+        }
+        // "Generiere eine Nachricht ..." is a news article. The model otherwise answers it with SEO or schema markup.
+        if (
+            AgentRunner::isNewsCreateRequest($requestQuery)
+            && in_array($name, ['t3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_apply_schema_markup', 't3ai_generate_keywords', 't3ai_generate_meta_description'], true)
+            && preg_match('/\b(seo|meta|keywords?|schema|structured\s+data|suchmaschinen\w*|metadaten|og\s*(?:title|desc\w*))\b/iu', $requestQuery) !== 1
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for a news article, not SEO. Call write_table with action create on tx_news_domain_model_news, with title, teaser and bodytext in the same call.',
+            );
+        }
+        // "Add an intro paragraph to this page" is a content element. The model otherwise drafts a whole new page.
+        if (
+            $requestQuery !== ''
+            && in_array($name, AgentRunner::PAGE_CREATE_TOOL_NAMES, true)
+            && !AgentRunner::asksForNewPage($requestQuery)
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor did not ask for a new page. Add the text to the open page with write_table (action create, tableName tt_content, CType text, header and bodytext in the same call).',
             );
         }
         if ($name === 'file_reference_add') {

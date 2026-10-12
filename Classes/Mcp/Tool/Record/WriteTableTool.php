@@ -208,6 +208,8 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         if ($action === 'delete' || trim($data) === '') {
             return [];
         }
+        // A model sometimes wraps the object in a code fence.
+        $data = trim((string) preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($data)));
         try {
             try {
                 $payload = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
@@ -224,6 +226,11 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
                 1790400001,
                 $exception,
             );
+        }
+        // Double-encoded: the object arrived as a JSON string holding JSON.
+        if (is_string($payload) && in_array(trim($payload)[0] ?? '', ['{'], true)) {
+            $inner = json_decode($payload, true);
+            $payload = is_array($inner) ? $inner : $payload;
         }
         if (!is_array($payload) || ($payload !== [] && array_is_list($payload))) {
             throw new \InvalidArgumentException('data must be a JSON object of field values, e.g. {"pid": 12, "title": "News"}.', 1790400002);
@@ -292,6 +299,24 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             $notAllowed = array_values(array_map('strval', array_keys(array_diff_key($filteredData, $allowed))));
             if ($notAllowed !== [] && array_diff(array_keys($allowed), self::STRUCTURAL_FIELDS) === []) {
                 throw new \InvalidArgumentException('You are not allowed to change this field with your backend account: ' . implode(', ', $notAllowed) . '.');
+            }
+            // A page type the group may not set is dropped at Apply, and the editor would get a plain page.
+            if ($tableName === 'pages' && (int) ($filteredData['doktype'] ?? 1) !== 1 && !isset($allowed['doktype'])) {
+                throw new \InvalidArgumentException(sprintf(
+                    'You are not allowed to create this kind of page (page type %s) with your backend account. Nothing was created.',
+                    (string) $filteredData['doktype'],
+                ));
+            }
+            if (
+                $tableName === 'pages'
+                && (int) ($allowed['doktype'] ?? 1) !== 1
+                && !$user->isAdmin()
+                && !$user->checkAuthMode('pages', 'doktype', (string) $allowed['doktype'])
+            ) {
+                throw new \InvalidArgumentException(sprintf(
+                    'You are not allowed to create this kind of page (page type %s) with your backend account. Nothing was created.',
+                    (string) $allowed['doktype'],
+                ));
             }
             $filteredData = $allowed;
         }
