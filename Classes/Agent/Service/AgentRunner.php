@@ -1127,6 +1127,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         // "Generate the picture" must not become Write all SEO texts / SEO batch.
         't3ai_generate_all_seo' => '/\b(seo|meta\s*desc|meta\s*title|og\s*title|og\s*desc|open\s*graph|schema\s*markup|suchmaschinen\w*|metadaten)\b/iu',
         't3ai_generate_seo_batch' => '/\b(seo|meta\s*desc|meta\s*title|og\s*title|og\s*desc|open\s*graph|schema\s*markup|suchmaschinen\w*|metadaten)\b/iu',
+        // A read-only report that spends AI credits: only when the editor asks for an analysis.
+        't3ai_analyze_content' => '/\b(analy[sz]\w*|analysis|readab\w*|inhaltsanalyse|auswert\w*|bewert\w*|how good)\b/iu',
         't3aa_generate_voice_over' => '/\b(voice\s*-?\s*over|voiceover|audio\s*narrat\w*|sprachausgabe|vorlesen|vorlese\w*)\b/iu',
     ];
 

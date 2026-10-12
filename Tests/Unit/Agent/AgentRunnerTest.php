@@ -525,14 +525,16 @@ final class AgentRunnerTest extends TestCase
     #[Test]
     public function copyingAPageIsOfferedOnlyWhenAskedFor(): void
     {
-        $gated = ['pages_copy', 'content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3aa_generate_voice_over'];
+        $gated = ['pages_copy', 'content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'];
         self::assertSame($gated, AgentRunner::toolsNotAskedFor('I want a new subpage "Eval yes" under this page'));
         self::assertSame($gated, AgentRunner::toolsNotAskedFor('Ändere die Unterüberschrift von Element 12 auf Hallo'));
-        self::assertSame(['pages_copy', 'content_move', 'pages_move', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Switch to the QA Draft workspace'));
+        self::assertSame(['pages_copy', 'content_move', 'pages_move', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Switch to the QA Draft workspace'));
         self::assertNotContains('content_move', AgentRunner::toolsNotAskedFor('Move element 12 below element 15'));
-        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
-        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
-        self::assertSame(['content_move', 'pages_move', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
+        self::assertNotContains('t3ai_analyze_content', AgentRunner::toolsNotAskedFor('Run a content analysis for this page'));
+        self::assertContains('t3ai_analyze_content', AgentRunner::toolsNotAskedFor('Change the header of element 12'));
+        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
+        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
+        self::assertSame(['content_move', 'pages_move', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
         self::assertNotContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor('Summarize this page'));
         self::assertContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor('Rewrite the block so it sounds friendlier'));
         self::assertContains('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor('Generate a picture and attach it to the news'));

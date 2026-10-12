@@ -39,6 +39,15 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     /** Characters of a tool response kept in the stored trace. */
     private const TRACE_RESPONSE_CHARS = 1500;
 
+    /** Tools that create pages under a parent page (argument parentPageId). */
+    private const PARENT_PAGE_TOOLS = [
+        't3ai_create_page_simple',
+        't3ai_create_page_advanced',
+        't3ai_create_page_structure',
+        't3ai_create_blog_simple',
+        't3ai_create_blog_advanced',
+    ];
+
     public function __construct(
         private PermittedActionProvider $permittedActionProvider,
         private AgentDemandCounter $demandCounter,
@@ -457,6 +466,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $summary = $preview->llmSummary !== ''
             ? $preview->llmSummary
             : $this->translator->translate('agent.suggestions.ready', [$editorLabel, (string) count($preview->variants)]);
+        $summary .= $this->translationProviderNotice($toolName, $arguments, (string) ($body['requestQuery'] ?? ''));
 
         return [
             'role' => 'assistant',
@@ -519,6 +529,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
         if ($toolName === 'write_table' && $requestQuery !== '') {
             $arguments['requestQuery'] = $requestQuery;
+        }
+        if (strtolower($toolName) === 't3ai_mass_translation_queue_requeue') {
+            $arguments = self::requeueFailedOnly($arguments, $requestQuery);
         }
         if (strtolower($toolName) === 't3ai_glossary_save') {
             $choice = GlossarySaveLanguage::resolve($requestQuery, GlossarySaveLanguage::siteLanguages($context));
@@ -592,6 +605,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $content = ($draftCard['kind'] ?? '') === SatelliteToolPlanService::PLAN_KIND_TOOL_CONFIRMATION
             ? (string) ($draftCard['summary'] ?? $this->translator->translate('agent.draft.proposed', [$editorLabel]))
             : $this->translator->translate('agent.draft.proposed', [$editorLabel]);
+        $content .= $this->translationProviderNotice($toolName, $arguments, $requestQuery);
 
         return [
             'role' => 'assistant',
@@ -606,6 +620,67 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'orchestratorPause' => true,
             ],
         ];
+    }
+
+    /**
+     * "Retry the failed ones" means every failed row. A page id the model copied from the open page or
+     * from a finished row would requeue nothing, so the list is dropped unless the editor gave numbers.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function requeueFailedOnly(array $arguments, string $requestQuery): array
+    {
+        if (!empty($arguments['includeFinished'])) {
+            return $arguments;
+        }
+        if (
+            preg_match('/\b(fail\w*|fehlgeschlag\w*|fehler\w*|errors?)\b/iu', $requestQuery) === 1
+            && preg_match('/\d/', $requestQuery) !== 1
+        ) {
+            unset($arguments['pageIds'], $arguments['pageId']);
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * DeepL and Google Translate are not agent providers. When the editor asks for one, the card must
+     * say which provider is really used instead of leaving the editor to assume.
+     *
+     * @param array<string, mixed> $arguments
+     */
+    private function translationProviderNotice(string $toolName, array $arguments, string $requestQuery): string
+    {
+        if (!self::isTranslateTool($toolName)) {
+            return '';
+        }
+        if (preg_match('/\b(deepl|google\s*translate|google)\b/iu', $requestQuery, $match) !== 1) {
+            return '';
+        }
+        $used = trim((string) ($arguments['aiProvider'] ?? ''));
+        if ($used === '') {
+            $used = $this->translator->translate('agent.translate.defaultProvider');
+            if ($used === 'agent.translate.defaultProvider') {
+                $used = 'your default AI provider';
+            }
+        }
+        $label = $this->translator->translate('agent.translate.providerNotice', [$match[1], $used]);
+        if ($label === 'agent.translate.providerNotice') {
+            $label = sprintf(
+                "%s can't be used in the agent, so this translation uses %s. For %s, use the page translation dialog.",
+                $match[1],
+                $used,
+                $match[1],
+            );
+        }
+
+        return "\n\n" . $label;
+    }
+
+    public static function isTranslateTool(string $toolName): bool
+    {
+        return in_array(strtolower(trim($toolName)), ['t3ai_translate_content', 't3ai_translate_page', 't3ai_translate_news', 't3ai_record_translate'], true);
     }
 
     /**
@@ -714,6 +789,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             if ($this->toolUsesPageIdAsUid($toolName)) {
                 $arguments['uid'] ??= $pageId;
             }
+        }
+
+        // "Create a page here / under this page": the open page is the parent unless the model named another one.
+        if (
+            $pageId > 0
+            && in_array(strtolower(trim($toolName)), self::PARENT_PAGE_TOOLS, true)
+            && (int) ($arguments['parentPageId'] ?? 0) <= 0
+            && trim((string) ($arguments['parentPageUrl'] ?? '')) === ''
+        ) {
+            $arguments['parentPageId'] = $pageId;
         }
 
         // The SEO queue add does not read pid. The open page must not appear as "Pid" on the card.
