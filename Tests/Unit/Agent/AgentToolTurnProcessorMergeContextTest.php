@@ -133,6 +133,35 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
     }
 
     #[Test]
+    public function aNamedPageUidReplacesTheOpenPageOnSeoQueueRemove(): void
+    {
+        self::assertSame(
+            [138],
+            AgentToolTurnProcessor::seoQueueRemovePageIds(
+                ['pageIds' => [144]],
+                't3ai_mass_seo_queue_remove',
+                'Remove page 138 from the SEO queue.',
+            )['pageIds'],
+        );
+        self::assertSame(
+            [144],
+            AgentToolTurnProcessor::seoQueueRemovePageIds(
+                ['pageIds' => [144]],
+                't3ai_mass_seo_queue_remove',
+                'Remove this page from the SEO queue',
+            )['pageIds'],
+        );
+        self::assertSame(
+            [2],
+            AgentToolTurnProcessor::seoQueueRemovePageIds(
+                ['pageIds' => [2]],
+                't3ai_mass_seo_queue_remove',
+                'Remove the Contact page from the SEO queue',
+            )['pageIds'],
+        );
+    }
+
+    #[Test]
     public function mergeContextDoesNotCopyPageIdIntoUidForContentTools(): void
     {
         $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();

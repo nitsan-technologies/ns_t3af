@@ -54,8 +54,19 @@ final class AgentTargetPageResolverTest extends TestCase
     {
         self::assertSame('Contact', AgentTargetPageResolver::namedPageTitle('make the Contact page show up in Google'));
         self::assertSame('Contact', AgentTargetPageResolver::namedPageTitle('page called Contact'));
+        self::assertSame('Remove', AgentTargetPageResolver::namedPageTitle('Remove page 138 from the SEO queue.'));
         self::assertNull(AgentTargetPageResolver::namedPageTitle('Generate SEO for this page'));
         self::assertNull(AgentTargetPageResolver::namedPageTitle('the first one'));
+    }
+
+    #[Test]
+    public function aPageNumberIsNotATitle(): void
+    {
+        self::assertSame([138], AgentTargetPageResolver::mentionedPageUids('Remove page 138 from the SEO queue.'));
+        self::assertSame([12, 14], AgentTargetPageResolver::mentionedPageUids('Remove pages 12 and 14 from the SEO queue'));
+        self::assertSame([12], AgentTargetPageResolver::mentionedPageUids('Seite 12 aus der SEO-Warteschlange entfernen'));
+        self::assertSame([], AgentTargetPageResolver::mentionedPageUids('Remove the Contact page from the SEO queue'));
+        self::assertSame([], AgentTargetPageResolver::mentionedPageUids('Remove this page from the SEO queue'));
     }
 
     #[Test]
