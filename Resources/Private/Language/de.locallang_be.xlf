@@ -1929,6 +1929,10 @@
                 <source>Select at least one suggestion variant to apply.</source>
                 <target>Wählen Sie mindestens eine Vorschlagsvariante zum Anwenden.</target>
             </trans-unit>
+            <trans-unit id="agent.write.structureOutlineUnread">
+                <source>Your custom outline could not be read, so the drafted page tree was used.</source>
+                <target>Ihre eigene Gliederung konnte nicht gelesen werden, daher wurde der Entwurf der Seitenstruktur verwendet.</target>
+            </trans-unit>
             <trans-unit id="agent.write.editsNeedEditorFlag">
                 <source>Inline edits require editedByEditor confirmation.</source>
                 <target>Inline-Bearbeitungen erfordern die Bestätigung editedByEditor.</target>

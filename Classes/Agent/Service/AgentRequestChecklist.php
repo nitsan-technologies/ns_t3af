@@ -554,7 +554,9 @@ final class AgentRequestChecklist
      */
     public static function historySinceLatestUserRequest(array $history, string $requestText = ''): array
     {
-        $start = 0;
+        $start = null;
+        $needle = trim($requestText);
+        $hasPriorRequest = false;
         for ($i = count($history) - 1; $i >= 0; --$i) {
             if (($history[$i]['role'] ?? '') !== 'user') {
                 continue;
@@ -564,17 +566,30 @@ final class AgentRequestChecklist
                 continue;
             }
             $content = trim((string) ($history[$i]['content'] ?? ''));
-            if ($requestText !== '' && $content !== '' && !str_contains($content, mb_substr($requestText, 0, 40))) {
+            // "continue" / "[The editor …]" are not requests; keep scanning for the real one.
+            if ($content === '' || str_starts_with($content, '[The editor ') || AgentPromptBuilder::isGoOnReply($content)) {
+                continue;
+            }
+            $hasPriorRequest = true;
+            if ($needle !== '') {
                 // Keep scanning for the message that matches this request when provided.
-                if ($content !== trim($requestText) && !str_starts_with($content, mb_substr(trim($requestText), 0, 80))) {
+                if (
+                    $content !== $needle
+                    && !str_starts_with($content, mb_substr($needle, 0, 80))
+                    && !str_contains($content, mb_substr($needle, 0, 40))
+                ) {
                     continue;
                 }
             }
             $start = $i + 1;
             break;
         }
+        // New turn whose text is not in history yet: ignore earlier requests' work.
+        if ($needle !== '' && $start === null && $hasPriorRequest) {
+            return [];
+        }
 
-        return array_slice($history, $start);
+        return array_slice($history, $start ?? 0);
     }
 
     /**

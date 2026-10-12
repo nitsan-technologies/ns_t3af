@@ -348,6 +348,18 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
     }
 
     #[Test]
+    public function aNamedElementPositionIsRecognised(): void
+    {
+        self::assertSame(1, AgentToolTurnProcessor::requestedElementPosition('Translate the first element into French'));
+        self::assertSame(2, AgentToolTurnProcessor::requestedElementPosition('Translate the second content element to German'));
+        self::assertSame(-1, AgentToolTurnProcessor::requestedElementPosition('Übersetze das letzte Element ins Englische'));
+        self::assertSame(1, AgentToolTurnProcessor::requestedElementPosition('Übersetze den ersten Absatz'));
+        self::assertNull(AgentToolTurnProcessor::requestedElementPosition('Translate this page into French'));
+        self::assertNull(AgentToolTurnProcessor::requestedElementPosition('Translate the element "First steps" into French'));
+        self::assertNull(AgentToolTurnProcessor::requestedElementPosition('Translate the last page'));
+    }
+
+    #[Test]
     public function recursiveSubtreeKeepsTheFirstListedPageWhenNoPageIdWasGiven(): void
     {
         $merged = AgentToolTurnProcessor::seoQueueAddRecursiveSubtree(
