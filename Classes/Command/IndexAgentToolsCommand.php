@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Command;
 
 use NITSAN\NsT3AF\Agent\Contract\AgentToolIndexInterface;
+use NITSAN\NsT3AF\Agent\Embedding\EmbeddingSourceResolver;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -32,8 +33,14 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 final class IndexAgentToolsCommand extends Command
 {
+    private const MAX_REASON_LENGTH = 200;
+
+    /** Status codes that point at a wrong or missing embedding model rather than credentials or limits. */
+    private const MODEL_STATUS_CODES = [400, 404, 422];
+
     public function __construct(
         private readonly AgentToolIndexInterface $toolIndex,
+        private readonly EmbeddingSourceResolver $embeddingSourceResolver,
     ) {
         parent::__construct();
     }
@@ -47,9 +54,61 @@ final class IndexAgentToolsCommand extends Command
 
             return Command::SUCCESS;
         } catch (\Throwable $exception) {
-            $io->error('Failed to rebuild agent tool index: ' . $exception->getMessage());
+            $io->error($this->failureMessage($exception));
 
             return Command::FAILURE;
         }
+    }
+
+    private function failureMessage(\Throwable $exception): string
+    {
+        $message = $exception->getMessage();
+        $status = self::httpStatus($message);
+        $reason = self::shortReason($message);
+
+        if (!in_array($status, self::MODEL_STATUS_CODES, true)) {
+            return 'Failed to rebuild agent tool index: ' . $reason;
+        }
+
+        return sprintf(
+            'Failed to rebuild agent tool index: the provider rejected the embedding request for model "%s" (HTTP %d). '
+            . 'Set an embedding model for the provider in AI Foundation > AI Providers.',
+            $this->embeddingModelId(),
+            $status,
+        );
+    }
+
+    private function embeddingModelId(): string
+    {
+        try {
+            return $this->embeddingSourceResolver->modelIdFor($this->embeddingSourceResolver->resolve());
+        } catch (\Throwable) {
+            return 'unknown';
+        }
+    }
+
+    private static function httpStatus(string $message): int
+    {
+        if (preg_match('/(?:response code|HTTP\/\d(?:\.\d)?)\s+(\d{3})/i', $message, $matches) === 1) {
+            return (int) $matches[1];
+        }
+
+        return 0;
+    }
+
+    /**
+     * Drops a raw JSON response body so the console shows one readable line.
+     */
+    private static function shortReason(string $message): string
+    {
+        $withoutBody = preg_replace('/\s*:?\s*"?(?:\{|\[\s*[{"]).*$/s', '', $message) ?? $message;
+        $reason = trim((string) preg_replace('/\s+/', ' ', $withoutBody));
+        if ($reason === '') {
+            $reason = trim((string) preg_replace('/\s+/', ' ', $message));
+        }
+
+        return mb_strlen($reason) > self::MAX_REASON_LENGTH
+            ? mb_substr($reason, 0, self::MAX_REASON_LENGTH - 1) . '…'
+            : $reason;
     }
 }
