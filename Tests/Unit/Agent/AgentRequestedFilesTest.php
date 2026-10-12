@@ -141,6 +141,16 @@ final class AgentRequestedFilesTest extends TestCase
     }
 
     #[Test]
+    public function theNumberOfAskedImagesIsRead(): void
+    {
+        self::assertSame(3, AgentRequestedFiles::requestedImageCount('Make 3 different pictures of a mountain lake.'));
+        self::assertSame(3, AgentRequestedFiles::requestedImageCount('Get three photos of mountains from Pexels'));
+        self::assertSame(2, AgentRequestedFiles::requestedImageCount('Erstelle zwei Bilder von einem Hund'));
+        self::assertSame(0, AgentRequestedFiles::requestedImageCount('Generate an image of a red apple'));
+        self::assertSame(0, AgentRequestedFiles::requestedImageCount('Create 3 text elements'));
+    }
+
+    #[Test]
     public function withoutImageGenerationTheAttachStepClosesAndNoWebImageIsFetched(): void
     {
         $request = 'Create a text & media content element with an AI-generated image of a red lighthouse at sunset and a short text about coastal travel';
