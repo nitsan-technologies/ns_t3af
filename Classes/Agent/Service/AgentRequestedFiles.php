@@ -65,9 +65,50 @@ final readonly class AgentRequestedFiles
             ) !== 1;
     }
 
+    /**
+     * "Make 3 different pictures …", "Get three photos …", "Erstelle zwei Bilder …" → 3, 3, 2; 0 when no number is given.
+     */
+    public static function requestedImageCount(string $request): int
+    {
+        if (preg_match(
+            '/\b(\d{1,2}|two|three|four|five|six|zwei|drei|vier|fünf|sechs)\s+(?:[\p{L}-]+\s+){0,3}(?:images?|pictures?|photos?|illustrations?|graphics?|bilder|fotos|illustrationen|grafiken)\b/iu',
+            $request,
+            $match,
+        ) !== 1) {
+            return 0;
+        }
+        $words = ['two' => 2, 'three' => 3, 'four' => 4, 'five' => 5, 'six' => 6, 'zwei' => 2, 'drei' => 3, 'vier' => 4, 'fünf' => 5, 'sechs' => 6];
+
+        return $words[mb_strtolower($match[1])] ?? (int) $match[1];
+    }
+
     public static function namesUrl(string $request): bool
     {
         return preg_match('#\bhttps?://#i', $request) === 1;
+    }
+
+    /**
+     * "Add / attach / put this image on …": the composer file should become a file_reference_add.
+     * Needs a place (page, news, element, …) after the verb, or a German add/attach compound.
+     * "What is in this image?" / "Set the alt text…" / rename alone do not.
+     */
+    public static function asksToAttachOrPlaceFile(string $request): bool
+    {
+        return preg_match(
+            // Hinzufügen / einfügen / anhängen / anfügen / einbinden (compound forms)
+            '/\b(?:hinzufüg\w*|einfüg\w*|anhäng\w*|anfüg\w*|einbind\w*)\b'
+            // Separable: füge … hinzu
+            . '|\bfüg\w*\b(?:\W+\w+){0,6}\W+hinzu\b'
+            // Verb … prep (+ article) + place noun — not "set … for this image"
+            . '|\b(?:attach|add|insert|put|place|use|set|embed|include|füg\w*|häng\w*|setz\w*|verwend\w*)\b'
+            . '(?:\W+\w+){0,8}\W+'
+            . '(?:to|on|in|into|onto|for|an|auf|zu|zum|zur|für)\s+'
+            // "to news" | "to the news" | "to the Services page" (title words only after an article)
+            . '(?:(?:the|this|that|a|an|my|our|die|der|das|den|dem|diese\w*|eine\w*)\s+(?:\w+\s+){0,4})?'
+            . '(?:page|element|header|content|news|article|record|seite|inhalt\w*|artikel|nachricht\w*)\b'
+            . '/iu',
+            $request,
+        ) === 1;
     }
 
     /**

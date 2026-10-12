@@ -1045,6 +1045,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if ($schemaRequest) {
             $found = [...self::schemaTools($executableTools, $offeredNames), ...$found];
         }
+        if (self::asksSeoForAllPages($query) || self::isMassSeoEnableRequest($query)) {
+            $found = [...self::toolsByName(['pages_tree', 'pages_list', 't3ai_generate_seo_batch', 't3ai_mass_seo_queue_add'], $executableTools, $offeredNames), ...$found];
+        }
         $found = [...self::fileActionTools($query, $executableTools, $offeredNames), ...$found];
         $workPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
         $gateRequest = self::requestForGate($userMessage, $historyMessages);
@@ -1304,6 +1307,51 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return array_values($picked);
+    }
+
+    /**
+     * "Generate SEO metadata for all pages": the whole site, not the open page.
+     */
+    public static function asksSeoForAllPages(string $query): bool
+    {
+        $q = mb_strtolower(trim($query));
+
+        return preg_match('/\b(seo|meta\s*(?:data|descriptions?|titles?)?|metadaten|suchmaschinen\w*)\b/u', $q) === 1
+            && preg_match('/\b(all|every|whole|entire|alle|s[äa]mtliche|gesamte\w*)\s+(?:\w+\s+){0,2}(pages|seiten|site|website)\b/u', $q) === 1
+            && preg_match('/\b(this|current|open|diese|aktuelle)\s+(page|seite)\b/u', $q) !== 1;
+    }
+
+    /**
+     * "Enable the Mass SEO feature for all pages": queue the pages (an explicit page list ignores the Mass SEO flag).
+     */
+    public static function isMassSeoEnableRequest(string $query): bool
+    {
+        $q = mb_strtolower(trim($query));
+
+        return preg_match('/\bmass[\s-]*seo\b/u', $q) === 1
+            && preg_match('/\b(enable|activate|turn\s+on|switch\s+on|set\s+up|aktivier\w*|einschalt\w*|aktiv\w*)\b/u', $q) === 1;
+    }
+
+    /**
+     * Tools of the request that the module cap may have left out.
+     *
+     * @param list<string> $names
+     * @param list<array<string, mixed>> $executableTools
+     * @param array<string, int|string> $alreadyOffered
+     * @return list<array<string, mixed>>
+     */
+    public static function toolsByName(array $names, array $executableTools, array $alreadyOffered = []): array
+    {
+        $wanted = array_flip($names);
+        $picked = [];
+        foreach ($executableTools as $tool) {
+            $name = (string) ($tool['name'] ?? '');
+            if ($name !== '' && isset($wanted[$name]) && !isset($alreadyOffered[$name])) {
+                $picked[] = $tool;
+            }
+        }
+
+        return $picked;
     }
 
     /**

@@ -359,6 +359,24 @@ final readonly class AgentTurnRouter
             return ['context' => $this->lockPage($context, $match['uid'], $match['title']), 'messages' => null];
         }
 
+        if ($this->targetPageResolver->namedPageExistsButUnreadable($title, $user)) {
+            return [
+                'context' => $context,
+                'messages' => [[
+                    'role' => 'assistant',
+                    'content' => sprintf(
+                        'You cannot access the page "%s" with your backend account. Nothing was queued.',
+                        $title,
+                    ),
+                    'meta' => [
+                        'type' => 'error',
+                        'correlationId' => $correlationId,
+                        'orchestratorPause' => true,
+                    ],
+                ]],
+            ];
+        }
+
         $options = $this->targetPageResolver->similarPageLabels($title, $user);
 
         return [
