@@ -584,14 +584,31 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($languageTurn !== null) {
             return $languageTurn;
         }
+        $parsedGlossaryPair = null;
         if (strtolower($toolName) === 't3ai_glossary_save') {
-            $choice = GlossarySaveLanguage::resolve($requestQuery, GlossarySaveLanguage::siteLanguages($context));
-            $options = $choice['options'] ?? null;
-            if (is_array($options)) {
-                return $this->glossaryLanguageQuestion(array_values(array_filter($options, 'is_string')), $correlationId);
+            $parsedGlossaryPair = GlossaryPairRequest::parse($requestQuery);
+            if ($parsedGlossaryPair !== null) {
+                $arguments['sourceTerm'] = $parsedGlossaryPair['source'];
+                $arguments['targetTerm'] = $parsedGlossaryPair['target'];
             }
+            $siteLanguages = GlossarySaveLanguage::siteLanguages($context);
+            $choice = GlossarySaveLanguage::resolve($requestQuery, $siteLanguages);
+            $options = $choice['options'] ?? null;
             if (isset($choice['languageUid'])) {
                 $arguments['languageUid'] = (int) $choice['languageUid'];
+            } elseif ($parsedGlossaryPair !== null && is_array($options)) {
+                unset($arguments['languageUid']);
+            } elseif ($parsedGlossaryPair !== null && (int) ($arguments['languageUid'] ?? 0) <= 0) {
+                $targets = array_values(array_filter(
+                    $siteLanguages,
+                    static fn(array $language): bool => (int) ($language['id'] ?? 0) > 0,
+                ));
+                if (count($targets) === 1) {
+                    $arguments['languageUid'] = (int) $targets[0]['id'];
+                }
+            }
+            if (is_array($options) && $parsedGlossaryPair === null) {
+                return $this->glossaryLanguageQuestion(array_values(array_filter($options, 'is_string')), $correlationId);
             }
         }
 
@@ -617,6 +634,15 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 ],
             ];
         } catch (\InvalidArgumentException $exception) {
+            if (
+                $parsedGlossaryPair !== null
+                && str_contains($exception->getMessage(), 'languageUid')
+            ) {
+                $options = GlossarySaveLanguage::resolve($requestQuery, GlossarySaveLanguage::siteLanguages($context))['options'] ?? null;
+                if (is_array($options)) {
+                    return $this->glossaryLanguageQuestion(array_values(array_filter($options, 'is_string')), $correlationId);
+                }
+            }
             // Wrong arguments (a record that does not exist, a wrong field): no card, and the turn
             // goes on so the model can correct the call.
             $this->logRefusedPlan($correlationId, $toolName, $arguments, $exception);
