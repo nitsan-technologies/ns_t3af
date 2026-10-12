@@ -213,6 +213,19 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: the editor asked for a news article, not SEO. Call write_table with action create on tx_news_domain_model_news, with title, teaser and bodytext in the same call.',
             );
         }
+        // "Generate a Person schema" is schema markup for a page. The model otherwise tries to create a folder and tells the editor to do it by hand.
+        if (
+            str_starts_with($name, 'directory_')
+            && AgentRunner::isSchemaRequest($requestQuery)
+            && preg_match('/\b(folders?|director(?:y|ies)|ordner|verzeichnis\w*)\b/iu', $requestQuery) !== 1
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for schema markup, not a folder. Call t3ai_apply_schema_markup with schemaType (for example Person) for the open page.',
+            );
+        }
         // A news article without a picture request is not answered with an image card.
         if (
             $name === 't3ai_generate_image'

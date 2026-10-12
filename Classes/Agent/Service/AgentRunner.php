@@ -990,6 +990,13 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $notAskedFor['t3ai_generate_image'] = true;
             }
         }
+        $schemaRequest = self::isSchemaRequest($query);
+        if ($schemaRequest && preg_match('/\b(folders?|director(?:y|ies)|ordner|verzeichnis\w*)\b/iu', $query) !== 1) {
+            // "Generate a Person schema" is JSON-LD for a page, not a folder.
+            foreach (['directory_create', 'directory_move', 'directory_rename', 'directory_delete'] as $directoryTool) {
+                $notAskedFor[$directoryTool] = true;
+            }
+        }
         // One generate per open request: a second card is often applied together and doubles files/credits.
         if (self::imageAlreadyGeneratedThisRequest($userMessage, $historyMessages)) {
             $notAskedFor['t3ai_generate_image'] = true;
@@ -1034,6 +1041,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
         if ($newsCreate) {
             $found = [...self::newsCreateTools($executableTools, $offeredNames), ...$found];
+        }
+        if ($schemaRequest) {
+            $found = [...self::schemaTools($executableTools, $offeredNames), ...$found];
         }
         $found = [...self::fileActionTools($query, $executableTools, $offeredNames), ...$found];
         $workPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
@@ -1294,6 +1304,36 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return array_values($picked);
+    }
+
+    /**
+     * Asks to generate or add schema markup (JSON-LD, structured data, "a Person schema").
+     */
+    public static function isSchemaRequest(string $query): bool
+    {
+        $q = mb_strtolower(trim($query));
+
+        return preg_match('/\b(schema|schemas|schema\.org|json-?ld|structured\s+data|strukturierte\s+daten|schema-markup)\b/u', $q) === 1
+            && preg_match('/\b(generate|create|add|apply|make|write|insert|generier\w*|erstell\w*|erzeug\w*|hinzuf\w*|anleg\w*)\b/u', $q) === 1
+            && preg_match('/\b(delete|remove|l[öo]sch\w*|entfern\w*)\b/u', $q) !== 1;
+    }
+
+    /**
+     * Keep the schema markup tool in the toolbox for a schema request, even if the module cap left it out.
+     *
+     * @param list<array<string, mixed>> $executableTools
+     * @param array<string, int|string> $alreadyOffered
+     * @return list<array<string, mixed>>
+     */
+    public static function schemaTools(array $executableTools, array $alreadyOffered = []): array
+    {
+        foreach ($executableTools as $tool) {
+            if ((string) ($tool['name'] ?? '') === 't3ai_apply_schema_markup' && !isset($alreadyOffered['t3ai_apply_schema_markup'])) {
+                return [$tool];
+            }
+        }
+
+        return [];
     }
 
     public static function isPageMoveRequest(string $query): bool
