@@ -414,7 +414,27 @@ readonly class AgentPromptBuilder
 
         $requestText = self::latestUserRequestText($history);
         // An edit of existing records ("change the header of element 5") has no create step: nothing new may follow.
-        $changesExistingOnly = $requestText !== '' && AgentRequestChecklist::parse($requestText) === [];
+        // Free multi-create wording ("intro and a team section") has an empty checklist but still creates.
+        $changesExistingOnly = $requestText !== ''
+            && AgentRequestChecklist::parse($requestText) === []
+            && !AgentCoreToolSet::isCreateContentRequest($requestText);
+        $createContentDone = AgentCoreToolSet::isCreateContentRequest($requestText)
+            && !self::asksForMultipleContentPieces($requestText)
+            && self::remainingWorkReminder($history, AgentPlan::latest($history), $requestText) === '';
+        if ($createContentDone) {
+            $message = sprintf(
+                '[The editor confirmed "%s" and it was applied.%s] My request was only to add that content.'
+                . ' Confirm in one short sentence that it is done. Do not call any tools.'
+                . ' Do not update, rewrite, or delete the content element you just created.',
+                $label,
+                $result !== '' ? ' Result: ' . $result : '',
+            );
+            if ($requestText !== '') {
+                $message .= sprintf(' My request was: "%s".', mb_substr(preg_replace('/\s+/u', ' ', $requestText) ?? $requestText, 0, 300));
+            }
+
+            return $message;
+        }
         $message = sprintf(
             '[The editor confirmed "%s" and it was applied.%s] Continue with the remaining steps of my request, if there are any;'
             . ' if this change already completed it, just confirm that in one short sentence.'
@@ -572,6 +592,20 @@ readonly class AgentPromptBuilder
     }
 
     /**
+     * Free wording that names two content pieces ("an intro and a team section") without a checklist
+     * split must not be treated as finished after the first Apply.
+     */
+    public static function asksForMultipleContentPieces(string $query): bool
+    {
+        $piece = 'intro|paragraph|section|element|block|absatz|abschnitt|faq|team|header|headline|einleitung';
+
+        return preg_match(
+            '/\b(?:' . $piece . ')\b.+\b(?:and|und|plus|,)\b.+\b(?:' . $piece . ')\b/iu',
+            $query,
+        ) === 1;
+    }
+
+    /**
      * @param list<array<string, mixed>> $history
      * @param list<array{title: string, status: string}> $plan
      */
@@ -594,12 +628,12 @@ readonly class AgentPromptBuilder
         }
 
         // A file saved in an earlier request and never attached must not make an unrelated request
-        // ("rename this header") look unfinished: it counts when the request is about images, or when the
-        // file was saved while working on this request.
+        // ("Where are my AI pictures?") look unfinished: it counts when this request asks to place a
+        // file, or when the file was saved while working on this request.
         $pending = '';
         if (AgentRequestedFiles::asksOnlyForGeneratedImage($query)) {
             // Just an image was asked for: the request is done once the file is saved.
-        } elseif (self::requestMentionsImage($query)) {
+        } elseif (AgentRequestedFiles::asksToAttachOrPlaceFile($query)) {
             $pending = self::pendingImageAttachNote($history);
         } elseif (self::unattachedFileUids(AgentRequestChecklist::historySinceLatestUserRequest($history, $query)) !== []) {
             $pending = self::pendingImageAttachNote($history);
@@ -680,7 +714,10 @@ readonly class AgentPromptBuilder
         if ($uid === null) {
             return '';
         }
-        if (!self::requestMentionsImage($requestQuery) && !AgentPlan::hasOpenImageAttachStep($plan)) {
+        if (
+            !AgentRequestedFiles::asksToAttachOrPlaceFile($requestQuery)
+            && !AgentPlan::hasOpenImageAttachStep($plan)
+        ) {
             return '';
         }
 

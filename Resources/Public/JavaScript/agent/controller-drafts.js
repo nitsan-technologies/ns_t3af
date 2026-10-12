@@ -4,7 +4,7 @@
 
 import { lang, hasTurnGuardWarning, errorText, errorDetails, messageContent, escapeHtml, humanizeKey } from './format.js';
 import { ajaxUrl } from './context.js';
-import { isSuggestionFieldSafe, renderImagePreviews, renderMediaPreview, resolveToolDisplayLabel, renderToolTrace, renderWorkTraceHtml, renderMessageBody } from './render-helpers.js';
+import { formatSuggestionFieldText, isSuggestionFieldSafe, renderImagePreviews, renderMediaPreview, resolveToolDisplayLabel, renderToolTrace, renderWorkTraceHtml, renderMessageBody } from './render-helpers.js';
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
 
 /**
@@ -268,9 +268,10 @@ export const draftMethods = {
         const editValue = Object.prototype.hasOwnProperty.call(meta.edits, key)
           ? String(meta.edits[key] ?? '')
           : null;
+        const toolName = String(meta.tool ?? suggestions.tool ?? '');
         const variantOptions = variants.map((variant, index) => {
           const values = variant?.values && typeof variant.values === 'object' ? variant.values : {};
-          const text = String(values[key] ?? '');
+          const text = formatSuggestionFieldText(toolName, key, String(values[key] ?? ''));
           const variantLabel = String(variant.label ?? `Variant ${index + 1}`);
           const checked = selectedIndex === index && editValue === null ? ' checked' : '';
           return `<label class="nst3af-agent-suggestions__option">

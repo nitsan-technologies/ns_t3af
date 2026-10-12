@@ -446,6 +446,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $arguments,
             $toolName,
             (int) ($context['pageId'] ?? 0),
+            $requestQuery,
         );
         $variants = max(1, min(5, (int) ($arguments['variants'] ?? 3)));
         unset($arguments['variants']);
@@ -614,6 +615,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $arguments,
             $toolName,
             (int) ($context['pageId'] ?? 0),
+            $requestQuery,
         );
         if (in_array(strtolower($toolName), self::SITE_WIDE_QUEUE_TOOLS, true)) {
             $workspaceUser = $GLOBALS['BE_USER'] ?? null;
@@ -964,12 +966,23 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      * @param array<string, mixed> $arguments
      * @return array<string, mixed>
      */
-    public static function pinTranslateContentToOpenPage(array $arguments, string $toolName, int $openPageId): array
+    public static function pinTranslateContentToOpenPage(array $arguments, string $toolName, int $openPageId, string $requestQuery = ''): array
     {
         if (strtolower(trim($toolName)) !== 't3ai_translate_content' || $openPageId <= 0) {
             return $arguments;
         }
         $arguments['pageId'] = $openPageId;
+        // "the first / second / last element": the position the editor named wins over a guessed uid.
+        $position = self::requestedElementPosition($requestQuery);
+        if ($position !== null) {
+            $rows = self::defaultLanguageContentOnPage($openPageId);
+            $row = $rows === [] ? null : ($position === -1 ? $rows[count($rows) - 1] : ($rows[$position - 1] ?? null));
+            if (is_array($row) && (int) ($row['uid'] ?? 0) > 0) {
+                $arguments['contentUid'] = (int) $row['uid'];
+
+                return $arguments;
+            }
+        }
         $contentUid = (int) ($arguments['contentUid'] ?? 0);
         if ($contentUid > 0) {
             $pid = self::contentElementPid($contentUid);
@@ -984,6 +997,28 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return $arguments;
+    }
+
+    /**
+     * The position of the element a request names ("translate the first element into French"):
+     * 1-based, or -1 for the last one. Null when the request names no position.
+     */
+    public static function requestedElementPosition(string $request): ?int
+    {
+        $noun = '(?:content\s+)?(?:element|paragraph|block|section|inhaltselement|absatz|abschnitt)';
+        $words = [
+            'first' => 1, '1st' => 1, 'erste' => 1,
+            'second' => 2, '2nd' => 2, 'zweite' => 2,
+            'third' => 3, '3rd' => 3, 'dritte' => 3,
+            'fourth' => 4, '4th' => 4, 'vierte' => 4,
+            'fifth' => 5, '5th' => 5, 'fünfte' => 5,
+            'last' => -1, 'letzte' => -1,
+        ];
+        if (preg_match('/(?<![\p{L}\p{N}_])(' . implode('|', array_map('preg_quote', array_keys($words))) . ')(?:[nrsm])?\s+' . $noun . '(?![\p{L}\p{N}_])/iu', $request, $match) !== 1) {
+            return null;
+        }
+
+        return $words[mb_strtolower($match[1])] ?? null;
     }
 
     private static function contentElementPid(int $contentUid): int
