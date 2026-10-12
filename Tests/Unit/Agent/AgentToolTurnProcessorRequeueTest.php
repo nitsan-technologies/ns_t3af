@@ -53,6 +53,30 @@ final class AgentToolTurnProcessorRequeueTest extends TestCase
     }
 
     #[Test]
+    public function removeThisPageUsesTheOpenPage(): void
+    {
+        $arguments = AgentToolTurnProcessor::pinOpenPageForQueueRemove(['pageIds' => [4]], 2, 't3ai_mass_translation_queue_remove', 'Remove this page from the translation queue');
+
+        self::assertSame([2], $arguments['pageIds']);
+    }
+
+    #[Test]
+    public function removeWithANamedPageKeepsTheModelChoice(): void
+    {
+        $arguments = AgentToolTurnProcessor::pinOpenPageForQueueRemove(['pageIds' => [4]], 2, 't3ai_mass_translation_queue_remove', 'Remove page 4 from the translation queue');
+
+        self::assertSame([4], $arguments['pageIds']);
+    }
+
+    #[Test]
+    public function otherToolsAreLeftAlone(): void
+    {
+        $arguments = AgentToolTurnProcessor::pinOpenPageForQueueRemove(['pageIds' => [4]], 2, 't3ai_mass_translation_queue_list', 'Remove this page');
+
+        self::assertSame([4], $arguments['pageIds']);
+    }
+
+    #[Test]
     public function translateToolsAreRecognised(): void
     {
         self::assertTrue(AgentToolTurnProcessor::isTranslateTool('t3ai_record_translate'));

@@ -50,6 +50,22 @@ final class AgentTargetPageResolverTest extends TestCase
     }
 
     #[Test]
+    public function pageNamedBeforeTheListWordIsFound(): void
+    {
+        self::assertSame('QA Secret Outside', AgentTargetPageResolver::namedPageTitle('add QA Secret Outside to the list for Google texts'));
+        self::assertSame('QA Secret Outside', AgentTargetPageResolver::namedPageTitle('remove "QA Secret Outside" from the translation queue'));
+    }
+
+    #[Test]
+    public function thisPageOrAllPagesBeforeTheListWordIsNotAName(): void
+    {
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('add this page to the translation queue'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('add all pages to the list for Google texts'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('add it to the queue'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('add 4, 5 to the queue'));
+    }
+
+    #[Test]
     public function namedPageTitleIsTheWordsBeforePage(): void
     {
         self::assertSame('Contact', AgentTargetPageResolver::namedPageTitle('make the Contact page show up in Google'));
