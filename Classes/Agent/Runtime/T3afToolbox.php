@@ -213,6 +213,15 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: the editor asked for a news article, not SEO. Call write_table with action create on tx_news_domain_model_news, with title, teaser and bodytext in the same call.',
             );
         }
+        // "Generate SEO for all pages" is a batch over the pages, not the one page that is open.
+        if ($name === 't3ai_generate_all_seo' && AgentRunner::asksSeoForAllPages($requestQuery)) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for SEO for all pages, not for the open page. Call pages_tree (or pages_list) for the page uids, then t3ai_generate_seo_batch with pageIds of those pages. With more than 20 pages, ask first whether to queue them instead (t3ai_mass_seo_queue_add with pageIds).',
+            );
+        }
         // "Generate a Person schema" is schema markup for a page. The model otherwise tries to create a folder and tells the editor to do it by hand.
         if (
             str_starts_with($name, 'directory_')
@@ -283,7 +292,7 @@ final class T3afToolbox implements ToolboxInterface
 
                 return new ToolResult(
                     $toolCall,
-                    'Not executed: every generated file in this conversation is already attached (or none exists yet). Do not call file_reference_add again.',
+                    'Not executed: there is no file left to attach from this conversation (uploads, generated images, or named sys_file uids). Do not claim the image is already attached — call file_reference_list if you need to check.',
                 );
             }
         }

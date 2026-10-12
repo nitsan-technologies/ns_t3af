@@ -280,6 +280,36 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
     }
 
     #[Test]
+    public function seoQueueAddRefusesOpenPageWhenANamedPageWasNotLocked(): void
+    {
+        self::assertNotNull(AgentToolTurnProcessor::refuseSeoQueueOpenPageForNamedTitle(
+            't3ai_mass_seo_queue_add',
+            ['pageId' => 3],
+            ['pageId' => 3],
+            'add QA Secret Outside to the list for Google texts',
+        ));
+        self::assertNull(AgentToolTurnProcessor::refuseSeoQueueOpenPageForNamedTitle(
+            't3ai_mass_seo_queue_add',
+            ['pageId' => 4],
+            ['pageId' => 3, 'lockedPageId' => 4],
+            'add QA Secret Outside to the list for Google texts',
+        ));
+    }
+
+    #[Test]
+    public function translateContentDropsAUidFromAnotherPage(): void
+    {
+        $merged = AgentToolTurnProcessor::pinTranslateContentToOpenPage(
+            ['contentUid' => 1, 'targetLanguageUid' => 1],
+            't3ai_translate_content',
+            3,
+        );
+
+        self::assertSame(3, $merged['pageId']);
+        self::assertArrayNotHasKey('contentUid', $merged);
+    }
+
+    #[Test]
     public function recursiveSubtreeKeepsTheFirstListedPageWhenNoPageIdWasGiven(): void
     {
         $merged = AgentToolTurnProcessor::seoQueueAddRecursiveSubtree(

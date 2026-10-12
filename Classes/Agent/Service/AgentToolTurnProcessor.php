@@ -27,7 +27,11 @@ use NITSAN\NsT3AF\Mcp\Exception\UnsupportedPlanException;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPlaygroundService;
 use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Database\Connection;
+use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Shared tool-turn execution for slash/@ fast paths and NL orchestration.
@@ -421,12 +425,28 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             (string) ($body['provider'] ?? ''),
         );
 
-        $arguments = self::openPageAsParent($arguments, (int) ($context['pageId'] ?? 0), $toolName, trim((string) ($body['requestQuery'] ?? '')));
-        $arguments = self::withEditorRequestAsStructurePrompt($arguments, $toolName, trim((string) ($body['requestQuery'] ?? '')));
-        $languageTurn = $this->unavailableLanguageTurn($toolName, $context, trim((string) ($body['requestQuery'] ?? '')), $correlationId);
+        $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
+        $arguments = self::openPageAsParent($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
+        $arguments = self::withEditorRequestAsStructurePrompt($arguments, $toolName, $requestQuery);
+        $languageTurn = $this->unavailableLanguageTurn($toolName, $context, $requestQuery, $correlationId);
         if ($languageTurn !== null) {
             return $languageTurn;
         }
+        $translateClarify = self::clarifyAmbiguousTranslateContent(
+            $toolName,
+            $arguments,
+            (int) ($context['pageId'] ?? 0),
+            $requestQuery,
+            $correlationId,
+        );
+        if ($translateClarify !== null) {
+            return $translateClarify;
+        }
+        $arguments = self::pinTranslateContentToOpenPage(
+            $arguments,
+            $toolName,
+            (int) ($context['pageId'] ?? 0),
+        );
         $variants = max(1, min(5, (int) ($arguments['variants'] ?? 3)));
         unset($arguments['variants']);
 
@@ -562,6 +582,39 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 ],
             ];
         }
+        $refuseNamedOpen = self::refuseSeoQueueOpenPageForNamedTitle(
+            $toolName,
+            $arguments,
+            $context,
+            $requestQuery,
+        );
+        if ($refuseNamedOpen !== null) {
+            return [
+                'role' => 'assistant',
+                'content' => $refuseNamedOpen,
+                'meta' => [
+                    'type' => 'error',
+                    'tool' => $toolName,
+                    'orchestratorPause' => true,
+                    'correlationId' => $correlationId,
+                ],
+            ];
+        }
+        $translateClarify = self::clarifyAmbiguousTranslateContent(
+            $toolName,
+            $arguments,
+            (int) ($context['pageId'] ?? 0),
+            $requestQuery,
+            $correlationId,
+        );
+        if ($translateClarify !== null) {
+            return $translateClarify;
+        }
+        $arguments = self::pinTranslateContentToOpenPage(
+            $arguments,
+            $toolName,
+            (int) ($context['pageId'] ?? 0),
+        );
         if (in_array(strtolower($toolName), self::SITE_WIDE_QUEUE_TOOLS, true)) {
             $workspaceUser = $GLOBALS['BE_USER'] ?? null;
             if ($workspaceUser instanceof \TYPO3\CMS\Core\Authentication\BackendUserAuthentication && (int) $workspaceUser->workspace > 0) {
@@ -864,6 +917,206 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $arguments['recursive'] = true;
 
         return $arguments;
+    }
+
+    /**
+     * A named page for the SEO/Google list must not silently queue the open Layout page.
+     *
+     * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $context
+     */
+    public static function refuseSeoQueueOpenPageForNamedTitle(
+        string $toolName,
+        array $arguments,
+        array $context,
+        string $requestQuery,
+    ): ?string {
+        if (strtolower(trim($toolName)) !== 't3ai_mass_seo_queue_add') {
+            return null;
+        }
+        $named = AgentTargetPageResolver::namedPageTitle($requestQuery);
+        if ($named === null) {
+            return null;
+        }
+        $lockedPageId = (int) ($context['lockedPageId'] ?? 0);
+        if ($lockedPageId > 0) {
+            return null;
+        }
+        $openPageId = (int) ($context['pageId'] ?? 0);
+        $targetPageId = (int) ($arguments['pageId'] ?? 0);
+        if ($targetPageId <= 0 && self::hasExplicitPageIdList($arguments['pageIds'] ?? null)) {
+            return null;
+        }
+        if ($openPageId > 0 && ($targetPageId === $openPageId || $targetPageId <= 0)) {
+            return sprintf(
+                'I need the page "%s", not the page that is open. Nothing was queued.',
+                $named,
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * Translate-content must target an element on the open page. A guessed uid from another page is dropped;
+     * the only element on this page is used when there is exactly one.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function pinTranslateContentToOpenPage(array $arguments, string $toolName, int $openPageId): array
+    {
+        if (strtolower(trim($toolName)) !== 't3ai_translate_content' || $openPageId <= 0) {
+            return $arguments;
+        }
+        $arguments['pageId'] = $openPageId;
+        $contentUid = (int) ($arguments['contentUid'] ?? 0);
+        if ($contentUid > 0) {
+            $pid = self::contentElementPid($contentUid);
+            if ($pid === $openPageId) {
+                return $arguments;
+            }
+            unset($arguments['contentUid']);
+        }
+        $only = self::soleDefaultLanguageContentUid($openPageId);
+        if ($only > 0) {
+            $arguments['contentUid'] = $only;
+        }
+
+        return $arguments;
+    }
+
+    private static function contentElementPid(int $contentUid): int
+    {
+        if ($contentUid <= 0) {
+            return 0;
+        }
+        try {
+            $row = BackendUtility::getRecord('tt_content', $contentUid, 'uid,pid');
+        } catch (\Throwable) {
+            return 0;
+        }
+
+        return is_array($row) ? (int) ($row['pid'] ?? 0) : 0;
+    }
+
+    /**
+     * Several elements share the named title on this page — ask which one (buttons).
+     *
+     * @param array<string, mixed> $arguments
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    public static function clarifyAmbiguousTranslateContent(
+        string $toolName,
+        array $arguments,
+        int $openPageId,
+        string $requestQuery,
+        string $correlationId,
+    ): ?array {
+        if (strtolower(trim($toolName)) !== 't3ai_translate_content' || $openPageId <= 0 || $requestQuery === '') {
+            return null;
+        }
+        $needle = '';
+        if (preg_match('/["“]([^"”]{2,80})["”]/u', $requestQuery, $quoted) === 1) {
+            $needle = trim((string) $quoted[1]);
+        } elseif (preg_match(
+            '/\b(?:element|inhaltselement)\s+["“]?([^"”\n,]{2,80}?)["”]?\s+(?:on|into|to|nach|ins|auf)\b/iu',
+            $requestQuery,
+            $quoted,
+        ) === 1) {
+            $needle = trim((string) $quoted[1]);
+        }
+        if ($needle === '' || preg_match('/\b(this|that|the|diese|dieses|content)\b/iu', $needle) === 1) {
+            // Fall back: a header on this page that appears in the request and matches more than once.
+            foreach (self::defaultLanguageContentOnPage($openPageId) as $row) {
+                $header = trim((string) ($row['header'] ?? ''));
+                if ($header === '' || mb_stripos($requestQuery, $header) === false) {
+                    continue;
+                }
+                $matches = self::contentUidsMatchingHeaderOnPage($openPageId, $header);
+                if (count($matches) >= 2) {
+                    $needle = $header;
+                    break;
+                }
+            }
+        }
+        if ($needle === '') {
+            return null;
+        }
+        $matches = self::contentUidsMatchingHeaderOnPage($openPageId, $needle);
+        if (count($matches) < 2) {
+            return null;
+        }
+        $options = [];
+        foreach ($matches as $match) {
+            $options[] = sprintf('%s [%d]', $match['header'] !== '' ? $match['header'] : 'Element', $match['uid']);
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => sprintf('Which content element called "%s" should I translate?', $needle),
+            'meta' => [
+                'type' => 'clarification',
+                'tool' => 'ask_clarification',
+                'options' => $options,
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
+    }
+
+    private static function soleDefaultLanguageContentUid(int $pageId): int
+    {
+        $rows = self::defaultLanguageContentOnPage($pageId);
+        if (count($rows) !== 1) {
+            return 0;
+        }
+
+        return (int) ($rows[0]['uid'] ?? 0);
+    }
+
+    /**
+     * @return list<array{uid: int, header: string}>
+     */
+    private static function contentUidsMatchingHeaderOnPage(int $pageId, string $needle): array
+    {
+        $needle = mb_strtolower(trim($needle));
+        $matches = [];
+        foreach (self::defaultLanguageContentOnPage($pageId) as $row) {
+            $header = trim((string) ($row['header'] ?? ''));
+            if ($header !== '' && mb_strtolower($header) === $needle) {
+                $matches[] = ['uid' => (int) $row['uid'], 'header' => $header];
+            }
+        }
+
+        return $matches;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private static function defaultLanguageContentOnPage(int $pageId): array
+    {
+        try {
+            $query = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('tt_content');
+            $query->getRestrictions()->removeAll();
+            $rows = $query
+                ->select('uid', 'header')
+                ->from('tt_content')
+                ->where(
+                    $query->expr()->eq('pid', $query->createNamedParameter($pageId, Connection::PARAM_INT)),
+                    $query->expr()->eq('sys_language_uid', $query->createNamedParameter(0, Connection::PARAM_INT)),
+                    $query->expr()->eq('deleted', $query->createNamedParameter(0, Connection::PARAM_INT)),
+                )
+                ->orderBy('sorting', 'ASC')
+                ->setMaxResults(50)
+                ->executeQuery()
+                ->fetchAllAssociative();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return array_values(array_filter($rows, 'is_array'));
     }
 
     /**
@@ -1324,6 +1577,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             if ($newsUid !== null) {
                 $arguments['newsArticleUid'] = $newsUid;
             }
+            // Smaller models send count 1 for "make 3 pictures".
+            $count = AgentRequestedFiles::requestedImageCount($request);
+            if ($count > 1 && (int) ($arguments['count'] ?? 1) <= 1) {
+                $arguments['count'] = $count;
+            }
 
             return $arguments;
         }
@@ -1357,7 +1615,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
 
         if ($pending === []) {
             throw new \InvalidArgumentException(
-                'Every generated file in this conversation is already attached (or none exists yet). Do not call file_reference_add again.',
+                'There is no file left to attach from this conversation (uploads, generated images, or named sys_file uids). Do not claim the image is already attached — call file_reference_list if you need to check.',
             );
         }
         if ($fileUidsRaw !== '' && self::fileUidsArgumentIsNumericList($fileUidsRaw)) {

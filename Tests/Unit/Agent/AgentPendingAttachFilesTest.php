@@ -96,12 +96,97 @@ final class AgentPendingAttachFilesTest extends TestCase
         self::assertSame([], AgentPromptBuilder::pendingAttachFileUids([self::userRequest('Rename the header of element 289')], 'Rename the header of element 289'));
     }
 
+    #[Test]
+    public function aComposerUploadedFileFromFileGetInfoIsPendingToAttach(): void
+    {
+        $request = 'Add this image to the news QA News: Market outlook 2027.';
+        $history = [
+            self::userRequest('@file:1:user_upload/photo.jpg ' . $request),
+            self::composerFileInfo(42, 'photo.jpg'),
+        ];
+
+        self::assertSame([42], AgentPromptBuilder::unattachedFileUids($history));
+        self::assertSame([42], AgentPromptBuilder::pendingAttachFileUids($history, $request));
+    }
+
+    #[Test]
+    public function aComposerFileAimedAtANamedPageIsPendingToAttach(): void
+    {
+        $request = 'Add this image to the Services page';
+        $history = [
+            self::userRequest('@file:1:user_upload/photo.jpg ' . $request),
+            self::composerFileInfo(42, 'photo.jpg'),
+        ];
+
+        self::assertSame([42], AgentPromptBuilder::unattachedFileUids($history));
+        self::assertSame([42], AgentPromptBuilder::pendingAttachFileUids($history, $request));
+    }
+
+    #[Test]
+    public function aComposerFileAskedOnlyForInspectionIsNotPendingToAttach(): void
+    {
+        $request = 'What is in this image?';
+        $history = [
+            self::userRequest('@file:1:user_upload/photo.jpg ' . $request),
+            self::composerFileInfo(42, 'photo.jpg'),
+        ];
+
+        self::assertSame([], AgentPromptBuilder::unattachedFileUids($history));
+        self::assertSame([], AgentPromptBuilder::pendingAttachFileUids($history, $request));
+    }
+
+    #[Test]
+    public function aComposerFileAskedOnlyForAltTextIsNotPendingToAttach(): void
+    {
+        $request = 'Set the alt text for this image';
+        $history = [
+            self::userRequest('@file:1:user_upload/photo.jpg ' . $request),
+            self::composerFileInfo(42, 'photo.jpg'),
+        ];
+
+        self::assertSame([], AgentPromptBuilder::unattachedFileUids($history));
+        self::assertSame([], AgentPromptBuilder::pendingAttachFileUids($history, $request));
+    }
+
+    #[Test]
+    public function aGermanAddRequestWithComposerFileIsPendingToAttach(): void
+    {
+        $request = 'Füge das Bild hinzu';
+        $history = [
+            self::userRequest('@file:1:user_upload/photo.jpg ' . $request),
+            self::composerFileInfo(42, 'photo.jpg'),
+        ];
+
+        self::assertSame([42], AgentPromptBuilder::unattachedFileUids($history));
+        self::assertSame([42], AgentPromptBuilder::pendingAttachFileUids($history, $request));
+    }
+
     /**
      * @return array<string, mixed>
      */
     private static function userRequest(string $text): array
     {
         return ['role' => 'user', 'content' => $text, 'meta' => []];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function composerFileInfo(int $uid, string $name): array
+    {
+        return [
+            'role' => 'assistant',
+            'content' => 'File ' . $name,
+            'meta' => [
+                'type' => 'tool_result',
+                'tool' => 'file_get_info',
+                'success' => true,
+                'severity' => 'read',
+                'readWithoutConfirmation' => true,
+                'triggeredByAttachment' => true,
+                'details' => ['uid' => $uid, 'name' => $name, 'identifier' => '/user_upload/' . $name],
+            ],
+        ];
     }
 
     /**
