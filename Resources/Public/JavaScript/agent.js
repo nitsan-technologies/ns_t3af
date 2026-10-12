@@ -116,6 +116,10 @@ class AgentController {
     this.starters = { executable: [], locked: [] };
     this.isOpen = false;
     this.isRunning = false;
+    /** The server still holds this user's turn lock (a reload left the previous request running). */
+    this.turnRunning = false;
+    /** True while this window is waiting for that turn to store its answer. */
+    this.recoveringTurn = false;
     this.autocompleteMode = null;
     this.settingsHref = '#';
     this.settingsAllowed = false;

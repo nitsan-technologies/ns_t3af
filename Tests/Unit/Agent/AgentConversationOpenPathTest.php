@@ -68,4 +68,21 @@ final class AgentConversationOpenPathTest extends TestCase
         self::assertStringContainsString('nst3af_agent_index_warm', $sessionsJs);
         self::assertStringContainsString('warmToolIndexInBackground', $sessionsJs);
     }
+
+    public function testAReloadKeepsTheRunningTurnVisible(): void
+    {
+        $controller = (string) file_get_contents(
+            $this->extRoot . '/Classes/Agent/Controller/AgentAjaxController.php',
+        );
+        $turnJs = (string) file_get_contents(
+            $this->extRoot . '/Resources/Public/JavaScript/agent/controller-turn.js',
+        );
+
+        self::assertStringContainsString('connection_aborted()', $controller);
+        self::assertStringContainsString("'turnRunning'", $controller);
+        self::assertStringContainsString("'type' => 'turn_running'", $controller);
+        self::assertStringContainsString('awaitRunningTurn', $turnJs);
+        self::assertStringContainsString("reply?.meta?.type === 'turn_running'", $turnJs);
+        self::assertStringContainsString('noteInterruptedTurn', $turnJs);
+    }
 }

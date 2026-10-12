@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-12 — A reload keeps the running agent turn
+
+**Done:** Reloading while a turn is writing no longer drops the answer or leaves the next message blocked with an idle composer. Stream writes stop after the browser disconnects, the answer is stored, and reopening shows a spinner until it appears. If the turn has already ended with no answer, the panel says the connection was interrupted and the next message is accepted. A second turn is still refused while the first holds the lock. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
 ## 2026-10-12 — Existing files named in the request can be attached
 
 **Done:** "Create a text & media element … and attach the existing images sys_file uid 3 and 11" created the element, then the follow-up tried `write_table` `assets` and stopped. The `file_reference_add` gates (`AgentRunner` toolbox, `T3afToolbox`, `AgentToolTurnProcessor`) only knew files saved in the conversation. They now use `AgentPromptBuilder::pendingAttachFileUids()`: saved and unattached files plus `AgentRequestedFiles::attachableNamedFileUids()` not yet attached for this request. The original request reaches the toolbox as `body['requestForGate']`.

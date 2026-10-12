@@ -233,6 +233,7 @@ export const sessionMethods = {
       this.panel?.removeAttribute('aria-busy');
       this.renderContext();
       this.renderStream();
+      await this.awaitRunningTurn();
       // The active row in the Conversations rail follows the conversation that was just loaded.
       this.renderSessions?.();
     },
@@ -281,6 +282,7 @@ export const sessionMethods = {
         this.hasUsableProvider = payload.hasUsableProvider !== false;
         this.continueAfterConfirm = payload.continueAfterConfirm !== false;
         this.credits = payload.credits ?? null;
+        this.turnRunning = payload.turnRunning === true;
         this.disclosureDismissed = payload.disclosureDismissed === true;
         this.loadedScopeKey = this.sessionScopeKey();
 
