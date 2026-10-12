@@ -110,11 +110,13 @@ Set up providers, backend modules, and MCP through the AI Foundation module.
       ..  card-footer:: :ref:`Read more <mcp-server>`
          :button-style: btn btn-primary stretched-link
 
-   ..  card:: AI Agent
+   ..  card:: Ask AI agent
 
-      Backend right-edge assistant: ask in plain language, preview changes, then apply.
+      Ask the AI agent about the page you are working on: describe the task
+      in plain language, review the prepared change, and nothing is saved
+      until you click Apply.
 
-      ..  card-footer:: :ref:`Read more <ai-agent>`
+      ..  card-footer:: :ref:`Read more <ask-ai-agent>`
          :button-style: btn btn-primary stretched-link
 
    ..  card:: DPA & GDPR
@@ -205,7 +207,7 @@ Help
    T3Planet-Credit-System/Index
    Data-Processing-Agreement/Index
    Integrations/Index
-   Agent/Index
+   AskAiAgent/Index
    UserGuide/Index
    DeveloperGuide/Index
    Troubleshooting/Index
