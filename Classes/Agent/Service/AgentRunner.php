@@ -632,6 +632,19 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * A news request must not end in a tt_content or pages record, unless the editor also named one
+     * ("a news article and a content element").
+     */
+    public static function isNewsRequestAnsweredWithOtherTable(string $tableName, string $query): bool
+    {
+        if (!in_array(strtolower(trim($tableName)), ['tt_content', 'pages'], true)) {
+            return false;
+        }
+
+        return preg_match('/\b(content\s*elements?|inhaltselement\w*|text\s*elements?|paragraphs?|absatz|absätze|pages?|seiten?|headings?|[üu]berschrift\w*)\b/iu', $query) !== 1;
+    }
+
+    /**
      * True when a reply offers to apply a change ("Would you like to apply this change?") — which is only
      * honest when a draft card came with it.
      */

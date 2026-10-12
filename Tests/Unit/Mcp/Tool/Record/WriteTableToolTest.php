@@ -323,6 +323,15 @@ final class WriteTableToolTest extends TestCase
     }
 
     #[Test]
+    public function unescapedQuotesInsideTheBodyAreAccepted(): void
+    {
+        $payload = \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData('{"title":"Green bonds","bodytext":"<p>See <a href="https://x.test">this</a>, he said "hello", ok.</p>","teaser":"T"}', 'create');
+
+        self::assertSame('<p>See <a href="https://x.test">this</a>, he said "hello", ok.</p>', $payload['bodytext']);
+        self::assertSame('T', $payload['teaser']);
+    }
+
+    #[Test]
     public function deleteNeedsNoDataAndBadDataIsExplained(): void
     {
         self::assertSame([], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData('', 'delete'));
