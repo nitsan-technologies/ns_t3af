@@ -259,6 +259,7 @@
   color: var(--nst3af-agent-text-faint);
   flex-shrink: 0;
   border-radius: 6px;
+  background: light-dark(#fff, #000);
 }
 
 .nst3af-agent-header__close:hover,
