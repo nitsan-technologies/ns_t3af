@@ -562,6 +562,30 @@ final class AgentAjaxController
             return new JsonResponse(['ok' => false, 'message' => $message], 400);
         }
 
+        if (($result['unchanged'] ?? false) === true) {
+            $message = $this->translator->translate('agent.suggestions.unchanged');
+            if ($message === '' || $message === 'agent.suggestions.unchanged') {
+                $message = 'These texts are already on the page. Nothing was changed.';
+            }
+            $this->recordInConversation($user, $body, static function (array $messages) use ($message): array {
+                $messages[] = [
+                    'role' => 'assistant',
+                    'content' => $message,
+                    'meta' => ['type' => 'info'],
+                ];
+
+                return $messages;
+            });
+
+            return new JsonResponse([
+                'ok' => true,
+                'unchanged' => true,
+                'result' => $result,
+                'message' => $message,
+                'links' => [],
+            ]);
+        }
+
         $this->auditLogger->logToolInvocation(
             (string) ($result['correlationId'] ?? $correlationId),
             (string) ($result['tool'] ?? 'agent_draft_apply'),

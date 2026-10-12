@@ -982,6 +982,19 @@ export const draftMethods = {
         }
 
         const result = payload.result ?? {};
+        if (payload.unchanged === true) {
+          meta.applying = false;
+          this.messages.push({
+            role: 'assistant',
+            content: messageContent(
+              payload.message,
+              lang('agent.suggestions.unchanged', 'These texts are already on the page. Nothing was changed.'),
+            ),
+            meta: { type: 'info' },
+          });
+          this.renderStream();
+          return;
+        }
         meta.applied = true;
         meta.applying = false;
         meta.appliedCount = Number(result.appliedCount ?? Object.keys(selections).length + Object.keys(edits).length);

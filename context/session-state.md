@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-12 — An unchanged SEO suggestion is not saved
+
+**Done:** Apply skips a suggestion that matches the text already stored. When every chosen text matches, the card stays and the reply says nothing was changed. A text that differs is still saved. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
 ## 2026-10-12 — A named page uid is the page that is removed
 
 **Done:** "Remove page 138" and `/t3ai_mass_seo_queue_remove 138` use page 138. The page open in Layout is used only when the request names no page number. A title with no number is still looked up by `namedPageTitle()`. See `context/features/ai-agent.md`.
