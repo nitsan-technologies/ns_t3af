@@ -221,6 +221,78 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
     }
 
     #[Test]
+    public function mergeContextLockedPageBeatsModelPageIdsOnSeoQueueAdd(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'mergeContextArguments');
+
+        $merged = $method->invoke(
+            $processor,
+            ['pageIds' => [2]],
+            ['pageId' => 2, 'lockedPageId' => 4],
+            't3ai_mass_seo_queue_add',
+        );
+
+        self::assertSame(4, $merged['pageId']);
+        self::assertArrayNotHasKey('pageIds', $merged);
+    }
+
+    #[Test]
+    public function seoQueueAddRecursiveSubtreeDropsInventedPageIds(): void
+    {
+        $merged = AgentToolTurnProcessor::seoQueueAddRecursiveSubtree(
+            ['pageIds' => [1, 2, 4], 'pageId' => 1],
+            't3ai_mass_seo_queue_add',
+            'Add Home and all its subpages to the SEO queue',
+        );
+
+        self::assertTrue($merged['recursive']);
+        self::assertArrayNotHasKey('pageIds', $merged);
+        self::assertSame(1, $merged['pageId']);
+    }
+
+    #[Test]
+    public function refuseQueueRemoveOnAddRequestBlocksRemoveTool(): void
+    {
+        self::assertNotNull(AgentToolTurnProcessor::refuseQueueRemoveOnAddRequest(
+            't3ai_mass_seo_queue_remove',
+            'Add this page to the SEO queue',
+        ));
+        self::assertNull(AgentToolTurnProcessor::refuseQueueRemoveOnAddRequest(
+            't3ai_mass_seo_queue_remove',
+            'Remove this page from the SEO queue',
+        ));
+        self::assertNull(AgentToolTurnProcessor::refuseQueueRemoveOnAddRequest(
+            't3ai_mass_seo_queue_add',
+            'Add this page to the SEO queue',
+        ));
+    }
+
+    #[Test]
+    public function takeOutOfTheQueueIsNotAnAddRequest(): void
+    {
+        foreach (['Take this page out of the queue', 'Take this page out of that list', 'Nimm diese Seite aus der Warteschlange raus'] as $request) {
+            self::assertNull(
+                AgentToolTurnProcessor::refuseQueueRemoveOnAddRequest('t3ai_mass_seo_queue_remove', $request),
+                $request,
+            );
+        }
+    }
+
+    #[Test]
+    public function recursiveSubtreeKeepsTheFirstListedPageWhenNoPageIdWasGiven(): void
+    {
+        $merged = AgentToolTurnProcessor::seoQueueAddRecursiveSubtree(
+            ['pageIds' => [7, 8, 9]],
+            't3ai_mass_seo_queue_add',
+            'Add Services and all subpages to the SEO queue',
+        );
+
+        self::assertSame(7, $merged['pageId']);
+        self::assertTrue($merged['recursive']);
+    }
+
+    #[Test]
     public function mergeContextMapsPageIdToUidForPagesGet(): void
     {
         $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();

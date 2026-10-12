@@ -178,12 +178,23 @@ final readonly class AgentTargetPageResolver
     }
 
     /**
-     * "Create a page called Contact" is a new page, not a lookup of an existing one.
+     * "Create a page called Contact" / "Write a blog article page called …" is a new page, not a lookup.
      */
     public static function isCreatePageRequest(string $message): bool
     {
-        return preg_match('/\b(create|new|anleg\w*|neue[rnms]?|hinzufüg\w*|hinzufueg\w*)\b/iu', $message) === 1
-            && preg_match('/\b(page|seite)\b/iu', $message) === 1;
+        if (preg_match('/\b(page|seite|blog)\b/iu', $message) !== 1) {
+            return false;
+        }
+        if (preg_match('/\b(create|new|anleg\w*|neue[rnms]?|hinzufüg\w*|hinzufueg\w*)\b/iu', $message) === 1) {
+            return true;
+        }
+
+        // "Write a blog article page called …" / "Write a page about …" — not "write SEO for this page".
+        return preg_match('/\b(write|draft|compose|schreib\w*|verfass\w*)\b/iu', $message) === 1
+            && (
+                preg_match('/\b(blog|article|artikel)\b/iu', $message) === 1
+                || preg_match('/\b(?:page|seite)\s+(?:called|named|titled|about|namens|genannt|[üu]ber)\b/iu', $message) === 1
+            );
     }
 
     /**
