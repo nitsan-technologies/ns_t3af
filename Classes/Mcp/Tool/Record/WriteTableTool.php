@@ -63,6 +63,9 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     /** Fields every create carries; they do not count as content the editor asked for. */
     private const STRUCTURAL_FIELDS = ['CType', 'colPos', 'sys_language_uid', 'l18n_parent', 'hidden', 'sorting', 'list_type'];
 
+    /** A 0 on these fields is what a new record has anyway; a card row "Publish Date 0" only confuses the editor. */
+    private const ZERO_IS_DEFAULT_FIELDS = ['list_type', 'l18n_parent', 'l10n_parent', 'starttime', 'endtime', 'fe_group', 'sorting', 'editlock'];
+
     private const ALLOWED_ACTIONS = ['create', 'update', 'delete'];
 
     /** Text fields where a rewrite must stay about the same thing. */
@@ -272,7 +275,14 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             throw new \InvalidArgumentException(PageAccessService::ACCESS_DENIED_MESSAGE);
         }
         unset($payload['pid'], $payload['beforeUid'], $payload['afterUid']);
-        $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
+        $filteredData = self::withoutEmptyCreateFields($this->normalizer->filterWritableFields($tableName, $payload));
+        if ($tableName === 'tt_content' && ($filteredData['CType'] ?? '') === 'text'
+            && trim((string) ($filteredData['header'] ?? '')) === ''
+            && trim((string) ($filteredData['subheader'] ?? '')) === ''
+            && trim((string) ($filteredData['bodytext'] ?? '')) === ''
+        ) {
+            throw new \InvalidArgumentException('A text element needs a header or a text. Write the text first and send it in the same call.');
+        }
         // Fields the group may not edit would be dropped silently at Apply: the card must not offer them,
         // and a create whose requested content fields are all forbidden is refused.
         $notAllowed = [];
@@ -299,6 +309,26 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return new ToolPlan('create', 'write_table', $fields, ['pid' => $pid] + ($notAllowed !== [] ? ['notAllowedFields' => $notAllowed] : []));
+    }
+
+    /**
+     * A new record starts empty, so a blank value or a 0 on a field that is 0 anyway only adds an empty row to the
+     * card (and, for a model that sends every column, buries the text the editor wants to review).
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private static function withoutEmptyCreateFields(array $data): array
+    {
+        foreach ($data as $field => $value) {
+            $blank = $value === null || (is_string($value) && trim($value) === '');
+            $zeroDefault = ($value === 0 || $value === '0') && in_array((string) $field, self::ZERO_IS_DEFAULT_FIELDS, true);
+            if ($blank || $zeroDefault) {
+                unset($data[$field]);
+            }
+        }
+
+        return $data;
     }
 
     /** @param array<string, mixed> $payload */

@@ -41,6 +41,16 @@ final class AgentWriteService
 {
     private const FLOW_AGENT_PREVIEW = 'agent_preview';
 
+    private const GLOSSARY_TABLE = 'tx_nst3ai_domain_model_glossary';
+
+    /** Tools whose apply creates one new page; Undo deletes that page. */
+    private const PAGE_CREATE_TOOLS = [
+        't3ai_create_page_simple',
+        't3ai_create_page_advanced',
+        't3ai_create_blog_simple',
+        't3ai_create_blog_advanced',
+    ];
+
     /** A prepared change that was not executed within this time is treated as outdated. */
     public const DRAFT_MAX_AGE_SECONDS = 3600;
 
@@ -317,13 +327,17 @@ final class AgentWriteService
     }
 
     /**
-     * What Undo removes after a confirmed tool ran. Attaching files can be undone: exactly the new
-     * references go, never the files or the record they were attached to. Other tools have no undo.
+     * What Undo removes after a confirmed tool ran. Attaching files and saving a glossary term can be
+     * undone: exactly the new references or rows go (a changed term gets its old text back), never the
+     * files or the record they were attached to. Other tools have no undo.
      *
      * @return list<array<string, mixed>>
      */
     public static function toolUndoFields(string $toolName, mixed $result): array
     {
+        if ($toolName === 't3ai_glossary_save') {
+            return self::glossaryUndoFields($result);
+        }
         if ($toolName !== 'file_reference_add') {
             return [];
         }
@@ -358,6 +372,51 @@ final class AgentWriteService
                     'parent' => $parent,
                 ];
             }
+        }
+
+        return $undo;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private static function glossaryUndoFields(mixed $result): array
+    {
+        $payload = self::decodeToolResultPayload($result);
+        $overlayUid = (int) ($payload['termId'] ?? 0);
+        if (($payload['saved'] ?? false) !== true || $overlayUid <= 0) {
+            return [];
+        }
+        $table = self::GLOSSARY_TABLE;
+        $parentUid = (int) ($payload['parentTermId'] ?? 0);
+
+        if (($payload['overlayCreated'] ?? false) === true) {
+            $undo = [['table' => $table, 'uid' => $overlayUid, 'field' => '_record', 'previousValue' => null, 'action' => 'create']];
+            if (($payload['parentCreated'] ?? false) === true && $parentUid > 0) {
+                $undo[] = ['table' => $table, 'uid' => $parentUid, 'field' => '_record', 'previousValue' => null, 'action' => 'create'];
+            }
+
+            return $undo;
+        }
+
+        $undo = [[
+            'table' => $table,
+            'uid' => $overlayUid,
+            'field' => 'term',
+            'previousValue' => (string) ($payload['previousTarget'] ?? ''),
+            'appliedValue' => (string) ($payload['target'] ?? ''),
+            'action' => 'update',
+        ]];
+        $previousSource = (string) ($payload['previousSource'] ?? '');
+        if ($parentUid > 0 && $previousSource !== '' && $previousSource !== (string) ($payload['source'] ?? '')) {
+            $undo[] = [
+                'table' => $table,
+                'uid' => $parentUid,
+                'field' => 'term',
+                'previousValue' => $previousSource,
+                'appliedValue' => (string) ($payload['source'] ?? ''),
+                'action' => 'update',
+            ];
         }
 
         return $undo;
@@ -570,7 +629,12 @@ final class AgentWriteService
         }
 
         // File metadata DualMode uses discrete #[McpContentParam] args (altText/title/description).
-        if ($toolName === 't3aa_update_file_metadata' || array_key_exists('altText', $resolvedValues) || array_key_exists('schemaContent', $resolvedValues)) {
+        if ($toolName === 't3aa_update_file_metadata'
+            || array_key_exists('altText', $resolvedValues)
+            || array_key_exists('schemaContent', $resolvedValues)
+            || array_key_exists('payload', $resolvedValues)
+            || array_key_exists('structure', $resolvedValues)
+        ) {
             return array_merge($arguments, $resolvedValues);
         }
 
@@ -660,6 +724,18 @@ final class AgentWriteService
         array $undoFields,
         PreviewResult $preview,
     ): array {
+        if (in_array($toolName, self::PAGE_CREATE_TOOLS, true)) {
+            // The preview targets the parent page, but the apply creates a new page: Undo takes that page back.
+            $createdPageId = (int) (self::decodeToolResultPayload($result)['pageId'] ?? 0);
+
+            return $createdPageId > 0
+                ? [['table' => 'pages', 'uid' => $createdPageId, 'field' => '_record', 'previousValue' => null, 'action' => 'create']]
+                : [];
+        }
+        if ($toolName === 't3ai_create_page_structure') {
+            // A whole tree has no list of the new pages in its result, so there is nothing exact to take back.
+            return [];
+        }
         if (!str_starts_with($toolName, 't3ai_translate_') && $toolName !== 't3ai_record_translate') {
             return $undoFields;
         }

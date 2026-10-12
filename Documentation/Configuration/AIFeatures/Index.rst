@@ -87,3 +87,11 @@ Scenario: agency with dev and live keys
 ---------------------------------------
 
 Use global default for staging. On production, set SEO to a fast model and Pages to premium. Dev team keeps separate provider rows in :ref:`AI Providers <ai-providers>` with dev API keys.
+
+AI Agent card
+-------------
+
+The :guilabel:`AI Agent` card configures the in-backend AI agent: limits per
+turn, conversation retention, and the conversation list. Click
+:guilabel:`Configure` on the card. All fields are described in
+:ref:`ask-ai-agent-feature-settings`.

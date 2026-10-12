@@ -33,9 +33,19 @@ Admin checklist
 For editors
 -----------
 
-Editors usually do not configure providers directly. They can use the built-in
-:ref:`AI Agent <ai-agent>` (toolbar :guilabel:`Ask AI Agent` or
-**Ctrl/Cmd+Shift+K**) and features from child extensions that depend on AI Foundation.
+Editors usually do not configure providers directly. They use the AI agent
+of AI Foundation and the features of extensions that depend on AI Foundation.
+
+Working with the AI agent:
+
+* Open the agent with :guilabel:`Ask AI Agent` in the backend
+  toolbar or with :kbd:`Ctrl/Cmd+Shift+K`, then describe the task in plain
+  language.
+* Read requests are answered right away. Changes appear as cards with the
+  current and the new values — review them, then click :guilabel:`Apply` or
+  :guilabel:`Cancel`. Deleting needs a second click.
+* Use :guilabel:`Undo` on an applied card if the result is not what you
+  wanted. See :ref:`Ask AI agent <ask-ai-agent>`.
 
 When AI features fail in a backend module:
 
@@ -64,5 +74,7 @@ Known boundaries
 ----------------
 
 * No standalone frontend plugin is provided by this extension.
-* Backend UI includes the :ref:`AI Agent <ai-agent>` and AI Foundation modules;
-  additional editor workflows come from dependent extensions.
+* The in-backend AI agent (:ref:`Ask AI agent <ask-ai-agent>`) is part of
+  AI Foundation. Many content features (SEO, translation, page and content
+  generation, alt texts) still come from dependent extensions and appear in
+  the agent as additional tools.

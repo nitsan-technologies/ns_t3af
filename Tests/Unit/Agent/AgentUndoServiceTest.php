@@ -95,6 +95,42 @@ final class AgentUndoServiceTest extends TestCase
     }
 
     #[Test]
+    public function aNewGlossaryTermCanBeUndoneByRemovingTheRowsItCreated(): void
+    {
+        $undoFields = AgentWriteService::toolUndoFields(
+            't3ai_glossary_save',
+            '{"saved":true,"source":"solar inverter","target":"Solarwechselrichter","termId":18,"parentTermId":17,"parentCreated":true,"overlayCreated":true,"previousTarget":"","previousSource":""}',
+        );
+
+        self::assertTrue(AgentUndoService::isUndoable($undoFields));
+        self::assertSame([18, 17], array_column($undoFields, 'uid'));
+        self::assertSame(['create', 'create'], array_column($undoFields, 'action'));
+        self::assertSame(['tx_nst3ai_domain_model_glossary', 'tx_nst3ai_domain_model_glossary'], array_column($undoFields, 'table'));
+    }
+
+    #[Test]
+    public function aChangedGlossaryTermGetsItsOldTranslationBackOnUndo(): void
+    {
+        $undoFields = AgentWriteService::toolUndoFields(
+            't3ai_glossary_save',
+            ['saved' => true, 'source' => 'Layout', 'target' => 'Layoutansicht', 'termId' => 9, 'parentTermId' => 8, 'parentCreated' => false, 'overlayCreated' => false, 'previousTarget' => 'Layout', 'previousSource' => 'Layout'],
+        );
+
+        self::assertCount(1, $undoFields);
+        self::assertSame('update', $undoFields[0]['action']);
+        self::assertSame('term', $undoFields[0]['field']);
+        self::assertSame('Layout', $undoFields[0]['previousValue']);
+        self::assertSame('Layoutansicht', $undoFields[0]['appliedValue']);
+    }
+
+    #[Test]
+    public function aGlossarySaveThatChangedNothingOffersNoUndo(): void
+    {
+        self::assertSame([], AgentWriteService::toolUndoFields('t3ai_glossary_save', '{"saved":false,"already":true}'));
+        self::assertSame([], AgentWriteService::toolUndoFields('t3ai_glossary_save', 'not json'));
+    }
+
+    #[Test]
     public function undoOfAnUpdateRestoresThePreviousValue(): void
     {
         $dataHandler = $this->createMock(DataHandlerService::class);
