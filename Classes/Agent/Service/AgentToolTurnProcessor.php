@@ -539,6 +539,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $arguments = $this->normalizeWriteToolArguments($toolName, $arguments);
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
         $arguments = self::seoQueueRemovePageIds($arguments, $toolName, $requestQuery);
+        $arguments = self::seoQueueAddRecursiveSubtree($arguments, $toolName, $requestQuery);
         $arguments = self::openPageAsParent($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $arguments = self::openPageAsCreatePid($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $arguments = self::pinOpenPageForQueueRemove($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
@@ -546,6 +547,20 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $arguments = $this->enrichPlannedToolArguments($toolName, $arguments, $history, $gateRequest !== '' ? $gateRequest : $requestQuery);
         if ($toolName === 'write_table' && $requestQuery !== '') {
             $arguments['requestQuery'] = $requestQuery;
+        }
+        $refuseRemove = self::refuseQueueRemoveOnAddRequest($toolName, $requestQuery);
+        if ($refuseRemove !== null) {
+            return [
+                'role' => 'assistant',
+                'content' => $refuseRemove,
+                'meta' => [
+                    'type' => 'info',
+                    'tool' => $toolName,
+                    'success' => true,
+                    'orchestratorPause' => true,
+                    'correlationId' => $correlationId,
+                ],
+            ];
         }
         if (in_array(strtolower($toolName), self::SITE_WIDE_QUEUE_TOOLS, true)) {
             $workspaceUser = $GLOBALS['BE_USER'] ?? null;
@@ -786,6 +801,78 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * "Home and all its subpages" must use pageId + recursive (Mass SEO filter), never an invented pageIds tree.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function seoQueueAddRecursiveSubtree(array $arguments, string $toolName, string $requestQuery): array
+    {
+        if (strtolower(trim($toolName)) !== 't3ai_mass_seo_queue_add') {
+            return $arguments;
+        }
+        if (preg_match(
+            '/\b(all\s+(?:its\s+|the\s+)?subpages?|and\s+all\s+(?:its\s+)?subpages?|und\s+alle\s+unterseiten)\b/iu',
+            $requestQuery,
+        ) !== 1) {
+            return $arguments;
+        }
+        // The invented list is dropped; the first named page stays the root when no pageId was given.
+        $firstListed = 0;
+        $listed = $arguments['pageIds'] ?? null;
+        if (is_string($listed)) {
+            $listed = preg_split('/[\s,;]+/', trim($listed, " \t\n\r\0\x0B\"'[]")) ?: [];
+        }
+        if (is_array($listed)) {
+            foreach ($listed as $listedId) {
+                if ((int) $listedId > 0) {
+                    $firstListed = (int) $listedId;
+                    break;
+                }
+            }
+        }
+        unset($arguments['pageIds']);
+        if ((int) ($arguments['pageId'] ?? 0) <= 0 && trim((string) ($arguments['pageUrl'] ?? '')) === '' && $firstListed > 0) {
+            $arguments['pageId'] = $firstListed;
+        }
+        $arguments['recursive'] = true;
+
+        return $arguments;
+    }
+
+    /**
+     * Add requests must not open a remove card. Null when the remove tool is allowed.
+     */
+    public static function refuseQueueRemoveOnAddRequest(string $toolName, string $requestQuery): ?string
+    {
+        $tool = strtolower(trim($toolName));
+        if (!in_array($tool, ['t3ai_mass_seo_queue_remove', 't3ai_mass_translation_queue_remove'], true)) {
+            return null;
+        }
+        if ($requestQuery === '') {
+            return null;
+        }
+        $asksRemove = preg_match(
+            '/\b(remove|delete|drop|cancel|take\b[^.?!]{0,40}\bout|out\s+of|get\s+rid|clear|entfern\w*|lösch\w*|stornier\w*|abbrechen|raus\w*|herausnehm\w*|aus\s+der)\b/iu',
+            $requestQuery,
+        ) === 1;
+        if ($asksRemove) {
+            return null;
+        }
+        $asksAdd = preg_match(
+            '/\b(add|put|schedule|hinzu\w*|aufnehm\w*|einplan\w*)\b/iu',
+            $requestQuery,
+        ) === 1;
+        if (!$asksAdd) {
+            return null;
+        }
+
+        return $tool === 't3ai_mass_seo_queue_remove'
+            ? 'You asked to add pages to the SEO queue, not remove them. If they are already queued, say so — do not remove them.'
+            : 'You asked to add pages to the translation queue, not remove them. If they are already queued, say so — do not remove them.';
+    }
+
+    /**
      * "Retry the failed ones" means every failed row. A page id the model copied from the open page or
      * from a finished row would requeue nothing, so the list is dropped unless the editor gave numbers.
      *
@@ -986,6 +1073,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($lockedPageId > 0) {
             $context['pageId'] = $lockedPageId;
             unset($arguments['pageId'], $arguments['pageUrl']);
+            // SEO/translation queue add: a model pageIds list of the open page must not beat the named page.
+            if (in_array(strtolower(trim($toolName)), ['t3ai_mass_seo_queue_add', 't3ai_mass_translation_queue_add'], true)) {
+                unset($arguments['pageIds']);
+                $arguments['pageId'] = $lockedPageId;
+            }
         }
 
         $pageId = (int) ($context['pageId'] ?? 0);

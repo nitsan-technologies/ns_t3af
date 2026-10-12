@@ -89,6 +89,10 @@ final class AgentTargetPageResolverTest extends TestCase
     public function creatingAPageIsNotALookup(): void
     {
         self::assertTrue(AgentTargetPageResolver::isCreatePageRequest('Create a page called Contact'));
+        self::assertTrue(AgentTargetPageResolver::isCreatePageRequest(
+            'Write a blog article page called 7 tips for better sleep, under this page.',
+        ));
+        self::assertFalse(AgentTargetPageResolver::isCreatePageRequest('Write SEO for this page'));
         self::assertFalse(AgentTargetPageResolver::isCreatePageRequest('make the Contact page show up in Google'));
     }
 
