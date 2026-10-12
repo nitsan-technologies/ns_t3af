@@ -213,6 +213,36 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: the editor asked for a news article, not SEO. Call write_table with action create on tx_news_domain_model_news, with title, teaser and bodytext in the same call.',
             );
         }
+        // A news article without a picture request is not answered with an image card.
+        if (
+            $name === 't3ai_generate_image'
+            && AgentRunner::isNewsCreateRequest($requestQuery)
+            && preg_match('/\b(pictures?|images?|photos?|illustrations?|bild\w*|foto\w*|grafik\w*)\b/iu', $requestQuery) !== 1
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for a news article, not a picture. Call write_table with action create on tx_news_domain_model_news, with title, teaser and bodytext in the same call.',
+            );
+        }
+        // A news request answered with a content element or a page (for example on a folder). News lives in its own table.
+        if (
+            $name === 'write_table'
+            && strtolower((string) ($toolCall->getArguments()['action'] ?? 'create')) === 'create'
+            && AgentRunner::isNewsCreateRequest($requestQuery)
+            && AgentRunner::isNewsRequestAnsweredWithOtherTable(
+                (string) ($toolCall->getArguments()['tableName'] ?? $toolCall->getArguments()['table'] ?? ''),
+                $requestQuery,
+            )
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for a news article, not a content element or a page. Call write_table with action create on tx_news_domain_model_news, with title, teaser and bodytext in the same call. Omit pid; the tool picks the news storage.',
+            );
+        }
         // "Add an intro paragraph to this page" is a content element. The model otherwise drafts a whole new page.
         if (
             $requestQuery !== ''

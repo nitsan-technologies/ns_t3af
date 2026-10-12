@@ -97,4 +97,13 @@ final class AgentRunnerPageRequestTest extends TestCase
         $content = ['action' => 'create', 'tableName' => 'tt_content', 'data' => '{"header":"X"}'];
         self::assertSame($content, AgentToolTurnProcessor::openPageAsCreatePid($content, 33, 'write_table', 'Add text'));
     }
+
+    #[Test]
+    public function newsRequestMustNotEndInAContentElementOrPage(): void
+    {
+        self::assertTrue(AgentRunner::isNewsRequestAnsweredWithOtherTable('tt_content', 'Generiere eine Nachricht über unser Sommerfest.'));
+        self::assertTrue(AgentRunner::isNewsRequestAnsweredWithOtherTable('pages', 'Create a news article about SEPA'));
+        self::assertFalse(AgentRunner::isNewsRequestAnsweredWithOtherTable('tx_news_domain_model_news', 'Create a news article about SEPA'));
+        self::assertFalse(AgentRunner::isNewsRequestAnsweredWithOtherTable('tt_content', 'Create a news article and a content element about SEPA'));
+    }
 }
