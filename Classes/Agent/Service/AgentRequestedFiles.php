@@ -50,6 +50,21 @@ final readonly class AgentRequestedFiles
         ) === 1;
     }
 
+    /**
+     * "Generate an image of a red apple": the saved file is the whole result. Nothing has to be created
+     * or attached unless the request names a place for it ("…and add it to this page").
+     */
+    public static function asksOnlyForGeneratedImage(string $request): bool
+    {
+        return self::asksForGeneratedImage($request)
+            && AgentRequestChecklist::parse($request) === []
+            && preg_match(
+                '/\b(?:attach|add|insert|put|place|use|embed|füg\w*|häng\w*|setz\w*|verwend\w*|einbind\w*)\b'
+                . '|\b(?:to|on|in|into|onto|for|zu|zum|zur|auf|für)\s+(?:(?:the|this|that|a|an|my|our|die|der|das|den|dem|diese\w*|eine\w*)\s+)?(?:page|element|content|news|article|record|seite|inhalt\w*|artikel)\b/iu',
+                $request,
+            ) !== 1;
+    }
+
     public static function namesUrl(string $request): bool
     {
         return preg_match('#\bhttps?://#i', $request) === 1;

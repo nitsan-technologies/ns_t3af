@@ -1001,7 +1001,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $gateRequest = self::requestForGate($userMessage, $historyMessages);
         if (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $gateRequest)) {
             $found = [...self::imageWorkTools($executableTools, $offeredNames, $historyMessages, $gateRequest), ...$found];
-        } elseif (AgentPromptBuilder::pendingImageAttachNote($historyMessages) !== '') {
+        } elseif (
+            !AgentRequestedFiles::asksOnlyForGeneratedImage($gateRequest)
+            && AgentPromptBuilder::pendingImageAttachNote($historyMessages) !== ''
+        ) {
             $found = [...self::pendingAttachTools($executableTools, $offeredNames), ...$found];
         }
 
