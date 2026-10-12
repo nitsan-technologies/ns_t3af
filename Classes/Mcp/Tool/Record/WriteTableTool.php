@@ -214,11 +214,15 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             try {
                 $payload = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
             } catch (\JsonException $exception) {
-                if ($exception->getCode() !== JSON_ERROR_CTRL_CHAR) {
+                if (!in_array($exception->getCode(), [JSON_ERROR_CTRL_CHAR, JSON_ERROR_SYNTAX], true)) {
                     throw $exception;
                 }
-                // Some models (Mistral) put raw line breaks or tabs inside a string value.
-                $payload = json_decode(self::escapeControlCharsInStrings($data), true, 512, JSON_THROW_ON_ERROR);
+                // Some models (Mistral) put raw line breaks or tabs, or unescaped quotes (HTML attributes), inside a string value.
+                try {
+                    $payload = json_decode(self::escapeControlCharsInStrings($data), true, 512, JSON_THROW_ON_ERROR);
+                } catch (\JsonException) {
+                    $payload = json_decode(self::escapeControlCharsInStrings(self::escapeInnerQuotes($data)), true, 512, JSON_THROW_ON_ERROR);
+                }
             }
         } catch (\JsonException $exception) {
             throw new \InvalidArgumentException(
@@ -238,6 +242,55 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
         /** @var array<string, mixed> $payload */
         return $payload;
+    }
+
+    /**
+     * A string only ends at a quote that is followed by `}`, `]`, `:` or `, "`. Any other quote inside
+     * a string value (for example in <a href="…">) is escaped.
+     */
+    private static function escapeInnerQuotes(string $json): string
+    {
+        $out = '';
+        $inString = false;
+        $escaped = false;
+        $length = strlen($json);
+        for ($i = 0; $i < $length; ++$i) {
+            $char = $json[$i];
+            if (!$inString) {
+                $out .= $char;
+                if ($char === '"') {
+                    $inString = true;
+                    $escaped = false;
+                }
+                continue;
+            }
+            if ($escaped) {
+                $escaped = false;
+                $out .= $char;
+                continue;
+            }
+            if ($char === '\\') {
+                $escaped = true;
+                $out .= $char;
+                continue;
+            }
+            if ($char !== '"') {
+                $out .= $char;
+                continue;
+            }
+            $rest = ltrim(substr($json, $i + 1));
+            $next = $rest[0] ?? '';
+            $ends = $next === '' || $next === '}' || $next === ']' || $next === ':'
+                || ($next === ',' && preg_match('/^,\s*["}\]\[{]/', $rest) === 1);
+            if ($ends) {
+                $inString = false;
+                $out .= $char;
+            } else {
+                $out .= '\\"';
+            }
+        }
+
+        return $out;
     }
 
     /** Escapes raw control characters inside JSON string literals only; whitespace between tokens stays. */
