@@ -549,6 +549,7 @@ export const chromeMethods = {
 
       this.renderContext();
       this.renderStream();
+      await this.awaitRunningTurn();
       this.restoreFullscreenPref();
 
       // Apply the remembered/default rail state now that sessionListSettings.enabled is known

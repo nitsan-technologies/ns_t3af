@@ -247,6 +247,7 @@ final class AgentAjaxController
             'hasUsableProvider' => $this->providerOptions->hasUsableProvider((int) ($context['pageId'] ?? 0), $user),
             'continueAfterConfirm' => $this->agentSettings->isContinueAfterConfirmEnabled(),
             'credits' => $this->creditsStatus->status(),
+            'turnRunning' => $this->turnGuard->isBusy((int) ($user->user['uid'] ?? 0)),
         ]);
     }
 
@@ -1006,7 +1007,7 @@ final class AgentAjaxController
                 'messages' => [[
                     'role' => 'assistant',
                     'content' => $this->translator->translate('agent.turn.alreadyRunning'),
-                    'meta' => ['type' => 'governance_blocked'],
+                    'meta' => ['type' => 'turn_running'],
                 ]],
             ]);
         }
@@ -1085,7 +1086,7 @@ final class AgentAjaxController
                 'messages' => [[
                     'role' => 'assistant',
                     'content' => $this->translator->translate('agent.turn.alreadyRunning'),
-                    'meta' => ['type' => 'governance_blocked'],
+                    'meta' => ['type' => 'turn_running'],
                 ]],
             ]);
         }
@@ -1197,10 +1198,18 @@ final class AgentAjaxController
      */
     private function emitSseEvent(string $event, array $payload): void
     {
-        echo 'event: ' . $event . "\n";
-        echo 'data: ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n\n";
-        if (function_exists('flush')) {
-            flush();
+        // A reload closes the stream. Writing to it must not stop the turn before the answer is saved.
+        if (connection_aborted() === 1) {
+            return;
+        }
+        try {
+            echo 'event: ' . $event . "\n";
+            echo 'data: ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n\n";
+            if (function_exists('flush')) {
+                flush();
+            }
+        } catch (\Throwable) {
+            // The browser is gone. The turn still finishes and is stored.
         }
     }
 
