@@ -1074,7 +1074,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $notAskedFor['t3ai_generate_seo_batch'] = true;
             $notAskedFor['t3aa_generate_voice_over'] = true;
         }
-        if ($createContent || self::isPlainEditRequest($query) || self::isNewsOnlyRequest($query)) {
+        if ($createContent || self::isPlainEditRequest($query) || self::isNewsOnlyRequest($query) || self::isVisibilityRequest($query)) {
             // "Change the header of element 5" is an update: with the delete tool at hand the model sometimes
             // answers with a delete card plus a create card instead.
             $notAskedFor['content_delete'] = true;
@@ -1472,6 +1472,19 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return [];
+    }
+
+    /**
+     * "Make the German version visible", "hide this page": a change of the hidden field, never a delete.
+     */
+    public static function isVisibilityRequest(string $query): bool
+    {
+        $q = mb_strtolower(trim($query));
+        if ($q === '' || preg_match('/\b(delete|remove|erase|trash|l[öo]sch\w*|entfern\w*)/u', $q) === 1) {
+            return false;
+        }
+
+        return preg_match('/\b(visible|invisible|hidden|unhide|hide|activate|deactivate|publish|unpublish|sichtbar|unsichtbar|ausblend\w*|einblend\w*|verstecke\w*|verberg\w*|aktivier\w*|deaktivier\w*|ver[öo]ffentlich\w*)\b/u', $q) === 1;
     }
 
     /**

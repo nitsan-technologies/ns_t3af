@@ -222,6 +222,15 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: the editor asked for SEO for all pages, not for the open page. Call pages_tree (or pages_list) for the page uids, then t3ai_generate_seo_batch with pageIds of those pages. With more than 20 pages, ask first whether to queue them instead (t3ai_mass_seo_queue_add with pageIds).',
             );
         }
+        // "Make the German version visible" changes the hidden field. The model sometimes tries a delete first.
+        if ($name === 'content_delete' && AgentRunner::isVisibilityRequest($requestQuery)) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked to show or hide something, not to delete it. Change the hidden field with write_table action update (page and its content elements), never delete.',
+            );
+        }
         // "Translate the first element into French" is one element, not the whole page.
         if ($name === 't3ai_translate_page' && AgentRunner::asksForOneElementTranslation($requestQuery)) {
             $outcome = 'invalid';
