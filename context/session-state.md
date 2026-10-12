@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-12 — Existing files named in the request can be attached
+
+**Done:** "Create a text & media element … and attach the existing images sys_file uid 3 and 11" created the element, then the follow-up tried `write_table` `assets` and stopped. The `file_reference_add` gates (`AgentRunner` toolbox, `T3afToolbox`, `AgentToolTurnProcessor`) only knew files saved in the conversation. They now use `AgentPromptBuilder::pendingAttachFileUids()`: saved and unattached files plus `AgentRequestedFiles::attachableNamedFileUids()` not yet attached for this request. The original request reaches the toolbox as `body['requestForGate']`.
+
+**Last touched:** 2026-10-12
+
+---
+
 ## 2026-10-12 — An empty embedding model uses the vendor's embedding model
 
 **Done:** `Provider::effectiveEmbeddingModel()` and `AiService` embed calls use `Provider::DEFAULT_EMBEDDING_MODELS` when `embedding_model_id` is empty (OpenAI `text-embedding-3-small`, Mistral `mistral-embed`, Gemini `gemini-embedding-001`, Hugging Face MiniLM). Ollama, Azure and custom endpoints still use the chat model. `t3af:agent:index-tools` prints one line with the model and HTTP status for 400/404/422 and drops raw JSON bodies. Field help (EN/DE) and `Documentation/Configuration/AIProviders` updated. See `context/features/providers.md`.

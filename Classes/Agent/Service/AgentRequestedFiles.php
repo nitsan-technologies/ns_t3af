@@ -203,6 +203,22 @@ final readonly class AgentRequestedFiles
     }
 
     /**
+     * Files named in this request that can be attached (not known to be missing).
+     *
+     * @param list<array<string, mixed>> $history
+     * @return list<int>
+     */
+    public static function attachableNamedFileUids(array $history, string $request): array
+    {
+        $named = self::namedFileUids($request);
+        if ($named === []) {
+            return [];
+        }
+
+        return array_values(array_diff($named, array_keys(self::knownUnavailable($history, $request))));
+    }
+
+    /**
      * Instruction for the model while the request names unavailable files.
      *
      * @param list<array<string, mixed>> $history
