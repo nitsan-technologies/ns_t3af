@@ -305,6 +305,42 @@ final class AgentTurnRouterTest extends TestCase
     }
 
     #[Test]
+    public function aPageNumberIsNotAskedAsATitle(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $this->turnOrchestrator->expects(self::once())
+            ->method('runTurn')
+            ->with(
+                'Remove page 138 from the SEO queue.',
+                self::isType('array'),
+                self::callback(static fn(array $context): bool => (int) ($context['pageId'] ?? 0) === 144 && (int) ($context['lockedPageId'] ?? 0) === 0),
+                self::isType('array'),
+                $user,
+                'corr-page-number',
+                null,
+            )
+            ->willReturn([
+                'messages' => [[
+                    'role' => 'assistant',
+                    'content' => 'queued',
+                    'meta' => ['type' => 'info'],
+                ]],
+                'paused' => false,
+                'pauseReason' => null,
+            ]);
+
+        $messages = $this->router->route(
+            'Remove page 138 from the SEO queue.',
+            ['pageId' => 144, 'details' => ['page' => ['uid' => 144, 'title' => 'QA Big Tree']]],
+            [],
+            $user,
+            'corr-page-number',
+        );
+
+        self::assertSame('queued', $messages[0]['content']);
+    }
+
+    #[Test]
     public function theFirstSimilarPageBecomesThePageOfTheNextTurn(): void
     {
         $user = $this->createMock(BackendUserAuthentication::class);

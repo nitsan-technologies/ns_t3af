@@ -317,6 +317,11 @@ final readonly class AgentTurnRouter
             return ['context' => $context, 'messages' => null];
         }
 
+        // "Remove page 138" names a uid. The words before "page" are not a title.
+        if (AgentTargetPageResolver::mentionedPageUids($message) !== []) {
+            return ['context' => $context, 'messages' => null];
+        }
+
         $title = AgentTargetPageResolver::namedPageTitle($message);
         if ($title === null) {
             return ['context' => $context, 'messages' => null];
