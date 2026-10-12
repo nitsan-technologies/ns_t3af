@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-12 — SEO for all subpages uses the subpages
+
+**Done:** "Write SEO texts for all subpages of this page" drops a page list that is only the open page. The card is filled with the subpages. A list that names other pages is kept. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
 ## 2026-10-12 — A hidden subpage still gets SEO texts
 
 **Done:** Writing SEO texts for the subpages of the open page includes a hidden page. A page that still has no site is named and skipped, and the other subpages still get a card. See `context/features/ai-agent.md`.

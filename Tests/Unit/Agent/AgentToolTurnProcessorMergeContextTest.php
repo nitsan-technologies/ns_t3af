@@ -252,6 +252,44 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
     }
 
     #[Test]
+    public function seoForAllSubpagesDropsAListThatIsOnlyTheOpenPage(): void
+    {
+        $merged = AgentToolTurnProcessor::seoBatchSubpagesOfOpenPage(
+            ['pageId' => 2, 'pageIds' => [2], 'entries' => [['pageId' => 2]]],
+            't3ai_generate_seo_batch',
+            'Write SEO texts for all subpages of this page in English',
+        );
+
+        self::assertSame(2, $merged['pageId']);
+        self::assertArrayNotHasKey('pageIds', $merged);
+        self::assertArrayNotHasKey('entries', $merged);
+    }
+
+    #[Test]
+    public function seoForAllSubpagesKeepsAListOfOtherPages(): void
+    {
+        $merged = AgentToolTurnProcessor::seoBatchSubpagesOfOpenPage(
+            ['pageId' => 2, 'pageIds' => [3, 48]],
+            't3ai_generate_seo_batch',
+            'Write SEO texts for all subpages of this page in English',
+        );
+
+        self::assertSame([3, 48], $merged['pageIds']);
+    }
+
+    #[Test]
+    public function seoForThisPageKeepsTheOpenPage(): void
+    {
+        $merged = AgentToolTurnProcessor::seoBatchSubpagesOfOpenPage(
+            ['pageId' => 2, 'pageIds' => [2]],
+            't3ai_generate_seo_batch',
+            'Write SEO texts for this page',
+        );
+
+        self::assertSame([2], $merged['pageIds']);
+    }
+
+    #[Test]
     public function refuseQueueRemoveOnAddRequestBlocksRemoveTool(): void
     {
         self::assertNotNull(AgentToolTurnProcessor::refuseQueueRemoveOnAddRequest(
