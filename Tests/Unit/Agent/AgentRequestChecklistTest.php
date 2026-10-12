@@ -37,6 +37,8 @@ final class AgentRequestChecklistTest extends TestCase
         self::assertSame([], AgentRequestChecklist::parse('Rewrite the text of the block "QA visible element" so it sounds friendlier for customers.'));
         self::assertSame([], AgentRequestChecklist::parse('Rewrite the text of this text element so it is shorter.'));
         self::assertSame([], AgentRequestChecklist::parse('Formuliere den Text des Textblocks freundlicher um und kürze ihn.'));
+        self::assertSame([], AgentRequestChecklist::parse('Make the opening hours text shorter.'));
+        self::assertSame([], AgentRequestChecklist::parse('Make the text of the welcome block more formal.'));
         // A real create request still counts.
         self::assertNotSame([], AgentRequestChecklist::parse('Add a text block with our opening hours.'));
     }

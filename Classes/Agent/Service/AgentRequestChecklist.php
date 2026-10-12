@@ -295,6 +295,10 @@ final class AgentRequestChecklist
     private static function isChangeOfExistingRecord(string $message): bool
     {
         $s = mb_strtolower($message);
+        // "Make the opening hours text shorter" uses "make" but changes an existing text.
+        if (preg_match('/\bmake\b[^.?!]{0,80}\b(?:shorter|longer|simpler|friendlier|clearer|more\s+(?:formal|casual|friendly|concise|polite)|k[üu]rzer|l[äa]nger|einfacher|freundlicher|klarer)\b/u', $s) === 1) {
+            return true;
+        }
         if (preg_match(self::CREATE_VERBS, $s) === 1) {
             return false;
         }

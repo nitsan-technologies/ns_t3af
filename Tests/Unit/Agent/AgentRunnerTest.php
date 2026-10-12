@@ -1171,4 +1171,13 @@ final class AgentRunnerTest extends TestCase
             AgentRunner::newsCreateTools($catalog, ['t3ai_create_news_simple' => 0]),
         );
     }
+
+    #[Test]
+    public function makeItShorterIsAnEditNotACreate(): void
+    {
+        self::assertTrue(AgentRunner::isPlainEditRequest('Make the opening hours text shorter.'));
+        self::assertTrue(AgentRunner::isPlainEditRequest('Mach den Text freundlicher, bitte umschreiben'));
+        self::assertFalse(AgentRunner::isPlainEditRequest('Make a new page called About'));
+        self::assertFalse(AgentRunner::isPlainEditRequest('Delete the opening hours text'));
+    }
 }
