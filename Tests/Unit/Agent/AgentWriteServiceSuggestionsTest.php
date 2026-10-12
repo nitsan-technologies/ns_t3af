@@ -147,6 +147,117 @@ final class AgentWriteServiceSuggestionsTest extends TestCase
     }
 
     #[Test]
+    public function anUnchangedSuggestionIsNotWrittenAndTheCardStays(): void
+    {
+        $preview = new PreviewResult(
+            tool: 't3ai_generate_all_seo',
+            target: ['table' => 'pages', 'uid' => 2, 'languageId' => 0],
+            fields: [
+                ['key' => 'metaTitle', 'label' => 'Meta Title', 'current' => 'QA Mounted'],
+                ['key' => 'keywords', 'label' => 'Keywords', 'current' => 'mounted'],
+            ],
+            variants: [[
+                'label' => 'Variant 1',
+                'angle' => '',
+                'values' => [
+                    'metaTitle' => 'QA Mounted',
+                    'keywords' => ' mounted ',
+                ],
+            ]],
+        );
+        $draft = [
+            'flow' => 'agent_preview',
+            'previewResult' => $preview->toArray(),
+            'arguments' => ['pageId' => 2],
+            'severity' => 'write',
+            'tool' => 't3ai_generate_all_seo',
+            'destructiveArmed' => false,
+        ];
+        $draftSession = $this->createDraftSession();
+        $draftSession->storeDraft('draft-same', $draft);
+
+        $playground = $this->createMock(McpPlaygroundService::class);
+        $playground->expects(self::never())->method('invokeWithMode');
+
+        $service = new AgentWriteService(
+            $this->createMock(DataHandlerService::class),
+            $this->createMock(RecordService::class),
+            $draftSession,
+            $playground,
+            $this->createPresenter(),
+            $this->createAgentTranslator(),
+            new AgentLowRiskFieldMatrix(),
+        );
+
+        $result = $service->applySuggestions('draft-same', ['metaTitle' => 0, 'keywords' => 0]);
+
+        self::assertTrue(($result['unchanged'] ?? false) === true);
+        self::assertSame(0, $result['appliedCount']);
+        self::assertSame($draft, $draftSession->getDraft('draft-same'));
+    }
+
+    #[Test]
+    public function onlyASuggestionThatDiffersIsWritten(): void
+    {
+        $preview = new PreviewResult(
+            tool: 't3ai_generate_all_seo',
+            target: ['table' => 'pages', 'uid' => 2, 'languageId' => 0],
+            fields: [
+                ['key' => 'metaTitle', 'label' => 'Meta Title', 'current' => 'QA Mounted'],
+                ['key' => 'keywords', 'label' => 'Keywords', 'current' => 'mounted'],
+            ],
+            variants: [[
+                'label' => 'Variant 1',
+                'angle' => '',
+                'values' => [
+                    'metaTitle' => 'QA Mounted',
+                    'keywords' => 'mounted, seo',
+                ],
+            ]],
+        );
+        $draftSession = $this->createDraftSession();
+        $draftSession->storeDraft('draft-mix', [
+            'flow' => 'agent_preview',
+            'previewResult' => $preview->toArray(),
+            'arguments' => ['pageId' => 2],
+            'severity' => 'write',
+            'tool' => 't3ai_generate_all_seo',
+            'destructiveArmed' => false,
+        ]);
+
+        $capturedArguments = null;
+        $playground = $this->createMock(McpPlaygroundService::class);
+        $playground->expects(self::once())
+            ->method('invokeWithMode')
+            ->willReturnCallback(
+                static function (string $tool, array $arguments) use (&$capturedArguments): array {
+                    self::assertSame('t3ai_generate_all_seo', $tool);
+                    $capturedArguments = $arguments;
+
+                    return ['success' => true, 'result' => ['ok' => true], 'latencyMs' => 1, 'message' => ''];
+                },
+            );
+
+        $service = new AgentWriteService(
+            $this->createMock(DataHandlerService::class),
+            $this->createMock(RecordService::class),
+            $draftSession,
+            $playground,
+            $this->createPresenter(),
+            $this->createAgentTranslator(),
+            new AgentLowRiskFieldMatrix(),
+        );
+
+        $result = $service->applySuggestions('draft-mix', ['metaTitle' => 0, 'keywords' => 0]);
+
+        self::assertSame(1, $result['appliedCount']);
+        self::assertSame(['keywords' => 'mounted, seo'], $result['appliedValues']);
+        self::assertIsArray($capturedArguments);
+        self::assertSame(['keywords' => 'mounted, seo'], $capturedArguments['fields'] ?? null);
+        self::assertNull($draftSession->getDraft('draft-mix'));
+    }
+
+    #[Test]
     public function seoUndoRestoresDatabaseColumnsNotSuggestionKeys(): void
     {
         $preview = new PreviewResult(
