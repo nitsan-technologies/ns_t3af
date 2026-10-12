@@ -592,6 +592,16 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function newsRelatedRequestsIncludeTranslateAndCreate(): void
+    {
+        self::assertTrue(AgentRunner::isNewsRelatedRequest('Translate news article 1 into German'));
+        self::assertTrue(AgentRunner::isNewsRelatedRequest('Create a news article about AI'));
+        self::assertTrue(AgentRunner::isNewsRelatedRequest('Erstelle eine Nachricht über SEO'));
+        self::assertFalse(AgentRunner::isNewsRelatedRequest('Translate this page to German'));
+        self::assertFalse(AgentRunner::isNewsRelatedRequest('What is the latest news on this page?'));
+    }
+
+    #[Test]
     public function endlessToolCallingStopsAtTheLoopLimit(): void
     {
         $responses = [];
