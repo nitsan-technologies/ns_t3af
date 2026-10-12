@@ -132,7 +132,7 @@ Asking when queued SEO or translation texts will be written follows `QueueAutoma
 
 Asking to put the old text back, to undo, or to revert restores the latest applied change that still has Undo. That uses the same restore as the Undo button and does not generate new SEO texts. When no such change is left, the reply points at the Undo button. A request for better or new Google texts still generates suggestions.
 
-Writing SEO texts for the subpages of the open page uses `t3ai_generate_seo_batch`. An empty `entries` list uses the subpages of the open page, including pages that do not have Mass SEO enabled. The SEO queue is for background generation. A recursive add only includes pages with Mass SEO enabled, and the reply names any page that was skipped. When that add queues nothing, the Apply reply is that skip sentence and no follow-up turn says “Done.” The card does not show `pid`.
+Writing SEO texts for the subpages of the open page uses `t3ai_generate_seo_batch`. An empty `entries` list uses the subpages of the open page, including pages that do not have Mass SEO enabled and including hidden pages. A page that still has no site is named and skipped, and the other subpages still get a card. The SEO queue is for background generation. A recursive add only includes pages with Mass SEO enabled, and the reply names any page that was skipped. When that add queues nothing, the Apply reply is that skip sentence and no follow-up turn says “Done.” The card does not show `pid`.
 
 ---
 
