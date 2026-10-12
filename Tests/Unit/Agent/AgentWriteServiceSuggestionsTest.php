@@ -572,6 +572,32 @@ final class AgentWriteServiceSuggestionsTest extends TestCase
         self::assertArrayNotHasKey('fields', $capturedArguments ?? []);
     }
 
+    #[Test]
+    public function pageStructureCustomFallBackKeepsTheDraftJson(): void
+    {
+        $draftJson = '{"title":"","children":[{"title":"About Us","children":[]}]}';
+        $preview = new PreviewResult(
+            tool: 't3ai_create_page_structure',
+            target: ['table' => 'pages', 'uid' => 2, 'languageId' => 0],
+            fields: [
+                ['key' => 'structure', 'label' => 'Structure', 'current' => ''],
+            ],
+            variants: [[
+                'label' => 'Draft',
+                'angle' => '',
+                'values' => ['structure' => $draftJson],
+            ]],
+        );
+
+        self::assertSame($draftJson, AgentWriteService::structureDraftFromPreview($preview));
+        $kept = AgentWriteService::withoutUnchangedSuggestions(
+            ['structure' => $draftJson],
+            [['key' => 'structure', 'current' => '']],
+            't3ai_create_page_structure',
+        );
+        self::assertSame($draftJson, $kept['structure']);
+    }
+
     private function createDraftSession(): AgentDraftSession
     {
         $this->sessionData = [];

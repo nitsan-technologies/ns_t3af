@@ -55,7 +55,7 @@ final class AgentPageStructureOutlineTest extends TestCase
     public function resolveEditFallsBackWhenTheCustomTextIsNotAnOutline(): void
     {
         $draft = '{"title":"Home","children":[]}';
-        $resolved = AgentPageStructureOutline::resolveEdit('please make a bakery site', $draft);
+        $resolved = AgentPageStructureOutline::resolveEdit('Company and location', $draft);
 
         self::assertTrue($resolved['fellBackToDraft']);
         self::assertSame($draft, $resolved['structure']);

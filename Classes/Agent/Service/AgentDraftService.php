@@ -124,6 +124,7 @@ final class AgentDraftService
     /**
      * @param array<string, mixed> $draftCard
      * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $extra     optional draft keys (e.g. pendingAttachFileUid)
      */
     public function persistDraft(
         array $draftCard,
@@ -131,6 +132,7 @@ final class AgentDraftService
         array $arguments,
         AgentDraftSession $session,
         ?string $flow = null,
+        array $extra = [],
     ): void {
         $draftId = (string) ($draftCard['draftId'] ?? '');
         if ($draftId === '') {
@@ -146,6 +148,11 @@ final class AgentDraftService
         ];
         if ($flow !== null && $flow !== '') {
             $payload['flow'] = $flow;
+        }
+        foreach ($extra as $key => $value) {
+            if (is_string($key) && $key !== '' && !array_key_exists($key, $payload)) {
+                $payload[$key] = $value;
+            }
         }
 
         $session->storeDraft($draftId, $payload);

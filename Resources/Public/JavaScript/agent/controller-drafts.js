@@ -888,7 +888,20 @@ export const draftMethods = {
       const textarea = this.stream?.querySelector(
         `textarea[data-nst3af-agent-suggestions-edit][data-message-index="${messageIndex}"][data-field-key="${CSS.escape(fieldKey)}"]`,
       );
-      const current = textarea instanceof HTMLTextAreaElement ? textarea.value : '';
+      let current = textarea instanceof HTMLTextAreaElement ? textarea.value : '';
+      // Page-structure Custom starts empty: seed it with the draft outline so Apply is not an empty edit.
+      if (current === '') {
+        const suggestions = message.meta.suggestions && typeof message.meta.suggestions === 'object'
+          ? message.meta.suggestions
+          : {};
+        const tool = String(message.meta.tool ?? suggestions.tool ?? '');
+        const variants = Array.isArray(suggestions.variants) ? suggestions.variants : [];
+        const values = variants[0]?.values && typeof variants[0].values === 'object' ? variants[0].values : {};
+        current = formatSuggestionFieldText(tool, fieldKey, String(values[fieldKey] ?? ''));
+        if (textarea instanceof HTMLTextAreaElement && current !== '') {
+          textarea.value = current;
+        }
+      }
       message.meta.edits = { ...(message.meta.edits ?? {}), [fieldKey]: current };
     },
 

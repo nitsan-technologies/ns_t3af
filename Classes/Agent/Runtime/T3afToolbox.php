@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Runtime;
 
+use NITSAN\NsT3AF\Agent\Service\AgentAttachTargetRequest;
 use NITSAN\NsT3AF\Agent\Service\AgentPlan;
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentRequestedFiles;
@@ -200,6 +201,20 @@ final class T3afToolbox implements ToolboxInterface
             return new ToolResult(
                 $toolCall,
                 'Not executed: the editor asked for a picture, not SEO or voice-over. Call t3ai_generate_image (then file_reference_add), or wait for the open generate card to be applied.',
+            );
+        }
+        // "Add this image to the news X" must attach, not create a duplicate news/CE.
+        if (
+            $name === 'write_table'
+            && strtolower((string) ($toolCall->getArguments()['action'] ?? 'create')) === 'create'
+            && AgentRequestedFiles::asksToAttachOrPlaceFile($requestQuery)
+            && AgentAttachTargetRequest::parse($requestQuery) !== null
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor named an existing record to attach the image to. Call file_reference_add for that record (news: fal_media, textmedia: assets). Do not create a new record.',
             );
         }
         // EXT:news missing: do not search or write the news table, and do not run news MCP tools.
