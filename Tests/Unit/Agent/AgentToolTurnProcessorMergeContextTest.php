@@ -816,4 +816,32 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
             $history,
         );
     }
+
+    #[Test]
+    public function enrichPlannedToolArgumentsTrustsTheFileTheRouterPicked(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'enrichPlannedToolArguments');
+        $arguments = ['table' => 'tx_news_domain_model_news', 'uid' => 5, 'fieldName' => 'fal_media', 'fileUids' => '67'];
+
+        // No upload in the history yet (the router card is built before the turn is stored): still allowed.
+        self::assertSame($arguments, $method->invoke($processor, 'file_reference_add', $arguments, [], 'Add this image to the news X', [67]));
+    }
+
+    #[Test]
+    public function enrichPlannedToolArgumentsStillRefusesAFileTheRouterDidNotPick(): void
+    {
+        $processor = (new \ReflectionClass(AgentToolTurnProcessor::class))->newInstanceWithoutConstructor();
+        $method = new \ReflectionMethod(AgentToolTurnProcessor::class, 'enrichPlannedToolArguments');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $method->invoke(
+            $processor,
+            'file_reference_add',
+            ['table' => 'tx_news_domain_model_news', 'uid' => 5, 'fieldName' => 'fal_media', 'fileUids' => '99'],
+            [],
+            'Add this image to the news X',
+            [67],
+        );
+    }
 }

@@ -69,7 +69,7 @@ final readonly class AgentAttachTargetResolver implements AgentAttachTargetResol
         if (isset($target['uid'])) {
             $query->andWhere($query->expr()->eq('uid', $query->createNamedParameter((int) $target['uid'], Connection::PARAM_INT)));
         } else {
-            $query->andWhere($query->expr()->eq('title', $query->createNamedParameter((string) ($target['title'] ?? ''))));
+            $query->andWhere($query->expr()->eq('TRIM(' . $query->quoteIdentifier('title') . ')', $query->createNamedParameter(trim((string) ($target['title'] ?? '')))));
         }
         $rows = $query->executeQuery()->fetchAllAssociative();
         if (count($rows) !== 1) {
@@ -98,7 +98,7 @@ final readonly class AgentAttachTargetResolver implements AgentAttachTargetResol
             }
             $query->andWhere(
                 $query->expr()->eq('pid', $query->createNamedParameter($openPageId, Connection::PARAM_INT)),
-                $query->expr()->eq('header', $query->createNamedParameter((string) ($target['title'] ?? ''))),
+                $query->expr()->eq('TRIM(' . $query->quoteIdentifier('header') . ')', $query->createNamedParameter(trim((string) ($target['title'] ?? '')))),
             );
         }
         $rows = $query->executeQuery()->fetchAllAssociative();

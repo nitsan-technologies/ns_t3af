@@ -567,7 +567,10 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $arguments = self::openPageAsCreatePid($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $arguments = self::pinOpenPageForQueueRemove($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $gateRequest = trim((string) ($body['requestForGate'] ?? ''));
-        $arguments = $this->enrichPlannedToolArguments($toolName, $arguments, $history, $gateRequest !== '' ? $gateRequest : $requestQuery);
+        $routerFileUids = is_array($body['routerFileUids'] ?? null)
+            ? array_values(array_filter(array_map('intval', $body['routerFileUids']), static fn(int $uid): bool => $uid > 0))
+            : [];
+        $arguments = $this->enrichPlannedToolArguments($toolName, $arguments, $history, $gateRequest !== '' ? $gateRequest : $requestQuery, $routerFileUids);
         if ($toolName === 'write_table' && $requestQuery !== '') {
             $arguments['requestQuery'] = $requestQuery;
         }
@@ -1735,9 +1738,10 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     /**
      * @param array<string, mixed> $arguments
      * @param list<array<string, mixed>> $history
+     * @param list<int> $routerFileUids sys_file uids the structural attach router picked (not from the model)
      * @return array<string, mixed>
      */
-    private function enrichPlannedToolArguments(string $toolName, array $arguments, array $history, string $request = ''): array
+    private function enrichPlannedToolArguments(string $toolName, array $arguments, array $history, string $request = '', array $routerFileUids = []): array
     {
         $toolName = strtolower(trim($toolName));
         if ($toolName === 't3ai_generate_image') {
@@ -1769,8 +1773,17 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             );
         }
 
-        $pending = AgentPromptBuilder::pendingAttachFileUids($history, $request);
+        // The router already picked the uploaded file (the composer file of this turn, or the one waiting
+        // upload of the chat); the history gate below only guards file uids that a model made up.
         $fileUidsRaw = trim((string) ($arguments['fileUids'] ?? ''));
+        if ($routerFileUids !== [] && self::fileUidsArgumentIsNumericList($fileUidsRaw)) {
+            $named = array_values(array_filter(array_map('intval', explode(',', $fileUidsRaw)), static fn(int $uid): bool => $uid > 0));
+            if ($named !== [] && array_diff($named, $routerFileUids) === []) {
+                return $arguments;
+            }
+        }
+
+        $pending = AgentPromptBuilder::pendingAttachFileUids($history, $request);
         if ($fileUidsRaw !== '' && !self::fileUidsArgumentIsNumericList($fileUidsRaw)) {
             $resolved = $pending;
             if ($resolved === []) {

@@ -69,6 +69,48 @@ final class AgentAttachTargetRequest
         return null;
     }
 
+    /**
+     * sys_file uids of files the editor attached with the composer (@file), as read by file_get_info.
+     *
+     * @param list<array<string, mixed>> $messages
+     * @return list<int>
+     */
+    public static function uploadedFileUids(array $messages): array
+    {
+        $uids = [];
+        foreach ($messages as $message) {
+            $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
+            $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+            if (
+                ($meta['triggeredByAttachment'] ?? false) === true
+                && ($meta['tool'] ?? '') === 'file_get_info'
+                && ($meta['success'] ?? true) !== false
+                && (int) ($details['uid'] ?? 0) > 0
+            ) {
+                $uids[(int) $details['uid']] = true;
+            }
+        }
+
+        return array_keys($uids);
+    }
+
+    /**
+     * The one earlier upload that is still waiting for a place ("upload first, then say where it goes"),
+     * or null when there is none or more than one, so the model asks which.
+     *
+     * @param list<array<string, mixed>> $history
+     * @param array<int, true> $attached uids a file_reference_add already covered
+     */
+    public static function onlyWaitingUpload(array $history, array $attached): ?int
+    {
+        $waiting = array_values(array_filter(
+            self::uploadedFileUids($history),
+            static fn(int $uid): bool => !isset($attached[$uid]),
+        ));
+
+        return count($waiting) === 1 ? $waiting[0] : null;
+    }
+
     private static function cleanTitle(string $raw): string
     {
         $title = trim($raw);

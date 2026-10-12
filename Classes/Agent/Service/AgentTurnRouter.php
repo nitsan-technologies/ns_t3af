@@ -81,6 +81,8 @@ final readonly class AgentTurnRouter
         array $historyMessages = [],
         ?callable $emitEvent = null,
     ): array {
+        // Only the router may name the uploaded file for an attach card, never the request.
+        unset($body['routerFileUids']);
         $selectedTool = trim((string) ($body['tool'] ?? ''));
         $toolArguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
         $starterAction = trim((string) ($body['action'] ?? ''));
@@ -213,7 +215,7 @@ final readonly class AgentTurnRouter
             // "Add this image to the news X": the card is built here, the model is not left to forget the call.
             $attachCard = $this->attachCardFor(
                 $this->messageParser->stripComposerTokens($message),
-                $attachmentMessages,
+                AgentAttachTargetRequest::uploadedFileUids($attachmentMessages)[0] ?? 0,
                 $context,
                 $body,
                 $user,
@@ -239,6 +241,27 @@ final readonly class AgentTurnRouter
             );
 
             return array_merge($attachmentMessages, $orchestratorResult['messages']);
+        }
+
+        // Upload first, say where it goes in the next message: the one waiting upload gets its card too.
+        if (
+            $fileAttachments === []
+            && !is_array($body['continuation'] ?? null)
+            && !AgentRequestedFiles::asksForGeneratedImage($message)
+            && !AgentRequestedFiles::namesUrl($message)
+        ) {
+            $waitingUid = AgentAttachTargetRequest::onlyWaitingUpload(
+                $historyMessages,
+                AgentPromptBuilder::attachedFileUids($historyMessages),
+            );
+            $waitingCard = $waitingUid !== null
+                ? $this->attachCardFor($this->messageParser->stripComposerTokens($message), $waitingUid, $context, $body, $user, $correlationId)
+                : null;
+            if ($waitingCard !== null) {
+                $this->emitMessages($emitEvent, [$waitingCard]);
+
+                return [$waitingCard];
+            }
         }
 
         // Files the request names that cannot be attached are reported before the model runs; the
@@ -487,14 +510,13 @@ final readonly class AgentTurnRouter
      * The file_reference_add card for an uploaded file and a request that names one news article or content
      * element, or null when the model has to take the request (several or no match, a continuation, a new element).
      *
-     * @param list<array{role: string, content: string, meta: array<string, mixed>}> $attachmentMessages
      * @param array<string, mixed> $context
      * @param array<string, mixed> $body
      * @return array{role: string, content: string, meta: array<string, mixed>}|null
      */
     private function attachCardFor(
         string $request,
-        array $attachmentMessages,
+        int $fileUid,
         array $context,
         array $body,
         BackendUserAuthentication $user,
@@ -506,20 +528,6 @@ final readonly class AgentTurnRouter
         $target = AgentAttachTargetRequest::parse($request);
         if ($target === null) {
             return null;
-        }
-        $fileUid = 0;
-        foreach ($attachmentMessages as $attachmentMessage) {
-            $meta = is_array($attachmentMessage['meta'] ?? null) ? $attachmentMessage['meta'] : [];
-            $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
-            if (
-                ($meta['triggeredByAttachment'] ?? false) === true
-                && ($meta['tool'] ?? '') === 'file_get_info'
-                && ($meta['success'] ?? true) !== false
-                && (int) ($details['uid'] ?? 0) > 0
-            ) {
-                $fileUid = (int) $details['uid'];
-                break;
-            }
         }
         if ($fileUid <= 0) {
             return null;
@@ -536,7 +544,13 @@ final readonly class AgentTurnRouter
             'fileUids' => (string) $fileUid,
         ];
         $body['requestQuery'] = $request;
-        $card = $this->executeTool('file_reference_add', $context, $body, $user, $correlationId);
+        $body['routerFileUids'] = [$fileUid];
+        try {
+            $card = $this->executeTool('file_reference_add', $context, $body, $user, $correlationId);
+        } catch (\Throwable) {
+            // Whatever goes wrong here, the model still answers the request.
+            return null;
+        }
         if (($card['meta']['type'] ?? '') !== 'inline_draft') {
             return null;
         }
