@@ -1789,6 +1789,10 @@
                 <source>Change not found or already undone.</source>
                 <target>Änderung nicht gefunden oder bereits zurückgenommen.</target>
             </trans-unit>
+            <trans-unit id="agent.undo.useButton">
+                <source>Use the Undo button on the applied change to put the old text back.</source>
+                <target>Nutzen Sie die Schaltfläche „Zurücknehmen“ an der angewendeten Änderung, um den alten Text zurückzuholen.</target>
+            </trans-unit>
             <trans-unit id="agent.draft.expired">
                 <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
                 <target>Dieser Vorschlag ist veraltet und wurde nicht ausgeführt. Fragen Sie erneut, um einen aktuellen zu erhalten.</target>
