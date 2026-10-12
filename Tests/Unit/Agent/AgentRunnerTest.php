@@ -1102,6 +1102,16 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function showAndHideRequestsAreNotDeleteRequests(): void
+    {
+        self::assertTrue(AgentRunner::isVisibilityRequest('Make the German version of this page visible on the website.'));
+        self::assertTrue(AgentRunner::isVisibilityRequest('Hide this page'));
+        self::assertTrue(AgentRunner::isVisibilityRequest('Mach die deutsche Version sichtbar'));
+        self::assertFalse(AgentRunner::isVisibilityRequest('Delete the hidden element'));
+        self::assertFalse(AgentRunner::isVisibilityRequest('Change the header of element 5'));
+    }
+
+    #[Test]
     public function fileRequestsKeepTheMatchingFileTools(): void
     {
         $tools = [['name' => 'file_copy'], ['name' => 'file_move'], ['name' => 'directory_create'], ['name' => 'content_get']];
