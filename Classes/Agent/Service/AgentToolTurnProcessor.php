@@ -748,7 +748,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'editorLabel' => $editorLabel,
                 'severity' => $severity,
                 'draft' => $draftCard,
-                'previews' => $this->previewsForChange($arguments, []),
+                'previews' => $this->previewsForChange($arguments, [], $history, $requestQuery),
                 'orchestratorPause' => true,
             ],
         ];
@@ -1337,19 +1337,35 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
 
     /**
      * The image a prepared change is about (alt text / metadata of a file), shown on the card.
+     * For a new textmedia draft, pending unattached files from this conversation are shown too
+     * so "Put that picture on this page" is not an empty card.
      *
      * @param array<string, mixed> $arguments
      * @param array<mixed> $target
+     * @param list<array<string, mixed>> $history
      * @return list<array{fileUid: int, url: string, href: string, name: string, alt: string}>
      */
-    private function previewsForChange(array $arguments, array $target): array
+    private function previewsForChange(array $arguments, array $target, array $history = [], string $request = ''): array
     {
         if (!isset($this->mediaPreviews)) {
             return [];
         }
         $previews = $this->mediaPreviews->forRecord((string) ($target['table'] ?? ''), (int) ($target['uid'] ?? 0));
+        if ($previews !== []) {
+            return $previews;
+        }
+        $previews = $this->mediaPreviews->forDetails($arguments);
+        if ($previews !== []) {
+            return $previews;
+        }
+        $pending = AgentPromptBuilder::pendingAttachFileUids($history, $request);
+        if ($pending === []) {
+            return [];
+        }
 
-        return $previews !== [] ? $previews : $this->mediaPreviews->forDetails($arguments);
+        return $this->mediaPreviews->forDetails([
+            'fileUids' => implode(',', array_map(static fn(int $uid): string => (string) $uid, $pending)),
+        ]);
     }
 
     /**

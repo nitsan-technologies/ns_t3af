@@ -1052,10 +1052,13 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
         $schemaRequest = self::isSchemaRequest($query);
         if ($schemaRequest && preg_match('/\b(folders?|director(?:y|ies)|ordner|verzeichnis\w*)\b/iu', $query) !== 1) {
-            // "Generate a Person schema" is JSON-LD for a page, not a folder.
+            // "Generate a Person schema" is JSON-LD for a page, not a folder or a content element.
+            // write_table stays available for combined requests ("… and rename the header");
+            // T3afToolbox still refuses a tt_content create on a pure schema ask.
             foreach (['directory_create', 'directory_move', 'directory_rename', 'directory_delete'] as $directoryTool) {
                 $notAskedFor[$directoryTool] = true;
             }
+            $notAskedFor['t3ai_create_content_element'] = true;
         }
         // One generate per open request: a second card is often applied together and doubles files/credits.
         if (self::imageAlreadyGeneratedThisRequest($userMessage, $historyMessages)) {

@@ -38,14 +38,22 @@ final readonly class AgentRequestedFiles
 
     /**
      * "… with an AI-generated image of a lighthouse", "Generate an image of a mountain lake",
-     * "Generiere ein Bild von …": an image the AI has to make, not one from the web or the fileadmin.
+     * "Create a picture of a coffee shop", "Generiere ein Bild von …": an image the AI has to make,
+     * not one from the web or the fileadmin.
+     *
+     * create/make/draw need an indefinite article or a number ("a picture", "3 photos") so
+     * "make the image smaller" is not treated as generation.
      */
     public static function asksForGeneratedImage(string $request): bool
     {
+        $imageNoun = '(?:images?|pictures?|photos?|illustrations?|graphics?|bild|bilder|foto|fotos|illustration\w*|grafik\w*)';
+
         return preg_match(
             '/\b(?:ai|ki)[\s-]*(?:generated|generiert\w*|created|erstellt\w*|images?|bild\w*)\b'
-            . '|\bgenerat\w*\s+(?:\w+\s+){0,3}(?:images?|pictures?|photos?|illustrations?|graphics?)\b'
-            . '|\bgenerier\w*\s+(?:\w+\s+){0,3}(?:bild|bilder|foto\w*|illustration\w*|grafik\w*)\b/iu',
+            . '|\b(?:generat\w*|generier\w*)\s+(?:\w+\s+){0,3}' . $imageNoun . '\b'
+            . '|\b(?:creat\w*|mak\w*|draw\w*|erzeug\w*|erstell\w*|zeichn\w*)\s+'
+            . '(?:(?:a|an|one|some|another|\d{1,2}|ein|eine|einen|einem|einer|eines|einige)\s+)'
+            . '(?:\w+\s+){0,2}' . $imageNoun . '\b/iu',
             $request,
         ) === 1;
     }
@@ -58,6 +66,8 @@ final readonly class AgentRequestedFiles
     {
         return self::asksForGeneratedImage($request)
             && AgentRequestChecklist::parse($request) === []
+            // "Create an image page" is a page, not a standalone file.
+            && preg_match('/\b(?:new\s+)?(?:pages?|seiten?|subpages?|unterseiten?)\b/iu', $request) !== 1
             && preg_match(
                 '/\b(?:attach|add|insert|put|place|use|embed|füg\w*|häng\w*|setz\w*|verwend\w*|einbind\w*)\b'
                 . '|\b(?:to|on|in|into|onto|for|zu|zum|zur|auf|für)\s+(?:(?:the|this|that|a|an|my|our|die|der|das|den|dem|diese\w*|eine\w*)\s+)?(?:page|element|content|news|article|record|seite|inhalt\w*|artikel)\b/iu',
