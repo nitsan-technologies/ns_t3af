@@ -85,11 +85,18 @@ final class AgentRequestedFilesTest extends TestCase
         return [
             'ai-generated' => ['Create a text & media content element with an AI-generated image of a red lighthouse at sunset', true],
             'generate an image' => ['Generate an image of a blue mountain lake', true],
+            'create a picture' => ['Create a picture of a cozy coffee shop with warm light and save it in my files.', true],
+            'make pictures' => ['Make 3 different pictures of a mountain lake.', true],
             'german' => ['Erstelle ein Text & Medien Element und generiere ein Bild von einem Leuchtturm', true],
             'ki-bild' => ['Füge ein KI-Bild von einem Strand hinzu', true],
             'existing file' => ['Attach sys_file uid 145 to element 12', false],
             'generate seo' => ['Generate SEO metadata for this page', false],
             'image alt text' => ['Set the image alt text of element 5', false],
+            'make image smaller' => ['Make the image smaller', false],
+            'make picture wider' => ['Make the picture on this page wider', false],
+            'make sure alt text' => ['Make sure the image has alt text', false],
+            'draw attention' => ['Draw attention to the image in the hero', false],
+            'make photo larger' => ['Update the header and make the photo larger', false],
         ];
     }
 
@@ -107,10 +114,12 @@ final class AgentRequestedFilesTest extends TestCase
     {
         return [
             'just an image' => ['Generate an image of a red apple on a wooden table', true],
+            'create and save in files' => ['Create a picture of a cozy coffee shop with warm light and save it in my files.', true],
             'german' => ['Generiere ein Bild von einem roten Apfel auf einem Holztisch', true],
             'into an element' => ['Create a text & media content element with an AI-generated image of a red lighthouse at sunset', false],
             'add it' => ['Generate an image of a lake and add it to element 12', false],
             'for this page' => ['Generate an image for this page', false],
+            'image page' => ['Create an image page under this page', false],
             'not generated' => ['Attach sys_file uid 145 to element 12', false],
         ];
     }
@@ -136,6 +145,24 @@ final class AgentRequestedFilesTest extends TestCase
         ];
 
         self::assertSame([171], AgentPromptBuilder::unattachedFileUids($history));
+        self::assertSame('', AgentPromptBuilder::remainingWorkReminder($history, [], $request));
+        self::assertFalse(AgentPromptBuilder::hasBlockingRemainingWork($history, [], $request));
+    }
+
+    #[Test]
+    public function createAPictureAndSaveInFilesLeavesNothingToAttach(): void
+    {
+        $request = 'Create a picture of a cozy coffee shop with warm light and save it in my files.';
+        $history = [
+            ['role' => 'user', 'content' => $request, 'meta' => []],
+            [
+                'role' => 'assistant',
+                'content' => 'Image saved.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3ai_generate_image', 'success' => true, 'severity' => 'write', 'details' => ['fileUid' => 150]],
+            ],
+        ];
+
+        self::assertTrue(AgentRequestedFiles::asksOnlyForGeneratedImage($request));
         self::assertSame('', AgentPromptBuilder::remainingWorkReminder($history, [], $request));
         self::assertFalse(AgentPromptBuilder::hasBlockingRemainingWork($history, [], $request));
     }
