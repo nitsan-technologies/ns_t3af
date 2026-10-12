@@ -82,6 +82,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         private AgentTranslator $translator,
         private PremiumCatalogProvider $premiumCatalog,
         private AgentEntitlementExplanation $entitlementExplanation,
+        private AgentProviderTurnErrorPresenter $providerTurnErrorPresenter,
         private ?AgentProviderOptions $providerOptions = null,
     ) {}
 
@@ -520,7 +521,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             } else {
                 $state->addMessage([
                     'role' => 'assistant',
-                    'content' => $this->creditsErrorMessage($exception),
+                    'content' => $this->creditsErrorMessage($exception, $user),
                     'meta' => ['type' => 'error', 'correlationId' => $correlationId, 'degraded' => true],
                 ]);
                 $state->failed = true;
@@ -542,7 +543,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         return false;
     }
 
-    private function creditsErrorMessage(\Throwable $exception): string
+    private function creditsErrorMessage(\Throwable $exception, BackendUserAuthentication $user): string
     {
         if ($exception instanceof InsufficientCreditsException) {
             return $exception->getMessage() !== '' && $exception->getMessage() !== 'insufficient_credits'
@@ -566,26 +567,11 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             return $this->translator->translate('agent.turn.timeout');
         }
 
-        if (self::looksLikeContextOverflow($exception->getMessage())) {
+        if (AgentProviderTurnErrorPresenter::looksLikeContextOverflow($exception)) {
             return $this->translator->translate('agent.credits.contextLength');
         }
 
-        // Account problems of the AI provider (empty balance, quota, invalid key) are for the administrator:
-        // the editor gets a plain sentence, not the provider's billing text.
-        if (self::looksLikeProviderAccountProblem($exception->getMessage())) {
-            return $this->translator->translate('agent.turn.providerUnavailable');
-        }
-
-        return $this->translator->translate('agent.turn.orchestratorFailed', [self::readableProviderError($exception->getMessage())]);
-    }
-
-    /** Provider wording for an empty balance, an exhausted quota or a rejected API key. */
-    public static function looksLikeProviderAccountProblem(string $raw): bool
-    {
-        return preg_match(
-            '/credit balance|billing|insufficient[_ ]quota|exceeded your (?:current )?quota|quota exceeded|plans? (?:&|and) billing|invalid[_ ]api[_ ]key|incorrect api key|authentication[_ ]error|invalid x-api-key|payment required/i',
-            $raw,
-        ) === 1;
+        return $this->providerTurnErrorPresenter->present($exception, $this->translator, (bool) $user->isAdmin());
     }
 
     /**
@@ -681,12 +667,6 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return false;
-    }
-
-    /** Provider wording for "the request is larger than the model's context window". */
-    private static function looksLikeContextOverflow(string $raw): bool
-    {
-        return preg_match('/context[_ ]length|maximum context|context window|too many tokens|prompt is too long|reduce the length/i', $raw) === 1;
     }
 
     /**
@@ -886,20 +866,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
      */
     public static function readableProviderError(string $raw): string
     {
-        $raw = trim($raw);
-        $start = strpos($raw, '{');
-        if ($start !== false) {
-            $end = strrpos($raw, '}');
-            $decoded = $end !== false && $end > $start ? json_decode(substr($raw, $start, $end - $start + 1), true) : null;
-            $message = is_array($decoded) ? ($decoded['error']['message'] ?? $decoded['message'] ?? $decoded['error'] ?? null) : null;
-            $raw = is_string($message) && trim($message) !== '' ? trim($message) : trim(substr($raw, 0, $start));
-        }
-        $raw = trim((string) preg_replace('/\s+/u', ' ', $raw), ' :-');
-        if ($raw === '') {
-            return 'The AI provider returned an error. Please try again.';
-        }
-
-        return mb_strlen($raw) > 200 ? rtrim(mb_substr($raw, 0, 200)) . '…' : $raw;
+        return AgentProviderTurnErrorPresenter::readableProviderError($raw);
     }
 
     /**

@@ -44,6 +44,10 @@ final class RequestedLanguageTest extends TestCase
         yield 'deutsch' => ['Übersetze diese Seite auf Deutsch', null];
         yield 'term in quotes' => ['Save the glossary term "French fries" as "Pommes" in German', null];
         yield 'site language beside other' => ['Translate the French page into German', null];
+        yield 'site language and a missing one' => ['Queue this page for translation into German and Spanish.', 'Spanish'];
+        yield 'missing then site language' => ['Queue this page for translation into Spanish und Deutsch', 'Spanish'];
+        yield 'two missing' => ['Queue this page for translation into French and Spanish.', 'French'];
+        yield 'spanish only' => ['Queue this page for translation into Spanish only.', 'Spanish'];
         yield 'no language' => ['Translate this page', null];
     }
 
@@ -52,6 +56,24 @@ final class RequestedLanguageTest extends TestCase
     public function namesTheMissingLanguageOnly(string $request, ?string $expected): void
     {
         self::assertSame($expected, RequestedLanguage::unavailable($request, self::SITE));
+    }
+
+    #[Test]
+    public function aButtonLabelIsUnavailableOnlyForALanguageTheSiteLacks(): void
+    {
+        self::assertTrue(RequestedLanguage::isUnavailableName('Spanish', self::SITE));
+        self::assertTrue(RequestedLanguage::isUnavailableName('Französisch', self::SITE));
+        self::assertFalse(RequestedLanguage::isUnavailableName('German', self::SITE));
+        self::assertFalse(RequestedLanguage::isUnavailableName('Page 2', self::SITE));
+        self::assertFalse(RequestedLanguage::isUnavailableName('Spanish', []));
+    }
+
+    #[Test]
+    public function aQueueRequestTurnedIntoARemovalStillGetsTheLanguageCheck(): void
+    {
+        self::assertTrue(RequestedLanguage::isQueueAddRequestForRemoval('t3ai_mass_translation_queue_remove', 'Queue this page for translation into Spanish only.'));
+        self::assertFalse(RequestedLanguage::isQueueAddRequestForRemoval('t3ai_mass_translation_queue_remove', 'Remove page 2 from the translation queue'));
+        self::assertFalse(RequestedLanguage::isQueueAddRequestForRemoval('t3ai_mass_translation_queue_add', 'Queue this page for translation into Spanish'));
     }
 
     #[Test]

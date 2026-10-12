@@ -695,6 +695,22 @@
                 <source>The AI provider is not available right now. Please try again later or ask your administrator to check the provider account.</source>
                 <target>Der KI-Anbieter ist im Moment nicht verfügbar. Bitte versuchen Sie es später erneut oder bitten Sie Ihre Administration, das Anbieterkonto zu prüfen.</target>
             </trans-unit>
+            <trans-unit id="agent.turn.providerNotFoundForSite">
+                <source>No AI provider is configured for this site. Open AI Foundation → Providers on the current site, add a connected provider, and run Test connection.</source>
+                <target>Für diese Website ist kein KI-Anbieter konfiguriert. Öffnen Sie KI Foundation → Anbieter auf der aktuellen Website, legen Sie einen verbundenen Anbieter an und führen Sie „Verbindung testen“ aus.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.providerNoDefaultForSite">
+                <source>No default AI provider is configured for this site. Open AI Foundation → Providers on the current site and mark one provider as default.</source>
+                <target>Für diese Website ist kein Standard-KI-Anbieter gesetzt. Öffnen Sie KI Foundation → Anbieter auf der aktuellen Website und markieren Sie einen Anbieter als Standard.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.providerRateLimited">
+                <source>The AI provider rate limit was reached: %1$s Please wait a moment and try again.</source>
+                <target>Das Anfragenlimit des KI-Anbieters wurde erreicht: %1$s Bitte warten Sie einen Moment und versuchen Sie es erneut.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.providerRateLimitedFallback">
+                <source>too many requests in a short time.</source>
+                <target>zu viele Anfragen in kurzer Zeit.</target>
+            </trans-unit>
             <trans-unit id="agent.turn.timeout">
                 <source>The AI took too long to answer. Please try again.</source>
                 <target>Die KI hat zu lange für die Antwort gebraucht. Bitte versuchen Sie es erneut.</target>

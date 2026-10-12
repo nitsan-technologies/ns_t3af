@@ -756,6 +756,18 @@
       <trans-unit id="agent.turn.providerUnavailable" resname="agent.turn.providerUnavailable">
         <source>The AI provider is not available right now. Please try again later or ask your administrator to check the provider account.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.providerNotFoundForSite" resname="agent.turn.providerNotFoundForSite">
+        <source>No AI provider is configured for this site. Open AI Foundation → Providers on the current site, add a connected provider, and run Test connection.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.providerNoDefaultForSite" resname="agent.turn.providerNoDefaultForSite">
+        <source>No default AI provider is configured for this site. Open AI Foundation → Providers on the current site and mark one provider as default.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.providerRateLimited" resname="agent.turn.providerRateLimited">
+        <source>The AI provider rate limit was reached: %1$s Please wait a moment and try again.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.providerRateLimitedFallback" resname="agent.turn.providerRateLimitedFallback">
+        <source>too many requests in a short time.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.timeout" resname="agent.turn.timeout">
         <source>The AI took too long to answer. Please try again.</source>
       </trans-unit>
