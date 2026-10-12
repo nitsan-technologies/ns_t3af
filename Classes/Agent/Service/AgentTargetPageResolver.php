@@ -213,6 +213,10 @@ final readonly class AgentTargetPageResolver
             if (($meta['type'] ?? '') !== 'clarification') {
                 continue;
             }
+            // Options that are content elements ("Coastal travel [713]") are not pages.
+            if (($meta['contentChoice'] ?? false) === true) {
+                return 0;
+            }
             $raw = is_array($meta['options'] ?? null) ? $meta['options'] : [];
             $options = array_values(array_filter($raw, 'is_string'));
             $missingPage = ($meta['missingPage'] ?? false) === true;

@@ -142,4 +142,23 @@ final class AgentTargetPageResolverTest extends TestCase
         self::assertSame('Contacts [8]', $labels[0]);
         self::assertNotContains('Contact [9]', $labels);
     }
+
+    #[Test]
+    public function aClickOnAnElementOptionIsNotAPageChoice(): void
+    {
+        $history = [[
+            'role' => 'assistant',
+            'content' => 'Which content element called "Coastal travel" should I translate?',
+            'meta' => ['type' => 'clarification', 'options' => ['Coastal travel [713]', 'Coastal travel [697]'], 'contentChoice' => true],
+        ]];
+
+        self::assertSame(0, AgentTargetPageResolver::pageIdFromChoice('Coastal travel [713]', $history));
+
+        $pageHistory = [[
+            'role' => 'assistant',
+            'content' => 'Which page?',
+            'meta' => ['type' => 'clarification', 'options' => ['Services [12]', 'Services Old [14]']],
+        ]];
+        self::assertSame(12, AgentTargetPageResolver::pageIdFromChoice('Services [12]', $pageHistory));
+    }
 }

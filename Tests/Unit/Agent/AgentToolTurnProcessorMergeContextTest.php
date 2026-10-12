@@ -360,6 +360,35 @@ final class AgentToolTurnProcessorMergeContextTest extends TestCase
     }
 
     #[Test]
+    public function namingTheOpenPageForTheGoogleListIsNotRefused(): void
+    {
+        $context = ['pageId' => 3, 'details' => ['page' => ['uid' => 3, 'title' => 'QA Mounted Child']]];
+
+        self::assertNull(AgentToolTurnProcessor::refuseSeoQueueOpenPageForNamedTitle(
+            't3ai_mass_seo_queue_add',
+            ['pageId' => 3],
+            $context,
+            'add QA Mounted Child to the list for Google texts',
+        ));
+        // Another page named while this one is open still must not queue the open page.
+        self::assertNotNull(AgentToolTurnProcessor::refuseSeoQueueOpenPageForNamedTitle(
+            't3ai_mass_seo_queue_add',
+            ['pageId' => 3],
+            $context,
+            'add QA Secret Outside to the list for Google texts',
+        ));
+    }
+
+    #[Test]
+    public function aPickedElementButtonCarriesItsUid(): void
+    {
+        self::assertSame(713, AgentToolTurnProcessor::contentUidFromChoiceText('Coastal travel [713]'));
+        self::assertSame(696, AgentToolTurnProcessor::contentUidFromChoiceText("Coastal Travel [696]\n"));
+        self::assertSame(0, AgentToolTurnProcessor::contentUidFromChoiceText('Translate the element [713] into German'));
+        self::assertSame(0, AgentToolTurnProcessor::contentUidFromChoiceText('Translate this page'));
+    }
+
+    #[Test]
     public function recursiveSubtreeKeepsTheFirstListedPageWhenNoPageIdWasGiven(): void
     {
         $merged = AgentToolTurnProcessor::seoQueueAddRecursiveSubtree(
