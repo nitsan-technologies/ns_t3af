@@ -1904,8 +1904,8 @@
                 <target>Embedding Modell</target>
             </trans-unit>
             <trans-unit id="provider.field.embeddingModelId.subnote">
-                <source>Leave blank to use the chat model for embeddings.</source>
-                <target>Lassen Sie das Feld leer, um das Chat-Modell für Embeddings zu verwenden.</target>
+                <source>Leave blank to use the vendor default (OpenAI: text-embedding-3-small, Mistral: mistral-embed, Gemini: gemini-embedding-001). Other providers use the chat model.</source>
+                <target>Leer lassen, um den Standard des Anbieters zu verwenden (OpenAI: text-embedding-3-small, Mistral: mistral-embed, Gemini: gemini-embedding-001). Andere Anbieter verwenden das Chat-Modell.</target>
             </trans-unit>
             <trans-unit id="provider.field.capabilities">
                 <source>Capabilities</source>
@@ -1972,8 +1972,8 @@
                 <target>Wählen Sie das Modell, das Antworten und anderen Text für diese Verbindung schreibt. Ein Modell ist eine bestimmte AI-Version, zum Beispiel gpt-4o oder claude-sonnet. Bei Azure tragen Sie den Deployment-Namen aus dem Azure-Portal ein. Der weicht oft vom öffentlichen Modellnamen ab.</target>
             </trans-unit>
             <trans-unit id="provider.field.embeddingModelId.help">
-                <source>Choose the model used when the site searches or looks for similar content. If you leave this empty, the chat model above is used for that too. For example: text-embedding-3-small. You can skip this if you only use the AI for writing.</source>
-                <target>Wählen Sie das Modell, das die Website für die Suche oder für ähnliche Inhalte nutzt. Wenn Sie das Feld leer lassen, wird dafür das Chat-Modell oben verwendet. Zum Beispiel: text-embedding-3-small. Sie können das Feld überspringen, wenn Sie die AI nur zum Schreiben nutzen.</target>
+                <source>Choose the model used when the site searches or looks for similar content. If you leave this empty, OpenAI, Mistral and Gemini use their standard embedding model (text-embedding-3-small, mistral-embed, gemini-embedding-001). Other providers use the chat model above. You can skip this if you only use the AI for writing.</source>
+                <target>Wählen Sie das Modell, das die Website für die Suche oder für ähnliche Inhalte nutzt. Wenn Sie das Feld leer lassen, verwenden OpenAI, Mistral und Gemini ihr Standard-Embedding-Modell (text-embedding-3-small, mistral-embed, gemini-embedding-001). Andere Anbieter verwenden das Chat-Modell oben. Sie können das Feld überspringen, wenn Sie die AI nur zum Schreiben nutzen.</target>
             </trans-unit>
             <trans-unit id="provider.field.apiVersion">
                 <source>API version</source>
