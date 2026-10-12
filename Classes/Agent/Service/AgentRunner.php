@@ -196,7 +196,11 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             (($continuation['outcome'] ?? '') === 'declined' || $cardDropped)
             && !$state->failed
             && !$cardLeft
-            && (trim($finalText) === '' || AgentPromptBuilder::isCardHistoryEcho($finalText))
+            && (
+                trim($finalText) === ''
+                || AgentPromptBuilder::isCardHistoryEcho($finalText)
+                || self::declinedReplyOffersItAgain(($continuation['outcome'] ?? '') === 'declined', $state->executedTools, $historyMessages)
+            )
         ) {
             $finalText = $this->translator->translate(
                 ($continuation['outcome'] ?? '') === 'declined' ? 'agent.turn.declinedAskInstead' : 'agent.turn.declinedNotRepeated',
@@ -774,6 +778,33 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         return in_array($tool, ['t3ai_translate_page', 't3ai_translate_content', 't3ai_translate_news', 't3ai_record_translate'], true)
             ? 'tool translate'
             : 'tool ' . $tool;
+    }
+
+    /**
+     * After the editor cancelled the only step of a request, a text-only reply is the model asking
+     * "Shall I translate into German, French or Hindi?" - the cancelled action offered again. With no
+     * tool run, no card and no step of the request left, that reply is replaced by the fixed
+     * "nothing was written, what instead?" text.
+     *
+     * @param array<int|string, mixed> $executedTools
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function declinedReplyOffersItAgain(bool $declined, array $executedTools, array $historyMessages): bool
+    {
+        // The plan is left out on purpose: its step for the cancelled action would still look open.
+        return $declined
+            && $executedTools === []
+            && !AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, []);
+    }
+
+    /**
+     * "Translate the first / last content element into French": one element by position, with no
+     * "whole page" in the request. The page translation tool is the wrong one for it.
+     */
+    public static function asksForOneElementTranslation(string $request): bool
+    {
+        return AgentToolTurnProcessor::requestedElementPosition($request) !== null
+            && preg_match('/\b(?:whole|entire|complete|full)\s+page\b|\bgesamte[nr]?\s+seite\b|\bganze[nr]?\s+seite\b/iu', $request) !== 1;
     }
 
     /**
