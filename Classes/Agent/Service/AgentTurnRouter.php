@@ -186,6 +186,26 @@ final readonly class AgentTurnRouter
         }
         $context = $namedPage['context'];
 
+        $glossaryPair = GlossaryPairRequest::parse($nlMessage);
+        if ($glossaryPair !== null && !is_array($body['continuation'] ?? null)) {
+            $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+            $arguments['sourceTerm'] = $glossaryPair['source'];
+            $arguments['targetTerm'] = $glossaryPair['target'];
+            $arguments['pageId'] = (int) ($context['pageId'] ?? $arguments['pageId'] ?? 0);
+            unset($arguments['languageUid']);
+            $body['arguments'] = $arguments;
+            $body['requestQuery'] = $nlMessage;
+            $glossaryMessages = $this->finalizeStructuralMessages(
+                [$this->executeTool('t3ai_glossary_save', $context, $body, $user, $correlationId)],
+                $correlationId,
+            );
+            $this->emitMessages($emitEvent, $glossaryMessages);
+
+            return $attachmentMessages === []
+                ? $glossaryMessages
+                : array_merge($attachmentMessages, $glossaryMessages);
+        }
+
         if ($followUp !== '' && $attachmentMessages !== []) {
             $this->emitMessages($emitEvent, $attachmentMessages);
             $history = $historyMessages;

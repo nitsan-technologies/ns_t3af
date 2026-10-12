@@ -235,6 +235,44 @@ final class AgentTurnRouterTest extends TestCase
     }
 
     #[Test]
+    public function aKnownGlossaryPhraseIsSavedWithoutTheModel(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $this->turnOrchestrator->expects(self::never())->method('runTurn');
+        $this->toolTurnProcessor->expects(self::once())
+            ->method('execute')
+            ->with(
+                't3ai_glossary_save',
+                self::callback(static fn(array $context): bool => (int) ($context['pageId'] ?? 0) === 2),
+                self::callback(static function (array $body): bool {
+                    $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+
+                    return ($arguments['sourceTerm'] ?? null) === 'Layout'
+                        && ($arguments['targetTerm'] ?? null) === 'Layoutansicht'
+                        && ($body['requestQuery'] ?? null) === 'remember that we say Layoutansicht not Layout';
+                }),
+                $user,
+                'corr-glossary',
+            )
+            ->willReturn([
+                'role' => 'assistant',
+                'content' => '"Layout" is already in the word list as "Layoutansicht" (German).',
+                'meta' => ['type' => 'info', 'orchestratorPause' => true],
+            ]);
+
+        $messages = $this->router->route(
+            'remember that we say Layoutansicht not Layout',
+            ['pageId' => 2],
+            [],
+            $user,
+            'corr-glossary',
+        );
+
+        self::assertSame('info', $messages[0]['meta']['type'] ?? null);
+        self::assertSame('"Layout" is already in the word list as "Layoutansicht" (German).', $messages[0]['content']);
+    }
+
+    #[Test]
     public function legacySeoActionMapsToGenerateAllSeoTool(): void
     {
         $user = $this->createMock(BackendUserAuthentication::class);
