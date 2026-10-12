@@ -66,6 +66,14 @@ final class AgentTargetPageResolverTest extends TestCase
     }
 
     #[Test]
+    public function aQuestionWordBeforePagesIsNotAPageTitle(): void
+    {
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('Which pages will be included and what will be generated for them?'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('How many pages are selected?'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('Welche Seiten werden berücksichtigt?'));
+    }
+
+    #[Test]
     public function namedPageTitleIsTheWordsBeforePage(): void
     {
         self::assertSame('Contact', AgentTargetPageResolver::namedPageTitle('make the Contact page show up in Google'));
