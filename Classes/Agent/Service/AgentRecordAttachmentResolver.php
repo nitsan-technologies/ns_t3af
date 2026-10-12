@@ -152,7 +152,7 @@ final readonly class AgentRecordAttachmentResolver
             'tool' => 'file_get_info',
             'arguments' => [
                 'storageUid' => $storageUid,
-                'fileIdentifier' => $identifier,
+                'fileIdentifier' => '/' . ltrim(trim($identifier), '/'),
             ],
         ];
     }
