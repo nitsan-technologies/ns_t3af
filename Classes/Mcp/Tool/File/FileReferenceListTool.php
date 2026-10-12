@@ -55,6 +55,21 @@ readonly class FileReferenceListTool implements McpNonAiToolInterface
             );
         }
 
+        // "image" on a Text & Media element is always empty: the element keeps its pictures in "assets".
+        $note = '';
+        $usable = $this->usableFileFieldsOfRecord($table, $uid, $fieldName, $fileFields);
+        if ($usable !== null) {
+            if (count($usable) !== 1) {
+                return $this->encodeError(
+                    'Field \'' . $fieldName . '\' is not used by this record type.'
+                    . ($usable !== [] ? ' Use fieldName "' . implode('" or "', $usable) . '".' : ' This record type has no file field.'),
+                    ['availableFileFields' => $usable],
+                );
+            }
+            $note = 'Field \'' . $fieldName . '\' is not used by this record type; listed \'' . $usable[0] . '\' instead.';
+            $fieldName = $usable[0];
+        }
+
         $references = $this->recordService->findFileReferences($table, $uid, $fieldName);
 
         return json_encode([
@@ -63,7 +78,37 @@ readonly class FileReferenceListTool implements McpNonAiToolInterface
             'fieldName' => $fieldName,
             'total' => count($references),
             'references' => $references,
+            ...($note !== '' ? ['note' => $note] : []),
         ], JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * The file fields the record type really shows when the asked-for one is not among them, else null.
+     *
+     * @param list<string> $fileFields
+     * @return list<string>|null
+     */
+    private function usableFileFieldsOfRecord(string $table, int $uid, string $fieldName, array $fileFields): ?array
+    {
+        $typeField = (string) ($GLOBALS['TCA'][$table]['ctrl']['type'] ?? '');
+        if ($typeField === '' || str_contains($typeField, ':') || $uid <= 0) {
+            return null;
+        }
+        try {
+            $row = $this->recordService->findByUid($table, $uid, ['uid', $typeField]);
+        } catch (\Throwable) {
+            return null;
+        }
+        $recordType = $row !== null ? trim((string) ($row[$typeField] ?? '')) : '';
+        if ($recordType === '') {
+            return null;
+        }
+        $shown = $this->tcaSchemaService->getShownFields($table, $recordType);
+        if ($shown === [] || in_array($fieldName, $shown, true)) {
+            return null;
+        }
+
+        return array_values(array_intersect($fileFields, $shown));
     }
 
     /** @param array<string, mixed> $context */

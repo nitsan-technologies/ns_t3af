@@ -1405,7 +1405,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      */
     private function unavailableLanguageTurn(string $toolName, array $context, string $requestQuery, string $correlationId): ?array
     {
-        if ($requestQuery === '' || !RequestedLanguage::isLanguageTool($toolName)) {
+        if ($requestQuery === '' || (!RequestedLanguage::isLanguageTool($toolName) && !RequestedLanguage::isQueueAddRequestForRemoval($toolName, $requestQuery))) {
             return null;
         }
         $siteLanguages = GlossarySaveLanguage::siteLanguages($context);

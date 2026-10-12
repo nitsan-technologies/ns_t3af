@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Service;
 
+use NITSAN\NsT3AF\Agent\Contract\AgentAttachTargetResolverInterface;
 use NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface;
 use NITSAN\NsT3AF\Agent\Contract\AgentTurnRunnerInterface;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
@@ -61,6 +62,7 @@ final readonly class AgentTurnRouter
         private AgentTranslator $translator,
         private AgentTargetPageResolver $targetPageResolver,
         private ?AgentRequestedFiles $requestedFiles = null,
+        private ?AgentAttachTargetResolverInterface $attachTargetResolver = null,
     ) {}
 
     /**
@@ -208,6 +210,20 @@ final readonly class AgentTurnRouter
 
         if ($followUp !== '' && $attachmentMessages !== []) {
             $this->emitMessages($emitEvent, $attachmentMessages);
+            // "Add this image to the news X": the card is built here, the model is not left to forget the call.
+            $attachCard = $this->attachCardFor(
+                $this->messageParser->stripComposerTokens($message),
+                $attachmentMessages,
+                $context,
+                $body,
+                $user,
+                $correlationId,
+            );
+            if ($attachCard !== null) {
+                $this->emitMessages($emitEvent, [$attachCard]);
+
+                return array_merge($attachmentMessages, [$attachCard]);
+            }
             $history = $historyMessages;
             foreach ($attachmentMessages as $attachmentMessage) {
                 $history[] = $attachmentMessage;
@@ -465,6 +481,69 @@ final readonly class AgentTurnRouter
         string $correlationId,
     ): array {
         return $this->toolTurnProcessor->execute($toolName, $context, $body, $user, $correlationId);
+    }
+
+    /**
+     * The file_reference_add card for an uploaded file and a request that names one news article or content
+     * element, or null when the model has to take the request (several or no match, a continuation, a new element).
+     *
+     * @param list<array{role: string, content: string, meta: array<string, mixed>}> $attachmentMessages
+     * @param array<string, mixed> $context
+     * @param array<string, mixed> $body
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function attachCardFor(
+        string $request,
+        array $attachmentMessages,
+        array $context,
+        array $body,
+        BackendUserAuthentication $user,
+        string $correlationId,
+    ): ?array {
+        if ($this->attachTargetResolver === null || is_array($body['continuation'] ?? null)) {
+            return null;
+        }
+        $target = AgentAttachTargetRequest::parse($request);
+        if ($target === null) {
+            return null;
+        }
+        $fileUid = 0;
+        foreach ($attachmentMessages as $attachmentMessage) {
+            $meta = is_array($attachmentMessage['meta'] ?? null) ? $attachmentMessage['meta'] : [];
+            $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+            if (
+                ($meta['triggeredByAttachment'] ?? false) === true
+                && ($meta['tool'] ?? '') === 'file_get_info'
+                && ($meta['success'] ?? true) !== false
+                && (int) ($details['uid'] ?? 0) > 0
+            ) {
+                $fileUid = (int) $details['uid'];
+                break;
+            }
+        }
+        if ($fileUid <= 0) {
+            return null;
+        }
+        $record = $this->attachTargetResolver->resolve($target, (int) ($context['pageId'] ?? 0));
+        if ($record === null) {
+            return null;
+        }
+
+        $body['arguments'] = [
+            'table' => $record['table'],
+            'uid' => $record['uid'],
+            'fieldName' => $record['fieldName'],
+            'fileUids' => (string) $fileUid,
+        ];
+        $body['requestQuery'] = $request;
+        $card = $this->executeTool('file_reference_add', $context, $body, $user, $correlationId);
+        if (($card['meta']['type'] ?? '') !== 'inline_draft') {
+            return null;
+        }
+        // Like a card from a natural-language turn: the turn goes on after Apply or decline.
+        $card['meta']['fromRunner'] = true;
+
+        return $card;
     }
 
     /**

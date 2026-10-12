@@ -39,6 +39,14 @@ final class RequestedLanguage
         't3ai_mass_translation_queue_add',
     ];
 
+    /** A queue request that the model turned into a removal; the language check still applies. */
+    public static function isQueueAddRequestForRemoval(string $toolName, string $request): bool
+    {
+        return strtolower(trim($toolName)) === 't3ai_mass_translation_queue_remove'
+            && preg_match('/\b(queue|add|enqueue|translate|translation|übersetz\w*|warteschlange)\b/iu', $request) === 1
+            && preg_match('/\b(remove|delete|clear|drop|entfern\w*|lösch\w*)\b/iu', $request) !== 1;
+    }
+
     /**
      * Alias groups (English and German names, ISO code). The first entry is the English name.
      *
@@ -108,20 +116,80 @@ final class RequestedLanguage
         $text = (string) preg_replace('/[“„«][^”“»]{0,200}[”“»]/u', ' ', $text);
 
         $missing = null;
+        $namedAvailable = [];
+        $namedMissing = [];
         foreach (self::LANGUAGES as $aliases) {
             foreach ($aliases as $alias) {
-                if (preg_match('/(?<![\p{L}\p{N}_])' . preg_quote($alias, '/') . '(?:e[nrsm]?)?(?![\p{L}\p{N}_])/iu', $text) !== 1) {
+                if (preg_match(self::aliasPattern($alias), $text) !== 1) {
                     continue;
                 }
                 if (isset($available[self::canonical($aliases[0])])) {
-                    return null;
+                    $namedAvailable[] = $alias;
+                } else {
+                    $namedMissing[] = $alias;
+                    $missing ??= $aliases[0];
                 }
-                $missing ??= $aliases[0];
                 break;
             }
         }
+        if ($namedAvailable === []) {
+            return $missing;
+        }
 
-        return $missing;
+        // "German and Spanish": a language listed next to a site language is a target too, not a stray word.
+        foreach ($namedMissing as $gone) {
+            foreach ($namedAvailable as $kept) {
+                $a = self::aliasBody($gone);
+                $b = self::aliasBody($kept);
+                $join = '\s*(?:,|&|\/|and|und|or|oder|plus|sowie)?\s*';
+                if (preg_match('/(?<![\p{L}\p{N}_])' . $a . '(?:e[nrsm]?)?' . $join . $b . '(?![\p{L}\p{N}_])/iu', $text) === 1
+                    || preg_match('/(?<![\p{L}\p{N}_])' . $b . '(?:e[nrsm]?)?' . $join . $a . '(?:e[nrsm]?)?(?![\p{L}\p{N}_])/iu', $text) === 1) {
+                    foreach (self::LANGUAGES as $aliases) {
+                        if (in_array($gone, $aliases, true)) {
+                            return $aliases[0];
+                        }
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * True when the text is the name of a language the site does not have ("Spanish" as a button label).
+     *
+     * @param list<array<string, mixed>> $siteLanguages
+     */
+    public static function isUnavailableName(string $name, array $siteLanguages): bool
+    {
+        $needle = mb_strtolower(trim($name));
+        $titles = array_map('mb_strtolower', array_filter(array_map(
+            static fn(array $language): string => trim((string) ($language['title'] ?? '')),
+            $siteLanguages,
+        )));
+        if ($needle === '' || $titles === [] || in_array($needle, $titles, true)) {
+            return false;
+        }
+        foreach (self::LANGUAGES as $aliases) {
+            foreach ($aliases as $alias) {
+                if (mb_strtolower($alias) === $needle) {
+                    return !in_array(mb_strtolower($aliases[0]), $titles, true);
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static function aliasBody(string $alias): string
+    {
+        return preg_quote($alias, '/');
+    }
+
+    private static function aliasPattern(string $alias): string
+    {
+        return '/(?<![\p{L}\p{N}_])' . preg_quote($alias, '/') . '(?:e[nrsm]?)?(?![\p{L}\p{N}_])/iu';
     }
 
     /**

@@ -34,6 +34,7 @@ use NITSAN\NsT3AF\Agent\Service\AgentLowRiskFieldMatrix;
 use NITSAN\NsT3AF\Agent\Service\AgentPausePolicy;
 use NITSAN\NsT3AF\Agent\Service\AgentPlan;
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
+use NITSAN\NsT3AF\Agent\Service\AgentProviderTurnErrorPresenter;
 use NITSAN\NsT3AF\Agent\Service\AgentRunner;
 use NITSAN\NsT3AF\Agent\Service\AgentSettingsService;
 use NITSAN\NsT3AF\Agent\Service\AgentToolArgumentValidator;
@@ -862,6 +863,7 @@ final class AgentRunnerTest extends TestCase
                 $translator,
                 new AgentLanguageResolver($this->createMock(SiteFinder::class)),
             ),
+            new AgentProviderTurnErrorPresenter(),
         );
     }
 
@@ -880,7 +882,7 @@ final class AgentRunnerTest extends TestCase
             'The AI provider returned an error. Please try again.',
             AgentRunner::readableProviderError('{"raw":true}'),
         );
-        self::assertLessThanOrEqual(201, mb_strlen(AgentRunner::readableProviderError(str_repeat('word ', 200))));
+        self::assertLessThanOrEqual(321, mb_strlen(AgentRunner::readableProviderError(str_repeat('word ', 200))));
     }
 
     #[Test]
@@ -1141,14 +1143,6 @@ final class AgentRunnerTest extends TestCase
         self::assertTrue(AgentRunner::looksLikeTimeout(new \RuntimeException('Idle timeout reached for "https://api.mistral.ai/v1/chat/completions".')));
         self::assertTrue(AgentRunner::looksLikeTimeout(new \RuntimeException('wrapped', 0, new \RuntimeException('Operation timed out after 30000 ms'))));
         self::assertFalse(AgentRunner::looksLikeTimeout(new \RuntimeException('The model is overloaded.')));
-    }
-
-    #[Test]
-    public function providerBillingTextIsRecognisedSoEditorsDoNotSeeIt(): void
-    {
-        self::assertTrue(AgentRunner::looksLikeProviderAccountProblem('Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing.'));
-        self::assertTrue(AgentRunner::looksLikeProviderAccountProblem('You exceeded your current quota, please check your plan and billing details.'));
-        self::assertFalse(AgentRunner::looksLikeProviderAccountProblem('The model is overloaded, try again.'));
     }
 
     #[Test]

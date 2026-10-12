@@ -24,8 +24,10 @@ use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentRequestedFiles;
 use NITSAN\NsT3AF\Agent\Service\AgentRunner;
 use NITSAN\NsT3AF\Agent\Service\AgentToolSearch;
+use NITSAN\NsT3AF\Agent\Service\GlossarySaveLanguage;
 use NITSAN\NsT3AF\Agent\Service\PageCreateAfter;
 use NITSAN\NsT3AF\Agent\Service\PageCreateBefore;
+use NITSAN\NsT3AF\Agent\Service\RequestedLanguage;
 use NITSAN\NsT3AF\Api\AiToolDefinition;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Tool\Agent\AskClarificationTool;
@@ -355,7 +357,7 @@ final class T3afToolbox implements ToolboxInterface
         }
 
         if ($name === self::ASK_CLARIFICATION) {
-            return new ToolResult($toolCall, $this->askClarification($validation['arguments']));
+            return new ToolResult($toolCall, $this->askClarification($this->withoutUnavailableLanguages($validation['arguments'])));
         }
 
         // The same read with the same arguments: answer from the first call, no budget used.
@@ -680,6 +682,49 @@ final class T3afToolbox implements ToolboxInterface
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * A language question lists only the languages of the site; a language the editor asked for that the site
+     * does not have is said so instead of being offered as a button.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    private function withoutUnavailableLanguages(array $arguments): array
+    {
+        $siteLanguages = GlossarySaveLanguage::siteLanguages($this->runtime->context);
+        $options = is_array($arguments['options'] ?? null) ? $arguments['options'] : [];
+        if ($siteLanguages === [] || $options === []) {
+            return $arguments;
+        }
+        $kept = array_values(array_filter(
+            $options,
+            static fn(mixed $option): bool => !is_string($option) || !RequestedLanguage::isUnavailableName($option, $siteLanguages),
+        ));
+        if (count($kept) === count($options)) {
+            return $arguments;
+        }
+        $requestQuery = trim((string) ($this->runtime->body['requestQuery'] ?? ''));
+        $missing = RequestedLanguage::unavailable($requestQuery, $siteLanguages);
+        if ($missing !== null || $kept === []) {
+            $missing ??= 'That language';
+            $titles = RequestedLanguage::titles($siteLanguages);
+            $arguments['question'] = sprintf(
+                "%s isn't a language of this site (available: %s). Nothing was changed. Pick one of the site languages.",
+                $missing,
+                $titles,
+            );
+            $arguments['options'] = $kept === [] ? array_values(array_filter(array_map(
+                static fn(array $language): string => trim((string) ($language['title'] ?? '')),
+                array_filter($siteLanguages, static fn(array $language): bool => (int) ($language['id'] ?? 0) > 0),
+            ), static fn(string $title): bool => $title !== '')) : $kept;
+
+            return $arguments;
+        }
+        $arguments['options'] = $kept;
+
+        return $arguments;
     }
 
     /**
