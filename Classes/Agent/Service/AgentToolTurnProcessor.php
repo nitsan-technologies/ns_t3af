@@ -538,6 +538,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
         $arguments = $this->normalizeWriteToolArguments($toolName, $arguments);
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
+        $arguments = self::seoQueueRemovePageIds($arguments, $toolName, $requestQuery);
         $arguments = self::openPageAsParent($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $arguments = self::openPageAsCreatePid($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $arguments = self::pinOpenPageForQueueRemove($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
@@ -760,6 +761,25 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
         if (is_array($parent) && ((int) ($parent['pid'] ?? 1) === 0 || (int) ($parent['is_siteroot'] ?? 0) === 1)) {
             $arguments['parentPageId'] = $openPageId;
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * "Remove page 138" keeps that uid. A request with no number still uses the open page.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function seoQueueRemovePageIds(array $arguments, string $toolName, string $requestQuery): array
+    {
+        if (strtolower(trim($toolName)) !== 't3ai_mass_seo_queue_remove') {
+            return $arguments;
+        }
+        $named = AgentTargetPageResolver::mentionedPageUids($requestQuery);
+        if ($named !== []) {
+            $arguments['pageIds'] = $named;
         }
 
         return $arguments;
