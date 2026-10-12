@@ -216,11 +216,17 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             return $normalized;
         }
 
-        $unhide = ['unhide', 'show', 'enable', 'reveal'];
-        $hide = ['hide', 'disable'];
+        $unhide = ['unhide', 'show', 'enable', 'reveal', 'visible', 'activate', 'publish', 'make_visible'];
+        $hide = ['hide', 'disable', 'unpublish'];
         $update = ['change', 'modify', 'set', 'edit'];
 
-        if (in_array($normalized, $unhide, true)) {
+        // "make visible" / "make_visible" arrive with a space or underscore.
+        $compact = str_replace([' ', '-'], '_', $normalized);
+        if (in_array($compact, ['make_visible', 'set_visible', 'make_visible_on_website'], true)) {
+            $normalized = 'visible';
+        }
+
+        if (in_array($normalized, $unhide, true) || $normalized === 'visible') {
             if (!array_key_exists('hidden', $payload)) {
                 $payload['hidden'] = 0;
             }
@@ -520,7 +526,74 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             );
         }
 
+        foreach ($this->hiddenTranslationContentFields($tableName, $uid, $filteredData, $requestQuery) as $extra) {
+            $fields[] = $extra;
+        }
+
         return new ToolPlan('update', 'write_table', $fields);
+    }
+
+    /**
+     * Unhiding a translated page also unhides its hidden content elements (same as Activate Translated Content).
+     *
+     * @param array<string, mixed> $filteredData
+     * @return list<ToolPlanField>
+     */
+    private function hiddenTranslationContentFields(string $tableName, int $uid, array $filteredData, string $requestQuery): array
+    {
+        if ($tableName !== 'pages' || !array_key_exists('hidden', $filteredData) || (int) $filteredData['hidden'] !== 0) {
+            return [];
+        }
+        $page = $this->recordService->findByUid('pages', $uid, ['uid', 'pid', 'sys_language_uid', 'l10n_parent', 'hidden']);
+        if (!is_array($page)) {
+            return [];
+        }
+        $languageUid = (int) ($page['sys_language_uid'] ?? 0);
+        if ($languageUid <= 0) {
+            return [];
+        }
+        // Only when making a translation visible (explicit request or unhiding a hidden translation row).
+        $asksVisible = $requestQuery === ''
+            || preg_match('/\b(visible|unhide|show|enable|activate|sichtbar|einblend|aktivier)\w*\b/iu', $requestQuery) === 1;
+        if (!$asksVisible) {
+            return [];
+        }
+
+        // Connected translations keep content on the default-language page (l10n_parent).
+        $contentPid = (int) ($page['l10n_parent'] ?? 0);
+        if ($contentPid <= 0) {
+            $contentPid = $uid;
+        }
+
+        $listed = $this->recordService->findByPid(
+            'tt_content',
+            $contentPid,
+            100,
+            0,
+            ['uid', 'hidden', 'deleted', 'header'],
+            $languageUid,
+            'sys_language_uid',
+        );
+        $fields = [];
+        foreach ($listed['records'] as $row) {
+            if (!is_array($row) || (int) ($row['deleted'] ?? 0) === 1 || (int) ($row['hidden'] ?? 0) !== 1) {
+                continue;
+            }
+            $contentUid = (int) ($row['uid'] ?? 0);
+            if ($contentUid <= 0) {
+                continue;
+            }
+            $fields[] = new ToolPlanField(
+                ToolPlanField::buildKey('tt_content', $contentUid, 'hidden'),
+                'tt_content',
+                $contentUid,
+                'hidden',
+                1,
+                0,
+            );
+        }
+
+        return $fields;
     }
 
     /**
