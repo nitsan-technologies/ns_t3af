@@ -106,4 +106,22 @@ final class AgentRunnerPageRequestTest extends TestCase
         self::assertFalse(AgentRunner::isNewsRequestAnsweredWithOtherTable('tx_news_domain_model_news', 'Create a news article about SEPA'));
         self::assertFalse(AgentRunner::isNewsRequestAnsweredWithOtherTable('tt_content', 'Create a news article and a content element about SEPA'));
     }
+
+    #[Test]
+    public function schemaRequestsAreRecognised(): void
+    {
+        self::assertTrue(AgentRunner::isSchemaRequest('Generate a Person schema for this page'));
+        self::assertTrue(AgentRunner::isSchemaRequest('Strukturierte Daten für diese Seite erzeugen'));
+        self::assertFalse(AgentRunner::isSchemaRequest('Remove the schema from this page'));
+        self::assertFalse(AgentRunner::isSchemaRequest('Generate SEO for this page'));
+    }
+
+    #[Test]
+    public function schemaToolIsKeptForASchemaRequest(): void
+    {
+        $tools = [['name' => 'pages_get'], ['name' => 't3ai_apply_schema_markup']];
+
+        self::assertSame([['name' => 't3ai_apply_schema_markup']], AgentRunner::schemaTools($tools));
+        self::assertSame([], AgentRunner::schemaTools($tools, ['t3ai_apply_schema_markup' => 1]));
+    }
 }
