@@ -466,7 +466,7 @@ final class AgentWriteService
             $this->releaseDraft($draftId, $stored, true);
             throw $exception;
         }
-        $this->releaseDraft($draftId, $stored, false);
+        $this->releaseDraft($draftId, $stored, ($result['unchanged'] ?? false) === true);
 
         return $result;
     }
@@ -532,6 +532,19 @@ final class AgentWriteService
             throw new \RuntimeException($this->translator->translate('agent.write.editsNeedEditorFlag'), 1712003216);
         }
 
+        $resolved = self::withoutUnchangedSuggestions($resolved, $preview->fields);
+        if ($resolved === []) {
+            return [
+                'unchanged' => true,
+                'suggestionsApply' => false,
+                'appliedCount' => 0,
+                'appliedValues' => [],
+                'tool' => $toolName,
+                'readback' => [],
+                'undoable' => false,
+            ];
+        }
+
         $baseArguments = is_array($stored['arguments'] ?? null) ? $stored['arguments'] : [];
         $arguments = $this->buildContextModeArguments($toolName, $baseArguments, $resolved);
         $correlationId ??= $this->generateCorrelationId();
@@ -593,6 +606,32 @@ final class AgentWriteService
             'presentation' => $presentation,
             'latencyMs' => (int) ($invokeResult['latencyMs'] ?? 0),
         ];
+    }
+
+    /**
+     * A chosen suggestion that matches the text already stored is not a change.
+     *
+     * @param array<string, string> $resolved
+     * @param list<array<string, mixed>> $fields
+     * @return array<string, string>
+     */
+    public static function withoutUnchangedSuggestions(array $resolved, array $fields): array
+    {
+        $current = [];
+        foreach ($fields as $field) {
+            $key = trim((string) ($field['key'] ?? ''));
+            if ($key === '') {
+                continue;
+            }
+            $current[$key] = trim((string) ($field['current'] ?? ''));
+        }
+        foreach ($resolved as $key => $value) {
+            if (array_key_exists($key, $current) && trim($value) === $current[$key]) {
+                unset($resolved[$key]);
+            }
+        }
+
+        return $resolved;
     }
 
     /**
