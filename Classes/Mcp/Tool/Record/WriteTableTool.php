@@ -425,7 +425,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     public static function isRewriteRequest(string $query): bool
     {
         return preg_match(
-            '/\b(rewrite|reword|rephrase|paraphrase|shorten|simplify|polish|improve|friendlier|more\s+friendly|more\s+formal|umschreib\w*|umformulier\w*|k[üu]rz\w*|freundlicher|verbesser\w*|[üu]berarbeit\w*)\b/iu',
+            '/\b(rewrite|reword|rephrase|paraphrase|shorten|simplify|polish|improve|friendlier|more\s+friendly|more\s+formal|shorter|longer|simpler|k[üu]rzer|einfacher|umschreib\w*|umformulier\w*|k[üu]rz\w*|freundlicher|verbesser\w*|[üu]berarbeit\w*)\b/iu',
             $query,
         ) === 1;
     }

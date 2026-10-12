@@ -1267,7 +1267,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             return false;
         }
 
-        return preg_match('/\b(change|update|edit|rename|set|[äa]ndere\w*|aktualisier\w*|umbenenn\w*)\b/u', $q) === 1;
+        return preg_match('/\b(change|update|edit|rename|set|rewrite|reword|rephrase|shorten|simplify|[äa]ndere\w*|aktualisier\w*|umbenenn\w*|umschreib\w*|k[üu]rze\w*)\b/u', $q) === 1
+            || preg_match('/\bmake\b[^.?!]{0,80}\b(?:shorter|longer|simpler|friendlier|clearer|more\s+(?:formal|casual|friendly|concise|polite)|k[üu]rzer|l[äa]nger|einfacher|freundlicher|klarer)\b/u', $q) === 1;
     }
 
     /**
