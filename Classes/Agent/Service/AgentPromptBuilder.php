@@ -976,7 +976,7 @@ readonly class AgentPromptBuilder
      * @param list<array<string, mixed>> $history
      * @return array<int, true>
      */
-    private static function attachedFileUids(array $history): array
+    public static function attachedFileUids(array $history): array
     {
         $attached = [];
         foreach ($history as $entry) {

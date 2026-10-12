@@ -75,4 +75,43 @@ final class AgentAttachTargetRequestTest extends TestCase
         self::assertNull(AgentAttachTargetResolver::pickField('special', ['a', 'b']));
         self::assertNull(AgentAttachTargetResolver::pickField('text', []));
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function upload(int $uid, bool $success = true): array
+    {
+        return [
+            'role' => 'assistant',
+            'content' => 'file',
+            'meta' => [
+                'type' => 'tool_result',
+                'tool' => 'file_get_info',
+                'success' => $success,
+                'triggeredByAttachment' => true,
+                'details' => ['uid' => $uid],
+            ],
+        ];
+    }
+
+    #[Test]
+    public function readsTheUidsOfFilesAttachedInTheComposer(): void
+    {
+        $other = ['role' => 'assistant', 'content' => 'x', 'meta' => ['type' => 'tool_result', 'tool' => 'file_get_info', 'details' => ['uid' => 9]]];
+
+        self::assertSame([67, 70], AgentAttachTargetRequest::uploadedFileUids([self::upload(67), $other, self::upload(70), self::upload(67), self::upload(71, false)]));
+        self::assertSame([], AgentAttachTargetRequest::uploadedFileUids([]));
+    }
+
+    #[Test]
+    public function aSingleWaitingUploadIsUsedForTheNextMessage(): void
+    {
+        self::assertSame(67, AgentAttachTargetRequest::onlyWaitingUpload([self::upload(67)], []));
+        self::assertSame(70, AgentAttachTargetRequest::onlyWaitingUpload([self::upload(67), self::upload(70)], [67 => true]));
+        // Two files wait: the model asks which one.
+        self::assertNull(AgentAttachTargetRequest::onlyWaitingUpload([self::upload(67), self::upload(70)], []));
+        // Already attached, or nothing uploaded.
+        self::assertNull(AgentAttachTargetRequest::onlyWaitingUpload([self::upload(67)], [67 => true]));
+        self::assertNull(AgentAttachTargetRequest::onlyWaitingUpload([], []));
+    }
 }
