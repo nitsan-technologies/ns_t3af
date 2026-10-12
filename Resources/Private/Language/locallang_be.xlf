@@ -1558,6 +1558,9 @@
       <trans-unit id="agent.write.noSuggestionSelections" resname="agent.write.noSuggestionSelections">
         <source>Select at least one suggestion variant to apply.</source>
       </trans-unit>
+      <trans-unit id="agent.write.structureOutlineUnread" resname="agent.write.structureOutlineUnread">
+        <source>Your custom outline could not be read, so the drafted page tree was used.</source>
+      </trans-unit>
       <trans-unit id="agent.write.editsNeedEditorFlag" resname="agent.write.editsNeedEditorFlag">
         <source>Inline edits require editedByEditor confirmation.</source>
       </trans-unit>

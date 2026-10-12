@@ -731,7 +731,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             }
             // A declined tool card ("Generate an image") comes back with other wording, never with the same arguments.
             if ($discarded && !in_array((string) ($draft['tool'] ?? ''), ['', 'write_table'], true)) {
-                $declinedCreates['tool ' . $draft['tool']] = true;
+                $declinedCreates[self::declinedToolKey((string) $draft['tool'])] = true;
             }
         }
 
@@ -747,7 +747,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 }
                 if (
                     ($afterDecline && (string) ($draft['action'] ?? '') === 'create' && isset($declinedCreates[self::createdKind($draft)]))
-                    || isset($declinedCreates['tool ' . (string) ($draft['tool'] ?? '')])
+                    || isset($declinedCreates[self::declinedToolKey((string) ($draft['tool'] ?? ''))])
                 ) {
                     ++$declinedDropped;
                     continue;
@@ -761,6 +761,19 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return $kept;
+    }
+
+    /**
+     * Key of a declined tool card. The translate tools are one family: after the editor cancels a page
+     * translation, the same translation must not come back through another translate tool.
+     */
+    private static function declinedToolKey(string $tool): string
+    {
+        $tool = strtolower(trim($tool));
+
+        return in_array($tool, ['t3ai_translate_page', 't3ai_translate_content', 't3ai_translate_news', 't3ai_record_translate'], true)
+            ? 'tool translate'
+            : 'tool ' . $tool;
     }
 
     /**
@@ -970,6 +983,22 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         $createContent = AgentCoreToolSet::isCreateContentRequest($query);
         $notAskedFor = array_flip(self::toolsNotAskedFor($query));
+        $gateRequest = self::requestForGate($userMessage, $historyMessages);
+        $appliedCreateDone = $createContent
+            && str_starts_with(ltrim($userMessage), '[The editor confirmed')
+            && str_contains($userMessage, 'it was applied')
+            && !AgentPromptBuilder::asksForMultipleContentPieces($gateRequest)
+            && !AgentPromptBuilder::hasBlockingRemainingWork(
+                $historyMessages,
+                self::planCarriedIntoTurn($userMessage, $historyMessages),
+                $gateRequest,
+            );
+        if ($appliedCreateDone) {
+            // Intro/paragraph create already applied: do not invent a follow-up change or delete card.
+            $notAskedFor['write_table'] = true;
+            $notAskedFor['content_delete'] = true;
+            $notAskedFor['t3ai_create_content_element'] = true;
+        }
         $newsCreate = self::isNewsCreateRequest($query);
         if (!self::asksForNewPage($query)) {
             foreach (self::PAGE_CREATE_TOOL_NAMES as $pageCreateTool) {
@@ -1033,7 +1062,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $found = [];
         }
 
-        if ($createContent) {
+        if ($createContent && !$appliedCreateDone) {
             $found = [...self::createContentTools($executableTools, $offeredNames), ...$found];
         }
         if (self::isPageMoveRequest($query)) {
@@ -1050,7 +1079,6 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
         $found = [...self::fileActionTools($query, $executableTools, $offeredNames), ...$found];
         $workPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
-        $gateRequest = self::requestForGate($userMessage, $historyMessages);
         if (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $gateRequest)) {
             $found = [...self::imageWorkTools($executableTools, $offeredNames, $historyMessages, $gateRequest), ...$found];
         } elseif (

@@ -319,6 +319,107 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function askingWherePicturesAreDoesNotKeepAnEarlierGeneratePending(): void
+    {
+        $history = [
+            [
+                'role' => 'user',
+                'content' => 'Make a picture of a sunset over the sea and put it on this page.',
+                'meta' => ['type' => 'message'],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Image saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 200],
+                ],
+            ],
+        ];
+
+        self::assertFalse(AgentPromptBuilder::hasBlockingRemainingWork($history, [], 'Where are my AI pictures saved?'));
+        self::assertTrue(AgentPromptBuilder::hasBlockingRemainingWork($history, [], 'Put that picture on this page.'));
+    }
+
+    #[Test]
+    public function continuationAfterCreateContentOnlyConfirmsDone(): void
+    {
+        $history = [
+            ['role' => 'user', 'content' => 'Write an intro paragraph and add it to the page.', 'meta' => []],
+            [
+                'role' => 'assistant',
+                'content' => 'Created.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tt_content', 'uid' => 774, 'values' => ['CType' => 'text', 'header' => 'Welcome', 'bodytext' => 'Hello.']]],
+                ],
+            ],
+        ];
+        $message = AgentPromptBuilder::continuationMessage(
+            ['outcome' => 'applied', 'label' => 'Create a content element', 'result' => 'Created.'],
+            $history,
+        );
+
+        self::assertStringContainsString('Do not call any tools', $message);
+        self::assertStringContainsString('Do not update, rewrite, or delete', $message);
+        self::assertStringNotContainsString('prepare the next distinct type', $message);
+    }
+
+    #[Test]
+    public function continuationAfterOnlyTheFirstOfTwoSectionsKeepsGoing(): void
+    {
+        $request = 'Add an intro and a team section to this page.';
+        $history = [
+            ['role' => 'user', 'content' => $request, 'meta' => []],
+            [
+                'role' => 'assistant',
+                'content' => 'Created.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tt_content', 'uid' => 800, 'values' => ['CType' => 'text', 'header' => 'Intro']]],
+                ],
+            ],
+        ];
+        $message = AgentPromptBuilder::continuationMessage(
+            ['outcome' => 'applied', 'label' => 'Create a content element', 'result' => 'Created.'],
+            $history,
+        );
+
+        self::assertTrue(AgentPromptBuilder::asksForMultipleContentPieces($request));
+        self::assertStringNotContainsString('Do not call any tools', $message);
+        self::assertStringContainsString('prepare the next distinct type', $message);
+    }
+
+    #[Test]
+    public function composerExpandedAttachStillSeesPendingFileInThisRequest(): void
+    {
+        $request = 'Add this image to the news QA News: Market outlook 2027.';
+        $composer = '@file:1:user_upload/photo.jpg ' . $request;
+        $history = [
+            ['role' => 'user', 'content' => $composer, 'meta' => []],
+            [
+                'role' => 'assistant',
+                'content' => 'File photo.jpg',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 'file_get_info',
+                    'success' => true,
+                    'severity' => 'read',
+                    'readWithoutConfirmation' => true,
+                    'triggeredByAttachment' => true,
+                    'details' => ['uid' => 42, 'name' => 'photo.jpg', 'identifier' => '/user_upload/photo.jpg'],
+                ],
+            ],
+        ];
+
+        self::assertSame([42], AgentPromptBuilder::unattachedFileUids($history));
+        self::assertTrue(AgentPromptBuilder::hasBlockingRemainingWork($history, [], $request));
+        self::assertTrue(AgentPromptBuilder::hasBlockingRemainingWork($history, [], $composer));
+    }
+
+    #[Test]
     public function continuationRemindsToAttachImageWhenTextMediaHasNoFileYet(): void
     {
         $history = [
