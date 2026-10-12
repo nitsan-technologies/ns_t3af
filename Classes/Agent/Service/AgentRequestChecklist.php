@@ -365,6 +365,12 @@ final class AgentRequestChecklist
             ' ',
             $s,
         );
+        // "…an image of a red apple on a wooden table" describes the picture: "table" there is not a Table element.
+        $s = (string) preg_replace(
+            '/\b(?:images?|pictures?|photos?|illustrations?|graphics?|bild(?:er)?|foto\w*|grafik\w*)\s+(?:of|showing|depicting|von|vom|zeigt)\b.*?(?=\s+(?:and|und)\s+(?:the|a|an|it|with|add|put|attach|insert|place|use|create|mit|der|die|das|ein|eine|es)\b|[,;.]|$)/u',
+            ' ',
+            $s,
+        );
         $hits = [];
         $patterns = [
             'textmedia' => '/\b(text\s*(?:&|and|und)\s*(?:media|medien)|textmedia)\b/u',
