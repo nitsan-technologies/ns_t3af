@@ -426,6 +426,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         );
 
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
+        $arguments = self::seoBatchSubpagesOfOpenPage($arguments, $toolName, $requestQuery);
         $arguments = self::openPageAsParent($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $arguments = self::withEditorRequestAsStructurePrompt($arguments, $toolName, $requestQuery);
         $languageTurn = $this->unavailableLanguageTurn($toolName, $context, $requestQuery, $correlationId);
@@ -560,6 +561,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
         $arguments = self::seoQueueRemovePageIds($arguments, $toolName, $requestQuery);
         $arguments = self::seoQueueAddRecursiveSubtree($arguments, $toolName, $requestQuery);
+        $arguments = self::seoBatchSubpagesOfOpenPage($arguments, $toolName, $requestQuery);
         $arguments = self::openPageAsParent($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $arguments = self::openPageAsCreatePid($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $arguments = self::pinOpenPageForQueueRemove($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
@@ -917,6 +919,85 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $arguments['recursive'] = true;
 
         return $arguments;
+    }
+
+    /**
+     * "SEO for all subpages of this page" must use the subpages. A list that is only the open page
+     * is the page on screen, so it is dropped and the subpage lookup runs.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function seoBatchSubpagesOfOpenPage(array $arguments, string $toolName, string $requestQuery): array
+    {
+        if (strtolower(trim($toolName)) !== 't3ai_generate_seo_batch') {
+            return $arguments;
+        }
+        if (preg_match(
+            '/\b(?:all\s+(?:its\s+|the\s+)?subpages?|subpages?\s+of\s+(?:this|the|that)\s+page|und\s+alle\s+unterseiten|unterseiten\s+(?:dieser|der)\s+seite)\b/iu',
+            $requestQuery,
+        ) !== 1) {
+            return $arguments;
+        }
+        $parent = (int) ($arguments['pageId'] ?? 0);
+        if ($parent <= 0) {
+            return $arguments;
+        }
+        $listed = self::positivePageIdList($arguments['pageIds'] ?? null);
+        if ($listed !== [] && $listed !== [$parent]) {
+            return $arguments;
+        }
+        unset($arguments['pageIds']);
+        if (self::entriesNameOnlyPage($arguments['entries'] ?? null, $parent)) {
+            unset($arguments['entries']);
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private static function positivePageIdList(mixed $pageIds): array
+    {
+        if (is_string($pageIds)) {
+            $pageIds = preg_split('/[\s,;]+/', trim($pageIds, " \t\n\r\0\x0B\"'[]")) ?: [];
+        }
+        if (!is_array($pageIds)) {
+            return [];
+        }
+        $ids = [];
+        foreach ($pageIds as $pageId) {
+            $pageId = (int) $pageId;
+            if ($pageId > 0) {
+                $ids[$pageId] = $pageId;
+            }
+        }
+
+        return array_values($ids);
+    }
+
+    private static function entriesNameOnlyPage(mixed $entries, int $pageId): bool
+    {
+        if (is_string($entries)) {
+            $decoded = json_decode($entries, true);
+            $entries = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($entries) || $entries === []) {
+            return false;
+        }
+        foreach ($entries as $entry) {
+            if (!is_array($entry)) {
+                return false;
+            }
+            $id = (int) ($entry['pageId'] ?? 0);
+            unset($entry['pageId'], $entry['pageUrl']);
+            if ($id !== $pageId || $entry !== []) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
