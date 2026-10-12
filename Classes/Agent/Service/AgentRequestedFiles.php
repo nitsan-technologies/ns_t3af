@@ -65,6 +65,23 @@ final readonly class AgentRequestedFiles
             ) !== 1;
     }
 
+    /**
+     * "Make 3 different pictures …", "Get three photos …", "Erstelle zwei Bilder …" → 3, 3, 2; 0 when no number is given.
+     */
+    public static function requestedImageCount(string $request): int
+    {
+        if (preg_match(
+            '/\b(\d{1,2}|two|three|four|five|six|zwei|drei|vier|fünf|sechs)\s+(?:[\p{L}-]+\s+){0,3}(?:images?|pictures?|photos?|illustrations?|graphics?|bilder|fotos|illustrationen|grafiken)\b/iu',
+            $request,
+            $match,
+        ) !== 1) {
+            return 0;
+        }
+        $words = ['two' => 2, 'three' => 3, 'four' => 4, 'five' => 5, 'six' => 6, 'zwei' => 2, 'drei' => 3, 'vier' => 4, 'fünf' => 5, 'sechs' => 6];
+
+        return $words[mb_strtolower($match[1])] ?? (int) $match[1];
+    }
+
     public static function namesUrl(string $request): bool
     {
         return preg_match('#\bhttps?://#i', $request) === 1;
