@@ -222,6 +222,15 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: the editor asked for SEO for all pages, not for the open page. Call pages_tree (or pages_list) for the page uids, then t3ai_generate_seo_batch with pageIds of those pages. With more than 20 pages, ask first whether to queue them instead (t3ai_mass_seo_queue_add with pageIds).',
             );
         }
+        // "Translate the first element into French" is one element, not the whole page.
+        if ($name === 't3ai_translate_page' && AgentRunner::asksForOneElementTranslation($requestQuery)) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for one content element, not the whole page. Call t3ai_translate_content with contentUid of that element (content_list on the open page gives the order) and targetLanguageUid of the language named in the request.',
+            );
+        }
         // "Generate a Person schema" is schema markup for a page. The model otherwise tries to create a folder and tells the editor to do it by hand.
         if (
             str_starts_with($name, 'directory_')
