@@ -1330,6 +1330,12 @@
       <trans-unit id="agent.glossary.whichLanguage" resname="agent.glossary.whichLanguage">
         <source>Which language should I save this word in?</source>
       </trans-unit>
+      <trans-unit id="agent.translate.defaultProvider" resname="agent.translate.defaultProvider">
+        <source>your default AI provider</source>
+      </trans-unit>
+      <trans-unit id="agent.translate.providerNotice" resname="agent.translate.providerNotice">
+        <source>%1$s can't be used in the agent, so this translation uses %2$s. For %1$s, use the page translation dialog.</source>
+      </trans-unit>
       <trans-unit id="agent.page.missingUid" resname="agent.page.missingUid">
         <source>Page %d doesn't exist.</source>
       </trans-unit>

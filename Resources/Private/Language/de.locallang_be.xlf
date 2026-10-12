@@ -1625,6 +1625,14 @@
                 <source>Which language should I save this word in?</source>
                 <target>In welcher Sprache soll ich dieses Wort speichern?</target>
             </trans-unit>
+            <trans-unit id="agent.translate.defaultProvider">
+                <source>your default AI provider</source>
+                <target>Ihren Standard-KI-Anbieter</target>
+            </trans-unit>
+            <trans-unit id="agent.translate.providerNotice">
+                <source>%1$s can't be used in the agent, so this translation uses %2$s. For %1$s, use the page translation dialog.</source>
+                <target>%1$s kann im Agenten nicht verwendet werden, daher nutzt diese Übersetzung %2$s. Für %1$s den Dialog zur Seitenübersetzung verwenden.</target>
+            </trans-unit>
             <trans-unit id="agent.page.missingUid">
                 <source>Page %d doesn't exist.</source>
                 <target>Seite %d gibt es nicht.</target>
