@@ -222,18 +222,42 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: the editor asked for SEO for all pages, not for the open page. Call pages_tree (or pages_list) for the page uids, then t3ai_generate_seo_batch with pageIds of those pages. With more than 20 pages, ask first whether to queue them instead (t3ai_mass_seo_queue_add with pageIds).',
             );
         }
-        // "Generate a Person schema" is schema markup for a page. The model otherwise tries to create a folder and tells the editor to do it by hand.
-        if (
-            str_starts_with($name, 'directory_')
-            && AgentRunner::isSchemaRequest($requestQuery)
-            && preg_match('/\b(folders?|director(?:y|ies)|ordner|verzeichnis\w*)\b/iu', $requestQuery) !== 1
-        ) {
+        // "Translate the first element into French" is one element, not the whole page.
+        if ($name === 't3ai_translate_page' && AgentRunner::asksForOneElementTranslation($requestQuery)) {
             $outcome = 'invalid';
 
             return new ToolResult(
                 $toolCall,
-                'Not executed: the editor asked for schema markup, not a folder. Call t3ai_apply_schema_markup with schemaType (for example Person) for the open page.',
+                'Not executed: the editor asked for one content element, not the whole page. Call t3ai_translate_content with contentUid of that element (content_list on the open page gives the order) and targetLanguageUid of the language named in the request.',
             );
+        }
+        // "Generate a Person schema" is schema markup for a page. The model otherwise tries to create a folder or a content element.
+        if (
+            AgentRunner::isSchemaRequest($requestQuery)
+            && preg_match('/\b(folders?|director(?:y|ies)|ordner|verzeichnis\w*|content\s+element|inhaltselement|absatz|paragraph)\b/iu', $requestQuery) !== 1
+        ) {
+            if (str_starts_with($name, 'directory_')) {
+                $outcome = 'invalid';
+
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: the editor asked for schema markup, not a folder. Call t3ai_apply_schema_markup with schemaType (for example Person) for the open page.',
+                );
+            }
+            if ($name === 't3ai_create_content_element'
+                || (
+                    $name === 'write_table'
+                    && strtolower((string) ($toolCall->getArguments()['action'] ?? 'create')) === 'create'
+                    && strtolower((string) ($toolCall->getArguments()['tableName'] ?? $toolCall->getArguments()['table'] ?? '')) === 'tt_content'
+                )
+            ) {
+                $outcome = 'invalid';
+
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: the editor asked for schema markup, not a content element. Call t3ai_apply_schema_markup with schemaType (for example Person) for the open page; do not ask which page when one is open.',
+                );
+            }
         }
         // A news article without a picture request is not answered with an image card.
         if (

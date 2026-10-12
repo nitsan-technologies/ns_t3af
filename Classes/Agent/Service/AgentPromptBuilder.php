@@ -74,7 +74,7 @@ readonly class AgentPromptBuilder
             'When you search for a record or element by name, use a limit of at least 5. If more than one matches, ask which one with ask_clarification and the real matches as options; never pick the first silently.',
             'The translations of a page are listed in the `translations` of pages_get (uid, language, hidden, title); they are not subpages. When asked "is this page already in German/French/…?", check that entry: if missing, say no; if present but hidden=1 or the title still starts with "[Translate to …:]", say it exists but is incomplete/hidden — never a plain yes. To show or hide a translated page, change the `hidden` field of that translation uid. When the editor wants the page itself visible or hidden, also look for hidden content elements on that translation (content_list) and include them in the same change, or ask if only the page was meant; never conclude that a translation does not exist from a search below the page.',
             'News articles (EXT:news) live in the table tx_news_domain_model_news; there is no table tt_news. To find, change or delete a news article, search or write that table (or use the news tools when offered), never tt_content.',
-            'Schema markup, structured data or "a Person/Organization/Article schema" for a page or news article is ONE call of t3ai_apply_schema_markup with schemaType and the page (or newsId). It is not a folder, a file or a record you create with write_table: never call a directory tool or tell the editor to create it manually. "Selected page" / "this page" means the open page — never treat the word Selected as a page title. Fill schema fields only from the page (or news) content; do not invent names, jobs or contact data that are not there.',
+            'Schema markup, structured data or "a Person/Organization/Article schema" for a page or news article is ONE call of t3ai_apply_schema_markup with schemaType and the page (or newsId). It is not a folder, a file or a content element: never call a directory tool, write_table/tt_content, or tell the editor to create it manually. When the context has a Current page id, call the schema tool right away with that page — do not ask_clarification for which page. "Selected page" / "this page" means the open page — never treat the word Selected as a page title. Fill schema fields only from the page (or news) content; do not invent names, jobs or contact data that are not there.',
             'An uploaded or named image that the editor wants "in the news" / "in that news" goes onto the news record (file_reference_add, tableName tx_news_domain_model_news, fieldName fal_media), never onto a content element. When a news article was just created or applied in this conversation, or the editor named it by title, use that news uid and do not ask which record to attach to; ask only when several news match. A file the editor attached in the composer (or "this image" after an upload) is not attached until file_reference_add succeeds: never say it is already attached, and never stop after only file_reference_list. To put that image on a new content element: create textmedia with write_table (header/body only), Apply, then file_reference_add fieldName assets — do not put the image in write_table data.',
             'To create a news article call write_table create on tx_news_domain_model_news right away (do not call explain_capabilities first). A news article is never a content element, a page heading or an image card. Every new article gets a title, a short teaser and the text. Do not invent a date: leave datetime out (it defaults to today) unless the editor named a date. For bodytext use simple HTML (p, h2, ul), not Markdown. If the editor asked for a picture, create the news first, then generate one image and attach it to that news uid with file_reference_add fieldName fal_media — never create a content element on the Layout page for a news picture, and call generate/attach only once each.',
             'To add a paragraph, an intro or any text to the open page, create ONE content element: write_table create on tt_content with CType text, the page as pid, and header and bodytext in the same call. Never create a new page for it. If the editor gave no topic, write the text from the page title and its existing content instead of asking what it should be about.',
@@ -414,7 +414,27 @@ readonly class AgentPromptBuilder
 
         $requestText = self::latestUserRequestText($history);
         // An edit of existing records ("change the header of element 5") has no create step: nothing new may follow.
-        $changesExistingOnly = $requestText !== '' && AgentRequestChecklist::parse($requestText) === [];
+        // Free multi-create wording ("intro and a team section") has an empty checklist but still creates.
+        $changesExistingOnly = $requestText !== ''
+            && AgentRequestChecklist::parse($requestText) === []
+            && !AgentCoreToolSet::isCreateContentRequest($requestText);
+        $createContentDone = AgentCoreToolSet::isCreateContentRequest($requestText)
+            && !self::asksForMultipleContentPieces($requestText)
+            && self::remainingWorkReminder($history, AgentPlan::latest($history), $requestText) === '';
+        if ($createContentDone) {
+            $message = sprintf(
+                '[The editor confirmed "%s" and it was applied.%s] My request was only to add that content.'
+                . ' Confirm in one short sentence that it is done. Do not call any tools.'
+                . ' Do not update, rewrite, or delete the content element you just created.',
+                $label,
+                $result !== '' ? ' Result: ' . $result : '',
+            );
+            if ($requestText !== '') {
+                $message .= sprintf(' My request was: "%s".', mb_substr(preg_replace('/\s+/u', ' ', $requestText) ?? $requestText, 0, 300));
+            }
+
+            return $message;
+        }
         $message = sprintf(
             '[The editor confirmed "%s" and it was applied.%s] Continue with the remaining steps of my request, if there are any;'
             . ' if this change already completed it, just confirm that in one short sentence.'
@@ -572,6 +592,20 @@ readonly class AgentPromptBuilder
     }
 
     /**
+     * Free wording that names two content pieces ("an intro and a team section") without a checklist
+     * split must not be treated as finished after the first Apply.
+     */
+    public static function asksForMultipleContentPieces(string $query): bool
+    {
+        $piece = 'intro|paragraph|section|element|block|absatz|abschnitt|faq|team|header|headline|einleitung';
+
+        return preg_match(
+            '/\b(?:' . $piece . ')\b.+\b(?:and|und|plus|,)\b.+\b(?:' . $piece . ')\b/iu',
+            $query,
+        ) === 1;
+    }
+
+    /**
      * @param list<array<string, mixed>> $history
      * @param list<array{title: string, status: string}> $plan
      */
@@ -594,12 +628,12 @@ readonly class AgentPromptBuilder
         }
 
         // A file saved in an earlier request and never attached must not make an unrelated request
-        // ("rename this header") look unfinished: it counts when the request is about images, or when the
-        // file was saved while working on this request.
+        // ("Where are my AI pictures?") look unfinished: it counts when this request asks to place a
+        // file, or when the file was saved while working on this request.
         $pending = '';
         if (AgentRequestedFiles::asksOnlyForGeneratedImage($query)) {
             // Just an image was asked for: the request is done once the file is saved.
-        } elseif (self::requestMentionsImage($query)) {
+        } elseif (AgentRequestedFiles::asksToAttachOrPlaceFile($query)) {
             $pending = self::pendingImageAttachNote($history);
         } elseif (self::unattachedFileUids(AgentRequestChecklist::historySinceLatestUserRequest($history, $query)) !== []) {
             $pending = self::pendingImageAttachNote($history);
@@ -680,7 +714,10 @@ readonly class AgentPromptBuilder
         if ($uid === null) {
             return '';
         }
-        if (!self::requestMentionsImage($requestQuery) && !AgentPlan::hasOpenImageAttachStep($plan)) {
+        if (
+            !AgentRequestedFiles::asksToAttachOrPlaceFile($requestQuery)
+            && !AgentPlan::hasOpenImageAttachStep($plan)
+        ) {
             return '';
         }
 

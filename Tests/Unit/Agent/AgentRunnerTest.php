@@ -1055,6 +1055,53 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function aCancelledTranslationIsNotOfferedAgainThroughAnotherTranslateTool(): void
+    {
+        $card = static fn(string $tool, bool $discarded = false): array => [
+            'role' => 'assistant',
+            'content' => 'Translate the page',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => ['tool' => $tool, 'discarded' => $discarded, 'fields' => [], 'arguments' => ['pageId' => 5, 'languageUid' => 1]],
+            ],
+        ];
+        $request = ['role' => 'user', 'content' => 'Translate this page into German', 'meta' => ['type' => 'message']];
+        $declined = ['role' => 'user', 'content' => '[The editor declined …]', 'meta' => ['type' => 'continuation', 'hidden' => true]];
+        $history = [$request, $card('t3ai_translate_page', true), $declined];
+
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$card('t3ai_translate_content')], $history, true));
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$card('t3ai_record_translate')], $history));
+        // A new request from the editor may translate again.
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$card('t3ai_translate_content')], [...$history, $request], true));
+        // Other tools are not affected by the cancelled translation.
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$card('t3ai_generate_all_seo')], $history, true));
+    }
+
+    #[Test]
+    public function aCancelledOnlyStepIsNotOfferedAgainInText(): void
+    {
+        $history = [
+            ['role' => 'user', 'content' => 'Translate this page to German.', 'meta' => ['type' => 'message']],
+            ['role' => 'assistant', 'content' => 'Translate the whole page', 'meta' => ['type' => 'inline_draft', 'draft' => ['tool' => 't3ai_translate_page', 'discarded' => true, 'fields' => [], 'arguments' => ['pageId' => 128]]]],
+        ];
+
+        // Text only after the cancel ("Shall I translate into German, French or Hindi?"): replaced.
+        self::assertTrue(AgentRunner::declinedReplyOffersItAgain(true, [], $history));
+        // A tool ran in this turn, or the editor did not cancel: the reply stays.
+        self::assertFalse(AgentRunner::declinedReplyOffersItAgain(true, ['file_list'], $history));
+        self::assertFalse(AgentRunner::declinedReplyOffersItAgain(false, [], $history));
+    }
+
+    #[Test]
+    public function aSingleElementTranslationIsNotAPageTranslation(): void
+    {
+        self::assertTrue(AgentRunner::asksForOneElementTranslation('Translate the first content element into French.'));
+        self::assertTrue(AgentRunner::asksForOneElementTranslation('Übersetze das letzte Element ins Englische'));
+        self::assertFalse(AgentRunner::asksForOneElementTranslation('Translate the first element and the whole page into French'));
+        self::assertFalse(AgentRunner::asksForOneElementTranslation('Translate this page to German.'));
+    }
+
+    #[Test]
     public function fileRequestsKeepTheMatchingFileTools(): void
     {
         $tools = [['name' => 'file_copy'], ['name' => 'file_move'], ['name' => 'directory_create'], ['name' => 'content_get']];

@@ -508,8 +508,17 @@ final class AgentWriteService
 
         $normalizedSelections = $this->normalizeSelections($selections);
         $resolved = $preview->resolveSelections($normalizedSelections);
+        $structureFellBackToDraft = false;
         foreach ($edits as $fieldKey => $value) {
             if (!is_string($fieldKey) || $fieldKey === '' || !is_scalar($value)) {
+                continue;
+            }
+            // Page-structure cards show a bullet outline; accept that outline, or fall back to the draft JSON.
+            if ($toolName === 't3ai_create_page_structure' && $fieldKey === 'structure') {
+                $draftJson = (string) ($resolved['structure'] ?? '');
+                $resolvedStructure = AgentPageStructureOutline::resolveEdit((string) $value, $draftJson);
+                $resolved['structure'] = $resolvedStructure['structure'];
+                $structureFellBackToDraft = $resolvedStructure['fellBackToDraft'];
                 continue;
             }
             $resolved[$fieldKey] = (string) $value;
@@ -573,6 +582,10 @@ final class AgentWriteService
             (string) ($invokeResult['message'] ?? ''),
             $pageId,
         );
+        if ($structureFellBackToDraft) {
+            $note = $this->translator->translate('agent.write.structureOutlineUnread');
+            $presentation['content'] = trim((string) ($presentation['content'] ?? '') . ' ' . $note);
+        }
 
         $changeId = bin2hex(random_bytes(8));
         $undoFields = $this->refineSuggestionUndoFields(
@@ -605,6 +618,7 @@ final class AgentWriteService
             'suggestionsApply' => true,
             'presentation' => $presentation,
             'latencyMs' => (int) ($invokeResult['latencyMs'] ?? 0),
+            'structureFellBackToDraft' => $structureFellBackToDraft,
         ];
     }
 
