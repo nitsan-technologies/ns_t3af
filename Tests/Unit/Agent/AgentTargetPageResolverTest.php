@@ -74,6 +74,14 @@ final class AgentTargetPageResolverTest extends TestCase
     }
 
     #[Test]
+    public function selectedPageMeansTheOpenPageNotATitle(): void
+    {
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('Selected page generates proper person schema'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('Generate Person schema for the selected page'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('Selected page'));
+    }
+
+    #[Test]
     public function namedPageTitleIsTheWordsBeforePage(): void
     {
         self::assertSame('Contact', AgentTargetPageResolver::namedPageTitle('make the Contact page show up in Google'));
