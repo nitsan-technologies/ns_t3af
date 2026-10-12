@@ -1025,6 +1025,13 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($lockedPageId > 0) {
             return null;
         }
+        // The editor named the page that is open: that is the page to queue, not a different one.
+        $details = is_array($context['details'] ?? null) ? $context['details'] : [];
+        $openPage = is_array($details['page'] ?? null) ? $details['page'] : [];
+        $openTitle = trim((string) ($openPage['title'] ?? ''));
+        if ($openTitle !== '' && mb_strtolower($openTitle) === mb_strtolower($named)) {
+            return null;
+        }
         $openPageId = (int) ($context['pageId'] ?? 0);
         $targetPageId = (int) ($arguments['pageId'] ?? 0);
         if ($targetPageId <= 0 && self::hasExplicitPageIdList($arguments['pageIds'] ?? null)) {
@@ -1053,6 +1060,13 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return $arguments;
         }
         $arguments['pageId'] = $openPageId;
+        // A button the editor clicked ("Coastal travel [713]") is the element to translate.
+        $chosen = self::chosenContentUidOnPage($requestQuery, $openPageId);
+        if ($chosen > 0) {
+            $arguments['contentUid'] = $chosen;
+
+            return $arguments;
+        }
         // "the first / second / last element": the position the editor named wins over a guessed uid.
         $position = self::requestedElementPosition($requestQuery);
         if ($position !== null) {
@@ -1132,6 +1146,10 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if (strtolower(trim($toolName)) !== 't3ai_translate_content' || $openPageId <= 0 || $requestQuery === '') {
             return null;
         }
+        // The editor already picked one ("Coastal travel [713]"): do not ask again.
+        if (self::chosenContentUidOnPage($requestQuery, $openPageId) > 0) {
+            return null;
+        }
         $needle = '';
         if (preg_match('/["“]([^"”]{2,80})["”]/u', $requestQuery, $quoted) === 1) {
             $needle = trim((string) $quoted[1]);
@@ -1175,10 +1193,29 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'type' => 'clarification',
                 'tool' => 'ask_clarification',
                 'options' => $options,
+                // The options are content elements, not pages: a click must not be read as a page choice.
+                'contentChoice' => true,
                 'correlationId' => $correlationId,
                 'orchestratorPause' => true,
             ],
         ];
+    }
+
+    /**
+     * The uid in a picked option such as "Coastal travel [713]", or 0. Only a reply that ends with the
+     * bracketed uid counts.
+     */
+    public static function contentUidFromChoiceText(string $request): int
+    {
+        return preg_match('/\[(\d{1,10})\]\s*$/u', trim($request), $match) === 1 ? (int) $match[1] : 0;
+    }
+
+    /** A picked element uid that really is an element of the open page, or 0. */
+    private static function chosenContentUidOnPage(string $request, int $openPageId): int
+    {
+        $uid = self::contentUidFromChoiceText($request);
+
+        return $uid > 0 && self::contentElementPid($uid) === $openPageId ? $uid : 0;
     }
 
     private static function soleDefaultLanguageContentUid(int $pageId): int
