@@ -1329,6 +1329,10 @@
                 <source>The request failed.</source>
                 <target>Die Anfrage ist fehlgeschlagen.</target>
             </trans-unit>
+            <trans-unit id="agent.error.serverPage">
+                <source>The server answered with an error page instead of a reply, so nothing was changed. Please try again; if it keeps happening, tell your administrator.</source>
+                <target>Der Server hat statt einer Antwort eine Fehlerseite geliefert, daher wurde nichts geändert. Bitte versuchen Sie es erneut; wenn es weiter auftritt, informieren Sie Ihre Administration.</target>
+            </trans-unit>
             <trans-unit id="agent.error.applyFailed">
                 <source>Applying the draft failed.</source>
                 <target>Das Anwenden des Entwurfs ist fehlgeschlagen.</target>
