@@ -41,6 +41,7 @@ use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentProviderOptions;
 use NITSAN\NsT3AF\Agent\Service\AgentRecordAttachmentResolver;
 use NITSAN\NsT3AF\Agent\Service\AgentRecordLabeler;
+use NITSAN\NsT3AF\Agent\Service\AgentRestoreRequest;
 use NITSAN\NsT3AF\Agent\Service\AgentSchedulerHandoff;
 use NITSAN\NsT3AF\Agent\Service\AgentSessionPresenter;
 use NITSAN\NsT3AF\Agent\Service\AgentSettingsService;
@@ -925,6 +926,79 @@ final class AgentAjaxController
     }
 
     /**
+     * "Put the old text back" restores the latest applied change, the same way as its Undo button.
+     * Null means this is not that request, so the model may still run.
+     *
+     * @param list<array<string, mixed>> $messages
+     * @return array{assistant: list<array<string, mixed>>, all: list<array<string, mixed>>}|null
+     */
+    private function restoreAppliedChange(string $message, array $messages, BackendUserAuthentication $user): ?array
+    {
+        if (!AgentRestoreRequest::matches($message)) {
+            return null;
+        }
+
+        $changeId = AgentRestoreRequest::latestChangeId($messages);
+        if ($changeId === null) {
+            return $this->restoreReply($messages, $this->undoButtonHint());
+        }
+
+        $changeWorkspace = $this->undoService->workspaceOf($changeId);
+        if ($changeWorkspace !== null) {
+            $blocked = $this->governanceGuard->requiresWorkspaceEnforcement($user) && $changeWorkspace <= 0
+                ? $this->governanceGuard->assertDraftApplyAllowed($user, $changeWorkspace)
+                : null;
+            if ($blocked !== null) {
+                return $this->restoreReply($messages, $blocked, 'error');
+            }
+            if (AiUniverseUtilityHelper::isExtensionLoaded('workspaces') && !$user->setTemporaryWorkspace($changeWorkspace)) {
+                return $this->restoreReply($messages, $this->translator->translate('agent.error.forbidden'), 'error');
+            }
+        }
+
+        try {
+            $result = $this->undoService->undo($changeId);
+        } catch (\Throwable $exception) {
+            return $this->restoreReply($messages, $exception->getMessage(), 'error');
+        }
+
+        $updated = $this->conversationRecorder->undone($messages, $this->changeMessages->undone($result), $changeId);
+
+        return [
+            'assistant' => array_slice($updated, count($messages)),
+            'all' => $updated,
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $messages
+     * @return array{assistant: list<array<string, mixed>>, all: list<array<string, mixed>>}
+     */
+    private function restoreReply(array $messages, string $content, string $type = 'info'): array
+    {
+        $messages[] = [
+            'role' => 'assistant',
+            'content' => $content,
+            'meta' => ['type' => $type],
+        ];
+
+        return [
+            'assistant' => array_slice($messages, -1),
+            'all' => $messages,
+        ];
+    }
+
+    private function undoButtonHint(): string
+    {
+        $hint = $this->translator->translate('agent.undo.useButton');
+        if ($hint === '' || $hint === 'agent.undo.useButton') {
+            return 'Use the Undo button on the applied change to put the old text back.';
+        }
+
+        return $hint;
+    }
+
+    /**
      * "Summarize conversation": stores a short summary; later turns replay it instead of the
      * older messages.
      */
@@ -1012,6 +1086,7 @@ final class AgentAjaxController
             ]);
         }
 
+        $restored = null;
         try {
             $correlationId = $this->turnRepository->startTurn((int) ($user->user['uid'] ?? 0));
             $turn = $this->prepareTurn($request, $body, $message, $user, $correlationId);
@@ -1021,19 +1096,24 @@ final class AgentAjaxController
             // Keep the question even if the page is reloaded before the answer is ready.
             $this->conversationSession->save($user, $turn['messages'], $turn['context'], $turn['provider']);
 
-            $assistantMessages = $this->turnRouter->route(
-                $turn['message'],
-                $turn['turnContext'],
-                $turn['body'],
-                $user,
-                $correlationId,
-                $turn['history'],
-            );
+            $restored = $this->restoreAppliedChange($turn['message'], $turn['messages'], $user);
+            if ($restored !== null) {
+                $assistantMessages = $restored['assistant'];
+            } else {
+                $assistantMessages = $this->turnRouter->route(
+                    $turn['message'],
+                    $turn['turnContext'],
+                    $turn['body'],
+                    $user,
+                    $correlationId,
+                    $turn['history'],
+                );
+            }
         } finally {
             $lease->release();
         }
 
-        $allMessages = [...$turn['messages'], ...$assistantMessages];
+        $allMessages = is_array($restored) ? $restored['all'] : [...$turn['messages'], ...$assistantMessages];
         $this->conversationSession->save($user, $allMessages, $turn['context'], $turn['provider']);
         $sessionTitle = $this->maybeApplyShortTitle($user, $allMessages, $turn['provider'], $turn['context']);
 
@@ -1126,22 +1206,27 @@ final class AgentAjaxController
             }
 
             try {
-                $assistantMessages = $this->turnRouter->route(
-                    $turn['message'],
-                    $turn['turnContext'],
-                    $turn['body'],
-                    $user,
-                    $correlationId,
-                    $turn['history'],
-                    function (string $event, array $payload): void {
-                        // tool_call / model_request are for the eval and logs, not for the window.
-                        if (!in_array($event, self::INTERNAL_TURN_EVENTS, true)) {
-                            $this->emitSseEvent($event, $payload);
-                        }
-                    },
-                );
-
-                $allMessages = [...$turn['messages'], ...$assistantMessages];
+                $restored = $this->restoreAppliedChange($turn['message'], $turn['messages'], $user);
+                if ($restored !== null) {
+                    $assistantMessages = $restored['assistant'];
+                    $allMessages = $restored['all'];
+                } else {
+                    $assistantMessages = $this->turnRouter->route(
+                        $turn['message'],
+                        $turn['turnContext'],
+                        $turn['body'],
+                        $user,
+                        $correlationId,
+                        $turn['history'],
+                        function (string $event, array $payload): void {
+                            // tool_call / model_request are for the eval and logs, not for the window.
+                            if (!in_array($event, self::INTERNAL_TURN_EVENTS, true)) {
+                                $this->emitSseEvent($event, $payload);
+                            }
+                        },
+                    );
+                    $allMessages = [...$turn['messages'], ...$assistantMessages];
+                }
                 $this->conversationSession->save($user, $allMessages, $turn['context'], $turn['provider']);
                 $sessionTitle = $this->maybeApplyShortTitle($user, $allMessages, $turn['provider'], $turn['context']);
 

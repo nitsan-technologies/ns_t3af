@@ -2,6 +2,22 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-12 — Improving a page for Google prepares suggestions
+
+**Done:** “Make this page look better in Google” and “write SEO texts for this page” call `t3ai_generate_all_seo` and prepare suggestions. Nothing is written until Apply. The SEO queue is only for an explicit add, list, or “list for Google” request. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
+## 2026-10-12 — Putting the old text back restores the applied change
+
+**Done:** “Put the old Google text back”, undo, or revert restores the latest applied change that still has Undo, the same way as the Undo button, and does not spend credits on new SEO suggestions. When nothing is left to restore, the reply points at the Undo button. A request for better or new Google texts still generates suggestions. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
 ## 2026-10-12 — A reload keeps the running agent turn
 
 **Done:** Reloading while a turn is writing no longer drops the answer or leaves the next message blocked with an idle composer. Stream writes stop after the browser disconnects, the answer is stored, and reopening shows a spinner until it appears. If the turn has already ended with no answer, the panel says the connection was interrupted and the next message is accepted. A second turn is still refused while the first holds the lock. See `context/features/ai-agent.md`.
