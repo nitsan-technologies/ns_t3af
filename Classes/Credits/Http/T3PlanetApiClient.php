@@ -248,7 +248,17 @@ class T3PlanetApiClient
             'request_uuid' => $requestUuid,
             'feature_key' => $featureKey,
             'meta_json' => $metaJson,
-        ], $metaJson, $options), $bearerToken);
+        ], $metaJson, $options), $bearerToken, null, self::callTimeout($options));
+    }
+
+    /**
+     * Per-call limit ({@see AiOptions::$timeoutSeconds}) in whole seconds; null = client default.
+     */
+    private static function callTimeout(?AiOptions $options): ?int
+    {
+        $seconds = $options?->timeoutSeconds;
+
+        return $seconds !== null && $seconds > 0 ? max(1, (int) ceil($seconds)) : null;
     }
 
     /**

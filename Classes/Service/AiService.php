@@ -34,6 +34,7 @@ use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 use NITSAN\NsT3AF\Exception\UnknownAdapterException;
 use NITSAN\NsT3AF\Provider\AdapterRegistry;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
+use NITSAN\NsT3AF\Provider\Contract\RequestTimeoutCapableInterface;
 use NITSAN\NsT3AF\Provider\OpenAiCompatible\OpenAiCompatiblePlatform;
 use NITSAN\NsT3AF\Provider\ProviderCapabilityGuard;
 use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiBridgeAdapter;
@@ -72,6 +73,18 @@ final class AiService implements AiServiceInterface
         private readonly ?RequestTelemetryService $telemetry = null,
     ) {}
 
+    /**
+     * Platform for one call; bounded by {@see AiOptions::$timeoutSeconds} when the adapter supports it.
+     */
+    private function platformFor(AdapterInterface $adapter, Provider $provider, AiOptions $options): object
+    {
+        if ($options->timeoutSeconds !== null && $options->timeoutSeconds > 0 && $adapter instanceof RequestTimeoutCapableInterface) {
+            return $adapter->platformWithTimeout($provider, $options->timeoutSeconds);
+        }
+
+        return $adapter->platform($provider);
+    }
+
     public function complete(string $prompt, AiOptions $options = new AiOptions()): AiResponse
     {
         $provider = $this->provider($options->providerIdentifier, $options->pageId);
@@ -93,7 +106,7 @@ final class AiService implements AiServiceInterface
 
         $start = (int) (microtime(true) * 1000);
         try {
-            $platform = $adapter->platform($provider);
+            $platform = $this->platformFor($adapter, $provider, $before->getOptions());
             $invocation = $this->invokePlatform(
                 $platform,
                 $provider,
@@ -166,7 +179,7 @@ final class AiService implements AiServiceInterface
         $start = (int) (microtime(true) * 1000);
         $content = '';
         try {
-            $platform = $adapter->platform($provider);
+            $platform = $this->platformFor($adapter, $provider, $before->getOptions());
             $modelId = $this->effectiveModel($provider, $before->getOptions());
 
             if (method_exists($platform, 'stream')) {
@@ -284,7 +297,7 @@ final class AiService implements AiServiceInterface
                     $text,
                 );
             } else {
-                $platform = $adapter->platform($provider);
+                $platform = $this->platformFor($adapter, $provider, $before->getOptions());
                 $invocation = $this->embedPlatform(
                     $platform,
                     $provider,
