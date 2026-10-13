@@ -140,8 +140,11 @@ readonly class FileUploadService
             throw new \RuntimeException('Could not hash the temporary upload file.', 1747320002);
         }
 
-        $existingFile = $this->findIdenticalFile($folder->getStorage(), $sha1);
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        $existingFile = $this->findIdenticalFileInFolder($folder->getStorage(), $sha1, $folder);
         if ($existingFile !== null) {
+            self::assertDedupeNameMatchesExisting($existingFile, $fileName, $extension);
+
             return ['file' => $existingFile, 'deduplicated' => true];
         }
 
@@ -157,8 +160,8 @@ readonly class FileUploadService
             );
         }
 
-        // Uploads can be rewritten while stored (e.g. SVG sanitizer); re-check hash.
-        $existingFile = $this->findIdenticalFile($folder->getStorage(), $file->getSha1(), $file->getUid());
+        // Uploads can be rewritten while stored (e.g. SVG sanitizer); re-check hash in this folder only.
+        $existingFile = $this->findIdenticalFileInFolder($folder->getStorage(), $file->getSha1(), $folder, $file->getUid());
         if ($existingFile !== null) {
             try {
                 $folder->getStorage()->deleteFile($file);
@@ -170,6 +173,70 @@ readonly class FileUploadService
         }
 
         return ['file' => $file, 'deduplicated' => false];
+    }
+
+    /**
+     * Dedupe must not return an existing file under a mismatched extension (e.g. JPEG bytes as .woff2).
+     */
+    public static function assertDedupeNameMatchesExisting(File $existing, string $requestedFileName, string $requestedExtension): void
+    {
+        $existingExtension = strtolower($existing->getExtension());
+        if ($requestedExtension !== '' && $existingExtension !== '' && $requestedExtension !== $existingExtension) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'An identical file already exists as ".%s" (%s), but the upload name uses ".%s". '
+                    . 'Rename to match the real type, or upload different bytes.',
+                    $existingExtension,
+                    $existing->getMimeType(),
+                    $requestedExtension,
+                ),
+                1747320025,
+            );
+        }
+
+        if ($requestedExtension !== '' && !self::isExtensionConsistentWithMime($requestedExtension, $existing->getMimeType())) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'Mime-type "%s" not allowed for file extension "%s".',
+                    $existing->getMimeType(),
+                    $requestedExtension,
+                ),
+                1747320026,
+            );
+        }
+    }
+
+    public static function isExtensionConsistentWithMime(string $extension, string $mimeType): bool
+    {
+        $extension = strtolower($extension);
+        $mimeType = strtolower(trim(explode(';', $mimeType)[0]));
+        $expected = GeneralUtility::makeInstance(MimeTypeDetector::class)
+            ->getMimeTypesForFileExtension($extension);
+
+        // Unknown extensions: do not invent a refusal here (FAL allow-list handles that on addFile).
+        return $expected === [] || ($mimeType !== '' && in_array($mimeType, $expected, true));
+    }
+
+    public static function isFileInFolder(File $file, Folder $folder): bool
+    {
+        try {
+            $parent = $file->getParentFolder();
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return self::normalizeFolderIdentifier($parent->getIdentifier())
+            === self::normalizeFolderIdentifier($folder->getIdentifier());
+    }
+
+    public static function normalizeFolderIdentifier(string $identifier): string
+    {
+        $identifier = str_replace('\\', '/', $identifier);
+        if ($identifier === '' || $identifier === '/') {
+            return '/';
+        }
+
+        return rtrim($identifier, '/') . '/';
     }
 
     public function assertFileNameIsAllowed(string $fileName): void
@@ -634,8 +701,15 @@ readonly class FileUploadService
         return ($fileName !== '' ? $fileName : 'download') . '.' . $extension;
     }
 
-    private function findIdenticalFile(ResourceStorage $storage, string $sha1, int $excludeFileUid = 0): ?File
-    {
+    /**
+     * Same-content reuse only inside the requested folder (not the whole storage).
+     */
+    private function findIdenticalFileInFolder(
+        ResourceStorage $storage,
+        string $sha1,
+        Folder $folder,
+        int $excludeFileUid = 0,
+    ): ?File {
         $rows = GeneralUtility::makeInstance(FileIndexRepository::class)->findByContentHash($sha1);
         foreach ($rows as $row) {
             if ((int) ($row['storage'] ?? 0) !== $storage->getUid() || !empty($row['missing'])) {
@@ -654,7 +728,11 @@ readonly class FileUploadService
                     continue;
                 }
                 $file = $storage->getFile($identifier);
-                if ($file instanceof File && $storage->checkFileActionPermission('read', $file)) {
+                if (
+                    $file instanceof File
+                    && $storage->checkFileActionPermission('read', $file)
+                    && self::isFileInFolder($file, $folder)
+                ) {
                     return $file;
                 }
             } catch (\Exception) {
