@@ -65,7 +65,12 @@ readonly class ContentGetTool implements McpNonAiToolInterface
         $record = $this->recordService->findByUid('tt_content', $uid, $fields);
 
         if ($record === null) {
-            return json_encode(['error' => $this->pageAccess->isUnrestricted() ? 'Content element not found' : 'Content element not found or you don\'t have access to its page.'], JSON_THROW_ON_ERROR);
+            throw new \InvalidArgumentException(
+                $this->pageAccess->isUnrestricted()
+                    ? 'Content element not found'
+                    : 'Content element not found or you don\'t have access to its page.',
+                1790600010,
+            );
         }
 
         $sysLanguageUid = $record[$languageField ?? ''] ?? -1;

@@ -36,6 +36,7 @@ final class McpSiteRequestBootstrap
 {
     public function __construct(
         private readonly SiteFinder $siteFinder,
+        private readonly ?McpSlugRedirectGuard $slugRedirectGuard = null,
     ) {}
 
     /**
@@ -130,6 +131,7 @@ final class McpSiteRequestBootstrap
         $warnings = [];
         foreach (array_unique(array_filter($pageIds, static fn(int $uid): bool => $uid > 0)) as $pageId) {
             if (!$this->attachForPage($pageId)) {
+                $this->slugRedirectGuard?->skipPage($pageId);
                 $warnings[] = sprintf(
                     'Page %d has no site configuration; auto-redirects for slug changes were skipped.',
                     $pageId,

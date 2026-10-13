@@ -502,6 +502,43 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function dryRunPageCopyRollsBackAndLeavesNoCopiedPage(): void
+    {
+        $GLOBALS['LANG'] = $this->get(\TYPO3\CMS\Core\Localization\LanguageServiceFactory::class)
+            ->createFromUserPreferences($GLOBALS['BE_USER']);
+
+        $source = $this->service->apply(
+            ['pages' => ['NEWsrc' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Copy source', 'hidden' => 1]]],
+            [],
+            false,
+            true,
+            true,
+        );
+        $sourceUid = $source->created['NEWsrc'];
+        $pagesBefore = (int) $this->getConnectionPool()->getConnectionForTable('pages')
+            ->executeQuery('SELECT COUNT(*) FROM pages')
+            ->fetchOne();
+
+        $result = $this->service->apply(
+            [],
+            ['pages' => [$sourceUid => ['copy' => self::SITE_ROOT_PAGE_ID]]],
+            true,
+            true,
+            false,
+        );
+
+        self::assertTrue($result->dryRun);
+        self::assertFalse($result->written);
+        self::assertSame(
+            $pagesBefore,
+            (int) $this->getConnectionPool()->getConnectionForTable('pages')
+                ->executeQuery('SELECT COUNT(*) FROM pages')
+                ->fetchOne(),
+        );
+        self::assertSame(1, $this->countWhere('pages', 'title', 'Copy source'));
+    }
+
+    #[Test]
     public function aRealSysCategoryCreateCommitsAndAFailingBatchWithCategoryRollsBack(): void
     {
         $created = $this->service->apply(

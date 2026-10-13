@@ -38,6 +38,7 @@ readonly class DataHandlerService
     public function __construct(
         private McpSiteRequestBootstrap $siteRequestBootstrap,
         private RecordService $recordService,
+        private ?McpSlugRedirectGuard $slugRedirectGuard = null,
     ) {}
 
     /**
@@ -101,17 +102,33 @@ readonly class DataHandlerService
         return $fields;
     }
 
-    /** @param array<string, mixed> $fields */
-    public function updateRecord(string $table, int $uid, array $fields): void
+    /**
+     * @param array<string, mixed> $fields
+     * @return array{warnings: list<string>, redirects: list<array{uid: int, source_host: string, source_path: string, target: string}>}
+     */
+    public function updateRecord(string $table, int $uid, array $fields): array
     {
         $requestSnapshot = $this->siteRequestBootstrap->capture();
+        $warnings = [];
+        $redirects = [];
+        $guard = $this->slugRedirectGuard;
+        $trackRedirects = $guard !== null && $table === 'pages' && array_key_exists('slug', $fields);
+        if ($trackRedirects) {
+            $guard->begin();
+        }
 
         try {
             if ($table === 'pages') {
                 // DataHandler page writes must use the live uid — workspace version
                 // uids break RootlineUtility / SiteFinder ("Could not fetch page data").
                 $uid = $this->resolveLivePageUid($uid);
-                $this->siteRequestBootstrap->attachForPage($uid);
+                if (!$this->siteRequestBootstrap->attachForPage($uid)) {
+                    $guard?->skipPage($uid);
+                    $warnings[] = sprintf(
+                        'Page %d has no site configuration; auto-redirects for slug changes were skipped.',
+                        $uid,
+                    );
+                }
             }
 
             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
@@ -119,11 +136,19 @@ readonly class DataHandlerService
             $dataHandler->process_datamap();
 
             $this->checkErrors($dataHandler);
+            if ($trackRedirects && $guard !== null) {
+                $redirects = $guard->collectNewRedirects();
+            }
         } finally {
             if ($table === 'pages') {
                 $this->siteRequestBootstrap->restore($requestSnapshot);
             }
+            if ($trackRedirects && $guard !== null) {
+                $guard->end();
+            }
         }
+
+        return ['warnings' => $warnings, 'redirects' => $redirects];
     }
 
     public function deleteRecord(string $table, int $uid): void

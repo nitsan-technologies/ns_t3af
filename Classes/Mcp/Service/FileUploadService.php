@@ -141,6 +141,7 @@ readonly class FileUploadService
         }
 
         $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        self::assertFontFileIsGenuine($tempPath, $extension);
         $existingFile = $this->findIdenticalFileInFolder($folder->getStorage(), $sha1, $folder);
         if ($existingFile !== null) {
             self::assertDedupeNameMatchesExisting($existingFile, $fileName, $extension);
@@ -215,6 +216,77 @@ readonly class FileUploadService
 
         // Unknown extensions: do not invent a refusal here (FAL allow-list handles that on addFile).
         return $expected === [] || ($mimeType !== '' && in_array($mimeType, $expected, true));
+    }
+
+    /**
+     * WOFF/WOFF2 are mapped from application/octet-stream install-wide; require real font magic
+     * so random bytes / polyglots cannot be stored as font/* via MCP upload.
+     */
+    public static function assertFontFileIsGenuine(string $path, string $extension): void
+    {
+        $extension = strtolower($extension);
+        if ($extension !== 'woff' && $extension !== 'woff2') {
+            return;
+        }
+
+        $size = filesize($path);
+        if ($size === false || $size < 44) {
+            throw new \InvalidArgumentException(
+                'This file is too small to be a valid .' . $extension . ' font.',
+                1747320027,
+            );
+        }
+
+        $handle = fopen($path, 'rb');
+        if ($handle === false) {
+            throw new \RuntimeException('Could not read the upload for font validation.', 1747320028);
+        }
+        try {
+            $header = fread($handle, 12);
+        } finally {
+            fclose($handle);
+        }
+        if (!is_string($header) || strlen($header) < 12) {
+            throw new \InvalidArgumentException(
+                'Could not read a .' . $extension . ' font header.',
+                1747320029,
+            );
+        }
+
+        $expectedMagic = $extension === 'woff2' ? 'wOF2' : 'wOFF';
+        if (!str_starts_with($header, $expectedMagic)) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'File content is not a real .%s font (expected magic bytes "%s").',
+                    $extension,
+                    $expectedMagic,
+                ),
+                1747320030,
+            );
+        }
+
+        $declaredLength = unpack('N', substr($header, 8, 4));
+        $length = is_array($declaredLength) ? (int) ($declaredLength[1] ?? 0) : 0;
+        if ($length !== $size) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'This .%s file header length (%d) does not match the file size (%d).',
+                    $extension,
+                    $length,
+                    $size,
+                ),
+                1747320031,
+            );
+        }
+
+        // Polyglot guard: fonts must not carry executable script payloads after a forged header.
+        $sample = (string) file_get_contents($path, false, null, 0, min($size, 65536));
+        if (str_contains($sample, '<?php') || str_contains(strtolower($sample), '<script')) {
+            throw new \InvalidArgumentException(
+                'This .' . $extension . ' file contains script content and is not allowed.',
+                1747320032,
+            );
+        }
     }
 
     public static function isFileInFolder(File $file, Folder $folder): bool
