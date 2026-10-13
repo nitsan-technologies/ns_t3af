@@ -29,7 +29,7 @@ From Sanjay’s 2026-10-12 handoff. **Not in 2.0.1.** Track for 2.1+.
 6. Workspace file-reference counter sync on live row
 7. Atomic file field replace / `file_reference_remove`
 8. `file_list` shared offset for files+folders
-9. Upload dedupe scope (mount/folder)
+9. Upload dedupe scope (mount/folder) — **partially fixed in 2.0.1:** same-folder only + extension/mime guard; revisit mount-wide policy if product wants storage-wide reuse with an explicit flag
 10. Docs vs code base64 upload limit
 11. Unknown search `op` → refuse, not silent LIKE
 12. Structured error codes in tool replies
