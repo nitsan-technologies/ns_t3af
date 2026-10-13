@@ -24,6 +24,8 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Mcp\Server;
 
+use const JSON_THROW_ON_ERROR;
+
 use Mcp\Exception\ToolCallException;
 use NITSAN\NsT3AF\Mcp\Logging\AuditLogger;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPlaygroundService;
@@ -52,13 +54,12 @@ final class ErrorHandlingProxy
             $result = $this->inner->$name(...$arguments);
             $executionTimeMs = (int) ((hrtime(true) - $startTime) / 1000000);
             $handlerName = $this->getHandlerName();
-            // Tools report a refused call as {"error": "..."} without throwing: that is a failure in the log.
+            // Soft {"error": "..."} success payloads must become isError:true for agents.
             $errorMessage = McpPlaygroundService::errorMessageOf($result);
             if ($errorMessage !== null) {
-                $this->auditLogger->logFailure($handlerName, $this->type, $arguments, $executionTimeMs, $errorMessage);
-                $this->toolLogService->logFailure($this->inner, $this->type, $arguments, $executionTimeMs, $errorMessage);
-
-                return $result;
+                $code = self::errorCodeOf($result) ?? 1790700001;
+                // Throw so the catch below logs once and MCP marks isError.
+                throw new ToolCallException(self::errorPayload($errorMessage, $code), $code);
             }
             $this->auditLogger->logSuccess($handlerName, $this->type, $arguments, $executionTimeMs);
             $this->toolLogService->logSuccess($this->inner, $this->type, $arguments, $executionTimeMs);
@@ -73,7 +74,7 @@ final class ErrorHandlingProxy
             }
             $this->toolLogService->logFailure($this->inner, $this->type, $arguments, $executionTimeMs, $e->getMessage());
 
-            throw $e;
+            throw self::ensureCodedToolCallException($e);
         } catch (\Throwable $e) {
             $executionTimeMs = (int) ((hrtime(true) - $startTime) / 1000000);
             $handlerName = $this->getHandlerName();
@@ -81,8 +82,65 @@ final class ErrorHandlingProxy
             $this->toolLogService->logFailure($this->inner, $this->type, $arguments, $executionTimeMs, $e->getMessage());
             $this->logger->error($handlerName . ' failed', ['exception' => $e]);
 
-            throw new ToolCallException($e->getMessage(), (int) $e->getCode(), $e);
+            $code = (int) $e->getCode();
+            if ($code === 0) {
+                $code = 1790700000;
+            }
+
+            throw new ToolCallException(self::errorPayload($e->getMessage(), $code), $code, $e);
         }
+    }
+
+    private static function ensureCodedToolCallException(ToolCallException $exception): ToolCallException
+    {
+        $code = (int) $exception->getCode();
+        if ($code === 0) {
+            $code = 1790700000;
+        }
+        $message = $exception->getMessage();
+        $decoded = json_decode($message, true);
+        if (is_array($decoded) && isset($decoded['code']) && is_numeric($decoded['code'])) {
+            return $exception;
+        }
+        if (is_array($decoded)) {
+            $decoded['code'] = $code;
+
+            return new ToolCallException(json_encode($decoded, JSON_THROW_ON_ERROR), $code, $exception);
+        }
+
+        return new ToolCallException(self::errorPayload($message, $code), $code, $exception);
+    }
+
+    /** @param mixed $result */
+    private static function errorCodeOf(mixed $result): ?int
+    {
+        if (is_string($result)) {
+            $decoded = json_decode($result, true);
+            $result = is_array($decoded) ? $decoded : null;
+        }
+        if (!is_array($result) || !isset($result['code']) || !is_numeric($result['code'])) {
+            return null;
+        }
+
+        return (int) $result['code'];
+    }
+
+    private static function errorPayload(string $message, int $code): string
+    {
+        $decoded = json_decode($message, true);
+        if (is_array($decoded)) {
+            $decoded['code'] = $code;
+            if (!isset($decoded['error']) || !is_string($decoded['error']) || $decoded['error'] === '') {
+                // Structured batch payloads (ok/written/…) keep their shape; only bare maps get error=.
+                if (!isset($decoded['ok']) && !isset($decoded['written'])) {
+                    $decoded['error'] = $message;
+                }
+            }
+
+            return json_encode($decoded, JSON_THROW_ON_ERROR);
+        }
+
+        return json_encode(['error' => $message, 'code' => $code], JSON_THROW_ON_ERROR);
     }
 
     private function getHandlerName(): string

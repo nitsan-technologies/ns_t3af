@@ -67,6 +67,13 @@ final class AgentSlashArgumentBinder
             return $arguments;
         }
 
+        $pageIds = self::explicitPageIdList($remainder, $params, $arguments);
+        if ($pageIds !== null) {
+            $arguments['pageIds'] = $pageIds;
+
+            return $arguments;
+        }
+
         if ($params === []) {
             return $this->bindLegacyUid($arguments, $remainder);
         }
@@ -141,6 +148,45 @@ final class AgentSlashArgumentBinder
         $arguments[$firstName] = $remainder;
 
         return $arguments;
+    }
+
+    /**
+     * A digit list belongs in pageIds when that is the tool's page argument.
+     * A tool that already has pageId or uid keeps the existing single-id binding.
+     *
+     * @param list<array{name?: string, type?: string, required?: bool, default?: string|null}> $params
+     * @param array<string, mixed> $arguments
+     * @return list<int>|null
+     */
+    private static function explicitPageIdList(string $remainder, array $params, array $arguments): ?array
+    {
+        if (array_key_exists('pageIds', $arguments) || preg_match('/^\d+(?:[\s,;]+\d+)*$/', $remainder) !== 1) {
+            return null;
+        }
+
+        $hasPageIds = false;
+        foreach ($params as $param) {
+            $name = trim((string) ($param['name'] ?? ''));
+            if ($name === 'pageIds') {
+                $hasPageIds = true;
+            }
+            if (in_array($name, self::ID_PARAM_NAMES, true)) {
+                return null;
+            }
+        }
+        if (!$hasPageIds) {
+            return null;
+        }
+
+        $ids = [];
+        foreach (preg_split('/[\s,;]+/', $remainder) ?: [] as $part) {
+            $uid = (int) $part;
+            if ($uid > 0) {
+                $ids[$uid] = $uid;
+            }
+        }
+
+        return $ids === [] ? null : array_values($ids);
     }
 
     /**

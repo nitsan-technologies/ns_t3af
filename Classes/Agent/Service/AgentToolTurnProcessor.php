@@ -22,11 +22,17 @@ namespace NITSAN\NsT3AF\Agent\Service;
 use NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface;
 use NITSAN\NsT3AF\Mcp\Dto\PreviewResult;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Exception\NoChangeRequiredException;
 use NITSAN\NsT3AF\Mcp\Exception\UnsupportedPlanException;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPlaygroundService;
 use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Database\Connection;
+use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Shared tool-turn execution for slash/@ fast paths and NL orchestration.
@@ -37,6 +43,21 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
 {
     /** Characters of a tool response kept in the stored trace. */
     private const TRACE_RESPONSE_CHARS = 1500;
+
+    /** Queue tools whose rows are read for the whole site, so a draft workspace must not add to them. */
+    private const SITE_WIDE_QUEUE_TOOLS = [
+        't3ai_mass_seo_queue_add',
+        't3ai_mass_translation_queue_add',
+    ];
+
+    /** Tools that create pages under a parent page (argument parentPageId). */
+    private const PARENT_PAGE_TOOLS = [
+        't3ai_create_page_simple',
+        't3ai_create_page_advanced',
+        't3ai_create_page_structure',
+        't3ai_create_blog_simple',
+        't3ai_create_blog_advanced',
+    ];
 
     public function __construct(
         private PermittedActionProvider $permittedActionProvider,
@@ -384,6 +405,17 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * A disabled feature already tells the editor what to turn on. The preview-failed
+     * wrapper would hide that behind “try again”.
+     */
+    private static function isFeatureDisabledMessage(string $message): bool
+    {
+        $lower = mb_strtolower(trim($message));
+
+        return $lower !== '' && (str_contains($lower, 'turned off') || str_contains($lower, 'currently disabled'));
+    }
+
+    /**
      * @param array<string, mixed> $tool
      * @param array<string, mixed> $context
      * @param array<string, mixed> $body
@@ -405,6 +437,30 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             (string) ($body['provider'] ?? ''),
         );
 
+        $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
+        $arguments = self::seoBatchSubpagesOfOpenPage($arguments, $toolName, $requestQuery);
+        $arguments = self::openPageAsParent($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
+        $arguments = self::withEditorRequestAsStructurePrompt($arguments, $toolName, $requestQuery);
+        $languageTurn = $this->unavailableLanguageTurn($toolName, $context, $requestQuery, $correlationId);
+        if ($languageTurn !== null) {
+            return $languageTurn;
+        }
+        $translateClarify = self::clarifyAmbiguousTranslateContent(
+            $toolName,
+            $arguments,
+            (int) ($context['pageId'] ?? 0),
+            $requestQuery,
+            $correlationId,
+        );
+        if ($translateClarify !== null) {
+            return $translateClarify;
+        }
+        $arguments = self::pinTranslateContentToOpenPage(
+            $arguments,
+            $toolName,
+            (int) ($context['pageId'] ?? 0),
+            $requestQuery,
+        );
         $variants = max(1, min(5, (int) ($arguments['variants'] ?? 3)));
         unset($arguments['variants']);
 
@@ -416,12 +472,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             );
             $this->auditLogger->logToolInvocation($correlationId, $toolName, $arguments, false, 0, mb_substr((string) ($result['message'] ?? ''), 0, 250));
 
+            $content = self::isFeatureDisabledMessage($failureDetail)
+                ? $failureDetail
+                : $this->translator->translate(
+                    'agent.turn.previewFailed',
+                    [$this->editorLabelService->resolve($tool) ?: $toolName, $failureDetail],
+                );
+
             return [
                 'role' => 'assistant',
-                'content' => $this->translator->translate(
-                    'agent.turn.previewFailed',
-                    [$toolName, $failureDetail],
-                ),
+                'content' => $content,
                 'meta' => [
                     'type' => 'error',
                     'tool' => $toolName,
@@ -456,6 +516,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $summary = $preview->llmSummary !== ''
             ? $preview->llmSummary
             : $this->translator->translate('agent.suggestions.ready', [$editorLabel, (string) count($preview->variants)]);
+        $summary .= $this->translationProviderNotice($toolName, $arguments, (string) ($body['requestQuery'] ?? ''));
 
         return [
             'role' => 'assistant',
@@ -511,10 +572,122 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $toolName,
             (string) ($body['provider'] ?? ''),
         );
+        /** @var list<array<string, mixed>> $history */
+        $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
         $arguments = $this->normalizeWriteToolArguments($toolName, $arguments);
+        $arguments = self::withUpdateUid($arguments, $toolName, $history);
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
+        $arguments = self::seoQueueRemovePageIds($arguments, $toolName, $requestQuery);
+        $arguments = self::seoQueueAddRecursiveSubtree($arguments, $toolName, $requestQuery);
+        $arguments = self::seoBatchSubpagesOfOpenPage($arguments, $toolName, $requestQuery);
+        $arguments = self::openPageAsParent($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
+        $arguments = self::openPageAsCreatePid($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
+        $arguments = self::openPageAsContentPid($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
+        $arguments = self::pinOpenPageForQueueRemove($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
+        $gateRequest = trim((string) ($body['requestForGate'] ?? ''));
+        $routerFileUids = is_array($body['routerFileUids'] ?? null)
+            ? array_values(array_filter(array_map('intval', $body['routerFileUids']), static fn(int $uid): bool => $uid > 0))
+            : [];
+        $arguments = $this->enrichPlannedToolArguments($toolName, $arguments, $history, $gateRequest !== '' ? $gateRequest : $requestQuery, $routerFileUids);
         if ($toolName === 'write_table' && $requestQuery !== '') {
             $arguments['requestQuery'] = $requestQuery;
+        }
+        $refuseRemove = self::refuseQueueRemoveOnAddRequest($toolName, $requestQuery);
+        if ($refuseRemove !== null) {
+            return [
+                'role' => 'assistant',
+                'content' => $refuseRemove,
+                'meta' => [
+                    'type' => 'info',
+                    'tool' => $toolName,
+                    'success' => true,
+                    'orchestratorPause' => true,
+                    'correlationId' => $correlationId,
+                ],
+            ];
+        }
+        $refuseNamedOpen = self::refuseSeoQueueOpenPageForNamedTitle(
+            $toolName,
+            $arguments,
+            $context,
+            $requestQuery,
+        );
+        if ($refuseNamedOpen !== null) {
+            return [
+                'role' => 'assistant',
+                'content' => $refuseNamedOpen,
+                'meta' => [
+                    'type' => 'error',
+                    'tool' => $toolName,
+                    'orchestratorPause' => true,
+                    'correlationId' => $correlationId,
+                ],
+            ];
+        }
+        $translateClarify = self::clarifyAmbiguousTranslateContent(
+            $toolName,
+            $arguments,
+            (int) ($context['pageId'] ?? 0),
+            $requestQuery,
+            $correlationId,
+        );
+        if ($translateClarify !== null) {
+            return $translateClarify;
+        }
+        $arguments = self::pinTranslateContentToOpenPage(
+            $arguments,
+            $toolName,
+            (int) ($context['pageId'] ?? 0),
+            $requestQuery,
+        );
+        if (in_array(strtolower($toolName), self::SITE_WIDE_QUEUE_TOOLS, true)) {
+            $workspaceUser = $GLOBALS['BE_USER'] ?? null;
+            if ($workspaceUser instanceof \TYPO3\CMS\Core\Authentication\BackendUserAuthentication && (int) $workspaceUser->workspace > 0) {
+                $message = $this->translator->translate('agent.queue.draftWorkspace');
+                if ($message === 'agent.queue.draftWorkspace') {
+                    $message = 'The queues are shared by the whole site and cannot be changed from a draft workspace. Switch to the Live workspace first. Nothing was added.';
+                }
+
+                return [
+                    'role' => 'assistant',
+                    'content' => $message,
+                    'meta' => ['type' => 'error', 'tool' => $toolName, 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ];
+            }
+        }
+        if (strtolower($toolName) === 't3ai_mass_translation_queue_requeue') {
+            $arguments = self::requeueFailedOnly($arguments, $requestQuery);
+        }
+        $languageTurn = $this->unavailableLanguageTurn($toolName, $context, $requestQuery, $correlationId);
+        if ($languageTurn !== null) {
+            return $languageTurn;
+        }
+        $parsedGlossaryPair = null;
+        if (strtolower($toolName) === 't3ai_glossary_save') {
+            $parsedGlossaryPair = GlossaryPairRequest::parse($requestQuery);
+            if ($parsedGlossaryPair !== null) {
+                $arguments['sourceTerm'] = $parsedGlossaryPair['source'];
+                $arguments['targetTerm'] = $parsedGlossaryPair['target'];
+            }
+            $siteLanguages = GlossarySaveLanguage::siteLanguages($context);
+            $choice = GlossarySaveLanguage::resolve($requestQuery, $siteLanguages);
+            $options = $choice['options'] ?? null;
+            if (isset($choice['languageUid'])) {
+                $arguments['languageUid'] = (int) $choice['languageUid'];
+            } elseif ($parsedGlossaryPair !== null && is_array($options)) {
+                unset($arguments['languageUid']);
+            } elseif ($parsedGlossaryPair !== null && (int) ($arguments['languageUid'] ?? 0) <= 0) {
+                $targets = array_values(array_filter(
+                    $siteLanguages,
+                    static fn(array $language): bool => (int) ($language['id'] ?? 0) > 0,
+                ));
+                if (count($targets) === 1) {
+                    $arguments['languageUid'] = (int) $targets[0]['id'];
+                }
+            }
+            if (is_array($options) && $parsedGlossaryPair === null) {
+                return $this->glossaryLanguageQuestion(array_values(array_filter($options, 'is_string')), $correlationId);
+            }
         }
 
         try {
@@ -527,7 +700,27 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'content' => $exception->getMessage(),
                 'meta' => ['type' => 'error', 'tool' => $toolName, 'orchestratorPause' => true],
             ];
+        } catch (NoChangeRequiredException $exception) {
+            return [
+                'role' => 'assistant',
+                'content' => $exception->getMessage(),
+                'meta' => [
+                    'type' => 'info',
+                    'tool' => $toolName,
+                    'success' => true,
+                    'orchestratorPause' => true,
+                ],
+            ];
         } catch (\InvalidArgumentException $exception) {
+            if (
+                $parsedGlossaryPair !== null
+                && str_contains($exception->getMessage(), 'languageUid')
+            ) {
+                $options = GlossarySaveLanguage::resolve($requestQuery, GlossarySaveLanguage::siteLanguages($context))['options'] ?? null;
+                if (is_array($options)) {
+                    return $this->glossaryLanguageQuestion(array_values(array_filter($options, 'is_string')), $correlationId);
+                }
+            }
             // Wrong arguments (a record that does not exist, a wrong field): no card, and the turn
             // goes on so the model can correct the call.
             $this->logRefusedPlan($correlationId, $toolName, $arguments, $exception);
@@ -544,6 +737,14 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                     'error' => $exception->getMessage(),
                     'autoRan' => false,
                     'facts' => [],
+                    // Without the request, a refused call cannot be told apart from a wrong call afterwards.
+                    'trace' => [[
+                        'step' => 'plan',
+                        'tool' => $toolName,
+                        'request' => self::refusedRequestForTrace($arguments),
+                        'response' => $exception->getMessage(),
+                        'status' => 'refused',
+                    ]],
                 ],
             ];
         } catch (\Throwable $exception) {
@@ -562,11 +763,42 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             : $this->editorLabelService->resolveByName($shownTool);
         $draftCard = $this->draftService->buildDraftCard($plan, $severity);
         $draftCard['editorLabel'] = $editorLabel;
-        $this->draftService->persistDraft($draftCard, $plan, $arguments, $this->draftSession);
+        $extra = [];
+        // Media CE create + place/attach (or "new Text & Media …"): after Apply, attach the pending file.
+        // Clarification answers live in requestForGate / latest user text, not always in requestQuery.
+        // "Put that picture on this page" alone must still wire pendingAttach when the model creates textmedia.
+        if ($shownTool === 'write_table' && $plan->action === 'create') {
+            $gateRequest = trim((string) ($body['requestForGate'] ?? ''));
+            $latestUser = AgentPromptBuilder::latestUserRequestText($history);
+            $attachProbe = $gateRequest !== '' ? $gateRequest : ($latestUser !== '' ? $latestUser : $requestQuery);
+            $wantsAttach = AgentAttachTargetRequest::asksForNewContentElementAttach($requestQuery)
+                || AgentAttachTargetRequest::asksForNewContentElementAttach($attachProbe)
+                || (
+                    self::planCreatesMediaContent($plan)
+                    && (
+                        AgentRequestedFiles::asksToAttachOrPlaceFile($requestQuery)
+                        || AgentRequestedFiles::asksToAttachOrPlaceFile($attachProbe)
+                    )
+                );
+            if ($wantsAttach) {
+                // Only pending/generated files for this turn — never the first upload in the whole conversation.
+                $pending = AgentPromptBuilder::pendingAttachFileUids($history, $attachProbe);
+                $fileUid = $pending[0] ?? 0;
+                if ($fileUid <= 0) {
+                    $router = is_array($body['routerFileUids'] ?? null) ? $body['routerFileUids'] : [];
+                    $fileUid = (int) ($router[0] ?? 0);
+                }
+                if ($fileUid > 0) {
+                    $extra['pendingAttachFileUid'] = $fileUid;
+                }
+            }
+        }
+        $this->draftService->persistDraft($draftCard, $plan, $arguments, $this->draftSession, null, $extra);
 
         $content = ($draftCard['kind'] ?? '') === SatelliteToolPlanService::PLAN_KIND_TOOL_CONFIRMATION
             ? (string) ($draftCard['summary'] ?? $this->translator->translate('agent.draft.proposed', [$editorLabel]))
             : $this->translator->translate('agent.draft.proposed', [$editorLabel]);
+        $content .= $this->translationProviderNotice($toolName, $arguments, $requestQuery);
 
         return [
             'role' => 'assistant',
@@ -577,7 +809,767 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'editorLabel' => $editorLabel,
                 'severity' => $severity,
                 'draft' => $draftCard,
-                'previews' => $this->previewsForChange($arguments, []),
+                'previews' => $this->previewsForChange($arguments, [], $history, $requestQuery),
+                'orchestratorPause' => true,
+            ],
+        ];
+    }
+
+    /**
+     * Draft creates a content type that can hold a file (Text & Media / Text & Images / Image).
+     */
+    public static function planCreatesMediaContent(ToolPlan $plan): bool
+    {
+        foreach ($plan->fields as $field) {
+            if ($field->table !== 'tt_content' || strtolower($field->field) !== 'ctype') {
+                continue;
+            }
+            $cType = strtolower(trim((string) $field->proposedValue));
+
+            return in_array($cType, ['textmedia', 'textpic', 'image'], true);
+        }
+
+        return false;
+    }
+
+    /**
+     * "Add a text element … on this page": keep the create on the open page when the model drifts to Home.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function openPageAsContentPid(array $arguments, int $openPageId, string $toolName, string $requestQuery): array
+    {
+        if ($openPageId <= 0 || strtolower(trim($toolName)) !== 'write_table') {
+            return $arguments;
+        }
+        $table = strtolower(trim((string) ($arguments['tableName'] ?? $arguments['table'] ?? '')));
+        if ($table !== 'tt_content' || strtolower(trim((string) ($arguments['action'] ?? ''))) !== 'create') {
+            return $arguments;
+        }
+        if (isset($arguments['beforeUid']) || isset($arguments['afterUid'])) {
+            return $arguments;
+        }
+        if (preg_match('/\b(this|current|open)\s+page\b|\b(diese|aktuelle)\s+seite\b/iu', $requestQuery) !== 1) {
+            return $arguments;
+        }
+        // Another named page in the request ("on the Contact page like this page"): leave the model's pid.
+        if (AgentTargetPageResolver::namedPageTitle($requestQuery) !== null
+            || AgentTargetPageResolver::mentionedPageUids($requestQuery) !== []) {
+            return $arguments;
+        }
+        $data = $arguments['data'] ?? [];
+        $wasString = is_string($data);
+        if ($wasString) {
+            $decoded = json_decode($data, true);
+            $data = is_array($decoded) ? $decoded : null;
+        }
+        if (!is_array($data) || isset($data['beforeUid']) || isset($data['afterUid'])) {
+            return $arguments;
+        }
+        $pid = isset($data['pid']) && is_numeric($data['pid']) ? (int) $data['pid'] : 0;
+        // Negative pid means "after record X" — never rewrite that into "first on the open page".
+        if ($pid <= 0 || $pid === $openPageId) {
+            return $arguments;
+        }
+        $data['pid'] = $openPageId;
+        $arguments['data'] = $wasString ? json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : $data;
+
+        return $arguments;
+    }
+
+    /**
+     * A new page made with write_table needs a place. Without a pid (an editor's group cannot insert on page 0) or
+     * with the site root the model took for "Home", the page belongs under the open page, unless the request says
+     * "root" or "top level".
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function openPageAsCreatePid(array $arguments, int $openPageId, string $toolName, string $requestQuery): array
+    {
+        if ($openPageId <= 0 || strtolower(trim($toolName)) !== 'write_table') {
+            return $arguments;
+        }
+        $table = strtolower(trim((string) ($arguments['tableName'] ?? $arguments['table'] ?? '')));
+        if ($table !== 'pages' || strtolower(trim((string) ($arguments['action'] ?? ''))) !== 'create') {
+            return $arguments;
+        }
+        if (isset($arguments['beforeUid']) || isset($arguments['afterUid'])) {
+            return $arguments;
+        }
+        $data = $arguments['data'] ?? [];
+        $wasString = is_string($data);
+        if ($wasString) {
+            $decoded = json_decode($data, true);
+            $data = is_array($decoded) ? $decoded : null;
+        }
+        if (!is_array($data) || isset($data['beforeUid']) || isset($data['afterUid'])) {
+            return $arguments;
+        }
+        $pid = isset($data['pid']) && is_numeric($data['pid']) ? (int) $data['pid'] : 0;
+        $useOpenPage = $pid <= 0;
+        if (
+            !$useOpenPage
+            && $pid !== $openPageId
+            && preg_match('/\b(root|top[- ]?level|site\s*root|wurzel|oberste\w*)\b/iu', $requestQuery) !== 1
+        ) {
+            try {
+                $parent = \TYPO3\CMS\Backend\Utility\BackendUtility::getRecord('pages', $pid, 'pid,is_siteroot');
+            } catch (\Throwable) {
+                $parent = null;
+            }
+            $useOpenPage = is_array($parent) && ((int) ($parent['pid'] ?? 1) === 0 || (int) ($parent['is_siteroot'] ?? 0) === 1);
+        }
+        if (!$useOpenPage) {
+            return $arguments;
+        }
+        $data['pid'] = $openPageId;
+        $arguments['data'] = $wasString ? json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : $data;
+
+        return $arguments;
+    }
+
+    /**
+     * The page tree is written from the prompt alone. A model that sends a short prompt ("Home") for
+     * "a structure with Home, About, Services, Contact" gets a tree with one page, so the editor's own
+     * request is part of the prompt.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function withEditorRequestAsStructurePrompt(array $arguments, string $toolName, string $requestQuery): array
+    {
+        if (strtolower(trim($toolName)) !== 't3ai_create_page_structure' || $requestQuery === '') {
+            return $arguments;
+        }
+        $prompt = trim((string) ($arguments['prompt'] ?? ''));
+        if ($prompt !== '' && mb_stripos($prompt, $requestQuery) !== false) {
+            return $arguments;
+        }
+        if ($prompt !== '' && mb_strlen($prompt) >= mb_strlen($requestQuery)) {
+            return $arguments;
+        }
+        $arguments['prompt'] = trim($requestQuery . ($prompt !== '' ? "\n" . $prompt : ''));
+
+        return $arguments;
+    }
+
+    /**
+     * The model reads "Home" in "a structure with Home, About, Services" as the existing start page and
+     * sends it as the parent. Without a word like "root" or "top level", the pages belong under the open page.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function openPageAsParent(array $arguments, int $openPageId, string $toolName, string $requestQuery): array
+    {
+        $parentId = (int) ($arguments['parentPageId'] ?? 0);
+        if (
+            $openPageId <= 0
+            || $parentId <= 0
+            || $parentId === $openPageId
+            || !in_array(strtolower(trim($toolName)), self::PARENT_PAGE_TOOLS, true)
+            || preg_match('/\b(root|top[- ]?level|site\s*root|wurzel|oberste\w*)\b/iu', $requestQuery) === 1
+        ) {
+            return $arguments;
+        }
+        try {
+            $parent = \TYPO3\CMS\Backend\Utility\BackendUtility::getRecord('pages', $parentId, 'pid,is_siteroot');
+        } catch (\Throwable) {
+            return $arguments;
+        }
+        if (is_array($parent) && ((int) ($parent['pid'] ?? 1) === 0 || (int) ($parent['is_siteroot'] ?? 0) === 1)) {
+            $arguments['parentPageId'] = $openPageId;
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * "Remove page 138" keeps that uid. A request with no number still uses the open page.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function seoQueueRemovePageIds(array $arguments, string $toolName, string $requestQuery): array
+    {
+        if (strtolower(trim($toolName)) !== 't3ai_mass_seo_queue_remove') {
+            return $arguments;
+        }
+        $named = AgentTargetPageResolver::mentionedPageUids($requestQuery);
+        if ($named !== []) {
+            $arguments['pageIds'] = $named;
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * "Home and all its subpages" must use pageId + recursive (Mass SEO filter), never an invented pageIds tree.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function seoQueueAddRecursiveSubtree(array $arguments, string $toolName, string $requestQuery): array
+    {
+        if (strtolower(trim($toolName)) !== 't3ai_mass_seo_queue_add') {
+            return $arguments;
+        }
+        if (preg_match(
+            '/\b(all\s+(?:its\s+|the\s+)?subpages?|and\s+all\s+(?:its\s+)?subpages?|und\s+alle\s+unterseiten)\b/iu',
+            $requestQuery,
+        ) !== 1) {
+            return $arguments;
+        }
+        // The invented list is dropped; the first named page stays the root when no pageId was given.
+        $firstListed = 0;
+        $listed = $arguments['pageIds'] ?? null;
+        if (is_string($listed)) {
+            $listed = preg_split('/[\s,;]+/', trim($listed, " \t\n\r\0\x0B\"'[]")) ?: [];
+        }
+        if (is_array($listed)) {
+            foreach ($listed as $listedId) {
+                if ((int) $listedId > 0) {
+                    $firstListed = (int) $listedId;
+                    break;
+                }
+            }
+        }
+        unset($arguments['pageIds']);
+        if ((int) ($arguments['pageId'] ?? 0) <= 0 && trim((string) ($arguments['pageUrl'] ?? '')) === '' && $firstListed > 0) {
+            $arguments['pageId'] = $firstListed;
+        }
+        $arguments['recursive'] = true;
+
+        return $arguments;
+    }
+
+    /**
+     * "SEO for all subpages of this page" must use the subpages. A list that is only the open page
+     * is the page on screen, so it is dropped and the subpage lookup runs.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function seoBatchSubpagesOfOpenPage(array $arguments, string $toolName, string $requestQuery): array
+    {
+        if (strtolower(trim($toolName)) !== 't3ai_generate_seo_batch') {
+            return $arguments;
+        }
+        if (preg_match(
+            '/\b(?:all\s+(?:its\s+|the\s+)?subpages?|subpages?\s+of\s+(?:this|the|that)\s+page|und\s+alle\s+unterseiten|unterseiten\s+(?:dieser|der)\s+seite)\b/iu',
+            $requestQuery,
+        ) !== 1) {
+            return $arguments;
+        }
+        $parent = (int) ($arguments['pageId'] ?? 0);
+        if ($parent <= 0) {
+            return $arguments;
+        }
+        $listed = self::positivePageIdList($arguments['pageIds'] ?? null);
+        if ($listed !== [] && $listed !== [$parent]) {
+            return $arguments;
+        }
+        unset($arguments['pageIds']);
+        if (self::entriesNameOnlyPage($arguments['entries'] ?? null, $parent)) {
+            unset($arguments['entries']);
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private static function positivePageIdList(mixed $pageIds): array
+    {
+        if (is_string($pageIds)) {
+            $pageIds = preg_split('/[\s,;]+/', trim($pageIds, " \t\n\r\0\x0B\"'[]")) ?: [];
+        }
+        if (!is_array($pageIds)) {
+            return [];
+        }
+        $ids = [];
+        foreach ($pageIds as $pageId) {
+            $pageId = (int) $pageId;
+            if ($pageId > 0) {
+                $ids[$pageId] = $pageId;
+            }
+        }
+
+        return array_values($ids);
+    }
+
+    private static function entriesNameOnlyPage(mixed $entries, int $pageId): bool
+    {
+        if (is_string($entries)) {
+            $decoded = json_decode($entries, true);
+            $entries = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($entries) || $entries === []) {
+            return false;
+        }
+        foreach ($entries as $entry) {
+            if (!is_array($entry)) {
+                return false;
+            }
+            $id = (int) ($entry['pageId'] ?? 0);
+            unset($entry['pageId'], $entry['pageUrl']);
+            if ($id !== $pageId || $entry !== []) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * A named page for the SEO/Google list must not silently queue the open Layout page.
+     *
+     * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $context
+     */
+    public static function refuseSeoQueueOpenPageForNamedTitle(
+        string $toolName,
+        array $arguments,
+        array $context,
+        string $requestQuery,
+    ): ?string {
+        if (strtolower(trim($toolName)) !== 't3ai_mass_seo_queue_add') {
+            return null;
+        }
+        $named = AgentTargetPageResolver::namedPageTitle($requestQuery);
+        if ($named === null) {
+            return null;
+        }
+        $lockedPageId = (int) ($context['lockedPageId'] ?? 0);
+        if ($lockedPageId > 0) {
+            return null;
+        }
+        // The editor named the page that is open: that is the page to queue, not a different one.
+        $details = is_array($context['details'] ?? null) ? $context['details'] : [];
+        $openPage = is_array($details['page'] ?? null) ? $details['page'] : [];
+        $openTitle = trim((string) ($openPage['title'] ?? ''));
+        if ($openTitle !== '' && mb_strtolower($openTitle) === mb_strtolower($named)) {
+            return null;
+        }
+        $openPageId = (int) ($context['pageId'] ?? 0);
+        $targetPageId = (int) ($arguments['pageId'] ?? 0);
+        if ($targetPageId <= 0 && self::hasExplicitPageIdList($arguments['pageIds'] ?? null)) {
+            return null;
+        }
+        if ($openPageId > 0 && ($targetPageId === $openPageId || $targetPageId <= 0)) {
+            return sprintf(
+                'I need the page "%s", not the page that is open. Nothing was queued.',
+                $named,
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * Translate-content must target an element on the open page. A guessed uid from another page is dropped;
+     * the only element on this page is used when there is exactly one.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function pinTranslateContentToOpenPage(array $arguments, string $toolName, int $openPageId, string $requestQuery = ''): array
+    {
+        if (strtolower(trim($toolName)) !== 't3ai_translate_content' || $openPageId <= 0) {
+            return $arguments;
+        }
+        $arguments['pageId'] = $openPageId;
+        // A button the editor clicked ("Coastal travel [713]") is the element to translate.
+        $chosen = self::chosenContentUidOnPage($requestQuery, $openPageId);
+        if ($chosen > 0) {
+            $arguments['contentUid'] = $chosen;
+
+            return $arguments;
+        }
+        // "the first / second / last element": the position the editor named wins over a guessed uid.
+        $position = self::requestedElementPosition($requestQuery);
+        if ($position !== null) {
+            $rows = self::defaultLanguageContentOnPage($openPageId);
+            $row = $rows === [] ? null : ($position === -1 ? $rows[count($rows) - 1] : ($rows[$position - 1] ?? null));
+            if (is_array($row) && (int) ($row['uid'] ?? 0) > 0) {
+                $arguments['contentUid'] = (int) $row['uid'];
+
+                return $arguments;
+            }
+        }
+        $contentUid = (int) ($arguments['contentUid'] ?? 0);
+        if ($contentUid > 0) {
+            $pid = self::contentElementPid($contentUid);
+            if ($pid === $openPageId) {
+                return $arguments;
+            }
+            unset($arguments['contentUid']);
+        }
+        $only = self::soleDefaultLanguageContentUid($openPageId);
+        if ($only > 0) {
+            $arguments['contentUid'] = $only;
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * The position of the element a request names ("translate the first element into French"):
+     * 1-based, or -1 for the last one. Null when the request names no position.
+     */
+    public static function requestedElementPosition(string $request): ?int
+    {
+        $noun = '(?:content\s+)?(?:element|paragraph|block|section|inhaltselement|absatz|abschnitt)';
+        $words = [
+            'first' => 1, '1st' => 1, 'erste' => 1,
+            'second' => 2, '2nd' => 2, 'zweite' => 2,
+            'third' => 3, '3rd' => 3, 'dritte' => 3,
+            'fourth' => 4, '4th' => 4, 'vierte' => 4,
+            'fifth' => 5, '5th' => 5, 'fünfte' => 5,
+            'last' => -1, 'letzte' => -1,
+        ];
+        if (preg_match('/(?<![\p{L}\p{N}_])(' . implode('|', array_map('preg_quote', array_keys($words))) . ')(?:[nrsm])?\s+' . $noun . '(?![\p{L}\p{N}_])/iu', $request, $match) !== 1) {
+            return null;
+        }
+
+        return $words[mb_strtolower($match[1])] ?? null;
+    }
+
+    private static function contentElementPid(int $contentUid): int
+    {
+        if ($contentUid <= 0) {
+            return 0;
+        }
+        try {
+            $row = BackendUtility::getRecord('tt_content', $contentUid, 'uid,pid');
+        } catch (\Throwable) {
+            return 0;
+        }
+
+        return is_array($row) ? (int) ($row['pid'] ?? 0) : 0;
+    }
+
+    /**
+     * Several elements share the named title on this page — ask which one (buttons).
+     *
+     * @param array<string, mixed> $arguments
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    public static function clarifyAmbiguousTranslateContent(
+        string $toolName,
+        array $arguments,
+        int $openPageId,
+        string $requestQuery,
+        string $correlationId,
+    ): ?array {
+        if (strtolower(trim($toolName)) !== 't3ai_translate_content' || $openPageId <= 0 || $requestQuery === '') {
+            return null;
+        }
+        // The editor already picked one ("Coastal travel [713]"): do not ask again.
+        if (self::chosenContentUidOnPage($requestQuery, $openPageId) > 0) {
+            return null;
+        }
+        $needle = '';
+        if (preg_match('/["“]([^"”]{2,80})["”]/u', $requestQuery, $quoted) === 1) {
+            $needle = trim((string) $quoted[1]);
+        } elseif (preg_match(
+            '/\b(?:element|inhaltselement)\s+["“]?([^"”\n,]{2,80}?)["”]?\s+(?:on|into|to|nach|ins|auf)\b/iu',
+            $requestQuery,
+            $quoted,
+        ) === 1) {
+            $needle = trim((string) $quoted[1]);
+        }
+        if ($needle === '' || preg_match('/\b(this|that|the|diese|dieses|content)\b/iu', $needle) === 1) {
+            // Fall back: a header on this page that appears in the request and matches more than once.
+            foreach (self::defaultLanguageContentOnPage($openPageId) as $row) {
+                $header = trim((string) ($row['header'] ?? ''));
+                if ($header === '' || mb_stripos($requestQuery, $header) === false) {
+                    continue;
+                }
+                $matches = self::contentUidsMatchingHeaderOnPage($openPageId, $header);
+                if (count($matches) >= 2) {
+                    $needle = $header;
+                    break;
+                }
+            }
+        }
+        if ($needle === '') {
+            return null;
+        }
+        $matches = self::contentUidsMatchingHeaderOnPage($openPageId, $needle);
+        if (count($matches) < 2) {
+            return null;
+        }
+        $options = [];
+        foreach ($matches as $match) {
+            $options[] = sprintf('%s [%d]', $match['header'] !== '' ? $match['header'] : 'Element', $match['uid']);
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => sprintf('Which content element called "%s" should I translate?', $needle),
+            'meta' => [
+                'type' => 'clarification',
+                'tool' => 'ask_clarification',
+                'options' => $options,
+                // The options are content elements, not pages: a click must not be read as a page choice.
+                'contentChoice' => true,
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
+    }
+
+    /**
+     * The uid in a picked option such as "Coastal travel [713]", or 0. Only a reply that ends with the
+     * bracketed uid counts.
+     */
+    public static function contentUidFromChoiceText(string $request): int
+    {
+        return preg_match('/\[(\d{1,10})\]\s*$/u', trim($request), $match) === 1 ? (int) $match[1] : 0;
+    }
+
+    /** A picked element uid that really is an element of the open page, or 0. */
+    private static function chosenContentUidOnPage(string $request, int $openPageId): int
+    {
+        $uid = self::contentUidFromChoiceText($request);
+
+        return $uid > 0 && self::contentElementPid($uid) === $openPageId ? $uid : 0;
+    }
+
+    private static function soleDefaultLanguageContentUid(int $pageId): int
+    {
+        $rows = self::defaultLanguageContentOnPage($pageId);
+        if (count($rows) !== 1) {
+            return 0;
+        }
+
+        return (int) ($rows[0]['uid'] ?? 0);
+    }
+
+    /**
+     * @return list<array{uid: int, header: string}>
+     */
+    private static function contentUidsMatchingHeaderOnPage(int $pageId, string $needle): array
+    {
+        $needle = mb_strtolower(trim($needle));
+        $matches = [];
+        foreach (self::defaultLanguageContentOnPage($pageId) as $row) {
+            $header = trim((string) ($row['header'] ?? ''));
+            if ($header !== '' && mb_strtolower($header) === $needle) {
+                $matches[] = ['uid' => (int) $row['uid'], 'header' => $header];
+            }
+        }
+
+        return $matches;
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private static function defaultLanguageContentOnPage(int $pageId): array
+    {
+        try {
+            $query = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('tt_content');
+            $query->getRestrictions()->removeAll();
+            $rows = $query
+                ->select('uid', 'header')
+                ->from('tt_content')
+                ->where(
+                    $query->expr()->eq('pid', $query->createNamedParameter($pageId, Connection::PARAM_INT)),
+                    $query->expr()->eq('sys_language_uid', $query->createNamedParameter(0, Connection::PARAM_INT)),
+                    $query->expr()->eq('deleted', $query->createNamedParameter(0, Connection::PARAM_INT)),
+                )
+                ->orderBy('sorting', 'ASC')
+                ->setMaxResults(50)
+                ->executeQuery()
+                ->fetchAllAssociative();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        return array_values(array_filter($rows, 'is_array'));
+    }
+
+    /**
+     * Add requests must not open a remove card. Null when the remove tool is allowed.
+     */
+    public static function refuseQueueRemoveOnAddRequest(string $toolName, string $requestQuery): ?string
+    {
+        $tool = strtolower(trim($toolName));
+        if (!in_array($tool, ['t3ai_mass_seo_queue_remove', 't3ai_mass_translation_queue_remove'], true)) {
+            return null;
+        }
+        if ($requestQuery === '') {
+            return null;
+        }
+        $asksRemove = preg_match(
+            '/\b(remove|delete|drop|cancel|take\b[^.?!]{0,40}\bout|out\s+of|get\s+rid|clear|entfern\w*|lösch\w*|stornier\w*|abbrechen|raus\w*|herausnehm\w*|aus\s+der)\b/iu',
+            $requestQuery,
+        ) === 1;
+        if ($asksRemove) {
+            return null;
+        }
+        $asksAdd = preg_match(
+            '/\b(add|put|schedule|hinzu\w*|aufnehm\w*|einplan\w*)\b/iu',
+            $requestQuery,
+        ) === 1;
+        if (!$asksAdd) {
+            return null;
+        }
+
+        return $tool === 't3ai_mass_seo_queue_remove'
+            ? 'You asked to add pages to the SEO queue, not remove them. If they are already queued, say so — do not remove them.'
+            : 'You asked to add pages to the translation queue, not remove them. If they are already queued, say so — do not remove them.';
+    }
+
+    /**
+     * "Retry the failed ones" means every failed row. A page id the model copied from the open page or
+     * from a finished row would requeue nothing, so the list is dropped unless the editor gave numbers.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function requeueFailedOnly(array $arguments, string $requestQuery): array
+    {
+        if (!empty($arguments['includeFinished'])) {
+            return $arguments;
+        }
+        if (
+            preg_match('/\b(fail\w*|fehlgeschlag\w*|fehler\w*|errors?)\b/iu', $requestQuery) === 1
+            && preg_match('/\d/', $requestQuery) !== 1
+        ) {
+            unset($arguments['pageIds'], $arguments['pageId'], $arguments['pid']);
+            $arguments['includeFinished'] = false;
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * DeepL and Google Translate are not agent providers. When the editor asks for one, the card must
+     * say which provider is really used instead of leaving the editor to assume.
+     *
+     * @param array<string, mixed> $arguments
+     */
+    private function translationProviderNotice(string $toolName, array $arguments, string $requestQuery): string
+    {
+        if (!self::isTranslateTool($toolName)) {
+            return '';
+        }
+        if (preg_match('/\b(deepl|google\s*translate|google)\b/iu', $requestQuery, $match) !== 1) {
+            return '';
+        }
+        $used = trim((string) ($arguments['aiProvider'] ?? ''));
+        if ($used === '') {
+            $used = $this->translator->translate('agent.translate.defaultProvider');
+            if ($used === 'agent.translate.defaultProvider') {
+                $used = 'your default AI provider';
+            }
+        }
+        $label = $this->translator->translate('agent.translate.providerNotice', [$match[1], $used]);
+        if ($label === 'agent.translate.providerNotice') {
+            $label = sprintf(
+                "%s can't be used in the agent, so this translation uses %s. For %s, use the page translation dialog.",
+                $match[1],
+                $used,
+                $match[1],
+            );
+        }
+
+        return "\n\n" . $label;
+    }
+
+    /**
+     * The model sometimes sends the languages as {"languageUids":[1]} or {"languageUid":1}. The card and
+     * the queue tool both want the plain list.
+     */
+    public static function unwrapLanguageConfig(mixed $value): mixed
+    {
+        if (is_string($value)) {
+            $trimmed = trim($value);
+            if ($trimmed === '' || !in_array($trimmed[0], ['{', '['], true)) {
+                return $value;
+            }
+            $decoded = json_decode($trimmed, true);
+            if (!is_array($decoded)) {
+                return $value;
+            }
+            $value = $decoded;
+        }
+        if (!is_array($value) || array_is_list($value)) {
+            return $value;
+        }
+        foreach (['languageUids', 'languageUid', 'languageIds', 'languageId', 'languages', 'language'] as $key) {
+            if (array_key_exists($key, $value)) {
+                $inner = $value[$key];
+
+                return is_array($inner) ? $inner : [$inner];
+            }
+        }
+
+        return $value;
+    }
+
+    public static function isTranslateTool(string $toolName): bool
+    {
+        return in_array(strtolower(trim($toolName)), ['t3ai_translate_content', 't3ai_translate_page', 't3ai_translate_news', 't3ai_record_translate'], true);
+    }
+
+    /**
+     * The turn that ends a request for a language the site does not have, or null.
+     *
+     * @param array<string, mixed> $context
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function unavailableLanguageTurn(string $toolName, array $context, string $requestQuery, string $correlationId): ?array
+    {
+        if ($requestQuery === '' || (!RequestedLanguage::isLanguageTool($toolName) && !RequestedLanguage::isQueueAddRequestForRemoval($toolName, $requestQuery))) {
+            return null;
+        }
+        $siteLanguages = GlossarySaveLanguage::siteLanguages($context);
+        $missing = RequestedLanguage::unavailable($requestQuery, $siteLanguages);
+        if ($missing === null) {
+            return null;
+        }
+        $message = $this->translator->translate('agent.language.notAvailable', [$missing, RequestedLanguage::titles($siteLanguages)]);
+        if ($message === 'agent.language.notAvailable') {
+            $message = sprintf(
+                "%s isn't a language of this site (available: %s). Nothing was changed. Pick one of the site languages.",
+                $missing,
+                RequestedLanguage::titles($siteLanguages),
+            );
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $message,
+            'meta' => ['type' => 'error', 'tool' => $toolName, 'correlationId' => $correlationId, 'orchestratorPause' => true],
+        ];
+    }
+
+    /**
+     * @param list<string> $options
+     * @return array{role: string, content: string, meta: array<string, mixed>}
+     */
+    private function glossaryLanguageQuestion(array $options, string $correlationId): array
+    {
+        $question = $this->translator->translate('agent.glossary.whichLanguage');
+        if ($question === '' || $question === 'agent.glossary.whichLanguage') {
+            $question = 'Which language should I save this word in?';
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $question,
+            'meta' => [
+                'type' => 'clarification',
+                'tool' => 'ask_clarification',
+                'options' => array_values($options),
+                'correlationId' => $correlationId,
                 'orchestratorPause' => true,
             ],
         ];
@@ -585,19 +1577,35 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
 
     /**
      * The image a prepared change is about (alt text / metadata of a file), shown on the card.
+     * For a new textmedia draft, pending unattached files from this conversation are shown too
+     * so "Put that picture on this page" is not an empty card.
      *
      * @param array<string, mixed> $arguments
      * @param array<mixed> $target
+     * @param list<array<string, mixed>> $history
      * @return list<array{fileUid: int, url: string, href: string, name: string, alt: string}>
      */
-    private function previewsForChange(array $arguments, array $target): array
+    private function previewsForChange(array $arguments, array $target, array $history = [], string $request = ''): array
     {
         if (!isset($this->mediaPreviews)) {
             return [];
         }
         $previews = $this->mediaPreviews->forRecord((string) ($target['table'] ?? ''), (int) ($target['uid'] ?? 0));
+        if ($previews !== []) {
+            return $previews;
+        }
+        $previews = $this->mediaPreviews->forDetails($arguments);
+        if ($previews !== []) {
+            return $previews;
+        }
+        $pending = AgentPromptBuilder::pendingAttachFileUids($history, $request);
+        if ($pending === []) {
+            return [];
+        }
 
-        return $previews !== [] ? $previews : $this->mediaPreviews->forDetails($arguments);
+        return $this->mediaPreviews->forDetails([
+            'fileUids' => implode(',', array_map(static fn(int $uid): string => (string) $uid, $pending)),
+        ]);
     }
 
     /**
@@ -629,10 +1637,38 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             }
         }
 
+        // The editor named a page, or picked one after "I can't find that page". That page wins
+        // over the page on screen and over a page id the model guessed.
+        $lockedPageId = (int) ($context['lockedPageId'] ?? 0);
+        if ($lockedPageId > 0) {
+            $context['pageId'] = $lockedPageId;
+            unset($arguments['pageId'], $arguments['pageUrl']);
+            // SEO/translation queue add: a model pageIds list of the open page must not beat the named page.
+            if (in_array(strtolower(trim($toolName)), ['t3ai_mass_seo_queue_add', 't3ai_mass_translation_queue_add'], true)) {
+                unset($arguments['pageIds']);
+                $arguments['pageId'] = $lockedPageId;
+            }
+        }
+
         $pageId = (int) ($context['pageId'] ?? 0);
+        if (strtolower(trim($toolName)) === 't3ai_mass_seo_queue_add') {
+            $fromUrl = self::pageIdsWrittenAsUrl((string) ($arguments['pageUrl'] ?? ''));
+            if ($fromUrl !== [] && !self::hasExplicitPageIdList($arguments['pageIds'] ?? null)) {
+                $arguments['pageIds'] = $fromUrl;
+                unset($arguments['pageUrl']);
+            }
+        }
         // The model named another page by URL: the page on screen must not be added as a second, conflicting target.
         $namesPageByUrl = trim((string) ($arguments['pageUrl'] ?? '')) !== '' && !isset($arguments['pageId']);
-        if ($pageId > 0 && !$namesPageByUrl) {
+        // An explicit SEO queue list is the whole request. The open page must not replace it.
+        $namesSeoQueuePages = in_array(strtolower(trim($toolName)), ['t3ai_mass_seo_queue_add', 't3ai_mass_seo_queue_remove'], true)
+            && self::hasExplicitPageIdList($arguments['pageIds'] ?? null);
+        if (
+            $pageId > 0
+            && !$namesPageByUrl
+            && !$namesSeoQueuePages
+            && !$this->toolIgnoresLayoutPageContext($toolName)
+        ) {
             $arguments['pageId'] ??= $pageId;
             // Do not force pid onto *_search tools — that scoped site-wide searches to the current page only.
             if (!$this->toolUsesOptionalSearchPid($toolName)) {
@@ -641,6 +1677,37 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             // Only for tools whose `uid` means pages.uid (never content_get / other entity uids).
             if ($this->toolUsesPageIdAsUid($toolName)) {
                 $arguments['uid'] ??= $pageId;
+            }
+        }
+
+        // "Create a page here / under this page": the open page is the parent unless the model named another one.
+        if (
+            $pageId > 0
+            && in_array(strtolower(trim($toolName)), self::PARENT_PAGE_TOOLS, true)
+            && (int) ($arguments['parentPageId'] ?? 0) <= 0
+            && trim((string) ($arguments['parentPageUrl'] ?? '')) === ''
+        ) {
+            $arguments['parentPageId'] = $pageId;
+        }
+
+        // The SEO queue add does not read pid. The open page must not appear as "Pid" on the card.
+        if (strtolower(trim($toolName)) === 't3ai_mass_seo_queue_add') {
+            unset($arguments['pid']);
+        }
+
+        // News lives in storage folders, not on the Layout page. Models often send the open page
+        // as pid (or 0); that empties the search. Drop those so record_search is site-wide (page access).
+        if (strtolower(trim($toolName)) === 'record_search') {
+            $table = strtolower(trim((string) ($arguments['tableName'] ?? $arguments['table'] ?? '')));
+            $pidArg = array_key_exists('pid', $arguments) ? (int) $arguments['pid'] : -1;
+            if ($pidArg <= 0) {
+                unset($arguments['pid']);
+            } elseif (
+                $table === 'tx_news_domain_model_news'
+                && $pageId > 0
+                && $pidArg === $pageId
+            ) {
+                unset($arguments['pid']);
             }
         }
 
@@ -694,7 +1761,79 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $arguments['aiProvider'] = $provider;
         }
 
+        // The remove tool only reads pageIds. "This page" is the open page when no list was sent.
+        if (in_array(strtolower(trim($toolName)), ['t3ai_mass_seo_queue_remove', 't3ai_mass_translation_queue_remove'], true)) {
+            if (!self::hasExplicitPageIdList($arguments['pageIds'] ?? null)) {
+                $removePageId = (int) ($arguments['pageId'] ?? 0);
+                if ($removePageId > 0) {
+                    $arguments['pageIds'] = [$removePageId];
+                }
+            }
+            unset($arguments['pageId'], $arguments['pid']);
+        }
+
         return $arguments;
+    }
+
+    /**
+     * "Remove this page from the queue" means the open page. A model may pick another row from the
+     * list, so the open page replaces its choice when the request names no page number.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function pinOpenPageForQueueRemove(array $arguments, int $openPageId, string $toolName, string $requestQuery): array
+    {
+        if ($openPageId <= 0 || !in_array(strtolower(trim($toolName)), ['t3ai_mass_seo_queue_remove', 't3ai_mass_translation_queue_remove'], true)) {
+            return $arguments;
+        }
+        if (preg_match('/\d/', $requestQuery) === 1) {
+            return $arguments;
+        }
+        if (preg_match('/\b(this|current|open)\s+page\b|\b(diese|aktuelle)\s+seite\b/iu', $requestQuery) !== 1) {
+            return $arguments;
+        }
+        $arguments['pageIds'] = [$openPageId];
+
+        return $arguments;
+    }
+
+    private static function hasExplicitPageIdList(mixed $pageIds): bool
+    {
+        if (is_string($pageIds)) {
+            $pageIds = preg_split('/[\s,;]+/', trim($pageIds, " \t\n\r\0\x0B\"'[]")) ?: [];
+        }
+        if (!is_array($pageIds)) {
+            return false;
+        }
+        foreach ($pageIds as $pageId) {
+            if ((int) $pageId > 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private static function pageIdsWrittenAsUrl(string $pageUrl): array
+    {
+        $trimmed = trim($pageUrl);
+        if ($trimmed === '' || preg_match('/^\d+(?:[\s,;]+\d+)*$/', $trimmed) !== 1) {
+            return [];
+        }
+
+        $ids = [];
+        foreach (preg_split('/[\s,;]+/', $trimmed) ?: [] as $pageId) {
+            $pageId = (int) $pageId;
+            if ($pageId > 0) {
+                $ids[$pageId] = $pageId;
+            }
+        }
+
+        return array_values($ids);
     }
 
     private function toolUsesOptionalSearchPid(string $toolName): bool
@@ -702,6 +1841,222 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $toolName = strtolower(trim($toolName));
 
         return $toolName !== '' && str_ends_with($toolName, '_search');
+    }
+
+    /**
+     * Layout page context (open page in Page module) must not label file-only satellite steps.
+     */
+    private function toolIgnoresLayoutPageContext(string $toolName): bool
+    {
+        return match (strtolower(trim($toolName))) {
+            't3ai_generate_image' => true,
+            default => false,
+        };
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @param list<array<string, mixed>> $history
+     * @param list<int> $routerFileUids sys_file uids the structural attach router picked (not from the model)
+     * @return array<string, mixed>
+     */
+    private function enrichPlannedToolArguments(string $toolName, array $arguments, array $history, string $request = '', array $routerFileUids = []): array
+    {
+        $toolName = strtolower(trim($toolName));
+        if ($toolName === 't3ai_generate_image') {
+            unset($arguments['pageId'], $arguments['pid']);
+            $newsUid = AgentPromptBuilder::latestAppliedNewsUid($history);
+            if ($newsUid !== null) {
+                $arguments['newsArticleUid'] = $newsUid;
+            }
+            // Smaller models send count 1 for "make 3 pictures".
+            $count = AgentRequestedFiles::requestedImageCount($request);
+            if ($count > 1 && (int) ($arguments['count'] ?? 1) <= 1) {
+                $arguments['count'] = $count;
+            }
+            // "description" is a common alias; an empty prompt with a picture request uses the editor's words.
+            $prompt = trim((string) ($arguments['prompt'] ?? ''));
+            if ($prompt === '') {
+                $prompt = trim((string) ($arguments['description'] ?? ''));
+            }
+            if ($prompt === '' && $request !== '' && AgentRequestedFiles::asksForGeneratedImage($request)) {
+                $prompt = $request;
+            }
+            if ($prompt !== '') {
+                $arguments['prompt'] = $prompt;
+                unset($arguments['description']);
+            }
+
+            return $arguments;
+        }
+
+        if ($toolName === 't3aa_update_file_metadata') {
+            return $this->enrichFileMetadataArguments($arguments, $history);
+        }
+
+        if ($toolName !== 'file_reference_add') {
+            return $arguments;
+        }
+
+        if (AgentPromptBuilder::hasOpenFileReferenceDraft($history)) {
+            throw new \InvalidArgumentException(
+                'An attach card is already open for the editor. Wait until they Apply or Decline it; do not prepare another attach.',
+            );
+        }
+
+        // The router already picked the uploaded file (the composer file of this turn, or the one waiting
+        // upload of the chat); the history gate below only guards file uids that a model made up.
+        $fileUidsRaw = trim((string) ($arguments['fileUids'] ?? ''));
+        if ($routerFileUids !== [] && self::fileUidsArgumentIsNumericList($fileUidsRaw)) {
+            $named = array_values(array_filter(array_map('intval', explode(',', $fileUidsRaw)), static fn(int $uid): bool => $uid > 0));
+            if ($named !== [] && array_diff($named, $routerFileUids) === []) {
+                return $arguments;
+            }
+        }
+
+        $pending = AgentPromptBuilder::pendingAttachFileUids($history, $request);
+        if ($fileUidsRaw !== '' && !self::fileUidsArgumentIsNumericList($fileUidsRaw)) {
+            $resolved = $pending;
+            if ($resolved === []) {
+                throw new \InvalidArgumentException(
+                    'No generated file is available yet. Call t3ai_generate_image first and wait until the editor applies it, then attach using the numeric sys_file uid from that result.',
+                );
+            }
+            $arguments['fileUids'] = implode(',', array_map(static fn(int $uid): string => (string) $uid, $resolved));
+            $fileUidsRaw = (string) $arguments['fileUids'];
+        }
+
+        if ($pending === []) {
+            throw new \InvalidArgumentException(
+                'There is no file left to attach from this conversation (uploads, generated images, or named sys_file uids). Do not claim the image is already attached — call file_reference_list if you need to check.',
+            );
+        }
+        if ($fileUidsRaw !== '' && self::fileUidsArgumentIsNumericList($fileUidsRaw)) {
+            $requested = [];
+            foreach (explode(',', $fileUidsRaw) as $part) {
+                $uid = (int) trim($part);
+                if ($uid > 0) {
+                    $requested[] = $uid;
+                }
+            }
+            $stillOpen = array_values(array_intersect($requested, $pending));
+            if ($stillOpen === []) {
+                throw new \InvalidArgumentException(
+                    'Those files are already attached. Do not attach the same file again.',
+                );
+            }
+            $arguments['fileUids'] = implode(',', array_map(static fn(int $uid): string => (string) $uid, $stillOpen));
+        }
+
+        $newsUid = AgentPromptBuilder::latestAppliedNewsUid($history);
+        if ($newsUid !== null) {
+            $table = strtolower(trim((string) ($arguments['table'] ?? '')));
+            if ($table === '' || $table === 'tx_news_domain_model_news') {
+                $arguments['table'] = 'tx_news_domain_model_news';
+                if ((int) ($arguments['uid'] ?? 0) <= 0) {
+                    $arguments['uid'] = $newsUid;
+                }
+                $arguments['fieldName'] ??= 'fal_media';
+            }
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @param list<array<string, mixed>> $history
+     * @return array<string, mixed>
+     */
+    private function enrichFileMetadataArguments(array $arguments, array $history): array
+    {
+        $fileUid = (int) ($arguments['fileUid'] ?? 0);
+        $fileUrl = trim((string) ($arguments['fileUrl'] ?? ''));
+        if ($fileUid > 0) {
+            unset($arguments['fileUrl']);
+
+            return $arguments;
+        }
+
+        if ($fileUrl !== '' && !self::isPlaceholderFileLocator($fileUrl)) {
+            return $arguments;
+        }
+
+        $resolved = AgentPromptBuilder::unattachedFileUids($history);
+        if ($resolved === []) {
+            // Latest generate may already be attached; still allow editing its texts by uid.
+            $resolved = self::latestGeneratedFileUids($history);
+        }
+        if ($resolved === []) {
+            throw new \InvalidArgumentException(
+                'No sys_file uid is available for image texts. Pass fileUid from t3ai_generate_image (or file_list), not a placeholder path like /generated-image.jpg.',
+            );
+        }
+        $arguments['fileUid'] = $resolved[0];
+        unset($arguments['fileUrl']);
+
+        return $arguments;
+    }
+
+    private static function isPlaceholderFileLocator(string $value): bool
+    {
+        $value = strtolower(trim($value));
+        if ($value === '') {
+            return true;
+        }
+
+        return (bool) preg_match(
+            '#^(?:\[?image(?:uid|id|url)?\]?|/generated[-_]?image\.(?:jpg|jpeg|png|webp)|generated[-_]?image\.(?:jpg|jpeg|png|webp)|placeholder)$#',
+            $value,
+        );
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @return list<int>
+     */
+    private static function latestGeneratedFileUids(array $history): array
+    {
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            if (($history[$i]['role'] ?? '') !== 'assistant'
+                || ($meta['type'] ?? '') !== 'tool_result'
+                || ($meta['success'] ?? true) === false
+                || (string) ($meta['tool'] ?? '') !== 't3ai_generate_image'
+            ) {
+                continue;
+            }
+            $uids = [];
+            $fileUid = (int) (($meta['details']['fileUid'] ?? 0));
+            if ($fileUid > 0) {
+                $uids[] = $fileUid;
+            }
+            foreach (is_array($meta['previews'] ?? null) ? $meta['previews'] : [] as $preview) {
+                if (is_array($preview) && (int) ($preview['fileUid'] ?? 0) > 0) {
+                    $uids[] = (int) $preview['fileUid'];
+                }
+            }
+            if ($uids !== []) {
+                return array_values(array_unique($uids));
+            }
+        }
+
+        return [];
+    }
+
+    private static function fileUidsArgumentIsNumericList(string $fileUids): bool
+    {
+        foreach (explode(',', $fileUids) as $part) {
+            $part = trim($part);
+            if ($part === '') {
+                continue;
+            }
+            if (preg_match('/^[1-9]\d*$/', $part) !== 1) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -749,6 +2104,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      */
     private function normalizeWriteToolArguments(string $toolName, array $arguments): array
     {
+        if (strtolower($toolName) === 't3ai_mass_translation_queue_add' && isset($arguments['languageConfig'])) {
+            $arguments['languageConfig'] = self::unwrapLanguageConfig($arguments['languageConfig']);
+        }
         if ($toolName !== 'write_table') {
             return $arguments;
         }
@@ -764,6 +2122,83 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return $arguments;
+    }
+
+    /**
+     * A write_table update that arrives without "uid" gets it from where models usually put it ("data":{"uid":…},
+     * "recordUid", "id"), else from the one record of that table the agent just read in this turn
+     * ("Make the German version visible": pages_get uid 70, then update). Several candidates: nothing is guessed.
+     *
+     * @param array<string, mixed> $arguments
+     * @param list<array<string, mixed>> $history
+     * @return array<string, mixed>
+     */
+    public static function withUpdateUid(array $arguments, string $toolName, array $history): array
+    {
+        if (strtolower(trim($toolName)) !== 'write_table' || strtolower(trim((string) ($arguments['action'] ?? ''))) !== 'update') {
+            return $arguments;
+        }
+        if ((int) ($arguments['uid'] ?? 0) > 0) {
+            return $arguments;
+        }
+
+        $data = $arguments['data'] ?? [];
+        if (is_string($data)) {
+            $decoded = json_decode($data, true);
+            $data = is_array($decoded) ? $decoded : [];
+        }
+        foreach ([$arguments['recordUid'] ?? null, $arguments['id'] ?? null, is_array($data) ? ($data['uid'] ?? null) : null] as $candidate) {
+            if (is_numeric($candidate) && (int) $candidate > 0) {
+                $arguments['uid'] = (int) $candidate;
+
+                return $arguments;
+            }
+        }
+
+        $table = strtolower(trim((string) ($arguments['tableName'] ?? $arguments['table'] ?? '')));
+        $readTool = ['pages' => 'pages_get', 'tt_content' => 'content_get'][$table] ?? '';
+        if ($readTool === '') {
+            return $arguments;
+        }
+        $uids = [];
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $entry = $history[$i];
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($entry['role'] ?? '') === 'user' && ($meta['hidden'] ?? false) !== true) {
+                break;
+            }
+            if (($meta['type'] ?? '') !== 'tool_result' || ($meta['success'] ?? true) === false || ($meta['tool'] ?? '') !== $readTool) {
+                continue;
+            }
+            $uid = (int) (is_array($meta['details'] ?? null) ? ($meta['details']['uid'] ?? 0) : 0);
+            if ($uid > 0) {
+                $uids[$uid] = true;
+            }
+        }
+        if (count($uids) === 1) {
+            $arguments['uid'] = (int) array_key_first($uids);
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * The arguments of a refused plan for the stored trace: long values are shortened, nothing else is changed.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function refusedRequestForTrace(array $arguments): array
+    {
+        $short = static function (mixed $value) use (&$short): mixed {
+            if (is_array($value)) {
+                return array_map($short, $value);
+            }
+
+            return is_string($value) && mb_strlen($value) > 500 ? mb_substr($value, 0, 500) . '… (shortened)' : $value;
+        };
+
+        return array_map($short, $arguments);
     }
 
     /**

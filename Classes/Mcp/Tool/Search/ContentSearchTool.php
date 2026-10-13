@@ -48,7 +48,8 @@ readonly class ContentSearchTool implements McpNonAiToolInterface
             . ' (e.g. "hello") or a JSON object for advanced conditions'
             . ' (e.g. {"CType":{"op":"eq","value":"text"}, "header":"Welcome"}).'
             . ' Supports operators: eq, neq, like, gt, gte, lt, lte, in, null, notNull.'
-            . ' Filter by pid and/or sysLanguageUid. Use orderBy and orderDirection for sorting.',
+            . ' Filter by pid and/or sysLanguageUid. Use orderBy and orderDirection for sorting.'
+            . ' Use selectFields (comma-separated) to choose which fields to return (same semantics as content_list).',
     )]
     public function execute(
         string $search,
@@ -58,7 +59,10 @@ readonly class ContentSearchTool implements McpNonAiToolInterface
         int $sysLanguageUid = -1,
         string $orderBy = '',
         string $orderDirection = 'ASC',
+        string $selectFields = '',
     ): string {
+        // A limit of 1 hides a second element with a similar name, so the Agent never sees an ambiguity.
+        $limit = max(5, $limit);
         if ($pid > 0 && !$this->pageAccess->canReadPage($pid)) {
             return json_encode(['error' => PageAccessService::ACCESS_DENIED_MESSAGE, 'pageId' => $pid], JSON_THROW_ON_ERROR);
         }
@@ -89,19 +93,40 @@ readonly class ContentSearchTool implements McpNonAiToolInterface
             $orderDirection = 'ASC';
         }
 
+        $fields = $this->resolveSelectFields($selectFields, $readFields);
+
         return json_encode(
             $this->recordService->search(
                 'tt_content',
                 $searchConditions,
                 $limit,
                 $offset,
-                $readFields,
+                $fields,
                 $pid >= 0 ? $pid : null,
                 $resolvedOrderBy,
                 $orderDirection,
             ),
             JSON_THROW_ON_ERROR,
         );
+    }
+
+    /**
+     * @param list<string> $defaultFields
+     * @return list<string>
+     */
+    private function resolveSelectFields(string $selectFields, array $defaultFields): array
+    {
+        if ($selectFields === '') {
+            return $defaultFields;
+        }
+
+        $requested = array_map('trim', explode(',', $selectFields));
+        $allowed = array_merge(['uid', 'pid'], $defaultFields);
+        $valid = array_values(array_intersect($requested, $allowed));
+
+        return $valid !== []
+            ? array_values(array_unique(array_merge(['uid', 'pid'], $valid)))
+            : $defaultFields;
     }
 
     /**

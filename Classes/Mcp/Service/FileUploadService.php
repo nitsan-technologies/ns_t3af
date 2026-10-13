@@ -27,6 +27,7 @@ use Doctrine\DBAL\ParameterType;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\UriResolver;
 use GuzzleHttp\Psr7\Utils;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
 use NITSAN\NsT3AF\Service\PublicUrlValidator;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -98,8 +99,15 @@ readonly class FileUploadService
         $storage = $this->getStorage($storageUid);
         $segments = GeneralUtility::trimExplode('/', $directoryPath, true);
         if ($segments === []) {
-            return $storage->getRootLevelFolder();
+            $root = $storage->getRootLevelFolder();
+            RecordsApplyFileAccess::assertFolderAllowed($storageUid, $root->getIdentifier());
+
+            return $root;
         }
+
+        // Refuse before creating missing segments outside the editor's mounts.
+        $intended = '/' . implode('/', $segments) . '/';
+        RecordsApplyFileAccess::assertFolderAllowed($storageUid, $intended);
 
         $existingIdentifier = '/';
         while ($segments !== [] && $storage->hasFolder($existingIdentifier . $segments[0] . '/')) {
@@ -140,8 +148,12 @@ readonly class FileUploadService
             throw new \RuntimeException('Could not hash the temporary upload file.', 1747320002);
         }
 
-        $existingFile = $this->findIdenticalFile($folder->getStorage(), $sha1);
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        self::assertFontFileIsGenuine($tempPath, $extension);
+        $existingFile = $this->findIdenticalFileInFolder($folder->getStorage(), $sha1, $folder);
         if ($existingFile !== null) {
+            self::assertDedupeNameMatchesExisting($existingFile, $fileName, $extension);
+
             return ['file' => $existingFile, 'deduplicated' => true];
         }
 
@@ -151,16 +163,14 @@ readonly class FileUploadService
             throw new \InvalidArgumentException('This file extension is not allowed: ' . $e->getMessage(), 1747320003, $e);
         } catch (\TYPO3\CMS\Core\Validation\ResultException $e) {
             throw new \InvalidArgumentException(
-                'The file was rejected because its content does not match the file extension "'
-                . pathinfo($fileName, PATHINFO_EXTENSION) . '". '
-                . 'Make sure the URL/content actually delivers this file type.',
+                self::formatResourceConsistencyFailure($e, $fileName),
                 1747320004,
                 $e,
             );
         }
 
-        // Uploads can be rewritten while stored (e.g. SVG sanitizer); re-check hash.
-        $existingFile = $this->findIdenticalFile($folder->getStorage(), $file->getSha1(), $file->getUid());
+        // Uploads can be rewritten while stored (e.g. SVG sanitizer); re-check hash in this folder only.
+        $existingFile = $this->findIdenticalFileInFolder($folder->getStorage(), $file->getSha1(), $folder, $file->getUid());
         if ($existingFile !== null) {
             try {
                 $folder->getStorage()->deleteFile($file);
@@ -172,6 +182,141 @@ readonly class FileUploadService
         }
 
         return ['file' => $file, 'deduplicated' => false];
+    }
+
+    /**
+     * Dedupe must not return an existing file under a mismatched extension (e.g. JPEG bytes as .woff2).
+     */
+    public static function assertDedupeNameMatchesExisting(File $existing, string $requestedFileName, string $requestedExtension): void
+    {
+        $existingExtension = strtolower($existing->getExtension());
+        if ($requestedExtension !== '' && $existingExtension !== '' && $requestedExtension !== $existingExtension) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'An identical file already exists as ".%s" (%s), but the upload name uses ".%s". '
+                    . 'Rename to match the real type, or upload different bytes.',
+                    $existingExtension,
+                    $existing->getMimeType(),
+                    $requestedExtension,
+                ),
+                1747320025,
+            );
+        }
+
+        if ($requestedExtension !== '' && !self::isExtensionConsistentWithMime($requestedExtension, $existing->getMimeType())) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'Mime-type "%s" not allowed for file extension "%s".',
+                    $existing->getMimeType(),
+                    $requestedExtension,
+                ),
+                1747320026,
+            );
+        }
+    }
+
+    public static function isExtensionConsistentWithMime(string $extension, string $mimeType): bool
+    {
+        $extension = strtolower($extension);
+        $mimeType = strtolower(trim(explode(';', $mimeType)[0]));
+        $expected = GeneralUtility::makeInstance(MimeTypeDetector::class)
+            ->getMimeTypesForFileExtension($extension);
+
+        // Unknown extensions: do not invent a refusal here (FAL allow-list handles that on addFile).
+        return $expected === [] || ($mimeType !== '' && in_array($mimeType, $expected, true));
+    }
+
+    /**
+     * WOFF/WOFF2 are mapped from application/octet-stream install-wide; require real font magic
+     * so random bytes / polyglots cannot be stored as font/* via MCP upload.
+     */
+    public static function assertFontFileIsGenuine(string $path, string $extension): void
+    {
+        $extension = strtolower($extension);
+        if ($extension !== 'woff' && $extension !== 'woff2') {
+            return;
+        }
+
+        $size = filesize($path);
+        if ($size === false || $size < 44) {
+            throw new \InvalidArgumentException(
+                'This file is too small to be a valid .' . $extension . ' font.',
+                1747320027,
+            );
+        }
+
+        $handle = fopen($path, 'rb');
+        if ($handle === false) {
+            throw new \RuntimeException('Could not read the upload for font validation.', 1747320028);
+        }
+        try {
+            $header = fread($handle, 12);
+        } finally {
+            fclose($handle);
+        }
+        if (!is_string($header) || strlen($header) < 12) {
+            throw new \InvalidArgumentException(
+                'Could not read a .' . $extension . ' font header.',
+                1747320029,
+            );
+        }
+
+        $expectedMagic = $extension === 'woff2' ? 'wOF2' : 'wOFF';
+        if (!str_starts_with($header, $expectedMagic)) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'File content is not a real .%s font (expected magic bytes "%s").',
+                    $extension,
+                    $expectedMagic,
+                ),
+                1747320030,
+            );
+        }
+
+        $declaredLength = unpack('N', substr($header, 8, 4));
+        $length = is_array($declaredLength) ? (int) ($declaredLength[1] ?? 0) : 0;
+        if ($length !== $size) {
+            throw new \InvalidArgumentException(
+                sprintf(
+                    'This .%s file header length (%d) does not match the file size (%d).',
+                    $extension,
+                    $length,
+                    $size,
+                ),
+                1747320031,
+            );
+        }
+
+        // Polyglot guard: fonts must not carry executable script payloads after a forged header.
+        $sample = (string) file_get_contents($path, false, null, 0, min($size, 65536));
+        if (str_contains($sample, '<?php') || str_contains(strtolower($sample), '<script')) {
+            throw new \InvalidArgumentException(
+                'This .' . $extension . ' file contains script content and is not allowed.',
+                1747320032,
+            );
+        }
+    }
+
+    public static function isFileInFolder(File $file, Folder $folder): bool
+    {
+        try {
+            $parent = $file->getParentFolder();
+        } catch (\Throwable) {
+            return false;
+        }
+
+        return self::normalizeFolderIdentifier($parent->getIdentifier())
+            === self::normalizeFolderIdentifier($folder->getIdentifier());
+    }
+
+    public static function normalizeFolderIdentifier(string $identifier): string
+    {
+        $identifier = str_replace('\\', '/', $identifier);
+        if ($identifier === '' || $identifier === '/') {
+            return '/';
+        }
+
+        return rtrim($identifier, '/') . '/';
     }
 
     public function assertFileNameIsAllowed(string $fileName): void
@@ -357,33 +502,27 @@ readonly class FileUploadService
         for ($hop = 0; $hop <= self::MAX_REDIRECTS; $hop++) {
             $resolvedIp = $this->assertPublicHttpUrl($currentUrl);
 
-            $options = [
-                'allow_redirects' => false,
-                'http_errors' => false,
-                'stream' => true,
-                'connect_timeout' => 10,
-                'timeout' => 300,
-                'headers' => ['User-Agent' => 'TYPO3-AI-Foundation-MCP/1.0'],
-            ];
-
-            $parts = parse_url($currentUrl);
-            $host = is_string($parts['host'] ?? null) ? $parts['host'] : '';
             $proxyConfigured = !empty($GLOBALS['TYPO3_CONF_VARS']['HTTP']['proxy']);
-            if (!$proxyConfigured && $resolvedIp !== null && $host !== ''
-                && filter_var($host, FILTER_VALIDATE_IP) === false
-                && defined('CURLOPT_RESOLVE')
-            ) {
-                $port = $parts['port'] ?? (($parts['scheme'] ?? 'https') === 'https' ? 443 : 80);
-                $pinnedIp = filter_var($resolvedIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false
-                    ? '[' . $resolvedIp . ']'
-                    : $resolvedIp;
-                $options['curl'] = [\CURLOPT_RESOLVE => [$host . ':' . $port . ':' . $pinnedIp]];
-            }
+            $options = self::buildDownloadRequestOptions($currentUrl, $resolvedIp, $proxyConfigured, $maxBytes);
 
             try {
                 $response = $requestFactory->request($currentUrl, 'GET', $options);
             } catch (GuzzleException $e) {
-                throw new \InvalidArgumentException('Downloading the URL failed: ' . $e->getMessage(), 1747320010, $e);
+                $cause = $e;
+                while ($cause !== null) {
+                    if ($cause instanceof \InvalidArgumentException && $cause->getCode() === 1747320015) {
+                        throw $cause;
+                    }
+                    $cause = $cause->getPrevious();
+                }
+                $failedHost = parse_url($currentUrl, PHP_URL_HOST);
+                $failedHost = is_string($failedHost) && $failedHost !== '' ? $failedHost : 'that address';
+
+                throw new \InvalidArgumentException(
+                    'Could not download the file from ' . $failedHost . '.',
+                    1747320010,
+                    $e,
+                );
             }
 
             if (!in_array($response->getStatusCode(), [301, 302, 303, 307, 308], true)) {
@@ -489,6 +628,58 @@ readonly class FileUploadService
     }
 
     /**
+     * HTTP client options for one download hop.
+     *
+     * When DNS is pinned via CURLOPT_RESOLVE, {@see stream} must not be set: Guzzle's
+     * stream handler rejects curl options. Without pinning, stream is used for size limits.
+     *
+     * @return array<string, mixed>
+     */
+    public static function buildDownloadRequestOptions(
+        string $url,
+        ?string $resolvedIp,
+        bool $proxyConfigured,
+        int $maxBytes,
+    ): array {
+        $options = [
+            'allow_redirects' => false,
+            'http_errors' => false,
+            'connect_timeout' => 10,
+            'timeout' => 300,
+            'headers' => ['User-Agent' => 'TYPO3-AI-Foundation-MCP/1.0'],
+        ];
+
+        $parts = parse_url($url);
+        $host = is_string($parts['host'] ?? null) ? $parts['host'] : '';
+        $pinDns = !$proxyConfigured && $resolvedIp !== null && $host !== ''
+            && filter_var($host, FILTER_VALIDATE_IP) === false
+            && defined('CURLOPT_RESOLVE');
+
+        if ($pinDns) {
+            $port = $parts['port'] ?? (($parts['scheme'] ?? 'https') === 'https' ? 443 : 80);
+            $pinnedIp = filter_var($resolvedIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false
+                ? '[' . $resolvedIp . ']'
+                : $resolvedIp;
+            $options['curl'] = [\CURLOPT_RESOLVE => [$host . ':' . $port . ':' . $pinnedIp]];
+            $options['progress'] = static function (int $downloadTotal, int $downloaded) use ($maxBytes): void {
+                if ($downloaded > $maxBytes) {
+                    throw new \InvalidArgumentException(
+                        'The file exceeds the maximum size of ' . round($maxBytes / 1048576) . ' MiB '
+                        . '(configurable via mcpMaxFileSizeMb).',
+                        1747320015,
+                    );
+                }
+            };
+
+            return $options;
+        }
+
+        $options['stream'] = true;
+
+        return $options;
+    }
+
+    /**
      * Validate http(s) + PublicUrlValidator; return a pin-able resolved IP for hostnames.
      */
     private function assertPublicHttpUrl(string $url): ?string
@@ -501,23 +692,48 @@ readonly class FileUploadService
             throw new \InvalidArgumentException('Only http:// and https:// URLs can be downloaded. Got: ' . $url, 1747320018);
         }
 
-        if (!$this->publicUrlValidator->isPublicUrl($url)) {
-            throw new \InvalidArgumentException(
-                'The URL points to a private or reserved network address and cannot be downloaded.',
-                1747320019,
-            );
-        }
-
+        $privateAddress = new \InvalidArgumentException(
+            'The URL points to a private or reserved network address and cannot be downloaded.',
+            1747320019,
+        );
         if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+            if (!$this->publicUrlValidator->isPublicUrl($url)) {
+                throw $privateAddress;
+            }
+
             return null;
         }
 
+        // Resolved once: the address that is checked is the address the download is pinned to.
         $resolvedIp = gethostbyname($host);
         if ($resolvedIp === $host) {
             throw new \InvalidArgumentException('Could not resolve host "' . $host . '".', 1747320020);
         }
+        $ipHost = str_contains($resolvedIp, ':') ? '[' . $resolvedIp . ']' : $resolvedIp;
+        if (!$this->publicUrlValidator->isPublicUrl($scheme . '://' . $ipHost . '/')) {
+            throw $privateAddress;
+        }
 
         return $resolvedIp;
+    }
+
+    /**
+     * A download that fails the same way on every try: the URL, the host, the answer or the file is
+     * wrong. Network trouble, timeouts and server errors (5xx, 408, 429) may pass on a retry.
+     */
+    public static function isPermanentFailure(\Throwable $exception): bool
+    {
+        $code = $exception->getCode();
+        if ($code === 1747320013) {
+            if (preg_match('/HTTP status (\d{3})/', $exception->getMessage(), $match) !== 1) {
+                return false;
+            }
+            $status = (int) $match[1];
+
+            return $status >= 400 && $status < 500 && !in_array($status, [408, 429], true);
+        }
+
+        return in_array($code, [1747320011, 1747320012, 1747320015, 1747320016, 1747320017, 1747320018, 1747320019, 1747320020], true);
     }
 
     private function looksLikeHtmlDocument(string $tempPath): bool
@@ -565,8 +781,15 @@ readonly class FileUploadService
         return ($fileName !== '' ? $fileName : 'download') . '.' . $extension;
     }
 
-    private function findIdenticalFile(ResourceStorage $storage, string $sha1, int $excludeFileUid = 0): ?File
-    {
+    /**
+     * Same-content reuse only inside the requested folder (not the whole storage).
+     */
+    private function findIdenticalFileInFolder(
+        ResourceStorage $storage,
+        string $sha1,
+        Folder $folder,
+        int $excludeFileUid = 0,
+    ): ?File {
         $rows = GeneralUtility::makeInstance(FileIndexRepository::class)->findByContentHash($sha1);
         foreach ($rows as $row) {
             if ((int) ($row['storage'] ?? 0) !== $storage->getUid() || !empty($row['missing'])) {
@@ -585,7 +808,11 @@ readonly class FileUploadService
                     continue;
                 }
                 $file = $storage->getFile($identifier);
-                if ($file instanceof File && $storage->checkFileActionPermission('read', $file)) {
+                if (
+                    $file instanceof File
+                    && $storage->checkFileActionPermission('read', $file)
+                    && self::isFileInFolder($file, $folder)
+                ) {
                     return $file;
                 }
             } catch (\Exception) {
@@ -615,5 +842,25 @@ readonly class FileUploadService
         }
 
         throw new \RuntimeException('Access denied to storage: ' . $storageUid, 1747320024);
+    }
+
+    /**
+     * Surface TYPO3 resource-consistency messages (extension allow-list, mime mismatch) as-is.
+     */
+    public static function formatResourceConsistencyFailure(\TYPO3\CMS\Core\Validation\ResultException $exception, string $fileName): string
+    {
+        $details = [];
+        foreach ($exception->messages as $message) {
+            $text = trim($message->message);
+            if ($text !== '') {
+                $details[] = $text;
+            }
+        }
+
+        if ($details !== []) {
+            return implode(' ', $details);
+        }
+
+        return 'The file "' . basename($fileName) . '" was rejected by TYPO3 file consistency checks.';
     }
 }

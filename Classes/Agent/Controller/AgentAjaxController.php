@@ -23,6 +23,7 @@ use GuzzleHttp\Psr7\PumpStream;
 use NITSAN\NsT3AF\Access\RecordAccessGate;
 use NITSAN\NsT3AF\Agent\Context\AgentContextPresenter;
 use NITSAN\NsT3AF\Agent\Contract\AgentToolIndexInterface;
+use NITSAN\NsT3AF\Agent\Service\AgentApplyNotRetryableException;
 use NITSAN\NsT3AF\Agent\Service\AgentAuditLogger;
 use NITSAN\NsT3AF\Agent\Service\AgentAvailabilityService;
 use NITSAN\NsT3AF\Agent\Service\AgentChangeMessageBuilder;
@@ -35,11 +36,13 @@ use NITSAN\NsT3AF\Agent\Service\AgentCreditsStatus;
 use NITSAN\NsT3AF\Agent\Service\AgentDraftSession;
 use NITSAN\NsT3AF\Agent\Service\AgentGovernanceGuard;
 use NITSAN\NsT3AF\Agent\Service\AgentLowRiskFieldMatrix;
+use NITSAN\NsT3AF\Agent\Service\AgentPageStructureOutline;
 use NITSAN\NsT3AF\Agent\Service\AgentPermissionMessage;
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentProviderOptions;
 use NITSAN\NsT3AF\Agent\Service\AgentRecordAttachmentResolver;
 use NITSAN\NsT3AF\Agent\Service\AgentRecordLabeler;
+use NITSAN\NsT3AF\Agent\Service\AgentRestoreRequest;
 use NITSAN\NsT3AF\Agent\Service\AgentSchedulerHandoff;
 use NITSAN\NsT3AF\Agent\Service\AgentSessionPresenter;
 use NITSAN\NsT3AF\Agent\Service\AgentSettingsService;
@@ -246,6 +249,7 @@ final class AgentAjaxController
             'hasUsableProvider' => $this->providerOptions->hasUsableProvider((int) ($context['pageId'] ?? 0), $user),
             'continueAfterConfirm' => $this->agentSettings->isContinueAfterConfirmEnabled(),
             'credits' => $this->creditsStatus->status(),
+            'turnRunning' => $this->turnGuard->isBusy((int) ($user->user['uid'] ?? 0)),
         ]);
     }
 
@@ -550,7 +554,37 @@ final class AgentAjaxController
                 ? $reason
                 : $this->translator->translate('agent.error.applyFailedDetail', [$reason]);
 
+            if ($exception instanceof AgentApplyNotRetryableException) {
+                $this->recordInConversation($user, $body, fn(array $messages): array => $this->conversationRecorder->failed($messages, $draftId, $message));
+
+                return new JsonResponse(['ok' => false, 'message' => $message, 'retryable' => false], 400);
+            }
+
             return new JsonResponse(['ok' => false, 'message' => $message], 400);
+        }
+
+        if (($result['unchanged'] ?? false) === true) {
+            $message = $this->translator->translate('agent.suggestions.unchanged');
+            if ($message === '' || $message === 'agent.suggestions.unchanged') {
+                $message = 'These texts are already on the page. Nothing was changed.';
+            }
+            $this->recordInConversation($user, $body, static function (array $messages) use ($message): array {
+                $messages[] = [
+                    'role' => 'assistant',
+                    'content' => $message,
+                    'meta' => ['type' => 'info'],
+                ];
+
+                return $messages;
+            });
+
+            return new JsonResponse([
+                'ok' => true,
+                'unchanged' => true,
+                'result' => $result,
+                'message' => $message,
+                'links' => [],
+            ]);
         }
 
         $this->auditLogger->logToolInvocation(
@@ -575,11 +609,29 @@ final class AgentAjaxController
         $message = ($result['toolConfirmation'] ?? false) === true
             ? $this->translator->translate('agent.draft.toolApplied')
             : $this->changeMessages->applied($labelledResult);
+        // One-Apply create+attach: say the file was attached so the follow-up does not open a second card.
+        $attachNote = trim((string) ($result['attachNote'] ?? ''));
+        if ($attachNote !== '') {
+            $message = trim($message . ' ' . $attachNote);
+        }
         if (($result['suggestionsApply'] ?? false) === true) {
             $message = $this->translator->translate('agent.suggestions.applied', [
                 (string) ($result['appliedCount'] ?? 0),
             ]);
+            // Custom outline could not be parsed: say the draft was used (do not hide it behind "Applied N fields").
+            if (($result['structureFellBackToDraft'] ?? false) === true) {
+                $fallback = $this->translator->translate('agent.write.structureOutlineUnread');
+                if ($fallback !== '' && $fallback !== 'agent.write.structureOutlineUnread') {
+                    $message = trim($message . ' ' . $fallback);
+                }
+            }
+            // Page-structure Apply: name the real tree so the follow-up does not invent the bakery list.
+            $structureSummary = $this->pageStructureApplySummary($result);
+            if ($structureSummary !== '') {
+                $message = trim($message . ' ' . $structureSummary);
+            }
         }
+        // Image fallback notice is shown once in the Agent UI (JS bubble from details.notice), not here.
 
         $links = $this->resultLinks($result, $storedDraft);
         if ($user !== null) {
@@ -605,6 +657,52 @@ final class AgentAjaxController
             'schedulerHandoff' => $handoff,
             'links' => $links,
         ]);
+    }
+
+    /**
+     * Titles from a page-structure Apply, so the chat follow-up names what was really created.
+     *
+     * @param array<string, mixed> $result
+     */
+    private function pageStructureApplySummary(array $result): string
+    {
+        if ((string) ($result['tool'] ?? '') !== 't3ai_create_page_structure') {
+            return '';
+        }
+        $structureJson = '';
+        $applied = is_array($result['appliedValues'] ?? null) ? $result['appliedValues'] : [];
+        if (isset($applied['structure']) && is_string($applied['structure'])) {
+            $structureJson = $applied['structure'];
+        }
+        $presentation = is_array($result['presentation'] ?? null) ? $result['presentation'] : [];
+        $details = is_array($presentation['details'] ?? null) ? $presentation['details'] : [];
+        if ($structureJson === '' && isset($details['structure'])) {
+            $structureJson = is_string($details['structure'])
+                ? $details['structure']
+                : (is_array($details['structure']) ? (string) json_encode($details['structure'], JSON_UNESCAPED_UNICODE) : '');
+        }
+        if ($structureJson === '') {
+            return '';
+        }
+        try {
+            $decoded = json_decode($structureJson, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return '';
+        }
+        if (!is_array($decoded)) {
+            return '';
+        }
+        $outline = AgentPageStructureOutline::formatOutline($decoded);
+        if ($outline === '') {
+            return '';
+        }
+
+        $label = $this->translator->translate('agent.write.structureCreatedPages');
+        if ($label === '' || $label === 'agent.write.structureCreatedPages') {
+            $label = 'Created pages:';
+        }
+
+        return $label . "\n" . $outline;
     }
 
     /**
@@ -917,6 +1015,79 @@ final class AgentAjaxController
     }
 
     /**
+     * "Put the old text back" restores the latest applied change, the same way as its Undo button.
+     * Null means this is not that request, so the model may still run.
+     *
+     * @param list<array<string, mixed>> $messages
+     * @return array{assistant: list<array<string, mixed>>, all: list<array<string, mixed>>}|null
+     */
+    private function restoreAppliedChange(string $message, array $messages, BackendUserAuthentication $user): ?array
+    {
+        if (!AgentRestoreRequest::matches($message)) {
+            return null;
+        }
+
+        $changeId = AgentRestoreRequest::latestChangeId($messages);
+        if ($changeId === null) {
+            return $this->restoreReply($messages, $this->undoButtonHint());
+        }
+
+        $changeWorkspace = $this->undoService->workspaceOf($changeId);
+        if ($changeWorkspace !== null) {
+            $blocked = $this->governanceGuard->requiresWorkspaceEnforcement($user) && $changeWorkspace <= 0
+                ? $this->governanceGuard->assertDraftApplyAllowed($user, $changeWorkspace)
+                : null;
+            if ($blocked !== null) {
+                return $this->restoreReply($messages, $blocked, 'error');
+            }
+            if (AiUniverseUtilityHelper::isExtensionLoaded('workspaces') && !$user->setTemporaryWorkspace($changeWorkspace)) {
+                return $this->restoreReply($messages, $this->translator->translate('agent.error.forbidden'), 'error');
+            }
+        }
+
+        try {
+            $result = $this->undoService->undo($changeId);
+        } catch (\Throwable $exception) {
+            return $this->restoreReply($messages, $exception->getMessage(), 'error');
+        }
+
+        $updated = $this->conversationRecorder->undone($messages, $this->changeMessages->undone($result), $changeId);
+
+        return [
+            'assistant' => array_slice($updated, count($messages)),
+            'all' => $updated,
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $messages
+     * @return array{assistant: list<array<string, mixed>>, all: list<array<string, mixed>>}
+     */
+    private function restoreReply(array $messages, string $content, string $type = 'info'): array
+    {
+        $messages[] = [
+            'role' => 'assistant',
+            'content' => $content,
+            'meta' => ['type' => $type],
+        ];
+
+        return [
+            'assistant' => array_slice($messages, -1),
+            'all' => $messages,
+        ];
+    }
+
+    private function undoButtonHint(): string
+    {
+        $hint = $this->translator->translate('agent.undo.useButton');
+        if ($hint === '' || $hint === 'agent.undo.useButton') {
+            return 'Use the Undo button on the applied change to put the old text back.';
+        }
+
+        return $hint;
+    }
+
+    /**
      * "Summarize conversation": stores a short summary; later turns replay it instead of the
      * older messages.
      */
@@ -999,11 +1170,12 @@ final class AgentAjaxController
                 'messages' => [[
                     'role' => 'assistant',
                     'content' => $this->translator->translate('agent.turn.alreadyRunning'),
-                    'meta' => ['type' => 'governance_blocked'],
+                    'meta' => ['type' => 'turn_running'],
                 ]],
             ]);
         }
 
+        $restored = null;
         try {
             $correlationId = $this->turnRepository->startTurn((int) ($user->user['uid'] ?? 0));
             $turn = $this->prepareTurn($request, $body, $message, $user, $correlationId);
@@ -1013,19 +1185,24 @@ final class AgentAjaxController
             // Keep the question even if the page is reloaded before the answer is ready.
             $this->conversationSession->save($user, $turn['messages'], $turn['context'], $turn['provider']);
 
-            $assistantMessages = $this->turnRouter->route(
-                $turn['message'],
-                $turn['turnContext'],
-                $turn['body'],
-                $user,
-                $correlationId,
-                $turn['history'],
-            );
+            $restored = $this->restoreAppliedChange($turn['message'], $turn['messages'], $user);
+            if ($restored !== null) {
+                $assistantMessages = $restored['assistant'];
+            } else {
+                $assistantMessages = $this->turnRouter->route(
+                    $turn['message'],
+                    $turn['turnContext'],
+                    $turn['body'],
+                    $user,
+                    $correlationId,
+                    $turn['history'],
+                );
+            }
         } finally {
             $lease->release();
         }
 
-        $allMessages = [...$turn['messages'], ...$assistantMessages];
+        $allMessages = is_array($restored) ? $restored['all'] : [...$turn['messages'], ...$assistantMessages];
         $this->conversationSession->save($user, $allMessages, $turn['context'], $turn['provider']);
         $sessionTitle = $this->maybeApplyShortTitle($user, $allMessages, $turn['provider'], $turn['context']);
 
@@ -1078,7 +1255,7 @@ final class AgentAjaxController
                 'messages' => [[
                     'role' => 'assistant',
                     'content' => $this->translator->translate('agent.turn.alreadyRunning'),
-                    'meta' => ['type' => 'governance_blocked'],
+                    'meta' => ['type' => 'turn_running'],
                 ]],
             ]);
         }
@@ -1118,22 +1295,27 @@ final class AgentAjaxController
             }
 
             try {
-                $assistantMessages = $this->turnRouter->route(
-                    $turn['message'],
-                    $turn['turnContext'],
-                    $turn['body'],
-                    $user,
-                    $correlationId,
-                    $turn['history'],
-                    function (string $event, array $payload): void {
-                        // tool_call / model_request are for the eval and logs, not for the window.
-                        if (!in_array($event, self::INTERNAL_TURN_EVENTS, true)) {
-                            $this->emitSseEvent($event, $payload);
-                        }
-                    },
-                );
-
-                $allMessages = [...$turn['messages'], ...$assistantMessages];
+                $restored = $this->restoreAppliedChange($turn['message'], $turn['messages'], $user);
+                if ($restored !== null) {
+                    $assistantMessages = $restored['assistant'];
+                    $allMessages = $restored['all'];
+                } else {
+                    $assistantMessages = $this->turnRouter->route(
+                        $turn['message'],
+                        $turn['turnContext'],
+                        $turn['body'],
+                        $user,
+                        $correlationId,
+                        $turn['history'],
+                        function (string $event, array $payload): void {
+                            // tool_call / model_request are for the eval and logs, not for the window.
+                            if (!in_array($event, self::INTERNAL_TURN_EVENTS, true)) {
+                                $this->emitSseEvent($event, $payload);
+                            }
+                        },
+                    );
+                    $allMessages = [...$turn['messages'], ...$assistantMessages];
+                }
                 $this->conversationSession->save($user, $allMessages, $turn['context'], $turn['provider']);
                 $sessionTitle = $this->maybeApplyShortTitle($user, $allMessages, $turn['provider'], $turn['context']);
 
@@ -1190,10 +1372,18 @@ final class AgentAjaxController
      */
     private function emitSseEvent(string $event, array $payload): void
     {
-        echo 'event: ' . $event . "\n";
-        echo 'data: ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n\n";
-        if (function_exists('flush')) {
-            flush();
+        // A reload closes the stream. Writing to it must not stop the turn before the answer is saved.
+        if (connection_aborted() === 1) {
+            return;
+        }
+        try {
+            echo 'event: ' . $event . "\n";
+            echo 'data: ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n\n";
+            if (function_exists('flush')) {
+                flush();
+            }
+        } catch (\Throwable) {
+            // The browser is gone. The turn still finishes and is stored.
         }
     }
 
@@ -1708,7 +1898,8 @@ final class AgentAjaxController
         if (($meta['type'] ?? '') !== 'inline_draft' || $draft === null) {
             return $message;
         }
-        if (($draft['applied'] ?? false) === true || ($draft['discarded'] ?? false) === true || ($draft['applying'] ?? false) === true) {
+        if (($draft['applied'] ?? false) === true || ($draft['discarded'] ?? false) === true || ($draft['applying'] ?? false) === true
+            || ($draft['failed'] ?? false) === true) {
             return $message;
         }
 

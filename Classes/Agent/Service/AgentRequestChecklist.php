@@ -100,6 +100,13 @@ final class AgentRequestChecklist
                 'title' => 'Attach an image to the media content element',
                 'status' => 'pending',
             ];
+            if (self::asksForAltText($message)) {
+                $unique[] = [
+                    'kind' => 'alt_text',
+                    'title' => 'Set the alt text of the image',
+                    'status' => 'pending',
+                ];
+            }
         }
 
         return self::markFirstInProgress($unique);
@@ -123,19 +130,36 @@ final class AgentRequestChecklist
 
         $since = self::historySinceLatestUserRequest($history, $request);
         $appliedCTypes = self::appliedCTypes($since);
+        $declined = self::declinedCards($since);
         $imageAttached = self::hasSuccessfulMediaAttach($since);
+        $noFileLeft = AgentRequestedFiles::noFileLeftToAttach($since, $request);
+        $createSteps = 0;
+        $declinedCreates = 0;
 
         foreach ($steps as $index => $step) {
             if (($step['kind'] ?? '') === 'create') {
+                ++$createSteps;
                 $cType = (string) ($step['cType'] ?? '');
                 $pos = array_search($cType, $appliedCTypes, true);
+                $declinedPos = array_search($cType, $declined['cTypes'], true);
                 if ($pos !== false) {
                     unset($appliedCTypes[$pos]);
                     $appliedCTypes = array_values($appliedCTypes);
                     $steps[$index]['status'] = 'completed';
+                } elseif ($declinedPos !== false) {
+                    // The editor said no to this element: it is not open work the agent has to push again.
+                    unset($declined['cTypes'][$declinedPos]);
+                    $declined['cTypes'] = array_values($declined['cTypes']);
+                    $steps[$index]['status'] = 'failed';
+                    ++$declinedCreates;
                 }
             } elseif (($step['kind'] ?? '') === 'attach_image') {
-                $steps[$index]['status'] = $imageAttached ? 'completed' : 'pending';
+                // No image without the element it goes into, nor after the editor declined the attach.
+                $noTarget = $createSteps > 0 && $declinedCreates === $createSteps;
+                $steps[$index]['status'] = $imageAttached ? 'completed' : ($noFileLeft || $noTarget || $declined['attach'] ? 'failed' : 'pending');
+            } elseif (($step['kind'] ?? '') === 'alt_text') {
+                $attachClosed = $noFileLeft || ($createSteps > 0 && $declinedCreates === $createSteps) || $declined['attach'];
+                $steps[$index]['status'] = self::hasAltTextSet($since) ? 'completed' : ($attachClosed && !$imageAttached ? 'failed' : 'pending');
             }
         }
 
@@ -165,7 +189,7 @@ final class AgentRequestChecklist
     public static function hasOpen(array $steps): bool
     {
         foreach ($steps as $step) {
-            if (($step['status'] ?? '') !== 'completed') {
+            if (!self::isClosed($step)) {
                 return true;
             }
         }
@@ -176,14 +200,38 @@ final class AgentRequestChecklist
     /**
      * @param list<array{kind: string, cType?: string, title: string, status: string}> $steps
      */
-    public static function nextActionHint(array $steps): string
+    public static function nextActionHint(array $steps, string $request = ''): string
     {
+        $altText = in_array('alt_text', array_column($steps, 'kind'), true)
+            ? ' Pass alternative: a short alt text that describes what the image shows.'
+            : '';
         foreach ($steps as $step) {
-            if (($step['status'] ?? '') === 'completed') {
+            if (self::isClosed($step)) {
                 continue;
             }
             if (($step['kind'] ?? '') === 'attach_image') {
-                return 'Next: generate or upload an image, then call file_reference_add on the Text & Media / Images element (fieldName "assets" or "image"). Do not claim the request is finished until that succeeds.';
+                $fileUids = AgentRequestedFiles::namedFileUids($request);
+                if ($fileUids !== []) {
+                    return sprintf(
+                        'Next: call file_reference_add with fileUids "%s" on the Text & Media / Images element (fieldName "assets" or "image").%s'
+                        . ' The editor chose these existing files: do not upload, download or generate an image. Do not claim the request is finished until that succeeds.',
+                        implode(',', $fileUids),
+                        $altText,
+                    );
+                }
+
+                if (AgentRequestedFiles::asksForGeneratedImage($request)) {
+                    return 'Next: call ' . AgentRequestedFiles::GENERATION_TOOL . ' with a description of the image and a short altText,'
+                        . ' then file_reference_add with the returned fileUid on the Text & Media / Images element (fieldName "assets" or "image").'
+                        . ' Never use a stock photo or an image URL you found or made up. Do not claim the request is finished until the attach succeeds.';
+                }
+
+                return 'Next: generate or upload an image, then call file_reference_add on the Text & Media / Images element (fieldName "assets" or "image").'
+                    . $altText . ' Do not claim the request is finished until that succeeds.';
+            }
+            if (($step['kind'] ?? '') === 'alt_text') {
+                return 'Next: the image is attached without alt text. Set "alternative" on its sys_file_reference (write_table, table sys_file_reference, the uid from referenceUids)'
+                    . ' to a short text that describes the image. If that is not possible, tell the editor the alt text is not set — do not claim the request is finished.';
             }
             $cType = (string) ($step['cType'] ?? '');
             if ($cType !== '') {
@@ -200,7 +248,7 @@ final class AgentRequestChecklist
     /**
      * @param list<array{kind: string, cType?: string, title: string, status: string}> $steps
      */
-    public static function promptBlock(array $steps): string
+    public static function promptBlock(array $steps, string $request = ''): string
     {
         if ($steps === [] || !self::hasOpen($steps)) {
             return '';
@@ -209,7 +257,7 @@ final class AgentRequestChecklist
         foreach ($steps as $number => $step) {
             $lines[] = sprintf('%d. [%s] %s', $number + 1, $step['status'], $step['title']);
         }
-        $next = self::nextActionHint($steps);
+        $next = self::nextActionHint($steps, $request);
 
         return 'Server checklist from the editor request (authoritative — keep going until every step is completed;'
             . ' do not claim finished while any step is pending or in_progress):'
@@ -247,12 +295,16 @@ final class AgentRequestChecklist
     private static function isChangeOfExistingRecord(string $message): bool
     {
         $s = mb_strtolower($message);
+        // "Make the opening hours text shorter" uses "make" but changes an existing text.
+        if (preg_match('/\bmake\b[^.?!]{0,80}\b(?:shorter|longer|simpler|friendlier|clearer|more\s+(?:formal|casual|friendly|concise|polite)|k[üu]rzer|l[äa]nger|einfacher|freundlicher|klarer)\b/u', $s) === 1) {
+            return true;
+        }
         if (preg_match(self::CREATE_VERBS, $s) === 1) {
             return false;
         }
 
         return preg_match(
-            '/\b(rename|change|update|edit|set|delete|remove|translate|move|replace|fix|correct|[äa]ndere\w*|umbenenn\w*|l[öo]sch\w*|entfern\w*|[üu]bersetz\w*|verschieb\w*)\b/u',
+            '/\b(rename|change|update|edit|set|delete|remove|translate|move|replace|fix|correct|rewrite|reword|rephrase|paraphrase|shorten|simplify|improve|polish|adjust|tweak|modify|umschreib\w*|umformulier\w*|k[üu]rz\w*|verbesser\w*|[üu]berarbeit\w*|anpass\w*|[äa]ndere\w*|umbenenn\w*|l[öo]sch\w*|entfern\w*|[üu]bersetz\w*|verschieb\w*)\b/u',
             $s,
         ) === 1;
     }
@@ -313,10 +365,16 @@ final class AgentRequestChecklist
             ' ',
             $s,
         );
+        // "…an image of a red apple on a wooden table" describes the picture: "table" there is not a Table element.
+        $s = (string) preg_replace(
+            '/\b(?:images?|pictures?|photos?|illustrations?|graphics?|bild(?:er)?|foto\w*|grafik\w*)\s+(?:of|showing|depicting|von|vom|zeigt)\b.*?(?=\s+(?:and|und)\s+(?:the|a|an|it|with|add|put|attach|insert|place|use|create|mit|der|die|das|ein|eine|es)\b|[,;.]|$)/u',
+            ' ',
+            $s,
+        );
         $hits = [];
         $patterns = [
-            'textmedia' => '/\b(text\s*&\s*media|text\s+and\s+media|textmedia)\b/u',
-            'textpic' => '/\b(text\s*&\s*images|text\s+and\s+images|textpic)\b/u',
+            'textmedia' => '/\b(text\s*(?:&|and|und)\s*(?:media|medien)|textmedia)\b/u',
+            'textpic' => '/\b(text\s*(?:&|and|und)\s*(?:images|bilder)|textpic)\b/u',
             'images' => '/\b(images|bilder)\b/u',
             'bullets' => '/\b(bullets?|bullet\s*points?|liste|aufzählung|aufzaehlung)\b/u',
             'table' => '/\b(tables?|tabelle)\b/u',
@@ -328,28 +386,29 @@ final class AgentRequestChecklist
                 continue;
             }
             $mapped = $cType === 'images' ? 'textpic' : $cType;
-            if ($mapped === 'text' && preg_match('/\b(text\s*&\s*media|text\s+and\s+media|textmedia|textpic)\b/u', $s) === 1) {
+            if ($mapped === 'text' && preg_match('/\b(text\s*(?:&|and|und)\s*(?:media|medien|images|bilder)|textmedia|textpic)\b/u', $s) === 1) {
                 // Skip the "Text" inside "Text & Media" — only count a later bare Text if present after.
                 $offset = (int) $m[0][1];
                 $before = mb_substr($s, max(0, $offset - 20), 40);
-                if (preg_match('/text\s*&\s*media|text\s+and\s+media|textmedia/u', $before) === 1) {
+                if (preg_match('/text\s*(?:&|and|und)\s*(?:media|medien|images|bilder)|textmedia/u', $before) === 1) {
                     // find next bare "text" that is not part of textmedia
                     if (preg_match_all('/\btext\b/u', $s, $all, PREG_OFFSET_CAPTURE) > 0) {
                         foreach ($all[0] as $hit) {
                             $pos = (int) $hit[1];
                             $window = mb_substr($s, $pos, 20);
-                            if (preg_match('/^text\s*&\s*media|^text\s+and\s+media|^textmedia/u', $window) === 1) {
+                            if (preg_match('/^text\s*(?:&|and|und)\s*(?:media|medien|images|bilder)|^textmedia/u', $window) === 1) {
                                 continue;
                             }
-                            $hits[] = ['cType' => 'text', 'pos' => $pos];
+                            $hits[] = ['cType' => 'text', 'source' => 'text', 'pos' => $pos];
                             break;
                         }
                     }
                     continue;
                 }
             }
-            $hits[] = ['cType' => $mapped, 'pos' => (int) $m[0][1]];
+            $hits[] = ['cType' => $mapped, 'source' => $cType, 'pos' => (int) $m[0][1]];
         }
+        $hits = self::dropFieldMentionsOfAMediaElement($s, $hits);
         usort($hits, static fn(array $a, array $b): int => $a['pos'] <=> $b['pos']);
         $ordered = [];
         $seen = [];
@@ -363,6 +422,64 @@ final class AgentRequestChecklist
         }
 
         return $ordered;
+    }
+
+    /**
+     * "a short text", "alt text" and "attach the existing images" name fields of a
+     * Text & Media or Text & Images element. A later bare word is a second element
+     * only when the editor asks for one ("a separate text element", "two elements").
+     *
+     * @param list<array{cType: string, source: string, pos: int}> $hits
+     * @return list<array{cType: string, source: string, pos: int}>
+     */
+    private static function dropFieldMentionsOfAMediaElement(string $text, array $hits): array
+    {
+        $hasMediaElement = false;
+        foreach ($hits as $hit) {
+            if ($hit['source'] === 'textmedia' || $hit['source'] === 'textpic') {
+                $hasMediaElement = true;
+                break;
+            }
+        }
+        if (!$hasMediaElement) {
+            return $hits;
+        }
+        if (preg_match(
+            '/\b(?:two|three|several|multiple|zwei|drei|mehrere|\d+)\s+(?:different\s+)?(?:content\s+)?elements?\b/u',
+            $text,
+        ) === 1) {
+            return $hits;
+        }
+
+        $kept = [];
+        foreach ($hits as $hit) {
+            if (($hit['source'] === 'text' || $hit['source'] === 'images')
+                && !self::namesAnExtraElement($text, $hit['pos'], $hit['source'])
+            ) {
+                continue;
+            }
+            $kept[] = $hit;
+        }
+
+        return $kept;
+    }
+
+    private static function namesAnExtraElement(string $text, int $pos, string $source): bool
+    {
+        $before = mb_substr($text, max(0, $pos - 32), min(32, $pos));
+        $after = mb_substr($text, $pos, 28);
+        $word = $source === 'images' ? '(?:images|bilder)' : 'text';
+        if (preg_match('/^' . $word . '(?:\s+content)?\s+elements?\b/u', $after) === 1) {
+            return true;
+        }
+        if ($source === 'text' && preg_match('/^textelements?\b/u', $after) === 1) {
+            return true;
+        }
+
+        return preg_match(
+            '/\b(?:separate|another|additional|extra|second|eigenes|eigenen|separates|separaten|weiteres|weiteren)\s+$/u',
+            $before,
+        ) === 1;
     }
 
     private static function titleForCreate(string $cType, string $segment): string
@@ -411,7 +528,7 @@ final class AgentRequestChecklist
     {
         $found = false;
         foreach ($steps as $index => $step) {
-            if (($step['status'] ?? '') === 'completed') {
+            if (self::isClosed($step)) {
                 continue;
             }
             $steps[$index]['status'] = $found ? 'pending' : 'in_progress';
@@ -422,12 +539,24 @@ final class AgentRequestChecklist
     }
 
     /**
+     * Done, or impossible (the files to attach are missing): nothing is left to do for the step.
+     *
+     * @param array{status?: string} $step
+     */
+    private static function isClosed(array $step): bool
+    {
+        return in_array($step['status'] ?? '', ['completed', 'failed'], true);
+    }
+
+    /**
      * @param list<array<string, mixed>> $history
      * @return list<array<string, mixed>>
      */
     public static function historySinceLatestUserRequest(array $history, string $requestText = ''): array
     {
-        $start = 0;
+        $start = null;
+        $needle = trim($requestText);
+        $hasPriorRequest = false;
         for ($i = count($history) - 1; $i >= 0; --$i) {
             if (($history[$i]['role'] ?? '') !== 'user') {
                 continue;
@@ -437,17 +566,30 @@ final class AgentRequestChecklist
                 continue;
             }
             $content = trim((string) ($history[$i]['content'] ?? ''));
-            if ($requestText !== '' && $content !== '' && !str_contains($content, mb_substr($requestText, 0, 40))) {
+            // "continue" / "[The editor …]" are not requests; keep scanning for the real one.
+            if ($content === '' || str_starts_with($content, '[The editor ') || AgentPromptBuilder::isGoOnReply($content)) {
+                continue;
+            }
+            $hasPriorRequest = true;
+            if ($needle !== '') {
                 // Keep scanning for the message that matches this request when provided.
-                if ($content !== trim($requestText) && !str_starts_with($content, mb_substr(trim($requestText), 0, 80))) {
+                if (
+                    $content !== $needle
+                    && !str_starts_with($content, mb_substr($needle, 0, 80))
+                    && !str_contains($content, mb_substr($needle, 0, 40))
+                ) {
                     continue;
                 }
             }
             $start = $i + 1;
             break;
         }
+        // New turn whose text is not in history yet: ignore earlier requests' work.
+        if ($needle !== '' && $start === null && $hasPriorRequest) {
+            return [];
+        }
 
-        return array_slice($history, $start);
+        return array_slice($history, $start ?? 0);
     }
 
     /**
@@ -475,6 +617,96 @@ final class AgentRequestChecklist
         }
 
         return $types;
+    }
+
+    /**
+     * The editor declined attaching or generating an image for this request.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function imageWasDeclined(array $history, string $request): bool
+    {
+        return self::declinedCards(self::historySinceLatestUserRequest($history, $request))['attach'];
+    }
+
+    /**
+     * Cards the editor declined: the content types of declined creates, and whether an attach was declined.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array{cTypes: list<string>, attach: bool}
+     */
+    private static function declinedCards(array $history): array
+    {
+        $declined = ['cTypes' => [], 'attach' => false];
+        foreach ($history as $entry) {
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            if (($entry['role'] ?? '') !== 'assistant' || ($meta['type'] ?? '') !== 'inline_draft' || ($draft['discarded'] ?? false) !== true) {
+                continue;
+            }
+            if (in_array((string) ($draft['tool'] ?? $meta['tool'] ?? ''), ['file_reference_add', AgentRequestedFiles::GENERATION_TOOL], true)) {
+                $declined['attach'] = true;
+                continue;
+            }
+            if ((string) ($draft['action'] ?? '') !== 'create') {
+                continue;
+            }
+            foreach (is_array($draft['fields'] ?? null) ? $draft['fields'] : [] as $field) {
+                if (is_array($field) && ($field['table'] ?? '') === 'tt_content' && strtolower((string) ($field['field'] ?? '')) === 'ctype') {
+                    $cType = strtolower(trim((string) ($field['proposed'] ?? '')));
+                    if ($cType !== '') {
+                        $declined['cTypes'][] = $cType;
+                    }
+                }
+            }
+        }
+
+        return $declined;
+    }
+
+    /**
+     * "… and set a sensible alt text", "mit Alternativtext", "alt attribute".
+     */
+    private static function asksForAltText(string $message): bool
+    {
+        return preg_match('/\b(?:alt[\s-]?(?:text|tag|attribute?)s?|alternative?\s*text|alternativtext\w*|bildbeschreibung)\b/ui', $message) === 1;
+    }
+
+    /**
+     * An attach that carried an alt text, or an alt text written to a file reference afterwards.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    private static function hasAltTextSet(array $history): bool
+    {
+        foreach ($history as $entry) {
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $type = (string) ($meta['type'] ?? '');
+            if ($type === 'tool_result' && ($meta['success'] ?? true) !== false) {
+                $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+                $tool = (string) ($meta['tool'] ?? '');
+                if ($tool === 'file_reference_add' && trim((string) ($details['alternative'] ?? '')) !== '') {
+                    return true;
+                }
+                // A reference without its own alt text shows the alt text of the file metadata.
+                if ($tool === 't3ai_generate_image' && trim((string) ($details['altText'] ?? '')) !== '') {
+                    return true;
+                }
+            }
+            if ($type === 'readback_result') {
+                foreach (is_array($meta['readback'] ?? null) ? $meta['readback'] : [] as $record) {
+                    if (is_array($record) && ($record['table'] ?? '') === 'sys_file_reference'
+                        && trim((string) ($record['values']['alternative'] ?? '')) !== '') {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

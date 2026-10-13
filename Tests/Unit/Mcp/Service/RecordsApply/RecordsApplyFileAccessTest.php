@@ -56,4 +56,23 @@ final class RecordsApplyFileAccessTest extends TestCase
     {
         self::assertTrue(RecordsApplyFileAccess::isInsideAFileMount([['identifier' => '1:/']], 1, '/anything/a.json'));
     }
+
+    #[Test]
+    public function theMountFolderItselfIsInsideTheMount(): void
+    {
+        self::assertTrue(RecordsApplyFileAccess::isInsideAFileMount([['identifier' => '1:/qa_uploads/']], 1, '/qa_uploads/'));
+        self::assertFalse(RecordsApplyFileAccess::isInsideAFileMount([['identifier' => '1:/qa_uploads/']], 1, '/user_upload/'));
+    }
+
+    #[Test]
+    public function folderOutsideMountsMessageListsAllowedMounts(): void
+    {
+        $message = RecordsApplyFileAccess::folderOutsideMountsMessage(
+            [['identifier' => '1:/qa_uploads/']],
+            '/user_upload/',
+        );
+
+        self::assertStringContainsString('/user_upload/', $message);
+        self::assertStringContainsString('1:/qa_uploads/', $message);
+    }
 }

@@ -29,6 +29,7 @@ use Mcp\Capability\Attribute\McpTool;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Service\PermissionService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 
@@ -38,6 +39,7 @@ readonly class RecordCountTool implements McpNonAiToolInterface
     public function __construct(
         private RecordService $recordService,
         private TcaSchemaService $tcaSchemaService,
+        private PermissionService $permissionService,
     ) {}
 
     #[McpTool(
@@ -48,9 +50,14 @@ readonly class RecordCountTool implements McpNonAiToolInterface
     )]
     public function execute(string $tableName, int $pid = -1, string $search = ''): string
     {
+        $this->permissionService->assertCanSelectTable($tableName);
+
         $readFields = $this->tcaSchemaService->getReadFields($tableName);
         if ($readFields === ['uid', 'pid']) {
-            return json_encode(['error' => 'Table not found or has no readable fields: ' . $tableName], JSON_THROW_ON_ERROR);
+            throw new \InvalidArgumentException(
+                'Table not found or has no readable fields: ' . $tableName,
+                1790600004,
+            );
         }
 
         $searchConditions = [];
@@ -61,10 +68,7 @@ readonly class RecordCountTool implements McpNonAiToolInterface
                 $labelField = (string) ($GLOBALS['TCA'][$tableName]['ctrl']['label'] ?? '');
                 $searchData = SearchParamParser::parse($search, $labelField, array_merge(['uid', 'pid'], $readFields));
             } catch (\InvalidArgumentException $e) {
-                return json_encode(
-                    ['error' => 'Invalid search parameter: ' . $e->getMessage()],
-                    JSON_THROW_ON_ERROR,
-                );
+                throw new \InvalidArgumentException('Invalid search parameter: ' . $e->getMessage(), 1790600005, $e);
             }
 
             $allowedFields = array_merge(['uid', 'pid'], $readFields);

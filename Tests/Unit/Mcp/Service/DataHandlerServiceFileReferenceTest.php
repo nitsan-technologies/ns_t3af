@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Service;
 
 use Doctrine\DBAL\Result;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\McpSiteRequestBootstrap;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -115,7 +116,10 @@ final class DataHandlerServiceFileReferenceTest extends TestCase
         $recordService = $this->createMock(RecordService::class);
         $recordService->method('findFileReferences')->willReturn([]);
 
-        $service = new DataHandlerService($this->createMock(SiteFinder::class), $recordService);
+        $service = new DataHandlerService(
+            new McpSiteRequestBootstrap($this->createMock(SiteFinder::class)),
+            $recordService,
+        );
         $result = $service->createFileReferences('tt_content', 10, 'image', [42, 43]);
 
         $placeholders = array_map('strval', array_keys($capturedDatamap['sys_file_reference'] ?? []));

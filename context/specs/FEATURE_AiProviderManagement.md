@@ -316,7 +316,7 @@ Header in each ported file:
 - `ext_localconf.php` — register upgrade wizard, register Services.php compiler pass
 - `Classes/Controller/Backend/ModuleController.php` — link Dashboard "Providers" card to new route
 - `Resources/Private/Language/locallang_mod.xlf` — add `provider.*` keys (form labels, status strings, capability labels, errors)
-- `composer.json` — v2.x line: PHP `>=8.2 <9`, TYPO3 `^13.4 || ^14.3`; package version `2.0.0`. Add `suggest` block for `lochmueller/seal_ai`, `lochmueller/seal`, `symfony/ai-platform` as needed. v1.x stays on TYPO3 12 for legacy customers.
+- `composer.json` — v2.x line: PHP `>=8.2 <9`, TYPO3 `^13.4 || ^14.3`; package version `2.0.1`. Add `suggest` block for `lochmueller/seal_ai`, `lochmueller/seal`, `symfony/ai-platform` as needed. v1.x stays on TYPO3 12 for legacy customers.
 
 ## Upstream merge notes (commit `52258c7`)
 

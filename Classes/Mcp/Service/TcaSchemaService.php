@@ -122,6 +122,40 @@ readonly class TcaSchemaService
         return array_values(array_unique($fields));
     }
 
+    /**
+     * System date / editor fields that are excluded from default read lists but may be
+     * requested explicitly via selectFields (pages_get, search tools, …).
+     *
+     * @return list<string>
+     */
+    public function getOptionalSystemReadFields(string $tableName): array
+    {
+        $tca = $this->getTca($tableName);
+        if ($tca === null) {
+            return [];
+        }
+
+        $ctrl = $tca['ctrl'] ?? [];
+        if (!is_array($ctrl)) {
+            return [];
+        }
+
+        $fields = [];
+        foreach (['tstamp', 'crdate'] as $ctrlKey) {
+            $value = $ctrl[$ctrlKey] ?? null;
+            if (is_string($value) && $value !== '') {
+                $fields[] = $value;
+            }
+        }
+
+        // Creation user is a system column; allow it when present on the table.
+        if (isset($tca['columns']['cruser_id']) || isset($ctrl['cruser_id'])) {
+            $fields[] = 'cruser_id';
+        }
+
+        return array_values(array_unique($fields));
+    }
+
     /** @return list<string> All fields that can be read (simple value types + uid + pid + sortby). */
     public function getReadFields(string $tableName): array
     {
@@ -296,6 +330,41 @@ readonly class TcaSchemaService
         }
 
         return $fields;
+    }
+
+    /**
+     * Fields the record type shows in the backend form, palettes included. Empty when the
+     * table has no form for that type, so callers cannot tell a hidden field from an unknown one.
+     *
+     * @return list<string>
+     */
+    public function getShownFields(string $tableName, string $recordType): array
+    {
+        $tca = $this->getTca($tableName);
+        $type = $tca['types'][$recordType] ?? null;
+        $showitem = is_array($type) ? ($type['showitem'] ?? '') : '';
+        if (!is_string($showitem) || trim($showitem) === '') {
+            return [];
+        }
+        $palettes = is_array($tca['palettes'] ?? null) ? $tca['palettes'] : [];
+
+        $fields = [];
+        foreach (explode(',', $showitem) as $item) {
+            $parts = array_map('trim', explode(';', $item));
+            if ($parts[0] === '--palette--') {
+                $paletteItems = $palettes[$parts[2] ?? '']['showitem'] ?? '';
+                foreach (explode(',', is_string($paletteItems) ? $paletteItems : '') as $paletteItem) {
+                    $fields[] = trim(explode(';', $paletteItem)[0]);
+                }
+                continue;
+            }
+            $fields[] = $parts[0];
+        }
+
+        return array_values(array_unique(array_filter(
+            $fields,
+            static fn(string $field): bool => $field !== '' && !str_starts_with($field, '--'),
+        )));
     }
 
     /**

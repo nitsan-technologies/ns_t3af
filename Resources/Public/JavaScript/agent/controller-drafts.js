@@ -2,10 +2,58 @@
  * AgentController mixin: draft and suggestion apply/discard, tool-confirmation, readback.
  */
 
-import { lang, hasTurnGuardWarning, errorText, messageContent, escapeHtml, humanizeKey } from './format.js';
+import { lang, hasTurnGuardWarning, errorText, errorDetails, messageContent, escapeHtml, humanizeKey } from './format.js';
 import { ajaxUrl } from './context.js';
-import { isSuggestionFieldSafe, renderImagePreviews, renderMediaPreview, resolveToolDisplayLabel, renderToolTrace, renderWorkTraceHtml, renderMessageBody } from './render-helpers.js';
+import { formatSuggestionFieldText, isSuggestionFieldSafe, renderImagePreviews, renderMediaPreview, resolveToolDisplayLabel, renderToolTrace, renderWorkTraceHtml, renderMessageBody } from './render-helpers.js';
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
+
+/**
+ * An SEO queue add that queued nothing already explains why. A follow-up turn
+ * would replace that with "Done."
+ *
+ * @param {string} tool
+ * @param {string} content
+ * @returns {boolean}
+ */
+export function seoQueueAddSkipsFollowUp(tool, content) {
+  return tool === 't3ai_mass_seo_queue_add' && String(content ?? '').startsWith('No pages added');
+}
+
+/**
+ * True when a multi-step plan still has work after the current Apply.
+ *
+ * @param {Array<{title?: string, status?: string}>|null|undefined} planSteps
+ * @returns {boolean}
+ */
+export function planHasRemainingWork(planSteps) {
+  const steps = Array.isArray(planSteps) ? planSteps : [];
+  if (steps.length === 0) {
+    return false;
+  }
+  const open = steps.filter((step) => !['completed', 'failed'].includes(String(step?.status ?? '')));
+  // One open step is the structure (or other) Apply just confirmed; more means later steps remain.
+  return open.length > 1;
+}
+
+/**
+ * Apply already finished the editor request: skip the NL follow-up turn.
+ * Page-structure Apply lists created pages; a follow-up would re-draft the old tree —
+ * but only when the plan has nothing left (structure-only). Multi-step stays on continuation.
+ *
+ * @param {string} tool
+ * @param {string} content
+ * @param {Array<{title?: string, status?: string}>} [planSteps]
+ * @returns {boolean}
+ */
+export function draftApplySkipsFollowUp(tool, content, planSteps = []) {
+  if (seoQueueAddSkipsFollowUp(tool, content)) {
+    return true;
+  }
+  if (tool !== 't3ai_create_page_structure') {
+    return false;
+  }
+  return !planHasRemainingWork(planSteps);
+}
 
 export const draftMethods = {
   /**
@@ -70,7 +118,7 @@ export const draftMethods = {
       const seenCreates = new Set();
       this.messages.forEach((message, index) => {
         const draft = message.meta?.draft;
-        if (message.meta?.type === 'inline_draft' && draft && !draft.applied && !draft.discarded && !draft.applying
+        if (message.meta?.type === 'inline_draft' && draft && !draft.applied && !draft.discarded && !draft.applying && !draft.failed
           && String(draft.severity ?? 'write') !== 'destructive') {
           if (draft.action === 'create') {
             const fingerprint = createDraftFingerprint(draft);
@@ -167,6 +215,12 @@ export const draftMethods = {
       if (hasTurnGuardWarning(meta)) {
         extra += `<div class="nst3af-agent-msg__warn" role="status">${escapeHtml(String(meta.turnGuardWarning))}</div>`;
       }
+      let undoHtml = '';
+      if (success && meta.undone === true) {
+        undoHtml = `<div class="nst3af-agent-applied__actions"><span class="nst3af-agent-applied__undone">${escapeHtml(lang('agent.draft.undoneLabel', 'Undone'))}</span></div>`;
+      } else if (success && meta.changeId && meta.undoable === true) {
+        undoHtml = `<div class="nst3af-agent-applied__actions"><button type="button" class="btn btn-default btn-sm" data-nst3af-agent-undo="1" data-change-id="${escapeHtml(String(meta.changeId))}">${escapeHtml(lang('agent.draft.undo', 'Undo'))}</button></div>`;
+      }
 
       const autoHtml = autoRan
         ? `<span class="nst3af-agent-tcall__auto">${escapeHtml(lang('agent.toolCall.autoRan', 'completed'))}</span>`
@@ -191,6 +245,7 @@ export const draftMethods = {
             ${detailsHtml}
           </div>
         </details>
+        ${undoHtml}
       </div>`;
     },
 
@@ -249,9 +304,10 @@ export const draftMethods = {
         const editValue = Object.prototype.hasOwnProperty.call(meta.edits, key)
           ? String(meta.edits[key] ?? '')
           : null;
+        const toolName = String(meta.tool ?? suggestions.tool ?? '');
         const variantOptions = variants.map((variant, index) => {
           const values = variant?.values && typeof variant.values === 'object' ? variant.values : {};
-          const text = String(values[key] ?? '');
+          const text = formatSuggestionFieldText(toolName, key, String(values[key] ?? ''));
           const variantLabel = String(variant.label ?? `Variant ${index + 1}`);
           const checked = selectedIndex === index && editValue === null ? ' checked' : '';
           return `<label class="nst3af-agent-suggestions__option">
@@ -370,6 +426,18 @@ export const draftMethods = {
     },
 
   /**
+     * Apply failed for a reason another click cannot change (bad URL, unknown host): no Apply button.
+     *
+     * @param {object} draft
+     * @returns {string}
+     */
+    renderFailedDraft(draft) {
+      const reason = String(draft.failureMessage ?? '').trim() || lang('agent.error.applyFailed', 'Apply failed');
+      const hint = lang('agent.draft.failedFinal', 'Trying again would fail the same way, so this step is not offered again. Ask with a different address or file.');
+      return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant" role="alert"><div class="nst3af-agent-msg__who">AI Agent</div><div class="nst3af-agent-msg__body">${escapeHtml(reason)}<br>${escapeHtml(hint)}</div></div>`;
+    },
+
+  /**
      * @param {object} message
      * @param {number} messageIndex
      * @returns {string}
@@ -394,6 +462,10 @@ export const draftMethods = {
 
       if (draft.expired === true && !applied) {
         return this.renderExpiredDraft();
+      }
+
+      if (draft.failed === true && !applied) {
+        return this.renderFailedDraft(draft);
       }
 
       if (applied) {
@@ -468,6 +540,7 @@ export const draftMethods = {
           <div class="nst3af-agent-draft__fields">${rows}</div>
           ${this.renderDraftTarget(isDestructive)}
           ${nothingKept ? `<p class="nst3af-agent-draft__hint" role="status">${escapeHtml(lang('agent.draft.nothingKept', 'Nothing is selected. Include at least one change or cancel.'))}</p>` : ''}
+          ${!nothingKept && blankProposed ? `<p class="nst3af-agent-draft__hint" role="status">${escapeHtml(lang('agent.draft.blankProposed', 'A change has no new value. Leave it out or cancel.'))}</p>` : ''}
           <div class="nst3af-agent-draft__actions">
             <button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-draft-apply="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}"${nothingKept || blankProposed ? ' disabled' : ''}>${escapeHtml(applyLabel)}</button>
             ${safeApplyBtn}
@@ -509,6 +582,10 @@ export const draftMethods = {
 
       if (draft.expired === true && !applied) {
         return this.renderExpiredDraft();
+      }
+
+      if (draft.failed === true && !applied) {
+        return this.renderFailedDraft(draft);
       }
 
       if (applied) {
@@ -722,6 +799,8 @@ export const draftMethods = {
             previews: Array.isArray(presented.previews) ? presented.previews : [],
             autoRan: false,
             correlationId: result.correlationId ?? message.meta?.correlationId ?? '',
+            changeId: result.changeId ?? '',
+            undoable: result.undoable === true,
             schedulerHandoff: payload.schedulerHandoff ?? null,
             fromDraftApply: true,
             workDurationMs,
@@ -730,9 +809,33 @@ export const draftMethods = {
             links: Array.isArray(payload.links) ? payload.links : [],
             fromRunner: message.meta?.fromRunner === true,
           };
+          // Slash / skipped follow-up: surface the provider note outside the collapsed step.
+          // Natural Apply queues a continuation — that reply owns the notice once (avoid a double bubble).
+          // Only details.notice / "cannot create images" — never payload.message (that is the generic Apply text).
+          const details = presented.details && typeof presented.details === 'object' ? presented.details : {};
+          const notice = String(details.notice ?? '').trim();
+          const contentText = String(presented.content ?? '');
+          const visibleNotice = notice !== ''
+            ? notice
+            : (contentText.includes('cannot create images') ? contentText.trim() : '');
+          const appliedTool = String(result.tool ?? draft.tool ?? '');
+          const planSteps = typeof this.currentPlan === 'function' ? this.currentPlan() : [];
+          const skipsFollowUp = draftApplySkipsFollowUp(appliedTool, message.content, planSteps);
+          const willContinue = !skipsFollowUp
+            && this.continueAfterConfirm
+            && message.meta?.fromRunner === true;
+          if (visibleNotice !== '' && !willContinue) {
+            this.messages.push({
+              role: 'assistant',
+              content: visibleNotice,
+              meta: { type: 'info' },
+            });
+          }
           this.renderStream();
           this.refreshBackendContent();
-          this.queueContinuation(message, 'applied', String(message.content ?? ''));
+          if (!skipsFollowUp) {
+            this.queueContinuation(message, 'applied', String(message.content ?? ''));
+          }
         } else {
           const appliedCount = String(result.appliedCount ?? 0);
           const totalCount = String(result.totalCount ?? 0);
@@ -758,8 +861,14 @@ export const draftMethods = {
         }
       } catch (error) {
         draft.applying = false;
-        const text = await errorText(error);
-        this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
+        const { text, retryable } = await errorDetails(error);
+        if (retryable) {
+          this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
+        } else {
+          draft.failed = true;
+          draft.failureMessage = text;
+          this.announce(text);
+        }
         this.renderStream();
       } finally {
         this.clearWorkTraceTimer();
@@ -837,7 +946,20 @@ export const draftMethods = {
       const textarea = this.stream?.querySelector(
         `textarea[data-nst3af-agent-suggestions-edit][data-message-index="${messageIndex}"][data-field-key="${CSS.escape(fieldKey)}"]`,
       );
-      const current = textarea instanceof HTMLTextAreaElement ? textarea.value : '';
+      let current = textarea instanceof HTMLTextAreaElement ? textarea.value : '';
+      // Page-structure Custom starts empty: seed it with the draft outline so Apply is not an empty edit.
+      if (current === '') {
+        const suggestions = message.meta.suggestions && typeof message.meta.suggestions === 'object'
+          ? message.meta.suggestions
+          : {};
+        const tool = String(message.meta.tool ?? suggestions.tool ?? '');
+        const variants = Array.isArray(suggestions.variants) ? suggestions.variants : [];
+        const values = variants[0]?.values && typeof variants[0].values === 'object' ? variants[0].values : {};
+        current = formatSuggestionFieldText(tool, fieldKey, String(values[fieldKey] ?? ''));
+        if (textarea instanceof HTMLTextAreaElement && current !== '') {
+          textarea.value = current;
+        }
+      }
       message.meta.edits = { ...(message.meta.edits ?? {}), [fieldKey]: current };
     },
 
@@ -932,17 +1054,31 @@ export const draftMethods = {
         }
 
         const result = payload.result ?? {};
+        if (payload.unchanged === true) {
+          meta.applying = false;
+          this.messages.push({
+            role: 'assistant',
+            content: messageContent(
+              payload.message,
+              lang('agent.suggestions.unchanged', 'These texts are already on the page. Nothing was changed.'),
+            ),
+            meta: { type: 'info' },
+          });
+          this.renderStream();
+          return;
+        }
         meta.applied = true;
         meta.applying = false;
         meta.appliedCount = Number(result.appliedCount ?? Object.keys(selections).length + Object.keys(edits).length);
         meta.changeId = result.changeId ?? '';
 
+        const appliedText = messageContent(
+          payload.message,
+          lang('agent.suggestions.applied', 'Applied %1$s suggestion field(s).', [String(meta.appliedCount)]),
+        );
         this.messages.push({
           role: 'assistant',
-          content: messageContent(
-            payload.message,
-            lang('agent.suggestions.applied', 'Applied %1$s suggestion field(s).', [String(meta.appliedCount)]),
-          ),
+          content: appliedText,
           meta: {
             type: 'readback_result',
             readback: result.readback ?? [],
@@ -956,7 +1092,7 @@ export const draftMethods = {
         });
         this.renderStream();
         this.refreshBackendContent();
-        this.queueContinuation(message, 'applied', String(payload.message ?? ''));
+        this.queueContinuation(message, 'applied', String(appliedText ?? ''));
       } catch (error) {
         meta.applying = false;
         const text = await errorText(error);
@@ -1095,8 +1231,13 @@ function createDraftFingerprint(draft) {
  */
 function keptFieldsLackProposedValue(draft, keys = null) {
   const fields = Array.isArray(draft?.fields) ? draft.fields : [];
+  const isCreate = String(draft?.action ?? '') === 'create';
   return fields.some((field) => {
     if (field?.kept === false) {
+      return false;
+    }
+    // A blank value on a new record is just the field's default; only a rename or an edit to nothing is refused.
+    if (isCreate && String(field?.field ?? '') !== '_rename') {
       return false;
     }
     if (Array.isArray(keys) && !keys.includes(String(field?.key ?? ''))) {

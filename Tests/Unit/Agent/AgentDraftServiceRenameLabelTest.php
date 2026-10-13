@@ -59,6 +59,23 @@ final class AgentDraftServiceRenameLabelTest extends TestCase
         self::assertSame('Rename', $card['fields'][0]['fieldLabel']);
     }
 
+    #[Test]
+    public function createCardLeavesOutFieldsWithoutAValue(): void
+    {
+        $card = $this->service('New Page Content', 'Field')->buildDraftCard(new ToolPlan(
+            'create',
+            'record_create',
+            [
+                new ToolPlanField('tt_content:0:CType', 'tt_content', 0, 'CType', '', 'textmedia'),
+                new ToolPlanField('tt_content:0:header', 'tt_content', 0, 'header', '', 'Our Treats'),
+                new ToolPlanField('tt_content:0:bodytext', 'tt_content', 0, 'bodytext', '', ''),
+            ],
+        ), 'write');
+
+        self::assertSame(['CType', 'header'], array_column($card['fields'], 'field'));
+        self::assertSame(2, $card['totalFields']);
+    }
+
     private function service(string $recordLabel, string $fieldLabel): AgentDraftService
     {
         $labeler = $this->createMock(AgentRecordLabeler::class);

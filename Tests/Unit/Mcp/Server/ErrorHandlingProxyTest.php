@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Server;
 
+use Mcp\Exception\ToolCallException;
 use NITSAN\NsT3AF\Mcp\Logging\AuditLogger;
 use NITSAN\NsT3AF\Mcp\Server\ErrorHandlingProxy;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpToolLogService;
@@ -32,14 +33,13 @@ use Psr\Log\NullLogger;
 final class ErrorHandlingProxyTest extends TestCase
 {
     #[Test]
-    public function aToolAnswerWithAnErrorIsLoggedAsFailure(): void
+    public function aToolAnswerWithAnErrorIsLoggedAsFailureAndThrown(): void
     {
         $audit = $this->createMock(AuditLogger::class);
         $audit->expects(self::once())->method('logFailure');
         $audit->expects(self::never())->method('logSuccess');
         $toolLog = $this->createMock(McpToolLogService::class);
-        $toolLog->expects(self::once())->method('logFailure')
-            ->with(self::anything(), 'tool', self::anything(), self::anything(), 'Only administrators may clear all caches.');
+        $toolLog->expects(self::once())->method('logFailure');
         $toolLog->expects(self::never())->method('logSuccess');
 
         $inner = new class {
@@ -51,7 +51,16 @@ final class ErrorHandlingProxyTest extends TestCase
 
         $proxy = new ErrorHandlingProxy($inner, new NullLogger(), $audit, $toolLog, 'tool');
 
-        self::assertSame('{"error":"Only administrators may clear all caches."}', $proxy->__call('execute', []));
+        try {
+            $proxy->__call('execute', []);
+            self::fail('Soft error payloads must throw so MCP sets isError.');
+        } catch (ToolCallException $exception) {
+            self::assertSame(1790700001, $exception->getCode());
+            $payload = json_decode($exception->getMessage(), true);
+            self::assertIsArray($payload);
+            self::assertSame('Only administrators may clear all caches.', $payload['error'] ?? null);
+            self::assertSame(1790700001, $payload['code'] ?? null);
+        }
     }
 
     #[Test]

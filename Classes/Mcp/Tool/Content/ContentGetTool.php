@@ -65,7 +65,23 @@ readonly class ContentGetTool implements McpNonAiToolInterface
         $record = $this->recordService->findByUid('tt_content', $uid, $fields);
 
         if ($record === null) {
-            return json_encode(['error' => $this->pageAccess->isUnrestricted() ? 'Content element not found' : 'Content element not found or you don\'t have access to its page.'], JSON_THROW_ON_ERROR);
+            $asPage = $this->recordService->findByUid('pages', $uid, ['uid', 'l10n_parent']);
+            if (is_array($asPage)) {
+                throw new \InvalidArgumentException(
+                    sprintf(
+                        'Uid %d is a page, not a content element. Use pages_get for that uid. '
+                        . 'List content with content_list on the default-language page (l10n_parent or the open page) and sysLanguageUid.',
+                        $uid,
+                    ),
+                    1790600011,
+                );
+            }
+            throw new \InvalidArgumentException(
+                $this->pageAccess->isUnrestricted()
+                    ? 'Content element not found'
+                    : 'Content element not found or you don\'t have access to its page.',
+                1790600010,
+            );
         }
 
         $sysLanguageUid = $record[$languageField ?? ''] ?? -1;
@@ -97,7 +113,8 @@ readonly class ContentGetTool implements McpNonAiToolInterface
 
         $requested = array_map('trim', explode(',', $selectFields));
         $readable = $this->tcaSchemaService->getReadFields('tt_content');
-        $allowed = array_merge(['uid', 'pid'], $readable);
+        $system = $this->tcaSchemaService->getOptionalSystemReadFields('tt_content');
+        $allowed = array_merge(['uid', 'pid'], $readable, $system);
         $valid = array_values(array_intersect($requested, $allowed));
 
         return $valid !== []

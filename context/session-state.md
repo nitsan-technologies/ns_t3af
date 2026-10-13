@@ -2,6 +2,307 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-12 — A custom SEO text that stores the same is not saved
+
+**Done:** Apply compares a custom SEO text with the value the save would store. A preview URL or repeated spaces that clean away do not count as a change. When every chosen text matches, the card stays. A wording change is still saved. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
+## 2026-10-12 — SEO for all subpages uses the subpages
+
+**Done:** "Write SEO texts for all subpages of this page" drops a page list that is only the open page. The card is filled with the subpages. A list that names other pages is kept. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
+## 2026-10-12 — A hidden subpage still gets SEO texts
+
+**Done:** Writing SEO texts for the subpages of the open page includes a hidden page. A page that still has no site is named and skipped, and the other subpages still get a card. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
+## 2026-10-12 — A glossary phrase is read as two words
+
+**Done:** "We say Layoutansicht not Layout" and "Add Layout -> Layoutansicht to the glossary" are saved as Layout and Layoutansicht. When that pair is already in the word list, the reply says so and no card is opened. A new pair still gets the save card, and a language that was not named is still asked for. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
+## 2026-10-12 — An unchanged SEO suggestion is not saved
+
+**Done:** Apply skips a suggestion that matches the text already stored. When every chosen text matches, the card stays and the reply says nothing was changed. A text that differs is still saved. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
+## 2026-10-12 — A named page uid is the page that is removed
+
+**Done:** "Remove page 138" and `/t3ai_mass_seo_queue_remove 138` use page 138. The page open in Layout is used only when the request names no page number. A title with no number is still looked up by `namedPageTitle()`. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
+## 2026-10-12 — A page already out of the SEO queue is not removed again
+
+**Done:** Removing pages that are not in the SEO queue replies with that fact and does not prepare an Apply card. A page that is still queued still gets the card. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
+## 2026-10-12 — Improving a page for Google prepares suggestions
+
+**Done:** “Make this page look better in Google” and “write SEO texts for this page” call `t3ai_generate_all_seo` and prepare suggestions. Nothing is written until Apply. The SEO queue is only for an explicit add, list, or “list for Google” request. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
+## 2026-10-12 — Putting the old text back restores the applied change
+
+**Done:** “Put the old Google text back”, undo, or revert restores the latest applied change that still has Undo, the same way as the Undo button, and does not spend credits on new SEO suggestions. When nothing is left to restore, the reply points at the Undo button. A request for better or new Google texts still generates suggestions. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
+## 2026-10-12 — A reload keeps the running agent turn
+
+**Done:** Reloading while a turn is writing no longer drops the answer or leaves the next message blocked with an idle composer. Stream writes stop after the browser disconnects, the answer is stored, and reopening shows a spinner until it appears. If the turn has already ended with no answer, the panel says the connection was interrupted and the next message is accepted. A second turn is still refused while the first holds the lock. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
+## 2026-10-12 — Existing files named in the request can be attached
+
+**Done:** "Create a text & media element … and attach the existing images sys_file uid 3 and 11" created the element, then the follow-up tried `write_table` `assets` and stopped. The `file_reference_add` gates (`AgentRunner` toolbox, `T3afToolbox`, `AgentToolTurnProcessor`) only knew files saved in the conversation. They now use `AgentPromptBuilder::pendingAttachFileUids()`: saved and unattached files plus `AgentRequestedFiles::attachableNamedFileUids()` not yet attached for this request. The original request reaches the toolbox as `body['requestForGate']`.
+
+**Last touched:** 2026-10-12
+
+---
+
+## 2026-10-12 — An empty embedding model uses the vendor's embedding model
+
+**Done:** `Provider::effectiveEmbeddingModel()` and `AiService` embed calls use `Provider::DEFAULT_EMBEDDING_MODELS` when `embedding_model_id` is empty (OpenAI `text-embedding-3-small`, Mistral `mistral-embed`, Gemini `gemini-embedding-001`, Hugging Face MiniLM). Ollama, Azure and custom endpoints still use the chat model. `t3af:agent:index-tools` prints one line with the model and HTTP status for 400/404/422 and drops raw JSON bodies. Field help (EN/DE) and `Documentation/Configuration/AIProviders` updated. See `context/features/providers.md`.
+
+**Last touched:** 2026-10-12
+
+---
+
+## 2026-10-10 — An empty SEO queue add explains the skip
+
+**Done:** Applying `t3ai_mass_seo_queue_add` when nothing was queued keeps the skip sentence (Mass SEO is not enabled) and does not start a follow-up that says “Done.” The card does not show `pid`. Recursive adds still queue only pages with Mass SEO enabled. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-10
+
+---
+
+## 2026-10-10 — A guessed glossary language does not open a card
+
+**Done:** `GlossarySaveLanguage` checks the editor's request before a `t3ai_glossary_save` card. Several site languages and no named language ask which one. A named language is used even if the model sent another id. One other site language is unchanged. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-10
+
+---
+
+## 2026-10-10 — A glossary save without a language asks which one
+
+**Done:** A named language is still saved at once on the open page. When the language was not named and the site has more than one language besides the default, the prompt tells the agent to call `ask_clarification` and not to pick one. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-10
+
+---
+
+## 2026-10-10 — A named glossary word is saved without asking
+
+**Done:** When the editor names the source word, the translation, and the language, the prompt tells the agent to call `t3ai_glossary_save` with the open page and that site language id. The reply does not ask for either and does not start with “Done”. A missing language still asks which site language to use. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-10
+
+---
+
+## 2026-10-10 — An unchanged glossary word has no Apply card
+
+**Done:** When `t3ai_glossary_save` matches a word already in the list, the turn shows that sentence and stops. No draft is stored. A save card omits `termId` 0. See `packages/ns_t3ai/context/features/translation.md`.
+
+**Last touched:** 2026-10-10
+
+---
+
+## 2026-10-10 — Queue timing follows the enabled scheduler task
+
+**Done:** The agent says queued SEO or translation texts are written on the next automatic run only when that scheduler task is enabled. A disabled task is described as off: an admin has to enable it, and the reply offers to write the texts now. Showing either queue lists it again. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-10
+
+---
+
+## 2026-10-10 — Taking this page out of the SEO list prepares a card
+
+**Done:** "Take this page out of that list" calls `t3ai_mass_seo_queue_remove` with the open page as `pageIds`. A reply that only writes `[Prepare change` / `[Prepared change` or "this draft has not been applied" is retried as a real tool call, so the Apply card is shown. An explicit `pageIds` list is kept. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-10
+
+---
+
+## 2026-10-10 — Several pages go on one SEO queue card
+
+**Done:** "Add pages 2, 3, 4, 7, 9 and 24 to the SEO queue" sends every uid as `pageIds` on one `t3ai_mass_seo_queue_add` call. The open page is not substituted for that list. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-10
+
+---
+
+## 2026-10-09 — Subpage SEO is not an empty batch call
+
+**Done:** "Write SEO texts for all subpages" prepares `t3ai_generate_seo_batch`. An empty entries list uses the open page's subpages, including pages without Mass SEO enabled. The SEO queue stays the background path and only includes pages with Mass SEO enabled. See `context/features/ai-agent.md`.
+## 2026-10-09 — The next card no longer expires after Apply
+
+**Done:** `AgentDraftSession` keeps drafts in `sys_registry` (namespace `tx_nst3af_agent_draft`, one row per draft with `userUid`, `storedAt`, `payload`) instead of the backend session; the session is only the fallback when the registry cannot be reached (unit tests). Cause: after Apply the window reloads the page module while the continuation turn runs; that module request loaded the session before the turn stored the next card and, when it flushed its flash messages (`FlashMessageQueue::getAllMessagesAndFlush()` → `setAndSaveSessionData()`), saved its older copy back, so the card was gone ("This draft was not found or has expired", reload marks it expired). Fast local installs finish the reload first; slower ones lose the card. Rows older than a day are pruned on the next store. `AgentRequestChecklist` also reads the German labels "Text & Medien" / "Text und Medien" (textmedia) and "Text & Bilder" (textpic), so "Erstelle ein Text & Medien Element…" no longer plans a Text element. Checked over HTTP with a real backend session (`var/tmp` harness): race replayed before → 404 + EXPIRED, after → card applies; ticket prompts 1–3 (OpenAI, Mistral, admin and non-admin editor on a mounted page) and the workspace "Add a text about our team" request each create exactly one element.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — A download that cannot work is not offered again
+
+**Done:** `FileUploadService::assertPublicHttpUrl()` resolves a host name once: an unknown host throws `Could not resolve host "…"` (1747320020) instead of "private or reserved network address", and the checked IP is the pinned one. `FileUploadService::isPermanentFailure()` marks bad URL / unknown host / private address / redirect loop / empty body / HTML page / too large / HTTP 4xx (not 408, 429) as final; `FileUploadFromUrlTool` then returns `{"error": …, "retryable": false}`. `AgentWriteService` turns that into `AgentApplyNotRetryableException` (code 1712003211) and does not put the draft back; the apply endpoint answers `retryable: false` and records `draft.failed` + `failureMessage` (`AgentConversationRecorder::failed()`). The window shows the reason and `agent.draft.failedFinal` with no Apply button (`renderFailedDraft`), and Execute all skips it; a reopened chat does not mark it expired. The history note says "failed and would fail again with the same arguments: …", and `withoutRepeatedDeclinedDrafts()` drops the same card (reply `agent.turn.failedNotRepeated`). Tool cards carry no arguments in the window, so `draftSignature()` uses the summary when fields and arguments are empty (before, any two download cards counted as the same one). Network errors, 5xx, 408 and 429 stay retryable. Checked live: unknown host → message, draft gone; next request with a real Wikimedia JPG → new card, uploaded (sys_file 161).
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — AI-generated images: no stock photos, no repeat after decline
+
+**Done:** `AgentRequestedFiles::asksForGeneratedImage()` recognises "AI-generated image", "generate an image", "generiere ein Bild", "KI-Bild". When the editor cannot use `t3ai_generate_image`, `AgentTurnRouter` adds the `agent.turn.imageGenerationUnavailable` notice (`files_unavailable` with `noFileLeft` and `imageGenerationUnavailable`): the attach step closes and `promptNote()` forbids a web image. `T3afToolbox` refuses `file_upload_from_url` for such a request unless the editor gave a URL (pointing to `t3ai_generate_image` when it is there). The checklist hint names `t3ai_generate_image`. A declined tool card (other than `write_table`) is not offered again in the same request, a declined `t3ai_generate_image` closes the attach step, and the "element still has no image" reminder stays quiet; a dropped card with no reply text answers `agent.turn.declinedNotRepeated`. Checked live (OpenAI, Mistral ×3): Apply → one textmedia with one `assets` reference to a new file with alternative; Decline → no file, no new image card.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — A declined create is not proposed again
+
+**Done:** `AgentRequestChecklist::reconcile()` closes (status `failed`) a create step whose card the editor discarded in this request, plus the attach / alt-text steps when every create was declined or the attach card was declined. `AgentRunner::buildMessages()` no longer falls back to the saved model plan once the checklist is closed. Right after a decline, `withoutRepeatedDeclinedDrafts(..., afterDecline: true)` also drops a create of the same tool/table/CType that differs only in a field (the model had added `sys_language_uid`). A `draft_review` pause whose only card was dropped no longer leaves the window waiting; the reply is then `agent.turn.declinedAskInstead`. The decline continuation says nothing else remains when the checklist is closed. Checked live (Mistral ×2, OpenAI): after Discard the agent asks what to do instead, no new card. When only some named files are missing, the notice is `agent.turn.filesPartlyUnavailable` ("Skipped … I will continue with the other files"), so it no longer reads as if the whole request failed.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — Undo on the attach card
+
+**Done:** Applying `file_reference_add` stores undo fields (`AgentWriteService::toolUndoFields()`): one `create` entry per new `sys_file_reference` with its `parent` (table, uid, field). `AgentUndoService` removes exactly those references with `DataHandlerService::removeFileReferences()` (delete via DataHandler, then the parent field gets the remaining references so its counter is right); the file and the record stay. The tool result card keeps `changeId` / `undoable` and shows Undo below the collapsed result, then "Undone". Other confirmed tools still have no undo. Checked live: tt_content 250 assets 2 → 1, reference 106 deleted, reference 99 and sys_file 146 untouched.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — Attach cards show the images
+
+**Done:** `AgentMediaPreviewService` reads `fileUids` ("145,146" in the arguments, `[145]` in the result), so the `file_reference_add` card and its result card show a thumbnail and the file name of every file (up to `MAX_PREVIEWS`). A missing or non-image file in that list is shown by name only (empty `url`); `renderImagePreviews` renders it as a caption without an image. Single `fileUid` keys and file lists keep the old behaviour (no name-only entries), so an audio result still shows its player.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — Alt text on attached images
+
+**Done:** `file_reference_add` takes optional `alternative`, `title` and `description` and writes them on every new `sys_file_reference` (`DataHandlerService::createFileReferences(..., $texts)`). The card summary shows `with alt text "…"` and the result returns the texts. When the request asks for alt text (alt text / alt tag / Alternativtext / Bildbeschreibung), `AgentRequestChecklist` adds an `alt_text` step. It closes only when a successful attach carried `alternative` or a readback of `sys_file_reference` shows one, and fails when no file could be attached. Until then the hint says to set it, or to tell the editor it is not set instead of claiming completion. `t3ai_generate_image` (ns_t3ai) stores its `altText` on the file metadata and now returns it, and the checklist counts it, because a reference without its own alt text shows the metadata one. `PremiumCatalogProvider::findStandaloneMatch()` no longer answers "AI Accessibility is not included" when the message attaches a file, names a sys_file uid or creates a Text & Media element (the alt text then goes on the reference). Live runs (OpenAI, Mistral) with real Apply: create, then `file_reference_add` with `alternative`, then "complete". Once in three runs Mistral attached the same file again after the checklist was closed. Checked: tt_content 250 with sys_file 145 renders `<img alt="…">` on page 198.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — A leaked tool call is not the editor's reply
+
+**Done:** A reply that starts with a tool call (`{"pageId":99999} to=t3ai_generate_all_seo` plus junk) shows the sentence after it. When that sentence says the page is missing, the editor sees "Page 99999 doesn't exist." Removing a page from the SEO queue by name uses that page uid. See `context/features/ai-agent.md`.
+
+---
+
+## 2026-10-09 — Image generation uses an image model
+
+**Done:** `ImageGenerationService::imageModelFor()` picks the model for `generate()` and `variation()`: the requested `modelId`, else the provider's model when it is an image model (`gpt-image-*`, `dall-e-*`, `imagen`, `flux`, …), else `gpt-image-1` for `symfony.openai`. Otherwise it stops before any HTTP call with "No image model configured for provider X". The provider's chat model (`gpt-5.4-mini`) is no longer sent to images/generations, and telemetry logs the image model.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — A missing named page is not the page on screen
+
+**Done:** "make the Contact page show up in Google" asks which page to use when no page is called Contact, and does not prepare SEO for the open page. "The first one" locks the first offered page (`lockedPageId`). See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — No made-up download URL for a missing file
+
+**Done:** After a missing-file refusal the agent invented `https://example.com/cake.png` and offered an upload card that failed with 404. The refusal now tells the agent to report the missing file, a prompt rule allows only URLs the editor wrote or a tool returned, and `file_upload_from_url` gives no card for placeholder hosts (example.com/.net/.org, *.example, *.test, *.invalid, localhost).
+
+**Done:** A request that names sys_file uids is checked before the model runs (`AgentRequestedFiles`, called from `AgentTurnRouter`). Unknown or missing files get a visible `files_unavailable` message and a system prompt note; when none of the named files is left, the checklist marks the attach step `failed`, so the turn ends without "Say continue" and Progress closes.
+
+**Done:** A create card no longer shows fields with a blank value (the model sent an empty `bodytext`), and a blank value on a create no longer disables Apply. On an edit Apply stays disabled for a blank value, now with the hint `agent.draft.blankProposed`.
+
+**Done:** A typed "continue" / "weiter" no longer replaces the request (`AgentPromptBuilder::isGoOnReply`, skipped by `latestUserRequestText` and the runner's gate), so the server checklist survives it. Files a read tool only showed (`file_list` thumbnails) no longer count as "saved but not attached" — that kept the turn open after a successful attach and made the agent attach the same files twice. `file_reference_add` names every unusable file in one refusal, and those refusals also close the attach step when they cover every file the request named.
+
+**Done:** With existing sys_file uids in the request the attach hint now says "call file_reference_add with fileUids …; do not upload, download or generate" (it always said "generate or upload an image", so the agent offered an upload card with an empty URL). `file_upload_from_url` gives no card without a full http(s) URL. `buildMessages` reconciles the checklist with this turn's request (a new request is not in the history yet, so it used the previous one). "Saved n of m" no longer counts the blank fields a create card leaves out.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — Progress belongs to the newest request
+
+**Done:** The Progress panel (`controller-stream.js`) shows only the plan saved after the newest request the editor typed; hidden continuation rows count as part of it. "Waiting for your approval" needs an open step and an unapplied card of that request, so an old card no longer keeps it on. The panel hides once every step is done and no turn is running.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — Attach card only for files that can be shown
+
+**Done:** `file_reference_add` checks the files in `plan()` and again in `execute()`: numeric sys_file uid, the file exists, the editor may read it, and it is on disk (`File::exists()`). The field must be shown for the record type (`TcaSchemaService::getShownFields()`), so `assets` on an Image element is refused with the field to use. The card lists file names. `file_list` says storageUid 1 is fileadmin.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — Text & Media field words are not a second element
+
+**Done:** `AgentRequestChecklist` keeps "a short text", "alt text" and "attach the existing images" on the Text & Media step. A second create step still appears for "a separate text element" or "two elements".
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — URL upload no longer mixes streaming with DNS pinning
+
+**Done:** `file_upload_from_url` (`FileUploadService::downloadFromUrl`) pins the resolved public IP without `stream`, so Guzzle's stream handler is not given a curl option. A transport failure tells the editor the host. AI image generation itself stays `t3ai_generate_image` in ns_t3ai.
+
+## 2026-10-09 — SEO Undo restores the page columns
+
+**Done:** Suggestion Undo writes the preview field `column` (`seo_title`, `description`, `og_title`, `og_description`) instead of the suggestion key (`metaTitle`, …). Keywords already matched its column, so only that field was cleared. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-09
+
+---
+
+## 2026-10-09 — SEO Apply no longer claims a refused save
+
+**Done:** Agent suggestion Apply uses `invokeWithMode`, which now treats a tool `{"error": ...}` as a failure. An editor without SEO field rights sees the refusal instead of "Applied 5 suggestion field(s)" with nothing saved. See `context/features/ai-agent.md`.
+
+**Last touched:** 2026-10-09
+
+---
+
 ## 2026-10-09 — Release 2.0.0 (9 October 2026)
 
 **Done:** Release notes for 2.0.0 rewritten for the final date (AI Agent listed as new features, MCP batch writes, security items); `CHANGELOG.md` date set; `Documentation/Agent/PreviewApply.md` and `Documentation/Integrations/MCPTools/Index.rst` updated. Closing fixes before the release: header value in the request checklist (14zervyucgh), page cache scope default off (14zervyucgk), MCP Server settings access and module route token (14zervyuhge), `records_undo` empty map as `{}` (14zervyub6n), clear message for 256 KB+ unbroken text (14zervyub6r). Version stays 2.0.0.

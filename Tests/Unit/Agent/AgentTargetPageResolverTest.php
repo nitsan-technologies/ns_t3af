@@ -48,4 +48,117 @@ final class AgentTargetPageResolverTest extends TestCase
         self::assertSame('12', $resolver->extractPageReference('Optimise SEO for page uid 12'));
         self::assertSame('5', $resolver->extractPageReference('@pages:5'));
     }
+
+    #[Test]
+    public function pageNamedBeforeTheListWordIsFound(): void
+    {
+        self::assertSame('QA Secret Outside', AgentTargetPageResolver::namedPageTitle('add QA Secret Outside to the list for Google texts'));
+        self::assertSame('QA Secret Outside', AgentTargetPageResolver::namedPageTitle('remove "QA Secret Outside" from the translation queue'));
+    }
+
+    #[Test]
+    public function thisPageOrAllPagesBeforeTheListWordIsNotAName(): void
+    {
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('add this page to the translation queue'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('add all pages to the list for Google texts'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('add it to the queue'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('add 4, 5 to the queue'));
+    }
+
+    #[Test]
+    public function aQuestionWordBeforePagesIsNotAPageTitle(): void
+    {
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('Which pages will be included and what will be generated for them?'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('How many pages are selected?'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('Welche Seiten werden berücksichtigt?'));
+    }
+
+    #[Test]
+    public function selectedPageMeansTheOpenPageNotATitle(): void
+    {
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('Selected page generates proper person schema'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('Generate Person schema for the selected page'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('Selected page'));
+    }
+
+    #[Test]
+    public function namedPageTitleIsTheWordsBeforePage(): void
+    {
+        self::assertSame('Contact', AgentTargetPageResolver::namedPageTitle('make the Contact page show up in Google'));
+        self::assertSame('Contact', AgentTargetPageResolver::namedPageTitle('page called Contact'));
+        self::assertSame('Remove', AgentTargetPageResolver::namedPageTitle('Remove page 138 from the SEO queue.'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('Generate SEO for this page'));
+        self::assertNull(AgentTargetPageResolver::namedPageTitle('the first one'));
+    }
+
+    #[Test]
+    public function aPageNumberIsNotATitle(): void
+    {
+        self::assertSame([138], AgentTargetPageResolver::mentionedPageUids('Remove page 138 from the SEO queue.'));
+        self::assertSame([12, 14], AgentTargetPageResolver::mentionedPageUids('Remove pages 12 and 14 from the SEO queue'));
+        self::assertSame([12], AgentTargetPageResolver::mentionedPageUids('Seite 12 aus der SEO-Warteschlange entfernen'));
+        self::assertSame([], AgentTargetPageResolver::mentionedPageUids('Remove the Contact page from the SEO queue'));
+        self::assertSame([], AgentTargetPageResolver::mentionedPageUids('Remove this page from the SEO queue'));
+    }
+
+    #[Test]
+    public function creatingAPageIsNotALookup(): void
+    {
+        self::assertTrue(AgentTargetPageResolver::isCreatePageRequest('Create a page called Contact'));
+        self::assertTrue(AgentTargetPageResolver::isCreatePageRequest(
+            'Write a blog article page called 7 tips for better sleep, under this page.',
+        ));
+        self::assertFalse(AgentTargetPageResolver::isCreatePageRequest('Write SEO for this page'));
+        self::assertFalse(AgentTargetPageResolver::isCreatePageRequest('make the Contact page show up in Google'));
+    }
+
+    #[Test]
+    public function theFirstChoiceIsTheFirstSimilarPage(): void
+    {
+        $history = [[
+            'role' => 'assistant',
+            'content' => 'I can\'t find a page called "Contact". Which page should I use?',
+            'meta' => [
+                'type' => 'clarification',
+                'missingPage' => true,
+                'options' => ['About us [4]', 'QA Mounted [2]'],
+            ],
+        ]];
+
+        self::assertSame(4, AgentTargetPageResolver::pageIdFromChoice('the first one', $history));
+        self::assertSame(2, AgentTargetPageResolver::pageIdFromChoice('QA Mounted', $history));
+    }
+
+    #[Test]
+    public function similarPagesAreTheClosestTitles(): void
+    {
+        $labels = AgentTargetPageResolver::rankPageLabels('Contact', [
+            ['uid' => 2, 'title' => 'QA Mounted'],
+            ['uid' => 8, 'title' => 'Contacts'],
+            ['uid' => 4, 'title' => 'About'],
+            ['uid' => 9, 'title' => 'Contact'],
+        ]);
+
+        self::assertSame('Contacts [8]', $labels[0]);
+        self::assertNotContains('Contact [9]', $labels);
+    }
+
+    #[Test]
+    public function aClickOnAnElementOptionIsNotAPageChoice(): void
+    {
+        $history = [[
+            'role' => 'assistant',
+            'content' => 'Which content element called "Coastal travel" should I translate?',
+            'meta' => ['type' => 'clarification', 'options' => ['Coastal travel [713]', 'Coastal travel [697]'], 'contentChoice' => true],
+        ]];
+
+        self::assertSame(0, AgentTargetPageResolver::pageIdFromChoice('Coastal travel [713]', $history));
+
+        $pageHistory = [[
+            'role' => 'assistant',
+            'content' => 'Which page?',
+            'meta' => ['type' => 'clarification', 'options' => ['Services [12]', 'Services Old [14]']],
+        ]];
+        self::assertSame(12, AgentTargetPageResolver::pageIdFromChoice('Services [12]', $pageHistory));
+    }
 }

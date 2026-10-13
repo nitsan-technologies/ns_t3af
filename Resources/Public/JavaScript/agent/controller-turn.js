@@ -139,14 +139,38 @@ export const turnMethods = {
             credentials: 'same-origin',
             signal,
           });
-          payload = await response.json();
+          const raw = await response.text();
+          try {
+            payload = JSON.parse(raw);
+          } catch (parseError) {
+            // An error page (PHP error, expired login) instead of JSON: never show "Unexpected token '<'".
+            throw new Error(lang('agent.error.serverPage', 'The server answered with an error page instead of a reply, so nothing was changed. Please try again; if it keeps happening, tell your administrator.'));
+          }
         }
         if (!payload?.ok) {
           throw new Error(payload?.message ?? lang('agent.error.turnFailed', 'Turn failed'));
         }
 
+        const replies = Array.isArray(payload.messages) ? payload.messages : [];
+        if (replies.some((reply) => reply?.meta?.type === 'turn_running')) {
+          // This send was refused. The server did not store it; the previous turn is still the one on screen.
+          this.messages.pop();
+          const uuid = String(this.session?.uuid ?? '').trim();
+          await this.restoreSession(uuid !== '' ? { sessionUuid: uuid } : {});
+          if (this.turnRunning === true) {
+            await this.awaitRunningTurn();
+            return;
+          }
+          const last = this.messages[this.messages.length - 1];
+          if (last?.role !== 'assistant') {
+            this.noteInterruptedTurn();
+          }
+          this.renderContext();
+          this.renderStream();
+          return;
+        }
+
         if (!streamed) {
-          const replies = Array.isArray(payload.messages) ? payload.messages : [];
           replies.forEach((reply) => {
             const meta = reply.meta ?? {};
             if (hasTurnGuardWarning(meta) && reply.content) {
@@ -229,16 +253,67 @@ export const turnMethods = {
   async recoverInterruptedTurn() {
       const uuid = String(this.session?.uuid ?? '').trim();
       await this.restoreSession(uuid !== '' ? { sessionUuid: uuid } : {});
+      if (this.turnRunning === true) {
+        await this.awaitRunningTurn();
+        return;
+      }
       const last = this.messages[this.messages.length - 1];
       if (last?.role === 'user') {
-        this.messages.push({
-          role: 'assistant',
-          content: lang('agent.turn.streamInterrupted', 'The connection was interrupted. Your request may still be running. Reload the conversation in a moment to see the result.'),
-          meta: { type: 'info' },
-        });
+        this.noteInterruptedTurn();
       }
       this.renderContext();
       this.renderStream();
+    },
+
+  /**
+     * The question is stored and the turn lock is still held. Show the spinner and load the
+     * conversation again until the answer is stored. A second message stays refused until then.
+     */
+    async awaitRunningTurn() {
+      const unanswered = () => {
+        const last = this.messages[this.messages.length - 1];
+        return last?.role === 'user';
+      };
+      if (this.recoveringTurn === true || this.turnRunning !== true || !unanswered()) {
+        return;
+      }
+
+      this.recoveringTurn = true;
+      this.isRunning = true;
+      this.showProgress(true, '', true);
+      const started = Date.now();
+      try {
+        while (this.recoveringTurn === true && this.turnRunning === true && unanswered() && Date.now() - started < 120000) {
+          await new Promise((resolve) => window.setTimeout(resolve, 1500));
+          if (this.recoveringTurn !== true) {
+            break;
+          }
+          const uuid = String(this.session?.uuid ?? '').trim();
+          await this.restoreSession(uuid !== '' ? { sessionUuid: uuid } : {});
+          this.renderContext();
+          this.renderStream();
+          if (this.turnRunning === true && unanswered()) {
+            this.showProgress(true, '', true);
+          }
+        }
+        if (unanswered() && this.turnRunning !== true) {
+          this.noteInterruptedTurn();
+        }
+      } finally {
+        this.recoveringTurn = false;
+        this.isRunning = false;
+        this.showProgress(false);
+        this.renderContext();
+        this.renderStream();
+      }
+    },
+
+  noteInterruptedTurn() {
+      this.messages.push({
+        role: 'assistant',
+        content: lang('agent.turn.streamInterrupted', 'The connection was interrupted. Your request may still be running. Reload the conversation in a moment to see the result.'),
+        meta: { type: 'info' },
+      });
     },
 
   /**
@@ -272,6 +347,7 @@ export const turnMethods = {
       if (!this.isRunning) {
         return;
       }
+      this.recoveringTurn = false;
       this.turnAbort?.abort();
     },
 

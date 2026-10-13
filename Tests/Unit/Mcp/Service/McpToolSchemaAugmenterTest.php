@@ -239,6 +239,7 @@ final class McpToolSchemaAugmenterTest extends TestCase
 
         self::assertNotContains('value', $schema['required'] ?? []);
         self::assertArrayHasKey('aiProvider', $schema['properties']);
+        self::assertFalse($schema['additionalProperties'] ?? true);
     }
 
     private function createAugmenter(string $mode = McpModeResolver::MODE_CONTEXT): McpToolSchemaAugmenter

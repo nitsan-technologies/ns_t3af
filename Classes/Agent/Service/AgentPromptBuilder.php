@@ -42,6 +42,7 @@ readonly class AgentPromptBuilder
         private BrandContextResolver $brandContextResolver,
         private BrandContextAssembler $brandContextAssembler,
         private AgentLanguageResolver $languageResolver,
+        private QueueAutomationStatus $queueAutomationStatus,
     ) {}
 
     /**
@@ -59,14 +60,35 @@ readonly class AgentPromptBuilder
             $this->languageResolver->replyLanguageInstruction(),
             'Read tools run immediately. Write tools produce drafts that require explicit editor approval.',
             'Prefer concise answers grounded in tool results. Never claim a change was saved unless the editor applied a draft.',
+            'Never invent a tool result. Lines like "[Remove from translation queue] …" or "[Retry failed translations] …" are only written by the system after a real tool call. For queue or write actions, call the tool (so the editor gets an approval card) or say plainly that there is nothing to do — never pretend the action already ran.',
             'When the user asks to create, update, translate, or generate content, prefer calling the most specific write tool instead of replying with text only.',
+            'To make this page look better in Google, or to write SEO texts for this page, call t3ai_generate_all_seo. If that tool is not offered, call find_tools and then call it. That prepares suggestions and nothing is written until the editor applies them. Do not add the page to the SEO queue for that request. The SEO queue (t3ai_mass_seo_queue_*) is only for an explicit add, list, or "list for Google" request, never the translation queue. Translation queues need a target language; SEO queues do not. SEO texts for the subpages of this page still use t3ai_generate_seo_batch.',
             'When the user asks what you can do, which tools are available, or how you can help, call explain_capabilities, then answer with a short, friendly list of things they can ask, each with one example request in quotation marks, and end with a line telling them to pick a suggestion or type / to choose an action. In German use the formal Sie. No tool names or technical terms.',
             'When you cannot do something (no permission, not supported, missing extension), say why in one plain sentence and then offer a next step: a related thing you can do, the backend module where the editor can do it themselves, or who to ask (for example an administrator).',
             'When the editor asks to create, change or delete a kind of record that no offered tool covers (for example a system category or a backend user), call find_tools or the record write tool once before you answer. Say it ONLY when a tool call was actually refused for permission or no tool of the offered list fits; when a matching tool is offered (for example for workspaces, cache or publishing), call it and never refuse in advance. If it is refused or nothing fits, answer exactly in this spirit: "You are not allowed to change this kind of record with your backend account." Do not say that tools are missing, do not suggest doing it manually in a module and do not suggest asking an administrator to enable a tool. Say it once, in one short sentence.',
             'Before you ask the editor for a choice such as a workspace or a target page, make sure they may change that kind of record at all; if their account may not, say it is not allowed instead of asking. Never ask which workspace to use: the editor\'s current workspace is applied automatically.',
             'When the user asks who you are, who built or developed you, or what company/product this is, call explain_identity instead of answering from your own knowledge.',
             'When a required choice is missing (target language, which of several pages, which fields), call ask_clarification with the real choices as options instead of guessing; take them from the context or a tool result.',
-            'To translate a whole page, prefer a tool that translates the page and all its content in one step over element-by-element translation; for a page tree or many pages use the translation queue. If the editor did not name the language and the site has only one language besides the default one, use that language without asking; with several, offer the site languages from the context as ask_clarification options.',
+            'To translate a whole page, prefer a tool that translates the page and all its content in one step over element-by-element translation; for a page tree or many pages use the translation queue. If the editor did not name the language and the site has only one language besides the default one, use that language without asking; with several, offer the site languages from the context as ask_clarification options. Never pass language uid 0 (the default language) as a translation target. If the editor asks to translate into the language the page already is, say it is already in that language — do not open an Apply card.',
+            'When the editor names a record or content element by its title (not by id), find its uid with a search or list tool first; never ask which one they mean with titles you have not seen in a tool result, and never write choices into the question text: pass them as options.',
+            'When you search for a record or element by name, use a limit of at least 5. If more than one matches, ask which one with ask_clarification and the real matches as options; never pick the first silently.',
+            'The translations of a page are listed in the `translations` of pages_get (uid, language, hidden, title); they are not subpages. When asked "is this page already in German/French/…?", check that entry: if missing, say no; if present but hidden=1 or the title still starts with "[Translate to …:]", say it exists but is incomplete/hidden — never a plain yes. To show or hide a translated page, change the `hidden` field of that translation uid with write_table update — never workspace_stage_set, never content_get on the translation page uid (that uid is a page, not a content element). List content with content_list on the default-language page uid (l10n_parent / the open page) and sysLanguageUid of the translation language; content overlays live on that pid, not on the translation page uid. Include hidden content elements in the same write_table plan. Never claim the page is visible unless that write_table Apply succeeded. Never conclude that a translation does not exist from a search below the page.',
+            'News articles (EXT:news) live in the table tx_news_domain_model_news; there is no table tt_news. To find, change or delete a news article, search or write that table (or use the news tools when offered), never tt_content.',
+            'Schema markup, structured data or "a Person/Organization/Article schema" for a page or news article is ONE call of t3ai_apply_schema_markup with schemaType and the page (or newsId). It is not a folder, a file or a content element: never call a directory tool, write_table/tt_content, or tell the editor to create it manually. When the context has a Current page id, call the schema tool right away with that page — do not ask_clarification for which page. "Selected page" / "this page" means the open page — never treat the word Selected as a page title. Fill schema fields only from the page (or news) content; do not invent names, jobs or contact data that are not there.',
+            'An uploaded or named image that the editor wants "in the news" / "in that news" goes onto the news record (file_reference_add, tableName tx_news_domain_model_news, fieldName fal_media), never onto a content element. When a news article was just created or applied in this conversation, or the editor named it by title, use that news uid and do not ask which record to attach to; ask only when several news match. A file the editor attached in the composer (or "this image" after an upload) is not attached until file_reference_add succeeds: never say it is already attached, and never stop after only file_reference_list. To put that image on a new content element: create textmedia with write_table (header/body only) and wait for Apply — the image is attached automatically after that Apply. Never call file_reference_add with uid 0. Do not put the image in write_table data, and do not prepare a second attach card for the same file.',
+            'To create a news article call write_table create on tx_news_domain_model_news right away (do not call explain_capabilities first). A news article is never a content element, a page heading or an image card. Every new article gets a title, a short teaser and the text. Do not invent a date: leave datetime out (it defaults to today) unless the editor named a date. For bodytext use simple HTML (p, h2, ul), not Markdown. If the editor asked for a picture, create the news first, then generate one image and attach it to that news uid with file_reference_add fieldName fal_media — never create a content element on the Layout page for a news picture, and call generate/attach only once each.',
+            'To add a paragraph, an intro or any text to the open page, create ONE content element: write_table create on tt_content with CType text, the page as pid, and header and bodytext in the same call. Never create a new page for it. If the editor gave no topic, write the text from the page title and its existing content instead of asking what it should be about.',
+            'When creating news, set data.pid to a news storage folder (a page that already holds news, from a prior list). Never use pid 0 and never use the Layout page on screen unless it is that storage folder. If you do not know a storage pid, omit pid and the tool picks one.',
+            'When searching news with record_search, omit pid unless the editor named a news storage folder. News is not stored on the page open in Layout. An empty search lists all news the editor may read.',
+            'A blog post is a page with doktype 137, not a normal page and not a content element. To create one: when t3ai_create_blog_simple or t3ai_create_blog_advanced is offered, call it with topic and parentPageId (it drafts the title, the text and the SEO texts and the editor creates the page with one Apply); otherwise call write_table create on pages with data.doktype 137 and the title the editor gave, then add the text as content elements on that new page. A plain page (doktype 1) is not a blog post: never leave doktype out when the editor asked for a blog, a blog post or a Blogbeitrag.',
+            'Translations use the provider of this turn (the provider menu). When the editor asks for another translation provider such as DeepL or Google, say in one short sentence which provider this turn uses and that DeepL or Google can be used from the page translation dialog; never imply the asked provider was used.',
+            'To retry failed translations: call t3ai_mass_translation_queue_list and read each entry\'s status. If entries failed, call t3ai_mass_translation_queue_requeue; if none failed, say plainly that nothing has failed. Never say the translation queue is not available, and never put a tool name in the reply.',
+            'A picture for a news article is attached to the news record itself (table tx_news_domain_model_news, field fal_media), never to a content element. A news request never also creates a content element on the storage page. An "advanced" news article has a title, a teaser, a body with several sections (h2 headings) and keywords and a description; check after the create that the body text was saved before you say the article is done.',
+            'Say "not allowed" only when a tool call was actually refused for permission. When a search finds no record with the name the editor gave, say "I can\'t find a … called …" and offer to list the ones that exist; never blame rights for a record that does not exist.',
+            'When the editor asks for "all" records of a kind (all my news, all pages), call record_search on that table with an empty search and no pid: it lists them.',
+            'Before translating, get the target language from site_languages_list. If the site has it, use its uid and go on; if not, tell the editor which languages the site has. Never ask the editor to confirm a language with an empty list of choices.',
+            'A new record with its text (a news article, a page, one content element) is ONE create call that already holds the title, teaser and text. Never plan or offer a second step to add content to a record you just created.',
+            'To rewrite or change the text of a content element, start from that element\'s own current text (read it first) and never use the text of another element. Keep the meaning and every fact of the original: change only the wording, tone or length the editor asked for, and add no new claims, offers or promises.',
             'Write for editors: plain language, no tool names, ids only where they help to identify a record.',
             'Only some tools are offered at first. If none fits the request, call find_tools with a short description of the task before you say that something is not possible.',
             'For a request that needs three or more steps (for example create a page, add content, then translate it), call update_plan first with the steps (the first one in_progress), and again after every finished step (mark it completed, start the next). Never for a simple request; never as a substitute for doing the work.',
@@ -76,20 +98,41 @@ readonly class AgentPromptBuilder
             'Never reply with lines that look like history notes such as "[Prepared change: …]" or "Review the proposed changes for …" — those are internal records of past drafts, not answers. Call a write tool or write a normal sentence.',
             'If a tool result says a tool is not available or was not executed, tell the editor in one sentence instead of retrying it.',
             'Use pageId/pid/uid from context when a tool accepts a page or storage folder id.',
-            'Read results earlier in this conversation are still valid: do not read the same record or run the same search again; use what you have.',
+            'Read results earlier in this conversation are still valid: do not read the same record or run the same search again; use what you have. The SEO queue and the translation queue are the exception: list them again when the editor asks to see them.',
             'Do not ask the editor in text whether you should make a change ("Shall we proceed?"): call the write tool; it only prepares the change, and the editor confirms or declines it in the window. If no offered tool can make the change, call find_tools first.',
             'Read only what you need, then act. To create or change something, call the write tool as soon as you know the target; the editor reviews it before anything is saved.',
-            'To add an image to a new content element: first prepare the element (e.g. a text & media element), after it is applied attach the image to its uid with the file reference tool (field "assets" for text & media, "image" for text & images). The page uid is never a content element uid.',
-            'Do not call image generation until a Text & Media (textmedia) element for that image was applied, unless the editor asked only for a standalone image file. Mark a Text & Media plan step completed only after its element exists (and attach when they asked for an image).',
+            'To add an image to a new content element: prepare one textmedia create (header/body only). After Apply the image is attached automatically — do not open a second attach card. The page uid is never a content element uid; never pass a page uid to content_get or file_reference_add.',
+            'Do not call image generation until a Text & Media (textmedia) element for that image was applied, unless the editor asked only for a standalone image file. Mark a Text & Media plan step completed only after its element exists with the image attached.',
             'Never claim a file or image is attached to a record unless a file-reference tool succeeded for that file and record in this conversation. Generating or uploading a file alone does not attach it.',
-            'To create a new page, prepare a new record in the pages table (or use a create-page tool); copying a page is only for "copy" or "duplicate" requests. To delete a page or record, prepare the delete with the record write tool; the editor confirms it.',
+            'Only download a file from a URL the editor wrote or a tool returned. Never make up a URL (such as example.com) to replace a missing file: tell the editor which file is missing and let them upload or choose another one.',
+            'To create a new page that should have content ("a page about …", "with text and SEO"), when t3ai_create_page_simple or t3ai_create_page_advanced is offered call it once with topic and parentPageId (the open page unless the editor named another): it drafts the title, the content elements and the SEO texts and the editor creates the page with one Apply. Never create such a page with write_table, that makes an empty page. For several pages at once (a site structure, a page tree, a menu of pages) call t3ai_create_page_structure once with prompt and parentPageId; never create those pages one by one. For a page the editor only names, without wanting content, or when no create-page tool is offered, prepare a new record in the pages table; copying a page is only for "copy" or "duplicate" requests. To delete a page or record, prepare the delete with the record write tool; the editor confirms it.',
             'Page position uses pid. A positive pid creates the page as the first child of that page. A negative pid (-uid) creates it directly after that page. "After Page 1" is write_table create with afterUid set to Page 1\'s uid. Do not send Page 1\'s uid as a positive pid for an after request. "Before Page 2" is write_table create with beforeUid set to Page 2\'s uid. Do not send the parent uid as pid for a before request. "Last page under Home" is write_table create with afterUid set to Home\'s last subpage. "Subpage of Page 1" is Page 1\'s uid as a positive pid.',
             'To move an existing page, call pages_move and do not read the tree again when the uids are already known. beforeUid places it directly before that page. afterUid places it directly after that page. targetPid places it as the first child of that page. A hidden page can be moved. Never use content_move for a page, never update the pid field to move one, and never call pages_move when the editor asked to create a page.',
-            'To find a page by name, call pages_search with that name only and no pid. A hidden match is a real page: use its uid. "After page Sample" is pages_move with afterUid of that uid. Do not say the page does not exist.',
-            'To create a page with content: first prepare the new page (only the page). After the editor applies it, the result gives the new page uid; then prepare the content elements with that uid as their pid.',
+            'To find a page by name, call pages_search with that name only and no pid. A hidden match is a real page: use its uid. When no page has that name, say it was not found and ask which page to use. Do not change the page that is currently open instead. "After page Sample" is pages_move with afterUid of that uid.',
+            'To remove a named page from the SEO queue, use the uid you already found and call t3ai_mass_seo_queue_remove with pageIds set to that uid. The queue list uses the same page uid. Do not ask the editor for another id. To take this page out of the SEO list or queue, call that tool with pageIds set to this page uid. Do not describe a prepared change in the reply.',
+            'When the editor asks to add a page to the SEO or translation queue, call only the matching *_queue_add tool. Never call *_queue_remove for an add request. If the page is already queued, say so plainly — do not prepare a remove card.',
+            'SEO for "all pages" or the whole site: get the page uids with pages_tree (or pages_list), then call t3ai_generate_seo_batch with pageIds of those pages; never t3ai_generate_all_seo (that is the open page only). A follow-up such as "which pages will be included", "that" or "also include meta descriptions" refers to the pages of your previous answer: reuse those uids and never treat the first word of a question as a page title.',
+            '"Enable / activate the Mass SEO feature for all pages" means: get the page uids with pages_tree, then call t3ai_mass_seo_queue_add once with pageIds of every page (an explicit list is queued even where the Mass SEO flag is off). The Mass SEO flag is the page field tx_nst3ai_allow_mass_seo; there is no tx_seo or tx_massseo table and no extension setting. Never tell the editor to do it by hand in the Page Tree, and never say "you are not allowed" unless a tool was refused for permission.',
+            'To add Home (or another page) and all its subpages to the SEO queue, call t3ai_mass_seo_queue_add with that page\'s pageId and recursive true. Do not invent a pageIds list of the tree. Recursive adds only pages with Mass SEO enabled and names the skipped ones.',
+            'To add several named pages to the SEO queue, call t3ai_mass_seo_queue_add once with pageIds set to every uid. Do not put those uids in pageUrl. Do not send only the open page. A page that cannot be queued is named in the result; the others are still queued.',
+            'To remove a glossary term the editor named by word (for example cart), call t3ai_glossary_list if needed, then t3ai_glossary_delete with that term\'s termId (or sourceTerm). Never guess a termId. Prefer the word on the card, not "Glossary term N".',
+            'When the editor asks for SEO of one language version of this page (for example the German version), pass that language\'s id from the site languages as sysLanguageUid. The translated page is updated. Do not write those texts onto the default-language page.',
+            'To save a glossary term when the editor names the source word, the translation, and the language, call t3ai_glossary_save at once. Use this page\'s uid as pageId and the matching site language id from the context as languageUid. Do not ask which page. When the language was named, do not ask for it. When the editor did not name a language and the site has more than one language besides the default, call ask_clarification with those site languages as options and do not pick one. Do not start the reply with "Done".',
+            'When a page uid does not exist, say that the page does not exist. Do not show tool-call text, JSON, or tool names.',
+            'To write SEO texts for the subpages of this page, call t3ai_generate_seo_batch. Entries may be omitted: the subpages of the open page are used, including pages without Mass SEO enabled. The SEO queue is only for background generation. A recursive queue add includes only pages that have Mass SEO enabled. Repeat the queue summary: name any skipped pages and say Mass SEO is not enabled. Do not say every subpage was queued.',
+            'Without a create-page tool, to create a page with content: first prepare the new page (only the page). After the editor applies it, the result gives the new page uid; then prepare the content elements with that uid as their pid.',
+            'To analyse how good the text of a page is (readability, SEO, "content analysis") call t3ai_analyze_content with the page uid and show its report as the answer. It changes nothing. Change texts afterwards only when the editor asks for it, with write_table.',
             'When the editor asks to create or add content elements, use a create/write tool. Do not call content_delete unless they asked to remove or replace something.',
             'To change or delete a content element, use its uid from the latest content_list or content_get result; uids from older messages may no longer exist. The uid of a record you just created (from the applied result) is valid.',
+            'write_table action must be create, update, or delete only. To show or hide a page or content element, use action update with data {"hidden": 0} or {"hidden": 1}. Never invent other action names. After you create a content element the editor asked for, do not prepare a delete of that same element unless they asked to remove it.',
+            'To make a translated page visible, update hidden on that translation page uid and on its hidden content elements (content_list with the default page pid + that language) in the same write_table plan. Do not stop after only the page row. Do not use workspace_stage_set for visibility.',
+            'When confirming pages created by t3ai_create_page_structure, list only the page titles from the Apply result (structure / created pages), never the titles from the original chat request if they differ.',
+            'Before the first content element on this page: write_table create on tt_content with pid of this page and beforeUid of the first content element uid from content_list — never beforeUid of a page uid.',
         ];
+
+        foreach ($this->queueAutomationStatus->promptLines() as $queueLine) {
+            $lines[] = $queueLine;
+        }
 
         if ($pageId > 0) {
             $languageId = isset($context['languageId']) ? (int) $context['languageId'] : null;
@@ -316,6 +359,11 @@ readonly class AgentPromptBuilder
         if (($state['discarded'] ?? false) === true) {
             return 'declined';
         }
+        if (($state['failed'] ?? false) === true) {
+            $reason = trim((string) ($state['failureMessage'] ?? ''));
+
+            return 'failed and would fail again with the same arguments' . ($reason !== '' ? ': ' . $reason : '');
+        }
 
         return 'waiting for the editor';
     }
@@ -350,6 +398,15 @@ readonly class AgentPromptBuilder
             }
         }
         if (($continuation['outcome'] ?? '') === 'declined') {
+            $checklist = AgentRequestChecklist::reconcile($history, self::latestUserRequestText($history));
+            if ($checklist !== [] && !AgentRequestChecklist::hasOpen($checklist)) {
+                return sprintf(
+                    '[The editor declined "%s". Nothing was written.] The rest of my request depended on it, so nothing else remains:'
+                    . ' do not call tools and do not propose it again in another form. Ask in one short sentence what to do instead.',
+                    $label,
+                );
+            }
+
             return sprintf(
                 '[The editor declined "%s". Nothing was written.] Do not repeat it. If other steps of my request remain, continue with them;'
                 . ' otherwise ask in one short sentence what to do instead.',
@@ -359,7 +416,27 @@ readonly class AgentPromptBuilder
 
         $requestText = self::latestUserRequestText($history);
         // An edit of existing records ("change the header of element 5") has no create step: nothing new may follow.
-        $changesExistingOnly = $requestText !== '' && AgentRequestChecklist::parse($requestText) === [];
+        // Free multi-create wording ("intro and a team section") has an empty checklist but still creates.
+        $changesExistingOnly = $requestText !== ''
+            && AgentRequestChecklist::parse($requestText) === []
+            && !AgentCoreToolSet::isCreateContentRequest($requestText);
+        $createContentDone = AgentCoreToolSet::isCreateContentRequest($requestText)
+            && !self::asksForMultipleContentPieces($requestText)
+            && self::remainingWorkReminder($history, AgentPlan::latest($history), $requestText) === '';
+        if ($createContentDone) {
+            $message = sprintf(
+                '[The editor confirmed "%s" and it was applied.%s] My request was only to add that content.'
+                . ' Confirm in one short sentence that it is done. Do not call any tools.'
+                . ' Do not update, rewrite, or delete the content element you just created.',
+                $label,
+                $result !== '' ? ' Result: ' . $result : '',
+            );
+            if ($requestText !== '') {
+                $message .= sprintf(' My request was: "%s".', mb_substr(preg_replace('/\s+/u', ' ', $requestText) ?? $requestText, 0, 300));
+            }
+
+            return $message;
+        }
         $message = sprintf(
             '[The editor confirmed "%s" and it was applied.%s] Continue with the remaining steps of my request, if there are any;'
             . ' if this change already completed it, just confirm that in one short sentence.'
@@ -417,6 +494,59 @@ readonly class AgentPromptBuilder
     }
 
     /**
+     * Some models write the tool call into the answer ("{"pageId":99999} to=t3ai_generate_all_seo …").
+     * The editor sees the sentence after that call. A reply without a leaked call is unchanged.
+     */
+    public static function stripLeakedToolCall(string $text): string
+    {
+        $text = trim($text);
+        if ($text === '' || preg_match('/to=[A-Za-z0-9_]+/', $text) !== 1) {
+            return $text;
+        }
+
+        $stripped = preg_replace('/\{[^{}]{0,500}\}\s*to=[A-Za-z0-9_]+|to=[A-Za-z0-9_]+/u', ' ', $text);
+        if (!is_string($stripped)) {
+            return $text;
+        }
+        $stripped = trim($stripped);
+        if (preg_match('/[A-Za-zÄÖÜäöü][A-Za-zÄÖÜäöü\'’\-]*(?:\s+[A-Za-zÄÖÜäöü0-9][A-Za-zÄÖÜäöü0-9\'’\-]*){2,}.*/u', $stripped, $sentence) === 1) {
+            return trim($sentence[0]);
+        }
+
+        return $stripped;
+    }
+
+    /**
+     * Page uid from a leaked tool call whose sentence says that page is missing. 0 otherwise.
+     */
+    public static function leakedMissingPageUid(string $text): int
+    {
+        if (preg_match('/to=[A-Za-z0-9_]+/', $text) !== 1) {
+            return 0;
+        }
+        $prose = self::stripLeakedToolCall($text);
+        if (!self::isMissingPageProse($prose) && !self::isMissingPageProse($text)) {
+            return 0;
+        }
+        if (preg_match('/"pageId"\s*:\s*(\d+)/', $text, $match) === 1) {
+            return (int) $match[1];
+        }
+        if (preg_match('/\b(?:page|seite)(?:\s+uid)?\s+(\d+)/iu', $prose, $match) === 1) {
+            return (int) $match[1];
+        }
+
+        return 0;
+    }
+
+    private static function isMissingPageProse(string $text): bool
+    {
+        return preg_match(
+            '/was not found|does(?:\s*n[\'’]t| not) exist|can(?:\s*n[\'’]t|not) generate|nicht gefunden|gibt es nicht|kann .{0,40}nicht/iu',
+            $text,
+        ) === 1;
+    }
+
+    /**
      * Editor's newest non-continuation user message (the original multi-step request when present).
      *
      * @param list<array<string, mixed>> $history
@@ -433,7 +563,8 @@ readonly class AgentPromptBuilder
             }
             $text = trim((string) ($history[$i]['content'] ?? ''));
             // The follow-up after a confirmed card is not a request: its quoted label must never be read as one.
-            if (str_starts_with($text, '[The editor ')) {
+            // Neither is a typed "continue": the request it continues still decides what is left to do.
+            if (str_starts_with($text, '[The editor ') || self::isGoOnReply($text)) {
                 continue;
             }
 
@@ -443,10 +574,35 @@ readonly class AgentPromptBuilder
         return '';
     }
 
+    /**
+     * "continue", "go on", "weiter" — the editor asks to finish the previous request, not for something new.
+     */
+    public static function isGoOnReply(string $message): bool
+    {
+        return preg_match(
+            '/^\s*(?:please\s+|bitte\s+)?(?:continue|go\s+on|carry\s+on|keep\s+going|proceed|resume|next|weiter(?:\s+machen)?|mach(?:e)?\s+weiter|fortfahren|fortsetzen)\s*(?:please|bitte)?\s*[.!]*\s*$/iu',
+            $message,
+        ) === 1;
+    }
+
     public static function requestMentionsImage(string $query): bool
     {
         return preg_match(
             '/\b(image|images|bild|bilder|foto|photo|illustration|textmedia|text\s*&\s*media|text\s+and\s+media)\b/ui',
+            $query,
+        ) === 1;
+    }
+
+    /**
+     * Free wording that names two content pieces ("an intro and a team section") without a checklist
+     * split must not be treated as finished after the first Apply.
+     */
+    public static function asksForMultipleContentPieces(string $query): bool
+    {
+        $piece = 'intro|paragraph|section|element|block|absatz|abschnitt|faq|team|header|headline|einleitung';
+
+        return preg_match(
+            '/\b(?:' . $piece . ')\b.+\b(?:and|und|plus|,)\b.+\b(?:' . $piece . ')\b/iu',
             $query,
         ) === 1;
     }
@@ -462,7 +618,7 @@ readonly class AgentPromptBuilder
 
         $checklist = AgentRequestChecklist::reconcile($history, $query);
         if ($checklist !== []) {
-            $block = AgentRequestChecklist::promptBlock($checklist);
+            $block = AgentRequestChecklist::promptBlock($checklist, $query);
             if ($block !== '') {
                 $parts[] = $block;
             }
@@ -474,10 +630,12 @@ readonly class AgentPromptBuilder
         }
 
         // A file saved in an earlier request and never attached must not make an unrelated request
-        // ("rename this header") look unfinished: it counts when the request is about images, or when the
-        // file was saved while working on this request.
+        // ("Where are my AI pictures?") look unfinished: it counts when this request asks to place a
+        // file, or when the file was saved while working on this request.
         $pending = '';
-        if (self::requestMentionsImage($query)) {
+        if (AgentRequestedFiles::asksOnlyForGeneratedImage($query)) {
+            // Just an image was asked for: the request is done once the file is saved.
+        } elseif (AgentRequestedFiles::asksToAttachOrPlaceFile($query)) {
             $pending = self::pendingImageAttachNote($history);
         } elseif (self::unattachedFileUids(AgentRequestChecklist::historySinceLatestUserRequest($history, $query)) !== []) {
             $pending = self::pendingImageAttachNote($history);
@@ -547,14 +705,21 @@ readonly class AgentPromptBuilder
      */
     public static function missingMediaImageNote(array $history, string $requestQuery, array $plan = []): string
     {
-        if (self::unattachedFileUids($history) !== []) {
+        if (
+            self::unattachedFileUids($history) !== []
+            || AgentRequestedFiles::noFileLeftToAttach($history, $requestQuery)
+            || AgentRequestChecklist::imageWasDeclined($history, $requestQuery)
+        ) {
             return '';
         }
         $uid = self::unattachedMediaContentElementUid($history);
         if ($uid === null) {
             return '';
         }
-        if (!self::requestMentionsImage($requestQuery) && !AgentPlan::hasOpenImageAttachStep($plan)) {
+        if (
+            !AgentRequestedFiles::asksToAttachOrPlaceFile($requestQuery)
+            && !AgentPlan::hasOpenImageAttachStep($plan)
+        ) {
             return '';
         }
 
@@ -627,7 +792,7 @@ readonly class AgentPromptBuilder
     }
 
     /**
-     * When a generated/uploaded file still has no file reference and a content element exists,
+     * When a generated/uploaded file still has no file reference and a target record exists,
      * tell the model that attach is still open (do not let it declare the request done early).
      *
      * @param list<array<string, mixed>> $history
@@ -639,6 +804,15 @@ readonly class AgentPromptBuilder
             return '';
         }
         $fileUidList = implode(', ', array_map(static fn(int $uid): string => (string) $uid, $fileUids));
+        $newsUid = self::latestAppliedNewsUid($history);
+        if ($newsUid !== null) {
+            return sprintf(
+                'Remaining: attach fileUid %s to tx_news_domain_model_news uid %d with file_reference_add (fieldName "fal_media").'
+                . ' Do not create a content element, do not attach to the Layout page, and do not call generate or attach again once it succeeds.',
+                $fileUidList,
+                $newsUid,
+            );
+        }
         $contentUid = self::latestAppliedContentElementUid($history);
         if ($contentUid === null) {
             return sprintf(
@@ -660,6 +834,81 @@ readonly class AgentPromptBuilder
     }
 
     /**
+     * Newest applied EXT:news uid in this conversation, or null.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function latestAppliedNewsUid(array $history): ?int
+    {
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            if (($history[$i]['role'] ?? '') !== 'assistant' || ($meta['type'] ?? '') !== 'readback_result') {
+                continue;
+            }
+            foreach (is_array($meta['readback'] ?? null) ? $meta['readback'] : [] as $entry) {
+                if (!is_array($entry) || (string) ($entry['table'] ?? '') !== 'tx_news_domain_model_news') {
+                    continue;
+                }
+                $uid = (int) ($entry['uid'] ?? 0);
+                if ($uid > 0) {
+                    return $uid;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * True when an attach card is still waiting for Apply/Decline.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function hasOpenFileReferenceDraft(array $history): bool
+    {
+        foreach ($history as $entry) {
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($meta['type'] ?? '') !== 'inline_draft') {
+                continue;
+            }
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            $tool = (string) ($meta['tool'] ?? ($draft['tool'] ?? ''));
+            if ($tool === 'file_reference_add' && ($draft['discarded'] ?? false) !== true) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Files still to attach: saved in this conversation and not attached yet, plus existing files the
+     * request names ("attach sys_file uid 3") that are not missing and not attached while working on it.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return list<int>
+     */
+    public static function pendingAttachFileUids(array $history, string $request): array
+    {
+        $pending = self::unattachedFileUids($history);
+        $named = AgentRequestedFiles::attachableNamedFileUids($history, $request);
+        if ($named === []) {
+            return $pending;
+        }
+        $attached = self::attachedFileUids(AgentRequestChecklist::historySinceLatestUserRequest($history, $request));
+        foreach ($named as $uid) {
+            if (!isset($attached[$uid]) && !in_array($uid, $pending, true)) {
+                $pending[] = $uid;
+            }
+        }
+
+        return $pending;
+    }
+
+    /**
      * sys_file uids from successful writes that are not yet covered by a successful file_reference_add.
      *
      * @param list<array<string, mixed>> $history
@@ -668,9 +917,17 @@ readonly class AgentPromptBuilder
     public static function unattachedFileUids(array $history): array
     {
         $created = [];
-        $attached = [];
+        $attached = self::attachedFileUids($history);
+        $lastUserRequest = '';
         foreach ($history as $entry) {
-            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+            if (!is_array($entry)) {
+                continue;
+            }
+            if (($entry['role'] ?? '') === 'user') {
+                $lastUserRequest = (string) ($entry['content'] ?? '');
+                continue;
+            }
+            if (($entry['role'] ?? '') !== 'assistant') {
                 continue;
             }
             $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
@@ -680,13 +937,24 @@ readonly class AgentPromptBuilder
             $tool = (string) ($meta['tool'] ?? '');
             $details = $meta['details'] ?? null;
             if ($tool === 'file_reference_add') {
-                foreach (self::fileUidsFromDetails($details) as $uid) {
-                    $attached[$uid] = true;
-                }
+                continue;
+            }
+            // Composer @file:… runs file_get_info (read). Count it only when the editor asked to place it.
+            $composerAttach = ($meta['triggeredByAttachment'] ?? false) === true
+                && $tool === 'file_get_info'
+                && AgentRequestedFiles::asksToAttachOrPlaceFile($lastUserRequest);
+            // Files a lookup only showed (file_list thumbnails) were not saved for this request.
+            if (
+                !$composerAttach
+                && (($meta['severity'] ?? '') === 'read' || ($meta['readWithoutConfirmation'] ?? false) === true)
+            ) {
                 continue;
             }
             foreach (self::fileUidsFromDetails($details) as $uid) {
                 $created[$uid] = true;
+            }
+            if ($composerAttach && is_array($details) && (int) ($details['uid'] ?? 0) > 0) {
+                $created[(int) $details['uid']] = true;
             }
             foreach (is_array($meta['previews'] ?? null) ? $meta['previews'] : [] as $preview) {
                 if (is_array($preview) && (int) ($preview['fileUid'] ?? 0) > 0) {
@@ -702,6 +970,34 @@ readonly class AgentPromptBuilder
         }
 
         return $pending;
+    }
+
+    /**
+     * sys_file uids of successful file_reference_add results.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array<int, true>
+     */
+    public static function attachedFileUids(array $history): array
+    {
+        $attached = [];
+        foreach ($history as $entry) {
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($meta['type'] ?? '') !== 'tool_result' || ($meta['success'] ?? true) === false) {
+                continue;
+            }
+            if ((string) ($meta['tool'] ?? '') !== 'file_reference_add') {
+                continue;
+            }
+            foreach (self::fileUidsFromDetails($meta['details'] ?? null) as $uid) {
+                $attached[$uid] = true;
+            }
+        }
+
+        return $attached;
     }
 
     /**
@@ -875,11 +1171,87 @@ readonly class AgentPromptBuilder
         if ($text === '') {
             return false;
         }
-        if (str_contains($text, '[Prepared change:')) {
+        if (preg_match('/\[Prepare[d]? change\b/i', $text) === 1) {
+            return true;
+        }
+        if (preg_match('/\bthis draft has not been applied\b/i', $text) === 1) {
             return true;
         }
 
         return self::isDraftReviewBoilerplate($text);
+    }
+
+    /**
+     * Model invented a bracketed tool-result line ("[Remove from translation queue] Removed…")
+     * without calling a tool this turn.
+     */
+    public static function isFabricatedToolResultEcho(string $text): bool
+    {
+        $text = trim($text);
+        if ($text === '' || self::isCardHistoryEcho($text)) {
+            return false;
+        }
+
+        // History replays tool results as "[Label] …". Models copy that when they skip the tool.
+        return preg_match(
+            '/^\[[^\]\n]{3,80}\]\s+.+/u',
+            $text,
+        ) === 1;
+    }
+
+    /**
+     * After a real tool call, models sometimes paste "[Search pages] … [3]The page is already…"
+     * into the final answer with no space. Keep the human sentence; drop the glued prefix.
+     */
+    public static function stripGluedToolResultPrefix(string $text): string
+    {
+        $text = trim($text);
+        if ($text === '' || preg_match('/^\[[^\]\n]{3,80}\]\s+/u', $text) !== 1) {
+            return $text;
+        }
+
+        // "[Label] …uid]Next sentence" — capital letter glued after a closing bracket.
+        if (preg_match('/^\[[^\]\n]{3,80}\]\s+.+\[[0-9]+\]([A-ZÀ-ÖØ-Þ].+)$/su', $text, $match) === 1) {
+            return trim($match[1]);
+        }
+        // "[Label] …factsNext sentence" — lowercase/punct glued to a new capital sentence.
+        if (preg_match('/^\[[^\]\n]{3,80}\]\s+.+[a-z0-9.→»…]([A-ZÀ-ÖØ-Þ].+)$/su', $text, $match) === 1) {
+            return trim($match[1]);
+        }
+
+        return $text;
+    }
+
+    /**
+     * What the editor must be told about a made image (a cap such as "4 of the 6", or another generator that was
+     * used) but the model's reply left out. Only the first reply after the image was made owes it.
+     *
+     * @param list<array<string, mixed>> $messages history followed by this turn's messages, oldest first
+     */
+    public static function imageNoticeOwed(array $messages, string $replyText): string
+    {
+        for ($i = count($messages) - 1; $i >= 0; --$i) {
+            $meta = is_array($messages[$i]['meta'] ?? null) ? $messages[$i]['meta'] : [];
+            $type = (string) ($meta['type'] ?? '');
+            if ($type === 'nl_reply') {
+                return '';
+            }
+            if ($type !== 'tool_result' || (string) ($meta['tool'] ?? '') !== 't3ai_generate_image') {
+                continue;
+            }
+            if (($meta['success'] ?? true) === false) {
+                return '';
+            }
+            $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+            $notice = trim((string) ($details['notice'] ?? ''));
+            if ($notice === '' || mb_stripos($replyText, mb_substr($notice, 0, 30)) !== false) {
+                return '';
+            }
+
+            return $notice;
+        }
+
+        return '';
     }
 
     public static function isDraftReviewBoilerplate(string $text): bool

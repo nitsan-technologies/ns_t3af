@@ -111,5 +111,56 @@ final class FileUploadTokenFunctionalTest extends FunctionalTestCase
         $payload = json_decode((string) $response->getBody(), true);
         self::assertIsArray($payload);
         self::assertArrayHasKey('error', $payload);
+        self::assertSame(1747330005, $payload['code'] ?? null);
+    }
+
+    #[Test]
+    public function uploadEndpointRefusalsCarryTheSameNumericCodeAsTheToolRoute(): void
+    {
+        $plaintext = bin2hex(random_bytes(16));
+        $this->getConnectionPool()->getConnectionForTable('tx_nst3af_upload_tokens')->insert('tx_nst3af_upload_tokens', [
+            'token' => hash('sha256', $plaintext),
+            'be_user_uid' => 1,
+            'storage_uid' => 1,
+            'target_folder' => '/',
+            'file_name' => 'forged.woff2',
+            'expires' => time() + 900,
+            'used' => 0,
+            'tstamp' => time(),
+            'crdate' => time(),
+        ]);
+
+        $body = new Stream('php://temp', 'rw');
+        $body->write(random_bytes(2048));
+        $body->rewind();
+
+        $request = (new ServerRequest('http://localhost/mcp_upload', 'PUT'))
+            ->withBody($body)
+            ->withHeader('Authorization', 'Bearer ' . $plaintext)
+            ->withHeader('Content-Type', 'application/octet-stream');
+
+        /** @var FileUploadEndpoint $endpoint */
+        $endpoint = $this->get(FileUploadEndpoint::class);
+        $response = $endpoint($request);
+
+        self::assertSame(400, $response->getStatusCode());
+        $payload = json_decode((string) $response->getBody(), true);
+        self::assertIsArray($payload);
+        self::assertStringContainsString('not a real .woff2 font', (string) ($payload['error'] ?? ''));
+        self::assertSame(1747320030, $payload['code'] ?? null);
+    }
+
+    #[Test]
+    public function uploadEndpointRejectsWrongMethodWithCode(): void
+    {
+        /** @var FileUploadEndpoint $endpoint */
+        $endpoint = $this->get(FileUploadEndpoint::class);
+
+        $response = $endpoint(new ServerRequest('http://localhost/mcp_upload', 'GET'));
+
+        self::assertSame(405, $response->getStatusCode());
+        $payload = json_decode((string) $response->getBody(), true);
+        self::assertIsArray($payload);
+        self::assertSame(1747330004, $payload['code'] ?? null);
     }
 }

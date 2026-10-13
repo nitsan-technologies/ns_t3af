@@ -207,6 +207,55 @@ readonly class RecordService
     }
 
     /**
+     * DataHandler target that places a new record directly before an existing record of the same table
+     * (a content element before another content element): the previous sibling in the same page, column and
+     * language becomes a negative "after" target; the first element of the column uses the page pid.
+     */
+    public function targetBeforeRecord(string $table, int $uid): int
+    {
+        $record = $uid > 0 ? $this->findByUid($table, $uid, ['pid', 'sorting']) : null;
+        if ($record === null) {
+            throw new \InvalidArgumentException('Record not found: ' . $table . ' uid ' . $uid);
+        }
+
+        $pid = (int) ($record['pid'] ?? 0);
+        $sorting = (int) ($record['sorting'] ?? 0);
+        $columns = $this->connectionPool->getConnectionForTable($table)->createSchemaManager()->listTableColumns($table);
+        $has = static fn(string $column): bool => isset($columns[strtolower($column)]);
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
+        $queryBuilder->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($queryBuilder, $table);
+
+        $constraints = [
+            $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pid, ParameterType::INTEGER)),
+            $queryBuilder->expr()->lt('sorting', $queryBuilder->createNamedParameter($sorting, ParameterType::INTEGER)),
+            $queryBuilder->expr()->neq('uid', $queryBuilder->createNamedParameter($uid, ParameterType::INTEGER)),
+        ];
+        if ($has('deleted')) {
+            $constraints[] = $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER));
+        }
+        // Same column and language as the element it goes before.
+        $same = $this->findByUid($table, $uid, array_values(array_filter(['colPos', 'sys_language_uid'], $has)));
+        foreach (['colPos', 'sys_language_uid'] as $column) {
+            if ($has($column) && is_array($same) && isset($same[$column])) {
+                $constraints[] = $queryBuilder->expr()->eq($column, $queryBuilder->createNamedParameter((int) $same[$column], ParameterType::INTEGER));
+            }
+        }
+
+        $previous = $queryBuilder
+            ->select('uid')
+            ->from($table)
+            ->where(...$constraints)
+            ->orderBy('sorting', 'DESC')
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchAssociative();
+
+        return $previous !== false ? -((int) $previous['uid']) : $pid;
+    }
+
+    /**
      * Default-language pages with this exact title.
      *
      * @return list<array{uid: int, pid: int}>
@@ -531,6 +580,112 @@ readonly class RecordService
     }
 
     /**
+     * Prefer a real storage folder over a random page that happens to hold more rows:
+     * pages.module=news, then sysfolder (doktype 254), then highest row count.
+     * Used when a create omits storage (e.g. news while the Layout page is open).
+     */
+    public function preferredPidForTable(string $table): int
+    {
+        if ($table === '' || $table === 'pages') {
+            return 0;
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
+        $queryBuilder->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($queryBuilder, $table);
+        $queryBuilder
+            ->select('pid')
+            ->addSelectLiteral('COUNT(*) AS c')
+            ->from($table)
+            ->andWhere($queryBuilder->expr()->gt('pid', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER)))
+            ->groupBy('pid')
+            ->orderBy('c', 'DESC')
+            ->setMaxResults(50);
+
+        /** @var list<array{pid: int|string, c: int|string}> $rows */
+        $rows = $queryBuilder->executeQuery()->fetchAllAssociative();
+        $bestPid = 0;
+        $bestScore = -1;
+        foreach ($rows as $row) {
+            $pid = (int) ($row['pid'] ?? 0);
+            if ($pid <= 0 || !$this->pageAccess->canReadPage($pid)) {
+                continue;
+            }
+            $page = $this->pageMeta($pid);
+            $score = self::scorePreferredStoragePid(
+                (int) ($row['c'] ?? 0),
+                (int) ($page['doktype'] ?? 0),
+                (string) ($page['module'] ?? ''),
+            );
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestPid = $pid;
+            }
+        }
+
+        return $bestPid;
+    }
+
+    /**
+     * True when the page is a news storage folder (module=news) or a sysfolder (doktype 254).
+     * Ordinary pages (e.g. Privacy) must not keep a model-supplied pid on news create.
+     */
+    public function isSuitableNewsStoragePid(int $pid): bool
+    {
+        if ($pid <= 0) {
+            return false;
+        }
+        $page = $this->pageMeta($pid);
+
+        return self::isSuitableNewsStorage(
+            (int) ($page['doktype'] ?? 0),
+            (string) ($page['module'] ?? ''),
+        );
+    }
+
+    /**
+     * @internal unit-tested
+     */
+    public static function isSuitableNewsStorage(int $doktype, string $module): bool
+    {
+        return strtolower(trim($module)) === 'news' || $doktype === 254;
+    }
+
+    /**
+     * @internal unit-tested
+     */
+    public static function scorePreferredStoragePid(int $recordCount, int $doktype, string $module): int
+    {
+        $score = max(0, $recordCount);
+        if (strtolower(trim($module)) === 'news') {
+            $score += 10000;
+        }
+        // 254 = sysfolder — typical EXT:news storage, beat a higher count on a normal page.
+        if ($doktype === 254) {
+            $score += 1000;
+        }
+
+        return $score;
+    }
+
+    /**
+     * @return array{doktype?: int|string, module?: string}
+     */
+    private function pageMeta(int $pageUid): array
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $queryBuilder->getRestrictions()->removeAll();
+        $row = $queryBuilder
+            ->select('doktype', 'module')
+            ->from('pages')
+            ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($pageUid, ParameterType::INTEGER)))
+            ->executeQuery()
+            ->fetchAssociative();
+
+        return is_array($row) ? $row : [];
+    }
+
+    /**
      * Count records matching optional conditions without fetching them.
      *
      * @param array<string, array{operator: string, value: string}> $searchConditions
@@ -604,9 +759,23 @@ readonly class RecordService
         $queryBuilder->getRestrictions()->removeAll();
         $this->workspaceContext->applyRestriction($queryBuilder, $table);
 
-        /** @var list<array{uid: int|string, sys_language_uid: int|string}> $rows */
+        // The enable column tells the model whether a translation is visible; without it a hidden
+        // translation looks like any other and "make it visible" is answered with "already visible".
+        $disabled = $GLOBALS['TCA'][$table]['ctrl']['enablecolumns']['disabled'] ?? null;
+        $hiddenField = is_string($disabled) && $disabled !== '' ? $disabled : null;
+        $labelField = $GLOBALS['TCA'][$table]['ctrl']['label'] ?? null;
+        $titleField = is_string($labelField) && $labelField !== '' ? $labelField : null;
+        $select = ['uid', $languageField . ' AS sys_language_uid'];
+        if ($hiddenField !== null) {
+            $select[] = $hiddenField . ' AS hidden_flag';
+        }
+        if ($titleField !== null) {
+            $select[] = $titleField . ' AS title_label';
+        }
+
+        /** @var list<array{uid: int|string, sys_language_uid: int|string, hidden_flag?: int|string, title_label?: string}> $rows */
         $rows = $queryBuilder
-            ->select('uid', $languageField . ' AS sys_language_uid')
+            ->select(...$select)
             ->from($table)
             ->where($queryBuilder->expr()->eq($transOrigPointerField, $queryBuilder->createNamedParameter($uid, ParameterType::INTEGER)))
             ->orderBy($languageField, 'ASC')
@@ -614,10 +783,20 @@ readonly class RecordService
             ->fetchAllAssociative();
 
         return array_map(
-            static fn(array $row): array => [
-                'uid' => (int) $row['uid'],
-                'sys_language_uid' => (int) $row['sys_language_uid'],
-            ],
+            static function (array $row) use ($hiddenField, $titleField): array {
+                $entry = [
+                    'uid' => (int) $row['uid'],
+                    'sys_language_uid' => (int) $row['sys_language_uid'],
+                ];
+                if ($hiddenField !== null) {
+                    $entry['hidden'] = (int) ($row['hidden_flag'] ?? 0);
+                }
+                if ($titleField !== null) {
+                    $entry['title'] = (string) ($row['title_label'] ?? '');
+                }
+
+                return $entry;
+            },
             $rows,
         );
     }

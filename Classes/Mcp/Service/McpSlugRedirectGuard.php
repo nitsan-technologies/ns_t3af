@@ -1,0 +1,156 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the "AI Foundation for TYPO3" (ns_t3af) extension.
+ *
+ * (c) T3Planet / NITSAN Technologies <support@t3planet.de>
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License, either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * For the full copyright and license information, please read the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace NITSAN\NsT3AF\Mcp\Service;
+
+use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
+
+/**
+ * Request-scoped MCP state for slug auto-redirects: skip pages without a site,
+ * and collect redirects created during the current records_apply / write_table call.
+ */
+final class McpSlugRedirectGuard
+{
+    /** @var array<int, true> */
+    private array $skipPageIds = [];
+
+    /** @var list<array{uid: int, source_host: string, source_path: string, target: string}> */
+    private array $created = [];
+
+    private int $beforeMaxUid = 0;
+
+    private bool $active = false;
+
+    public function __construct(
+        private readonly ConnectionPool $connectionPool,
+    ) {}
+
+    public function begin(): void
+    {
+        $this->active = true;
+        $this->skipPageIds = [];
+        $this->created = [];
+        $this->beforeMaxUid = $this->currentMaxRedirectUid();
+    }
+
+    public function end(): void
+    {
+        $this->active = false;
+        $this->skipPageIds = [];
+    }
+
+    public function isActive(): bool
+    {
+        return $this->active;
+    }
+
+    public function skipPage(int $pageId): void
+    {
+        if ($pageId > 0) {
+            $this->skipPageIds[$pageId] = true;
+        }
+    }
+
+    public function shouldSkipPage(int $pageId): bool
+    {
+        return $this->active && isset($this->skipPageIds[$pageId]);
+    }
+
+    /**
+     * @return list<array{uid: int, source_host: string, source_path: string, target: string}>
+     */
+    public function collectNewRedirects(): array
+    {
+        if ($this->created !== []) {
+            return $this->created;
+        }
+
+        return $this->fetchRedirectsAfter($this->beforeMaxUid);
+    }
+
+    /**
+     * @param array{uid?: int|string|null, source_host?: string|null, source_path?: string|null, target?: string|null} $record
+     */
+    public function rememberCreated(array $record): void
+    {
+        $uid = (int) ($record['uid'] ?? 0);
+        if ($uid <= 0) {
+            return;
+        }
+
+        $this->created[] = [
+            'uid' => $uid,
+            'source_host' => (string) ($record['source_host'] ?? ''),
+            'source_path' => (string) ($record['source_path'] ?? ''),
+            'target' => (string) ($record['target'] ?? ''),
+        ];
+    }
+
+    private function currentMaxRedirectUid(): int
+    {
+        if (!ExtensionManagementUtility::isLoaded('redirects')) {
+            return 0;
+        }
+
+        try {
+            $max = $this->connectionPool->getConnectionForTable('sys_redirect')
+                ->executeQuery('SELECT MAX(uid) FROM sys_redirect')
+                ->fetchOne();
+
+            return (int) $max;
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    /**
+     * @return list<array{uid: int, source_host: string, source_path: string, target: string}>
+     */
+    private function fetchRedirectsAfter(int $beforeMaxUid): array
+    {
+        if (!ExtensionManagementUtility::isLoaded('redirects')) {
+            return [];
+        }
+
+        try {
+            $rows = $this->connectionPool->getConnectionForTable('sys_redirect')
+                ->executeQuery(
+                    'SELECT uid, source_host, source_path, target FROM sys_redirect'
+                    . ' WHERE uid > ? AND deleted = 0 ORDER BY uid ASC',
+                    [$beforeMaxUid],
+                )
+                ->fetchAllAssociative();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $out = [];
+        foreach ($rows as $row) {
+            $out[] = [
+                'uid' => (int) ($row['uid'] ?? 0),
+                'source_host' => (string) ($row['source_host'] ?? ''),
+                'source_path' => (string) ($row['source_path'] ?? ''),
+                'target' => (string) ($row['target'] ?? ''),
+            ];
+        }
+
+        return $out;
+    }
+}

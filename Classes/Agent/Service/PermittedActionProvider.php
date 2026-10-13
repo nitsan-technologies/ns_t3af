@@ -24,7 +24,9 @@ use NITSAN\NsT3AF\Agent\Contract\AgentActionCatalogInterface;
 use NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
+use NITSAN\NsT3AF\Mcp\Service\McpToolOwnershipResolver;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
 /**
  * Permitted tool catalog for the AI Agent (T4).
@@ -55,6 +57,7 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
         private AgentToolEditorLabelService $editorLabelService,
         private AgentTranslator $translator,
         private AgentGovernanceGuard $governanceGuard,
+        private McpToolOwnershipResolver $ownershipResolver = new McpToolOwnershipResolver(),
     ) {}
 
     /**
@@ -104,6 +107,10 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
         if (in_array($name, self::AGENT_HIDDEN_TOOL_NAMES, true)) {
             return true;
         }
+        // News tools only fail with "EXT:news is required" when EXT:news is not installed: do not offer them.
+        if (self::isNewsTool($tool) && !ExtensionManagementUtility::isLoaded('news')) {
+            return true;
+        }
 
         if (($tool['dualMode'] ?? false) !== true || ($tool['previewable'] ?? false) === true) {
             return false;
@@ -117,15 +124,27 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
 
     /**
      * @param array<string, mixed> $tool
+     */
+    public static function isNewsTool(array $tool): bool
+    {
+        $intent = is_array($tool['intent'] ?? null) ? $tool['intent'] : [];
+
+        return strtolower((string) ($intent['category'] ?? '')) === 'news'
+            || (string) ($tool['name'] ?? '') === 't3ai_translate_news';
+    }
+
+    /**
+     * @param array<string, mixed> $tool
      * @return array<string, mixed>
      */
     private function normalizeToolEntry(array $tool, AgentToolPolicy $policy): array
     {
         $toolName = (string) ($tool['name'] ?? '');
-        $ownerKey = (string) ($tool['ownerExtensionKey'] ?? self::CORE_EXTENSION_KEY);
-        if ($ownerKey === '') {
-            $ownerKey = self::CORE_EXTENSION_KEY;
-        }
+        $ownerKey = $this->ownershipResolver->resolve([
+            'name' => $toolName,
+            'className' => (string) ($tool['className'] ?? ''),
+            'ownerExtensionKey' => $tool['ownerExtensionKey'] ?? null,
+        ], []) ?? self::CORE_EXTENSION_KEY;
 
         $severity = ToolSeverity::tryFromString((string) ($tool['severity'] ?? ''));
         $lockReason = '';
@@ -209,7 +228,10 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
             return $this->translator->translate('agent.owner.core');
         }
 
-        return $ownerKey;
+        $labelKey = 'agent.owner.' . $ownerKey;
+        $label = $this->translator->translate($labelKey);
+
+        return ($label !== '' && $label !== $labelKey) ? $label : $ownerKey;
     }
 
 }

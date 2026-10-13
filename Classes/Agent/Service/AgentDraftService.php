@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
 
 /**
  * Builds inline draft card payloads from tool plans (BE-INLINE-DRAFT).
@@ -66,6 +67,9 @@ final class AgentDraftService
         $recordLabels = [];
 
         foreach ($plan->fields as $field) {
+            if (!self::isShownOnCard($plan, $field)) {
+                continue;
+            }
             $recordKey = $field->table . ':' . $field->uid;
             $recordLabels[$recordKey] ??= $this->recordLabeler?->recordLabel($field->table, $field->uid) ?? '';
             if ($field->field === '_rename' && $field->uid <= 0) {
@@ -120,6 +124,7 @@ final class AgentDraftService
     /**
      * @param array<string, mixed> $draftCard
      * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $extra     optional draft keys (e.g. pendingAttachFileUid)
      */
     public function persistDraft(
         array $draftCard,
@@ -127,6 +132,7 @@ final class AgentDraftService
         array $arguments,
         AgentDraftSession $session,
         ?string $flow = null,
+        array $extra = [],
     ): void {
         $draftId = (string) ($draftCard['draftId'] ?? '');
         if ($draftId === '') {
@@ -143,6 +149,11 @@ final class AgentDraftService
         if ($flow !== null && $flow !== '') {
             $payload['flow'] = $flow;
         }
+        foreach ($extra as $key => $value) {
+            if (is_string($key) && $key !== '' && !array_key_exists($key, $payload)) {
+                $payload[$key] = $value;
+            }
+        }
 
         $session->storeDraft($draftId, $payload);
     }
@@ -156,6 +167,20 @@ final class AgentDraftService
         $base = basename($path);
 
         return ($base === '' || $base === '.' || $base === '/') ? '' : $base;
+    }
+
+    /**
+     * A new record keeps its default for a blank value: the card leaves that field out (an empty row only
+     * made Apply look blocked), and "Saved n of m" must not count it either.
+     */
+    public static function isShownOnCard(ToolPlan $plan, ToolPlanField $field): bool
+    {
+        if ($plan->action !== 'create' || $field->field === '_rename') {
+            return true;
+        }
+        $value = $field->proposedValue;
+
+        return !($value === null || (is_scalar($value) && trim((string) $value) === '') || $value === []);
     }
 
     private function formatValue(mixed $value): string

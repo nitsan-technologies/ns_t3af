@@ -51,6 +51,18 @@ readonly class FileUploadFromUrlTool implements McpFalStorageToolInterface, McpP
         $url = (string) ($arguments['url'] ?? '');
         $directoryPath = (string) ($arguments['directoryPath'] ?? '/');
         $fileName = (string) ($arguments['fileName'] ?? '');
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+        if (!in_array(strtolower((string) parse_url($url, PHP_URL_SCHEME)), ['http', 'https'], true) || $host === '') {
+            throw new \InvalidArgumentException(
+                'url must be a full http:// or https:// address the editor gave you. To use a file that is already in the storage, pass its sys_file uid to file_reference_add instead of uploading it.',
+            );
+        }
+        if (preg_match('/(?:^|\.)(?:example\.(?:com|net|org)|[^.]+\.(?:example|test|invalid|localhost))$|^localhost$/', $host) === 1) {
+            throw new \InvalidArgumentException(sprintf(
+                '%s is a placeholder address, not a real file. Use a URL the editor gave you, or tell the editor the file is missing.',
+                $host,
+            ));
+        }
 
         $proposed = $fileName !== ''
             ? 'upload from ' . $url . ' as ' . $fileName . ' to ' . $directoryPath
@@ -83,12 +95,8 @@ readonly class FileUploadFromUrlTool implements McpFalStorageToolInterface, McpP
         int $storageUid = 1,
         string $fileName = '',
     ): string {
-        try {
-            $result = $this->fileService->uploadFileFromUrl($storageUid, $directoryPath, $url, $fileName);
+        $result = $this->fileService->uploadFileFromUrl($storageUid, $directoryPath, $url, $fileName);
 
-            return json_encode($result, JSON_THROW_ON_ERROR);
-        } catch (\Throwable $exception) {
-            return json_encode(['error' => $exception->getMessage()], JSON_THROW_ON_ERROR);
-        }
+        return json_encode($result, JSON_THROW_ON_ERROR);
     }
 }

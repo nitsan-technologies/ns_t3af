@@ -47,6 +47,7 @@ use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
@@ -63,7 +64,11 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     /** Fields every create carries; they do not count as content the editor asked for. */
     private const STRUCTURAL_FIELDS = ['CType', 'colPos', 'sys_language_uid', 'l18n_parent', 'hidden', 'sorting', 'list_type'];
 
-    private const ALLOWED_ACTIONS = ['create', 'update', 'delete'];
+    /** A 0 on these fields is what a new record has anyway; a card row "Publish Date 0" only confuses the editor. */
+    private const ZERO_IS_DEFAULT_FIELDS = ['list_type', 'l18n_parent', 'l10n_parent', 'starttime', 'endtime', 'fe_group', 'sorting', 'editlock'];
+
+    /** Text fields where a rewrite must stay about the same thing. */
+    private const REWRITE_CHECKED_FIELDS = ['bodytext', 'header', 'subheader', 'teaser'];
 
     /** A NEW id for the one record of a create. */
     private const NEW_ID = 'NEWrecord';
@@ -86,14 +91,14 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
      */
     public function plan(array $arguments): ToolPlan
     {
-        $action = (string) ($arguments['action'] ?? '');
         $tableName = (string) ($arguments['tableName'] ?? ($arguments['table'] ?? ''));
         $uid = (int) ($arguments['uid'] ?? 0);
         $dataRaw = $arguments['data'] ?? '{}';
         $dataRaw = is_string($dataRaw) ? $dataRaw : json_encode($dataRaw, JSON_THROW_ON_ERROR);
-
-        if (!in_array($action, self::ALLOWED_ACTIONS, true)) {
-            throw new \InvalidArgumentException('Invalid action. Use create, update, or delete.');
+        $payloadHint = self::decodeDataLoose($dataRaw);
+        $action = self::normalizeAction((string) ($arguments['action'] ?? ''), $payloadHint);
+        if ($payloadHint !== []) {
+            $dataRaw = json_encode($payloadHint, JSON_THROW_ON_ERROR);
         }
 
         if (!$this->tableExists($tableName)) {
@@ -122,8 +127,8 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return match ($action) {
-            'create' => $this->planCreate($tableName, $payload, $beforeUid, $afterUid),
-            'update' => $this->planUpdate($tableName, $uid, $payload),
+            'create' => $this->planCreate($tableName, $payload, $beforeUid, $afterUid, (string) ($arguments['requestQuery'] ?? '')),
+            'update' => $this->planUpdate($tableName, $uid, $payload, (string) ($arguments['requestQuery'] ?? '')),
             'delete' => $this->planDelete($tableName, $uid),
         };
     }
@@ -160,8 +165,14 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         int $beforeUid = 0,
         int $afterUid = 0,
     ): string {
-        if (!in_array($action, self::ALLOWED_ACTIONS, true)) {
-            return $this->encodeError('Invalid action. Use create, update, or delete.');
+        $payloadHint = self::decodeDataLoose($data);
+        try {
+            $action = self::normalizeAction($action, $payloadHint);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->encodeError($exception->getMessage());
+        }
+        if ($payloadHint !== []) {
+            $data = json_encode($payloadHint, JSON_THROW_ON_ERROR);
         }
 
         if (!$this->tableExists($tableName)) {
@@ -194,6 +205,64 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
      * The "data" JSON object. A delete needs none (empty or invalid data is ignored there);
      * empty data is an empty object.
      *
+     * Map model synonyms to create|update|delete. Unhide/hide become update and set hidden when missing.
+     *
+     * @param array<string, mixed> $payload
+     * @return 'create'|'update'|'delete'
+     */
+    public static function normalizeAction(string $action, array &$payload): string
+    {
+        $normalized = strtolower(trim($action));
+        if ($normalized === 'create' || $normalized === 'update' || $normalized === 'delete') {
+            return $normalized;
+        }
+
+        $unhide = ['unhide', 'show', 'enable', 'reveal', 'visible', 'activate', 'publish', 'make_visible'];
+        $hide = ['hide', 'disable', 'unpublish'];
+        $update = ['change', 'modify', 'set', 'edit'];
+
+        // "make visible" / "make_visible" arrive with a space or underscore.
+        $compact = str_replace([' ', '-'], '_', $normalized);
+        if (in_array($compact, ['make_visible', 'set_visible', 'make_visible_on_website'], true)) {
+            $normalized = 'visible';
+        }
+
+        if (in_array($normalized, $unhide, true) || $normalized === 'visible') {
+            if (!array_key_exists('hidden', $payload)) {
+                $payload['hidden'] = 0;
+            }
+
+            return 'update';
+        }
+        if (in_array($normalized, $hide, true)) {
+            if (!array_key_exists('hidden', $payload)) {
+                $payload['hidden'] = 1;
+            }
+
+            return 'update';
+        }
+        if (in_array($normalized, $update, true)) {
+            return 'update';
+        }
+
+        throw new \InvalidArgumentException('Invalid action. Use create, update, or delete.');
+    }
+
+    /**
+     * Best-effort decode for action aliases; empty on bad JSON (normalizeAction still runs).
+     *
+     * @return array<string, mixed>
+     */
+    public static function decodeDataLoose(string $data): array
+    {
+        try {
+            return self::decodeData($data === '' ? '{}' : $data, 'update');
+        } catch (\InvalidArgumentException) {
+            return [];
+        }
+    }
+
+    /**
      * @return array<string, mixed>
      * @throws \InvalidArgumentException when create/update data is not a JSON object
      */
@@ -202,14 +271,33 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         if ($action === 'delete' || trim($data) === '') {
             return [];
         }
+        // A model sometimes wraps the object in a code fence.
+        $data = trim((string) preg_replace('/^```(?:json)?\s*|\s*```$/i', '', trim($data)));
         try {
-            $payload = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
+            try {
+                $payload = json_decode($data, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException $exception) {
+                if (!in_array($exception->getCode(), [JSON_ERROR_CTRL_CHAR, JSON_ERROR_SYNTAX], true)) {
+                    throw $exception;
+                }
+                // Some models (Mistral) put raw line breaks or tabs, or unescaped quotes (HTML attributes), inside a string value.
+                try {
+                    $payload = json_decode(self::escapeControlCharsInStrings($data), true, 512, JSON_THROW_ON_ERROR);
+                } catch (\JsonException) {
+                    $payload = json_decode(self::escapeControlCharsInStrings(self::escapeInnerQuotes($data)), true, 512, JSON_THROW_ON_ERROR);
+                }
+            }
         } catch (\JsonException $exception) {
             throw new \InvalidArgumentException(
                 'data must be a JSON object of field values, e.g. {"pid": 12, "title": "News"} (' . $exception->getMessage() . ').',
                 1790400001,
                 $exception,
             );
+        }
+        // Double-encoded: the object arrived as a JSON string holding JSON.
+        if (is_string($payload) && in_array(trim($payload)[0] ?? '', ['{'], true)) {
+            $inner = json_decode($payload, true);
+            $payload = is_array($inner) ? $inner : $payload;
         }
         if (!is_array($payload) || ($payload !== [] && array_is_list($payload))) {
             throw new \InvalidArgumentException('data must be a JSON object of field values, e.g. {"pid": 12, "title": "News"}.', 1790400002);
@@ -219,10 +307,90 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         return $payload;
     }
 
-    /** @param array<string, mixed> $payload */
-    private function planCreate(string $tableName, array $payload, int $beforeUid = 0, int $afterUid = 0): ToolPlan
+    /**
+     * A string only ends at a quote that is followed by `}`, `]`, `:` or `, "`. Any other quote inside
+     * a string value (for example in <a href="…">) is escaped.
+     */
+    private static function escapeInnerQuotes(string $json): string
     {
-        $pid = $this->resolveCreatePid($payload, $beforeUid, $afterUid);
+        $out = '';
+        $inString = false;
+        $escaped = false;
+        $length = strlen($json);
+        for ($i = 0; $i < $length; ++$i) {
+            $char = $json[$i];
+            if (!$inString) {
+                $out .= $char;
+                if ($char === '"') {
+                    $inString = true;
+                    $escaped = false;
+                }
+                continue;
+            }
+            if ($escaped) {
+                $escaped = false;
+                $out .= $char;
+                continue;
+            }
+            if ($char === '\\') {
+                $escaped = true;
+                $out .= $char;
+                continue;
+            }
+            if ($char !== '"') {
+                $out .= $char;
+                continue;
+            }
+            $rest = ltrim(substr($json, $i + 1));
+            $next = $rest[0] ?? '';
+            $ends = $next === '' || $next === '}' || $next === ']' || $next === ':'
+                || ($next === ',' && preg_match('/^,\s*["}\]\[{]/', $rest) === 1);
+            if ($ends) {
+                $inString = false;
+                $out .= $char;
+            } else {
+                $out .= '\\"';
+            }
+        }
+
+        return $out;
+    }
+
+    /** Escapes raw control characters inside JSON string literals only; whitespace between tokens stays. */
+    private static function escapeControlCharsInStrings(string $json): string
+    {
+        $out = '';
+        $inString = false;
+        $escaped = false;
+        $length = strlen($json);
+        for ($i = 0; $i < $length; ++$i) {
+            $char = $json[$i];
+            if ($inString && !$escaped && ord($char) < 0x20) {
+                $out .= sprintf('\\u%04x', ord($char));
+                continue;
+            }
+            if ($inString) {
+                $escaped = !$escaped && $char === '\\';
+                if (!$escaped && $char === '"') {
+                    $inString = false;
+                }
+            } elseif ($char === '"') {
+                $inString = true;
+            }
+            $out .= $char;
+        }
+
+        return $out;
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function planCreate(string $tableName, array $payload, int $beforeUid = 0, int $afterUid = 0, string $requestQuery = ''): ToolPlan
+    {
+        if ($tableName === 'tx_news_domain_model_news') {
+            $payload = self::withSaneNewsDate($payload, $requestQuery);
+            $payload = $this->withNewsStoragePid($payload);
+        }
+        $pid = $this->resolveCreatePid($payload, $beforeUid, $afterUid, $tableName);
         if ($pid < 0) {
             $this->recordService->assertInsertAfterExists($tableName, abs($pid));
         }
@@ -230,7 +398,15 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             throw new \InvalidArgumentException(PageAccessService::ACCESS_DENIED_MESSAGE);
         }
         unset($payload['pid'], $payload['beforeUid'], $payload['afterUid']);
-        $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
+        $filteredData = self::withoutEmptyCreateFields($this->normalizer->filterWritableFields($tableName, $payload));
+        // Empty "add a text element" must still get a draft card — fill from the page title (no error card).
+        if ($tableName === 'tt_content' && ($filteredData['CType'] ?? '') === 'text'
+            && trim((string) ($filteredData['header'] ?? '')) === ''
+            && trim((string) ($filteredData['subheader'] ?? '')) === ''
+            && trim((string) ($filteredData['bodytext'] ?? '')) === ''
+        ) {
+            $filteredData = self::withPlaceholderTextContent($filteredData, $pid);
+        }
         // Fields the group may not edit would be dropped silently at Apply: the card must not offer them,
         // and a create whose requested content fields are all forbidden is refused.
         $notAllowed = [];
@@ -240,6 +416,24 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             $notAllowed = array_values(array_map('strval', array_keys(array_diff_key($filteredData, $allowed))));
             if ($notAllowed !== [] && array_diff(array_keys($allowed), self::STRUCTURAL_FIELDS) === []) {
                 throw new \InvalidArgumentException('You are not allowed to change this field with your backend account: ' . implode(', ', $notAllowed) . '.');
+            }
+            // A page type the group may not set is dropped at Apply, and the editor would get a plain page.
+            if ($tableName === 'pages' && (int) ($filteredData['doktype'] ?? 1) !== 1 && !isset($allowed['doktype'])) {
+                throw new \InvalidArgumentException(sprintf(
+                    'You are not allowed to create this kind of page (page type %s) with your backend account. Nothing was created.',
+                    (string) $filteredData['doktype'],
+                ));
+            }
+            if (
+                $tableName === 'pages'
+                && (int) ($allowed['doktype'] ?? 1) !== 1
+                && !$user->isAdmin()
+                && !$user->checkAuthMode('pages', 'doktype', (string) $allowed['doktype'])
+            ) {
+                throw new \InvalidArgumentException(sprintf(
+                    'You are not allowed to create this kind of page (page type %s) with your backend account. Nothing was created.',
+                    (string) $allowed['doktype'],
+                ));
             }
             $filteredData = $allowed;
         }
@@ -259,8 +453,58 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         return new ToolPlan('create', 'write_table', $fields, ['pid' => $pid] + ($notAllowed !== [] ? ['notAllowedFields' => $notAllowed] : []));
     }
 
+    /**
+     * A new record starts empty, so a blank value or a 0 on a field that is 0 anyway only adds an empty row to the
+     * card (and, for a model that sends every column, buries the text the editor wants to review).
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private static function withoutEmptyCreateFields(array $data): array
+    {
+        foreach ($data as $field => $value) {
+            $blank = $value === null || (is_string($value) && trim($value) === '');
+            $zeroDefault = ($value === 0 || $value === '0') && in_array((string) $field, self::ZERO_IS_DEFAULT_FIELDS, true);
+            if ($blank || $zeroDefault) {
+                unset($data[$field]);
+            }
+        }
+
+        return $data;
+    }
+
+    /**
+     * When the editor asked for a text element but the model sent no copy, draft from the page title.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    public static function withPlaceholderTextContent(array $data, int $pid): array
+    {
+        $pageTitle = self::pageTitleForContentPid($pid);
+        $header = $pageTitle !== '' ? $pageTitle : 'Text';
+        $data['header'] = $header;
+        $data['bodytext'] = '<p>' . htmlspecialchars($header, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>';
+
+        return $data;
+    }
+
+    private static function pageTitleForContentPid(int $pid): string
+    {
+        $pageUid = $pid > 0 ? $pid : 0;
+        if ($pageUid <= 0) {
+            return '';
+        }
+        $row = BackendUtility::getRecord('pages', $pageUid, 'title');
+        if (!is_array($row)) {
+            return '';
+        }
+
+        return trim((string) ($row['title'] ?? ''));
+    }
+
     /** @param array<string, mixed> $payload */
-    private function planUpdate(string $tableName, int $uid, array $payload): ToolPlan
+    private function planUpdate(string $tableName, int $uid, array $payload, string $requestQuery = ''): ToolPlan
     {
         if ($uid <= 0) {
             throw new \InvalidArgumentException('Update requires uid > 0.');
@@ -287,6 +531,21 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         $fieldNames = array_keys($filteredData);
         $current = $this->recordService->findByUid($tableName, $uid, $fieldNames) ?? [];
 
+        // A rewrite keeps the facts of the original. A draft that shares nothing with it is refused here, so
+        // the model corrects the call instead of the editor approving an unrelated text.
+        if (self::isRewriteRequest($requestQuery)) {
+            foreach (self::REWRITE_CHECKED_FIELDS as $textField) {
+                if (isset($filteredData[$textField], $current[$textField]) && is_string($filteredData[$textField]) && is_string($current[$textField])
+                    && !self::rewriteKeepsMeaning($current[$textField], $filteredData[$textField])
+                ) {
+                    throw new \InvalidArgumentException(sprintf(
+                        'The new "%s" shares none of the key words of the current text. A rewrite must keep the meaning and every fact of the original and only change wording, tone or length. Rewrite the current text again and call write_table with that.',
+                        $textField,
+                    ));
+                }
+            }
+        }
+
         $fields = [];
         foreach ($filteredData as $fieldName => $value) {
             $fields[] = new ToolPlanField(
@@ -299,7 +558,179 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             );
         }
 
+        foreach ($this->hiddenTranslationContentFields($tableName, $uid, $filteredData, $requestQuery) as $extra) {
+            $fields[] = $extra;
+        }
+
         return new ToolPlan('update', 'write_table', $fields);
+    }
+
+    /**
+     * Unhiding a translated page also unhides its hidden content elements (same as Activate Translated Content).
+     *
+     * @param array<string, mixed> $filteredData
+     * @return list<ToolPlanField>
+     */
+    private function hiddenTranslationContentFields(string $tableName, int $uid, array $filteredData, string $requestQuery): array
+    {
+        if ($tableName !== 'pages' || !array_key_exists('hidden', $filteredData) || (int) $filteredData['hidden'] !== 0) {
+            return [];
+        }
+        $page = $this->recordService->findByUid('pages', $uid, ['uid', 'pid', 'sys_language_uid', 'l10n_parent', 'hidden']);
+        if (!is_array($page)) {
+            return [];
+        }
+        $languageUid = (int) ($page['sys_language_uid'] ?? 0);
+        if ($languageUid <= 0) {
+            return [];
+        }
+        // Only when making a translation visible (explicit request or unhiding a hidden translation row).
+        $asksVisible = $requestQuery === ''
+            || preg_match('/\b(visible|unhide|show|enable|activate|sichtbar|einblend|aktivier)\w*\b/iu', $requestQuery) === 1;
+        if (!$asksVisible) {
+            return [];
+        }
+
+        // Connected translations keep content on the default-language page (l10n_parent).
+        $contentPid = (int) ($page['l10n_parent'] ?? 0);
+        if ($contentPid <= 0) {
+            $contentPid = $uid;
+        }
+
+        $listed = $this->recordService->findByPid(
+            'tt_content',
+            $contentPid,
+            100,
+            0,
+            ['uid', 'hidden', 'deleted', 'header'],
+            $languageUid,
+            'sys_language_uid',
+        );
+        $fields = [];
+        foreach ($listed['records'] as $row) {
+            if (!is_array($row) || (int) ($row['deleted'] ?? 0) === 1 || (int) ($row['hidden'] ?? 0) !== 1) {
+                continue;
+            }
+            $contentUid = (int) ($row['uid'] ?? 0);
+            if ($contentUid <= 0) {
+                continue;
+            }
+            $fields[] = new ToolPlanField(
+                ToolPlanField::buildKey('tt_content', $contentUid, 'hidden'),
+                'tt_content',
+                $contentUid,
+                'hidden',
+                1,
+                0,
+            );
+        }
+
+        return $fields;
+    }
+
+    /**
+     * News create needs a storage folder pid. Models omit it (or send 0) after being told not to use the
+     * Layout page for news search — DataHandler then fails on pages:0.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function withNewsStoragePid(array $payload): array
+    {
+        $pid = isset($payload['pid']) && is_numeric($payload['pid']) ? (int) $payload['pid'] : 0;
+        // Keep only a real news storage folder. A guessed Layout page (e.g. Privacy) must not win.
+        if ($pid > 0 && $this->recordService->isSuitableNewsStoragePid($pid)) {
+            return $payload;
+        }
+
+        $fallback = $this->recordService->preferredPidForTable('tx_news_domain_model_news');
+        if ($fallback <= 0) {
+            throw new \InvalidArgumentException(
+                'Creating a news article needs a news storage folder (pid). None was found that you can use.',
+            );
+        }
+        $payload['pid'] = $fallback;
+
+        return $payload;
+    }
+
+    /**
+     * True when create data has no usable pid yet (missing/zero). Unsuitable positive pids are
+     * rewritten in {@see withNewsStoragePid()} via page type, not here.
+     *
+     * @param array<string, mixed> $payload
+     * @internal used by unit tests
+     */
+    public static function newsCreateNeedsStoragePid(array $payload): bool
+    {
+        return !isset($payload['pid']) || !is_numeric($payload['pid']) || (int) $payload['pid'] <= 0;
+    }
+
+    /**
+     * A new news article is dated today unless the editor named a date. Models invent one (2023-12-01) that
+     * sorts the article years into the past.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    public static function withSaneNewsDate(array $payload, string $requestQuery, ?int $now = null): array
+    {
+        $now ??= time();
+        $given = $payload['datetime'] ?? null;
+        if ($given === null || $given === '' || $given === 0 || $given === '0') {
+            $payload['datetime'] = date('Y-m-d H:i:s', $now);
+
+            return $payload;
+        }
+        $timestamp = is_numeric($given) ? (int) $given : strtotime((string) $given);
+        $namedByEditor = preg_match('/\b(?:19|20)\d{2}\b|\d{1,2}\.\d{1,2}\.|\b(?:today|tomorrow|yesterday|heute|morgen|gestern)\b/iu', $requestQuery) === 1;
+        if (!$namedByEditor && ($timestamp === false || $timestamp < $now - 86400 * 183)) {
+            $payload['datetime'] = date('Y-m-d H:i:s', $now);
+        }
+
+        return $payload;
+    }
+
+    public static function isRewriteRequest(string $query): bool
+    {
+        return preg_match(
+            '/\b(rewrite|reword|rephrase|paraphrase|shorten|simplify|polish|improve|friendlier|more\s+friendly|more\s+formal|shorter|longer|simpler|k[üu]rzer|einfacher|umschreib\w*|umformulier\w*|k[üu]rz\w*|freundlicher|verbesser\w*|[üu]berarbeit\w*)\b/iu',
+            $query,
+        ) === 1;
+    }
+
+    /**
+     * False when the new text shares (almost) none of the significant words of the old one, i.e. it is not a
+     * rewrite of it. Short originals (fewer than 3 significant words) cannot be judged and pass.
+     */
+    public static function rewriteKeepsMeaning(string $old, string $new): bool
+    {
+        $oldWords = self::significantWords($old);
+        if (count($oldWords) < 3) {
+            return true;
+        }
+        $newWords = self::significantWords($new);
+        $kept = 0;
+        foreach ($oldWords as $word) {
+            foreach ($newWords as $candidate) {
+                if ($candidate === $word || (mb_strlen($word) >= 5 && mb_strlen($candidate) >= 5 && mb_substr($candidate, 0, 5) === mb_substr($word, 0, 5))) {
+                    ++$kept;
+                    break;
+                }
+            }
+        }
+
+        return $kept / count($oldWords) >= 0.34;
+    }
+
+    /** @return list<string> */
+    private static function significantWords(string $text): array
+    {
+        $plain = mb_strtolower(html_entity_decode(strip_tags($text)));
+        preg_match_all('/[\p{L}\p{N}]{4,}/u', $plain, $matches);
+        $stop = ['this', 'that', 'with', 'from', 'your', 'have', 'will', 'dies', 'diese', 'dieser', 'eine', 'einen', 'sind', 'oder', 'sowie'];
+
+        return array_values(array_unique(array_diff($matches[0], $stop)));
     }
 
     private function planDelete(string $tableName, int $uid): ToolPlan
@@ -424,7 +855,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
      *
      * @param array<string, mixed> $payload
      */
-    private function resolveCreatePid(array $payload, int $beforeUid, int $afterUid = 0): int
+    private function resolveCreatePid(array $payload, int $beforeUid, int $afterUid = 0, string $tableName = 'pages'): int
     {
         $beforeUid = $beforeUid > 0 ? $beforeUid : (int) ($payload['beforeUid'] ?? 0);
         $afterUid = $afterUid > 0 ? $afterUid : (int) ($payload['afterUid'] ?? 0);
@@ -432,6 +863,27 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             return -$afterUid;
         }
         if ($beforeUid > 0) {
+            $contentPid = isset($payload['pid']) && is_numeric($payload['pid']) ? (int) $payload['pid'] : 0;
+            // "Before 773" for a content element means that element, never the page with uid 773.
+            // Uids collide across tables: only treat beforeUid as a CE when it sits on the same page as pid.
+            if ($tableName !== 'pages' && $this->recordService->findExistingUids($tableName, [$beforeUid]) !== []) {
+                if ($contentPid <= 0) {
+                    return $this->recordService->targetBeforeRecord($tableName, $beforeUid);
+                }
+                $beforeRecord = $this->recordService->findByUid($tableName, $beforeUid, ['pid']);
+                if (is_array($beforeRecord) && (int) ($beforeRecord['pid'] ?? -1) === $contentPid) {
+                    return $this->recordService->targetBeforeRecord($tableName, $beforeUid);
+                }
+            }
+            // "Before the first element on this page" with beforeUid=<parent page> + pid=<this page>:
+            // keep the create on pid. Real "before page X" still uses targetBeforePage.
+            if ($tableName === 'tt_content' && $contentPid > 0) {
+                $page = $this->recordService->findByUid('pages', $contentPid, ['pid']);
+                if (is_array($page) && (int) ($page['pid'] ?? -1) === $beforeUid) {
+                    return $contentPid;
+                }
+            }
+
             return $this->recordService->targetBeforePage($beforeUid);
         }
         if (!isset($payload['pid']) || !is_numeric($payload['pid'])) {
@@ -445,7 +897,10 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     private function create(string $tableName, array $payload, bool $strict = false, int $beforeUid = 0, int $afterUid = 0): string
     {
         try {
-            $pid = $this->resolveCreatePid($payload, $beforeUid, $afterUid);
+            if ($tableName === 'tx_news_domain_model_news') {
+                $payload = $this->withNewsStoragePid($payload);
+            }
+            $pid = $this->resolveCreatePid($payload, $beforeUid, $afterUid, $tableName);
         } catch (\InvalidArgumentException $exception) {
             return $this->encodeError($exception->getMessage());
         }
@@ -571,6 +1026,14 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
         if ($fileFieldUids !== []) {
             $response['fileFields'] = $fileFieldUids;
+        }
+        if ($result instanceof RecordsApplyResult) {
+            if ($result->warnings !== []) {
+                $response['warnings'] = $result->warnings;
+            }
+            if ($result->redirects !== []) {
+                $response['redirects'] = $result->redirects;
+            }
         }
 
         return json_encode($response, JSON_THROW_ON_ERROR);

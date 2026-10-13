@@ -30,12 +30,16 @@ use Mcp\Capability\Attribute\McpTool;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Service\PermissionService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 
 #[McpToolSeverity(ToolSeverity::Read)]
 readonly class TableSchemaTool implements McpNonAiToolInterface
 {
-    public function __construct(private TcaSchemaService $tcaSchemaService) {}
+    public function __construct(
+        private TcaSchemaService $tcaSchemaService,
+        private PermissionService $permissionService,
+    ) {}
 
     #[McpTool(
         name: 'table_schema',
@@ -46,10 +50,15 @@ readonly class TableSchemaTool implements McpNonAiToolInterface
     )]
     public function execute(string $tableName): string
     {
+        $this->permissionService->assertCanSelectTable($tableName);
+
         $schema = $this->tcaSchemaService->getFieldsSchema($tableName);
 
         if ($schema['fields'] === []) {
-            return json_encode(['error' => 'Table not found or has no readable fields: ' . $tableName], JSON_THROW_ON_ERROR);
+            throw new \InvalidArgumentException(
+                'Table not found or has no readable fields: ' . $tableName,
+                1790600004,
+            );
         }
 
         return json_encode($schema, JSON_THROW_ON_ERROR);

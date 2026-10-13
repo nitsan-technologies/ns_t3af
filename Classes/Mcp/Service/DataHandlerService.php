@@ -27,22 +27,18 @@ use const JSON_THROW_ON_ERROR;
 
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
-use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
-use TYPO3\CMS\Core\Core\SystemEnvironmentBuilder;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
-use TYPO3\CMS\Core\Exception\SiteNotFoundException;
-use TYPO3\CMS\Core\Http\ServerRequest;
-use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 readonly class DataHandlerService
 {
     public function __construct(
-        private SiteFinder $siteFinder,
+        private McpSiteRequestBootstrap $siteRequestBootstrap,
         private RecordService $recordService,
+        private ?McpSlugRedirectGuard $slugRedirectGuard = null,
     ) {}
 
     /**
@@ -54,8 +50,7 @@ readonly class DataHandlerService
         $fields['pid'] = $pid;
         $fields = self::withContentColumn($table, $fields);
 
-        $hadRequest = isset($GLOBALS['TYPO3_REQUEST']);
-        $originalRequest = $GLOBALS['TYPO3_REQUEST'] ?? null;
+        $requestSnapshot = $this->siteRequestBootstrap->capture();
 
         try {
             if ($table === 'pages') {
@@ -63,11 +58,11 @@ readonly class DataHandlerService
                     $liveAnchor = $this->resolveLivePageUid(abs($pid));
                     $pid = -$liveAnchor;
                     $fields['pid'] = $pid;
-                    $this->attachSiteAttribute($liveAnchor);
+                    $this->siteRequestBootstrap->attachForPage($liveAnchor);
                 } else {
                     $pid = $this->resolveLivePageUid($pid);
                     $fields['pid'] = $pid;
-                    $this->attachSiteAttribute($pid);
+                    $this->siteRequestBootstrap->attachForPage($pid);
                 }
             }
 
@@ -86,7 +81,7 @@ readonly class DataHandlerService
             return (int) $uid;
         } finally {
             if ($table === 'pages') {
-                $this->restoreRequest($hadRequest, $originalRequest);
+                $this->siteRequestBootstrap->restore($requestSnapshot);
             }
         }
     }
@@ -107,18 +102,33 @@ readonly class DataHandlerService
         return $fields;
     }
 
-    /** @param array<string, mixed> $fields */
-    public function updateRecord(string $table, int $uid, array $fields): void
+    /**
+     * @param array<string, mixed> $fields
+     * @return array{warnings: list<string>, redirects: list<array{uid: int, source_host: string, source_path: string, target: string}>}
+     */
+    public function updateRecord(string $table, int $uid, array $fields): array
     {
-        $hadRequest = isset($GLOBALS['TYPO3_REQUEST']);
-        $originalRequest = $GLOBALS['TYPO3_REQUEST'] ?? null;
+        $requestSnapshot = $this->siteRequestBootstrap->capture();
+        $warnings = [];
+        $redirects = [];
+        $guard = $this->slugRedirectGuard;
+        $trackRedirects = $guard !== null && $table === 'pages' && array_key_exists('slug', $fields);
+        if ($trackRedirects) {
+            $guard->begin();
+        }
 
         try {
             if ($table === 'pages') {
                 // DataHandler page writes must use the live uid — workspace version
                 // uids break RootlineUtility / SiteFinder ("Could not fetch page data").
                 $uid = $this->resolveLivePageUid($uid);
-                $this->attachSiteAttribute($uid);
+                if (!$this->siteRequestBootstrap->attachForPage($uid)) {
+                    $guard?->skipPage($uid);
+                    $warnings[] = sprintf(
+                        'Page %d has no site configuration; auto-redirects for slug changes were skipped.',
+                        $uid,
+                    );
+                }
             }
 
             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
@@ -126,11 +136,19 @@ readonly class DataHandlerService
             $dataHandler->process_datamap();
 
             $this->checkErrors($dataHandler);
+            if ($trackRedirects && $guard !== null) {
+                $redirects = $guard->collectNewRedirects();
+            }
         } finally {
             if ($table === 'pages') {
-                $this->restoreRequest($hadRequest, $originalRequest);
+                $this->siteRequestBootstrap->restore($requestSnapshot);
+            }
+            if ($trackRedirects && $guard !== null) {
+                $guard->end();
             }
         }
+
+        return ['warnings' => $warnings, 'redirects' => $redirects];
     }
 
     public function deleteRecord(string $table, int $uid): void
@@ -163,14 +181,13 @@ readonly class DataHandlerService
      */
     public function copyRecord(string $table, int $uid, int $target, int $copyTreeDepth = 0): int
     {
-        $hadRequest = isset($GLOBALS['TYPO3_REQUEST']);
-        $originalRequest = $GLOBALS['TYPO3_REQUEST'] ?? null;
+        $requestSnapshot = $this->siteRequestBootstrap->capture();
         $previousCopyLevels = null;
 
         try {
             if ($table === 'pages') {
                 $uid = $this->resolveLivePageUid($uid);
-                $this->attachSiteAttribute($uid);
+                $this->siteRequestBootstrap->attachForPage($uid);
             }
 
             if ($table === 'pages' && $copyTreeDepth > 0 && isset($GLOBALS['BE_USER'])) {
@@ -201,7 +218,7 @@ readonly class DataHandlerService
                 }
             }
             if ($table === 'pages') {
-                $this->restoreRequest($hadRequest, $originalRequest);
+                $this->siteRequestBootstrap->restore($requestSnapshot);
             }
         }
     }
@@ -226,20 +243,54 @@ readonly class DataHandlerService
      *
      * @param list<int> $fileUids sys_file UIDs to attach
      * @param int $pid page of the record (references are stored there)
+     * @param array{alternative?: string, title?: string, description?: string} $texts set on every created reference
      * @return list<int> UIDs of the created sys_file_reference records
      */
-    public function createFileReferences(string $table, int $recordUid, string $fieldName, array $fileUids, int $pid = 0): array
+    public function createFileReferences(string $table, int $recordUid, string $fieldName, array $fileUids, int $pid = 0, array $texts = []): array
     {
         if ($fileUids === []) {
             throw new \RuntimeException('No file UIDs provided for file reference creation.', 1712002100);
         }
 
+        $texts = array_filter($texts, static fn(string $value): bool => trim($value) !== '');
         $references = [];
         foreach ($fileUids as $fileUid) {
-            $references[] = ['uid_local' => $fileUid];
+            $references[] = ['uid_local' => $fileUid, ...$texts];
         }
 
         return $this->writeFileFieldReferences($table, $recordUid, $fieldName, $references, replaceExisting: false, pid: $pid);
+    }
+
+    /**
+     * Remove some file references of a TCA file field; the files themselves stay. The parent field
+     * keeps the remaining references, so its counter stays right.
+     *
+     * @param list<int> $referenceUids
+     * @return list<int> UIDs of the removed references (only those still attached to this field)
+     */
+    public function removeFileReferences(string $table, int $recordUid, string $fieldName, array $referenceUids): array
+    {
+        $removed = [];
+        $remaining = [];
+        foreach ($this->recordService->findFileReferences($table, $recordUid, $fieldName) as $row) {
+            $uid = (int) ($row['uid'] ?? 0);
+            if ($uid <= 0) {
+                continue;
+            }
+            if (in_array($uid, $referenceUids, true)) {
+                $removed[] = $uid;
+            } else {
+                $remaining[] = $uid;
+            }
+        }
+        if ($removed === []) {
+            return [];
+        }
+
+        $this->deleteRecords('sys_file_reference', $removed);
+        $this->updateRecord($table, $recordUid, [$fieldName => implode(',', $remaining)]);
+
+        return $removed;
     }
 
     /**
@@ -418,43 +469,6 @@ readonly class DataHandlerService
         $oid = (int) ($record['t3ver_oid'] ?? 0);
 
         return $oid > 0 ? $oid : (int) ($record['uid'] ?? $pageId);
-    }
-
-    private function attachSiteAttribute(int $livePageId): void
-    {
-        if ($livePageId <= 0) {
-            return;
-        }
-
-        try {
-            $site = $this->siteFinder->getSiteByPageId($livePageId);
-        } catch (SiteNotFoundException) {
-            return;
-        }
-
-        $request = $GLOBALS['TYPO3_REQUEST'] ?? null;
-        if ($request instanceof ServerRequestInterface) {
-            $GLOBALS['TYPO3_REQUEST'] = $request->withAttribute('site', $site);
-
-            return;
-        }
-
-        $GLOBALS['TYPO3_REQUEST'] = (new ServerRequest((string) $site->getBase()))
-            ->withAttribute('site', $site)
-            ->withAttribute('applicationType', SystemEnvironmentBuilder::REQUESTTYPE_BE);
-    }
-
-    private function restoreRequest(bool $hadRequest, mixed $originalRequest): void
-    {
-        if ($hadRequest && $originalRequest instanceof ServerRequestInterface) {
-            $GLOBALS['TYPO3_REQUEST'] = $originalRequest;
-
-            return;
-        }
-
-        if (!$hadRequest) {
-            unset($GLOBALS['TYPO3_REQUEST']);
-        }
     }
 
     /**

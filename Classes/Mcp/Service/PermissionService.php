@@ -24,6 +24,18 @@ use TYPO3\CMS\Core\Type\Bitmask\Permission;
 
 readonly class PermissionService
 {
+    /**
+     * Backend auth tables: never readable via generic MCP search/count for non-admins,
+     * even if a group were misconfigured with tables_select.
+     *
+     * @var list<string>
+     */
+    private const ADMIN_ONLY_SELECT_TABLES = [
+        'be_users',
+        'be_groups',
+        'be_sessions',
+    ];
+
     /** @return array{table: string, canSelect: bool, canModify: bool} */
     public function checkTableAccess(string $table): array
     {
@@ -31,9 +43,35 @@ readonly class PermissionService
 
         return [
             'table' => $table,
-            'canSelect' => $backendUser->check('tables_select', $table),
+            'canSelect' => $this->canSelectTable($table, $backendUser),
             'canModify' => $backendUser->check('tables_modify', $table),
         ];
+    }
+
+    /**
+     * Refuse tables the current backend user may not list (MCP record_search / record_count / …).
+     *
+     * @throws \InvalidArgumentException code 1790600001
+     */
+    public function assertCanSelectTable(string $table): void
+    {
+        if ($this->canSelectTable($table, $this->getBackendUser())) {
+            return;
+        }
+
+        throw new \InvalidArgumentException(
+            sprintf('You are not allowed to read table "%s" with your backend account.', $table),
+            1790600001,
+        );
+    }
+
+    private function canSelectTable(string $table, BackendUserAuthentication $backendUser): bool
+    {
+        if (in_array($table, self::ADMIN_ONLY_SELECT_TABLES, true) && !$backendUser->isAdmin()) {
+            return false;
+        }
+
+        return $backendUser->check('tables_select', $table);
     }
 
     /**
