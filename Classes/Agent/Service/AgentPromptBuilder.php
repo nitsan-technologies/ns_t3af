@@ -1220,6 +1220,38 @@ readonly class AgentPromptBuilder
         return $text;
     }
 
+    /**
+     * What the editor must be told about a made image (a cap such as "4 of the 6", or another generator that was
+     * used) but the model's reply left out. Only the first reply after the image was made owes it.
+     *
+     * @param list<array<string, mixed>> $messages history followed by this turn's messages, oldest first
+     */
+    public static function imageNoticeOwed(array $messages, string $replyText): string
+    {
+        for ($i = count($messages) - 1; $i >= 0; --$i) {
+            $meta = is_array($messages[$i]['meta'] ?? null) ? $messages[$i]['meta'] : [];
+            $type = (string) ($meta['type'] ?? '');
+            if ($type === 'nl_reply') {
+                return '';
+            }
+            if ($type !== 'tool_result' || (string) ($meta['tool'] ?? '') !== 't3ai_generate_image') {
+                continue;
+            }
+            if (($meta['success'] ?? true) === false) {
+                return '';
+            }
+            $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+            $notice = trim((string) ($details['notice'] ?? ''));
+            if ($notice === '' || mb_stripos($replyText, mb_substr($notice, 0, 30)) !== false) {
+                return '';
+            }
+
+            return $notice;
+        }
+
+        return '';
+    }
+
     public static function isDraftReviewBoilerplate(string $text): bool
     {
         return preg_match(

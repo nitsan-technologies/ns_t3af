@@ -253,6 +253,11 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         if ($finalText !== '') {
+            // A cap ("4 of the 6") or a fallback generator is named in the reply, not only in the collapsed step.
+            $imageNotice = AgentPromptBuilder::imageNoticeOwed([...$historyMessages, ...$state->messages], $finalText);
+            if ($imageNotice !== '') {
+                $finalText = rtrim($finalText) . "\n\n" . $imageNotice;
+            }
             $state->emit('delta', ['content' => $finalText]);
         }
         $nlMeta = [
