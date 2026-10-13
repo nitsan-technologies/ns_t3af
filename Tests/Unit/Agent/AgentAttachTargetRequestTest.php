@@ -125,4 +125,13 @@ final class AgentAttachTargetRequestTest extends TestCase
         self::assertNull(AgentAttachTargetRequest::onlyWaitingUpload([self::upload(67)], [67 => true]));
         self::assertNull(AgentAttachTargetRequest::onlyWaitingUpload([], []));
     }
+
+    #[Test]
+    public function aClarificationChoiceForANewTextAndMediaElementAsksForTheAttach(): void
+    {
+        self::assertTrue(AgentAttachTargetRequest::asksForNewContentElementAttach('A new Text & Media element (create one and attach the image)'));
+        self::assertTrue(AgentAttachTargetRequest::asksForNewContentElementAttach('Add the picture to a new content element'));
+        self::assertFalse(AgentAttachTargetRequest::asksForNewContentElementAttach('A new Text & Media element'));
+        self::assertFalse(AgentAttachTargetRequest::asksForNewContentElementAttach('Attach the image to the existing element'));
+    }
 }

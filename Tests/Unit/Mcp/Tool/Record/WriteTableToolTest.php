@@ -467,6 +467,32 @@ final class WriteTableToolTest extends TestCase
     }
 
     #[Test]
+    public function planCreateBeforeAContentElementUsesThePreviousElementNotAPage(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())->method('findExistingUids')->with('tt_content', [773])->willReturn([773]);
+        $records->expects(self::once())->method('targetBeforeRecord')->with('tt_content', 773)->willReturn(-752);
+        $records->expects(self::never())->method('targetBeforePage');
+        $records->expects(self::once())->method('assertInsertAfterExists')->with('tt_content', 752);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'beforeUid' => 773,
+            'data' => ['pid' => 2, 'header' => 'New element'],
+        ]);
+
+        self::assertSame(-752, $plan->context['pid']);
+    }
+
+    #[Test]
     public function planCreateBeforeANamedPageIgnoresAnAfterPid(): void
     {
         $records = $this->createMock(RecordService::class);

@@ -207,6 +207,55 @@ readonly class RecordService
     }
 
     /**
+     * DataHandler target that places a new record directly before an existing record of the same table
+     * (a content element before another content element): the previous sibling in the same page, column and
+     * language becomes a negative "after" target; the first element of the column uses the page pid.
+     */
+    public function targetBeforeRecord(string $table, int $uid): int
+    {
+        $record = $uid > 0 ? $this->findByUid($table, $uid, ['pid', 'sorting']) : null;
+        if ($record === null) {
+            throw new \InvalidArgumentException('Record not found: ' . $table . ' uid ' . $uid);
+        }
+
+        $pid = (int) ($record['pid'] ?? 0);
+        $sorting = (int) ($record['sorting'] ?? 0);
+        $columns = $this->connectionPool->getConnectionForTable($table)->createSchemaManager()->listTableColumns($table);
+        $has = static fn(string $column): bool => isset($columns[strtolower($column)]);
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
+        $queryBuilder->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($queryBuilder, $table);
+
+        $constraints = [
+            $queryBuilder->expr()->eq('pid', $queryBuilder->createNamedParameter($pid, ParameterType::INTEGER)),
+            $queryBuilder->expr()->lt('sorting', $queryBuilder->createNamedParameter($sorting, ParameterType::INTEGER)),
+            $queryBuilder->expr()->neq('uid', $queryBuilder->createNamedParameter($uid, ParameterType::INTEGER)),
+        ];
+        if ($has('deleted')) {
+            $constraints[] = $queryBuilder->expr()->eq('deleted', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER));
+        }
+        // Same column and language as the element it goes before.
+        $same = $this->findByUid($table, $uid, array_values(array_filter(['colPos', 'sys_language_uid'], $has)));
+        foreach (['colPos', 'sys_language_uid'] as $column) {
+            if ($has($column) && is_array($same) && isset($same[$column])) {
+                $constraints[] = $queryBuilder->expr()->eq($column, $queryBuilder->createNamedParameter((int) $same[$column], ParameterType::INTEGER));
+            }
+        }
+
+        $previous = $queryBuilder
+            ->select('uid')
+            ->from($table)
+            ->where(...$constraints)
+            ->orderBy('sorting', 'DESC')
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchAssociative();
+
+        return $previous !== false ? -((int) $previous['uid']) : $pid;
+    }
+
+    /**
      * Default-language pages with this exact title.
      *
      * @return list<array{uid: int, pid: int}>

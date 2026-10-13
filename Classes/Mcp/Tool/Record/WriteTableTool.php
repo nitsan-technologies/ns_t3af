@@ -389,7 +389,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             $payload = self::withSaneNewsDate($payload, $requestQuery);
             $payload = $this->withNewsStoragePid($payload);
         }
-        $pid = $this->resolveCreatePid($payload, $beforeUid, $afterUid);
+        $pid = $this->resolveCreatePid($payload, $beforeUid, $afterUid, $tableName);
         if ($pid < 0) {
             $this->recordService->assertInsertAfterExists($tableName, abs($pid));
         }
@@ -823,7 +823,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
      *
      * @param array<string, mixed> $payload
      */
-    private function resolveCreatePid(array $payload, int $beforeUid, int $afterUid = 0): int
+    private function resolveCreatePid(array $payload, int $beforeUid, int $afterUid = 0, string $tableName = 'pages'): int
     {
         $beforeUid = $beforeUid > 0 ? $beforeUid : (int) ($payload['beforeUid'] ?? 0);
         $afterUid = $afterUid > 0 ? $afterUid : (int) ($payload['afterUid'] ?? 0);
@@ -831,6 +831,11 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             return -$afterUid;
         }
         if ($beforeUid > 0) {
+            // "Before 773" for a content element means that element, never the page with uid 773.
+            if ($tableName !== 'pages' && $this->recordService->findExistingUids($tableName, [$beforeUid]) !== []) {
+                return $this->recordService->targetBeforeRecord($tableName, $beforeUid);
+            }
+
             return $this->recordService->targetBeforePage($beforeUid);
         }
         if (!isset($payload['pid']) || !is_numeric($payload['pid'])) {
@@ -847,7 +852,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             if ($tableName === 'tx_news_domain_model_news') {
                 $payload = $this->withNewsStoragePid($payload);
             }
-            $pid = $this->resolveCreatePid($payload, $beforeUid, $afterUid);
+            $pid = $this->resolveCreatePid($payload, $beforeUid, $afterUid, $tableName);
         } catch (\InvalidArgumentException $exception) {
             return $this->encodeError($exception->getMessage());
         }
