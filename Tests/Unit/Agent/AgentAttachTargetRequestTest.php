@@ -131,7 +131,13 @@ final class AgentAttachTargetRequestTest extends TestCase
     {
         self::assertTrue(AgentAttachTargetRequest::asksForNewContentElementAttach('A new Text & Media element (create one and attach the image)'));
         self::assertTrue(AgentAttachTargetRequest::asksForNewContentElementAttach('Add the picture to a new content element'));
+        // r5 clarification button (no attach verb — only "for the image").
+        self::assertTrue(AgentAttachTargetRequest::asksForNewContentElementAttach('Create a new Text & Media element for the image'));
         self::assertFalse(AgentAttachTargetRequest::asksForNewContentElementAttach('A new Text & Media element'));
         self::assertFalse(AgentAttachTargetRequest::asksForNewContentElementAttach('Attach the image to the existing element'));
+        // Mentions "picture" in the text but is not an attach-to-new-element request.
+        self::assertFalse(AgentAttachTargetRequest::asksForNewContentElementAttach(
+            'Add a new text element about a picture of the Alps',
+        ));
     }
 }

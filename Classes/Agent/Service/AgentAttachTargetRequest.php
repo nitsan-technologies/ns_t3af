@@ -116,13 +116,20 @@ final class AgentAttachTargetRequest
      */
     public static function asksForNewContentElementAttach(string $request): bool
     {
-        if (preg_match('/\b(?:new|another|neue[nrsm]?|weitere[nrsm]?)\s+(?:[\w&]+\s+){0,3}(?:content\s+)?(?:element|inhaltselement)\b/iu', $request) !== 1) {
+        // "Create a new Text & Media element for the image" / "A new Text & Media element (… attach …)"
+        $newElement = preg_match(
+            '/\b(?:new|another|neue[nrsm]?|weitere[nrsm]?)\s+(?:[\w&]+\s+){0,4}(?:content\s+)?(?:element|inhaltselement|text\s*&\s*media|textmedia|textpic)\b/iu',
+            $request,
+        ) === 1;
+        if (!$newElement) {
             return false;
         }
 
-        // "A new Text & Media element (create one and attach the image)": a clarification choice names no place.
+        // Clarification choices often say "for the image" / "and attach the image" without a place verb.
+        // Do not treat a bare "Add a new … element about a picture …" as an attach request (add ≠ attach).
         return AgentRequestedFiles::asksToAttachOrPlaceFile($request)
-            || preg_match('/\b(?:attach|add|put|place|insert|anh[äa]ng\w*|hinzuf[üu]g\w*)\b[^.]{0,40}\b(?:image|picture|photo|file|bild|foto|datei)\b/iu', $request) === 1;
+            || preg_match('/\b(?:attach|put|place|insert|anh[äa]ng\w*|hinzuf[üu]g\w*)\b[^.]{0,40}\b(?:image|picture|photo|file|bild|foto|datei)\b/iu', $request) === 1
+            || preg_match('/\b(?:for|with|und)\s+(?:the\s+|das\s+|die\s+|den\s+)?(?:image|picture|photo|file|bild|foto|datei)\b/iu', $request) === 1;
     }
 
     private static function cleanTitle(string $raw): string

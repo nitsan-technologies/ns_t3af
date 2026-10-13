@@ -1949,6 +1949,10 @@
                 <source>Your custom outline could not be read, so the drafted page tree was used.</source>
                 <target>Ihre eigene Gliederung konnte nicht gelesen werden, daher wurde der Entwurf der Seitenstruktur verwendet.</target>
             </trans-unit>
+            <trans-unit id="agent.write.structureCreatedPages">
+                <source>Created pages:</source>
+                <target>Erstellte Seiten:</target>
+            </trans-unit>
             <trans-unit id="agent.write.editsNeedEditorFlag">
                 <source>Inline edits require editedByEditor confirmation.</source>
                 <target>Inline-Bearbeitungen erfordern die Bestätigung editedByEditor.</target>

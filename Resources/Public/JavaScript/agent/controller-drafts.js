@@ -773,6 +773,21 @@ export const draftMethods = {
             links: Array.isArray(payload.links) ? payload.links : [],
             fromRunner: message.meta?.fromRunner === true,
           };
+          // Slash image Apply has no NL follow-up: surface the provider note outside the collapsed step.
+          // Only details.notice / "cannot create images" — never payload.message (that is the generic Apply text).
+          const details = presented.details && typeof presented.details === 'object' ? presented.details : {};
+          const notice = String(details.notice ?? '').trim();
+          const contentText = String(presented.content ?? '');
+          const visibleNotice = notice !== ''
+            ? notice
+            : (contentText.includes('cannot create images') ? contentText.trim() : '');
+          if (visibleNotice !== '') {
+            this.messages.push({
+              role: 'assistant',
+              content: visibleNotice,
+              meta: { type: 'info' },
+            });
+          }
           this.renderStream();
           this.refreshBackendContent();
           if (!seoQueueAddSkipsFollowUp(String(result.tool ?? draft.tool ?? ''), message.content)) {
@@ -1014,12 +1029,13 @@ export const draftMethods = {
         meta.appliedCount = Number(result.appliedCount ?? Object.keys(selections).length + Object.keys(edits).length);
         meta.changeId = result.changeId ?? '';
 
+        const appliedText = messageContent(
+          payload.message,
+          lang('agent.suggestions.applied', 'Applied %1$s suggestion field(s).', [String(meta.appliedCount)]),
+        );
         this.messages.push({
           role: 'assistant',
-          content: messageContent(
-            payload.message,
-            lang('agent.suggestions.applied', 'Applied %1$s suggestion field(s).', [String(meta.appliedCount)]),
-          ),
+          content: appliedText,
           meta: {
             type: 'readback_result',
             readback: result.readback ?? [],
@@ -1033,7 +1049,7 @@ export const draftMethods = {
         });
         this.renderStream();
         this.refreshBackendContent();
-        this.queueContinuation(message, 'applied', String(payload.message ?? ''));
+        this.queueContinuation(message, 'applied', String(appliedText ?? ''));
       } catch (error) {
         meta.applying = false;
         const text = await errorText(error);
