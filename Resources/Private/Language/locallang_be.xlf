@@ -1573,6 +1573,9 @@
       <trans-unit id="agent.write.structureOutlineUnread" resname="agent.write.structureOutlineUnread">
         <source>Your custom outline could not be read, so the drafted page tree was used.</source>
       </trans-unit>
+      <trans-unit id="agent.write.structureCreatedPages" resname="agent.write.structureCreatedPages">
+        <source>Created pages:</source>
+      </trans-unit>
       <trans-unit id="agent.write.editsNeedEditorFlag" resname="agent.write.editsNeedEditorFlag">
         <source>Inline edits require editedByEditor confirmation.</source>
       </trans-unit>

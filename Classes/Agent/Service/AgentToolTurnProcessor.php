@@ -566,6 +566,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $arguments = self::seoBatchSubpagesOfOpenPage($arguments, $toolName, $requestQuery);
         $arguments = self::openPageAsParent($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $arguments = self::openPageAsCreatePid($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
+        $arguments = self::openPageAsContentPid($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $arguments = self::pinOpenPageForQueueRemove($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $gateRequest = trim((string) ($body['requestForGate'] ?? ''));
         $routerFileUids = is_array($body['routerFileUids'] ?? null)
@@ -747,24 +748,27 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $draftCard = $this->draftService->buildDraftCard($plan, $severity);
         $draftCard['editorLabel'] = $editorLabel;
         $extra = [];
-        // "new content element" + uploaded file: after Apply, attach that file to the created element.
-        if (
-            $shownTool === 'write_table'
-            && $plan->action === 'create'
-            && AgentAttachTargetRequest::asksForNewContentElementAttach($requestQuery)
-        ) {
-            $pending = AgentPromptBuilder::pendingAttachFileUids($history, $requestQuery);
-            $fileUid = $pending[0] ?? 0;
-            if ($fileUid <= 0) {
-                $uploaded = AgentAttachTargetRequest::uploadedFileUids($history);
-                $fileUid = $uploaded[0] ?? 0;
-            }
-            if ($fileUid <= 0) {
-                $router = is_array($body['routerFileUids'] ?? null) ? $body['routerFileUids'] : [];
-                $fileUid = (int) ($router[0] ?? 0);
-            }
-            if ($fileUid > 0) {
-                $extra['pendingAttachFileUid'] = $fileUid;
+        // "new content element" + uploaded/generated file: after Apply, attach that file to the created element.
+        // Clarification answers ("Create a new Text & Media element for the image") live in the latest user
+        // message / requestForGate, not always in the original requestQuery.
+        if ($shownTool === 'write_table' && $plan->action === 'create') {
+            $gateRequest = trim((string) ($body['requestForGate'] ?? ''));
+            $latestUser = AgentPromptBuilder::latestUserRequestText($history);
+            $wantsNewCeAttach = AgentAttachTargetRequest::asksForNewContentElementAttach($requestQuery)
+                || ($gateRequest !== '' && AgentAttachTargetRequest::asksForNewContentElementAttach($gateRequest))
+                || ($latestUser !== '' && AgentAttachTargetRequest::asksForNewContentElementAttach($latestUser));
+            if ($wantsNewCeAttach) {
+                $attachProbe = $gateRequest !== '' ? $gateRequest : ($latestUser !== '' ? $latestUser : $requestQuery);
+                // Only pending/generated files for this turn — never the first upload in the whole conversation.
+                $pending = AgentPromptBuilder::pendingAttachFileUids($history, $attachProbe);
+                $fileUid = $pending[0] ?? 0;
+                if ($fileUid <= 0) {
+                    $router = is_array($body['routerFileUids'] ?? null) ? $body['routerFileUids'] : [];
+                    $fileUid = (int) ($router[0] ?? 0);
+                }
+                if ($fileUid > 0) {
+                    $extra['pendingAttachFileUid'] = $fileUid;
+                }
             }
         }
         $this->draftService->persistDraft($draftCard, $plan, $arguments, $this->draftSession, null, $extra);
@@ -787,6 +791,52 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'orchestratorPause' => true,
             ],
         ];
+    }
+
+    /**
+     * "Add a text element … on this page": keep the create on the open page when the model drifts to Home.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function openPageAsContentPid(array $arguments, int $openPageId, string $toolName, string $requestQuery): array
+    {
+        if ($openPageId <= 0 || strtolower(trim($toolName)) !== 'write_table') {
+            return $arguments;
+        }
+        $table = strtolower(trim((string) ($arguments['tableName'] ?? $arguments['table'] ?? '')));
+        if ($table !== 'tt_content' || strtolower(trim((string) ($arguments['action'] ?? ''))) !== 'create') {
+            return $arguments;
+        }
+        if (isset($arguments['beforeUid']) || isset($arguments['afterUid'])) {
+            return $arguments;
+        }
+        if (preg_match('/\b(this|current|open)\s+page\b|\b(diese|aktuelle)\s+seite\b/iu', $requestQuery) !== 1) {
+            return $arguments;
+        }
+        // Another named page in the request ("on the Contact page like this page"): leave the model's pid.
+        if (AgentTargetPageResolver::namedPageTitle($requestQuery) !== null
+            || AgentTargetPageResolver::mentionedPageUids($requestQuery) !== []) {
+            return $arguments;
+        }
+        $data = $arguments['data'] ?? [];
+        $wasString = is_string($data);
+        if ($wasString) {
+            $decoded = json_decode($data, true);
+            $data = is_array($decoded) ? $decoded : null;
+        }
+        if (!is_array($data) || isset($data['beforeUid']) || isset($data['afterUid'])) {
+            return $arguments;
+        }
+        $pid = isset($data['pid']) && is_numeric($data['pid']) ? (int) $data['pid'] : 0;
+        // Negative pid means "after record X" — never rewrite that into "first on the open page".
+        if ($pid <= 0 || $pid === $openPageId) {
+            return $arguments;
+        }
+        $data['pid'] = $openPageId;
+        $arguments['data'] = $wasString ? json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : $data;
+
+        return $arguments;
     }
 
     /**

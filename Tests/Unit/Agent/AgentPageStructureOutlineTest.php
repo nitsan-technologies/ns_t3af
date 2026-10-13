@@ -60,4 +60,18 @@ final class AgentPageStructureOutlineTest extends TestCase
         self::assertTrue($resolved['fellBackToDraft']);
         self::assertSame($draft, $resolved['structure']);
     }
+
+    #[Test]
+    public function formatOutlineListsNestedTitles(): void
+    {
+        $outline = AgentPageStructureOutline::formatOutline([
+            'title' => '',
+            'children' => [
+                ['title' => 'Shop', 'children' => [['title' => 'Gift cards', 'children' => []]]],
+                ['title' => 'Team', 'children' => []],
+            ],
+        ]);
+
+        self::assertSame("• Shop\n  • Gift cards\n• Team", $outline);
+    }
 }

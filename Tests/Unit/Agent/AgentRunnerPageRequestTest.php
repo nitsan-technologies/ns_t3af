@@ -99,6 +99,48 @@ final class AgentRunnerPageRequestTest extends TestCase
     }
 
     #[Test]
+    public function aContentCreateOnThisPageStaysOnTheOpenPage(): void
+    {
+        $arguments = [
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'data' => '{"pid":1,"CType":"text","header":"New Text Element"}',
+        ];
+        $result = AgentToolTurnProcessor::openPageAsContentPid(
+            $arguments,
+            2,
+            'write_table',
+            'Add a new text element before the first element on this page',
+        );
+        self::assertSame(2, json_decode((string) $result['data'], true)['pid']);
+    }
+
+    #[Test]
+    public function openPageAsContentPidLeavesNegativePidAndBeforeUidAlone(): void
+    {
+        $after = [
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'data' => '{"pid":-777,"CType":"text","header":"After"}',
+        ];
+        self::assertSame(
+            $after,
+            AgentToolTurnProcessor::openPageAsContentPid($after, 2, 'write_table', 'Add a text element on this page'),
+        );
+
+        $before = [
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'beforeUid' => 777,
+            'data' => '{"pid":1,"CType":"text","header":"Before"}',
+        ];
+        self::assertSame(
+            $before,
+            AgentToolTurnProcessor::openPageAsContentPid($before, 2, 'write_table', 'Add a text element on this page'),
+        );
+    }
+
+    #[Test]
     public function newsRequestMustNotEndInAContentElementOrPage(): void
     {
         self::assertTrue(AgentRunner::isNewsRequestAnsweredWithOtherTable('tt_content', 'Generiere eine Nachricht über unser Sommerfest.'));

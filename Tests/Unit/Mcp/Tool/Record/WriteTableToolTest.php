@@ -471,6 +471,7 @@ final class WriteTableToolTest extends TestCase
     {
         $records = $this->createMock(RecordService::class);
         $records->expects(self::once())->method('findExistingUids')->with('tt_content', [773])->willReturn([773]);
+        $records->expects(self::once())->method('findByUid')->with('tt_content', 773, ['pid'])->willReturn(['pid' => 2]);
         $records->expects(self::once())->method('targetBeforeRecord')->with('tt_content', 773)->willReturn(-752);
         $records->expects(self::never())->method('targetBeforePage');
         $records->expects(self::once())->method('assertInsertAfterExists')->with('tt_content', 752);
@@ -490,6 +491,70 @@ final class WriteTableToolTest extends TestCase
         ]);
 
         self::assertSame(-752, $plan->context['pid']);
+    }
+
+    #[Test]
+    public function planCreateBeforeAParentPageUidKeepsTheContentPid(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())->method('findExistingUids')->with('tt_content', [1])->willReturn([]);
+        $records->expects(self::once())->method('findByUid')->with('pages', 2, ['pid'])->willReturn(['pid' => 1]);
+        $records->expects(self::never())->method('targetBeforePage');
+        $records->expects(self::never())->method('targetBeforeRecord');
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'beforeUid' => 1,
+            'data' => ['pid' => 2, 'CType' => 'text', 'header' => 'New Text Element'],
+        ]);
+
+        self::assertSame(2, $plan->context['pid']);
+    }
+
+    #[Test]
+    public function planCreateBeforeACollidingContentUidOnAnotherPageKeepsThePid(): void
+    {
+        // beforeUid 1 exists as tt_content somewhere, but not on pid 2 — treat as parent-page mistake.
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())->method('findExistingUids')->with('tt_content', [1])->willReturn([1]);
+        $records->expects(self::exactly(2))->method('findByUid')->willReturnCallback(
+            static function (string $table, int $uid, array $fields): ?array {
+                if ($table === 'tt_content' && $uid === 1) {
+                    return ['pid' => 99];
+                }
+                if ($table === 'pages' && $uid === 2) {
+                    return ['pid' => 1];
+                }
+
+                return null;
+            },
+        );
+        $records->expects(self::never())->method('targetBeforeRecord');
+        $records->expects(self::never())->method('targetBeforePage');
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'beforeUid' => 1,
+            'data' => ['pid' => 2, 'CType' => 'text', 'header' => 'New Text Element'],
+        ]);
+
+        self::assertSame(2, $plan->context['pid']);
     }
 
     #[Test]
