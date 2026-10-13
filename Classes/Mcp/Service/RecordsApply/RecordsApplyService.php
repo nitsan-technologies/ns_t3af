@@ -176,7 +176,7 @@ readonly class RecordsApplyService
             if (!$connection->isTransactionActive()) {
                 // Do not release the requestId lock: a retry with the same id must not write again.
                 $this->siteRequestBootstrap->restore($requestSnapshot);
-                $dataHandler->discardDeferredCaches();
+                $this->settleDeferredCaches($dataHandler, $dryRun, $batchId);
                 $this->logger->error('records_apply: DataHandler threw after transaction ended', ['exception' => $throwable, 'batchId' => $batchId]);
                 $this->audit->log($tool, $batchId, $dryRun, false, 'transaction-broken', $operations, $fieldNames, 'rollback not possible');
 
@@ -223,7 +223,8 @@ readonly class RecordsApplyService
         if (!$connection->isTransactionActive()) {
             // Keep the requestId lock (pending) so the same id cannot write the batch twice.
             $this->siteRequestBootstrap->restore($requestSnapshot);
-            $dataHandler->discardDeferredCaches();
+            // Rows may already be live — flush for real runs; dry runs only drop the queue.
+            $this->settleDeferredCaches($dataHandler, $dryRun, $batchId);
             $this->audit->log($tool, $batchId, $dryRun, false, 'transaction-broken', $operations, $fieldNames, 'rollback not possible');
 
             throw $this->transactionBrokenException($batchId, $dryRun, $created, $copied);
@@ -271,8 +272,7 @@ readonly class RecordsApplyService
         if ($dryRun) {
             $this->rollBack($connection);
             $this->siteRequestBootstrap->restore($requestSnapshot);
-            // Do not flush caches for rolled-back uids — only drop the deferred queue.
-            $dataHandler->discardDeferredCaches();
+            $this->settleDeferredCaches($dataHandler, true, $batchId);
         } else {
             try {
                 // The stored answer is written inside the transaction: the data and the row exist together, or neither does.
@@ -298,12 +298,7 @@ readonly class RecordsApplyService
 
             $this->siteRequestBootstrap->restore($requestSnapshot);
 
-            try {
-                $dataHandler->flushDeferredCaches();
-            } catch (\Throwable $throwable) {
-                // Data is committed; a late cache flush must not turn the call into a failure.
-                $this->logger->warning('records_apply: deferred cache flush failed', ['exception' => $throwable, 'batchId' => $batchId]);
-            }
+            $this->settleDeferredCaches($dataHandler, false, $batchId);
         }
 
         $aiLabelled = 0;
@@ -368,6 +363,25 @@ readonly class RecordsApplyService
     {
         if ($connection->isTransactionActive()) {
             $connection->rollBack();
+        }
+    }
+
+    /**
+     * Real runs flush deferred caches (try/catch — never fail the call). Dry runs only drop the queue.
+     */
+    private function settleDeferredCaches(DeferredCacheClearingDataHandler $dataHandler, bool $dryRun, string $batchId): void
+    {
+        if ($dryRun) {
+            $dataHandler->discardDeferredCaches();
+
+            return;
+        }
+
+        try {
+            $dataHandler->flushDeferredCaches();
+        } catch (\Throwable $throwable) {
+            // Data may already be committed; a late cache flush must not turn the call into a failure.
+            $this->logger->warning('records_apply: deferred cache flush failed', ['exception' => $throwable, 'batchId' => $batchId]);
         }
     }
 
