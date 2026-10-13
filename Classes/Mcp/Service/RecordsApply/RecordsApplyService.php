@@ -22,12 +22,12 @@ namespace NITSAN\NsT3AF\Mcp\Service\RecordsApply;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Exception\ToolCallException;
+use NITSAN\NsT3AF\Mcp\Service\McpSiteRequestBootstrap;
 use NITSAN\NsT3AF\Mcp\Service\WorkspaceContextService;
 use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
 use Psr\Log\LoggerInterface;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
-use TYPO3\CMS\Core\DataHandling\DataHandler;
 use TYPO3\CMS\Core\DataHandling\Model\CorrelationId;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
@@ -62,6 +62,7 @@ readonly class RecordsApplyService
         private RecordsApplyIdempotency $idempotency,
         private ConnectionPool $connectionPool,
         private LoggerInterface $logger,
+        private McpSiteRequestBootstrap $siteRequestBootstrap,
         private ?WorkspaceContextService $workspaceContext = null,
         private ?WorkspaceListService $workspaceList = null,
     ) {}
@@ -109,6 +110,22 @@ readonly class RecordsApplyService
         $operations = self::operations($datamap, $cmdmap);
         $fieldNames = self::fieldNames($datamap);
 
+        // Cache flush (TRUNCATE) during DataHandler ends the outer MySQL transaction. Until that is
+        // proven fixed for every path, refuse dryRun when sys_category is in the batch so a "dry"
+        // call cannot leave real rows behind.
+        if ($dryRun && self::touchesSysCategory($datamap, $cmdmap)) {
+            $problems = [[
+                'table' => 'sys_category',
+                'error' => 'dryRun is not supported for batches that include sys_category: a cache flush '
+                    . 'during that save can end the database transaction, so a rollback would not undo the writes. '
+                    . 'Omit dryRun, or leave sys_category out of this batch.',
+            ]];
+            $exception = new RecordsApplyValidationException($problems);
+            $this->audit->log($tool, $batchId, true, false, 'validation', $operations, $fieldNames, $exception->getMessage());
+
+            throw $exception;
+        }
+
         if ($append) {
             $datamap = $this->orderer->apply($datamap);
         }
@@ -139,7 +156,12 @@ readonly class RecordsApplyService
             throw $throwable;
         }
 
-        $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
+        $requestSnapshot = $this->siteRequestBootstrap->capture();
+        $siteWarnings = $this->siteRequestBootstrap->attachForPagesBatch($datamap, $cmdmap);
+
+        /** @var DeferredCacheClearingDataHandler $dataHandler */
+        $dataHandler = GeneralUtility::makeInstance(DeferredCacheClearingDataHandler::class);
+        $dataHandler->deferCacheClearing(true);
 
         try {
             $dataHandler->start($datamap, $cmdmap);
@@ -149,8 +171,22 @@ readonly class RecordsApplyService
                 $dataHandler->process_cmdmap();
             }
         } catch (\Throwable $throwable) {
+            $created = self::createdFromDataHandler($dataHandler);
+            $copied = self::copiedFromDataHandler($dataHandler);
+            if (!$connection->isTransactionActive()) {
+                // Do not release the requestId lock: a retry with the same id must not write again.
+                $this->siteRequestBootstrap->restore($requestSnapshot);
+                $dataHandler->discardDeferredCaches();
+                $this->logger->error('records_apply: DataHandler threw after transaction ended', ['exception' => $throwable, 'batchId' => $batchId]);
+                $this->audit->log($tool, $batchId, $dryRun, false, 'transaction-broken', $operations, $fieldNames, 'rollback not possible');
+
+                throw $this->transactionBrokenException($batchId, $dryRun, $created, $copied, $throwable);
+            }
+
             $this->rollBack($connection);
             $this->release($lock, $batchId);
+            $this->siteRequestBootstrap->restore($requestSnapshot);
+            $dataHandler->discardDeferredCaches();
             $this->logger->error('records_apply: DataHandler threw', ['exception' => $throwable, 'batchId' => $batchId]);
 
             $summary = sprintf('%s (code %d)', $throwable::class, (int) $throwable->getCode());
@@ -180,10 +216,26 @@ readonly class RecordsApplyService
             );
         }
 
+        $created = self::createdFromDataHandler($dataHandler);
+        $copied = self::copiedFromDataHandler($dataHandler);
+
+        // A TRUNCATE (or similar) during DataHandler ends the transaction; rollback would be a no-op.
+        if (!$connection->isTransactionActive()) {
+            // Keep the requestId lock (pending) so the same id cannot write the batch twice.
+            $this->siteRequestBootstrap->restore($requestSnapshot);
+            $dataHandler->discardDeferredCaches();
+            $this->audit->log($tool, $batchId, $dryRun, false, 'transaction-broken', $operations, $fieldNames, 'rollback not possible');
+
+            throw $this->transactionBrokenException($batchId, $dryRun, $created, $copied);
+        }
+
         $errors = self::errors($dataHandler->errorLog);
         if ($errors !== []) {
+            // Transaction is still active (checked above); safe to roll back.
             $this->rollBack($connection);
             $this->release($lock, $batchId);
+            $this->siteRequestBootstrap->restore($requestSnapshot);
+            $dataHandler->discardDeferredCaches();
             $this->audit->log($tool, $batchId, $dryRun, false, 'datahandler', $operations, $fieldNames, implode(' | ', $errors));
 
             throw new ToolCallException(
@@ -199,20 +251,6 @@ readonly class RecordsApplyService
             );
         }
 
-        $created = [];
-        foreach ($dataHandler->substNEWwithIDs as $newId => $uid) {
-            if (str_starts_with((string) $newId, 'NEW')) {
-                $created[(string) $newId] = (int) $uid;
-            }
-        }
-
-        $copied = [];
-        foreach ($dataHandler->copyMappingArray as $table => $mapping) {
-            foreach ($mapping as $sourceUid => $copyUid) {
-                $copied[(string) $table][(int) $sourceUid] = (int) $copyUid;
-            }
-        }
-
         $result = new RecordsApplyResult(
             $batchId,
             $dryRun,
@@ -221,6 +259,7 @@ readonly class RecordsApplyService
             $copied,
             $operations,
             $checked['ignored'],
+            warnings: $siteWarnings,
         );
 
         // Say where the change went. It is stored with a requestId's answer, so a replay names the same workspace.
@@ -231,6 +270,9 @@ readonly class RecordsApplyService
 
         if ($dryRun) {
             $this->rollBack($connection);
+            $this->siteRequestBootstrap->restore($requestSnapshot);
+            // Do not flush caches for rolled-back uids — only drop the deferred queue.
+            $dataHandler->discardDeferredCaches();
         } else {
             try {
                 // The stored answer is written inside the transaction: the data and the row exist together, or neither does.
@@ -242,6 +284,7 @@ readonly class RecordsApplyService
             } catch (\Throwable $throwable) {
                 $this->rollBack($connection);
                 $this->release($lock, $batchId);
+                $this->siteRequestBootstrap->restore($requestSnapshot);
                 $this->logger->error('records_apply: commit failed', ['exception' => $throwable, 'batchId' => $batchId]);
                 $summary = sprintf('%s (code %d)', $throwable::class, (int) $throwable->getCode());
                 $this->audit->log($tool, $batchId, $dryRun, false, 'commit', $operations, $fieldNames, $summary);
@@ -251,6 +294,15 @@ readonly class RecordsApplyService
                     1790500005,
                     $throwable,
                 );
+            }
+
+            $this->siteRequestBootstrap->restore($requestSnapshot);
+
+            try {
+                $dataHandler->flushDeferredCaches();
+            } catch (\Throwable $throwable) {
+                // Data is committed; a late cache flush must not turn the call into a failure.
+                $this->logger->warning('records_apply: deferred cache flush failed', ['exception' => $throwable, 'batchId' => $batchId]);
             }
         }
 
@@ -269,6 +321,15 @@ readonly class RecordsApplyService
         $this->audit->log($tool, $batchId, $dryRun, true, $dryRun ? 'dry-run' : 'applied', $operations, $fieldNames);
 
         return $result->withAiLabelled($aiLabelled);
+    }
+
+    /**
+     * @param array<mixed> $datamap
+     * @param array<mixed> $cmdmap
+     */
+    private static function touchesSysCategory(array $datamap, array $cmdmap): bool
+    {
+        return isset($datamap['sys_category']) || isset($cmdmap['sys_category']);
     }
 
     private function workspaceTitle(int $workspaceId): string
@@ -308,6 +369,66 @@ readonly class RecordsApplyService
         if ($connection->isTransactionActive()) {
             $connection->rollBack();
         }
+    }
+
+    /**
+     * @param array<string, int> $created
+     * @param array<string, array<int, int>> $copied
+     */
+    private function transactionBrokenException(
+        string $batchId,
+        bool $dryRun,
+        array $created,
+        array $copied,
+        ?\Throwable $previous = null,
+    ): ToolCallException {
+        // Rows may already be committed when the transaction ended mid-run — including dryRun.
+        $payload = [
+            'ok' => false,
+            'written' => true,
+            'dryRun' => $dryRun,
+            'stage' => 'transaction-broken',
+            'batchId' => $batchId,
+            'map' => $created,
+            'note' => 'The database transaction ended during DataHandler (often a cache flush that TRUNCATEs). '
+                . 'Rollback is not possible; the batch may be partially written. New record ids are in "map". '
+                . 'If you passed a requestId, it stays locked so a retry with the same id will not write again — use a new requestId only after you have inspected the map.',
+        ];
+        if ($copied !== []) {
+            $payload['copied'] = $copied;
+        }
+
+        return new ToolCallException(json_encode($payload, JSON_THROW_ON_ERROR), 1790500007, $previous);
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private static function createdFromDataHandler(DeferredCacheClearingDataHandler $dataHandler): array
+    {
+        $created = [];
+        foreach ($dataHandler->substNEWwithIDs as $newId => $uid) {
+            if (str_starts_with((string) $newId, 'NEW')) {
+                $created[(string) $newId] = (int) $uid;
+            }
+        }
+
+        return $created;
+    }
+
+    /**
+     * @return array<string, array<int, int>>
+     */
+    private static function copiedFromDataHandler(DeferredCacheClearingDataHandler $dataHandler): array
+    {
+        $copied = [];
+        foreach ($dataHandler->copyMappingArray as $table => $mapping) {
+            foreach ($mapping as $sourceUid => $copyUid) {
+                $copied[(string) $table][(int) $sourceUid] = (int) $copyUid;
+            }
+        }
+
+        return $copied;
     }
 
     /**

@@ -44,6 +44,7 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
         'frontend',
         'workspaces',
         'scheduler',
+        'redirects',
     ];
 
     protected array $testExtensionsToLoad = [
@@ -470,6 +471,155 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
         $this->service->apply(['pages' => [$uid => ['title' => 'Hidden draft, edited']]], [], false, true, true);
 
         self::assertSame(['ai_generated', 'mcp'], $this->labelOf('pages', $uid));
+    }
+
+    #[Test]
+    public function dryRunWithSysCategoryIsRefusedBeforeAnythingIsWritten(): void
+    {
+        $before = (int) $this->getConnectionPool()->getConnectionForTable('sys_category')
+            ->executeQuery('SELECT COUNT(*) FROM sys_category')
+            ->fetchOne();
+
+        try {
+            $this->service->apply(
+                ['sys_category' => ['NEWcat' => ['pid' => 0, 'title' => 'Dry category']]],
+                [],
+                true,
+                true,
+                false,
+            );
+            self::fail('Expected dryRun with sys_category to be refused.');
+        } catch (RecordsApplyValidationException $exception) {
+            self::assertStringContainsString('sys_category', $exception->getProblems()[0]['error'] ?? '');
+        }
+
+        self::assertSame(
+            $before,
+            (int) $this->getConnectionPool()->getConnectionForTable('sys_category')
+                ->executeQuery('SELECT COUNT(*) FROM sys_category')
+                ->fetchOne(),
+        );
+    }
+
+    #[Test]
+    public function aRealSysCategoryCreateCommitsAndAFailingBatchWithCategoryRollsBack(): void
+    {
+        $created = $this->service->apply(
+            ['sys_category' => ['NEWcat' => ['pid' => 0, 'title' => 'MCP category keep']]],
+            [],
+            false,
+            true,
+            false,
+        );
+        self::assertArrayHasKey('NEWcat', $created->created);
+        self::assertSame(1, $this->countWhere('sys_category', 'title', 'MCP category keep'));
+
+        try {
+            $this->service->apply(
+                [
+                    'sys_category' => ['NEWbad' => ['pid' => 0, 'title' => 'Must not survive category']],
+                    'be_groups' => ['NEWgroup' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Nowhere']],
+                ],
+                [],
+                false,
+                true,
+                false,
+            );
+            self::fail('Expected DataHandler to refuse the root-level record below a page.');
+        } catch (ToolCallException $exception) {
+            self::assertStringContainsString('datahandler', $exception->getMessage());
+        }
+
+        self::assertSame(0, $this->countWhere('sys_category', 'title', 'Must not survive category'));
+        self::assertSame(1, $this->countWhere('sys_category', 'title', 'MCP category keep'));
+    }
+
+    #[Test]
+    public function aSlugChangeOnASitePageSucceeds(): void
+    {
+        $created = $this->service->apply(
+            ['pages' => ['NEWpage' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Slug page', 'slug' => '/slug-page', 'hidden' => 0]]],
+            [],
+            false,
+            true,
+            true,
+        );
+        $uid = $created->created['NEWpage'];
+
+        $result = $this->service->apply(
+            ['pages' => [$uid => ['slug' => '/slug-page-renamed']]],
+            [],
+            false,
+            true,
+            true,
+        );
+
+        self::assertTrue($result->written);
+        $slug = $this->getConnectionPool()->getConnectionForTable('pages')
+            ->executeQuery('SELECT slug FROM pages WHERE uid = ?', [$uid])
+            ->fetchOne();
+        self::assertSame('/slug-page-renamed', $slug);
+    }
+
+    #[Test]
+    public function aSlugChangeOnAHiddenSitePageSucceeds(): void
+    {
+        $created = $this->service->apply(
+            ['pages' => ['NEWpage' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Hidden slug', 'slug' => '/hidden-slug', 'hidden' => 1]]],
+            [],
+            false,
+            true,
+            true,
+        );
+        $uid = $created->created['NEWpage'];
+
+        $result = $this->service->apply(
+            ['pages' => [$uid => ['slug' => '/hidden-slug-renamed']]],
+            [],
+            false,
+            true,
+            true,
+        );
+
+        self::assertTrue($result->written);
+        $slug = $this->getConnectionPool()->getConnectionForTable('pages')
+            ->executeQuery('SELECT slug FROM pages WHERE uid = ?', [$uid])
+            ->fetchOne();
+        self::assertSame('/hidden-slug-renamed', $slug);
+    }
+
+    #[Test]
+    public function aSlugChangeOnAPageWithoutASiteWarnsAndStillWrites(): void
+    {
+        // Sibling of the site root (pid 0, not rootPageId) has no site in the fixture.
+        $connection = $this->getConnectionPool()->getConnectionForTable('pages');
+        $connection->insert('pages', [
+            'pid' => 0,
+            'title' => 'Orphan page',
+            'slug' => '/orphan',
+            'doktype' => 1,
+            'hidden' => 0,
+            'deleted' => 0,
+            'tstamp' => 1734875000,
+            'crdate' => 1734875000,
+            'sorting' => 512,
+            'is_siteroot' => 0,
+        ]);
+        $uid = (int) $connection->lastInsertId();
+
+        $result = $this->service->apply(
+            ['pages' => [$uid => ['slug' => '/orphan-renamed']]],
+            [],
+            false,
+            true,
+            true,
+        );
+
+        self::assertTrue($result->written);
+        self::assertNotSame([], $result->warnings);
+        self::assertStringContainsString('no site', $result->warnings[0]);
+        $slug = $connection->executeQuery('SELECT slug FROM pages WHERE uid = ?', [$uid])->fetchOne();
+        self::assertSame('/orphan-renamed', $slug);
     }
 
     /**

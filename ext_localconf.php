@@ -106,6 +106,17 @@ $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelHoldList'] ??= ['publi
 $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelAutoConfirmSources'] ??= [];
 $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelFolderDefaults'] ??= [];
 
+// WOFF/WOFF2: finfo often reports application/octet-stream or application/font-woff*
+// instead of font/woff(2). Map those so MCP (and FAL) uploads pass consistency checks.
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['FileInfo']['mimeTypeCompatibility']['application/octet-stream']['woff']
+    = 'font/woff';
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['FileInfo']['mimeTypeCompatibility']['application/octet-stream']['woff2']
+    = 'font/woff2';
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['FileInfo']['mimeTypeCompatibility']['application/font-woff']['woff']
+    = 'font/woff';
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['FileInfo']['mimeTypeCompatibility']['application/font-woff2']['woff2']
+    = 'font/woff2';
+
 // Classic-mode: load the bundled t3af.phar so Symfony AI bridges become
 // discoverable. No-op in Composer mode.
 \NITSAN\NsT3AF\Bootstrap\T3afPharBootstrap::register();

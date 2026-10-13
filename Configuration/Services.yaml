@@ -531,6 +531,11 @@ services:
   NITSAN\NsT3AF\Mcp\Service\DataHandlerService:
     public: true
 
+  # records_apply uses makeInstance(); must be public and not shared (like core DataHandler).
+  NITSAN\NsT3AF\Mcp\Service\RecordsApply\DeferredCacheClearingDataHandler:
+    public: true
+    shared: false
+
   NITSAN\NsT3AF\Mcp\Tool\:
     resource: '../Classes/Mcp/Tool/*'
 

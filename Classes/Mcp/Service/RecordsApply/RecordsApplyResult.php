@@ -35,6 +35,7 @@ final readonly class RecordsApplyResult
      * @param int $aiLabelled how many records were marked as AI-involved in the AI Label module
      * @param bool $replayed true when this is the stored answer of an earlier call with the same requestId; nothing was written now
      * @param array{id: int, title: string}|null $workspace the workspace the call ran in (0 = Live), so the client can see where the change went
+     * @param list<string> $warnings non-fatal notes (e.g. no site for slug auto-redirect)
      */
     public function __construct(
         public string $batchId,
@@ -47,6 +48,7 @@ final readonly class RecordsApplyResult
         public int $aiLabelled = 0,
         public bool $replayed = false,
         public ?array $workspace = null,
+        public array $warnings = [],
     ) {}
 
     public function withAiLabelled(int $aiLabelled): self
@@ -62,6 +64,7 @@ final readonly class RecordsApplyResult
             $aiLabelled,
             $this->replayed,
             $this->workspace,
+            $this->warnings,
         );
     }
 
@@ -78,6 +81,27 @@ final readonly class RecordsApplyResult
             $this->aiLabelled,
             $this->replayed,
             ['id' => $id, 'title' => $title],
+            $this->warnings,
+        );
+    }
+
+    /**
+     * @param list<string> $warnings
+     */
+    public function withWarnings(array $warnings): self
+    {
+        return new self(
+            $this->batchId,
+            $this->dryRun,
+            $this->written,
+            $this->created,
+            $this->copied,
+            $this->operations,
+            $this->ignoredFields,
+            $this->aiLabelled,
+            $this->replayed,
+            $this->workspace,
+            $warnings,
         );
     }
 
@@ -94,6 +118,7 @@ final readonly class RecordsApplyResult
             0,
             true,
             $this->workspace,
+            $this->warnings,
         );
     }
 
@@ -147,6 +172,13 @@ final readonly class RecordsApplyResult
             $workspace = ['id' => (int) $stored['workspace']['id'], 'title' => (string) ($stored['workspace']['title'] ?? '')];
         }
 
+        $warnings = [];
+        foreach (is_array($stored['warnings'] ?? null) ? $stored['warnings'] : [] as $warning) {
+            if (is_string($warning) && $warning !== '') {
+                $warnings[] = $warning;
+            }
+        }
+
         return new self(
             is_string($stored['batchId'] ?? null) ? $stored['batchId'] : '',
             false,
@@ -158,6 +190,7 @@ final readonly class RecordsApplyResult
             0,
             false,
             $workspace,
+            $warnings,
         );
     }
 
@@ -187,6 +220,10 @@ final readonly class RecordsApplyResult
 
         if ($this->aiLabelled > 0) {
             $result['aiLabelled'] = $this->aiLabelled;
+        }
+
+        if ($this->warnings !== []) {
+            $result['warnings'] = $this->warnings;
         }
 
         if ($this->replayed) {
