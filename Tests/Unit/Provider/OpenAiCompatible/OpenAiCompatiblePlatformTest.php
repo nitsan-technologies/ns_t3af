@@ -260,6 +260,41 @@ final class OpenAiCompatiblePlatformTest extends TestCase
         self::assertSame('A red balloon', $capturedOptions['json']['prompt']);
     }
 
+    public function testPlatformWithTimeoutLimitsRequestDuration(): void
+    {
+        $captured = [];
+        $factory = $this->createMock(RequestFactory::class);
+        $factory->expects(self::exactly(2))
+            ->method('request')
+            ->with(
+                self::stringContains('/chat/completions'),
+                self::identicalTo('POST'),
+                self::callback(static function (array $options) use (&$captured): bool {
+                    $captured[] = [$options['timeout'] ?? null, $options['connect_timeout'] ?? null];
+
+                    return true;
+                }),
+            )
+            ->willReturnCallback(static fn(): Response => new Response(200, [], json_encode([
+                'choices' => [['message' => ['content' => 'ok']]],
+            ]) ?: ''));
+
+        $adapter = new OpenAiCompatibleAdapter(new CredentialCipher(), $factory);
+        $provider = $this->makeProvider(
+            adapterType: Provider::ADAPTER_OPENAI_COMPATIBLE,
+            endpointUrl: 'https://api.example.com/v1',
+            apiKeyCipher: '',
+        );
+        $payload = ['messages' => [['role' => 'user', 'content' => 'hello']]];
+
+        $this->platform($adapter, $provider)->invoke('any-model', $payload);
+        $limited = $adapter->platformWithTimeout($provider, 2.5);
+        self::assertInstanceOf(OpenAiCompatiblePlatform::class, $limited);
+        $limited->invoke('any-model', $payload);
+
+        self::assertSame([[120, 10], [2.5, 2.5]], $captured);
+    }
+
     public function testInvokePreservesStringMessageContent(): void
     {
         $capturedJson = null;

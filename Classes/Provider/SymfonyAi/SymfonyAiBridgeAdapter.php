@@ -23,6 +23,7 @@ use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 use NITSAN\NsT3AF\Exception\CipherException;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
+use NITSAN\NsT3AF\Provider\Contract\RequestTimeoutCapableInterface;
 use NITSAN\NsT3AF\Provider\Contract\VerifyResult;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use TYPO3\CMS\Core\Http\RequestFactory;
@@ -42,7 +43,7 @@ use TYPO3\CMS\Core\Http\RequestFactory;
  *
  * @internal
  */
-final class SymfonyAiBridgeAdapter implements AdapterInterface
+final class SymfonyAiBridgeAdapter implements AdapterInterface, RequestTimeoutCapableInterface
 {
     private const HUGGINGFACE_INFERENCE_URL = 'https://router.huggingface.co/hf-inference/models/';
 
@@ -276,7 +277,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
      *
      * @throws AdapterRuntimeException
      */
-    private function buildAzurePlatform(Provider $provider, string $apiKey): object
+    private function buildAzurePlatform(Provider $provider, string $apiKey, ?float $timeoutSeconds = null): object
     {
         $factoryClass = self::AZURE_FACTORY_FQCN;
         $factoryClassScoped = self::VENDOR_PREFIX . self::AZURE_FACTORY_FQCN;
@@ -295,6 +296,8 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
                 self::AZURE_FACTORY_FQCN,
             ));
         }
+
+        $httpClient = $this->limitedHttpClient($timeoutSeconds, $resolvedFactory);
 
         $endpoint = trim($provider->endpointUrl);
         if ($endpoint === '') {
@@ -317,7 +320,11 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         // wired to the same deployment name. When embedding and chat deployments differ
         // we rebuild using the individual ModelClient classes directly.
         if ($chatDeployment === $embeddingDeployment) {
-            return $resolvedFactory::createProvider($baseUrl, $chatDeployment, $apiVersion, $apiKey);
+            $clientArg = $httpClient !== null && $this->factoryHasParameter($resolvedFactory, 'createProvider', 'httpClient')
+                ? ['httpClient' => $httpClient]
+                : [];
+
+            return $resolvedFactory::createProvider($baseUrl, $chatDeployment, $apiVersion, $apiKey, ...$clientArg);
         }
 
         // Dual-deployment: assemble platform manually using the Azure model client classes.
@@ -327,6 +334,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
             $embeddingDeployment,
             $apiVersion,
             $apiKey,
+            $httpClient,
         );
     }
 
@@ -345,6 +353,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         string $apiVersion,
         #[\SensitiveParameter]
         string $apiKey,
+        ?object $innerHttpClient = null,
     ): object {
         $responsesClientClass = $this->resolveScopedClass('Symfony\\AI\\Platform\\Bridge\\Azure\\Responses\\ModelClient');
         $embeddingsClientClass = $this->resolveScopedClass('Symfony\\AI\\Platform\\Bridge\\Azure\\OpenAi\\EmbeddingsModelClient');
@@ -374,7 +383,7 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         }
 
         /** @var class-string $eventSourceHttpClientClass */
-        $httpClient = new $eventSourceHttpClientClass(null);
+        $httpClient = new $eventSourceHttpClientClass($innerHttpClient);
 
         /** @var class-string $responsesClientClass */
         $responsesClient = new $responsesClientClass($httpClient, $baseUrl, $apiKey, $chatDeployment);
@@ -755,6 +764,45 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
      */
     public function platform(Provider $provider): object
     {
+        return $this->buildPlatform($provider, null);
+    }
+
+    /**
+     * Same platform with a Symfony HTTP client limited to $timeoutSeconds (`timeout` + `max_duration`), handed to the
+     * bridge factory through its `httpClient` parameter. Works for every Symfony AI bridge that accepts one; a
+     * factory without that parameter gets the default client (no limit).
+     */
+    public function platformWithTimeout(Provider $provider, float $timeoutSeconds): object
+    {
+        return $this->buildPlatform($provider, $timeoutSeconds > 0 ? $timeoutSeconds : null);
+    }
+
+    /**
+     * Symfony HTTP client with a total time limit, from the same namespace as the bridge factory (plain in
+     * Composer mode, php-scoper prefixed in t3af.phar) so it satisfies the factory's HttpClientInterface type;
+     * null when unavailable.
+     */
+    private function limitedHttpClient(?float $timeoutSeconds, string $factoryClass): ?object
+    {
+        if ($timeoutSeconds === null) {
+            return null;
+        }
+        $httpClientClass = 'Symfony\\Component\\HttpClient\\HttpClient';
+        if (str_starts_with(ltrim($factoryClass, '\\'), self::VENDOR_PREFIX)) {
+            $httpClientClass = self::VENDOR_PREFIX . $httpClientClass;
+        }
+        if (!class_exists($httpClientClass) || !method_exists($httpClientClass, 'create')) {
+            return null;
+        }
+
+        /** @var object $client */
+        $client = $httpClientClass::create(['timeout' => $timeoutSeconds, 'max_duration' => $timeoutSeconds]);
+
+        return $client;
+    }
+
+    private function buildPlatform(Provider $provider, ?float $timeoutSeconds): object
+    {
         if (!$this->isRuntimeAvailable()) {
             throw new AdapterRuntimeException(sprintf(
                 'Symfony AI Platform runtime is not installed. Add `composer require %s` to use adapter type "%s".',
@@ -785,11 +833,11 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
 
         // Azure has a bespoke dual-deployment wiring that bypasses the generic factory dispatch.
         if ($this->canonicalTypeKey($this->descriptor->type) === 'symfony.azure') {
-            return $this->buildAzurePlatform($provider, $apiKey);
+            return $this->buildAzurePlatform($provider, $apiKey, $timeoutSeconds);
         }
 
         /** @var object $platform */
-        $platform = $this->createPlatformFromFactory($factoryClass, $provider, $apiKey);
+        $platform = $this->createPlatformFromFactory($factoryClass, $provider, $apiKey, $this->limitedHttpClient($timeoutSeconds, $factoryClass));
 
         return $platform;
     }
@@ -878,9 +926,12 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
         return method_exists($factoryClass, 'createPlatform') || method_exists($factoryClass, 'create');
     }
 
-    private function createPlatformFromFactory(string $factoryClass, Provider $provider, #[\SensitiveParameter] string $apiKey): object
+    private function createPlatformFromFactory(string $factoryClass, Provider $provider, #[\SensitiveParameter] string $apiKey, ?object $httpClient = null): object
     {
         $method = method_exists($factoryClass, 'createPlatform') ? 'createPlatform' : 'create';
+        $clientArg = $httpClient !== null && $this->factoryHasParameter($factoryClass, $method, 'httpClient')
+            ? ['httpClient' => $httpClient]
+            : [];
 
         if ($this->factoryExpectsEndpointFirst($factoryClass, $method)) {
             $endpoint = $this->resolveEndpoint($provider);
@@ -891,23 +942,38 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface
             $apiKeyArg = $apiKey !== '' ? $apiKey : null;
 
             /** @var object $platform */
-            $platform = $factoryClass::{$method}($endpoint, $apiKeyArg);
+            $platform = $factoryClass::{$method}($endpoint, $apiKeyArg, ...$clientArg);
 
             return $platform;
         }
 
         $endpoint = $this->resolveEndpoint($provider);
         if ($endpoint !== null && $this->factoryAcceptsBaseUrl($factoryClass, $method)) {
+            $arguments = [$apiKey, 'baseUrl' => $this->normalizeFactoryBaseUrl($endpoint)] + $clientArg;
             /** @var object $platform */
-            $platform = $factoryClass::{$method}($apiKey, baseUrl: $this->normalizeFactoryBaseUrl($endpoint));
+            $platform = $factoryClass::{$method}(...$arguments);
 
             return $platform;
         }
 
         /** @var object $platform */
-        $platform = $factoryClass::{$method}($apiKey);
+        $platform = $factoryClass::{$method}($apiKey, ...$clientArg);
 
         return $platform;
+    }
+
+    private function factoryHasParameter(string $factoryClass, string $method, string $name): bool
+    {
+        if (!method_exists($factoryClass, $method)) {
+            return false;
+        }
+        foreach ((new \ReflectionMethod($factoryClass, $method))->getParameters() as $parameter) {
+            if ($parameter->getName() === $name) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
