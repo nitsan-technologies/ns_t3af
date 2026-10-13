@@ -405,6 +405,17 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * A disabled feature already tells the editor what to turn on. The preview-failed
+     * wrapper would hide that behind “try again”.
+     */
+    private static function isFeatureDisabledMessage(string $message): bool
+    {
+        $lower = mb_strtolower(trim($message));
+
+        return $lower !== '' && (str_contains($lower, 'turned off') || str_contains($lower, 'currently disabled'));
+    }
+
+    /**
      * @param array<string, mixed> $tool
      * @param array<string, mixed> $context
      * @param array<string, mixed> $body
@@ -461,12 +472,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             );
             $this->auditLogger->logToolInvocation($correlationId, $toolName, $arguments, false, 0, mb_substr((string) ($result['message'] ?? ''), 0, 250));
 
-            return [
-                'role' => 'assistant',
-                'content' => $this->translator->translate(
+            $content = self::isFeatureDisabledMessage($failureDetail)
+                ? $failureDetail
+                : $this->translator->translate(
                     'agent.turn.previewFailed',
                     [$this->editorLabelService->resolve($tool) ?: $toolName, $failureDetail],
-                ),
+                );
+
+            return [
+                'role' => 'assistant',
+                'content' => $content,
                 'meta' => [
                     'type' => 'error',
                     'tool' => $toolName,
