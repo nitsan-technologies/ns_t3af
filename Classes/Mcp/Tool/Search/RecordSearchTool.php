@@ -30,6 +30,7 @@ use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
+use NITSAN\NsT3AF\Mcp\Service\PermissionService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 
@@ -40,6 +41,7 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
         private RecordService $recordService,
         private TcaSchemaService $tcaSchemaService,
         private PageAccessService $pageAccess,
+        private PermissionService $permissionService,
     ) {}
 
     #[McpTool(
@@ -62,13 +64,18 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
         string $orderDirection = 'ASC',
         string $selectFields = '',
     ): string {
+        $this->permissionService->assertCanSelectTable($tableName);
+
         if ($pid > 0 && $tableName !== 'pages' && !$this->pageAccess->canReadPage($pid)) {
-            return json_encode(['error' => PageAccessService::ACCESS_DENIED_MESSAGE, 'pageId' => $pid], JSON_THROW_ON_ERROR);
+            throw new \InvalidArgumentException(PageAccessService::ACCESS_DENIED_MESSAGE, 1790600003);
         }
 
         $readFields = $this->tcaSchemaService->getReadFields($tableName);
         if ($readFields === ['uid', 'pid']) {
-            return json_encode(['error' => 'Table not found or has no readable fields: ' . $tableName], JSON_THROW_ON_ERROR);
+            throw new \InvalidArgumentException(
+                'Table not found or has no readable fields: ' . $tableName,
+                1790600004,
+            );
         }
 
         // "Show me all my news": an empty search lists the table (still limited by page access and rights).
@@ -77,7 +84,7 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
             $labelField = (string) ($GLOBALS['TCA'][$tableName]['ctrl']['label'] ?? '');
             $searchData = $listAll ? [] : SearchParamParser::parse($search, $labelField, array_merge(['uid', 'pid'], $readFields));
         } catch (\InvalidArgumentException $e) {
-            return json_encode(['error' => 'Invalid search parameter: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
+            throw new \InvalidArgumentException('Invalid search parameter: ' . $e->getMessage(), 1790600005, $e);
         }
 
         $allowedFields = array_merge(['uid', 'pid'], $readFields);
@@ -85,19 +92,16 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
         $ignoredFields = array_values(array_diff(array_keys($searchData), $allowedFields));
 
         if ($validSearch === [] && !$listAll) {
-            return json_encode(
-                ['error' => 'No valid search fields provided', 'ignoredFields' => $ignoredFields],
-                JSON_THROW_ON_ERROR,
+            throw new \InvalidArgumentException(
+                'No valid search fields provided' . ($ignoredFields !== [] ? ' (ignored: ' . implode(', ', $ignoredFields) . ')' : ''),
+                1790600006,
             );
         }
 
         $resolvedOrderBy = null;
         if ($orderBy !== '') {
             if (!in_array($orderBy, $allowedFields, true)) {
-                return json_encode(
-                    ['error' => 'Invalid orderBy field: ' . $orderBy, 'allowedFields' => $allowedFields],
-                    JSON_THROW_ON_ERROR,
-                );
+                throw new \InvalidArgumentException('Invalid orderBy field: ' . $orderBy, 1790600007);
             }
             $resolvedOrderBy = $orderBy;
         }

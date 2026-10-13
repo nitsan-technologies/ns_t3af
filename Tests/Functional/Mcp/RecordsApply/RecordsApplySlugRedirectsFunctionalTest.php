@@ -108,6 +108,8 @@ final class RecordsApplySlugRedirectsFunctionalTest extends FunctionalTestCase
             )
             ->fetchOne();
         self::assertGreaterThanOrEqual(1, $redirectCount, 'EXT:redirects should create a redirect when the site is attached.');
+        self::assertNotSame([], $result->redirects, 'Created redirects must be listed in the records_apply reply.');
+        self::assertSame('/redirect-slug-page', $result->redirects[0]['source_path'] ?? null);
     }
 
     #[Test]
@@ -200,6 +202,17 @@ final class RecordsApplySlugRedirectsFunctionalTest extends FunctionalTestCase
                 ->fetchOne(),
             'No auto-redirect when the page has no site.',
         );
+        self::assertSame(
+            0,
+            (int) $this->getConnectionPool()->getConnectionForTable('sys_redirect')
+                ->executeQuery(
+                    'SELECT COUNT(*) FROM sys_redirect WHERE target LIKE ? AND deleted = 0',
+                    ['%uid=' . $uid . '%'],
+                )
+                ->fetchOne(),
+            'No wildcard or other auto-redirect targeting the no-site page.',
+        );
+        self::assertSame([], $result->redirects);
     }
 
     #[Test]

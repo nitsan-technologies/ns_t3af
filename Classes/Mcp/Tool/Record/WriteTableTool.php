@@ -979,6 +979,14 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         if ($fileFieldUids !== []) {
             $response['fileFields'] = $fileFieldUids;
         }
+        if ($result instanceof RecordsApplyResult) {
+            if ($result->warnings !== []) {
+                $response['warnings'] = $result->warnings;
+            }
+            if ($result->redirects !== []) {
+                $response['redirects'] = $result->redirects;
+            }
+        }
 
         return json_encode($response, JSON_THROW_ON_ERROR);
     }

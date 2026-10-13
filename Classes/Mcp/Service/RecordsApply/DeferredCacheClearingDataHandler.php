@@ -30,7 +30,23 @@ use TYPO3\CMS\Core\DataHandling\DataHandler;
  */
 final class DeferredCacheClearingDataHandler extends DataHandler
 {
+    /**
+     * When true, every instance skips processClearCacheQueue (nested DataHandlers
+     * created during page copy via SYS[Objects] XCLASS).
+     */
+    private static bool $globallyDefer = false;
+
     private bool $deferCacheClearing = false;
+
+    public static function setGloballyDefer(bool $defer): void
+    {
+        self::$globallyDefer = $defer;
+    }
+
+    public static function isGloballyDeferring(): bool
+    {
+        return self::$globallyDefer;
+    }
 
     public function deferCacheClearing(bool $defer = true): void
     {
@@ -40,7 +56,13 @@ final class DeferredCacheClearingDataHandler extends DataHandler
     public function flushDeferredCaches(): void
     {
         $this->deferCacheClearing = false;
-        $this->processClearCacheQueue();
+        $wasGlobal = self::$globallyDefer;
+        self::$globallyDefer = false;
+        try {
+            $this->processClearCacheQueue();
+        } finally {
+            self::$globallyDefer = $wasGlobal;
+        }
     }
 
     /**
@@ -55,7 +77,7 @@ final class DeferredCacheClearingDataHandler extends DataHandler
 
     protected function processClearCacheQueue(): void
     {
-        if ($this->deferCacheClearing) {
+        if ($this->deferCacheClearing || self::$globallyDefer) {
             return;
         }
 

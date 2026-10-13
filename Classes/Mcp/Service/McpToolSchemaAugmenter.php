@@ -88,6 +88,9 @@ readonly class McpToolSchemaAugmenter
         }
 
         $inputSchema['properties'] = $properties;
+        // Agents often send aliases (e.g. path instead of directoryPath); reject unknowns
+        // so a call cannot silently act on the storage root (handoff P2 #14).
+        $inputSchema['additionalProperties'] = false;
 
         return $inputSchema;
     }

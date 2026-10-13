@@ -81,11 +81,21 @@ final class ContentReadToolsAccessTest extends TestCase
     #[Test]
     public function recordSearchRefusesAnOutsidePageForPageContentTables(): void
     {
-        $tool = new RecordSearchTool($this->untouchedRecords(), $this->untouchedSchema(), $this->access());
+        $permissions = $this->createMock(\NITSAN\NsT3AF\Mcp\Service\PermissionService::class);
+        $permissions->expects(self::once())->method('assertCanSelectTable')->with('tt_content');
+        $tool = new RecordSearchTool(
+            $this->untouchedRecords(),
+            $this->untouchedSchema(),
+            $this->access(),
+            $permissions,
+        );
 
-        $decoded = $this->decode($tool->execute('tt_content', '{"header":"SECRET"}', 20, 0, self::OUTSIDE_PAGE));
-
-        self::assertSame(PageAccessService::ACCESS_DENIED_MESSAGE, $decoded['error']);
+        try {
+            $tool->execute('tt_content', '{"header":"SECRET"}', 20, 0, self::OUTSIDE_PAGE);
+            self::fail('Expected page access refusal.');
+        } catch (\InvalidArgumentException $exception) {
+            self::assertSame(PageAccessService::ACCESS_DENIED_MESSAGE, $exception->getMessage());
+        }
     }
 
     #[Test]
@@ -95,9 +105,9 @@ final class ContentReadToolsAccessTest extends TestCase
         $records->method('findByUid')->willReturn(null);
         $tool = new ContentGetTool($records, $this->schema(), $this->access(unrestricted: false));
 
-        $decoded = $this->decode($tool->execute(714));
-
-        self::assertStringContainsString("don't have access to its page", $decoded['error']);
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("don't have access to its page");
+        $tool->execute(714);
     }
 
     #[Test]
@@ -107,9 +117,9 @@ final class ContentReadToolsAccessTest extends TestCase
         $records->method('findByUid')->willReturn(null);
         $tool = new ContentGetTool($records, $this->schema(), $this->access(unrestricted: true));
 
-        $decoded = $this->decode($tool->execute(714));
-
-        self::assertSame('Content element not found', $decoded['error']);
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Content element not found');
+        $tool->execute(714);
     }
 
     /**

@@ -536,6 +536,22 @@ services:
     public: true
     shared: false
 
+  # Shared across records_apply / write_table and the redirects event listener for one request.
+  NITSAN\NsT3AF\Mcp\Service\McpSlugRedirectGuard:
+    public: true
+    shared: true
+
+  NITSAN\NsT3AF\Mcp\EventListener\McpSlugRedirectListener:
+    tags:
+      - name: event.listener
+        identifier: 'nst3af-mcp-slug-redirect-skip-no-site'
+        event: TYPO3\CMS\Redirects\Event\SlugRedirectChangeItemCreatedEvent
+        method: clearSourcesForSkippedPages
+      - name: event.listener
+        identifier: 'nst3af-mcp-slug-redirect-collect'
+        event: TYPO3\CMS\Redirects\Event\AfterAutoCreateRedirectHasBeenPersistedEvent
+        method: rememberCreatedRedirect
+
   NITSAN\NsT3AF\Mcp\Tool\:
     resource: '../Classes/Mcp/Tool/*'
 
