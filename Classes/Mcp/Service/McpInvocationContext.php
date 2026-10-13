@@ -116,6 +116,7 @@ final class McpInvocationContext
             pageId: $options->pageId,
             requestUuid: $options->requestUuid,
             extra: $options->extra,
+            timeoutSeconds: $options->timeoutSeconds,
         );
     }
 
@@ -144,6 +145,7 @@ final class McpInvocationContext
             pageId: $options->pageId,
             requestUuid: $options->requestUuid,
             extra: $options->extra,
+            timeoutSeconds: $options->timeoutSeconds,
         );
     }
 

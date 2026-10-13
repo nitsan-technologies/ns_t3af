@@ -58,6 +58,11 @@ final readonly class AiOptions
      *                                         - `brandContextProfileUid` (int): resolved brand profile uid (stamped at runtime; lineage).
      *                                         - `imageSize` / `imageCount`: image generation variation overrides.
      *                                         - `quality` (mixed): input to the response quality resolver.
+     * @param float|null   $timeoutSeconds     Upper limit in seconds for the whole provider request of this call
+     *                                         (connect + response). `null` keeps the adapter default. Applied by
+     *                                         adapters implementing {@see \NITSAN\NsT3AF\Provider\Contract\RequestTimeoutCapableInterface}
+     *                                         and by T3Planet Credits calls; other adapters ignore it. A call that
+     *                                         runs out of time fails like any other provider error.
      */
     public function __construct(
         public ?string $providerIdentifier = null,
@@ -75,5 +80,6 @@ final readonly class AiOptions
         public ?int $pageId = null,
         public string $requestUuid = '',
         public array $extra = [],
+        public ?float $timeoutSeconds = null,
     ) {}
 }

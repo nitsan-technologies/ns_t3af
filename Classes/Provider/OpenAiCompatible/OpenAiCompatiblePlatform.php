@@ -44,7 +44,26 @@ final class OpenAiCompatiblePlatform
         private readonly Provider $provider,
         private readonly CredentialCipher $cipher,
         private readonly RequestFactory $requestFactory,
+        /** Upper limit for every request of this platform ({@see \NITSAN\NsT3AF\Api\AiOptions::$timeoutSeconds}). */
+        private readonly ?float $requestTimeout = null,
     ) {}
+
+    /**
+     * Guzzle timeouts: the per-call limit when it is lower than the default.
+     *
+     * @return array{timeout: float|int, connect_timeout: float|int}
+     */
+    private function timeouts(int $timeout = 120, int $connectTimeout = 10): array
+    {
+        if ($this->requestTimeout === null || $this->requestTimeout <= 0) {
+            return ['timeout' => $timeout, 'connect_timeout' => $connectTimeout];
+        }
+
+        return [
+            'timeout' => min($timeout, $this->requestTimeout),
+            'connect_timeout' => min($connectTimeout, $this->requestTimeout),
+        ];
+    }
 
     /**
      * Non-streaming chat completion (POST …/chat/completions).
@@ -216,9 +235,7 @@ final class OpenAiCompatiblePlatform
             'headers' => $headers,
             'json' => $body,
             'http_errors' => false,
-            'timeout' => 120,
-            'connect_timeout' => 10,
-        ];
+        ] + $this->timeouts();
         if ($streamResponseBody) {
             $options['stream'] = true;
         }
@@ -246,9 +263,7 @@ final class OpenAiCompatiblePlatform
             'headers'     => $headers,
             'json'        => $body,
             'http_errors' => false,
-            'timeout'     => 120,
-            'connect_timeout' => 10,
-        ]);
+        ] + $this->timeouts());
     }
 
     private function endpointUrl(string $path): string
@@ -527,9 +542,7 @@ final class OpenAiCompatiblePlatform
             'headers' => $headers,
             'multipart' => $multipart,
             'http_errors' => false,
-            'timeout' => 120,
-            'connect_timeout' => 10,
-        ]);
+        ] + $this->timeouts());
     }
 
     /**

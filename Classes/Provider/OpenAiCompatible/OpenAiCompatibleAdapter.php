@@ -24,6 +24,7 @@ use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 use NITSAN\NsT3AF\Exception\CipherException;
 use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
+use NITSAN\NsT3AF\Provider\Contract\RequestTimeoutCapableInterface;
 use NITSAN\NsT3AF\Provider\Contract\VerifyResult;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use TYPO3\CMS\Core\Http\RequestFactory;
@@ -37,7 +38,7 @@ use TYPO3\CMS\Core\Http\RequestFactory;
  *
  * @internal
  */
-final class OpenAiCompatibleAdapter implements AdapterInterface
+final class OpenAiCompatibleAdapter implements AdapterInterface, RequestTimeoutCapableInterface
 {
     public function __construct(
         private readonly CredentialCipher $cipher,
@@ -141,6 +142,11 @@ final class OpenAiCompatibleAdapter implements AdapterInterface
     public function platform(Provider $provider): object
     {
         return new OpenAiCompatiblePlatform($provider, $this->cipher, $this->requestFactory);
+    }
+
+    public function platformWithTimeout(Provider $provider, float $timeoutSeconds): object
+    {
+        return new OpenAiCompatiblePlatform($provider, $this->cipher, $this->requestFactory, $timeoutSeconds);
     }
 
     private function elapsed(int $startMs): int
