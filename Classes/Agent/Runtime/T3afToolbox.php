@@ -268,6 +268,20 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: the editor asked to show or hide something, not to delete it. Change the hidden field with write_table action update (page and its content elements), never delete.',
             );
         }
+        // Show/hide (not bare "publish"): use write_table hidden, never a workspace review stage.
+        // Bare publish/unpublish may still use workspace_stage_set.
+        if (
+            $name === 'workspace_stage_set'
+            && AgentRunner::isVisibilityRequest($requestQuery)
+            && preg_match('/\b(visible|invisible|hidden|unhide|hide|sichtbar|unsichtbar|ausblend\w*|einblend\w*|verstecke\w*|verberg\w*)\b/iu', $requestQuery) === 1
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked to make a page or content visible or hidden, not to change a workspace review stage. Call write_table action update with data {"hidden": 0} (or 1) on the translation page uid and its hidden content elements.',
+            );
+        }
         // "Translate the first element into French" is one element, not the whole page.
         if ($name === 't3ai_translate_page' && AgentRunner::asksForOneElementTranslation($requestQuery)) {
             $outcome = 'invalid';
@@ -349,6 +363,17 @@ final class T3afToolbox implements ToolboxInterface
             );
         }
         if ($name === 'file_reference_add') {
+            $attachUid = (int) ($toolCall->getArguments()['uid'] ?? 0);
+            if ($attachUid <= 0) {
+                $outcome = 'invalid';
+
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: file_reference_add needs the uid of an existing record (tt_content or news). '
+                    . 'To put the image on a new Text & Media element, create that element with write_table first '
+                    . '(the image attaches after Apply). To attach to an existing element, pass that element\'s uid (> 0).',
+                );
+            }
             if (AgentPromptBuilder::hasOpenFileReferenceDraft($conversationHistory)) {
                 $outcome = 'invalid';
 

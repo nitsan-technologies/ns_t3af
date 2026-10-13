@@ -106,4 +106,30 @@ final class AgentPageStructureOutline
 
         return ['title' => '', 'children' => $roots];
     }
+
+    /**
+     * Bullet outline of a structure array (for Apply result / follow-up text).
+     *
+     * @param array<string, mixed> $structure
+     */
+    public static function formatOutline(array $structure, int $depth = 0): string
+    {
+        $title = trim((string) ($structure['title'] ?? ''));
+        $children = is_array($structure['children'] ?? null) ? array_values($structure['children']) : [];
+        $children = array_values(array_filter($children, 'is_array'));
+        $lines = [];
+        if ($title !== '') {
+            $lines[] = str_repeat('  ', $depth) . '• ' . $title;
+            ++$depth;
+        }
+        foreach ($children as $child) {
+            /** @var array<string, mixed> $child */
+            $line = self::formatOutline($child, $depth);
+            if ($line !== '') {
+                $lines[] = $line;
+            }
+        }
+
+        return implode("\n", $lines);
+    }
 }

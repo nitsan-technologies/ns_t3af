@@ -65,6 +65,17 @@ readonly class ContentGetTool implements McpNonAiToolInterface
         $record = $this->recordService->findByUid('tt_content', $uid, $fields);
 
         if ($record === null) {
+            $asPage = $this->recordService->findByUid('pages', $uid, ['uid', 'l10n_parent']);
+            if (is_array($asPage)) {
+                throw new \InvalidArgumentException(
+                    sprintf(
+                        'Uid %d is a page, not a content element. Use pages_get for that uid. '
+                        . 'List content with content_list on the default-language page (l10n_parent or the open page) and sysLanguageUid.',
+                        $uid,
+                    ),
+                    1790600011,
+                );
+            }
             throw new \InvalidArgumentException(
                 $this->pageAccess->isUnrestricted()
                     ? 'Content element not found'

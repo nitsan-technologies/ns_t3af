@@ -36,6 +36,7 @@ use NITSAN\NsT3AF\Agent\Service\AgentCreditsStatus;
 use NITSAN\NsT3AF\Agent\Service\AgentDraftSession;
 use NITSAN\NsT3AF\Agent\Service\AgentGovernanceGuard;
 use NITSAN\NsT3AF\Agent\Service\AgentLowRiskFieldMatrix;
+use NITSAN\NsT3AF\Agent\Service\AgentPageStructureOutline;
 use NITSAN\NsT3AF\Agent\Service\AgentPermissionMessage;
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentProviderOptions;
@@ -608,11 +609,29 @@ final class AgentAjaxController
         $message = ($result['toolConfirmation'] ?? false) === true
             ? $this->translator->translate('agent.draft.toolApplied')
             : $this->changeMessages->applied($labelledResult);
+        // One-Apply create+attach: say the file was attached so the follow-up does not open a second card.
+        $attachNote = trim((string) ($result['attachNote'] ?? ''));
+        if ($attachNote !== '') {
+            $message = trim($message . ' ' . $attachNote);
+        }
         if (($result['suggestionsApply'] ?? false) === true) {
             $message = $this->translator->translate('agent.suggestions.applied', [
                 (string) ($result['appliedCount'] ?? 0),
             ]);
+            // Custom outline could not be parsed: say the draft was used (do not hide it behind "Applied N fields").
+            if (($result['structureFellBackToDraft'] ?? false) === true) {
+                $fallback = $this->translator->translate('agent.write.structureOutlineUnread');
+                if ($fallback !== '' && $fallback !== 'agent.write.structureOutlineUnread') {
+                    $message = trim($message . ' ' . $fallback);
+                }
+            }
+            // Page-structure Apply: name the real tree so the follow-up does not invent the bakery list.
+            $structureSummary = $this->pageStructureApplySummary($result);
+            if ($structureSummary !== '') {
+                $message = trim($message . ' ' . $structureSummary);
+            }
         }
+        // Image fallback notice is shown once in the Agent UI (JS bubble from details.notice), not here.
 
         $links = $this->resultLinks($result, $storedDraft);
         if ($user !== null) {
@@ -638,6 +657,52 @@ final class AgentAjaxController
             'schedulerHandoff' => $handoff,
             'links' => $links,
         ]);
+    }
+
+    /**
+     * Titles from a page-structure Apply, so the chat follow-up names what was really created.
+     *
+     * @param array<string, mixed> $result
+     */
+    private function pageStructureApplySummary(array $result): string
+    {
+        if ((string) ($result['tool'] ?? '') !== 't3ai_create_page_structure') {
+            return '';
+        }
+        $structureJson = '';
+        $applied = is_array($result['appliedValues'] ?? null) ? $result['appliedValues'] : [];
+        if (isset($applied['structure']) && is_string($applied['structure'])) {
+            $structureJson = $applied['structure'];
+        }
+        $presentation = is_array($result['presentation'] ?? null) ? $result['presentation'] : [];
+        $details = is_array($presentation['details'] ?? null) ? $presentation['details'] : [];
+        if ($structureJson === '' && isset($details['structure'])) {
+            $structureJson = is_string($details['structure'])
+                ? $details['structure']
+                : (is_array($details['structure']) ? (string) json_encode($details['structure'], JSON_UNESCAPED_UNICODE) : '');
+        }
+        if ($structureJson === '') {
+            return '';
+        }
+        try {
+            $decoded = json_decode($structureJson, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return '';
+        }
+        if (!is_array($decoded)) {
+            return '';
+        }
+        $outline = AgentPageStructureOutline::formatOutline($decoded);
+        if ($outline === '') {
+            return '';
+        }
+
+        $label = $this->translator->translate('agent.write.structureCreatedPages');
+        if ($label === '' || $label === 'agent.write.structureCreatedPages') {
+            $label = 'Created pages:';
+        }
+
+        return $label . "\n" . $outline;
     }
 
     /**

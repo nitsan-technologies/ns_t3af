@@ -50,6 +50,21 @@ readonly class ContentListTool implements McpNonAiToolInterface
     )]
     public function execute(int $pid, int $limit = 20, int $offset = 0, int $sysLanguageUid = -1, string $selectFields = ''): string
     {
+        // Overlay translation pages (l10n_parent > 0) do not host tt_content rows; content lives on
+        // the default-language page with sys_language_uid set. Remap so "German content of page 70"
+        // lists the overlays on pid = l10n_parent instead of an empty list. When the caller did not
+        // pass a language filter, default to that overlay page's own language.
+        if ($pid > 0) {
+            $page = $this->recordService->findByUid('pages', $pid, ['uid', 'l10n_parent', 'sys_language_uid']);
+            $defaultPid = is_array($page) ? (int) ($page['l10n_parent'] ?? 0) : 0;
+            if ($defaultPid > 0) {
+                if ($sysLanguageUid < 0 && is_array($page)) {
+                    $sysLanguageUid = (int) ($page['sys_language_uid'] ?? -1);
+                }
+                $pid = $defaultPid;
+            }
+        }
+
         if ($pid > 0 && !$this->pageAccess->canReadPage($pid)) {
             return json_encode(['error' => PageAccessService::ACCESS_DENIED_MESSAGE, 'pageId' => $pid], JSON_THROW_ON_ERROR);
         }
