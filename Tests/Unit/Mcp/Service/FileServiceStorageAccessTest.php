@@ -64,6 +64,7 @@ final class FileServiceStorageAccessTest extends TestCase
         $storage->method('getFileByIdentifier')->with('/doc.pdf')->willReturn($file);
 
         $backendUser = $this->createMock(BackendUserAuthentication::class);
+        $backendUser->method('isAdmin')->willReturn(true);
         $backendUser->method('getFileStorages')->willReturn([1 => $storage]);
         $GLOBALS['BE_USER'] = $backendUser;
 

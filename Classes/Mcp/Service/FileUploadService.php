@@ -27,6 +27,7 @@ use Doctrine\DBAL\ParameterType;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\UriResolver;
 use GuzzleHttp\Psr7\Utils;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
 use NITSAN\NsT3AF\Service\PublicUrlValidator;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -98,8 +99,15 @@ readonly class FileUploadService
         $storage = $this->getStorage($storageUid);
         $segments = GeneralUtility::trimExplode('/', $directoryPath, true);
         if ($segments === []) {
-            return $storage->getRootLevelFolder();
+            $root = $storage->getRootLevelFolder();
+            RecordsApplyFileAccess::assertFolderAllowed($storageUid, $root->getIdentifier());
+
+            return $root;
         }
+
+        // Refuse before creating missing segments outside the editor's mounts.
+        $intended = '/' . implode('/', $segments) . '/';
+        RecordsApplyFileAccess::assertFolderAllowed($storageUid, $intended);
 
         $existingIdentifier = '/';
         while ($segments !== [] && $storage->hasFolder($existingIdentifier . $segments[0] . '/')) {

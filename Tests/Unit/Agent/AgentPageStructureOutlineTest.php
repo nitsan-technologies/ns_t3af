@@ -74,4 +74,42 @@ final class AgentPageStructureOutlineTest extends TestCase
 
         self::assertSame("• Shop\n  • Gift cards\n• Team", $outline);
     }
+
+    #[Test]
+    public function formatOutlineOmitsGenericHomeWrapperThatIsNotCreated(): void
+    {
+        $outline = AgentPageStructureOutline::formatOutline([
+            'title' => 'Home',
+            'children' => [
+                ['title' => 'About Us', 'children' => []],
+                ['title' => 'Contact', 'children' => []],
+            ],
+        ]);
+
+        self::assertSame("• About Us\n• Contact", $outline);
+        self::assertStringNotContainsString('Home', $outline);
+    }
+
+    #[Test]
+    public function formatOutlineKeepsALoneHomePage(): void
+    {
+        self::assertSame('• Home', AgentPageStructureOutline::formatOutline([
+            'title' => 'Home',
+            'children' => [],
+        ]));
+    }
+
+    #[Test]
+    public function formatOutlineKeepsANamedHomeUnderAnEmptyRoot(): void
+    {
+        // Bullet outline "• Home / Shop" creates a real Home page — not a phantom wrapper.
+        $outline = AgentPageStructureOutline::formatOutline([
+            'title' => '',
+            'children' => [
+                ['title' => 'Home', 'children' => [['title' => 'Shop', 'children' => []]]],
+            ],
+        ]);
+
+        self::assertSame("• Home\n  • Shop", $outline);
+    }
 }

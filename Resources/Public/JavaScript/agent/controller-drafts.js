@@ -19,6 +19,42 @@ export function seoQueueAddSkipsFollowUp(tool, content) {
   return tool === 't3ai_mass_seo_queue_add' && String(content ?? '').startsWith('No pages added');
 }
 
+/**
+ * True when a multi-step plan still has work after the current Apply.
+ *
+ * @param {Array<{title?: string, status?: string}>|null|undefined} planSteps
+ * @returns {boolean}
+ */
+export function planHasRemainingWork(planSteps) {
+  const steps = Array.isArray(planSteps) ? planSteps : [];
+  if (steps.length === 0) {
+    return false;
+  }
+  const open = steps.filter((step) => !['completed', 'failed'].includes(String(step?.status ?? '')));
+  // One open step is the structure (or other) Apply just confirmed; more means later steps remain.
+  return open.length > 1;
+}
+
+/**
+ * Apply already finished the editor request: skip the NL follow-up turn.
+ * Page-structure Apply lists created pages; a follow-up would re-draft the old tree —
+ * but only when the plan has nothing left (structure-only). Multi-step stays on continuation.
+ *
+ * @param {string} tool
+ * @param {string} content
+ * @param {Array<{title?: string, status?: string}>} [planSteps]
+ * @returns {boolean}
+ */
+export function draftApplySkipsFollowUp(tool, content, planSteps = []) {
+  if (seoQueueAddSkipsFollowUp(tool, content)) {
+    return true;
+  }
+  if (tool !== 't3ai_create_page_structure') {
+    return false;
+  }
+  return !planHasRemainingWork(planSteps);
+}
+
 export const draftMethods = {
   /**
      * Where a confirmed change goes: live website or the current draft workspace.
@@ -773,7 +809,8 @@ export const draftMethods = {
             links: Array.isArray(payload.links) ? payload.links : [],
             fromRunner: message.meta?.fromRunner === true,
           };
-          // Slash image Apply has no NL follow-up: surface the provider note outside the collapsed step.
+          // Slash / skipped follow-up: surface the provider note outside the collapsed step.
+          // Natural Apply queues a continuation — that reply owns the notice once (avoid a double bubble).
           // Only details.notice / "cannot create images" — never payload.message (that is the generic Apply text).
           const details = presented.details && typeof presented.details === 'object' ? presented.details : {};
           const notice = String(details.notice ?? '').trim();
@@ -781,7 +818,13 @@ export const draftMethods = {
           const visibleNotice = notice !== ''
             ? notice
             : (contentText.includes('cannot create images') ? contentText.trim() : '');
-          if (visibleNotice !== '') {
+          const appliedTool = String(result.tool ?? draft.tool ?? '');
+          const planSteps = typeof this.currentPlan === 'function' ? this.currentPlan() : [];
+          const skipsFollowUp = draftApplySkipsFollowUp(appliedTool, message.content, planSteps);
+          const willContinue = !skipsFollowUp
+            && this.continueAfterConfirm
+            && message.meta?.fromRunner === true;
+          if (visibleNotice !== '' && !willContinue) {
             this.messages.push({
               role: 'assistant',
               content: visibleNotice,
@@ -790,7 +833,7 @@ export const draftMethods = {
           }
           this.renderStream();
           this.refreshBackendContent();
-          if (!seoQueueAddSkipsFollowUp(String(result.tool ?? draft.tool ?? ''), message.content)) {
+          if (!skipsFollowUp) {
             this.queueContinuation(message, 'applied', String(message.content ?? ''));
           }
         } else {

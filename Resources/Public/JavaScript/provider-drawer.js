@@ -198,6 +198,14 @@ const OPENRESPONSES_ADAPTER = 'symfony.openresponses';
 const CAP_EMBEDDINGS = 'embeddings';
 const CAP_CHAT = 'chat';
 const CAP_COMPLETION = 'completion';
+const CAP_IMAGE_GENERATION = 'image_generation';
+/** Adapters the image tool can actually generate with (must match Provider::adapterSupportsImageGeneration / McpImageSourceResolver). */
+const IMAGE_GENERATION_ADAPTERS = new Set([
+  'symfony.openai',
+  'ns_t3ai.stability_ai',
+  'ns_t3ai.midjourney',
+  OPENAI_COMPATIBLE_ADAPTER,
+]);
 
 const DRAWER_FOCUSABLE = [
   'a[href]',
@@ -674,6 +682,16 @@ class ProviderDrawer {
         if (isOllama) {
           apiKeyInput.value = '';
         }
+      }
+      // Image generation is only wired for OpenAI / Stability / MidJourney (+ OpenAI-compatible).
+      const imageCap = form.querySelector(`input[name="capabilities[]"][value="${CAP_IMAGE_GENERATION}"]`);
+      const imageCapRow = imageCap?.closest('.form-group');
+      const canGenerateImages = IMAGE_GENERATION_ADAPTERS.has(adapterType);
+      if (imageCapRow instanceof HTMLElement) {
+        imageCapRow.hidden = !canGenerateImages;
+      }
+      if (imageCap instanceof HTMLInputElement && !canGenerateImages) {
+        imageCap.checked = false;
       }
       // Azure: update model field labels to deployment-centric terminology.
       const modelFieldLabelText = form.querySelector('[data-aiu-model-field-label] [data-aiu-field-label-text]');

@@ -329,6 +329,17 @@ final class ProviderFormService
             }
         }
 
+        $adapterForCaps = trim((string) ($payload['adapter_type'] ?? ''));
+        if ($adapterForCaps !== '' && !Provider::adapterSupportsImageGeneration($adapterForCaps)) {
+            $caps = $payload['capabilities'] ?? '';
+            $capList = is_string($caps) ? Capability::fromCsv($caps) : [];
+            $capList = array_values(array_filter(
+                $capList,
+                static fn(string $cap): bool => $cap !== Capability::IMAGE_GENERATION,
+            ));
+            $payload['capabilities'] = Capability::toCsv($capList);
+        }
+
         return $payload;
     }
 

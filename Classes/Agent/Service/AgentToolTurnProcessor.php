@@ -27,6 +27,7 @@ use NITSAN\NsT3AF\Mcp\Exception\UnsupportedPlanException;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPlaygroundService;
 use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\Connection;
@@ -748,17 +749,23 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $draftCard = $this->draftService->buildDraftCard($plan, $severity);
         $draftCard['editorLabel'] = $editorLabel;
         $extra = [];
-        // "new content element" + uploaded/generated file: after Apply, attach that file to the created element.
-        // Clarification answers ("Create a new Text & Media element for the image") live in the latest user
-        // message / requestForGate, not always in the original requestQuery.
+        // Media CE create + place/attach (or "new Text & Media …"): after Apply, attach the pending file.
+        // Clarification answers live in requestForGate / latest user text, not always in requestQuery.
+        // "Put that picture on this page" alone must still wire pendingAttach when the model creates textmedia.
         if ($shownTool === 'write_table' && $plan->action === 'create') {
             $gateRequest = trim((string) ($body['requestForGate'] ?? ''));
             $latestUser = AgentPromptBuilder::latestUserRequestText($history);
-            $wantsNewCeAttach = AgentAttachTargetRequest::asksForNewContentElementAttach($requestQuery)
-                || ($gateRequest !== '' && AgentAttachTargetRequest::asksForNewContentElementAttach($gateRequest))
-                || ($latestUser !== '' && AgentAttachTargetRequest::asksForNewContentElementAttach($latestUser));
-            if ($wantsNewCeAttach) {
-                $attachProbe = $gateRequest !== '' ? $gateRequest : ($latestUser !== '' ? $latestUser : $requestQuery);
+            $attachProbe = $gateRequest !== '' ? $gateRequest : ($latestUser !== '' ? $latestUser : $requestQuery);
+            $wantsAttach = AgentAttachTargetRequest::asksForNewContentElementAttach($requestQuery)
+                || AgentAttachTargetRequest::asksForNewContentElementAttach($attachProbe)
+                || (
+                    self::planCreatesMediaContent($plan)
+                    && (
+                        AgentRequestedFiles::asksToAttachOrPlaceFile($requestQuery)
+                        || AgentRequestedFiles::asksToAttachOrPlaceFile($attachProbe)
+                    )
+                );
+            if ($wantsAttach) {
                 // Only pending/generated files for this turn — never the first upload in the whole conversation.
                 $pending = AgentPromptBuilder::pendingAttachFileUids($history, $attachProbe);
                 $fileUid = $pending[0] ?? 0;
@@ -791,6 +798,23 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'orchestratorPause' => true,
             ],
         ];
+    }
+
+    /**
+     * Draft creates a content type that can hold a file (Text & Media / Text & Images / Image).
+     */
+    public static function planCreatesMediaContent(ToolPlan $plan): bool
+    {
+        foreach ($plan->fields as $field) {
+            if ($field->table !== 'tt_content' || strtolower($field->field) !== 'ctype') {
+                continue;
+            }
+            $cType = strtolower(trim((string) $field->proposedValue));
+
+            return in_array($cType, ['textmedia', 'textpic', 'image'], true);
+        }
+
+        return false;
     }
 
     /**

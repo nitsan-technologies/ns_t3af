@@ -126,6 +126,9 @@ readonly class FileUploadEndpoint
             // Same numeric code as the MCP tool route (file_upload) reports for the same refusal.
             return $this->jsonError($e->getMessage(), 400, (int) $e->getCode() ?: self::FALLBACK_ERROR_CODE);
         } catch (\Throwable $e) {
+            if ((int) $e->getCode() === 1747330008) {
+                return $this->jsonError($e->getMessage(), 403, 1747330008);
+            }
             $this->logger->error('Pre-signed upload failed: ' . $e->getMessage(), ['exception' => $e]);
 
             return $this->jsonError('Upload failed due to an unexpected server error (see TYPO3 log).', 500, 1747330009);
