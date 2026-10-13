@@ -31,7 +31,6 @@ use NITSAN\NsT3AF\Mcp\Contract\McpFalStorageToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
-use NITSAN\NsT3AF\Mcp\Service\FileUploadService;
 use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 
@@ -96,15 +95,8 @@ readonly class FileUploadFromUrlTool implements McpFalStorageToolInterface, McpP
         int $storageUid = 1,
         string $fileName = '',
     ): string {
-        try {
-            $result = $this->fileService->uploadFileFromUrl($storageUid, $directoryPath, $url, $fileName);
+        $result = $this->fileService->uploadFileFromUrl($storageUid, $directoryPath, $url, $fileName);
 
-            return json_encode($result, JSON_THROW_ON_ERROR);
-        } catch (\Throwable $exception) {
-            return json_encode(
-                ['error' => $exception->getMessage(), ...(FileUploadService::isPermanentFailure($exception) ? ['retryable' => false] : [])],
-                JSON_THROW_ON_ERROR,
-            );
-        }
+        return json_encode($result, JSON_THROW_ON_ERROR);
     }
 }
