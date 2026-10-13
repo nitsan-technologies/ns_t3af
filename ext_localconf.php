@@ -106,8 +106,12 @@ $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelHoldList'] ??= ['publi
 $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelAutoConfirmSources'] ??= [];
 $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelFolderDefaults'] ??= [];
 
-// WOFF/WOFF2: finfo often reports application/octet-stream or application/font-woff*
-// instead of font/woff(2). Map those so MCP (and FAL) uploads pass consistency checks.
+// WOFF/WOFF2 (D12): allow extensions and map finfo octet-stream / application/font-woff* → font/woff(2).
+foreach (['woff', 'woff2'] as $fontExtension) {
+    if (!\TYPO3\CMS\Core\Utility\GeneralUtility::inList($GLOBALS['TYPO3_CONF_VARS']['SYS']['mediafile_ext'], $fontExtension)) {
+        $GLOBALS['TYPO3_CONF_VARS']['SYS']['mediafile_ext'] .= ',' . $fontExtension;
+    }
+}
 $GLOBALS['TYPO3_CONF_VARS']['SYS']['FileInfo']['mimeTypeCompatibility']['application/octet-stream']['woff']
     = 'font/woff';
 $GLOBALS['TYPO3_CONF_VARS']['SYS']['FileInfo']['mimeTypeCompatibility']['application/octet-stream']['woff2']

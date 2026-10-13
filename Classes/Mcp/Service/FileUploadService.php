@@ -151,9 +151,7 @@ readonly class FileUploadService
             throw new \InvalidArgumentException('This file extension is not allowed: ' . $e->getMessage(), 1747320003, $e);
         } catch (\TYPO3\CMS\Core\Validation\ResultException $e) {
             throw new \InvalidArgumentException(
-                'The file was rejected because its content does not match the file extension "'
-                . pathinfo($fileName, PATHINFO_EXTENSION) . '". '
-                . 'Make sure the URL/content actually delivers this file type.',
+                self::formatResourceConsistencyFailure($e, $fileName),
                 1747320004,
                 $e,
             );
@@ -686,5 +684,25 @@ readonly class FileUploadService
         }
 
         throw new \RuntimeException('Access denied to storage: ' . $storageUid, 1747320024);
+    }
+
+    /**
+     * Surface TYPO3 resource-consistency messages (extension allow-list, mime mismatch) as-is.
+     */
+    public static function formatResourceConsistencyFailure(\TYPO3\CMS\Core\Validation\ResultException $exception, string $fileName): string
+    {
+        $details = [];
+        foreach ($exception->messages as $message) {
+            $text = trim($message->message);
+            if ($text !== '') {
+                $details[] = $text;
+            }
+        }
+
+        if ($details !== []) {
+            return implode(' ', $details);
+        }
+
+        return 'The file "' . basename($fileName) . '" was rejected by TYPO3 file consistency checks.';
     }
 }

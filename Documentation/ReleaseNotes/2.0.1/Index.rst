@@ -21,7 +21,8 @@ Here is the list of features and updates introduced in this release:
    12-10-2026 [BUGFIX] MCP file_upload_from_url: pinned-DNS downloads must not set Guzzle stream together with curl (regression guard + unit test; 2.0.0 still combined them)
    12-10-2026 [FEATURE] MCP pages_search / content_search / record_search: selectFields (same semantics as content_list)
    12-10-2026 [FEATURE] MCP pages_get / content_get: selectFields may include tstamp, crdate, cruser_id
-   12-10-2026 [BUGFIX] MCP uploads: map application/octet-stream and application/font-woff* to font/woff and font/woff2
+   12-10-2026 [BUGFIX] MCP uploads: allow woff/woff2 in mediafile_ext; map application/octet-stream and application/font-woff* to font/woff and font/woff2; surface TYPO3 consistency errors; file_upload_from_url failures throw (isError)
+   12-10-2026 [TASK] MCP initialize serverInfo.version reports 2.0.1
    12-10-2026 [TASK] AI Agent QA (separate commits on feature/ai-agent): attachment handling, SEO/page-structure fixes, news guard, and related editor UX
 
 Deferred (planned for 2.1+)
