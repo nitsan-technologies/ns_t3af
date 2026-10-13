@@ -45,6 +45,9 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  */
 readonly class FileUploadEndpoint
 {
+    /** Used when a refusal carries no code of its own; same value as ErrorHandlingProxy. */
+    private const FALLBACK_ERROR_CODE = 1790700000;
+
     public function __construct(
         private FileUploadService $fileUploadService,
         private BackendUserBootstrap $backendUserBootstrap,
@@ -61,19 +64,19 @@ readonly class FileUploadEndpoint
             }
 
             if (!in_array($request->getMethod(), ['PUT', 'POST'], true)) {
-                return $this->jsonError('Use HTTP PUT (or POST) with the raw file bytes as request body.', 405);
+                return $this->jsonError('Use HTTP PUT (or POST) with the raw file bytes as request body.', 405, 1747330004);
             }
 
             $token = $this->extractToken($request);
             $tokenRow = $this->fileUploadService->consumeUploadToken($token);
             if ($tokenRow === null) {
-                return $this->jsonError('Invalid, expired, or already used upload token.', 401);
+                return $this->jsonError('Invalid, expired, or already used upload token.', 401, 1747330005);
             }
 
             try {
                 $this->backendUserBootstrap->bootstrap((int) $tokenRow['be_user_uid']);
             } catch (\RuntimeException) {
-                return $this->jsonError('The backend user this upload token belongs to is not available.', 401);
+                return $this->jsonError('The backend user this upload token belongs to is not available.', 401, 1747330006);
             }
 
             [$body, $uploadedFileName] = $this->extractUpload($request);
@@ -88,6 +91,7 @@ readonly class FileUploadEndpoint
                 return $this->jsonError(
                     'No file name given. Pass it as ?fileName=<name.ext> query parameter or Content-Disposition header.',
                     400,
+                    1747330007,
                 );
             }
 
@@ -117,13 +121,14 @@ readonly class FileUploadEndpoint
 
             return $this->withCorsHeaders($this->jsonResponse($data, 201));
         } catch (InsufficientFolderAccessPermissionsException|InsufficientFolderWritePermissionsException $e) {
-            return $this->jsonError('No permission for the target folder: ' . $e->getMessage(), 403);
+            return $this->jsonError('No permission for the target folder: ' . $e->getMessage(), 403, 1747330008);
         } catch (\InvalidArgumentException $e) {
-            return $this->jsonError($e->getMessage(), 400);
+            // Same numeric code as the MCP tool route (file_upload) reports for the same refusal.
+            return $this->jsonError($e->getMessage(), 400, (int) $e->getCode() ?: self::FALLBACK_ERROR_CODE);
         } catch (\Throwable $e) {
             $this->logger->error('Pre-signed upload failed: ' . $e->getMessage(), ['exception' => $e]);
 
-            return $this->jsonError('Upload failed due to an unexpected server error (see TYPO3 log).', 500);
+            return $this->jsonError('Upload failed due to an unexpected server error (see TYPO3 log).', 500, 1747330009);
         }
     }
 
@@ -208,9 +213,9 @@ readonly class FileUploadEndpoint
             ->withBody($body);
     }
 
-    private function jsonError(string $message, int $status): ResponseInterface
+    private function jsonError(string $message, int $status, int $code): ResponseInterface
     {
-        return $this->withCorsHeaders($this->jsonResponse(['error' => $message], $status));
+        return $this->withCorsHeaders($this->jsonResponse(['error' => $message, 'code' => $code], $status));
     }
 
     private function withCorsHeaders(ResponseInterface $response): ResponseInterface
