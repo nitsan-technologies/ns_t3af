@@ -49,6 +49,7 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
             . ' for advanced operators (e.g. {"uid":{"op":"gt","value":"10"}, "title":{"op":"eq","value":"Home"}}).'
             . ' Supported operators: eq, neq, like, gt, gte, lt, lte, in (comma-separated), null, notNull.'
             . ' Optionally filter by pid. Use orderBy to sort results by a field name and orderDirection (ASC or DESC).'
+            . ' Use selectFields (comma-separated) to choose which fields to return (same semantics as content_list).'
             . ' Returns matching records with pagination.',
     )]
     public function execute(
@@ -59,6 +60,7 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
         int $pid = -1,
         string $orderBy = '',
         string $orderDirection = 'ASC',
+        string $selectFields = '',
     ): string {
         if ($pid > 0 && $tableName !== 'pages' && !$this->pageAccess->canReadPage($pid)) {
             return json_encode(['error' => PageAccessService::ACCESS_DENIED_MESSAGE, 'pageId' => $pid], JSON_THROW_ON_ERROR);
@@ -104,6 +106,8 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
             $orderDirection = 'ASC';
         }
 
+        $fields = $this->resolveSelectFields($selectFields, $readFields);
+
         // pid 0 (and the default -1) mean "do not filter by storage page". Listing all also
         // ignores an incidental pid so "show all my news" is not scoped to the page on screen.
         $result = $this->recordService->search(
@@ -111,7 +115,7 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
             $validSearch,
             $limit,
             $offset,
-            $readFields,
+            $fields,
             self::resolveSearchPid($pid, $listAll),
             $resolvedOrderBy,
             $orderDirection,
@@ -122,6 +126,25 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
         }
 
         return json_encode($result, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @param list<string> $defaultFields
+     * @return list<string>
+     */
+    private function resolveSelectFields(string $selectFields, array $defaultFields): array
+    {
+        if ($selectFields === '') {
+            return $defaultFields;
+        }
+
+        $requested = array_map('trim', explode(',', $selectFields));
+        $allowed = array_merge(['uid', 'pid'], $defaultFields);
+        $valid = array_values(array_intersect($requested, $allowed));
+
+        return $valid !== []
+            ? array_values(array_unique(array_merge(['uid', 'pid'], $valid)))
+            : $defaultFields;
     }
 
     /**

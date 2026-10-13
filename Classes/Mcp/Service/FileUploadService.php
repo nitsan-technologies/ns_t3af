@@ -357,42 +357,8 @@ readonly class FileUploadService
         for ($hop = 0; $hop <= self::MAX_REDIRECTS; $hop++) {
             $resolvedIp = $this->assertPublicHttpUrl($currentUrl);
 
-            $options = [
-                'allow_redirects' => false,
-                'http_errors' => false,
-                'connect_timeout' => 10,
-                'timeout' => 300,
-                'headers' => ['User-Agent' => 'TYPO3-AI-Foundation-MCP/1.0'],
-            ];
-
-            $parts = parse_url($currentUrl);
-            $host = is_string($parts['host'] ?? null) ? $parts['host'] : '';
             $proxyConfigured = !empty($GLOBALS['TYPO3_CONF_VARS']['HTTP']['proxy']);
-            $pinDns = !$proxyConfigured && $resolvedIp !== null && $host !== ''
-                && filter_var($host, FILTER_VALIDATE_IP) === false
-                && defined('CURLOPT_RESOLVE');
-            if ($pinDns) {
-                // A streamed body is handled by Guzzle's stream handler, which
-                // rejects every curl option. DNS pinning needs CURLOPT_RESOLVE,
-                // so this hop is not streamed. The progress callback stops the
-                // transfer once the body passes the size limit.
-                $port = $parts['port'] ?? (($parts['scheme'] ?? 'https') === 'https' ? 443 : 80);
-                $pinnedIp = filter_var($resolvedIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false
-                    ? '[' . $resolvedIp . ']'
-                    : $resolvedIp;
-                $options['curl'] = [\CURLOPT_RESOLVE => [$host . ':' . $port . ':' . $pinnedIp]];
-                $options['progress'] = static function (int $downloadTotal, int $downloaded) use ($maxBytes): void {
-                    if ($downloaded > $maxBytes) {
-                        throw new \InvalidArgumentException(
-                            'The file exceeds the maximum size of ' . round($maxBytes / 1048576) . ' MiB '
-                            . '(configurable via mcpMaxFileSizeMb).',
-                            1747320015,
-                        );
-                    }
-                };
-            } else {
-                $options['stream'] = true;
-            }
+            $options = self::buildDownloadRequestOptions($currentUrl, $resolvedIp, $proxyConfigured, $maxBytes);
 
             try {
                 $response = $requestFactory->request($currentUrl, 'GET', $options);
@@ -514,6 +480,58 @@ readonly class FileUploadService
         }
 
         return $file instanceof File ? $file : null;
+    }
+
+    /**
+     * HTTP client options for one download hop.
+     *
+     * When DNS is pinned via CURLOPT_RESOLVE, {@see stream} must not be set: Guzzle's
+     * stream handler rejects curl options. Without pinning, stream is used for size limits.
+     *
+     * @return array<string, mixed>
+     */
+    public static function buildDownloadRequestOptions(
+        string $url,
+        ?string $resolvedIp,
+        bool $proxyConfigured,
+        int $maxBytes,
+    ): array {
+        $options = [
+            'allow_redirects' => false,
+            'http_errors' => false,
+            'connect_timeout' => 10,
+            'timeout' => 300,
+            'headers' => ['User-Agent' => 'TYPO3-AI-Foundation-MCP/1.0'],
+        ];
+
+        $parts = parse_url($url);
+        $host = is_string($parts['host'] ?? null) ? $parts['host'] : '';
+        $pinDns = !$proxyConfigured && $resolvedIp !== null && $host !== ''
+            && filter_var($host, FILTER_VALIDATE_IP) === false
+            && defined('CURLOPT_RESOLVE');
+
+        if ($pinDns) {
+            $port = $parts['port'] ?? (($parts['scheme'] ?? 'https') === 'https' ? 443 : 80);
+            $pinnedIp = filter_var($resolvedIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false
+                ? '[' . $resolvedIp . ']'
+                : $resolvedIp;
+            $options['curl'] = [\CURLOPT_RESOLVE => [$host . ':' . $port . ':' . $pinnedIp]];
+            $options['progress'] = static function (int $downloadTotal, int $downloaded) use ($maxBytes): void {
+                if ($downloaded > $maxBytes) {
+                    throw new \InvalidArgumentException(
+                        'The file exceeds the maximum size of ' . round($maxBytes / 1048576) . ' MiB '
+                        . '(configurable via mcpMaxFileSizeMb).',
+                        1747320015,
+                    );
+                }
+            };
+
+            return $options;
+        }
+
+        $options['stream'] = true;
+
+        return $options;
     }
 
     /**

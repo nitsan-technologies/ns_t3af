@@ -47,6 +47,7 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
             . ' (e.g. {"doktype":{"op":"eq","value":"1"}, "title":"Home"}).'
             . ' Supports operators: eq, neq, like, gt, gte, lt, lte, in, null, notNull.'
             . ' Use orderBy and orderDirection for sorting.'
+            . ' Use selectFields (comma-separated) to choose which fields to return (same semantics as content_list).'
             . ' Leave pid unset to search the whole tree. A hidden page is included and is a real page.',
     )]
     public function execute(
@@ -56,6 +57,7 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
         int $pid = -1,
         string $orderBy = '',
         string $orderDirection = 'ASC',
+        string $selectFields = '',
     ): string {
         if (trim($search) === '') {
             // An empty term used to come back as a silent "nothing found"; say what is missing instead.
@@ -69,6 +71,8 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
         if ($searchConditions === []) {
             return json_encode(['error' => 'No valid search conditions provided'], JSON_THROW_ON_ERROR);
         }
+
+        $fields = $this->resolveSelectFields($selectFields, $readFields);
 
         $resolvedOrderBy = null;
         if ($orderBy !== '' && in_array($orderBy, $allowedFields, true)) {
@@ -85,7 +89,7 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
             $searchConditions,
             $limit,
             $offset,
-            $readFields,
+            $fields,
             $scopedPid,
             $resolvedOrderBy,
             $orderDirection,
@@ -99,7 +103,7 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
                 $searchConditions,
                 $limit,
                 $offset,
-                $readFields,
+                $fields,
                 null,
                 $resolvedOrderBy,
                 $orderDirection,
@@ -107,6 +111,25 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
         }
 
         return json_encode($result, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @param list<string> $defaultFields
+     * @return list<string>
+     */
+    private function resolveSelectFields(string $selectFields, array $defaultFields): array
+    {
+        if ($selectFields === '') {
+            return $defaultFields;
+        }
+
+        $requested = array_map('trim', explode(',', $selectFields));
+        $allowed = array_merge(['uid', 'pid'], $defaultFields);
+        $valid = array_values(array_intersect($requested, $allowed));
+
+        return $valid !== []
+            ? array_values(array_unique(array_merge(['uid', 'pid'], $valid)))
+            : $defaultFields;
     }
 
     /**

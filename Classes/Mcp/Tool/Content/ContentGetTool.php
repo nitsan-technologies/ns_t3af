@@ -97,7 +97,8 @@ readonly class ContentGetTool implements McpNonAiToolInterface
 
         $requested = array_map('trim', explode(',', $selectFields));
         $readable = $this->tcaSchemaService->getReadFields('tt_content');
-        $allowed = array_merge(['uid', 'pid'], $readable);
+        $system = $this->tcaSchemaService->getOptionalSystemReadFields('tt_content');
+        $allowed = array_merge(['uid', 'pid'], $readable, $system);
         $valid = array_values(array_intersect($requested, $allowed));
 
         return $valid !== []

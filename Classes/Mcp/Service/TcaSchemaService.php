@@ -122,6 +122,40 @@ readonly class TcaSchemaService
         return array_values(array_unique($fields));
     }
 
+    /**
+     * System date / editor fields that are excluded from default read lists but may be
+     * requested explicitly via selectFields (pages_get, search tools, …).
+     *
+     * @return list<string>
+     */
+    public function getOptionalSystemReadFields(string $tableName): array
+    {
+        $tca = $this->getTca($tableName);
+        if ($tca === null) {
+            return [];
+        }
+
+        $ctrl = $tca['ctrl'] ?? [];
+        if (!is_array($ctrl)) {
+            return [];
+        }
+
+        $fields = [];
+        foreach (['tstamp', 'crdate'] as $ctrlKey) {
+            $value = $ctrl[$ctrlKey] ?? null;
+            if (is_string($value) && $value !== '') {
+                $fields[] = $value;
+            }
+        }
+
+        // Creation user is a system column; allow it when present on the table.
+        if (isset($tca['columns']['cruser_id']) || isset($ctrl['cruser_id'])) {
+            $fields[] = 'cruser_id';
+        }
+
+        return array_values(array_unique($fields));
+    }
+
     /** @return list<string> All fields that can be read (simple value types + uid + pid + sortby). */
     public function getReadFields(string $tableName): array
     {
