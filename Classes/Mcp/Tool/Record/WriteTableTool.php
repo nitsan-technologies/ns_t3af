@@ -831,9 +831,25 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             return -$afterUid;
         }
         if ($beforeUid > 0) {
+            $contentPid = isset($payload['pid']) && is_numeric($payload['pid']) ? (int) $payload['pid'] : 0;
             // "Before 773" for a content element means that element, never the page with uid 773.
+            // Uids collide across tables: only treat beforeUid as a CE when it sits on the same page as pid.
             if ($tableName !== 'pages' && $this->recordService->findExistingUids($tableName, [$beforeUid]) !== []) {
-                return $this->recordService->targetBeforeRecord($tableName, $beforeUid);
+                if ($contentPid <= 0) {
+                    return $this->recordService->targetBeforeRecord($tableName, $beforeUid);
+                }
+                $beforeRecord = $this->recordService->findByUid($tableName, $beforeUid, ['pid']);
+                if (is_array($beforeRecord) && (int) ($beforeRecord['pid'] ?? -1) === $contentPid) {
+                    return $this->recordService->targetBeforeRecord($tableName, $beforeUid);
+                }
+            }
+            // "Before the first element on this page" with beforeUid=<parent page> + pid=<this page>:
+            // keep the create on pid. Real "before page X" still uses targetBeforePage.
+            if ($tableName === 'tt_content' && $contentPid > 0) {
+                $page = $this->recordService->findByUid('pages', $contentPid, ['pid']);
+                if (is_array($page) && (int) ($page['pid'] ?? -1) === $beforeUid) {
+                    return $contentPid;
+                }
             }
 
             return $this->recordService->targetBeforePage($beforeUid);

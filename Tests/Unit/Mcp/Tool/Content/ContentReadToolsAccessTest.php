@@ -44,7 +44,9 @@ final class ContentReadToolsAccessTest extends TestCase
     #[Test]
     public function contentListRefusesAnOutsidePage(): void
     {
-        $records = $this->untouchedRecords();
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->with('pages', self::OUTSIDE_PAGE, ['uid', 'l10n_parent', 'sys_language_uid'])->willReturn(null);
+        $records->expects(self::never())->method('findByPid');
         $tool = new ContentListTool($records, $this->untouchedSchema(), $this->access());
 
         $decoded = $this->decode($tool->execute(self::OUTSIDE_PAGE));
@@ -58,10 +60,57 @@ final class ContentReadToolsAccessTest extends TestCase
     public function contentListStillListsAMountedPage(): void
     {
         $records = $this->createMock(RecordService::class);
-        $records->expects(self::once())->method('findByPid')->willReturn(['records' => [['uid' => 1]], 'total' => 1]);
+        $records->method('findByUid')->with('pages', self::MOUNTED_PAGE, ['uid', 'l10n_parent', 'sys_language_uid'])->willReturn(
+            ['uid' => self::MOUNTED_PAGE, 'l10n_parent' => 0, 'sys_language_uid' => 0],
+        );
+        $records->expects(self::once())->method('findByPid')->with(
+            'tt_content',
+            self::MOUNTED_PAGE,
+            self::anything(),
+            self::anything(),
+            self::anything(),
+            self::anything(),
+            self::anything(),
+        )->willReturn(['records' => [['uid' => 1]], 'total' => 1]);
         $tool = new ContentListTool($records, $this->schema(), $this->access());
 
         $decoded = $this->decode($tool->execute(self::MOUNTED_PAGE));
+
+        self::assertArrayNotHasKey('error', $decoded);
+        self::assertSame(1, $decoded['total']);
+    }
+
+    #[Test]
+    public function contentListRemapsAnOverlayPageUidToTheDefaultLanguagePid(): void
+    {
+        $overlayUid = 70;
+        $defaultPid = 2;
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->with('pages', $overlayUid, ['uid', 'l10n_parent', 'sys_language_uid'])->willReturn(
+            ['uid' => $overlayUid, 'l10n_parent' => $defaultPid, 'sys_language_uid' => 1],
+        );
+        $schema = $this->createMock(TcaSchemaService::class);
+        $schema->method('getTranslationConfig')->willReturn([
+            'languageField' => 'sys_language_uid',
+            'transOrigPointerField' => 'l18n_parent',
+            'translationSource' => null,
+        ]);
+        $schema->method('getListFields')->willReturn(['uid', 'pid', 'header']);
+        $records->expects(self::once())->method('findByPid')->with(
+            'tt_content',
+            $defaultPid,
+            self::anything(),
+            self::anything(),
+            self::anything(),
+            1,
+            'sys_language_uid',
+        )->willReturn(['records' => [['uid' => 753]], 'total' => 1]);
+        $access = $this->createMock(PageAccessService::class);
+        $access->method('canReadPage')->with($defaultPid)->willReturn(true);
+        $tool = new ContentListTool($records, $schema, $access);
+
+        // Default sysLanguageUid=-1: overlay remap must filter to that page's language (1).
+        $decoded = $this->decode($tool->execute($overlayUid));
 
         self::assertArrayNotHasKey('error', $decoded);
         self::assertSame(1, $decoded['total']);
@@ -120,6 +169,27 @@ final class ContentReadToolsAccessTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Content element not found');
         $tool->execute(714);
+    }
+
+    #[Test]
+    public function contentGetRejectsAPageUidWithAClearMessage(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->willReturnCallback(static function (string $table, int $uid): ?array {
+            if ($table === 'tt_content') {
+                return null;
+            }
+            if ($table === 'pages' && $uid === 70) {
+                return ['uid' => 70, 'l10n_parent' => 2];
+            }
+
+            return null;
+        });
+        $tool = new ContentGetTool($records, $this->schema(), $this->access(unrestricted: true));
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Uid 70 is a page, not a content element');
+        $tool->execute(70);
     }
 
     /**
