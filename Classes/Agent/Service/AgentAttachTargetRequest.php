@@ -116,8 +116,13 @@ final class AgentAttachTargetRequest
      */
     public static function asksForNewContentElementAttach(string $request): bool
     {
+        if (preg_match('/\b(?:new|another|neue[nrsm]?|weitere[nrsm]?)\s+(?:[\w&]+\s+){0,3}(?:content\s+)?(?:element|inhaltselement)\b/iu', $request) !== 1) {
+            return false;
+        }
+
+        // "A new Text & Media element (create one and attach the image)": a clarification choice names no place.
         return AgentRequestedFiles::asksToAttachOrPlaceFile($request)
-            && preg_match('/\b(?:new|another|neue[nrsm]?|weitere[nrsm]?)\s+(?:\w+\s+){0,2}(?:content\s+)?(?:element|inhaltselement)\b/iu', $request) === 1;
+            || preg_match('/\b(?:attach|add|put|place|insert|anh[äa]ng\w*|hinzuf[üu]g\w*)\b[^.]{0,40}\b(?:image|picture|photo|file|bild|foto|datei)\b/iu', $request) === 1;
     }
 
     private static function cleanTitle(string $raw): string

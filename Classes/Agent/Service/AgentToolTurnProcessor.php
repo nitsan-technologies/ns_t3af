@@ -559,6 +559,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         /** @var list<array<string, mixed>> $history */
         $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
         $arguments = $this->normalizeWriteToolArguments($toolName, $arguments);
+        $arguments = self::withUpdateUid($arguments, $toolName, $history);
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
         $arguments = self::seoQueueRemovePageIds($arguments, $toolName, $requestQuery);
         $arguments = self::seoQueueAddRecursiveSubtree($arguments, $toolName, $requestQuery);
@@ -719,6 +720,14 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                     'error' => $exception->getMessage(),
                     'autoRan' => false,
                     'facts' => [],
+                    // Without the request, a refused call cannot be told apart from a wrong call afterwards.
+                    'trace' => [[
+                        'step' => 'plan',
+                        'tool' => $toolName,
+                        'request' => self::refusedRequestForTrace($arguments),
+                        'response' => $exception->getMessage(),
+                        'status' => 'refused',
+                    ]],
                 ],
             ];
         } catch (\Throwable $exception) {
@@ -2024,6 +2033,83 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return $arguments;
+    }
+
+    /**
+     * A write_table update that arrives without "uid" gets it from where models usually put it ("data":{"uid":…},
+     * "recordUid", "id"), else from the one record of that table the agent just read in this turn
+     * ("Make the German version visible": pages_get uid 70, then update). Several candidates: nothing is guessed.
+     *
+     * @param array<string, mixed> $arguments
+     * @param list<array<string, mixed>> $history
+     * @return array<string, mixed>
+     */
+    public static function withUpdateUid(array $arguments, string $toolName, array $history): array
+    {
+        if (strtolower(trim($toolName)) !== 'write_table' || strtolower(trim((string) ($arguments['action'] ?? ''))) !== 'update') {
+            return $arguments;
+        }
+        if ((int) ($arguments['uid'] ?? 0) > 0) {
+            return $arguments;
+        }
+
+        $data = $arguments['data'] ?? [];
+        if (is_string($data)) {
+            $decoded = json_decode($data, true);
+            $data = is_array($decoded) ? $decoded : [];
+        }
+        foreach ([$arguments['recordUid'] ?? null, $arguments['id'] ?? null, is_array($data) ? ($data['uid'] ?? null) : null] as $candidate) {
+            if (is_numeric($candidate) && (int) $candidate > 0) {
+                $arguments['uid'] = (int) $candidate;
+
+                return $arguments;
+            }
+        }
+
+        $table = strtolower(trim((string) ($arguments['tableName'] ?? $arguments['table'] ?? '')));
+        $readTool = ['pages' => 'pages_get', 'tt_content' => 'content_get'][$table] ?? '';
+        if ($readTool === '') {
+            return $arguments;
+        }
+        $uids = [];
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $entry = $history[$i];
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($entry['role'] ?? '') === 'user' && ($meta['hidden'] ?? false) !== true) {
+                break;
+            }
+            if (($meta['type'] ?? '') !== 'tool_result' || ($meta['success'] ?? true) === false || ($meta['tool'] ?? '') !== $readTool) {
+                continue;
+            }
+            $uid = (int) (is_array($meta['details'] ?? null) ? ($meta['details']['uid'] ?? 0) : 0);
+            if ($uid > 0) {
+                $uids[$uid] = true;
+            }
+        }
+        if (count($uids) === 1) {
+            $arguments['uid'] = (int) array_key_first($uids);
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * The arguments of a refused plan for the stored trace: long values are shortened, nothing else is changed.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function refusedRequestForTrace(array $arguments): array
+    {
+        $short = static function (mixed $value) use (&$short): mixed {
+            if (is_array($value)) {
+                return array_map($short, $value);
+            }
+
+            return is_string($value) && mb_strlen($value) > 500 ? mb_substr($value, 0, 500) . '… (shortened)' : $value;
+        };
+
+        return array_map($short, $arguments);
     }
 
     /**
