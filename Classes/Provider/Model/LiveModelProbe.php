@@ -124,10 +124,41 @@ class LiveModelProbe
             return [];
         }
 
-        return VendorModelIdNormalizer::idsFromModelsListJson(
-            (string) $response->getBody(),
-            $adapterType,
-        );
+        return $this->extractIds((string) $response->getBody());
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function extractIds(string $body): array
+    {
+        if ($body === '') {
+            return [];
+        }
+        $decoded = json_decode($body, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+        $list = $decoded['data'] ?? $decoded['models'] ?? null;
+        if (!is_array($list)) {
+            return [];
+        }
+        $ids = [];
+        foreach ($list as $item) {
+            if (is_string($item) && $item !== '') {
+                $ids[] = $item;
+                continue;
+            }
+            if (!is_array($item)) {
+                continue;
+            }
+            $id = $item['id'] ?? $item['name'] ?? $item['model'] ?? null;
+            if (is_string($id) && $id !== '') {
+                $ids[] = $id;
+            }
+        }
+
+        return array_values(array_unique($ids));
     }
 
     private function resolveEndpoint(string $adapterType, string $configuredEndpoint): string

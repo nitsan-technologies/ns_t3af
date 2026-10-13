@@ -34,7 +34,6 @@ use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 final class ProviderCapabilityGuard
 {
     public const CALL_COMPLETE = 'complete';
-    public const CALL_COMPLETE_WITH_TOOLS = 'complete_with_tools';
     public const CALL_STREAM = 'stream';
     public const CALL_EMBED = 'embed';
     public const CALL_TTS = 'tts';
@@ -51,15 +50,6 @@ final class ProviderCapabilityGuard
 
         return $provider->hasCapability(Capability::CHAT)
             || $provider->hasCapability(Capability::COMPLETION);
-    }
-
-    /**
-     * Whether this provider may run tool-calling turns (Agent NL loop).
-     * Same chat/completion gate as text generation; adapter probes runtime support.
-     */
-    public static function allowsToolCalling(Provider $provider): bool
-    {
-        return self::allowsChat($provider);
     }
 
     /**
@@ -82,7 +72,6 @@ final class ProviderCapabilityGuard
                 $provider,
                 [Capability::CHAT, Capability::COMPLETION],
             ),
-            self::CALL_COMPLETE_WITH_TOOLS => self::assertCompleteWithTools($provider),
             self::CALL_STREAM => self::assertHas($provider, Capability::STREAMING),
             self::CALL_EMBED => self::assertHas($provider, Capability::EMBEDDINGS),
             self::CALL_TTS => self::assertHas($provider, Capability::TTS),
@@ -95,23 +84,11 @@ final class ProviderCapabilityGuard
         }
 
         if (
-            (
-                $callKind === self::CALL_COMPLETE
-                || $callKind === self::CALL_COMPLETE_WITH_TOOLS
-                || $callKind === self::CALL_STREAM
-            )
+            ($callKind === self::CALL_COMPLETE || $callKind === self::CALL_STREAM)
             && self::optionsRequireVision($options)
         ) {
             self::assertHas($provider, Capability::VISION);
         }
-    }
-
-    private static function assertCompleteWithTools(Provider $provider): void
-    {
-        self::assertAny(
-            $provider,
-            [Capability::CHAT, Capability::COMPLETION],
-        );
     }
 
     /**

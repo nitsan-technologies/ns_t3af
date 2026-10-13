@@ -14,7 +14,7 @@ AI Foundation
    nitsan/ns-t3af
 
 :Version:
-   2.0.0
+   1.2.4
 
 :Language:
    en
@@ -110,15 +110,6 @@ Set up providers, backend modules, and MCP through the AI Foundation module.
       ..  card-footer:: :ref:`Read more <mcp-server>`
          :button-style: btn btn-primary stretched-link
 
-   ..  card:: Ask AI agent
-
-      Ask the AI agent about the page you are working on: describe the task
-      in plain language, review the prepared change, and nothing is saved
-      until you click Apply.
-
-      ..  card-footer:: :ref:`Read more <ask-ai-agent>`
-         :button-style: btn btn-primary stretched-link
-
    ..  card:: DPA & GDPR
 
       Technical data-management for providers, prompts, usage, logs, and Credits.
@@ -207,7 +198,6 @@ Help
    T3Planet-Credit-System/Index
    Data-Processing-Agreement/Index
    Integrations/Index
-   AskAiAgent/Index
    UserGuide/Index
    DeveloperGuide/Index
    Troubleshooting/Index

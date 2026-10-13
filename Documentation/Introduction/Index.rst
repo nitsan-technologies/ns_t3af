@@ -24,7 +24,6 @@ Key capabilities
 ----------------
 
 * **AI Providers** — Connect OpenAI, Claude, Gemini, and other vendors with encrypted API keys
-* **AI Agent** — Backend right-edge assistant (Ctrl/Cmd+Shift+K): ask, preview, then apply
 * **MCP Server** — Expose TYPO3 to Cursor, Claude Desktop, and other MCP clients
 * **AI Context** — Store brand voice once for on-brand AI output
 * **AI Prompts & Features** — Shared prompt templates and per-feature provider assignment
@@ -86,4 +85,4 @@ This extension is developed and maintained by:
 
 **T3Planet project by NITSAN**: https://nitsantech.de/typo3-agentur
 
-Developed with modern AI tooling by the NITSAN/T3Planet team — following TYPO3 coding standards, reviewed by certified TYPO3 developers, and tested across TYPO3 v13 and v14.
+Developed with modern AI tooling by the NITSAN/T3Planet team — following TYPO3 coding standards, reviewed by certified TYPO3 developers, and tested across TYPO3 v12, v13 and v14.

@@ -32,7 +32,7 @@ use TYPO3\CMS\Core\Utility\GeneralUtility;
  *
  * @internal
  */
-class CreditsDomainResolver
+final class CreditsDomainResolver
 {
     public function __construct(
         private readonly SiteFinder $siteFinder,

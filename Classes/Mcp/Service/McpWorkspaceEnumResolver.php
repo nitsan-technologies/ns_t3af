@@ -41,15 +41,11 @@ readonly class McpWorkspaceEnumResolver
     {
         $parts = [];
         foreach ($this->workspaceListService->list() as $workspace) {
-            if ((int) $workspace['uid'] > 0) {
-                $parts[] = sprintf('%d = %s', (int) $workspace['uid'], (string) $workspace['title']);
-            }
+            $parts[] = sprintf('%d = %s', (int) $workspace['uid'], (string) $workspace['title']);
         }
 
-        $description = 'Optional: run this call in a draft workspace instead of the default. '
-            . 'Leave it out to use the workspace selected in the TYPO3 MCP Server backend module (Live unless a draft workspace is selected there). '
-            . 'The value applies to this call only.';
-
-        return $parts === [] ? $description : $description . ' Draft workspaces: ' . implode(', ', $parts) . '.';
+        return 'Optional draft workspace override (positive UID only). '
+            . 'Omit entirely to use the workspace selected in the TYPO3 MCP Server backend module — do not pass 0. '
+            . 'Options: ' . implode(', ', $parts) . '.';
     }
 }

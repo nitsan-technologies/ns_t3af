@@ -195,24 +195,18 @@ final class ProviderRepository implements ProviderRepositoryInterface
         if ($uid <= 0) {
             return;
         }
-        $now = (int) ($GLOBALS['EXEC_TIME'] ?? time());
+        $now = $GLOBALS['EXEC_TIME'] ?? time();
         $connection = $this->connection();
-        // Single UPDATE avoids clear-then-set lock ordering deadlocks (MySQL 1213).
+        $clearCriteria = ['is_default' => 1];
         if ($storagePid > 0) {
-            $connection->executeStatement(
-                'UPDATE `' . self::TABLE . '` SET `is_default` = CASE WHEN `uid` = ? THEN 1 ELSE 0 END, `tstamp` = ?'
-                . ' WHERE `deleted` = 0 AND (`pid` = ? OR `uid` = ?)',
-                [$uid, $now, $storagePid, $uid],
-            );
-
-            return;
+            $clearCriteria['pid'] = $storagePid;
         }
-
-        $connection->executeStatement(
-            'UPDATE `' . self::TABLE . '` SET `is_default` = CASE WHEN `uid` = ? THEN 1 ELSE 0 END, `tstamp` = ?'
-            . ' WHERE `deleted` = 0',
-            [$uid, $now],
+        $connection->update(
+            self::TABLE,
+            ['is_default' => 0, 'tstamp' => $now],
+            $clearCriteria,
         );
+        $connection->update(self::TABLE, ['is_default' => 1, 'tstamp' => $now], ['uid' => $uid]);
     }
 
     /**

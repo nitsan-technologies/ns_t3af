@@ -26,17 +26,11 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Redirect;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
-use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
-use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
-use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
-use NITSAN\NsT3AF\Mcp\Service\McpRecordPlanService;
-use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
-#[McpToolSeverity(ToolSeverity::Write)]
-readonly class RedirectUpdateTool implements McpNonAiToolInterface, McpPlannableToolInterface
+readonly class RedirectUpdateTool implements McpNonAiToolInterface
 {
     private const TABLE = 'sys_redirect';
 
@@ -57,31 +51,7 @@ readonly class RedirectUpdateTool implements McpNonAiToolInterface, McpPlannable
         'endtime',
     ];
 
-    public function __construct(
-        private DataHandlerService $dataHandlerService,
-        private McpRecordPlanService $recordPlanService,
-    ) {}
-
-    /**
-     * @param array<string, mixed> $arguments
-     */
-    public function plan(array $arguments): ToolPlan
-    {
-        $fieldsRaw = (string) ($arguments['fields'] ?? '{}');
-        /** @var array<string, mixed> $data */
-        $data = json_decode($fieldsRaw, true, 512, JSON_THROW_ON_ERROR);
-        if (!is_array($data)) {
-            throw new \InvalidArgumentException('fields must be a JSON object.');
-        }
-
-        return $this->recordPlanService->planUpdate(
-            self::TABLE,
-            (int) ($arguments['uid'] ?? 0),
-            $data,
-            'redirect_update',
-            self::WRITABLE_FIELDS,
-        );
-    }
+    public function __construct(private DataHandlerService $dataHandlerService) {}
 
     #[McpTool(
         name: 'redirect_update',

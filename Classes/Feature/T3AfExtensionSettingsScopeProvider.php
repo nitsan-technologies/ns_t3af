@@ -47,7 +47,6 @@ final class T3AfExtensionSettingsScopeProvider implements ExtensionSettingsScope
             'openai usage api',
             't3planet credits',
             'mcp server',
-            'ai agent',
         ];
     }
 

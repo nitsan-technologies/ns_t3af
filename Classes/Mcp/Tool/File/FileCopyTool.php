@@ -26,41 +26,12 @@ namespace NITSAN\NsT3AF\Mcp\Tool\File;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
-use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpFalStorageToolInterface;
-use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
-use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
-use NITSAN\NsT3AF\Mcp\Service\McpFalPlanBuilder;
-use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 
-#[McpToolSeverity(ToolSeverity::Write)]
-readonly class FileCopyTool implements McpFalStorageToolInterface, McpPlannableToolInterface
+readonly class FileCopyTool implements McpFalStorageToolInterface
 {
-    public function __construct(
-        private FileService $fileService,
-        private McpFalPlanBuilder $falPlanBuilder,
-    ) {}
-
-    /**
-     * @param array<string, mixed> $arguments
-     */
-    public function plan(array $arguments): ToolPlan
-    {
-        $storageUid = (int) ($arguments['storageUid'] ?? 1);
-        $fileIdentifier = (string) ($arguments['fileIdentifier'] ?? '');
-        $targetDirectory = (string) ($arguments['targetDirectory'] ?? '');
-
-        return $this->falPlanBuilder->filePathChange(
-            'copy',
-            'file_copy',
-            '_copy',
-            $storageUid,
-            $fileIdentifier,
-            'copy to ' . $targetDirectory,
-            ['targetDirectory' => $targetDirectory],
-        );
-    }
+    public function __construct(private FileService $fileService) {}
 
     #[McpTool(
         name: 'file_copy',

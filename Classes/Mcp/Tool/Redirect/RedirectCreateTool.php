@@ -26,17 +26,11 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Redirect;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
-use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
-use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
-use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
-use NITSAN\NsT3AF\Mcp\Service\McpRecordPlanService;
-use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
-#[McpToolSeverity(ToolSeverity::Write)]
-readonly class RedirectCreateTool implements McpNonAiToolInterface, McpPlannableToolInterface
+readonly class RedirectCreateTool implements McpNonAiToolInterface
 {
     private const TABLE = 'sys_redirect';
 
@@ -57,41 +51,7 @@ readonly class RedirectCreateTool implements McpNonAiToolInterface, McpPlannable
         'endtime',
     ];
 
-    public function __construct(
-        private DataHandlerService $dataHandlerService,
-        private McpRecordPlanService $recordPlanService,
-    ) {}
-
-    /**
-     * @param array<string, mixed> $arguments
-     */
-    public function plan(array $arguments): ToolPlan
-    {
-        $data = [
-            'pid' => (int) ($arguments['pid'] ?? 0),
-            'source_host' => (string) ($arguments['sourceHost'] ?? ''),
-            'source_path' => (string) ($arguments['sourcePath'] ?? ''),
-            'target' => (string) ($arguments['target'] ?? ''),
-            'target_statuscode' => (int) ($arguments['targetStatuscode'] ?? 301),
-        ];
-
-        $fieldsRaw = (string) ($arguments['fields'] ?? '');
-        if ($fieldsRaw !== '') {
-            /** @var array<string, mixed> $extra */
-            $extra = json_decode($fieldsRaw, true, 512, JSON_THROW_ON_ERROR);
-            if (!is_array($extra)) {
-                throw new \InvalidArgumentException('fields must be a JSON object.');
-            }
-            $data = array_merge($extra, $data);
-        }
-
-        return $this->recordPlanService->planCreate(
-            self::TABLE,
-            $data,
-            'redirect_create',
-            self::WRITABLE_FIELDS,
-        );
-    }
+    public function __construct(private DataHandlerService $dataHandlerService) {}
 
     #[McpTool(
         name: 'redirect_create',

@@ -26,7 +26,6 @@ final class LimitsConfig
 {
     /**
      * @param list<string> $allowedProviders
-     * @param list<string> $blockedAgentTools tool names, `*` wildcard (AI Agent)
      */
     public function __construct(
         public bool $providerAllowlistEnabled = false,
@@ -48,8 +47,6 @@ final class LimitsConfig
         public LoggingPolicy $loggingPolicy = LoggingPolicy::Always,
         public int $logRetentionDays = 30,
         public bool $piiMasking = false,
-        public bool $agentReadOnly = false,
-        public array $blockedAgentTools = [],
     ) {}
 
     /**
@@ -85,8 +82,6 @@ final class LimitsConfig
             loggingPolicy: LoggingPolicy::tryFromString((string) ($data['loggingPolicy'] ?? 'always')),
             logRetentionDays: (int) ($data['logRetentionDays'] ?? 30),
             piiMasking: PayloadBoolean::parse($data['piiMasking'] ?? false),
-            agentReadOnly: PayloadBoolean::parse($data['agentReadOnly'] ?? false),
-            blockedAgentTools: AgentToolPolicy::parseToolList($data['blockedAgentTools'] ?? []),
         );
     }
 
@@ -115,8 +110,6 @@ final class LimitsConfig
             'loggingPolicy' => $this->loggingPolicy->value,
             'logRetentionDays' => $this->logRetentionDays,
             'piiMasking' => $this->piiMasking,
-            'agentReadOnly' => $this->agentReadOnly,
-            'blockedAgentTools' => $this->blockedAgentTools,
         ];
     }
 }

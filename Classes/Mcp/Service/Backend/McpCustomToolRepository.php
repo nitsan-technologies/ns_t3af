@@ -42,7 +42,6 @@ readonly class McpCustomToolRepository
      *     description: string,
      *     handlerType: string,
      *     handlerValue: string,
-     *     severity: string,
      *     parameters: list<array<string, mixed>>,
      *     hidden: bool,
      *     deleted: bool,
@@ -139,7 +138,6 @@ readonly class McpCustomToolRepository
         string $description,
         string $handlerType,
         string $handlerValue,
-        string $severity,
         array $parameters,
     ): int {
         $now = $GLOBALS['EXEC_TIME'] ?? time();
@@ -150,7 +148,6 @@ readonly class McpCustomToolRepository
             'description' => $description,
             'handler_type' => $handlerType,
             'handler_value' => $handlerValue,
-            'severity' => $severity,
             'parameters_json' => json_encode($parameters, JSON_THROW_ON_ERROR),
             'hidden' => 0,
             'deleted' => 0,
@@ -170,7 +167,6 @@ readonly class McpCustomToolRepository
         string $description,
         string $handlerType,
         string $handlerValue,
-        string $severity,
         array $parameters,
     ): void {
         $now = $GLOBALS['EXEC_TIME'] ?? time();
@@ -180,7 +176,6 @@ readonly class McpCustomToolRepository
             'description' => $description,
             'handler_type' => $handlerType,
             'handler_value' => $handlerValue,
-            'severity' => $severity,
             'parameters_json' => json_encode($parameters, JSON_THROW_ON_ERROR),
             'tstamp' => $now,
         ], ['uid' => $uid]);
@@ -205,7 +200,6 @@ readonly class McpCustomToolRepository
      *     description: string,
      *     handlerType: string,
      *     handlerValue: string,
-     *     severity: string,
      *     parameters: list<array<string, mixed>>,
      *     hidden: bool,
      *     deleted: bool,
@@ -241,7 +235,6 @@ readonly class McpCustomToolRepository
             'description' => (string) ($row['description'] ?? ''),
             'handlerType' => (string) ($row['handler_type'] ?? 'php'),
             'handlerValue' => (string) ($row['handler_value'] ?? ''),
-            'severity' => (string) ($row['severity'] ?? ''),
             'parameters' => $parameters,
             'hidden' => (int) ($row['hidden'] ?? 0) === 1,
             'deleted' => (int) ($row['deleted'] ?? 0) === 1,
