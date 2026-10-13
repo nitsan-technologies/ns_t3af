@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Tool\File;
 
 use NITSAN\NsT3AF\Mcp\Service\FileService;
+use NITSAN\NsT3AF\Mcp\Service\FileUploadService;
 use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
 use NITSAN\NsT3AF\Mcp\Tool\File\FileUploadFromUrlTool;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -90,28 +91,37 @@ final class FileUploadFromUrlToolTest extends TestCase
     #[Test]
     public function unknownHostIsReportedAsNotWorthRetrying(): void
     {
-        $result = $this->executeFailingWith(new \InvalidArgumentException('Could not resolve host "no-such-host.invalid".', 1747320020));
+        $exception = new \InvalidArgumentException('Could not resolve host "no-such-host.invalid".', 1747320020);
 
-        self::assertSame(['error' => 'Could not resolve host "no-such-host.invalid".', 'retryable' => false], $result);
+        try {
+            $this->executeFailingWith($exception);
+            self::fail('Upload failures must throw so MCP marks isError.');
+        } catch (\InvalidArgumentException $caught) {
+            self::assertSame($exception->getMessage(), $caught->getMessage());
+            self::assertTrue(FileUploadService::isPermanentFailure($caught));
+        }
     }
 
     #[Test]
     public function networkTroubleMayBeRetried(): void
     {
-        $result = $this->executeFailingWith(new \InvalidArgumentException('Could not download the file from example.com.', 1747320010));
+        $exception = new \InvalidArgumentException('Could not download the file from example.com.', 1747320010);
 
-        self::assertSame(['error' => 'Could not download the file from example.com.'], $result);
+        try {
+            $this->executeFailingWith($exception);
+            self::fail('Upload failures must throw so MCP marks isError.');
+        } catch (\InvalidArgumentException $caught) {
+            self::assertSame($exception->getMessage(), $caught->getMessage());
+            self::assertFalse(FileUploadService::isPermanentFailure($caught));
+        }
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function executeFailingWith(\Throwable $exception): array
+    private function executeFailingWith(\Throwable $exception): void
     {
         $fileService = $this->createMock(FileService::class);
         $fileService->method('uploadFileFromUrl')->willThrowException($exception);
         $tool = new FileUploadFromUrlTool($fileService, new McpConfirmationPlanBuilder());
 
-        return json_decode($tool->execute('https://no-such-host.invalid/a.jpg', 'user_upload'), true, 512, JSON_THROW_ON_ERROR);
+        $tool->execute('https://no-such-host.invalid/a.jpg', 'user_upload');
     }
 }
