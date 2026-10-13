@@ -23,14 +23,9 @@ use const JSON_THROW_ON_ERROR;
 
 use Mcp\Exception\ToolCallException;
 use Mcp\Server\Builder;
-use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Repository\DiscoveredTableRepository;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\McpToolSchemaAugmenter;
-use NITSAN\NsT3AF\Mcp\Service\McpToolSeverityResolver;
-use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyBatchRunner;
-use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyMoveCommandChainer;
-use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyPreflight;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Helper\MoveTarget;
@@ -53,18 +48,7 @@ readonly class NsT3afDynamicToolRegistrar
         private DiscoveredTableRepository $discoveredTableRepository,
         private LoggerInterface $logger,
         private McpToolSchemaAugmenter $toolSchemaAugmenter,
-        private RecordsApplyBatchRunner $batchRunner,
     ) {}
-
-    /**
-     * Severity map for the nine dynamic operations per discovered table.
-     *
-     * @return array<string, ToolSeverity>
-     */
-    public static function operationSeverityMap(): array
-    {
-        return McpToolSeverityResolver::dynamicOperationSeverityMap();
-    }
 
     public function register(Builder $builder): void
     {
@@ -534,13 +518,12 @@ readonly class NsT3afDynamicToolRegistrar
     private function registerDeleteBatchTool(Builder $builder, string $tableName, array $config): void
     {
         $recordService = $this->recordService;
-        $batchRunner = $this->batchRunner;
-        $toolName = $config['prefix'] . '_delete_batch';
+        $dataHandlerService = $this->dataHandlerService;
         $logger = $this->logger;
 
         $this->addAugmentedTool(
             $builder,
-            handler: static function (string $uids) use ($recordService, $batchRunner, $toolName, $logger, $tableName): BatchRecordsDeletedResult {
+            handler: static function (string $uids) use ($recordService, $dataHandlerService, $logger, $tableName): BatchRecordsDeletedResult {
                 $uidList = self::parseUids($uids);
                 $existingUids = $recordService->findExistingUids($tableName, $uidList);
 
@@ -551,20 +534,19 @@ readonly class NsT3afDynamicToolRegistrar
                 $skippedUids = array_values(array_diff($uidList, $existingUids));
 
                 try {
-                    $result = $batchRunner->run($toolName, [], [$tableName => array_fill_keys($existingUids, ['delete' => 1])]);
+                    $dataHandlerService->deleteRecords($tableName, $existingUids);
                 } catch (\Throwable $e) {
                     $logger->error($tableName . ' delete batch tool failed', ['exception' => $e]);
 
                     throw new ToolCallException($e->getMessage(), (int) $e->getCode(), $e);
                 }
 
-                return new BatchRecordsDeletedResult($existingUids, count($existingUids), $skippedUids, $result->batchId);
+                return new BatchRecordsDeletedResult($existingUids, count($existingUids), $skippedUids);
             },
-            name: $toolName,
-            description: 'Delete multiple ' . $config['label'] . ' records in a single operation (all or nothing, at most 500 uids per call).'
+            name: $config['prefix'] . '_delete_batch',
+            description: 'Delete multiple ' . $config['label'] . ' records in a single operation.'
                 . ' Pass UIDs as a comma-separated string (e.g. "1,2,3").'
-                . ' Non-existent UIDs are skipped and reported in skippedUids.'
-                . ' Returns a batchId for records_undo.',
+                . ' Non-existent UIDs are skipped and reported in skippedUids.',
         );
     }
 
@@ -572,8 +554,7 @@ readonly class NsT3afDynamicToolRegistrar
     private function registerUpdateBatchTool(Builder $builder, string $tableName, array $config): void
     {
         $recordService = $this->recordService;
-        $batchRunner = $this->batchRunner;
-        $toolName = $config['prefix'] . '_update_batch';
+        $dataHandlerService = $this->dataHandlerService;
         $logger = $this->logger;
         $writableFields = $config['writableFields'];
 
@@ -584,8 +565,7 @@ readonly class NsT3afDynamicToolRegistrar
                 string $fields,
             ) use (
                 $recordService,
-                $batchRunner,
-                $toolName,
+                $dataHandlerService,
                 $logger,
                 $tableName,
                 $writableFields,
@@ -617,7 +597,7 @@ readonly class NsT3afDynamicToolRegistrar
                 }
 
                 try {
-                    $result = $batchRunner->run($toolName, [$tableName => array_fill_keys($existingUids, $validFields)], []);
+                    $dataHandlerService->updateRecords($tableName, $existingUids, $validFields);
                 } catch (\Throwable $e) {
                     $logger->error($tableName . ' update batch tool failed', ['exception' => $e]);
 
@@ -630,15 +610,13 @@ readonly class NsT3afDynamicToolRegistrar
                     array_keys($validFields),
                     $ignoredFields,
                     $skippedUids,
-                    $result->batchId,
                 );
             },
-            name: $toolName,
-            description: 'Update the same fields on multiple ' . $config['label'] . ' records (all or nothing, at most 500 uids per call).'
+            name: $config['prefix'] . '_update_batch',
+            description: 'Update the same fields on multiple ' . $config['label'] . ' records.'
                 . ' Pass UIDs as comma-separated (e.g. "1,2,3") and fields as a JSON object (e.g. {"hidden":1}).'
                 . ' Available fields: ' . implode(', ', $config['writableFields']) . '.'
-                . ' Non-existent UIDs are skipped and reported in skippedUids.'
-                . ' Returns a batchId for records_undo.',
+                . ' Non-existent UIDs are skipped and reported in skippedUids.',
         );
     }
 
@@ -646,8 +624,7 @@ readonly class NsT3afDynamicToolRegistrar
     private function registerMoveBatchTool(Builder $builder, string $tableName, array $config): void
     {
         $recordService = $this->recordService;
-        $batchRunner = $this->batchRunner;
-        $toolName = $config['prefix'] . '_move_batch';
+        $dataHandlerService = $this->dataHandlerService;
         $logger = $this->logger;
 
         $this->addAugmentedTool(
@@ -658,8 +635,7 @@ readonly class NsT3afDynamicToolRegistrar
                 int $afterUid = 0,
             ) use (
                 $recordService,
-                $batchRunner,
-                $toolName,
+                $dataHandlerService,
                 $logger,
                 $tableName
             ): BatchRecordsMovedResult|ErrorResult {
@@ -675,36 +651,24 @@ readonly class NsT3afDynamicToolRegistrar
                     throw new ToolCallException('None of the provided UIDs exist in table ' . $tableName);
                 }
 
-                // findExistingUids returns database order; chain in the request order.
-                $existingSet = array_fill_keys($existingUids, true);
-                $orderedUids = array_values(array_filter(
-                    $uidList,
-                    static fn(int $uid): bool => isset($existingSet[$uid]),
-                ));
                 $skippedUids = array_values(array_diff($uidList, $existingUids));
 
                 try {
-                    $result = $batchRunner->run(
-                        $toolName,
-                        [],
-                        [$tableName => RecordsApplyMoveCommandChainer::chain($tableName, $orderedUids, $target)],
-                    );
+                    $dataHandlerService->moveRecords($tableName, $existingUids, $target);
                 } catch (\Throwable $e) {
                     $logger->error($tableName . ' move batch tool failed', ['exception' => $e]);
 
                     throw new ToolCallException($e->getMessage(), (int) $e->getCode(), $e);
                 }
 
-                return new BatchRecordsMovedResult($orderedUids, count($orderedUids), $target, $skippedUids, $result->batchId);
+                return new BatchRecordsMovedResult($existingUids, count($existingUids), $target, $skippedUids);
             },
-            name: $toolName,
-            description: 'Move multiple ' . $config['label'] . ' records to a new position in a single operation (all or nothing, at most 500 uids per call).'
+            name: $config['prefix'] . '_move_batch',
+            description: 'Move multiple ' . $config['label'] . ' records to a new position in a single operation.'
                 . ' Pass UIDs as comma-separated (e.g. "1,2,3").'
                 . ' Provide exactly one of: targetPid (move all to the top of that page)'
                 . ' or afterUid (place all after that sibling record).'
-                . ' When the table has a sort field, the request order is kept on the target.'
-                . ' Non-existent UIDs are skipped and reported in skippedUids.'
-                . ' Returns a batchId for records_undo.',
+                . ' Non-existent UIDs are skipped and reported in skippedUids.',
         );
     }
 
@@ -718,25 +682,12 @@ readonly class NsT3afDynamicToolRegistrar
         );
     }
 
-    /**
-     * Shared by update/delete/move batch tools. Cap is on supplied uids, before any database lookup.
-     *
-     * @return list<int>
-     */
-    public static function parseUids(string $uids): array
+    /** @return list<int> */
+    private static function parseUids(string $uids): array
     {
-        $uidList = array_values(array_filter(
+        return array_values(array_filter(
             array_map('intval', array_filter(explode(',', $uids), static fn(string $v): bool => $v !== '')),
             static fn(int $v): bool => $v > 0,
         ));
-        if (count($uidList) > RecordsApplyPreflight::MAX_RECORDS) {
-            throw new ToolCallException(sprintf(
-                'Too many uids: %d in this call, at most %d uids per call. Split the call.',
-                count($uidList),
-                RecordsApplyPreflight::MAX_RECORDS,
-            ));
-        }
-
-        return $uidList;
     }
 }

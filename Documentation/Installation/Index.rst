@@ -54,7 +54,7 @@ Requirements
 
 Ensure your system meets these requirements:
 
-* **TYPO3** — 13.4 LTS or 14.x
+* **TYPO3** — 12.4 LTS, 13.4 LTS, or 14.x
 * **PHP** — 8.2 or higher (8.3 recommended), including ``ext-sodium``
 * **Composer** — 2.x
 * **Database** — MySQL 8.0+ or MariaDB 10.3+
@@ -144,18 +144,18 @@ Recommended root ``composer.json`` settings:
        "minimum-stability": "stable",
        "prefer-stable": true,
        "require": {
-           "nitsan/ns-t3af": "^2.0"
+           "nitsan/ns-t3af": "^1.1"
        }
    }
 
 If an audit or ``composer.lock`` review shows a dev branch reference, pin
-``^2.0`` explicitly and refresh the lock:
+``^1.1`` explicitly and refresh the lock:
 
 .. code-block:: bash
 
    composer update nitsan/ns-t3af --with-dependencies
 
-Verify the lock entry lists a ``2.0.x`` version and a tag commit reference,
+Verify the lock entry lists a ``1.1.x`` version and a tag commit reference,
 not ``dev-dep/...``.
 
 Local monorepo development may use path repositories with ``@dev``; that is

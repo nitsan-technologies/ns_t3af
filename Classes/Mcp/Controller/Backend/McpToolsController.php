@@ -299,7 +299,6 @@ final class McpToolsController
         $description = trim((string) ($body['description'] ?? ''));
         $handlerType = trim((string) ($body['handlerType'] ?? 'php'));
         $handlerValue = trim((string) ($body['handlerValue'] ?? ''));
-        $severity = trim((string) ($body['severity'] ?? ''));
         $parameters = $body['parameters'] ?? [];
 
         if ($label === '' || $handlerValue === '') {
@@ -317,7 +316,6 @@ final class McpToolsController
                 $description,
                 $handlerType,
                 $handlerValue,
-                $severity,
                 $parameters,
             );
 
@@ -342,7 +340,6 @@ final class McpToolsController
         $description = trim((string) ($body['description'] ?? ''));
         $handlerType = trim((string) ($body['handlerType'] ?? 'php'));
         $handlerValue = trim((string) ($body['handlerValue'] ?? ''));
-        $severity = trim((string) ($body['severity'] ?? ''));
         $parameters = $body['parameters'] ?? [];
 
         if ($uid <= 0) {
@@ -365,7 +362,6 @@ final class McpToolsController
                 $description,
                 $handlerType,
                 $handlerValue,
-                $severity,
                 $parameters,
             );
 

@@ -26,36 +26,15 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Scheduler;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
-use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
-use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
-use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
-use NITSAN\NsT3AF\Mcp\Service\McpRecordPlanService;
-use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
-#[McpToolSeverity(ToolSeverity::Destructive)]
-readonly class SchedulerDeleteTool implements McpNonAiToolInterface, McpPlannableToolInterface
+readonly class SchedulerDeleteTool implements McpNonAiToolInterface
 {
     private const TABLE = 'tx_scheduler_task';
 
-    public function __construct(
-        private DataHandlerService $dataHandlerService,
-        private McpRecordPlanService $recordPlanService,
-    ) {}
-
-    /**
-     * @param array<string, mixed> $arguments
-     */
-    public function plan(array $arguments): ToolPlan
-    {
-        return $this->recordPlanService->planDelete(
-            self::TABLE,
-            (int) ($arguments['uid'] ?? 0),
-            'scheduler_delete',
-        );
-    }
+    public function __construct(private DataHandlerService $dataHandlerService) {}
 
     #[McpTool(
         name: 'scheduler_delete',

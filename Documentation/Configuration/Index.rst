@@ -47,8 +47,6 @@ Minimum working setup
 3. Provider marked **Default**
 4. (Optional) DeepL or Google keys for translation APIs
 5. (Optional) MCP enabled if you use AI agents
-6. (Optional) :guilabel:`AI Agent access` granted to editor groups if they
-   should use :ref:`Ask AI Agent <ask-ai-agent>`
 
 AI Providers (primary)
 ----------------------

@@ -25,12 +25,11 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Command;
 
 use Doctrine\DBAL\ParameterType;
+use Mcp\Server\Transport\StdioTransport;
 use NITSAN\NsT3AF\Mcp\Authentication\BackendUserBootstrap;
 use NITSAN\NsT3AF\Mcp\Logging\StderrLogger;
-use NITSAN\NsT3AF\Mcp\Server\BufferedStdioTransport;
 use NITSAN\NsT3AF\Mcp\Server\McpServerFactory;
 use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
-use NITSAN\NsT3AF\Mcp\Service\WorkspacePreferenceService;
 use Psr\Log\LoggerInterface;
 
 use const STDERR;
@@ -52,7 +51,6 @@ class McpServeCommand extends Command
         private readonly BackendUserBootstrap $backendUserBootstrap,
         private readonly McpServerFactory $mcpServerFactory,
         private readonly WorkspaceListService $workspaceListService,
-        private readonly WorkspacePreferenceService $workspacePreferenceService,
         private readonly LoggerInterface $logger,
     ) {
         parent::__construct();
@@ -62,7 +60,7 @@ class McpServeCommand extends Command
     {
         $this
             ->addOption('user', 'u', InputOption::VALUE_REQUIRED, 'Backend username to authenticate as', 'admin')
-            ->addOption('workspace', 'w', InputOption::VALUE_REQUIRED, 'Workspace UID (0 = Live). Without this option the workspace selected in the MCP Server backend module is used (Live when none is selected).')
+            ->addOption('workspace', 'w', InputOption::VALUE_REQUIRED, 'Workspace UID (div0=live)', '0')
             ->addOption('transport', null, InputOption::VALUE_REQUIRED, 'Transport type', 'stdio')
             ->addOption(
                 'no-startup-message',
@@ -76,7 +74,7 @@ class McpServeCommand extends Command
     {
         /** @var string $username */
         $username = $input->getOption('user');
-        $workspaceOption = $input->getOption('workspace');
+        $workspaceId = (int) $input->getOption('workspace');
         $transport = (string) $input->getOption('transport');
         $showStartup = !(bool) $input->getOption('no-startup-message');
         $verbose = $output->isVerbose();
@@ -100,22 +98,11 @@ class McpServeCommand extends Command
             return Command::FAILURE;
         }
 
-        // Not passed: follow the module setting, as the HTTP server does. Read once at start, so a
-        // change in the module needs a restart of the stdio server.
-        $workspaceId = $workspaceOption === null || $workspaceOption === ''
-            ? $this->workspacePreferenceService->getForUser($beUserUid)
-            : (int) $workspaceOption;
-
         if ($showStartup) {
             $workspaceTitle = $this->workspaceListService->resolveTitle($workspaceId);
             $this->logStderr($output, 'TYPO3 MCP Server (stdio) — AI Foundation v' . McpServerFactory::VERSION);
             $this->logStderr($output, sprintf('  User:       %s (uid %d)', $username, $beUserUid));
-            $this->logStderr($output, sprintf(
-                '  Workspace:  %d (%s)%s',
-                $workspaceId,
-                $workspaceTitle,
-                $workspaceOption === null || $workspaceOption === '' ? ' — from the MCP Server module' : ' — from -w',
-            ));
+            $this->logStderr($output, sprintf('  Workspace:  %d (%s)', $workspaceId, $workspaceTitle));
             if ($workspaceId > 0 && str_starts_with($workspaceTitle, 'Workspace #')) {
                 $this->logStderr($output, '  Warning:    workspace uid not found in sys_workspace — using live fallback overlay');
             }
@@ -165,7 +152,7 @@ class McpServeCommand extends Command
                 ? new StderrLogger($this->logger)
                 : $this->logger;
 
-            $stdioTransport = new BufferedStdioTransport(STDIN, STDOUT, $transportLogger);
+            $stdioTransport = new StdioTransport(STDIN, STDOUT, $transportLogger);
 
             if ($verbose) {
                 $this->logStderr($output, '[debug] Entering MCP event loop (no output until a client sends JSON-RPC)…');

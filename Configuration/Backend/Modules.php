@@ -112,9 +112,6 @@ return [
             'for_developers' => [
                 'target' => ModuleController::class . '::forDevelopersAction',
             ],
-            'ai_agent' => [
-                'target' => ModuleController::class . '::aiAgentAction',
-            ],
             'mcp_server' => [
                 'target' => ModuleController::class . '::mcpServerAction',
             ],
