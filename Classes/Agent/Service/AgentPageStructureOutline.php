@@ -108,11 +108,24 @@ final class AgentPageStructureOutline
     }
 
     /**
-     * Bullet outline of a structure array (for Apply result / follow-up text).
+     * Bullet outline of pages that create actually inserts (matches ns_t3ai nodesUnderParent).
+     * A generic "Home"/"Start" wrapper with children is omitted — that page is not created.
      *
      * @param array<string, mixed> $structure
      */
     public static function formatOutline(array $structure, int $depth = 0): string
+    {
+        if ($depth === 0) {
+            $structure = self::structureWithoutPhantomRoot($structure);
+        }
+
+        return self::formatOutlineLines($structure, $depth);
+    }
+
+    /**
+     * @param array<string, mixed> $structure
+     */
+    private static function formatOutlineLines(array $structure, int $depth): string
     {
         $title = trim((string) ($structure['title'] ?? ''));
         $children = is_array($structure['children'] ?? null) ? array_values($structure['children']) : [];
@@ -124,12 +137,37 @@ final class AgentPageStructureOutline
         }
         foreach ($children as $child) {
             /** @var array<string, mixed> $child */
-            $line = self::formatOutline($child, $depth);
+            $line = self::formatOutlineLines($child, $depth);
             if ($line !== '') {
                 $lines[] = $line;
             }
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * Drop a generic root title when it only wraps real children (same rule as create).
+     *
+     * @param array<string, mixed> $structure
+     * @return array<string, mixed>
+     */
+    public static function structureWithoutPhantomRoot(array $structure): array
+    {
+        $title = trim((string) ($structure['title'] ?? ''));
+        $children = is_array($structure['children'] ?? null) ? array_values($structure['children']) : [];
+        $children = array_values(array_filter($children, 'is_array'));
+        if ($title !== '' && $children !== [] && self::isGenericStructureRootTitle($title)) {
+            return ['title' => '', 'children' => $children];
+        }
+
+        return $structure;
+    }
+
+    private static function isGenericStructureRootTitle(string $title): bool
+    {
+        $normalized = mb_strtolower(trim($title));
+
+        return in_array($normalized, ['home', 'start', 'startseite', 'root', 'site', 'website', 'hauptebene'], true);
     }
 }

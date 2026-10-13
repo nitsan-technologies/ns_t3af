@@ -193,4 +193,27 @@ final class ProviderTest extends TestCase
         $p = Provider::fromRow(['capabilities' => 'chat,bogus,vision']);
         self::assertSame(['chat', 'vision'], $p->capabilities);
     }
+
+    public function testOnlyRealImageAdaptersSupportImageGeneration(): void
+    {
+        self::assertTrue(Provider::adapterSupportsImageGeneration('symfony.openai'));
+        self::assertTrue(Provider::adapterSupportsImageGeneration('ns_t3ai.stability_ai'));
+        self::assertTrue(Provider::adapterSupportsImageGeneration(Provider::ADAPTER_OPENAI_COMPATIBLE));
+        self::assertFalse(Provider::adapterSupportsImageGeneration('symfony.gemini'));
+        self::assertFalse(Provider::adapterSupportsImageGeneration('symfony.mistral'));
+        self::assertFalse(Provider::adapterSupportsImageGeneration('symfony.anthropic'));
+        self::assertFalse(Provider::adapterSupportsImageGeneration(Provider::ADAPTER_SYMFONY_AZURE));
+        self::assertFalse(Provider::adapterSupportsImageGeneration(Provider::ADAPTER_SYMFONY_OPENRESPONSES));
+    }
+
+    public function testFromRowDropsImageGenerationOnChatOnlyAdapters(): void
+    {
+        $p = Provider::fromRow([
+            'adapter_type' => 'symfony.gemini',
+            'capabilities' => 'chat,streaming,image_generation',
+        ]);
+
+        self::assertSame(['chat', 'streaming'], $p->capabilities);
+        self::assertFalse($p->hasCapability(Capability::IMAGE_GENERATION));
+    }
 }

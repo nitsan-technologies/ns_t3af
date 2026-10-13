@@ -47,6 +47,7 @@ use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
@@ -398,12 +399,13 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
         unset($payload['pid'], $payload['beforeUid'], $payload['afterUid']);
         $filteredData = self::withoutEmptyCreateFields($this->normalizer->filterWritableFields($tableName, $payload));
+        // Empty "add a text element" must still get a draft card — fill from the page title (no error card).
         if ($tableName === 'tt_content' && ($filteredData['CType'] ?? '') === 'text'
             && trim((string) ($filteredData['header'] ?? '')) === ''
             && trim((string) ($filteredData['subheader'] ?? '')) === ''
             && trim((string) ($filteredData['bodytext'] ?? '')) === ''
         ) {
-            throw new \InvalidArgumentException('A text element needs a header or a text. Write the text first and send it in the same call.');
+            $filteredData = self::withPlaceholderTextContent($filteredData, $pid);
         }
         // Fields the group may not edit would be dropped silently at Apply: the card must not offer them,
         // and a create whose requested content fields are all forbidden is refused.
@@ -469,6 +471,36 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return $data;
+    }
+
+    /**
+     * When the editor asked for a text element but the model sent no copy, draft from the page title.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    public static function withPlaceholderTextContent(array $data, int $pid): array
+    {
+        $pageTitle = self::pageTitleForContentPid($pid);
+        $header = $pageTitle !== '' ? $pageTitle : 'Text';
+        $data['header'] = $header;
+        $data['bodytext'] = '<p>' . htmlspecialchars($header, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>';
+
+        return $data;
+    }
+
+    private static function pageTitleForContentPid(int $pid): string
+    {
+        $pageUid = $pid > 0 ? $pid : 0;
+        if ($pageUid <= 0) {
+            return '';
+        }
+        $row = BackendUtility::getRecord('pages', $pageUid, 'title');
+        if (!is_array($row)) {
+            return '';
+        }
+
+        return trim((string) ($row['title'] ?? ''));
     }
 
     /** @param array<string, mixed> $payload */

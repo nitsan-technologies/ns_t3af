@@ -89,11 +89,69 @@ readonly class RecordsApplyFileAccess
             }
 
             $path = rtrim($path, '/');
-            if ($path === '' || str_starts_with($fileIdentifier, $path . '/')) {
+            $normalized = rtrim($fileIdentifier, '/');
+            // Mount root covers the folder itself and everything under it.
+            if ($path === '' || $normalized === $path || str_starts_with($fileIdentifier, $path . '/')) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * May the backend user use this folder (list / create / upload)? Same mount rule as {@see canReadFile()}.
+     *
+     * @throws \RuntimeException code 1747330008 when the folder is outside every file mount
+     */
+    public static function assertFolderAllowed(int $storageUid, string $folderIdentifier): void
+    {
+        $backendUser = $GLOBALS['BE_USER'] ?? null;
+        if (!$backendUser instanceof BackendUserAuthentication) {
+            throw new \RuntimeException('No authenticated backend user available', 1747330008);
+        }
+        if ($backendUser->isAdmin()) {
+            return;
+        }
+
+        $identifier = '/' . trim(str_replace('\\', '/', $folderIdentifier), '/');
+        if ($identifier !== '/') {
+            $identifier .= '/';
+        }
+
+        $mounts = $backendUser->getFileMountRecords();
+        if (!is_array($mounts)) {
+            $mounts = [];
+        }
+        if (!self::isInsideAFileMount($mounts, $storageUid, $identifier)) {
+            throw new \RuntimeException(
+                self::folderOutsideMountsMessage($mounts, $identifier),
+                1747330008,
+            );
+        }
+    }
+
+    /**
+     * @param array<mixed> $mountRecords
+     */
+    public static function folderOutsideMountsMessage(array $mountRecords, string $folderIdentifier): string
+    {
+        $allowed = [];
+        foreach ($mountRecords as $mount) {
+            $id = is_array($mount) ? trim((string) ($mount['identifier'] ?? '')) : '';
+            if ($id !== '') {
+                $allowed[] = $id;
+            }
+        }
+        $folder = trim($folderIdentifier) !== '' ? trim($folderIdentifier) : '/';
+        if ($allowed === []) {
+            return sprintf('No permission for the target folder %s: you have no file mounts.', $folder);
+        }
+
+        return sprintf(
+            'No permission for the target folder %s: outside your file mounts. Allowed: %s.',
+            $folder,
+            implode(', ', $allowed),
+        );
     }
 }

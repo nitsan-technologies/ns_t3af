@@ -19,8 +19,11 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
+use NITSAN\NsT3AF\Agent\Service\AgentRequestedFiles;
 use NITSAN\NsT3AF\Agent\Service\AgentRunner;
 use NITSAN\NsT3AF\Agent\Service\AgentToolTurnProcessor;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -113,6 +116,22 @@ final class AgentRunnerPageRequestTest extends TestCase
             'Add a new text element before the first element on this page',
         );
         self::assertSame(2, json_decode((string) $result['data'], true)['pid']);
+    }
+
+    #[Test]
+    public function planCreatesMediaContentRecognisesAttachableCTypes(): void
+    {
+        $media = new ToolPlan('create', 'write_table', [
+            new ToolPlanField('tt_content:0:CType', 'tt_content', 0, 'CType', '', 'textmedia'),
+            new ToolPlanField('tt_content:0:header', 'tt_content', 0, 'header', '', 'Photo'),
+        ]);
+        $plain = new ToolPlan('create', 'write_table', [
+            new ToolPlanField('tt_content:0:CType', 'tt_content', 0, 'CType', '', 'text'),
+        ]);
+
+        self::assertTrue(AgentToolTurnProcessor::planCreatesMediaContent($media));
+        self::assertFalse(AgentToolTurnProcessor::planCreatesMediaContent($plain));
+        self::assertTrue(AgentRequestedFiles::asksToAttachOrPlaceFile('Put that picture on this page'));
     }
 
     #[Test]

@@ -317,21 +317,12 @@ final class WriteTableToolTest extends TestCase
     }
 
     #[Test]
-    public function aTextElementWithNoTextAtAllIsRefusedBeforeACardIsShown(): void
+    public function anEmptyTextElementGetsAPlaceholderFromThePageTitle(): void
     {
-        $GLOBALS['TCA']['tt_content']['columns'] += [
-            'CType' => ['config' => ['type' => 'select']],
-            'bodytext' => ['config' => ['type' => 'text']],
-        ];
-        $this->bootstrapAdminUser();
+        $filled = WriteTableTool::withPlaceholderTextContent(['CType' => 'text'], 0);
 
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('A text element needs a header or a text.');
-        $this->tool->plan([
-            'action' => 'create',
-            'tableName' => 'tt_content',
-            'data' => ['pid' => 1, 'CType' => 'text', 'header' => '', 'bodytext' => ''],
-        ]);
+        self::assertSame('Text', $filled['header']);
+        self::assertStringContainsString('<p>Text</p>', (string) $filled['bodytext']);
     }
 
     private function bootstrapAdminUser(): void
