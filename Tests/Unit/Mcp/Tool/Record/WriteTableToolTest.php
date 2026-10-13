@@ -76,6 +76,33 @@ final class WriteTableToolTest extends TestCase
     }
 
     #[Test]
+    public function unhideAliasBecomesUpdateWithHiddenZero(): void
+    {
+        $payload = [];
+        self::assertSame('update', WriteTableTool::normalizeAction('unhide', $payload));
+        self::assertSame(0, $payload['hidden']);
+    }
+
+    #[Test]
+    public function visibleAndMakeVisibleAliasesBecomeUpdate(): void
+    {
+        foreach (['visible', 'activate', 'publish', 'make visible', 'make_visible'] as $action) {
+            $payload = [];
+            self::assertSame('update', WriteTableTool::normalizeAction($action, $payload), $action);
+            self::assertSame(0, $payload['hidden'], $action);
+        }
+    }
+
+    #[Test]
+    public function hideAliasBecomesUpdateWithHiddenOne(): void
+    {
+        $payload = ['title' => 'X'];
+        self::assertSame('update', WriteTableTool::normalizeAction('hide', $payload));
+        self::assertSame(1, $payload['hidden']);
+        self::assertSame('X', $payload['title']);
+    }
+
+    #[Test]
     public function rejectsUnknownTable(): void
     {
         $this->bootstrapAdminUser();
@@ -269,11 +296,57 @@ final class WriteTableToolTest extends TestCase
         ]);
     }
 
+    #[Test]
+    public function aCreateLeavesOutBlankFieldsAndZerosThatAreTheDefaultAnyway(): void
+    {
+        $GLOBALS['TCA']['tt_content']['columns'] += [
+            'bodytext' => ['config' => ['type' => 'text']],
+            'starttime' => ['config' => ['type' => 'datetime']],
+            'list_type' => ['config' => ['type' => 'select']],
+            'colPos' => ['config' => ['type' => 'select']],
+        ];
+        $this->bootstrapAdminUser();
+
+        $plan = $this->tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'data' => ['pid' => 1, 'header' => 'Hi', 'bodytext' => '', 'starttime' => 0, 'list_type' => '0', 'colPos' => 0],
+        ]);
+
+        self::assertEqualsCanonicalizing(['header', 'colPos'], array_map(static fn($field): string => $field->field, $plan->fields));
+    }
+
+    #[Test]
+    public function anEmptyTextElementGetsAPlaceholderFromThePageTitle(): void
+    {
+        $filled = WriteTableTool::withPlaceholderTextContent(['CType' => 'text'], 0);
+
+        self::assertSame('Text', $filled['header']);
+        self::assertStringContainsString('<p>Text</p>', (string) $filled['bodytext']);
+    }
+
     private function bootstrapAdminUser(): void
     {
         $backendUser = $this->createMock(BackendUserAuthentication::class);
         $backendUser->method('check')->willReturn(true);
         $GLOBALS['BE_USER'] = $backendUser;
+    }
+
+    #[Test]
+    public function rawLineBreaksInsideStringsAreAccepted(): void
+    {
+        $payload = \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData("{\"title\":\"A\nB\",\n \"x\": 1}", 'update');
+
+        self::assertSame(['title' => "A\nB", 'x' => 1], $payload);
+    }
+
+    #[Test]
+    public function unescapedQuotesInsideTheBodyAreAccepted(): void
+    {
+        $payload = \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData('{"title":"Green bonds","bodytext":"<p>See <a href="https://x.test">this</a>, he said "hello", ok.</p>","teaser":"T"}', 'create');
+
+        self::assertSame('<p>See <a href="https://x.test">this</a>, he said "hello", ok.</p>', $payload['bodytext']);
+        self::assertSame('T', $payload['teaser']);
     }
 
     #[Test]
@@ -382,6 +455,97 @@ final class WriteTableToolTest extends TestCase
         ]);
 
         self::assertSame(-68, $plan->context['pid']);
+    }
+
+    #[Test]
+    public function planCreateBeforeAContentElementUsesThePreviousElementNotAPage(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())->method('findExistingUids')->with('tt_content', [773])->willReturn([773]);
+        $records->expects(self::once())->method('findByUid')->with('tt_content', 773, ['pid'])->willReturn(['pid' => 2]);
+        $records->expects(self::once())->method('targetBeforeRecord')->with('tt_content', 773)->willReturn(-752);
+        $records->expects(self::never())->method('targetBeforePage');
+        $records->expects(self::once())->method('assertInsertAfterExists')->with('tt_content', 752);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'beforeUid' => 773,
+            'data' => ['pid' => 2, 'header' => 'New element'],
+        ]);
+
+        self::assertSame(-752, $plan->context['pid']);
+    }
+
+    #[Test]
+    public function planCreateBeforeAParentPageUidKeepsTheContentPid(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())->method('findExistingUids')->with('tt_content', [1])->willReturn([]);
+        $records->expects(self::once())->method('findByUid')->with('pages', 2, ['pid'])->willReturn(['pid' => 1]);
+        $records->expects(self::never())->method('targetBeforePage');
+        $records->expects(self::never())->method('targetBeforeRecord');
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'beforeUid' => 1,
+            'data' => ['pid' => 2, 'CType' => 'text', 'header' => 'New Text Element'],
+        ]);
+
+        self::assertSame(2, $plan->context['pid']);
+    }
+
+    #[Test]
+    public function planCreateBeforeACollidingContentUidOnAnotherPageKeepsThePid(): void
+    {
+        // beforeUid 1 exists as tt_content somewhere, but not on pid 2 — treat as parent-page mistake.
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())->method('findExistingUids')->with('tt_content', [1])->willReturn([1]);
+        $records->expects(self::exactly(2))->method('findByUid')->willReturnCallback(
+            static function (string $table, int $uid, array $fields): ?array {
+                if ($table === 'tt_content' && $uid === 1) {
+                    return ['pid' => 99];
+                }
+                if ($table === 'pages' && $uid === 2) {
+                    return ['pid' => 1];
+                }
+
+                return null;
+            },
+        );
+        $records->expects(self::never())->method('targetBeforeRecord');
+        $records->expects(self::never())->method('targetBeforePage');
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'beforeUid' => 1,
+            'data' => ['pid' => 2, 'CType' => 'text', 'header' => 'New Text Element'],
+        ]);
+
+        self::assertSame(2, $plan->context['pid']);
     }
 
     #[Test]
@@ -508,5 +672,172 @@ final class WriteTableToolTest extends TestCase
             'tableName' => 'tt_content',
             'data' => ['pid' => -12, 'header' => 'After'],
         ]);
+    }
+
+    #[Test]
+    public function aRewriteThatLostTheOriginalWordsIsRefused(): void
+    {
+        $old = 'Visible content for QA editor regression tests.';
+
+        self::assertFalse(WriteTableTool::rewriteKeepsMeaning($old, "Hello there! We're here to make your experience delightful and smooth."));
+        self::assertTrue(WriteTableTool::rewriteKeepsMeaning($old, 'Here you can find visible content that we use for our editor regression tests.'));
+        self::assertTrue(WriteTableTool::rewriteKeepsMeaning('Normal text inside the mount (QA)', 'Here is the regular text inside our mount (QA).'));
+    }
+
+    #[Test]
+    public function veryShortOriginalsAreNotJudged(): void
+    {
+        self::assertTrue(WriteTableTool::rewriteKeepsMeaning('Welcome', 'Hello and good day to you'));
+        self::assertTrue(WriteTableTool::rewriteKeepsMeaning('', 'Anything'));
+    }
+
+    #[Test]
+    public function onlyRewriteRequestsAreChecked(): void
+    {
+        self::assertTrue(WriteTableTool::isRewriteRequest('Rewrite the text of the block so it sounds friendlier'));
+        self::assertTrue(WriteTableTool::isRewriteRequest('Formuliere den Text freundlicher um, bitte umschreiben'));
+        self::assertFalse(WriteTableTool::isRewriteRequest('Replace the text of the block with: Opening hours 9-5'));
+        self::assertFalse(WriteTableTool::isRewriteRequest('Make the German page visible'));
+    }
+
+    #[Test]
+    public function aNewNewsArticleGetsTodayUnlessTheEditorNamedADate(): void
+    {
+        $now = (int) strtotime('2026-10-09 10:00:00');
+
+        self::assertSame('2026-10-09 10:00:00', WriteTableTool::withSaneNewsDate(['title' => 'A'], 'Create a news', $now)['datetime']);
+        self::assertSame('2026-10-09 10:00:00', WriteTableTool::withSaneNewsDate(['title' => 'A', 'datetime' => '2023-12-01 00:00:00'], 'We are open 10 to 4 in December', $now)['datetime']);
+        self::assertSame('2023-12-01 00:00:00', WriteTableTool::withSaneNewsDate(['title' => 'A', 'datetime' => '2023-12-01 00:00:00'], 'Dated 1.12.2023, create a news', $now)['datetime']);
+        self::assertSame('2026-11-01 00:00:00', WriteTableTool::withSaneNewsDate(['datetime' => '2026-11-01 00:00:00'], 'Create a news', $now)['datetime']);
+    }
+
+    #[Test]
+    public function newsCreateNeedsStoragePidWhenMissingOrZero(): void
+    {
+        self::assertTrue(WriteTableTool::newsCreateNeedsStoragePid(['title' => 'A']));
+        self::assertTrue(WriteTableTool::newsCreateNeedsStoragePid(['title' => 'A', 'pid' => 0]));
+        self::assertTrue(WriteTableTool::newsCreateNeedsStoragePid(['title' => 'A', 'pid' => '0']));
+        self::assertFalse(WriteTableTool::newsCreateNeedsStoragePid(['title' => 'A', 'pid' => 53]));
+    }
+
+    #[Test]
+    public function newsCreateWithoutPidUsesPreferredStorageFolder(): void
+    {
+        $this->bootstrapAdminUser();
+        $GLOBALS['TCA']['tx_news_domain_model_news'] = [
+            'ctrl' => ['label' => 'title'],
+            'columns' => [
+                'title' => ['config' => ['type' => 'input']],
+                'teaser' => ['config' => ['type' => 'text']],
+                'bodytext' => ['config' => ['type' => 'text']],
+                'datetime' => ['config' => ['type' => 'input']],
+                'pid' => ['config' => ['type' => 'passthrough']],
+            ],
+        ];
+
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->expects(self::never())->method('isSuitableNewsStoragePid');
+        $recordService->expects(self::once())->method('preferredPidForTable')
+            ->with('tx_news_domain_model_news')
+            ->willReturn(53);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $recordService,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tx_news_domain_model_news',
+            'data' => json_encode(['title' => 'Anniversary', 'teaser' => 'Ten years', 'pid' => 0], JSON_THROW_ON_ERROR),
+            'requestQuery' => 'Write a news story with a picture',
+        ]);
+
+        self::assertSame(53, (int) ($plan->context['pid'] ?? 0));
+    }
+
+    #[Test]
+    public function newsCreateOnOrdinaryPageIsRewrittenToPreferredStorage(): void
+    {
+        $this->bootstrapAdminUser();
+        $GLOBALS['TCA']['tx_news_domain_model_news'] = [
+            'ctrl' => ['label' => 'title'],
+            'columns' => [
+                'title' => ['config' => ['type' => 'input']],
+                'teaser' => ['config' => ['type' => 'text']],
+                'bodytext' => ['config' => ['type' => 'text']],
+                'datetime' => ['config' => ['type' => 'input']],
+                'pid' => ['config' => ['type' => 'passthrough']],
+            ],
+        ];
+
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->expects(self::once())->method('isSuitableNewsStoragePid')->with(4)->willReturn(false);
+        $recordService->expects(self::once())->method('preferredPidForTable')
+            ->with('tx_news_domain_model_news')
+            ->willReturn(53);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $recordService,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tx_news_domain_model_news',
+            'data' => json_encode(['title' => 'Anniversary', 'teaser' => 'Ten years', 'pid' => 4], JSON_THROW_ON_ERROR),
+            'requestQuery' => 'Write a news story with a picture',
+        ]);
+
+        self::assertSame(53, (int) ($plan->context['pid'] ?? 0));
+    }
+
+    #[Test]
+    public function newsCreateKeepsSuitableStoragePid(): void
+    {
+        $this->bootstrapAdminUser();
+        $GLOBALS['TCA']['tx_news_domain_model_news'] = [
+            'ctrl' => ['label' => 'title'],
+            'columns' => [
+                'title' => ['config' => ['type' => 'input']],
+                'teaser' => ['config' => ['type' => 'text']],
+                'bodytext' => ['config' => ['type' => 'text']],
+                'datetime' => ['config' => ['type' => 'input']],
+                'pid' => ['config' => ['type' => 'passthrough']],
+            ],
+        ];
+
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->expects(self::once())->method('isSuitableNewsStoragePid')->with(53)->willReturn(true);
+        $recordService->expects(self::never())->method('preferredPidForTable');
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $recordService,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tx_news_domain_model_news',
+            'data' => json_encode(['title' => 'Anniversary', 'teaser' => 'Ten years', 'pid' => 53], JSON_THROW_ON_ERROR),
+            'requestQuery' => 'Write a news story with a picture',
+        ]);
+
+        self::assertSame(53, (int) ($plan->context['pid'] ?? 0));
+    }
+
+    #[\PHPUnit\Framework\Attributes\Test]
+    public function decodeDataAcceptsACodeFenceAndDoubleEncodedJson(): void
+    {
+        $fenced = "```json\n{\"title\":\"A\"}\n```";
+        self::assertSame(['title' => 'A'], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData($fenced, 'create'));
+        $double = json_encode('{"title":"B"}', JSON_THROW_ON_ERROR);
+        self::assertSame(['title' => 'B'], \NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool::decodeData($double, 'create'));
     }
 }

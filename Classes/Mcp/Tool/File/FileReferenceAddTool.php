@@ -35,6 +35,8 @@ use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use TYPO3\CMS\Core\Resource\File;
+use TYPO3\CMS\Core\Resource\ResourceFactory;
 
 #[McpToolSeverity(ToolSeverity::Write)]
 readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannableToolInterface
@@ -44,6 +46,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
         private TcaSchemaService $tcaSchemaService,
         private McpConfirmationPlanBuilder $confirmationPlanBuilder,
         private RecordService $recordService,
+        private ResourceFactory $resourceFactory,
     ) {}
 
     /**
@@ -78,30 +81,45 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
                 $fileFields !== [] ? implode(', ', $fileFields) : 'none',
             ));
         }
-        if ($this->findRecord($table, $uid) === null) {
+        $record = $this->findRecord($table, $uid);
+        if ($record === null) {
             throw new \InvalidArgumentException(sprintf(
                 'There is no %s record with uid %d. Use the uid of the record itself (for a new content element: the uid from the applied result), not the page uid.',
                 $table,
                 $uid,
             ));
         }
+        $this->assertFieldIsShownForRecord($table, $uid, $record, $fieldName, $fileFields);
+        $files = $this->filesToAttach(self::withoutAlreadyAttached(
+            $table,
+            $uid,
+            $fieldName,
+            self::numericFileUids($fileUids),
+        ));
+        $fileLabels = implode(', ', array_map(
+            static fn(File $file): string => $file->getName() . ' (uid ' . $file->getUid() . ')',
+            $files,
+        ));
 
+        $texts = self::referenceTexts($arguments);
         $arguments = [
             'table' => $table,
             'uid' => $uid,
             'fieldName' => $fieldName,
-            'fileUids' => $fileUids,
+            'fileUids' => implode(',', array_map(static fn(File $file): int => $file->getUid(), $files)),
+            ...$texts,
         ];
+        $textNote = self::describeTexts($texts);
 
         return $this->confirmationPlanBuilder->confirmation(
             'update',
             'file_reference_add',
             '_reference',
             $fieldName,
-            'attach file(s) ' . $fileUids,
+            'attach file(s) ' . $fileLabels . $textNote,
             [
                 'arguments' => $arguments,
-                'summary' => sprintf('Attach file(s) %s to %s uid %d (%s)', $fileUids, $table, $uid, $fieldName),
+                'summary' => sprintf('Attach file(s) %s to %s uid %d (%s)%s', $fileLabels, $table, $uid, $fieldName, $textNote),
                 ...$arguments,
             ],
             $table,
@@ -113,10 +131,20 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
         name: 'file_reference_add',
         description: 'Attach uploaded files to a record file/image field.'
             . ' Pass sys_file UIDs from file_upload_from_url, file_upload, or file_upload_prepare (comma-separated).'
+            . ' alternative (alt text), title and description are set on every attached file; pass a short alt text'
+            . ' that describes the image whenever the editor asks for one.'
             . ' Updates the parent FAL counter column (e.g. og_image) so SEO generators see the attachment.',
     )]
-    public function execute(string $table, int $uid, string $fieldName, string $fileUids): string
-    {
+    public function execute(
+        string $table,
+        int $uid,
+        string $fieldName,
+        string $fileUids,
+        string $alternative = '',
+        string $title = '',
+        string $description = '',
+    ): string {
+        $texts = self::referenceTexts(['alternative' => $alternative, 'title' => $title, 'description' => $description]);
         $parsedUids = array_values(array_filter(
             array_map(static fn(string $value): int => (int) trim($value), explode(',', $fileUids)),
             static fn(int $value): bool => $value > 0,
@@ -144,6 +172,14 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
         }
 
         try {
+            $this->assertFieldIsShownForRecord($table, $uid, $record, $fieldName, $fileFields);
+            $parsedUids = $this->withoutAlreadyAttached($table, $uid, $fieldName, $parsedUids);
+            $this->filesToAttach($parsedUids);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->encodeError($exception->getMessage());
+        }
+
+        try {
             $referenceUids = $this->dataHandlerService->createFileReferences(
                 $table,
                 $uid,
@@ -151,6 +187,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
                 $parsedUids,
                 // References live on the page of their record.
                 (int) ($record['pid'] ?? 0),
+                $texts,
             );
             $parentCount = count($this->recordService->findFileReferences($table, $uid, $fieldName));
 
@@ -162,6 +199,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
                 'referencesCreated' => count($referenceUids),
                 'referenceUids' => $referenceUids,
                 'parentFieldCount' => $parentCount,
+                ...$texts,
             ], JSON_THROW_ON_ERROR);
         } catch (\Throwable $exception) {
             return $this->encodeError($exception->getMessage());
@@ -174,13 +212,191 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
     private function findRecord(string $table, int $uid): ?array
     {
         $deleteField = (string) ($GLOBALS['TCA'][$table]['ctrl']['delete'] ?? '');
+        $fields = ['uid', 'pid'];
+        if ($deleteField !== '') {
+            $fields[] = $deleteField;
+        }
+        $typeField = self::typeField($table);
+        if ($typeField !== '') {
+            $fields[] = $typeField;
+        }
         try {
-            $row = $this->recordService->findByUid($table, $uid, $deleteField !== '' ? ['uid', 'pid', $deleteField] : ['uid', 'pid']);
+            $row = $this->recordService->findByUid($table, $uid, $fields);
         } catch (\Throwable) {
             return null;
         }
 
         return $row !== null && ($deleteField === '' || (int) ($row[$deleteField] ?? 0) === 0) ? $row : null;
+    }
+
+    /** Type column of the table, or '' when the type comes from a related record ("uid_local:type"). */
+    private static function typeField(string $table): string
+    {
+        $typeField = (string) ($GLOBALS['TCA'][$table]['ctrl']['type'] ?? '');
+
+        return str_contains($typeField, ':') ? '' : $typeField;
+    }
+
+    /**
+     * "assets" on an Image element is stored but never shown or rendered.
+     *
+     * @param array<string, mixed> $record
+     * @param list<string> $fileFields
+     */
+    private function assertFieldIsShownForRecord(string $table, int $uid, array $record, string $fieldName, array $fileFields): void
+    {
+        $typeField = self::typeField($table);
+        $recordType = $typeField !== '' ? trim((string) ($record[$typeField] ?? '')) : '';
+        if ($recordType === '') {
+            return;
+        }
+        $shown = $this->tcaSchemaService->getShownFields($table, $recordType);
+        if ($shown === [] || in_array($fieldName, $shown, true)) {
+            return;
+        }
+        $usable = array_values(array_intersect($fileFields, $shown));
+
+        throw new \InvalidArgumentException(sprintf(
+            'Field "%s" is not used by %s uid %d (%s "%s"). %s',
+            $fieldName,
+            $table,
+            $uid,
+            $typeField,
+            $recordType,
+            $usable !== [] ? 'Use fieldName "' . implode('" or "', $usable) . '".' : 'This record type has no file field.',
+        ));
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @return array{alternative?: string, title?: string, description?: string} only the texts that were given
+     */
+    private static function referenceTexts(array $arguments): array
+    {
+        $texts = [];
+        foreach (['alternative', 'title', 'description'] as $key) {
+            $value = trim((string) ($arguments[$key] ?? ''));
+            if ($value !== '') {
+                $texts[$key] = $value;
+            }
+        }
+
+        return $texts;
+    }
+
+    /**
+     * @param array{alternative?: string, title?: string, description?: string} $texts
+     */
+    private static function describeTexts(array $texts): string
+    {
+        $labels = ['alternative' => 'alt text', 'title' => 'title', 'description' => 'description'];
+        $parts = [];
+        foreach ($texts as $key => $value) {
+            $parts[] = sprintf('%s "%s"', $labels[$key], $value);
+        }
+
+        return $parts !== [] ? ' with ' . implode(', ', $parts) : '';
+    }
+
+    /**
+     * Drop file uids already referenced on this record field so a second Apply cannot duplicate.
+     *
+     * @param list<int> $fileUids
+     * @return non-empty-list<int>
+     */
+    private function withoutAlreadyAttached(string $table, int $uid, string $fieldName, array $fileUids): array
+    {
+        $already = [];
+        foreach ($this->recordService->findFileReferences($table, $uid, $fieldName) as $ref) {
+            $local = (int) ($ref['uid_local'] ?? 0);
+            if ($local > 0) {
+                $already[$local] = true;
+            }
+        }
+        $fresh = [];
+        foreach ($fileUids as $fileUid) {
+            if (!isset($already[$fileUid])) {
+                $fresh[] = $fileUid;
+            }
+        }
+        if ($fresh === []) {
+            throw new \InvalidArgumentException(sprintf(
+                'Those files are already attached to %s uid %d (%s). Do not attach the same file again.',
+                $table,
+                $uid,
+                $fieldName,
+            ));
+        }
+
+        return $fresh;
+    }
+
+    /** @return non-empty-list<int> */
+    private static function numericFileUids(string $fileUids): array
+    {
+        $uids = [];
+        foreach (explode(',', $fileUids) as $part) {
+            $part = trim($part);
+            if ($part === '') {
+                continue;
+            }
+            if (preg_match('/^[1-9]\d*$/', $part) !== 1) {
+                throw new \InvalidArgumentException(sprintf(
+                    '"%s" is not a sys_file uid. Pass the numeric uid returned by file_upload_from_url, file_upload or file_list (storageUid 1 is fileadmin), not a file name.',
+                    $part,
+                ));
+            }
+            $uids[] = (int) $part;
+        }
+        if ($uids === []) {
+            throw new \InvalidArgumentException('fileUids is required: one or more sys_file uids, comma-separated.');
+        }
+
+        return array_values(array_unique($uids));
+    }
+
+    /**
+     * @param list<int> $fileUids
+     * @return list<File>
+     */
+    private function filesToAttach(array $fileUids): array
+    {
+        $files = [];
+        $problems = [];
+        $missing = false;
+        foreach ($fileUids as $fileUid) {
+            try {
+                $file = $this->resourceFactory->getFileObject($fileUid);
+            } catch (\Throwable) {
+                $problems[] = sprintf('There is no file with sys_file uid %d.', $fileUid);
+                continue;
+            }
+            try {
+                $readable = $file->checkActionPermission('read');
+                $onDisk = $readable && !$file->isMissing() && $file->exists();
+            } catch (\Throwable) {
+                $readable = false;
+                $onDisk = false;
+            }
+            if (!$readable) {
+                $problems[] = sprintf('You may not use the file with sys_file uid %d.', $fileUid);
+                continue;
+            }
+            if (!$onDisk) {
+                $problems[] = sprintf('The file %s (sys_file uid %d) is missing from the storage, so it would show as a broken image.', $file->getName(), $fileUid);
+                $missing = true;
+                continue;
+            }
+            $files[] = $file;
+        }
+        // Every unusable file is named at once: the agent must not find them one call at a time.
+        if ($problems !== []) {
+            throw new \InvalidArgumentException(implode(' ', $problems) . ($missing
+                ? ' Tell the editor which files are missing; do not download, generate or pick a replacement.'
+                : ' Unless the editor named this uid, look the file up with file_list (storageUid 1) and use its uid.'));
+        }
+
+        return $files;
     }
 
     /** @param array<string, mixed> $context */

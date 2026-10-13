@@ -42,6 +42,7 @@ final class SatelliteToolPlanServiceTest extends TestCase
                 't3ai_generate_meta_description' => ToolSeverity::Write,
                 't3ai_apply_schema_markup' => ToolSeverity::Write,
                 't3ai_generate_all_seo' => ToolSeverity::Write,
+                't3ai_generate_image' => ToolSeverity::Write,
                 't3cs_save_datasource' => ToolSeverity::Write,
                 't3cs_list_datasources' => ToolSeverity::Read,
                 't3ac_chatbot_settings' => ToolSeverity::Write,
@@ -114,6 +115,26 @@ final class SatelliteToolPlanServiceTest extends TestCase
     }
 
     #[Test]
+    public function generateImagePlanDoesNotMentionLayoutPage(): void
+    {
+        $service = new SatelliteToolPlanService(
+            $this->severityLookup(['t3ai_generate_image' => ToolSeverity::Write]),
+            new McpConfirmationPlanBuilder(),
+            $this->createAgentTranslator(),
+        );
+        $plan = $service->plan('t3ai_generate_image', [
+            'prompt' => 'Office team',
+            'newsArticleUid' => 42,
+        ]);
+
+        $summary = (string) ($plan->context['summary'] ?? '');
+        self::assertStringContainsString('Generate an image', $summary);
+        self::assertStringNotContainsString('for page', $summary);
+        self::assertStringContainsString('news article', $summary);
+        self::assertStringContainsString('42', $summary);
+    }
+
+    #[Test]
     public function childToolsWithoutOwnSummaryUseTheirEditorLabel(): void
     {
         $service = new SatelliteToolPlanService(
@@ -132,5 +153,71 @@ final class SatelliteToolPlanServiceTest extends TestCase
             ],
             $plan->context['displayArguments'] ?? null,
         );
+    }
+
+    #[Test]
+    public function translatePageSummaryKeepsSpaceBeforeForPage(): void
+    {
+        $service = new SatelliteToolPlanService(
+            $this->severityLookup(['t3ai_translate_page' => ToolSeverity::Write]),
+            new McpConfirmationPlanBuilder(),
+            $this->createAgentTranslator(),
+        );
+        $plan = $service->plan('t3ai_translate_page', ['pageId' => 213, 'languageUids' => [1]]);
+
+        $summary = (string) ($plan->context['summary'] ?? '');
+        self::assertStringContainsString('Translate the whole page for page', $summary);
+        self::assertStringNotContainsString('pagefor page', $summary);
+        self::assertStringContainsString('213', $summary);
+    }
+
+    #[Test]
+    public function aNewGlossarySaveDoesNotShowTermIdZero(): void
+    {
+        $service = new SatelliteToolPlanService(
+            $this->severityLookup(['t3ai_glossary_save' => ToolSeverity::Write]),
+            new McpConfirmationPlanBuilder(),
+            $this->createAgentTranslator(),
+        );
+        $plan = $service->plan('t3ai_glossary_save', [
+            'sourceTerm' => 'Test 123',
+            'targetTerm' => 'Agent 123',
+            'languageUid' => 2,
+            'termId' => 0,
+        ]);
+        $keys = array_map(
+            static fn(mixed $row): string => is_array($row) ? (string) ($row['key'] ?? '') : '',
+            is_array($plan->context['displayArguments'] ?? null) ? $plan->context['displayArguments'] : [],
+        );
+
+        self::assertNotContains('termId', $keys);
+        self::assertSame([
+            'sourceTerm' => 'Test 123',
+            'targetTerm' => 'Agent 123',
+            'languageUid' => 2,
+            'termId' => 0,
+        ], $plan->context['arguments'] ?? null);
+    }
+
+    #[Test]
+    public function anSeoQueueAddCardDoesNotShowPid(): void
+    {
+        $service = new SatelliteToolPlanService(
+            $this->severityLookup(['t3ai_mass_seo_queue_add' => ToolSeverity::Write]),
+            new McpConfirmationPlanBuilder(),
+            $this->createAgentTranslator(),
+        );
+        $plan = $service->plan('t3ai_mass_seo_queue_add', [
+            'pageId' => 45,
+            'pid' => 3,
+            'recursive' => true,
+        ]);
+        $keys = array_map(
+            static fn(mixed $row): string => is_array($row) ? (string) ($row['key'] ?? '') : '',
+            is_array($plan->context['displayArguments'] ?? null) ? $plan->context['displayArguments'] : [],
+        );
+
+        self::assertNotContains('pid', $keys);
+        self::assertArrayNotHasKey('pid', is_array($plan->context['arguments'] ?? null) ? $plan->context['arguments'] : []);
     }
 }

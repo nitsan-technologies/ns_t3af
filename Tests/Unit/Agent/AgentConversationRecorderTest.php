@@ -149,6 +149,20 @@ final class AgentConversationRecorderTest extends TestCase
     }
 
     #[Test]
+    public function aFinalFailureStaysOnTheCard(): void
+    {
+        $messages = [
+            ['role' => 'assistant', 'content' => 'Upload file from URL', 'meta' => ['type' => 'inline_draft', 'draft' => ['draftId' => 'd4']]],
+        ];
+
+        $failed = $this->recorder->failed($messages, 'd4', 'Could not resolve host "no-such-host.invalid".');
+
+        self::assertTrue($failed[0]['meta']['draft']['failed']);
+        self::assertSame('Could not resolve host "no-such-host.invalid".', $failed[0]['meta']['draft']['failureMessage']);
+        self::assertSame($messages, $this->recorder->failed($messages, 'unknown', 'x'));
+    }
+
+    #[Test]
     public function summarizingNeedsFourNewVisibleMessages(): void
     {
         $visible = ['role' => 'user', 'content' => 'x', 'meta' => []];

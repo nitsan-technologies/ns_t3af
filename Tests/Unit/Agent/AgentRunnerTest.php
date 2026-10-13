@@ -34,6 +34,7 @@ use NITSAN\NsT3AF\Agent\Service\AgentLowRiskFieldMatrix;
 use NITSAN\NsT3AF\Agent\Service\AgentPausePolicy;
 use NITSAN\NsT3AF\Agent\Service\AgentPlan;
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
+use NITSAN\NsT3AF\Agent\Service\AgentProviderTurnErrorPresenter;
 use NITSAN\NsT3AF\Agent\Service\AgentRunner;
 use NITSAN\NsT3AF\Agent\Service\AgentSettingsService;
 use NITSAN\NsT3AF\Agent\Service\AgentToolArgumentValidator;
@@ -416,6 +417,60 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function imageWorkToolsOmitsAttachWhenEveryFileIsAlreadyLinked(): void
+    {
+        $catalog = [
+            ['name' => 't3ai_generate_image'],
+            ['name' => 'file_reference_add'],
+        ];
+        $history = [
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 5],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 'file_reference_add',
+                    'success' => true,
+                    'details' => ['fileUid' => 5],
+                ],
+            ],
+        ];
+
+        $names = array_map(
+            static fn(array $t): string => (string) $t['name'],
+            AgentRunner::imageWorkTools($catalog, [], $history),
+        );
+
+        self::assertSame(['t3ai_generate_image'], $names);
+    }
+
+    #[Test]
+    public function imageWorkToolsOffersAttachForExistingFilesNamedInTheRequest(): void
+    {
+        $catalog = [
+            ['name' => 't3ai_generate_image'],
+            ['name' => 'file_reference_add'],
+        ];
+        $request = 'Create a text & media content element with the heading Our Treats and attach the existing images sys_file uid 3 and uid 11';
+        $history = [['role' => 'user', 'content' => $request, 'meta' => []]];
+
+        $names = array_map(
+            static fn(array $t): string => (string) $t['name'],
+            AgentRunner::imageWorkTools($catalog, [], $history, $request),
+        );
+
+        self::assertSame(['t3ai_generate_image', 'file_reference_add'], $names);
+    }
+
+    #[Test]
     public function aShortReplyIsSearchedWithThePreviousRequest(): void
     {
         $query = AgentRunner::requestQuery('Yes', [
@@ -489,13 +544,61 @@ final class AgentRunnerTest extends TestCase
     #[Test]
     public function copyingAPageIsOfferedOnlyWhenAskedFor(): void
     {
-        self::assertSame(['pages_copy', 'content_move', 'pages_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('I want a new subpage "Eval yes" under this page'));
-        self::assertSame(['pages_copy', 'content_move', 'pages_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('Ändere die Unterüberschrift von Element 12 auf Hallo'));
-        self::assertSame(['pages_copy', 'content_move', 'pages_move'], AgentRunner::toolsNotAskedFor('Switch to the QA Draft workspace'));
+        $gated = ['pages_copy', 'content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'];
+        self::assertSame($gated, AgentRunner::toolsNotAskedFor('I want a new subpage "Eval yes" under this page'));
+        self::assertSame($gated, AgentRunner::toolsNotAskedFor('Ändere die Unterüberschrift von Element 12 auf Hallo'));
+        self::assertSame(['pages_copy', 'content_move', 'pages_move', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Switch to the QA Draft workspace'));
         self::assertNotContains('content_move', AgentRunner::toolsNotAskedFor('Move element 12 below element 15'));
-        self::assertSame(['content_move', 'pages_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
-        self::assertSame(['content_move', 'pages_move', 'workspace_switch'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
-        self::assertSame(['content_move', 'pages_move'], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
+        self::assertNotContains('t3ai_analyze_content', AgentRunner::toolsNotAskedFor('Run a content analysis for this page'));
+        self::assertContains('t3ai_analyze_content', AgentRunner::toolsNotAskedFor('Change the header of element 12'));
+        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
+        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
+        self::assertSame(['content_move', 'pages_move', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
+        self::assertNotContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor('Summarize this page'));
+        self::assertContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor('Rewrite the block so it sounds friendlier'));
+        self::assertContains('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor('Generate a picture and attach it to the news'));
+        self::assertNotContains('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor('Write alt text for this image'));
+        self::assertContains('t3ai_generate_all_seo', AgentRunner::toolsNotAskedFor('Yes, generate the picture and attach it to the new news article'));
+        self::assertNotContains('t3ai_generate_all_seo', AgentRunner::toolsNotAskedFor('Write all SEO texts for this page'));
+        self::assertContains('t3aa_generate_voice_over', AgentRunner::toolsNotAskedFor('Generate a picture for the news'));
+        self::assertNotContains('t3aa_generate_voice_over', AgentRunner::toolsNotAskedFor('Create a voice-over for this page'));
+    }
+
+    #[Test]
+    public function hasOpenGenerateImageDraftDetectsWaitingCard(): void
+    {
+        $history = [
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'inline_draft',
+                    'tool' => 't3ai_generate_image',
+                    'draft' => ['tool' => 't3ai_generate_image', 'discarded' => false],
+                ],
+            ],
+        ];
+
+        self::assertTrue(AgentRunner::hasOpenGenerateImageDraft($history));
+        self::assertFalse(AgentRunner::hasOpenGenerateImageDraft([]));
+    }
+
+    #[Test]
+    public function newsRequestsDoNotGetTheContentDeleteTool(): void
+    {
+        self::assertTrue(AgentRunner::isNewsOnlyRequest('Delete the Winter Opening Hours news.'));
+        self::assertTrue(AgentRunner::isNewsOnlyRequest('Lösche die Meldung Sommerfest'));
+        self::assertFalse(AgentRunner::isNewsOnlyRequest('Delete the news content element on this page'));
+        self::assertFalse(AgentRunner::isNewsOnlyRequest('Delete element 12'));
+    }
+
+    #[Test]
+    public function newsRelatedRequestsIncludeTranslateAndCreate(): void
+    {
+        self::assertTrue(AgentRunner::isNewsRelatedRequest('Translate news article 1 into German'));
+        self::assertTrue(AgentRunner::isNewsRelatedRequest('Create a news article about AI'));
+        self::assertTrue(AgentRunner::isNewsRelatedRequest('Erstelle eine Nachricht über SEO'));
+        self::assertFalse(AgentRunner::isNewsRelatedRequest('Translate this page to German'));
+        self::assertFalse(AgentRunner::isNewsRelatedRequest('What is the latest news on this page?'));
     }
 
     #[Test]
@@ -770,6 +873,7 @@ final class AgentRunnerTest extends TestCase
                 $translator,
                 new AgentLanguageResolver($this->createMock(SiteFinder::class)),
             ),
+            new AgentProviderTurnErrorPresenter(),
         );
     }
 
@@ -788,7 +892,7 @@ final class AgentRunnerTest extends TestCase
             'The AI provider returned an error. Please try again.',
             AgentRunner::readableProviderError('{"raw":true}'),
         );
-        self::assertLessThanOrEqual(201, mb_strlen(AgentRunner::readableProviderError(str_repeat('word ', 200))));
+        self::assertLessThanOrEqual(321, mb_strlen(AgentRunner::readableProviderError(str_repeat('word ', 200))));
     }
 
     #[Test]
@@ -842,6 +946,44 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function aDownloadThatFailedForGoodIsNotOfferedAgainUnchanged(): void
+    {
+        $download = static fn(string $url, bool $failed = false): array => [
+            'role' => 'assistant',
+            'content' => 'Upload file from URL',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => ['tool' => 'file_upload_from_url', 'failed' => $failed, 'fields' => [], 'arguments' => ['url' => $url]],
+            ],
+        ];
+        $history = [$download('https://no-such-host.invalid/a.jpg', true)];
+        $newRequest = ['role' => 'user', 'content' => 'Try again', 'meta' => ['type' => 'message']];
+
+        $declinedDropped = 0;
+        $failedDropped = 0;
+        $kept = AgentRunner::withoutRepeatedDeclinedDrafts([$download('https://no-such-host.invalid/a.jpg')], [...$history, $newRequest], false, $declinedDropped, $failedDropped);
+
+        self::assertSame([], $kept);
+        self::assertSame(0, $declinedDropped);
+        self::assertSame(1, $failedDropped);
+        // Another address is a new attempt.
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$download('https://upload.wikimedia.org/a.jpg')], $history));
+
+        // Tool cards in the window carry no arguments: the address is only in the summary.
+        $card = static fn(string $url, bool $failed = false): array => [
+            'role' => 'assistant',
+            'content' => 'upload from ' . $url . ' to user_upload',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => ['tool' => 'file_upload_from_url', 'kind' => 'tool_confirmation', 'action' => 'create', 'failed' => $failed, 'fields' => [], 'arguments' => [], 'summary' => 'upload from ' . $url . ' to user_upload'],
+            ],
+        ];
+        $history = [$card('https://no-such-host.invalid/a.jpg', true)];
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$card('https://no-such-host.invalid/a.jpg')], $history));
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$card('https://upload.wikimedia.org/a.jpg')], $history));
+    }
+
+    #[Test]
     public function aPendingCreateIsNotOfferedAgain(): void
     {
         $create = static fn(string $title, bool $applied = false): array => [
@@ -871,6 +1013,117 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function aCreateTheEditorJustDeclinedIsNotProposedAgainWithOneFieldMore(): void
+    {
+        $textMedia = static fn(array $extra = [], bool $discarded = false): array => [
+            'role' => 'assistant',
+            'content' => 'Create element',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => [
+                    'tool' => 'write_table',
+                    'action' => 'create',
+                    'discarded' => $discarded,
+                    'fields' => [
+                        ['table' => 'tt_content', 'uid' => 0, 'field' => 'CType', 'proposed' => 'textmedia'],
+                        ['table' => 'tt_content', 'uid' => 0, 'field' => 'header', 'proposed' => 'Preview Test'],
+                        ...$extra,
+                    ],
+                ],
+            ],
+        ];
+        $request = ['role' => 'user', 'content' => 'Create a text & media element', 'meta' => ['type' => 'message']];
+        $declined = ['role' => 'user', 'content' => '[The editor declined …]', 'meta' => ['type' => 'continuation', 'hidden' => true]];
+        $history = [$request, $textMedia([], true), $declined];
+        $again = $textMedia([['table' => 'tt_content', 'uid' => 0, 'field' => 'sys_language_uid', 'proposed' => '0']]);
+
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$again], $history, true));
+        // A new request of the editor may ask for that element after all.
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$again], [...$history, $request], true));
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$again], $history));
+    }
+
+    #[Test]
+    public function aToolCardTheEditorJustDeclinedIsNotProposedAgainInOtherWords(): void
+    {
+        $generate = static fn(string $prompt, bool $discarded = false): array => [
+            'role' => 'assistant',
+            'content' => 'Generate an image',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => ['tool' => 't3ai_generate_image', 'discarded' => $discarded, 'fields' => [], 'arguments' => ['prompt' => $prompt]],
+            ],
+        ];
+        $request = ['role' => 'user', 'content' => 'Create a text & media element with an AI-generated image', 'meta' => ['type' => 'message']];
+        $declined = ['role' => 'user', 'content' => '[The editor declined …]', 'meta' => ['type' => 'continuation', 'hidden' => true]];
+        $history = [$request, $generate('A red lighthouse', true), $declined];
+
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$generate('A red lighthouse on a cliff')], $history, true));
+        // Also later in the same request, after another card was applied.
+        $dropped = 0;
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$generate('A red lighthouse on a cliff')], $history, false, $dropped));
+        self::assertSame(1, $dropped);
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$generate('A red lighthouse on a cliff')], [...$history, $request], true));
+    }
+
+    #[Test]
+    public function aCancelledTranslationIsNotOfferedAgainThroughAnotherTranslateTool(): void
+    {
+        $card = static fn(string $tool, bool $discarded = false): array => [
+            'role' => 'assistant',
+            'content' => 'Translate the page',
+            'meta' => [
+                'type' => 'inline_draft',
+                'draft' => ['tool' => $tool, 'discarded' => $discarded, 'fields' => [], 'arguments' => ['pageId' => 5, 'languageUid' => 1]],
+            ],
+        ];
+        $request = ['role' => 'user', 'content' => 'Translate this page into German', 'meta' => ['type' => 'message']];
+        $declined = ['role' => 'user', 'content' => '[The editor declined …]', 'meta' => ['type' => 'continuation', 'hidden' => true]];
+        $history = [$request, $card('t3ai_translate_page', true), $declined];
+
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$card('t3ai_translate_content')], $history, true));
+        self::assertSame([], AgentRunner::withoutRepeatedDeclinedDrafts([$card('t3ai_record_translate')], $history));
+        // A new request from the editor may translate again.
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$card('t3ai_translate_content')], [...$history, $request], true));
+        // Other tools are not affected by the cancelled translation.
+        self::assertCount(1, AgentRunner::withoutRepeatedDeclinedDrafts([$card('t3ai_generate_all_seo')], $history, true));
+    }
+
+    #[Test]
+    public function aCancelledOnlyStepIsNotOfferedAgainInText(): void
+    {
+        $history = [
+            ['role' => 'user', 'content' => 'Translate this page to German.', 'meta' => ['type' => 'message']],
+            ['role' => 'assistant', 'content' => 'Translate the whole page', 'meta' => ['type' => 'inline_draft', 'draft' => ['tool' => 't3ai_translate_page', 'discarded' => true, 'fields' => [], 'arguments' => ['pageId' => 128]]]],
+        ];
+
+        // Text only after the cancel ("Shall I translate into German, French or Hindi?"): replaced.
+        self::assertTrue(AgentRunner::declinedReplyOffersItAgain(true, [], $history));
+        // A tool ran in this turn, or the editor did not cancel: the reply stays.
+        self::assertFalse(AgentRunner::declinedReplyOffersItAgain(true, ['file_list'], $history));
+        self::assertFalse(AgentRunner::declinedReplyOffersItAgain(false, [], $history));
+    }
+
+    #[Test]
+    public function aSingleElementTranslationIsNotAPageTranslation(): void
+    {
+        self::assertTrue(AgentRunner::asksForOneElementTranslation('Translate the first content element into French.'));
+        self::assertTrue(AgentRunner::asksForOneElementTranslation('Übersetze das letzte Element ins Englische'));
+        self::assertFalse(AgentRunner::asksForOneElementTranslation('Translate the first element and the whole page into French'));
+        self::assertFalse(AgentRunner::asksForOneElementTranslation('Translate this page to German.'));
+    }
+
+    #[Test]
+    public function showAndHideRequestsAreNotDeleteRequests(): void
+    {
+        self::assertTrue(AgentRunner::isVisibilityRequest('Make the German version of this page visible on the website.'));
+        self::assertTrue(AgentRunner::isVisibilityRequest('Hide this page'));
+        self::assertTrue(AgentRunner::isVisibilityRequest('Mach die deutsche Version sichtbar'));
+        self::assertFalse(AgentRunner::isVisibilityRequest('Delete the hidden element'));
+        self::assertFalse(AgentRunner::isVisibilityRequest('Change the header of element 5'));
+    }
+
+    #[Test]
     public function fileRequestsKeepTheMatchingFileTools(): void
     {
         $tools = [['name' => 'file_copy'], ['name' => 'file_move'], ['name' => 'directory_create'], ['name' => 'content_get']];
@@ -895,10 +1148,126 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
-    public function providerBillingTextIsRecognisedSoEditorsDoNotSeeIt(): void
+    public function providerTimeoutsAreRecognised(): void
     {
-        self::assertTrue(AgentRunner::looksLikeProviderAccountProblem('Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing.'));
-        self::assertTrue(AgentRunner::looksLikeProviderAccountProblem('You exceeded your current quota, please check your plan and billing details.'));
-        self::assertFalse(AgentRunner::looksLikeProviderAccountProblem('The model is overloaded, try again.'));
+        self::assertTrue(AgentRunner::looksLikeTimeout(new \RuntimeException('Idle timeout reached for "https://api.mistral.ai/v1/chat/completions".')));
+        self::assertTrue(AgentRunner::looksLikeTimeout(new \RuntimeException('wrapped', 0, new \RuntimeException('Operation timed out after 30000 ms'))));
+        self::assertFalse(AgentRunner::looksLikeTimeout(new \RuntimeException('The model is overloaded.')));
+    }
+
+    #[Test]
+    public function offerToApplyWithoutADraftIsRecognised(): void
+    {
+        self::assertTrue(AgentRunner::offersUnbackedApply("Welcome to our QA section!\n\nWould you like to apply this change?"));
+        self::assertTrue(AgentRunner::offersUnbackedApply('Would you like me to save it as the new text?'));
+        self::assertTrue(AgentRunner::offersUnbackedApply('Soll ich diese Änderung übernehmen?'));
+    }
+
+    #[Test]
+    public function plainAnswersAreNeverForcedIntoAWrite(): void
+    {
+        self::assertFalse(AgentRunner::offersUnbackedApply(''));
+        self::assertFalse(AgentRunner::offersUnbackedApply('The page has 3 content elements and 2 translations.'));
+        self::assertFalse(AgentRunner::offersUnbackedApply('Which page do you mean: Home or About?'));
+        self::assertFalse(AgentRunner::offersUnbackedApply('Die Seite hat drei Inhaltselemente.'));
+        self::assertFalse(AgentRunner::offersUnbackedApply('You can use the Content module to review the text.'));
+    }
+
+    #[Test]
+    public function aToolCallWrittenAsTextIsRecognised(): void
+    {
+        self::assertTrue(AgentRunner::looksLikeLeakedToolCall('{"newsId":1,"targetLanguageUid":1} to=functions.t3ai_translate_news 天天爱彩票'));
+        self::assertTrue(AgentRunner::looksLikeLeakedToolCall('<|channel|>commentary functions.pages_get {"uid":3}'));
+        self::assertFalse(AgentRunner::looksLikeLeakedToolCall('I translated the news article into German.'));
+        self::assertFalse(AgentRunner::looksLikeLeakedToolCall(''));
+    }
+
+    #[Test]
+    public function newsCreateRequestsAreToldApartFromOtherNewsRequests(): void
+    {
+        self::assertTrue(AgentRunner::isNewsCreateRequest('Write a short news article about our summer team party.'));
+        self::assertTrue(AgentRunner::isNewsCreateRequest('Now write a longer, detailed news story about our anniversary, with a few sections and a picture.'));
+        self::assertTrue(AgentRunner::isNewsCreateRequest('Create a news article titled Winter Opening Hours'));
+        self::assertTrue(AgentRunner::isNewsCreateRequest('Erstelle einen neuen Newsartikel zum Sommerfest'));
+        // "generate" used to miss, so the turn offered the SEO tools instead of write_table.
+        self::assertTrue(AgentRunner::isNewsCreateRequest('I want to generate a news about our new office'));
+        self::assertTrue(AgentRunner::isNewsCreateRequest('Generiere eine Nachricht zum Tag der offenen Tür'));
+        self::assertFalse(AgentRunner::isNewsCreateRequest('Delete the Winter news'));
+        self::assertFalse(AgentRunner::isNewsCreateRequest('Translate the news into German'));
+        self::assertFalse(AgentRunner::isNewsCreateRequest('Show me all my news articles'));
+        self::assertFalse(AgentRunner::isNewsCreateRequest('Create a new text element'));
+    }
+
+    #[Test]
+    public function imageAlreadyGeneratedThisRequestBlocksASecondGenerate(): void
+    {
+        $withFile = [
+            [
+                'role' => 'assistant',
+                'content' => 'Image saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 155],
+                ],
+            ],
+        ];
+        $withOpenCard = [
+            [
+                'role' => 'assistant',
+                'content' => 'Review.',
+                'meta' => [
+                    'type' => 'inline_draft',
+                    'tool' => 't3ai_generate_image',
+                    'draft' => ['tool' => 't3ai_generate_image', 'discarded' => false],
+                ],
+            ],
+        ];
+
+        self::assertTrue(AgentRunner::imageAlreadyGeneratedThisRequest('Yes, generate the picture.', $withFile));
+        self::assertTrue(AgentRunner::imageAlreadyGeneratedThisRequest('Yes, generate the picture.', $withOpenCard));
+        self::assertFalse(AgentRunner::imageAlreadyGeneratedThisRequest('Write a news story with a picture.', []));
+    }
+
+    #[Test]
+    public function newsCreateToolsPreferWriteTableWhenCreateNewsToolsAreHidden(): void
+    {
+        $catalog = [
+            ['name' => 'write_table'],
+            ['name' => 't3ai_create_content_element'],
+            ['name' => 'explain_capabilities'],
+            ['name' => 't3ai_create_news_simple'],
+        ];
+
+        self::assertSame(
+            [
+                ['name' => 'write_table'],
+                ['name' => 't3ai_create_news_simple'],
+            ],
+            AgentRunner::newsCreateTools($catalog),
+        );
+        self::assertSame(
+            [['name' => 'write_table']],
+            AgentRunner::newsCreateTools($catalog, ['t3ai_create_news_simple' => 0]),
+        );
+    }
+
+    #[Test]
+    public function makeItShorterIsAnEditNotACreate(): void
+    {
+        self::assertTrue(AgentRunner::isPlainEditRequest('Make the opening hours text shorter.'));
+        self::assertTrue(AgentRunner::isPlainEditRequest('Mach den Text freundlicher, bitte umschreiben'));
+        self::assertFalse(AgentRunner::isPlainEditRequest('Make a new page called About'));
+        self::assertFalse(AgentRunner::isPlainEditRequest('Delete the opening hours text'));
+    }
+
+    #[Test]
+    public function aCopiedHistoryTagIsDroppedFromTheAnswer(): void
+    {
+        self::assertSame('Nothing has failed.', AgentRunner::withoutLeadingHistoryTag('[Read the translation queue] Nothing has failed.'));
+        self::assertSame('Nothing has failed.', AgentRunner::withoutLeadingHistoryTag("[Prepared change: Page] \nNothing has failed."));
+        self::assertSame('Hello [Read] world', AgentRunner::withoutLeadingHistoryTag('Hello [Read] world'));
+        self::assertSame('[Read the page]', AgentRunner::withoutLeadingHistoryTag('[Read the page]'));
     }
 }

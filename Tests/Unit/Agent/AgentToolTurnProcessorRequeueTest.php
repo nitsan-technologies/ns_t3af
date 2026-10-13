@@ -1,0 +1,95 @@
+<?php
+
+declare(strict_types=1);
+
+/*
+ * This file is part of the "AI Foundation for TYPO3" (ns_t3af) extension.
+ *
+ * (c) T3Planet / NITSAN Technologies <support@t3planet.de>
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License, either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * For the full copyright and license information, please read the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace NITSAN\NsT3AF\Tests\Unit\Agent;
+
+use NITSAN\NsT3AF\Agent\Service\AgentToolTurnProcessor;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+
+/**
+ * @internal
+ */
+final class AgentToolTurnProcessorRequeueTest extends TestCase
+{
+    #[Test]
+    public function retryFailedDropsPageIdsCopiedFromTheOpenPage(): void
+    {
+        $arguments = AgentToolTurnProcessor::requeueFailedOnly(['pageIds' => [226]], 'retry the ones that failed');
+
+        self::assertArrayNotHasKey('pageIds', $arguments);
+    }
+
+    #[Test]
+    public function namedPagesAreKept(): void
+    {
+        $arguments = AgentToolTurnProcessor::requeueFailedOnly(['pageIds' => [227]], 'retry the failed one for page 227');
+
+        self::assertSame([227], $arguments['pageIds']);
+    }
+
+    #[Test]
+    public function includeFinishedKeepsThePageList(): void
+    {
+        $arguments = AgentToolTurnProcessor::requeueFailedOnly(['pageIds' => [226], 'includeFinished' => true], 'retry the failed ones');
+
+        self::assertSame([226], $arguments['pageIds']);
+    }
+
+    #[Test]
+    public function removeThisPageUsesTheOpenPage(): void
+    {
+        $arguments = AgentToolTurnProcessor::pinOpenPageForQueueRemove(['pageIds' => [4]], 2, 't3ai_mass_translation_queue_remove', 'Remove this page from the translation queue');
+
+        self::assertSame([2], $arguments['pageIds']);
+    }
+
+    #[Test]
+    public function removeWithANamedPageKeepsTheModelChoice(): void
+    {
+        $arguments = AgentToolTurnProcessor::pinOpenPageForQueueRemove(['pageIds' => [4]], 2, 't3ai_mass_translation_queue_remove', 'Remove page 4 from the translation queue');
+
+        self::assertSame([4], $arguments['pageIds']);
+    }
+
+    #[Test]
+    public function otherToolsAreLeftAlone(): void
+    {
+        $arguments = AgentToolTurnProcessor::pinOpenPageForQueueRemove(['pageIds' => [4]], 2, 't3ai_mass_translation_queue_list', 'Remove this page');
+
+        self::assertSame([4], $arguments['pageIds']);
+    }
+
+    #[Test]
+    public function translateToolsAreRecognised(): void
+    {
+        self::assertTrue(AgentToolTurnProcessor::isTranslateTool('t3ai_record_translate'));
+        self::assertTrue(AgentToolTurnProcessor::isTranslateTool('T3AI_TRANSLATE_PAGE'));
+        self::assertFalse(AgentToolTurnProcessor::isTranslateTool('t3ai_glossary_save'));
+    }
+
+    #[Test]
+    public function wrappedLanguageConfigBecomesAPlainList(): void
+    {
+        self::assertSame([1], AgentToolTurnProcessor::unwrapLanguageConfig(['languageUids' => [1]]));
+        self::assertSame([1], AgentToolTurnProcessor::unwrapLanguageConfig('{"languageUid":1}'));
+        self::assertSame(['1' => '1'], AgentToolTurnProcessor::unwrapLanguageConfig(['1' => '1']));
+        self::assertSame([2, 3], AgentToolTurnProcessor::unwrapLanguageConfig([2, 3]));
+    }
+}

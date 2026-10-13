@@ -106,6 +106,21 @@ $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelHoldList'] ??= ['publi
 $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelAutoConfirmSources'] ??= [];
 $GLOBALS['TYPO3_CONF_VARS']['EXTCONF']['ns_t3af']['ailabelFolderDefaults'] ??= [];
 
+// WOFF/WOFF2 (D12): allow extensions and map finfo octet-stream / application/font-woff* → font/woff(2).
+foreach (['woff', 'woff2'] as $fontExtension) {
+    if (!\TYPO3\CMS\Core\Utility\GeneralUtility::inList($GLOBALS['TYPO3_CONF_VARS']['SYS']['mediafile_ext'], $fontExtension)) {
+        $GLOBALS['TYPO3_CONF_VARS']['SYS']['mediafile_ext'] .= ',' . $fontExtension;
+    }
+}
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['FileInfo']['mimeTypeCompatibility']['application/octet-stream']['woff']
+    = 'font/woff';
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['FileInfo']['mimeTypeCompatibility']['application/octet-stream']['woff2']
+    = 'font/woff2';
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['FileInfo']['mimeTypeCompatibility']['application/font-woff']['woff']
+    = 'font/woff';
+$GLOBALS['TYPO3_CONF_VARS']['SYS']['FileInfo']['mimeTypeCompatibility']['application/font-woff2']['woff2']
+    = 'font/woff2';
+
 // Classic-mode: load the bundled t3af.phar so Symfony AI bridges become
 // discoverable. No-op in Composer mode.
 \NITSAN\NsT3AF\Bootstrap\T3afPharBootstrap::register();

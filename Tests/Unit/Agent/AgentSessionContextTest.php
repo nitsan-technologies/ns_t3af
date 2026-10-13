@@ -178,6 +178,56 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function pendingAttachForNewsUsesFalMediaNotAContentElement(): void
+    {
+        $history = [
+            [
+                'role' => 'assistant',
+                'content' => 'Done.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tx_news_domain_model_news', 'uid' => 41, 'values' => ['title' => 'Anniversary']]],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Image saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 155],
+                ],
+            ],
+        ];
+
+        self::assertSame(41, AgentPromptBuilder::latestAppliedNewsUid($history));
+        $note = AgentPromptBuilder::pendingImageAttachNote($history);
+        self::assertStringContainsString('tx_news_domain_model_news uid 41', $note);
+        self::assertStringContainsString('fal_media', $note);
+        self::assertStringContainsString('Do not create a content element', $note);
+        self::assertStringNotContainsString('textmedia', $note);
+        self::assertFalse(AgentPromptBuilder::hasOpenFileReferenceDraft($history));
+    }
+
+    #[Test]
+    public function hasOpenFileReferenceDraftDetectsWaitingAttachCard(): void
+    {
+        $history = [
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'inline_draft',
+                    'tool' => 'file_reference_add',
+                    'draft' => ['tool' => 'file_reference_add', 'discarded' => false],
+                ],
+            ],
+        ];
+
+        self::assertTrue(AgentPromptBuilder::hasOpenFileReferenceDraft($history));
+    }
+
+    #[Test]
     public function pendingAttachPrefersTextMediaOverALaterPlainTextElement(): void
     {
         $history = [
@@ -266,6 +316,107 @@ final class AgentSessionContextTest extends TestCase
 
         self::assertFalse(AgentPromptBuilder::hasBlockingRemainingWork($history, [], 'Rename the header of element 5 to Welcome.'));
         self::assertTrue(AgentPromptBuilder::hasBlockingRemainingWork($history, [], 'Now attach the image to the page.'));
+    }
+
+    #[Test]
+    public function askingWherePicturesAreDoesNotKeepAnEarlierGeneratePending(): void
+    {
+        $history = [
+            [
+                'role' => 'user',
+                'content' => 'Make a picture of a sunset over the sea and put it on this page.',
+                'meta' => ['type' => 'message'],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Image saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3ai_generate_image',
+                    'success' => true,
+                    'details' => ['fileUid' => 200],
+                ],
+            ],
+        ];
+
+        self::assertFalse(AgentPromptBuilder::hasBlockingRemainingWork($history, [], 'Where are my AI pictures saved?'));
+        self::assertTrue(AgentPromptBuilder::hasBlockingRemainingWork($history, [], 'Put that picture on this page.'));
+    }
+
+    #[Test]
+    public function continuationAfterCreateContentOnlyConfirmsDone(): void
+    {
+        $history = [
+            ['role' => 'user', 'content' => 'Write an intro paragraph and add it to the page.', 'meta' => []],
+            [
+                'role' => 'assistant',
+                'content' => 'Created.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tt_content', 'uid' => 774, 'values' => ['CType' => 'text', 'header' => 'Welcome', 'bodytext' => 'Hello.']]],
+                ],
+            ],
+        ];
+        $message = AgentPromptBuilder::continuationMessage(
+            ['outcome' => 'applied', 'label' => 'Create a content element', 'result' => 'Created.'],
+            $history,
+        );
+
+        self::assertStringContainsString('Do not call any tools', $message);
+        self::assertStringContainsString('Do not update, rewrite, or delete', $message);
+        self::assertStringNotContainsString('prepare the next distinct type', $message);
+    }
+
+    #[Test]
+    public function continuationAfterOnlyTheFirstOfTwoSectionsKeepsGoing(): void
+    {
+        $request = 'Add an intro and a team section to this page.';
+        $history = [
+            ['role' => 'user', 'content' => $request, 'meta' => []],
+            [
+                'role' => 'assistant',
+                'content' => 'Created.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tt_content', 'uid' => 800, 'values' => ['CType' => 'text', 'header' => 'Intro']]],
+                ],
+            ],
+        ];
+        $message = AgentPromptBuilder::continuationMessage(
+            ['outcome' => 'applied', 'label' => 'Create a content element', 'result' => 'Created.'],
+            $history,
+        );
+
+        self::assertTrue(AgentPromptBuilder::asksForMultipleContentPieces($request));
+        self::assertStringNotContainsString('Do not call any tools', $message);
+        self::assertStringContainsString('prepare the next distinct type', $message);
+    }
+
+    #[Test]
+    public function composerExpandedAttachStillSeesPendingFileInThisRequest(): void
+    {
+        $request = 'Add this image to the news QA News: Market outlook 2027.';
+        $composer = '@file:1:user_upload/photo.jpg ' . $request;
+        $history = [
+            ['role' => 'user', 'content' => $composer, 'meta' => []],
+            [
+                'role' => 'assistant',
+                'content' => 'File photo.jpg',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 'file_get_info',
+                    'success' => true,
+                    'severity' => 'read',
+                    'readWithoutConfirmation' => true,
+                    'triggeredByAttachment' => true,
+                    'details' => ['uid' => 42, 'name' => 'photo.jpg', 'identifier' => '/user_upload/photo.jpg'],
+                ],
+            ],
+        ];
+
+        self::assertSame([42], AgentPromptBuilder::unattachedFileUids($history));
+        self::assertTrue(AgentPromptBuilder::hasBlockingRemainingWork($history, [], $request));
+        self::assertTrue(AgentPromptBuilder::hasBlockingRemainingWork($history, [], $composer));
     }
 
     #[Test]
@@ -392,6 +543,49 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function choicesPastedIntoTheQuestionBecomeOptions(): void
+    {
+        [$question, $options] = AskClarificationTool::liftInlineOptions('Which element? ["RT A", "RT B"]', []);
+
+        self::assertSame('Which element?', $question);
+        self::assertSame(['RT A', 'RT B'], $options);
+        self::assertSame(['Which?', ['X']], AskClarificationTool::liftInlineOptions('Which?', ['X']));
+    }
+
+    #[Test]
+    public function fullClarificationJsonInTheReplyBecomesQuestionAndOptions(): void
+    {
+        $json = '{"question":"Do you want me to create just the image, or add it to the page?","options":["Create image only","Create image and add to page","Cancel"]}';
+        $parsed = AskClarificationTool::parseEmbeddedClarification($json . ' Extra chatter.');
+
+        self::assertNotNull($parsed);
+        self::assertSame('Do you want me to create just the image, or add it to the page?', $parsed['question']);
+        self::assertSame(['Create image only', 'Create image and add to page', 'Cancel'], $parsed['options']);
+
+        [$question, $options] = AskClarificationTool::liftInlineOptions($json, []);
+        self::assertSame('Do you want me to create just the image, or add it to the page?', $question);
+        self::assertSame(['Create image only', 'Create image and add to page', 'Cancel'], $options);
+    }
+
+    #[Test]
+    public function gluedToolResultPrefixIsStrippedFromFinalAnswer(): void
+    {
+        self::assertSame(
+            'The page is already in the SEO queue.',
+            AgentPromptBuilder::stripGluedToolResultPrefix(
+                '[Search pages] Matching pages: 1 Examples: QA Mounted Child [3]The page is already in the SEO queue.',
+            ),
+        );
+        self::assertSame(
+            'I can remove glossary terms when you name one that exists.',
+            AgentPromptBuilder::stripGluedToolResultPrefix(
+                '[Show the translation glossary] Items: 1 Examples: Agent → AssistentI can remove glossary terms when you name one that exists.',
+            ),
+        );
+        self::assertSame('Plain answer.', AgentPromptBuilder::stripGluedToolResultPrefix('Plain answer.'));
+    }
+
+    #[Test]
     public function historyReplaysCardsAsShortNotes(): void
     {
         $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();
@@ -409,6 +603,26 @@ final class AgentSessionContextTest extends TestCase
             ['role' => 'assistant', 'content' => '[Prepared change: Change a record — applied] New title.'],
             ['role' => 'assistant', 'content' => 'Which language? (options: German, French)'],
         ], $history);
+    }
+
+    #[Test]
+    public function historyTellsTheModelThatAFailedCardWouldFailAgain(): void
+    {
+        $builder = (new \ReflectionClass(AgentPromptBuilder::class))->newInstanceWithoutConstructor();
+        $history = $builder->buildHistory([[
+            'role' => 'assistant',
+            'content' => 'upload from https://no-such-host.invalid/a.jpg to user_upload',
+            'meta' => ['type' => 'inline_draft', 'draft' => [
+                'editorLabel' => 'Upload a file from a URL',
+                'failed' => true,
+                'failureMessage' => 'Could not resolve host "no-such-host.invalid".',
+            ]],
+        ]]);
+
+        self::assertSame(
+            '[Prepared change: Upload a file from a URL — failed and would fail again with the same arguments: Could not resolve host "no-such-host.invalid".] upload from https://no-such-host.invalid/a.jpg to user_upload',
+            $history[0]['content'],
+        );
     }
 
     #[Test]
@@ -440,6 +654,27 @@ final class AgentSessionContextTest extends TestCase
             'Review the proposed changes for Change a record before anything is written.',
         ));
         self::assertFalse(AgentPromptBuilder::isCardHistoryEcho('All requested content elements have been added.'));
+        self::assertTrue(AgentPromptBuilder::isCardHistoryEcho(
+            '[Prepare change: Remove pages from the SEO queue] Page 2 is queued for removal. This draft has not been applied yet.',
+        ));
+        self::assertTrue(AgentPromptBuilder::isCardHistoryEcho('[Prepared change] The page is set to be removed from the SEO queue.'));
+    }
+
+    #[Test]
+    public function fabricatedBracketedToolResultsAreDetected(): void
+    {
+        self::assertTrue(AgentPromptBuilder::isFabricatedToolResultEcho(
+            '[Remove from translation queue] Removed 1 page(s) from the queue. “QA Mounted Child” has been removed.',
+        ));
+        self::assertTrue(AgentPromptBuilder::isFabricatedToolResultEcho(
+            '[Retry failed translations] Requeued: 0 entries.',
+        ));
+        self::assertFalse(AgentPromptBuilder::isFabricatedToolResultEcho(
+            'The translation queue is empty — nothing to remove.',
+        ));
+        self::assertFalse(AgentPromptBuilder::isFabricatedToolResultEcho(
+            '[Prepared change: Change a record — applied] Review the proposed changes for Change a record before anything is written.',
+        ));
     }
 
     #[Test]
@@ -544,6 +779,24 @@ final class AgentSessionContextTest extends TestCase
     }
 
     #[Test]
+    public function aLeakedToolCallIsNotShownToTheEditor(): void
+    {
+        $leaked = '{"pageId":99999} to=t3ai_generate_all_seo 天天中彩票实名_code:46 】!【I can’t generate SEO texts for page 99999 because it does not exist.';
+
+        self::assertSame(
+            'I can’t generate SEO texts for page 99999 because it does not exist.',
+            AgentPromptBuilder::stripLeakedToolCall($leaked),
+        );
+        self::assertSame(99999, AgentPromptBuilder::leakedMissingPageUid($leaked));
+        self::assertSame(
+            'The SEO card is ready for this page.',
+            AgentPromptBuilder::stripLeakedToolCall('{"pageId":5} to=t3ai_generate_all_seo The SEO card is ready for this page.'),
+        );
+        self::assertSame(0, AgentPromptBuilder::leakedMissingPageUid('{"pageId":5} to=t3ai_generate_all_seo The SEO card is ready for this page.'));
+        self::assertSame('Page 2 is ready.', AgentPromptBuilder::stripLeakedToolCall('Page 2 is ready.'));
+    }
+
+    #[Test]
     public function theFollowUpAfterAConfirmedCardIsNotARequest(): void
     {
         $followUp = '[The editor confirmed "Create Text element" and it was applied.] Continue.';
@@ -556,5 +809,14 @@ final class AgentSessionContextTest extends TestCase
                 ['role' => 'user', 'content' => $followUp, 'meta' => []],
             ]),
         );
+    }
+
+    #[Test]
+    public function anEmptyListInTheQuestionIsDropped(): void
+    {
+        [$question, $options] = AskClarificationTool::liftInlineOptions('[]I need the target language confirmed.', []);
+
+        self::assertSame('I need the target language confirmed.', $question);
+        self::assertSame([], $options);
     }
 }

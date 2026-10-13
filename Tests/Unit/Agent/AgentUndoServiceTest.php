@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
 use NITSAN\NsT3AF\Agent\Service\AgentDraftSession;
 use NITSAN\NsT3AF\Agent\Service\AgentUndoService;
+use NITSAN\NsT3AF\Agent\Service\AgentWriteService;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use PHPUnit\Framework\Attributes\Test;
@@ -68,11 +69,75 @@ final class AgentUndoServiceTest extends TestCase
     }
 
     #[Test]
+    public function undoOfAnAttachRemovesOnlyTheNewReferences(): void
+    {
+        $dataHandler = $this->createMock(DataHandlerService::class);
+        $dataHandler->expects(self::never())->method('deleteRecord');
+        $dataHandler->expects(self::exactly(2))->method('removeFileReferences')
+            ->willReturnCallback(static function (string $table, int $uid, string $field, array $referenceUids): array {
+                self::assertSame(['tt_content', 255, 'assets'], [$table, $uid, $field]);
+
+                return $referenceUids;
+            });
+        [$service, $session] = $this->subject($dataHandler);
+        $undoFields = AgentWriteService::toolUndoFields(
+            'file_reference_add',
+            '{"table":"tt_content","uid":255,"fieldName":"assets","fileUids":[145,146],"referencesCreated":2,"referenceUids":[100,101]}',
+        );
+        self::assertTrue(AgentUndoService::isUndoable($undoFields));
+        $session->storeChange('change-attach', ['undoFields' => $undoFields]);
+
+        $result = $service->undo('change-attach');
+
+        self::assertSame([100, 101], array_column($result['reverted'], 'uid'));
+        self::assertSame(['sys_file_reference', 'sys_file_reference'], array_column($result['reverted'], 'table'));
+        self::assertSame([], AgentWriteService::toolUndoFields('file_upload_from_url', ['fileUid' => 5]));
+    }
+
+    #[Test]
+    public function aNewGlossaryTermCanBeUndoneByRemovingTheRowsItCreated(): void
+    {
+        $undoFields = AgentWriteService::toolUndoFields(
+            't3ai_glossary_save',
+            '{"saved":true,"source":"solar inverter","target":"Solarwechselrichter","termId":18,"parentTermId":17,"parentCreated":true,"overlayCreated":true,"previousTarget":"","previousSource":""}',
+        );
+
+        self::assertTrue(AgentUndoService::isUndoable($undoFields));
+        self::assertSame([18, 17], array_column($undoFields, 'uid'));
+        self::assertSame(['create', 'create'], array_column($undoFields, 'action'));
+        self::assertSame(['tx_nst3ai_domain_model_glossary', 'tx_nst3ai_domain_model_glossary'], array_column($undoFields, 'table'));
+    }
+
+    #[Test]
+    public function aChangedGlossaryTermGetsItsOldTranslationBackOnUndo(): void
+    {
+        $undoFields = AgentWriteService::toolUndoFields(
+            't3ai_glossary_save',
+            ['saved' => true, 'source' => 'Layout', 'target' => 'Layoutansicht', 'termId' => 9, 'parentTermId' => 8, 'parentCreated' => false, 'overlayCreated' => false, 'previousTarget' => 'Layout', 'previousSource' => 'Layout'],
+        );
+
+        self::assertCount(1, $undoFields);
+        self::assertSame('update', $undoFields[0]['action']);
+        self::assertSame('term', $undoFields[0]['field']);
+        self::assertSame('Layout', $undoFields[0]['previousValue']);
+        self::assertSame('Layoutansicht', $undoFields[0]['appliedValue']);
+    }
+
+    #[Test]
+    public function aGlossarySaveThatChangedNothingOffersNoUndo(): void
+    {
+        self::assertSame([], AgentWriteService::toolUndoFields('t3ai_glossary_save', '{"saved":false,"already":true}'));
+        self::assertSame([], AgentWriteService::toolUndoFields('t3ai_glossary_save', 'not json'));
+    }
+
+    #[Test]
     public function undoOfAnUpdateRestoresThePreviousValue(): void
     {
         $dataHandler = $this->createMock(DataHandlerService::class);
         $dataHandler->expects(self::once())->method('updateRecord')->with('tt_content', 42, ['header' => 'Old']);
-        [$service, $session] = $this->subject($dataHandler);
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->willReturn(['header' => 'Old']);
+        [$service, $session] = $this->subject($dataHandler, $records);
         $session->storeChange('change-2', [
             'undoFields' => [
                 ['table' => 'tt_content', 'uid' => 42, 'field' => 'header', 'previousValue' => 'Old', 'action' => 'update'],
@@ -114,7 +179,10 @@ final class AgentUndoServiceTest extends TestCase
         $dataHandler = $this->createMock(DataHandlerService::class);
         $dataHandler->expects(self::once())->method('updateRecord')->with('tt_content', 42, ['header' => 'Old']);
         $records = $this->createMock(RecordService::class);
-        $records->method('findByUid')->willReturn(['header' => 'Agent']);
+        $records->method('findByUid')->willReturnOnConsecutiveCalls(
+            ['header' => 'Agent'],
+            ['header' => 'Old'],
+        );
         [$service, $session] = $this->subject($dataHandler, $records);
         $session->storeChange('change-6', [
             'undoFields' => [
@@ -123,6 +191,44 @@ final class AgentUndoServiceTest extends TestCase
         ]);
 
         $service->undo('change-6');
+    }
+
+    #[Test]
+    public function undoBatchesSeoFieldRestoresIntoOneWrite(): void
+    {
+        $dataHandler = $this->createMock(DataHandlerService::class);
+        $dataHandler->expects(self::once())->method('updateRecord')->with('pages', 203, [
+            'seo_title' => '',
+            'description' => '',
+            'keywords' => '',
+        ]);
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->willReturnCallback(
+            static function (string $table, int $uid, array $fields): array {
+                unset($table, $uid);
+                // Before undo: still the agent values. After: restored empties.
+                $agent = ['seo_title' => 'AI', 'description' => 'AI', 'keywords' => 'AI'];
+                $restored = ['seo_title' => '', 'description' => '', 'keywords' => ''];
+                static $calls = 0;
+                ++$calls;
+
+                return $calls <= 3
+                    ? array_intersect_key($agent, array_flip($fields))
+                    : array_intersect_key($restored, array_flip($fields));
+            },
+        );
+        [$service, $session] = $this->subject($dataHandler, $records);
+        $session->storeChange('change-seo', [
+            'undoFields' => [
+                ['table' => 'pages', 'uid' => 203, 'field' => 'seo_title', 'previousValue' => '', 'appliedValue' => 'AI', 'action' => 'update'],
+                ['table' => 'pages', 'uid' => 203, 'field' => 'description', 'previousValue' => '', 'appliedValue' => 'AI', 'action' => 'update'],
+                ['table' => 'pages', 'uid' => 203, 'field' => 'keywords', 'previousValue' => '', 'appliedValue' => 'AI', 'action' => 'update'],
+            ],
+        ]);
+
+        $result = $service->undo('change-seo');
+
+        self::assertCount(3, $result['reverted']);
     }
 
     #[Test]

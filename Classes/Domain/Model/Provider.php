@@ -56,6 +56,26 @@ final readonly class Provider
     /** Default Azure OpenAI API version when none is stored. */
     public const AZURE_DEFAULT_API_VERSION = '2024-10-21';
 
+    /**
+     * Embedding model per vendor when `embedding_model_id` is empty. Chat models
+     * are rejected by these vendors' embedding endpoints (e.g. Mistral HTTP 422).
+     * Adapters without an entry (Ollama, Azure, custom endpoints) keep the chat
+     * model, because their models are install-specific.
+     *
+     * @var array<string, string>
+     */
+    public const DEFAULT_EMBEDDING_MODELS = [
+        'symfony.openai' => 'text-embedding-3-small',
+        'symfony.mistral' => 'mistral-embed',
+        'symfony.gemini' => 'gemini-embedding-001',
+        'symfony.huggingface' => 'sentence-transformers/all-MiniLM-L6-v2',
+    ];
+
+    public static function defaultEmbeddingModel(string $adapterType): string
+    {
+        return self::DEFAULT_EMBEDDING_MODELS[self::normalizeAdapterType($adapterType)] ?? '';
+    }
+
     public static function adapterRequiresEndpoint(string $adapterType): bool
     {
         $adapterType = self::normalizeAdapterType($adapterType);
@@ -74,6 +94,41 @@ final readonly class Provider
     public static function adapterRequiresApiKey(string $adapterType): bool
     {
         return $adapterType !== self::ADAPTER_SYMFONY_OLLAMA;
+    }
+
+    /**
+     * Whether the image tool can actually generate with this adapter.
+     * Must match {@see \NITSAN\NsT3Ai\Mcp\Service\McpImageSourceResolver::sourceOfProvider()}.
+     * Chat providers (Gemini, Mistral, Claude, …) must not advertise image_generation.
+     */
+    public static function adapterSupportsImageGeneration(string $adapterType): bool
+    {
+        $adapterType = self::normalizeAdapterType($adapterType);
+
+        return in_array($adapterType, [
+            'symfony.openai',
+            'ns_t3ai.stability_ai',
+            'ns_t3ai.midjourney',
+            self::ADAPTER_OPENAI_COMPATIBLE,
+        ], true);
+    }
+
+    /**
+     * Drop image_generation when the adapter cannot generate (legacy rows kept the tick).
+     *
+     * @param list<string> $capabilities
+     * @return list<string>
+     */
+    public static function capabilitiesForAdapter(string $adapterType, array $capabilities): array
+    {
+        if (self::adapterSupportsImageGeneration($adapterType)) {
+            return array_values($capabilities);
+        }
+
+        return array_values(array_filter(
+            $capabilities,
+            static fn(string $cap): bool => $cap !== Capability::IMAGE_GENERATION,
+        ));
     }
 
     public static function normalizeLastStatus(string $lastStatus): string
@@ -147,17 +202,19 @@ final readonly class Provider
      */
     public static function fromRow(array $row): self
     {
+        $adapterType = self::normalizeAdapterType((string) ($row['adapter_type'] ?? ''));
+
         return new self(
             uid: (int) ($row['uid'] ?? 0),
             pid: (int) ($row['pid'] ?? 0),
             identifier: (string) ($row['identifier'] ?? ''),
             title: (string) ($row['title'] ?? ''),
-            adapterType: self::normalizeAdapterType((string) ($row['adapter_type'] ?? '')),
+            adapterType: $adapterType,
             endpointUrl: (string) ($row['endpoint_url'] ?? ''),
             apiKeyCipher: (string) ($row['api_key'] ?? ''),
             modelId: (string) ($row['model_id'] ?? ''),
             embeddingModelId: (string) ($row['embedding_model_id'] ?? ''),
-            capabilities: Capability::fromCsv((string) ($row['capabilities'] ?? '')),
+            capabilities: self::capabilitiesForAdapter($adapterType, Capability::fromCsv((string) ($row['capabilities'] ?? ''))),
             temperature: (float) ($row['temperature'] ?? 0.7),
             systemPrompt: (string) ($row['system_prompt'] ?? ''),
             isDefault: (bool) ($row['is_default'] ?? false),
@@ -195,7 +252,13 @@ final readonly class Provider
      */
     public function effectiveEmbeddingModel(): string
     {
-        return $this->embeddingModelId !== '' ? $this->embeddingModelId : $this->modelId;
+        $configured = trim($this->embeddingModelId);
+        if ($configured !== '') {
+            return $configured;
+        }
+        $vendorDefault = self::defaultEmbeddingModel($this->adapterType);
+
+        return $vendorDefault !== '' ? $vendorDefault : $this->modelId;
     }
 
     /**

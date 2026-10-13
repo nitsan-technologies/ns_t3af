@@ -18,7 +18,7 @@
 - **Structural routing** — `AgentTurnRouter` (slash / `@` / UI tool chips); free-text NL goes only to `AgentRunner` (no keyword workflows).
 - **Tool selection** — `AgentCoreToolSet` (core + module + recent) and `find_tools` (`AgentToolSearch`: embeddings + BM25); index via `t3af:agent:index-tools`; eval via `t3af:agent:eval` (`--live` runs `Resources/Private/Agent/Eval/Scenarios/*.json` against providers, see `Documentation/Agent/Eval.md`).
 - **Per-group tool access** — `LimitsConfig::agentReadOnly` / `blockedAgentTools` → `AgentGovernanceGuard::agentToolPolicy()` → locked in `PermittedActionProvider`.
-- **Conversations** — one row per conversation in `tx_nst3af_agent_conversation` (session uuid, home module + page, title, locked provider). `AgentConversationSession` opens the requested or latest one for `agentConversationScope`; conversation list, rename and delete in the window. See `Documentation/Agent/Conversations.md`.
+- **Conversations** — one row per conversation in `tx_nst3af_agent_conversation` (session uuid, home module + page, title, locked provider). `AgentConversationSession` opens the requested or latest one for `agentConversationScope`; conversation list, rename and delete in the window. See `Documentation/Agent/Conversations.md`. A reload does not cancel a running turn. Stream writes stop once the browser is gone, the answer is stored, and reopening shows a spinner until that answer appears. If the turn has ended with no answer, the panel says the connection was interrupted. A second message is still refused while the first turn holds the lock.
 - **Provider select** — `AgentProviderOptions` (tool-calling providers the editor's groups may use); fixed per conversation after the first answer.
 - **Info window** — "How the AI Agent works" with a live "Where you are" section (`renderInfo()` in `agent.js`).
 
@@ -100,7 +100,7 @@ Reasoning models (0.13 `MultiPartResult`: thinking + text / tool calls) are read
 | Piece | Path |
 |---|---|
 | Preview DualMode | `McpPlaygroundService::preview` + `McpModeOverride` → suggestions meta |
-| Suggestions apply | `AgentWriteService::applySuggestions` (context mode content params) |
+| Suggestions apply | `AgentWriteService::applySuggestions` (context mode content params). A tool `{"error": ...}` (for example an editor without SEO field rights) is a failed apply, not "Applied". Undo writes the preview field `column` (pages `seo_title`, not the suggestion key `metaTitle`). |
 | Plan + draft card | `AgentToolPlanResolver`, `AgentDraftService`, `SatelliteToolPlanService` |
 | Apply (non-preview) | `AgentWriteService::apply` → DataHandler or tool confirmation invoke |
 | Tool confirmation kind | `PLAN_KIND_TOOL_CONFIRMATION` — run-after-confirm for non-DataHandler tools |
@@ -118,6 +118,22 @@ A new `tt_content` row gets `colPos` 0 when the plan omitted it (`DataHandlerSer
 
 Moving an existing page uses `pages_move` (`beforeUid` places it directly before that page, `afterUid` places it directly after that page, `targetPid` makes it the first child). The previous sibling is a default-language page, and the page being moved is not used as its own anchor. Execute checks that sibling again. A request that already names both pages offers `pages_move` so the turn does not keep reading the tree. A hidden page can be moved, and `pages_search` still returns it when a name search was limited to the current page or to visible pages. `content_move` is only for a content element; a page uid sent there is planned as `pages_move` instead.
 
+A request that names a page ("the Contact page") does not use the page on screen when that name is missing. The turn asks which page to use and offers the closest titles. "The first one", or a clicked title, locks that page for the next turn (`lockedPageId`), including for SEO. Creating a page is unchanged.
+
+A model reply that leaks a tool call (`to=tool_name`, including the JSON in front of it) is stripped before the editor sees it (`AgentPromptBuilder::stripLeakedToolCall`). When that leak is about a page uid that does not exist, the reply is `agent.page.missingUid` ("Page 99999 doesn't exist."). A normal reply is unchanged.
+
+Removing a named page from the SEO queue uses that page's uid as `pageIds` on `t3ai_mass_seo_queue_remove`. "Remove page 138" and `/t3ai_mass_seo_queue_remove 138` use 138, including when another page is open. A title with no number, such as "the Contact page", is still looked up by name. The queue list uses the same uid. A page that is still queued gets an Apply card. When none of the named pages are in the queue, the reply says so and no card is prepared. "Take this page out of that list" uses the open page as `pageIds` when the call omitted the list. A reply that only describes a prepared change (`[Prepare change` or `[Prepared change`) is treated as a history note and retried as a real tool call. Adding several named pages uses `pageIds` on `t3ai_mass_seo_queue_add` in one call, so the open page is not substituted for that list. SEO for one language version passes that language's id as `sysLanguageUid`.
+
+Saving a glossary word when the editor names the source, the translation, and the language calls `t3ai_glossary_save` at once. "We say Layoutansicht not Layout" and "Add Layout -> Layoutansicht to the glossary" are read as the source word and the translation before a card is prepared, including when the model does not call the tool. When that pair is already in the word list, the reply says so and no card is opened. The open page is `pageId` and the named site language id is `languageUid`. The reply does not ask which page, does not ask for a language that was named, and does not start with “Done”. When the language was not named and the site has more than one language besides the default, `GlossarySaveLanguage` withholds the save card and asks with those languages as options, unless that pair is already stored. A guessed language id, including German, is not used. A request that names one of those languages uses that language. One other site language is still used without asking. A new pair such as Pagetree → Seitenbaum still gets the save card.
+
+Asking when queued SEO or translation texts will be written follows `QueueAutomationStatus`: an enabled, not-deleted scheduler task (`tx_scheduler_task.tasktype`) counts as automatic processing on. A disabled task counts as off, and the reply says an admin has to enable that scheduler task, and offers to write the texts now. It does not say a scheduled job will run. Showing the SEO or translation queue calls the list tool again, because a scheduler run can empty the queue between questions.
+
+“Make this page look better in Google” or “write SEO texts for this page” calls `t3ai_generate_all_seo` and prepares suggestions. Nothing is written until Apply. Apply skips a suggestion that matches the text already stored, including a custom text that the SEO save would store as that same text. When every chosen text matches, the card stays and the reply says nothing was changed. A text that differs is still saved, and the follow-up after that save stays. That request does not add the page to the SEO queue. The queue is only for an explicit add, list, or “list for Google” request.
+
+Asking to put the old text back, to undo, or to revert restores the latest applied change that still has Undo. That uses the same restore as the Undo button and does not generate new SEO texts. When no such change is left, the reply points at the Undo button. A request for better or new Google texts still generates suggestions.
+
+Writing SEO texts for the subpages of the open page uses `t3ai_generate_seo_batch`. An empty `entries` list uses the subpages of the open page, including pages that do not have Mass SEO enabled and including hidden pages. A list that contains only the open page is dropped for that request, so the card is not filled with the open page. A page that still has no site is named and skipped, and the other subpages still get a card. The SEO queue is for background generation. A recursive add only includes pages with Mass SEO enabled, and the reply names any page that was skipped. When that add queues nothing, the Apply reply is that skip sentence and no follow-up turn says “Done.” The card does not show `pid`.
+
 ---
 
 ## NL tool selection
@@ -125,7 +141,7 @@ Moving an existing page uses `pages_move` (`beforeUid` places it directly before
 - Child tools declare `#[McpToolIntent(modules, summary, examples (EN + DE), category)]`; core tools get `searchTerms` (EN + DE) in `Configuration/McpToolMetadata.yaml`.
 - `AgentCoreToolSet` picks the start set; `find_tools` (`AgentToolSearch`) ranks the rest via embeddings + BM25. See `Documentation/Agent/Routing.md`.
 - Starter chips are context requests in the editor's language (`AgentStarterBuilder::choose`: page → SEO / translate / add content / accessibility; open record → improve / translate; file → alt text / missing alt text / generate image; draft workspace → changes). A click sends the text as a normal message; a chip only shows when a permitted tool can do it.
-- Image previews: `AgentMediaPreviewService` adds `meta.previews` (processed thumbnails, read permission checked) to tool results, suggestion cards and drafts about a file; `agent.js` renders them as a gallery.
+- Image previews: `AgentMediaPreviewService` adds `meta.previews` (processed thumbnails, read permission checked) to tool results, suggestion cards and drafts about a file; `agent.js` renders them as a gallery. Files of a `fileUids` list (attach cards) that are missing or no image show their name only.
 
 ---
 
@@ -175,7 +191,9 @@ Phase 4 child tools (all with `McpToolSeverity`, `McpToolIntent` EN/DE, `agent.t
 | ns_t3ai | `t3ai_mass_seo_queue_remove`, `t3ai_mass_translation_queue_remove`, `…_requeue`, `…_clear_completed` (`McpQueueManagementService`, catalog ids bulkSeo/bulkTranslation) |
 | ns_t3ai | `t3ai_translate_page` — page + all content, several languages, always native generation (`McpPageTranslationService`) |
 | ns_t3ai | `t3ai_glossary_list` / `_save` / `_delete` (`McpGlossaryService`, catalog id translationGlossary) |
-| ns_t3ai | `t3ai_generate_image` — one image into the fileadmin, T3AI Media permission; result card shows the image (`previewImageUrl`) |
+| ns_t3ai | `t3ai_generate_image` — one image into the fileadmin, T3AI Media permission; result card shows the image (`previewImageUrl`). Saving the provider URL stays in ns_t3ai `FileService`. |
+| ns_t3af | `file_upload_from_url` — downloads a public URL into FAL. A hostname is pinned with `CURLOPT_RESOLVE` and is not streamed, because the stream handler rejects curl options. A failed download names the host. No card for a placeholder host such as example.com. |
+| ns_t3af | `file_reference_add` — no card for a file name instead of a uid, an unknown or unreadable file, a file missing on disk, or a field the record type does not show (`assets` on Image). The card lists file names. sys_file uids named in the request are checked up front (`AgentRequestedFiles`): missing ones are reported in a `files_unavailable` message and the attach step ends as `failed`. |
 | ns_t3aa | `t3aa_alt_text_queue_folder`, `t3aa_alt_text_drafts_list`, `t3aa_alt_text_approve`, `t3aa_mark_image_decorative` (`McpAltTextService`) |
 | ns_t3aa | `t3aa_accessibility_scan_run`, `t3aa_accessibility_issues` (`McpAccessibilityService`) |
 | ns_t3aa | `t3aa_generate_voice_over` — text or page text to MP3, T3AA Media permission; result card plays it (`McpVoiceOverService`) |
@@ -185,7 +203,7 @@ Phase 4 child tools (all with `McpToolSeverity`, `McpToolIntent` EN/DE, `agent.t
 - **Entitlements** — `EntitlementResolver` locks tools when owner extension inactive.
 - **Satellite write tools** — implement planning in child or use `write_table` / confirmation flow per classification doc.
 
-Permissions and refusals (2.0.0): the table is checked before the page; a field the editor may not change (`exclude` fields need the `non_exclude_fields` grant, structural fields such as CType, colPos, hidden, sorting stay unchanged on a create the user may not make) is left out of the card and the card is dropped when nothing is left (`WriteTableTool`, `McpRecordPlanService`, `RecordAccessGate::canModifyField()/withoutForbiddenFields()`; plan context `notAllowedFields`). Refused, hidden, not-permitted, preview-failed and failed-apply requests are logged with success 0 (`AgentToolTurnProcessor::logRefusedPlan()`, `AgentAjaxController`). The "[The editor confirmed …]" follow-up is ignored by `AgentRequestChecklist`, and so is a header named as a field of the requested element ("with the header X", including the value that follows it, which may contain the word "header").
+Permissions and refusals (2.0.0): the table is checked before the page; a field the editor may not change (`exclude` fields need the `non_exclude_fields` grant, structural fields such as CType, colPos, hidden, sorting stay unchanged on a create the user may not make) is left out of the card and the card is dropped when nothing is left (`WriteTableTool`, `McpRecordPlanService`, `RecordAccessGate::canModifyField()/withoutForbiddenFields()`; plan context `notAllowedFields`). Refused, hidden, not-permitted, preview-failed and failed-apply requests are logged with success 0 (`AgentToolTurnProcessor::logRefusedPlan()`, `AgentAjaxController`). The "[The editor confirmed …]" follow-up is ignored by `AgentRequestChecklist`, and so is a header named as a field of the requested element ("with the header X", including the value that follows it, which may contain the word "header"). Once the request is for Text & Media or Text & Images, a later "short text", "alt text", "short sentence" or "attach the existing images" stays a field of that element. A second element is added when the editor asks for one ("a separate text element", "two elements").
 
 ---
 

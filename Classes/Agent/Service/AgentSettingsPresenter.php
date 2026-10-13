@@ -23,6 +23,7 @@ use NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpToolLogRepository;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
+use NITSAN\NsT3AF\Mcp\Service\McpToolOwnershipResolver;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 
 /**
@@ -38,6 +39,7 @@ final readonly class AgentSettingsPresenter
         private AgentDemandCounter $demandCounter,
         private AgentTurnRepository $turnRepository,
         private ConnectionPool $connectionPool,
+        private McpToolOwnershipResolver $ownershipResolver = new McpToolOwnershipResolver(),
     ) {}
 
     /**
@@ -222,10 +224,11 @@ final readonly class AgentSettingsPresenter
      */
     private function normalizeToolEntry(array $tool): array
     {
-        $ownerKey = (string) ($tool['ownerExtensionKey'] ?? 'ns_t3af');
-        if ($ownerKey === '') {
-            $ownerKey = 'ns_t3af';
-        }
+        $ownerKey = $this->ownershipResolver->resolve([
+            'name' => (string) ($tool['name'] ?? ''),
+            'className' => (string) ($tool['className'] ?? ''),
+            'ownerExtensionKey' => $tool['ownerExtensionKey'] ?? null,
+        ], []) ?? 'ns_t3af';
 
         $severity = ToolSeverity::tryFromString((string) ($tool['severity'] ?? ''));
         $executable = $severity !== null && $this->entitlementResolver->isExecutable($ownerKey);
@@ -236,7 +239,15 @@ final readonly class AgentSettingsPresenter
             'severity' => $severity?->value,
             'severityLabel' => $severity?->label() ?? '',
             'ownerExtensionKey' => $ownerKey,
-            'ownerLabel' => $ownerKey === 'ns_t3af' ? 'AI Foundation' : $ownerKey,
+            'ownerLabel' => match ($ownerKey) {
+                'ns_t3af' => 'AI Foundation',
+                'ns_t3ai' => 'T3AI',
+                'ns_t3aa' => 'T3AA',
+                'ns_t3cs' => 'T3CS',
+                'ns_t3ac' => 'T3AC',
+                'ns_t3as' => 'T3AS',
+                default => $ownerKey,
+            },
             'executable' => $executable,
         ];
     }

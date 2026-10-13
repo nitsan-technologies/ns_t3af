@@ -32,6 +32,18 @@ use PHPUnit\Framework\TestCase;
 final class AgentRequestChecklistTest extends TestCase
 {
     #[Test]
+    public function rewritingTheTextOfAnExistingBlockIsNotACreateRequest(): void
+    {
+        self::assertSame([], AgentRequestChecklist::parse('Rewrite the text of the block "QA visible element" so it sounds friendlier for customers.'));
+        self::assertSame([], AgentRequestChecklist::parse('Rewrite the text of this text element so it is shorter.'));
+        self::assertSame([], AgentRequestChecklist::parse('Formuliere den Text des Textblocks freundlicher um und kürze ihn.'));
+        self::assertSame([], AgentRequestChecklist::parse('Make the opening hours text shorter.'));
+        self::assertSame([], AgentRequestChecklist::parse('Make the text of the welcome block more formal.'));
+        // A real create request still counts.
+        self::assertNotSame([], AgentRequestChecklist::parse('Add a text block with our opening hours.'));
+    }
+
+    #[Test]
     public function parseNumberedAiPromptIntoCreatesAndAttach(): void
     {
         $message = <<<'TXT'
@@ -194,5 +206,187 @@ TXT;
             ['Create Header element', 'Create Text element'],
             array_column(AgentRequestChecklist::parse('Add a header and a text element to this page'), 'title'),
         );
+    }
+
+    #[Test]
+    public function elementWordsInsideAnImageDescriptionAreNotCreateSteps(): void
+    {
+        self::assertSame([], AgentRequestChecklist::parse('Generate an image of a red apple on a wooden table'));
+        self::assertSame([], AgentRequestChecklist::parse('Make a picture showing a table with a header of flowers.'));
+        self::assertSame(
+            ['textmedia'],
+            array_column(array_filter(
+                AgentRequestChecklist::parse('Generate an image of a red apple on a wooden table and add it to a text & media element'),
+                static fn(array $s): bool => ($s['kind'] ?? '') === 'create',
+            ), 'cType'),
+        );
+        self::assertSame(['table'], array_column(AgentRequestChecklist::parse('Add a table with our opening hours'), 'cType'));
+    }
+
+    #[Test]
+    public function aShortTextOrAttachedImagesStayFieldsOfTextAndMedia(): void
+    {
+        $prompts = [
+            'Create a text & media content element with an AI-generated image of a red lighthouse at sunset and a short text about coastal travel',
+            'Create a text & media content element with the heading Our Treats and attach the existing images sys_file uid 3 (cake.png) and uid 4 (csm_cabin.png)',
+            'Create a text & media content element with the heading Frontend Check and a short sentence, attach the existing image sys_file uid 145 and set a sensible alt text',
+        ];
+        foreach ($prompts as $prompt) {
+            $steps = AgentRequestChecklist::parse($prompt);
+            self::assertSame(
+                ['textmedia'],
+                array_column(array_filter($steps, static fn(array $s): bool => ($s['kind'] ?? '') === 'create'), 'cType'),
+                $prompt,
+            );
+            self::assertContains('attach_image', array_column($steps, 'kind'), $prompt);
+        }
+
+        $steps = AgentRequestChecklist::parse(
+            'Create two elements: a text & media element and a text element about the coast',
+        );
+        self::assertSame(
+            ['textmedia', 'text'],
+            array_column(array_filter($steps, static fn(array $s): bool => ($s['kind'] ?? '') === 'create'), 'cType'),
+        );
+    }
+
+    #[Test]
+    public function germanTextAndMediaIsOneMediaElement(): void
+    {
+        $creates = static fn(string $prompt): array => array_column(
+            array_filter(AgentRequestChecklist::parse($prompt), static fn(array $s): bool => ($s['kind'] ?? '') === 'create'),
+            'cType',
+        );
+
+        self::assertSame(['textmedia'], $creates('Erstelle ein Text & Medien Element mit Bildern über unsere Torten und einem kurzen Text'));
+        self::assertSame(['textmedia'], $creates('Erstelle ein Text und Medien Element mit der Überschrift Unsere Torten'));
+        self::assertSame(['textpic'], $creates('Erstelle ein Text & Bilder Element mit der Überschrift Unsere Torten'));
+        self::assertSame(['textmedia', 'text'], $creates('Erstelle ein Text & Medien Element und ein separates Text Element'));
+    }
+
+    #[Test]
+    public function aTypedContinueKeepsTheRequestItContinues(): void
+    {
+        $request = 'Create a text & media content element with the heading Our Treats and attach the existing image sys_file uid 145';
+        $history = [
+            ['role' => 'user', 'content' => $request, 'meta' => ['type' => 'message']],
+            ['role' => 'assistant', 'content' => 'I am not finished yet.', 'meta' => ['type' => 'nl_reply']],
+            ['role' => 'user', 'content' => 'continue', 'meta' => ['type' => 'message']],
+        ];
+
+        self::assertSame($request, AgentPromptBuilder::latestUserRequestText($history));
+        self::assertTrue(AgentPromptBuilder::isGoOnReply('Weiter!'));
+        self::assertFalse(AgentPromptBuilder::isGoOnReply('continue with the table element'));
+    }
+
+    #[Test]
+    public function attachHintNamesTheFilesTheEditorChose(): void
+    {
+        $request = 'Create new text & media content element with the heading Our Treats and attach the existing images sys_file uid 114 (ebnodwdxc.png) and uid 115 (Migrate_From_Wordpress_to_TYPO3.png).';
+        $steps = AgentRequestChecklist::reconcile([
+            [
+                'role' => 'assistant',
+                'content' => 'Applied.',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [['table' => 'tt_content', 'uid' => 250, 'values' => ['CType' => 'textmedia']]],
+                ],
+            ],
+        ], $request);
+
+        $block = AgentRequestChecklist::promptBlock($steps, $request);
+        self::assertStringContainsString('file_reference_add with fileUids "114,115"', $block);
+        self::assertStringContainsString('do not upload, download or generate', $block);
+        self::assertStringContainsString('generate or upload an image', AgentRequestChecklist::promptBlock($steps, 'Create a text & media element with an image'));
+    }
+
+    #[Test]
+    public function anAltTextRequestStaysOpenUntilTheAltTextIsSet(): void
+    {
+        $request = 'Create a text & media content element with the heading Frontend Check and a short sentence, attach the existing image sys_file uid 145 and set a sensible alt text for the image';
+        $created = [
+            'role' => 'assistant',
+            'content' => 'Applied.',
+            'meta' => ['type' => 'readback_result', 'readback' => [['table' => 'tt_content', 'uid' => 172, 'values' => ['CType' => 'textmedia']]]],
+        ];
+        $attached = static fn(array $details): array => [
+            'role' => 'assistant',
+            'content' => 'Attached.',
+            'meta' => ['type' => 'tool_result', 'tool' => 'file_reference_add', 'success' => true, 'details' => ['table' => 'tt_content', 'uid' => 172, 'referenceUids' => [78], ...$details]],
+        ];
+
+        $steps = AgentRequestChecklist::parse($request);
+        self::assertSame(['create', 'attach_image', 'alt_text'], array_column($steps, 'kind'));
+        self::assertStringContainsString('Pass alternative', AgentRequestChecklist::promptBlock(AgentRequestChecklist::reconcile([$created], $request), $request));
+
+        $withoutAlt = AgentRequestChecklist::reconcile([$created, $attached([])], $request);
+        self::assertSame(['completed', 'completed', 'in_progress'], array_column($withoutAlt, 'status'));
+        self::assertTrue(AgentPromptBuilder::hasBlockingRemainingWork([$created, $attached([])], [], $request));
+        self::assertStringContainsString('tell the editor the alt text is not set', AgentRequestChecklist::nextActionHint($withoutAlt));
+
+        $withAlt = AgentRequestChecklist::reconcile([$created, $attached(['alternative' => 'Snowy mountain lake'])], $request);
+        self::assertFalse(AgentRequestChecklist::hasOpen($withAlt));
+
+        $generated = [
+            'role' => 'assistant',
+            'content' => 'Image generated.',
+            'meta' => ['type' => 'tool_result', 'tool' => 't3ai_generate_image', 'success' => true, 'details' => ['fileUid' => 150, 'altText' => 'Team meeting in a bright office']],
+        ];
+        self::assertFalse(AgentRequestChecklist::hasOpen(AgentRequestChecklist::reconcile([$created, $generated, $attached([])], $request)));
+
+        self::assertSame(['create', 'attach_image'], array_column(AgentRequestChecklist::parse('Create a text & media element with an image of a lake'), 'kind'));
+        self::assertContains('alt_text', array_column(AgentRequestChecklist::parse('Erstelle ein Text & Media Element mit einem Bild und einem passenden Alternativtext'), 'kind'));
+    }
+
+    #[Test]
+    public function aDeclinedCreateIsNotPushedAgain(): void
+    {
+        $request = 'Create a text & media content element with the heading Preview Test and attach the existing images sys_file uid 145 and 5';
+        $declinedCard = static fn(string $tool, string $action, array $fields): array => [
+            'role' => 'assistant',
+            'content' => 'Draft discarded. Nothing was written.',
+            'meta' => ['type' => 'inline_draft', 'tool' => $tool, 'draft' => ['tool' => $tool, 'action' => $action, 'discarded' => true, 'fields' => $fields]],
+        ];
+        $history = [
+            ['role' => 'user', 'content' => $request, 'meta' => ['type' => 'message']],
+            $declinedCard('write_table', 'create', [
+                ['table' => 'tt_content', 'field' => 'colPos', 'proposed' => '0'],
+                ['table' => 'tt_content', 'field' => 'CType', 'proposed' => 'textmedia'],
+                ['table' => 'tt_content', 'field' => 'header', 'proposed' => 'Preview Test'],
+            ]),
+            ['role' => 'user', 'content' => '[The editor declined "Change a record". Nothing was written.] Do not repeat it.', 'meta' => ['type' => 'continuation', 'hidden' => true]],
+        ];
+
+        $steps = AgentRequestChecklist::reconcile($history, $request);
+
+        self::assertSame(['failed', 'failed'], array_column($steps, 'status'));
+        self::assertFalse(AgentPromptBuilder::hasBlockingRemainingWork($history, [], $request));
+        self::assertStringContainsString(
+            'nothing else remains',
+            AgentPromptBuilder::continuationMessage(['outcome' => 'declined', 'label' => 'Change a record'], array_slice($history, 0, 2)),
+        );
+
+        $created = ['role' => 'assistant', 'content' => 'Applied.', 'meta' => ['type' => 'readback_result', 'readback' => [['table' => 'tt_content', 'uid' => 260, 'values' => ['CType' => 'textmedia']]]]];
+        $attachDeclined = $declinedCard('file_reference_add', '', []);
+        self::assertSame(['completed', 'failed'], array_column(AgentRequestChecklist::reconcile([$history[0], $created, $attachDeclined], $request), 'status'));
+    }
+
+    #[Test]
+    public function filesALookupOnlyShowedAreNotWaitingToBeAttached(): void
+    {
+        $history = [
+            [
+                'role' => 'assistant',
+                'content' => 'This folder contains 2 file(s).',
+                'meta' => ['type' => 'tool_result', 'tool' => 'file_list', 'severity' => 'read', 'success' => true, 'previews' => [['fileUid' => 128], ['fileUid' => 129]]],
+            ],
+            [
+                'role' => 'assistant',
+                'content' => 'Image generated.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3ai_generate_image', 'severity' => 'write', 'success' => true, 'previews' => [['fileUid' => 150]]],
+            ],
+        ];
+
+        self::assertSame([150], AgentPromptBuilder::unattachedFileUids($history));
     }
 }

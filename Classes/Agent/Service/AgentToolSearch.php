@@ -58,6 +58,18 @@ final readonly class AgentToolSearch
     ) {}
 
     /**
+     * True when the search text asks to change a field of an existing record (show/hide, rename, set…).
+     * The record writer is then always part of the answer, even when the words rank other tools higher.
+     */
+    public static function asksForRecordChange(string $query): bool
+    {
+        return preg_match(
+            '/\b(visible|visibility|hidden?|hiding|unhide|show|enable|disable|activate|deactivate|publish|rename|change|update|edit|set|rewrite|sichtbar\w*|verstecken|verberg\w*|ausblend\w*|einblend\w*|zeig\w*|aktivier\w*|deaktivier\w*|umbenenn\w*|[äa]nder\w*)\b/iu',
+            $query,
+        ) === 1;
+    }
+
+    /**
      * @param list<array<string, mixed>> $candidates catalog entries the editor may run
      * @return array{tools: list<array<string, mixed>>, method: string}
      */

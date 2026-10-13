@@ -714,6 +714,21 @@
       <trans-unit id="agent.owner.core" resname="agent.owner.core">
         <source>AI Foundation</source>
       </trans-unit>
+      <trans-unit id="agent.owner.ns_t3ai" resname="agent.owner.ns_t3ai">
+        <source>T3AI</source>
+      </trans-unit>
+      <trans-unit id="agent.owner.ns_t3aa" resname="agent.owner.ns_t3aa">
+        <source>T3AA</source>
+      </trans-unit>
+      <trans-unit id="agent.owner.ns_t3cs" resname="agent.owner.ns_t3cs">
+        <source>T3CS</source>
+      </trans-unit>
+      <trans-unit id="agent.owner.ns_t3ac" resname="agent.owner.ns_t3ac">
+        <source>T3AC</source>
+      </trans-unit>
+      <trans-unit id="agent.owner.ns_t3as" resname="agent.owner.ns_t3as">
+        <source>T3AS</source>
+      </trans-unit>
       <trans-unit id="agent.tool.unclassified" resname="agent.tool.unclassified">
         <source>The agent cannot use this yet because its extension does not say whether it changes data. Ask your developer to update the extension.</source>
       </trans-unit>
@@ -741,11 +756,29 @@
       <trans-unit id="agent.turn.providerUnavailable" resname="agent.turn.providerUnavailable">
         <source>The AI provider is not available right now. Please try again later or ask your administrator to check the provider account.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.providerNotFoundForSite" resname="agent.turn.providerNotFoundForSite">
+        <source>No AI provider is configured for this site. Open AI Foundation → Providers on the current site, add a connected provider, and run Test connection.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.providerNoDefaultForSite" resname="agent.turn.providerNoDefaultForSite">
+        <source>No default AI provider is configured for this site. Open AI Foundation → Providers on the current site and mark one provider as default.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.providerRateLimited" resname="agent.turn.providerRateLimited">
+        <source>The AI provider rate limit was reached: %1$s Please wait a moment and try again.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.providerRateLimitedFallback" resname="agent.turn.providerRateLimitedFallback">
+        <source>too many requests in a short time.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.timeout" resname="agent.turn.timeout">
+        <source>The AI took too long to answer. Please try again.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.orchestratorFailed" resname="agent.turn.orchestratorFailed">
         <source>The agent could not complete this turn: %1$s</source>
       </trans-unit>
       <trans-unit id="agent.turn.emptyModelReply" resname="agent.turn.emptyModelReply">
         <source>I could not produce a reply. Try rephrasing or use / to run a specific tool.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.declinedAskInstead" resname="agent.turn.declinedAskInstead">
+        <source>Okay, nothing was written. What should I do instead?</source>
       </trans-unit>
       <trans-unit id="agent.turn.alreadyRunning" resname="agent.turn.alreadyRunning">
         <source>The AI Agent is still working on your previous request. Please wait until it has finished, then send your message again.</source>
@@ -755,6 +788,21 @@
       </trans-unit>
       <trans-unit id="agent.turn.stepsStillOpen" resname="agent.turn.stepsStillOpen">
         <source>I am not finished yet (for example, an image still has to be attached). Say “continue” or pick one of the suggested actions.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.filesUnavailable" resname="agent.turn.filesUnavailable">
+        <source>These files cannot be attached because they do not exist or are missing from the file storage: %s. Please upload them again or choose other files.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.declinedNotRepeated" resname="agent.turn.declinedNotRepeated">
+        <source>I left out the step you declined. What should I do next?</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.failedNotRepeated" resname="agent.turn.failedNotRepeated">
+        <source>That step already failed and would fail the same way again, so I did not offer it again. Give me a different address or file.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.imageGenerationUnavailable" resname="agent.turn.imageGenerationUnavailable">
+        <source>AI image generation is not available to you (it needs T3AI with an image provider and access to T3AI Media), so no image will be generated. I will do the rest of the request.</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.filesPartlyUnavailable" resname="agent.turn.filesPartlyUnavailable">
+        <source>Skipped %1$s: the file does not exist or is missing from the file storage. I will continue with the other files (%2$s).</source>
       </trans-unit>
       <trans-unit id="agent.turn.emptyModelReplyWithTools" resname="agent.turn.emptyModelReplyWithTools">
         <source>I could not produce a reply. Closest tools: %1$s. Try rephrasing, pick a suggested action, or use / to run a specific tool.</source>
@@ -996,6 +1044,9 @@
       <trans-unit id="agent.draft.nothingKept" resname="agent.draft.nothingKept">
         <source>Nothing is selected. Include at least one change or cancel.</source>
       </trans-unit>
+      <trans-unit id="agent.draft.blankProposed" resname="agent.draft.blankProposed">
+        <source>A change has no new value. Leave it out or cancel.</source>
+      </trans-unit>
       <trans-unit id="agent.draft.titleRename" resname="agent.draft.titleRename">
         <source>Rename %1$s</source>
       </trans-unit>
@@ -1068,6 +1119,9 @@
       </trans-unit>
       <trans-unit id="agent.error.turnFailed" resname="agent.error.turnFailed">
         <source>The request failed.</source>
+      </trans-unit>
+      <trans-unit id="agent.error.serverPage" resname="agent.error.serverPage">
+        <source>The server answered with an error page instead of a reply, so nothing was changed. Please try again; if it keeps happening, tell your administrator.</source>
       </trans-unit>
       <trans-unit id="agent.error.applyFailed" resname="agent.error.applyFailed">
         <source>Applying the draft failed.</source>
@@ -1282,6 +1336,27 @@
       <trans-unit id="agent.result.emptyMatchingPages" resname="agent.result.emptyMatchingPages">
         <source>No matching pages were found.</source>
       </trans-unit>
+      <trans-unit id="agent.page.notFound" resname="agent.page.notFound">
+        <source>I can't find a page called "%1$s". Which page should I use?</source>
+      </trans-unit>
+      <trans-unit id="agent.glossary.whichLanguage" resname="agent.glossary.whichLanguage">
+        <source>Which language should I save this word in?</source>
+      </trans-unit>
+      <trans-unit id="agent.language.notAvailable" resname="agent.language.notAvailable">
+        <source>%1$s isn't a language of this site (available: %2$s). Nothing was changed. Pick one of the site languages.</source>
+      </trans-unit>
+      <trans-unit id="agent.queue.draftWorkspace" resname="agent.queue.draftWorkspace">
+        <source>The queues are shared by the whole site and cannot be changed from a draft workspace. Switch to the Live workspace first. Nothing was added.</source>
+      </trans-unit>
+      <trans-unit id="agent.translate.defaultProvider" resname="agent.translate.defaultProvider">
+        <source>your default AI provider</source>
+      </trans-unit>
+      <trans-unit id="agent.translate.providerNotice" resname="agent.translate.providerNotice">
+        <source>%1$s can't be used in the agent, so this translation uses %2$s. For %1$s, use the page translation dialog.</source>
+      </trans-unit>
+      <trans-unit id="agent.page.missingUid" resname="agent.page.missingUid">
+        <source>Page %d doesn't exist.</source>
+      </trans-unit>
       <trans-unit id="agent.result.emptyMatchingContentElements" resname="agent.result.emptyMatchingContentElements">
         <source>No matching content elements were found.</source>
       </trans-unit>
@@ -1393,8 +1468,14 @@
       <trans-unit id="agent.undo.changeNotFound" resname="agent.undo.changeNotFound">
         <source>Change not found or already undone.</source>
       </trans-unit>
+      <trans-unit id="agent.undo.useButton" resname="agent.undo.useButton">
+        <source>Use the Undo button on the applied change to put the old text back.</source>
+      </trans-unit>
       <trans-unit id="agent.draft.expired" resname="agent.draft.expired">
         <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.failedFinal" resname="agent.draft.failedFinal">
+        <source>Trying again would fail the same way, so this step is not offered again. Ask with a different address or file.</source>
       </trans-unit>
       <trans-unit id="agent.turn.streamInterrupted" resname="agent.turn.streamInterrupted">
         <source>The connection was interrupted. Your request may still be running. Reload the conversation in a moment to see the result.</source>
@@ -1407,6 +1488,9 @@
       </trans-unit>
       <trans-unit id="agent.plan.pageHint" resname="agent.plan.pageHint">
         <source>for page %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.plan.newsHint" resname="agent.plan.newsHint">
+        <source>for news article %1$s</source>
       </trans-unit>
       <trans-unit id="agent.plan.generateAllSeo" resname="agent.plan.generateAllSeo">
         <source>Generate and apply all SEO metadata%1$s.</source>
@@ -1462,6 +1546,9 @@
       <trans-unit id="agent.suggestions.applied" resname="agent.suggestions.applied">
         <source>Applied %1$s suggestion field(s).</source>
       </trans-unit>
+      <trans-unit id="agent.suggestions.unchanged" resname="agent.suggestions.unchanged">
+        <source>These texts are already on the page. Nothing was changed.</source>
+      </trans-unit>
       <trans-unit id="agent.suggestions.creditHint" resname="agent.suggestions.creditHint">
         <source>This preview used %1$s AI call(s). Regenerating will use credits again.</source>
       </trans-unit>
@@ -1482,6 +1569,12 @@
       </trans-unit>
       <trans-unit id="agent.write.noSuggestionSelections" resname="agent.write.noSuggestionSelections">
         <source>Select at least one suggestion variant to apply.</source>
+      </trans-unit>
+      <trans-unit id="agent.write.structureOutlineUnread" resname="agent.write.structureOutlineUnread">
+        <source>Your custom outline could not be read, so the drafted page tree was used.</source>
+      </trans-unit>
+      <trans-unit id="agent.write.structureCreatedPages" resname="agent.write.structureCreatedPages">
+        <source>Created pages:</source>
       </trans-unit>
       <trans-unit id="agent.write.editsNeedEditorFlag" resname="agent.write.editsNeedEditorFlag">
         <source>Inline edits require editedByEditor confirmation.</source>
@@ -1761,6 +1854,9 @@
       </trans-unit>
       <trans-unit id="agent.field.rename" resname="agent.field.rename">
         <source>Rename</source>
+      </trans-unit>
+      <trans-unit id="agent.field.hidden" resname="agent.field.hidden">
+        <source>Hidden (1 = hidden, 0 = visible)</source>
       </trans-unit>
       <trans-unit id="agent.field.copy" resname="agent.field.copy">
         <source>Copy</source>
@@ -2103,6 +2199,9 @@
       </trans-unit>
       <trans-unit id="agent.arg.pageId" resname="agent.arg.pageId">
         <source>Page</source>
+      </trans-unit>
+      <trans-unit id="agent.arg.languageConfig" resname="agent.arg.languageConfig">
+        <source>Languages</source>
       </trans-unit>
       <trans-unit id="agent.arg.pageIds" resname="agent.arg.pageIds">
         <source>Pages</source>

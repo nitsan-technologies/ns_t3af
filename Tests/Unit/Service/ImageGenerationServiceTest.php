@@ -121,6 +121,89 @@ final class ImageGenerationServiceTest extends TestCase
         self::assertCount(1, $response->images);
     }
 
+    public function testGenerateUsesTheOpenAiImageModelInsteadOfTheChatModel(): void
+    {
+        $platform = $this->recordingPlatform();
+        $response = $this->service($this->makeProvider('gpt-5.4-mini'), $platform)->generate('A small red lighthouse');
+
+        self::assertSame(['gpt-image-1'], $platform->models);
+        self::assertSame('gpt-image-1', $response->modelId);
+    }
+
+    public function testVariationResolvesTheModelTheSameWay(): void
+    {
+        $platform = $this->recordingPlatform();
+        $this->service($this->makeProvider('gpt-5.4-mini'), $platform)->variation('/tmp/source.png');
+
+        self::assertSame(['gpt-image-1'], $platform->models);
+    }
+
+    public function testRequestedOrStoredImageModelWins(): void
+    {
+        $platform = $this->recordingPlatform();
+        $this->service($this->makeProvider('gpt-5.4-mini'), $platform)->generate('cat', new ImageGenerationOptions(modelId: 'dall-e-3'));
+        $this->service($this->makeProvider('gpt-image-1-mini'), $platform)->generate('cat');
+
+        self::assertSame(['dall-e-3', 'gpt-image-1-mini'], $platform->models);
+    }
+
+    public function testChatModelWithoutAnImageDefaultFailsBeforeTheRequest(): void
+    {
+        $platform = $this->recordingPlatform();
+
+        try {
+            $this->service($this->makeProvider('llama3.1', Provider::ADAPTER_OPENAI_COMPATIBLE), $platform)->generate('cat');
+            self::fail('Expected an exception');
+        } catch (AdapterRuntimeException $e) {
+            self::assertStringContainsString('No image model configured for provider "OpenAI"', $e->getMessage());
+        }
+        self::assertSame([], $platform->models);
+    }
+
+    /**
+     * @return object{models: list<string>}
+     */
+    private function recordingPlatform(): object
+    {
+        return new class {
+            /** @var list<string> */
+            public array $models = [];
+
+            /** @return list<array{url: string}> */
+            public function generateImages(string $model, string $prompt, ImageGenerationOptions $options): array
+            {
+                $this->models[] = $model;
+
+                return [['url' => 'https://example.test/img.png']];
+            }
+
+            /** @return list<array{url: string}> */
+            public function createImageVariation(string $model, string $path, ImageGenerationOptions $options): array
+            {
+                $this->models[] = $model;
+
+                return [['url' => 'https://example.test/img.png']];
+            }
+        };
+    }
+
+    private function service(Provider $provider, object $platform): ImageGenerationService
+    {
+        $adapter = $this->createMock(AdapterInterface::class);
+        $adapter->method('getType')->willReturn($provider->adapterType);
+        $adapter->method('platform')->willReturn($platform);
+        $dispatcher = $this->createMock(EventDispatcherInterface::class);
+        $dispatcher->method('dispatch')->willReturnArgument(0);
+
+        return new ImageGenerationService(
+            $this->makeLookup($provider),
+            new AdapterRegistry([$adapter]),
+            $dispatcher,
+            new CredentialCipher(),
+            $this->requestFactoryStub(),
+        );
+    }
+
     private function requestFactoryStub(): RequestFactory
     {
         return $this->getMockBuilder(RequestFactory::class)
@@ -160,16 +243,16 @@ final class ImageGenerationServiceTest extends TestCase
         return $adapter;
     }
 
-    private function makeProvider(): Provider
+    private function makeProvider(string $modelId = 'dall-e-3', string $adapterType = 'symfony.openai'): Provider
     {
         return Provider::fromRow([
             'uid' => 1,
             'pid' => 10,
             'identifier' => 'openai',
             'title' => 'OpenAI',
-            'adapter_type' => 'symfony.openai',
-            'endpoint_url' => '',
-            'model_id' => 'dall-e-3',
+            'adapter_type' => $adapterType,
+            'endpoint_url' => $adapterType === 'symfony.openai' ? '' : 'https://llm.internal/v1',
+            'model_id' => $modelId,
             'embedding_model_id' => '',
             'system_prompt' => '',
             'temperature' => 0.7,

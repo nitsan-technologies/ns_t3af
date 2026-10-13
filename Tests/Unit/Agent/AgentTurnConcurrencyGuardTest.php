@@ -92,6 +92,34 @@ final class AgentTurnConcurrencyGuardTest extends TestCase
     }
 
     #[Test]
+    public function aBusyTurnIsReportedWithoutReleasingIt(): void
+    {
+        $locker = $this->createMock(LockingStrategyInterface::class);
+        $locker->method('acquire')->willReturn(false);
+        $locker->expects(self::never())->method('release');
+
+        self::assertTrue($this->guard($locker)->isBusy(7));
+    }
+
+    #[Test]
+    public function aFreeTurnIsNotBusyAndReleasesTheProbe(): void
+    {
+        $locker = $this->locker(acquired: true);
+        $locker->expects(self::once())->method('release');
+
+        self::assertFalse($this->guard($locker)->isBusy(7));
+    }
+
+    #[Test]
+    public function brokenLockingIsNotReportedAsBusy(): void
+    {
+        $factory = $this->createMock(LockFactory::class);
+        $factory->method('createLocker')->willThrowException(new \RuntimeException('no lock backend'));
+
+        self::assertFalse((new AgentTurnConcurrencyGuard($factory))->isBusy(7));
+    }
+
+    #[Test]
     public function lockIsPerBackendUser(): void
     {
         $locker = $this->locker(acquired: true);

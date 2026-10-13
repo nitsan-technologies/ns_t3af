@@ -24,6 +24,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Service;
 
 use Doctrine\DBAL\ParameterType;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Resource\File;
@@ -58,6 +59,7 @@ readonly class FileService
 
         $storage = $this->getStorage($storageUid);
         $folder = $storage->getFolder($directoryPath);
+        RecordsApplyFileAccess::assertFolderAllowed($storageUid, $folder->getIdentifier());
 
         $totalFiles = $storage->countFilesInFolder($folder);
         $totalDirectories = $storage->countFoldersInFolder($folder);
@@ -96,6 +98,9 @@ readonly class FileService
     public function getFileInfo(int $storageUid, string $fileIdentifier): array
     {
         $storage = $this->getStorage($storageUid);
+        // FAL identifiers start with a slash; a composer token (@file:1:user_upload/a.jpg) carries it without.
+        $fileIdentifier = '/' . ltrim($fileIdentifier, '/');
+        RecordsApplyFileAccess::assertFolderAllowed($storageUid, dirname($fileIdentifier) . '/');
         $file = $storage->getFileByIdentifier($fileIdentifier);
 
         if (!$file instanceof File) {
@@ -279,6 +284,7 @@ readonly class FileService
     {
         $storage = $this->getStorage($storageUid);
         $parentFolder = $storage->getFolder($parentPath);
+        RecordsApplyFileAccess::assertFolderAllowed($storageUid, $parentFolder->getIdentifier());
         $folder = $storage->createFolder($directoryName, $parentFolder);
 
         return [

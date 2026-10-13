@@ -639,6 +639,26 @@
                 <source>AI Foundation</source>
                 <target>AI Foundation</target>
             </trans-unit>
+            <trans-unit id="agent.owner.ns_t3ai">
+                <source>T3AI</source>
+                <target>T3AI</target>
+            </trans-unit>
+            <trans-unit id="agent.owner.ns_t3aa">
+                <source>T3AA</source>
+                <target>T3AA</target>
+            </trans-unit>
+            <trans-unit id="agent.owner.ns_t3cs">
+                <source>T3CS</source>
+                <target>T3CS</target>
+            </trans-unit>
+            <trans-unit id="agent.owner.ns_t3ac">
+                <source>T3AC</source>
+                <target>T3AC</target>
+            </trans-unit>
+            <trans-unit id="agent.owner.ns_t3as">
+                <source>T3AS</source>
+                <target>T3AS</target>
+            </trans-unit>
             <trans-unit id="agent.tool.blockedForGroup">
                 <source>Your user group may not use this. Ask your administrator to allow it under AI Permissions.</source>
                 <target>Ihre Benutzergruppe darf das nicht verwenden. Bitten Sie Ihren Administrator, es unter „KI-Berechtigungen“ freizugeben.</target>
@@ -675,6 +695,26 @@
                 <source>The AI provider is not available right now. Please try again later or ask your administrator to check the provider account.</source>
                 <target>Der KI-Anbieter ist im Moment nicht verfügbar. Bitte versuchen Sie es später erneut oder bitten Sie Ihre Administration, das Anbieterkonto zu prüfen.</target>
             </trans-unit>
+            <trans-unit id="agent.turn.providerNotFoundForSite">
+                <source>No AI provider is configured for this site. Open AI Foundation → Providers on the current site, add a connected provider, and run Test connection.</source>
+                <target>Für diese Website ist kein KI-Anbieter konfiguriert. Öffnen Sie KI Foundation → Anbieter auf der aktuellen Website, legen Sie einen verbundenen Anbieter an und führen Sie „Verbindung testen“ aus.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.providerNoDefaultForSite">
+                <source>No default AI provider is configured for this site. Open AI Foundation → Providers on the current site and mark one provider as default.</source>
+                <target>Für diese Website ist kein Standard-KI-Anbieter gesetzt. Öffnen Sie KI Foundation → Anbieter auf der aktuellen Website und markieren Sie einen Anbieter als Standard.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.providerRateLimited">
+                <source>The AI provider rate limit was reached: %1$s Please wait a moment and try again.</source>
+                <target>Das Anfragenlimit des KI-Anbieters wurde erreicht: %1$s Bitte warten Sie einen Moment und versuchen Sie es erneut.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.providerRateLimitedFallback">
+                <source>too many requests in a short time.</source>
+                <target>zu viele Anfragen in kurzer Zeit.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.timeout">
+                <source>The AI took too long to answer. Please try again.</source>
+                <target>Die KI hat zu lange für die Antwort gebraucht. Bitte versuchen Sie es erneut.</target>
+            </trans-unit>
             <trans-unit id="agent.turn.orchestratorFailed">
                 <source>The agent could not complete this turn: %1$s</source>
                 <target>Der Agent konnte diese Runde nicht abschließen: %1$s</target>
@@ -682,6 +722,10 @@
             <trans-unit id="agent.turn.emptyModelReply">
                 <source>I could not produce a reply. Try rephrasing or use / to run a specific tool.</source>
                 <target>Ich konnte keine Antwort erzeugen. Formulieren Sie um oder verwenden Sie / für ein bestimmtes Tool.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.declinedAskInstead">
+                <source>Okay, nothing was written. What should I do instead?</source>
+                <target>In Ordnung, es wurde nichts gespeichert. Was soll ich stattdessen tun?</target>
             </trans-unit>
             <trans-unit id="agent.turn.alreadyRunning">
                 <source>The AI Agent is still working on your previous request. Please wait until it has finished, then send your message again.</source>
@@ -694,6 +738,26 @@
             <trans-unit id="agent.turn.stepsStillOpen">
                 <source>I am not finished yet (for example, an image still has to be attached). Say “continue” or pick one of the suggested actions.</source>
                 <target>Ich bin noch nicht fertig (zum Beispiel muss noch ein Bild angehängt werden). Schreiben Sie „weiter“ oder wählen Sie eine vorgeschlagene Aktion.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.filesUnavailable">
+                <source>These files cannot be attached because they do not exist or are missing from the file storage: %s. Please upload them again or choose other files.</source>
+                <target>Diese Dateien können nicht angehängt werden, weil sie nicht existieren oder im Dateispeicher fehlen: %s. Bitte laden Sie sie erneut hoch oder wählen Sie andere Dateien.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.declinedNotRepeated">
+                <source>I left out the step you declined. What should I do next?</source>
+                <target>Den Schritt, den Sie abgelehnt haben, habe ich ausgelassen. Was soll ich als Nächstes tun?</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.failedNotRepeated">
+                <source>That step already failed and would fail the same way again, so I did not offer it again. Give me a different address or file.</source>
+                <target>Dieser Schritt ist bereits gescheitert und würde genauso wieder scheitern, daher habe ich ihn nicht erneut angeboten. Nennen Sie eine andere Adresse oder Datei.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.imageGenerationUnavailable">
+                <source>AI image generation is not available to you (it needs T3AI with an image provider and access to T3AI Media), so no image will be generated. I will do the rest of the request.</source>
+                <target>KI-Bildgenerierung steht Ihnen nicht zur Verfügung (sie benötigt T3AI mit einem Bild-Anbieter und Zugriff auf T3AI Media), daher wird kein Bild erzeugt. Den Rest der Anfrage erledige ich.</target>
+            </trans-unit>
+            <trans-unit id="agent.turn.filesPartlyUnavailable">
+                <source>Skipped %1$s: the file does not exist or is missing from the file storage. I will continue with the other files (%2$s).</source>
+                <target>%1$s übersprungen: Die Datei existiert nicht oder fehlt im Dateispeicher. Ich mache mit den anderen Dateien weiter (%2$s).</target>
             </trans-unit>
             <trans-unit id="agent.turn.loopLimit">
                 <source>I could not finish this in one go. Tell me a bit more precisely what I should do, for example which page it is about.</source>
@@ -1181,6 +1245,10 @@
                 <source>Nothing is selected. Include at least one change or cancel.</source>
                 <target>Nichts ausgewählt. Beziehen Sie mindestens eine Änderung ein oder brechen Sie ab.</target>
             </trans-unit>
+            <trans-unit id="agent.draft.blankProposed">
+                <source>A change has no new value. Leave it out or cancel.</source>
+                <target>Eine Änderung hat keinen neuen Wert. Lassen Sie sie weg oder brechen Sie ab.</target>
+            </trans-unit>
             <trans-unit id="agent.draft.titleRename">
                 <source>Rename %1$s</source>
                 <target>%1$s umbenennen</target>
@@ -1276,6 +1344,10 @@
             <trans-unit id="agent.error.turnFailed">
                 <source>The request failed.</source>
                 <target>Die Anfrage ist fehlgeschlagen.</target>
+            </trans-unit>
+            <trans-unit id="agent.error.serverPage">
+                <source>The server answered with an error page instead of a reply, so nothing was changed. Please try again; if it keeps happening, tell your administrator.</source>
+                <target>Der Server hat statt einer Antwort eine Fehlerseite geliefert, daher wurde nichts geändert. Bitte versuchen Sie es erneut; wenn es weiter auftritt, informieren Sie Ihre Administration.</target>
             </trans-unit>
             <trans-unit id="agent.error.applyFailed">
                 <source>Applying the draft failed.</source>
@@ -1561,6 +1633,34 @@
                 <source>No matching pages were found.</source>
                 <target>Es wurden keine passenden Seiten gefunden.</target>
             </trans-unit>
+            <trans-unit id="agent.page.notFound">
+                <source>I can't find a page called "%1$s". Which page should I use?</source>
+                <target>Ich finde keine Seite mit dem Namen „%1$s“. Welche Seite soll ich verwenden?</target>
+            </trans-unit>
+            <trans-unit id="agent.glossary.whichLanguage">
+                <source>Which language should I save this word in?</source>
+                <target>In welcher Sprache soll ich dieses Wort speichern?</target>
+            </trans-unit>
+            <trans-unit id="agent.language.notAvailable">
+                <source>%1$s isn't a language of this site (available: %2$s). Nothing was changed. Pick one of the site languages.</source>
+                <target>%1$s ist keine Sprache dieser Website (verfügbar: %2$s). Es wurde nichts geändert. Bitte eine der Website-Sprachen wählen.</target>
+            </trans-unit>
+            <trans-unit id="agent.queue.draftWorkspace">
+                <source>The queues are shared by the whole site and cannot be changed from a draft workspace. Switch to the Live workspace first. Nothing was added.</source>
+                <target>Die Warteschlangen gelten für die ganze Website und können nicht aus einem Entwurfs-Workspace geändert werden. Zuerst in den Live-Workspace wechseln. Es wurde nichts hinzugefügt.</target>
+            </trans-unit>
+            <trans-unit id="agent.translate.defaultProvider">
+                <source>your default AI provider</source>
+                <target>Ihren Standard-KI-Anbieter</target>
+            </trans-unit>
+            <trans-unit id="agent.translate.providerNotice">
+                <source>%1$s can't be used in the agent, so this translation uses %2$s. For %1$s, use the page translation dialog.</source>
+                <target>%1$s kann im Agenten nicht verwendet werden, daher nutzt diese Übersetzung %2$s. Für %1$s den Dialog zur Seitenübersetzung verwenden.</target>
+            </trans-unit>
+            <trans-unit id="agent.page.missingUid">
+                <source>Page %d doesn't exist.</source>
+                <target>Seite %d gibt es nicht.</target>
+            </trans-unit>
             <trans-unit id="agent.result.emptyMatchingContentElements">
                 <source>No matching content elements were found.</source>
                 <target>Es wurden keine passenden Inhaltselemente gefunden.</target>
@@ -1709,9 +1809,17 @@
                 <source>Change not found or already undone.</source>
                 <target>Änderung nicht gefunden oder bereits zurückgenommen.</target>
             </trans-unit>
+            <trans-unit id="agent.undo.useButton">
+                <source>Use the Undo button on the applied change to put the old text back.</source>
+                <target>Nutzen Sie die Schaltfläche „Zurücknehmen“ an der angewendeten Änderung, um den alten Text zurückzuholen.</target>
+            </trans-unit>
             <trans-unit id="agent.draft.expired">
                 <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
                 <target>Dieser Vorschlag ist veraltet und wurde nicht ausgeführt. Fragen Sie erneut, um einen aktuellen zu erhalten.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.failedFinal">
+                <source>Trying again would fail the same way, so this step is not offered again. Ask with a different address or file.</source>
+                <target>Ein erneuter Versuch würde genauso scheitern, daher wird dieser Schritt nicht noch einmal angeboten. Fragen Sie mit einer anderen Adresse oder Datei.</target>
             </trans-unit>
             <trans-unit id="agent.turn.streamInterrupted">
                 <source>The connection was interrupted. Your request may still be running. Reload the conversation in a moment to see the result.</source>
@@ -1728,6 +1836,10 @@
             <trans-unit id="agent.plan.pageHint">
                 <source>for page %1$s</source>
                 <target>für Seite %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.plan.newsHint">
+                <source>for news article %1$s</source>
+                <target>für News-Artikel %1$s</target>
             </trans-unit>
             <trans-unit id="agent.plan.generateAllSeo">
                 <source>Generate and apply all SEO metadata%1$s.</source>
@@ -1801,6 +1913,10 @@
                 <source>Applied %1$s suggestion field(s).</source>
                 <target>%1$s vorgeschlagene Feld(er) angewendet.</target>
             </trans-unit>
+            <trans-unit id="agent.suggestions.unchanged">
+                <source>These texts are already on the page. Nothing was changed.</source>
+                <target>Diese Texte stehen bereits auf der Seite. Es wurde nichts geändert.</target>
+            </trans-unit>
             <trans-unit id="agent.suggestions.creditHint">
                 <source>This preview used %1$s AI call(s). Regenerating will use credits again.</source>
                 <target>Diese Vorschau hat %1$s KI-Aufruf(e) verbraucht. Erneutes Generieren verbraucht wieder Credits.</target>
@@ -1828,6 +1944,14 @@
             <trans-unit id="agent.write.noSuggestionSelections">
                 <source>Select at least one suggestion variant to apply.</source>
                 <target>Wählen Sie mindestens eine Vorschlagsvariante zum Anwenden.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.structureOutlineUnread">
+                <source>Your custom outline could not be read, so the drafted page tree was used.</source>
+                <target>Ihre eigene Gliederung konnte nicht gelesen werden, daher wurde der Entwurf der Seitenstruktur verwendet.</target>
+            </trans-unit>
+            <trans-unit id="agent.write.structureCreatedPages">
+                <source>Created pages:</source>
+                <target>Erstellte Seiten:</target>
             </trans-unit>
             <trans-unit id="agent.write.editsNeedEditorFlag">
                 <source>Inline edits require editedByEditor confirmation.</source>
@@ -2200,6 +2324,10 @@
             <trans-unit id="agent.field.rename">
                 <source>Rename</source>
                 <target>Umbenennen</target>
+            </trans-unit>
+            <trans-unit id="agent.field.hidden">
+                <source>Hidden (1 = hidden, 0 = visible)</source>
+                <target>Versteckt (1 = versteckt, 0 = sichtbar)</target>
             </trans-unit>
             <trans-unit id="agent.field.copy">
                 <source>Copy</source>
@@ -2656,6 +2784,10 @@
             <trans-unit id="agent.arg.pageId">
                 <source>Page</source>
                 <target>Seite</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.languageConfig">
+                <source>Languages</source>
+                <target>Sprachen</target>
             </trans-unit>
             <trans-unit id="agent.arg.pageIds">
                 <source>Pages</source>

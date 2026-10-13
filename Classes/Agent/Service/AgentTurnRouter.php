@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Service;
 
+use NITSAN\NsT3AF\Agent\Contract\AgentAttachTargetResolverInterface;
 use NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface;
 use NITSAN\NsT3AF\Agent\Contract\AgentTurnRunnerInterface;
 use NITSAN\NsT3AF\Mcp\Service\FileService;
@@ -59,6 +60,9 @@ final readonly class AgentTurnRouter
         private PermittedActionProvider $permittedActionProvider,
         private FileService $fileService,
         private AgentTranslator $translator,
+        private AgentTargetPageResolver $targetPageResolver,
+        private ?AgentRequestedFiles $requestedFiles = null,
+        private ?AgentAttachTargetResolverInterface $attachTargetResolver = null,
     ) {}
 
     /**
@@ -77,6 +81,8 @@ final readonly class AgentTurnRouter
         array $historyMessages = [],
         ?callable $emitEvent = null,
     ): array {
+        // Only the router may name the uploaded file for an attach card, never the request.
+        unset($body['routerFileUids']);
         $selectedTool = trim((string) ($body['tool'] ?? ''));
         $toolArguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
         $starterAction = trim((string) ($body['action'] ?? ''));
@@ -173,8 +179,53 @@ final readonly class AgentTurnRouter
             return $attachmentMessages;
         }
 
+        $nlMessage = $followUp !== '' ? $followUp : $message;
+        $namedPage = $this->applyNamedPage($nlMessage, $historyMessages, $context, $user, $correlationId);
+        if ($namedPage['messages'] !== null) {
+            $this->emitMessages($emitEvent, $namedPage['messages']);
+
+            return $attachmentMessages === []
+                ? $namedPage['messages']
+                : array_merge($attachmentMessages, $namedPage['messages']);
+        }
+        $context = $namedPage['context'];
+
+        $glossaryPair = GlossaryPairRequest::parse($nlMessage);
+        if ($glossaryPair !== null && !is_array($body['continuation'] ?? null)) {
+            $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+            $arguments['sourceTerm'] = $glossaryPair['source'];
+            $arguments['targetTerm'] = $glossaryPair['target'];
+            $arguments['pageId'] = (int) ($context['pageId'] ?? $arguments['pageId'] ?? 0);
+            unset($arguments['languageUid']);
+            $body['arguments'] = $arguments;
+            $body['requestQuery'] = $nlMessage;
+            $glossaryMessages = $this->finalizeStructuralMessages(
+                [$this->executeTool('t3ai_glossary_save', $context, $body, $user, $correlationId)],
+                $correlationId,
+            );
+            $this->emitMessages($emitEvent, $glossaryMessages);
+
+            return $attachmentMessages === []
+                ? $glossaryMessages
+                : array_merge($attachmentMessages, $glossaryMessages);
+        }
+
         if ($followUp !== '' && $attachmentMessages !== []) {
             $this->emitMessages($emitEvent, $attachmentMessages);
+            // "Add this image to the news X": the card is built here, the model is not left to forget the call.
+            $attachCard = $this->attachCardFor(
+                $this->messageParser->stripComposerTokens($message),
+                AgentAttachTargetRequest::uploadedFileUids($attachmentMessages)[0] ?? 0,
+                $context,
+                $body,
+                $user,
+                $correlationId,
+            );
+            if ($attachCard !== null) {
+                $this->emitMessages($emitEvent, [$attachCard]);
+
+                return array_merge($attachmentMessages, [$attachCard]);
+            }
             $history = $historyMessages;
             foreach ($attachmentMessages as $attachmentMessage) {
                 $history[] = $attachmentMessage;
@@ -192,6 +243,43 @@ final readonly class AgentTurnRouter
             return array_merge($attachmentMessages, $orchestratorResult['messages']);
         }
 
+        // Upload first, say where it goes in the next message: the one waiting upload gets its card too.
+        if (
+            $fileAttachments === []
+            && !is_array($body['continuation'] ?? null)
+            && !AgentRequestedFiles::asksForGeneratedImage($message)
+            && !AgentRequestedFiles::namesUrl($message)
+        ) {
+            $waitingUid = AgentAttachTargetRequest::onlyWaitingUpload(
+                $historyMessages,
+                AgentPromptBuilder::attachedFileUids($historyMessages),
+            );
+            $waitingCard = $waitingUid !== null
+                ? $this->attachCardFor($this->messageParser->stripComposerTokens($message), $waitingUid, $context, $body, $user, $correlationId)
+                : null;
+            if ($waitingCard !== null) {
+                $this->emitMessages($emitEvent, [$waitingCard]);
+
+                return [$waitingCard];
+            }
+        }
+
+        // Files the request names that cannot be attached are reported before the model runs; the
+        // checklist then closes the attach step instead of asking the editor to "continue".
+        $unavailableFiles = [];
+        $isContinuation = is_array($body['continuation'] ?? null) || str_starts_with(trim($message), '[The editor ');
+        if (!$isContinuation && $this->requestedFiles !== null) {
+            $notice = $this->requestedFiles->messageFor($message, $this->translator, $correlationId);
+            if ($notice === null && AgentRequestedFiles::asksForGeneratedImage($message) && !$this->canGenerateImages()) {
+                $notice = $this->requestedFiles->generationUnavailableMessage($message, $this->translator, $correlationId);
+            }
+            if ($notice !== null) {
+                $unavailableFiles = [$notice];
+                $this->emitMessages($emitEvent, $unavailableFiles);
+                $historyMessages[] = $notice;
+            }
+        }
+
         $orchestratorResult = $this->turnOrchestrator->runTurn(
             $message,
             $historyMessages,
@@ -202,7 +290,7 @@ final readonly class AgentTurnRouter
             $emitEvent,
         );
 
-        return $orchestratorResult['messages'];
+        return array_merge($unavailableFiles, $orchestratorResult['messages']);
     }
 
     /**
@@ -266,6 +354,144 @@ final readonly class AgentTurnRouter
     }
 
     /**
+     * A named page that does not exist is not replaced by the page on screen.
+     * The editor is asked which page to use. A later "the first one" locks that page.
+     *
+     * @param list<array<string, mixed>> $history
+     * @param array<string, mixed> $context
+     * @return array{context: array<string, mixed>, messages: list<array{role: string, content: string, meta: array<string, mixed>}>|null}
+     */
+    private function applyNamedPage(
+        string $message,
+        array $history,
+        array $context,
+        BackendUserAuthentication $user,
+        string $correlationId,
+    ): array {
+        $choice = AgentTargetPageResolver::pageIdFromChoice($message, $history);
+        if ($choice > 0) {
+            return ['context' => $this->lockPage($context, $choice, self::titleFromChoice($message, $history)), 'messages' => null];
+        }
+        if (AgentTargetPageResolver::isCreatePageRequest($message)) {
+            return ['context' => $context, 'messages' => null];
+        }
+
+        // "Remove page 138" names a uid. The words before "page" are not a title.
+        if (AgentTargetPageResolver::mentionedPageUids($message) !== []) {
+            return ['context' => $context, 'messages' => null];
+        }
+
+        $title = AgentTargetPageResolver::namedPageTitle($message);
+        if ($title === null) {
+            return ['context' => $context, 'messages' => null];
+        }
+
+        $details = is_array($context['details'] ?? null) ? $context['details'] : [];
+        $openPage = is_array($details['page'] ?? null) ? $details['page'] : [];
+        $openTitle = trim((string) ($openPage['title'] ?? ''));
+        if ($openTitle !== '' && mb_strtolower($openTitle) === mb_strtolower($title)) {
+            return ['context' => $context, 'messages' => null];
+        }
+
+        $match = $this->targetPageResolver->matchingPage($title, $user);
+        if ($match !== null) {
+            return ['context' => $this->lockPage($context, $match['uid'], $match['title']), 'messages' => null];
+        }
+
+        if ($this->targetPageResolver->namedPageExistsButUnreadable($title, $user)) {
+            return [
+                'context' => $context,
+                'messages' => [[
+                    'role' => 'assistant',
+                    'content' => sprintf(
+                        'You cannot access the page "%s" with your backend account. Nothing was queued.',
+                        $title,
+                    ),
+                    'meta' => [
+                        'type' => 'error',
+                        'correlationId' => $correlationId,
+                        'orchestratorPause' => true,
+                    ],
+                ]],
+            ];
+        }
+
+        $options = $this->targetPageResolver->similarPageLabels($title, $user);
+
+        return [
+            'context' => $context,
+            'messages' => [[
+                'role' => 'assistant',
+                'content' => $this->missingPageQuestion($title),
+                'meta' => [
+                    'type' => 'clarification',
+                    'tool' => 'ask_clarification',
+                    'options' => $options,
+                    'missingPage' => true,
+                    'missingPageName' => $title,
+                    'correlationId' => $correlationId,
+                    'orchestratorPause' => true,
+                ],
+            ]],
+        ];
+    }
+
+    private function missingPageQuestion(string $title): string
+    {
+        try {
+            $question = $this->translator->translate('agent.page.notFound', [$title]);
+        } catch (\Throwable) {
+            $question = '';
+        }
+        if ($question === '' || $question === 'agent.page.notFound') {
+            return sprintf('I can\'t find a page called "%s". Which page should I use?', $title);
+        }
+
+        return $question;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    private static function titleFromChoice(string $message, array $history): string
+    {
+        $uid = AgentTargetPageResolver::pageIdFromChoice($message, $history);
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            $options = is_array($meta['options'] ?? null) ? $meta['options'] : [];
+            foreach ($options as $option) {
+                if (!is_string($option) || !str_ends_with($option, '[' . $uid . ']')) {
+                    continue;
+                }
+
+                return trim((string) preg_replace('/\s*\[\d+\]\s*$/', '', $option));
+            }
+        }
+
+        return trim((string) preg_replace('/\s*\[\d+\]\s*$/', '', $message));
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @return array<string, mixed>
+     */
+    private function lockPage(array $context, int $pageId, string $title): array
+    {
+        $context['pageId'] = $pageId;
+        $context['lockedPageId'] = $pageId;
+        $details = is_array($context['details'] ?? null) ? $context['details'] : [];
+        $page = is_array($details['page'] ?? null) ? $details['page'] : [];
+        $page['uid'] = $pageId;
+        if ($title !== '') {
+            $page['title'] = $title;
+        }
+        $details['page'] = $page;
+        $context['details'] = $details;
+
+        return $context;
+    }
+
+    /**
      * @param array<string, mixed> $context
      * @param array<string, mixed> $body
      * @return array{role: string, content: string, meta: array<string, mixed>}
@@ -278,6 +504,60 @@ final readonly class AgentTurnRouter
         string $correlationId,
     ): array {
         return $this->toolTurnProcessor->execute($toolName, $context, $body, $user, $correlationId);
+    }
+
+    /**
+     * The file_reference_add card for an uploaded file and a request that names one news article or content
+     * element, or null when the model has to take the request (several or no match, a continuation, a new element).
+     *
+     * @param array<string, mixed> $context
+     * @param array<string, mixed> $body
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function attachCardFor(
+        string $request,
+        int $fileUid,
+        array $context,
+        array $body,
+        BackendUserAuthentication $user,
+        string $correlationId,
+    ): ?array {
+        if ($this->attachTargetResolver === null || is_array($body['continuation'] ?? null)) {
+            return null;
+        }
+        $target = AgentAttachTargetRequest::parse($request);
+        if ($target === null) {
+            return null;
+        }
+        if ($fileUid <= 0) {
+            return null;
+        }
+        $record = $this->attachTargetResolver->resolve($target, (int) ($context['pageId'] ?? 0));
+        if ($record === null) {
+            return null;
+        }
+
+        $body['arguments'] = [
+            'table' => $record['table'],
+            'uid' => $record['uid'],
+            'fieldName' => $record['fieldName'],
+            'fileUids' => (string) $fileUid,
+        ];
+        $body['requestQuery'] = $request;
+        $body['routerFileUids'] = [$fileUid];
+        try {
+            $card = $this->executeTool('file_reference_add', $context, $body, $user, $correlationId);
+        } catch (\Throwable) {
+            // Whatever goes wrong here, the model still answers the request.
+            return null;
+        }
+        if (($card['meta']['type'] ?? '') !== 'inline_draft') {
+            return null;
+        }
+        // Like a card from a natural-language turn: the turn goes on after Apply or decline.
+        $card['meta']['fromRunner'] = true;
+
+        return $card;
     }
 
     /**
@@ -391,6 +671,17 @@ final readonly class AgentTurnRouter
     private static function canonicalSlashTool(string $toolName): string
     {
         return self::SLASH_TOOL_ALIASES[strtolower($toolName)] ?? $toolName;
+    }
+
+    private function canGenerateImages(): bool
+    {
+        try {
+            $executable = $this->permittedActionProvider->buildCatalog()['executable'];
+        } catch (\Throwable) {
+            return true;
+        }
+
+        return in_array(AgentRequestedFiles::GENERATION_TOOL, array_map(static fn(array $tool): string => (string) ($tool['name'] ?? ''), $executable), true);
     }
 
     private function isKnownTool(string $toolName): bool

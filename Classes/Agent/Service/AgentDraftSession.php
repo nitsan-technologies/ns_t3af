@@ -20,11 +20,12 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\Service;
 
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Registry;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
- * Session storage for pending agent drafts and applied changes (undo).
+ * Storage for pending agent drafts and applied changes (undo).
  *
  * @internal
  */
@@ -33,8 +34,16 @@ final class AgentDraftSession
     private const DRAFTS_KEY = 'nst3af_agent_drafts';
     private const CHANGES_KEY = 'nst3af_agent_changes';
     private const REGISTRY_NAMESPACE = 'tx_nst3af_agent_change';
+    private const DRAFT_REGISTRY_NAMESPACE = 'tx_nst3af_agent_draft';
+    private const DRAFT_KEEP_SECONDS = 86400;
+
+    private bool $staleDraftsPruned = false;
 
     /**
+     * Drafts live in the registry, one row each, not in the backend session: every backend request
+     * that saves the session (a module render flushing its flash messages) writes back the copy it
+     * loaded, so a draft created meanwhile by the agent turn would be gone ("not found or expired").
+     *
      * @param array<string, mixed> $payload
      */
     public function storeDraft(string $draftId, array $payload, ?BackendUserAuthentication $user = null): void
@@ -42,6 +51,19 @@ final class AgentDraftSession
         $user ??= $this->resolveBackendUser();
         if ($user === null) {
             return;
+        }
+
+        try {
+            $this->pruneStaleDrafts();
+            GeneralUtility::makeInstance(Registry::class)->set(
+                self::DRAFT_REGISTRY_NAMESPACE,
+                $draftId,
+                ['userUid' => $this->userUid($user), 'storedAt' => time(), 'payload' => $payload],
+            );
+
+            return;
+        } catch (\Throwable) {
+            // Registry not reachable (unit tests, broken database): keep the draft in the session.
         }
 
         $drafts = $this->readDrafts($user);
@@ -59,6 +81,18 @@ final class AgentDraftSession
             return null;
         }
 
+        try {
+            $stored = GeneralUtility::makeInstance(Registry::class)->get(self::DRAFT_REGISTRY_NAMESPACE, $draftId);
+
+            return is_array($stored)
+                && (int) ($stored['userUid'] ?? 0) === $this->userUid($user)
+                && is_array($stored['payload'] ?? null)
+                ? $stored['payload']
+                : null;
+        } catch (\Throwable) {
+            // See storeDraft().
+        }
+
         $drafts = $this->readDrafts($user);
 
         return is_array($drafts[$draftId] ?? null) ? $drafts[$draftId] : null;
@@ -71,9 +105,52 @@ final class AgentDraftSession
             return;
         }
 
+        try {
+            $registry = GeneralUtility::makeInstance(Registry::class);
+            $stored = $registry->get(self::DRAFT_REGISTRY_NAMESPACE, $draftId);
+            if (is_array($stored) && (int) ($stored['userUid'] ?? 0) === $this->userUid($user)) {
+                $registry->remove(self::DRAFT_REGISTRY_NAMESPACE, $draftId);
+            }
+
+            return;
+        } catch (\Throwable) {
+            // See storeDraft().
+        }
+
         $drafts = $this->readDrafts($user);
         unset($drafts[$draftId]);
         $user->setAndSaveSessionData(self::DRAFTS_KEY, $drafts);
+    }
+
+    /**
+     * A card nobody applied or declined keeps its row; after a day it cannot be applied anyway.
+     */
+    private function pruneStaleDrafts(): void
+    {
+        if ($this->staleDraftsPruned) {
+            return;
+        }
+        $this->staleDraftsPruned = true;
+
+        try {
+            $rows = GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable('sys_registry')
+                ->select(['entry_key', 'entry_value'], 'sys_registry', ['entry_namespace' => self::DRAFT_REGISTRY_NAMESPACE])
+                ->fetchAllAssociative();
+        } catch (\Throwable) {
+            return;
+        }
+        $registry = GeneralUtility::makeInstance(Registry::class);
+        foreach ($rows as $row) {
+            $value = @unserialize((string) $row['entry_value'], ['allowed_classes' => false]);
+            if (!is_array($value) || (int) ($value['storedAt'] ?? 0) < time() - self::DRAFT_KEEP_SECONDS) {
+                $registry->remove(self::DRAFT_REGISTRY_NAMESPACE, (string) $row['entry_key']);
+            }
+        }
+    }
+
+    private function userUid(BackendUserAuthentication $user): int
+    {
+        return (int) ($user->user['uid'] ?? 0);
     }
 
     public function setDestructiveArmed(string $draftId, bool $armed, ?BackendUserAuthentication $user = null): void

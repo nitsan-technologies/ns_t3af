@@ -76,6 +76,9 @@ final readonly class SatelliteToolPlanService
 
         $severity = $this->severityLookup->severityFor($toolName);
         $action = $severity === ToolSeverity::Destructive ? 'delete' : 'update';
+        if (in_array($toolName, ['t3ai_mass_seo_queue_add', 't3ai_mass_seo_queue_remove'], true)) {
+            unset($arguments['pid']);
+        }
         $displayArguments = $this->normalizeDisplayArguments($arguments);
         $summary = $this->buildSummary($toolName, $displayArguments);
 
@@ -101,6 +104,12 @@ final readonly class SatelliteToolPlanService
     private function normalizeDisplayArguments(array $arguments): array
     {
         $display = $arguments;
+        if ((int) ($display['newsArticleUid'] ?? 0) > 0) {
+            unset($display['pageId'], $display['pid']);
+        }
+        if ((int) ($display['termId'] ?? 0) <= 0) {
+            unset($display['termId']);
+        }
         if (isset($display['pageId'])) {
             $pageId = (int) $display['pageId'];
             if ($pageId > 0) {
@@ -160,8 +169,51 @@ final readonly class SatelliteToolPlanService
         return match ($key) {
             'pageId', 'pageIds' => implode(', ', array_map(fn(int $uid): string => $this->pageLabel($uid), $ids)),
             'languageUid', 'targetLanguageUid', 'languageUids' => implode(', ', array_map(fn(int $uid): string => $this->languageLabel($uid, $pageId), $ids)),
+            'languageConfig' => $this->formatLanguageConfig($value, $pageId),
             default => $this->formatArgumentValue($value),
         };
+    }
+
+    /**
+     * T3AI queue tools take {"2":"1"}, [2], "[2]" or a bare "2"; the card shows "German [2]".
+     */
+    private function formatLanguageConfig(mixed $value, int $pageId): string
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = is_array($decoded) ? $decoded : [$value];
+        }
+        if (!is_array($value)) {
+            $value = [$value];
+        }
+
+        // ["2,3"] is a list with one comma string.
+        if (array_is_list($value)) {
+            $flat = [];
+            foreach ($value as $item) {
+                foreach (is_string($item) ? preg_split('/\s*[,;]\s*/', $item, -1, PREG_SPLIT_NO_EMPTY) ?: [] : [$item] as $part) {
+                    $flat[] = $part;
+                }
+            }
+            $value = $flat;
+        }
+
+        $ids = [];
+        foreach ($value as $key => $item) {
+            if (array_is_list($value)) {
+                $candidate = $item;
+            } else {
+                $enabled = $item === true || $item === 1 || $item === '1';
+                $candidate = $enabled ? $key : null;
+            }
+            if (is_numeric($candidate) && (int) $candidate > 0) {
+                $ids[] = (int) $candidate;
+            }
+        }
+
+        return $ids === []
+            ? $this->formatArgumentValue($value)
+            : implode(', ', array_map(fn(int $uid): string => $this->languageLabel($uid, $pageId), array_values(array_unique($ids))));
     }
 
     private function pageLabel(int $uid): string
@@ -171,6 +223,20 @@ final readonly class SatelliteToolPlanService
         }
         try {
             $title = trim((string) (BackendUtility::getRecord('pages', $uid, 'title')['title'] ?? ''));
+        } catch (\Throwable) {
+            $title = '';
+        }
+
+        return $title !== '' ? sprintf('%s [%d]', AgentQuote::wrap($title), $uid) : (string) $uid;
+    }
+
+    private function newsArticleLabel(int $uid): string
+    {
+        if ($uid <= 0) {
+            return (string) $uid;
+        }
+        try {
+            $title = trim((string) (BackendUtility::getRecord('tx_news_domain_model_news', $uid, 'title')['title'] ?? ''));
         } catch (\Throwable) {
             $title = '';
         }
@@ -206,9 +272,24 @@ final readonly class SatelliteToolPlanService
      */
     private function buildSummary(string $toolName, array $arguments): string
     {
+        if ($toolName === 't3ai_generate_image') {
+            $newsUid = (int) ($arguments['newsArticleUid'] ?? 0);
+            $toolLabel = $this->translator->translate('agent.tool.label.t3ai_generate_image');
+            if ($toolLabel === 'agent.tool.label.t3ai_generate_image' || $toolLabel === '') {
+                $toolLabel = 'Generate an image';
+            }
+            $targetHint = $newsUid > 0
+                ? $this->translator->translate('agent.plan.newsHint', [$this->newsArticleLabel($newsUid)])
+                : '';
+
+            return self::joinNamedToolSummary($toolLabel, $targetHint);
+        }
+
         $pageId = (int) ($arguments['pageId'] ?? 0);
-        // The separating space lives here: TYPO3 v14 trims leading/trailing whitespace from XLIFF labels.
-        $pageHint = $pageId > 0 ? ' ' . $this->translator->translate('agent.plan.pageHint', [$this->pageLabel($pageId)]) : '';
+        // Join the space in PHP: TYPO3 v14 trims XLIFF whitespace, so "%1$s%2$s" + "for page" became "pagefor page".
+        $pageHint = $pageId > 0
+            ? $this->translator->translate('agent.plan.pageHint', [$this->pageLabel($pageId)])
+            : '';
 
         $labelKey = match ($toolName) {
             't3ai_generate_all_seo' => 'agent.plan.generateAllSeo',
@@ -225,11 +306,27 @@ final readonly class SatelliteToolPlanService
             // Any other child tool: its editor label ("Translate the whole page") instead of "Run this tool".
             $toolLabel = $this->translator->translate('agent.tool.label.' . $toolName);
             if ($toolLabel !== 'agent.tool.label.' . $toolName && $toolLabel !== '') {
-                return $this->translator->translate('agent.plan.namedTool', [$toolLabel, $pageHint]);
+                return self::joinNamedToolSummary($toolLabel, $pageHint);
             }
         }
 
-        return $this->translator->translate($labelKey, [$pageHint]);
+        // Templates like "Generate … metadata%1$s." need a leading space on the hint, or nothing.
+        $hintForTemplate = $pageHint !== '' ? ' ' . ltrim($pageHint) : '';
+
+        return $this->translator->translate($labelKey, [$hintForTemplate]);
+    }
+
+    /**
+     * "Translate the whole page" + "for page Home" → "Translate the whole page for page Home."
+     * Never "pagefor page".
+     */
+    private static function joinNamedToolSummary(string $toolLabel, string $targetHint): string
+    {
+        $toolLabel = rtrim($toolLabel, ". \t");
+        $targetHint = trim($targetHint);
+        $summary = $targetHint === '' ? $toolLabel : $toolLabel . ' ' . $targetHint;
+
+        return $summary . '.';
     }
 
     private function formatArgumentValue(mixed $value): string

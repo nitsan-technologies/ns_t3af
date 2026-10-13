@@ -24,6 +24,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Service;
 
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\McpSiteRequestBootstrap;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -38,7 +39,7 @@ final class DataHandlerServiceLivePageUidTest extends TestCase
     public function resolveLivePageUidKeepsNonPositiveIds(): void
     {
         $service = new DataHandlerService(
-            $this->createMock(SiteFinder::class),
+            new McpSiteRequestBootstrap($this->createMock(SiteFinder::class)),
             $this->createMock(RecordService::class),
         );
         $method = new \ReflectionMethod(DataHandlerService::class, 'resolveLivePageUid');

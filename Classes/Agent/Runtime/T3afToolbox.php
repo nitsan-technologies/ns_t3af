@@ -19,9 +19,16 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Agent\Runtime;
 
+use NITSAN\NsT3AF\Agent\Service\AgentAttachTargetRequest;
 use NITSAN\NsT3AF\Agent\Service\AgentPlan;
+use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
+use NITSAN\NsT3AF\Agent\Service\AgentRequestedFiles;
+use NITSAN\NsT3AF\Agent\Service\AgentRunner;
+use NITSAN\NsT3AF\Agent\Service\AgentToolSearch;
+use NITSAN\NsT3AF\Agent\Service\GlossarySaveLanguage;
 use NITSAN\NsT3AF\Agent\Service\PageCreateAfter;
 use NITSAN\NsT3AF\Agent\Service\PageCreateBefore;
+use NITSAN\NsT3AF\Agent\Service\RequestedLanguage;
 use NITSAN\NsT3AF\Api\AiToolDefinition;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Tool\Agent\AskClarificationTool;
@@ -170,6 +177,220 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: this creates a new page. Call write_table with action create, tableName pages, and ' . $place . ' of the page that sets the place. Do not call pages_move.',
             );
         }
+        // Asked for an AI-generated image, the model otherwise uploads a stock photo from a URL it made up.
+        if ($name === 'file_upload_from_url' && AgentRequestedFiles::asksForGeneratedImage($requestQuery) && !AgentRequestedFiles::namesUrl($requestQuery)) {
+            $outcome = 'invalid';
+
+            return new ToolResult($toolCall, isset($this->catalog[AgentRequestedFiles::GENERATION_TOOL])
+                ? 'Not executed: the editor asked for an AI-generated image. Call ' . AgentRequestedFiles::GENERATION_TOOL
+                    . ' with a description of the image and a short altText, then file_reference_add with the returned fileUid.'
+                    . ' Never use a stock photo or an image URL you found or made up.'
+                : 'Not executed: the editor asked for an AI-generated image, and AI image generation is not available to this editor.'
+                    . ' Do not upload a web image instead: do the rest of the request and tell the editor in one sentence that the image could not be generated.');
+        }
+        $conversationHistory = $this->conversationHistory();
+        if (
+            in_array($name, ['t3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3aa_generate_voice_over'], true)
+            && (
+                preg_match('/\b(picture|pictures|image|images|photo|photos|illustration|bild\w*|foto\w*|grafik\w*)\b/iu', $requestQuery) === 1
+                || AgentPromptBuilder::pendingImageAttachNote($conversationHistory) !== ''
+            )
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for a picture, not SEO or voice-over. Call t3ai_generate_image (then file_reference_add), or wait for the open generate card to be applied.',
+            );
+        }
+        // "Add this image to the news X" must attach, not create a duplicate news/CE.
+        if (
+            $name === 'write_table'
+            && strtolower((string) ($toolCall->getArguments()['action'] ?? 'create')) === 'create'
+            && AgentRequestedFiles::asksToAttachOrPlaceFile($requestQuery)
+            && AgentAttachTargetRequest::parse($requestQuery) !== null
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor named an existing record to attach the image to. Call file_reference_add for that record (news: fal_media, textmedia: assets). Do not create a new record.',
+            );
+        }
+        // EXT:news missing: do not search or write the news table, and do not run news MCP tools.
+        if (!\TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('news')) {
+            $newsTable = strtolower((string) ($toolCall->getArguments()['tableName'] ?? $toolCall->getArguments()['table'] ?? ''));
+            $isNewsMcp = str_contains($name, 'news') && str_starts_with($name, 't3ai_');
+            if (
+                $isNewsMcp
+                || $newsTable === 'tx_news_domain_model_news'
+                || (
+                    in_array($name, ['record_search', 'write_table', 'records_apply'], true)
+                    && AgentRunner::isNewsRelatedRequest($requestQuery)
+                )
+            ) {
+                $outcome = 'invalid';
+
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: News isn\'t available on this site (EXT:news is not installed).',
+                );
+            }
+        }
+        // "Generiere eine Nachricht ..." is a news article. The model otherwise answers it with SEO or schema markup.
+        if (
+            AgentRunner::isNewsCreateRequest($requestQuery)
+            && in_array($name, ['t3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_apply_schema_markup', 't3ai_generate_keywords', 't3ai_generate_meta_description'], true)
+            && preg_match('/\b(seo|meta|keywords?|schema|structured\s+data|suchmaschinen\w*|metadaten|og\s*(?:title|desc\w*))\b/iu', $requestQuery) !== 1
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for a news article, not SEO. Call write_table with action create on tx_news_domain_model_news, with title, teaser and bodytext in the same call.',
+            );
+        }
+        // "Generate SEO for all pages" is a batch over the pages, not the one page that is open.
+        if ($name === 't3ai_generate_all_seo' && AgentRunner::asksSeoForAllPages($requestQuery)) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for SEO for all pages, not for the open page. Call pages_tree (or pages_list) for the page uids, then t3ai_generate_seo_batch with pageIds of those pages. With more than 20 pages, ask first whether to queue them instead (t3ai_mass_seo_queue_add with pageIds).',
+            );
+        }
+        // "Make the German version visible" changes the hidden field. The model sometimes tries a delete first.
+        if ($name === 'content_delete' && AgentRunner::isVisibilityRequest($requestQuery)) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked to show or hide something, not to delete it. Change the hidden field with write_table action update (page and its content elements), never delete.',
+            );
+        }
+        // Show/hide (not bare "publish"): use write_table hidden, never a workspace review stage.
+        // Bare publish/unpublish may still use workspace_stage_set.
+        if (
+            $name === 'workspace_stage_set'
+            && AgentRunner::isVisibilityRequest($requestQuery)
+            && preg_match('/\b(visible|invisible|hidden|unhide|hide|sichtbar|unsichtbar|ausblend\w*|einblend\w*|verstecke\w*|verberg\w*)\b/iu', $requestQuery) === 1
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked to make a page or content visible or hidden, not to change a workspace review stage. Call write_table action update with data {"hidden": 0} (or 1) on the translation page uid and its hidden content elements.',
+            );
+        }
+        // "Translate the first element into French" is one element, not the whole page.
+        if ($name === 't3ai_translate_page' && AgentRunner::asksForOneElementTranslation($requestQuery)) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for one content element, not the whole page. Call t3ai_translate_content with contentUid of that element (content_list on the open page gives the order) and targetLanguageUid of the language named in the request.',
+            );
+        }
+        // "Generate a Person schema" is schema markup for a page. The model otherwise tries to create a folder or a content element.
+        if (
+            AgentRunner::isSchemaRequest($requestQuery)
+            && preg_match('/\b(folders?|director(?:y|ies)|ordner|verzeichnis\w*|content\s+element|inhaltselement|absatz|paragraph)\b/iu', $requestQuery) !== 1
+        ) {
+            if (str_starts_with($name, 'directory_')) {
+                $outcome = 'invalid';
+
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: the editor asked for schema markup, not a folder. Call t3ai_apply_schema_markup with schemaType (for example Person) for the open page.',
+                );
+            }
+            if ($name === 't3ai_create_content_element'
+                || (
+                    $name === 'write_table'
+                    && strtolower((string) ($toolCall->getArguments()['action'] ?? 'create')) === 'create'
+                    && strtolower((string) ($toolCall->getArguments()['tableName'] ?? $toolCall->getArguments()['table'] ?? '')) === 'tt_content'
+                )
+            ) {
+                $outcome = 'invalid';
+
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: the editor asked for schema markup, not a content element. Call t3ai_apply_schema_markup with schemaType (for example Person) for the open page; do not ask which page when one is open.',
+                );
+            }
+        }
+        // A news article without a picture request is not answered with an image card.
+        if (
+            $name === 't3ai_generate_image'
+            && AgentRunner::isNewsCreateRequest($requestQuery)
+            && preg_match('/\b(pictures?|images?|photos?|illustrations?|bild\w*|foto\w*|grafik\w*)\b/iu', $requestQuery) !== 1
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for a news article, not a picture. Call write_table with action create on tx_news_domain_model_news, with title, teaser and bodytext in the same call.',
+            );
+        }
+        // A news request answered with a content element or a page (for example on a folder). News lives in its own table.
+        if (
+            $name === 'write_table'
+            && strtolower((string) ($toolCall->getArguments()['action'] ?? 'create')) === 'create'
+            && AgentRunner::isNewsCreateRequest($requestQuery)
+            && AgentRunner::isNewsRequestAnsweredWithOtherTable(
+                (string) ($toolCall->getArguments()['tableName'] ?? $toolCall->getArguments()['table'] ?? ''),
+                $requestQuery,
+            )
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for a news article, not a content element or a page. Call write_table with action create on tx_news_domain_model_news, with title, teaser and bodytext in the same call. Omit pid; the tool picks the news storage.',
+            );
+        }
+        // "Add an intro paragraph to this page" is a content element. The model otherwise drafts a whole new page.
+        if (
+            $requestQuery !== ''
+            && in_array($name, AgentRunner::PAGE_CREATE_TOOL_NAMES, true)
+            && !AgentRunner::asksForNewPage($requestQuery)
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor did not ask for a new page. Add the text to the open page with write_table (action create, tableName tt_content, CType text, header and bodytext in the same call).',
+            );
+        }
+        if ($name === 'file_reference_add') {
+            $attachUid = (int) ($toolCall->getArguments()['uid'] ?? 0);
+            if ($attachUid <= 0) {
+                $outcome = 'invalid';
+
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: file_reference_add needs the uid of an existing record (tt_content or news). '
+                    . 'To put the image on a new Text & Media element, create that element with write_table first '
+                    . '(the image attaches after Apply). To attach to an existing element, pass that element\'s uid (> 0).',
+                );
+            }
+            if (AgentPromptBuilder::hasOpenFileReferenceDraft($conversationHistory)) {
+                $outcome = 'invalid';
+
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: an attach card is already open for the editor. Wait until they Apply or Decline it. Do not prepare another attach.',
+                );
+            }
+            if (AgentPromptBuilder::pendingAttachFileUids($conversationHistory, $this->gateRequest()) === []) {
+                $outcome = 'invalid';
+
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: there is no file left to attach from this conversation (uploads, generated images, or named sys_file uids). Do not claim the image is already attached — call file_reference_list if you need to check.',
+                );
+            }
+        }
         if (!isset($this->catalog[$name])) {
             $outcome = 'unavailable';
 
@@ -196,7 +417,7 @@ final class T3afToolbox implements ToolboxInterface
         }
 
         if ($name === self::ASK_CLARIFICATION) {
-            return new ToolResult($toolCall, $this->askClarification($validation['arguments']));
+            return new ToolResult($toolCall, $this->askClarification($this->withoutUnavailableLanguages($validation['arguments'])));
         }
 
         // The same read with the same arguments: answer from the first call, no budget used.
@@ -250,6 +471,7 @@ final class T3afToolbox implements ToolboxInterface
 
         $body = $this->runtime->body;
         $body['arguments'] = $validation['arguments'];
+        $body['conversationHistory'] = $this->conversationHistory();
         $body['skipLlmSummary'] = true;
         $message = $this->runtime->executor->execute($name, $this->runtime->context, $body, $this->runtime->user, $this->state->correlationId);
 
@@ -286,6 +508,36 @@ final class T3afToolbox implements ToolboxInterface
         }
 
         return new ToolResult($toolCall, $forModel);
+    }
+
+    /**
+     * The editor's request this turn works on (the original one during a confirm/decline continuation).
+     */
+    private function gateRequest(): string
+    {
+        $request = trim((string) ($this->runtime->body['requestForGate'] ?? ''));
+
+        return $request !== '' ? $request : trim((string) ($this->runtime->body['requestQuery'] ?? ''));
+    }
+
+    /**
+     * Prior conversation plus messages produced in this turn (readbacks, open drafts, applied tools).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function conversationHistory(): array
+    {
+        $prior = is_array($this->runtime->body['conversationHistory'] ?? null)
+            ? $this->runtime->body['conversationHistory']
+            : [];
+        $merged = [];
+        foreach ([...array_values($prior), ...$this->state->messages] as $entry) {
+            if (is_array($entry)) {
+                $merged[] = $entry;
+            }
+        }
+
+        return $merged;
     }
 
     /**
@@ -441,7 +693,17 @@ final class T3afToolbox implements ToolboxInterface
 
         $candidates = array_values(array_diff_key($this->catalog, $this->definitions));
         $result = $this->runtime->toolSearch->search($query, $candidates, self::FOUND_TOOLS_LIMIT);
-        $found = $this->addDefinitions($result['tools']);
+        $foundTools = $result['tools'];
+        // "Make the page visible" ranks page and cache tools; the record writer is what changes a field.
+        if (AgentToolSearch::asksForRecordChange($query)) {
+            $foundNames = array_map(static fn(array $tool): string => (string) ($tool['name'] ?? ''), $foundTools);
+            foreach ($candidates as $candidate) {
+                if (($candidate['name'] ?? '') === 'write_table' && !in_array('write_table', $foundNames, true)) {
+                    $foundTools[] = $candidate;
+                }
+            }
+        }
+        $found = $this->addDefinitions($foundTools);
         $this->state->trace[] = [
             'tool' => self::FIND_TOOLS,
             'query' => $query,
@@ -480,6 +742,49 @@ final class T3afToolbox implements ToolboxInterface
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * A language question lists only the languages of the site; a language the editor asked for that the site
+     * does not have is said so instead of being offered as a button.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    private function withoutUnavailableLanguages(array $arguments): array
+    {
+        $siteLanguages = GlossarySaveLanguage::siteLanguages($this->runtime->context);
+        $options = is_array($arguments['options'] ?? null) ? $arguments['options'] : [];
+        if ($siteLanguages === [] || $options === []) {
+            return $arguments;
+        }
+        $kept = array_values(array_filter(
+            $options,
+            static fn(mixed $option): bool => !is_string($option) || !RequestedLanguage::isUnavailableName($option, $siteLanguages),
+        ));
+        if (count($kept) === count($options)) {
+            return $arguments;
+        }
+        $requestQuery = trim((string) ($this->runtime->body['requestQuery'] ?? ''));
+        $missing = RequestedLanguage::unavailable($requestQuery, $siteLanguages);
+        if ($missing !== null || $kept === []) {
+            $missing ??= 'That language';
+            $titles = RequestedLanguage::titles($siteLanguages);
+            $arguments['question'] = sprintf(
+                "%s isn't a language of this site (available: %s). Nothing was changed. Pick one of the site languages.",
+                $missing,
+                $titles,
+            );
+            $arguments['options'] = $kept === [] ? array_values(array_filter(array_map(
+                static fn(array $language): string => trim((string) ($language['title'] ?? '')),
+                array_filter($siteLanguages, static fn(array $language): bool => (int) ($language['id'] ?? 0) > 0),
+            ), static fn(string $title): bool => $title !== '')) : $kept;
+
+            return $arguments;
+        }
+        $arguments['options'] = $kept;
+
+        return $arguments;
     }
 
     /**

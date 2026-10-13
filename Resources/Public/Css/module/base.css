@@ -348,6 +348,23 @@
     gap: 0.25rem !important;
 }
 
+/*
+ * t3sbootstrap (extension setting "preview") loads bestyles.css, which forces every .card-size-small
+ * to calc(50% - gap) !important once its container is >= 992px. Restore the intended widths on
+ * AI Universe module pages: full width for .w-100 cards, the TYPO3 core 4-column grid inside
+ * .card-container. Specificity stays at two classes (above the third-party rule) so extension CSS
+ * that sizes its own cards with !important still wins.
+ */
+:where(.module-body .aiu-module-page) .card-size-small.w-100 {
+    width: 100% !important;
+}
+
+@container (min-width: 992px) {
+    :where(.module-body .aiu-module-page .card-container) > .card-size-small:not(.w-100) {
+        width: calc(25% - var(--typo3-card-grid-gap)) !important;
+    }
+}
+
 .aiu-module-nav-tabs .nav-link {
     align-items: center;
     border: 1px solid light-dark(#d7d7d7, #404040);

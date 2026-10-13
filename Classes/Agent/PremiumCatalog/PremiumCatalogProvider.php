@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Agent\PremiumCatalog;
 
 use NITSAN\NsT3AF\Access\ExtensionAvailability;
+use NITSAN\NsT3AF\Agent\Service\AgentRequestedFiles;
 
 /**
  * Last-resort capability lookup for {@see \NITSAN\NsT3AF\Agent\Runtime\T3afToolbox::findTools()}:
@@ -111,22 +112,39 @@ final readonly class PremiumCatalogProvider
             return null;
         }
 
+        if ($this->makesAnImageItself($query)) {
+            return null;
+        }
+
         $best = null;
         $bestScore = 0;
+        $bestInstalledScore = 0;
         foreach ($this->all() as $entry) {
-            if ($this->extensionAvailability->isLoaded($entry->extensionKey)) {
-                continue;
-            }
             $score = 0;
             foreach ($entry->searchTerms as $term) {
                 if (self::containsTerm($needle, $term)) {
                     ++$score;
                 }
             }
+            // Installed extensions are scored too, but never returned: they are not something to
+            // sell. Their score decides whether this is an upsell at all — see below.
+            if ($this->extensionAvailability->isLoaded($entry->extensionKey)) {
+                $bestInstalledScore = max($bestInstalledScore, $score);
+                continue;
+            }
             if ($score > $bestScore) {
                 $bestScore = $score;
                 $best = $entry;
             }
+        }
+
+        // An installed extension that matches the request at least as well owns it, so the real
+        // tool/entitlement path decides. Otherwise "generate an image … with the alt text X" is
+        // answered with an AI Accessibility upsell ("alt text" scores 1) even though the installed
+        // ns_t3ai can generate the image ("generate image" scores 1 too) — a purchased feature
+        // refused to sell another product.
+        if ($bestInstalledScore >= $bestScore) {
+            return null;
         }
 
         return $best;
@@ -152,7 +170,50 @@ final readonly class PremiumCatalogProvider
      */
     public function findStandaloneMatch(string $query): ?PremiumCatalogEntry
     {
-        return $this->looksCompound($query) ? null : $this->findMatch($query);
+        if ($this->looksCompound($query) || self::placesAFile($query)) {
+            return null;
+        }
+
+        return $this->findMatch($query);
+    }
+
+    /**
+     * Attaching a file, naming a sys_file uid or creating a Text & Media element is core work
+     * (file_reference_add, write_table); an alt text asked for with it goes on the file reference
+     * and needs no AI Accessibility.
+     *
+     * @var list<string>
+     */
+    private const FILE_PLACEMENT_SIGNALS = [
+        '/\battach\w*\b/i',
+        '/\banh(?:ä|ae)ng\w*\b/iu',
+        '/\bsys_file\b/i',
+        '/\b(?:file|datei)[\s-]*uid\b/iu',
+        '/\b(?:text\s*(?:&|and|und)\s*media|textmedia|textpic)\b/iu',
+    ];
+
+    /**
+     * Asking for a made image while ns_t3ai is installed is T3AI work (`t3ai_generate_image`), and an
+     * alt text named with it goes on the generated file — so it is not an AI Accessibility request.
+     */
+    private function makesAnImageItself(string $query): bool
+    {
+        if (!$this->extensionAvailability->isLoaded('ns_t3ai')) {
+            return false;
+        }
+
+        return AgentRequestedFiles::asksForGeneratedImage($query);
+    }
+
+    private static function placesAFile(string $query): bool
+    {
+        foreach (self::FILE_PLACEMENT_SIGNALS as $pattern) {
+            if (preg_match($pattern, $query) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

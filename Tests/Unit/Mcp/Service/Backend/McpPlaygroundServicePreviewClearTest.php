@@ -91,6 +91,29 @@ final class McpPlaygroundServicePreviewClearTest extends TestCase
         self::assertFalse($context->isActive());
     }
 
+    #[Test]
+    public function invokeWithModeReportsAToolErrorPayloadAsFailure(): void
+    {
+        $tool = new class {
+            #[McpTool(name: 't3ai_generate_all_seo', description: 'Fixture')]
+            public function execute(): string
+            {
+                return '{"error":"You are not allowed to change this field with your backend account: seo_title."}';
+            }
+        };
+
+        $context = new McpInvocationContext($this->createMock(WorkspaceListService::class));
+        $service = $this->createPlayground([$tool], $context);
+        $result = $service->invokeWithMode('t3ai_generate_all_seo', [], 'context');
+
+        self::assertFalse($result['success']);
+        self::assertSame(
+            'You are not allowed to change this field with your backend account: seo_title.',
+            $result['message'],
+        );
+        self::assertFalse($context->isActive());
+    }
+
     /**
      * @param list<object> $tools
      */

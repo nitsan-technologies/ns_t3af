@@ -518,7 +518,7 @@ Reject if (see §1.5): `token_missing`, `token_invalid`, `license_expired`, `dom
   "max_tokens": 500,
   "language": "en",
   "typo3_version": 13,
-  "ext_version": "2.0.0",
+  "ext_version": "2.0.1",
   "ai_endpoint": "completion"
 }
 

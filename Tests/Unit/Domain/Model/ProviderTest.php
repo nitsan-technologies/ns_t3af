@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Domain\Model;
 
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Provider\Capability;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class ProviderTest extends TestCase
@@ -115,6 +116,57 @@ final class ProviderTest extends TestCase
         self::assertSame('gpt-4o', $p->effectiveEmbeddingModel());
     }
 
+    /**
+     * @return iterable<string, array{string, string}>
+     */
+    public static function vendorEmbeddingDefaults(): iterable
+    {
+        yield 'mistral' => ['symfony.mistral', 'mistral-embed'];
+        yield 'openai' => ['symfony.openai', 'text-embedding-3-small'];
+        yield 'gemini' => ['symfony.gemini', 'gemini-embedding-001'];
+        yield 'huggingface (legacy dashed type)' => ['symfony.hugging-face', 'sentence-transformers/all-MiniLM-L6-v2'];
+    }
+
+    #[DataProvider('vendorEmbeddingDefaults')]
+    public function testEffectiveEmbeddingModelUsesVendorDefaultInsteadOfChatModel(string $adapterType, string $expected): void
+    {
+        $p = Provider::fromRow([
+            'adapter_type' => $adapterType,
+            'model_id' => 'open-mistral-nemo',
+            'embedding_model_id' => '',
+        ]);
+
+        self::assertSame($expected, $p->effectiveEmbeddingModel());
+    }
+
+    public function testEffectiveEmbeddingModelKeepsChatModelForInstallSpecificAdapters(): void
+    {
+        $ollama = Provider::fromRow([
+            'adapter_type' => Provider::ADAPTER_SYMFONY_OLLAMA,
+            'model_id' => 'nomic-embed-text',
+            'embedding_model_id' => '',
+        ]);
+        $custom = Provider::fromRow([
+            'adapter_type' => Provider::ADAPTER_OPENAI_COMPATIBLE,
+            'model_id' => 'local-model',
+            'embedding_model_id' => '  ',
+        ]);
+
+        self::assertSame('nomic-embed-text', $ollama->effectiveEmbeddingModel());
+        self::assertSame('local-model', $custom->effectiveEmbeddingModel());
+    }
+
+    public function testConfiguredEmbeddingModelWinsOverVendorDefault(): void
+    {
+        $p = Provider::fromRow([
+            'adapter_type' => 'symfony.mistral',
+            'model_id' => 'open-mistral-nemo',
+            'embedding_model_id' => 'codestral-embed',
+        ]);
+
+        self::assertSame('codestral-embed', $p->effectiveEmbeddingModel());
+    }
+
     public function testEffectiveEmbeddingModelUsesDedicatedField(): void
     {
         $p = Provider::fromRow(['model_id' => 'gpt-4o', 'embedding_model_id' => 'text-embedding-3-small']);
@@ -140,5 +192,28 @@ final class ProviderTest extends TestCase
     {
         $p = Provider::fromRow(['capabilities' => 'chat,bogus,vision']);
         self::assertSame(['chat', 'vision'], $p->capabilities);
+    }
+
+    public function testOnlyRealImageAdaptersSupportImageGeneration(): void
+    {
+        self::assertTrue(Provider::adapterSupportsImageGeneration('symfony.openai'));
+        self::assertTrue(Provider::adapterSupportsImageGeneration('ns_t3ai.stability_ai'));
+        self::assertTrue(Provider::adapterSupportsImageGeneration(Provider::ADAPTER_OPENAI_COMPATIBLE));
+        self::assertFalse(Provider::adapterSupportsImageGeneration('symfony.gemini'));
+        self::assertFalse(Provider::adapterSupportsImageGeneration('symfony.mistral'));
+        self::assertFalse(Provider::adapterSupportsImageGeneration('symfony.anthropic'));
+        self::assertFalse(Provider::adapterSupportsImageGeneration(Provider::ADAPTER_SYMFONY_AZURE));
+        self::assertFalse(Provider::adapterSupportsImageGeneration(Provider::ADAPTER_SYMFONY_OPENRESPONSES));
+    }
+
+    public function testFromRowDropsImageGenerationOnChatOnlyAdapters(): void
+    {
+        $p = Provider::fromRow([
+            'adapter_type' => 'symfony.gemini',
+            'capabilities' => 'chat,streaming,image_generation',
+        ]);
+
+        self::assertSame(['chat', 'streaming'], $p->capabilities);
+        self::assertFalse($p->hasCapability(Capability::IMAGE_GENERATION));
     }
 }

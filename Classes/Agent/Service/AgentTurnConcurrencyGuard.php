@@ -58,4 +58,19 @@ final readonly class AgentTurnConcurrencyGuard
 
         return new AgentTurnLease($locker);
     }
+
+    /**
+     * True while this user already has a turn. The check takes the lock only when it is free,
+     * and releases it immediately, so a running turn is left alone.
+     */
+    public function isBusy(int $backendUserId): bool
+    {
+        $lease = $this->acquire($backendUserId);
+        if ($lease === null) {
+            return true;
+        }
+        $lease->release();
+
+        return false;
+    }
 }

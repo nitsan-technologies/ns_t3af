@@ -106,7 +106,8 @@ readonly class PagesGetTool implements McpNonAiToolInterface
 
         $requested = array_map('trim', explode(',', $selectFields));
         $readable = $this->tcaSchemaService->getReadFields('pages');
-        $allowed = array_merge(['uid', 'pid'], $readable);
+        $system = $this->tcaSchemaService->getOptionalSystemReadFields('pages');
+        $allowed = array_merge(['uid', 'pid'], $readable, $system);
         $valid = array_values(array_intersect($requested, $allowed));
 
         return $valid !== []
