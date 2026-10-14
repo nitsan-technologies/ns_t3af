@@ -43,7 +43,7 @@ use ReflectionMethod;
  */
 readonly class McpServerFactory
 {
-    public const VERSION = '2.0.1';
+    public const VERSION = '2.0.2';
 
     private const DEFAULT_SESSION_LIFETIME = 86400;
 
