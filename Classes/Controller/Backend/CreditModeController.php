@@ -157,6 +157,91 @@ final class CreditModeController
         }
     }
 
+    /**
+     * Redeem a claim code emailed after a website purchase, or after account recovery.
+     */
+    public function claimAction(ServerRequestInterface $request): ResponseInterface
+    {
+        if (!$this->creditModeResolver->isPubliclyAvailable()) {
+            return new JsonResponse([
+                'error_code' => 'credits_unavailable',
+                'userMessage' => 'T3Planet Credits are coming soon.',
+            ], 403);
+        }
+
+        try {
+            $body = $this->parseRequestBody($request);
+            $claimCode = trim((string) ($body['claimCode'] ?? $body['claim_code'] ?? ''));
+            if ($claimCode === '') {
+                return new JsonResponse([
+                    'status' => false,
+                    'error_code' => CreditsApiErrorCodes::REQUIRED_FIELD_MISSING,
+                    'userMessage' => 'Paste the claim code from your activation email.',
+                ], 400);
+            }
+
+            $this->runtimeSettings->save(['credit_mode' => 1]);
+            $claim = $this->tokenResolver->claimWithCode($claimCode);
+            $balance = $this->fetchBalanceOrResync();
+            $this->pricingResolver->rememberFromPayload($balance);
+
+            return new JsonResponse([
+                'status' => true,
+                'creditMode' => true,
+                'active' => $this->creditModeResolver->isActive(),
+                'needsContact' => false,
+                'action' => $claim['action'],
+                'mergedIntoExistingAccount' => $claim['merged'] ?? false,
+                'creditsBearerToken' => $this->runtimeSettings->getTokenPlain() ?? '',
+                'balance' => $balance,
+                'pricing' => $this->serializePricing($this->pricingResolver->resolve()),
+            ]);
+        } catch (CreditsApiException $exception) {
+            return $this->errorResponse($exception);
+        } catch (\Throwable $exception) {
+            return $this->unexpectedErrorResponse($exception);
+        }
+    }
+
+    /**
+     * Ask for a fresh claim code to be emailed to the account's registered address.
+     *
+     * Always reports the same thing: the server deliberately does not reveal whether an account
+     * exists for the address, and echoing a difference here would undo that.
+     */
+    public function requestClaimCodeAction(ServerRequestInterface $request): ResponseInterface
+    {
+        if (!$this->creditModeResolver->isPubliclyAvailable()) {
+            return new JsonResponse([
+                'error_code' => 'credits_unavailable',
+                'userMessage' => 'T3Planet Credits are coming soon.',
+            ], 403);
+        }
+
+        try {
+            $body = $this->parseRequestBody($request);
+            $email = trim((string) ($body['email'] ?? ''));
+            if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return new JsonResponse([
+                    'status' => false,
+                    'error_code' => CreditsApiErrorCodes::REQUIRED_FIELD_MISSING,
+                    'userMessage' => 'Enter the email address your AI Credits account is registered to.',
+                ], 400);
+            }
+
+            $this->tokenResolver->requestClaimCode($email);
+
+            return new JsonResponse([
+                'status' => true,
+                'userMessage' => 'If that address has an AI Credits account, a claim code is on its way to it.',
+            ]);
+        } catch (CreditsApiException $exception) {
+            return $this->errorResponse($exception);
+        } catch (\Throwable $exception) {
+            return $this->unexpectedErrorResponse($exception);
+        }
+    }
+
     public function refreshTokenAction(ServerRequestInterface $request): ResponseInterface
     {
         if (!$this->creditModeResolver->isActive()) {

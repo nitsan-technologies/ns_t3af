@@ -1600,6 +1600,12 @@
       <trans-unit id="provider.mode.credits.refreshToken" resname="provider.mode.credits.refreshToken">
         <source>Refresh token</source>
       </trans-unit>
+      <trans-unit id="provider.mode.credits.claim.prefix" resname="provider.mode.credits.claim.prefix">
+        <source>Bought credits on t3planet.de?</source>
+      </trans-unit>
+      <trans-unit id="provider.mode.credits.claim.link" resname="provider.mode.credits.claim.link">
+        <source>Use a claim code</source>
+      </trans-unit>
       <trans-unit id="provider.mode.credits.meta.costEffective" resname="provider.mode.credits.meta.costEffective">
         <source>Cost effective</source>
       </trans-unit>

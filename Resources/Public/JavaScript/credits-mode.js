@@ -12,6 +12,8 @@ const routes = {
   status: 'nst3af_credits_status',
   toggle: 'nst3af_credits_toggle',
   activate: 'nst3af_credits_activate',
+  claim: 'nst3af_credits_claim',
+  requestClaimCode: 'nst3af_credits_request_claim_code',
   refreshToken: 'nst3af_credits_refresh_token',
   dashboard: 'nst3af_credits_dashboard',
   estimate: 'nst3af_credits_estimate',
@@ -944,6 +946,215 @@ function bindCreditsContactDialog(dialog) {
   }
 }
 
+/* ---------------------------------------------------------------------------
+ * Claim code: connect this site to an account bought on the website, or recover
+ * one after a rebuild. The code is the credential — there is no bearer yet.
+ * ------------------------------------------------------------------------- */
+
+let creditsClaimDialogBound = false;
+
+/**
+ * @param {HTMLDialogElement} dialog
+ */
+function closeCreditsClaimDialog(dialog) {
+  if (dialog.open) {
+    dialog.close();
+  }
+}
+
+/**
+ * @param {HTMLDialogElement} dialog
+ * @param {string} message
+ */
+function showClaimError(dialog, message) {
+  const errorEl = dialog.querySelector('[data-credits-claim-error]');
+  if (errorEl instanceof HTMLElement) {
+    errorEl.textContent = message;
+    errorEl.classList.remove('is-hidden');
+  }
+}
+
+/**
+ * @param {HTMLDialogElement} dialog
+ */
+function submitCreditsClaimForm(dialog) {
+  const codeInput = dialog.querySelector('#aiu-credits-claim-code');
+  const submitBtn = dialog.querySelector('[data-credits-claim-submit]');
+  const errorEl = dialog.querySelector('[data-credits-claim-error]');
+
+  if (!(codeInput instanceof HTMLTextAreaElement)) {
+    return;
+  }
+  if (errorEl instanceof HTMLElement) {
+    errorEl.classList.add('is-hidden');
+    errorEl.textContent = '';
+  }
+
+  // Codes are pasted from email, so newlines and stray spaces are the norm.
+  const claimCode = codeInput.value.replace(/\s+/g, '');
+  if (claimCode === '') {
+    showClaimError(dialog, 'Paste the claim code from your activation email.');
+    codeInput.focus();
+    return;
+  }
+
+  if (submitBtn instanceof HTMLButtonElement) {
+    submitBtn.disabled = true;
+  }
+
+  post(routes.claim, { claimCode })
+    .then((data) => {
+      if (data.status === false || data.error || data.error_code) {
+        showClaimError(
+          dialog,
+          data.userMessage || data.message || data.error_code || data.error,
+        );
+        return;
+      }
+
+      closeCreditsClaimDialog(dialog);
+      Notification.success(
+        ll(LL.brandT3planet, 'T3Planet Credits'),
+        data.mergedIntoExistingAccount
+          ? 'Your purchase was added to this site’s existing credits account. Loading your dashboard…'
+          : 'Credits account connected. Loading your dashboard…',
+      );
+      window.location.reload();
+    })
+    .catch((err) => {
+      showClaimError(dialog, err && err.message ? err.message : String(err));
+    })
+    .finally(() => {
+      if (submitBtn instanceof HTMLButtonElement) {
+        submitBtn.disabled = false;
+      }
+    });
+}
+
+/**
+ * @param {HTMLDialogElement} dialog
+ */
+function submitCreditsClaimResend(dialog) {
+  const emailInput = dialog.querySelector('#aiu-credits-claim-email');
+  const noteEl = dialog.querySelector('[data-credits-claim-resend-note]');
+  if (!(emailInput instanceof HTMLInputElement)) {
+    return;
+  }
+
+  const email = emailInput.value.trim();
+  if (email === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (noteEl instanceof HTMLElement) {
+      noteEl.textContent = 'Enter the email address your account is registered to.';
+      noteEl.className = 'small mt-2 text-danger';
+    }
+    emailInput.focus();
+    return;
+  }
+
+  post(routes.requestClaimCode, { email })
+    .then((data) => {
+      if (noteEl instanceof HTMLElement) {
+        // The server answers the same way whether or not the address is registered, on
+        // purpose — so this message must not imply that it is.
+        noteEl.textContent = (data && data.userMessage)
+          ? data.userMessage
+          : 'If that address has an AI Credits account, a claim code is on its way to it.';
+        noteEl.className = 'small mt-2 text-variant';
+      }
+    })
+    .catch((err) => {
+      if (noteEl instanceof HTMLElement) {
+        noteEl.textContent = err && err.message ? err.message : String(err);
+        noteEl.className = 'small mt-2 text-danger';
+      }
+    });
+}
+
+/**
+ * @param {HTMLDialogElement} dialog
+ */
+function bindCreditsClaimDialog(dialog) {
+  if (creditsClaimDialogBound) {
+    return;
+  }
+  creditsClaimDialogBound = true;
+  observeBrowserAutocomplete(dialog);
+
+  dialog.addEventListener('click', (evt) => {
+    if (evt.target === dialog) {
+      closeCreditsClaimDialog(dialog);
+    }
+  });
+  dialog.addEventListener('cancel', (evt) => {
+    evt.preventDefault();
+    closeCreditsClaimDialog(dialog);
+  });
+  dialog.querySelectorAll('[data-credits-claim-close]').forEach((el) => {
+    el.addEventListener('click', () => closeCreditsClaimDialog(dialog));
+  });
+
+  const form = dialog.querySelector('[data-credits-claim-form]');
+  if (form instanceof HTMLFormElement) {
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      submitCreditsClaimForm(dialog);
+    });
+  }
+
+  const resendForm = dialog.querySelector('[data-credits-claim-resend-form]');
+  if (resendForm instanceof HTMLFormElement) {
+    resendForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      submitCreditsClaimResend(dialog);
+    });
+  }
+}
+
+function openCreditsClaimDialog() {
+  const dialog = document.getElementById('aiu-credits-claim-dialog');
+  if (!(dialog instanceof HTMLDialogElement) || typeof dialog.showModal !== 'function') {
+    Notification.error(
+      ll(LL.errorTitleActivate, 'Activate T3Planet Credits'),
+      'The claim code form is not ready. Reload the module and try again.',
+    );
+    return;
+  }
+
+  bindCreditsClaimDialog(dialog);
+
+  const form = dialog.querySelector('[data-credits-claim-form]');
+  if (form instanceof HTMLFormElement) {
+    form.reset();
+  }
+  const errorEl = dialog.querySelector('[data-credits-claim-error]');
+  if (errorEl instanceof HTMLElement) {
+    errorEl.classList.add('is-hidden');
+    errorEl.textContent = '';
+  }
+  const noteEl = dialog.querySelector('[data-credits-claim-resend-note]');
+  if (noteEl instanceof HTMLElement) {
+    noteEl.classList.add('is-hidden');
+    noteEl.textContent = '';
+  }
+
+  dialog.showModal();
+}
+
+function bindCreditsClaimTriggers() {
+  document.addEventListener('click', (event) => {
+    const trigger = event.target instanceof Element
+      ? event.target.closest('[data-credits-claim-open]')
+      : null;
+    if (!trigger) {
+      return;
+    }
+    event.preventDefault();
+    openCreditsClaimDialog();
+  });
+}
+
 function openFreeCreditsContactModal(root) {
   const dialog = document.getElementById('aiu-credits-contact-dialog');
   if (!(dialog instanceof HTMLDialogElement) || typeof dialog.showModal !== 'function') {
@@ -1232,6 +1443,7 @@ function boot() {
   initDashboardRoots(document);
   initProvidersRoots(document);
   bindCheckoutLinks();
+  bindCreditsClaimTriggers();
   bindScrollHelpers();
   initCreditsBundleTabs(document);
   requestAnimationFrame(() => initCreditsHeroProgress(document));

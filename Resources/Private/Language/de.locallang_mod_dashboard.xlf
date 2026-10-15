@@ -2107,6 +2107,14 @@
                 <source>Support reference token (quote this when contacting T3Planet):</source>
                 <target>Support-Referenz Token (geben Sie diese an, wenn Sie T3Planet kontaktieren):</target>
             </trans-unit>
+            <trans-unit id="provider.mode.credits.claim.prefix">
+                <source>Bought credits on t3planet.de?</source>
+                <target>Credits auf t3planet.de gekauft?</target>
+            </trans-unit>
+            <trans-unit id="provider.mode.credits.claim.link">
+                <source>Use a claim code</source>
+                <target>Einlösecode verwenden</target>
+            </trans-unit>
             <trans-unit id="provider.mode.credits.meta.costEffective">
                 <source>Cost effective</source>
                 <target>Kosteneffektiv</target>
