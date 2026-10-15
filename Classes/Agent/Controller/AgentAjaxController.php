@@ -793,13 +793,16 @@ final class AgentAjaxController
     private function resultLinks(array $result, array $storedDraft): array
     {
         $records = [];
-        foreach (is_array($result['readback'] ?? null) ? $result['readback'] : [] as $entry) {
+        $readback = is_array($result['readback'] ?? null) ? $result['readback'] : [];
+        $resultRecords = is_array($result['resultRecords'] ?? null) ? $result['resultRecords'] : [];
+        foreach ([...$readback, ...$resultRecords] as $entry) {
             if (is_array($entry)) {
                 $records[] = [(string) ($entry['table'] ?? ''), (int) ($entry['uid'] ?? 0)];
             }
         }
         $target = $storedDraft['previewResult']['target'] ?? null;
-        if (is_array($target)) {
+        $metadataSaved = in_array('sys_file_metadata', array_column($records, 0), true);
+        if (is_array($target) && !($metadataSaved && ($target['table'] ?? '') === 'sys_file')) {
             $records[] = [(string) ($target['table'] ?? ''), (int) ($target['uid'] ?? 0)];
         }
         // Confirmed child tools (translate page, generate SEO, …): the page they worked on.

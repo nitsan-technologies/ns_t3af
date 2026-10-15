@@ -139,7 +139,64 @@ readonly class RecordPayloadNormalizer
      */
     public function ignoredFields(array $payload, array $filteredData): array
     {
-        return array_values(array_diff(array_keys($payload), array_keys($filteredData)));
+        $ignored = [];
+        foreach (array_keys($payload) as $fieldName) {
+            if (!array_key_exists($fieldName, $filteredData)) {
+                $ignored[] = (string) $fieldName;
+            }
+        }
+
+        return $ignored;
+    }
+
+    /**
+     * A model sometimes sends one update as {"275": {"bodytext": "..."}} (the uid is the key)
+     * or {"275": "new text"}. That is not a field name.
+     *
+     * @param array<mixed, mixed> $payload
+     * @return list<array{uid: int, fields: array<string, mixed>}>|null
+     */
+    public static function uidKeyedFieldMaps(array $payload): ?array
+    {
+        if ($payload === []) {
+            return null;
+        }
+
+        $records = [];
+        foreach ($payload as $key => $value) {
+            $uid = self::recordUidKey($key);
+            if ($uid === null) {
+                return null;
+            }
+            if (is_array($value) && !array_is_list($value)) {
+                $fields = [];
+                foreach ($value as $fieldName => $fieldValue) {
+                    $fields[(string) $fieldName] = $fieldValue;
+                }
+                $records[] = ['uid' => $uid, 'fields' => $fields];
+                continue;
+            }
+            if (is_string($value) || is_int($value) || is_float($value)) {
+                $records[] = ['uid' => $uid, 'fields' => ['bodytext' => (string) $value]];
+                continue;
+            }
+
+            return null;
+        }
+
+        return $records;
+    }
+
+    private static function recordUidKey(mixed $key): ?int
+    {
+        if (is_int($key) && $key > 0) {
+            return $key;
+        }
+        if (is_string($key) && ctype_digit($key) && (int) $key > 0) {
+            return (int) $key;
+        }
+
+        return null;
     }
 
     /**
@@ -150,7 +207,11 @@ readonly class RecordPayloadNormalizer
     {
         $details = [];
         foreach ($ignoredFields as $fieldName) {
-            $details[] = $this->tcaSchemaService->describeIgnoredField($tableName, $fieldName);
+            $name = trim((string) $fieldName);
+            if ($name === '') {
+                continue;
+            }
+            $details[] = $this->tcaSchemaService->describeIgnoredField($tableName, $name);
         }
 
         return $details;

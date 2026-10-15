@@ -2,6 +2,33 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-15 — Image texts, named pages from context, review fixes
+
+**Done:**
+- **Image texts:**
+  - A named file is the target and is found in any folder the editor may read. Several files with that name lead to a question.
+  - Existing texts lead to a Regenerate / Fill empty / Keep question. A click on an option runs without the model.
+  - The language comes from `isoCode`; `languageUid` is hidden from the agent (`McpAgentHidden` on a parameter).
+  - Text the editor wrote is used as it is (`McpContentParam(editorText)`).
+  - After Apply, links and Undo use the `sys_file_metadata` row.
+- **Named pages:** a name that matches no page title is left to the model, which reads the current context (open page, site languages, translations) and searches only when needed.
+- **`site_languages_list`:** without a site, returns languages grouped per site.
+- **Tool results:** a tool's own `summary` is shown before the item count.
+- **Runner safety nets:** a failed last tool gets a reply; an invented permission refusal is retried once.
+- **`write_table`:**
+  - The voice-over guard checks the record being written, not the whole request.
+  - A uid-keyed multi-record update checks every record before writing.
+- **Review fixes:**
+  - File-name lookups skip files outside the editor's file mounts.
+  - Two PHPStan level 8 errors fixed.
+  - `SiteLanguagesListServiceTest` updated.
+
+See `context/features/ai-agent.md` (Backend context, Image texts, Runner safety nets).
+
+**Last touched:** 2026-10-15
+
+---
+
 ## 2026-10-12 — A custom SEO text that stores the same is not saved
 
 **Done:** Apply compares a custom SEO text with the value the save would store. A preview URL or repeated spaces that clean away do not count as a change. When every chosen text matches, the card stays. A wording change is still saved. See `context/features/ai-agent.md`.

@@ -23,6 +23,12 @@ namespace NITSAN\NsT3AF\Mcp\Attribute;
  * Marks an execute() parameter that carries externally generated content in context mode.
  *
  * In native mode the parameter is optional and the tool generates the value internally.
+ * With $editorText the AI Agent may pass it as well, but only with text the editor wrote in the request.
  */
 #[\Attribute(\Attribute::TARGET_PARAMETER)]
-final class McpContentParam {}
+final class McpContentParam
+{
+    public function __construct(
+        public readonly bool $editorText = false,
+    ) {}
+}

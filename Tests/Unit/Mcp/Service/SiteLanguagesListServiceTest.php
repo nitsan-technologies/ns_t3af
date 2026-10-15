@@ -23,6 +23,8 @@ use NITSAN\NsT3AF\Mcp\Service\SiteLanguagesListService;
 use NITSAN\NsT3AF\Mcp\Support\SitePageResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Site\Entity\Site;
 use TYPO3\CMS\Core\Site\SiteFinder;
 
 /**
@@ -30,12 +32,18 @@ use TYPO3\CMS\Core\Site\SiteFinder;
  */
 final class SiteLanguagesListServiceTest extends TestCase
 {
+    protected function tearDown(): void
+    {
+        unset($GLOBALS['BE_USER']);
+        parent::tearDown();
+    }
+
     #[Test]
-    public function listForPageThrowsWhenPageCannotBeResolved(): void
+    public function aPageThatCannotBeResolvedStillFails(): void
     {
         $pageResolver = $this->createMock(SitePageResolver::class);
         $pageResolver->method('resolve')->willThrowException(
-            new \RuntimeException('Either pageId or pageUrl must be provided.'),
+            new \RuntimeException('Page 999 not found.'),
         );
 
         $service = new SiteLanguagesListService(
@@ -44,8 +52,43 @@ final class SiteLanguagesListServiceTest extends TestCase
         );
 
         $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Either pageId or pageUrl must be provided.');
+        $this->expectExceptionMessage('Page 999 not found.');
 
-        $service->listForPage(null, '');
+        $service->listForPage(999, '');
+    }
+
+    #[Test]
+    public function withoutAPageEachSiteListsItsOwnLanguages(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $user->method('isAdmin')->willReturn(true);
+        $user->method('checkLanguageAccess')->willReturn(true);
+        $GLOBALS['BE_USER'] = $user;
+
+        $siteFinder = $this->createMock(SiteFinder::class);
+        $siteFinder->method('getAllSites')->willReturn([
+            'home' => self::site('home', 15, 'Hindi', 'hi-IN'),
+            'camino' => self::site('camino', 33, 'Spanish', 'es-ES'),
+        ]);
+        $pageResolver = $this->createMock(SitePageResolver::class);
+        $pageResolver->expects(self::never())->method('resolve');
+
+        $result = (new SiteLanguagesListService($pageResolver, $siteFinder))->listForPage(null, '');
+
+        self::assertArrayNotHasKey('languages', $result);
+        self::assertSame(['home', 'camino'], array_column($result['sites'], 'siteIdentifier'));
+        self::assertSame('Hindi', $result['sites'][0]['languages'][1]['title']);
+        self::assertSame('Spanish', $result['sites'][1]['languages'][1]['title']);
+    }
+
+    private static function site(string $identifier, int $rootPageId, string $secondTitle, string $secondLocale): Site
+    {
+        return new Site($identifier, $rootPageId, [
+            'base' => 'https://' . $identifier . '.test/',
+            'languages' => [
+                ['languageId' => 0, 'title' => 'English', 'locale' => 'en-US', 'base' => '/', 'flag' => 'us'],
+                ['languageId' => 1, 'title' => $secondTitle, 'locale' => $secondLocale, 'base' => '/' . substr($secondLocale, 0, 2) . '/', 'flag' => 'global'],
+            ],
+        ]);
     }
 }

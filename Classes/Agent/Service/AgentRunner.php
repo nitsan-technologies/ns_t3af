@@ -221,6 +221,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $finalText = $this->translator->translate('agent.turn.failedNotRepeated');
         }
 
+        if (!$state->failed && !$cardLeft && trim($finalText) === '' && self::endedOnFailedTool($state->messages)) {
+            $finalText = $this->translator->translate('agent.turn.toolFailedNoReply');
+        }
+
         if ($state->failed || ($finalText === '' && $state->executedTools !== [])) {
             return ['messages' => $state->messages, 'paused' => false, 'pauseReason' => null];
         }
@@ -356,6 +360,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $providerIdentifier = self::providerFromBody($body);
         $body['requestQuery'] = self::requestQuery($userMessage, $historyMessages);
         $body['requestForGate'] = $requestForChecklist;
+        // A click on a question's option arrives as this message; requestQuery may glue earlier turns to it.
+        $body['userMessage'] = trim($userMessage);
         // Prior turns (news readback, generated fileUid) must reach write-tool enrichment.
         $body['conversationHistory'] = $historyMessages;
 
@@ -461,6 +467,25 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 ) {
                     $finalText = '';
                 }
+                $retried = true;
+            }
+            // "You are not allowed to … with your backend account" before any tool was even called: the model
+            // refused in advance (often copying an earlier refusal in the chat). Ask once for the real call.
+            if (
+                !$retried
+                && $state->executedTools === []
+                && self::claimsPermissionRefusal($finalText)
+                && !self::turnWasRefusedByPermissions($state->messages, $this->translator->translate('agent.tool.permissionDenied'))
+                && !$state->isPaused()
+                && !$state->failed
+                && !$state->isCancelled()
+            ) {
+                $nudge = $userMessage . "\n\n[System: No tool call was refused in this turn. Do not claim a missing permission or feature in advance: call the offered tool that matches the request now. Only a tool call that was actually refused is a permission problem.]";
+                $retryPlan = $state->plan !== [] ? $state->plan : $plan;
+                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan, $requestForChecklist))->getResult();
+                $content = $agentResult->getContent();
+                $retryText = is_string($content) ? trim($content) : '';
+                $finalText = AgentPromptBuilder::isCardHistoryEcho($retryText) ? '' : $retryText;
                 $retried = true;
             }
             $retryPlan = $state->plan !== [] ? $state->plan : $plan;
@@ -866,6 +891,17 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * The reply says the editor lacks a permission or feature (the refusal sentence the prompt gives the model).
+     */
+    public static function claimsPermissionRefusal(string $text): bool
+    {
+        return preg_match(
+            '/\bwith your backend account\b|\bnot (?:allowed|permitted) to\b|\b(?:do not|don\'t) have (?:the )?(?:permission|access|rights)\b|\bnot available (?:for|to) your (?:backend )?account\b/i',
+            $text,
+        ) === 1;
+    }
+
+    /**
      * True when a tool of this turn failed because the editor lacks the permission, so the reply
      * has to say "not allowed" and the request must not stay open.
      *
@@ -1012,6 +1048,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         $createContent = AgentCoreToolSet::isCreateContentRequest($query);
         $notAskedFor = array_flip(self::toolsNotAskedFor($query));
+        // "Now the same in Hindi" right after image texts were prepared still means image texts.
+        if (self::usedRecently('t3aa_update_file_metadata', $historyMessages)) {
+            unset($notAskedFor['t3aa_update_file_metadata']);
+        }
         $gateRequest = self::requestForGate($userMessage, $historyMessages);
         $appliedCreateDone = $createContent
             && str_starts_with(ltrim($userMessage), '[The editor confirmed')
@@ -1234,6 +1274,11 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     ];
 
     /**
+     * A request for the page voice-over (the player), not a generic content element.
+     */
+    public const VOICE_OVER_REQUEST = '/\b(voice\s*-?\s*over|voiceover|audio\s*narrat\w*|sprachausgabe|vorlesen|vorlese\w*)\b/iu';
+
+    /**
      * Tools that fit only when the editor says so, and the words that ask for them.
      * "Create a new subpage" must not end in a copy of another page.
      *
@@ -1255,8 +1300,41 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         't3ai_generate_seo_batch' => '/\b(seo|meta\s*desc|meta\s*title|og\s*title|og\s*desc|open\s*graph|schema\s*markup|suchmaschinen\w*|metadaten)\b/iu',
         // A read-only report that spends AI credits: only when the editor asks for an analysis.
         't3ai_analyze_content' => '/\b(analy[sz]\w*|analysis|readab\w*|inhaltsanalyse|auswert\w*|bewert\w*|how good)\b/iu',
-        't3aa_generate_voice_over' => '/\b(voice\s*-?\s*over|voiceover|audio\s*narrat\w*|sprachausgabe|vorlesen|vorlese\w*)\b/iu',
+        't3aa_generate_voice_over' => self::VOICE_OVER_REQUEST,
     ];
+
+    /**
+     * @param list<array<string, mixed>> $messages
+     */
+    private static function endedOnFailedTool(array $messages): bool
+    {
+        $last = $messages === [] ? [] : $messages[array_key_last($messages)];
+        $meta = is_array($last['meta'] ?? null) ? $last['meta'] : [];
+
+        return ($meta['type'] ?? '') === 'tool_result' && ($meta['success'] ?? true) === false;
+    }
+
+    /**
+     * True when one of the last editor requests led to a card, result or question of $toolName.
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function usedRecently(string $toolName, array $historyMessages, int $requests = 3): bool
+    {
+        for ($i = count($historyMessages) - 1; $i >= 0 && $requests > 0; --$i) {
+            $entry = $historyMessages[$i];
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($entry['role'] ?? '') === 'user' && ($meta['hidden'] ?? false) !== true) {
+                --$requests;
+                continue;
+            }
+            if (in_array($toolName, [$meta['tool'] ?? '', $meta['askedFor'] ?? '', $meta['fileChoiceTool'] ?? ''], true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /**
      * @return list<string>

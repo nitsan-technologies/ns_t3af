@@ -179,6 +179,23 @@ final readonly class AgentTurnRouter
             return $attachmentMessages;
         }
 
+        // A click on an option of the image-text question already says what to do; the model is not asked again.
+        $imageTextAnswer = $attachmentMessages === [] && !is_array($body['continuation'] ?? null)
+            ? AgentToolTurnProcessor::imageTextAnswer(trim($message), $historyMessages)
+            : null;
+        if ($imageTextAnswer !== null && $this->isKnownTool($imageTextAnswer['tool'])) {
+            $body['arguments'] = $imageTextAnswer['arguments'];
+            $body['conversationHistory'] = $historyMessages;
+            $body['userMessage'] = trim($message);
+            $answerMessages = $this->finalizeStructuralMessages(
+                [$this->executeTool($imageTextAnswer['tool'], $context, $body, $user, $correlationId)],
+                $correlationId,
+            );
+            $this->emitMessages($emitEvent, $answerMessages);
+
+            return $answerMessages;
+        }
+
         $nlMessage = $followUp !== '' ? $followUp : $message;
         $namedPage = $this->applyNamedPage($nlMessage, $historyMessages, $context, $user, $correlationId);
         if ($namedPage['messages'] !== null) {
@@ -354,8 +371,10 @@ final readonly class AgentTurnRouter
     }
 
     /**
-     * A named page that does not exist is not replaced by the page on screen.
-     * The editor is asked which page to use. A later "the first one" locks that page.
+     * A page the editor named, when one with that title exists, becomes the page for this turn.
+     * A name that matches nothing is left for the model: the current context already lists the open
+     * page, its languages and its translations, and the model decides what the name refers to.
+     * A later "the first one" still locks a page the editor picked from a question.
      *
      * @param list<array<string, mixed>> $history
      * @param array<string, mixed> $context
@@ -416,38 +435,7 @@ final readonly class AgentTurnRouter
             ];
         }
 
-        $options = $this->targetPageResolver->similarPageLabels($title, $user);
-
-        return [
-            'context' => $context,
-            'messages' => [[
-                'role' => 'assistant',
-                'content' => $this->missingPageQuestion($title),
-                'meta' => [
-                    'type' => 'clarification',
-                    'tool' => 'ask_clarification',
-                    'options' => $options,
-                    'missingPage' => true,
-                    'missingPageName' => $title,
-                    'correlationId' => $correlationId,
-                    'orchestratorPause' => true,
-                ],
-            ]],
-        ];
-    }
-
-    private function missingPageQuestion(string $title): string
-    {
-        try {
-            $question = $this->translator->translate('agent.page.notFound', [$title]);
-        } catch (\Throwable) {
-            $question = '';
-        }
-        if ($question === '' || $question === 'agent.page.notFound') {
-            return sprintf('I can\'t find a page called "%s". Which page should I use?', $title);
-        }
-
-        return $question;
+        return ['context' => $context, 'messages' => null];
     }
 
     /**

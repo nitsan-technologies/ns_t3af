@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Agent\Service;
 
 use Mcp\Capability\Attribute\Schema;
 use NITSAN\NsT3AF\Api\AiToolDefinition;
+use NITSAN\NsT3AF\Mcp\Attribute\McpAgentHidden;
 use NITSAN\NsT3AF\Mcp\Attribute\McpContentParam;
 use NITSAN\NsT3AF\Mcp\Attribute\McpDualModeTool;
 use NITSAN\NsT3AF\Mcp\Contract\McpPreviewableToolInterface;
@@ -121,7 +122,11 @@ final readonly class AgentToolDefinitionMapper
         if ($className !== '' && class_exists($className) && method_exists($className, 'execute')) {
             $reflection = new ReflectionMethod($className, 'execute');
             foreach ($reflection->getParameters() as $parameter) {
-                if ($parameter->getAttributes(McpContentParam::class) !== []) {
+                $contentParam = $parameter->getAttributes(McpContentParam::class)[0] ?? null;
+                if (
+                    ($contentParam !== null && $contentParam->newInstance()->editorText !== true)
+                    || $parameter->getAttributes(McpAgentHidden::class) !== []
+                ) {
                     continue;
                 }
                 $name = $parameter->getName();
@@ -130,6 +135,9 @@ final readonly class AgentToolDefinitionMapper
                 }
                 // Introspected @param text; the model chooses arguments from it.
                 $description = $described[$name] ?? '';
+                if ($contentParam !== null) {
+                    $description = trim($description . ' Only the exact text the editor wrote for it in the request; leave empty to let the tool generate it.');
+                }
                 $definition = self::schemaDefinition($parameter);
                 if ($definition !== null) {
                     // A `mixed` parameter carries its real shape in #[Schema(definition: …)] (a

@@ -128,7 +128,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
         return match ($action) {
             'create' => $this->planCreate($tableName, $payload, $beforeUid, $afterUid, (string) ($arguments['requestQuery'] ?? '')),
-            'update' => $this->planUpdate($tableName, $uid, $payload, (string) ($arguments['requestQuery'] ?? '')),
+            'update' => $this->planUpdateOrUidMap($tableName, $uid, $payload, (string) ($arguments['requestQuery'] ?? '')),
             'delete' => $this->planDelete($tableName, $uid),
         };
     }
@@ -196,7 +196,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
         return match ($action) {
             'create' => $this->create($tableName, $payload, $strict, $beforeUid, $afterUid),
-            'update' => $this->update($tableName, $uid, $payload, $strict),
+            'update' => $this->updateOrUidMap($tableName, $uid, $payload, $strict),
             'delete' => $this->delete($tableName, $uid),
         };
     }
@@ -501,6 +501,32 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return trim((string) ($row['title'] ?? ''));
+    }
+
+    /**
+     * One field object, or several records keyed by their uid ({"275": {"bodytext": "..."}}).
+     *
+     * @param array<mixed, mixed> $payload
+     */
+    private function planUpdateOrUidMap(string $tableName, int $uid, array $payload, string $requestQuery = ''): ToolPlan
+    {
+        $records = RecordPayloadNormalizer::uidKeyedFieldMaps($payload);
+        if ($records === null) {
+            return $this->planUpdate($tableName, $uid, $payload, $requestQuery);
+        }
+
+        $fields = [];
+        foreach ($records as $record) {
+            $one = $this->planUpdate($tableName, $record['uid'], $record['fields'], $requestQuery);
+            foreach ($one->fields as $field) {
+                $fields[] = $field;
+            }
+        }
+        if ($fields === []) {
+            throw new \InvalidArgumentException('No valid writable fields provided.');
+        }
+
+        return new ToolPlan('update', 'write_table', $fields);
     }
 
     /** @param array<string, mixed> $payload */
@@ -964,6 +990,52 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return json_encode($response, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @param array<mixed, mixed> $payload
+     */
+    private function updateOrUidMap(string $tableName, int $uid, array $payload, bool $strict): string
+    {
+        $records = RecordPayloadNormalizer::uidKeyedFieldMaps($payload);
+        if ($records === null) {
+            return $this->update($tableName, $uid, $payload, $strict);
+        }
+
+        // Every record is checked before the first one is written, so a bad record does not leave half the change saved.
+        $existing = $this->recordService->findExistingUids($tableName, array_column($records, 'uid'));
+        foreach ($records as $record) {
+            if (!in_array($record['uid'], $existing, true)) {
+                return $this->encodeError('Record not found: ' . $tableName . ' uid ' . $record['uid'] . '. Nothing was written.');
+            }
+            [$fields, $fileFields] = $this->normalizer->extractFileFields($tableName, $record['fields']);
+            $filteredData = $this->normalizer->filterWritableFields($tableName, $fields);
+            if ($filteredData === [] && $fileFields === []) {
+                return $this->encodeError('No writable fields for ' . $tableName . ' uid ' . $record['uid'] . '. Nothing was written.');
+            }
+            if ($strict && $this->normalizer->ignoredFields($fields, $filteredData) !== []) {
+                return $this->encodeError('Strict mode: record ' . $record['uid'] . ' has fields that are unknown or not writable. Nothing was written.');
+            }
+        }
+
+        $written = [];
+        foreach ($records as $record) {
+            $result = json_decode($this->update($tableName, $record['uid'], $record['fields'], $strict), true);
+            $error = is_array($result) ? ($result['error'] ?? null) : 'Update failed.';
+            if ($error !== null) {
+                return json_encode([
+                    'error' => is_string($error) ? $error : 'Update failed.',
+                    'failedUid' => $record['uid'],
+                    'written' => $written,
+                ], JSON_THROW_ON_ERROR);
+            }
+            $written[] = $result;
+        }
+
+        return json_encode(
+            count($written) === 1 ? $written[0] : ['action' => 'update', 'table' => $tableName, 'records' => $written],
+            JSON_THROW_ON_ERROR,
+        );
     }
 
     /** @param array<string, mixed> $payload */
