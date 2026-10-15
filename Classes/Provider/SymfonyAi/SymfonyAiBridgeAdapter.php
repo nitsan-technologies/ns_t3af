@@ -27,6 +27,7 @@ use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
 use NITSAN\NsT3AF\Provider\Contract\RequestTimeoutCapableInterface;
 use NITSAN\NsT3AF\Provider\Contract\ToolCallingCapableInterface;
 use NITSAN\NsT3AF\Provider\Contract\VerifyResult;
+use NITSAN\NsT3AF\Provider\Model\InstalledModelCatalog;
 use NITSAN\NsT3AF\Provider\Model\VendorModelIdNormalizer;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use TYPO3\CMS\Core\Http\RequestFactory;
@@ -183,9 +184,15 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface, RequestTimeoutCa
         $body = (string) $response->getBody();
 
         if ($status >= 200 && $status < 300) {
+            $listed = $this->extractModelsFromJson($body);
+            $modelError = $this->configuredModelError($provider, $listed);
+            if ($modelError !== null) {
+                return VerifyResult::failure($modelError, $latency);
+            }
+
             return VerifyResult::ok(
                 sprintf('Connected (HTTP %d)', $status),
-                $this->extractModelsFromJson($body),
+                $listed,
                 $latency,
             );
         }
@@ -719,6 +726,37 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface, RequestTimeoutCa
     private function elapsed(int $startMs): int
     {
         return (int) (microtime(true) * 1000) - $startMs;
+    }
+
+    /**
+     * The API key can be valid while the saved chat or embedding model is a name
+     * this install cannot run. Catalog adapters are checked against the installed
+     * library. Adapters without a catalog are checked against the live id list
+     * when that list is not empty.
+     *
+     * @param list<string> $listedIds
+     */
+    private function configuredModelError(Provider $provider, array $listedIds): ?string
+    {
+        $catalog = new InstalledModelCatalog();
+        $chatError = $catalog->rejection($provider->adapterType, $provider->modelId);
+        if ($chatError !== null) {
+            return $chatError;
+        }
+        $embeddingError = $catalog->rejection($provider->adapterType, $provider->embeddingModelId);
+        if ($embeddingError !== null) {
+            return $embeddingError;
+        }
+        if ($catalog->restricts($provider->adapterType)) {
+            return null;
+        }
+
+        $chatListed = $catalog->rejectionAgainstListedIds($provider->modelId, $listedIds);
+        if ($chatListed !== null) {
+            return $chatListed;
+        }
+
+        return $catalog->rejectionAgainstListedIds($provider->embeddingModelId, $listedIds);
     }
 
     /**

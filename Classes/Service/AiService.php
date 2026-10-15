@@ -122,6 +122,7 @@ final class AiService implements AiServiceInterface
                 $before->getOptions(),
             );
         } catch (\Throwable $e) {
+            $this->markDisconnectedWhenModelUnsupported($provider, $e);
             $this->telemetry?->logFailure(
                 provider: $provider,
                 options: $before->getOptions(),
@@ -252,6 +253,7 @@ final class AiService implements AiServiceInterface
 
             return new StreamSummary(content: $finalResponse->content);
         } catch (\Throwable $e) {
+            $this->markDisconnectedWhenModelUnsupported($provider, $e);
             $this->telemetry?->logFailure(
                 provider: $provider,
                 options: $before->getOptions(),
@@ -323,6 +325,7 @@ final class AiService implements AiServiceInterface
                 );
             }
         } catch (\Throwable $e) {
+            $this->markDisconnectedWhenModelUnsupported($provider, $e);
             $this->telemetry?->logFailure(
                 provider: $provider,
                 options: $before->getOptions(),
@@ -1288,6 +1291,36 @@ final class AiService implements AiServiceInterface
             || str_contains($message, 'no supporting normalizer found')
             || str_contains($message, "invalid 'input'")
             || str_contains($message, 'expected a string or token array');
+    }
+
+    private function markDisconnectedWhenModelUnsupported(Provider $provider, \Throwable $error): void
+    {
+        if ($provider->uid <= 0 || !$this->exceptionChainMentionsUnsupportedModel($error)) {
+            return;
+        }
+        $message = trim($error->getMessage());
+        if ($message === '') {
+            $message = 'Model not supported by this provider.';
+        }
+        $this->providerRepository?->updateStatus($provider->uid, [
+            'last_status' => 'disconnected',
+            'last_status_at' => $GLOBALS['EXEC_TIME'] ?? time(),
+            'last_status_message' => mb_substr($message, 0, 250),
+        ]);
+    }
+
+    private function exceptionChainMentionsUnsupportedModel(\Throwable $error): bool
+    {
+        $current = $error;
+        for ($depth = 0; $depth < 5 && $current instanceof \Throwable; $depth++) {
+            $lower = mb_strtolower($current->getMessage(), 'UTF-8');
+            if (str_contains($lower, 'no provider found for model') || str_contains($lower, 'not supported by this provider')) {
+                return true;
+            }
+            $current = $current->getPrevious();
+        }
+
+        return false;
     }
 
     private function mapRuntimeException(Provider $provider, string $callType, \Throwable $error): AdapterRuntimeException

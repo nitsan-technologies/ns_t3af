@@ -2829,6 +2829,12 @@
       <trans-unit id="checklist.keys.descMissing" resname="checklist.keys.descMissing">
         <source>One or more providers are missing API credentials.</source>
       </trans-unit>
+      <trans-unit id="checklist.providerModel.title" resname="checklist.providerModel.title">
+        <source>Provider model is not usable</source>
+      </trans-unit>
+      <trans-unit id="checklist.providerModel.descFailed" resname="checklist.providerModel.descFailed">
+        <source>%1$s failed its last check. Open AI Providers, choose a chat model from the list, and test the connection again.</source>
+      </trans-unit>
       <trans-unit id="checklist.keys.descPending" resname="checklist.keys.descPending">
         <source>Configure providers first.</source>
       </trans-unit>

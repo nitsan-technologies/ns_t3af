@@ -82,11 +82,15 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
         }
 
         $liveIds = $this->liveProbe->probe($provider);
+        $catalogOnly = $catalogById !== [] && InstalledModelCatalog::restrictsAdapter($provider->adapterType);
 
         /** @var array<string, ModelInfo> $merged */
         $merged = [];
 
         foreach ($liveIds as $id) {
+            if ($catalogOnly && !isset($catalogById[$id])) {
+                continue;
+            }
             $caps = $catalogById[$id]->capabilities ?? $this->inferrer->infer($id, $provider->adapterType);
             $merged[$id] = new ModelInfo(
                 id: $id,

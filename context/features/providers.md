@@ -54,6 +54,7 @@
 - Save requires at least one capability for normal adapters. Missing `capabilities[]` in POST (all boxes unchecked) is treated as none selected and rejected — it must not silently keep the previous CSV.
 - Exception: adapters with `getDefaultCapabilities() === []` (DeepL Translate `ns_t3ai.deepl_translate`, Google Translate `ns_t3ai.google_translate`) may save with zero capabilities — they are translate-only and must not advertise chat/completion.
 - Drawer save is AJAX (`provider-drawer.js`): validation errors re-render inside the open panel; do not rely on a full-page `providers.save` HTML response for the happy path.
+- For Mistral, OpenAI, Anthropic, Gemini, and OpenRouter, the model list and save accept only ids in the installed Symfony catalog. A live API name the library cannot route (such as `mistral-medium-3.5`) is omitted and rejected with “Model not supported by this provider”. Test connection checks the saved chat model and embedding model, not only the API key. Azure, Ollama, and custom endpoints stay free text. A later “No provider found for model” marks that provider disconnected; the dashboard checklist warns.
 
 **Don't:**
 - Add provider API keys back to ext_conf.
