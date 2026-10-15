@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-15 — Catalog models only for routed providers
+
+**Done:** Chat and embedding selects for catalog-backed adapters omit live API ids the installed library cannot route. Save and Test connection reject those ids. A later “No provider found for model” sets the provider to disconnected, and the dashboard checklist warns. Search shows the existing unavailable sentence instead of “no results” or the raw model error. See `context/features/providers.md`.
+
+**Last touched:** 2026-10-15
+
+---
+
 ## 2026-10-09 — Release 2.0.0 (9 October 2026)
 
 **Done:** Release notes for 2.0.0 rewritten for the final date (AI Agent listed as new features, MCP batch writes, security items); `CHANGELOG.md` date set; `Documentation/Agent/PreviewApply.md` and `Documentation/Integrations/MCPTools/Index.rst` updated. Closing fixes before the release: header value in the request checklist (14zervyucgh), page cache scope default off (14zervyucgk), MCP Server settings access and module route token (14zervyuhge), `records_undo` empty map as `{}` (14zervyub6n), clear message for 256 KB+ unbroken text (14zervyub6r). Version stays 2.0.0.

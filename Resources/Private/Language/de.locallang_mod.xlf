@@ -3147,6 +3147,14 @@
                 <source>One or more providers are missing API credentials.</source>
                 <target>Bei einem oder mehreren Providers fehlen API-Anmeldeinformationen.</target>
             </trans-unit>
+            <trans-unit id="checklist.providerModel.title">
+                <source>Provider model is not usable</source>
+                <target>Provider-Modell ist nicht nutzbar</target>
+            </trans-unit>
+            <trans-unit id="checklist.providerModel.descFailed">
+                <source>%1$s failed its last check. Open AI Providers, choose a chat model from the list, and test the connection again.</source>
+                <target>%1$s hat die letzte Prüfung nicht bestanden. Öffnen Sie AI Providers, wählen Sie ein Chat-Modell aus der Liste und prüfen Sie die Verbindung erneut.</target>
+            </trans-unit>
             <trans-unit id="checklist.keys.descPending">
                 <source>Configure providers first.</source>
                 <target>Konfigurieren Sie zuerst Providers.</target>

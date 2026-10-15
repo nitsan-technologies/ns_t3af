@@ -26,6 +26,7 @@ use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
 use NITSAN\NsT3AF\Provider\Contract\RequestTimeoutCapableInterface;
 use NITSAN\NsT3AF\Provider\Contract\VerifyResult;
+use NITSAN\NsT3AF\Provider\Model\InstalledModelCatalog;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use TYPO3\CMS\Core\Http\RequestFactory;
 
@@ -118,9 +119,17 @@ final class OpenAiCompatibleAdapter implements AdapterInterface, RequestTimeoutC
         $body = (string) $response->getBody();
 
         if ($status >= 200 && $status < 300) {
+            $listed = $this->extractModelsFromJson($body);
+            $catalog = new InstalledModelCatalog();
+            $modelError = $catalog->rejectionAgainstListedIds($provider->modelId, $listed)
+                ?? $catalog->rejectionAgainstListedIds($provider->embeddingModelId, $listed);
+            if ($modelError !== null) {
+                return VerifyResult::failure($modelError, $latency);
+            }
+
             return VerifyResult::ok(
                 sprintf('Connected (HTTP %d)', $status),
-                $this->extractModelsFromJson($body),
+                $listed,
                 $latency,
             );
         }

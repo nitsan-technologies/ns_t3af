@@ -25,6 +25,7 @@ use NITSAN\NsT3AF\Domain\Repository\ProviderRepositoryInterface;
 use NITSAN\NsT3AF\Exception\CipherException;
 use NITSAN\NsT3AF\Provider\AdapterRegistry;
 use NITSAN\NsT3AF\Provider\Capability;
+use NITSAN\NsT3AF\Provider\Model\InstalledModelCatalog;
 
 /**
  * Validates and persists drawer form submissions for the provider list view.
@@ -103,6 +104,7 @@ final class ProviderFormService
         private readonly ProviderRepositoryInterface $repository,
         private readonly AdapterRegistry $adapters,
         private readonly CredentialCipher $cipher,
+        private readonly InstalledModelCatalog $installedModels = new InstalledModelCatalog(),
     ) {}
 
     /**
@@ -193,6 +195,19 @@ final class ProviderFormService
         $apiKeyError = $this->validateApiKey($uid, $adapterType, $input);
         if ($apiKeyError !== '') {
             $errors['api_key'] = $apiKeyError;
+        }
+
+        $stored = $uid > 0 ? $this->repository->findByUid($uid) : null;
+        $adapterChanging = $stored instanceof Provider && trim($stored->adapterType) !== $adapterType;
+        if ($adapterType !== '' && !$adapterChanging && $this->adapters->has($adapterType)) {
+            $chatModelError = $this->installedModels->rejection($adapterType, $this->stringValue($input, 'model_id'));
+            if ($chatModelError !== null) {
+                $errors['model_id'] = $chatModelError;
+            }
+            $embeddingModelError = $this->installedModels->rejection($adapterType, $this->stringValue($input, 'embedding_model_id'));
+            if ($embeddingModelError !== null) {
+                $errors['embedding_model_id'] = $embeddingModelError;
+            }
         }
 
         if ($errors !== []) {
