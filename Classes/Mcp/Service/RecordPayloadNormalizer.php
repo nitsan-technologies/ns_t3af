@@ -200,7 +200,7 @@ readonly class RecordPayloadNormalizer
     }
 
     /**
-     * @param list<string> $ignoredFields
+     * @param list<int|string> $ignoredFields
      * @return list<array<string, mixed>>
      */
     public function ignoredFieldDetails(string $tableName, array $ignoredFields): array
