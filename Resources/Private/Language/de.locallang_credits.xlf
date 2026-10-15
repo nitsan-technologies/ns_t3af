@@ -11,6 +11,10 @@
                 <source>Your T3Planet Credits session is invalid or expired. Click Activate to sign in again.</source>
                 <target>Ihre T3Planet-Credits-Sitzung ist ungültig oder abgelaufen. CLIck Aktivieren, um sich erneut anzumelden.</target>
             </trans-unit>
+            <trans-unit id="credits.api.error.token_ip_paid_conflict">
+                <source>This server IP already belongs to a paying T3Planet Credits account. If this site should use that account, use a claim code to connect it instead of activating a new trial.</source>
+                <target>Diese Server-IP gehört bereits zu einem zahlenden T3Planet-Credits-Konto. Wenn diese Website dieses Konto nutzen soll, verbinden Sie sie mit einem Einlösecode, anstatt einen neuen Testzeitraum zu aktivieren.</target>
+            </trans-unit>
             <trans-unit id="credits.api.error.license_invalid">
                 <source>This Credits account is not valid. Click Activate again or contact support.</source>
                 <target>Dieses Credits-Konto ist ungültig. Klicken Sie erneut auf Aktivieren oder kontaktieren Sie den Support.</target>

@@ -24,6 +24,7 @@ use NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface;
 use NITSAN\NsT3AF\Credits\CreditsApiErrorCodes;
 use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
+use Psr\Log\LoggerInterface;
 
 /**
  * @internal
@@ -39,6 +40,8 @@ class TokenResolver
         private readonly CreditsApiResponseCacheInterface $apiResponseCache,
         private readonly CreditsDomainResolver $domainResolver,
         private readonly LicenseContactResolver $licenseContactResolver,
+        private readonly ?LocalReceiptCache $localReceiptCache = null,
+        private readonly ?LoggerInterface $logger = null,
     ) {}
 
     public function resolve(?string $domain = null): string
@@ -77,6 +80,84 @@ class TokenResolver
     public static function isIpConflict(CreditsApiException $exception): bool
     {
         return $exception->errorCode === CreditsApiErrorCodes::TOKEN_IP_CONFLICT;
+    }
+
+    /**
+     * `token_ip_paid_conflict`: this server's IP belongs to a paying customer's account.
+     *
+     * Must never be treated as an ordinary conflict. Adopting would hand this install someone
+     * else's paid credits, and `adoptIpBoundAccount()` clears the stored bearer before
+     * re-minting — so on shared hosting a site would destroy its own token and receive an
+     * unrelated trial account.
+     */
+    public static function isPaidIpConflict(CreditsApiException $exception): bool
+    {
+        return $exception->errorCode === CreditsApiErrorCodes::TOKEN_IP_PAID_CONFLICT;
+    }
+
+    /**
+     * Redeem an emailed claim code and store the Bearer it returns.
+     *
+     * @param array{name?: string, email?: string}|null $contactOverride Form contact when no license; null = resolve from ns_license
+     *
+     * @return array{action: string, token: string, bound_ip: string, merged: bool}
+     */
+    public function claimWithCode(#[\SensitiveParameter] string $claimCode, ?array $contactOverride = null): array
+    {
+        $claimCode = trim($claimCode);
+        if ($claimCode === '') {
+            throw new CreditsApiException(
+                CreditsApiErrorCodes::REQUIRED_FIELD_MISSING,
+                400,
+                'A claim code is required.',
+            );
+        }
+
+        $previousToken = (string) ($this->runtimeSettings->getTokenPlain() ?? '');
+
+        $payload = $this->apiClient->claimToken($claimCode, null, $this->resolveContact($contactOverride));
+        $token = trim((string) ($payload['token'] ?? ''));
+        if ($token === '') {
+            throw new CreditsApiException('token_missing', 502, 'Claim endpoint did not return a token');
+        }
+
+        // Replace whatever was stored: on a merge the server hands back the surviving account's
+        // bearer, which may differ from the one the code was issued for.
+        $this->runtimeSettings->storeToken($token);
+        $this->rememberToken($token);
+
+        if ($previousToken !== '' && !hash_equals($previousToken, $token)) {
+            // This site now belongs to a different account, so the locally mirrored receipts
+            // describe the previous one's spend. Left in place they are reported as this
+            // account's usage. Deliberately keyed on the token changing: a re-bind to a new
+            // server, or a merge that returns the site's own bearer, keeps its history.
+            $this->apiResponseCache->flush();
+            try {
+                $this->localReceiptCache?->purgeAll();
+            } catch (\Throwable $exception) {
+                // A stale usage card must not cost the customer their claim.
+                $this->logger?->warning('Could not purge local receipts after claim', [
+                    'exception' => $exception->getMessage(),
+                ]);
+            }
+        }
+
+        return [
+            'action' => (string) ($payload['action'] ?? 'claimed'),
+            'token' => $token,
+            'bound_ip' => (string) ($payload['bound_ip'] ?? ''),
+            'merged' => (bool) ($payload['merged_into_existing_account'] ?? false),
+        ];
+    }
+
+    /**
+     * Ask the server to email a fresh claim code to the account's registered address.
+     *
+     * The response is deliberately uninformative about whether the address is registered.
+     */
+    public function requestClaimCode(string $email): void
+    {
+        $this->apiClient->requestClaimCode($email);
     }
 
     /**
@@ -122,6 +203,12 @@ class TokenResolver
             try {
                 $bind = $this->ensureIpBound($token);
             } catch (CreditsApiException $exception) {
+                if (self::isPaidIpConflict($exception)) {
+                    // This IP belongs to a paying customer (shared hosting). Adopting would take
+                    // their credits, and the adopt path clears the stored bearer first — so keep
+                    // the token exactly as it is and surface the error for the admin to act on.
+                    throw $exception;
+                }
                 if (!self::isIpConflict($exception)) {
                     throw $exception;
                 }
