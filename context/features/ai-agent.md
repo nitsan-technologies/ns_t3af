@@ -39,7 +39,7 @@ Slash/`@` / starter chips go to `AgentToolTurnProcessor::execute()`. Meaning for
 
 ## Backend context
 
-Resolved server-side in `AgentContextResolver` (permission checks) and presented by `AgentContextPresenter`: chips for the window and `details` (readable module, page with slug and parent, language with the site's languages, record label, workspace, folder). `AgentContextPresenter::promptBlock()` puts them into the system prompt as "Current context".
+Resolved server-side in `AgentContextResolver` (permission checks) and presented by `AgentContextPresenter`: chips for the window and `details` (readable module, page with slug and parent, language with the site's languages, the page's translations with their page uid and hidden state, record label, workspace, folder). `AgentContextPresenter::promptBlock()` puts them into the system prompt as "Current context". The block tells the model to read it before deciding what a name in the request refers to: this page, a site language, a translation of this page, or another page. Translations are listed by language and uid, not by their translated title.
 
 | Module | `pageId` | Extra |
 |---|---|---|
@@ -49,6 +49,8 @@ Resolved server-side in `AgentContextResolver` (permission checks) and presented
 
 `AgentToolTurnProcessor::mergeContextArguments()` injects `pageId`/`pid`/`uid`, `storageUid`, `workspaceId`, `targetLanguageUid`.
 
+`site_languages_list` without a page (or for a page that belongs to no site) returns the languages grouped per site (`sites[]` with `siteIdentifier`, `rootPageId`, `languages`), because one language id can mean different languages on different sites.
+
 ---
 
 ## Editor-facing tool answers
@@ -56,7 +58,7 @@ Resolved server-side in `AgentContextResolver` (permission checks) and presented
 | Piece | Path |
 |---|---|
 | Human tool title | `AgentToolEditorLabelService` → catalog `editorLabel`, turn meta `toolCallLabel` |
-| Result prose | `AgentToolResultPresenter` — list leads, action success, file metadata facts |
+| Result prose | `AgentToolResultPresenter` — list leads, action success, file metadata facts. A tool's own `summary` is shown before the "Found N items" list lead |
 | UI header | `agent.js` `resolveToolDisplayLabel()` — friendly label in card; technical id only under **Details** |
 | Facts block | Hidden in UI when `message.content` already has prose (facts remain in meta for debug) |
 
@@ -118,7 +120,7 @@ A new `tt_content` row gets `colPos` 0 when the plan omitted it (`DataHandlerSer
 
 Moving an existing page uses `pages_move` (`beforeUid` places it directly before that page, `afterUid` places it directly after that page, `targetPid` makes it the first child). The previous sibling is a default-language page, and the page being moved is not used as its own anchor. Execute checks that sibling again. A request that already names both pages offers `pages_move` so the turn does not keep reading the tree. A hidden page can be moved, and `pages_search` still returns it when a name search was limited to the current page or to visible pages. `content_move` is only for a content element; a page uid sent there is planned as `pages_move` instead.
 
-A request that names a page ("the Contact page") does not use the page on screen when that name is missing. The turn asks which page to use and offers the closest titles. "The first one", or a clicked title, locks that page for the next turn (`lockedPageId`), including for SEO. Creating a page is unchanged.
+A request that names an existing page title ("the Contact page") uses that page for the turn. A name that matches no page title is no longer answered by the router with a "which page?" question. The model decides from the current context whether the name is this page, a site language ("the Hindi page" is the Hindi translation of the open page), a translation, or another page. It searches with `pages_search` (name only, no pid; a hidden match is a real page) only when the context does not explain the name, and asks when nothing matches. It must not fall back to the open page for a page the editor named. A page the editor picked from an earlier question ("the first one", a clicked title, old `missingPage` questions) still locks that page for the next turn (`lockedPageId`), including for SEO. Creating a page is unchanged.
 
 A model reply that leaks a tool call (`to=tool_name`, including the JSON in front of it) is stripped before the editor sees it (`AgentPromptBuilder::stripLeakedToolCall`). When that leak is about a page uid that does not exist, the reply is `agent.page.missingUid` ("Page 99999 doesn't exist."). A normal reply is unchanged.
 
@@ -194,12 +196,33 @@ Phase 4 child tools (all with `McpToolSeverity`, `McpToolIntent` EN/DE, `agent.t
 | ns_t3ai | `t3ai_generate_image` — one image into the fileadmin, T3AI Media permission; result card shows the image (`previewImageUrl`). Saving the provider URL stays in ns_t3ai `FileService`. |
 | ns_t3af | `file_upload_from_url` — downloads a public URL into FAL. A hostname is pinned with `CURLOPT_RESOLVE` and is not streamed, because the stream handler rejects curl options. A failed download names the host. No card for a placeholder host such as example.com. |
 | ns_t3af | `file_reference_add` — no card for a file name instead of a uid, an unknown or unreadable file, a file missing on disk, or a field the record type does not show (`assets` on Image). The card lists file names. sys_file uids named in the request are checked up front (`AgentRequestedFiles`): missing ones are reported in a `files_unavailable` message and the attach step ends as `failed`. |
-| ns_t3aa | `t3aa_alt_text_queue_folder`, `t3aa_alt_text_drafts_list`, `t3aa_alt_text_approve`, `t3aa_mark_image_decorative` (`McpAltTextService`) |
-| ns_t3aa | `t3aa_accessibility_scan_run`, `t3aa_accessibility_issues` (`McpAccessibilityService`) |
-| ns_t3aa | `t3aa_generate_voice_over` — text or page text to MP3, T3AA Media permission; result card plays it (`McpVoiceOverService`) |
+| ns_t3aa | `t3aa_alt_text_queue_folder` (creates the drafts), `t3aa_alt_text_drafts_list` (read only; an empty list says nothing was generated yet and points to the queue tool), `t3aa_alt_text_approve` (refused with a pointer to `t3aa_update_file_metadata` when a file has no draft), `t3aa_mark_image_decorative` (`McpAltTextService`) |
+| ns_t3aa | `t3aa_accessibility_scan_run`, `t3aa_accessibility_issues` (`McpAccessibilityService`; one item per rule with summed occurrences, plain-text fix, ready `summary` with score and issue counts) |
+| ns_t3aa | `t3aa_get_file_metadata`, `t3aa_update_file_metadata` — see "Image texts" below |
+| ns_t3aa | `t3aa_generate_voice_over` — text or page text to MP3, T3AA Media permission. For a page it stores the audio on the page and places the Voiceover content element (`nst3aa_voiceover`) in that language; it never creates Text & Media (`McpVoiceOverService`) |
+| ns_t3aa | `t3aa_get_page_speed` — `pageId` of this site (frontend URL from the site) or a URL the editor wrote; `T3afToolbox` drops a URL whose host the editor never wrote |
 
+
+### Image texts (alt text, title, description)
+
+- A file named in the request (`AgentToolTurnProcessor::requestedFileName`) is the target; `fileUrl` may be just the name and is found in any folder. Only files the editor may read count (`RecordsApplyFileAccess`); files outside their file mounts are neither used nor named.
+- Several readable files with that name: the turn asks which one (`agent.fileMeta.whichFile`, meta `fileChoice`, `fileChoiceTool`). The click (`… [uid]`) goes back to that tool.
+- Texts already stored: before generating, the turn shows them and asks (`agent.fileMeta.overwriteQuestion`, meta `fileMetaOverwrite {fileUid, languageUid, choices}`, `askedFor`). **Regenerate all** builds suggestions; **Fill empty fields only** passes `onlyFields`; **Keep current texts** answers `agent.fileMeta.kept` and changes nothing.
+- A click on one of those options is answered by `AgentTurnRouter` without the model (`AgentToolTurnProcessor::imageTextAnswer()`). `T3afToolbox::answeredImageTextQuestion()` does the same when the runner gets the click.
+- Language: the model passes `isoCode` (`de`, `hi`). `languageUid` is `#[McpAgentHidden]` on the tool parameter, and `T3afToolbox` drops a `languageUid` the model sends anyway. ns_t3aa `MetadataLanguage` maps the code to the site language id.
+- Text the editor wrote for alt text, title or description (`#[McpContentParam(editorText: true)]`) is shown as it is; text the model made up is dropped and generated from the image instead.
+- A follow-up within 3 requests ("now the same in Hindi") keeps the image-text tool offered (`AgentRunner::usedRecently()`); `t3ai_generate_image` is refused there unless the editor asked for a new picture.
+- After Apply, the result links point at the `sys_file_metadata` row (`AgentWriteService` `resultRecords`), and Undo resets that row.
+
+### Runner safety nets
+
+- A turn that ends on a failed tool with no reply gets `agent.turn.toolFailedNoReply`.
+- A reply that claims a missing permission while no tool ran and nothing was refused (`AgentRunner::claimsPermissionRefusal()`) is retried once with a nudge to call the offered tool. English wording only; one extra model call.
+- `write_table` is refused when the record is headed "Voice-over", or when the request is about a voice-over and the write attaches a file (`assets`, `media`, `image`), as long as `t3aa_generate_voice_over` is offered.
+- A uid-keyed `write_table` update (`{"275": {"bodytext": "…"}}`) checks every record before writing any (`RecordPayloadNormalizer::uidKeyedFieldMaps()`).
 
 - **MCP tools** — tag `mcp.tool`; optional `McpToolIntent` for agent retrieval (`ns_t3ai`, `ns_t3aa`, …).
+- **Hidden parameters** — `#[McpAgentHidden]` on an `execute()` parameter hides it from the agent schema (`AgentToolDefinitionMapper`); the tool or runtime fills it. `#[McpContentParam(editorText: true)]` exposes a content parameter for text the editor wrote only. Child extensions using these need the ns_t3af release that contains them; older 2.0.x ignores them (parameter visible, editor text hidden).
 - **Entitlements** — `EntitlementResolver` locks tools when owner extension inactive.
 - **Satellite write tools** — implement planning in child or use `write_table` / confirmation flow per classification doc.
 

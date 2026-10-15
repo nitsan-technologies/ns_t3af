@@ -25,6 +25,9 @@ namespace NITSAN\NsT3AF\Mcp\Attribute;
  * DualMode tools without {@see \NITSAN\NsT3AF\Mcp\Contract\McpPreviewableToolInterface}
  * are hidden automatically; use this attribute for NonAi helpers that must stay
  * agent-hidden (e.g. t3aa_get_file_for_metadata).
+ *
+ * On a parameter of execute(): the agent does not see that argument; the tool or the
+ * agent runtime fills it.
  */
-#[\Attribute(\Attribute::TARGET_CLASS)]
+#[\Attribute(\Attribute::TARGET_CLASS | \Attribute::TARGET_PARAMETER)]
 final class McpAgentHidden {}

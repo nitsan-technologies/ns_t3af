@@ -234,6 +234,20 @@ final class AgentToolResultPresenterTest extends TestCase
     }
 
     #[Test]
+    public function theToolsOwnSummaryIsShownInsteadOfTheItemCount(): void
+    {
+        $presented = $this->createPresenter()->present('t3aa_accessibility_issues', [
+            'score' => 61,
+            'total' => 1,
+            'count' => 1,
+            'items' => [['title' => 'Links Must Contain Clear and Distinguishable Text', 'occurrences' => 1]],
+            'summary' => 'Accessibility score 61/100: 1 issue type(s).',
+        ], true);
+
+        self::assertSame('Accessibility score 61/100: 1 issue type(s).', $presented['content']);
+    }
+
+    #[Test]
     public function presentBuildsHumanSummaryForMissingAltFileList(): void
     {
         $ai = $this->createMock(AiServiceInterface::class);

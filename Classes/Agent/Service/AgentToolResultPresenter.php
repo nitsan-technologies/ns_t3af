@@ -162,7 +162,8 @@ final readonly class AgentToolResultPresenter
         $toolLead = $this->buildToolSpecificContent($toolName, $facts, $details);
 
         return [
-            'content' => $llmSummary ?? $toolLead ?? $listLead ?? $summary,
+            // The tool's own summary says more than "Found N items" (score, what was queued, …).
+            'content' => $llmSummary ?? $toolLead ?? ($hasReadySummary ? $summary : null) ?? $listLead ?? $summary,
             'success' => $error === null,
             'summary' => $summary,
             'llmSummary' => $llmSummary,

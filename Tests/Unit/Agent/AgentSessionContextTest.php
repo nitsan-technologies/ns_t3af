@@ -48,7 +48,7 @@ final class AgentSessionContextTest extends TestCase
         ]]);
 
         self::assertSame(implode("\n", [
-            'Current context (use it when the editor says "this page", "here", "this element"):',
+            'Current context. Read it before you answer, and use it to decide what a name in the request refers to (this page, a language, a translation, or another page):',
             '- Module: Page (web_layout)',
             '- Page: "AI ChEddi" [uid 49], slug /ai-cheddi, parent "Home" [45]',
             '- Language: German [1] (site languages: English [0], German [1])',

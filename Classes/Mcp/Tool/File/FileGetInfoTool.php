@@ -36,7 +36,14 @@ readonly class FileGetInfoTool implements McpFalStorageToolInterface
 {
     public function __construct(private FileService $fileService) {}
 
-    #[McpTool(name: 'file_get_info', description: 'Get metadata for a file by storage UID and file identifier.')]
+    /**
+     * @param int    $storageUid     File storage uid (1 = fileadmin).
+     * @param string $fileIdentifier Path in the storage ("/user_upload/photo.jpg"), or just the file name; a name is found in any folder.
+     */
+    #[McpTool(
+        name: 'file_get_info',
+        description: 'Get details (uid, folder, size, type, public URL) of a file by storage UID and file identifier or just its file name.',
+    )]
     public function execute(int $storageUid, string $fileIdentifier): string
     {
         return json_encode(

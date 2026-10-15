@@ -27,11 +27,14 @@ use NITSAN\NsT3AF\Mcp\Exception\UnsupportedPlanException;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPlaygroundService;
 use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
 use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Resource\ResourceFactory;
+use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
@@ -93,6 +96,17 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     ): array {
         $catalog = $this->permittedActionProvider->buildCatalog();
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        if ($toolName === 't3aa_get_file_metadata') {
+            $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
+            $arguments = self::withChosenFile($arguments, self::openQuestionMeta($history), trim((string) ($body['userMessage'] ?? '')));
+            // A number in the named file ("…_629764.jpeg") is not its uid.
+            $arguments = self::withRequestedFileName($arguments, trim((string) ($body['requestQuery'] ?? '')));
+            $body['arguments'] = $arguments;
+            $fileChoice = $this->fileChoiceTurn($arguments, $toolName, $correlationId);
+            if ($fileChoice !== null) {
+                return $fileChoice;
+            }
+        }
         $reroutedTool = $this->rerouteWriteTableTool($toolName, $arguments, $catalog);
         if ($reroutedTool !== null) {
             $body['arguments'] = $reroutedTool['arguments'];
@@ -438,6 +452,13 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         );
 
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
+        if ($toolName === 't3aa_update_file_metadata') {
+            $fileMetadata = $this->prepareFileMetadataTurn($arguments, $body, $requestQuery, $correlationId);
+            if ($fileMetadata['turn'] !== null) {
+                return $fileMetadata['turn'];
+            }
+            $arguments = $fileMetadata['arguments'];
+        }
         $arguments = self::seoBatchSubpagesOfOpenPage($arguments, $toolName, $requestQuery);
         $arguments = self::openPageAsParent($arguments, (int) ($context['pageId'] ?? 0), $toolName, $requestQuery);
         $arguments = self::withEditorRequestAsStructurePrompt($arguments, $toolName, $requestQuery);
@@ -465,6 +486,8 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         unset($arguments['variants']);
 
         $result = $this->playgroundService->preview($toolName, $arguments, $variants);
+        // A preview-only switch: saving writes exactly the fields on the card.
+        unset($arguments['onlyFields']);
         if (($result['success'] ?? false) !== true || !$result['preview'] instanceof PreviewResult) {
             $failureDetail = AgentPermissionMessage::rewrite(
                 (string) ($result['message'] ?? ''),
@@ -536,6 +559,339 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'orchestratorPause' => true,
             ],
         ];
+    }
+
+    /**
+     * Before image texts are generated: ask which file when several share the requested name, and ask
+     * before replacing texts the image already has. The editor's click on an option answers the question.
+     *
+     * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $body
+     * @return array{arguments: array<string, mixed>, turn: array{role: string, content: string, meta: array<string, mixed>}|null}
+     */
+    private function prepareFileMetadataTurn(array $arguments, array $body, string $requestQuery, string $correlationId): array
+    {
+        $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
+        $reply = trim((string) ($body['userMessage'] ?? ''));
+        $question = self::openQuestionMeta($history);
+
+        $arguments = self::withChosenFile($arguments, $question, $reply);
+        $arguments = self::withRequestedFileName($arguments, $requestQuery);
+        $fileChoice = $this->fileChoiceTurn($arguments, 't3aa_update_file_metadata', $correlationId);
+        if ($fileChoice !== null) {
+            return ['arguments' => $arguments, 'turn' => $fileChoice];
+        }
+
+        $givenByEditor = false;
+        foreach (['altText', 'title', 'description'] as $key) {
+            $value = trim((string) ($arguments[$key] ?? ''), " \t\n\r\0\x0B\"'“”„«»");
+            // Text the model wrote itself is not used: the tool generates it from the image instead.
+            if (
+                $value === ''
+                || !self::writtenInRequest($value, $requestQuery)
+                // The file name itself ("photo.jpg") is not a text for the file.
+                || preg_match('/^\S+\.[a-z0-9]{2,5}$/iu', $value) === 1
+            ) {
+                unset($arguments[$key]);
+                continue;
+            }
+            $arguments[$key] = $value;
+            $givenByEditor = true;
+        }
+        if ($givenByEditor) {
+            // The card shows the editor's text next to the current one.
+            return ['arguments' => $arguments, 'turn' => null];
+        }
+
+        $current = $this->currentFileMetadata($arguments);
+        if ($current === null) {
+            return ['arguments' => $arguments, 'turn' => null];
+        }
+        $filled = array_keys(array_filter($current['fields'], static fn(string $value): bool => trim($value) !== ''));
+        if ($filled === []) {
+            return ['arguments' => $arguments, 'turn' => null];
+        }
+
+        $asked = is_array($question['fileMetaOverwrite'] ?? null) ? $question['fileMetaOverwrite'] : [];
+        if ((int) ($asked['fileUid'] ?? 0) === $current['fileUid'] && (int) ($asked['languageUid'] ?? -1) === $current['languageUid']) {
+            $choices = is_array($asked['choices'] ?? null) ? $asked['choices'] : [];
+            if (self::sameChoice($reply, (string) ($choices['keep'] ?? ''))) {
+                return ['arguments' => $arguments, 'turn' => [
+                    'role' => 'assistant',
+                    'content' => $this->translator->translate('agent.fileMeta.kept', [$current['fileName']]),
+                    'meta' => ['type' => 'nl_reply', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ]];
+            }
+            if (self::sameChoice($reply, (string) ($choices['fillEmpty'] ?? ''))) {
+                $arguments['onlyFields'] = array_values(array_diff(array_keys($current['fields']), $filled));
+            }
+
+            // "Regenerate", or an answer in the editor's own words after which the model still prepares the change.
+            return ['arguments' => $arguments, 'turn' => null];
+        }
+
+        $choices = ['regenerate' => $this->translator->translate('agent.fileMeta.option.regenerate')];
+        if (count($filled) < count($current['fields'])) {
+            $choices['fillEmpty'] = $this->translator->translate('agent.fileMeta.option.fillEmpty');
+        }
+        $choices['keep'] = $this->translator->translate('agent.fileMeta.option.keep');
+
+        $lines = [];
+        foreach ($current['fields'] as $key => $value) {
+            $value = trim($value);
+            $lines[] = sprintf(
+                '- %s: %s',
+                $this->translator->translate('agent.fileMeta.field.' . $key),
+                $value !== '' ? mb_strimwidth($value, 0, 160, '…') : $this->translator->translate('agent.fileMeta.field.empty'),
+            );
+        }
+        $languageLabel = self::languageTitle($current['languageUid']);
+
+        return ['arguments' => $arguments, 'turn' => [
+            'role' => 'assistant',
+            'content' => $this->translator->translate('agent.fileMeta.overwriteQuestion', [
+                $current['fileName'],
+                $languageLabel !== '' ? ' (' . $languageLabel . ')' : '',
+                implode("\n", $lines),
+            ]),
+            'meta' => [
+                'type' => 'clarification',
+                'tool' => 'ask_clarification',
+                'options' => array_values($choices),
+                'contentChoice' => true,
+                'askedFor' => 't3aa_update_file_metadata',
+                'fileMetaOverwrite' => [
+                    'fileUid' => $current['fileUid'],
+                    'languageUid' => $current['languageUid'],
+                    'choices' => $choices,
+                ],
+                'previews' => isset($this->mediaPreviews) ? $this->mediaPreviews->forRecord('sys_file', $current['fileUid']) : [],
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ]];
+    }
+
+    /**
+     * The editor clicked an option of the agent's image-text question ("Regenerate all", "Keep current
+     * texts", or one of several files with the same name): the tool and target that click stands for.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array{tool: string, arguments: array<string, int>}|null
+     */
+    public static function imageTextAnswer(string $reply, array $history): ?array
+    {
+        $question = self::openQuestionMeta($history);
+        $asked = is_array($question['fileMetaOverwrite'] ?? null) ? $question['fileMetaOverwrite'] : [];
+        $choices = is_array($asked['choices'] ?? null) ? $asked['choices'] : [];
+        if ((int) ($asked['fileUid'] ?? 0) > 0) {
+            foreach ($choices as $label) {
+                if (self::sameChoice($reply, (string) $label)) {
+                    return [
+                        'tool' => 't3aa_update_file_metadata',
+                        'arguments' => ['fileUid' => (int) $asked['fileUid'], 'languageUid' => (int) ($asked['languageUid'] ?? 0)],
+                    ];
+                }
+            }
+        }
+        $chosenFileUid = ($question['fileChoice'] ?? false) === true ? self::contentUidFromChoiceText($reply) : 0;
+        if ($chosenFileUid > 0) {
+            return [
+                'tool' => (string) ($question['fileChoiceTool'] ?? '') ?: 't3aa_update_file_metadata',
+                'arguments' => ['fileUid' => $chosenFileUid],
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * The file the editor picked from "Several files are named …" ("1:/folder/photo.jpg [134]").
+     *
+     * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $question
+     * @return array<string, mixed>
+     */
+    private static function withChosenFile(array $arguments, array $question, string $reply): array
+    {
+        $chosenFileUid = ($question['fileChoice'] ?? false) === true ? self::contentUidFromChoiceText($reply) : 0;
+        if ($chosenFileUid > 0) {
+            unset($arguments['fileUrl']);
+            $arguments['fileUid'] = $chosenFileUid;
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * A bare file name that several files share: ask which one. The click goes back to $toolName.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function fileChoiceTurn(array $arguments, string $toolName, string $correlationId): ?array
+    {
+        $fileUrl = trim((string) ($arguments['fileUrl'] ?? ''));
+        if ((int) ($arguments['fileUid'] ?? 0) > 0 || $fileUrl === '' || str_contains(ltrim($fileUrl, '/'), '/')) {
+            return null;
+        }
+        $sameName = self::filesNamed(basename($fileUrl));
+        if (count($sameName) < 2) {
+            return null;
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $this->translator->translate('agent.fileMeta.whichFile', [basename($fileUrl)]),
+            'meta' => [
+                'type' => 'clarification',
+                'tool' => 'ask_clarification',
+                'options' => array_map(
+                    static fn(array $row): string => sprintf('%d:%s [%d]', $row['storage'], $row['identifier'], $row['uid']),
+                    $sameName,
+                ),
+                // Options are files, not pages.
+                'contentChoice' => true,
+                'fileChoice' => true,
+                'fileChoiceTool' => $toolName,
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
+    }
+
+    /**
+     * Stored texts of the file the arguments point at, read with the file metadata read tool (no AI call).
+     *
+     * @param array<string, mixed> $arguments
+     * @return array{fileUid: int, fileName: string, languageUid: int, fields: array{altText: string, title: string, description: string}}|null
+     */
+    private function currentFileMetadata(array $arguments): ?array
+    {
+        $read = array_filter([
+            'fileUid' => (int) ($arguments['fileUid'] ?? 0),
+            'fileUrl' => trim((string) ($arguments['fileUrl'] ?? '')),
+            'languageUid' => (int) ($arguments['languageUid'] ?? 0),
+            'isoCode' => trim((string) ($arguments['isoCode'] ?? '')),
+        ], static fn(int|string $value): bool => $value !== 0 && $value !== '');
+        $result = $this->playgroundService->invoke('t3aa_get_file_metadata', $read);
+        if (($result['success'] ?? false) !== true) {
+            // Unknown file, no access, …: the preview reports it.
+            return null;
+        }
+        $payload = $result['result'] ?? null;
+        if (is_string($payload)) {
+            $payload = json_decode($payload, true);
+        }
+        if (!is_array($payload) || ($payload['found'] ?? false) !== true || (int) ($payload['file_uid'] ?? 0) <= 0) {
+            return null;
+        }
+
+        return [
+            'fileUid' => (int) $payload['file_uid'],
+            'fileName' => (string) ($payload['file_name'] ?? ''),
+            'languageUid' => (int) ($payload['language_uid'] ?? 0),
+            'fields' => [
+                'altText' => (string) ($payload['alt_text'] ?? ''),
+                'title' => (string) ($payload['title'] ?? ''),
+                'description' => (string) ($payload['description'] ?? ''),
+            ],
+        ];
+    }
+
+    /**
+     * Meta of the agent's question the current message answers: the newest clarification with no editor
+     * message after it.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array<string, mixed>
+     */
+    public static function openQuestionMeta(array $history): array
+    {
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $entry = $history[$i];
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($entry['role'] ?? '') === 'user' && ($meta['hidden'] ?? false) !== true) {
+                return [];
+            }
+            if (($entry['role'] ?? '') === 'assistant' && ($meta['type'] ?? '') === 'clarification') {
+                return $meta;
+            }
+        }
+
+        return [];
+    }
+
+    public static function writtenInRequest(string $text, string $request): bool
+    {
+        $normalize = static fn(string $value): string => mb_strtolower((string) preg_replace('/\s+/u', ' ', trim($value)));
+
+        return $text !== '' && str_contains($normalize($request), $normalize($text));
+    }
+
+    public static function sameChoice(string $reply, string $choice): bool
+    {
+        $normalize = static fn(string $text): string => mb_strtolower(trim($text, " \t\n\r\0\x0B.!"));
+
+        return $choice !== '' && $normalize($reply) === $normalize($choice);
+    }
+
+    /**
+     * Files with that name the editor may read. Files outside their file mounts are not offered.
+     *
+     * @return list<array{uid: int, storage: int, identifier: string}>
+     */
+    private static function filesNamed(string $name): array
+    {
+        if ($name === '') {
+            return [];
+        }
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('sys_file');
+        $queryBuilder->getRestrictions()->removeAll();
+        $rows = $queryBuilder->select('uid', 'storage', 'identifier')
+            ->from('sys_file')
+            ->where(
+                $queryBuilder->expr()->eq('name', $queryBuilder->createNamedParameter($name)),
+                $queryBuilder->expr()->eq('missing', $queryBuilder->createNamedParameter(0, Connection::PARAM_INT)),
+            )
+            ->orderBy('uid')
+            ->setMaxResults(50)
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        $fileAccess = new RecordsApplyFileAccess(GeneralUtility::makeInstance(ResourceFactory::class));
+        $files = [];
+        foreach ($rows as $row) {
+            if (count($files) >= 9) {
+                break;
+            }
+            if (!$fileAccess->canRead((int) $row['uid'])) {
+                continue;
+            }
+            $files[] = [
+                'uid' => (int) $row['uid'],
+                'storage' => (int) $row['storage'],
+                'identifier' => (string) $row['identifier'],
+            ];
+        }
+
+        return $files;
+    }
+
+    private static function languageTitle(int $languageUid): string
+    {
+        if ($languageUid <= 0) {
+            return '';
+        }
+        foreach (GeneralUtility::makeInstance(SiteFinder::class)->getAllSites() as $site) {
+            foreach ($site->getAllLanguages() as $language) {
+                if ($language->getLanguageId() === $languageUid) {
+                    return $language->getTitle();
+                }
+            }
+        }
+
+        return '';
     }
 
     /**
@@ -1891,6 +2247,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         if ($toolName === 't3aa_update_file_metadata') {
+            $named = self::withRequestedFileName($arguments, $request);
+            if ($named !== $arguments) {
+                return $named;
+            }
+
             return $this->enrichFileMetadataArguments($arguments, $history);
         }
 
@@ -1998,6 +2359,61 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         return $arguments;
     }
 
+    /**
+     * The editor named one file ("…/photo.jpg"). That file is the target, not a file the model found
+     * by browsing with a similar name. The file tool resolves the name to its sys_file record.
+     *
+     * A fileUid of a file with that name (picked when several share the name) stays.
+     *
+     * @param array<string, mixed> $arguments
+     * @param (callable(int): string)|null $fileNameOf sys_file name by uid
+     * @return array<string, mixed>
+     */
+    public static function withRequestedFileName(array $arguments, string $request, ?callable $fileNameOf = null): array
+    {
+        $name = self::requestedFileName($request);
+        if ($name === null) {
+            return $arguments;
+        }
+
+        $fileNameOf ??= static fn(int $uid): string => (string) (BackendUtility::getRecord('sys_file', $uid, 'name')['name'] ?? '');
+        $fileUid = (int) ($arguments['fileUid'] ?? 0);
+        if ($fileUid > 0 && strcasecmp($fileNameOf($fileUid), basename($name)) === 0) {
+            unset($arguments['fileUrl']);
+
+            return $arguments;
+        }
+
+        unset($arguments['fileUid']);
+        $currentUrl = trim((string) ($arguments['fileUrl'] ?? ''));
+        if ($currentUrl === '' || strcasecmp(basename($currentUrl), basename($name)) !== 0) {
+            $arguments['fileUrl'] = $name;
+        }
+
+        return $arguments;
+    }
+
+    /**
+     * One file name with a file extension in the request, or null when there is none or several.
+     */
+    public static function requestedFileName(string $request): ?string
+    {
+        if ($request === '') {
+            return null;
+        }
+        preg_match_all(
+            '#(?<![\w.-])((?:[\w.-]+/)*[\w.-]+\.(?:jpe?g|png|webp|gif|svg|avif|tiff?|bmp|heic))(?![\w.-])#iu',
+            $request,
+            $matches,
+        );
+        $names = array_values(array_unique(array_map(
+            static fn(string $name): string => ltrim($name, '/'),
+            $matches[1],
+        )));
+
+        return count($names) === 1 ? $names[0] : null;
+    }
+
     private static function isPlaceholderFileLocator(string $value): bool
     {
         $value = strtolower(trim($value));
@@ -2090,11 +2506,37 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return null;
         }
 
-        $fileUid = (int) ($arguments['uid'] ?? $arguments['fileUid'] ?? 0);
+        $rerouted = [];
+        $fileUid = (int) ($arguments['fileUid'] ?? 0);
+        $metadataUid = (int) ($arguments['uid'] ?? 0);
+        if ($fileUid <= 0 && $metadataUid > 0) {
+            // "uid" of write_table on sys_file_metadata is the metadata row, not the file.
+            $row = BackendUtility::getRecord('sys_file_metadata', $metadataUid, 'file,sys_language_uid');
+            if (is_array($row)) {
+                $fileUid = (int) ($row['file'] ?? 0);
+                $rerouted['languageUid'] = (int) ($row['sys_language_uid'] ?? 0);
+            }
+        }
+        if ($fileUid > 0) {
+            $rerouted['fileUid'] = $fileUid;
+        }
+
+        $data = $arguments['data'] ?? [];
+        if (is_string($data)) {
+            $decoded = json_decode($data, true);
+            $data = is_array($decoded) ? $decoded : [];
+        }
+        if (is_array($data)) {
+            foreach (['alternative' => 'altText', 'title' => 'title', 'description' => 'description'] as $column => $argument) {
+                if (is_string($data[$column] ?? null) && trim($data[$column]) !== '') {
+                    $rerouted[$argument] = $data[$column];
+                }
+            }
+        }
 
         return [
             'tool' => 't3aa_update_file_metadata',
-            'arguments' => $fileUid > 0 ? ['fileUid' => $fileUid] : [],
+            'arguments' => $rerouted,
         ];
     }
 

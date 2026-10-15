@@ -123,6 +123,7 @@ export const streamMethods = {
       return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant nst3af-agent-clarify">
         <div class="nst3af-agent-msg__who">AI Agent</div>
         <div class="nst3af-agent-msg__body">${renderMessageBody(String(message.content ?? ''))}</div>
+        ${renderImagePreviews(message.meta?.previews)}
         ${buttons}
       </div>`;
     },

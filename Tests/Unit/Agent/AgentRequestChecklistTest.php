@@ -165,6 +165,19 @@ TXT;
     }
 
     #[Test]
+    public function altTextForExistingImagesCreatesNoElement(): void
+    {
+        self::assertSame([], AgentRequestChecklist::parse('Queue alt text drafts for all images in the user_upload folder.'));
+        self::assertSame([], AgentRequestChecklist::parse('Generate alt text for all images in the user_upload folder.'));
+        self::assertSame([], AgentRequestChecklist::parse('Create alt text drafts for the images in fileadmin/user_upload'));
+        self::assertSame(
+            ['create', 'attach_image'],
+            array_column(AgentRequestChecklist::parse('Add an image from the user_upload folder to a new text & media element'), 'kind'),
+        );
+        self::assertSame(['create', 'attach_image'], array_column(AgentRequestChecklist::parse('Add the images element'), 'kind'));
+    }
+
+    #[Test]
     public function aQuestionAboutContentTypesIsNotARequestToCreateThem(): void
     {
         self::assertSame([], AgentRequestChecklist::parse(

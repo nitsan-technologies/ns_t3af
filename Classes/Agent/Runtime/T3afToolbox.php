@@ -25,6 +25,7 @@ use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentRequestedFiles;
 use NITSAN\NsT3AF\Agent\Service\AgentRunner;
 use NITSAN\NsT3AF\Agent\Service\AgentToolSearch;
+use NITSAN\NsT3AF\Agent\Service\AgentToolTurnProcessor;
 use NITSAN\NsT3AF\Agent\Service\GlossarySaveLanguage;
 use NITSAN\NsT3AF\Agent\Service\PageCreateAfter;
 use NITSAN\NsT3AF\Agent\Service\PageCreateBefore;
@@ -136,6 +137,7 @@ final class T3afToolbox implements ToolboxInterface
 
     public function execute(ToolCall $toolCall): ToolResult
     {
+        $toolCall = $this->answeredImageTextQuestion($this->withoutInventedPageSpeedUrl(self::withoutGuessedLanguageUid($toolCall)));
         $outcome = 'executed';
         $result = $this->run($toolCall, $outcome);
         // For the eval and debugging: every call the model made, also the ones that did not run.
@@ -146,6 +148,124 @@ final class T3afToolbox implements ToolboxInterface
         ]);
 
         return $result;
+    }
+
+    /**
+     * The editor clicked an option of the agent's image-text question ("Regenerate all", or one of several
+     * files with the same name). That click means the image-text tool for that file, whatever the model called.
+     */
+    private function answeredImageTextQuestion(ToolCall $toolCall): ToolCall
+    {
+        if ($toolCall->getName() === self::UPDATE_PLAN) {
+            return $toolCall;
+        }
+        $answer = AgentToolTurnProcessor::imageTextAnswer(
+            trim((string) ($this->runtime->body['userMessage'] ?? '')),
+            $this->conversationHistory(),
+        );
+        $tool = (string) ($answer['tool'] ?? '');
+        $target = $answer['arguments'] ?? null;
+        if ($target === null || !isset($this->catalog[$tool])) {
+            return $toolCall;
+        }
+
+        $arguments = $toolCall->getName() === $tool ? $toolCall->getArguments() : [];
+        unset($arguments['fileUrl'], $arguments['altText'], $arguments['title'], $arguments['description']);
+        if (isset($target['languageUid'])) {
+            unset($arguments['isoCode']);
+        }
+
+        return new ToolCall($toolCall->getId(), $tool, array_merge($arguments, $target));
+    }
+
+    /**
+     * "Check the page speed of this page": the model fills url with a made-up address ("https://your-site.com")
+     * and PageSpeed then scores a stranger's site. A url whose host the editor never wrote is dropped, so the
+     * tool checks the current page (pageId).
+     */
+    private function withoutInventedPageSpeedUrl(ToolCall $toolCall): ToolCall
+    {
+        $arguments = $toolCall->getArguments();
+        $host = strtolower((string) parse_url(trim((string) ($arguments['url'] ?? '')), PHP_URL_HOST));
+        if ($toolCall->getName() !== 't3aa_get_page_speed' || $host === '') {
+            return $toolCall;
+        }
+        $written = (string) ($this->runtime->body['requestQuery'] ?? '');
+        foreach ($this->conversationHistory() as $entry) {
+            if (($entry['role'] ?? '') === 'user') {
+                $written .= ' ' . (string) ($entry['content'] ?? '');
+            }
+        }
+        if (str_contains(strtolower($written), $host)) {
+            return $toolCall;
+        }
+        unset($arguments['url']);
+
+        return new ToolCall($toolCall->getId(), $toolCall->getName(), $arguments);
+    }
+
+    /**
+     * The record the model wants to write is headed "Voice-over" (also inside a uid-keyed map of records).
+     * A text element with other content is a normal write, even in a request that also asks for a voice-over.
+     */
+    private static function writesVoiceOverHeader(mixed $data): bool
+    {
+        if (is_string($data)) {
+            $data = json_decode($data, true);
+        }
+        if (!is_array($data)) {
+            return false;
+        }
+        foreach (['header', 'subheader'] as $field) {
+            if (is_string($data[$field] ?? null) && preg_match(AgentRunner::VOICE_OVER_REQUEST, $data[$field]) === 1) {
+                return true;
+            }
+        }
+        foreach ($data as $value) {
+            if (is_array($value) && self::writesVoiceOverHeader($value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The write attaches a file to the record (assets, media, image), which is how an audio file ends up on a text element.
+     */
+    private static function writesMediaField(mixed $data): bool
+    {
+        if (is_string($data)) {
+            $data = json_decode($data, true);
+        }
+        if (!is_array($data)) {
+            return false;
+        }
+        foreach ($data as $key => $value) {
+            if (in_array((string) $key, ['assets', 'media', 'image'], true) && $value !== '' && $value !== null && $value !== []) {
+                return true;
+            }
+            if (is_array($value) && self::writesMediaField($value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * The image-text tools do not show languageUid to the model (it picks the language by isoCode),
+     * so a languageUid it sends anyway is a guess.
+     */
+    private static function withoutGuessedLanguageUid(ToolCall $toolCall): ToolCall
+    {
+        $arguments = $toolCall->getArguments();
+        if (!in_array($toolCall->getName(), ['t3aa_get_file_metadata', 't3aa_update_file_metadata'], true) || !array_key_exists('languageUid', $arguments)) {
+            return $toolCall;
+        }
+        unset($arguments['languageUid']);
+
+        return new ToolCall($toolCall->getId(), $toolCall->getName(), $arguments);
     }
 
     /**
@@ -188,7 +308,52 @@ final class T3afToolbox implements ToolboxInterface
                 : 'Not executed: the editor asked for an AI-generated image, and AI image generation is not available to this editor.'
                     . ' Do not upload a web image instead: do the rest of the request and tell the editor in one sentence that the image could not be generated.');
         }
+        // The image-text tools find a named file in any folder; browsing for it only costs steps.
+        $namedFile = in_array($name, ['file_list', 'file_get_info'], true)
+            ? AgentToolTurnProcessor::requestedFileName($requestQuery)
+            : null;
+        if (
+            $namedFile !== null
+            && isset($this->catalog['t3aa_update_file_metadata'])
+            && !in_array('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor($this->gateRequest()), true)
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor named the file "' . $namedFile . '". t3aa_get_file_metadata and t3aa_update_file_metadata'
+                    . ' take fileUrl "' . $namedFile . '" and find it in any folder. Call the one the request needs with that fileUrl;'
+                    . ' for texts in another language add isoCode.',
+            );
+        }
+        $describedFile = $name === AgentRequestedFiles::GENERATION_TOOL
+            ? AgentToolTurnProcessor::requestedFileName((string) ($toolCall->getArguments()['prompt'] ?? ''))
+            : null;
         $conversationHistory = $this->conversationHistory();
+        if ($describedFile !== null && isset($this->catalog['t3aa_update_file_metadata'])) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the prompt is about the existing file "' . $describedFile . '", and this tool draws a new picture.'
+                    . ' For its alt text, title or description call t3aa_update_file_metadata with fileUrl "' . $describedFile . '"'
+                    . ' (isoCode for another language).',
+            );
+        }
+        if (
+            $name === AgentRequestedFiles::GENERATION_TOOL
+            && isset($this->catalog['t3aa_update_file_metadata'])
+            && AgentRunner::usedRecently('t3aa_update_file_metadata', $conversationHistory)
+            && !AgentRequestedFiles::asksForGeneratedImage($requestQuery)
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor is working on the texts of an existing image and did not ask for a new picture.'
+                    . ' Call t3aa_update_file_metadata for that file (isoCode for another language).',
+            );
+        }
         if (
             in_array($name, ['t3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3aa_generate_voice_over'], true)
             && (
@@ -201,6 +366,26 @@ final class T3afToolbox implements ToolboxInterface
             return new ToolResult(
                 $toolCall,
                 'Not executed: the editor asked for a picture, not SEO or voice-over. Call t3ai_generate_image (then file_reference_add), or wait for the open generate card to be applied.',
+            );
+        }
+        // A voice-over is the voice-over tool. write_table otherwise saves a Text & Media element titled "Voice-over".
+        if (
+            $name === 'write_table'
+            && isset($this->catalog['t3aa_generate_voice_over'])
+            && (
+                self::writesVoiceOverHeader($toolCall->getArguments()['data'] ?? null)
+                || (
+                    preg_match(AgentRunner::VOICE_OVER_REQUEST, $requestQuery) === 1
+                    && self::writesMediaField($toolCall->getArguments()['data'] ?? null)
+                )
+            )
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: a voice-over is not a normal content element. Call t3aa_generate_voice_over for this page and, when the editor named a language, pass that languageUid.'
+                    . ' The tool stores the audio on the page and places the Voiceover element. Do not create Text & Media, and do not add the voice-over onto an existing text element.',
             );
         }
         // "Add this image to the news X" must attach, not create a duplicate news/CE.

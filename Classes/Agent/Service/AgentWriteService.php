@@ -26,6 +26,8 @@ use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
+use TYPO3\CMS\Core\Database\Connection;
+use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Locking\Exception\LockAcquireWouldBlockException;
 use TYPO3\CMS\Core\Locking\LockFactory;
 use TYPO3\CMS\Core\Locking\LockingStrategyInterface;
@@ -695,6 +697,7 @@ final class AgentWriteService
             'totalCount' => count($preview->fields),
             'appliedValues' => $resolved,
             'readback' => [],
+            'resultRecords' => self::createdFileMetadataRecords($toolName, $preview),
             'action' => 'apply_suggestions',
             'tool' => $toolName,
             'suggestionsApply' => true,
@@ -890,6 +893,39 @@ final class AgentWriteService
     }
 
     /**
+     * @return list<array{table: string, uid: int}>
+     */
+    private static function createdFileMetadataRecords(string $toolName, PreviewResult $preview): array
+    {
+        if ($toolName !== 't3aa_update_file_metadata' || ($preview->target['table'] ?? '') !== 'sys_file') {
+            return [];
+        }
+        $metadataUid = self::fileMetadataUid((int) ($preview->target['uid'] ?? 0), (int) ($preview->target['languageId'] ?? 0));
+
+        return $metadataUid > 0 ? [['table' => 'sys_file_metadata', 'uid' => $metadataUid]] : [];
+    }
+
+    private static function fileMetadataUid(int $fileUid, int $languageUid): int
+    {
+        if ($fileUid <= 0) {
+            return 0;
+        }
+        $queryBuilder = GeneralUtility::makeInstance(ConnectionPool::class)->getQueryBuilderForTable('sys_file_metadata');
+        $queryBuilder->getRestrictions()->removeAll();
+        $uid = $queryBuilder->select('uid')
+            ->from('sys_file_metadata')
+            ->where(
+                $queryBuilder->expr()->eq('file', $queryBuilder->createNamedParameter($fileUid, Connection::PARAM_INT)),
+                $queryBuilder->expr()->eq('sys_language_uid', $queryBuilder->createNamedParameter($languageUid, Connection::PARAM_INT)),
+            )
+            ->setMaxResults(1)
+            ->executeQuery()
+            ->fetchOne();
+
+        return (int) $uid;
+    }
+
+    /**
      * Translation DualMode previews the source record but writes a localization overlay.
      * Undo must delete that overlay (create), never blank the source (update).
      *
@@ -902,6 +938,14 @@ final class AgentWriteService
         array $undoFields,
         PreviewResult $preview,
     ): array {
+        if ($toolName === 't3aa_update_file_metadata' && ($preview->target['table'] ?? '') === 'sys_file') {
+            // The file had no metadata row in that language yet; saving created it, Undo resets that row.
+            $metadataUid = self::fileMetadataUid((int) ($preview->target['uid'] ?? 0), (int) ($preview->target['languageId'] ?? 0));
+
+            return $metadataUid > 0
+                ? array_map(static fn(array $field): array => ['table' => 'sys_file_metadata', 'uid' => $metadataUid] + $field, $undoFields)
+                : [];
+        }
         if (in_array($toolName, self::PAGE_CREATE_TOOLS, true)) {
             // The preview targets the parent page, but the apply creates a new page: Undo takes that page back.
             $createdPageId = (int) (self::decodeToolResultPayload($result)['pageId'] ?? 0);
