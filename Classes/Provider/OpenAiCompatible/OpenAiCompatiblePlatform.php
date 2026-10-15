@@ -40,6 +40,13 @@ use TYPO3\CMS\Core\Http\RequestFactory;
  */
 final class OpenAiCompatiblePlatform
 {
+    /**
+     * Usage block (prompt/completion tokens) of the last {@see stream()} call, when the server sent one.
+     *
+     * @var array<string, mixed>
+     */
+    private array $lastStreamUsage = [];
+
     public function __construct(
         private readonly Provider $provider,
         private readonly CredentialCipher $cipher,
@@ -232,11 +239,38 @@ final class OpenAiCompatiblePlatform
             'temperature' => $this->provider->temperature,
             'stream' => true,
         ];
+        $this->lastStreamUsage = [];
+        if ($this->requestsStreamUsage()) {
+            // Ask for the final usage chunk so streamed calls are logged with their tokens and cost.
+            $body['stream_options'] = ['include_usage' => true];
+        }
 
         $response = $this->postJson($this->chatCompletionsPath(), $body, streamResponseBody: true);
         $this->assertOk($response, 'chat/completions (stream)');
 
         yield from $this->parseSseChatStream($response->getBody());
+    }
+
+    /**
+     * Usage of the last streamed answer (OpenAI shape: prompt_tokens, completion_tokens), empty when the server sent none.
+     *
+     * @return array<string, mixed>
+     */
+    public function lastStreamUsage(): array
+    {
+        return $this->lastStreamUsage;
+    }
+
+    /**
+     * ``stream_options`` is sent only to the official OpenAI API, which is known to accept it. Other
+     * OpenAI-compatible servers may reject unknown fields, so their request stays unchanged; a usage
+     * chunk they send anyway is still read.
+     */
+    private function requestsStreamUsage(): bool
+    {
+        $host = parse_url($this->resolveBaseEndpoint(), PHP_URL_HOST);
+
+        return is_string($host) && strtolower($host) === 'api.openai.com';
     }
 
     /**
@@ -611,6 +645,9 @@ final class OpenAiCompatiblePlatform
         $data = json_decode($json, true);
         if (!is_array($data)) {
             return;
+        }
+        if (isset($data['usage']) && is_array($data['usage']) && $data['usage'] !== []) {
+            $this->lastStreamUsage = $data['usage'];
         }
         $choices = $data['choices'] ?? null;
         if (!is_array($choices) || !isset($choices[0]) || !is_array($choices[0])) {
