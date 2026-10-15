@@ -564,6 +564,98 @@ final class AiServiceTest extends TestCase
         self::assertSame(['hel', 'lo'], $chunks);
     }
 
+    public function testStreamPassesSymfonyBridgeTokenUsageToResponse(): void
+    {
+        $provider = $this->makeProvider(adapterType: 'symfony.mistral');
+        $platform = new class {
+            /** @param array<string, mixed> $options */
+            public function invoke(string $model, mixed $payload, array $options = []): object
+            {
+                return new class {
+                    public function asStream(): \Generator
+                    {
+                        yield 'Hi';
+                        yield ' there';
+                    }
+
+                    public function getMetadata(): object
+                    {
+                        return new class {
+                            public function get(string $key, mixed $default = null): mixed
+                            {
+                                if ($key !== 'token_usage') {
+                                    return $default;
+                                }
+
+                                return new class {
+                                    public function getPromptTokens(): ?int
+                                    {
+                                        return 42;
+                                    }
+
+                                    public function getCompletionTokens(): ?int
+                                    {
+                                        return 7;
+                                    }
+
+                                    public function getTotalTokens(): ?int
+                                    {
+                                        return 49;
+                                    }
+                                };
+                            }
+                        };
+                    }
+                };
+            }
+        };
+        $adapter = $this->makeAdapter('symfony.mistral', $platform);
+        $events = new CapturingDispatcher();
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$adapter]),
+            $events,
+            $this->makeSiteStorageContext(),
+        );
+
+        self::assertSame(['Hi', ' there'], iterator_to_array($service->stream('hi'), false));
+        /** @var AfterProviderResponseEvent $after */
+        $after = $events->dispatched[1];
+        self::assertSame(42, $after->getResponse()->tokensInput);
+        self::assertSame(7, $after->getResponse()->tokensOutput);
+    }
+
+    public function testStreamWithoutBridgeUsageKeepsZeroTokens(): void
+    {
+        $provider = $this->makeProvider(adapterType: 'symfony.mistral');
+        $platform = new class {
+            /** @param array<string, mixed> $options */
+            public function invoke(string $model, mixed $payload, array $options = []): object
+            {
+                return new class {
+                    public function asStream(): \Generator
+                    {
+                        yield 'ok';
+                    }
+                };
+            }
+        };
+        $adapter = $this->makeAdapter('symfony.mistral', $platform);
+        $events = new CapturingDispatcher();
+        $service = new AiService(
+            new StaticProviderLookup($provider),
+            new AdapterRegistry([$adapter]),
+            $events,
+            $this->makeSiteStorageContext(),
+        );
+
+        self::assertSame(['ok'], iterator_to_array($service->stream('hi'), false));
+        /** @var AfterProviderResponseEvent $after */
+        $after = $events->dispatched[1];
+        self::assertSame(0, $after->getResponse()->tokensInput);
+        self::assertSame(0, $after->getResponse()->tokensOutput);
+    }
+
     public function testStreamFailsWhenPlatformHasNoStreamingApi(): void
     {
         $provider = $this->makeProvider();

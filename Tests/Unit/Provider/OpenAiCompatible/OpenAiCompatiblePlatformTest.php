@@ -95,6 +95,59 @@ final class OpenAiCompatiblePlatformTest extends TestCase
         self::assertSame(['tail'], $chunks);
     }
 
+    public function testStreamReadsUsageChunkAndAsksOpenAiForIt(): void
+    {
+        $factory = $this->createMock(RequestFactory::class);
+        $factory->expects(self::once())
+            ->method('request')
+            ->with(
+                self::anything(),
+                self::identicalTo('POST'),
+                self::callback(static function (array $options): bool {
+                    return ($options['json']['stream_options']['include_usage'] ?? false) === true;
+                }),
+            )
+            ->willReturn(new Response(200, [], "data: {\"choices\":[{\"delta\":{\"content\":\"Hi\"}}]}\n\n"
+                . "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":12,\"completion_tokens\":3}}\n\ndata: [DONE]\n\n"));
+
+        $adapter = new OpenAiCompatibleAdapter(new CredentialCipher(), $factory);
+        $provider = $this->makeProvider(
+            adapterType: Provider::ADAPTER_OPENAI_COMPATIBLE,
+            endpointUrl: 'https://api.openai.com/v1',
+            apiKeyCipher: '',
+        );
+        $platform = $this->platform($adapter, $provider);
+
+        self::assertSame(['Hi'], iterator_to_array($platform->stream('gpt-4o', 'hello'), false));
+        self::assertSame(['prompt_tokens' => 12, 'completion_tokens' => 3], $platform->lastStreamUsage());
+    }
+
+    public function testStreamDoesNotSendStreamOptionsToOtherServers(): void
+    {
+        $factory = $this->createMock(RequestFactory::class);
+        $factory->expects(self::once())
+            ->method('request')
+            ->with(
+                self::anything(),
+                self::identicalTo('POST'),
+                self::callback(static function (array $options): bool {
+                    return !array_key_exists('stream_options', $options['json'] ?? []);
+                }),
+            )
+            ->willReturn(new Response(200, [], "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\n"));
+
+        $adapter = new OpenAiCompatibleAdapter(new CredentialCipher(), $factory);
+        $provider = $this->makeProvider(
+            adapterType: Provider::ADAPTER_OPENAI_COMPATIBLE,
+            endpointUrl: 'https://api.example.com/v1',
+            apiKeyCipher: '',
+        );
+        $platform = $this->platform($adapter, $provider);
+
+        self::assertSame(['ok'], iterator_to_array($platform->stream('gpt-4o', 'hello'), false));
+        self::assertSame([], $platform->lastStreamUsage());
+    }
+
     public function testStreamUsesStandardPathWhenBaseAlreadyEndsWithV1(): void
     {
         $factory = $this->createMock(RequestFactory::class);

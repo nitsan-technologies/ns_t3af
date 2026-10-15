@@ -84,6 +84,13 @@ final class AiService implements AiServiceInterface
         return $adapter->platform($provider);
     }
 
+    /**
+     * Token usage of the last stream read through a Symfony AI result (its ``token_usage`` metadata), OpenAI shape.
+     *
+     * @var array<string, int>
+     */
+    private array $lastBridgeStreamUsage = [];
+
     public function complete(string $prompt, AiOptions $options = new AiOptions()): AiResponse
     {
         $provider = $this->provider($options->providerIdentifier, $options->pageId);
@@ -177,6 +184,7 @@ final class AiService implements AiServiceInterface
 
         $start = (int) (microtime(true) * 1000);
         $content = '';
+        $streamUsage = [];
         try {
             $platform = $this->platformFor($adapter, $provider, $before->getOptions());
             $modelId = $this->effectiveModel($provider, $before->getOptions());
@@ -187,12 +195,18 @@ final class AiService implements AiServiceInterface
                     $content .= $delta;
                     yield $delta;
                 }
+                if (method_exists($platform, 'lastStreamUsage')) {
+                    $usage = $platform->lastStreamUsage();
+                    $streamUsage = is_array($usage) ? $usage : [];
+                }
             } elseif (method_exists($platform, 'invoke')) {
                 $payloads = $this->symfonyPlatformInvokePayloads($before->getPrompt(), $provider, $modelId, $before->getOptions());
+                $this->lastBridgeStreamUsage = [];
                 foreach ($this->streamViaPlatformInvoke($platform, $modelId, $payloads, $adapter) as $delta) {
                     $content .= $delta;
                     yield $delta;
                 }
+                $streamUsage = $this->lastBridgeStreamUsage;
             } else {
                 throw new AdapterRuntimeException(sprintf(
                     'Adapter "%s" platform exposes neither stream() nor invoke() for streaming.',
@@ -205,10 +219,13 @@ final class AiService implements AiServiceInterface
                 return;
             }
 
+            [$tokensInput, $tokensOutput] = $streamUsage !== [] ? $this->extractUsageFromUsageArray($streamUsage) : [0, 0];
             $response = new AiResponse(
                 content: $content,
                 modelId: $modelId,
                 providerIdentifier: $provider->identifier,
+                tokensInput: $tokensInput,
+                tokensOutput: $tokensOutput,
                 latencyMs: (int) (microtime(true) * 1000) - $start,
                 cached: false,
                 raw: [],
@@ -1105,6 +1122,7 @@ final class AiService implements AiServiceInterface
             foreach ($result->asTextStream() as $delta) {
                 yield $this->coerceStreamChunk($delta);
             }
+            $this->lastBridgeStreamUsage = $this->readBridgeTokenUsage($result);
 
             return;
         }
@@ -1113,6 +1131,7 @@ final class AiService implements AiServiceInterface
             foreach ($result->asStream() as $delta) {
                 yield $this->coerceStreamChunk($delta);
             }
+            $this->lastBridgeStreamUsage = $this->readBridgeTokenUsage($result);
 
             return;
         }
@@ -1129,6 +1148,33 @@ final class AiService implements AiServiceInterface
             'Adapter "%s" invoke(stream) did not return a streamable result.',
             $adapter->getType(),
         ));
+    }
+
+    /**
+     * Symfony AI collects the usage chunk of a stream (Mistral sends it by default, OpenAI-compatible bridges ask for
+     * it) into the result metadata as ``token_usage`` once the stream is read. Read only; empty when not available.
+     *
+     * @return array<string, int>
+     */
+    private function readBridgeTokenUsage(object $result): array
+    {
+        try {
+            $metadata = method_exists($result, 'getMetadata') ? $result->getMetadata() : null;
+            $usage = is_object($metadata) && method_exists($metadata, 'get') ? $metadata->get('token_usage') : null;
+        } catch (\Throwable) {
+            return [];
+        }
+        if (!is_object($usage)) {
+            return [];
+        }
+        $prompt = method_exists($usage, 'getPromptTokens') ? (int) $usage->getPromptTokens() : 0;
+        $completion = method_exists($usage, 'getCompletionTokens') ? (int) $usage->getCompletionTokens() : 0;
+        $total = method_exists($usage, 'getTotalTokens') ? (int) $usage->getTotalTokens() : 0;
+        if ($prompt <= 0 && $completion <= 0 && $total <= 0) {
+            return [];
+        }
+
+        return ['prompt_tokens' => max(0, $prompt), 'completion_tokens' => max(0, $completion), 'total_tokens' => max(0, $total)];
     }
 
     private function coerceStreamChunk(mixed $chunk): string
