@@ -256,6 +256,30 @@
     align-items: center;
     gap: .25rem;
 }
+/* Secondary action under the benefit checks (e.g. "Use a claim code"). The meta row sets a
+   muted 11px context, which flattens Bootstrap's own link classes — so the action states its
+   own colour and underline to stay recognisably clickable at that size. */
+.aiu-mode__meta--action {
+    margin-top: .4rem;
+}
+.aiu-mode__claim-link {
+    appearance: none;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: inherit;
+    font-weight: 500;
+    line-height: inherit;
+    vertical-align: baseline;
+    color: var(--typo3-state-primary-bg, var(--typo3-link-color, var(--aiu-primary, #205eb5)));
+    text-decoration: underline;
+    cursor: pointer;
+}
+.aiu-mode__claim-link:hover,
+.aiu-mode__claim-link:focus-visible {
+    text-decoration: none;
+}
+
 .aiu-mode__meta--summary { gap: .65rem; }
 .aiu-mode__meta--summary span { position: relative; }
 .aiu-mode__meta--summary span + span { padding-left: .65rem; }

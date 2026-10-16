@@ -388,6 +388,42 @@ class T3PlanetApiClient
     }
 
     /**
+     * Redeem an emailed claim code for the account's Bearer (POST /API/AI/ClaimToken.php).
+     *
+     * For a customer who bought AI Credits on the website before installing TYPO3, and for one
+     * recovering an account after a site rebuild. Deliberately unauthenticated — there is no
+     * bearer to send yet; the claim code is the credential.
+     *
+     * @param array{name?: string, email?: string} $contact
+     *
+     * @return array<string, mixed>
+     */
+    public function claimToken(#[\SensitiveParameter] string $claimCode, ?string $declaredIp = null, array $contact = []): array
+    {
+        $body = ['claim_code' => trim($claimCode)];
+        if ($declaredIp !== null && trim($declaredIp) !== '') {
+            $body['declared_ip'] = trim($declaredIp);
+        }
+        self::appendContactFields($body, $contact);
+
+        return $this->http->postJson('ClaimToken', $body);
+    }
+
+    /**
+     * Ask for a fresh claim code (POST /API/AI/RequestClaimCode.php).
+     *
+     * The code is only ever sent to the address already stored on the account, and the server
+     * answers identically whether or not an account exists — so the response says nothing about
+     * whether the address is registered, and the UI must not imply otherwise.
+     *
+     * @return array<string, mixed>
+     */
+    public function requestClaimCode(string $email): array
+    {
+        return $this->http->postJson('RequestClaimCode', ['email' => trim($email)]);
+    }
+
+    /**
      * @param array<string, mixed> $body
      * @param array{name?: string, email?: string} $contact
      */
