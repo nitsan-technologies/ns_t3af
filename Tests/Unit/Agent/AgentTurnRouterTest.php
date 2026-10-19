@@ -323,23 +323,39 @@ final class AgentTurnRouterTest extends TestCase
     }
 
     #[Test]
-    public function aMissingNamedPageAsksInsteadOfUsingTheOpenPage(): void
+    public function anUnmatchedNameIsLeftForTheModelOnTheOpenPage(): void
     {
         $user = $this->createMock(BackendUserAuthentication::class);
-        $this->turnOrchestrator->expects(self::never())->method('runTurn');
+        $this->turnOrchestrator->expects(self::once())
+            ->method('runTurn')
+            ->with(
+                'Add the voice-over content element for the Hindi page',
+                self::isType('array'),
+                self::callback(static fn(array $context): bool => (int) ($context['pageId'] ?? 0) === 54 && (int) ($context['lockedPageId'] ?? 0) === 0),
+                self::isType('array'),
+                $user,
+                'corr-unmatched',
+                null,
+            )
+            ->willReturn([
+                'messages' => [[
+                    'role' => 'assistant',
+                    'content' => 'decided',
+                    'meta' => ['type' => 'info'],
+                ]],
+                'paused' => false,
+                'pauseReason' => null,
+            ]);
 
         $messages = $this->router->route(
-            'make the Contact page show up in Google',
-            ['pageId' => 2, 'details' => ['page' => ['uid' => 2, 'title' => 'QA Mounted']]],
+            'Add the voice-over content element for the Hindi page',
+            ['pageId' => 54, 'details' => ['page' => ['uid' => 54, 'title' => 'Page 5']]],
             [],
             $user,
-            'corr-missing',
+            'corr-unmatched',
         );
 
-        self::assertSame('clarification', $messages[0]['meta']['type'] ?? null);
-        self::assertTrue($messages[0]['meta']['missingPage'] ?? false);
-        self::assertSame('Contact', $messages[0]['meta']['missingPageName'] ?? null);
-        self::assertStringContainsString('Contact', $messages[0]['content']);
+        self::assertSame('decided', $messages[0]['content']);
     }
 
     #[Test]

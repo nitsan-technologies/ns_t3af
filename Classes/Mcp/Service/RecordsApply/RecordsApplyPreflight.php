@@ -22,7 +22,10 @@ namespace NITSAN\NsT3AF\Mcp\Service\RecordsApply;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Checks a records_apply request completely BEFORE anything is written.
@@ -366,6 +369,10 @@ readonly class RecordsApplyPreflight
                         continue;
                     }
 
+                    if ($command === 'copy' && !$this->copyTranslationsCanFollow($table, (int) $uid, $argument, $where, $problems)) {
+                        continue;
+                    }
+
                     $clean[$table][(int) $uid][$command] = $argument;
                     $needsExisting = $needsExisting || $command !== 'undelete';
                 }
@@ -460,6 +467,113 @@ readonly class RecordsApplyPreflight
                 'error' => 'Record not found or not accessible.',
             ]);
         }
+    }
+
+    /**
+     * DataHandler copies translations together with the original, then logs a warning (which this
+     * engine treats as a failed batch) when the target page has no translation in that language.
+     * Refuse here, before anything is written.
+     *
+     * @param array<string, mixed> $where
+     */
+    private function copyTranslationsCanFollow(string $table, int $uid, int $target, array $where, RecordsApplyProblems $problems): bool
+    {
+        if ($table === 'pages') {
+            return true;
+        }
+
+        $config = $this->tcaSchemaService->getTranslationConfig($table);
+        $languageField = $config['languageField'];
+        $pointerField = $config['transOrigPointerField'];
+        if ($languageField === null || $pointerField === null) {
+            return true;
+        }
+
+        $pageId = $this->copyTargetPageId($table, $target);
+        if ($pageId <= 0) {
+            return true;
+        }
+
+        $overlayLanguages = $this->translationLanguageIds($table, $pointerField, $languageField, $uid);
+        if ($overlayLanguages === []) {
+            return true;
+        }
+
+        $pageConfig = $this->tcaSchemaService->getTranslationConfig('pages');
+        $pageLanguageField = $pageConfig['languageField'] ?? 'sys_language_uid';
+        $pagePointerField = $pageConfig['transOrigPointerField'] ?? 'l10n_parent';
+        $defaultPageId = $this->defaultLanguagePageId($pageId, $pagePointerField);
+        $available = $this->translationLanguageIds('pages', $pagePointerField, $pageLanguageField, $defaultPageId);
+        $missing = array_values(array_diff($overlayLanguages, $available));
+        if ($missing === []) {
+            return true;
+        }
+
+        foreach ($missing as $languageId) {
+            $problems->add($where + [
+                'error' => sprintf(
+                    'Page %d has no translation in language %d. %s:%d has a translation in that language. Create the page translation first, or copy records that have no translations.',
+                    $defaultPageId,
+                    $languageId,
+                    $table,
+                    $uid,
+                ),
+            ]);
+        }
+
+        return false;
+    }
+
+    private function copyTargetPageId(string $table, int $target): int
+    {
+        if ($target > 0) {
+            return $target;
+        }
+
+        $record = $this->recordService->findByUid($table, -$target, ['pid']);
+
+        return (int) ($record['pid'] ?? 0);
+    }
+
+    private function defaultLanguagePageId(int $pageId, string $pointerField): int
+    {
+        $page = $this->recordService->findByUid('pages', $pageId, ['uid', $pointerField]);
+        $parent = (int) ($page[$pointerField] ?? 0);
+
+        return $parent > 0 ? $parent : $pageId;
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function translationLanguageIds(string $table, string $pointerField, string $languageField, int $parentUid): array
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
+        $queryBuilder->getRestrictions()->removeAll()->add(GeneralUtility::makeInstance(DeletedRestriction::class));
+
+        try {
+            $column = $queryBuilder
+                ->select($languageField)
+                ->from($table)
+                ->where($queryBuilder->expr()->eq(
+                    $pointerField,
+                    $queryBuilder->createNamedParameter($parentUid, Connection::PARAM_INT),
+                ))
+                ->executeQuery()
+                ->fetchFirstColumn();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $languages = [];
+        foreach ($column as $languageId) {
+            $languageId = (int) $languageId;
+            if ($languageId > 0) {
+                $languages[$languageId] = $languageId;
+            }
+        }
+
+        return array_values($languages);
     }
 
     private function checkTable(string $table, string $section, BackendUserAuthentication $backendUser, RecordsApplyProblems $problems): bool

@@ -75,7 +75,7 @@
                             <td>
                                 <f:if condition="{conn.scope}">
                                     <f:then><code>{conn.scope}</code></f:then>
-                                    <f:else><span class="text-variant">—</span></f:else>
+                                    <f:else><code>{mcpDefaultScopes}</code></f:else>
                                 </f:if>
                             </td>
                             <td><f:format.date format="Y-m-d H:i:s">{conn.connected}</f:format.date></td>

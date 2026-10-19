@@ -655,11 +655,13 @@ readonly class FileUploadService
             && filter_var($host, FILTER_VALIDATE_IP) === false
             && defined('CURLOPT_RESOLVE');
 
-        if ($pinDns) {
+        if ($pinDns && extension_loaded('curl')) {
             $port = $parts['port'] ?? (($parts['scheme'] ?? 'https') === 'https' ? 443 : 80);
             $pinnedIp = filter_var($resolvedIp, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) !== false
                 ? '[' . $resolvedIp . ']'
                 : $resolvedIp;
+            // Leave stream unset. Guzzle uses the curl handler only when that key is absent,
+            // and the stream handler rejects curl options.
             $options['curl'] = [\CURLOPT_RESOLVE => [$host . ':' . $port . ':' . $pinnedIp]];
             $options['progress'] = static function (int $downloadTotal, int $downloaded) use ($maxBytes): void {
                 if ($downloaded > $maxBytes) {

@@ -289,7 +289,7 @@ function storePersonalBearerToken(root) {
 
   const target = panel.querySelector('[data-copy-target="personal-bearer-token"]');
   if (target instanceof HTMLElement) {
-    target.textContent = plain.slice(0, 24) + '…';
+    target.textContent = plain;
   }
 }
 

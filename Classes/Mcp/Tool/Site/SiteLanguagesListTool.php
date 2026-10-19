@@ -39,7 +39,7 @@ readonly class SiteLanguagesListTool implements McpNonAiToolInterface
 
     #[McpTool(
         name: 'site_languages_list',
-        description: 'List site languages available for a page. Provide pageId or pageUrl (one required). Use before mass translation queue operations to ask the user which target languages to select.',
+        description: 'List site languages available for a page (pageId or pageUrl), or the languages of all sites when no page is given. Use before mass translation queue operations to ask the user which target languages to select.',
     )]
     public function execute(?int $pageId = null, string $pageUrl = ''): string
     {

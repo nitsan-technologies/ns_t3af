@@ -62,13 +62,29 @@ Connection methods
 * **mcp-remote** — Simple HTTP clients. Uses URL token.
 * **Local CLI** — DDEV and local development. Uses backend user and workspace.
 
+.. _mcp-personal-token:
+
+Personal bearer token
+---------------------
+
+On :guilabel:`AI Foundation > MCP Server`, the **Bearer Token** row is for
+clients other than n8n and Manus. Those two still use :guilabel:`Create n8n Token`
+and :guilabel:`Create manus Token` in their setup tabs.
+
+* Opening the module does not create a token.
+* Click :guilabel:`Create personal token`. One token is created, and the full
+  value is shown once. Copy it before you leave the page.
+* A later visit shows only a short preview. :guilabel:`Copy Token` still copies
+  the full value in that same browser session. After the session is gone,
+  revoke the token and create a new one.
+
 MCP modes
 ---------
 
 Set the mode in the **MCP Server** top bar (stored as ``mcpMode`` in the
 AI Foundation MCP settings).
 
-**Context (AI Generate via AI Agent)** — Default for Cursor, Claude Desktop,
+**Context (AI Generate in the client)** — Default for Cursor, Claude Desktop,
 and similar clients.
 
 * The external AI agent generates content outside TYPO3.

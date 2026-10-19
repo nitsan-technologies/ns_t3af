@@ -798,6 +798,9 @@
       <trans-unit id="agent.turn.failedNotRepeated" resname="agent.turn.failedNotRepeated">
         <source>That step already failed and would fail the same way again, so I did not offer it again. Give me a different address or file.</source>
       </trans-unit>
+      <trans-unit id="agent.turn.toolFailedNoReply" resname="agent.turn.toolFailedNoReply">
+        <source>That step did not work (see the message above), so nothing was changed. Tell me how to go on, for example with a different page, file or wording.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.imageGenerationUnavailable" resname="agent.turn.imageGenerationUnavailable">
         <source>AI image generation is not available to you (it needs T3AI with an image provider and access to T3AI Media), so no image will be generated. I will do the rest of the request.</source>
       </trans-unit>
@@ -1530,6 +1533,40 @@
       </trans-unit>
       <trans-unit id="agent.turn.previewFailed" resname="agent.turn.previewFailed">
         <source>I could not show a preview for “%1$s”: %2$s Try again or describe the change differently.</source>
+      </trans-unit>
+      <trans-unit id="agent.fileMeta.overwriteQuestion" resname="agent.fileMeta.overwriteQuestion">
+        <source>“%1$s”%2$s already has image texts:
+
+%3$s
+
+Should I generate new suggestions? Nothing is replaced until you save one.</source>
+      </trans-unit>
+      <trans-unit id="agent.fileMeta.option.regenerate" resname="agent.fileMeta.option.regenerate">
+        <source>Regenerate all</source>
+      </trans-unit>
+      <trans-unit id="agent.fileMeta.option.fillEmpty" resname="agent.fileMeta.option.fillEmpty">
+        <source>Fill empty fields only</source>
+      </trans-unit>
+      <trans-unit id="agent.fileMeta.option.keep" resname="agent.fileMeta.option.keep">
+        <source>Keep current texts</source>
+      </trans-unit>
+      <trans-unit id="agent.fileMeta.kept" resname="agent.fileMeta.kept">
+        <source>I kept the current image texts of “%s”. Nothing was changed.</source>
+      </trans-unit>
+      <trans-unit id="agent.fileMeta.whichFile" resname="agent.fileMeta.whichFile">
+        <source>Several files are named “%s”. Which one do you mean?</source>
+      </trans-unit>
+      <trans-unit id="agent.fileMeta.field.altText" resname="agent.fileMeta.field.altText">
+        <source>Alt text</source>
+      </trans-unit>
+      <trans-unit id="agent.fileMeta.field.title" resname="agent.fileMeta.field.title">
+        <source>Title</source>
+      </trans-unit>
+      <trans-unit id="agent.fileMeta.field.description" resname="agent.fileMeta.field.description">
+        <source>Description</source>
+      </trans-unit>
+      <trans-unit id="agent.fileMeta.field.empty" resname="agent.fileMeta.field.empty">
+        <source>(empty)</source>
       </trans-unit>
       <trans-unit id="agent.tool.permissionDenied" resname="agent.tool.permissionDenied">
         <source>You do not have permission to change this page or its content. Ask an administrator for page or content edit rights, then try again.</source>

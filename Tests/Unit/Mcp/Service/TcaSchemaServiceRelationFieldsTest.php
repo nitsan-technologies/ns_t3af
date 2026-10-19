@@ -76,7 +76,7 @@ final class TcaSchemaServiceRelationFieldsTest extends TestCase
                 ],
             ],
             'tt_content' => [
-                'ctrl' => ['label' => 'header'],
+                'ctrl' => ['label' => 'header', 'sortby' => 'sorting'],
                 'columns' => [
                     'header' => [
                         'label' => 'Header',
@@ -149,6 +149,9 @@ final class TcaSchemaServiceRelationFieldsTest extends TestCase
 
         self::assertArrayHasKey('categories', $byName);
         self::assertSame('uid_list', $byName['categories']['writableAs']);
+        self::assertSame('category', $byName['categories']['relationKind']);
+        self::assertSame('mm', $byName['authors']['relationKind']);
+        self::assertSame('mm', $byName['tags']['relationKind']);
 
         $ttSchema = $this->service->getFieldsSchema('tt_content');
         $ttByName = [];
@@ -159,6 +162,8 @@ final class TcaSchemaServiceRelationFieldsTest extends TestCase
         self::assertSame('collection', $ttByName['nitsan_nsfaq_faq']['type']);
         self::assertSame('nitsan_nsfaq_faq', $ttByName['nitsan_nsfaq_faq']['foreignTable']);
         self::assertFalse($ttByName['nitsan_nsfaq_faq']['writable']);
+        self::assertSame('sorting', $ttByName['sorting']['name']);
+        self::assertTrue($ttByName['sorting']['readOnly']);
     }
 
     #[Test]

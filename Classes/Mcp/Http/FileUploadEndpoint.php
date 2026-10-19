@@ -68,9 +68,17 @@ readonly class FileUploadEndpoint
             }
 
             $token = $this->extractToken($request);
+            if ($token === '') {
+                return $this->jsonError('Missing upload token.', 401, 1747330005);
+            }
+
             $tokenRow = $this->fileUploadService->consumeUploadToken($token);
             if ($tokenRow === null) {
-                return $this->jsonError('Invalid, expired, or already used upload token.', 401, 1747330005);
+                return $this->jsonError(
+                    'Invalid, expired, or already used upload token. Ask for a new upload ticket.',
+                    403,
+                    1747330005,
+                );
             }
 
             try {

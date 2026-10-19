@@ -29,14 +29,17 @@ namespace NITSAN\NsT3AF\Mcp\Service\RecordsApply;
  *  - the first new record of a group goes after the last record already on that page,
  *  - every further one goes after the new record sent just before it.
  *
- * A group is table + pid + column + language, so content in different columns or languages is
- * ordered independently. A negative pid is the client's explicit placement and stays as it is.
- * Tables without a manual sort order (no ctrl.sortby) and inline child tables (hideTable) are
- * ordered by their parent's field list, so they are not touched here.
+ * A group is table + pid + column + language + inline parent, so content in different columns,
+ * languages, or parent records is ordered independently. A negative pid is the client's explicit
+ * placement and stays as it is. Tables without a manual sort order (no ctrl.sortby) are not touched.
+ * Inline child tables (hideTable) that do have sortby are chained too, within each parent.
  */
 readonly class RecordAppendOrderer
 {
-    public function __construct(private LastRecordLocator $locator) {}
+    public function __construct(
+        private LastRecordLocator $locator,
+        private InlineForeignFields $foreignFields = new InlineForeignFields(),
+    ) {}
 
     /**
      * @param array<string, array<int|string, array<string, mixed>>> $datamap
@@ -46,9 +49,11 @@ readonly class RecordAppendOrderer
     {
         foreach ($datamap as $table => $records) {
             $sortBy = $GLOBALS['TCA'][$table]['ctrl']['sortby'] ?? '';
-            if (!is_string($sortBy) || $sortBy === '' || ($GLOBALS['TCA'][$table]['ctrl']['hideTable'] ?? false)) {
+            if (!is_string($sortBy) || $sortBy === '') {
                 continue;
             }
+
+            $parentFields = $this->foreignFields->ofChildTable($table);
 
             /** @var array<string, string> $lastNewInGroup group key => NEW id */
             $lastNewInGroup = [];
@@ -66,6 +71,7 @@ readonly class RecordAppendOrderer
                     $pid,
                     (string) ($fields['colPos'] ?? ''),
                     (string) ($fields['sys_language_uid'] ?? '0'),
+                    self::parentKey($fields, $parentFields),
                 ]);
 
                 if (isset($lastNewInGroup[$key])) {
@@ -82,5 +88,22 @@ readonly class RecordAppendOrderer
         }
 
         return $datamap;
+    }
+
+    /**
+     * @param array<string, mixed> $fields
+     * @param list<string> $parentFields
+     */
+    private static function parentKey(array $fields, array $parentFields): string
+    {
+        $parts = [];
+        foreach ($parentFields as $field) {
+            if (!array_key_exists($field, $fields) || !is_scalar($fields[$field])) {
+                continue;
+            }
+            $parts[] = $field . '=' . (string) $fields[$field];
+        }
+
+        return implode(',', $parts);
     }
 }

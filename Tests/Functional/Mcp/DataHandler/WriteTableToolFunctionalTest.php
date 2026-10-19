@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Functional\Mcp\DataHandler;
 
+use Mcp\Exception\ToolCallException;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool;
 use PHPUnit\Framework\Attributes\Test;
@@ -43,9 +44,11 @@ final class WriteTableToolFunctionalTest extends FunctionalTestCase
         'frontend',
         'workspaces',
         'scheduler',
+        'extensionmanager',
     ];
 
     protected array $testExtensionsToLoad = [
+        'nitsan/ns-license',
         'ns_t3af',
     ];
 
@@ -134,9 +137,13 @@ final class WriteTableToolFunctionalTest extends FunctionalTestCase
 
         /** @var WriteTableTool $tool */
         $tool = $this->get(WriteTableTool::class);
-        $result = json_decode($tool->execute('create', 'tt_content', '{"pid":999999,"CType":"text","header":"Nowhere"}'), true);
-
-        self::assertStringContainsString('Page 999999 was not found', $result['error']);
+        try {
+            $tool->execute('create', 'tt_content', '{"pid":999999,"CType":"text","header":"Nowhere"}');
+            self::fail('Expected the missing page to leave write_table.');
+        } catch (ToolCallException $exception) {
+            self::assertSame(1790500006, $exception->getCode());
+            self::assertStringContainsString('Page 999999 was not found', $exception->getMessage());
+        }
         self::assertSame(
             0,
             (int) $this->getConnectionPool()->getConnectionForTable('tt_content')

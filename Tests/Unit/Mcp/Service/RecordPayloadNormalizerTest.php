@@ -182,6 +182,31 @@ final class RecordPayloadNormalizerTest extends TestCase
     }
 
     #[Test]
+    public function ignoredFieldDetailsAcceptsANumericKey(): void
+    {
+        $details = $this->normalizer->ignoredFieldDetails('tt_content', [275]);
+
+        self::assertSame('275', $details[0]['field']);
+        self::assertSame('unknown_or_not_in_tca', $details[0]['reason']);
+    }
+
+    #[Test]
+    public function uidKeyedFieldMapsReadsRecordsKeyedByUid(): void
+    {
+        self::assertSame(
+            [
+                ['uid' => 275, 'fields' => ['bodytext' => 'Short text']],
+                ['uid' => 276, 'fields' => ['header' => 'Origin', 'bodytext' => 'Created in 1962']],
+            ],
+            RecordPayloadNormalizer::uidKeyedFieldMaps([
+                275 => 'Short text',
+                '276' => ['header' => 'Origin', 'bodytext' => 'Created in 1962'],
+            ]),
+        );
+        self::assertNull(RecordPayloadNormalizer::uidKeyedFieldMaps(['bodytext' => 'Short text', 'uid' => 275]));
+    }
+
+    #[Test]
     public function ignoredFieldsContextCarriesNamesAndDetails(): void
     {
         $context = $this->normalizer->ignoredFieldsContext('tt_content', ['bogus']);

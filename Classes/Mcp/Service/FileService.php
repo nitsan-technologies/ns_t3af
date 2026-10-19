@@ -100,12 +100,8 @@ readonly class FileService
         $storage = $this->getStorage($storageUid);
         // FAL identifiers start with a slash; a composer token (@file:1:user_upload/a.jpg) carries it without.
         $fileIdentifier = '/' . ltrim($fileIdentifier, '/');
-        RecordsApplyFileAccess::assertFolderAllowed($storageUid, dirname($fileIdentifier) . '/');
-        $file = $storage->getFileByIdentifier($fileIdentifier);
-
-        if (!$file instanceof File) {
-            throw new \RuntimeException('File not found: ' . $fileIdentifier, 1712002001);
-        }
+        $file = $this->fileByIdentifierOrName($storage, $fileIdentifier);
+        RecordsApplyFileAccess::assertFolderAllowed($storageUid, dirname($file->getIdentifier()) . '/');
 
         return [
             'uid' => $file->getUid(),
@@ -388,6 +384,74 @@ readonly class FileService
         $storage = $this->getStorage($storageUid);
         $folder = $storage->getFolder($directoryIdentifier);
         $storage->deleteFolder($folder, $recursive);
+    }
+
+    /**
+     * Editors name a file ("photo.jpg") without its folder: a name that is unique in the storage is that file.
+     * Only files inside the editor's file mounts count, so other folders are neither used nor named.
+     */
+    private function fileByIdentifierOrName(ResourceStorage $storage, string $fileIdentifier): File
+    {
+        try {
+            $file = $storage->getFileByIdentifier($fileIdentifier);
+        } catch (\Throwable) {
+            $file = null;
+        }
+        if ($file instanceof File) {
+            return $file;
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('sys_file');
+        $queryBuilder->getRestrictions()->removeAll();
+        $identifiers = $queryBuilder->select('identifier')
+            ->from('sys_file')
+            ->where(
+                $queryBuilder->expr()->eq('storage', $queryBuilder->createNamedParameter($storage->getUid(), ParameterType::INTEGER)),
+                $queryBuilder->expr()->eq('name', $queryBuilder->createNamedParameter(basename($fileIdentifier))),
+                $queryBuilder->expr()->eq('missing', $queryBuilder->createNamedParameter(0, ParameterType::INTEGER)),
+            )
+            ->orderBy('uid')
+            ->setMaxResults(50)
+            ->executeQuery()
+            ->fetchFirstColumn();
+        $identifiers = array_slice(array_values(array_filter(
+            array_unique(array_map('strval', $identifiers)),
+            static fn(string $identifier): bool => self::mayReadIdentifier($storage->getUid(), $identifier),
+        )), 0, 9);
+
+        if (count($identifiers) > 1) {
+            throw new \RuntimeException(sprintf(
+                'Several files are named "%s": %s. Pass the full identifier of the one to use.',
+                basename($fileIdentifier),
+                implode(', ', $identifiers),
+            ), 1712002002);
+        }
+        if (count($identifiers) === 1) {
+            try {
+                $file = $storage->getFileByIdentifier($identifiers[0]);
+            } catch (\Throwable) {
+                $file = null;
+            }
+            if ($file instanceof File) {
+                return $file;
+            }
+        }
+
+        throw new \RuntimeException('File not found: ' . $fileIdentifier, 1712002001);
+    }
+
+    private static function mayReadIdentifier(int $storageUid, string $fileIdentifier): bool
+    {
+        $backendUser = $GLOBALS['BE_USER'] ?? null;
+        if (!$backendUser instanceof BackendUserAuthentication) {
+            return false;
+        }
+        if ($backendUser->isAdmin()) {
+            return true;
+        }
+        $mounts = $backendUser->getFileMountRecords();
+
+        return RecordsApplyFileAccess::isInsideAFileMount(is_array($mounts) ? $mounts : [], $storageUid, $fileIdentifier);
     }
 
     /**

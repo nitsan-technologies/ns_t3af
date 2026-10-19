@@ -205,7 +205,10 @@ Recommended for production-like clients. Transport: **HTTP Streamable** at ``{si
 Authentication options:
 
 * **OAuth 2.1 + PKCE** — Claude Desktop, MCP Inspector, generic OAuth clients
-* **Bearer token** — n8n, Manus (create token in the module UI)
+* **Bearer token** — n8n and Manus (create the token in that client's setup
+  tab). Other clients use :guilabel:`Create personal token` on the Connect
+  screen. Opening that screen does not create a token. See
+  :ref:`mcp-personal-token`.
 
 Default scopes (advanced settings): ``mcp:read mcp:write mcp:tools``
 
@@ -216,8 +219,8 @@ Claude Desktop (OAuth)
 
 **Steps:**
 
-1. Open **Claude Desktop → Settings → Integrations**.
-2. Click **Add Integration**.
+1. Open **Claude Desktop → Customize → Connectors**.
+2. Click **Add connector**.
 3. Name it (for example ``TYPO3 DDEV``).
 4. Paste **Server URL** from the module, e.g.:
 

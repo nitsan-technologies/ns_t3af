@@ -25,6 +25,7 @@ namespace NITSAN\NsT3AF\Mcp\Service;
 
 use const JSON_THROW_ON_ERROR;
 
+use NITSAN\NsT3AF\Mcp\Authentication\McpBackendUserAuthentication;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
@@ -83,6 +84,7 @@ readonly class DataHandlerService
             if ($table === 'pages') {
                 $this->siteRequestBootstrap->restore($requestSnapshot);
             }
+            $this->discardUpdateSignal();
         }
     }
 
@@ -146,6 +148,7 @@ readonly class DataHandlerService
             if ($trackRedirects && $guard !== null) {
                 $guard->end();
             }
+            $this->discardUpdateSignal();
         }
 
         return ['warnings' => $warnings, 'redirects' => $redirects];
@@ -153,11 +156,15 @@ readonly class DataHandlerService
 
     public function deleteRecord(string $table, int $uid): void
     {
-        $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
-        $dataHandler->start([], [$table => [$uid => ['delete' => 1]]]);
-        $dataHandler->process_cmdmap();
+        try {
+            $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
+            $dataHandler->start([], [$table => [$uid => ['delete' => 1]]]);
+            $dataHandler->process_cmdmap();
 
-        $this->checkErrors($dataHandler);
+            $this->checkErrors($dataHandler);
+        } finally {
+            $this->discardUpdateSignal();
+        }
     }
 
     /**
@@ -166,11 +173,15 @@ readonly class DataHandlerService
      */
     public function moveRecord(string $table, int $uid, int $target): void
     {
-        $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
-        $dataHandler->start([], [$table => [$uid => ['move' => $target]]]);
-        $dataHandler->process_cmdmap();
+        try {
+            $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
+            $dataHandler->start([], [$table => [$uid => ['move' => $target]]]);
+            $dataHandler->process_cmdmap();
 
-        $this->checkErrors($dataHandler);
+            $this->checkErrors($dataHandler);
+        } finally {
+            $this->discardUpdateSignal();
+        }
     }
 
     /**
@@ -220,6 +231,7 @@ readonly class DataHandlerService
             if ($table === 'pages') {
                 $this->siteRequestBootstrap->restore($requestSnapshot);
             }
+            $this->discardUpdateSignal();
         }
     }
 
@@ -231,11 +243,15 @@ readonly class DataHandlerService
             $cmdmap[$uid] = ['delete' => 1];
         }
 
-        $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
-        $dataHandler->start([], [$table => $cmdmap]);
-        $dataHandler->process_cmdmap();
+        try {
+            $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
+            $dataHandler->start([], [$table => $cmdmap]);
+            $dataHandler->process_cmdmap();
 
-        $this->checkErrors($dataHandler);
+            $this->checkErrors($dataHandler);
+        } finally {
+            $this->discardUpdateSignal();
+        }
     }
 
     /**
@@ -411,25 +427,29 @@ readonly class DataHandlerService
             $fieldName => implode(',', $parentValueParts),
         ];
 
-        $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
-        $dataHandler->start($datamap, []);
-        $dataHandler->process_datamap();
+        try {
+            $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
+            $dataHandler->start($datamap, []);
+            $dataHandler->process_datamap();
 
-        $this->checkErrors($dataHandler);
+            $this->checkErrors($dataHandler);
 
-        $referenceUids = [];
-        foreach ($newIds as $newId) {
-            /** @var int|string|null $uid */
-            $uid = $dataHandler->substNEWwithIDs[$newId] ?? null;
-            if ($uid !== null) {
-                $referenceUids[] = (int) $uid;
+            $referenceUids = [];
+            foreach ($newIds as $newId) {
+                /** @var int|string|null $uid */
+                $uid = $dataHandler->substNEWwithIDs[$newId] ?? null;
+                if ($uid !== null) {
+                    $referenceUids[] = (int) $uid;
+                }
             }
+
+            // Ensure parent FAL counter column matches live references (SEO/og_image).
+            $this->syncFileFieldCounter($table, $recordUid, $fieldName);
+
+            return $referenceUids;
+        } finally {
+            $this->discardUpdateSignal();
         }
-
-        // Ensure parent FAL counter column matches live references (SEO/og_image).
-        $this->syncFileFieldCounter($table, $recordUid, $fieldName);
-
-        return $referenceUids;
     }
 
     /**
@@ -678,11 +698,20 @@ readonly class DataHandlerService
      */
     public function processCommand(array $cmdmap): void
     {
-        $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
-        $dataHandler->start([], $cmdmap);
-        $dataHandler->process_cmdmap();
+        try {
+            $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
+            $dataHandler->start([], $cmdmap);
+            $dataHandler->process_cmdmap();
 
-        $this->checkErrors($dataHandler);
+            $this->checkErrors($dataHandler);
+        } finally {
+            $this->discardUpdateSignal();
+        }
+    }
+
+    private function discardUpdateSignal(): void
+    {
+        McpBackendUserAuthentication::discardUpdateSignal($GLOBALS['BE_USER'] ?? null);
     }
 
     private function checkErrors(DataHandler $dataHandler): void

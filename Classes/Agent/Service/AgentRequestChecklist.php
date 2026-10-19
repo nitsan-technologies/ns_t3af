@@ -371,6 +371,15 @@ final class AgentRequestChecklist
             ' ',
             $s,
         );
+        // "Alt text" is a field of an image, not a Text element.
+        $s = (string) preg_replace('/\b(?:alt[\s-]?(?:texts?|tags?|attributes?)|alternative?\s+texts?)\b/u', ' ', $s);
+        // "all images", "the images in the user_upload folder" are files that already exist, not an Images element.
+        $s = (string) preg_replace(
+            '/\b(?:all|existing|these|those|the|alle|vorhandenen?|diese)\s+(?:images|bilder)\b(?!\s+(?:content\s+)?elements?\b)'
+            . '|\b(?:images|bilder)\s+(?:in|from|im|aus)\s+(?:the\s+|dem\s+)?(?:folder|ordner|fileadmin\b|[\w.-]+\/|[\w.-]+\s+(?:folder|ordner)\b)/u',
+            ' ',
+            $s,
+        );
         $hits = [];
         $patterns = [
             'textmedia' => '/\b(text\s*(?:&|and|und)\s*(?:media|medien)|textmedia)\b/u',

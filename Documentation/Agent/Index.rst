@@ -111,3 +111,4 @@ Related
 * :ref:`AI Permissions <ai-permissions>` — group policy for the agent
 * :ref:`Release notes 2.0.0 <release-notes-2-0-0>` — when the agent was introduced
 * :ref:`Release notes 2.0.1 <release-notes-2-0-1>` — agent QA and MCP patch fixes
+* :ref:`Release notes 2.0.3 <release-notes-2-0-3>` — image texts, named pages, personal token, collection writes

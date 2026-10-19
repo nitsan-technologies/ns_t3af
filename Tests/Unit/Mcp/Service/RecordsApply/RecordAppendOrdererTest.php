@@ -144,16 +144,42 @@ final class RecordAppendOrdererTest extends TestCase
     }
 
     #[Test]
-    public function tablesWithoutAManualSortOrderAndInlineChildTablesAreNotTouched(): void
+    public function tablesWithoutAManualSortOrderAreNotTouched(): void
     {
         $this->locator->expects(self::never())->method('lastUid');
 
         $datamap = [
             'tx_plain' => ['NEWa' => ['pid' => 5], 'NEWb' => ['pid' => 5]],
-            'tx_child' => ['NEWc' => ['pid' => 5], 'NEWd' => ['pid' => 5]],
         ];
 
         self::assertSame($datamap, $this->orderer->apply($datamap));
+    }
+
+    #[Test]
+    public function inlineChildrenChainInsideEachParentAndAPlainIntegerParentStaysItsOwnGroup(): void
+    {
+        $GLOBALS['TCA']['tt_content']['columns']['faq'] = [
+            'config' => [
+                'type' => 'inline',
+                'foreign_table' => 'tx_child',
+                'foreign_field' => 'foreign_table_parent_uid',
+            ],
+        ];
+        $this->locator->expects(self::exactly(3))->method('lastUid')->willReturn(null);
+
+        $result = $this->orderer->apply([
+            'tx_child' => [
+                'NEWq1' => ['pid' => 5, 'title' => 'Q1', 'foreign_table_parent_uid' => 'NEWce'],
+                'NEWr1' => ['pid' => 5, 'title' => 'R1', 'foreign_table_parent_uid' => 'NEWother'],
+                'NEWq2' => ['pid' => 5, 'title' => 'Q2', 'foreign_table_parent_uid' => 'NEWce'],
+                'NEWzero' => ['pid' => 5, 'title' => 'Z', 'foreign_table_parent_uid' => 0],
+            ],
+        ]);
+
+        self::assertSame(5, $result['tx_child']['NEWq1']['pid']);
+        self::assertSame('-NEWq1', $result['tx_child']['NEWq2']['pid']);
+        self::assertSame(5, $result['tx_child']['NEWr1']['pid']);
+        self::assertSame(5, $result['tx_child']['NEWzero']['pid']);
     }
 
     #[Test]

@@ -20,6 +20,8 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Service;
 
 use NITSAN\NsT3AF\Mcp\Support\SitePageResolver;
+use TYPO3\CMS\Core\Exception\SiteNotFoundException;
+use TYPO3\CMS\Core\Site\Entity\SiteLanguage;
 use TYPO3\CMS\Core\Site\SiteFinder;
 
 /**
@@ -37,27 +39,68 @@ readonly class SiteLanguagesListService
      */
     public function listForPage(?int $pageId, string $pageUrl): array
     {
-        $resolvedPageId = $this->pageResolver->resolve($pageId, $pageUrl);
-        $site = $this->siteFinder->getSiteByPageId($resolvedPageId);
-        $siteLanguages = $site->getAvailableLanguages($GLOBALS['BE_USER'], false, $resolvedPageId);
-
-        $languages = [];
-        foreach ($siteLanguages as $siteLanguage) {
-            $languageId = $siteLanguage->getLanguageId();
-            $languages[] = [
-                'languageId' => $languageId,
-                'title' => $siteLanguage->getTitle(),
-                'locale' => (string) $siteLanguage->getLocale(),
-                'iso' => $siteLanguage->getLocale()->getLanguageCode(),
-                'flagIdentifier' => $siteLanguage->getFlagIdentifier(),
-                'isDefault' => $languageId === 0,
+        $resolvedPageId = 0;
+        $site = null;
+        if (($pageId ?? 0) > 0 || trim($pageUrl) !== '') {
+            try {
+                $resolvedPageId = $this->pageResolver->resolve($pageId, $pageUrl);
+                $site = $this->siteFinder->getSiteByPageId($resolvedPageId);
+            } catch (SiteNotFoundException) {
+                $site = null;
+            }
+        }
+        if ($site === null) {
+            return [
+                'note' => ($resolvedPageId > 0
+                    ? sprintf('Page %d belongs to no site. These are the languages of each site.', $resolvedPageId)
+                    : 'No page given. These are the languages of each site.')
+                    . ' A language id can stand for a different language on another site.',
+                'sites' => $this->allSitesLanguages(),
             ];
         }
 
         return [
             'pageId' => $resolvedPageId,
             'siteIdentifier' => $site->getIdentifier(),
-            'languages' => $languages,
+            'languages' => array_map(
+                $this->languageRow(...),
+                $site->getAvailableLanguages($GLOBALS['BE_USER'], false, $resolvedPageId),
+            ),
+        ];
+    }
+
+    /**
+     * @return list<array{siteIdentifier: string, rootPageId: int, languages: list<array<string, mixed>>}>
+     */
+    private function allSitesLanguages(): array
+    {
+        $sites = [];
+        foreach ($this->siteFinder->getAllSites() as $site) {
+            $sites[] = [
+                'siteIdentifier' => $site->getIdentifier(),
+                'rootPageId' => $site->getRootPageId(),
+                'languages' => array_values(array_map(
+                    $this->languageRow(...),
+                    $site->getAvailableLanguages($GLOBALS['BE_USER']),
+                )),
+            ];
+        }
+
+        return $sites;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function languageRow(SiteLanguage $siteLanguage): array
+    {
+        return [
+            'languageId' => $siteLanguage->getLanguageId(),
+            'title' => $siteLanguage->getTitle(),
+            'locale' => (string) $siteLanguage->getLocale(),
+            'iso' => $siteLanguage->getLocale()->getLanguageCode(),
+            'flagIdentifier' => $siteLanguage->getFlagIdentifier(),
+            'isDefault' => $siteLanguage->getLanguageId() === 0,
         ];
     }
 }

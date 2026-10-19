@@ -123,7 +123,7 @@ final readonly class AgentContextPresenter
             return '';
         }
 
-        $lines = ['Current context (use it when the editor says "this page", "here", "this element"):'];
+        $lines = ['Current context. Read it before you answer, and use it to decide what a name in the request refers to (this page, a language, a translation, or another page):'];
         $module = is_array($details['module'] ?? null) ? $details['module'] : [];
         if (($module['route'] ?? '') !== '') {
             $lines[] = sprintf('- Module: %s (%s)', $module['label'] ?? $module['route'], $module['route']);

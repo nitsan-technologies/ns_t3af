@@ -751,6 +751,10 @@
                 <source>That step already failed and would fail the same way again, so I did not offer it again. Give me a different address or file.</source>
                 <target>Dieser Schritt ist bereits gescheitert und würde genauso wieder scheitern, daher habe ich ihn nicht erneut angeboten. Nennen Sie eine andere Adresse oder Datei.</target>
             </trans-unit>
+            <trans-unit id="agent.turn.toolFailedNoReply">
+                <source>That step did not work (see the message above), so nothing was changed. Tell me how to go on, for example with a different page, file or wording.</source>
+                <target>Dieser Schritt hat nicht funktioniert (siehe Meldung oben), es wurde nichts geändert. Sagen Sie mir, wie es weitergehen soll, zum Beispiel mit einer anderen Seite, Datei oder Formulierung.</target>
+            </trans-unit>
             <trans-unit id="agent.turn.imageGenerationUnavailable">
                 <source>AI image generation is not available to you (it needs T3AI with an image provider and access to T3AI Media), so no image will be generated. I will do the rest of the request.</source>
                 <target>KI-Bildgenerierung steht Ihnen nicht zur Verfügung (sie benötigt T3AI mit einem Bild-Anbieter und Zugriff auf T3AI Media), daher wird kein Bild erzeugt. Den Rest der Anfrage erledige ich.</target>
@@ -1892,6 +1896,54 @@
             <trans-unit id="agent.turn.previewFailed">
                 <source>I could not show a preview for “%1$s”: %2$s Try again or describe the change differently.</source>
                 <target>Für „%1$s“ konnte ich keine Vorschau anzeigen: %2$s Versuchen Sie es erneut oder beschreiben Sie die Änderung anders.</target>
+            </trans-unit>
+            <trans-unit id="agent.fileMeta.overwriteQuestion">
+                <source>“%1$s”%2$s already has image texts:
+
+%3$s
+
+Should I generate new suggestions? Nothing is replaced until you save one.</source>
+                <target>„%1$s“%2$s hat bereits Bildtexte:
+
+%3$s
+
+Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag speichern.</target>
+            </trans-unit>
+            <trans-unit id="agent.fileMeta.option.regenerate">
+                <source>Regenerate all</source>
+                <target>Alle neu erstellen</target>
+            </trans-unit>
+            <trans-unit id="agent.fileMeta.option.fillEmpty">
+                <source>Fill empty fields only</source>
+                <target>Nur leere Felder füllen</target>
+            </trans-unit>
+            <trans-unit id="agent.fileMeta.option.keep">
+                <source>Keep current texts</source>
+                <target>Aktuelle Texte behalten</target>
+            </trans-unit>
+            <trans-unit id="agent.fileMeta.kept">
+                <source>I kept the current image texts of “%s”. Nothing was changed.</source>
+                <target>Die aktuellen Bildtexte von „%s“ bleiben unverändert.</target>
+            </trans-unit>
+            <trans-unit id="agent.fileMeta.whichFile">
+                <source>Several files are named “%s”. Which one do you mean?</source>
+                <target>Mehrere Dateien heißen „%s“. Welche meinen Sie?</target>
+            </trans-unit>
+            <trans-unit id="agent.fileMeta.field.altText">
+                <source>Alt text</source>
+                <target>Alt-Text</target>
+            </trans-unit>
+            <trans-unit id="agent.fileMeta.field.title">
+                <source>Title</source>
+                <target>Titel</target>
+            </trans-unit>
+            <trans-unit id="agent.fileMeta.field.description">
+                <source>Description</source>
+                <target>Beschreibung</target>
+            </trans-unit>
+            <trans-unit id="agent.fileMeta.field.empty">
+                <source>(empty)</source>
+                <target>(leer)</target>
             </trans-unit>
             <trans-unit id="agent.tool.permissionDenied">
                 <source>You do not have permission to change this page or its content. Ask an administrator for page or content edit rights, then try again.</source>
