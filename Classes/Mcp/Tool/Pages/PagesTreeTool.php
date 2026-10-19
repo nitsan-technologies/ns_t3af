@@ -46,9 +46,9 @@ readonly class PagesTreeTool implements McpNonAiToolInterface
 
     #[McpTool(
         name: 'pages_tree',
-        description: 'Get the page tree hierarchy starting from a given page ID. Returns nested structure with children. Use depth to control how deep to traverse (max 10).',
+        description: 'Get the page tree hierarchy starting from a given page ID. Returns nested structure with children. Use depth to control how deep to traverse (max 10). sysLanguageUid defaults to 0 (default language only); pass -1 for every language.',
     )]
-    public function execute(int $pid = 0, int $depth = 3): string
+    public function execute(int $pid = 0, int $depth = 3, int $sysLanguageUid = 0): string
     {
         $depth = min(max($depth, 1), self::MAX_DEPTH);
 
@@ -66,7 +66,7 @@ readonly class PagesTreeTool implements McpNonAiToolInterface
         }
 
         $nodeCount = 0;
-        $tree = $this->buildTree($pid, $depth, $nodeCount, $fields);
+        $tree = $this->buildTree($pid, $depth, $nodeCount, $fields, $languageField, $sysLanguageUid);
 
         return json_encode(['tree' => $tree, 'totalNodes' => $nodeCount], JSON_THROW_ON_ERROR);
     }
@@ -75,7 +75,7 @@ readonly class PagesTreeTool implements McpNonAiToolInterface
      * @param list<string> $fields
      * @return list<array<string, mixed>>
      */
-    private function buildTree(int $pid, int $remainingDepth, int &$nodeCount, array $fields): array
+    private function buildTree(int $pid, int $remainingDepth, int &$nodeCount, array $fields, ?string $languageField, int $sysLanguageUid): array
     {
         if ($remainingDepth <= 0 || $nodeCount >= self::MAX_NODES) {
             return [];
@@ -89,9 +89,13 @@ readonly class PagesTreeTool implements McpNonAiToolInterface
                 break;
             }
 
+            if ($sysLanguageUid >= 0 && $languageField !== null && (int) ($page[$languageField] ?? 0) !== $sysLanguageUid) {
+                continue;
+            }
+
             $nodeCount++;
             $uid = (int) ($page['uid'] ?? 0);
-            $page['children'] = $this->buildTree($uid, $remainingDepth - 1, $nodeCount, $fields);
+            $page['children'] = $this->buildTree($uid, $remainingDepth - 1, $nodeCount, $fields, $languageField, $sysLanguageUid);
             $tree[] = $page;
         }
 

@@ -536,9 +536,12 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $refreshLifetime = (int) ($settings['refreshTokenLifetime'] ?? 2592000);
         $maxActiveTokens = (int) ($settings['oauthMaxActiveTokensPerUser'] ?? 10);
         $beUsername = is_object($beUser) ? (string) ($beUser->user['username'] ?? 'admin') : 'admin';
+        $issuePersonalToken = (string) ($request->getQueryParams()['createPersonalToken'] ?? '') === '1';
         $personalTokenState = $beUserUid > 0
-            ? $this->buildMcpPersonalTokenState($beUserUid, $beUsername, $accessLifetime, $refreshLifetime, $maxActiveTokens)
+            ? $this->buildMcpPersonalTokenState($beUserUid, $beUsername, $accessLifetime, $refreshLifetime, $maxActiveTokens, $issuePersonalToken)
             : ['active' => 0, 'uid' => 0, 'preview' => '', 'plain' => ''];
+        $personalTokenUri = (string) $request->getUri();
+        $createPersonalTokenUrl = $personalTokenUri . (str_contains($personalTokenUri, '?') ? '&' : '?') . 'createPersonalToken=1';
 
         $mcpWebSocketUrl = $this->buildMcpWebSocketUrl($serverUrl);
         $mcpNpxCommand = 'npx -y mcp-remote ' . $serverUrl;
@@ -603,6 +606,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             'mcpPersonalTokenUid' => (int) ($personalTokenState['uid'] ?? 0),
             'mcpPersonalTokenPreview' => (string) ($personalTokenState['preview'] ?? ''),
             'mcpPersonalTokenPlain' => (string) ($personalTokenState['plain'] ?? ''),
+            'mcpCreatePersonalTokenUrl' => $createPersonalTokenUrl,
             'mcpWebSocketUrl' => $mcpWebSocketUrl,
             'mcpNpxCommand' => htmlspecialchars($mcpNpxCommand, ENT_NOQUOTES, 'UTF-8'),
             'mcpSshTunnelCommand' => htmlspecialchars($mcpSshTunnelCommand, ENT_NOQUOTES, 'UTF-8'),
@@ -733,21 +737,24 @@ final class ModuleController extends AbstractAiUniverseModuleController
         int $accessLifetime,
         int $refreshLifetime,
         int $maxActiveTokens,
+        bool $issue,
     ): array {
         $plain = '';
-        try {
-            $issued = $this->mcpTokenRepository->ensurePersonalBearerToken(
-                $beUserUid,
-                $username,
-                $accessLifetime,
-                $refreshLifetime,
-                $maxActiveTokens,
-            );
-            if ($issued !== null) {
-                $plain = $issued;
+        if ($issue) {
+            try {
+                $issued = $this->mcpTokenRepository->ensurePersonalBearerToken(
+                    $beUserUid,
+                    $username,
+                    $accessLifetime,
+                    $refreshLifetime,
+                    $maxActiveTokens,
+                );
+                if ($issued !== null) {
+                    $plain = $issued;
+                }
+            } catch (\RuntimeException) {
+                // Max tokens reached — fall through to preview-only state.
             }
-        } catch (\RuntimeException) {
-            // Max tokens reached — fall through to preview-only state.
         }
 
         $token = $this->mcpTokenRepository->findPersonalBearerToken($beUserUid);

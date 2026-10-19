@@ -33,26 +33,31 @@
             </div>
         </div>
 
-        <f:if condition="{mcpPersonalTokenActive} == 1">
-            <div class="aiu-mcp-bearer-token mt-3">
-                <div class="aiu-mcp-bearer-token__box">
-                    <div class="aiu-mcp-bearer-token__header">
-                        <span class="aiu-mcp-bearer-token__label">
-                            <f:translate key="{ll}:module.mcpServer.clientToken.bearerLabel" />
-                        </span>
-                        <button type="button"
-                                class="btn btn-link btn-sm p-0 aiu-mcp-bearer-token__copy"
-                                data-copy="personal-bearer-token"
-                                aria-label="{f:translate(key: '{ll}:module.mcpServer.action.copyToken')}">
-                            <core:icon identifier="actions-clipboard" size="small" alternativeMarkupIdentifier="inline" />
+        <div class="aiu-mcp-field-row mt-3">
+            <label class="form-label text-uppercase small"><f:translate key="{ll}:module.mcpServer.clientToken.bearerLabel" /></label>
+            <f:if condition="{mcpPersonalTokenActive} == 1">
+                <f:then>
+                    <div class="aiu-mcp-url-row">
+                        <code class="aiu-mcp-url-row__code"
+                              data-copy-target="personal-bearer-token"
+                              data-token-uid="{mcpPersonalTokenUid}"><f:if condition="{mcpPersonalTokenPlain}"><f:then>{mcpPersonalTokenPlain}</f:then><f:else>{mcpPersonalTokenPreview}</f:else></f:if></code>
+                        <button type="button" class="btn btn-sm btn-default" data-copy="personal-bearer-token">
+                            <core:icon identifier="actions-clipboard" size="small" />
+                            <f:translate key="{ll}:module.mcpServer.action.copyToken" />
                         </button>
                     </div>
-                    <code class="aiu-mcp-bearer-token__value"
-                          data-copy-target="personal-bearer-token"
-                          data-token-uid="{mcpPersonalTokenUid}">{mcpPersonalTokenPreview}</code>
-                </div>
-            </div>
-        </f:if>
+                </f:then>
+                <f:else>
+                    <div class="aiu-mcp-url-row">
+                        <span>No personal token yet. Opening this page does not create one.</span>
+                        <a class="btn btn-sm btn-default" href="{mcpCreatePersonalTokenUrl}">
+                            <core:icon identifier="actions-add" size="small" />
+                            Create personal token
+                        </a>
+                    </div>
+                </f:else>
+            </f:if>
+        </div>
 
         <div class="aiu-mcp-endpoint-status mt-3">
             <div class="aiu-mcp-endpoint-status__row">

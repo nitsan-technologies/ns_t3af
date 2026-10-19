@@ -115,6 +115,42 @@ final class FileUploadTokenFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function uploadEndpointRejectsUsedTokenWithNewTicketHint(): void
+    {
+        $plaintext = bin2hex(random_bytes(16));
+        $this->getConnectionPool()->getConnectionForTable('tx_nst3af_upload_tokens')->insert('tx_nst3af_upload_tokens', [
+            'token' => hash('sha256', $plaintext),
+            'be_user_uid' => 1,
+            'storage_uid' => 1,
+            'target_folder' => '/',
+            'file_name' => 'used.png',
+            'expires' => time() + 900,
+            'used' => time(),
+            'tstamp' => time(),
+            'crdate' => time(),
+        ]);
+
+        $body = new Stream('php://temp', 'rw');
+        $body->write('hello');
+        $body->rewind();
+
+        $request = (new ServerRequest('http://localhost/mcp_upload', 'PUT'))
+            ->withBody($body)
+            ->withHeader('Authorization', 'Bearer ' . $plaintext)
+            ->withHeader('Content-Type', 'application/octet-stream');
+
+        /** @var FileUploadEndpoint $endpoint */
+        $endpoint = $this->get(FileUploadEndpoint::class);
+        $response = $endpoint($request);
+
+        self::assertSame(403, $response->getStatusCode());
+        $payload = json_decode((string) $response->getBody(), true);
+        self::assertIsArray($payload);
+        self::assertStringContainsString('Ask for a new upload ticket.', (string) ($payload['error'] ?? ''));
+        self::assertSame(1747330005, $payload['code'] ?? null);
+    }
+
+    #[Test]
     public function uploadEndpointRefusalsCarryTheSameNumericCodeAsTheToolRoute(): void
     {
         $plaintext = bin2hex(random_bytes(16));
