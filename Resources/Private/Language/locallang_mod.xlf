@@ -1024,7 +1024,7 @@
         <source>AI MCP Mode</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.mode.context" resname="module.mcpServer.mode.context">
-        <source>Context (AI Generate via AI Agent)</source>
+        <source>Context (AI Generate in the client)</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.mode.native" resname="module.mcpServer.mode.native">
         <source>Native (AI Generate via TYPO3)</source>
@@ -1370,6 +1370,9 @@
       </trans-unit>
       <trans-unit id="module.mcpServer.client.gemini" resname="module.mcpServer.client.gemini">
         <source>Gemini CLI</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.client.claude-code" resname="module.mcpServer.client.claude-code">
+        <source>Claude Code</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.client.customjson" resname="module.mcpServer.client.customjson">
         <source>Custom JSON</source>
@@ -1752,6 +1755,12 @@
       <trans-unit id="module.mcpServer.snippet.gemini.step2" resname="module.mcpServer.snippet.gemini.step2">
         <source>Register %1$s</source>
       </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.claudeCode.step1" resname="module.mcpServer.snippet.claudeCode.step1">
+        <source>In a terminal, add this server to Claude Code.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.claudeCode.step2" resname="module.mcpServer.snippet.claudeCode.step2">
+        <source>claude mcp add --transport http typo3 %1$s</source>
+      </trans-unit>
       <trans-unit id="module.mcpServer.snippet.customjson.lead" resname="module.mcpServer.snippet.customjson.lead">
         <source>Generic mcpServers JSON snippet:</source>
       </trans-unit>
@@ -1840,10 +1849,10 @@
         <source>Anonymous Read-Only</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.claude.step1" resname="module.mcpServer.snippet.claude.step1">
-        <source>Go to Settings → Integrations in Claude Desktop.</source>
+        <source>Go to Customize → Connectors in Claude Desktop.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.claude.step2" resname="module.mcpServer.snippet.claude.step2">
-        <source>Click "Add Integration".</source>
+        <source>Click "Add connector".</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.claude.step3" resname="module.mcpServer.snippet.claude.step3">
         <source>Enter an integration name (for example: New TYPO3 site).</source>

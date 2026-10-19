@@ -7,7 +7,6 @@
 <f:variable name="customTableCount" value="{customTables -> f:count()}" />
 <f:variable name="promptCount" value="{mcpPromptTemplates -> f:count()}" />
 <f:variable name="customToolCount" value="{mcpCustomTools -> f:count()}" />
-<f:variable name="coreToolCount" value="{coreToolCount}" />
 
 <div class="aiu-mcp-tools-shell">
     <aside class="aiu-mcp-tools-shell__sidebar" aria-label="{f:translate(key: '{ll}:module.mcpTools.sidebar.aria')}">
@@ -68,7 +67,6 @@
                                 <f:translate key="{ll}:module.mcpTools.sidebar.core" default="TYPO3 Core" />
                             </h4>
                             <span class="aiu-mcp-tools-nav__meta">
-                                {coreToolCount}
                                 <f:translate key="{ll}:module.mcpTools.sidebar.coreMeta" default="built-in tools" />
                             </span>
                         </span>

@@ -84,7 +84,7 @@ MCP modes
 Set the mode in the **MCP Server** top bar (stored as ``mcpMode`` in the
 AI Foundation MCP settings).
 
-**Context (AI Generate via AI Agent)** — Default for Cursor, Claude Desktop,
+**Context (AI Generate in the client)** — Default for Cursor, Claude Desktop,
 and similar clients.
 
 * The external AI agent generates content outside TYPO3.

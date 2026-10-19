@@ -20,12 +20,6 @@
                     </p>
                 </div>
             </div>
-            <div class="aiu-mcp-tools__banner-badges d-flex flex-wrap gap-2">
-                <div class="badge badge-default">
-                    {coreExtension.toolCount}
-                    <f:translate key="{ll}:module.mcpTools.toolsLabel" />
-                </div>
-            </div>
         </div>
 
         <f:if condition="{mcpToolCategories -> f:count()} > 0">
@@ -53,10 +47,6 @@
                 <div class="card-header-body">
                     <div class="card-header-body__top d-flex align-items-start justify-content-between gap-2">
                         <h2 class="card-title mb-0">{coreExtension.label}</h2>
-                        <span class="badge badge-default flex-shrink-0">
-                            {coreExtension.toolCount}
-                            <f:translate key="{ll}:module.mcpTools.toolsLabel" />
-                        </span>
                     </div>
                     <span>{coreExtension.tagline}</span>
                     <f:if condition="{coreExtension.skillTrigger}">

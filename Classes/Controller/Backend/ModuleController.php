@@ -799,6 +799,9 @@ final class ModuleController extends AbstractAiUniverseModuleController
     {
         return [
             ['key' => 'claude', 'icon' => 'actions-chat', 'snippet' => 'ClaudeDesktop'],
+            ['key' => 'chatgpt', 'icon' => 'actions-chat', 'snippet' => 'ChatGpt'],
+            ['key' => 'gemini', 'icon' => 'actions-chat', 'snippet' => 'GeminiCli'],
+            ['key' => 'claude-code', 'icon' => 'actions-terminal', 'snippet' => 'ClaudeCode'],
             ['key' => 'cursor', 'icon' => 'actions-open', 'snippet' => 'Cursor'],
             ['key' => 'vscode', 'icon' => 'actions-code', 'snippet' => 'VsCode'],
             ['key' => 'windsurf', 'icon' => 'actions-eye', 'snippet' => 'Windsurf'],
@@ -830,7 +833,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
 
         /** @var array<string, list<string>> $transportClientKeys */
         $transportClientKeys = [
-            'http' => ['claude', 'cursor', 'vscode', 'windsurf', 'continue', 'jetbrains', 'n8n', 'manus', 'dify', 'langchain', 'autogen', 'codex', 'openai-gpts', 'copilot-studio', 'inspector', 'other'],
+            'http' => ['claude', 'chatgpt', 'gemini', 'claude-code', 'cursor', 'vscode', 'windsurf', 'continue', 'jetbrains', 'n8n', 'manus', 'dify', 'langchain', 'autogen', 'codex', 'openai-gpts', 'copilot-studio', 'inspector', 'other'],
             'websocket' => ['zed', 'continue', 'cursor', 'langchain', 'other'],
             'docker' => ['claude', 'cursor', 'vscode', 'windsurf', 'continue', 'zed', 'jetbrains', 'other'],
             'sshtunnel' => ['claude', 'cursor', 'vscode', 'continue', 'other'],
@@ -909,7 +912,6 @@ final class ModuleController extends AbstractAiUniverseModuleController
             'mcpToolsUri' => (string) $this->uriBuilder->buildUriFromRoute('t3af_dashboard.mcp_tools'),
             'aiExtensions' => $aiExtensions,
             'coreExtension' => $coreExtension,
-            'coreToolCount' => (int) ($coreExtension['toolCount'] ?? 0),
             'customTables' => $this->mcpToolsRegistryService->getCustomTableRows(),
             'mcpToolsStats' => $statistics,
             'mcpToolsExtConfSnippet' => $this->mcpToolsRegistryService->buildExtConfSnippet(),

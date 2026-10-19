@@ -219,8 +219,8 @@ Claude Desktop (OAuth)
 
 **Steps:**
 
-1. Open **Claude Desktop → Settings → Integrations**.
-2. Click **Add Integration**.
+1. Open **Claude Desktop → Customize → Connectors**.
+2. Click **Add connector**.
 3. Name it (for example ``TYPO3 DDEV``).
 4. Paste **Server URL** from the module, e.g.:
 
