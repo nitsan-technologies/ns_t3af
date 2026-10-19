@@ -129,11 +129,15 @@ readonly class McpServerMiddleware implements MiddlewareInterface
     }
 
     /**
-     * Builds the streamable HTTP transport (mcp/sdk ^0.8).
+     * Builds the streamable HTTP transport (mcp/sdk ^0.9).
      *
      * The SDK's default DnsRebindingProtectionMiddleware allow-list is localhost-only,
      * which rejects real site hosts. We pass an explicit middleware stack with this
      * instance's hosts via {@see buildAllowedHosts()}.
+     *
+     * Since 0.9 the second constructor argument is allowedOrigins, not the response
+     * factory. Origins are open (`*`) so cross-origin clients keep working, matching
+     * Access-Control-Allow-Origin. The host list still rejects a bad Host.
      *
      * ProtocolVersionMiddleware stays off this list. Since 0.8 the transport applies
      * it itself, and only to handshake-era requests. Listing it here runs before the
@@ -145,8 +149,9 @@ readonly class McpServerMiddleware implements MiddlewareInterface
             new \Mcp\Server\Transport\Http\Middleware\CorsMiddleware(),
             new \Mcp\Server\Transport\Http\Middleware\DnsRebindingProtectionMiddleware(
                 $this->buildAllowedHosts($request),
-                $this->responseFactory,
-                $this->streamFactory,
+                allowedOrigins: ['*'],
+                responseFactory: $this->responseFactory,
+                streamFactory: $this->streamFactory,
             ),
         ];
 
