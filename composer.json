@@ -52,6 +52,7 @@
         "ext-curl": "*",
         "ext-sodium": "*",
         "mcp/sdk": "^0.7",
+        "nitsan/ns-license": "^14.5.4",
         "symfony/ai-agent": "~0.13.0",
         "symfony/ai-anthropic-platform": "^0.13",
         "symfony/ai-azure-platform": "^0.13",
