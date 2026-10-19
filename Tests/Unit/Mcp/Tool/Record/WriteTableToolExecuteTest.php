@@ -185,6 +185,33 @@ final class WriteTableToolExecuteTest extends TestCase
     }
 
     #[Test]
+    public function createThatOnlySetsACollectionFieldNamesTheChildTable(): void
+    {
+        $this->engine->expects(self::never())->method('apply');
+        $GLOBALS['TCA']['nitsan_nsfaq_faq'] = [
+            'ctrl' => ['label' => 'title'],
+            'columns' => [
+                'title' => ['config' => ['type' => 'input']],
+                'foreign_table_parent_uid' => ['config' => ['type' => 'passthrough']],
+            ],
+        ];
+        $GLOBALS['TCA']['tt_content']['columns']['nitsan_nsfaq_faq'] = [
+            'config' => [
+                'type' => 'inline',
+                'foreign_table' => 'nitsan_nsfaq_faq',
+                'foreign_field' => 'foreign_table_parent_uid',
+            ],
+        ];
+
+        $result = $this->callTool('create', '{"pid":5,"nitsan_nsfaq_faq":"1,2"}');
+
+        self::assertStringStartsWith('No valid writable fields provided. nitsan_nsfaq_faq: ', $result['error']);
+        self::assertStringContainsString('nitsan_nsfaq_faq', $result['error']);
+        self::assertStringContainsString('foreign_table_parent_uid', $result['error']);
+        self::assertSame('collection', $result['ignoredFieldDetails'][0]['reason']);
+    }
+
+    #[Test]
     public function fieldsTheEngineDropsAreReportedAsIgnored(): void
     {
         $this->engine->method('apply')->willReturn(new RecordsApplyResult(
@@ -270,6 +297,32 @@ final class WriteTableToolExecuteTest extends TestCase
             'No valid writable fields provided.',
             $this->callTool('update', '{"bogus":1}', 42)['error'],
         );
+    }
+
+    #[Test]
+    public function updateThatOnlySetsACollectionFieldNamesTheChildTable(): void
+    {
+        $this->recordService->method('findExistingUids')->willReturn([42]);
+        $this->engine->expects(self::never())->method('apply');
+        $GLOBALS['TCA']['nitsan_nsfaq_faq'] = [
+            'ctrl' => ['label' => 'title'],
+            'columns' => [
+                'title' => ['config' => ['type' => 'input']],
+                'foreign_table_parent_uid' => ['config' => ['type' => 'passthrough']],
+            ],
+        ];
+        $GLOBALS['TCA']['tt_content']['columns']['nitsan_nsfaq_faq'] = [
+            'config' => [
+                'type' => 'inline',
+                'foreign_table' => 'nitsan_nsfaq_faq',
+                'foreign_field' => 'foreign_table_parent_uid',
+            ],
+        ];
+
+        $error = $this->callTool('update', '{"nitsan_nsfaq_faq":"7,6"}', 42)['error'];
+
+        self::assertStringStartsWith('No valid writable fields provided. nitsan_nsfaq_faq: ', $error);
+        self::assertStringContainsString('foreign_table_parent_uid', $error);
     }
 
     #[Test]

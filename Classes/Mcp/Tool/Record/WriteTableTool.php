@@ -956,7 +956,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
         if ($filteredData === [] && $fileFields === []) {
             return $this->encodeError(
-                'No valid writable fields provided.',
+                $this->noWritableFieldsError($tableName, $payload, $filteredData),
                 $this->normalizer->ignoredFieldsContext($tableName, $ignoredFields),
             );
         }
@@ -1069,7 +1069,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
         if ($filteredData === [] && $fileFields === []) {
             return $this->encodeError(
-                'No valid writable fields provided.',
+                $this->noWritableFieldsError($tableName, $payload, $filteredData),
                 $this->normalizer->ignoredFieldsContext($tableName, $ignoredFields),
             );
         }
@@ -1260,6 +1260,32 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return isset($tca[$tableName]) && is_array($tca[$tableName]);
+    }
+
+    /**
+     * The error proxy keeps only this sentence. A dropped collection field has to name the child
+     * table here. An unknown field stays the short sentence; its details remain on ignoredFieldDetails.
+     *
+     * @param array<string, mixed> $payload
+     * @param array<string, mixed> $filteredData
+     */
+    private function noWritableFieldsError(string $tableName, array $payload, array $filteredData): string
+    {
+        $message = 'No valid writable fields provided.';
+        $hints = [];
+        foreach ($this->normalizer->ignoredFieldDetails($tableName, $this->normalizer->ignoredFields($payload, $filteredData)) as $detail) {
+            if (($detail['reason'] ?? '') !== 'collection') {
+                continue;
+            }
+            $field = (string) ($detail['field'] ?? '');
+            $hint = trim((string) ($detail['hint'] ?? ''));
+            if ($field === '' || $hint === '') {
+                continue;
+            }
+            $hints[] = $field . ': ' . $hint;
+        }
+
+        return $hints === [] ? $message : $message . ' ' . implode(' ', $hints);
     }
 
     /** @param array<string, mixed> $context */
