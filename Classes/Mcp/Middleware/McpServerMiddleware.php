@@ -129,11 +129,15 @@ readonly class McpServerMiddleware implements MiddlewareInterface
     }
 
     /**
-     * Builds the streamable HTTP transport (mcp/sdk ^0.7).
+     * Builds the streamable HTTP transport (mcp/sdk ^0.8).
      *
      * The SDK's default DnsRebindingProtectionMiddleware allow-list is localhost-only,
      * which rejects real site hosts. We pass an explicit middleware stack with this
      * instance's hosts via {@see buildAllowedHosts()}.
+     *
+     * ProtocolVersionMiddleware stays off this list. Since 0.8 the transport applies
+     * it itself, and only to handshake-era requests. Listing it here runs before the
+     * era is classified and rejects modern (2026-07-28) clients.
      */
     private function createTransport(ServerRequestInterface $request): StreamableHttpTransport
     {
@@ -144,7 +148,6 @@ readonly class McpServerMiddleware implements MiddlewareInterface
                 $this->responseFactory,
                 $this->streamFactory,
             ),
-            new \Mcp\Server\Transport\Http\Middleware\ProtocolVersionMiddleware(),
         ];
 
         return new StreamableHttpTransport(
