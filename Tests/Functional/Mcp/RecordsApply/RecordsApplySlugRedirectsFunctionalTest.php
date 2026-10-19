@@ -45,9 +45,11 @@ final class RecordsApplySlugRedirectsFunctionalTest extends FunctionalTestCase
         'workspaces',
         'scheduler',
         'redirects',
+        'extensionmanager',
     ];
 
     protected array $testExtensionsToLoad = [
+        'nitsan/ns-license',
         'ns_t3af',
     ];
 

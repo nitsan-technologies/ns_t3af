@@ -41,9 +41,11 @@ final class AccessControlListenerFunctionalTest extends FunctionalTestCase
         'frontend',
         'workspaces',
         'scheduler',
+        'extensionmanager',
     ];
 
     protected array $testExtensionsToLoad = [
+        'nitsan/ns-license',
         'ns_t3af',
     ];
 
