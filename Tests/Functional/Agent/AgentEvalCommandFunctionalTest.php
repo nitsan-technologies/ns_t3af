@@ -35,9 +35,9 @@ use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
  */
 final class AgentEvalCommandFunctionalTest extends FunctionalTestCase
 {
-    protected array $coreExtensionsToLoad = ['frontend', 'workspaces', 'scheduler'];
+    protected array $coreExtensionsToLoad = ['frontend', 'workspaces', 'scheduler', 'extensionmanager'];
 
-    protected array $testExtensionsToLoad = ['ns_t3af'];
+    protected array $testExtensionsToLoad = ['nitsan/ns-license', 'ns_t3af'];
 
     /**
      * @var array<string, non-empty-string>
