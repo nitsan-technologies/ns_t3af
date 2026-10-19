@@ -77,6 +77,47 @@ final class McpServerMiddlewareTest extends TestCase
         self::assertSame(33554432, $maxBodyBytesProperty->getValue($transport));
     }
 
+    public function testCreateTransportLeavesProtocolVersionCheckToTheSdk(): void
+    {
+        $settings = $this->createMock(AdvancedSettingsService::class);
+        $settings->method('maxBodyBytes')->willReturn(33554432);
+
+        $siteFinder = $this->createMock(SiteFinder::class);
+        $siteFinder->method('getAllSites')->willReturn([]);
+
+        $pathProvider = $this->createMock(McpPathProvider::class);
+        $pathProvider->method('getBasePath')->willReturn('/mcp');
+        $pathProvider->method('getUploadPath')->willReturn('/mcp_upload');
+
+        $middleware = new McpServerMiddleware(
+            $this->createMock(AuthorizationService::class),
+            $this->createMock(BackendUserBootstrap::class),
+            $this->createMock(McpServerFactory::class),
+            $pathProvider,
+            $settings,
+            new McpRuntimeContext(),
+            $this->createMock(WorkspacePreferenceService::class),
+            new ResponseFactory(),
+            new StreamFactory(),
+            $siteFinder,
+            $this->createMock(FileUploadEndpoint::class),
+        );
+
+        $method = new \ReflectionMethod(McpServerMiddleware::class, 'createTransport');
+        /** @var StreamableHttpTransport $transport */
+        $transport = $method->invoke($middleware, new ServerRequest('https://example.com/mcp', 'POST'));
+
+        $stack = (new \ReflectionProperty(StreamableHttpTransport::class, 'middleware'))->getValue($transport);
+        self::assertIsArray($stack);
+        self::assertSame(
+            [
+                \Mcp\Server\Transport\Http\Middleware\CorsMiddleware::class,
+                \Mcp\Server\Transport\Http\Middleware\DnsRebindingProtectionMiddleware::class,
+            ],
+            array_map(static fn(object $entry): string => $entry::class, $stack),
+        );
+    }
+
     public function testProcessReturnsMissingAuthenticationTokenWhenNoTokenProvided(): void
     {
         $settings = $this->createMock(AdvancedSettingsService::class);
