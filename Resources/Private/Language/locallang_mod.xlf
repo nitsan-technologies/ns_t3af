@@ -2862,6 +2862,30 @@
       <trans-unit id="wizard.kicker.after" resname="wizard.kicker.after">
         <source> of 7</source>
       </trans-unit>
+      <trans-unit id="dashboard.credits.claim.link" resname="dashboard.credits.claim.link">
+        <source>I already have a claim code</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.claim.title" resname="dashboard.credits.claim.title">
+        <source>Use a claim code</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.claim.subtitle" resname="dashboard.credits.claim.subtitle">
+        <source>Bought AI Credits on t3planet.de, or recovering an account after a site rebuild? Paste the code from your email to connect this site to it.</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.claim.codeLabel" resname="dashboard.credits.claim.codeLabel">
+        <source>Claim code</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.claim.submit" resname="dashboard.credits.claim.submit">
+        <source>Connect this site</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.claim.lostCode" resname="dashboard.credits.claim.lostCode">
+        <source>Lost the code, or has it expired? We can email a new one to the address your account is registered to.</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.claim.emailPlaceholder" resname="dashboard.credits.claim.emailPlaceholder">
+        <source>Account email address</source>
+      </trans-unit>
+      <trans-unit id="dashboard.credits.claim.resend" resname="dashboard.credits.claim.resend">
+        <source>Email me a code</source>
+      </trans-unit>
       <trans-unit id="wizard.close" resname="wizard.close">
         <source>Close wizard</source>
       </trans-unit>

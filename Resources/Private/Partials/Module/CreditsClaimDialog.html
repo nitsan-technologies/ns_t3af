@@ -1,0 +1,85 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:variable name="ll">LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf</f:variable>
+
+<dialog id="aiu-credits-claim-dialog"
+        class="aiu-credits-contact-dialog"
+        aria-labelledby="aiu-credits-claim-heading"
+        aria-describedby="aiu-credits-claim-subtitle">
+    <div class="aiu-credits-contact">
+        <header class="aiu-credits-contact__header">
+            <h2 class="aiu-credits-contact__title" id="aiu-credits-claim-heading">
+                <f:translate key="{ll}:dashboard.credits.claim.title" default="Use a claim code" />
+            </h2>
+            <button type="button"
+                    class="aiu-credits-contact__close"
+                    data-credits-claim-close=""
+                    aria-label="{f:translate(key: '{ll}:wizard.close')}">
+                <core:icon identifier="actions-close" size="small" alternativeMarkupIdentifier="inline" />
+            </button>
+        </header>
+
+        <div class="aiu-credits-contact__body">
+            <p class="aiu-credits-contact__subtitle text-variant" id="aiu-credits-claim-subtitle">
+                <f:translate key="{ll}:dashboard.credits.claim.subtitle"
+                             default="Bought AI Credits on t3planet.de, or recovering an account after a site rebuild? Paste the code from your email to connect this site to it." />
+            </p>
+
+            <form id="aiu-credits-claim-form"
+                  class="aiu-credits-contact-form"
+                  data-credits-claim-form=""
+                  novalidate="">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label" for="aiu-credits-claim-code">
+                            <f:translate key="{ll}:dashboard.credits.claim.codeLabel" default="Claim code" />*
+                        </label>
+                        <textarea class="form-control font-monospace"
+                                  id="aiu-credits-claim-code"
+                                  name="claimCode"
+                                  rows="3"
+                                  required=""
+                                  spellcheck="false"
+                                  autocomplete="off"></textarea>
+                    </div>
+                </div>
+
+                <div class="text-danger small mt-2 is-hidden" data-credits-claim-error="" role="alert"></div>
+            </form>
+
+            <hr class="my-3" />
+
+            <p class="small text-variant mb-2">
+                <f:translate key="{ll}:dashboard.credits.claim.lostCode"
+                             default="Lost the code, or has it expired? We can email a new one to the address your account is registered to." />
+            </p>
+            <form class="aiu-credits-contact-form" data-credits-claim-resend-form="" novalidate="">
+                <div class="input-group input-group-sm">
+                    <input type="email"
+                           class="form-control"
+                           id="aiu-credits-claim-email"
+                           name="email"
+                           placeholder="{f:translate(key: '{ll}:dashboard.credits.claim.emailPlaceholder', default: 'Account email address')}"
+                           autocomplete="email" />
+                    <button type="submit" class="btn btn-default" data-credits-claim-resend="">
+                        <f:translate key="{ll}:dashboard.credits.claim.resend" default="Email me a code" />
+                    </button>
+                </div>
+                <div class="small mt-2 is-hidden" data-credits-claim-resend-note="" role="status"></div>
+            </form>
+        </div>
+
+        <footer class="aiu-credits-contact__footer">
+            <button type="button" class="btn btn-default" data-credits-claim-close="">
+                <f:translate key="LLL:EXT:core/Resources/Private/Language/locallang_core.xlf:labels.cancel" />
+            </button>
+            <button type="submit" class="btn btn-primary" form="aiu-credits-claim-form" data-credits-claim-submit="">
+                <f:translate key="{ll}:dashboard.credits.claim.submit" default="Connect this site" />
+            </button>
+        </footer>
+    </div>
+</dialog>
+
+</html>
