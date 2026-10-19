@@ -26,6 +26,7 @@ use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyValidationException;
 use PHPUnit\Framework\Attributes\Test;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Context\WorkspaceAspect;
+use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
 
@@ -698,6 +699,73 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
         return array_map('strval', $this->getConnectionPool()->getConnectionForTable('tt_content')
             ->executeQuery('SELECT header FROM tt_content WHERE pid = ? AND deleted = 0 ORDER BY sorting ASC, uid ASC', [$pageUid])
             ->fetchFirstColumn());
+    }
+
+    #[Test]
+    public function copyOfATranslationIsRefusedWhenTheTargetPageLacksThatLanguage(): void
+    {
+        $GLOBALS['LANG'] = $this->get(LanguageServiceFactory::class)->createFromUserPreferences($GLOBALS['BE_USER']);
+        $dataHandlerService = $this->get(DataHandlerService::class);
+        $pageA = $dataHandlerService->createRecord('pages', self::SITE_ROOT_PAGE_ID, ['title' => 'Copy source', 'hidden' => 0]);
+        $pageB = $dataHandlerService->createRecord('pages', self::SITE_ROOT_PAGE_ID, ['title' => 'Copy target', 'hidden' => 0]);
+        $content = $dataHandlerService->createRecord('tt_content', $pageA, ['CType' => 'text', 'colPos' => 0, 'header' => 'Hello']);
+        $contentConnection = $this->getConnectionPool()->getConnectionForTable('tt_content');
+        $contentConnection->insert('tt_content', [
+            'pid' => $pageA,
+            'CType' => 'text',
+            'colPos' => 0,
+            'header' => 'Hallo',
+            'sys_language_uid' => 1,
+            'l18n_parent' => $content,
+            'l10n_source' => $content,
+            'tstamp' => 1734875000,
+            'crdate' => 1734875000,
+            'deleted' => 0,
+            'hidden' => 0,
+            'sorting' => 256,
+        ]);
+
+        $before = (int) $contentConnection->executeQuery('SELECT COUNT(*) FROM tt_content')->fetchOne();
+
+        try {
+            $this->service->apply([], [
+                'tt_content' => [$content => ['copy' => $pageB]],
+            ], false, true, true);
+            self::fail('Expected a validation exception.');
+        } catch (RecordsApplyValidationException $exception) {
+            $text = implode(' ', array_map(static fn(array $problem): string => (string) ($problem['error'] ?? ''), $exception->getProblems()));
+            self::assertStringContainsString('Page ' . $pageB, $text);
+            self::assertStringContainsString('language 1', $text);
+            self::assertStringContainsString('tt_content:' . $content, $text);
+        }
+
+        self::assertSame($before, (int) $contentConnection->executeQuery('SELECT COUNT(*) FROM tt_content')->fetchOne());
+
+        $plain = $dataHandlerService->createRecord('tt_content', $pageA, ['CType' => 'text', 'colPos' => 0, 'header' => 'Plain']);
+        $plainCopy = $this->service->apply([], [
+            'tt_content' => [$plain => ['copy' => $pageB]],
+        ], false, true, true);
+        self::assertTrue($plainCopy->written);
+
+        $this->getConnectionPool()->getConnectionForTable('pages')->insert('pages', [
+            'pid' => self::SITE_ROOT_PAGE_ID,
+            'title' => 'Copy target DE',
+            'doktype' => 1,
+            'sys_language_uid' => 1,
+            'l10n_parent' => $pageB,
+            'l10n_source' => $pageB,
+            'slug' => '/copy-target-de',
+            'hidden' => 0,
+            'deleted' => 0,
+            'tstamp' => 1734875000,
+            'crdate' => 1734875000,
+            'sorting' => 512,
+        ]);
+
+        $translatedCopy = $this->service->apply([], [
+            'tt_content' => [$content => ['copy' => $pageB]],
+        ], false, true, true);
+        self::assertTrue($translatedCopy->written);
     }
 
     private function countWhere(string $table, string $field, string $value, ?int $workspace = null): int

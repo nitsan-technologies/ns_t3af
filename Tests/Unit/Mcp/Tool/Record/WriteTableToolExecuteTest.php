@@ -328,31 +328,38 @@ final class WriteTableToolExecuteTest extends TestCase
     }
 
     #[Test]
-    public function aRefusalBeforeTheWriteIsReportedWithItsProblems(): void
+    public function aRefusalBeforeTheWriteIsRethrownWithTheAuditedCode(): void
     {
         $this->engine->method('apply')->willThrowException(new RecordsApplyValidationException([
             ['table' => 'tt_content', 'id' => 'NEWrecord', 'error' => 'Page 404 was not found or is not accessible.'],
             ['table' => 'tt_content', 'id' => 'NEWrecord', 'error' => 'Not writable fields (strict mode refuses the whole call).', 'fields' => ['a', 'b']],
         ]));
 
-        self::assertSame(
-            'Page 404 was not found or is not accessible.; Not writable fields (strict mode refuses the whole call). (a, b)',
-            $this->callTool('create', '{"pid":404,"header":"Hi"}')['error'],
-        );
+        try {
+            $this->tool->execute('create', 'tt_content', '{"pid":404,"header":"Hi"}');
+            self::fail('Expected the validation refusal to leave write_table.');
+        } catch (ToolCallException $exception) {
+            self::assertSame(1790500006, $exception->getCode());
+            self::assertSame(
+                'Page 404 was not found or is not accessible.; Not writable fields (strict mode refuses the whole call). (a, b)',
+                $exception->getMessage(),
+            );
+        }
     }
 
     #[Test]
-    public function aDataHandlerRefusalKeepsTheMessageFormatClientsKnow(): void
+    public function aDataHandlerRefusalIsRethrownWithItsAuditedCode(): void
     {
-        $this->engine->method('apply')->willThrowException(new ToolCallException(
-            (string) json_encode(['ok' => false, 'stage' => 'datahandler', 'errors' => ['first', 'second']]),
-            1790500004,
-        ));
+        $message = (string) json_encode(['ok' => false, 'stage' => 'datahandler', 'errors' => ['first', 'second']]);
+        $this->engine->method('apply')->willThrowException(new ToolCallException($message, 1790500004));
 
-        self::assertSame(
-            'DataHandler errors: first; second',
-            $this->callTool('create', '{"pid":5,"header":"Hi"}')['error'],
-        );
+        try {
+            $this->tool->execute('create', 'tt_content', '{"pid":5,"header":"Hi"}');
+            self::fail('Expected the DataHandler refusal to leave write_table.');
+        } catch (ToolCallException $exception) {
+            self::assertSame(1790500004, $exception->getCode());
+            self::assertSame($message, $exception->getMessage());
+        }
     }
 
     /**

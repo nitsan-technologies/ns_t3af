@@ -8,5 +8,13 @@ languages:
     locale: en_US.UTF-8
     navigationTitle: English
     flag: us
+  -
+    title: German
+    enabled: true
+    languageId: 1
+    base: /de/
+    locale: de_DE.UTF-8
+    navigationTitle: German
+    flag: de
 rootPageId: 1
 websiteTitle: Testing

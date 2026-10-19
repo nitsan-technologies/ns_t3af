@@ -19,11 +19,14 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Functional\Mcp\RecordsApply;
 
+use NITSAN\NsT3AF\Mcp\Authentication\BackendUserBootstrap;
 use NITSAN\NsT3AF\Mcp\Service\McpSiteRequestBootstrap;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
 use PHPUnit\Framework\Attributes\Test;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Context\Context;
 use TYPO3\CMS\Core\Context\WorkspaceAspect;
+use TYPO3\CMS\Core\Core\Environment;
 use TYPO3\CMS\Core\DataHandling\DataHandler;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\TestingFramework\Core\Functional\FunctionalTestCase;
@@ -216,6 +219,73 @@ final class RecordsApplySlugRedirectsFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function slugUpdateWithSessionLessMcpUserSavesAndLeavesTheUserRecordAlone(): void
+    {
+        $created = $this->service->apply(
+            ['pages' => ['NEWpage' => [
+                'pid' => self::SITE_ROOT_PAGE_ID,
+                'title' => 'Session less slug',
+                'slug' => '/session-less-slug',
+                'hidden' => 0,
+            ]]],
+            [],
+            false,
+            true,
+            true,
+        );
+        $uid = $created->created['NEWpage'];
+
+        $users = $this->getConnectionPool()->getConnectionForTable('be_users');
+        $seed = 'a:1:{s:4:"lang";s:2:"de";}';
+        $users->update('be_users', ['uc' => $seed], ['uid' => self::ADMIN_UID]);
+        $sessionsBefore = $this->sessionCount();
+
+        $user = $this->get(BackendUserBootstrap::class)->bootstrap(self::ADMIN_UID);
+        $previousCli = $this->setCli(false);
+
+        try {
+            $session = (new \ReflectionProperty($user, 'userSession'))->getValue($user);
+            self::assertNull($session);
+            self::assertNull($user->getModuleData('nst3af-session-probe'));
+
+            $result = $this->service->apply(
+                ['pages' => [$uid => ['slug' => '/session-less-slug-renamed']]],
+                [],
+                false,
+                true,
+                true,
+            );
+
+            self::assertTrue($result->written);
+            self::assertSame(
+                '/session-less-slug-renamed',
+                $this->getConnectionPool()->getConnectionForTable('pages')
+                    ->executeQuery('SELECT slug FROM pages WHERE uid = ?', [$uid])
+                    ->fetchOne(),
+            );
+            self::assertNotSame([], $result->redirects);
+            self::assertSame('/session-less-slug', $result->redirects[0]['source_path'] ?? null);
+            self::assertSame($seed, $users->executeQuery('SELECT uc FROM be_users WHERE uid = ?', [self::ADMIN_UID])->fetchOne());
+            self::assertSame($sessionsBefore, $this->sessionCount());
+            self::assertNull($user->getModuleData(BackendUtility::class . '::getUpdateSignal'));
+
+            $again = $this->service->apply(
+                ['pages' => [$uid => ['slug' => '/session-less-slug-again']]],
+                [],
+                false,
+                true,
+                true,
+            );
+            self::assertTrue($again->written);
+            self::assertNull($user->getModuleData(BackendUtility::class . '::getUpdateSignal'));
+            self::assertSame($seed, $users->executeQuery('SELECT uc FROM be_users WHERE uid = ?', [self::ADMIN_UID])->fetchOne());
+            self::assertSame($sessionsBefore, $this->sessionCount());
+        } finally {
+            $this->setCli($previousCli);
+        }
+    }
+
+    #[Test]
     public function siteBootstrapAttachesSiteForASitePage(): void
     {
         /** @var McpSiteRequestBootstrap $bootstrap */
@@ -223,5 +293,21 @@ final class RecordsApplySlugRedirectsFunctionalTest extends FunctionalTestCase
         unset($GLOBALS['TYPO3_REQUEST']);
         self::assertTrue($bootstrap->attachForPage(self::SITE_ROOT_PAGE_ID));
         self::assertNotNull($GLOBALS['TYPO3_REQUEST']?->getAttribute('site'));
+    }
+
+    private function sessionCount(): int
+    {
+        return (int) $this->getConnectionPool()->getConnectionForTable('be_sessions')
+            ->executeQuery('SELECT COUNT(*) FROM be_sessions')
+            ->fetchOne();
+    }
+
+    private function setCli(bool $cli): bool
+    {
+        $property = new \ReflectionProperty(Environment::class, 'cli');
+        $previous = (bool) $property->getValue();
+        $property->setValue(null, $cli);
+
+        return $previous;
     }
 }

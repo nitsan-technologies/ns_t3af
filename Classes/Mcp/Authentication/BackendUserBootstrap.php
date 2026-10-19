@@ -56,7 +56,7 @@ readonly class BackendUserBootstrap
             throw new \RuntimeException('Backend user not found', 1712000010);
         }
 
-        $backendUser = new BackendUserAuthentication();
+        $backendUser = new McpBackendUserAuthentication();
         $backendUser->user = $userRow;
         $backendUser->fetchGroupData();
 

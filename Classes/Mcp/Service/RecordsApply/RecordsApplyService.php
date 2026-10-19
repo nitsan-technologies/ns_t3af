@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Mcp\Service\RecordsApply;
 use const JSON_THROW_ON_ERROR;
 
 use Mcp\Exception\ToolCallException;
+use NITSAN\NsT3AF\Mcp\Authentication\McpBackendUserAuthentication;
 use NITSAN\NsT3AF\Mcp\Service\McpSiteRequestBootstrap;
 use NITSAN\NsT3AF\Mcp\Service\McpSlugRedirectGuard;
 use NITSAN\NsT3AF\Mcp\Service\WorkspaceContextService;
@@ -102,7 +103,7 @@ readonly class RecordsApplyService
             [$datamap, $cmdmap] = $this->bulkExpander->expand($bulk, $datamap, $cmdmap);
             $checked = $this->preflight->check($datamap, $cmdmap, $strict);
         } catch (RecordsApplyValidationException $exception) {
-            $this->audit->log($tool, $batchId, $dryRun, false, 'validation', [], [], $exception->getMessage());
+            $this->audit->log($tool, $batchId, $dryRun, false, 'validation', [], [], $exception->getMessage(), $exception->getProblems(), self::recordIds($datamap, $cmdmap));
 
             throw $exception;
         }
@@ -122,7 +123,7 @@ readonly class RecordsApplyService
                     . 'Omit dryRun, or leave sys_category out of this batch.',
             ]];
             $exception = new RecordsApplyValidationException($problems);
-            $this->audit->log($tool, $batchId, true, false, 'validation', $operations, $fieldNames, $exception->getMessage());
+            $this->audit->log($tool, $batchId, true, false, 'validation', $operations, $fieldNames, $exception->getMessage(), $exception->getProblems(), self::recordIds($datamap, $cmdmap));
 
             throw $exception;
         }
@@ -134,7 +135,7 @@ readonly class RecordsApplyService
         $connection = $this->connectionPool->getConnectionByName(ConnectionPool::DEFAULT_CONNECTION_NAME);
         if ($connection->isTransactionActive()) {
             $message = 'records_apply cannot run inside an open database transaction, because it could not roll back on its own. Nothing was written.';
-            $this->audit->log($tool, $batchId, $dryRun, false, 'transaction', $operations, $fieldNames, $message);
+            $this->audit->log($tool, $batchId, $dryRun, false, 'transaction', $operations, $fieldNames, $message, [], self::recordIds($datamap, $cmdmap));
 
             throw new ToolCallException($message, 1790500002);
         }
@@ -187,7 +188,7 @@ readonly class RecordsApplyService
                     $cacheGuard->leave();
                     $this->settleDeferredCaches($dataHandler, $dryRun, $batchId);
                     $this->logger->error('records_apply: DataHandler threw after transaction ended', ['exception' => $throwable, 'batchId' => $batchId]);
-                    $this->audit->log($tool, $batchId, $dryRun, false, 'transaction-broken', $operations, $fieldNames, 'rollback not possible');
+                    $this->audit->log($tool, $batchId, $dryRun, false, 'transaction-broken', $operations, $fieldNames, 'rollback not possible', [], self::recordIds($datamap, $cmdmap));
 
                     throw $this->transactionBrokenException($batchId, $dryRun, $created, $copied, $throwable);
                 }
@@ -199,8 +200,8 @@ readonly class RecordsApplyService
                 $dataHandler->discardDeferredCaches();
                 $this->logger->error('records_apply: DataHandler threw', ['exception' => $throwable, 'batchId' => $batchId]);
 
-                $summary = sprintf('%s (code %d)', $throwable::class, (int) $throwable->getCode());
-                $this->audit->log($tool, $batchId, $dryRun, false, 'datahandler', $operations, $fieldNames, $summary);
+                $summary = self::throwableSummary($throwable);
+                $this->audit->log($tool, $batchId, $dryRun, false, 'datahandler', $operations, $fieldNames, $summary, [], self::recordIds($datamap, $cmdmap));
 
                 $unbroken = self::unbrokenRunHint($datamap);
                 if ($unbroken !== null) {
@@ -234,7 +235,7 @@ readonly class RecordsApplyService
                 $this->siteRequestBootstrap->restore($requestSnapshot);
                 $cacheGuard->leave();
                 $this->settleDeferredCaches($dataHandler, $dryRun, $batchId);
-                $this->audit->log($tool, $batchId, $dryRun, false, 'transaction-broken', $operations, $fieldNames, 'rollback not possible');
+                $this->audit->log($tool, $batchId, $dryRun, false, 'transaction-broken', $operations, $fieldNames, 'rollback not possible', [], self::recordIds($datamap, $cmdmap));
 
                 throw $this->transactionBrokenException($batchId, $dryRun, $created, $copied);
             }
@@ -246,7 +247,7 @@ readonly class RecordsApplyService
                 $this->siteRequestBootstrap->restore($requestSnapshot);
                 $cacheGuard->leave();
                 $dataHandler->discardDeferredCaches();
-                $this->audit->log($tool, $batchId, $dryRun, false, 'datahandler', $operations, $fieldNames, implode(' | ', $errors));
+                $this->audit->log($tool, $batchId, $dryRun, false, 'datahandler', $operations, $fieldNames, implode(' | ', $errors), [], self::recordIds($datamap, $cmdmap));
 
                 throw new ToolCallException(
                     json_encode([
@@ -300,8 +301,8 @@ readonly class RecordsApplyService
                     $this->slugRedirectGuard->end();
                     $dataHandler->discardDeferredCaches();
                     $this->logger->error('records_apply: commit failed', ['exception' => $throwable, 'batchId' => $batchId]);
-                    $summary = sprintf('%s (code %d)', $throwable::class, (int) $throwable->getCode());
-                    $this->audit->log($tool, $batchId, $dryRun, false, 'commit', $operations, $fieldNames, $summary);
+                    $summary = self::throwableSummary($throwable);
+                    $this->audit->log($tool, $batchId, $dryRun, false, 'commit', $operations, $fieldNames, $summary, [], self::recordIds($datamap, $cmdmap));
 
                     throw new ToolCallException(
                         sprintf('The database refused to commit the batch (%s). Nothing was written (batch %s).', $summary, $batchId),
@@ -320,6 +321,8 @@ readonly class RecordsApplyService
             // Any path that returned/threw without leave() still restores backends + XCLASS.
             $cacheGuard->leave();
             $this->slugRedirectGuard->end();
+            // stdio reuses one user. Drop the in-memory slug signal without writing uc.
+            McpBackendUserAuthentication::discardUpdateSignal($GLOBALS['BE_USER'] ?? null);
         }
 
         $aiLabelled = 0;
@@ -509,6 +512,46 @@ readonly class RecordsApplyService
         }
 
         return $operations;
+    }
+
+    /**
+     * @param array<mixed> $datamap
+     * @param array<mixed> $cmdmap
+     * @return array<string, list<string>>
+     */
+    private static function recordIds(array $datamap, array $cmdmap): array
+    {
+        $ids = [];
+        foreach ($datamap as $table => $records) {
+            if (!is_array($records)) {
+                continue;
+            }
+            foreach (array_keys($records) as $id) {
+                $ids[(string) $table][] = (string) $id;
+            }
+        }
+        foreach ($cmdmap as $table => $records) {
+            if (!is_array($records)) {
+                continue;
+            }
+            foreach (array_keys($records) as $id) {
+                $ids[(string) $table][] = (string) $id;
+            }
+        }
+
+        return $ids;
+    }
+
+    private static function throwableSummary(\Throwable $throwable): string
+    {
+        return sprintf(
+            '%s (code %d) %s in %s:%d',
+            $throwable::class,
+            (int) $throwable->getCode(),
+            $throwable->getMessage(),
+            $throwable->getFile(),
+            $throwable->getLine(),
+        );
     }
 
     /**
