@@ -66,6 +66,7 @@
         "symfony/event-dispatcher": "^7.3 || ^8.0",
         "typo3/cms-backend": "^13.4 || ^14.3",
         "typo3/cms-core": "^13.4 || ^14.3",
+        "nitsan/ns-license": "^14.5.4",
         "typo3/cms-fluid": "^13.4 || ^14.3",
         "typo3/cms-scheduler": "^13.4 || ^14.3",
         "typo3/cms-workspaces": "^13.4 || ^14.3"
@@ -112,18 +113,18 @@
             "version": "2.0.2",
             "Package": {
                 "providesPackages": {
-                  "mcp/sdk": "",
-                  "symfony/ai-agent": "",
-                  "symfony/ai-anthropic-platform": "",
-                  "symfony/ai-azure-platform": "",
-                  "symfony/ai-gemini-platform": "",
-                  "symfony/ai-generic-platform": "",
-                  "symfony/ai-mistral-platform": "",
-                  "symfony/ai-ollama-platform": "",
-                  "symfony/ai-open-ai-platform": "",
-                  "symfony/ai-open-router-platform": "",
-                  "symfony/ai-platform": "",
-                  "symfony/ai-store": ""
+                    "mcp/sdk": "",
+                    "symfony/ai-agent": "",
+                    "symfony/ai-anthropic-platform": "",
+                    "symfony/ai-azure-platform": "",
+                    "symfony/ai-gemini-platform": "",
+                    "symfony/ai-generic-platform": "",
+                    "symfony/ai-mistral-platform": "",
+                    "symfony/ai-ollama-platform": "",
+                    "symfony/ai-open-ai-platform": "",
+                    "symfony/ai-open-router-platform": "",
+                    "symfony/ai-platform": "",
+                    "symfony/ai-store": ""
                 }
             }
         }

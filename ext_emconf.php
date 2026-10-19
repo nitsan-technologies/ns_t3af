@@ -28,6 +28,7 @@ $EM_CONF['ns_t3af'] = [
     'constraints' => [
         'depends' => [
             'typo3' => '13.4.0-14.99.99',
+            'ns_license' => '14.5.4-14.9.99',
             'php' => '8.2.0-8.5.99',
             'workspaces' => '13.4.0-14.99.99',
             'scheduler' => '13.4.0-14.99.99',
