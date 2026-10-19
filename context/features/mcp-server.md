@@ -51,7 +51,7 @@
 - `mcpMaxBodyBytes` — max Streamable HTTP POST body size in bytes (default 100 MiB; SDK floor 4 MiB)
 - OAuth lifetimes, rate limits, `oauthDefaultClientId`, redirect URIs
 
-**SDK:** `mcp/sdk ^0.7` (Composer require; no 0.5/0.6 compatibility path in transport code)
+**SDK:** `mcp/sdk ^0.8` (Composer require; no 0.5/0.6/0.7 compatibility path in transport code). `ProtocolVersionMiddleware` is not on the custom HTTP stack; the SDK applies it to handshake-era requests only.
 
 ---
 
