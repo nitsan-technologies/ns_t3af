@@ -27,6 +27,7 @@ use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
 use Symfony\AI\Platform\Vector\Vector;
 use Symfony\AI\Store\Document\Metadata;
 use Symfony\AI\Store\Document\VectorDocument;
+use Symfony\AI\Store\Document\VectorDocumentInterface;
 use Symfony\AI\Store\InMemory\Store;
 use Symfony\AI\Store\Query\VectorQuery;
 
@@ -118,7 +119,7 @@ final class AgentToolIndexService implements AgentToolIndexInterface
 
         $out = [];
         foreach ($results as $document) {
-            if (!$document instanceof VectorDocument) {
+            if (!$document instanceof VectorDocumentInterface) {
                 continue;
             }
             $name = (string) $document->getId();

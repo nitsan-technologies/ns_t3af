@@ -2,6 +2,7 @@
 
 Release notes live in the documentation:
 
+- [2.0.4](Documentation/ReleaseNotes/2.0.4/Index.rst) — 20 October 2026 (Symfony AI 0.14.x: platform, store, agent, and bridges)
 - [2.0.3](Documentation/ReleaseNotes/2.0.3/Index.rst) — 19 October 2026 (AI Agent image texts and named pages, MCP personal token, collection child writes)
 - [2.0.2](Documentation/ReleaseNotes/2.0.2/Index.rst) — 14 October 2026 (backend card grid regression on TYPO3 14, v13 flex layout)
 - [2.0.1](Documentation/ReleaseNotes/2.0.1/Index.rst) — 13 October 2026 (MCP dryRun/category, slug site bootstrap, search selectFields, font MIME, AI Agent QA)
