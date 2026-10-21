@@ -37,7 +37,12 @@
                             </h4>
                             <span class="aiu-mcp-tools-nav__meta">
                                 {extensionCount}
-                                <f:translate key="{ll}:module.mcpTools.sidebar.bundles" default="bundles" />
+                                <f:if condition="{extensionCount} == 1">
+                                    <f:translate key="{ll}:module.mcpTools.sidebar.bundle" default="bundle" />
+                                </f:if>
+                                <f:if condition="{extensionCount} != 1">
+                                    <f:translate key="{ll}:module.mcpTools.sidebar.bundles" default="bundles" />
+                                </f:if>
                             </span>
                         </span>
                     </button>
@@ -83,7 +88,12 @@
                             </h4>
                             <span class="aiu-mcp-tools-nav__meta">
                                 {promptCount}
-                                <f:translate key="{ll}:module.mcpTools.sidebar.templatesMeta" default="templates" />
+                                <f:if condition="{promptCount} == 1">
+                                    <f:translate key="{ll}:module.mcpTools.sidebar.template" default="template" />
+                                </f:if>
+                                <f:if condition="{promptCount} != 1">
+                                    <f:translate key="{ll}:module.mcpTools.sidebar.templatesMeta" default="templates" />
+                                </f:if>
                             </span>
                         </span>
                     </button>

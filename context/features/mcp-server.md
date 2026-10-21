@@ -63,7 +63,9 @@ Examples: `ns_t3ai` tools, `ns_t3aa` `GenerateFileMetadataTool`.
 
 Access (2.0.0): the 11 settings actions of `McpServerController` (status, connections, mode, advanced settings, scopes, IP allowlist add/remove/toggle, mTLS, analytics export, health ping) return 403 unless the user is admin, or has `t3af_dashboard` and the MCP Server tab visible (`denyUnlessCanManageMcpServer()`, `ModuleTabAccessService`). `ModuleController::mcpServerAction` stops before building tokens for a user without the tab. Per-user token and workspace actions are unchanged. `cache_clear` scope `pages` needs `options.clearCache.pages = 1` for non-admins (`CacheService::denialReason()`).
 
-`records_apply` / `records_undo`: an empty `map` is `{}`; a text value with an unbroken run over 256 KB gets a clear message when DataHandler throws (`RecordsApplyService::unbrokenRunHint()`, TYPO3 `EmailSoftReferenceParser` fails past pcre.backtrack_limit).
+`records_apply` / `records_undo`: an empty `map` is `{}`; a text value with an unbroken run over 256 KB gets a clear message when DataHandler throws (`RecordsApplyService::unbrokenRunHint()`, TYPO3 `EmailSoftReferenceParser` fails past pcre.backtrack_limit). After a **transaction-broken** partial write, `written` is **false** unless created/updated uids are verified in the database. `beginTransaction` retries on deadlock/lock-wait timeouts before surfacing the error.
+
+**Workspace:** `workspace_stage_set` updates a version row via DataHandler `version → setStage` (not a direct SQL patch). Invalid or unknown stage ids for that workspace are refused before the cmd runs; success requires `t3ver_stage` to match in the DB.
 
 ---
 

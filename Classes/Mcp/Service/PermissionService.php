@@ -39,6 +39,7 @@ readonly class PermissionService
     /** @return array{table: string, canSelect: bool, canModify: bool} */
     public function checkTableAccess(string $table): array
     {
+        $this->assertTableIsRegistered($table);
         $backendUser = $this->getBackendUser();
 
         return [
@@ -67,11 +68,39 @@ readonly class PermissionService
 
     private function canSelectTable(string $table, BackendUserAuthentication $backendUser): bool
     {
+        if (!$this->isRegisteredTable($table)) {
+            return false;
+        }
+
         if (in_array($table, self::ADMIN_ONLY_SELECT_TABLES, true) && !$backendUser->isAdmin()) {
             return false;
         }
 
         return $backendUser->check('tables_select', $table);
+    }
+
+    private function assertTableIsRegistered(string $table): void
+    {
+        if ($this->isRegisteredTable($table)) {
+            return;
+        }
+
+        throw new \InvalidArgumentException(
+            sprintf('Table "%s" is not registered in TYPO3.', $table),
+            1790600002,
+        );
+    }
+
+    private function isRegisteredTable(string $table): bool
+    {
+        $table = trim($table);
+        if ($table === '') {
+            return false;
+        }
+
+        $tca = $GLOBALS['TCA'] ?? null;
+
+        return is_array($tca) && isset($tca[$table]) && is_array($tca[$table]);
     }
 
     /**

@@ -787,10 +787,10 @@
         <source>Open starter kit on GitHub</source>
       </trans-unit>
       <trans-unit id="module.footer.developedBy" resname="module.footer.developedBy">
-        <source>Developed with 💙 by Team T3Planet.</source>
+        <source>Developed by Team T3Planet.</source>
       </trans-unit>
       <trans-unit id="module.footer.developedBy.prefix" resname="module.footer.developedBy.prefix">
-        <source>Developed with 💙 by Team </source>
+        <source>Developed by Team </source>
       </trans-unit>
       <trans-unit id="module.footer.developedBy.brand" resname="module.footer.developedBy.brand">
         <source>T3Planet.</source>
@@ -1969,7 +1969,7 @@
         <source>MCP Tools</source>
       </trans-unit>
       <trans-unit id="module.mcpTools.intro" resname="module.mcpTools.intro">
-        <source>AI tools exposed via Model Context Protocol — power your AI extensions and enable custom developer integrations.</source>
+        <source>AI tools exposed via Model Context Protocol. Power your AI extensions and enable custom developer integrations.</source>
       </trans-unit>
       <trans-unit id="module.mcpTools.tab.extensions" resname="module.mcpTools.tab.extensions">
         <source>AI Universe Extensions</source>
@@ -1981,7 +1981,7 @@
         <source>Search tools…</source>
       </trans-unit>
       <trans-unit id="module.mcpTools.banner.title" resname="module.mcpTools.banner.title">
-        <source>AI Skills + MCP Tools — linked by extension</source>
+        <source>AI Skills + MCP Tools, linked by extension</source>
       </trans-unit>
       <trans-unit id="module.mcpTools.banner.body" resname="module.mcpTools.banner.body">
         <source>Each AI extension ships with a set of MCP tools and a downloadable .md AI Skill file for your assistant. Type the skill trigger in your chat to activate the workflow.</source>
@@ -2175,6 +2175,9 @@
       <trans-unit id="module.mcpTools.sidebar.createCustomTool" resname="module.mcpTools.sidebar.createCustomTool">
         <source>Create Custom Tool</source>
       </trans-unit>
+      <trans-unit id="module.mcpTools.sidebar.bundle" resname="module.mcpTools.sidebar.bundle">
+        <source>bundle</source>
+      </trans-unit>
       <trans-unit id="module.mcpTools.sidebar.bundles" resname="module.mcpTools.sidebar.bundles">
         <source>bundles</source>
       </trans-unit>
@@ -2183,6 +2186,9 @@
       </trans-unit>
       <trans-unit id="module.mcpTools.sidebar.promptTemplates" resname="module.mcpTools.sidebar.promptTemplates">
         <source>Prompt Templates</source>
+      </trans-unit>
+      <trans-unit id="module.mcpTools.sidebar.template" resname="module.mcpTools.sidebar.template">
+        <source>template</source>
       </trans-unit>
       <trans-unit id="module.mcpTools.sidebar.templatesMeta" resname="module.mcpTools.sidebar.templatesMeta">
         <source>templates</source>
@@ -2335,7 +2341,7 @@
         <source>TYPO3 Core MCP Tools</source>
       </trans-unit>
       <trans-unit id="module.mcpTools.core.banner.body" resname="module.mcpTools.core.banner.body">
-        <source>Built-in tools shipped with AI Universe for page reads, content listing, TCA schema, workspaces, files, and generic record writes via DataHandler.</source>
+        <source>Built-in tools shipped with AI Foundation for page reads, content listing, TCA schema, workspaces, files, and generic record writes via DataHandler.</source>
       </trans-unit>
       <trans-unit id="module.mcpTools.core.empty" resname="module.mcpTools.core.empty">
         <source>No TYPO3 Core MCP tools registered.</source>

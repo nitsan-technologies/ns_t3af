@@ -808,12 +808,12 @@
                 <target>Starter-Kit auf GitHub öffnen</target>
             </trans-unit>
             <trans-unit id="module.footer.developedBy">
-                <source>Developed with 💙 by Team T3Planet.</source>
-                <target>Entwickelt mit 💙 vom Team T3Planet.</target>
+                <source>Developed by Team T3Planet.</source>
+                <target>Entwickelt vom Team T3Planet.</target>
             </trans-unit>
             <trans-unit id="module.footer.developedBy.prefix">
-                <source>Developed with 💙 by Team </source>
-                <target>Entwickelt mit 💙 vom Team </target>
+                <source>Developed by Team </source>
+                <target>Entwickelt vom Team </target>
             </trans-unit>
             <trans-unit id="module.footer.developedBy.brand">
                 <source>T3Planet.</source>
@@ -2352,8 +2352,8 @@
                 <target>MCP Tools</target>
             </trans-unit>
             <trans-unit id="module.mcpTools.intro">
-                <source>AI tools exposed via Model Context Protocol — power your AI extensions and enable custom developer integrations.</source>
-                <target>Über das Model Context Protocol bereitgestellte KI-Tools – unterstützen Sie Ihre KI-Erweiterungen und ermöglichen benutzerdefinierte Entwicklerintegrationen.</target>
+                <source>AI tools exposed via Model Context Protocol. Power your AI extensions and enable custom developer integrations.</source>
+                <target>Über das Model Context Protocol bereitgestellte KI-Tools. Unterstützen Sie Ihre KI-Erweiterungen und ermöglichen benutzerdefinierte Entwicklerintegrationen.</target>
             </trans-unit>
             <trans-unit id="module.mcpTools.tab.extensions">
                 <source>AI Universe Extensions</source>
@@ -2368,8 +2368,8 @@
                 <target>Suchwerkzeuge…</target>
             </trans-unit>
             <trans-unit id="module.mcpTools.banner.title">
-                <source>AI Skills + MCP Tools — linked by extension</source>
-                <target>KI-Fähigkeiten + MCP Tools – verknüpft durch Erweiterung</target>
+                <source>AI Skills + MCP Tools, linked by extension</source>
+                <target>KI-Fähigkeiten + MCP Tools, verknüpft durch Erweiterung</target>
             </trans-unit>
             <trans-unit id="module.mcpTools.banner.body">
                 <source>Each AI extension ships with a set of MCP tools and a downloadable .md AI Skill file for your assistant. Type the skill trigger in your chat to activate the workflow.</source>
@@ -2627,6 +2627,10 @@
                 <source>Create Custom Tool</source>
                 <target>Erstellen Sie ein benutzerdefiniertes Tool</target>
             </trans-unit>
+            <trans-unit id="module.mcpTools.sidebar.bundle">
+                <source>bundle</source>
+                <target>Bündel</target>
+            </trans-unit>
             <trans-unit id="module.mcpTools.sidebar.bundles">
                 <source>bundles</source>
                 <target>Bündel</target>
@@ -2638,6 +2642,10 @@
             <trans-unit id="module.mcpTools.sidebar.promptTemplates">
                 <source>Prompt Templates</source>
                 <target>Prompt-Vorlagen</target>
+            </trans-unit>
+            <trans-unit id="module.mcpTools.sidebar.template">
+                <source>template</source>
+                <target>Vorlage</target>
             </trans-unit>
             <trans-unit id="module.mcpTools.sidebar.templatesMeta">
                 <source>templates</source>
@@ -2840,8 +2848,8 @@
                 <target>TYPO3 Kern MCP Tools</target>
             </trans-unit>
             <trans-unit id="module.mcpTools.core.banner.body">
-                <source>Built-in tools shipped with AI Universe for page reads, content listing, TCA schema, workspaces, files, and generic record writes via DataHandler.</source>
-                <target>Mit AI Universe gelieferte integrierte Tools für Seitenlesevorgänge, Inhaltslisten, TCA-Schema, Arbeitsbereiche, Dateien und generische Datensatzschreibvorgänge über DataHandler.</target>
+                <source>Built-in tools shipped with AI Foundation for page reads, content listing, TCA schema, workspaces, files, and generic record writes via DataHandler.</source>
+                <target>Mit AI Foundation gelieferte integrierte Tools für Seitenlesevorgänge, Inhaltslisten, TCA-Schema, Arbeitsbereiche, Dateien und generische Datensatzschreibvorgänge über DataHandler.</target>
             </trans-unit>
             <trans-unit id="module.mcpTools.core.empty">
                 <source>No TYPO3 Core MCP tools registered.</source>
