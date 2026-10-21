@@ -186,6 +186,23 @@ final class FileUploadTokenFunctionalTest extends FunctionalTestCase
         self::assertIsArray($payload);
         self::assertStringContainsString('not a real .woff2 font', (string) ($payload['error'] ?? ''));
         self::assertSame(1747320030, $payload['code'] ?? null);
+
+        $row = $this->getConnectionPool()->getConnectionForTable('tx_nst3af_upload_tokens')
+            ->select(['used'], 'tx_nst3af_upload_tokens', ['token' => hash('sha256', $plaintext)])
+            ->fetchAssociative();
+        self::assertIsArray($row);
+        self::assertSame(0, (int) ($row['used'] ?? 1));
+
+        $body->rewind();
+        $retry = $endpoint((new ServerRequest('http://localhost/mcp_upload', 'PUT'))
+            ->withBody($body)
+            ->withHeader('Authorization', 'Bearer ' . $plaintext)
+            ->withHeader('Content-Type', 'application/octet-stream'));
+        self::assertSame(400, $retry->getStatusCode());
+        $retryPayload = json_decode((string) $retry->getBody(), true);
+        self::assertIsArray($retryPayload);
+        self::assertSame(1747320030, $retryPayload['code'] ?? null);
+        self::assertStringNotContainsString('already used', strtolower((string) ($retryPayload['error'] ?? '')));
     }
 
     #[Test]

@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Service\RecordsApply;
 
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyPreflight;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyProblems;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyValidationException;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
@@ -511,6 +512,29 @@ final class RecordsApplyPreflightTest extends TestCase
             self::fail('Expected the shortcut page type to be refused.');
         } catch (RecordsApplyValidationException $exception) {
             self::assertSame(['doktype'], $exception->getProblems()[0]['fields']);
+        }
+    }
+
+    #[Test]
+    public function aMissingRelationUidIsRefused(): void
+    {
+        $GLOBALS['TCA']['tt_content']['columns']['categories'] = [
+            'config' => ['type' => 'category', 'foreign_table' => 'sys_category'],
+        ];
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->method('findExistingUids')
+            ->willReturnCallback(static fn(string $table, array $uids): array => $table === 'sys_category' ? [] : $uids);
+        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $recordService, $this->connectionPool);
+
+        $problems = new RecordsApplyProblems();
+        $method = new \ReflectionMethod(RecordsApplyPreflight::class, 'validateRelationUidList');
+        self::assertFalse($method->invoke($preflight, 'tt_content', 'categories', '42', ['table' => 'tt_content', 'id' => '5'], $problems));
+
+        try {
+            $preflight->check(['tt_content' => ['5' => ['categories' => '42']]], [], false);
+            self::fail('Expected a missing category uid to be refused.');
+        } catch (RecordsApplyValidationException $exception) {
+            self::assertSame(['categories'], $exception->getProblems()[0]['fields']);
         }
     }
 

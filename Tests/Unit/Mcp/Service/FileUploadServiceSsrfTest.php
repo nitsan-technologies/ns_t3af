@@ -24,6 +24,8 @@ use GuzzleHttp\Psr7\Request;
 use NITSAN\NsT3AF\Mcp\Service\AdvancedSettingsService;
 use NITSAN\NsT3AF\Mcp\Service\FileUploadService;
 use NITSAN\NsT3AF\Mcp\Service\McpPublicUrlService;
+use NITSAN\NsT3AF\Mcp\Service\NativePublicHostnameResolver;
+use NITSAN\NsT3AF\Mcp\Service\PublicHostnameResolverInterface;
 use NITSAN\NsT3AF\Service\PublicUrlValidator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
@@ -108,7 +110,8 @@ final class FileUploadServiceSsrfTest extends TestCase
         $requestFactory->expects(self::never())->method('request');
 
         try {
-            $this->serviceWith($requestFactory)->downloadFromUrl('https://no-such-host.invalid/photo.jpg');
+            $this->serviceWith($requestFactory, new NativePublicHostnameResolver())
+                ->downloadFromUrl('https://no-such-host.invalid/photo.jpg');
             self::fail('An unknown host must be reported.');
         } catch (\InvalidArgumentException $exception) {
             self::assertSame('Could not resolve host "no-such-host.invalid".', $exception->getMessage());
@@ -125,7 +128,7 @@ final class FileUploadServiceSsrfTest extends TestCase
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('private or reserved network address');
 
-        $this->serviceWith($requestFactory)->downloadFromUrl('http://localhost/secret.jpg');
+        $this->serviceWith($requestFactory, new NativePublicHostnameResolver())->downloadFromUrl('http://localhost/secret.jpg');
     }
 
     /**
@@ -153,10 +156,12 @@ final class FileUploadServiceSsrfTest extends TestCase
         self::assertSame($permanent, FileUploadService::isPermanentFailure($exception));
     }
 
-    private function serviceWith(RequestFactory $requestFactory): FileUploadService
+    private function serviceWith(RequestFactory $requestFactory, ?PublicHostnameResolverInterface $hostnameResolver = null): FileUploadService
     {
         $advanced = $this->createMock(AdvancedSettingsService::class);
         $advanced->method('maxFileSizeMb')->willReturn(10);
+
+        $resolver = $hostnameResolver ?? $this->exampleComPublicResolver();
 
         return new FileUploadService(
             $this->createMock(ConnectionPool::class),
@@ -165,6 +170,26 @@ final class FileUploadServiceSsrfTest extends TestCase
             new PublicUrlValidator(),
             $this->createMock(McpPublicUrlService::class),
             $requestFactory,
+            $resolver,
         );
+    }
+
+    private function exampleComPublicResolver(): PublicHostnameResolverInterface
+    {
+        $resolver = $this->createMock(PublicHostnameResolverInterface::class);
+        $resolver->method('resolve')->willReturnCallback(static function (string $hostname): string {
+            if ($hostname === 'example.com') {
+                return '93.184.216.34';
+            }
+
+            $resolved = gethostbyname($hostname);
+            if ($resolved === $hostname) {
+                throw new \InvalidArgumentException('Could not resolve host "' . $hostname . '".', 1747320020);
+            }
+
+            return $resolved;
+        });
+
+        return $resolver;
     }
 }

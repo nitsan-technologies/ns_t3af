@@ -145,6 +145,7 @@ readonly class RecordsApplyPreflight
 
             $writable = array_flip($this->tcaSchemaService->getApplyWritableFields($table));
             $listFields = array_flip($this->tcaSchemaService->getApplyListFields($table));
+            $relationUidListFields = array_flip($this->tcaSchemaService->getRelationUidListFields($table));
             /** @var list<int> $existing */
             $existing = [];
             /** @var array<int, list<array<string, mixed>>> $afterRecords records that new ones are placed after (negative pid) */
@@ -271,6 +272,10 @@ readonly class RecordsApplyPreflight
                     }
 
                     $fields[$fieldName] = $normalized;
+
+                    if ($valid && isset($relationUidListFields[(string) $fieldName]) && $normalized !== '') {
+                        $valid = $this->validateRelationUidList($table, (string) $fieldName, $normalized, $where, $problems);
+                    }
                 }
 
                 if (!$valid) {
@@ -650,6 +655,62 @@ readonly class RecordsApplyPreflight
         }
 
         return null;
+    }
+
+    /**
+     * @param array<string, mixed> $where
+     */
+    private function validateRelationUidList(
+        string $table,
+        string $fieldName,
+        string $normalized,
+        array $where,
+        RecordsApplyProblems $problems,
+    ): bool {
+        $config = $this->tcaSchemaService->getColumnFieldConfig($table, $fieldName);
+        $foreignTable = is_array($config) && is_string($config['foreign_table'] ?? null) && $config['foreign_table'] !== ''
+            ? $config['foreign_table']
+            : null;
+        if ($foreignTable === null && is_array($config) && ($config['type'] ?? '') === 'category') {
+            $foreignTable = 'sys_category';
+        }
+        if ($foreignTable === null) {
+            return true;
+        }
+
+        /** @var list<int> $uids */
+        $uids = [];
+        foreach (explode(',', $normalized) as $item) {
+            $item = trim($item);
+            if ($item === '' || preg_match(self::NEW_ID, $item) === 1) {
+                continue;
+            }
+            if (ctype_digit($item)) {
+                $uids[] = (int) $item;
+                continue;
+            }
+            if (preg_match('/^[A-Za-z0-9_]+_(\d+)$/', $item, $match) === 1) {
+                $uids[] = (int) $match[1];
+            }
+        }
+
+        if ($uids === []) {
+            return true;
+        }
+
+        $found = $this->recordService->findExistingUids($foreignTable, $uids);
+        foreach (array_diff($uids, $found) as $missing) {
+            $problems->add($where + [
+                'error' => sprintf(
+                    'Related record %d for field "%s" was not found or is not accessible.',
+                    $missing,
+                    RecordsApplyProblems::safe($fieldName),
+                ),
+                'fields' => [RecordsApplyProblems::safe($fieldName)],
+            ]);
+        }
+
+        return array_diff($uids, $found) === [];
     }
 
     /** @return string|null comma-separated list, or null when the value is not a valid uid list */

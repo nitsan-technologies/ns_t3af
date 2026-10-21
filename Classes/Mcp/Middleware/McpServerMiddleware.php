@@ -24,6 +24,7 @@ use const JSON_THROW_ON_ERROR;
 use Mcp\Server\Transport\StreamableHttpTransport;
 use NITSAN\NsT3AF\Mcp\Authentication\BackendUserBootstrap;
 use NITSAN\NsT3AF\Mcp\Http\FileUploadEndpoint;
+use NITSAN\NsT3AF\Mcp\Http\McpCorsHeaders;
 use NITSAN\NsT3AF\Mcp\OAuth\AuthorizationService;
 use NITSAN\NsT3AF\Mcp\Server\McpServerFactory;
 use NITSAN\NsT3AF\Mcp\Service\AdvancedSettingsService;
@@ -66,7 +67,7 @@ readonly class McpServerMiddleware implements MiddlewareInterface
         // Pre-signed uploads use their own token — do not require OAuth access token.
         if ($path === $uploadPath) {
             if (!$this->settingsService->isMcpServerEnabled()) {
-                return $this->withCorsHeaders($this->createJsonResponse(['error' => 'MCP server is disabled'], 503));
+                return McpCorsHeaders::apply($this->createJsonResponse(['error' => 'MCP server is disabled'], 503), $request);
             }
 
             return ($this->fileUploadEndpoint)($request);
@@ -79,20 +80,20 @@ readonly class McpServerMiddleware implements MiddlewareInterface
         }
 
         if (!$this->settingsService->isMcpServerEnabled()) {
-            return $this->withCorsHeaders($this->createJsonResponse(['error' => 'MCP server is disabled'], 503));
+            return McpCorsHeaders::apply($this->createJsonResponse(['error' => 'MCP server is disabled'], 503), $request);
         }
 
         if ($request->getMethod() === 'OPTIONS') {
-            return $this->withCorsHeaders($this->responseFactory->createResponse(204));
+            return McpCorsHeaders::apply($this->responseFactory->createResponse(204), $request);
         }
 
         $token = $urlToken ?? $this->extractQueryToken($request) ?? $this->extractBearerToken($request);
         if ($token === null) {
             if ($this->settingsService->allowAnonymousReadOnly()) {
-                return $this->withCorsHeaders($this->createJsonResponse(['error' => 'Anonymous read-only not implemented in v1'], 501));
+                return McpCorsHeaders::apply($this->createJsonResponse(['error' => 'Anonymous read-only not implemented in v1'], 501), $request);
             }
 
-            return $this->withCorsHeaders($this->createUnauthorizedResponse($request, 'Missing authentication token'));
+            return McpCorsHeaders::apply($this->createUnauthorizedResponse($request, 'Missing authentication token'), $request);
         }
 
         try {
@@ -108,7 +109,7 @@ readonly class McpServerMiddleware implements MiddlewareInterface
             // the editor's own backend session into that workspace.
             $this->backendUserBootstrap->applyWorkspace($GLOBALS['BE_USER'], $workspaceId);
         } catch (\RuntimeException) {
-            return $this->withCorsHeaders($this->createUnauthorizedResponse($request, 'Authentication failed'));
+            return McpCorsHeaders::apply($this->createUnauthorizedResponse($request, 'Authentication failed'), $request);
         }
 
         try {
@@ -119,10 +120,10 @@ readonly class McpServerMiddleware implements MiddlewareInterface
             $response = $server->run($transport);
 
             if ($this->isSessionNotFoundResponse($response)) {
-                return $this->withCorsHeaders($this->createUnauthorizedResponse($request, 'Session expired'));
+                return McpCorsHeaders::apply($this->createUnauthorizedResponse($request, 'Session expired'), $request);
             }
 
-            return $this->withCorsHeaders($response);
+            return McpCorsHeaders::apply($response, $request);
         } finally {
             $this->runtimeContext->clear();
         }
@@ -279,16 +280,4 @@ readonly class McpServerMiddleware implements MiddlewareInterface
             ->withBody($body);
     }
 
-    private function withCorsHeaders(ResponseInterface $response): ResponseInterface
-    {
-        return $response
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
-            ->withHeader(
-                'Access-Control-Allow-Headers',
-                'Accept, Authorization, Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, Last-Event-ID',
-            )
-            ->withHeader('Access-Control-Expose-Headers', 'Mcp-Session-Id')
-            ->withHeader('X-Content-Type-Options', 'nosniff');
-    }
 }

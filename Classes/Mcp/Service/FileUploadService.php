@@ -42,8 +42,11 @@ use TYPO3\CMS\Core\Resource\Index\FileIndexRepository;
 use TYPO3\CMS\Core\Resource\MimeTypeDetector;
 use TYPO3\CMS\Core\Resource\OnlineMedia\Helpers\OnlineMediaHelperRegistry;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
+use TYPO3\CMS\Core\Resource\Security\FileNameValidator;
+use TYPO3\CMS\Core\Resource\Service\ResourceConsistencyService;
 use TYPO3\CMS\Core\Resource\StorageRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Validation\ResultException;
 
 /**
  * Create-only FAL uploads for MCP: deny dangerous names, rename on conflict,
@@ -88,6 +91,7 @@ readonly class FileUploadService
         private PublicUrlValidator $publicUrlValidator,
         private McpPublicUrlService $mcpPublicUrlService,
         private ?RequestFactory $requestFactory = null,
+        private ?PublicHostnameResolverInterface $publicHostnameResolver = null,
     ) {}
 
     /**
@@ -133,15 +137,8 @@ readonly class FileUploadService
      */
     public function storeFile(string $tempPath, string $fileName, Folder $folder): array
     {
+        $this->assertUploadContentReady($tempPath, $fileName, $folder);
         $fileName = basename($fileName);
-        if ($fileName === '' || !str_contains($fileName, '.')) {
-            throw new \InvalidArgumentException(
-                'Could not determine a file name with an extension. Pass an explicit "fileName" like "image.jpg".',
-                1747320001,
-            );
-        }
-
-        $this->assertFileNameIsAllowed($fileName);
 
         $sha1 = sha1_file($tempPath);
         if ($sha1 === false) {
@@ -149,7 +146,6 @@ readonly class FileUploadService
         }
 
         $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-        self::assertFontFileIsGenuine($tempPath, $extension);
         $existingFile = $this->findIdenticalFileInFolder($folder->getStorage(), $sha1, $folder);
         if ($existingFile !== null) {
             self::assertDedupeNameMatchesExisting($existingFile, $fileName, $extension);
@@ -358,6 +354,76 @@ readonly class FileUploadService
     }
 
     /**
+     * Same blocked-name rules as {@see assertFileNameIsAllowed()} plus TYPO3's global allowed-extension list.
+     */
+    public function assertStorageAcceptsFileName(Folder $folder, string $fileName): void
+    {
+        $this->assertFileNameIsAllowed($fileName);
+        $this->assertFileNamePassesCoreDenyPattern($fileName);
+        $this->assertFileExtensionInGlobalAllowList($folder->getStorage(), basename($fileName));
+    }
+
+    /**
+     * Content checks that must pass before a single-use upload token is consumed.
+     */
+    public function assertUploadContentReady(string $tempPath, string $fileName, Folder $folder): void
+    {
+        $fileName = basename($fileName);
+        if ($fileName === '' || !str_contains($fileName, '.')) {
+            throw new \InvalidArgumentException(
+                'Could not determine a file name with an extension. Pass an explicit "fileName" like "image.jpg".',
+                1747320001,
+            );
+        }
+
+        $this->assertStorageAcceptsFileName($folder, $fileName);
+        $this->ensureDetectableTextPlain($tempPath, $fileName);
+
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        self::assertFontFileIsGenuine($tempPath, $extension);
+        $this->assertResourceConsistencyForUpload($folder->getStorage(), $tempPath, $fileName);
+    }
+
+    private function assertFileNamePassesCoreDenyPattern(string $fileName): void
+    {
+        $validator = GeneralUtility::makeInstance(FileNameValidator::class);
+        if (!$validator->isValid(basename($fileName))) {
+            throw new \InvalidArgumentException(
+                'This file extension is not allowed by the storage configuration.',
+                1747320003,
+            );
+        }
+    }
+
+    private function assertFileExtensionInGlobalAllowList(ResourceStorage $storage, string $fileName): void
+    {
+        try {
+            GeneralUtility::makeInstance(ResourceConsistencyService::class)
+                ->validate($storage, '', $fileName);
+        } catch (ResultException $e) {
+            throw new \InvalidArgumentException(
+                self::formatResourceConsistencyFailure($e, $fileName),
+                1747320004,
+                $e,
+            );
+        }
+    }
+
+    private function assertResourceConsistencyForUpload(ResourceStorage $storage, string $tempPath, string $fileName): void
+    {
+        try {
+            GeneralUtility::makeInstance(ResourceConsistencyService::class)
+                ->validate($storage, $tempPath, $fileName);
+        } catch (ResultException $e) {
+            throw new \InvalidArgumentException(
+                self::formatResourceConsistencyFailure($e, $fileName),
+                1747320004,
+                $e,
+            );
+        }
+    }
+
+    /**
      * @return array{
      *     uid: int,
      *     name: string,
@@ -426,11 +492,9 @@ readonly class FileUploadService
     }
 
     /**
-     * Atomically consume a single-use upload token. Returns the DB row once, else null.
-     *
      * @return array<string, mixed>|null
      */
-    public function consumeUploadToken(string $token): ?array
+    public function peekUploadToken(string $token): ?array
     {
         if ($token === '') {
             return null;
@@ -447,6 +511,22 @@ readonly class FileUploadService
             return null;
         }
 
+        return $row;
+    }
+
+    /**
+     * Atomically consume a single-use upload token. Returns the DB row once, else null.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function consumeUploadToken(string $token): ?array
+    {
+        $row = $this->peekUploadToken($token);
+        if ($row === null) {
+            return null;
+        }
+
+        $connection = $this->connectionPool->getConnectionForTable(self::TABLE_UPLOAD_TOKENS);
         $affected = $connection->executeStatement(
             'UPDATE ' . self::TABLE_UPLOAD_TOKENS . ' SET used = ?, tstamp = ? WHERE uid = ? AND used = 0',
             [time(), time(), (int) $row['uid']],
@@ -698,6 +778,9 @@ readonly class FileUploadService
             'The URL points to a private or reserved network address and cannot be downloaded.',
             1747320019,
         );
+        if (in_array($host, ['localhost', 'localhost.localdomain', 'ip6-localhost', 'ip6-loopback'], true)) {
+            throw $privateAddress;
+        }
         if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
             if (!$this->publicUrlValidator->isPublicUrl($url)) {
                 throw $privateAddress;
@@ -707,16 +790,38 @@ readonly class FileUploadService
         }
 
         // Resolved once: the address that is checked is the address the download is pinned to.
-        $resolvedIp = gethostbyname($host);
-        if ($resolvedIp === $host) {
-            throw new \InvalidArgumentException('Could not resolve host "' . $host . '".', 1747320020);
-        }
+        $resolver = $this->publicHostnameResolver ?? new NativePublicHostnameResolver();
+        $resolvedIp = $resolver->resolve($host);
         $ipHost = str_contains($resolvedIp, ':') ? '[' . $resolvedIp . ']' : $resolvedIp;
         if (!$this->publicUrlValidator->isPublicUrl($scheme . '://' . $ipHost . '/')) {
             throw $privateAddress;
         }
 
         return $resolvedIp;
+    }
+
+    /**
+     * finfo often reports 1–2 byte payloads as application/octet-stream; pad tiny UTF-8 text so FAL accepts .txt and similar.
+     */
+    private function ensureDetectableTextPlain(string $tempPath, string $fileName): void
+    {
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        if (!in_array($extension, ['txt', 'md', 'csv', 'tsv', 'json', 'xml', 'yml', 'yaml', 'css', 'svg'], true)) {
+            return;
+        }
+
+        $size = filesize($tempPath);
+        if ($size === false || $size >= 3) {
+            return;
+        }
+
+        $content = file_get_contents($tempPath);
+        if ($content === false || $content === '' || !mb_check_encoding($content, 'UTF-8')) {
+            return;
+        }
+
+        // ponytail: minimum 3 bytes so MimeTypeDetector returns text/plain; padding is whitespace only.
+        file_put_contents($tempPath, $content . str_repeat(' ', 3 - strlen($content)));
     }
 
     /**

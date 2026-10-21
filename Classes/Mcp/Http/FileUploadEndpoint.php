@@ -60,31 +60,32 @@ readonly class FileUploadEndpoint
     {
         try {
             if ($request->getMethod() === 'OPTIONS') {
-                return $this->withCorsHeaders($this->responseFactory->createResponse(204));
+                return McpCorsHeaders::apply($this->responseFactory->createResponse(204), $request);
             }
 
             if (!in_array($request->getMethod(), ['PUT', 'POST'], true)) {
-                return $this->jsonError('Use HTTP PUT (or POST) with the raw file bytes as request body.', 405, 1747330004);
+                return $this->jsonError('Use HTTP PUT (or POST) with the raw file bytes as request body.', 405, 1747330004, $request);
             }
 
             $token = $this->extractToken($request);
             if ($token === '') {
-                return $this->jsonError('Missing upload token.', 401, 1747330005);
+                return $this->jsonError('Missing upload token.', 401, 1747330005, $request);
             }
 
-            $tokenRow = $this->fileUploadService->consumeUploadToken($token);
+            $tokenRow = $this->fileUploadService->peekUploadToken($token);
             if ($tokenRow === null) {
                 return $this->jsonError(
                     'Invalid, expired, or already used upload token. Ask for a new upload ticket.',
                     403,
                     1747330005,
+                    $request,
                 );
             }
 
             try {
                 $this->backendUserBootstrap->bootstrap((int) $tokenRow['be_user_uid']);
             } catch (\RuntimeException) {
-                return $this->jsonError('The backend user this upload token belongs to is not available.', 401, 1747330006);
+                return $this->jsonError('The backend user this upload token belongs to is not available.', 401, 1747330006, $request);
             }
 
             [$body, $uploadedFileName] = $this->extractUpload($request);
@@ -100,17 +101,29 @@ readonly class FileUploadEndpoint
                     'No file name given. Pass it as ?fileName=<name.ext> query parameter or Content-Disposition header.',
                     400,
                     1747330007,
+                    $request,
                 );
             }
 
-            $this->fileUploadService->assertFileNameIsAllowed($fileName);
+            $folder = $this->fileUploadService->resolveFolder(
+                (int) $tokenRow['storage_uid'],
+                (string) $tokenRow['target_folder'],
+            );
+            $this->fileUploadService->assertStorageAcceptsFileName($folder, $fileName);
 
             $tempPath = $this->bufferToTempFile($body, $this->fileUploadService->getMaxFileBytes());
             try {
-                $folder = $this->fileUploadService->resolveFolder(
-                    (int) $tokenRow['storage_uid'],
-                    (string) $tokenRow['target_folder'],
-                );
+                $this->fileUploadService->assertUploadContentReady($tempPath, $fileName, $folder);
+
+                if ($this->fileUploadService->consumeUploadToken($token) === null) {
+                    return $this->jsonError(
+                        'Invalid, expired, or already used upload token. Ask for a new upload ticket.',
+                        403,
+                        1747330005,
+                        $request,
+                    );
+                }
+
                 $stored = $this->fileUploadService->storeFile($tempPath, $fileName, $folder);
             } finally {
                 if (file_exists($tempPath)) {
@@ -127,19 +140,19 @@ readonly class FileUploadEndpoint
                 $data['renamedFrom'] = basename($fileName);
             }
 
-            return $this->withCorsHeaders($this->jsonResponse($data, 201));
+            return McpCorsHeaders::apply($this->jsonResponse($data, 201), $request);
         } catch (InsufficientFolderAccessPermissionsException|InsufficientFolderWritePermissionsException $e) {
-            return $this->jsonError('No permission for the target folder: ' . $e->getMessage(), 403, 1747330008);
+            return $this->jsonError('No permission for the target folder: ' . $e->getMessage(), 403, 1747330008, $request);
         } catch (\InvalidArgumentException $e) {
             // Same numeric code as the MCP tool route (file_upload) reports for the same refusal.
-            return $this->jsonError($e->getMessage(), 400, (int) $e->getCode() ?: self::FALLBACK_ERROR_CODE);
+            return $this->jsonError($e->getMessage(), 400, (int) $e->getCode() ?: self::FALLBACK_ERROR_CODE, $request);
         } catch (\Throwable $e) {
             if ((int) $e->getCode() === 1747330008) {
-                return $this->jsonError($e->getMessage(), 403, 1747330008);
+                return $this->jsonError($e->getMessage(), 403, 1747330008, $request);
             }
             $this->logger->error('Pre-signed upload failed: ' . $e->getMessage(), ['exception' => $e]);
 
-            return $this->jsonError('Upload failed due to an unexpected server error (see TYPO3 log).', 500, 1747330009);
+            return $this->jsonError('Upload failed due to an unexpected server error (see TYPO3 log).', 500, 1747330009, $request);
         }
     }
 
@@ -224,17 +237,8 @@ readonly class FileUploadEndpoint
             ->withBody($body);
     }
 
-    private function jsonError(string $message, int $status, int $code): ResponseInterface
+    private function jsonError(string $message, int $status, int $code, ?ServerRequestInterface $request = null): ResponseInterface
     {
-        return $this->withCorsHeaders($this->jsonResponse(['error' => $message, 'code' => $code], $status));
-    }
-
-    private function withCorsHeaders(ResponseInterface $response): ResponseInterface
-    {
-        return $response
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Methods', 'PUT, POST, OPTIONS')
-            ->withHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, Content-Disposition')
-            ->withHeader('X-Content-Type-Options', 'nosniff');
+        return McpCorsHeaders::apply($this->jsonResponse(['error' => $message, 'code' => $code], $status), $request);
     }
 }
