@@ -152,7 +152,21 @@
     outline: none;
 }
 
-.aiu-oauth-authorize__submit {
+.aiu-oauth-authorize__meta {
+    color: var(--aiu-oauth-text-muted);
+    font-size: .8125rem;
+    margin: 0 0 .75rem;
+}
+
+.aiu-oauth-authorize__actions {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    margin-top: .25rem;
+}
+
+.aiu-oauth-authorize__submit,
+.aiu-oauth-authorize__deny {
     appearance: none;
     background: var(--aiu-oauth-btn-bg);
     border: 1px solid var(--aiu-oauth-btn-border);
@@ -164,10 +178,13 @@
     font-size: .875rem;
     font-weight: 600;
     line-height: 1.3;
-    margin-top: .25rem;
     padding: .75rem 1rem;
     transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
     width: 100%;
+}
+
+.aiu-oauth-authorize__deny {
+    background: #fff;
 }
 
 .aiu-oauth-authorize__submit:hover {

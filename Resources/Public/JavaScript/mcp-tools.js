@@ -270,10 +270,41 @@ function filterSearch(root, query) {
     return;
   }
 
-  activeSection.querySelectorAll('[data-mcp-tools-card]').forEach((item) => {
-    const haystack = (item.getAttribute('data-search-text') ?? item.textContent ?? '').toLowerCase();
-    item.hidden = query !== '' && !haystack.includes(query);
+  activeSection.querySelectorAll('[data-mcp-tools-card]').forEach((card) => {
+    filterToolTagsInCard(card, query);
   });
+}
+
+function filterToolTagsInCard(card, query) {
+  if (!(card instanceof HTMLElement)) {
+    return;
+  }
+
+  const toolTags = card.querySelectorAll('[data-mcp-tools-tool-tag]');
+  if (toolTags.length === 0) {
+    const haystack = (card.getAttribute('data-search-text') ?? card.textContent ?? '').toLowerCase();
+    card.hidden = query !== '' && !haystack.includes(query);
+    return;
+  }
+
+  let visibleCount = 0;
+  toolTags.forEach((tag) => {
+    if (!(tag instanceof HTMLElement)) {
+      return;
+    }
+    const haystack = (
+      tag.getAttribute('data-search-text')
+      ?? tag.getAttribute('data-tool-name')
+      ?? tag.textContent
+      ?? ''
+    ).toLowerCase();
+    const matches = query === '' || haystack.includes(query);
+    tag.hidden = !matches;
+    if (matches) {
+      visibleCount += 1;
+    }
+  });
+  card.hidden = query !== '' && visibleCount === 0;
 }
 
 function getExtensionsPanel(root) {
@@ -305,10 +336,12 @@ function applyExtensionsPanelFilters(root, query) {
 
   extensionsPanel.querySelectorAll('[data-mcp-tools-card]').forEach((card) => {
     const cardExtension = card.getAttribute('data-extension-id') ?? '';
-    const haystack = (card.getAttribute('data-search-text') ?? card.textContent ?? '').toLowerCase();
     const matchesExtension = extensionId === 'all' || cardExtension === extensionId;
-    const matchesSearch = query === '' || haystack.includes(query);
-    card.hidden = !(matchesExtension && matchesSearch);
+    if (!matchesExtension) {
+      card.hidden = true;
+      return;
+    }
+    filterToolTagsInCard(card, query);
   });
 }
 

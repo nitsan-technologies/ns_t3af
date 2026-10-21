@@ -28,7 +28,7 @@ final class AdvancedSettingsServiceTest extends TestCase
     public function testMaxBodyBytesDefaultsToSixteenMiB(): void
     {
         $extensionSettings = $this->createMock(ExtensionSettingsService::class);
-        $extensionSettings->method('getAll')->with('ns_t3af')->willReturn([]);
+        $extensionSettings->method('getAllIgnorePid')->with('ns_t3af')->willReturn([]);
 
         $service = new AdvancedSettingsService($extensionSettings);
 
@@ -39,7 +39,7 @@ final class AdvancedSettingsServiceTest extends TestCase
     public function testMaxBodyBytesUsesConfiguredValue(): void
     {
         $extensionSettings = $this->createMock(ExtensionSettingsService::class);
-        $extensionSettings->method('getAll')->with('ns_t3af')->willReturn([
+        $extensionSettings->method('getAllIgnorePid')->with('ns_t3af')->willReturn([
             'mcpMaxBodyBytes' => '33554432',
         ]);
 
@@ -51,7 +51,7 @@ final class AdvancedSettingsServiceTest extends TestCase
     public function testMaxBodyBytesFallsBackWhenConfiguredValueInvalid(): void
     {
         $extensionSettings = $this->createMock(ExtensionSettingsService::class);
-        $extensionSettings->method('getAll')->with('ns_t3af')->willReturn([
+        $extensionSettings->method('getAllIgnorePid')->with('ns_t3af')->willReturn([
             'mcpMaxBodyBytes' => '0',
         ]);
 
@@ -63,7 +63,7 @@ final class AdvancedSettingsServiceTest extends TestCase
     public function testAllExposesMaxBodyBytesForAdvancedForm(): void
     {
         $extensionSettings = $this->createMock(ExtensionSettingsService::class);
-        $extensionSettings->method('getAll')->with('ns_t3af')->willReturn([
+        $extensionSettings->method('getAllIgnorePid')->with('ns_t3af')->willReturn([
             'mcpMaxBodyBytes' => '33554432',
         ]);
 

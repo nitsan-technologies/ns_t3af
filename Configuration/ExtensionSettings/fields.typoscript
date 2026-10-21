@@ -122,7 +122,12 @@ rateLimitRevokeWindow = 300
 oauthDefaultClientId = typo3-ai-foundation-mcp-client
 
 # cat=MCP Server//61; type=text; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.oauthDefaultRedirectUris
-oauthDefaultRedirectUris = https://claude.ai/oauth/callback
+oauthDefaultRedirectUris = https://claude.ai/api/mcp/auth_callback
+https://claude.com/api/mcp/auth_callback
+cursor://*
+https://www.cursor.com/agents/mcp/oauth/callback
+http://127.0.0.1:*
+http://localhost:*
 https://app.n8n.io/oauth/callback
 
 # cat=MCP Server//62; type=string; label=LLL:EXT:ns_t3af/Resources/Private/Language/locallang_be.xlf:extmng.oauthDefaultScopes

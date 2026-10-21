@@ -28,6 +28,7 @@ use NITSAN\NsT3AF\Agent\Service\SatelliteToolPlanService;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpToolLogRepository;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\FileFieldAttachmentValidator;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
@@ -116,11 +117,14 @@ final class AgentToolTurnProcessorRefusedPlanLogTest extends TestCase
     private function buildProcessor(McpToolLogRepository $repository): AgentToolTurnProcessor
     {
         $translator = $this->createAgentTranslator();
+        $tca = new TcaSchemaService();
         $tool = new WriteTableTool(
             $this->createMock(DataHandlerService::class),
             $this->createMock(RecordService::class),
-            new TcaSchemaService(),
+            $tca,
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator($tca),
+            $this->createMock(\TYPO3\CMS\Core\Resource\ResourceFactory::class),
         );
         $resolver = new AgentToolPlanResolver(
             [$tool],

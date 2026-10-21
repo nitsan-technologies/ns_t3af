@@ -557,7 +557,7 @@ readonly class TcaSchemaService
             'foreignField' => $foreignField,
             'hint' => 'This is a Content Blocks / inline collection. Do not write the parent counter. '
                 . 'Create/update child rows in table "' . $foreignTable . '" with "' . $foreignField . '" '
-                . 'set to this record uid. For order: first child pid=<pageUid>, later children pid=-<previousChildUid>.',
+                . 'set to this record uid. For order on create: append with afterUid, or pid=<pageUid> for the first sibling and pid=-<previousChildUid> for each following row.',
         ];
     }
 

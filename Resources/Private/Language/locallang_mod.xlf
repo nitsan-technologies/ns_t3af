@@ -1780,10 +1780,10 @@
         <source>Options</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.advanced.redirectUrisPlaceholder" resname="module.mcpServer.advanced.redirectUrisPlaceholder">
-        <source>https://claude.ai/oauth/callback</source>
+        <source>One URI per line; optional prefix with * (e.g. cursor://*)</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.advanced.redirectUrisHint" resname="module.mcpServer.advanced.redirectUrisHint">
-        <source>One redirect URI per line. Used for OAuth authorization code flow with MCP clients.</source>
+        <source>One redirect URI per line for OAuth dynamic registration. Leave empty to allow any redirect URI. A trailing * matches any URI with that prefix (e.g. cursor://* expands to Cursor HTTPS and localhost callbacks, http://127.0.0.1:* for other desktop clients).</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.advanced.scopesHint" resname="module.mcpServer.advanced.scopesHint">
         <source>Space-separated scopes granted to new OAuth tokens (e.g. mcp:read mcp:write mcp:tools).</source>

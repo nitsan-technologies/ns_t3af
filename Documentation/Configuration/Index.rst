@@ -98,6 +98,8 @@ MCP Server
 * ``mcpBasePath`` — HTTP endpoint (default: ``/mcp``)
 * ``requireAuth`` — Require login (default: on)
 * ``accessTokenLifetime`` — OAuth token TTL
+* ``oauthDefaultRedirectUris`` — Optional OAuth redirect allow-list (one URI per line;
+  empty = allow any; trailing ``*`` = prefix — see :ref:`MCP Server <mcp-server>`)
 
 Full guide: :ref:`MCP Server <mcp-server>`
 

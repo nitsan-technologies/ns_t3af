@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Tool\Record;
 
 use Mcp\Exception\ToolCallException;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\FileFieldAttachmentValidator;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyResult;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyValidationException;
@@ -31,6 +32,7 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Resource\ResourceFactory;
 
 /**
  * write_table's execute() paths: what the tool returns and what it hands to the records_apply engine,
@@ -68,7 +70,15 @@ final class WriteTableToolExecuteTest extends TestCase
         $this->dataHandler = $this->createMock(DataHandlerService::class);
         $this->recordService = $this->createMock(RecordService::class);
         $this->engine = $this->createMock(RecordsApplyService::class);
-        $this->tool = new WriteTableTool($this->dataHandler, $this->recordService, new TcaSchemaService(), $this->engine);
+        $tca = new TcaSchemaService();
+        $this->tool = new WriteTableTool(
+            $this->dataHandler,
+            $this->recordService,
+            $tca,
+            $this->engine,
+            new FileFieldAttachmentValidator($tca),
+            $this->createMock(ResourceFactory::class),
+        );
 
         $this->bootstrapUser(true);
     }

@@ -49,7 +49,7 @@
 
 - `mcpBasePath`, `enableMcpServer`, `requireAuth`
 - `mcpMaxBodyBytes` — max Streamable HTTP POST body size in bytes (default 100 MiB; SDK floor 4 MiB)
-- OAuth lifetimes, rate limits, `oauthDefaultClientId`, redirect URIs
+- OAuth lifetimes, rate limits, `oauthDefaultClientId`, redirect URIs (`oauthDefaultRedirectUris`: one per line; empty = no allow-list; trailing `*` = prefix, e.g. `cursor://*`, `http://127.0.0.1:*`). Advanced MCP settings save globally (`mergeGlobal`) and read via `getAllIgnorePid` so empty clears persist.
 
 **SDK:** `mcp/sdk ^0.9` (Composer require; no 0.5–0.8 compatibility path in transport code). `ProtocolVersionMiddleware` is not on the custom HTTP stack; the SDK applies it to handshake-era requests only. DNS rebinding allows any `Origin` (`allowedOrigins: ['*']`); the host allow-list still rejects a bad `Host`.
 

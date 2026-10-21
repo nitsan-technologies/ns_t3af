@@ -82,7 +82,7 @@ tools:
     category: Records
     status: ready
     tagline: Create, update, or delete records in any workspace-capable table
-    notes: 'Scalar and relation field writes go through DataHandler via the records_apply engine (one transaction). File fields are attached after that commit in a separate pass, so a file-attach failure does not roll back the create/update. A positive pid creates the record as the first child of that page. A negative pid (-uid) places it directly after that record. Does not return a batchId. Records written by an MCP client are marked as AI-involved in the AI Label module (setting mcpMarkWritesAsAi). Category/MM fields accept "126" or "8,12". File fields accept [{"uid_local": N, "alternative": "..."}] (replace on update; [] clears). Collections: write child table rows with foreign_table_parent_uid (see ignoredFieldDetails).'
+    notes: 'Scalar and relation field writes go through DataHandler via the records_apply engine (one transaction). File fields are attached after that commit in a separate pass, so a file-attach failure does not roll back the create/update. New records are appended on their page in send order unless you pass afterUid, beforeUid, or a negative pid (-uid) to place after a sibling. Does not return a batchId. Records written by an MCP client are marked as AI-involved in the AI Label module (setting mcpMarkWritesAsAi). Category/MM fields accept "126" or "8,12". File fields accept [{"uid_local": N, "alternative": "..."}] (replace on update; [] clears). Collections: write child table rows with foreign_table_parent_uid (see ignoredFieldDetails).'
     examplePrompts:
       - 'Create a news article titled Summer Sale 2026 on the News page'
       - 'Add a new text content element to the homepage'
