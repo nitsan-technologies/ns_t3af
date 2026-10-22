@@ -24,6 +24,7 @@ use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyPreflight;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyProblems;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyValidationException;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
+use NITSAN\NsT3AF\Mcp\Service\RecordSiteLanguageGuard;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -31,6 +32,7 @@ use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Site\SiteFinder;
 
 /**
  * @internal
@@ -90,7 +92,21 @@ final class RecordsApplyPreflightTest extends TestCase
             ->willReturnCallback(static fn(string $type, string $table): bool => $table !== 'tx_denied');
         $GLOBALS['BE_USER'] = $backendUser;
 
-        $this->preflight = new RecordsApplyPreflight(new TcaSchemaService(), $this->recordService, $this->connectionPool);
+        $this->preflight = $this->makePreflight();
+    }
+
+    private function makePreflight(?RecordsApplyFileAccess $fileAccess = null, ?RecordService $recordService = null): RecordsApplyPreflight
+    {
+        $tca = new TcaSchemaService();
+        $guard = new RecordSiteLanguageGuard($tca, $this->createMock(SiteFinder::class));
+
+        return new RecordsApplyPreflight(
+            $tca,
+            $recordService ?? $this->recordService,
+            $this->connectionPool,
+            $guard,
+            $fileAccess,
+        );
     }
 
     protected function tearDown(): void
@@ -139,7 +155,7 @@ final class RecordsApplyPreflightTest extends TestCase
         $recordService = $this->createMock(RecordService::class);
         $recordService->method('findExistingUids')
             ->willReturnCallback(static fn(string $table, array $uids): array => $table === 'pages' ? [1] : $uids);
-        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $recordService, $this->connectionPool);
+        $preflight = $this->makePreflight(null, $recordService);
 
         try {
             $preflight->check(['tt_content' => ['NEWa' => ['pid' => 1, 'header' => 'A'], 'NEWb' => ['pid' => 404, 'header' => 'B']]], [], true);
@@ -157,7 +173,7 @@ final class RecordsApplyPreflightTest extends TestCase
         $recordService = $this->createMock(RecordService::class);
         $recordService->method('findExistingUids')
             ->willReturnCallback(static fn(string $table, array $uids): array => array_values(array_diff($uids, [77])));
-        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $recordService, $this->connectionPool);
+        $preflight = $this->makePreflight(null, $recordService);
 
         try {
             $preflight->check(['tt_content' => ['NEWa' => ['pid' => -77, 'header' => 'A'], 'NEWb' => ['pid' => -78, 'header' => 'B']]], [], true);
@@ -353,7 +369,7 @@ final class RecordsApplyPreflightTest extends TestCase
     {
         $recordService = $this->createMock(RecordService::class);
         $recordService->method('findExistingUids')->willReturn([]);
-        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $recordService, $this->connectionPool);
+        $preflight = $this->makePreflight(null, $recordService);
 
         try {
             $preflight->check(['tt_content' => [5 => ['header' => 'A']]], ['tt_content' => [6 => ['delete' => 1]]], true);
@@ -370,7 +386,7 @@ final class RecordsApplyPreflightTest extends TestCase
         $recordService = $this->createMock(RecordService::class);
         $recordService->method('findExistingUids')
             ->willReturnCallback(static fn(string $table, array $uids): array => $table === 'pages' ? [] : $uids);
-        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $recordService, $this->connectionPool);
+        $preflight = $this->makePreflight(null, $recordService);
 
         try {
             $preflight->check(
@@ -402,7 +418,7 @@ final class RecordsApplyPreflightTest extends TestCase
     {
         $recordService = $this->createMock(RecordService::class);
         $recordService->expects(self::never())->method('findExistingUids');
-        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $recordService, $this->connectionPool);
+        $preflight = $this->makePreflight(null, $recordService);
 
         $checked = $preflight->check([], ['tt_content' => [9 => ['undelete' => 1]]], true);
 
@@ -524,7 +540,7 @@ final class RecordsApplyPreflightTest extends TestCase
         $recordService = $this->createMock(RecordService::class);
         $recordService->method('findExistingUids')
             ->willReturnCallback(static fn(string $table, array $uids): array => $table === 'sys_category' ? [] : $uids);
-        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $recordService, $this->connectionPool);
+        $preflight = $this->makePreflight(null, $recordService);
 
         $problems = new RecordsApplyProblems();
         $method = new \ReflectionMethod(RecordsApplyPreflight::class, 'validateRelationUidList');
@@ -544,7 +560,7 @@ final class RecordsApplyPreflightTest extends TestCase
         $GLOBALS['TCA']['sys_file_reference']['columns']['uid_local'] = ['config' => ['type' => 'input']];
         $fileAccess = $this->createMock(RecordsApplyFileAccess::class);
         $fileAccess->method('canRead')->willReturnCallback(static fn(int $uid): bool => $uid === 12);
-        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $this->recordService, $this->connectionPool, $fileAccess);
+        $preflight = $this->makePreflight($fileAccess);
 
         $checked = $preflight->check(['sys_file_reference' => ['NEWr1' => ['pid' => '1', 'uid_local' => 12]]], [], true);
         self::assertSame(12, $checked['datamap']['sys_file_reference']['NEWr1']['uid_local']);

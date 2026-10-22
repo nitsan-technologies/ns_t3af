@@ -133,6 +133,8 @@ readonly class DataHandlerService
                 }
             }
 
+            $this->recordService->assertRecordExists($table, $uid);
+
             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
             $dataHandler->start([$table => [$uid => $fields]], []);
             $dataHandler->process_datamap();

@@ -139,6 +139,7 @@ readonly class FileUploadService
     {
         $this->assertUploadContentReady($tempPath, $fileName, $folder);
         $fileName = basename($fileName);
+        self::assertFileNameLength($fileName);
 
         $sha1 = sha1_file($tempPath);
         if ($sha1 === false) {
@@ -469,6 +470,10 @@ readonly class FileUploadService
 
         $token = bin2hex(random_bytes(32));
         $validUntil = time() + $this->getUploadTokenTtl();
+        $sanitizedFileName = basename($fileName);
+        if ($sanitizedFileName !== '') {
+            self::assertFileNameLength($sanitizedFileName);
+        }
         $connection = $this->connectionPool->getConnectionForTable(self::TABLE_UPLOAD_TOKENS);
 
         $gcQuery = $connection->createQueryBuilder();
@@ -481,7 +486,7 @@ readonly class FileUploadService
             'be_user_uid' => $userUid,
             'storage_uid' => $folder->getStorage()->getUid(),
             'target_folder' => $folder->getIdentifier(),
-            'file_name' => basename($fileName),
+            'file_name' => $sanitizedFileName,
             'expires' => $validUntil,
             'used' => 0,
             'tstamp' => time(),
@@ -675,6 +680,8 @@ readonly class FileUploadService
         }
 
         if ($requestedFileName !== '') {
+            self::assertFileNameLength($requestedFileName);
+
             return [$tempPath, $requestedFileName];
         }
 
@@ -689,7 +696,19 @@ readonly class FileUploadService
             throw $e;
         }
 
+        self::assertFileNameLength($fileName);
+
         return [$tempPath, $fileName];
+    }
+
+    private static function assertFileNameLength(string $fileName): void
+    {
+        if (strlen($fileName) > 255) {
+            throw new \InvalidArgumentException(
+                'The file name must be at most 255 bytes.',
+                1747320026,
+            );
+        }
     }
 
     /**

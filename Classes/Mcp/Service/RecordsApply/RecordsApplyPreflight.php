@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Service\RecordsApply;
 
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
+use NITSAN\NsT3AF\Mcp\Service\RecordSiteLanguageGuard;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\Connection;
@@ -56,6 +57,7 @@ readonly class RecordsApplyPreflight
         private TcaSchemaService $tcaSchemaService,
         private RecordService $recordService,
         private ConnectionPool $connectionPool,
+        private RecordSiteLanguageGuard $siteLanguageGuard,
         private ?RecordsApplyFileAccess $fileAccess = null,
     ) {}
 
@@ -202,6 +204,33 @@ readonly class RecordsApplyPreflight
                 } elseif ($isNew) {
                     $problems->add($where + ['error' => 'A new record needs a pid.']);
                     continue;
+                }
+
+                if ($isNew) {
+                    $pageIdForLanguage = $this->resolveLanguagePageId($table, $pid);
+                    if ($pageIdForLanguage > 0) {
+                        try {
+                            $this->siteLanguageGuard->assertCreateLanguageAllowed($table, $fields, $pageIdForLanguage);
+                        } catch (\InvalidArgumentException $exception) {
+                            $problems->add($where + ['error' => $exception->getMessage()]);
+                            continue;
+                        }
+                    }
+                } else {
+                    $blockedTranslation = $this->siteLanguageGuard->findTranslationFieldsPresentOnUpdate($table, $fields);
+                    if ($blockedTranslation !== []) {
+                        $names = array_map(RecordsApplyProblems::safe(...), $blockedTranslation);
+                        if ($strict) {
+                            $problems->add($where + [
+                                'error' => 'Translation and language fields cannot be changed on update (strict mode refuses the whole call).',
+                                'fields' => $names,
+                            ]);
+                            continue;
+                        }
+
+                        $ignored[] = ['table' => $table, 'id' => RecordsApplyProblems::safe($id), 'fields' => $names];
+                    }
+                    $fields = $this->siteLanguageGuard->stripTranslationFieldsForUpdate($table, $fields);
                 }
 
                 $unwritable = [];
@@ -751,5 +780,24 @@ readonly class RecordsApplyPreflight
         }
 
         return implode(',', $normalized);
+    }
+
+    private function resolveLanguagePageId(string $table, int|string $pid): int
+    {
+        if (!is_int($pid)) {
+            return 0;
+        }
+
+        if ($pid > 0) {
+            return $pid;
+        }
+
+        if ($pid < 0) {
+            $sibling = $this->recordService->findByUid($table, -$pid, ['pid']);
+
+            return (int) ($sibling['pid'] ?? 0);
+        }
+
+        return 0;
     }
 }

@@ -82,10 +82,21 @@ readonly class OAuthToken
         return $this->accessTokenExpires >= time();
     }
 
-    public function expiresSoon(int $withinSeconds = 604800): bool
+    public function expiresSoon(?int $withinSeconds = null): bool
     {
         $remaining = $this->accessTokenExpires - time();
+        if ($remaining <= 0) {
+            return false;
+        }
 
-        return $remaining > 0 && $remaining <= $withinSeconds;
+        if ($withinSeconds !== null) {
+            return $remaining <= $withinSeconds;
+        }
+
+        $issuedAt = $this->crdate > 0 ? $this->crdate : ($this->accessTokenExpires - 86400);
+        $lifetime = max(1, $this->accessTokenExpires - $issuedAt);
+        $threshold = max(3600, (int) ceil($lifetime * 0.25));
+
+        return $remaining <= $threshold;
     }
 }

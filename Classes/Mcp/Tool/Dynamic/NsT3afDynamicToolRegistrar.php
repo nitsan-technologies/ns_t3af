@@ -32,6 +32,7 @@ use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyBatchRunner;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyMoveCommandChainer;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyPreflight;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
+use NITSAN\NsT3AF\Mcp\Service\RecordSiteLanguageGuard;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Helper\MoveTarget;
 use NITSAN\NsT3AF\Mcp\Tool\Result\BatchRecordsDeletedResult;
@@ -54,6 +55,7 @@ readonly class NsT3afDynamicToolRegistrar
         private LoggerInterface $logger,
         private McpServerToolRegistration $toolRegistration,
         private RecordsApplyBatchRunner $batchRunner,
+        private RecordSiteLanguageGuard $siteLanguageGuard,
     ) {}
 
     /**
@@ -348,6 +350,7 @@ readonly class NsT3afDynamicToolRegistrar
         $logger = $this->logger;
         $writableFields = $config['writableFields'];
         $languageField = $config['translationConfig']['languageField'];
+        $siteLanguageGuard = $this->siteLanguageGuard;
 
         /** @param array<string, mixed> $data */
         $createHandler = static function (
@@ -360,7 +363,20 @@ readonly class NsT3afDynamicToolRegistrar
             $tableName,
             $writableFields,
             $languageField,
+            $siteLanguageGuard,
         ): RecordCreatedResult|ErrorResult {
+            if ($languageField !== null) {
+                try {
+                    $siteLanguageGuard->assertCreateLanguageAllowed(
+                        $tableName,
+                        [$languageField => $sysLanguageUid] + $data,
+                        $pid,
+                    );
+                } catch (\InvalidArgumentException $exception) {
+                    return new ErrorResult($exception->getMessage());
+                }
+            }
+
             $filteredData = array_intersect_key($data, array_flip($writableFields));
 
             if ($languageField !== null) {
@@ -429,6 +445,8 @@ readonly class NsT3afDynamicToolRegistrar
         $dataHandlerService = $this->dataHandlerService;
         $logger = $this->logger;
         $writableFields = $config['writableFields'];
+        $blockedOnUpdate = $this->tcaSchemaService->getTranslationFieldsBlockedOnUpdate($tableName);
+        $writableForUpdate = array_values(array_diff($writableFields, $blockedOnUpdate));
 
         $this->addAugmentedTool(
             $builder,
@@ -439,12 +457,12 @@ readonly class NsT3afDynamicToolRegistrar
                 $dataHandlerService,
                 $logger,
                 $tableName,
-                $writableFields,
+                $writableForUpdate,
             ): RecordUpdatedResult|ErrorResult {
                 /** @var array<string, mixed> $data */
                 $data = json_decode($fields, true, 512, JSON_THROW_ON_ERROR);
 
-                $filteredData = array_intersect_key($data, array_flip($writableFields));
+                $filteredData = array_intersect_key($data, array_flip($writableForUpdate));
                 $ignoredFields = array_values(array_diff(array_keys($data), array_keys($filteredData)));
 
                 if ($filteredData === []) {

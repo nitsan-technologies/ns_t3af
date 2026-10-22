@@ -46,6 +46,7 @@ use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyResult;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyValidationException;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
+use NITSAN\NsT3AF\Mcp\Service\RecordSiteLanguageGuard;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
@@ -87,6 +88,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         private ResourceFactory $resourceFactory,
         private ?PageAccessService $pageAccess = null,
         private ?RecordsApplyFileAccess $fileAccess = null,
+        private ?RecordSiteLanguageGuard $siteLanguageGuard = null,
     ) {
         $this->normalizer = new RecordPayloadNormalizer($tcaSchemaService);
     }
@@ -545,7 +547,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             throw new \InvalidArgumentException('Record not found: ' . $tableName . ' uid ' . $uid);
         }
 
-        $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
+        $filteredData = $this->normalizer->filterWritableFieldsForUpdate($tableName, $payload);
         if ($filteredData === []) {
             throw new \InvalidArgumentException($this->normalizer->noWritableFieldsMessage($tableName, $payload, $filteredData));
         }
@@ -941,6 +943,12 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
         unset($payload['pid']);
 
+        try {
+            $this->siteLanguageGuard?->assertCreateLanguageAllowed($tableName, $payload, $pid);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->encodeError($exception->getMessage());
+        }
+
         [$payload, $fileFields] = $this->normalizer->extractFileFields($tableName, $payload);
         $payload = $this->normalizer->normalizeRelationUidListFields($tableName, $payload);
         $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
@@ -1018,7 +1026,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
                 return $this->encodeError('Record not found: ' . $tableName . ' uid ' . $record['uid'] . '. Nothing was written.');
             }
             [$fields, $fileFields] = $this->normalizer->extractFileFields($tableName, $record['fields']);
-            $filteredData = $this->normalizer->filterWritableFields($tableName, $fields);
+            $filteredData = $this->normalizer->filterWritableFieldsForUpdate($tableName, $fields);
             if ($filteredData === [] && $fileFields === []) {
                 return $this->encodeError('No writable fields for ' . $tableName . ' uid ' . $record['uid'] . '. Nothing was written.');
             }
@@ -1060,7 +1068,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
         [$payload, $fileFields] = $this->normalizer->extractFileFields($tableName, $payload);
         $payload = $this->normalizer->normalizeRelationUidListFields($tableName, $payload);
-        $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
+        $filteredData = $this->normalizer->filterWritableFieldsForUpdate($tableName, $payload);
         $ignoredFields = $this->normalizer->ignoredFields($payload, $filteredData);
 
         if ($strict && $ignoredFields !== []) {

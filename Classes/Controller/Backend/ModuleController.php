@@ -49,6 +49,7 @@ use NITSAN\NsT3AF\Mcp\Service\Backend\McpToolMetadataService;
 use NITSAN\NsT3AF\Mcp\Service\McpConnectionsService;
 use NITSAN\NsT3AF\Mcp\Service\McpPathProvider;
 use NITSAN\NsT3AF\Mcp\Service\McpPublicUrlService;
+use NITSAN\NsT3AF\Mcp\Service\McpRegisteredPromptCounter;
 use NITSAN\NsT3AF\Mcp\Service\McpServerStatusService;
 use NITSAN\NsT3AF\Mcp\Service\McpToolsRegistryService;
 use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
@@ -148,6 +149,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
         private readonly McpAnalyticsService $mcpAnalyticsService,
         private readonly McpHealthService $mcpHealthService,
         private readonly McpPromptTemplateService $mcpPromptTemplateService,
+        private readonly McpRegisteredPromptCounter $mcpRegisteredPromptCounter,
         private readonly McpCustomToolService $mcpCustomToolService,
         private readonly McpPlaygroundService $mcpPlaygroundService,
         private readonly McpSkillHubService $mcpSkillHubService,
@@ -646,6 +648,11 @@ final class ModuleController extends AbstractAiUniverseModuleController
 
         return [
             'clientKey' => $clientKey,
+            'displayName' => match ($clientKey) {
+                'n8n' => 'n8n',
+                'manus' => 'Manus',
+                default => $label,
+            },
             'label' => $label,
             'active' => $token !== null ? 1 : 0,
             'preview' => $token?->preview() ?? '',
@@ -977,6 +984,7 @@ PY);
             'mcpToolsStats' => $statistics,
             'mcpToolsExtConfSnippet' => $this->mcpToolsRegistryService->buildExtConfSnippet(),
             'mcpPromptTemplates' => $this->mcpPromptTemplateService->listTemplates(),
+            'mcpRegisteredPromptCount' => $this->mcpRegisteredPromptCounter->count(),
             'mcpCustomTools' => $this->decorateCustomToolsForView($this->mcpCustomToolService->listTools()),
             'mcpToolCategories' => $this->mcpToolMetadataService->getCategories(),
             'mcpPlaygroundConfig' => $playgroundConfig,

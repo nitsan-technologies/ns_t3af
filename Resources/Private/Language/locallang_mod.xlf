@@ -1147,10 +1147,19 @@
         <source>%1$s token active</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.clientToken.missing" resname="module.mcpServer.clientToken.missing">
-        <source>No %1$s token found. Create an %1$s token to connect %1$s workflows to this TYPO3 instance.</source>
+        <source>No %1$s token found. Create a %1$s token to connect %1$s workflows to this TYPO3 instance.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.clientToken.create" resname="module.mcpServer.clientToken.create">
-        <source>+ Create %1$s Token</source>
+        <source>+ Create %1$s token</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.personalToken.missing" resname="module.mcpServer.personalToken.missing">
+        <source>No personal token is stored in this browser session.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.personalToken.create" resname="module.mcpServer.personalToken.create">
+        <source>Create personal token</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.personalToken.regenerate" resname="module.mcpServer.personalToken.regenerate">
+        <source>Regenerate token</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.clientToken.bearerLabel" resname="module.mcpServer.clientToken.bearerLabel">
         <source>Bearer Token</source>

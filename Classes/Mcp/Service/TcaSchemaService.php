@@ -194,6 +194,41 @@ readonly class TcaSchemaService
         return array_values(array_unique($fields));
     }
 
+    /**
+     * Translation pointer / source fields must not be written via MCP (create or update).
+     *
+     * @return list<string>
+     */
+    public function getTranslationImmutableFieldNames(string $tableName): array
+    {
+        $config = $this->getTranslationConfig($tableName);
+        $locked = [];
+        if ($config['transOrigPointerField'] !== null) {
+            $locked[] = $config['transOrigPointerField'];
+        }
+        if ($config['translationSource'] !== null) {
+            $locked[] = $config['translationSource'];
+        }
+
+        return $locked;
+    }
+
+    /**
+     * Language and translation link fields refused on update (re-pointing translations breaks records).
+     *
+     * @return list<string>
+     */
+    public function getTranslationFieldsBlockedOnUpdate(string $tableName): array
+    {
+        $config = $this->getTranslationConfig($tableName);
+        $blocked = $this->getTranslationImmutableFieldNames($tableName);
+        if ($config['languageField'] !== null) {
+            $blocked[] = $config['languageField'];
+        }
+
+        return array_values(array_unique($blocked));
+    }
+
     /** @return list<string> Fields that can be written (readable fields minus uid, pid, readOnly, system fields). */
     public function getWritableFields(string $tableName): array
     {
@@ -208,6 +243,7 @@ readonly class TcaSchemaService
         }
 
         $systemFields = $this->getSystemFields($tca);
+        $translationImmutable = array_flip($this->getTranslationImmutableFieldNames($tableName));
         $fields = [];
 
         foreach ($columns as $fieldName => $columnConfig) {
@@ -216,6 +252,10 @@ readonly class TcaSchemaService
             }
 
             if (in_array($fieldName, $systemFields, true)) {
+                continue;
+            }
+
+            if (isset($translationImmutable[$fieldName])) {
                 continue;
             }
 
@@ -249,10 +289,15 @@ readonly class TcaSchemaService
         }
 
         $systemFields = $this->getSystemFields($tca);
+        $translationImmutable = array_flip($this->getTranslationImmutableFieldNames($tableName));
         $fields = [];
 
         foreach ($columns as $fieldName => $columnConfig) {
             if (!is_string($fieldName) || !is_array($columnConfig) || in_array($fieldName, $systemFields, true)) {
+                continue;
+            }
+
+            if (isset($translationImmutable[$fieldName])) {
                 continue;
             }
 

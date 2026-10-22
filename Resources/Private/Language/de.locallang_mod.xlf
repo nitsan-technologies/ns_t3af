@@ -1288,16 +1288,28 @@
                 <target>%1$s Token aktiv</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.clientToken.missing">
-                <source>No %1$s token found. Create an %1$s token to connect %1$s workflows to this TYPO3 instance.</source>
-                <target>Kein %1$s Token gefunden. Erstellen Sie eine %1$s Token, um %1$s Workflows mit dieser TYPO3-Instanz zu verbinden.</target>
+                <source>No %1$s token found. Create a %1$s token to connect %1$s workflows to this TYPO3 instance.</source>
+                <target>Kein %1$s-Token gefunden. Erstellen Sie einen %1$s-Token, um %1$s-Workflows mit dieser TYPO3-Instanz zu verbinden.</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.clientToken.create">
-                <source>+ Create %1$s Token</source>
-                <target>+ %1$s Token erstellen</target>
+                <source>+ Create %1$s token</source>
+                <target>+ %1$s-Token erstellen</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.clientToken.bearerLabel">
                 <source>Bearer Token</source>
-                <target>Inhaber Token</target>
+                <target>Bearer-Token</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.personalToken.missing">
+                <source>No personal token is stored in this browser session.</source>
+                <target>In dieser Browsersitzung ist kein persönliches Token gespeichert.</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.personalToken.create">
+                <source>Create personal token</source>
+                <target>Persönliches Token erstellen</target>
+            </trans-unit>
+            <trans-unit id="module.mcpServer.personalToken.regenerate">
+                <source>Regenerate token</source>
+                <target>Token neu erstellen</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.clients.aria">
                 <source>AI clients</source>

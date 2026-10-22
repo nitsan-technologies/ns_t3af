@@ -50,6 +50,10 @@ use TYPO3\CMS\Core\Http\NormalizedParams;
 
 readonly class OAuthMiddleware implements MiddlewareInterface
 {
+    private const MAX_CLIENT_NAME_LENGTH = 255;
+    private const MAX_REDIRECT_URIS = 32;
+    private const MAX_REDIRECT_URI_LENGTH = 2048;
+
     public function __construct(
         private AuthorizationService $authorizationService,
         private ClientRepository $clientRepository,
@@ -334,10 +338,26 @@ readonly class OAuthMiddleware implements MiddlewareInterface
             );
         }
 
-        /** @var array<string, mixed> $body */
-        $body = json_decode((string) $request->getBody(), true, 16, JSON_THROW_ON_ERROR);
+        try {
+            /** @var array<string, mixed> $body */
+            $body = json_decode((string) $request->getBody(), true, 16, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return $this->createJsonResponse(
+                400,
+                ['error' => 'invalid_request', 'error_description' => 'Request body must be valid JSON'],
+            );
+        }
 
-        $clientName = is_string($body['client_name'] ?? null) ? $body['client_name'] : 'MCP Client';
+        $clientName = is_string($body['client_name'] ?? null) ? trim($body['client_name']) : 'MCP Client';
+        if ($clientName === '') {
+            $clientName = 'MCP Client';
+        }
+        if (strlen($clientName) > self::MAX_CLIENT_NAME_LENGTH) {
+            return $this->createJsonResponse(
+                400,
+                ['error' => 'invalid_client_metadata', 'error_description' => 'client_name must be at most 255 characters'],
+            );
+        }
 
         $redirectUris = [];
         if (is_array($body['redirect_uris'] ?? null)) {
@@ -355,7 +375,29 @@ readonly class OAuthMiddleware implements MiddlewareInterface
             );
         }
 
+        if (count($redirectUris) > self::MAX_REDIRECT_URIS) {
+            return $this->createJsonResponse(
+                400,
+                ['error' => 'invalid_client_metadata', 'error_description' => 'Too many redirect_uris'],
+            );
+        }
+
+        foreach ($redirectUris as $uri) {
+            if (strlen($uri) > self::MAX_REDIRECT_URI_LENGTH) {
+                return $this->createJsonResponse(
+                    400,
+                    ['error' => 'invalid_client_metadata', 'error_description' => 'redirect_uri is too long'],
+                );
+            }
+        }
+
         $clientName = $this->clientLabelResolver->normalizeClientName($clientName, $redirectUris);
+        if (strlen($clientName) > self::MAX_CLIENT_NAME_LENGTH) {
+            return $this->createJsonResponse(
+                400,
+                ['error' => 'invalid_client_metadata', 'error_description' => 'client_name must be at most 255 characters'],
+            );
+        }
 
         try {
             $this->redirectUriPolicy->assertAllAllowed($redirectUris);

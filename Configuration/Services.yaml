@@ -563,6 +563,10 @@ services:
       $tools: !tagged_iterator mcp.tool
       $prompts: !tagged_iterator mcp.prompt
 
+  NITSAN\NsT3AF\Mcp\Service\McpRegisteredPromptCounter:
+    arguments:
+      $codePrompts: !tagged_iterator mcp.prompt
+
   NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService:
     arguments:
       $tools: !tagged_iterator mcp.tool
