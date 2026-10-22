@@ -169,7 +169,7 @@ final readonly class AgentCoreToolSet
     public static function isCreateContentRequest(string $query): bool
     {
         $q = mb_strtolower(trim($query));
-        if ($q === '') {
+        if ($q === '' || AgentRequestChecklist::isChatOnlyWritingRequest($query)) {
             return false;
         }
         if (preg_match('/\b(delete|remove|replace|clear|löschen|loeschen|entfernen|ersetzen)/u', $q)) {

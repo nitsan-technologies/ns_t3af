@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
+use NITSAN\NsT3AF\Agent\Service\AgentCoreToolSet;
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentRequestChecklist;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -196,6 +197,16 @@ TXT;
         ] as $message) {
             self::assertSame([], AgentRequestChecklist::parse($message), $message);
         }
+    }
+
+    #[Test]
+    public function chatOnlyWritingDoesNotOpenACreateTextStep(): void
+    {
+        $request = 'Write a two-sentence intro paragraph about a local bakery. Just show me the text here in the chat, don\'t save anything.';
+        self::assertTrue(AgentRequestChecklist::isChatOnlyWritingRequest($request));
+        self::assertSame([], AgentRequestChecklist::parse($request));
+        self::assertFalse(AgentPromptBuilder::hasBlockingRemainingWork([], [], $request));
+        self::assertFalse(AgentCoreToolSet::isCreateContentRequest($request));
     }
 
     #[Test]
