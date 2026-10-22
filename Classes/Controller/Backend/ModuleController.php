@@ -737,6 +737,23 @@ final class ModuleController extends AbstractAiUniverseModuleController
 
     private function buildCliConfigJson(): string
     {
+        if ($this->isDdevProject()) {
+            return json_encode([
+                'mcpServers' => [
+                    'typo3-ai-foundation' => [
+                        'command' => 'ddev',
+                        'args' => [
+                            'exec',
+                            'php',
+                            'vendor/bin/typo3',
+                            'nst3af:mcp:serve',
+                            '--transport=stdio',
+                        ],
+                    ],
+                ],
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
+        }
+
         $projectPath = $this->resolveLocalCliWorkingDirectory();
 
         return json_encode([
@@ -751,7 +768,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
     }
 
     /**
-     * Desktop MCP clients run on the host; inside DDEV the project path is the container mount.
+     * Desktop MCP clients run on the host; DDEV_HOST_PROJECT_PATH is often unset in the web container.
      */
     private function resolveLocalCliWorkingDirectory(): string
     {
@@ -761,6 +778,17 @@ final class ModuleController extends AbstractAiUniverseModuleController
         }
 
         return \TYPO3\CMS\Core\Core\Environment::getProjectPath();
+    }
+
+    private function isDdevProject(): bool
+    {
+        if (getenv('IS_DDEV_PROJECT') === 'true') {
+            return true;
+        }
+
+        $ddevProject = getenv('DDEV_PROJECT');
+
+        return is_string($ddevProject) && $ddevProject !== '';
     }
 
     private function buildLangchainHttpSnippet(string $serverUrl): string
