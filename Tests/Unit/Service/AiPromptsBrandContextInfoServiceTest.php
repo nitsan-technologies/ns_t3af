@@ -103,6 +103,7 @@ final class AiPromptsBrandContextInfoServiceTest extends TestCase
             $featureSettings,
             ProviderTestStubs::t3AiPromptCategoryProviders(),
         );
+        $GLOBALS['BE_USER'] = null;
         $result = $service->buildByCategory(42);
 
         self::assertTrue($result['seo']['available']);

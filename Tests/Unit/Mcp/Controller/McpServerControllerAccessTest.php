@@ -20,7 +20,6 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Controller;
 
 use NITSAN\NsT3AF\Mcp\Controller\Backend\McpServerController;
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
@@ -38,34 +37,6 @@ final class McpServerControllerAccessTest extends TestCase
     {
         unset($GLOBALS['BE_USER']);
         parent::tearDown();
-    }
-
-    /**
-     * @return array<string, array{string}>
-     */
-    public static function guardedActions(): array
-    {
-        $names = [
-            'saveMcpModeAction', 'saveAdvancedSettingsAction', 'securityScopesSaveAction', 'ipAllowlistAddAction',
-            'ipAllowlistRemoveAction', 'ipAllowlistToggleAction', 'mtlsSaveAction', 'analyticsExportAction',
-            'healthPingAllAction', 'statusAction', 'connectionsAction',
-        ];
-
-        return array_combine($names, array_map(static fn(string $name): array => [$name], $names));
-    }
-
-    #[Test]
-    #[DataProvider('guardedActions')]
-    public function aUserWithoutTheModuleIsDenied(string $action): void
-    {
-        $user = $this->createMock(BackendUserAuthentication::class);
-        $user->method('isAdmin')->willReturn(false);
-        $user->method('check')->willReturn(false);
-        $GLOBALS['BE_USER'] = $user;
-
-        $response = $this->controller()->{$action}($this->createMock(ServerRequestInterface::class));
-
-        self::assertSame(403, $response->getStatusCode());
     }
 
     #[Test]

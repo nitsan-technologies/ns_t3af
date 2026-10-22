@@ -194,7 +194,7 @@ final class TokenResolver
      *
      * @param array{name?: string, email?: string}|null $contactOverride
      *
-     * @return array{action: 'minted'|'unchanged', token: string, already_bound?: bool, bound_ip?: string}
+     * @return array{action: 'minted'|'unchanged'|'adopted', token: string, already_bound?: bool, bound_ip?: string}
      */
     public function activateTrialToken(?array $contactOverride = null): array
     {

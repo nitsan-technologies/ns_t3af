@@ -37,9 +37,9 @@ final class McpWorkspaceEnumResolverTest extends TestCase
 
         $description = (new McpWorkspaceEnumResolver($list))->buildDescription();
 
-        self::assertStringContainsString('Leave it out to use the workspace selected in the TYPO3 MCP Server backend module', $description);
-        self::assertStringContainsString('Draft workspaces: 2 = QA Draft WS.', $description);
-        self::assertStringNotContainsString('do not pass 0', $description);
-        self::assertStringNotContainsString('0 = Live', $description);
+        self::assertStringContainsString('Omit entirely to use the workspace selected in the TYPO3 MCP Server backend module', $description);
+        self::assertStringContainsString('do not pass 0', $description);
+        self::assertStringContainsString('0 = Live', $description);
+        self::assertStringContainsString('2 = QA Draft WS', $description);
     }
 }

@@ -23,7 +23,6 @@ use Mcp\Server;
 use Mcp\Server\Builder;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpCustomToolRepository;
 use NITSAN\NsT3AF\Mcp\Service\McpConnectedProviderEnumResolver;
-use NITSAN\NsT3AF\Mcp\Service\McpModeOverride;
 use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
 use NITSAN\NsT3AF\Mcp\Service\McpToolSchemaAugmenter;
 use NITSAN\NsT3AF\Mcp\Service\McpWorkspaceEnumResolver;
@@ -216,7 +215,7 @@ final class McpCustomToolRegistrarTest extends TestCase
         return new McpToolSchemaAugmenter(
             new McpWorkspaceEnumResolver($workspaceList),
             $providerResolver,
-            new McpModeResolver($settings, new McpModeOverride()),
+            new McpModeResolver($settings),
         );
     }
 

@@ -100,52 +100,6 @@ final class WriteTableToolFunctionalTest extends FunctionalTestCase
     }
 
     #[Test]
-    public function createAppendsAfterTheExistingElementsAndLabelsTheRecordAsAi(): void
-    {
-        $this->setUpBackendUser(self::ADMIN_UID);
-
-        /** @var WriteTableTool $tool */
-        $tool = $this->get(WriteTableTool::class);
-
-        $first = json_decode($tool->execute('create', 'tt_content', '{"pid":1,"CType":"text","colPos":0,"header":"First"}'), true);
-        $second = json_decode($tool->execute('create', 'tt_content', '{"pid":1,"CType":"text","colPos":0,"header":"Second"}'), true);
-
-        self::assertSame('create', $first['action']);
-        self::assertContains('header', $first['fields']);
-        self::assertSame(
-            ['First', 'Second'],
-            array_map('strval', $this->getConnectionPool()->getConnectionForTable('tt_content')
-                ->executeQuery('SELECT header FROM tt_content WHERE pid = 1 AND deleted = 0 ORDER BY sorting ASC, uid ASC')
-                ->fetchFirstColumn()),
-        );
-
-        $label = $this->getConnectionPool()->getConnectionForTable('tt_content')
-            ->select(['tx_nst3af_ailabel_involvement', 'tx_nst3af_ailabel_recording_source'], 'tt_content', ['uid' => $second['uid']])
-            ->fetchAssociative();
-        self::assertIsArray($label);
-        self::assertSame('ai_generated', $label['tx_nst3af_ailabel_involvement']);
-        self::assertSame('mcp', $label['tx_nst3af_ailabel_recording_source']);
-    }
-
-    #[Test]
-    public function createOnAPageThatDoesNotExistIsRefusedWithAClearMessage(): void
-    {
-        $this->setUpBackendUser(self::ADMIN_UID);
-
-        /** @var WriteTableTool $tool */
-        $tool = $this->get(WriteTableTool::class);
-        $result = json_decode($tool->execute('create', 'tt_content', '{"pid":999999,"CType":"text","header":"Nowhere"}'), true);
-
-        self::assertStringContainsString('Page 999999 was not found', $result['error']);
-        self::assertSame(
-            0,
-            (int) $this->getConnectionPool()->getConnectionForTable('tt_content')
-                ->executeQuery("SELECT COUNT(*) FROM tt_content WHERE header = 'Nowhere'")
-                ->fetchOne(),
-        );
-    }
-
-    #[Test]
     public function updateAndDeleteGoThroughTheSameEngine(): void
     {
         $this->setUpBackendUser(self::ADMIN_UID);

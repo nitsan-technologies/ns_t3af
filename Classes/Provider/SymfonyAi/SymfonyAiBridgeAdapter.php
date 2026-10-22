@@ -829,7 +829,8 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface, RequestTimeoutCa
         if (str_starts_with(ltrim($factoryClass, '\\'), self::VENDOR_PREFIX)) {
             $httpClientClass = self::VENDOR_PREFIX . $httpClientClass;
         }
-        if (!class_exists($httpClientClass) || !method_exists($httpClientClass, 'create')) {
+        // Prefixed phar builds may load a class that has no create(); keep the check.
+        if (!class_exists($httpClientClass) || !method_exists($httpClientClass, 'create')) { // @phpstan-ignore function.alreadyNarrowedType
             return null;
         }
 

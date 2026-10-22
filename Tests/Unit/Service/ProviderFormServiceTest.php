@@ -524,7 +524,7 @@ final class ProviderFormServiceTest extends TestCase
         self::assertNotNull($captured);
         self::assertStringStartsWith(CredentialCipher::PREFIX_V1, (string) $captured['api_key']);
         self::assertSame('chat,streaming', $captured['capabilities']);
-        self::assertArrayNotHasKey('is_default', $captured);
+        self::assertSame(1, $captured['is_default']);
         self::assertSame(0.55, $captured['temperature']);
         self::assertSame(20, $captured['priority']);
     }
@@ -1135,6 +1135,9 @@ final class ProviderFormServiceTest extends TestCase
         self::assertSame(0, $captured['is_default']);
     }
 
+    /**
+     * @return ProviderRepositoryInterface&\PHPUnit\Framework\MockObject\MockObject
+     */
     private function makeRepo(int $savedUid): ProviderRepositoryInterface
     {
         $repo = $this->createMock(ProviderRepositoryInterface::class);

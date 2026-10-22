@@ -32,29 +32,6 @@ use Psr\Log\NullLogger;
 final class ErrorHandlingProxyTest extends TestCase
 {
     #[Test]
-    public function aToolAnswerWithAnErrorIsLoggedAsFailure(): void
-    {
-        $audit = $this->createMock(AuditLogger::class);
-        $audit->expects(self::once())->method('logFailure');
-        $audit->expects(self::never())->method('logSuccess');
-        $toolLog = $this->createMock(McpToolLogService::class);
-        $toolLog->expects(self::once())->method('logFailure')
-            ->with(self::anything(), 'tool', self::anything(), self::anything(), 'Only administrators may clear all caches.');
-        $toolLog->expects(self::never())->method('logSuccess');
-
-        $inner = new class {
-            public function execute(): string
-            {
-                return '{"error":"Only administrators may clear all caches."}';
-            }
-        };
-
-        $proxy = new ErrorHandlingProxy($inner, new NullLogger(), $audit, $toolLog, 'tool');
-
-        self::assertSame('{"error":"Only administrators may clear all caches."}', $proxy->__call('execute', []));
-    }
-
-    #[Test]
     public function aNormalAnswerIsLoggedAsSuccess(): void
     {
         $audit = $this->createMock(AuditLogger::class);

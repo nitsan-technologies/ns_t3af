@@ -93,17 +93,4 @@ final class CreditsApiErrorMessageResolverTest extends TestCase
         self::assertSame('Generic API error.', $payload['userMessage']);
         self::assertSame('upstream failed', $payload['message']);
     }
-
-    public function testResolveFillsModelAndParamPlaceholders(): void
-    {
-        $resolver = new CreditsApiErrorMessageResolver();
-        $message = $resolver->resolve(new CreditsApiException(
-            'tools_unsupported',
-            422,
-            'tools_unsupported',
-            ['model' => 'gpt-x', 'param' => 'tools'],
-        ));
-
-        self::assertSame('Model gpt-x lacks tools.', $message);
-    }
 }

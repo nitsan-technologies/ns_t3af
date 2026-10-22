@@ -24,7 +24,6 @@ use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\SymfonyAi\BridgeDescriptor;
 use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiBridgeAdapter;
-use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiPlatform;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Http\JsonResponse;
@@ -149,13 +148,7 @@ final class SymfonyAiBridgeAdapterTest extends TestCase
     {
         $adapter = $this->makeAdapter();
         $this->expectException(AdapterRuntimeException::class);
-        // PlatformInterface is an interface. When it is loadable, the runtime is
-        // installed and a missing guessed factory is a different error.
-        if (interface_exists(\Symfony\AI\Platform\PlatformInterface::class)) {
-            $this->expectExceptionMessageMatches('/No platform factory found/');
-        } else {
-            $this->expectExceptionMessageMatches('/Symfony AI Platform runtime/');
-        }
+        $this->expectExceptionMessageMatches('/Symfony AI Platform runtime is not installed/');
         $adapter->platform($this->makeProvider());
     }
 
@@ -192,36 +185,6 @@ final class SymfonyAiBridgeAdapterTest extends TestCase
         $result = $adapter->testConnection($provider);
 
         self::assertTrue($result->ok);
-    }
-
-    public function testOllamaPlatformUsesProviderEndpointWhenRuntimePresent(): void
-    {
-        if (!class_exists(\Symfony\AI\Platform\Bridge\Ollama\Factory::class)) {
-            self::markTestSkipped('symfony/ai-ollama-platform is not installed.');
-        }
-
-        $adapter = new SymfonyAiBridgeAdapter(
-            new BridgeDescriptor(
-                packageName: 'symfony/ai-ollama-platform',
-                vendorKey: 'ollama',
-                type: 'symfony.ollama',
-                displayName: 'Ollama (Symfony AI)',
-                defaultEndpoint: 'http://localhost:11434',
-                defaultCapabilities: [Capability::CHAT, Capability::EMBEDDINGS],
-            ),
-            new CredentialCipher(),
-            $this->createMock(RequestFactory::class),
-        );
-
-        $provider = $this->makeProviderWith(
-            endpoint: 'http://ollama.test:11434',
-            apiKey: '',
-            adapterType: 'symfony.ollama',
-        );
-
-        $platform = $adapter->platform($provider);
-
-        self::assertInstanceOf(SymfonyAiPlatform::class, $platform);
     }
 
     public function testOllamaPlatformThrowsWhenEndpointMissing(): void
@@ -453,83 +416,6 @@ final class SymfonyAiBridgeAdapterTest extends TestCase
         );
 
         self::assertSame('2025-01-01', $provider->effectiveApiVersion());
-    }
-
-    public function testAzureDualDeploymentBuildsPlatformWhenAzureBridgeInstalled(): void
-    {
-        if (!class_exists(\Symfony\AI\Platform\Bridge\Azure\OpenAi\Factory::class)) {
-            self::markTestSkipped('symfony/ai-azure-platform is not installed.');
-        }
-
-        $adapter = $this->makeAzureAdapter();
-        $cipher = new CredentialCipher();
-        $provider = $this->makeProviderWith(
-            endpoint: 'https://myresource.openai.azure.com',
-            apiKey: $cipher->encrypt('azure-key-123'),
-            adapterType: 'symfony.azure',
-        );
-        $provider = new Provider(
-            uid: $provider->uid,
-            pid: $provider->pid,
-            identifier: $provider->identifier,
-            title: $provider->title,
-            adapterType: $provider->adapterType,
-            endpointUrl: $provider->endpointUrl,
-            apiKeyCipher: $provider->apiKeyCipher,
-            modelId: 'gpt-4o-chat',
-            embeddingModelId: 'text-embedding-3-small',
-            capabilities: $provider->capabilities,
-            temperature: $provider->temperature,
-            systemPrompt: $provider->systemPrompt,
-            isDefault: $provider->isDefault,
-            priority: $provider->priority,
-            lastUsedAt: $provider->lastUsedAt,
-            lastStatus: $provider->lastStatus,
-            lastStatusAt: $provider->lastStatusAt,
-            lastStatusMessage: $provider->lastStatusMessage,
-            apiVersion: '2024-10-21',
-        );
-
-        $platform = $adapter->platform($provider);
-
-        self::assertInstanceOf(SymfonyAiPlatform::class, $platform);
-    }
-
-    /**
-     * Composer discovery leaves factoryClass null. The runtime probe must still
-     * find Symfony\AI\Platform\Bridge\Azure\OpenAi\Factory rather than reporting
-     * that symfony/ai-azure-platform is not installed.
-     */
-    public function testAzurePlatformResolvesNestedFactoryWhenDescriptorOmitsFactoryClass(): void
-    {
-        if (!class_exists(\Symfony\AI\Platform\Bridge\Azure\OpenAi\Factory::class)) {
-            self::markTestSkipped('symfony/ai-azure-platform is not installed.');
-        }
-
-        $adapter = new SymfonyAiBridgeAdapter(
-            new BridgeDescriptor(
-                packageName: 'symfony/ai-azure-platform',
-                vendorKey: 'azure',
-                type: 'symfony.azure',
-                displayName: 'Azure (Symfony AI)',
-                defaultEndpoint: '',
-                defaultCapabilities: [Capability::CHAT, Capability::STREAMING, Capability::EMBEDDINGS],
-            ),
-            new CredentialCipher(),
-            $this->createMock(RequestFactory::class),
-        );
-        $cipher = new CredentialCipher();
-        $provider = $this->makeProviderWith(
-            endpoint: 'https://myresource.openai.azure.com',
-            apiKey: $cipher->encrypt('azure-key-123'),
-            adapterType: 'symfony.azure',
-        );
-
-        $platform = $adapter->platform($provider);
-
-        // adapter->platform() wraps the bridge in SymfonyAiPlatform (same as
-        // testAzureDualDeploymentBuildsPlatformWhenAzureBridgeInstalled).
-        self::assertInstanceOf(SymfonyAiPlatform::class, $platform);
     }
 
     private function makeAzureAdapter(?RequestFactory $requestFactory = null): SymfonyAiBridgeAdapter

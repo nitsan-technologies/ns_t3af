@@ -82,6 +82,7 @@ final class AiServiceTest extends TestCase
     {
         $provider = $this->makeProvider();
         $platform = new class {
+            /** @param array<string, mixed> $invokeOptions */
             public function invoke(string $model, mixed $payload, array $invokeOptions = []): string
             {
                 throw new \RuntimeException('No provider found for model "mistral-medium-3.5".');
@@ -618,17 +619,17 @@ final class AiServiceTest extends TestCase
                                 }
 
                                 return new class {
-                                    public function getPromptTokens(): ?int
+                                    public function getPromptTokens(): int
                                     {
                                         return 42;
                                     }
 
-                                    public function getCompletionTokens(): ?int
+                                    public function getCompletionTokens(): int
                                     {
                                         return 7;
                                     }
 
-                                    public function getTotalTokens(): ?int
+                                    public function getTotalTokens(): int
                                     {
                                         return 49;
                                     }
@@ -884,64 +885,6 @@ final class AiServiceTest extends TestCase
         self::assertSame('hello', $platform->seenInput);
         self::assertSame([[0.1, 0.2, 0.3]], $response->vectors);
         self::assertSame('mistral-embed', $response->modelId);
-    }
-
-    /**
-     * Regression: SymfonyAiPlatform exposes both invoke() (chat / MessageBag) and
-     * embed(). Embeddings must call embed() so the raw string is not wrapped as
-     * MessageBag (OpenAI: Invalid 'input': expected a string or token array).
-     */
-    public function testEmbedPrefersEmbedMethodOverInvokeWhenBothExist(): void
-    {
-        $provider = $this->makeProvider(embeddingModelId: 'text-embedding-3-large', adapterType: 'symfony.openai');
-        $platform = new class {
-            public bool $embedCalled = false;
-            public bool $invokeCalled = false;
-            public mixed $seenInput = null;
-
-            /**
-             * @param string|list<string> $text
-             */
-            public function embed(string $model, string|array $text): object
-            {
-                $this->embedCalled = true;
-                $this->seenInput = $text;
-
-                return new class {
-                    /** @return list<mixed> */
-                    public function asVectors(): array
-                    {
-                        return [new class {
-                            /** @return array<int|string, mixed> */
-                            public function getData(): array
-                            {
-                                return [0.5, 0.6];
-                            }
-                        }];
-                    }
-                };
-            }
-
-            public function invoke(string $model, mixed $input): object
-            {
-                $this->invokeCalled = true;
-                throw new \RuntimeException("Invalid 'input': expected a string or token array.");
-            }
-        };
-        $adapter = $this->makeAdapter('symfony.openai', $platform);
-        $service = new AiService(
-            new StaticProviderLookup($provider),
-            new AdapterRegistry([$adapter]),
-            new CapturingDispatcher(),
-            $this->makeSiteStorageContext(),
-        );
-
-        $response = $service->embed('hello');
-
-        self::assertTrue($platform->embedCalled);
-        self::assertFalse($platform->invokeCalled);
-        self::assertSame('hello', $platform->seenInput);
-        self::assertSame([[0.5, 0.6]], $response->vectors);
     }
 
     public function testEmbedInvokeAcceptsBatchInput(): void

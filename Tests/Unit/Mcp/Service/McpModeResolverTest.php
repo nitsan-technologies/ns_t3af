@@ -19,7 +19,6 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Service;
 
-use NITSAN\NsT3AF\Mcp\Service\McpModeOverride;
 use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
 use NITSAN\NsT3AF\Settings\ExtensionSettingsService;
 use PHPUnit\Framework\Attributes\Test;
@@ -36,7 +35,7 @@ final class McpModeResolverTest extends TestCase
         $settings = $this->createMock(ExtensionSettingsService::class);
         $settings->method('getAllIgnorePid')->with('ns_t3af')->willReturn([]);
 
-        $resolver = new McpModeResolver($settings, new McpModeOverride());
+        $resolver = new McpModeResolver($settings);
 
         self::assertTrue($resolver->isContext());
         self::assertFalse($resolver->isNative());
@@ -49,7 +48,7 @@ final class McpModeResolverTest extends TestCase
         $settings = $this->createMock(ExtensionSettingsService::class);
         $settings->method('getAllIgnorePid')->with('ns_t3af')->willReturn(['mcpMode' => 'native']);
 
-        $resolver = new McpModeResolver($settings, new McpModeOverride());
+        $resolver = new McpModeResolver($settings);
 
         self::assertTrue($resolver->isNative());
         self::assertFalse($resolver->isContext());
@@ -61,7 +60,7 @@ final class McpModeResolverTest extends TestCase
         $settings = $this->createMock(ExtensionSettingsService::class);
         $settings->method('getAllIgnorePid')->with('ns_t3af')->willReturn(['mcpMode' => 'invalid']);
 
-        $resolver = new McpModeResolver($settings, new McpModeOverride());
+        $resolver = new McpModeResolver($settings);
 
         self::assertTrue($resolver->isContext());
     }
@@ -75,7 +74,7 @@ final class McpModeResolverTest extends TestCase
             ->with('ns_t3af')
             ->willReturn(['mcpMode' => 'native']);
 
-        $resolver = new McpModeResolver($settings, new McpModeOverride());
+        $resolver = new McpModeResolver($settings);
 
         self::assertTrue($resolver->isNative());
     }
