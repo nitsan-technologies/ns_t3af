@@ -233,12 +233,14 @@ final class AgentToolIndexServiceTest extends TestCase
 
             public function embed(string $text): array
             {
-                $len = max(1, strlen($text));
-                $a = ($len % 7) / 7.0;
-                $b = (ord($text[0]) % 11) / 11.0;
-                $c = (ord($text[min(1, $len - 1)]) % 13) / 13.0;
+                $unpacked = unpack('C*', hash('sha256', $text, true));
+                $bytes = is_array($unpacked) ? array_values($unpacked) : [1, 2, 3];
 
-                return [$a, $b, $c];
+                return [
+                    ($bytes[0] ?? 1) / 255.0,
+                    ($bytes[1] ?? 2) / 255.0,
+                    ($bytes[2] ?? 3) / 255.0,
+                ];
             }
 
             public function embedMany(array $texts): array
