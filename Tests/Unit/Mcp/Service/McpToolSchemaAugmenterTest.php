@@ -298,6 +298,40 @@ final class McpToolSchemaAugmenterTest extends TestCase
         self::assertArrayNotHasKey('default', $pageId);
     }
 
+    #[Test]
+    public function objectOrArrayOneOfCollapsesToArrayBranch(): void
+    {
+        $augmenter = $this->createAugmenter();
+        $schema = $augmenter->augment([
+            'type' => 'object',
+            'properties' => [
+                'payload' => [
+                    'oneOf' => [
+                        ['type' => 'object'],
+                        ['type' => 'array', 'items' => ['type' => 'string']],
+                    ],
+                ],
+            ],
+        ]);
+
+        self::assertArrayNotHasKey('oneOf', $schema['properties']['payload']);
+        self::assertSame('array', $schema['properties']['payload']['type'] ?? null);
+    }
+
+    #[Test]
+    public function augmentFillsMissingPropertyDescriptions(): void
+    {
+        $augmenter = $this->createAugmenter();
+        $schema = $augmenter->augment([
+            'type' => 'object',
+            'properties' => [
+                'uid' => ['type' => 'integer'],
+            ],
+        ]);
+
+        self::assertSame('Record UID to act on.', $schema['properties']['uid']['description'] ?? '');
+    }
+
     private function createAugmenter(string $mode = McpModeResolver::MODE_CONTEXT): McpToolSchemaAugmenter
     {
         $workspaceList = $this->createMock(WorkspaceListService::class);

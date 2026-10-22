@@ -944,6 +944,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         unset($payload['pid']);
 
         try {
+            $this->siteLanguageGuard?->assertCreateNotLocalizedRecord($tableName, $payload);
             $this->siteLanguageGuard?->assertCreateLanguageAllowed($tableName, $payload, $pid);
         } catch (\InvalidArgumentException $exception) {
             return $this->encodeError($exception->getMessage());

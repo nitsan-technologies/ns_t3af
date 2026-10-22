@@ -737,11 +737,14 @@ final class ModuleController extends AbstractAiUniverseModuleController
 
     private function buildCliConfigJson(): string
     {
+        $projectPath = \TYPO3\CMS\Core\Core\Environment::getProjectPath();
+
         return json_encode([
             'mcpServers' => [
                 'typo3-ai-foundation' => [
                     'command' => 'php',
                     'args' => ['vendor/bin/typo3', 'nst3af:mcp:serve', '--transport=stdio'],
+                    'cwd' => $projectPath,
                 ],
             ],
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
@@ -752,18 +755,19 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $url = $serverUrl !== '' ? $serverUrl : 'https://example.com/mcp';
 
         return trim(<<<PY
-from langchain_mcp import MCPToolkit
+# pip install langchain-mcp-adapters
+from langchain_mcp_adapters.client import MultiServerMCPClient
 
-toolkit = MCPToolkit(
-    connections={
-        "typo3": {
+client = MultiServerMCPClient(
+    {
+        "typo3-ai-foundation": {
             "transport": "streamable_http",
             "url": "{$url}",
             "headers": {"Authorization": "Bearer YOUR_64_CHAR_TOKEN"},
         }
     }
 )
-tools = toolkit.get_tools()
+tools = await client.get_tools()
 PY);
     }
 

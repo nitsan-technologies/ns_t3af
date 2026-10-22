@@ -102,10 +102,18 @@ readonly class McpToolSchemaAugmenter
     private function normalizePortableSchema(array $schema, string $propertyName = ''): array
     {
         if (isset($schema['oneOf']) && is_array($schema['oneOf'])) {
-            $schema['oneOf'] = array_map(
+            /** @var list<array<string, mixed>> $branches */
+            $branches = array_values(array_map(
                 fn(mixed $branch): array => is_array($branch) ? $this->normalizePortableSchema($branch, $propertyName) : [],
                 $schema['oneOf'],
-            );
+            ));
+            $collapsed = $this->collapsePortableOneOf($branches, $propertyName);
+            if ($collapsed !== null) {
+                unset($schema['oneOf']);
+
+                return $this->normalizePortableSchema($collapsed + $schema, $propertyName);
+            }
+            $schema['oneOf'] = $branches;
         }
 
         $type = $schema['type'] ?? null;
@@ -120,7 +128,11 @@ readonly class McpToolSchemaAugmenter
         if (isset($schema['properties']) && is_array($schema['properties'])) {
             foreach ($schema['properties'] as $name => $property) {
                 if (is_array($property)) {
-                    $schema['properties'][$name] = $this->normalizePortableSchema($property, (string) $name);
+                    $property = $this->normalizePortableSchema($property, (string) $name);
+                    if (!isset($property['description']) || trim((string) $property['description']) === '') {
+                        $property['description'] = self::defaultPropertyDescription((string) $name);
+                    }
+                    $schema['properties'][$name] = $property;
                 }
             }
         }
@@ -201,6 +213,76 @@ readonly class McpToolSchemaAugmenter
     private function propertyNameSuggestsStringList(string $propertyName): bool
     {
         return $propertyName === 'options';
+    }
+
+    /**
+     * @param list<array<string, mixed>> $branches
+     * @return array<string, mixed>|null
+     */
+    private function collapsePortableOneOf(array $branches, string $propertyName): ?array
+    {
+        if ($branches === []) {
+            return null;
+        }
+
+        $byType = [];
+        foreach ($branches as $branch) {
+            if (!is_array($branch)) {
+                continue;
+            }
+            $type = $branch['type'] ?? null;
+            if (is_string($type) && $type !== '') {
+                $byType[$type] = $branch;
+            }
+        }
+
+        if (isset($byType['array'])) {
+            return $byType['array'];
+        }
+        if (isset($byType['object'])) {
+            return $byType['object'];
+        }
+        if (isset($byType['string'])) {
+            return $byType['string'];
+        }
+        if (isset($byType['integer'])) {
+            return $byType['integer'];
+        }
+
+        return count($branches) === 1 ? $branches[0] : null;
+    }
+
+    private static function defaultPropertyDescription(string $name): string
+    {
+        static $known = [
+            'uid' => 'Record UID to act on.',
+            'pageId' => 'Page UID (pages.uid).',
+            'pid' => 'Parent page UID for new records.',
+            'parentPageId' => 'Parent page UID for the new page or content.',
+            'sysLanguageUid' => 'Site language UID (0 = default).',
+            'targetPid' => 'Destination parent page UID when moving.',
+            'beforeUid' => 'Place the record before this sibling UID.',
+            'afterUid' => 'Place the record after this sibling UID.',
+            'target' => 'Move target: page UID or "first" / "last" on the parent.',
+            'scope' => 'Cache scope: pages, pagesTags, all, or system.',
+            'search' => 'Optional search string to filter results.',
+            'limit' => 'Maximum number of rows to return.',
+            'offset' => 'Number of rows to skip (pagination).',
+            'module' => 'Extension or module key to explain.',
+            'workspaceId' => 'Workspace UID (0 = live).',
+            'aiProvider' => 'AI provider identifier from connected providers.',
+            'fileName' => 'File name including extension.',
+            'directoryPath' => 'Folder path inside the storage (starts with /).',
+            'storageUid' => 'File storage UID (usually 1 for fileadmin).',
+            'content' => 'UTF-8 text file body (for small text files).',
+            'base64Content' => 'Base64-encoded file bytes.',
+            'action' => 'Write action: create, update, or delete.',
+            'data' => 'Field map for the record (TCA column names).',
+            'cmd' => 'records_apply command (for example localize, copy, move).',
+            'bulk' => 'Batch of record operations.',
+        ];
+
+        return $known[$name] ?? 'Parameter: ' . $name . '.';
     }
 
     /**

@@ -180,4 +180,16 @@ final class AgentProviderTurnErrorPresenterTest extends TestCase
         self::assertStringNotContainsString('gpt-unknown', $shown);
         self::assertSame('The AI provider is not available right now.', $shown);
     }
+
+    #[Test]
+    public function transportErrorsAreGenericForAdminsToo(): void
+    {
+        $exception = new AdapterRuntimeException(
+            'TLS connect error: error:0A000126:SSL routines::unexpected eof while reading for "https://10.255.255.1/v1/chat/completions".',
+        );
+
+        $shown = $this->presenter->present($exception, $this->translator, true);
+        self::assertSame('The AI provider is not available right now.', $shown);
+        self::assertStringNotContainsString('10.255.255.1', $shown);
+    }
 }

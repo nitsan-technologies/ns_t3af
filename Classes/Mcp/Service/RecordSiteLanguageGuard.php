@@ -83,6 +83,41 @@ readonly class RecordSiteLanguageGuard
     }
 
     /**
+     * Connected translations must be created with records_apply localize, not write_table create.
+     *
+     * @param array<string, mixed> $fields
+     */
+    public function assertCreateNotLocalizedRecord(string $table, array $fields): void
+    {
+        $config = $this->tcaSchemaService->getTranslationConfig($table);
+        $languageField = $config['languageField'];
+        $pointerField = $config['transOrigPointerField'];
+        if ($languageField === null && $pointerField === null) {
+            return;
+        }
+
+        $languageUid = $languageField !== null && array_key_exists($languageField, $fields)
+            ? (int) $fields[$languageField]
+            : 0;
+        $parentUid = $pointerField !== null && array_key_exists($pointerField, $fields)
+            ? (int) $fields[$pointerField]
+            : 0;
+
+        if ($languageUid <= 0 && $parentUid <= 0) {
+            return;
+        }
+
+        throw new \InvalidArgumentException(
+            sprintf(
+                'Creating a localized %s record via write_table is not supported (sys_language_uid=%d, translation parent=%d). Use records_apply with cmd "localize" instead.',
+                $table,
+                $languageUid,
+                $parentUid,
+            ),
+        );
+    }
+
+    /**
      * @param array<string, mixed> $fields
      * @return list<string>
      */

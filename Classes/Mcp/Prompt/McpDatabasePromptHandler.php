@@ -22,6 +22,8 @@ namespace NITSAN\NsT3AF\Mcp\Prompt;
 use Mcp\Exception\PromptGetException;
 use Mcp\Server\ClientGateway;
 use Mcp\Server\Handler\PromptHandlerInterface;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Renders a DB-backed MCP prompt template with named arguments from prompts/get.
@@ -30,6 +32,8 @@ use Mcp\Server\Handler\PromptHandlerInterface;
  */
 final readonly class McpDatabasePromptHandler implements PromptHandlerInterface
 {
+    private const PAGE_UID_ARGUMENTS = ['pageId', 'page_id', 'pid'];
+
     /**
      * @param list<array<string, mixed>> $argumentDefinitions
      */
@@ -51,6 +55,8 @@ final readonly class McpDatabasePromptHandler implements PromptHandlerInterface
             }
         }
 
+        $this->assertPageUidArgumentsValid($arguments);
+
         $rendered = McpDynamicPromptRegistrar::renderTemplateBody(
             $this->templateBody,
             $this->argumentDefinitions,
@@ -58,5 +64,36 @@ final readonly class McpDatabasePromptHandler implements PromptHandlerInterface
         );
 
         return ['user' => $rendered];
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    private function assertPageUidArgumentsValid(array $arguments): void
+    {
+        foreach ($this->argumentDefinitions as $definition) {
+            $name = (string) ($definition['name'] ?? '');
+            if ($name === '' || !in_array($name, self::PAGE_UID_ARGUMENTS, true)) {
+                continue;
+            }
+            if (!array_key_exists($name, $arguments)) {
+                continue;
+            }
+            $raw = $arguments[$name];
+            if ($raw === null || $raw === '') {
+                continue;
+            }
+            if (is_int($raw)) {
+                $raw = (string) $raw;
+            }
+            if (!is_string($raw) || !ctype_digit($raw) || (int) $raw <= 0) {
+                throw new PromptGetException(sprintf('Argument "%s" must be a positive page UID.', $name));
+            }
+            $uid = (int) $raw;
+            $record = GeneralUtility::makeInstance(RecordService::class)->findByUid('pages', $uid, ['uid']);
+            if ($record === null) {
+                throw new PromptGetException(sprintf('Page %d was not found or is not accessible.', $uid));
+            }
+        }
     }
 }

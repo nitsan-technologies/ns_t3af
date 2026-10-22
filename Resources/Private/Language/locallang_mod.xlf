@@ -1483,13 +1483,13 @@
         <source>Point the adapter at %s and send Authorization: Bearer YOUR_64_CHAR_TOKEN.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.codex.step1" resname="module.mcpServer.snippet.codex.step1">
-        <source>Open OpenAI Codex (or ChatGPT developer mode) MCP settings.</source>
+        <source>In a terminal: codex mcp add typo3-ai-foundation --url %s</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.codex.step2" resname="module.mcpServer.snippet.codex.step2">
-        <source>Add a remote MCP server with URL %s.</source>
+        <source>Or add to ~/.codex/config.toml: [mcp_servers.typo3-ai-foundation] url = "%s"</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.codex.step3" resname="module.mcpServer.snippet.codex.step3">
-        <source>Authenticate with OAuth or paste a TYPO3 personal access token when prompted.</source>
+        <source>Set Authorization Bearer YOUR_TOKEN in the Codex MCP config when OAuth is not used.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.langchain.npx.lead" resname="module.mcpServer.snippet.langchain.npx.lead">
         <source>Run mcp-remote locally and register the subprocess in LangChain when HTTP is not available to the runtime.</source>
@@ -1744,19 +1744,19 @@
         <source>Complete OAuth when prompted.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.vscode.step1" resname="module.mcpServer.snippet.vscode.step1">
-        <source>Install an MCP-compatible VS Code extension.</source>
+        <source>In VS Code, open Command Palette → “MCP: Add Server” (or create .vscode/mcp.json in your project).</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.vscode.step2" resname="module.mcpServer.snippet.vscode.step2">
-        <source>Configure server URL: %1$s</source>
+        <source>Add a streamable HTTP server with URL %1$s (type “http”).</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.vscode.step3" resname="module.mcpServer.snippet.vscode.step3">
-        <source>Use OAuth or bearer token auth.</source>
+        <source>Complete OAuth when prompted, or paste a TYPO3 personal access token in the Authorization header.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.windsurf.step1" resname="module.mcpServer.snippet.windsurf.step1">
-        <source>Open Windsurf MCP settings.</source>
+        <source>Open Windsurf → Settings → MCP and add a remote server.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.windsurf.step2" resname="module.mcpServer.snippet.windsurf.step2">
-        <source>Paste server URL: %1$s</source>
+        <source>In mcp_config.json set serverUrl to %1$s (streamable HTTP) and add Authorization: Bearer YOUR_TOKEN when needed.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.cline.step1" resname="module.mcpServer.snippet.cline.step1">
         <source>Open Cline MCP configuration.</source>
@@ -1765,10 +1765,10 @@
         <source>Add remote server: %1$s</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.continue.step1" resname="module.mcpServer.snippet.continue.step1">
-        <source>Edit Continue config.json.</source>
+        <source>Edit ~/.continue/config.yaml (Continue 1.x) and add an mcpServers entry.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.continue.step2" resname="module.mcpServer.snippet.continue.step2">
-        <source>Register MCP server URL: %1$s</source>
+        <source>Set url to %1$s with transport streamable-http and your Bearer token when required.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.zed.step1" resname="module.mcpServer.snippet.zed.step1">
         <source>Open Zed → Agent settings → MCP.</source>
@@ -1777,7 +1777,7 @@
         <source>Add server: %1$s</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.jetbrains.step1" resname="module.mcpServer.snippet.jetbrains.step1">
-        <source>Install JetBrains AI Assistant MCP plugin.</source>
+        <source>In JetBrains IDE: Settings → Tools → AI Assistant → Model Context Protocol.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.jetbrains.step2" resname="module.mcpServer.snippet.jetbrains.step2">
         <source>Configure endpoint: %1$s</source>
@@ -1813,7 +1813,7 @@
         <source>Server URL: %1$s</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.openaiGpts.step1" resname="module.mcpServer.snippet.openaiGpts.step1">
-        <source>In ChatGPT, Go to: Settings → Search Apps → Search Plugins → Browser directory → Click Add</source>
+        <source>Custom GPTs use OpenAPI Actions, not MCP. Use ChatGPT developer MCP connectors (or Codex CLI) for this TYPO3 server instead.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.openaiGpts.step3" resname="module.mcpServer.snippet.openaiGpts.step3">
         <source>Add custom MCP server:</source>
@@ -1840,10 +1840,10 @@
         <source>You can then ask ChatGPT to use your MCP tools.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.gemini.step1" resname="module.mcpServer.snippet.gemini.step1">
-        <source>Configure Gemini CLI MCP settings.</source>
+        <source>Run: gemini mcp add --transport http typo3-ai-foundation %1$s</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.gemini.step2" resname="module.mcpServer.snippet.gemini.step2">
-        <source>Register %1$s</source>
+        <source>Or add to ~/.gemini/settings.json under mcpServers.typo3-ai-foundation.httpUrl with the same URL and headers.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.claudeCode.step1" resname="module.mcpServer.snippet.claudeCode.step1">
         <source>In a terminal, add this server to Claude Code.</source>
@@ -1963,13 +1963,13 @@
         <source>Use: Basic + the base64 output (e.g. Basic dDNwbGFuZXQ6...).</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step1" resname="module.mcpServer.snippet.httpAuth.claude.step1">
-        <source>Paste the Token URL as the MCP server URL.</source>
+        <source>Use the streamable HTTP MCP server URL from this Connect panel (same as Remote OAuth), not a separate token URL.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step2" resname="module.mcpServer.snippet.httpAuth.claude.step2">
-        <source>Set Authentication to None.</source>
+        <source>For site HTTP Basic Auth: use the Basic header value from the command above (Claude Desktop custom connectors cannot add arbitrary headers — use OAuth Remote or a client that supports headers).</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step3" resname="module.mcpServer.snippet.httpAuth.claude.step3">
-        <source>Add a Request header: Authorization = the Basic value from the command above.</source>
+        <source>For TYPO3 bearer tokens: use Remote (OAuth) or paste Authorization: Bearer YOUR_TOKEN in a client that supports custom headers (Cursor, VS Code, Inspector).</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.httpAuth.claude.step4" resname="module.mcpServer.snippet.httpAuth.claude.step4">
         <source>Set Transport to Streamable HTTP.</source>
@@ -2053,7 +2053,7 @@
         <source>For OAuth-capable clients, complete the authorization flow when prompted.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.other.step5" resname="module.mcpServer.snippet.other.step5">
-        <source>For Bearer-only clients, create a token under the n8n or manus tabs above.</source>
+        <source>For Bearer-only clients, create a personal access token under AI Foundation → MCP → Access tokens.</source>
       </trans-unit>
       <trans-unit id="module.mcpTools.heading" resname="module.mcpTools.heading">
         <source>MCP Tools</source>

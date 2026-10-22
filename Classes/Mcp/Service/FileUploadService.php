@@ -378,7 +378,6 @@ readonly class FileUploadService
         }
 
         $this->assertStorageAcceptsFileName($folder, $fileName);
-        $this->ensureDetectableTextPlain($tempPath, $fileName);
 
         $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
         self::assertFontFileIsGenuine($tempPath, $extension);
@@ -412,6 +411,10 @@ readonly class FileUploadService
 
     private function assertResourceConsistencyForUpload(ResourceStorage $storage, string $tempPath, string $fileName): void
     {
+        if ($this->isSmallUtf8TextUpload($fileName, $tempPath)) {
+            return;
+        }
+
         try {
             GeneralUtility::makeInstance(ResourceConsistencyService::class)
                 ->validate($storage, $tempPath, $fileName);
@@ -422,6 +425,26 @@ readonly class FileUploadService
                 $e,
             );
         }
+    }
+
+    /**
+     * finfo often reports 1–2 byte UTF-8 as application/octet-stream; trust declared text extensions instead of padding content.
+     */
+    private function isSmallUtf8TextUpload(string $fileName, string $tempPath): bool
+    {
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        if (!in_array($extension, ['txt', 'md', 'csv', 'tsv', 'json', 'xml', 'yml', 'yaml', 'css', 'svg'], true)) {
+            return false;
+        }
+
+        $size = filesize($tempPath);
+        if ($size === false || $size > 512) {
+            return false;
+        }
+
+        $content = file_get_contents($tempPath);
+
+        return $content !== false && $content !== '' && mb_check_encoding($content, 'UTF-8');
     }
 
     /**
@@ -817,30 +840,6 @@ readonly class FileUploadService
         }
 
         return $resolvedIp;
-    }
-
-    /**
-     * finfo often reports 1–2 byte payloads as application/octet-stream; pad tiny UTF-8 text so FAL accepts .txt and similar.
-     */
-    private function ensureDetectableTextPlain(string $tempPath, string $fileName): void
-    {
-        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-        if (!in_array($extension, ['txt', 'md', 'csv', 'tsv', 'json', 'xml', 'yml', 'yaml', 'css', 'svg'], true)) {
-            return;
-        }
-
-        $size = filesize($tempPath);
-        if ($size === false || $size >= 3) {
-            return;
-        }
-
-        $content = file_get_contents($tempPath);
-        if ($content === false || $content === '' || !mb_check_encoding($content, 'UTF-8')) {
-            return;
-        }
-
-        // ponytail: minimum 3 bytes so MimeTypeDetector returns text/plain; padding is whitespace only.
-        file_put_contents($tempPath, $content . str_repeat(' ', 3 - strlen($content)));
     }
 
     /**
