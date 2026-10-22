@@ -455,7 +455,12 @@ final class ProviderFormService
             return '';
         }
 
-        if ($this->stringValue($input, 'api_key') !== '') {
+        $plainKey = $this->stringValue($input, 'api_key');
+        if ($plainKey !== '') {
+            if (preg_match('/[^\x00-\x7F]/', $plainKey) === 1) {
+                return 'API key must contain only ASCII characters.';
+            }
+
             return '';
         }
 

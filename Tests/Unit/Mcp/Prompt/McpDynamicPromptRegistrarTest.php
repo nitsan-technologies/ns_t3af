@@ -54,5 +54,15 @@ final class McpDynamicPromptRegistrarTest extends TestCase
 
         $server = $builder->build();
         self::assertInstanceOf(\Mcp\Server::class, $server);
+
+        $rendered = McpDynamicPromptRegistrar::renderTemplateBody(
+            'Brief {{brief}} on page {{pid}}',
+            [
+                ['name' => 'brief', 'required' => true, 'description' => ''],
+                ['name' => 'pid', 'required' => true, 'description' => ''],
+            ],
+            ['brief' => 'QA', 'pid' => '123'],
+        );
+        self::assertSame('Brief QA on page 123', $rendered);
     }
 }

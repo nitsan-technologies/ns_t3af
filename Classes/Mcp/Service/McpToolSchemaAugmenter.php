@@ -92,7 +92,51 @@ readonly class McpToolSchemaAugmenter
         // so a call cannot silently act on the storage root (handoff P2 #14).
         $inputSchema['additionalProperties'] = false;
 
-        return $inputSchema;
+        return $this->normalizePortableSchema($inputSchema);
+    }
+
+    /**
+     * @param array<string, mixed> $schema
+     * @return array<string, mixed>
+     */
+    private function normalizePortableSchema(array $schema): array
+    {
+        if (isset($schema['oneOf']) && is_array($schema['oneOf'])) {
+            $schema['oneOf'] = array_map(
+                fn(mixed $branch): array => is_array($branch) ? $this->normalizePortableSchema($branch) : [],
+                $schema['oneOf'],
+            );
+        }
+
+        $type = $schema['type'] ?? null;
+        if (is_array($type)) {
+            $nonNull = array_values(array_filter($type, static fn(mixed $t): bool => $t !== 'null'));
+            if (count($nonNull) === 1) {
+                $schema['type'] = $nonNull[0];
+                if (!array_key_exists('default', $schema)) {
+                    $schema['default'] = match ($nonNull[0]) {
+                        'integer' => 0,
+                        'string' => '',
+                        'boolean' => false,
+                        default => null,
+                    };
+                }
+            }
+        }
+
+        if (($schema['type'] ?? null) === 'array' && !isset($schema['items'])) {
+            $schema['items'] = ['type' => 'string'];
+        }
+
+        if (isset($schema['properties']) && is_array($schema['properties'])) {
+            foreach ($schema['properties'] as $name => $property) {
+                if (is_array($property)) {
+                    $schema['properties'][$name] = $this->normalizePortableSchema($property);
+                }
+            }
+        }
+
+        return $schema;
     }
 
     /**

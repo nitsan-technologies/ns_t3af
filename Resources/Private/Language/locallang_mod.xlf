@@ -1936,16 +1936,16 @@
         <source>Debug tools, resources, and prompts with MCP Inspector:</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.inspector.step1" resname="module.mcpServer.snippet.inspector.step1">
-        <source>Run the command above in your terminal (requires Node.js).</source>
+        <source>Run the command above in your terminal (Node.js 18+). On DDEV with HTTPS, set NODE_EXTRA_CA_CERTS to your mkcert root CA if the browser shows a certificate warning.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.inspector.step2" resname="module.mcpServer.snippet.inspector.step2">
-        <source>The Inspector UI opens in your browser with parameters pre-configured.</source>
+        <source>Open the Inspector v2 URL printed in the terminal (connect → authenticate → Tools / Prompts).</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.inspector.step3" resname="module.mcpServer.snippet.inspector.step3">
         <source>Complete OAuth authorization when prompted.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.inspector.step4" resname="module.mcpServer.snippet.inspector.step4">
-        <source>Browse and test TYPO3 MCP tools.</source>
+        <source>Browse and test TYPO3 MCP tools and prompts.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.snippet.other.lead" resname="module.mcpServer.snippet.other.lead">
         <source>Generic MCP client setup:</source>

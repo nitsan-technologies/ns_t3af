@@ -106,6 +106,11 @@ final class AgentProviderTurnErrorPresenterTest extends TestCase
         $bearer = 'HTTP 401: Invalid Authorization header Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload';
         self::assertStringContainsString('Bearer …', AgentProviderTurnErrorPresenter::maskSensitiveProviderText($bearer));
 
+        $symfony = 'Invalid header value for "auth_bearer": "sk-secret-key-with-unicode-é"';
+        $symfonyMasked = AgentProviderTurnErrorPresenter::maskSensitiveProviderText($symfony);
+        self::assertStringNotContainsString('sk-secret-key', $symfonyMasked);
+        self::assertStringContainsString('"auth_bearer":"…"', $symfonyMasked);
+
         $lettersOnly = 'File identifier ' . str_repeat('a', 40) . ' is invalid';
         self::assertSame($lettersOnly, AgentProviderTurnErrorPresenter::maskSensitiveProviderText($lettersOnly));
     }
@@ -166,12 +171,13 @@ final class AgentProviderTurnErrorPresenterTest extends TestCase
     }
 
     #[Test]
-    public function nonAccountErrorsAreShownToEditors(): void
+    public function nonAccountErrorsAreGenericForEditors(): void
     {
         $exception = new AdapterRuntimeException('The model `gpt-unknown` does not exist.');
 
         self::assertFalse(AgentProviderTurnErrorPresenter::looksLikeProviderAccountProblem($exception));
         $shown = $this->presenter->present($exception, $this->translator, false);
-        self::assertStringContainsString('gpt-unknown', $shown);
+        self::assertStringNotContainsString('gpt-unknown', $shown);
+        self::assertSame('The AI provider is not available right now.', $shown);
     }
 }

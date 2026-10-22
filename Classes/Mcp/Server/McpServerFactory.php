@@ -133,7 +133,12 @@ readonly class McpServerFactory
 
             foreach ($this->prompts as $prompt) {
                 $attribute = $this->getMethodAttribute($prompt, McpPrompt::class);
-                $builder->addPrompt([$prompt::class, 'execute'], $attribute?->name);
+                $builder->addPrompt(
+                    [$prompt::class, 'execute'],
+                    $attribute?->name,
+                    title: $attribute?->title,
+                    description: $attribute?->description,
+                );
             }
 
             $this->dynamicToolRegistrar->register($builder);

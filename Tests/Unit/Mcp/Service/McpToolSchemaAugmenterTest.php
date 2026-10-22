@@ -242,6 +242,16 @@ final class McpToolSchemaAugmenterTest extends TestCase
         self::assertFalse($schema['additionalProperties'] ?? true);
     }
 
+    #[Test]
+    public function nullableIntegerParametersAreNormalizedForPortableClients(): void
+    {
+        $augmenter = $this->createAugmenter();
+        $schema = $augmenter->generateForClassHandler([NullablePageSchemaTestTool::class, 'execute']);
+        $pageId = $schema['properties']['pageId'] ?? [];
+        self::assertSame('integer', $pageId['type'] ?? null);
+        self::assertArrayNotHasKey('null', is_array($pageId['type'] ?? null) ? $pageId['type'] : []);
+    }
+
     private function createAugmenter(string $mode = McpModeResolver::MODE_CONTEXT): McpToolSchemaAugmenter
     {
         $workspaceList = $this->createMock(WorkspaceListService::class);
@@ -292,6 +302,15 @@ final class ParentPageSchemaTestTool implements McpDualModeContentToolInterface
         #[McpParentPageTarget]
         string $parentPageUrl = '',
     ): string {
+        return '';
+    }
+}
+
+final class NullablePageSchemaTestTool implements McpNonAiToolInterface
+{
+    #[McpTool(name: 'test_nullable_page_schema', description: 'Test nullable normalization.')]
+    public function execute(?int $pageId = null): string
+    {
         return '';
     }
 }

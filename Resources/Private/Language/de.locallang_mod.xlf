@@ -2308,20 +2308,20 @@
                 <target>Debug-Tools, Ressourcen und Prompts mit MCP Inspector:</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.inspector.step1">
-                <source>Run the command above in your terminal (requires Node.js).</source>
-                <target>Führen Sie den obigen Befehl in Ihrem Terminal aus (erfordert Node.js).</target>
+                <source>Run the command above in your terminal (Node.js 18+). On DDEV with HTTPS, set NODE_EXTRA_CA_CERTS to your mkcert root CA if the browser shows a certificate warning.</source>
+                <target>Führen Sie den Befehl oben im Terminal aus (Node.js 18+). Bei DDEV mit HTTPS setzen Sie NODE_EXTRA_CA_CERTS auf die mkcert-Root-CA, falls der Browser ein Zertifikatsproblem meldet.</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.inspector.step2">
-                <source>The Inspector UI opens in your browser with parameters pre-configured.</source>
-                <target>Die Inspector-Benutzeroberfläche wird in Ihrem Browser mit vorkonfigurierten Parametern geöffnet.</target>
+                <source>Open the Inspector v2 URL printed in the terminal (connect → authenticate → Tools / Prompts).</source>
+                <target>Öffnen Sie die im Terminal ausgegebene Inspector-v2-URL (Verbinden → Authentifizieren → Tools / Prompts).</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.inspector.step3">
                 <source>Complete OAuth authorization when prompted.</source>
-                <target>Schließen Sie die OAuth-Autorisierung ab, wenn Prompted.</target>
+                <target>Schließen Sie die OAuth-Autorisierung ab, wenn Sie dazu aufgefordert werden.</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.inspector.step4">
-                <source>Browse and test TYPO3 MCP tools.</source>
-                <target>Durchsuchen und testen Sie TYPO3 MCP Tools.</target>
+                <source>Browse and test TYPO3 MCP tools and prompts.</source>
+                <target>Durchsuchen und testen Sie TYPO3-MCP-Tools und Prompts.</target>
             </trans-unit>
             <trans-unit id="module.mcpServer.snippet.other.lead">
                 <source>Generic MCP client setup:</source>

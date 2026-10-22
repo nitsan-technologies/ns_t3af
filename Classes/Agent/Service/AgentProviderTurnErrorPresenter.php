@@ -41,11 +41,18 @@ final class AgentProviderTurnErrorPresenter
             return $configuration;
         }
 
-        if (self::looksLikeProviderAccountProblem($exception)) {
-            if (!$isAdmin) {
-                return $translator->translate('agent.turn.providerUnavailable');
+        if (!$isAdmin) {
+            if (self::looksLikeRateLimit($exception, $detail)) {
+                return $translator->translate(
+                    'agent.turn.providerRateLimited',
+                    [$translator->translate('agent.turn.providerRateLimitedFallback')],
+                );
             }
 
+            return $translator->translate('agent.turn.providerUnavailable');
+        }
+
+        if (self::looksLikeProviderAccountProblem($exception)) {
             return $translator->translate(
                 'agent.turn.orchestratorFailed',
                 [$detail !== '' && $detail !== self::FALLBACK_DETAIL ? $detail : $translator->translate('agent.turn.providerUnavailable')],
@@ -141,6 +148,8 @@ final class AgentProviderTurnErrorPresenter
         $masked = (string) preg_replace('/\bAIza[0-9A-Za-z_-]{20,}\b/u', 'AIza…', $masked);
         $masked = (string) preg_replace('/\bxox[baprs]-[0-9A-Za-z-]{10,}\b/u', 'xox…', $masked);
         $masked = (string) preg_replace('/\bBearer\s+\S+/iu', 'Bearer …', $masked);
+        $masked = (string) preg_replace('/"auth_bearer"\s*:\s*"[^"]*"/iu', '"auth_bearer":"…"', $masked);
+        $masked = (string) preg_replace('/"authorization"\s*:\s*"[^"]*"/iu', '"authorization":"…"', $masked);
         $masked = (string) preg_replace(
             '/(?<=\b)(?:api[_-]?key|apikey|key)\s*=\s*[^\s&"\'<>]+/iu',
             'key=…',

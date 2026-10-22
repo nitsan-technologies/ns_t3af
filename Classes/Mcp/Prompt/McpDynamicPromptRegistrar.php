@@ -19,6 +19,8 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Mcp\Prompt;
 
+use Mcp\Schema\Prompt;
+use Mcp\Schema\PromptArgument;
 use Mcp\Server\Builder;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPromptTemplateRepository;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPromptTemplateService;
@@ -38,29 +40,45 @@ readonly class McpDynamicPromptRegistrar
         $this->promptTemplateService->ensureDefaults();
 
         foreach ($this->promptTemplateRepository->findVisible() as $template) {
-            $name = $template['name'];
-            $description = $template['description'];
-            $body = $template['templateBody'];
-            $arguments = array_values($template['arguments']);
+            $name = (string) $template['name'];
+            $description = (string) ($template['description'] ?? '');
+            $body = (string) $template['templateBody'];
+            $argumentDefinitions = array_values($template['arguments']);
 
-            $builder->addPrompt(
-                static function (array $params = []) use ($body, $arguments): array {
-                    $rendered = self::renderTemplate($body, $arguments, $params);
+            $promptArguments = [];
+            foreach ($argumentDefinitions as $definition) {
+                $argName = (string) ($definition['name'] ?? '');
+                if ($argName === '') {
+                    continue;
+                }
+                $promptArguments[] = new PromptArgument(
+                    $argName,
+                    (string) ($definition['description'] ?? '') !== ''
+                        ? (string) $definition['description']
+                        : null,
+                    (bool) ($definition['required'] ?? false),
+                );
+            }
 
-                    return ['user' => $rendered];
-                },
-                $name,
+            $definition = new Prompt(
+                name: $name,
                 title: $name,
                 description: $description !== '' ? $description : null,
+                arguments: $promptArguments !== [] ? $promptArguments : null,
+            );
+
+            $builder->add(
+                $definition,
+                new McpDatabasePromptHandler($body, $argumentDefinitions),
             );
         }
     }
 
     /**
      * @param list<array<string, mixed>> $argumentDefinitions
-     * @param array<string, mixed> $params
+     * @param array<string, mixed>       $params
      */
-    private static function renderTemplate(string $body, array $argumentDefinitions, array $params): string
+    public static function renderTemplateBody(string $body, array $argumentDefinitions, array $params): string
     {
         $rendered = $body;
 
