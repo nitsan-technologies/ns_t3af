@@ -119,10 +119,6 @@ readonly class McpServerMiddleware implements MiddlewareInterface
             /** @var ResponseInterface $response */
             $response = $server->run($transport);
 
-            if ($this->isSessionNotFoundResponse($response)) {
-                return McpCorsHeaders::apply($this->createUnauthorizedResponse($request, 'Session expired'), $request);
-            }
-
             return McpCorsHeaders::apply($response, $request);
         } finally {
             $this->runtimeContext->clear();
@@ -212,20 +208,6 @@ readonly class McpServerMiddleware implements MiddlewareInterface
         }
 
         return preg_match('/^[a-f0-9]{64}$/', $token) === 1 ? $token : null;
-    }
-
-    private function isSessionNotFoundResponse(ResponseInterface $response): bool
-    {
-        if ($response->getStatusCode() !== 404) {
-            return false;
-        }
-
-        $body = (string) $response->getBody();
-        $response->getBody()->rewind();
-
-        return $body !== ''
-            && str_contains($body, '"code":-32600')
-            && str_contains($body, 'Session not found');
     }
 
     private function extractBearerToken(ServerRequestInterface $request): ?string

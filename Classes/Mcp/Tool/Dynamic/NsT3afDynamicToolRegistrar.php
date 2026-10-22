@@ -25,8 +25,8 @@ use Mcp\Exception\ToolCallException;
 use Mcp\Server\Builder;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Repository\DiscoveredTableRepository;
+use NITSAN\NsT3AF\Mcp\Server\McpServerToolRegistration;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
-use NITSAN\NsT3AF\Mcp\Service\McpToolSchemaAugmenter;
 use NITSAN\NsT3AF\Mcp\Service\McpToolSeverityResolver;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyBatchRunner;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyMoveCommandChainer;
@@ -52,7 +52,7 @@ readonly class NsT3afDynamicToolRegistrar
         private TcaSchemaService $tcaSchemaService,
         private DiscoveredTableRepository $discoveredTableRepository,
         private LoggerInterface $logger,
-        private McpToolSchemaAugmenter $toolSchemaAugmenter,
+        private McpServerToolRegistration $toolRegistration,
         private RecordsApplyBatchRunner $batchRunner,
     ) {}
 
@@ -710,12 +710,7 @@ readonly class NsT3afDynamicToolRegistrar
 
     private function addAugmentedTool(Builder $builder, \Closure|string $handler, string $name, string $description): void
     {
-        $builder->addTool(
-            handler: $handler,
-            name: $name,
-            description: $description,
-            inputSchema: $this->toolSchemaAugmenter->generateForDynamicCallable($handler),
-        );
+        $this->toolRegistration->addDynamicTool($builder, $handler, $name, $description);
     }
 
     /**

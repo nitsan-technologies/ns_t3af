@@ -24,8 +24,8 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Tool\Custom;
 
 use Mcp\Server\Builder;
+use NITSAN\NsT3AF\Mcp\Server\McpServerToolRegistration;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpCustomToolRepository;
-use NITSAN\NsT3AF\Mcp\Service\McpToolSchemaAugmenter;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -43,7 +43,7 @@ readonly class McpCustomToolRegistrar
 {
     public function __construct(
         private McpCustomToolRepository $customToolRepository,
-        private McpToolSchemaAugmenter $toolSchemaAugmenter,
+        private McpServerToolRegistration $toolRegistration,
         private ContainerInterface $container,
         private LoggerInterface $logger,
     ) {}
@@ -122,11 +122,12 @@ readonly class McpCustomToolRegistrar
             $handler = [$className, 'execute'];
 
             try {
-                $builder->addTool(
-                    handler: $handler,
-                    name: $tool['name'],
+                $this->toolRegistration->addTool(
+                    $builder,
+                    $handler,
+                    $tool['name'],
                     description: $tool['description'],
-                    inputSchema: $this->toolSchemaAugmenter->generateForCustomToolHandler($handler),
+                    customToolHandler: true,
                 );
             } catch (\Throwable $exception) {
                 $this->logger->error('Failed to register custom MCP tool; skipping.', [

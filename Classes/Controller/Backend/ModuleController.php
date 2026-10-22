@@ -526,11 +526,11 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $clientTokens = $beUserUid > 0 ? $this->buildMcpClientTokenState($beUserUid) : ['n8n' => ['active' => 0], 'manus' => ['active' => 0]];
         $mcpRemoteState = $beUserUid > 0
             ? $this->buildMcpRemoteTokenState($beUserUid, $serverUrl)
-            : ['active' => 0, 'uid' => 0, 'tokenUrl' => $serverUrl . '?token=YOUR_TOKEN', 'configJson' => ''];
+            : ['active' => 0, 'uid' => 0, 'tokenUrl' => $this->buildMcpTokenUrlPlaceholder($serverUrl), 'configJson' => ''];
 
         $mcpRemoteConfigJson = $mcpRemoteState['configJson'] !== ''
             ? htmlspecialchars((string) $mcpRemoteState['configJson'], ENT_NOQUOTES, 'UTF-8')
-            : htmlspecialchars($this->buildMcpRemoteConfigJson('URL'), ENT_NOQUOTES, 'UTF-8');
+            : htmlspecialchars($this->buildMcpRemoteConfigJson($this->buildMcpTokenUrlPlaceholder($serverUrl)), ENT_NOQUOTES, 'UTF-8');
 
         $accessLifetime = (int) ($settings['accessTokenLifetime'] ?? 86400);
         $refreshLifetime = (int) ($settings['refreshTokenLifetime'] ?? 2592000);
@@ -543,9 +543,10 @@ final class ModuleController extends AbstractAiUniverseModuleController
         $personalTokenUri = (string) $request->getUri();
         $createPersonalTokenUrl = $personalTokenUri . (str_contains($personalTokenUri, '?') ? '&' : '?') . 'createPersonalToken=1';
 
-        $mcpWebSocketUrl = $this->buildMcpWebSocketUrl($serverUrl);
-        $mcpNpxCommand = 'npx -y mcp-remote ' . $serverUrl;
-        $mcpSshTunnelCommand = 'ssh -N -L 8787:127.0.0.1:443 user@your-server.example';
+        $mcpRemoteBridgeUrl = $this->buildMcpTokenUrlPlaceholder($serverUrl);
+        $mcpNpxCommand = 'npx -y mcp-remote ' . $mcpRemoteBridgeUrl;
+        $mcpSshTunnelCommand = $this->buildMcpSshTunnelCommand($serverUrl);
+        $mcpLocalTunnelMcpUrl = $this->buildMcpLocalTunnelMcpUrl($serverUrl);
         $mcpDockerCommand = 'ddev exec vendor/bin/typo3 nst3af:mcp:serve --transport=stdio --user=' . $beUsername . ' --workspace=0';
 
         $snippetArgs = [
@@ -555,7 +556,16 @@ final class ModuleController extends AbstractAiUniverseModuleController
             'scopes' => $defaultScopes,
             'clientTokens' => $clientTokens,
             'customJsonSnippet' => $this->buildCustomJsonSnippet($serverUrl),
+            'customJsonTunnelSnippet' => $this->buildCustomJsonSnippet($mcpLocalTunnelMcpUrl),
             'httpAuthCursorJson' => $this->buildHttpAuthCursorJson($serverUrl),
+            'mcpRemoteBridgeUrl' => $mcpRemoteBridgeUrl,
+            'mcpLocalTunnelMcpUrl' => $mcpLocalTunnelMcpUrl,
+            'langchainSnippet' => $this->buildLangchainHttpSnippet($serverUrl),
+            'autogenSnippet' => $this->buildAutogenHttpSnippet($serverUrl),
+            'cliConfigJson' => $this->buildCliConfigJson(),
+            'mcpRemoteConfigJson' => $mcpRemoteState['configJson'] !== ''
+                ? (string) $mcpRemoteState['configJson']
+                : $this->buildMcpRemoteConfigJson($mcpRemoteBridgeUrl),
         ];
 
         $hasDraftWorkspace = $this->mcpWorkspaceProvisionService->hasDraftWorkspace();
@@ -607,7 +617,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
             'mcpPersonalTokenPreview' => (string) ($personalTokenState['preview'] ?? ''),
             'mcpPersonalTokenPlain' => (string) ($personalTokenState['plain'] ?? ''),
             'mcpCreatePersonalTokenUrl' => $createPersonalTokenUrl,
-            'mcpWebSocketUrl' => $mcpWebSocketUrl,
+            'mcpLocalTunnelMcpUrl' => $mcpLocalTunnelMcpUrl,
             'mcpNpxCommand' => htmlspecialchars($mcpNpxCommand, ENT_NOQUOTES, 'UTF-8'),
             'mcpSshTunnelCommand' => htmlspecialchars($mcpSshTunnelCommand, ENT_NOQUOTES, 'UTF-8'),
             'mcpDockerCommand' => htmlspecialchars($mcpDockerCommand, ENT_NOQUOTES, 'UTF-8'),
@@ -649,14 +659,14 @@ final class ModuleController extends AbstractAiUniverseModuleController
     private function buildMcpRemoteTokenState(int $beUserUid, string $serverUrl): array
     {
         $token = $this->mcpTokenRepository->findActiveByLabel($beUserUid, TokenRepository::LABEL_MCP_REMOTE);
-        $placeholderUrl = $serverUrl . '?token=YOUR_TOKEN';
+        $placeholderUrl = $this->buildMcpTokenUrlPlaceholder($serverUrl);
 
         if ($token === null) {
             return [
                 'active' => 0,
                 'uid' => 0,
                 'tokenUrl' => $placeholderUrl,
-                'configJson' => $this->buildMcpRemoteConfigJson('URL'),
+                'configJson' => $this->buildMcpRemoteConfigJson($placeholderUrl),
             ];
         }
 
@@ -664,17 +674,28 @@ final class ModuleController extends AbstractAiUniverseModuleController
             'active' => 1,
             'uid' => $token->uid,
             'tokenUrl' => $placeholderUrl,
-            'configJson' => $this->buildMcpRemoteConfigJson('URL'),
+            'configJson' => $this->buildMcpRemoteConfigJson($placeholderUrl),
         ];
     }
 
-    private function buildMcpRemoteConfigJson(string $url): string
+    private function buildMcpTokenUrlPlaceholder(string $serverUrl): string
+    {
+        if ($serverUrl === '') {
+            return 'https://example.com/mcp?token=YOUR_64_CHAR_TOKEN';
+        }
+
+        $separator = str_contains($serverUrl, '?') ? '&' : '?';
+
+        return $serverUrl . $separator . 'token=YOUR_64_CHAR_TOKEN';
+    }
+
+    private function buildMcpRemoteConfigJson(string $mcpRemoteUrl): string
     {
         return json_encode([
             'mcpServers' => [
-                'New TYPO3 site' => [
+                'typo3-ai-foundation' => [
                     'command' => 'npx',
-                    'args' => ['mcp-remote', $url],
+                    'args' => ['-y', 'mcp-remote', $mcpRemoteUrl],
                 ],
             ],
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
@@ -694,22 +715,13 @@ final class ModuleController extends AbstractAiUniverseModuleController
     private function buildHttpAuthCursorJson(string $serverUrl): string
     {
         $baseUrl = $serverUrl !== '' ? $serverUrl : 'https://example.com/mcp';
-        $separator = str_contains($baseUrl, '?') ? '&' : '?';
-        $tokenUrl = $baseUrl . $separator . 'token=YOUR_64_CHAR_TOKEN';
 
         return json_encode([
             'mcpServers' => [
-                't3cs' => [
-                    'command' => 'npx',
-                    'args' => [
-                        '-y',
-                        'mcp-remote',
-                        $tokenUrl,
-                        '--header',
-                        'Authorization:${SITE_BASIC_AUTH}',
-                    ],
-                    'env' => [
-                        'SITE_BASIC_AUTH' => 'Basic YOUR_GENERATED_AUTH',
+                'typo3-ai-foundation' => [
+                    'url' => $baseUrl,
+                    'headers' => [
+                        'Authorization' => 'Bearer YOUR_64_CHAR_TOKEN',
                     ],
                 ],
             ],
@@ -720,12 +732,69 @@ final class ModuleController extends AbstractAiUniverseModuleController
     {
         return json_encode([
             'mcpServers' => [
-                'New TYPO3 site' => [
+                'typo3-ai-foundation' => [
                     'command' => 'php',
-                    'args' => ['vendor/bin/typo3', 'mcp:server'],
+                    'args' => ['vendor/bin/typo3', 'nst3af:mcp:serve', '--transport=stdio'],
                 ],
             ],
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) ?: '{}';
+    }
+
+    private function buildLangchainHttpSnippet(string $serverUrl): string
+    {
+        $url = $serverUrl !== '' ? $serverUrl : 'https://example.com/mcp';
+
+        return trim(<<<PY
+from langchain_mcp import MCPToolkit
+
+toolkit = MCPToolkit(
+    connections={
+        "typo3": {
+            "transport": "streamable_http",
+            "url": "{$url}",
+            "headers": {"Authorization": "Bearer YOUR_64_CHAR_TOKEN"},
+        }
+    }
+)
+tools = toolkit.get_tools()
+PY);
+    }
+
+    private function buildAutogenHttpSnippet(string $serverUrl): string
+    {
+        $url = $serverUrl !== '' ? $serverUrl : 'https://example.com/mcp';
+
+        return trim(<<<PY
+# pip install autogen-ext mcp
+from autogen_ext.tools.mcp import StreamableHttpMcpToolAdapter
+
+adapter = StreamableHttpMcpToolAdapter(
+    url="{$url}",
+    headers={"Authorization": "Bearer YOUR_64_CHAR_TOKEN"},
+)
+tools = await adapter.list_tools()
+PY);
+    }
+
+    private function buildMcpSshTunnelCommand(string $serverUrl): string
+    {
+        $host = parse_url($serverUrl, PHP_URL_HOST);
+        if (!is_string($host) || $host === '') {
+            return 'ssh -N -L 8787:127.0.0.1:443 user@your-server.example';
+        }
+
+        $port = (int) (parse_url($serverUrl, PHP_URL_PORT) ?? 443);
+        $localTarget = '127.0.0.1:' . ($port > 0 ? $port : 443);
+
+        return 'ssh -N -L 8787:' . $localTarget . ' user@' . $host;
+    }
+
+    private function buildMcpLocalTunnelMcpUrl(string $serverUrl): string
+    {
+        $path = parse_url($serverUrl, PHP_URL_PATH);
+        $path = is_string($path) && $path !== '' ? $path : '/mcp';
+
+        return 'https://127.0.0.1:8787' . $path;
     }
 
     /**
@@ -767,15 +836,6 @@ final class ModuleController extends AbstractAiUniverseModuleController
         ];
     }
 
-    private function buildMcpWebSocketUrl(string $serverUrl): string
-    {
-        if ($serverUrl === '') {
-            return 'wss://your-host/mcp';
-        }
-
-        return (string) preg_replace('#^https?://#i', 'wss://', $serverUrl);
-    }
-
     /**
      * @return list<array<string, mixed>>
      */
@@ -783,7 +843,7 @@ final class ModuleController extends AbstractAiUniverseModuleController
     {
         return [
             ['key' => 'http', 'icon' => 'actions-globe', 'available' => 1, 'badge' => 'recommended'],
-            ['key' => 'websocket', 'icon' => 'actions-exchange', 'available' => 1, 'badge' => 'realTime'],
+            ['key' => 'websocket', 'icon' => 'actions-exchange', 'available' => 1, 'badge' => 'docsOnly'],
             ['key' => 'docker', 'icon' => 'actions-extension', 'available' => 1, 'badge' => ''],
             ['key' => 'sshtunnel', 'icon' => 'actions-lock', 'available' => 1, 'badge' => 'enterprise'],
             ['key' => 'npx', 'icon' => 'actions-code', 'available' => 1, 'badge' => ''],
@@ -811,12 +871,13 @@ final class ModuleController extends AbstractAiUniverseModuleController
             ['key' => 'n8n', 'icon' => 'actions-cog', 'snippet' => 'N8n'],
             ['key' => 'manus', 'icon' => 'actions-user', 'snippet' => 'Manus'],
             ['key' => 'dify', 'icon' => 'actions-globe', 'snippet' => 'Other'],
-            ['key' => 'langchain', 'icon' => 'actions-link', 'snippet' => 'CustomJson'],
-            ['key' => 'autogen', 'icon' => 'actions-lightbulb', 'snippet' => 'CustomJson'],
-            ['key' => 'codex', 'icon' => 'actions-lightbulb', 'snippet' => 'ChatGpt'],
+            ['key' => 'langchain', 'icon' => 'actions-link', 'snippet' => 'Langchain'],
+            ['key' => 'autogen', 'icon' => 'actions-lightbulb', 'snippet' => 'Autogen'],
+            ['key' => 'codex', 'icon' => 'actions-lightbulb', 'snippet' => 'Codex'],
             ['key' => 'openai-gpts', 'icon' => 'actions-chat', 'snippet' => 'OpenAiCustomGpts'],
             ['key' => 'copilot-studio', 'icon' => 'actions-window', 'snippet' => 'Other'],
             ['key' => 'inspector', 'icon' => 'actions-search', 'snippet' => 'Inspector'],
+            ['key' => 'customjson', 'icon' => 'actions-code', 'snippet' => 'CustomJson'],
             ['key' => 'other', 'icon' => 'actions-menu-alternative', 'snippet' => 'Other'],
         ];
     }
@@ -834,9 +895,9 @@ final class ModuleController extends AbstractAiUniverseModuleController
         /** @var array<string, list<string>> $transportClientKeys */
         $transportClientKeys = [
             'http' => ['claude', 'chatgpt', 'gemini', 'claude-code', 'cursor', 'vscode', 'windsurf', 'continue', 'jetbrains', 'n8n', 'manus', 'dify', 'langchain', 'autogen', 'codex', 'openai-gpts', 'copilot-studio', 'inspector', 'other'],
-            'websocket' => ['zed', 'continue', 'cursor', 'langchain', 'other'],
+            'websocket' => [],
             'docker' => ['claude', 'cursor', 'vscode', 'windsurf', 'continue', 'zed', 'jetbrains', 'other'],
-            'sshtunnel' => ['claude', 'cursor', 'vscode', 'continue', 'other'],
+            'sshtunnel' => ['claude', 'cursor', 'vscode', 'continue', 'customjson', 'other'],
             'npx' => ['claude', 'cursor', 'vscode', 'windsurf', 'continue', 'langchain', 'autogen', 'other'],
             'mcpremote' => ['claude', 'cursor', 'vscode', 'other'],
             'stdio' => ['claude', 'cursor', 'vscode', 'windsurf', 'continue', 'zed', 'jetbrains', 'inspector', 'other'],

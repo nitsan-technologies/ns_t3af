@@ -243,6 +243,51 @@ final class McpToolSchemaAugmenterTest extends TestCase
     }
 
     #[Test]
+    public function pageIdsArrayUsesIntegerItemsNotStringDefault(): void
+    {
+        $augmenter = $this->createAugmenter();
+
+        $schema = $augmenter->augment([
+            'type' => 'object',
+            'properties' => [
+                'pageIds' => ['type' => 'array'],
+            ],
+        ]);
+
+        self::assertSame('integer', $schema['properties']['pageIds']['items']['type'] ?? null);
+    }
+
+    #[Test]
+    public function optionsArrayUsesStringItemsWhenUntyped(): void
+    {
+        $augmenter = $this->createAugmenter();
+
+        $schema = $augmenter->augment([
+            'type' => 'object',
+            'properties' => [
+                'options' => ['type' => 'array', 'items' => new \stdClass()],
+            ],
+        ]);
+
+        self::assertSame('string', $schema['properties']['options']['items']['type'] ?? null);
+    }
+
+    #[Test]
+    public function emptyObjectItemsSchemaInfersIntegerListForPageIds(): void
+    {
+        $augmenter = $this->createAugmenter();
+
+        $schema = $augmenter->augment([
+            'type' => 'object',
+            'properties' => [
+                'pageIds' => ['type' => 'array', 'items' => new \stdClass()],
+            ],
+        ]);
+
+        self::assertSame('integer', $schema['properties']['pageIds']['items']['type'] ?? null);
+    }
+
+    #[Test]
     public function nullableIntegerParametersAreNormalizedForPortableClients(): void
     {
         $augmenter = $this->createAugmenter();

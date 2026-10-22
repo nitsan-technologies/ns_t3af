@@ -1170,6 +1170,9 @@
       <trans-unit id="module.mcpServer.client.inspector" resname="module.mcpServer.client.inspector">
         <source>MCP Inspector</source>
       </trans-unit>
+      <trans-unit id="module.mcpServer.client.customjson" resname="module.mcpServer.client.customjson">
+        <source>Custom JSON</source>
+      </trans-unit>
       <trans-unit id="module.mcpServer.client.other" resname="module.mcpServer.client.other">
         <source>Other Clients</source>
       </trans-unit>
@@ -1390,7 +1393,7 @@
         <source>Local CLI (TYPO3)</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.transport.stdio.desc" resname="module.mcpServer.transport.stdio.desc">
-        <source>Development-only stdio bridge via vendor/bin/typo3 mcp:server.</source>
+        <source>Development-only stdio bridge via vendor/bin/typo3 nst3af:mcp:serve.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.transport.mcpremote.title" resname="module.mcpServer.transport.mcpremote.title">
         <source>Local Bridge</source>
@@ -1415,6 +1418,84 @@
       </trans-unit>
       <trans-unit id="module.mcpServer.transport.websocket.noteText" resname="module.mcpServer.transport.websocket.noteText">
         <source>Streamable HTTP at %s remains the primary transport. Enable WSS only when your proxy supports Upgrade headers and you need persistent connections.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.transport.websocket.docsOnly" resname="module.mcpServer.transport.websocket.docsOnly">
+        <source>This TYPO3 MCP server does not expose a native WebSocket endpoint. Use streamable HTTP unless your infrastructure team adds a separate WSS proxy.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.transport.websocket.useHttpInstead" resname="module.mcpServer.transport.websocket.useHttpInstead">
+        <source>Connect clients to this URL with OAuth Bearer or a personal access token — not wss://.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.transport.websocket.httpUrlLabel" resname="module.mcpServer.transport.websocket.httpUrlLabel">
+        <source>Streamable HTTP URL (use this)</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.cursor.npx.step1" resname="module.mcpServer.snippet.cursor.npx.step1">
+        <source>In Cursor → Settings → MCP, add a new server and choose command/stdio.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.cursor.npx.step2" resname="module.mcpServer.snippet.cursor.npx.step2">
+        <source>Paste the mcp-remote configuration below (local bridge to TYPO3 streamable HTTP).</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.autogen.npx.lead" resname="module.mcpServer.snippet.autogen.npx.lead">
+        <source>Start mcp-remote as a subprocess, then point AutoGen at the local stdio bridge.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.autogen.npx.hint" resname="module.mcpServer.snippet.autogen.npx.hint">
+        <source>Use a TYPO3 personal access token in the URL query string when your client cannot send Bearer headers.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.cursor.sshtunnel.step1" resname="module.mcpServer.snippet.cursor.sshtunnel.step1">
+        <source>Start the SSH tunnel command above and keep the session open.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.cursor.sshtunnel.step2" resname="module.mcpServer.snippet.cursor.sshtunnel.step2">
+        <source>In Cursor → Settings → MCP, add a remote server using the tunneled URL %s.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.cursor.mcpremote.step1" resname="module.mcpServer.snippet.cursor.mcpremote.step1">
+        <source>Issue an mcp-remote token URL from the Local Bridge panel if your client needs the token in the query string.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.cursor.mcpremote.step2" resname="module.mcpServer.snippet.cursor.mcpremote.step2">
+        <source>Paste the mcp-remote stdio configuration below into Cursor → Settings → MCP.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.transport.badge.docsOnly" resname="module.mcpServer.transport.badge.docsOnly">
+        <source>Docs only</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.langchain.lead" resname="module.mcpServer.snippet.langchain.lead">
+        <source>Register the TYPO3 MCP server in LangChain using streamable HTTP and a Bearer token.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.langchain.step1" resname="module.mcpServer.snippet.langchain.step1">
+        <source>Issue a personal MCP access token or complete OAuth in your client.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.langchain.step2" resname="module.mcpServer.snippet.langchain.step2">
+        <source>Use the streamable HTTP URL %s in your LangChain MCP toolkit configuration.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.autogen.lead" resname="module.mcpServer.snippet.autogen.lead">
+        <source>Connect Microsoft AutoGen to TYPO3 through the streamable HTTP MCP transport.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.autogen.step1" resname="module.mcpServer.snippet.autogen.step1">
+        <source>Install the AutoGen MCP adapter packages for your Python environment.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.autogen.step2" resname="module.mcpServer.snippet.autogen.step2">
+        <source>Point the adapter at %s and send Authorization: Bearer YOUR_64_CHAR_TOKEN.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.codex.step1" resname="module.mcpServer.snippet.codex.step1">
+        <source>Open OpenAI Codex (or ChatGPT developer mode) MCP settings.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.codex.step2" resname="module.mcpServer.snippet.codex.step2">
+        <source>Add a remote MCP server with URL %s.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.codex.step3" resname="module.mcpServer.snippet.codex.step3">
+        <source>Authenticate with OAuth or paste a TYPO3 personal access token when prompted.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.langchain.npx.lead" resname="module.mcpServer.snippet.langchain.npx.lead">
+        <source>Run mcp-remote locally and register the subprocess in LangChain when HTTP is not available to the runtime.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.langchain.npx.hint" resname="module.mcpServer.snippet.langchain.npx.hint">
+        <source>Replace YOUR_64_CHAR_TOKEN in the URL with a TYPO3 personal access token or use the token query parameter from the MCP Remote panel.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.customjson.sshtunnel.lead" resname="module.mcpServer.snippet.customjson.sshtunnel.lead">
+        <source>With the SSH tunnel active, use the local MCP URL %s in your client JSON.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.cursor.stdio.step1" resname="module.mcpServer.snippet.cursor.stdio.step1">
+        <source>Open Cursor → Settings → MCP and add a stdio server.</source>
+      </trans-unit>
+      <trans-unit id="module.mcpServer.snippet.cursor.stdio.step2" resname="module.mcpServer.snippet.cursor.stdio.step2">
+        <source>Paste the configuration below. Run the command from your TYPO3 project root (where vendor/bin/typo3 exists).</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.transport.docker.title" resname="module.mcpServer.transport.docker.title">
         <source>Docker / Container</source>
@@ -1444,13 +1525,13 @@
         <source>Secure remote access through an SSH port forward.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.transport.sshtunnel.lead" resname="module.mcpServer.transport.sshtunnel.lead">
-        <source>Forward a local port to the TYPO3 HTTPS endpoint, then point MCP clients at https://localhost:8787/mcp.</source>
+        <source>Forward a local port to the TYPO3 HTTPS endpoint, then point MCP clients at https://127.0.0.1:8787/mcp.</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.transport.sshtunnel.commandLabel" resname="module.mcpServer.transport.sshtunnel.commandLabel">
         <source>SSH command</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.transport.sshtunnel.hint" resname="module.mcpServer.transport.sshtunnel.hint">
-        <source>After the tunnel is up, use the Remote (OAuth) server URL pattern with localhost, or %s directly if you forward to the MCP path.</source>
+        <source>After the tunnel is up, connect MCP clients to %s (Bearer token or OAuth as usual).</source>
       </trans-unit>
       <trans-unit id="module.mcpServer.transport.npx.title" resname="module.mcpServer.transport.npx.title">
         <source>npx Wrapper</source>

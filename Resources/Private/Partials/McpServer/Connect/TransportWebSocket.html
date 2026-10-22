@@ -1,5 +1,4 @@
 <html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
-      xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
       data-namespace-typo3-fluid="true">
 <f:variable name="ll" value="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod.xlf" />
 
@@ -9,27 +8,23 @@
         <p class="text-variant small"><f:translate key="{ll}:module.mcpServer.transport.websocket.lead" /></p>
     </div>
     <div class="card-body">
-        <div class="aiu-mcp-field-row">
-            <label class="form-label"><f:translate key="{ll}:module.mcpServer.transport.websocket.urlLabel" /></label>
-            <div class="aiu-mcp-url-row">
-                <code class="aiu-mcp-url-row__code" data-copy-target="websocket-url">{mcpWebSocketUrl}</code>
-                <button type="button" class="btn btn-sm btn-default" data-copy="websocket-url">
-                    <core:icon identifier="actions-clipboard" size="small" />
-                    <f:translate key="{ll}:module.mcpServer.action.copyServerUrl" />
-                </button>
-            </div>
-        </div>
-
-        <div class="callout callout-info mt-3">
+        <div class="callout callout-info">
             <div class="callout-content">
                 <div class="callout-title"><f:translate key="{ll}:module.mcpServer.transport.websocket.noteTitle" /></div>
                 <div class="callout-body">
-                    <p class="mb-0"><f:translate key="{ll}:module.mcpServer.transport.websocket.noteText" arguments="{0: mcpServerUrl}" /></p>
+                    <p class="mb-2"><f:translate key="{ll}:module.mcpServer.transport.websocket.noteText" arguments="{0: mcpServerUrl}" /></p>
+                    <p class="mb-0"><f:translate key="{ll}:module.mcpServer.transport.websocket.docsOnly" /></p>
                 </div>
             </div>
         </div>
 
-        <f:render partial="McpServer/Connect/ClientSetupGuides" arguments="{transportKey: 'websocket', transportClients: mcpTransportGuides.websocket, mcpSnippetArgs: mcpSnippetArgs}" />
+        <div class="aiu-mcp-field-row mt-3">
+            <label class="form-label"><f:translate key="{ll}:module.mcpServer.transport.websocket.httpUrlLabel" /></label>
+            <div class="aiu-mcp-url-row">
+                <code class="aiu-mcp-url-row__code">{mcpServerUrl}</code>
+            </div>
+            <p class="text-variant small mb-0 mt-1"><f:translate key="{ll}:module.mcpServer.transport.websocket.useHttpInstead" /></p>
+        </div>
     </div>
 </div>
 </html>

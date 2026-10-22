@@ -99,11 +99,11 @@ readonly class McpToolSchemaAugmenter
      * @param array<string, mixed> $schema
      * @return array<string, mixed>
      */
-    private function normalizePortableSchema(array $schema): array
+    private function normalizePortableSchema(array $schema, string $propertyName = ''): array
     {
         if (isset($schema['oneOf']) && is_array($schema['oneOf'])) {
             $schema['oneOf'] = array_map(
-                fn(mixed $branch): array => is_array($branch) ? $this->normalizePortableSchema($branch) : [],
+                fn(mixed $branch): array => is_array($branch) ? $this->normalizePortableSchema($branch, $propertyName) : [],
                 $schema['oneOf'],
             );
         }
@@ -124,19 +124,77 @@ readonly class McpToolSchemaAugmenter
             }
         }
 
-        if (($schema['type'] ?? null) === 'array' && !isset($schema['items'])) {
-            $schema['items'] = ['type' => 'string'];
-        }
-
         if (isset($schema['properties']) && is_array($schema['properties'])) {
             foreach ($schema['properties'] as $name => $property) {
                 if (is_array($property)) {
-                    $schema['properties'][$name] = $this->normalizePortableSchema($property);
+                    $schema['properties'][$name] = $this->normalizePortableSchema($property, (string) $name);
                 }
             }
         }
 
+        if (($schema['type'] ?? null) === 'array') {
+            $schema['items'] = $this->normalizeArrayItemsSchema($schema['items'] ?? null, $propertyName);
+        }
+
         return $schema;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function normalizeArrayItemsSchema(mixed $items, string $propertyName): array
+    {
+        if ($this->itemsSchemaIsUnset($items)) {
+            $items = null;
+        } elseif (is_array($items) && isset($items['type'])) {
+            return $this->normalizePortableSchema($items, $propertyName);
+        } elseif ($items instanceof \stdClass) {
+            $items = (array) $items;
+            if ($items !== [] && isset($items['type'])) {
+                return $this->normalizePortableSchema($items, $propertyName);
+            }
+            $items = null;
+        }
+
+        if ($items === null && $this->propertyNameSuggestsIntegerList($propertyName)) {
+            return ['type' => 'integer'];
+        }
+
+        if ($items === null && $this->propertyNameSuggestsStringList($propertyName)) {
+            return ['type' => 'string'];
+        }
+
+        if ($items === null) {
+            return [];
+        }
+
+        return is_array($items) ? $this->normalizePortableSchema($items, $propertyName) : [];
+    }
+
+    private function itemsSchemaIsUnset(mixed $items): bool
+    {
+        if ($items === null) {
+            return true;
+        }
+        if ($items instanceof \stdClass) {
+            return get_object_vars($items) === [];
+        }
+
+        return is_array($items) && $items === [];
+    }
+
+    private function propertyNameSuggestsIntegerList(string $propertyName): bool
+    {
+        if ($propertyName === '') {
+            return false;
+        }
+
+        return (bool) preg_match('/(?:Ids|Uids|_uids)$/i', $propertyName);
+    }
+
+    private function propertyNameSuggestsStringList(string $propertyName): bool
+    {
+        return $propertyName === 'options';
     }
 
     /**
