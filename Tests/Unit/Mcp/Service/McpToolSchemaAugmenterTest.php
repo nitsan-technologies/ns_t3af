@@ -295,6 +295,7 @@ final class McpToolSchemaAugmenterTest extends TestCase
         $pageId = $schema['properties']['pageId'] ?? [];
         self::assertSame('integer', $pageId['type'] ?? null);
         self::assertArrayNotHasKey('null', is_array($pageId['type'] ?? null) ? $pageId['type'] : []);
+        self::assertArrayNotHasKey('default', $pageId);
     }
 
     private function createAugmenter(string $mode = McpModeResolver::MODE_CONTEXT): McpToolSchemaAugmenter

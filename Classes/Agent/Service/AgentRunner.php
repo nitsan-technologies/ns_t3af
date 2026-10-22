@@ -282,15 +282,16 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $nlMeta['plan'] = $workPlan;
         }
         // A permission refusal ends the request: say so plainly instead of "open steps".
-        $nlContent = $finalText !== '' ? $finalText : (
-            $permissionRefused
-                ? $this->translator->translate('agent.turn.notAllowed')
-                : (
-                    AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $requestForGate)
-                        ? $this->translator->translate('agent.turn.stepsStillOpen')
-                        : $this->translator->translate('agent.turn.emptyModelReply')
-                )
-        );
+        $nlContent = $finalText;
+        if ($nlContent === '') {
+            if ($permissionRefused) {
+                $nlContent = $this->translator->translate('agent.turn.notAllowed');
+            } elseif (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $requestForGate)) {
+                $nlContent = $this->translator->translate('agent.turn.stepsStillOpen');
+            } else {
+                $nlContent = $this->translator->translate('agent.turn.emptyModelReply');
+            }
+        }
         // Keep open Progress steps when the model answers in text: auto-completing them
         // made multi-element requests look finished after the first apply.
         // The window shows the plan of the last live event; make that the plan saved with the answer, so Progress
@@ -1254,7 +1255,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         string $userMessage,
         string $finalText,
     ): bool {
-        if ($finalText === '' || $state->isPaused() || $state->failed || $state->isCancelled()) {
+        if ($state->isPaused() || $state->failed || $state->isCancelled()) {
             return false;
         }
         if ($state->executedTools !== []) {

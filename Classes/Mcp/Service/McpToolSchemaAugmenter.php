@@ -112,15 +112,8 @@ readonly class McpToolSchemaAugmenter
         if (is_array($type)) {
             $nonNull = array_values(array_filter($type, static fn(mixed $t): bool => $t !== 'null'));
             if (count($nonNull) === 1) {
+                // Collapse ["null","integer"] → "integer" only; do not invent defaults (uid 0 reads as valid).
                 $schema['type'] = $nonNull[0];
-                if (!array_key_exists('default', $schema)) {
-                    $schema['default'] = match ($nonNull[0]) {
-                        'integer' => 0,
-                        'string' => '',
-                        'boolean' => false,
-                        default => null,
-                    };
-                }
             }
         }
 
@@ -134,6 +127,19 @@ readonly class McpToolSchemaAugmenter
 
         if (($schema['type'] ?? null) === 'array') {
             $schema['items'] = $this->normalizeArrayItemsSchema($schema['items'] ?? null, $propertyName);
+        }
+
+        if (array_key_exists('default', $schema)) {
+            $default = $schema['default'];
+            $scalarType = $schema['type'] ?? null;
+            if (
+                $default === null
+                || ($scalarType === 'integer' && $default === 0)
+                || ($scalarType === 'string' && $default === '')
+                || ($scalarType === 'boolean' && $default === false)
+            ) {
+                unset($schema['default']);
+            }
         }
 
         return $schema;
