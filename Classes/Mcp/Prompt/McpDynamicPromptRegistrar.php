@@ -24,6 +24,7 @@ use Mcp\Schema\PromptArgument;
 use Mcp\Server\Builder;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPromptTemplateRepository;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPromptTemplateService;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
 
 /**
  * Registers DB-backed MCP prompt templates with the MCP server builder.
@@ -33,6 +34,7 @@ readonly class McpDynamicPromptRegistrar
     public function __construct(
         private McpPromptTemplateService $promptTemplateService,
         private McpPromptTemplateRepository $promptTemplateRepository,
+        private RecordService $recordService,
     ) {}
 
     public function register(Builder $builder): void
@@ -69,7 +71,7 @@ readonly class McpDynamicPromptRegistrar
 
             $builder->add(
                 $definition,
-                new McpDatabasePromptHandler($body, $argumentDefinitions),
+                new McpDatabasePromptHandler($body, $argumentDefinitions, $this->recordService),
             );
         }
     }

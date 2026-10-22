@@ -154,6 +154,9 @@ readonly class FileUploadService
             return ['file' => $existingFile, 'deduplicated' => true];
         }
 
+        $storage = $folder->getStorage();
+        $this->registerResourceConsistencyExceptionForSmallTextUpload($storage, $tempPath, $fileName);
+
         try {
             $file = $folder->getStorage()->addFile($tempPath, $folder, $fileName, DuplicationBehavior::RENAME);
         } catch (IllegalFileExtensionException $e) {
@@ -445,6 +448,25 @@ readonly class FileUploadService
         $content = file_get_contents($tempPath);
 
         return $content !== false && $content !== '' && mb_check_encoding($content, 'UTF-8');
+    }
+
+    /**
+     * FAL re-validates MIME on addFile(); finfo still reports octet-stream for 1–2 byte UTF-8 text.
+     */
+    private function registerResourceConsistencyExceptionForSmallTextUpload(
+        ResourceStorage $storage,
+        string $tempPath,
+        string $fileName,
+    ): void {
+        if (!$this->isSmallUtf8TextUpload($fileName, $tempPath)) {
+            return;
+        }
+
+        GeneralUtility::makeInstance(ResourceConsistencyService::class)->addExceptionItem(
+            $storage,
+            $tempPath,
+            basename($fileName),
+        );
     }
 
     /**

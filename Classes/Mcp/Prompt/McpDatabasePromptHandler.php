@@ -23,7 +23,6 @@ use Mcp\Exception\PromptGetException;
 use Mcp\Server\ClientGateway;
 use Mcp\Server\Handler\PromptHandlerInterface;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
-use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 /**
  * Renders a DB-backed MCP prompt template with named arguments from prompts/get.
@@ -40,6 +39,7 @@ final readonly class McpDatabasePromptHandler implements PromptHandlerInterface
     public function __construct(
         private string $templateBody,
         private array $argumentDefinitions,
+        private RecordService $recordService,
     ) {}
 
     public function get(array $arguments, ClientGateway $gateway): mixed
@@ -90,8 +90,7 @@ final readonly class McpDatabasePromptHandler implements PromptHandlerInterface
                 throw new PromptGetException(sprintf('Argument "%s" must be a positive page UID.', $name));
             }
             $uid = (int) $raw;
-            $record = GeneralUtility::makeInstance(RecordService::class)->findByUid('pages', $uid, ['uid']);
-            if ($record === null) {
+            if (!$this->recordService->parentPageExists($uid)) {
                 throw new PromptGetException(sprintf('Page %d was not found or is not accessible.', $uid));
             }
         }
