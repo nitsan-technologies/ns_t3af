@@ -152,6 +152,18 @@
                         <span class="ok"><core:icon identifier="actions-check" size="small" /> All features</span>
                         <span class="ok"><core:icon identifier="actions-check" size="small" /> <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.credits.meta.costEffective" default="Cost effective" /></span>
                     </div>
+                    <f:if condition="{creditsFeatureAvailable} == 1">
+                        <div class="aiu-mode__meta aiu-mode__meta--action{f:if(condition: '{creditsModeActive} == 1', then: ' is-hidden', else: '')}">
+                            <span>
+                                <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.credits.claim.prefix"
+                                             default="Bought credits on t3planet.de?" />
+                                <button type="button" class="aiu-mode__claim-link" data-credits-claim-open>
+                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:provider.mode.credits.claim.link"
+                                                 default="Use a claim code" />
+                                </button>
+                            </span>
+                        </div>
+                    </f:if>
                 </div>
             </div>
         </div>

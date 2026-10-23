@@ -39,6 +39,7 @@ use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordPayloadNormalizer;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyAudit;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyResult;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
@@ -955,7 +956,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
         if ($filteredData === [] && $fileFields === []) {
             return $this->encodeError(
-                'No valid writable fields provided.',
+                $this->noWritableFieldsError($tableName, $payload, $filteredData),
                 $this->normalizer->ignoredFieldsContext($tableName, $ignoredFields),
             );
         }
@@ -969,7 +970,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
             $fileFieldUids = $this->applyFileFields($tableName, $newUid, $fileFields);
         } catch (\Throwable $exception) {
-            return $this->encodeError($this->describe($exception));
+            return $this->refused($exception);
         }
 
         [$writtenFields, $ignoredFields] = $this->withEngineIgnored($filteredData, $ignoredFields, $result);
@@ -1068,7 +1069,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
         if ($filteredData === [] && $fileFields === []) {
             return $this->encodeError(
-                'No valid writable fields provided.',
+                $this->noWritableFieldsError($tableName, $payload, $filteredData),
                 $this->normalizer->ignoredFieldsContext($tableName, $ignoredFields),
             );
         }
@@ -1081,7 +1082,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             }
             $fileFieldUids = $this->applyFileFields($tableName, $uid, $fileFields);
         } catch (\Throwable $exception) {
-            return $this->encodeError($this->describe($exception));
+            return $this->refused($exception);
         }
 
         [$writtenFields, $ignoredFields] = $this->withEngineIgnored($filteredData, $ignoredFields, $result);
@@ -1124,7 +1125,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         try {
             $this->write([], [$tableName => [$uid => ['delete' => 1]]]);
         } catch (\Throwable $exception) {
-            return $this->encodeError($this->describe($exception));
+            return $this->refused($exception);
         }
 
         return json_encode([
@@ -1161,6 +1162,25 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             array_values(array_diff(array_keys($filteredData), $dropped)),
             array_values(array_unique(array_merge($ignoredFields, $dropped))),
         ];
+    }
+
+    /**
+     * Engine refusals are already in the audit log. Rethrow them so the MCP proxy does not write a second entry.
+     * Anything else stays the soft error write_table has always returned.
+     */
+    private function refused(\Throwable $exception): string
+    {
+        if ($exception instanceof RecordsApplyValidationException) {
+            throw new ToolCallException($this->describe($exception), 1790500006, $exception);
+        }
+
+        if ($exception instanceof ToolCallException
+            && in_array((int) $exception->getCode(), RecordsApplyAudit::AUDITED_ERROR_CODES, true)
+        ) {
+            throw $exception;
+        }
+
+        return $this->encodeError($this->describe($exception));
     }
 
     /** The message write_table has always returned, built from what the engine refused with. */
@@ -1240,6 +1260,32 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         return isset($tca[$tableName]) && is_array($tca[$tableName]);
+    }
+
+    /**
+     * The error proxy keeps only this sentence. A dropped collection field has to name the child
+     * table here. An unknown field stays the short sentence; its details remain on ignoredFieldDetails.
+     *
+     * @param array<string, mixed> $payload
+     * @param array<string, mixed> $filteredData
+     */
+    private function noWritableFieldsError(string $tableName, array $payload, array $filteredData): string
+    {
+        $message = 'No valid writable fields provided.';
+        $hints = [];
+        foreach ($this->normalizer->ignoredFieldDetails($tableName, $this->normalizer->ignoredFields($payload, $filteredData)) as $detail) {
+            if (($detail['reason'] ?? '') !== 'collection') {
+                continue;
+            }
+            $field = (string) ($detail['field'] ?? '');
+            $hint = trim((string) ($detail['hint'] ?? ''));
+            if ($field === '' || $hint === '') {
+                continue;
+            }
+            $hints[] = $field . ': ' . $hint;
+        }
+
+        return $hints === [] ? $message : $message . ' ' . implode(' ', $hints);
     }
 
     /** @param array<string, mixed> $context */

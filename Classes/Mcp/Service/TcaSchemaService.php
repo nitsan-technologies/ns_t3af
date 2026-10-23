@@ -597,7 +597,32 @@ readonly class TcaSchemaService
             $fields[] = $this->buildFieldSchema($fieldName, $columnConfig);
         }
 
+        $sortField = $this->getSortField($tca);
+        $names = array_column($fields, 'name');
+        if ($sortField !== null && !in_array($sortField, $names, true)) {
+            $fields[] = [
+                'name' => $sortField,
+                'type' => 'number',
+                'readOnly' => true,
+                'hint' => 'Record order. Create the row with afterUid, or use records_apply append. Do not write this field.',
+            ];
+        }
+
         return ['table' => $tableName, 'fields' => $fields];
+    }
+
+    public function missingTableMessage(string $tableName): ?string
+    {
+        if ($this->getTca($tableName) !== null) {
+            return null;
+        }
+
+        return 'Table "' . $tableName . '" is not a TYPO3 table. Check the name. Relation tables are not edited directly; set the relation field on the parent record, for example categories as a uid list.';
+    }
+
+    public function noReadableFieldsMessage(string $tableName): string
+    {
+        return 'Table "' . $tableName . '" has no fields MCP can read. Read or write the parent record instead.';
     }
 
     /**
@@ -665,6 +690,8 @@ readonly class TcaSchemaService
             }
             if ($type === 'category') {
                 $schema['relationKind'] = 'category';
+            } elseif ($this->hasMMTable($config)) {
+                $schema['relationKind'] = 'mm';
             }
         }
 

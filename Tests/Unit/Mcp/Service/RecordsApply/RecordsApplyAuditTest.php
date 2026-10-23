@@ -47,4 +47,61 @@ final class RecordsApplyAuditTest extends TestCase
 
         self::assertSame("It's fine, don't worry", $redact->invoke(null, "It's fine, don't worry"));
     }
+
+    #[Test]
+    public function aColPosRefusalKeepsTheTypeAndColumnAndHidesTheTitle(): void
+    {
+        $redact = new \ReflectionMethod(RecordsApplyAudit::class, 'redact');
+        $long = str_repeat('x', 100);
+
+        self::assertSame(
+            'The record "…" with CType "text" in colPos "3" couldn\'t be saved due to disallowed value(s).',
+            $redact->invoke(null, 'The record "Secret title" with CType "text" in colPos "3" couldn\'t be saved due to disallowed value(s).'),
+        );
+        self::assertSame(
+            'CType "' . str_repeat('x', 80) . '"',
+            $redact->invoke(null, 'CType "' . $long . '"'),
+        );
+    }
+
+    #[Test]
+    public function validationIsAWarningAndADataHandlerDryRunStaysAnError(): void
+    {
+        $level = new \ReflectionMethod(RecordsApplyAudit::class, 'level');
+
+        self::assertSame('warning', $level->invoke(null, false, 'validation'));
+        self::assertSame('error', $level->invoke(null, false, 'datahandler'));
+        self::assertSame('info', $level->invoke(null, true, 'applied'));
+    }
+
+    #[Test]
+    public function aFailedEntryListsProblemPathsAndRecordIdsWithoutValues(): void
+    {
+        $details = new \ReflectionMethod(RecordsApplyAudit::class, 'details');
+        $payload = $details->invoke(
+            null,
+            'records_apply',
+            'ra-1',
+            true,
+            false,
+            'validation',
+            [],
+            [],
+            'records_apply request rejected: 1 problem(s), nothing was written.',
+            [[
+                'table' => 'tt_content',
+                'id' => '12',
+                'fields' => ['header'],
+                'error' => 'Unknown field.',
+                'value' => 'secret body',
+            ]],
+            ['tt_content' => ['12', 'NEWc1']],
+        );
+
+        self::assertSame([
+            ['table' => 'tt_content', 'id' => '12', 'fields' => ['header'], 'error' => 'Unknown field.'],
+        ], $payload['problems']);
+        self::assertSame(['tt_content' => ['12', 'NEWc1']], $payload['records']);
+        self::assertArrayNotHasKey('value', $payload['problems'][0]);
+    }
 }

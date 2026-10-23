@@ -94,6 +94,16 @@ return [
         'target' => CreditModeController::class . '::activateAction',
         'methods' => ['POST'],
     ],
+    'nst3af_credits_claim' => [
+        'path' => '/nst3af/credits/claim',
+        'target' => CreditModeController::class . '::claimAction',
+        'methods' => ['POST'],
+    ],
+    'nst3af_credits_request_claim_code' => [
+        'path' => '/nst3af/credits/request-claim-code',
+        'target' => CreditModeController::class . '::requestClaimCodeAction',
+        'methods' => ['POST'],
+    ],
     'nst3af_credits_refresh_token' => [
         'path' => '/nst3af/credits/refresh-token',
         'target' => CreditModeController::class . '::refreshTokenAction',

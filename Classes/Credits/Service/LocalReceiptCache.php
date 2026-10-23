@@ -38,6 +38,23 @@ final class LocalReceiptCache
     ) {}
 
     /**
+     * Drop every mirrored receipt.
+     *
+     * The mirror records this install's own spend, with no account column — it is only ever
+     * meaningful for whichever account the site is currently bound to. When a claim code
+     * connects the site to a *different* account, the rows left behind describe someone else's
+     * history and would be reported as this account's usage.
+     *
+     * @return int Rows removed.
+     */
+    public function purgeAll(): int
+    {
+        return (int) $this->connectionPool
+            ->getConnectionForTable(self::TABLE)
+            ->truncate(self::TABLE);
+    }
+
+    /**
      * @param array<string, mixed> $payload
      */
     public function storeFromCharge(string $requestUuid, string $featureKey, array $payload): void

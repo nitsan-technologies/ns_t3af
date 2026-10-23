@@ -18,6 +18,9 @@
       <trans-unit id="credits.api.error.token_ip_conflict" resname="credits.api.error.token_ip_conflict">
         <source>Another T3Planet Credits account is already bound to this server IP. Contact support.</source>
       </trans-unit>
+      <trans-unit id="credits.api.error.token_ip_paid_conflict" resname="credits.api.error.token_ip_paid_conflict">
+        <source>This server IP already belongs to a paying T3Planet Credits account. If this site should use that account, use a claim code to connect it instead of activating a new trial.</source>
+      </trans-unit>
       <trans-unit id="credits.api.error.license_invalid" resname="credits.api.error.license_invalid">
         <source>This Credits account is not valid. Click Activate again or contact support.</source>
       </trans-unit>

@@ -43,6 +43,8 @@ readonly class RecordsApplyAudit
     /**
      * @param array<string, array<string, int>> $operations
      * @param array<string, list<string>> $fieldNames
+     * @param list<array<string, mixed>> $problems
+     * @param array<string, list<string>> $recordIds
      */
     public function log(
         string $tool,
@@ -53,29 +55,15 @@ readonly class RecordsApplyAudit
         array $operations,
         array $fieldNames,
         string $error = '',
+        array $problems = [],
+        array $recordIds = [],
     ): void {
         try {
-            $data = [
-                'tool' => $tool,
-                'batchId' => $batchId,
-                'dryRun' => $dryRun,
-                'ok' => $ok,
-                'stage' => $stage,
-                'operations' => $operations,
-                'fields' => array_map(
-                    static fn(array $names): array => array_slice($names, 0, self::MAX_FIELD_NAMES),
-                    $fieldNames,
-                ),
-            ];
-            if ($error !== '') {
-                $data['error'] = mb_substr(self::redact($error), 0, 300);
-            }
-
             SysLogWriterUtility::insert(
                 sprintf('MCP %s %s %s (batch %s)', $tool, $dryRun ? 'dry-run' : 'apply', $ok ? 'OK' : 'failed', $batchId),
-                $ok ? 'info' : 'error',
+                self::level($ok, $stage),
                 AiLogChannelCatalog::CHANNEL_MCP,
-                $data,
+                self::details($tool, $batchId, $dryRun, $ok, $stage, $operations, $fieldNames, $error, $problems, $recordIds),
             );
         } catch (\Throwable) {
             // Audit logging must never break the call itself.
@@ -83,13 +71,148 @@ readonly class RecordsApplyAudit
     }
 
     /**
-     * DataHandler words its refusals around the record: "Attempt to modify record 'My title' …".
-     * The log keeps the sentence but not the quoted value, because it can be page or content text.
+     * A validation refusal is a bad request. A DataHandler failure, including a dry run, is an error.
+     */
+    private static function level(bool $ok, string $stage): string
+    {
+        if ($ok) {
+            return 'info';
+        }
+
+        return $stage === 'validation' ? 'warning' : 'error';
+    }
+
+    /**
+     * @param array<string, array<string, int>> $operations
+     * @param array<string, list<string>> $fieldNames
+     * @param list<array<string, mixed>> $problems
+     * @param array<string, list<string>> $recordIds
+     * @return array<string, mixed>
+     */
+    private static function details(
+        string $tool,
+        string $batchId,
+        bool $dryRun,
+        bool $ok,
+        string $stage,
+        array $operations,
+        array $fieldNames,
+        string $error,
+        array $problems,
+        array $recordIds,
+    ): array {
+        $data = [
+            'tool' => $tool,
+            'batchId' => $batchId,
+            'dryRun' => $dryRun,
+            'ok' => $ok,
+            'stage' => $stage,
+            'operations' => $operations,
+            'fields' => array_map(
+                static fn(array $names): array => array_slice($names, 0, self::MAX_FIELD_NAMES),
+                $fieldNames,
+            ),
+        ];
+        if ($error !== '') {
+            $data['error'] = mb_substr(self::redact($error), 0, 300);
+        }
+        $listedProblems = self::problems($problems);
+        if ($listedProblems !== []) {
+            $data['problems'] = $listedProblems;
+        }
+        $listedRecords = self::recordIds($recordIds);
+        if ($listedRecords !== []) {
+            $data['records'] = $listedRecords;
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $problems
+     * @return list<array<string, mixed>>
+     */
+    private static function problems(array $problems): array
+    {
+        $listed = [];
+        foreach (array_slice($problems, 0, 3) as $problem) {
+            if (!is_array($problem)) {
+                continue;
+            }
+            $entry = [];
+            foreach (['table', 'id'] as $key) {
+                if (isset($problem[$key]) && is_scalar($problem[$key])) {
+                    $entry[$key] = RecordsApplyProblems::safe((string) $problem[$key]);
+                }
+            }
+            $fields = $problem['fields'] ?? [];
+            if (is_array($fields) && $fields !== []) {
+                $names = [];
+                foreach (array_slice($fields, 0, self::MAX_FIELD_NAMES) as $field) {
+                    if (is_scalar($field)) {
+                        $names[] = RecordsApplyProblems::safe((string) $field);
+                    }
+                }
+                if ($names !== []) {
+                    $entry['fields'] = $names;
+                }
+            }
+            if (isset($problem['error']) && is_scalar($problem['error'])) {
+                $entry['error'] = self::redact(RecordsApplyProblems::safe((string) $problem['error']));
+            }
+            if ($entry !== []) {
+                $listed[] = $entry;
+            }
+        }
+
+        return $listed;
+    }
+
+    /**
+     * @param array<string, list<string>> $recordIds
+     * @return array<string, list<string>>
+     */
+    private static function recordIds(array $recordIds): array
+    {
+        $listed = [];
+        foreach ($recordIds as $table => $ids) {
+            if (!is_array($ids)) {
+                continue;
+            }
+            $safeIds = [];
+            foreach (array_slice($ids, 0, self::MAX_FIELD_NAMES) as $id) {
+                if (is_scalar($id)) {
+                    $safeIds[] = RecordsApplyProblems::safe((string) $id);
+                }
+            }
+            if ($safeIds !== []) {
+                $listed[RecordsApplyProblems::safe((string) $table)] = $safeIds;
+            }
+        }
+
+        return $listed;
+    }
+
+    /**
+     * Quoted record text stays out of the log. CType and colPos are kept, cut to 80 characters,
+     * because those values are what a refusal is about. The record title stays hidden.
      */
     private static function redact(string $text): string
     {
-        $text = preg_replace('/"[^"]*"/u', '"…"', $text) ?? '';
+        $kept = [];
+        $text = preg_replace_callback(
+            '/\b(CType|colPos)\s+"([^"]*)"/u',
+            static function (array $match) use (&$kept): string {
+                $token = "\x00K" . count($kept) . "\x00";
+                $kept[$token] = $match[1] . ' "' . RecordsApplyProblems::safe($match[2]) . '"';
 
-        return preg_replace('/(?<![\p{L}\p{N}])\'[^\']*\'/u', '\'…\'', $text) ?? '';
+                return $token;
+            },
+            $text,
+        ) ?? $text;
+        $text = preg_replace('/"[^"]*"/u', '"…"', $text) ?? '';
+        $text = preg_replace('/(?<![\p{L}\p{N}])\'[^\']*\'/u', '\'…\'', $text) ?? '';
+
+        return strtr($text, $kept);
     }
 }

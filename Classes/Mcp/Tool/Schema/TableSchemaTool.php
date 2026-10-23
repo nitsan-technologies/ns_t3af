@@ -52,11 +52,16 @@ readonly class TableSchemaTool implements McpNonAiToolInterface
     {
         $this->permissionService->assertCanSelectTable($tableName);
 
+        $missing = $this->tcaSchemaService->missingTableMessage($tableName);
+        if ($missing !== null) {
+            throw new \InvalidArgumentException($missing, 1790600004);
+        }
+
         $schema = $this->tcaSchemaService->getFieldsSchema($tableName);
 
         if ($schema['fields'] === []) {
             throw new \InvalidArgumentException(
-                'Table not found or has no readable fields: ' . $tableName,
+                $this->tcaSchemaService->noReadableFieldsMessage($tableName),
                 1790600004,
             );
         }

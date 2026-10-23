@@ -185,6 +185,33 @@ final class WriteTableToolExecuteTest extends TestCase
     }
 
     #[Test]
+    public function createThatOnlySetsACollectionFieldNamesTheChildTable(): void
+    {
+        $this->engine->expects(self::never())->method('apply');
+        $GLOBALS['TCA']['nitsan_nsfaq_faq'] = [
+            'ctrl' => ['label' => 'title'],
+            'columns' => [
+                'title' => ['config' => ['type' => 'input']],
+                'foreign_table_parent_uid' => ['config' => ['type' => 'passthrough']],
+            ],
+        ];
+        $GLOBALS['TCA']['tt_content']['columns']['nitsan_nsfaq_faq'] = [
+            'config' => [
+                'type' => 'inline',
+                'foreign_table' => 'nitsan_nsfaq_faq',
+                'foreign_field' => 'foreign_table_parent_uid',
+            ],
+        ];
+
+        $result = $this->callTool('create', '{"pid":5,"nitsan_nsfaq_faq":"1,2"}');
+
+        self::assertStringStartsWith('No valid writable fields provided. nitsan_nsfaq_faq: ', $result['error']);
+        self::assertStringContainsString('nitsan_nsfaq_faq', $result['error']);
+        self::assertStringContainsString('foreign_table_parent_uid', $result['error']);
+        self::assertSame('collection', $result['ignoredFieldDetails'][0]['reason']);
+    }
+
+    #[Test]
     public function fieldsTheEngineDropsAreReportedAsIgnored(): void
     {
         $this->engine->method('apply')->willReturn(new RecordsApplyResult(
@@ -273,6 +300,32 @@ final class WriteTableToolExecuteTest extends TestCase
     }
 
     #[Test]
+    public function updateThatOnlySetsACollectionFieldNamesTheChildTable(): void
+    {
+        $this->recordService->method('findExistingUids')->willReturn([42]);
+        $this->engine->expects(self::never())->method('apply');
+        $GLOBALS['TCA']['nitsan_nsfaq_faq'] = [
+            'ctrl' => ['label' => 'title'],
+            'columns' => [
+                'title' => ['config' => ['type' => 'input']],
+                'foreign_table_parent_uid' => ['config' => ['type' => 'passthrough']],
+            ],
+        ];
+        $GLOBALS['TCA']['tt_content']['columns']['nitsan_nsfaq_faq'] = [
+            'config' => [
+                'type' => 'inline',
+                'foreign_table' => 'nitsan_nsfaq_faq',
+                'foreign_field' => 'foreign_table_parent_uid',
+            ],
+        ];
+
+        $error = $this->callTool('update', '{"nitsan_nsfaq_faq":"7,6"}', 42)['error'];
+
+        self::assertStringStartsWith('No valid writable fields provided. nitsan_nsfaq_faq: ', $error);
+        self::assertStringContainsString('foreign_table_parent_uid', $error);
+    }
+
+    #[Test]
     public function deleteHandsACmdDeleteToTheEngine(): void
     {
         $this->recordService->method('findExistingUids')->willReturn([42]);
@@ -328,31 +381,38 @@ final class WriteTableToolExecuteTest extends TestCase
     }
 
     #[Test]
-    public function aRefusalBeforeTheWriteIsReportedWithItsProblems(): void
+    public function aRefusalBeforeTheWriteIsRethrownWithTheAuditedCode(): void
     {
         $this->engine->method('apply')->willThrowException(new RecordsApplyValidationException([
             ['table' => 'tt_content', 'id' => 'NEWrecord', 'error' => 'Page 404 was not found or is not accessible.'],
             ['table' => 'tt_content', 'id' => 'NEWrecord', 'error' => 'Not writable fields (strict mode refuses the whole call).', 'fields' => ['a', 'b']],
         ]));
 
-        self::assertSame(
-            'Page 404 was not found or is not accessible.; Not writable fields (strict mode refuses the whole call). (a, b)',
-            $this->callTool('create', '{"pid":404,"header":"Hi"}')['error'],
-        );
+        try {
+            $this->tool->execute('create', 'tt_content', '{"pid":404,"header":"Hi"}');
+            self::fail('Expected the validation refusal to leave write_table.');
+        } catch (ToolCallException $exception) {
+            self::assertSame(1790500006, $exception->getCode());
+            self::assertSame(
+                'Page 404 was not found or is not accessible.; Not writable fields (strict mode refuses the whole call). (a, b)',
+                $exception->getMessage(),
+            );
+        }
     }
 
     #[Test]
-    public function aDataHandlerRefusalKeepsTheMessageFormatClientsKnow(): void
+    public function aDataHandlerRefusalIsRethrownWithItsAuditedCode(): void
     {
-        $this->engine->method('apply')->willThrowException(new ToolCallException(
-            (string) json_encode(['ok' => false, 'stage' => 'datahandler', 'errors' => ['first', 'second']]),
-            1790500004,
-        ));
+        $message = (string) json_encode(['ok' => false, 'stage' => 'datahandler', 'errors' => ['first', 'second']]);
+        $this->engine->method('apply')->willThrowException(new ToolCallException($message, 1790500004));
 
-        self::assertSame(
-            'DataHandler errors: first; second',
-            $this->callTool('create', '{"pid":5,"header":"Hi"}')['error'],
-        );
+        try {
+            $this->tool->execute('create', 'tt_content', '{"pid":5,"header":"Hi"}');
+            self::fail('Expected the DataHandler refusal to leave write_table.');
+        } catch (ToolCallException $exception) {
+            self::assertSame(1790500004, $exception->getCode());
+            self::assertSame($message, $exception->getMessage());
+        }
     }
 
     /**

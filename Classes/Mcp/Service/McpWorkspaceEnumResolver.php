@@ -47,7 +47,7 @@ readonly class McpWorkspaceEnumResolver
         }
 
         $description = 'Optional: run this call in a draft workspace instead of the default. '
-            . 'Leave it out to use the workspace selected in the TYPO3 MCP Server backend module (Live unless a draft workspace is selected there). '
+            . 'Leave it out to use the workspace selected in the MCP Server backend module (Live unless a draft workspace is selected there). '
             . 'The value applies to this call only.';
 
         return $parts === [] ? $description : $description . ' Draft workspaces: ' . implode(', ', $parts) . '.';
