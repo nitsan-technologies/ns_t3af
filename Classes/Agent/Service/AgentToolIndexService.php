@@ -29,6 +29,7 @@ use Symfony\AI\Store\Document\Metadata;
 use Symfony\AI\Store\Document\VectorDocument;
 use Symfony\AI\Store\Document\VectorDocumentInterface;
 use Symfony\AI\Store\InMemory\Store;
+use Symfony\AI\Store\Query\TextQuery;
 use Symfony\AI\Store\Query\VectorQuery;
 
 /**
@@ -138,6 +139,70 @@ final class AgentToolIndexService implements AgentToolIndexInterface
                 'name' => $name,
                 'score' => $similarity,
             ];
+        }
+
+        if ($out !== []) {
+            return $out;
+        }
+
+        if (trim($message) !== '' && $store->supports(TextQuery::class)) {
+            $textResults = iterator_to_array($store->query(
+                new TextQuery([$message]),
+                ['maxItems' => $limit],
+            ), false);
+            foreach ($textResults as $document) {
+                if (!$document instanceof VectorDocumentInterface) {
+                    continue;
+                }
+                $out[] = [
+                    'name' => (string) $document->getId(),
+                    'score' => 0.5,
+                ];
+            }
+        }
+
+        if ($out !== []) {
+            return $out;
+        }
+
+        return $this->fallbackKeywordHitsFromCache($message, $limit);
+    }
+
+    /**
+     * @return list<array{name: string, score: float}>
+     */
+    private function fallbackKeywordHitsFromCache(string $message, int $limit): array
+    {
+        $cached = $this->cache->get(self::CACHE_KEY);
+        if (!is_array($cached) || !is_array($cached['documents'] ?? null)) {
+            return [];
+        }
+
+        $needle = strtolower(trim($message));
+        if ($needle === '') {
+            return [];
+        }
+
+        $out = [];
+        foreach ($cached['documents'] as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $id = (string) ($row['id'] ?? '');
+            if ($id === '') {
+                continue;
+            }
+            $haystack = strtolower(str_replace('_', ' ', $id) . "\n" . (string) ($row['text'] ?? ''));
+            if (!str_contains($haystack, $needle)) {
+                continue;
+            }
+            $out[] = [
+                'name' => $id,
+                'score' => 0.5,
+            ];
+            if (count($out) >= $limit) {
+                break;
+            }
         }
 
         return $out;
