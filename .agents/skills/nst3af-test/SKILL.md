@@ -24,3 +24,4 @@ Rules:
 - Vendor lives at `.Build/vendor/` (not root `vendor/`).
 - Fix PHPStan in new namespaces (`Provider/`, `Api/`, `Service/AiService`) before merging.
 - Architecture tests: `Tests/Architecture/ArchitectureTest.php` (phpat via phpstan.neon).
+- Cheap QA: load `qa/INDEX.md` and run `php qa/scope.php change` (or `smoke`). Do not open `qa/cases/` unless the script prints OPEN. Manual / live AI only if the user asked.

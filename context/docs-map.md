@@ -16,6 +16,7 @@
 | Feature summaries | `context/features/<name>.md` |
 | Deep specs (on demand) | `context/specs/FEATURE_*.md` |
 | Workflows | `tasks/*.md` |
+| Cheap QA index | `qa/INDEX.md` |
 | Session log | `context/session-state.md` |
 | AI Permissions (wizard, matrix, enforcement) | `context/features/ai-access-roles.md`, `Documentation/Developer/CustomAiAccess.rst` |
 
@@ -76,6 +77,7 @@ Build locally: `composer doc-watch` from package root.
 | Credits API changes for child extensions (2026-07) | `context/features/child-extensions-credits-api-migration.md` |
 | MCP OAuth / tools | `context/features/mcp-server.md`, `Documentation/McpServer/` |
 | Run tests / CI | `tasks/run-quality.md` |
+| QA a change (cheap) | `qa/INDEX.md` + `php qa/scope.php` — do not load `qa/cases/` |
 | Backend module markup / CSS conventions | `context/Typo3CoreBackendDesign.md` |
 | Backend AI Agent (right-edge panel, NL, drafts, file context) | `context/features/ai-agent.md`, public: `Documentation/Agent/Index.rst` |
 | Agent routing / preview-apply / eval | `Documentation/Agent/Routing.md`, `PreviewApply.md`, `Eval.md`, `VerifySuite.md` |

@@ -4,6 +4,7 @@ From `packages/ns_t3af/`:
 
 ```bash
 composer install    # first time; vendor at .Build/vendor/
+php qa/scope.php change   # which tests to run for a diff (no case files)
 composer test
 composer stan
 composer cs:check
@@ -26,6 +27,7 @@ ddev exec typo3 cache:flush
 | Provider / adapter | + manual connection test in backend |
 | TCA / SQL | `composer test:functional` if tests exist |
 | Context/docs only | no PHP required |
+| Cheap QA scope | `php qa/scope.php` — do not open `qa/cases/` unless OPEN |
 
 ## CI
 

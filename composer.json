@@ -151,7 +151,8 @@
         "smoke:standalone": [
             "@composer test",
             "@composer stan"
-        ]
+        ],
+        "qa:scope": "php qa/scope.php"
     },
     "scripts-descriptions": {
         "cs:check": "Run PHP-CS-Fixer in dry-run mode",
@@ -164,7 +165,8 @@
         "test:coverage": "Run unit tests with Clover/text coverage (.Build/logs/clover.xml)",
         "test:functional": "Run TYPO3 functional tests with SQLite (Build/phpunit/FunctionalTests.xml)",
         "test:all": "Run unit tests then functional tests",
-        "smoke:standalone": "Run unit tests + PHPStan (foundation-only CI smoke)"
+        "smoke:standalone": "Run unit tests + PHPStan (foundation-only CI smoke)",
+        "qa:scope": "Print cheap QA scope (php qa/scope.php). Pass smoke|change|feature after --"
     },
     "require-dev": {
         "doctrine/instantiator": "~2.0.0",
