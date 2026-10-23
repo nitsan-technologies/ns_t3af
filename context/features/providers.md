@@ -61,6 +61,8 @@
 - Import adapters from controllers (phpat blocks this).
 - Return decrypted keys to the browser (mask only).
 - Auto-run `testConnection()` on every save (latency / rate limits); require an explicit Test connection.
+- Block the save HTTP request on a full agent tool `embedMany` rebuild; schedule it after the response when embedding-relevant fields change.
+
 ---
 
 ## Verification

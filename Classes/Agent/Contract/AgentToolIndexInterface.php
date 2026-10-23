@@ -28,6 +28,9 @@ interface AgentToolIndexInterface
 {
     public function rebuild(): void;
 
+    /** Drop cached vectors so the next {@see rebuild()} or {@see ensureFresh()} recomputes them. */
+    public function invalidate(): void;
+
     /**
      * Ensure the cached tool index matches the current tool definitions.
      *

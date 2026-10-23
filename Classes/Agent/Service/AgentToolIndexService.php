@@ -55,13 +55,18 @@ final class AgentToolIndexService implements AgentToolIndexInterface
         private readonly AgentToolDocumentBuilder $documentBuilder,
     ) {}
 
+    public function invalidate(): void
+    {
+        $this->cache->remove(self::CACHE_KEY);
+        $this->hydratedStore = null;
+        $this->hydratedFingerprint = null;
+    }
+
     public function rebuild(): void
     {
         $source = $this->embeddingSourceResolver->resolve();
         if ($source === null) {
-            $this->cache->remove(self::CACHE_KEY);
-            $this->hydratedStore = null;
-            $this->hydratedFingerprint = null;
+            $this->invalidate();
 
             return;
         }
