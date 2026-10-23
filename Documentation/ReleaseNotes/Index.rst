@@ -22,6 +22,7 @@ List of versions
    2.0.2/Index
    2.0.1/Index
    2.0.0/Index
+   1.2.5/Index
    1.2.4/Index
    1.2.3/Index
    1.2.2/Index
