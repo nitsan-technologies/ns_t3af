@@ -107,6 +107,14 @@ final class AgentToolIndexService implements AgentToolIndexInterface
         $this->ensureFresh(rebuildIfStale: false);
         $store = $this->hydrateStore($source);
         if ($store === null) {
+            $cached = $this->cache->get(self::CACHE_KEY);
+            if (is_array($cached) && is_array($cached['documents'] ?? null) && $cached['documents'] !== []) {
+                $this->hydratedStore = null;
+                $this->hydratedFingerprint = null;
+                $store = $this->hydrateStore($source);
+            }
+        }
+        if ($store === null) {
             return [];
         }
 

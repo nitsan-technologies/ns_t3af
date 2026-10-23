@@ -233,14 +233,7 @@ final class AgentToolIndexServiceTest extends TestCase
 
             public function embed(string $text): array
             {
-                $unpacked = unpack('C*', hash('sha256', $text, true));
-                $bytes = is_array($unpacked) ? array_values($unpacked) : [1, 2, 3];
-
-                return [
-                    ($bytes[0] ?? 1) / 255.0,
-                    ($bytes[1] ?? 2) / 255.0,
-                    ($bytes[2] ?? 3) / 255.0,
-                ];
+                return deterministicUnitTestVector($text);
             }
 
             public function embedMany(array $texts): array
@@ -254,6 +247,26 @@ final class AgentToolIndexServiceTest extends TestCase
 /**
  * @internal
  */
+/**
+ * Normalized 32-d vectors — 3-d stubs can make Symfony cosine search return no hits on some PHP versions.
+ *
+ * @return list<float>
+ */
+function deterministicUnitTestVector(string $text): array
+{
+    $hash = hash('sha256', $text, true);
+    $vector = [];
+    for ($i = 0; $i < 32; ++$i) {
+        $vector[] = (ord($hash[$i]) - 128) / 128.0;
+    }
+    $norm = sqrt(array_sum(array_map(static fn(float $v): float => $v * $v, $vector)));
+    if ($norm > 0.0) {
+        $vector = array_map(static fn(float $v): float => $v / $norm, $vector);
+    }
+
+    return $vector;
+}
+
 final class InMemoryCacheFacade implements CacheFacadeInterface
 {
     /** @var array<string, mixed> */
