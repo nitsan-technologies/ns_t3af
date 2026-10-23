@@ -180,10 +180,10 @@ final class AgentToolIndexServiceTest extends TestCase
 
         $firstDocument = $cached['documents'][0];
         self::assertIsArray($firstDocument);
-        $queryText = (string) ($firstDocument['text'] ?? 'page');
-        self::assertNotSame('', $queryText);
+        $definitionHash = new \ReflectionMethod(AgentToolIndexService::class, 'definitionHash');
+        self::assertSame((string) ($cached['hash'] ?? ''), $definitionHash->invoke($service));
 
-        $hits = $service->search(ProviderEmbeddingSource::ID, $queryText, 5);
+        $hits = $service->search(ProviderEmbeddingSource::ID, 'page', 5);
 
         self::assertNotSame([], $hits);
         self::assertArrayHasKey('name', $hits[0]);
@@ -243,7 +243,7 @@ final class AgentToolIndexServiceTest extends TestCase
 
             public function embed(string $text): array
             {
-                return deterministicUnitTestVector($text);
+                return unitTestToolIndexEmbedding();
             }
 
             public function embedMany(array $texts): array
@@ -256,10 +256,17 @@ final class AgentToolIndexServiceTest extends TestCase
 
 /**
  * @internal
- */
-/**
- * Normalized 32-d vectors — 3-d stubs can make Symfony cosine search return no hits on some PHP versions.
  *
+ * @return list<float>
+ */
+function unitTestToolIndexEmbedding(): array
+{
+    static $vector = null;
+
+    return $vector ??= deterministicUnitTestVector('ns_t3af_agent_tool_index_unit');
+}
+
+/**
  * @return list<float>
  */
 function deterministicUnitTestVector(string $text): array

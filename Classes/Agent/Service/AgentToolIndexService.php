@@ -263,11 +263,16 @@ final class AgentToolIndexService implements AgentToolIndexInterface
 
     private function definitionHash(): string
     {
+        $tools = $this->indexableTools();
+        usort(
+            $tools,
+            static fn(array $a, array $b): int => strcmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? '')),
+        );
+
         $parts = [];
-        foreach ($this->indexableTools() as $tool) {
+        foreach ($tools as $tool) {
             $parts[] = $this->buildDocumentText($tool);
         }
-        sort($parts);
 
         return hash('sha256', implode("\n", $parts));
     }
