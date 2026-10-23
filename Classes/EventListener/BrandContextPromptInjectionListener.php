@@ -296,6 +296,7 @@ final class BrandContextPromptInjectionListener
             pageId: $options->pageId,
             requestUuid: $options->requestUuid,
             extra: $options->extra,
+            timeoutSeconds: $options->timeoutSeconds,
         );
     }
 
@@ -317,6 +318,7 @@ final class BrandContextPromptInjectionListener
             pageId: $options->pageId,
             requestUuid: $options->requestUuid,
             extra: BrandContextLineage::stampExtra($options->extra, $profileUid),
+            timeoutSeconds: $options->timeoutSeconds,
         );
     }
 
@@ -344,6 +346,7 @@ final class BrandContextPromptInjectionListener
             pageId: $options->pageId,
             requestUuid: $options->requestUuid,
             extra: $extra,
+            timeoutSeconds: $options->timeoutSeconds,
         );
     }
 }

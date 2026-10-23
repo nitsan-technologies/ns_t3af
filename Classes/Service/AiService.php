@@ -34,6 +34,7 @@ use NITSAN\NsT3AF\Exception\AdapterRuntimeException;
 use NITSAN\NsT3AF\Exception\UnknownAdapterException;
 use NITSAN\NsT3AF\Provider\AdapterRegistry;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
+use NITSAN\NsT3AF\Provider\Contract\RequestTimeoutCapableInterface;
 use NITSAN\NsT3AF\Provider\OpenAiCompatible\OpenAiCompatiblePlatform;
 use NITSAN\NsT3AF\Provider\ProviderCapabilityGuard;
 use NITSAN\NsT3AF\Provider\SymfonyAi\SymfonyAiBridgeAdapter;
@@ -72,6 +73,25 @@ final class AiService implements AiServiceInterface
         private readonly ?RequestTelemetryService $telemetry = null,
     ) {}
 
+    /**
+     * Platform for one call; bounded by {@see AiOptions::$timeoutSeconds} when the adapter supports it.
+     */
+    private function platformFor(AdapterInterface $adapter, Provider $provider, AiOptions $options): object
+    {
+        if ($options->timeoutSeconds !== null && $options->timeoutSeconds > 0 && $adapter instanceof RequestTimeoutCapableInterface) {
+            return $adapter->platformWithTimeout($provider, $options->timeoutSeconds);
+        }
+
+        return $adapter->platform($provider);
+    }
+
+    /**
+     * Token usage of the last stream read through a Symfony AI result (its ``token_usage`` metadata), OpenAI shape.
+     *
+     * @var array<string, int>
+     */
+    private array $lastBridgeStreamUsage = [];
+
     public function complete(string $prompt, AiOptions $options = new AiOptions()): AiResponse
     {
         $provider = $this->provider($options->providerIdentifier, $options->pageId);
@@ -93,7 +113,7 @@ final class AiService implements AiServiceInterface
 
         $start = (int) (microtime(true) * 1000);
         try {
-            $platform = $adapter->platform($provider);
+            $platform = $this->platformFor($adapter, $provider, $before->getOptions());
             $invocation = $this->invokePlatform(
                 $platform,
                 $provider,
@@ -102,6 +122,7 @@ final class AiService implements AiServiceInterface
                 $before->getOptions(),
             );
         } catch (\Throwable $e) {
+            $this->markDisconnectedWhenModelUnsupported($provider, $e);
             $this->telemetry?->logFailure(
                 provider: $provider,
                 options: $before->getOptions(),
@@ -165,8 +186,9 @@ final class AiService implements AiServiceInterface
 
         $start = (int) (microtime(true) * 1000);
         $content = '';
+        $streamUsage = [];
         try {
-            $platform = $adapter->platform($provider);
+            $platform = $this->platformFor($adapter, $provider, $before->getOptions());
             $modelId = $this->effectiveModel($provider, $before->getOptions());
 
             if (method_exists($platform, 'stream')) {
@@ -175,12 +197,18 @@ final class AiService implements AiServiceInterface
                     $content .= $delta;
                     yield $delta;
                 }
+                if (method_exists($platform, 'lastStreamUsage')) {
+                    $usage = $platform->lastStreamUsage();
+                    $streamUsage = is_array($usage) ? $usage : [];
+                }
             } elseif (method_exists($platform, 'invoke')) {
                 $payloads = $this->symfonyPlatformInvokePayloads($before->getPrompt(), $provider, $modelId, $before->getOptions());
+                $this->lastBridgeStreamUsage = [];
                 foreach ($this->streamViaPlatformInvoke($platform, $modelId, $payloads, $adapter) as $delta) {
                     $content .= $delta;
                     yield $delta;
                 }
+                $streamUsage = $this->lastBridgeStreamUsage;
             } else {
                 throw new AdapterRuntimeException(sprintf(
                     'Adapter "%s" platform exposes neither stream() nor invoke() for streaming.',
@@ -193,10 +221,13 @@ final class AiService implements AiServiceInterface
                 return;
             }
 
+            [$tokensInput, $tokensOutput] = $streamUsage !== [] ? $this->extractUsageFromUsageArray($streamUsage) : [0, 0];
             $response = new AiResponse(
                 content: $content,
                 modelId: $modelId,
                 providerIdentifier: $provider->identifier,
+                tokensInput: $tokensInput,
+                tokensOutput: $tokensOutput,
                 latencyMs: (int) (microtime(true) * 1000) - $start,
                 cached: false,
                 raw: [],
@@ -222,6 +253,7 @@ final class AiService implements AiServiceInterface
 
             return new StreamSummary(content: $finalResponse->content);
         } catch (\Throwable $e) {
+            $this->markDisconnectedWhenModelUnsupported($provider, $e);
             $this->telemetry?->logFailure(
                 provider: $provider,
                 options: $before->getOptions(),
@@ -284,7 +316,7 @@ final class AiService implements AiServiceInterface
                     $text,
                 );
             } else {
-                $platform = $adapter->platform($provider);
+                $platform = $this->platformFor($adapter, $provider, $before->getOptions());
                 $invocation = $this->embedPlatform(
                     $platform,
                     $provider,
@@ -293,6 +325,7 @@ final class AiService implements AiServiceInterface
                 );
             }
         } catch (\Throwable $e) {
+            $this->markDisconnectedWhenModelUnsupported($provider, $e);
             $this->telemetry?->logFailure(
                 provider: $provider,
                 options: $before->getOptions(),
@@ -1117,6 +1150,7 @@ final class AiService implements AiServiceInterface
                 foreach ($result->asTextStream() as $delta) {
                     yield $this->coerceStreamChunk($delta);
                 }
+                $this->lastBridgeStreamUsage = $this->readBridgeTokenUsage($result);
 
                 return;
             } catch (\Throwable $e) {
@@ -1132,6 +1166,7 @@ final class AiService implements AiServiceInterface
                 foreach ($result->asStream() as $delta) {
                     yield $this->coerceStreamChunk($delta);
                 }
+                $this->lastBridgeStreamUsage = $this->readBridgeTokenUsage($result);
 
                 return;
             } catch (\Throwable $e) {
@@ -1174,6 +1209,33 @@ final class AiService implements AiServiceInterface
 
         return str_contains($message, 'Unexpected response type:')
             && str_contains($message, 'StreamResult');
+    }
+
+    /**
+     * Symfony AI collects the usage chunk of a stream (Mistral sends it by default, OpenAI-compatible bridges ask for
+     * it) into the result metadata as ``token_usage`` once the stream is read. Read only; empty when not available.
+     *
+     * @return array<string, int>
+     */
+    private function readBridgeTokenUsage(object $result): array
+    {
+        try {
+            $metadata = method_exists($result, 'getMetadata') ? $result->getMetadata() : null;
+            $usage = is_object($metadata) && method_exists($metadata, 'get') ? $metadata->get('token_usage') : null;
+        } catch (\Throwable) {
+            return [];
+        }
+        if (!is_object($usage)) {
+            return [];
+        }
+        $prompt = method_exists($usage, 'getPromptTokens') ? (int) $usage->getPromptTokens() : 0;
+        $completion = method_exists($usage, 'getCompletionTokens') ? (int) $usage->getCompletionTokens() : 0;
+        $total = method_exists($usage, 'getTotalTokens') ? (int) $usage->getTotalTokens() : 0;
+        if ($prompt <= 0 && $completion <= 0 && $total <= 0) {
+            return [];
+        }
+
+        return ['prompt_tokens' => max(0, $prompt), 'completion_tokens' => max(0, $completion), 'total_tokens' => max(0, $total)];
     }
 
     private function coerceStreamChunk(mixed $chunk): string
@@ -1229,6 +1291,36 @@ final class AiService implements AiServiceInterface
             || str_contains($message, 'no supporting normalizer found')
             || str_contains($message, "invalid 'input'")
             || str_contains($message, 'expected a string or token array');
+    }
+
+    private function markDisconnectedWhenModelUnsupported(Provider $provider, \Throwable $error): void
+    {
+        if ($provider->uid <= 0 || !$this->exceptionChainMentionsUnsupportedModel($error)) {
+            return;
+        }
+        $message = trim($error->getMessage());
+        if ($message === '') {
+            $message = 'Model not supported by this provider.';
+        }
+        $this->providerRepository?->updateStatus($provider->uid, [
+            'last_status' => 'disconnected',
+            'last_status_at' => $GLOBALS['EXEC_TIME'] ?? time(),
+            'last_status_message' => mb_substr($message, 0, 250),
+        ]);
+    }
+
+    private function exceptionChainMentionsUnsupportedModel(\Throwable $error): bool
+    {
+        $current = $error;
+        for ($depth = 0; $depth < 5 && $current instanceof \Throwable; $depth++) {
+            $lower = mb_strtolower($current->getMessage(), 'UTF-8');
+            if (str_contains($lower, 'no provider found for model') || str_contains($lower, 'not supported by this provider')) {
+                return true;
+            }
+            $current = $current->getPrevious();
+        }
+
+        return false;
     }
 
     private function mapRuntimeException(Provider $provider, string $callType, \Throwable $error): AdapterRuntimeException

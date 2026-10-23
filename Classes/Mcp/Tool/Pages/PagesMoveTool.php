@@ -67,6 +67,7 @@ readonly class PagesMoveTool implements McpNonAiToolInterface, McpPlannableToolI
      */
     public function plan(array $arguments): ToolPlan
     {
+        self::assertSinglePositionArgument($arguments);
         $uid = (int) ($arguments['uid'] ?? 0);
         $target = $this->resolveTarget($arguments);
 
@@ -114,7 +115,7 @@ readonly class PagesMoveTool implements McpNonAiToolInterface, McpPlannableToolI
     )]
     public function execute(int $uid, int $beforeUid = 0, int $afterUid = 0, int $targetPid = -1, int $target = 0): string
     {
-        $arguments = ['target' => $target];
+        $arguments = ['uid' => $uid, 'target' => $target];
         if ($beforeUid > 0) {
             $arguments['beforeUid'] = $beforeUid;
         }
@@ -124,6 +125,7 @@ readonly class PagesMoveTool implements McpNonAiToolInterface, McpPlannableToolI
         if ($targetPid !== -1) {
             $arguments['targetPid'] = $targetPid;
         }
+        self::assertSinglePositionArgument($arguments);
         $resolved = $this->resolveTarget($arguments);
         if ($uid <= 0 || $resolved === 0) {
             throw new \InvalidArgumentException('Move requires a page uid and beforeUid, afterUid, or targetPid.');
@@ -132,6 +134,32 @@ readonly class PagesMoveTool implements McpNonAiToolInterface, McpPlannableToolI
         $this->dataHandlerService->moveRecord('pages', $uid, $resolved);
 
         return json_encode(['uid' => $uid, 'target' => $resolved, 'moved' => true], JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public static function assertSinglePositionArgument(array $arguments): void
+    {
+        $count = 0;
+        if ((int) ($arguments['beforeUid'] ?? 0) > 0) {
+            ++$count;
+        }
+        if ((int) ($arguments['afterUid'] ?? 0) > 0) {
+            ++$count;
+        }
+        if (array_key_exists('targetPid', $arguments) && (int) $arguments['targetPid'] >= 0) {
+            ++$count;
+        }
+        if ((int) ($arguments['target'] ?? 0) !== 0) {
+            ++$count;
+        }
+
+        if ($count !== 1) {
+            throw new \InvalidArgumentException(
+                'Move requires exactly one of beforeUid, afterUid, targetPid, or target.',
+            );
+        }
     }
 
     /**

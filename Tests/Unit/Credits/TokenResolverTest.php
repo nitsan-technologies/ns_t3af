@@ -34,10 +34,16 @@ final class TokenResolverTest extends TestCase
     /** @var array<string, mixed>|null */
     private ?array $previousTypo3ConfVars = null;
 
+    private string|false $previousDdevPrimaryUrl = false;
+
     protected function setUp(): void
     {
         $this->previousTypo3ConfVars = $GLOBALS['TYPO3_CONF_VARS'] ?? null;
         $GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey'] = 'unit-test-key-' . str_repeat('x', 32);
+
+        $this->previousDdevPrimaryUrl = getenv('DDEV_PRIMARY_URL');
+        putenv('DDEV_PRIMARY_URL');
+        unset($_SERVER['HTTP_HOST'], $_SERVER['SERVER_NAME']);
     }
 
     protected function tearDown(): void
@@ -46,6 +52,14 @@ final class TokenResolverTest extends TestCase
             unset($GLOBALS['TYPO3_CONF_VARS']);
         } else {
             $GLOBALS['TYPO3_CONF_VARS'] = $this->previousTypo3ConfVars;
+        }
+
+        if ($this->previousDdevPrimaryUrl === false) {
+            putenv('DDEV_PRIMARY_URL');
+        } elseif ($this->previousDdevPrimaryUrl === '') {
+            putenv('DDEV_PRIMARY_URL=');
+        } else {
+            putenv('DDEV_PRIMARY_URL=' . $this->previousDdevPrimaryUrl);
         }
     }
 

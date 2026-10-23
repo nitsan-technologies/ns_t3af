@@ -29,8 +29,6 @@ use NITSAN\NsT3AF\Mcp\Prompt\McpDynamicPromptRegistrar;
 use NITSAN\NsT3AF\Mcp\Server\Session\DatabaseSessionStore;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpToolLogService;
 use NITSAN\NsT3AF\Mcp\Service\McpInvocationContext;
-use NITSAN\NsT3AF\Mcp\Service\McpToolDescriptionResolver;
-use NITSAN\NsT3AF\Mcp\Service\McpToolSchemaAugmenter;
 use NITSAN\NsT3AF\Mcp\Tool\Custom\McpCustomToolRegistrar;
 use NITSAN\NsT3AF\Mcp\Tool\Dynamic\NsT3afDynamicToolRegistrar;
 use NITSAN\NsT3AF\Settings\ExtensionSettingsService;
@@ -43,7 +41,7 @@ use ReflectionMethod;
  */
 readonly class McpServerFactory
 {
-    public const VERSION = '2.0.3';
+    public const VERSION = '2.0.4';
 
     private const DEFAULT_SESSION_LIFETIME = 86400;
 
@@ -65,8 +63,7 @@ readonly class McpServerFactory
         private NsT3afDynamicToolRegistrar $dynamicToolRegistrar,
         private McpCustomToolRegistrar $customToolRegistrar,
         private McpDynamicPromptRegistrar $dynamicPromptRegistrar,
-        private McpToolSchemaAugmenter $toolSchemaAugmenter,
-        private McpToolDescriptionResolver $toolDescriptionResolver,
+        private McpServerToolRegistration $toolRegistration,
         private McpInvocationContext $invocationContext,
     ) {
         $config = $extensionSettingsService->getAll('ns_t3af');
@@ -123,17 +120,23 @@ readonly class McpServerFactory
             foreach ($this->tools as $tool) {
                 $attribute = $this->getMethodAttribute($tool, McpTool::class);
                 $handler = [$tool::class, 'execute'];
-                $builder->addTool(
+                $this->toolRegistration->addTool(
+                    $builder,
                     $handler,
                     $attribute?->name,
-                    description: $this->toolDescriptionResolver->resolve($tool, $attribute?->description),
-                    inputSchema: $this->toolSchemaAugmenter->generateForClassHandler($handler),
+                    description: $attribute?->description,
+                    toolInstance: $tool,
                 );
             }
 
             foreach ($this->prompts as $prompt) {
                 $attribute = $this->getMethodAttribute($prompt, McpPrompt::class);
-                $builder->addPrompt([$prompt::class, 'execute'], $attribute?->name);
+                $builder->addPrompt(
+                    [$prompt::class, 'execute'],
+                    $attribute?->name,
+                    title: $attribute?->title,
+                    description: $attribute?->description,
+                );
             }
 
             $this->dynamicToolRegistrar->register($builder);

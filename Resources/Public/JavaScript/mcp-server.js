@@ -80,6 +80,8 @@ function initMcpServerPage(root) {
           copyText(stored);
           return;
         }
+        Notification.error(lang('mcpServer.js.tokenCopyUnavailable', 'Full token unavailable. Revoke and create a new token to copy it again.'));
+        return;
       }
       copyText(el.textContent.trim());
     });
@@ -538,9 +540,27 @@ function restoreStoredTokens(root) {
     if (!client) return;
     const stored = sessionStorage.getItem(clientTokenStorageKey(client));
     if (stored) {
-      el.textContent = stored;
+      el.textContent = stored.length > 12 ? `${stored.slice(0, 8)}…` : stored;
+      el.setAttribute('title', stored);
+      revealCopyWhenStored(root, `client-token-${client}`);
     }
   });
+
+  root.querySelectorAll('[data-copy-when-stored="1"]').forEach((btn) => {
+    const copyKey = btn.getAttribute('data-copy');
+    if (!copyKey?.startsWith('client-token-')) {
+      return;
+    }
+    const client = copyKey.slice('client-token-'.length);
+    if (sessionStorage.getItem(clientTokenStorageKey(client))) {
+      btn.classList.remove('d-none');
+    }
+  });
+}
+
+function revealCopyWhenStored(root, copyKey) {
+  const btn = root.querySelector(`[data-copy="${copyKey}"][data-copy-when-stored="1"]`);
+  btn?.classList.remove('d-none');
 }
 
 function restoreMcpRemotePanel(root) {

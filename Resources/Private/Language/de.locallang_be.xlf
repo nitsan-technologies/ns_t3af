@@ -396,8 +396,8 @@
                 <target>Standard-OAuth-Client-ID: Empfohlene Client-ID für Dokumentation und dynamische Registrierung.</target>
             </trans-unit>
             <trans-unit id="extmng.oauthDefaultRedirectUris">
-                <source>Default OAuth redirect URIs: One allowed redirect URI per line for OAuth clients.</source>
-                <target>Standardmäßige OAuth-Umleitungs-URIs: Ein zulässiger Umleitungs-URI pro Zeile für OAuth-Clients.</target>
+                <source>Default OAuth redirect URIs: One URI per line; leave empty to disable the allow-list. Use a trailing * for prefix rules (e.g. cursor://*).</source>
+                <target>Standardmäßige OAuth-Umleitungs-URIs: Eine URI pro Zeile; leer lassen, um die Allow-List zu deaktivieren. Mit nachgestelltem * als Präfix-Regel (z. B. cursor://*).</target>
             </trans-unit>
             <trans-unit id="extmng.oauthDefaultScopes">
                 <source>Default OAuth scopes: Space-separated default scopes (e.g. mcp:read mcp:write mcp:tools).</source>

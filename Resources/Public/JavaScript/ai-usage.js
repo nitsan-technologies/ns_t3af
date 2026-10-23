@@ -350,7 +350,8 @@ function buildUsageDetailContent(scope, button) {
   const errorCode = (button.getAttribute('data-error-code') || '').trim();
   const errorClass = (button.getAttribute('data-error-class') || '').trim();
   const errorMessage = typeof meta.message === 'string' ? meta.message.trim() : '';
-  const isFailed = status === 'failed' || errorClass !== '' || errorMessage !== '';
+  const userErrorMessage = typeof meta.user_message === 'string' ? meta.user_message.trim() : '';
+  const isFailed = status === 'failed' || errorClass !== '' || errorMessage !== '' || userErrorMessage !== '';
   const mcpMode = typeof meta.mcp_mode === 'string' ? meta.mcp_mode.trim() : '';
 
   const requestRows = [
@@ -387,21 +388,23 @@ function buildUsageDetailContent(scope, button) {
       errorDetailRows.push(buildDetailRow(labels.errorCode, errorCode, { mono: true, empty }));
     }
 
-    const callout = errorMessage !== ''
-      ? `<div class="aiu-ai-usage-detail__callout callout callout-danger mb-0">`
-        + `<div class="callout-title">${escapeHtml(labels.errorMessage)}</div>`
-        + `<div class="callout-body">${escapeHtml(errorMessage)}</div>`
-        + '</div>'
-      : `<div class="aiu-ai-usage-detail__callout callout callout-warning mb-0">`
-        + `<div class="callout-body">${escapeHtml(labels.noErrorMessage)}</div>`
-        + '</div>';
+    const summaryText = userErrorMessage !== '' ? userErrorMessage : labels.noErrorMessage;
+    const technicalBlock = errorMessage !== '' && errorMessage !== userErrorMessage
+      ? `<details class="nst3af-agent-details mt-2 mb-0"><summary>${escapeHtml(labels.technicalDetails ?? 'Technical details')}</summary>`
+        + `<pre class="mb-0 small">${escapeHtml(errorMessage)}</pre></details>`
+      : '';
+
+    const callout = `<div class="aiu-ai-usage-detail__callout callout callout-danger mb-0">`
+      + `<div class="callout-title">${escapeHtml(labels.errorMessage)}</div>`
+      + `<div class="callout-body">${escapeHtml(summaryText)}${technicalBlock}</div>`
+      + '</div>';
 
     errorRows = buildSectionDividerRow(labels.sectionError)
       + buildCalloutRow(callout)
       + errorDetailRows.join('');
   }
 
-  const usedMetaKeys = new Set(['message', 'mcp_mode']);
+  const usedMetaKeys = new Set(['message', 'user_message', 'mcp_mode']);
   let metaRows = '';
   const metaEntries = Object.entries(meta).filter(([key, value]) => {
     if (usedMetaKeys.has(key)) {

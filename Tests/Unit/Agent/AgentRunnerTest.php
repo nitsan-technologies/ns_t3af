@@ -26,6 +26,7 @@ use NITSAN\NsT3AF\Agent\Contract\AgentToolTurnExecutorInterface;
 use NITSAN\NsT3AF\Agent\Embedding\EmbeddingSourceResolver;
 use NITSAN\NsT3AF\Agent\Entitlement\EntitlementResolver;
 use NITSAN\NsT3AF\Agent\PremiumCatalog\PremiumCatalogProvider;
+use NITSAN\NsT3AF\Agent\Runtime\AgentTurnState;
 use NITSAN\NsT3AF\Agent\Runtime\T3afToolbox;
 use NITSAN\NsT3AF\Agent\Service\AgentCoreToolSet;
 use NITSAN\NsT3AF\Agent\Service\AgentEntitlementExplanation;
@@ -1171,6 +1172,24 @@ final class AgentRunnerTest extends TestCase
         self::assertFalse(AgentRunner::offersUnbackedApply('Which page do you mean: Home or About?'));
         self::assertFalse(AgentRunner::offersUnbackedApply('Die Seite hat drei Inhaltselemente.'));
         self::assertFalse(AgentRunner::offersUnbackedApply('You can use the Content module to review the text.'));
+    }
+
+    #[Test]
+    public function shouldRetryForRemainingWorkWhenModelReplyIsEmpty(): void
+    {
+        $runner = $this->makeRunner($this->createMock(AiToolCallingServiceInterface::class), 0);
+        $method = new \ReflectionMethod(AgentRunner::class, 'shouldRetryForRemainingWork');
+        $state = new AgentTurnState('test-correlation');
+        $state->modelId = 'gpt-test';
+        $state->providerIdentifier = 'openai.test';
+        $plan = [['title' => 'Attach image', 'status' => 'open']];
+        $history = [
+            ['role' => 'user', 'content' => 'Generate an image and attach it to the page.'],
+        ];
+
+        self::assertTrue($method->invoke($runner, $state, $plan, $history, 'Generate an image and attach it to the page.', ''));
+        $state->failed = true;
+        self::assertFalse($method->invoke($runner, $state, $plan, $history, 'Generate an image and attach it to the page.', ''));
     }
 
     #[Test]

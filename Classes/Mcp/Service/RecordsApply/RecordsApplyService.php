@@ -56,6 +56,8 @@ readonly class RecordsApplyService
 {
     private const MAX_ERRORS = 20;
 
+    private const DEADLOCK_MAX_ATTEMPTS = 3;
+
     public function __construct(
         private RecordsApplyBulkExpander $bulkExpander,
         private RecordsApplyPreflight $preflight,
@@ -153,7 +155,7 @@ readonly class RecordsApplyService
         }
 
         try {
-            $connection->beginTransaction();
+            $this->beginTransactionWithRetry($connection);
         } catch (\Throwable $throwable) {
             $this->release($lock, $batchId);
 
@@ -197,7 +199,7 @@ readonly class RecordsApplyService
                     $this->logger->error('records_apply: DataHandler threw after transaction ended', ['exception' => $throwable, 'batchId' => $batchId]);
                     $this->audit->log($tool, $batchId, $dryRun, false, 'transaction-broken', $operations, $fieldNames, 'rollback not possible', [], self::recordIds($datamap, $cmdmap));
 
-                    throw $this->transactionBrokenException($batchId, $dryRun, $created, $copied, $throwable);
+                    throw $this->transactionBrokenException($connection, $batchId, $dryRun, $created, $copied, $throwable);
                 }
 
                 $this->rollBack($connection);
@@ -248,7 +250,7 @@ readonly class RecordsApplyService
                 $this->settleDeferredCaches($dataHandler, $dryRun, $batchId);
                 $this->audit->log($tool, $batchId, $dryRun, false, 'transaction-broken', $operations, $fieldNames, 'rollback not possible', [], self::recordIds($datamap, $cmdmap));
 
-                throw $this->transactionBrokenException($batchId, $dryRun, $created, $copied);
+                throw $this->transactionBrokenException($connection, $batchId, $dryRun, $created, $copied);
             }
 
             $errors = self::errors($dataHandler->errorLog);
@@ -516,29 +518,104 @@ readonly class RecordsApplyService
      * @param array<string, array<int, int>> $copied
      */
     private function transactionBrokenException(
+        Connection $connection,
         string $batchId,
         bool $dryRun,
         array $created,
         array $copied,
         ?\Throwable $previous = null,
     ): ToolCallException {
-        // Rows may already be committed when the transaction ended mid-run — including dryRun.
+        $written = $this->anyCreatedRecordsPersisted($connection, $created, $copied);
         $payload = [
             'ok' => false,
-            'written' => true,
+            'written' => $written,
             'dryRun' => $dryRun,
             'stage' => 'transaction-broken',
             'batchId' => $batchId,
             'map' => $created,
-            'note' => 'The database transaction ended during DataHandler (often a cache flush that TRUNCATEs). '
-                . 'Rollback is not possible; the batch may be partially written. New record ids are in "map". '
-                . 'If you passed a requestId, it stays locked so a retry with the same id will not write again — use a new requestId only after you have inspected the map.',
+            'note' => $written
+                ? 'The database transaction ended during DataHandler. Rollback was not possible and some records may be partially written. New record ids are in "map". '
+                    . 'If you passed a requestId, it stays locked so a retry with the same id will not write again — use a new requestId only after you have inspected the map.'
+                : 'The database transaction ended during DataHandler before any created records could be verified in the database. Treat the batch as not written and retry with a new requestId if needed.',
         ];
         if ($copied !== []) {
             $payload['copied'] = $copied;
         }
 
         return new ToolCallException(json_encode($payload, JSON_THROW_ON_ERROR), 1790500007, $previous);
+    }
+
+    private function beginTransactionWithRetry(Connection $connection): void
+    {
+        for ($attempt = 0; $attempt < self::DEADLOCK_MAX_ATTEMPTS; $attempt++) {
+            try {
+                $connection->beginTransaction();
+
+                return;
+            } catch (\Throwable $throwable) {
+                if (!$this->isDeadlockOrLockWait($throwable) || $attempt >= self::DEADLOCK_MAX_ATTEMPTS - 1) {
+                    throw $throwable;
+                }
+                usleep(100_000 * ($attempt + 1));
+            }
+        }
+    }
+
+    private function isDeadlockOrLockWait(\Throwable $throwable): bool
+    {
+        $message = strtolower($throwable->getMessage());
+
+        return str_contains($message, 'deadlock')
+            || str_contains($message, 'lock wait timeout')
+            || str_contains($message, '1213')
+            || str_contains($message, '1205');
+    }
+
+    /**
+     * @param array<string, int> $created
+     * @param array<string, array<int, int>> $copied
+     */
+    private function anyCreatedRecordsPersisted(Connection $connection, array $created, array $copied): bool
+    {
+        foreach ($created as $table => $uid) {
+            if (!is_string($table)) {
+                continue;
+            }
+            if ($this->recordUidExists($connection, $table, (int) $uid)) {
+                return true;
+            }
+        }
+
+        foreach ($copied as $table => $uidMap) {
+            if (!is_string($table) || !is_array($uidMap)) {
+                continue;
+            }
+            foreach ($uidMap as $newUid) {
+                if ($this->recordUidExists($connection, $table, (int) $newUid)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function recordUidExists(Connection $connection, string $table, int $uid): bool
+    {
+        if ($uid <= 0 || $table === '' || !preg_match('/^[a-z0-9_]+$/', $table)) {
+            return false;
+        }
+
+        try {
+            $count = $connection->executeQuery(
+                'SELECT COUNT(*) FROM ' . $connection->quoteIdentifier($table) . ' WHERE uid = ?',
+                [$uid],
+            )->fetchOne();
+
+            return (int) $count > 0;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**

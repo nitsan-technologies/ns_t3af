@@ -82,4 +82,54 @@ final class ErrorHandlingProxyTest extends TestCase
 
         (new ErrorHandlingProxy($inner, new NullLogger(), $audit, $toolLog, 'tool'))->__call('execute', []);
     }
+
+    #[Test]
+    public function invalidArgumentExceptionsExposeTheirMessage(): void
+    {
+        $audit = $this->createMock(AuditLogger::class);
+        $toolLog = $this->createMock(McpToolLogService::class);
+        $inner = new class {
+            public function execute(): void
+            {
+                throw new \InvalidArgumentException('Move requires exactly one of beforeUid, afterUid, or targetPid.', 1790400099);
+            }
+        };
+
+        $proxy = new ErrorHandlingProxy($inner, new NullLogger(), $audit, $toolLog, 'tool');
+
+        try {
+            $proxy->__call('execute', []);
+            self::fail('Expected ToolCallException');
+        } catch (ToolCallException $exception) {
+            $payload = json_decode($exception->getMessage(), true);
+            self::assertIsArray($payload);
+            self::assertStringContainsString('exactly one', (string) ($payload['error'] ?? ''));
+            self::assertSame(1790400099, $exception->getCode());
+        }
+    }
+
+    #[Test]
+    public function unexpectedThrowablesReturnGenericMessage(): void
+    {
+        $audit = $this->createMock(AuditLogger::class);
+        $toolLog = $this->createMock(McpToolLogService::class);
+        $inner = new class {
+            public function execute(): void
+            {
+                throw new \RuntimeException('Sensitive /var/www/html/tmp/detail', 0);
+            }
+        };
+
+        $proxy = new ErrorHandlingProxy($inner, new NullLogger(), $audit, $toolLog, 'tool');
+
+        try {
+            $proxy->__call('execute', []);
+            self::fail('Expected ToolCallException');
+        } catch (ToolCallException $exception) {
+            $payload = json_decode($exception->getMessage(), true);
+            self::assertIsArray($payload);
+            self::assertStringNotContainsString('/var/www', (string) ($payload['error'] ?? ''));
+            self::assertStringContainsString('unexpected server error', (string) ($payload['error'] ?? ''));
+        }
+    }
 }

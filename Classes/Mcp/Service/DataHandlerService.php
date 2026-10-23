@@ -133,6 +133,8 @@ readonly class DataHandlerService
                 }
             }
 
+            $this->recordService->assertRecordExists($table, $uid);
+
             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
             $dataHandler->start([$table => [$uid => $fields]], []);
             $dataHandler->process_datamap();
@@ -156,6 +158,8 @@ readonly class DataHandlerService
 
     public function deleteRecord(string $table, int $uid): void
     {
+        $this->recordService->assertRecordExists($table, $uid);
+
         try {
             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
             $dataHandler->start([], [$table => [$uid => ['delete' => 1]]]);
@@ -171,8 +175,35 @@ readonly class DataHandlerService
      * Move a record. $target follows the DataHandler convention:
      * positive => destination page id (top), negative => -(uid) of sibling to place after.
      */
+    public function setWorkspaceStage(string $table, int $uid, int $stageId): void
+    {
+        // Workspace version uids are not visible to assertRecordExists (workspace + page read restrictions).
+        // Callers validate the version row via WorkspaceVersionService::loadVersionRow() first.
+
+        try {
+            $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
+            $dataHandler->start([], [
+                $table => [
+                    $uid => [
+                        'version' => [
+                            'action' => 'setStage',
+                            'stageId' => $stageId,
+                        ],
+                    ],
+                ],
+            ]);
+            $dataHandler->process_cmdmap();
+
+            $this->checkErrors($dataHandler);
+        } finally {
+            $this->discardUpdateSignal();
+        }
+    }
+
     public function moveRecord(string $table, int $uid, int $target): void
     {
+        $this->recordService->assertRecordExists($table, $uid);
+
         try {
             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
             $dataHandler->start([], [$table => [$uid => ['move' => $target]]]);
@@ -192,6 +223,8 @@ readonly class DataHandlerService
      */
     public function copyRecord(string $table, int $uid, int $target, int $copyTreeDepth = 0): int
     {
+        $this->recordService->assertRecordExists($table, $uid);
+
         $requestSnapshot = $this->siteRequestBootstrap->capture();
         $previousCopyLevels = null;
 

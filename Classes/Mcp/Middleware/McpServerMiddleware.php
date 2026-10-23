@@ -24,6 +24,7 @@ use const JSON_THROW_ON_ERROR;
 use Mcp\Server\Transport\StreamableHttpTransport;
 use NITSAN\NsT3AF\Mcp\Authentication\BackendUserBootstrap;
 use NITSAN\NsT3AF\Mcp\Http\FileUploadEndpoint;
+use NITSAN\NsT3AF\Mcp\Http\McpCorsHeaders;
 use NITSAN\NsT3AF\Mcp\OAuth\AuthorizationService;
 use NITSAN\NsT3AF\Mcp\Server\McpServerFactory;
 use NITSAN\NsT3AF\Mcp\Service\AdvancedSettingsService;
@@ -66,7 +67,7 @@ readonly class McpServerMiddleware implements MiddlewareInterface
         // Pre-signed uploads use their own token — do not require OAuth access token.
         if ($path === $uploadPath) {
             if (!$this->settingsService->isMcpServerEnabled()) {
-                return $this->withCorsHeaders($this->createJsonResponse(['error' => 'MCP server is disabled'], 503));
+                return McpCorsHeaders::apply($this->createJsonResponse(['error' => 'MCP server is disabled'], 503), $request);
             }
 
             return ($this->fileUploadEndpoint)($request);
@@ -79,20 +80,20 @@ readonly class McpServerMiddleware implements MiddlewareInterface
         }
 
         if (!$this->settingsService->isMcpServerEnabled()) {
-            return $this->withCorsHeaders($this->createJsonResponse(['error' => 'MCP server is disabled'], 503));
+            return McpCorsHeaders::apply($this->createJsonResponse(['error' => 'MCP server is disabled'], 503), $request);
         }
 
         if ($request->getMethod() === 'OPTIONS') {
-            return $this->withCorsHeaders($this->responseFactory->createResponse(204));
+            return McpCorsHeaders::apply($this->responseFactory->createResponse(204), $request);
         }
 
         $token = $urlToken ?? $this->extractQueryToken($request) ?? $this->extractBearerToken($request);
         if ($token === null) {
             if ($this->settingsService->allowAnonymousReadOnly()) {
-                return $this->withCorsHeaders($this->createJsonResponse(['error' => 'Anonymous read-only not implemented in v1'], 501));
+                return McpCorsHeaders::apply($this->createJsonResponse(['error' => 'Anonymous read-only not implemented in v1'], 501), $request);
             }
 
-            return $this->withCorsHeaders($this->createUnauthorizedResponse($request, 'Missing authentication token'));
+            return McpCorsHeaders::apply($this->createUnauthorizedResponse($request, 'Missing authentication token'), $request);
         }
 
         try {
@@ -108,7 +109,7 @@ readonly class McpServerMiddleware implements MiddlewareInterface
             // the editor's own backend session into that workspace.
             $this->backendUserBootstrap->applyWorkspace($GLOBALS['BE_USER'], $workspaceId);
         } catch (\RuntimeException) {
-            return $this->withCorsHeaders($this->createUnauthorizedResponse($request, 'Authentication failed'));
+            return McpCorsHeaders::apply($this->createUnauthorizedResponse($request, 'Authentication failed'), $request);
         }
 
         try {
@@ -118,22 +119,26 @@ readonly class McpServerMiddleware implements MiddlewareInterface
             /** @var ResponseInterface $response */
             $response = $server->run($transport);
 
-            if ($this->isSessionNotFoundResponse($response)) {
-                return $this->withCorsHeaders($this->createUnauthorizedResponse($request, 'Session expired'));
-            }
-
-            return $this->withCorsHeaders($response);
+            return McpCorsHeaders::apply($response, $request);
         } finally {
             $this->runtimeContext->clear();
         }
     }
 
     /**
-     * Builds the streamable HTTP transport (mcp/sdk ^0.7).
+     * Builds the streamable HTTP transport (mcp/sdk ^0.9).
      *
      * The SDK's default DnsRebindingProtectionMiddleware allow-list is localhost-only,
      * which rejects real site hosts. We pass an explicit middleware stack with this
      * instance's hosts via {@see buildAllowedHosts()}.
+     *
+     * Since 0.9 the second constructor argument is allowedOrigins, not the response
+     * factory. Origins are open (`*`) so cross-origin clients keep working, matching
+     * Access-Control-Allow-Origin. The host list still rejects a bad Host.
+     *
+     * ProtocolVersionMiddleware stays off this list. Since 0.8 the transport applies
+     * it itself, and only to handshake-era requests. Listing it here runs before the
+     * era is classified and rejects modern (2026-07-28) clients.
      */
     private function createTransport(ServerRequestInterface $request): StreamableHttpTransport
     {
@@ -141,10 +146,10 @@ readonly class McpServerMiddleware implements MiddlewareInterface
             new \Mcp\Server\Transport\Http\Middleware\CorsMiddleware(),
             new \Mcp\Server\Transport\Http\Middleware\DnsRebindingProtectionMiddleware(
                 $this->buildAllowedHosts($request),
-                $this->responseFactory,
-                $this->streamFactory,
+                allowedOrigins: ['*'],
+                responseFactory: $this->responseFactory,
+                streamFactory: $this->streamFactory,
             ),
-            new \Mcp\Server\Transport\Http\Middleware\ProtocolVersionMiddleware(),
         ];
 
         return new StreamableHttpTransport(
@@ -205,20 +210,6 @@ readonly class McpServerMiddleware implements MiddlewareInterface
         return preg_match('/^[a-f0-9]{64}$/', $token) === 1 ? $token : null;
     }
 
-    private function isSessionNotFoundResponse(ResponseInterface $response): bool
-    {
-        if ($response->getStatusCode() !== 404) {
-            return false;
-        }
-
-        $body = (string) $response->getBody();
-        $response->getBody()->rewind();
-
-        return $body !== ''
-            && str_contains($body, '"code":-32600')
-            && str_contains($body, 'Session not found');
-    }
-
     private function extractBearerToken(ServerRequestInterface $request): ?string
     {
         $authHeader = $request->getHeaderLine('Authorization');
@@ -271,16 +262,4 @@ readonly class McpServerMiddleware implements MiddlewareInterface
             ->withBody($body);
     }
 
-    private function withCorsHeaders(ResponseInterface $response): ResponseInterface
-    {
-        return $response
-            ->withHeader('Access-Control-Allow-Origin', '*')
-            ->withHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
-            ->withHeader(
-                'Access-Control-Allow-Headers',
-                'Accept, Authorization, Content-Type, Mcp-Session-Id, Mcp-Protocol-Version, Last-Event-ID',
-            )
-            ->withHeader('Access-Control-Expose-Headers', 'Mcp-Session-Id')
-            ->withHeader('X-Content-Type-Options', 'nosniff');
-    }
 }

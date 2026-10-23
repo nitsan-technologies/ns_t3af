@@ -89,7 +89,7 @@ final class OpenAiCompatibleAdapterTest extends TestCase
             adapterType: Provider::ADAPTER_OPENAI_COMPATIBLE,
             endpointUrl: $endpointUrl,
             apiKeyCipher: $apiKeyCipher,
-            modelId: 'm',
+            modelId: 'alpha',
             embeddingModelId: '',
             capabilities: [Capability::CHAT],
             temperature: 0.7,

@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Tool\Record;
 
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\FileFieldAttachmentValidator;
 use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
@@ -28,6 +29,7 @@ use NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Resource\ResourceFactory;
 
 /**
  * @internal
@@ -55,7 +57,14 @@ final class WriteTableToolTest extends TestCase
         $recordService = $this->createMock(RecordService::class);
         $dataHandlerService = $this->createMock(DataHandlerService::class);
 
-        $this->tool = new WriteTableTool($dataHandlerService, $recordService, $tcaSchemaService, $this->createMock(RecordsApplyService::class));
+        $this->tool = new WriteTableTool(
+            $dataHandlerService,
+            $recordService,
+            $tcaSchemaService,
+            $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator($tcaSchemaService),
+            $this->createMock(ResourceFactory::class),
+        );
     }
 
     protected function tearDown(): void
@@ -144,6 +153,8 @@ final class WriteTableToolTest extends TestCase
             $recordService,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -179,6 +190,8 @@ final class WriteTableToolTest extends TestCase
             $recordService,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         try {
@@ -247,6 +260,8 @@ final class WriteTableToolTest extends TestCase
             $recordService,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $this->expectException(\InvalidArgumentException::class);
@@ -369,11 +384,14 @@ final class WriteTableToolTest extends TestCase
         $access->method('isUnrestricted')->willReturn(false);
         $access->method('canReadPage')->with(225)->willReturn(false);
 
+        $tca = new TcaSchemaService();
         $tool = new WriteTableTool(
             $this->createMock(DataHandlerService::class),
             $this->createMock(RecordService::class),
-            new TcaSchemaService(),
+            $tca,
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator($tca),
+            $this->createMock(ResourceFactory::class),
             $access,
         );
 
@@ -400,6 +418,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $this->expectException(\InvalidArgumentException::class);
@@ -422,6 +442,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -445,6 +467,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -472,6 +496,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -498,6 +524,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -536,6 +564,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -560,6 +590,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -588,6 +620,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -612,6 +646,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -637,6 +673,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -657,11 +695,14 @@ final class WriteTableToolTest extends TestCase
         $access = $this->createMock(PageAccessService::class);
         $access->method('isUnrestricted')->willReturn(false);
 
+        $tca = new TcaSchemaService();
         $tool = new WriteTableTool(
             $this->createMock(DataHandlerService::class),
             $records,
-            new TcaSchemaService(),
+            $tca,
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator($tca),
+            $this->createMock(ResourceFactory::class),
             $access,
         );
 
@@ -746,6 +787,8 @@ final class WriteTableToolTest extends TestCase
             $recordService,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -784,6 +827,8 @@ final class WriteTableToolTest extends TestCase
             $recordService,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -820,6 +865,8 @@ final class WriteTableToolTest extends TestCase
             $recordService,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([

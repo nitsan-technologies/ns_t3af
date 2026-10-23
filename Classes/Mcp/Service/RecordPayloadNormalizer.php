@@ -134,6 +134,20 @@ readonly class RecordPayloadNormalizer
 
     /**
      * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    public function filterWritableFieldsForUpdate(string $tableName, array $payload): array
+    {
+        $filtered = $this->filterWritableFields($tableName, $payload);
+        foreach ($this->tcaSchemaService->getTranslationFieldsBlockedOnUpdate($tableName) as $fieldName) {
+            unset($filtered[$fieldName]);
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
      * @param array<string, mixed> $filteredData
      * @return list<string>
      */

@@ -93,7 +93,7 @@ final class ModelDiscoveryServiceTest extends TestCase
 
         $ids = array_map(static fn(ModelInfo $m): string => $m->id, $models);
         self::assertContains('gpt-4o', $ids);
-        self::assertContains('gpt-4-new', $ids);
+        self::assertNotContains('gpt-4-new', $ids);
         self::assertContains('text-embedding-3', $ids);
 
         $byId = [];
@@ -102,8 +102,47 @@ final class ModelDiscoveryServiceTest extends TestCase
         }
         self::assertSame('live', $byId['gpt-4o']->source);
         self::assertSame([Capability::CHAT, Capability::VISION], $byId['gpt-4o']->capabilities);
-        self::assertSame('live', $byId['gpt-4-new']->source);
         self::assertSame('catalog', $byId['text-embedding-3']->source);
+    }
+
+    public function testLiveModelMissingFromCatalogIsOmitted(): void
+    {
+        $cache = $this->createMock(CacheFacadeInterface::class);
+        $cache->method('get')->willReturn(false);
+        $probe = $this->createMock(LiveModelProbe::class);
+        $probe->method('probe')->willReturn(['mistral-medium-3.5', 'open-mistral-nemo']);
+        $reader = $this->createMock(SymfonyAiCatalogReader::class);
+        $reader->method('read')->willReturn([
+            new ModelInfo('open-mistral-nemo', 'open-mistral-nemo', [Capability::CHAT], 'catalog'),
+            new ModelInfo('mistral-embed', 'mistral-embed', [Capability::EMBEDDINGS], 'catalog'),
+        ]);
+
+        $service = new ModelDiscoveryService($probe, $reader, new CapabilityInferrer(), $cache, new ModelCatalogFilter());
+        $models = $service->discover($this->provider('symfony.mistral'));
+        $ids = array_map(static fn(ModelInfo $m): string => $m->id, $models);
+
+        self::assertNotContains('mistral-medium-3.5', $ids);
+        self::assertContains('open-mistral-nemo', $ids);
+        self::assertContains('mistral-embed', $ids);
+    }
+
+    public function testAzureKeepsLiveIdsThatAreNotInTheCatalog(): void
+    {
+        $cache = $this->createMock(CacheFacadeInterface::class);
+        $cache->method('get')->willReturn(false);
+        $probe = $this->createMock(LiveModelProbe::class);
+        $probe->method('probe')->willReturn(['my-deployment']);
+        $reader = $this->createMock(SymfonyAiCatalogReader::class);
+        $reader->method('read')->willReturn([
+            new ModelInfo('gpt-4o', 'gpt-4o', [Capability::CHAT], 'catalog'),
+        ]);
+
+        $service = new ModelDiscoveryService($probe, $reader, new CapabilityInferrer(), $cache, new ModelCatalogFilter());
+        $models = $service->discover($this->provider('symfony.azure'));
+        $ids = array_map(static fn(ModelInfo $m): string => $m->id, $models);
+
+        self::assertContains('my-deployment', $ids);
+        self::assertContains('gpt-4o', $ids);
     }
 
     public function testNonSymfonyAdapterReadsNoCatalog(): void

@@ -21,11 +21,14 @@ namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Tool\Custom;
 
 use Mcp\Server;
 use Mcp\Server\Builder;
+use NITSAN\NsT3AF\Mcp\Server\McpServerToolRegistration;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpCustomToolRepository;
 use NITSAN\NsT3AF\Mcp\Service\McpConnectedProviderEnumResolver;
 use NITSAN\NsT3AF\Mcp\Service\McpModeOverride;
 use NITSAN\NsT3AF\Mcp\Service\McpModeResolver;
+use NITSAN\NsT3AF\Mcp\Service\McpToolDescriptionResolver;
 use NITSAN\NsT3AF\Mcp\Service\McpToolSchemaAugmenter;
+use NITSAN\NsT3AF\Mcp\Service\McpToolSeverityResolver;
 use NITSAN\NsT3AF\Mcp\Service\McpWorkspaceEnumResolver;
 use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
 use NITSAN\NsT3AF\Mcp\Tool\Custom\McpCustomToolRegistrar;
@@ -195,9 +198,21 @@ final class McpCustomToolRegistrarTest extends TestCase
     ): McpCustomToolRegistrar {
         return new McpCustomToolRegistrar(
             $repository,
-            $this->createAugmenter(),
+            $this->createToolRegistration(),
             $container,
             $logger ?? $this->createMock(LoggerInterface::class),
+        );
+    }
+
+    private function createToolRegistration(): McpServerToolRegistration
+    {
+        $settings = $this->createMock(ExtensionSettingsService::class);
+        $settings->method('getAllIgnorePid')->willReturn(['mcpMode' => McpModeResolver::MODE_CONTEXT]);
+
+        return new McpServerToolRegistration(
+            $this->createAugmenter(),
+            new McpToolDescriptionResolver(new McpModeResolver($settings, new McpModeOverride())),
+            new McpToolSeverityResolver(),
         );
     }
 

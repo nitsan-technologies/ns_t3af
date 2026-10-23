@@ -92,7 +92,197 @@ readonly class McpToolSchemaAugmenter
         // so a call cannot silently act on the storage root (handoff P2 #14).
         $inputSchema['additionalProperties'] = false;
 
-        return $inputSchema;
+        return $this->normalizePortableSchema($inputSchema);
+    }
+
+    /**
+     * @param array<string, mixed> $schema
+     * @return array<string, mixed>
+     */
+    private function normalizePortableSchema(array $schema, string $propertyName = ''): array
+    {
+        if (isset($schema['oneOf']) && is_array($schema['oneOf'])) {
+            /** @var list<array<string, mixed>> $branches */
+            $branches = array_values(array_map(
+                fn(mixed $branch): array => is_array($branch) ? $this->normalizePortableSchema($branch, $propertyName) : [],
+                $schema['oneOf'],
+            ));
+            $collapsed = $this->collapsePortableOneOf($branches, $propertyName);
+            if ($collapsed !== null) {
+                unset($schema['oneOf']);
+
+                return $this->normalizePortableSchema($collapsed + $schema, $propertyName);
+            }
+            $schema['oneOf'] = $branches;
+        }
+
+        $type = $schema['type'] ?? null;
+        if (is_array($type)) {
+            $nonNull = array_values(array_filter($type, static fn(mixed $t): bool => $t !== 'null'));
+            if (count($nonNull) === 1) {
+                // Collapse ["null","integer"] → "integer" only; do not invent defaults (uid 0 reads as valid).
+                $schema['type'] = $nonNull[0];
+            }
+        }
+
+        if (isset($schema['properties']) && is_array($schema['properties'])) {
+            foreach ($schema['properties'] as $name => $property) {
+                if (is_array($property)) {
+                    $property = $this->normalizePortableSchema($property, (string) $name);
+                    if (!isset($property['description']) || trim((string) $property['description']) === '') {
+                        $property['description'] = self::defaultPropertyDescription((string) $name);
+                    }
+                    $schema['properties'][$name] = $property;
+                }
+            }
+        }
+
+        if (($schema['type'] ?? null) === 'array') {
+            $schema['items'] = $this->normalizeArrayItemsSchema($schema['items'] ?? null, $propertyName);
+        }
+
+        if (array_key_exists('default', $schema)) {
+            $default = $schema['default'];
+            $scalarType = $schema['type'] ?? null;
+            if (
+                $default === null
+                || ($scalarType === 'integer' && $default === 0)
+                || ($scalarType === 'string' && $default === '')
+                || ($scalarType === 'boolean' && $default === false)
+            ) {
+                unset($schema['default']);
+            }
+        }
+
+        return $schema;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function normalizeArrayItemsSchema(mixed $items, string $propertyName): array
+    {
+        if ($this->itemsSchemaIsUnset($items)) {
+            $items = null;
+        } elseif (is_array($items) && isset($items['type'])) {
+            return $this->normalizePortableSchema($items, $propertyName);
+        } elseif ($items instanceof \stdClass) {
+            $items = (array) $items;
+            if ($items !== [] && isset($items['type'])) {
+                return $this->normalizePortableSchema($items, $propertyName);
+            }
+            $items = null;
+        }
+
+        if ($items === null && $this->propertyNameSuggestsIntegerList($propertyName)) {
+            return ['type' => 'integer'];
+        }
+
+        if ($items === null && $this->propertyNameSuggestsStringList($propertyName)) {
+            return ['type' => 'string'];
+        }
+
+        if ($items === null) {
+            return [];
+        }
+
+        return is_array($items) ? $this->normalizePortableSchema($items, $propertyName) : [];
+    }
+
+    private function itemsSchemaIsUnset(mixed $items): bool
+    {
+        if ($items === null) {
+            return true;
+        }
+        if ($items instanceof \stdClass) {
+            return get_object_vars($items) === [];
+        }
+
+        return is_array($items) && $items === [];
+    }
+
+    private function propertyNameSuggestsIntegerList(string $propertyName): bool
+    {
+        if ($propertyName === '') {
+            return false;
+        }
+
+        return (bool) preg_match('/(?:Ids|Uids|_uids)$/i', $propertyName);
+    }
+
+    private function propertyNameSuggestsStringList(string $propertyName): bool
+    {
+        return $propertyName === 'options';
+    }
+
+    /**
+     * @param list<array<string, mixed>> $branches
+     * @return array<string, mixed>|null
+     */
+    private function collapsePortableOneOf(array $branches, string $propertyName): ?array
+    {
+        if ($branches === []) {
+            return null;
+        }
+
+        $byType = [];
+        foreach ($branches as $branch) {
+            if (!is_array($branch)) {
+                continue;
+            }
+            $type = $branch['type'] ?? null;
+            if (is_string($type) && $type !== '') {
+                $byType[$type] = $branch;
+            }
+        }
+
+        if (isset($byType['array'])) {
+            return $byType['array'];
+        }
+        if (isset($byType['object'])) {
+            return $byType['object'];
+        }
+        if (isset($byType['string'])) {
+            return $byType['string'];
+        }
+        if (isset($byType['integer'])) {
+            return $byType['integer'];
+        }
+
+        return count($branches) === 1 ? $branches[0] : null;
+    }
+
+    private static function defaultPropertyDescription(string $name): string
+    {
+        static $known = [
+            'uid' => 'Record UID to act on.',
+            'pageId' => 'Page UID (pages.uid).',
+            'pid' => 'Parent page UID for new records.',
+            'parentPageId' => 'Parent page UID for the new page or content.',
+            'sysLanguageUid' => 'Site language UID (0 = default).',
+            'targetPid' => 'Destination parent page UID when moving.',
+            'beforeUid' => 'Place the record before this sibling UID.',
+            'afterUid' => 'Place the record after this sibling UID.',
+            'target' => 'Move target: page UID or "first" / "last" on the parent.',
+            'scope' => 'Cache scope: pages, pagesTags, all, or system.',
+            'search' => 'Optional search string to filter results.',
+            'limit' => 'Maximum number of rows to return.',
+            'offset' => 'Number of rows to skip (pagination).',
+            'module' => 'Extension or module key to explain.',
+            'workspaceId' => 'Workspace UID (0 = live).',
+            'aiProvider' => 'AI provider identifier from connected providers.',
+            'fileName' => 'File name including extension.',
+            'directoryPath' => 'Folder path inside the storage (starts with /).',
+            'storageUid' => 'File storage UID (usually 1 for fileadmin).',
+            'content' => 'UTF-8 text file body (for small text files).',
+            'base64Content' => 'Base64-encoded file bytes.',
+            'action' => 'Write action: create, update, or delete.',
+            'data' => 'Field map for the record (TCA column names).',
+            'cmd' => 'records_apply command (for example localize, copy, move).',
+            'bulk' => 'Batch of record operations.',
+        ];
+
+        return $known[$name] ?? 'Parameter: ' . $name . '.';
     }
 
     /**

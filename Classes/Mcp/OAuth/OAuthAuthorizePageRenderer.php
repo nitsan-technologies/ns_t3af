@@ -38,9 +38,27 @@ final readonly class OAuthAuthorizePageRenderer
     ) {}
 
     /** @param array<string, mixed> $params */
-    public function render(string $clientName, array $params, string $csrfToken, string $errorMessage = ''): string
-    {
+    public function render(
+        string $clientName,
+        array $params,
+        string $csrfToken,
+        string $errorMessage = '',
+        string $scopes = '',
+    ): string {
         $clientNameEscaped = htmlspecialchars($clientName, ENT_QUOTES, 'UTF-8');
+        $redirectUri = is_string($params['redirect_uri'] ?? null) ? (string) $params['redirect_uri'] : '';
+        $redirectHostEscaped = htmlspecialchars(
+            $redirectUri !== '' ? OAuthRedirectUriPolicy::redirectHost($redirectUri) : '',
+            ENT_QUOTES,
+            'UTF-8',
+        );
+        $scopesEscaped = htmlspecialchars(trim($scopes), ENT_QUOTES, 'UTF-8');
+        $redirectInfoHtml = $redirectHostEscaped !== ''
+            ? '<p class="aiu-oauth-authorize__meta">Redirects to: <strong>' . $redirectHostEscaped . '</strong></p>'
+            : '';
+        $scopesHtml = $scopesEscaped !== ''
+            ? '<p class="aiu-oauth-authorize__meta">Scopes: <code>' . $scopesEscaped . '</code></p>'
+            : '';
         $formAction = htmlspecialchars($this->pathProvider->getAuthorizePath(), ENT_QUOTES, 'UTF-8');
         $csrfTokenEscaped = htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8');
         $stylesheetUri = htmlspecialchars($this->assetProvider->stylesheetUri(), ENT_QUOTES, 'UTF-8');
@@ -77,9 +95,12 @@ final readonly class OAuthAuthorizePageRenderer
                                 </header>
                                 <main class="aiu-oauth-authorize__body">
                                     <p class="aiu-oauth-authorize__lead">
+                                        Application
                                         <span class="aiu-oauth-authorize__client">{$clientNameEscaped}</span>
-                                        is requesting access to your TYPO3 backend account.
+                                        (name supplied by the client) is requesting access to your TYPO3 backend account.
                                     </p>
+                                    {$redirectInfoHtml}
+                                    {$scopesHtml}
                                     {$errorHtml}
                                     <form method="post" action="{$formAction}" autocomplete="off">
                                         {$hiddenFields}
@@ -92,7 +113,10 @@ final readonly class OAuthAuthorizePageRenderer
                                             <label class="aiu-oauth-authorize__label" for="password">Password</label>
                                             <input class="aiu-oauth-authorize__input" type="password" id="password" name="password" required autocomplete="off">
                                         </div>
-                                        <button class="aiu-oauth-authorize__submit" type="submit">Authorize</button>
+                                        <div class="aiu-oauth-authorize__actions">
+                                            <button class="aiu-oauth-authorize__submit" type="submit" name="authorize" value="1">Authorize</button>
+                                            <button class="aiu-oauth-authorize__deny" type="submit" name="deny" value="1" formnovalidate>Deny</button>
+                                        </div>
                                     </form>
                                 </main>
                                 <footer class="aiu-oauth-authorize__footer">

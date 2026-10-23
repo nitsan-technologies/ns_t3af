@@ -32,6 +32,7 @@ use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 
 #[McpToolSeverity(ToolSeverity::Write)]
@@ -39,6 +40,7 @@ readonly class FileReferenceRemoveTool implements McpNonAiToolInterface, McpPlan
 {
     public function __construct(
         private DataHandlerService $dataHandlerService,
+        private RecordService $recordService,
         private McpConfirmationPlanBuilder $confirmationPlanBuilder,
     ) {}
 
@@ -76,13 +78,21 @@ readonly class FileReferenceRemoveTool implements McpNonAiToolInterface, McpPlan
         }
 
         try {
-            foreach ($parsedUids as $referenceUid) {
+            $existingUids = $this->recordService->findExistingUids('sys_file_reference', $parsedUids);
+            $missingUids = array_values(array_diff($parsedUids, $existingUids));
+            if ($missingUids !== []) {
+                return $this->encodeError(
+                    'File reference not found for uid(s): ' . implode(', ', array_map('strval', $missingUids)),
+                );
+            }
+
+            foreach ($existingUids as $referenceUid) {
                 $this->dataHandlerService->deleteRecord('sys_file_reference', $referenceUid);
             }
 
             return json_encode([
-                'referencesRemoved' => count($parsedUids),
-                'referenceUids' => $parsedUids,
+                'referencesRemoved' => count($existingUids),
+                'referenceUids' => $existingUids,
             ], JSON_THROW_ON_ERROR);
         } catch (\Throwable $exception) {
             return $this->encodeError($exception->getMessage());

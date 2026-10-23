@@ -551,7 +551,7 @@ PHP;
             'icon' => '⚡',
             'iconBg' => '#f3f4f6',
             'color' => '#737373',
-            'tagline' => 'Built-in MCP tools shipped with AI Foundation — pages, content, schema, workspaces, files, and record writes.',
+            'tagline' => 'Built-in MCP tools shipped with AI Foundation: pages, content, schema, workspaces, files, and record writes.',
             'skillName' => 'TYPO3 Core Assistant',
             'skillTrigger' => '/typo3_core',
             'skillFile' => 'typo3-core-skill.md',
@@ -560,7 +560,7 @@ PHP;
             'tools' => $this->enrichToolsForDisplay($tools, $periodQuery),
             'searchText' => $this->buildExtensionSearchText(self::CORE_EXTENSION_ID, [
                 'label' => 'TYPO3 Core',
-                'tagline' => 'Built-in MCP tools shipped with AI Foundation — pages, content, schema, workspaces, files, and record writes.',
+                'tagline' => 'Built-in MCP tools shipped with AI Foundation: pages, content, schema, workspaces, files, and record writes.',
             ], $tools),
         ];
     }

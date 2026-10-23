@@ -41,11 +41,22 @@ final class AgentProviderTurnErrorPresenter
             return $configuration;
         }
 
-        if (self::looksLikeProviderAccountProblem($exception)) {
-            if (!$isAdmin) {
-                return $translator->translate('agent.turn.providerUnavailable');
+        if (self::looksLikeTransportInfrastructure($exception, $detail)) {
+            return $translator->translate('agent.turn.providerUnavailable');
+        }
+
+        if (!$isAdmin) {
+            if (self::looksLikeRateLimit($exception, $detail)) {
+                return $translator->translate(
+                    'agent.turn.providerRateLimited',
+                    [$translator->translate('agent.turn.providerRateLimitedFallback')],
+                );
             }
 
+            return $translator->translate('agent.turn.providerUnavailable');
+        }
+
+        if (self::looksLikeProviderAccountProblem($exception)) {
             return $translator->translate(
                 'agent.turn.orchestratorFailed',
                 [$detail !== '' && $detail !== self::FALLBACK_DETAIL ? $detail : $translator->translate('agent.turn.providerUnavailable')],
@@ -140,7 +151,10 @@ final class AgentProviderTurnErrorPresenter
         $masked = (string) preg_replace('/\bsk-[a-zA-Z0-9_-]{8,}[a-zA-Z0-9_-]*/u', 'sk-…', $masked);
         $masked = (string) preg_replace('/\bAIza[0-9A-Za-z_-]{20,}\b/u', 'AIza…', $masked);
         $masked = (string) preg_replace('/\bxox[baprs]-[0-9A-Za-z-]{10,}\b/u', 'xox…', $masked);
+        $masked = (string) preg_replace('#\bhttps?://[^\s"\'<>]+#iu', 'https://…', $masked);
         $masked = (string) preg_replace('/\bBearer\s+\S+/iu', 'Bearer …', $masked);
+        $masked = (string) preg_replace('/"auth_bearer"\s*:\s*"[^"]*"/iu', '"auth_bearer":"…"', $masked);
+        $masked = (string) preg_replace('/"authorization"\s*:\s*"[^"]*"/iu', '"authorization":"…"', $masked);
         $masked = (string) preg_replace(
             '/(?<=\b)(?:api[_-]?key|apikey|key)\s*=\s*[^\s&"\'<>]+/iu',
             'key=…',
@@ -258,6 +272,27 @@ final class AgentProviderTurnErrorPresenter
     private static function looksLikeContextOverflowMessage(string $raw): bool
     {
         return preg_match('/context[_ ]length|maximum context|context window|too many tokens|prompt is too long|reduce the length/i', $raw) === 1;
+    }
+
+    private static function looksLikeTransportInfrastructure(\Throwable $exception, string $detail): bool
+    {
+        if (preg_match(
+            '/tls connect|ssl routines|broken pipe|send failure|connection refused|could not resolve host|name or service not known|failed to connect|network is unreachable|unexpected eof/i',
+            $detail,
+        ) === 1) {
+            return true;
+        }
+
+        for ($current = $exception; $current !== null; $current = $current->getPrevious()) {
+            if (preg_match(
+                '/tls connect|ssl routines|broken pipe|send failure|connection refused|could not resolve host|failed to connect|network is unreachable|unexpected eof/i',
+                $current->getMessage(),
+            ) === 1) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function extractErrorMessageFromPayload(string $payload): string

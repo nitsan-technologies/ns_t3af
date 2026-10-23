@@ -173,6 +173,16 @@ final class AgentToolIndexServiceTest extends TestCase
         );
 
         $service->rebuild();
+        $cached = $cache->get('tool_index_v2');
+        self::assertIsArray($cached);
+        self::assertIsArray($cached['documents'] ?? null);
+        self::assertNotEmpty($cached['documents']);
+
+        $firstDocument = $cached['documents'][0];
+        self::assertIsArray($firstDocument);
+        $definitionHash = new \ReflectionMethod(AgentToolIndexService::class, 'definitionHash');
+        self::assertSame((string) ($cached['hash'] ?? ''), $definitionHash->invoke($service));
+
         $hits = $service->search(ProviderEmbeddingSource::ID, 'page', 5);
 
         self::assertNotSame([], $hits);
@@ -233,12 +243,7 @@ final class AgentToolIndexServiceTest extends TestCase
 
             public function embed(string $text): array
             {
-                $len = max(1, strlen($text));
-                $a = ($len % 7) / 7.0;
-                $b = (ord($text[0]) % 11) / 11.0;
-                $c = (ord($text[min(1, $len - 1)]) % 13) / 13.0;
-
-                return [$a, $b, $c];
+                return unitTestToolIndexEmbedding();
             }
 
             public function embedMany(array $texts): array
@@ -251,7 +256,34 @@ final class AgentToolIndexServiceTest extends TestCase
 
 /**
  * @internal
+ *
+ * @return list<float>
  */
+function unitTestToolIndexEmbedding(): array
+{
+    static $vector = null;
+
+    return $vector ??= deterministicUnitTestVector('ns_t3af_agent_tool_index_unit');
+}
+
+/**
+ * @return list<float>
+ */
+function deterministicUnitTestVector(string $text): array
+{
+    $hash = hash('sha256', $text, true);
+    $vector = [];
+    for ($i = 0; $i < 32; ++$i) {
+        $vector[] = (ord($hash[$i]) - 128) / 128.0;
+    }
+    $norm = sqrt(array_sum(array_map(static fn(float $v): float => $v * $v, $vector)));
+    if ($norm > 0.0) {
+        $vector = array_map(static fn(float $v): float => $v / $norm, $vector);
+    }
+
+    return $vector;
+}
+
 final class InMemoryCacheFacade implements CacheFacadeInterface
 {
     /** @var array<string, mixed> */

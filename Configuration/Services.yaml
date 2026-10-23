@@ -527,6 +527,9 @@ services:
   NITSAN\NsT3AF\Mcp\Service\McpInvocationContext:
     public: true
 
+  NITSAN\NsT3AF\Mcp\Service\PublicHostnameResolverInterface:
+    alias: NITSAN\NsT3AF\Mcp\Service\NativePublicHostnameResolver
+
   # SEO save in ns_t3ai uses GeneralUtility::makeInstance() (PageRepository::saveField).
   NITSAN\NsT3AF\Mcp\Service\DataHandlerService:
     public: true
@@ -559,6 +562,10 @@ services:
     arguments:
       $tools: !tagged_iterator mcp.tool
       $prompts: !tagged_iterator mcp.prompt
+
+  NITSAN\NsT3AF\Mcp\Service\McpRegisteredPromptCounter:
+    arguments:
+      $codePrompts: !tagged_iterator mcp.prompt
 
   NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService:
     arguments:

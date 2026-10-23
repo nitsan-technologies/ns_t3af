@@ -22,7 +22,7 @@ namespace NITSAN\NsT3AF\Controller\Backend;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use NITSAN\NsT3AF\Access\ExtensionAvailability;
 use NITSAN\NsT3AF\Access\RecordAccessGate;
-use NITSAN\NsT3AF\Agent\Contract\AgentToolIndexInterface;
+use NITSAN\NsT3AF\Agent\Service\AgentToolIndexDeferredRebuildService;
 use NITSAN\NsT3AF\Credits\CreditsReceiptEntryType;
 use NITSAN\NsT3AF\Credits\Service\CreditModeResolver;
 use NITSAN\NsT3AF\Credits\Service\CreditOverviewLineService;
@@ -99,7 +99,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
         private readonly ProviderImportService $providerImportService,
         private readonly RecordAccessGate $recordAccessGate,
         private readonly ExtensionAvailability $extensionAvailability,
-        private readonly AgentToolIndexInterface $agentToolIndex,
+        private readonly AgentToolIndexDeferredRebuildService $agentToolIndexDeferredRebuild,
     ) {
         parent::__construct(
             $moduleTemplateFactory,
@@ -317,6 +317,7 @@ final class ProviderController extends AbstractAiUniverseModuleController
         /** @var array<string, mixed> $body */
         $body = (array) $request->getParsedBody();
         $uid = (int) ($body['uid'] ?? 0);
+        $existingProvider = $uid > 0 ? $this->providerRepository->findByUid($uid) : null;
 
         if (!$resolution->isResolved()) {
             return new RedirectResponse(
@@ -362,11 +363,11 @@ final class ProviderController extends AbstractAiUniverseModuleController
             );
         }
 
-        try {
-            $this->agentToolIndex->rebuild();
-        } catch (\Throwable) {
-            // Warming the agent tool index must not block saving a provider.
-        }
+        $this->agentToolIndexDeferredRebuild->afterProviderSave(
+            $existingProvider,
+            $provider,
+            $body,
+        );
 
         return new RedirectResponse(
             (string) $this->uriBuilder->buildUriFromRoute(

@@ -58,11 +58,10 @@ readonly class FileUploadPrepareTool implements McpFalStorageToolInterface
         string $directoryPath = '/',
         int $storageUid = 1,
     ): string {
-        if ($fileName !== '') {
-            $this->fileUploadService->assertFileNameIsAllowed($fileName);
-        }
-
         $folder = $this->fileUploadService->resolveFolder($storageUid, $directoryPath);
+        if ($fileName !== '') {
+            $this->fileUploadService->assertStorageAcceptsFileName($folder, $fileName);
+        }
         $tokenData = $this->fileUploadService->createUploadToken($folder, $fileName);
 
         $uploadUrl = $this->buildAbsoluteUploadUrl();

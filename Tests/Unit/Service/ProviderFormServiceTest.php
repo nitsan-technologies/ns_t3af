@@ -26,8 +26,12 @@ use NITSAN\NsT3AF\Provider\AdapterRegistry;
 use NITSAN\NsT3AF\Provider\Capability;
 use NITSAN\NsT3AF\Provider\Contract\AdapterInterface;
 use NITSAN\NsT3AF\Provider\Contract\VerifyResult;
+use NITSAN\NsT3AF\Provider\Model\InstalledModelCatalog;
+use NITSAN\NsT3AF\Provider\Model\ModelInfo;
+use NITSAN\NsT3AF\Provider\Model\SymfonyAiCatalogReader;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use NITSAN\NsT3AF\Service\ProviderFormService;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 final class ProviderFormServiceTest extends TestCase
@@ -205,6 +209,33 @@ final class ProviderFormServiceTest extends TestCase
 
         self::assertFalse($result->ok);
         self::assertArrayHasKey('identifier', $result->errors);
+    }
+
+    public function testRejectsChatModelMissingFromInstalledCatalog(): void
+    {
+        $reader = $this->createMock(SymfonyAiCatalogReader::class);
+        $reader->method('read')->willReturn([
+            new ModelInfo('open-mistral-nemo', 'open-mistral-nemo', [Capability::CHAT], 'catalog'),
+        ]);
+        $repo = $this->makeRepo(1);
+        $repo->expects(self::never())->method('save');
+        $service = new ProviderFormService(
+            $repo,
+            new AdapterRegistry([$this->fakeAdapter()]),
+            new CredentialCipher(),
+            new InstalledModelCatalog($reader),
+        );
+        $result = $service->save(0, [
+            'identifier' => 'mistral-live',
+            'title' => 'Mistral',
+            'adapter_type' => 'symfony.openai',
+            'api_key' => 'sk-plain-secret',
+            'model_id' => 'mistral-medium-3.5',
+            'capabilities' => ['chat'],
+        ], 1);
+
+        self::assertFalse($result->ok);
+        self::assertSame('Model "mistral-medium-3.5" is not supported by this provider.', $result->errors['model_id']);
     }
 
     public function testRejectsDuplicateIdentifierForDifferentUid(): void
@@ -975,14 +1006,14 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'Mistral',
             'adapter_type' => 'symfony.openai',
             'api_key' => 'sk-plain-secret',
-            'model_id' => 'mistral-large-latest',
-            'embedding_model_id' => 'mistral-embed',
+            'model_id' => 'gpt-4o',
+            'embedding_model_id' => 'text-embedding-3-small',
             'capabilities' => ['chat', 'streaming'],
         ], 1);
 
         self::assertTrue($result->ok);
         self::assertNotNull($captured);
-        self::assertSame('mistral-embed', $captured['embedding_model_id']);
+        self::assertSame('text-embedding-3-small', $captured['embedding_model_id']);
         self::assertStringContainsString(Capability::EMBEDDINGS, (string) $captured['capabilities']);
     }
 
@@ -1004,7 +1035,7 @@ final class ProviderFormServiceTest extends TestCase
             'title' => 'Mistral',
             'adapter_type' => 'symfony.openai',
             'api_key' => 'sk-plain-secret',
-            'model_id' => 'mistral-large-latest',
+            'model_id' => 'gpt-4o',
             'embedding_model_id' => '',
             'capabilities' => ['chat', 'streaming'],
         ], 1);
@@ -1105,7 +1136,7 @@ final class ProviderFormServiceTest extends TestCase
         self::assertSame(0, $captured['is_default']);
     }
 
-    private function makeRepo(int $savedUid): ProviderRepositoryInterface
+    private function makeRepo(int $savedUid): ProviderRepositoryInterface&MockObject
     {
         $repo = $this->createMock(ProviderRepositoryInterface::class);
         $repo->method('findByIdentifier')->willReturn(null);

@@ -68,6 +68,8 @@ final class OAuthAuthorizePageRendererTest extends TestCase
         self::assertStringContainsString('rel="icon"', $html);
         self::assertStringContainsString('type="image/svg+xml"', $html);
         self::assertStringContainsString('>Cursor</span>', $html);
+        self::assertStringContainsString('name supplied by the client', $html);
+        self::assertStringContainsString('formnovalidate', $html);
         self::assertStringContainsString('name="csrf_token" value="csrf-token-123"', $html);
         self::assertStringContainsString('name="client_id" value="abc"', $html);
         self::assertStringContainsString('autocomplete="off"', $html);

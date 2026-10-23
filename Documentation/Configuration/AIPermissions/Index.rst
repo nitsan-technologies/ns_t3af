@@ -91,7 +91,7 @@ Legend
 
 * **Use / Read / On** — Allowed (green check)
 * **Mgr** — Manage / read+write
-* **—** — No access
+* **—** — Not configured / off (group has no AI permissions yet, or feature/module disabled)
 
 AI Foundation columns
 ---------------------

@@ -2,6 +2,22 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-20 — Symfony AI 0.14
+
+**Done:** Raised Symfony AI constraints to `^0.14` (`symfony/ai-agent` `~0.14.0`). Locked platform and agent at 0.14.1 and the bundled bridges plus store at 0.14.0. Agent tool search accepts `VectorDocumentInterface` from the store query results.
+
+**Last touched:** 2026-10-20
+
+---
+
+## 2026-10-15 — Catalog models only for routed providers
+
+**Done:** Chat and embedding selects for catalog-backed adapters omit live API ids the installed library cannot route. Save and Test connection reject those ids. A later "No provider found for model" sets the provider to disconnected, and the dashboard checklist warns. Search shows the existing unavailable sentence instead of "no results" or the raw model error. See `context/features/providers.md`.
+
+**Last touched:** 2026-10-15
+
+---
+
 ## 2026-10-15 — Image texts, named pages from context, review fixes
 
 **Done:**
