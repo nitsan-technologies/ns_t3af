@@ -82,6 +82,7 @@ final class AiServiceTest extends TestCase
     {
         $provider = $this->makeProvider();
         $platform = new class {
+            /** @param array<string, mixed> $invokeOptions */
             public function invoke(string $model, mixed $payload, array $invokeOptions = []): string
             {
                 throw new \RuntimeException('No provider found for model "mistral-medium-3.5".');
@@ -618,17 +619,17 @@ final class AiServiceTest extends TestCase
                                 }
 
                                 return new class {
-                                    public function getPromptTokens(): ?int
+                                    public function getPromptTokens(): int
                                     {
                                         return 42;
                                     }
 
-                                    public function getCompletionTokens(): ?int
+                                    public function getCompletionTokens(): int
                                     {
                                         return 7;
                                     }
 
-                                    public function getTotalTokens(): ?int
+                                    public function getTotalTokens(): int
                                     {
                                         return 49;
                                     }

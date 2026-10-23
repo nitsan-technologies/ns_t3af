@@ -820,7 +820,9 @@ final class SymfonyAiBridgeAdapter implements AdapterInterface, RequestTimeoutCa
         if (str_starts_with(ltrim($factoryClass, '\\'), self::VENDOR_PREFIX)) {
             $httpClientClass = self::VENDOR_PREFIX . $httpClientClass;
         }
-        if (!class_exists($httpClientClass) || !method_exists($httpClientClass, 'create')) {
+        // create() is part of Symfony HttpClient. class_exists() covers both the Composer class and the
+        // php-scoper name inside t3af.phar; method_exists() is constant for the class PHPStan can see.
+        if (!class_exists($httpClientClass)) {
             return null;
         }
 

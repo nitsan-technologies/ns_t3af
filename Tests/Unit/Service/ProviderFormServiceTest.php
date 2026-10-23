@@ -31,6 +31,7 @@ use NITSAN\NsT3AF\Provider\Model\ModelInfo;
 use NITSAN\NsT3AF\Provider\Model\SymfonyAiCatalogReader;
 use NITSAN\NsT3AF\Service\CredentialCipher;
 use NITSAN\NsT3AF\Service\ProviderFormService;
+use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 
 final class ProviderFormServiceTest extends TestCase
@@ -1135,7 +1136,7 @@ final class ProviderFormServiceTest extends TestCase
         self::assertSame(0, $captured['is_default']);
     }
 
-    private function makeRepo(int $savedUid): ProviderRepositoryInterface
+    private function makeRepo(int $savedUid): ProviderRepositoryInterface&MockObject
     {
         $repo = $this->createMock(ProviderRepositoryInterface::class);
         $repo->method('findByIdentifier')->willReturn(null);
