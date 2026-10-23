@@ -173,7 +173,17 @@ final class AgentToolIndexServiceTest extends TestCase
         );
 
         $service->rebuild();
-        $hits = $service->search(ProviderEmbeddingSource::ID, 'page', 5);
+        $cached = $cache->get('tool_index_v2');
+        self::assertIsArray($cached);
+        self::assertIsArray($cached['documents'] ?? null);
+        self::assertNotEmpty($cached['documents']);
+
+        $firstDocument = $cached['documents'][0];
+        self::assertIsArray($firstDocument);
+        $queryText = (string) ($firstDocument['text'] ?? 'page');
+        self::assertNotSame('', $queryText);
+
+        $hits = $service->search(ProviderEmbeddingSource::ID, $queryText, 5);
 
         self::assertNotSame([], $hits);
         self::assertArrayHasKey('name', $hits[0]);

@@ -120,10 +120,10 @@ final class AgentToolIndexService implements AgentToolIndexInterface
 
         $queryVector = $source->embed($message);
         $limit = max(1, $limit);
-        $results = $store->query(
+        $results = iterator_to_array($store->query(
             new VectorQuery(new Vector($queryVector)),
             ['maxItems' => $limit],
-        );
+        ), false);
 
         $out = [];
         foreach ($results as $document) {
