@@ -8,6 +8,13 @@ declare(strict_types=1);
  * (c) T3Planet / NITSAN Technologies <support@t3planet.de>
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * This program is free software: you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License, either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * For the full copyright and license information, please read the LICENSE
+ * file that was distributed with this source code.
  */
 
 namespace NITSAN\NsT3AF\Credits\Service;
@@ -23,10 +30,7 @@ final class CreditModeRequestParser
     public static function claimCodeFromBody(array $body): ?string
     {
         $raw = $body['claimCode'] ?? $body['claim_code'] ?? '';
-        if (is_array($raw)) {
-            return null;
-        }
-        if (!is_scalar($raw) && $raw !== null) {
+        if (is_array($raw) || !is_scalar($raw)) {
             return null;
         }
 

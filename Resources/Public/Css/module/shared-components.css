@@ -271,7 +271,6 @@
     font-weight: 500;
     line-height: inherit;
     vertical-align: baseline;
-    color: var(--typo3-state-primary-bg, var(--typo3-link-color, var(--aiu-primary, #205eb5)));
     text-decoration: underline;
     cursor: pointer;
 }
