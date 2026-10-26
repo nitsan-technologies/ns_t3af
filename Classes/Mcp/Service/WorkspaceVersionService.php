@@ -60,16 +60,22 @@ readonly class WorkspaceVersionService
 
     public function assertStageExistsForWorkspace(int $stageId, int $workspaceId): void
     {
+        if ($stageId === -20) {
+            throw new \InvalidArgumentException(
+                'Stage -20 is publish-now in the TYPO3 backend and is not stored on the record. Use workspace_publish instead.',
+            );
+        }
+
         if (!ExtensionManagementUtility::isLoaded('workspaces')) {
             throw new \InvalidArgumentException('cms-workspaces extension is not installed.');
         }
 
-        if (in_array($stageId, [0, -10, -20], true)) {
+        if (in_array($stageId, [0, -10], true)) {
             return;
         }
 
-        if ($stageId <= 0) {
-            throw new \InvalidArgumentException('stage must be 0, -10, -20, or a positive sys_workspace_stage uid.');
+        if ($stageId < 0) {
+            throw new \InvalidArgumentException('stage must be 0, -10, or a positive sys_workspace_stage uid.');
         }
 
         $stageRow = BackendUtility::getRecord('sys_workspace_stage', $stageId);

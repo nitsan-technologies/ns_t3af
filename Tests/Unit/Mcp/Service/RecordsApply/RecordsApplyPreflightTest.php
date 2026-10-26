@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Service\RecordsApply;
 
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\InlineForeignFields;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyPreflight;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyProblems;
@@ -114,6 +115,7 @@ final class RecordsApplyPreflightTest extends TestCase
             $recordService ?? $this->recordService,
             $this->connectionPool,
             $guard,
+            new InlineForeignFields(),
             $fileAccess,
         );
     }

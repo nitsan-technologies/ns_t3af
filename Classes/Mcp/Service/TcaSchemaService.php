@@ -1094,6 +1094,9 @@ readonly class TcaSchemaService
         try {
             $backendLayoutView = GeneralUtility::makeInstance(BackendLayoutView::class);
             $backendLayout = $backendLayoutView->getBackendLayoutForPage($pageId);
+            if ($backendLayout === null) {
+                return null;
+            }
             $structure = $backendLayoutView->parseStructure($backendLayout);
             $list = $structure['__colPosList'] ?? [];
             if (!is_array($list) || $list === []) {

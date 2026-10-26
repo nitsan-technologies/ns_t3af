@@ -42,22 +42,7 @@ readonly class WorkspacePreferenceService
             return 0;
         }
 
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('be_users');
-        $queryBuilder->getRestrictions()->removeAll();
-
-        /** @var array{uc: string|null}|false $row */
-        $row = $queryBuilder
-            ->select('uc')
-            ->from('be_users')
-            ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($beUserUid, ParameterType::INTEGER)))
-            ->executeQuery()
-            ->fetchAssociative();
-
-        if ($row === false) {
-            return 0;
-        }
-
-        $uc = $this->parseUserConfiguration($row['uc'] ?? '');
+        $uc = $this->readUserConfiguration($beUserUid);
 
         return $this->normalizeWorkspaceId((int) ($uc[self::UC_KEY] ?? 0));
     }
@@ -117,11 +102,68 @@ readonly class WorkspacePreferenceService
             throw new \RuntimeException('Access denied', 1712300001);
         }
 
-        $workspaceId = $this->normalizeWorkspaceId($workspaceId);
-        $user->uc[self::UC_KEY] = $workspaceId;
-        $user->writeUC();
+        $beUserUid = (int) ($user->user['uid'] ?? 0);
+        if ($beUserUid <= 0) {
+            throw new \RuntimeException('Access denied', 1712300001);
+        }
+
+        $workspaceId = $this->saveForUser($beUserUid, $workspaceId);
+        $user->uc = $this->readUserConfiguration($beUserUid);
 
         return $workspaceId;
+    }
+
+    /**
+     * Merges the MCP workspace key into be_users.uc without calling BackendUserAuthentication::writeUC()
+     * (MCP users have no logger/session and must not replace the whole uc blob).
+     */
+    public function saveForUser(int $beUserUid, int $workspaceId): int
+    {
+        if ($beUserUid <= 0) {
+            throw new \RuntimeException('Access denied', 1712300001);
+        }
+
+        $workspaceId = $this->normalizeWorkspaceId($workspaceId);
+        $uc = $this->readUserConfiguration($beUserUid);
+        $uc[self::UC_KEY] = $workspaceId;
+        $this->writeUserConfiguration($beUserUid, $uc);
+
+        return $workspaceId;
+    }
+
+    /** @return array<string, mixed> */
+    public function readUserConfiguration(int $beUserUid): array
+    {
+        if ($beUserUid <= 0) {
+            return [];
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('be_users');
+        $queryBuilder->getRestrictions()->removeAll();
+
+        /** @var array{uc: string|null}|false $row */
+        $row = $queryBuilder
+            ->select('uc')
+            ->from('be_users')
+            ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($beUserUid, ParameterType::INTEGER)))
+            ->executeQuery()
+            ->fetchAssociative();
+
+        if ($row === false) {
+            return [];
+        }
+
+        return $this->parseUserConfiguration($row['uc'] ?? '');
+    }
+
+    /** @param array<string, mixed> $uc */
+    private function writeUserConfiguration(int $beUserUid, array $uc): void
+    {
+        $this->connectionPool->getConnectionForTable('be_users')->update(
+            'be_users',
+            ['uc' => serialize($uc)],
+            ['uid' => $beUserUid],
+        );
     }
 
     private function normalizeWorkspaceId(int $workspaceId): int

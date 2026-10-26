@@ -629,7 +629,7 @@ tools:
     category: Workspaces
     status: ready
     tagline: Move a workspace version to a review stage
-    notes: Stages -10 publish, -20 review, 0 editing, or custom stage uid.
+    notes: Stages 0 editing, -10 ready to publish, or custom stage uid. Use workspace_publish to publish (-20 is not stored).
     searchTerms:
       - 'send to review stage, approve changes'
       - 'Zur Prüfung senden, Änderungen freigeben'

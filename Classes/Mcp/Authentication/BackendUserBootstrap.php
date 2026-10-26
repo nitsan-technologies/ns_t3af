@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Authentication;
 
 use Doctrine\DBAL\ParameterType;
+use NITSAN\NsT3AF\Mcp\Service\WorkspacePreferenceService;
 use NITSAN\NsT3AF\Utility\AiUniverseUtilityHelper;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -33,6 +34,7 @@ readonly class BackendUserBootstrap
     public function __construct(
         private ConnectionPool $connectionPool,
         private LanguageServiceFactory $languageServiceFactory,
+        private WorkspacePreferenceService $workspacePreferenceService,
     ) {}
 
     public function bootstrap(int $beUserUid, int $workspaceId = 0): BackendUserAuthentication
@@ -58,6 +60,7 @@ readonly class BackendUserBootstrap
 
         $backendUser = new McpBackendUserAuthentication();
         $backendUser->user = $userRow;
+        $backendUser->uc = $this->workspacePreferenceService->readUserConfiguration($beUserUid);
         $backendUser->fetchGroupData();
 
         $GLOBALS['BE_USER'] = $backendUser;

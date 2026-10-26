@@ -90,7 +90,7 @@ readonly class WorkspaceStageSetTool implements McpNonAiToolInterface, McpPlanna
     #[McpTool(
         name: 'workspace_stage_set',
         description: 'Move a workspace version to a different stage. Pass table, workspaceVersionUid, and stage.'
-            . ' Built-in stages: 0 = editing, -10 = ready to publish, -20 = ready to review.'
+            . ' Built-in stages: 0 = editing, -10 = ready to publish. To publish now, use workspace_publish (stage -20 is not stored).'
             . ' Custom stage uids (>0) reference sys_workspace_stage. Requires cms-workspaces extension.',
     )]
     public function execute(string $table, int $workspaceVersionUid, int $stage): string

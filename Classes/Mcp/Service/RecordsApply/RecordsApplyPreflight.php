@@ -58,6 +58,7 @@ readonly class RecordsApplyPreflight
         private RecordService $recordService,
         private ConnectionPool $connectionPool,
         private RecordSiteLanguageGuard $siteLanguageGuard,
+        private InlineForeignFields $inlineForeignFields,
         private ?RecordsApplyFileAccess $fileAccess = null,
     ) {}
 
@@ -289,6 +290,24 @@ readonly class RecordsApplyPreflight
 
                     $ignored[] = ['table' => $table, 'id' => RecordsApplyProblems::safe($id), 'fields' => $names];
                     $fields = array_diff_key($fields, array_flip($invalid));
+                }
+
+                foreach ($this->inlineForeignFields->ofChildTable($table) as $parentField) {
+                    if (!array_key_exists($parentField, $fields)) {
+                        continue;
+                    }
+                    $parentRef = $fields[$parentField];
+                    if (is_string($parentRef) && preg_match(self::NEW_ID, $parentRef) === 1 && !isset($allNewIds[$parentRef])) {
+                        $problems->add($where + [
+                            'error' => sprintf(
+                                'Field %s refers to NEW id %s, which is not created in this call.',
+                                RecordsApplyProblems::safe($parentField),
+                                RecordsApplyProblems::safe($parentRef),
+                            ),
+                            'fields' => [RecordsApplyProblems::safe($parentField)],
+                        ]);
+                        continue 2;
+                    }
                 }
 
                 if ($fields === [] && !$isNew) {

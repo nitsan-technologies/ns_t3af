@@ -39,7 +39,8 @@ readonly class McpWorkspaceEnumResolver
 
     public function buildDescription(): string
     {
-        return 'Optional workspace UID for this call only. Omit to use the workspace selected in the MCP Server backend module. '
+        return 'Optional workspace UID for this call only. Pass 0 to force Live even when a draft workspace is selected in the MCP module. '
+            . 'Omit to use the workspace selected in the MCP Server backend module. '
             . 'Allowed values are listed in the enum; call workspace_list for titles and details.';
     }
 }

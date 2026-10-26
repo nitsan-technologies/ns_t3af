@@ -28,6 +28,7 @@ use NITSAN\NsT3AF\Mcp\Contract\McpDualModeContentToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpExternalContentToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpFalStorageToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
+use NITSAN\NsT3AF\Mcp\Tool\Workspace\WorkspaceSwitchTool;
 use ReflectionFunction;
 use ReflectionMethod;
 
@@ -405,7 +406,15 @@ readonly class McpToolSchemaAugmenter
 
     private function resolveIncludeWorkspaceId(string $handlerClass): bool
     {
-        return !is_subclass_of($handlerClass, McpFalStorageToolInterface::class);
+        if (is_subclass_of($handlerClass, McpFalStorageToolInterface::class)) {
+            return false;
+        }
+
+        if ($handlerClass === WorkspaceSwitchTool::class) {
+            return false;
+        }
+
+        return true;
     }
 
     private function resolveIncludeAiProvider(string $handlerClass): bool

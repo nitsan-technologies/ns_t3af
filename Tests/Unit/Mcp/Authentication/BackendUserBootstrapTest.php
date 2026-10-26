@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Authentication;
 
 use NITSAN\NsT3AF\Mcp\Authentication\BackendUserBootstrap;
+use NITSAN\NsT3AF\Mcp\Service\WorkspacePreferenceService;
 use NITSAN\NsT3AF\Tests\Unit\Access\Support\LoadedExtensionsTestTrait;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
@@ -88,6 +89,7 @@ final class BackendUserBootstrapTest extends TestCase
         return new BackendUserBootstrap(
             $this->createMock(ConnectionPool::class),
             $this->createMock(LanguageServiceFactory::class),
+            $this->createMock(WorkspacePreferenceService::class),
         );
     }
 }
