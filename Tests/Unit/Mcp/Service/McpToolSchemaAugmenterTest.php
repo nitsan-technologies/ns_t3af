@@ -327,7 +327,7 @@ final class McpToolSchemaAugmenterTest extends TestCase
         $schema = $augmenter->generateForHandler([WorkspaceSwitchTool::class, 'execute']);
 
         self::assertSame([0, 3], $schema['properties']['workspaceId']['enum']);
-        self::assertStringContainsString('save as the MCP Server default', $schema['properties']['workspaceId']['description']);
+        self::assertStringContainsString('persist for MCP', $schema['properties']['workspaceId']['description']);
         self::assertContains('workspaceId', $schema['required'] ?? []);
     }
 

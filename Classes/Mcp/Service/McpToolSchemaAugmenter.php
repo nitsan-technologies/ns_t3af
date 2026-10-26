@@ -269,6 +269,8 @@ readonly class McpToolSchemaAugmenter
             'search' => 'Optional search string to filter results.',
             'limit' => 'Maximum number of rows to return.',
             'offset' => 'Number of rows to skip (pagination).',
+            'orderDirection' => 'Sort direction: ASC or DESC.',
+            'orderBy' => 'TCA field name to sort by.',
             'module' => 'Extension or module key to explain.',
             'workspaceId' => 'Workspace UID (0 = live).',
             'aiProvider' => 'AI provider identifier from connected providers.',

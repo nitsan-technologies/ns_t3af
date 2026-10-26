@@ -482,6 +482,34 @@ final class WriteTableToolTest extends TestCase
     }
 
     #[Test]
+    public function planCreateBeforeContentElementHonorsBeforeUidWhenBothAreOnlyInDataJson(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())->method('findExistingUids')->with('tt_content', [773])->willReturn([773]);
+        $records->expects(self::once())->method('findByUid')->with('tt_content', 773, ['pid'])->willReturn(['pid' => 2]);
+        $records->expects(self::once())->method('targetBeforeRecord')->with('tt_content', 773)->willReturn(-752);
+        $records->expects(self::never())->method('targetBeforePage');
+        $records->expects(self::once())->method('assertInsertAfterExists')->with('tt_content', 752);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'data' => ['pid' => 2, 'beforeUid' => 773, 'header' => 'New element'],
+        ]);
+
+        self::assertSame(-752, $plan->context['pid']);
+    }
+
+    #[Test]
     public function planCreateBeforeAContentElementUsesThePreviousElementNotAPage(): void
     {
         $records = $this->createMock(RecordService::class);

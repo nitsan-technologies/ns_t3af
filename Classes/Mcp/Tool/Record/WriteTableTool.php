@@ -201,6 +201,11 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             return $this->encodeError($exception->getMessage());
         }
 
+        if ($action === 'create') {
+            $beforeUid = (int) ($beforeUid > 0 ? $beforeUid : ($payload['beforeUid'] ?? 0));
+            $afterUid = (int) ($afterUid > 0 ? $afterUid : ($payload['afterUid'] ?? 0));
+        }
+
         return match ($action) {
             'create' => $this->create($tableName, $payload, $strict, $beforeUid, $afterUid),
             'update' => $this->updateOrUidMap($tableName, $uid, $payload, $strict),
@@ -898,14 +903,22 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         if ($beforeUid > 0) {
             $contentPid = isset($payload['pid']) && is_numeric($payload['pid']) ? (int) $payload['pid'] : 0;
             // "Before 773" for a content element means that element, never the page with uid 773.
-            // Uids collide across tables: only treat beforeUid as a CE when it sits on the same page as pid.
             if ($tableName !== 'pages' && $this->recordService->findExistingUids($tableName, [$beforeUid]) !== []) {
-                if ($contentPid <= 0) {
-                    return $this->recordService->targetBeforeRecord($tableName, $beforeUid);
-                }
                 $beforeRecord = $this->recordService->findByUid($tableName, $beforeUid, ['pid']);
-                if (is_array($beforeRecord) && (int) ($beforeRecord['pid'] ?? -1) === $contentPid) {
-                    return $this->recordService->targetBeforeRecord($tableName, $beforeUid);
+                if (is_array($beforeRecord)) {
+                    $recordPid = (int) ($beforeRecord['pid'] ?? -1);
+                    if ($contentPid <= 0 || $recordPid === $contentPid) {
+                        return $this->recordService->targetBeforeRecord($tableName, $beforeUid);
+                    }
+                    // beforeUid is a CE on another page; parent-page shortcut may still apply below.
+                    if ($tableName === 'tt_content') {
+                        $page = $this->recordService->findByUid('pages', $contentPid, ['pid']);
+                        if (is_array($page) && (int) ($page['pid'] ?? -1) === $beforeUid) {
+                            return $contentPid;
+                        }
+                    }
+
+                    return $contentPid;
                 }
             }
             // "Before the first element on this page" with beforeUid=<parent page> + pid=<this page>:

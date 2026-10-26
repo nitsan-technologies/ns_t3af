@@ -36,6 +36,10 @@ final class SearchSortResolver
             $resolvedOrderBy = $orderBy;
         }
 
+        $orderDirection = strtoupper(trim($orderDirection));
+        if ($orderDirection === '') {
+            $orderDirection = 'ASC';
+        }
         if (!in_array($orderDirection, ['ASC', 'DESC'], true)) {
             throw new \InvalidArgumentException('orderDirection must be ASC or DESC.', 1790600008);
         }

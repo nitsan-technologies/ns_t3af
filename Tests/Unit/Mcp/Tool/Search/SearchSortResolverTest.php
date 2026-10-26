@@ -49,4 +49,11 @@ final class SearchSortResolverTest extends TestCase
             self::assertSame(1790600008, $exception->getCode());
         }
     }
+
+    #[Test]
+    public function orderDirectionIsCaseInsensitive(): void
+    {
+        [, $direction] = SearchSortResolver::resolve('uid', 'desc', ['uid', 'title']);
+        self::assertSame('DESC', $direction);
+    }
 }

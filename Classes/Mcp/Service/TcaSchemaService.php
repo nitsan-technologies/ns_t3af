@@ -147,6 +147,18 @@ readonly class TcaSchemaService
      */
     public function isFieldValueSemanticallyInvalid(string $table, string $field, mixed $value, int $pageId = 0): bool
     {
+        if ($table === 'tt_content' && $field === 'colPos') {
+            if ($value === null || $value === '') {
+                return true;
+            }
+            if (is_bool($value)) {
+                return true;
+            }
+            if (!$this->isIntegerLikeFieldValue($value)) {
+                return true;
+            }
+        }
+
         if ($value === null || $value === '') {
             return false;
         }
@@ -155,7 +167,11 @@ readonly class TcaSchemaService
             return false;
         }
 
-        $scalar = is_int($value) || is_float($value) ? (string) (int) $value : trim((string) $value);
+        if ($table === 'tt_content' && $field === 'colPos' && !$this->isIntegerLikeFieldValue($value)) {
+            return true;
+        }
+
+        $scalar = is_int($value) ? (string) $value : (is_string($value) ? trim($value) : (string) (int) $value);
         if ($scalar === '') {
             return false;
         }
@@ -1082,6 +1098,23 @@ readonly class TcaSchemaService
         }
 
         return $values === [] ? null : array_values(array_unique($values));
+    }
+
+    private function isIntegerLikeFieldValue(mixed $value): bool
+    {
+        if (is_int($value)) {
+            return true;
+        }
+        if (is_float($value)) {
+            return false;
+        }
+        if (!is_string($value)) {
+            return false;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed !== '' && preg_match('/^-?\d+$/', $trimmed) === 1;
     }
 
     /** @return list<int>|null */

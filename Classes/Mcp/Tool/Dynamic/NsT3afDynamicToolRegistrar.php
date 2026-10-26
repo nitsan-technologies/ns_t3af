@@ -402,7 +402,7 @@ readonly class NsT3afDynamicToolRegistrar
         };
 
         $description = 'Create a new ' . $config['label'] . ' record. Pass fields as a JSON object string.'
-            . ' Available fields: ' . implode(', ', $config['writableFields']) . '.';
+            . ' Use table_schema for allowed field names.';
 
         if ($languageField !== null) {
             $this->addAugmentedTool(
@@ -481,8 +481,7 @@ readonly class NsT3afDynamicToolRegistrar
             },
             name: $config['prefix'] . '_update',
             description: 'Update an existing ' . $config['label'] . ' record. Pass fields as a JSON object string'
-                . ' with field names and their new values. Available fields: '
-                . implode(', ', $config['writableFields']) . '.',
+                . ' with field names and their new values. Use table_schema for allowed field names.',
         );
     }
 
@@ -654,7 +653,7 @@ readonly class NsT3afDynamicToolRegistrar
             name: $toolName,
             description: 'Update the same fields on multiple ' . $config['label'] . ' records (all or nothing, at most 500 uids per call).'
                 . ' Pass UIDs as comma-separated (e.g. "1,2,3") and fields as a JSON object (e.g. {"hidden":1}).'
-                . ' Available fields: ' . implode(', ', $config['writableFields']) . '.'
+                . ' Use table_schema for allowed field names.'
                 . ' Non-existent UIDs are skipped and reported in skippedUids.'
                 . ' Returns a batchId for records_undo.',
         );
