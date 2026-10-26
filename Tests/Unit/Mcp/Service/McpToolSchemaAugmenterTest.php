@@ -40,6 +40,7 @@ use NITSAN\NsT3AF\Mcp\Tool\Pages\PagesGetTool;
 use NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool;
 use NITSAN\NsT3AF\Mcp\Tool\Schema\TableSchemaTool;
 use NITSAN\NsT3AF\Mcp\Tool\Workspace\WorkspaceListTool;
+use NITSAN\NsT3AF\Mcp\Tool\Workspace\WorkspaceSwitchTool;
 use NITSAN\NsT3AF\Settings\ExtensionSettingsService;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -316,6 +317,18 @@ final class McpToolSchemaAugmenterTest extends TestCase
 
         self::assertArrayNotHasKey('oneOf', $schema['properties']['payload']);
         self::assertSame('array', $schema['properties']['payload']['type'] ?? null);
+    }
+
+    #[Test]
+    public function workspaceSwitchSchemaUsesWorkspaceEnumOnNativeWorkspaceIdOnly(): void
+    {
+        $augmenter = $this->createAugmenter();
+
+        $schema = $augmenter->generateForHandler([WorkspaceSwitchTool::class, 'execute']);
+
+        self::assertSame([0, 3], $schema['properties']['workspaceId']['enum']);
+        self::assertStringContainsString('save as the MCP Server default', $schema['properties']['workspaceId']['description']);
+        self::assertContains('workspaceId', $schema['required'] ?? []);
     }
 
     #[Test]

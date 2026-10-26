@@ -50,12 +50,12 @@ final class McpInvocationContext
     /**
      * @param array<string, mixed> $arguments
      */
-    public function applyFromArguments(array $arguments): void
+    public function applyFromArguments(array $arguments, bool $applyWorkspaceOverride = true): void
     {
         $this->active = true;
         $this->providerIdentifier = null;
 
-        if (array_key_exists('workspaceId', $arguments)) {
+        if ($applyWorkspaceOverride && array_key_exists('workspaceId', $arguments)) {
             $workspaceId = (int) $arguments['workspaceId'];
             if ($workspaceId < 0) {
                 throw new \RuntimeException('workspaceId must be zero or a positive sys_workspace uid.');

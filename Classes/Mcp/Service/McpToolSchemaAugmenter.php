@@ -325,11 +325,17 @@ readonly class McpToolSchemaAugmenter
         $schema = $this->applyParentPageTargetRequirements($schema, $reflection);
         $schema = $this->applyNewsStorageTargetRequirements($schema, $reflection);
 
-        return $this->augment(
+        $schema = $this->augment(
             $schema,
             $this->resolveIncludeAiProvider($handlerClass),
             $this->resolveIncludeWorkspaceId($handlerClass),
         );
+
+        if ($handlerClass === WorkspaceSwitchTool::class) {
+            $schema = $this->applyWorkspaceEnumToNativeWorkspaceIdProperty($schema);
+        }
+
+        return $schema;
     }
 
     /**
@@ -402,6 +408,34 @@ readonly class McpToolSchemaAugmenter
         }
 
         return $definitions;
+    }
+
+    /**
+     * @param array<string, mixed> $schema
+     * @return array<string, mixed>
+     */
+    private function applyWorkspaceEnumToNativeWorkspaceIdProperty(array $schema): array
+    {
+        if (!isset($schema['properties']) || !is_array($schema['properties'])) {
+            return $schema;
+        }
+
+        /** @var array<string, mixed> $properties */
+        $properties = $schema['properties'];
+        if (!isset($properties[self::PARAM_WORKSPACE_ID]) || !is_array($properties[self::PARAM_WORKSPACE_ID])) {
+            return $schema;
+        }
+
+        $properties[self::PARAM_WORKSPACE_ID] = array_merge(
+            $properties[self::PARAM_WORKSPACE_ID],
+            [
+                'enum' => $this->workspaceEnumResolver->resolveEnum(),
+                'description' => $this->workspaceEnumResolver->buildPersistedPreferenceDescription(),
+            ],
+        );
+        $schema['properties'] = $properties;
+
+        return $schema;
     }
 
     private function resolveIncludeWorkspaceId(string $handlerClass): bool

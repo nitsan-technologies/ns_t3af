@@ -24,14 +24,46 @@ use Mcp\Capability\Registry\ReferenceHandlerInterface;
 use NITSAN\NsT3AF\Mcp\Server\ContextualReferenceHandler;
 use NITSAN\NsT3AF\Mcp\Service\McpInvocationContext;
 use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
+use NITSAN\NsT3AF\Mcp\Tool\Workspace\WorkspaceSwitchTool;
+use NITSAN\NsT3AF\Tests\Unit\Access\Support\LoadedExtensionsTestTrait;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 /**
  * @internal
  */
 final class ContextualReferenceHandlerTest extends TestCase
 {
+    use LoadedExtensionsTestTrait;
+
+    protected function tearDown(): void
+    {
+        $this->resetLoadedExtensions();
+        unset($GLOBALS['BE_USER']);
+        parent::tearDown();
+    }
+
+    #[Test]
+    public function handleSkipsPerCallWorkspaceOverrideForWorkspaceSwitch(): void
+    {
+        $this->mockLoadedExtensions(['workspaces']);
+        $backendUser = $this->createMock(BackendUserAuthentication::class);
+        $backendUser->workspace = 4;
+        $backendUser->expects(self::never())->method('setTemporaryWorkspace');
+        $GLOBALS['BE_USER'] = $backendUser;
+
+        $context = new McpInvocationContext($this->createMock(WorkspaceListService::class));
+
+        $inner = $this->createMock(ReferenceHandlerInterface::class);
+        $inner->expects(self::once())->method('handle')->willReturn('ok');
+
+        $handler = new ContextualReferenceHandler($context, $inner);
+        $reference = new ElementReference([WorkspaceSwitchTool::class, 'execute']);
+
+        self::assertSame('ok', $handler->handle($reference, ['workspaceId' => 99]));
+    }
+
     #[Test]
     public function handleAppliesInvocationContextBeforeDelegating(): void
     {

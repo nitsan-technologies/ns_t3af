@@ -43,4 +43,10 @@ readonly class McpWorkspaceEnumResolver
             . 'Omit to use the workspace selected in the MCP Server backend module. '
             . 'Allowed values are listed in the enum; call workspace_list for titles and details.';
     }
+
+    public function buildPersistedPreferenceDescription(): string
+    {
+        return 'Workspace UID to save as the MCP Server default for this backend user (0 = Live). '
+            . 'Allowed values are listed in the enum; call workspace_list for titles and details.';
+    }
 }
