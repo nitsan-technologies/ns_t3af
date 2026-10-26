@@ -195,7 +195,12 @@ final class RecordsApplyPayloadStore
     private function garbageCollect(string $dir): void
     {
         $cutoff = time() - 86400;
-        foreach (glob($dir . '/*.{json,meta}', GLOB_BRACE) ?: [] as $path) {
+        // ponytail: GLOB_BRACE is missing on some libc builds (CI images); two globs are enough.
+        $paths = array_merge(
+            glob($dir . '/*.json') ?: [],
+            glob($dir . '/*.meta') ?: [],
+        );
+        foreach ($paths as $path) {
             if (is_file($path) && filemtime($path) < $cutoff) {
                 @unlink($path);
             }
