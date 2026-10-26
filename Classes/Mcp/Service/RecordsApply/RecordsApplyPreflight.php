@@ -269,6 +269,28 @@ readonly class RecordsApplyPreflight
                     $fields = array_diff_key($fields, array_flip($denied));
                 }
 
+                $pageIdForValues = $this->resolvePageIdForFieldValues($table, $id, $isNew, $pid);
+                $invalid = [];
+                foreach ($fields as $fieldName => $fieldValue) {
+                    if ($this->tcaSchemaService->isFieldValueSemanticallyInvalid($table, (string) $fieldName, $fieldValue, $pageIdForValues)) {
+                        $invalid[] = (string) $fieldName;
+                    }
+                }
+
+                if ($invalid !== []) {
+                    $names = array_map(RecordsApplyProblems::safe(...), $invalid);
+                    if ($strict) {
+                        $problems->add($where + [
+                            'error' => 'Field value is not allowed by TCA or backend layout (strict mode refuses the whole call).',
+                            'fields' => $names,
+                        ]);
+                        continue;
+                    }
+
+                    $ignored[] = ['table' => $table, 'id' => RecordsApplyProblems::safe($id), 'fields' => $names];
+                    $fields = array_diff_key($fields, array_flip($invalid));
+                }
+
                 if ($fields === [] && !$isNew) {
                     $problems->add($where + ['error' => 'No writable fields left to update.']);
                     continue;
@@ -641,6 +663,32 @@ readonly class RecordsApplyPreflight
      * so strict mode has to ask first: exclude fields the group did not allow, admin-only fields, select values
      * behind authMode, and the page types (doktype) the group may use.
      */
+    /**
+     * @param int|string|null $pid placement from a new record, or null on update
+     */
+    private function resolvePageIdForFieldValues(string $table, string $id, bool $isNew, int|string|null $pid): int
+    {
+        if ($table !== 'tt_content') {
+            return 0;
+        }
+
+        if ($isNew) {
+            if (is_int($pid) && $pid > 0) {
+                return $pid;
+            }
+
+            return 0;
+        }
+
+        if (!ctype_digit($id)) {
+            return 0;
+        }
+
+        $row = $this->recordService->findByUid($table, (int) $id, ['pid']);
+
+        return is_array($row) ? (int) ($row['pid'] ?? 0) : 0;
+    }
+
     private static function userMayWrite(BackendUserAuthentication $backendUser, string $table, string $field, mixed $value): bool
     {
         $column = $GLOBALS['TCA'][$table]['columns'][$field] ?? null;

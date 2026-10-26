@@ -28,6 +28,7 @@ use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\UriResolver;
 use GuzzleHttp\Psr7\Utils;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyPayloadStore;
 use NITSAN\NsT3AF\Service\PublicUrlValidator;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -539,6 +540,49 @@ readonly class FileUploadService
         ]);
 
         return ['token' => $token, 'validUntil' => $validUntil];
+    }
+
+    /**
+     * Single-use upload token that stores JSON in var/transient (not public fileadmin).
+     *
+     * @return array{token: string, validUntil: int, payloadId: string}
+     */
+    public function createRecordsApplyPayloadUploadToken(): array
+    {
+        $user = $GLOBALS['BE_USER'] ?? null;
+        $userUid = (int) ($user->user['uid'] ?? 0);
+        if ($userUid <= 0) {
+            throw new \InvalidArgumentException('No authenticated backend user for upload token creation.', 1747320009);
+        }
+
+        $payloadStore = GeneralUtility::makeInstance(RecordsApplyPayloadStore::class);
+        $payloadId = $payloadStore->generateId();
+        $token = bin2hex(random_bytes(32));
+        $validUntil = time() + $this->getUploadTokenTtl();
+
+        $connection = $this->connectionPool->getConnectionForTable(self::TABLE_UPLOAD_TOKENS);
+        $connection->insert(self::TABLE_UPLOAD_TOKENS, [
+            'token' => hash('sha256', $token),
+            'be_user_uid' => $userUid,
+            'storage_uid' => RecordsApplyPayloadStore::TOKEN_STORAGE_UID,
+            'target_folder' => RecordsApplyPayloadStore::TOKEN_FOLDER_PREFIX . $payloadId,
+            // Leave empty: payload id lives in target_folder; client supplies payload.json via ?fileName= or defaults in the endpoint.
+            'file_name' => '',
+            'expires' => $validUntil,
+            'used' => 0,
+            'tstamp' => time(),
+            'crdate' => time(),
+        ]);
+
+        return ['token' => $token, 'validUntil' => $validUntil, 'payloadId' => $payloadId];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    public function isRecordsApplyPayloadUploadTokenRow(array $row): bool
+    {
+        return GeneralUtility::makeInstance(RecordsApplyPayloadStore::class)->isPayloadUploadTokenRow($row);
     }
 
     /**

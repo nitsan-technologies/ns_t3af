@@ -27,6 +27,7 @@ use const JSON_THROW_ON_ERROR;
 
 use NITSAN\NsT3AF\Mcp\Authentication\BackendUserBootstrap;
 use NITSAN\NsT3AF\Mcp\Service\FileUploadService;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyPayloadStore;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -90,12 +91,23 @@ readonly class FileUploadEndpoint
 
             [$body, $uploadedFileName] = $this->extractUpload($request);
 
-            $fileName = (string) ($tokenRow['file_name'] ?? '')
-                ?: trim((string) ($request->getQueryParams()['fileName'] ?? ''))
-                ?: ($uploadedFileName ?? '')
-                ?: ($this->fileUploadService->extractFileNameFromContentDisposition(
-                    $request->getHeaderLine('Content-Disposition'),
-                ) ?? '');
+            $isPayloadUpload = $this->fileUploadService->isRecordsApplyPayloadUploadTokenRow($tokenRow);
+
+            if ($isPayloadUpload) {
+                $fileName = trim((string) ($request->getQueryParams()['fileName'] ?? ''))
+                    ?: ($uploadedFileName ?? '')
+                    ?: ($this->fileUploadService->extractFileNameFromContentDisposition(
+                        $request->getHeaderLine('Content-Disposition'),
+                    ) ?? '')
+                    ?: 'payload.json';
+            } else {
+                $fileName = (string) ($tokenRow['file_name'] ?? '')
+                    ?: trim((string) ($request->getQueryParams()['fileName'] ?? ''))
+                    ?: ($uploadedFileName ?? '')
+                    ?: ($this->fileUploadService->extractFileNameFromContentDisposition(
+                        $request->getHeaderLine('Content-Disposition'),
+                    ) ?? '');
+            }
             if ($fileName === '') {
                 return $this->jsonError(
                     'No file name given. Pass it as ?fileName=<name.ext> query parameter or Content-Disposition header.',
@@ -104,16 +116,23 @@ readonly class FileUploadEndpoint
                     $request,
                 );
             }
-
-            $folder = $this->fileUploadService->resolveFolder(
-                (int) $tokenRow['storage_uid'],
-                (string) $tokenRow['target_folder'],
-            );
-            $this->fileUploadService->assertStorageAcceptsFileName($folder, $fileName);
+            if ($isPayloadUpload) {
+                if (strtolower(pathinfo($fileName, PATHINFO_EXTENSION)) !== 'json') {
+                    return $this->jsonError('records_apply payload uploads must use a .json file name.', 400, 1790500028, $request);
+                }
+            } else {
+                $folder = $this->fileUploadService->resolveFolder(
+                    (int) $tokenRow['storage_uid'],
+                    (string) $tokenRow['target_folder'],
+                );
+                $this->fileUploadService->assertStorageAcceptsFileName($folder, $fileName);
+            }
 
             $tempPath = $this->bufferToTempFile($body, $this->fileUploadService->getMaxFileBytes());
             try {
-                $this->fileUploadService->assertUploadContentReady($tempPath, $fileName, $folder);
+                if (!$isPayloadUpload) {
+                    $this->fileUploadService->assertUploadContentReady($tempPath, $fileName, $folder);
+                }
 
                 if ($this->fileUploadService->consumeUploadToken($token) === null) {
                     return $this->jsonError(
@@ -124,20 +143,37 @@ readonly class FileUploadEndpoint
                     );
                 }
 
-                $stored = $this->fileUploadService->storeFile($tempPath, $fileName, $folder);
+                if ($isPayloadUpload) {
+                    $payloadStore = GeneralUtility::makeInstance(RecordsApplyPayloadStore::class);
+                    $payloadId = $payloadStore->payloadIdFromTokenRow($tokenRow);
+                    $contents = (string) file_get_contents($tempPath);
+                    $payloadStore->storeUploadedPayload(
+                        $payloadId,
+                        (int) $tokenRow['be_user_uid'],
+                        $contents,
+                        (int) $tokenRow['expires'],
+                    );
+                    $data = [
+                        'purpose' => 'records_apply_payload',
+                        'payloadId' => $payloadId,
+                        'validUntil' => date('c', (int) $tokenRow['expires']),
+                        'note' => 'Pass payloadId to records_apply fromPayloadId. The JSON is private, read once, then deleted.',
+                    ];
+                } else {
+                    $stored = $this->fileUploadService->storeFile($tempPath, $fileName, $folder);
+                    $data = $this->fileUploadService->describeFile($stored['file']);
+                    if ($stored['deduplicated']) {
+                        $data['deduplicated'] = true;
+                        $data['note'] = 'A file with identical content already existed in this storage (see identifier, '
+                            . 'possibly in a different folder than requested); it is returned instead of creating a duplicate.';
+                    } elseif ($stored['file']->getName() !== basename($fileName)) {
+                        $data['renamedFrom'] = basename($fileName);
+                    }
+                }
             } finally {
                 if (file_exists($tempPath)) {
                     @unlink($tempPath);
                 }
-            }
-
-            $data = $this->fileUploadService->describeFile($stored['file']);
-            if ($stored['deduplicated']) {
-                $data['deduplicated'] = true;
-                $data['note'] = 'A file with identical content already existed in this storage (see identifier, '
-                    . 'possibly in a different folder than requested); it is returned instead of creating a duplicate.';
-            } elseif ($stored['file']->getName() !== basename($fileName)) {
-                $data['renamedFrom'] = basename($fileName);
             }
 
             return McpCorsHeaders::apply($this->jsonResponse($data, 201), $request);

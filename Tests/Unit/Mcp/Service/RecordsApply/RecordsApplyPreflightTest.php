@@ -65,6 +65,15 @@ final class RecordsApplyPreflightTest extends TestCase
             'ctrl' => ['label' => 'header'],
             'columns' => [
                 'header' => ['config' => ['type' => 'input']],
+                'CType' => [
+                    'config' => [
+                        'type' => 'select',
+                        'items' => [
+                            ['label' => 'Text', 'value' => 'text'],
+                            ['label' => 'Header', 'value' => 'header'],
+                        ],
+                    ],
+                ],
                 'locked' => ['config' => ['type' => 'input', 'readOnly' => true]],
                 'categories' => ['config' => ['type' => 'category']],
                 'assets' => ['config' => ['type' => 'file']],
@@ -114,6 +123,35 @@ final class RecordsApplyPreflightTest extends TestCase
         $GLOBALS['TCA'] = $this->originalTca;
         unset($GLOBALS['BE_USER']);
         parent::tearDown();
+    }
+
+    #[Test]
+    public function invalidCTypeIsRefusedInStrictMode(): void
+    {
+        try {
+            $this->preflight->check(
+                ['tt_content' => ['NEWc' => ['pid' => 1, 'header' => 'A', 'CType' => 'nonexistent_ctype']]],
+                [],
+                true,
+            );
+            self::fail('Expected a validation exception.');
+        } catch (RecordsApplyValidationException $exception) {
+            self::assertStringContainsString('not allowed', (string) ($exception->getProblems()[0]['error'] ?? ''));
+            self::assertSame(['CType'], $exception->getProblems()[0]['fields']);
+        }
+    }
+
+    #[Test]
+    public function invalidCTypeIsDroppedWhenNotStrict(): void
+    {
+        $checked = $this->preflight->check(
+            ['tt_content' => ['NEWc' => ['pid' => 1, 'header' => 'A', 'CType' => 'nonexistent_ctype']]],
+            [],
+            false,
+        );
+
+        self::assertSame(['pid' => 1, 'header' => 'A'], $checked['datamap']['tt_content']['NEWc']);
+        self::assertSame([['table' => 'tt_content', 'id' => 'NEWc', 'fields' => ['CType']]], $checked['ignored']);
     }
 
     #[Test]

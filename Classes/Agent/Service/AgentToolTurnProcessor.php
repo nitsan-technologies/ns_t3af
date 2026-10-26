@@ -1993,6 +1993,14 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             }
         }
 
+        // A limit of 1 hides a second element with a similar name, so the Agent never sees an ambiguity.
+        if (strtolower(trim($toolName)) === 'content_search') {
+            $searchLimit = (int) ($arguments['limit'] ?? 20);
+            if ($searchLimit > 0 && $searchLimit < 5) {
+                $arguments['limit'] = 5;
+            }
+        }
+
         // The editor named a page, or picked one after "I can't find that page". That page wins
         // over the page on screen and over a page id the model guessed.
         $lockedPageId = (int) ($context['lockedPageId'] ?? 0);

@@ -68,6 +68,8 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
             . ' Inline, data + cmd + bulk may weigh 2 MB together.'
             . ' fromFile = the sys_file uid of a .json file you uploaded, holding {"data": {...}, "cmd": {...}, "bulk": [...]} (each optional), for batches too big to send inline'
             . ' (up to 10 MB). Then leave data, cmd and bulk empty. The file is checked exactly like inline arguments and you need read access to it.'
+            . ' Prefer fromPayloadId after file_upload_prepare with purpose=records_apply_payload: private one-time storage, not web-readable.'
+            . ' fromPayloadId = the payloadId returned from that upload; same JSON shape as fromFile.'
             . ' Your own backend permissions apply. Returns "map" (NEW id => uid) and a batchId.',
         annotations: new ToolAnnotations(
             readOnlyHint: false,
@@ -84,13 +86,21 @@ readonly class RecordsApplyTool implements McpNonAiToolInterface
         string $bulk = '[]',
         string $requestId = '',
         int $fromFile = 0,
+        string $fromPayloadId = '',
     ): string {
-        if ($fromFile > 0) {
+        $fromPayloadId = trim($fromPayloadId);
+        if ($fromFile > 0 && $fromPayloadId !== '') {
+            throw new ToolCallException('Use either fromFile or fromPayloadId, not both. Nothing was written.', 1790500043);
+        }
+
+        if ($fromFile > 0 || $fromPayloadId !== '') {
             if (!in_array(trim($data), ['', '{}'], true) || !in_array(trim($cmd), ['', '{}'], true) || !in_array(trim($bulk), ['', '[]'], true)) {
-                throw new ToolCallException('With fromFile, data, cmd and bulk must be empty: put everything in the file. Nothing was written.', 1790500026);
+                throw new ToolCallException('With fromFile or fromPayloadId, data, cmd and bulk must be empty. Nothing was written.', 1790500026);
             }
 
-            [$datamap, $cmdmap, $bulkEntries] = $this->fileSource->read($fromFile);
+            [$datamap, $cmdmap, $bulkEntries] = $fromPayloadId !== ''
+                ? $this->fileSource->readFromPayloadId($fromPayloadId)
+                : $this->fileSource->read($fromFile);
         } else {
             $size = strlen($data) + strlen($cmd) + strlen($bulk);
             if ($size > self::MAX_PAYLOAD_BYTES) {

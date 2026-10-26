@@ -61,8 +61,7 @@ readonly class ContentSearchTool implements McpNonAiToolInterface
         string $orderDirection = 'ASC',
         string $selectFields = '',
     ): string {
-        // A limit of 1 hides a second element with a similar name, so the Agent never sees an ambiguity.
-        $limit = max(5, $limit);
+        $limit = min(max($limit, 1), 500);
         if ($pid > 0 && !$this->pageAccess->canReadPage($pid)) {
             return json_encode(['error' => PageAccessService::ACCESS_DENIED_MESSAGE, 'pageId' => $pid], JSON_THROW_ON_ERROR);
         }

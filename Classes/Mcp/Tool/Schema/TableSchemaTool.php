@@ -46,10 +46,15 @@ readonly class TableSchemaTool implements McpNonAiToolInterface
         description: 'Get the schema of a database table including field types, labels, select options, and constraints.'
             . ' Use this to discover valid field values before creating or updating records.'
             . ' Includes category/MM relations (writableAs=uid_list), file fields (writableAs=file_references),'
-            . ' and Content Blocks collections (type=collection, write child table via foreignField).',
+            . ' and Content Blocks collections (type=collection, write child table via foreignField).'
+            . ' Optional fields (comma-separated names), types (comma-separated TCA types), and compact=true reduce output size.',
     )]
-    public function execute(string $tableName): string
-    {
+    public function execute(
+        string $tableName,
+        string $fields = '',
+        string $types = '',
+        bool $compact = false,
+    ): string {
         $this->permissionService->assertCanSelectTable($tableName);
 
         $missing = $this->tcaSchemaService->missingTableMessage($tableName);
@@ -57,7 +62,9 @@ readonly class TableSchemaTool implements McpNonAiToolInterface
             throw new \InvalidArgumentException($missing, 1790600004);
         }
 
-        $schema = $this->tcaSchemaService->getFieldsSchema($tableName);
+        $onlyFields = $fields !== '' ? array_values(array_filter(array_map('trim', explode(',', $fields)))) : [];
+        $onlyTypes = $types !== '' ? array_values(array_filter(array_map('trim', explode(',', $types)))) : [];
+        $schema = $this->tcaSchemaService->getFieldsSchemaFiltered($tableName, $onlyFields, $onlyTypes, $compact);
 
         if ($schema['fields'] === []) {
             throw new \InvalidArgumentException(

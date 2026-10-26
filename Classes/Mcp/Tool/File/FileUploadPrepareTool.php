@@ -51,13 +51,47 @@ readonly class FileUploadPrepareTool implements McpFalStorageToolInterface
         name: 'file_upload_prepare',
         description: 'Prepare an out-of-band binary upload: returns a single-use upload URL and bearer token. '
             . 'The MCP client (or user) then HTTP-PUTs the raw file bytes to uploadUrl. Prefer this over '
-            . 'file_upload base64 for local/binary files so bytes never travel through the model context.',
+            . 'file_upload base64 for local/binary files so bytes never travel through the model context. '
+            . 'purpose=records_apply_payload stores large records_apply JSON privately (var/transient) and returns payloadId '
+            . 'for records_apply fromPayloadId instead of a public fileadmin URL.',
     )]
     public function execute(
         string $fileName = '',
         string $directoryPath = '/',
         int $storageUid = 1,
+        string $purpose = 'media',
     ): string {
+        $purpose = strtolower(trim($purpose));
+        if ($purpose === 'records_apply_payload') {
+            $tokenData = $this->fileUploadService->createRecordsApplyPayloadUploadToken();
+            $uploadUrl = $this->buildAbsoluteUploadUrl();
+            if ($uploadUrl === null) {
+                throw new ToolCallException(
+                    'Cannot build an absolute upload URL (no HTTP request context and no site with a fully qualified base URL). '
+                    . 'Configure a site base URL including scheme and domain.',
+                );
+            }
+
+            $curlUrl = $uploadUrl . '?fileName=' . rawurlencode('payload.json');
+
+            return json_encode([
+                'purpose' => 'records_apply_payload',
+                'payloadId' => $tokenData['payloadId'],
+                'uploadUrl' => $uploadUrl,
+                'uploadToken' => $tokenData['token'],
+                'validUntil' => date('c', $tokenData['validUntil']),
+                'instructions' => 'Upload the records_apply JSON via HTTP PUT to uploadUrl with the bearer uploadToken. '
+                    . 'Use a .json file name (fileName=payload.json). The payload is stored privately (not in fileadmin) '
+                    . "and deleted after records_apply reads it once. Example: curl -sS -T 'payload.json' -H 'Authorization: Bearer "
+                    . $tokenData['token'] . "' '" . $curlUrl . "'. Then call records_apply with fromPayloadId="
+                    . $tokenData['payloadId'] . ' and empty data/cmd/bulk.',
+            ], JSON_THROW_ON_ERROR);
+        }
+
+        if ($purpose !== '' && $purpose !== 'media') {
+            throw new ToolCallException('Unknown purpose "' . $purpose . '". Use "media" (default) or "records_apply_payload".');
+        }
+
         $folder = $this->fileUploadService->resolveFolder($storageUid, $directoryPath);
         if ($fileName !== '') {
             $this->fileUploadService->assertStorageAcceptsFileName($folder, $fileName);

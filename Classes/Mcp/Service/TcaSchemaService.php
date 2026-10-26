@@ -24,6 +24,10 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Mcp\Service;
 
+use TYPO3\CMS\Backend\View\BackendLayoutView;
+use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
+
 readonly class TcaSchemaService
 {
     /** TCA types that store simple scalar values readable/writable via DataHandler. */
@@ -120,6 +124,55 @@ readonly class TcaSchemaService
         }
 
         return array_values(array_unique($fields));
+    }
+
+    /** @return list<string> */
+    public function getContentListFields(): array
+    {
+        $preferred = ['uid', 'pid', 'CType', 'colPos', 'sorting', 'header', 'sys_language_uid', 'hidden'];
+        $readable = array_flip($this->getReadFields('tt_content'));
+        $fields = [];
+        foreach ($preferred as $field) {
+            if ($field === 'uid' || $field === 'pid' || isset($readable[$field])) {
+                $fields[] = $field;
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
+     * Best-effort semantic check (static TCA select items, tt_content colPos for a known page).
+     * Returns false when validation is not possible (dynamic item lists).
+     */
+    public function isFieldValueSemanticallyInvalid(string $table, string $field, mixed $value, int $pageId = 0): bool
+    {
+        if ($value === null || $value === '') {
+            return false;
+        }
+
+        if (!is_int($value) && !is_string($value) && !is_float($value)) {
+            return false;
+        }
+
+        $scalar = is_int($value) || is_float($value) ? (string) (int) $value : trim((string) $value);
+        if ($scalar === '') {
+            return false;
+        }
+
+        $allowed = $this->getStaticSelectValues($table, $field);
+        if ($allowed !== null && !in_array($scalar, $allowed, true)) {
+            return true;
+        }
+
+        if ($table === 'tt_content' && $field === 'colPos' && $pageId > 0) {
+            $colPosValues = $this->getAllowedColPosValuesForPage($pageId);
+            if ($colPosValues !== null && !in_array((int) $scalar, $colPosValues, true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -609,9 +662,27 @@ readonly class TcaSchemaService
     /**
      * Returns detailed schema information for all readable fields of a table.
      *
+     * @return array{table: string, fields: list<array<string, mixed>>, compact?: bool}
+     */
+    public function getFieldsSchema(string $tableName, bool $compact = false): array
+    {
+        return $this->filterFieldsSchema($this->buildFullFieldsSchema($tableName, $compact), [], [], $compact);
+    }
+
+    /**
+     * @param list<string> $onlyFields
+     * @param list<string> $onlyTypes
+     * @return array{table: string, fields: list<array<string, mixed>>, compact?: bool}
+     */
+    public function getFieldsSchemaFiltered(string $tableName, array $onlyFields = [], array $onlyTypes = [], bool $compact = false): array
+    {
+        return $this->filterFieldsSchema($this->buildFullFieldsSchema($tableName, $compact), $onlyFields, $onlyTypes, $compact);
+    }
+
+    /**
      * @return array{table: string, fields: list<array<string, mixed>>}
      */
-    public function getFieldsSchema(string $tableName): array
+    private function buildFullFieldsSchema(string $tableName, bool $compact): array
     {
         $tca = $this->getTca($tableName);
         if ($tca === null) {
@@ -639,7 +710,7 @@ readonly class TcaSchemaService
                 continue;
             }
 
-            $fields[] = $this->buildFieldSchema($fieldName, $columnConfig);
+            $fields[] = $this->buildFieldSchema($fieldName, $columnConfig, $compact);
         }
 
         $sortField = $this->getSortField($tca);
@@ -654,6 +725,38 @@ readonly class TcaSchemaService
         }
 
         return ['table' => $tableName, 'fields' => $fields];
+    }
+
+    /**
+     * @param array{table: string, fields: list<array<string, mixed>>} $schema
+     * @param list<string> $onlyFields
+     * @param list<string> $onlyTypes
+     * @return array{table: string, fields: list<array<string, mixed>>, compact?: bool}
+     */
+    private function filterFieldsSchema(array $schema, array $onlyFields, array $onlyTypes, bool $compact): array
+    {
+        $fields = $schema['fields'];
+        if ($onlyFields !== []) {
+            $allowed = array_flip(array_map('strval', $onlyFields));
+            $fields = array_values(array_filter(
+                $fields,
+                static fn(array $field): bool => isset($allowed[(string) ($field['name'] ?? '')]),
+            ));
+        }
+        if ($onlyTypes !== []) {
+            $types = array_flip(array_map('strval', $onlyTypes));
+            $fields = array_values(array_filter(
+                $fields,
+                static fn(array $field): bool => isset($types[(string) ($field['type'] ?? '')]),
+            ));
+        }
+
+        $result = ['table' => $schema['table'], 'fields' => $fields];
+        if ($compact) {
+            $result['compact'] = true;
+        }
+
+        return $result;
     }
 
     public function missingTableMessage(string $tableName): ?string
@@ -674,7 +777,7 @@ readonly class TcaSchemaService
      * @param array<mixed> $columnConfig
      * @return array<string, mixed>
      */
-    private function buildFieldSchema(string $fieldName, array $columnConfig): array
+    private function buildFieldSchema(string $fieldName, array $columnConfig, bool $compact = false): array
     {
         $config = $columnConfig['config'] ?? [];
         if (!is_array($config)) {
@@ -690,12 +793,20 @@ readonly class TcaSchemaService
 
         $label = $columnConfig['label'] ?? null;
         if (is_string($label) && $label !== '') {
-            $schema['label'] = $label;
+            $resolved = $this->resolveSchemaLabel($label);
+            if ($resolved !== null) {
+                $schema['label'] = $resolved;
+            }
         }
 
-        $description = $columnConfig['description'] ?? null;
-        if (is_string($description) && $description !== '') {
-            $schema['description'] = $description;
+        if (!$compact) {
+            $description = $columnConfig['description'] ?? null;
+            if (is_string($description) && $description !== '') {
+                $resolvedDescription = $this->resolveSchemaLabel($description);
+                if ($resolvedDescription !== null) {
+                    $schema['description'] = $resolvedDescription;
+                }
+            }
         }
 
         $readOnly = $config['readOnly'] ?? false;
@@ -708,9 +819,13 @@ readonly class TcaSchemaService
             $schema['required'] = true;
         }
 
-        $this->addConstraints($schema, $config, $type);
-        $this->addItems($schema, $config, $type);
-        $this->addRelationMetadata($schema, $config, $type, $columnConfig);
+        if (!$compact) {
+            $this->addConstraints($schema, $config, $type);
+        }
+        $this->addItems($schema, $config, $type, $compact);
+        if (!$compact) {
+            $this->addRelationMetadata($schema, $config, $type, $columnConfig);
+        }
 
         return $schema;
     }
@@ -871,7 +986,7 @@ readonly class TcaSchemaService
      * @param array<string, mixed> &$schema
      * @param array<mixed> $config
      */
-    private function addItems(array &$schema, array $config, string $type): void
+    private function addItems(array &$schema, array $config, string $type, bool $compact = false): void
     {
         if ($type !== 'select' && $type !== 'radio') {
             return;
@@ -909,8 +1024,11 @@ readonly class TcaSchemaService
             if (is_string($itemValue) || is_int($itemValue)) {
                 $entry['value'] = $itemValue;
             }
-            if (is_string($itemLabel) && $itemLabel !== '') {
-                $entry['label'] = $itemLabel;
+            if (!$compact && is_string($itemLabel) && $itemLabel !== '') {
+                $resolved = $this->resolveSchemaLabel($itemLabel);
+                if ($resolved !== null) {
+                    $entry['label'] = $resolved;
+                }
             }
 
             if ($entry !== []) {
@@ -921,6 +1039,94 @@ readonly class TcaSchemaService
         if ($parsedItems !== []) {
             $schema['items'] = $parsedItems;
         }
+    }
+
+    /** @return list<string>|null */
+    private function getStaticSelectValues(string $table, string $field): ?array
+    {
+        $config = $this->getColumnFieldConfig($table, $field);
+        if (!is_array($config)) {
+            return null;
+        }
+
+        $type = $config['type'] ?? '';
+        if (!in_array($type, ['select', 'radio'], true)) {
+            return null;
+        }
+
+        if (($config['foreign_table'] ?? '') !== ''
+            || ($config['itemProcFunc'] ?? '') !== ''
+            || ($config['itemsProcFunc'] ?? '') !== ''
+            || ($config['fileFolderConfig'] ?? null) !== null
+        ) {
+            return null;
+        }
+
+        $items = $config['items'] ?? null;
+        if (!is_array($items) || $items === []) {
+            return null;
+        }
+
+        $values = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $itemValue = $item['value'] ?? $item[1] ?? null;
+            if ($itemValue === null && array_key_exists(1, $item)) {
+                $itemValue = $item[1];
+            }
+            if (is_int($itemValue) || is_string($itemValue)) {
+                $values[] = (string) $itemValue;
+            }
+        }
+
+        return $values === [] ? null : array_values(array_unique($values));
+    }
+
+    /** @return list<int>|null */
+    private function getAllowedColPosValuesForPage(int $pageId): ?array
+    {
+        if (!class_exists(BackendLayoutView::class)) {
+            return null;
+        }
+
+        try {
+            $backendLayoutView = GeneralUtility::makeInstance(BackendLayoutView::class);
+            $backendLayout = $backendLayoutView->getBackendLayoutForPage($pageId);
+            $structure = $backendLayoutView->parseStructure($backendLayout);
+            $list = $structure['__colPosList'] ?? [];
+            if (!is_array($list) || $list === []) {
+                return null;
+            }
+
+            return array_values(array_unique(array_map(intval(...), $list)));
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function resolveSchemaLabel(string $label): ?string
+    {
+        if ($label === '') {
+            return null;
+        }
+
+        $backendUser = $GLOBALS['BE_USER'] ?? null;
+        if ($backendUser !== null) {
+            $languageService = GeneralUtility::makeInstance(LanguageServiceFactory::class)
+                ->createFromUserPreferences($backendUser);
+            $resolved = $languageService->sL($label);
+            if ($resolved !== '' && !str_starts_with($resolved, 'LLL:')) {
+                return $resolved;
+            }
+        }
+
+        if (str_starts_with($label, 'LLL:')) {
+            return null;
+        }
+
+        return $label;
     }
 
     /** @param array<mixed> $columnConfig */

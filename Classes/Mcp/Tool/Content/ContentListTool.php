@@ -78,9 +78,9 @@ readonly class ContentListTool implements McpNonAiToolInterface
             $valid = array_values(array_intersect($requested, $allowed));
             $fields = $valid !== []
                 ? array_values(array_unique(array_merge(['uid', 'pid'], $valid)))
-                : $this->tcaSchemaService->getListFields('tt_content');
+                : $this->tcaSchemaService->getContentListFields();
         } else {
-            $fields = $this->tcaSchemaService->getListFields('tt_content');
+            $fields = $this->tcaSchemaService->getContentListFields();
         }
 
         $languageField = $translationConfig['languageField'];
