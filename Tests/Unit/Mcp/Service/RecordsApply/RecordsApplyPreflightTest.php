@@ -638,6 +638,92 @@ final class RecordsApplyPreflightTest extends TestCase
     }
 
     #[Test]
+    public function aFileReferenceToANonexistentParentUidIsRefused(): void
+    {
+        $GLOBALS['TCA']['pages']['columns']['media'] = [
+            'config' => [
+                'type' => 'file',
+                'foreign_table' => 'sys_file_reference',
+                'foreign_field' => 'uid_foreign',
+            ],
+        ];
+        $GLOBALS['TCA']['sys_file_reference']['columns'] = [
+            'uid_foreign' => ['config' => ['type' => 'passthrough']],
+            'uid_local' => ['config' => ['type' => 'passthrough']],
+            'tablenames' => ['config' => ['type' => 'input']],
+            'fieldname' => ['config' => ['type' => 'input']],
+        ];
+
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->method('findExistingUids')
+            ->willReturnCallback(static function (string $table, array $uids): array {
+                if ($table === 'pages' && $uids === [999999]) {
+                    return [];
+                }
+
+                return $uids;
+            });
+        $preflight = $this->makePreflight(null, $recordService);
+
+        try {
+            $preflight->check([
+                'sys_file_reference' => [
+                    'NEWref' => [
+                        'pid' => 1,
+                        'uid_local' => 2,
+                        'uid_foreign' => 999999,
+                        'tablenames' => 'pages',
+                        'fieldname' => 'media',
+                    ],
+                ],
+            ], [], false);
+            self::fail('Expected validation for missing parent page uid.');
+        } catch (RecordsApplyValidationException $exception) {
+            self::assertSame(['uid_foreign'], $exception->getProblems()[0]['fields']);
+            self::assertStringContainsString('999999', (string) $exception->getProblems()[0]['error']);
+        }
+    }
+
+    #[Test]
+    public function aFileReferenceUidForeignNewIdMustMatchTablenames(): void
+    {
+        $GLOBALS['TCA']['pages']['columns']['media'] = [
+            'config' => [
+                'type' => 'file',
+                'foreign_table' => 'sys_file_reference',
+                'foreign_field' => 'uid_foreign',
+            ],
+        ];
+        $GLOBALS['TCA']['sys_file_reference']['columns'] = [
+            'uid_foreign' => ['config' => ['type' => 'passthrough']],
+            'uid_local' => ['config' => ['type' => 'passthrough']],
+            'tablenames' => ['config' => ['type' => 'input']],
+            'fieldname' => ['config' => ['type' => 'input']],
+        ];
+
+        try {
+            $this->preflight->check([
+                'pages' => ['NEWp' => ['pid' => 1, 'title' => 'P']],
+                'tt_content' => ['NEWce' => ['pid' => 'NEWp', 'CType' => 'text', 'header' => 'H']],
+                'sys_file_reference' => [
+                    'NEWref' => [
+                        'pid' => 'NEWp',
+                        'uid_local' => 2,
+                        'uid_foreign' => 'NEWce',
+                        'tablenames' => 'pages',
+                        'fieldname' => 'media',
+                    ],
+                ],
+            ], [], false);
+            self::fail('Expected validation when uid_foreign NEW id is on another table.');
+        } catch (RecordsApplyValidationException $exception) {
+            self::assertSame(['uid_foreign'], $exception->getProblems()[0]['fields']);
+            self::assertStringContainsString('NEWce', (string) $exception->getProblems()[0]['error']);
+            self::assertStringContainsString('pages', (string) $exception->getProblems()[0]['error']);
+        }
+    }
+
+    #[Test]
     public function aFileReferenceToAFileOutsideTheEditorsMountsIsRefused(): void
     {
         $GLOBALS['TCA']['sys_file_reference']['columns']['uid_local'] = ['config' => ['type' => 'input']];

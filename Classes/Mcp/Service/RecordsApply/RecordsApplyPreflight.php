@@ -298,6 +298,9 @@ readonly class RecordsApplyPreflight
                 }
 
                 foreach ($this->inlineForeignFields->ofChildTable($table) as $parentField) {
+                    if ($table === 'sys_file_reference' && $parentField === 'uid_foreign') {
+                        continue;
+                    }
                     if (!array_key_exists($parentField, $fields)) {
                         continue;
                     }
@@ -308,6 +311,34 @@ readonly class RecordsApplyPreflight
                             'fields' => [RecordsApplyProblems::safe($parentField)],
                         ]);
                         continue 2;
+                    }
+                }
+
+                if ($table === 'sys_file_reference' && array_key_exists('uid_foreign', $fields)) {
+                    $tablenames = is_string($fields['tablenames'] ?? null) ? trim($fields['tablenames']) : '';
+                    if ($tablenames === '') {
+                        $problems->add($where + [
+                            'error' => 'Field uid_foreign requires tablenames (the parent record table).',
+                            'fields' => ['tablenames', 'uid_foreign'],
+                        ]);
+                        continue;
+                    }
+                    if (!$this->checkTable($tablenames, 'data', $backendUser, $problems)) {
+                        continue;
+                    }
+                    $parentNewIds = $newIds[$tablenames] ?? [];
+                    $foreignError = $this->fileReferenceUidForeignError(
+                        $fields['uid_foreign'],
+                        $tablenames,
+                        $parentNewIds,
+                        $allNewIds,
+                    );
+                    if ($foreignError !== null) {
+                        $problems->add($where + [
+                            'error' => $foreignError,
+                            'fields' => ['uid_foreign'],
+                        ]);
+                        continue;
                     }
                 }
 
@@ -870,6 +901,53 @@ readonly class RecordsApplyPreflight
         }
 
         return 0;
+    }
+
+    /**
+     * @param array<string, true> $newIdsOnParentTable
+     * @param array<string, true> $allNewIds
+     */
+    private function fileReferenceUidForeignError(
+        mixed $parentRef,
+        string $parentTable,
+        array $newIdsOnParentTable,
+        array $allNewIds,
+    ): ?string {
+        if (is_string($parentRef)) {
+            $trimmed = trim($parentRef);
+            if (preg_match(self::NEW_ID, $trimmed) === 1 && !isset($newIdsOnParentTable[$trimmed]) && isset($allNewIds[$trimmed])) {
+                return sprintf(
+                    'Field uid_foreign refers to NEW id %s, which is not created as a %s record in this call.',
+                    RecordsApplyProblems::safe($trimmed),
+                    RecordsApplyProblems::safe($parentTable),
+                );
+            }
+        }
+
+        $formatError = self::inlineForeignFieldError($parentRef, $newIdsOnParentTable, 'uid_foreign');
+        if ($formatError !== null) {
+            return $formatError;
+        }
+
+        $uid = null;
+        if (is_int($parentRef) && $parentRef > 0) {
+            $uid = $parentRef;
+        } elseif (is_string($parentRef)) {
+            $trimmed = trim($parentRef);
+            if (ctype_digit($trimmed)) {
+                $uid = (int) $trimmed;
+            }
+        }
+
+        if ($uid !== null && $this->recordService->findExistingUids($parentTable, [$uid]) === []) {
+            return sprintf(
+                'Field uid_foreign refers to %s uid %d, which was not found or is not accessible.',
+                RecordsApplyProblems::safe($parentTable),
+                $uid,
+            );
+        }
+
+        return null;
     }
 
     /**
