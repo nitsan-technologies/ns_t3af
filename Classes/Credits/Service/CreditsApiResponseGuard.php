@@ -58,6 +58,7 @@ final class CreditsApiResponseGuard
     private const TIMESTAMP_KEYS = [
         'plan_expires_at',
         'expires_at',
+        'expiresAt',
         'plan_renewed_at',
         'purchased_at',
         'crdate',
@@ -66,13 +67,22 @@ final class CreditsApiResponseGuard
     /** @var list<string> */
     private const PLAIN_TEXT_KEYS = [
         'plan_name',
+        'plan',
         'title',
         'subtitle',
         'name',
     ];
 
-    public function assertBearerToken(#[\SensitiveParameter] string $token): void
+    public function assertBearerToken(#[\SensitiveParameter] mixed $token): void
     {
+        if (!is_string($token)) {
+            throw new CreditsApiException(
+                CreditsApiErrorCodes::INVALID_RESPONSE,
+                502,
+                'Invalid bearer token from T3Planet Credits API',
+            );
+        }
+
         $token = trim($token);
         if ($token === '') {
             throw new CreditsApiException(
@@ -111,12 +121,17 @@ final class CreditsApiResponseGuard
             return $payload;
         }
 
+        $this->assertPlainTextFields($payload);
+        $this->assertTimestampFields($payload);
+
         if (array_key_exists('balance', $payload)) {
             $this->assertCreditAmount($payload['balance'], 'balance');
         }
 
         $credits = $payload['credits'] ?? null;
         if (is_array($credits)) {
+            $this->assertPlainTextFields($credits);
+            $this->assertTimestampFields($credits);
             $this->assertCreditBlock($credits);
         } else {
             $this->assertCreditBlock($payload);
@@ -139,12 +154,56 @@ final class CreditsApiResponseGuard
         $this->assertPlainTextFields($payload);
         $this->assertTimestampFields($payload);
 
+        if (array_key_exists('balance', $payload)) {
+            $this->assertCreditAmount($payload['balance'], 'balance');
+        }
+
         $credits = $payload['credits'] ?? null;
         if (is_array($credits)) {
+            $this->assertPlainTextFields($credits);
+            $this->assertTimestampFields($credits);
             $this->assertCreditBlock($credits);
         }
 
         return $payload;
+    }
+
+    /**
+     * Validates Token / ClaimToken / RefreshToken payloads before persisting a bearer.
+     *
+     * @param array<string, mixed> $payload
+     */
+    public function guardClaimTokenResponse(array $payload): string
+    {
+        if (!array_key_exists('token', $payload)) {
+            throw new CreditsApiException(
+                CreditsApiErrorCodes::TOKEN_MISSING,
+                502,
+                'Token endpoint did not return a token',
+            );
+        }
+
+        $rawToken = $payload['token'];
+        $this->assertBearerToken($rawToken);
+        $token = trim($rawToken);
+
+        $this->assertPlainTextFields($payload);
+        $this->assertTimestampFields($payload);
+
+        if (array_key_exists('balance', $payload)) {
+            $this->assertCreditAmount($payload['balance'], 'balance');
+        }
+
+        $credits = $payload['credits'] ?? null;
+        if (is_array($credits)) {
+            $this->assertPlainTextFields($credits);
+            $this->assertTimestampFields($credits);
+            $this->assertCreditBlock($credits);
+        } else {
+            $this->assertCreditBlock($payload);
+        }
+
+        return $token;
     }
 
     /**
@@ -292,6 +351,9 @@ final class CreditsApiResponseGuard
         }
         if (is_int($value)) {
             return $value >= 0;
+        }
+        if (is_float($value)) {
+            return is_finite($value) && $value >= 0.0 && (float) (int) $value === $value;
         }
         if (is_string($value) && ctype_digit($value)) {
             return true;

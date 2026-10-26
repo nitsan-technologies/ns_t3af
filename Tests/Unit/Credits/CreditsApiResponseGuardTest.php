@@ -71,4 +71,55 @@ final class CreditsApiResponseGuardTest extends TestCase
         $this->expectException(CreditsApiException::class);
         $this->guard->guardCurrentPlan(['plan_expires_at' => 'not-a-date']);
     }
+
+    public function testRejectsIntegerBearer(): void
+    {
+        $this->expectException(CreditsApiException::class);
+        $this->guard->assertBearerToken(1234567890123456789);
+    }
+
+    public function testRejectsArrayBearer(): void
+    {
+        $this->expectException(CreditsApiException::class);
+        $this->guard->assertBearerToken(['secret-token-value']);
+    }
+
+    public function testGuardBalanceRejectsHtmlInPlanName(): void
+    {
+        $this->expectException(CreditsApiException::class);
+        $this->guard->guardBalance(['plan_name' => '<b>x</b>', 'credits' => ['free_credits' => 1]]);
+    }
+
+    public function testGuardBalanceRejectsInvalidExpiresAt(): void
+    {
+        $this->expectException(CreditsApiException::class);
+        $this->guard->guardBalance(['expires_at' => 'not-a-date', 'credits' => ['free_credits' => 1]]);
+    }
+
+    public function testGuardCurrentPlanRejectsTicketPlanField(): void
+    {
+        $this->expectException(CreditsApiException::class);
+        $this->guard->guardCurrentPlan(['plan' => '<img src=x onerror=alert(1)>Starter']);
+    }
+
+    public function testGuardCurrentPlanRejectsExpiresAtCamelCase(): void
+    {
+        $this->expectException(CreditsApiException::class);
+        $this->guard->guardCurrentPlan(['expiresAt' => 'not-a-date']);
+    }
+
+    public function testGuardCurrentPlanRejectsJunkTopLevelBalance(): void
+    {
+        $this->expectException(CreditsApiException::class);
+        $this->guard->guardCurrentPlan(['balance' => 'abc123junk']);
+    }
+
+    public function testGuardClaimTokenResponseRejectsValidTokenWithObjectBalance(): void
+    {
+        $this->expectException(CreditsApiException::class);
+        $this->guard->guardClaimTokenResponse([
+            'token' => 'bearer-test-token-abc',
+            'balance' => ['oops' => true],
+        ]);
+    }
 }

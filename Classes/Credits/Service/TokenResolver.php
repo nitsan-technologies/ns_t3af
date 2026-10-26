@@ -117,8 +117,7 @@ class TokenResolver
         $previousToken = (string) ($this->runtimeSettings->getTokenPlain() ?? '');
 
         $payload = $this->apiClient->claimToken($claimCode, null, $this->resolveContact($contactOverride));
-        $token = trim((string) ($payload['token'] ?? ''));
-        $this->responseGuard->assertBearerToken($token);
+        $token = $this->responseGuard->guardClaimTokenResponse($payload);
 
         // Replace whatever was stored: on a merge the server hands back the surviving account's
         // bearer, which may differ from the one the code was issued for.
@@ -177,8 +176,7 @@ class TokenResolver
     public function issueFreshToken(?array $contactOverride = null): string
     {
         $payload = $this->apiClient->issueTrialToken(null, $this->resolveContact($contactOverride));
-        $token = trim((string) ($payload['token'] ?? ''));
-        $this->responseGuard->assertBearerToken($token);
+        $token = $this->responseGuard->guardClaimTokenResponse($payload);
 
         $this->runtimeSettings->storeToken($token);
         $this->rememberToken($token);
@@ -307,8 +305,7 @@ class TokenResolver
         $this->ensureIpBound($current);
         $domain = $this->domainResolver->resolve();
         $payload = $this->apiClient->refreshBearerToken($current, $domain, $this->licenseContactResolver->resolve());
-        $token = trim((string) ($payload['token'] ?? ''));
-        $this->responseGuard->assertBearerToken($token);
+        $token = $this->responseGuard->guardClaimTokenResponse($payload);
 
         $this->runtimeSettings->storeToken($token);
         $this->rememberToken($token);
@@ -332,6 +329,21 @@ class TokenResolver
         $this->cache->remove(self::CACHE_IDENTIFIER);
         $this->runtimeSettings->clearToken();
         $this->apiResponseCache->flush();
+    }
+
+    /**
+     * Restore the bearer that was stored before a failed claim/activate balance fetch.
+     */
+    public function rollbackStoredBearer(?string $previousPlainToken): void
+    {
+        if ($previousPlainToken === null || $previousPlainToken === '') {
+            $this->invalidate();
+
+            return;
+        }
+
+        $this->runtimeSettings->storeToken($previousPlainToken);
+        $this->rememberToken($previousPlainToken);
     }
 
     public function invalidateOnUnauthorized(CreditsApiException $exception): bool

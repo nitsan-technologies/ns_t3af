@@ -107,6 +107,35 @@ final class TokenResolverTest extends TestCase
         self::assertSame('', $runtime->getTokenPlain() ?? '');
     }
 
+    public function testClaimWithCodeRejectsJunkBalanceInClaimResponse(): void
+    {
+        $api = $this->createMock(T3PlanetApiClient::class);
+        $api->expects(self::once())->method('claimToken')->willReturn([
+            'token' => self::VALID_BEARER,
+            'balance' => 'abc123junk',
+        ]);
+
+        [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
+        $resolver = new TokenResolver(
+            $api,
+            $runtime,
+            $cache,
+            $apiResponseCache,
+            $this->domainResolver($runtime),
+            $this->contactResolver(),
+            new CreditsApiResponseGuard(),
+        );
+
+        try {
+            $resolver->claimWithCode('any-code');
+            self::fail('Expected CreditsApiException');
+        } catch (\NITSAN\NsT3AF\Credits\Exception\CreditsApiException $exception) {
+            self::assertSame(CreditsApiErrorCodes::INVALID_RESPONSE, $exception->errorCode);
+        }
+
+        self::assertNull($runtime->getTokenPlain());
+    }
+
     public function testIssueFreshTokenStoresEncryptedToken(): void
     {
         $api = $this->createMock(T3PlanetApiClient::class);

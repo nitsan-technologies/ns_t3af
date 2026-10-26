@@ -171,9 +171,15 @@ final class CreditModeController
                 $contactOverride = $contact;
             }
 
+            $previousBearer = $this->runtimeSettings->getTokenPlain();
             $this->runtimeSettings->save(['credit_mode' => 1]);
             $activation = $this->tokenResolver->activateTrialToken($contactOverride);
-            $balance = $this->fetchBalanceOrResync();
+            try {
+                $balance = $this->fetchBalanceOrResync();
+            } catch (CreditsApiException $exception) {
+                $this->tokenResolver->rollbackStoredBearer($previousBearer);
+                throw $exception;
+            }
             $this->pricingResolver->rememberFromPayload($balance);
 
             return new JsonResponse([
@@ -228,9 +234,15 @@ final class CreditModeController
                 ], 400);
             }
 
+            $previousBearer = $this->runtimeSettings->getTokenPlain();
             $this->runtimeSettings->save(['credit_mode' => 1]);
             $claim = $this->tokenResolver->claimWithCode($claimCode);
-            $balance = $this->fetchBalanceOrResync();
+            try {
+                $balance = $this->fetchBalanceOrResync();
+            } catch (CreditsApiException $exception) {
+                $this->tokenResolver->rollbackStoredBearer($previousBearer);
+                throw $exception;
+            }
             $this->pricingResolver->rememberFromPayload($balance);
 
             return new JsonResponse([
