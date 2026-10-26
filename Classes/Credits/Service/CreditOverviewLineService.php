@@ -34,6 +34,7 @@ final class CreditOverviewLineService
         private readonly CurrentPlanService $currentPlanService,
         private readonly ProductCatalogService $productCatalogService,
         private readonly CreditsDashboardAssembler $dashboardAssembler,
+        private readonly LocalReceiptCache $localReceiptCache,
     ) {}
 
     public function resolve(): string
@@ -100,12 +101,40 @@ final class CreditOverviewLineService
         }
 
         $remaining = (float) $summary['remaining'];
-        $total = (float) $summary['total'];
-        $used = max(0.0, $total - $remaining);
-        $usedFormatted = AiCreditUnits::formatCredits($used);
-        $percentLeft = max(0, min(100, (int) $summary['percentLeft']));
+        $lifetimeUsed = 0.0;
+        if ($summary['isTrial'] ?? false) {
+            $lifetimeUnits = (int) array_sum($this->localReceiptCache->sumCostUnitsByFeatureKey());
+            $lifetimeUsed = $lifetimeUnits > 0 ? AiCreditUnits::unitsToCredits($lifetimeUnits) : 0.0;
+        }
 
-        return ['badge' => $this->mapSummaryToBadge($summary, $used, $usedFormatted, $percentLeft), 'empty' => false];
+        $badgeSummary = $summary;
+        $used = max(0.0, (float) $summary['total'] - $remaining);
+        if ($summary['isTrial'] ?? false) {
+            $total = $this->dashboardAssembler->applyTrialLifetimeUsage(
+                [
+                    'remaining' => $remaining,
+                    'total' => (float) $summary['total'],
+                ],
+                ['isTrial' => 1],
+                $products,
+                $lifetimeUsed,
+            )[0]['total'];
+            $used = $lifetimeUsed;
+            $percentLeft = $total > 0.0
+                ? max(0, min(100, (int) round(($remaining / $total) * 100)))
+                : 0;
+            $badgeSummary = array_merge($summary, [
+                'total' => $total,
+                'totalFormatted' => AiCreditUnits::formatCredits($total),
+                'percentLeft' => $percentLeft,
+            ]);
+        } else {
+            $percentLeft = max(0, min(100, (int) $summary['percentLeft']));
+        }
+
+        $usedFormatted = AiCreditUnits::formatCredits($used);
+
+        return ['badge' => $this->mapSummaryToBadge($badgeSummary, $used, $usedFormatted, $percentLeft), 'empty' => false];
     }
 
     /**
