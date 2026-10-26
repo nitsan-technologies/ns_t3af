@@ -490,7 +490,7 @@ readonly class DataHandlerService
      * at 0 even though sys_file_reference rows exist (breaks SEO og:image). Sync
      * the integer directly without re-processing IRRE relations.
      */
-    private function syncFileFieldCounter(string $table, int $recordUid, string $fieldName): void
+    public function syncFileFieldCounter(string $table, int $recordUid, string $fieldName): void
     {
         $count = 0;
         foreach ($this->recordService->findFileReferences($table, $recordUid, $fieldName) as $row) {

@@ -595,6 +595,49 @@ final class RecordsApplyPreflightTest extends TestCase
     }
 
     #[Test]
+    public function aFileReferenceWithABadUidForeignIsRefused(): void
+    {
+        $GLOBALS['TCA']['pages']['columns']['media'] = [
+            'config' => [
+                'type' => 'file',
+                'foreign_table' => 'sys_file_reference',
+                'foreign_field' => 'uid_foreign',
+            ],
+        ];
+        $GLOBALS['TCA']['sys_file_reference']['columns'] = [
+            'uid_foreign' => ['config' => ['type' => 'passthrough']],
+            'uid_local' => ['config' => ['type' => 'passthrough']],
+            'tablenames' => ['config' => ['type' => 'input']],
+            'fieldname' => ['config' => ['type' => 'input']],
+        ];
+
+        $batch = [
+            'pages' => ['NEWp' => ['pid' => 1, 'title' => 'P']],
+            'sys_file_reference' => [
+                'NEWref' => [
+                    'pid' => 'NEWp',
+                    'uid_local' => 2,
+                    'uid_foreign' => 'NEW_bad',
+                    'tablenames' => 'pages',
+                    'fieldname' => 'media',
+                ],
+            ],
+        ];
+
+        foreach (['NEW_bad', 'newp', 'NEW', 'abc', -5, 'NEWmissing'] as $badForeign) {
+            $data = $batch;
+            $data['sys_file_reference']['NEWref']['uid_foreign'] = $badForeign;
+            try {
+                $this->preflight->check($data, [], false);
+                self::fail('Expected validation for uid_foreign ' . var_export($badForeign, true));
+            } catch (RecordsApplyValidationException $exception) {
+                $problem = $exception->getProblems()[0];
+                self::assertSame(['uid_foreign'], $problem['fields'] ?? null, (string) ($problem['error'] ?? ''));
+            }
+        }
+    }
+
+    #[Test]
     public function aFileReferenceToAFileOutsideTheEditorsMountsIsRefused(): void
     {
         $GLOBALS['TCA']['sys_file_reference']['columns']['uid_local'] = ['config' => ['type' => 'input']];

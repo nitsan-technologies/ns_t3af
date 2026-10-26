@@ -186,13 +186,15 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
         }
 
         try {
+            $referencePid = $table === 'pages'
+                ? $uid
+                : (int) ($record['pid'] ?? 0);
             $referenceUids = $this->dataHandlerService->createFileReferences(
                 $table,
                 $uid,
                 $fieldName,
                 $parsedUids,
-                // References live on the page of their record.
-                (int) ($record['pid'] ?? 0),
+                $referencePid,
                 $texts,
             );
             $parentCount = count($this->recordService->findFileReferences($table, $uid, $fieldName));

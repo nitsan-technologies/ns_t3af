@@ -41,6 +41,7 @@ use NITSAN\NsT3AF\Mcp\Service\FileFieldAttachmentValidator;
 use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordPayloadNormalizer;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyAudit;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyDatamapMeta;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyResult;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
@@ -897,6 +898,9 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     {
         $beforeUid = $beforeUid > 0 ? $beforeUid : (int) ($payload['beforeUid'] ?? 0);
         $afterUid = $afterUid > 0 ? $afterUid : (int) ($payload['afterUid'] ?? 0);
+        if ($beforeUid > 0 && $afterUid > 0) {
+            throw new \InvalidArgumentException('Pass either beforeUid or afterUid for placement, not both.');
+        }
         if ($afterUid > 0 && $beforeUid <= 0) {
             return -$afterUid;
         }
@@ -910,12 +914,18 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
                     if ($contentPid <= 0 || $recordPid === $contentPid) {
                         return $this->recordService->targetBeforeRecord($tableName, $beforeUid);
                     }
-                    // beforeUid is a CE on another page; parent-page shortcut may still apply below.
                     if ($tableName === 'tt_content') {
                         $page = $this->recordService->findByUid('pages', $contentPid, ['pid']);
                         if (is_array($page) && (int) ($page['pid'] ?? -1) === $beforeUid) {
                             return $contentPid;
                         }
+
+                        throw new \InvalidArgumentException(sprintf(
+                            'beforeUid %d is a content element on page %d, but pid is %d. Use a content element on the same page.',
+                            $beforeUid,
+                            $recordPid,
+                            $contentPid,
+                        ));
                     }
 
                     return $contentPid;
@@ -928,6 +938,16 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
                 if (is_array($page) && (int) ($page['pid'] ?? -1) === $beforeUid) {
                     return $contentPid;
                 }
+
+                if ($this->recordService->findExistingUids('pages', [$beforeUid]) !== []) {
+                    return $this->recordService->targetBeforePage($beforeUid);
+                }
+
+                throw new \InvalidArgumentException(sprintf(
+                    'There is no %s record with uid %d. beforeUid must be an existing content element on the same page, a parent page uid when pid is a direct child page, or an existing page uid for page-tree placement.',
+                    $tableName,
+                    $beforeUid,
+                ));
             }
 
             return $this->recordService->targetBeforePage($beforeUid);
@@ -942,6 +962,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     /** @param array<string, mixed> $payload */
     private function create(string $tableName, array $payload, bool $strict = false, int $beforeUid = 0, int $afterUid = 0): string
     {
+        $placementViaBeforeUid = $beforeUid > 0 || (int) ($payload['beforeUid'] ?? 0) > 0;
         try {
             if ($tableName === 'tx_news_domain_model_news') {
                 $payload = $this->withNewsStoragePid($payload);
@@ -992,7 +1013,11 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         try {
-            $result = $this->write([$tableName => [self::NEW_ID => ['pid' => $pid] + $filteredData]], [], $strict);
+            $createRow = ['pid' => $pid] + $filteredData;
+            if ($placementViaBeforeUid) {
+                $createRow[RecordsApplyDatamapMeta::SKIP_APPEND_ORDER] = 1;
+            }
+            $result = $this->write([$tableName => [self::NEW_ID => $createRow]], [], $strict);
             $newUid = $result->created[self::NEW_ID] ?? 0;
             if ($newUid <= 0) {
                 throw new \RuntimeException('Failed to create record: no uid returned', 1712000020);

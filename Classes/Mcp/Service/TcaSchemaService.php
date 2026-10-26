@@ -636,6 +636,14 @@ readonly class TcaSchemaService
                 ];
             }
 
+            if (in_array($fieldName, $this->getWritableFields($tableName), true)) {
+                return [
+                    'field' => $fieldName,
+                    'reason' => 'value_not_allowed',
+                    'hint' => 'Value is not allowed by TCA (select items, backend layout, or field rules).',
+                ];
+            }
+
             return [
                 'field' => $fieldName,
                 'reason' => 'not_writable',

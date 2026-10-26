@@ -459,6 +459,15 @@ final class WriteTableToolTest extends TestCase
     public function planCreateBeforeAPageUsesThePreviousSiblingEvenWhenTheParentPidIsSent(): void
     {
         $records = $this->createMock(RecordService::class);
+        $records->method('findExistingUids')->willReturnCallback(
+            static function (string $table, array $uids): array {
+                if ($table === 'pages' && $uids === [70]) {
+                    return [70];
+                }
+
+                return [];
+            },
+        );
         $records->expects(self::once())->method('targetBeforePage')->with(70)->willReturn(-68);
         $records->expects(self::once())->method('assertInsertAfterExists')->with('tt_content', 68);
 
@@ -567,11 +576,18 @@ final class WriteTableToolTest extends TestCase
     }
 
     #[Test]
-    public function planCreateBeforeACollidingContentUidOnAnotherPageKeepsThePid(): void
+    public function planCreateBeforeACollidingContentUidOnAnotherPageKeepsThePidWhenItIsTheParentPage(): void
     {
-        // beforeUid 1 exists as tt_content somewhere, but not on pid 2 — treat as parent-page mistake.
         $records = $this->createMock(RecordService::class);
-        $records->expects(self::once())->method('findExistingUids')->with('tt_content', [1])->willReturn([1]);
+        $records->method('findExistingUids')->willReturnCallback(
+            static function (string $table, array $uids): array {
+                if ($table === 'tt_content' && $uids === [1]) {
+                    return [1];
+                }
+
+                return [];
+            },
+        );
         $records->expects(self::exactly(2))->method('findByUid')->willReturnCallback(
             static function (string $table, int $uid, array $fields): ?array {
                 if ($table === 'tt_content' && $uid === 1) {
@@ -607,6 +623,106 @@ final class WriteTableToolTest extends TestCase
     }
 
     #[Test]
+    public function planCreateBeforeAContentUidOnAnotherPageIsRefused(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->method('findExistingUids')->willReturnCallback(
+            static function (string $table, array $uids): array {
+                if ($table === 'tt_content' && $uids === [5]) {
+                    return [5];
+                }
+
+                return [];
+            },
+        );
+        $records->expects(self::exactly(2))->method('findByUid')->willReturnCallback(
+            static function (string $table, int $uid, array $fields): ?array {
+                if ($table === 'tt_content' && $uid === 5) {
+                    return ['pid' => 99];
+                }
+                if ($table === 'pages' && $uid === 2) {
+                    return ['pid' => 68];
+                }
+
+                return null;
+            },
+        );
+        $records->expects(self::never())->method('targetBeforeRecord');
+        $records->expects(self::never())->method('targetBeforePage');
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('beforeUid 5 is a content element on page 99');
+
+        $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'beforeUid' => 5,
+            'data' => ['pid' => 2, 'CType' => 'text', 'header' => 'New Text Element'],
+        ]);
+    }
+
+    #[Test]
+    public function planCreateRejectsBeforeUidAndAfterUidTogether(): void
+    {
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $this->createMock(RecordService::class),
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('not both');
+
+        $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'beforeUid' => 10,
+            'afterUid' => 11,
+            'data' => ['pid' => 2, 'header' => 'X'],
+        ]);
+    }
+
+    #[Test]
+    public function planCreateBeforeAnUnknownContentUidDoesNotCallTargetBeforePage(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::exactly(2))->method('findExistingUids')->willReturn([]);
+        $records->expects(self::once())->method('findByUid')->with('pages', 2, ['pid'])->willReturn(['pid' => 1]);
+        $records->expects(self::never())->method('targetBeforePage');
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('no tt_content record with uid 999999');
+
+        $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'beforeUid' => 999999,
+            'data' => ['pid' => 2, 'header' => 'X'],
+        ]);
+    }
+
+    #[Test]
     public function planCreateBeforeANamedPageIgnoresAnAfterPid(): void
     {
         $records = $this->createMock(RecordService::class);
@@ -636,6 +752,15 @@ final class WriteTableToolTest extends TestCase
     public function planCreateBeforeANamedPageIgnoresTheParentPid(): void
     {
         $records = $this->createMock(RecordService::class);
+        $records->method('findExistingUids')->willReturnCallback(
+            static function (string $table, array $uids): array {
+                if ($table === 'pages' && $uids === [111]) {
+                    return [111];
+                }
+
+                return [];
+            },
+        );
         $records->expects(self::once())
             ->method('findDefaultLanguagePagesByTitle')
             ->with('C')

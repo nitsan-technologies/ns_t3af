@@ -170,6 +170,8 @@ readonly class RecordsApplyPreflight
                     continue;
                 }
 
+                $skipAppendOrder = RecordsApplyDatamapMeta::pullSkipAppendOrder($fields);
+
                 $pid = null;
                 if (array_key_exists('pid', $fields)) {
                     if (!$isNew) {
@@ -236,6 +238,9 @@ readonly class RecordsApplyPreflight
 
                 $unwritable = [];
                 foreach (array_keys($fields) as $fieldName) {
+                    if (RecordsApplyDatamapMeta::isMetaField((string) $fieldName)) {
+                        continue;
+                    }
                     if (!isset($writable[(string) $fieldName])) {
                         $unwritable[] = (string) $fieldName;
                     }
@@ -296,14 +301,10 @@ readonly class RecordsApplyPreflight
                     if (!array_key_exists($parentField, $fields)) {
                         continue;
                     }
-                    $parentRef = $fields[$parentField];
-                    if (is_string($parentRef) && preg_match(self::NEW_ID, $parentRef) === 1 && !isset($allNewIds[$parentRef])) {
+                    $inlineError = self::inlineForeignFieldError($fields[$parentField], $allNewIds, $parentField);
+                    if ($inlineError !== null) {
                         $problems->add($where + [
-                            'error' => sprintf(
-                                'Field %s refers to NEW id %s, which is not created in this call.',
-                                RecordsApplyProblems::safe($parentField),
-                                RecordsApplyProblems::safe($parentRef),
-                            ),
+                            'error' => $inlineError,
                             'fields' => [RecordsApplyProblems::safe($parentField)],
                         ]);
                         continue 2;
@@ -361,6 +362,9 @@ readonly class RecordsApplyPreflight
                 }
 
                 $clean[$table][$id] = $pid === null ? $fields : ['pid' => $pid] + $fields;
+                if ($skipAppendOrder) {
+                    $clean[$table][$id][RecordsApplyDatamapMeta::SKIP_APPEND_ORDER] = 1;
+                }
                 if (!$isNew) {
                     $existing[] = (int) $id;
                 }
@@ -866,5 +870,71 @@ readonly class RecordsApplyPreflight
         }
 
         return 0;
+    }
+
+    /**
+     * @param array<string, true> $allNewIds
+     */
+    private static function inlineForeignFieldError(mixed $parentRef, array $allNewIds, string $parentField): ?string
+    {
+        if (is_int($parentRef)) {
+            if ($parentRef <= 0) {
+                return sprintf(
+                    'Field %s must be a positive uid or a NEW id created in this call.',
+                    RecordsApplyProblems::safe($parentField),
+                );
+            }
+
+            return null;
+        }
+
+        if (!is_string($parentRef)) {
+            return sprintf(
+                'Field %s must be a uid or a NEW id created in this call.',
+                RecordsApplyProblems::safe($parentField),
+            );
+        }
+
+        $parentRef = trim($parentRef);
+        if ($parentRef === '') {
+            return sprintf(
+                'Field %s must be a positive uid or a NEW id created in this call.',
+                RecordsApplyProblems::safe($parentField),
+            );
+        }
+
+        if (str_starts_with($parentRef, 'NEW')) {
+            if (preg_match(self::NEW_ID, $parentRef) !== 1) {
+                return sprintf(
+                    'Field %s uses an invalid NEW id. Use letters and digits only after NEW, e.g. NEWpage1 (no underscore).',
+                    RecordsApplyProblems::safe($parentField),
+                );
+            }
+            if (!isset($allNewIds[$parentRef])) {
+                return sprintf(
+                    'Field %s refers to NEW id %s, which is not created in this call.',
+                    RecordsApplyProblems::safe($parentField),
+                    RecordsApplyProblems::safe($parentRef),
+                );
+            }
+
+            return null;
+        }
+
+        if (ctype_digit($parentRef)) {
+            if ((int) $parentRef <= 0) {
+                return sprintf(
+                    'Field %s must be a positive uid or a NEW id created in this call.',
+                    RecordsApplyProblems::safe($parentField),
+                );
+            }
+
+            return null;
+        }
+
+        return sprintf(
+            'Field %s must be a positive uid or a NEW id created in this call.',
+            RecordsApplyProblems::safe($parentField),
+        );
     }
 }
