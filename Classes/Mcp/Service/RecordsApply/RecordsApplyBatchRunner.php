@@ -56,7 +56,7 @@ readonly class RecordsApplyBatchRunner
                 $payload['moreProblems'] = $exception->getMoreProblems();
             }
 
-            throw new ToolCallException(json_encode($payload, JSON_THROW_ON_ERROR), 1790500006, $exception);
+            throw new ToolCallException(json_encode($payload, JSON_THROW_ON_ERROR), $exception->getToolResponseCode(), $exception);
         }
     }
 }

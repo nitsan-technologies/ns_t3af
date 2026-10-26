@@ -50,6 +50,18 @@ final class SearchConditionParserTest extends TestCase
     }
 
     #[Test]
+    public function unknownOperatorIsRejected(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Unknown search operator "bogus"');
+
+        SearchConditionParser::fromArray(
+            ['uid' => ['op' => 'bogus', 'value' => '1']],
+            ['uid'],
+        );
+    }
+
+    #[Test]
     public function plainTermStripsQuotesTheModelWrapsAroundTheWord(): void
     {
         self::assertSame('QA', SearchConditionParser::plainTerm('QA'));

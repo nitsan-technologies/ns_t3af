@@ -67,7 +67,8 @@ final class McpConnectedProviderEnumResolverTest extends TestCase
         );
 
         self::assertSame(['openai-1'], $resolver->resolveEnum());
-        self::assertStringContainsString('openai-1 (OpenAI)', $resolver->buildDescription());
+        self::assertStringContainsString('enum', $resolver->buildDescription());
+        self::assertStringNotContainsString('openai-1 (OpenAI)', $resolver->buildDescription());
     }
 
     private function createResolver(bool $creditsActive): McpConnectedProviderEnumResolver

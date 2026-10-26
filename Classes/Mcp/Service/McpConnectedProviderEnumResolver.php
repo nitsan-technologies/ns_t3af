@@ -96,11 +96,7 @@ readonly class McpConnectedProviderEnumResolver
             return 'AI Foundation provider identifier. Omit for the default provider. No connected providers are configured yet.';
         }
 
-        $parts = array_map(
-            static fn(array $option): string => sprintf('%s (%s)', $option['identifier'], $option['title']),
-            $options,
-        );
-
-        return 'Connected AI Foundation provider identifier. Omit for the default provider. Options: ' . implode(', ', $parts) . '.';
+        return 'Connected AI Foundation provider identifier. Omit for the default provider. '
+            . 'Allowed values are listed in the enum.';
     }
 }

@@ -126,7 +126,7 @@ readonly class RecordsApplyService
                     . 'during that save can end the database transaction, so a rollback would not undo the writes. '
                     . 'Omit dryRun, or leave sys_category out of this batch.',
             ]];
-            $exception = new RecordsApplyValidationException($problems);
+            $exception = new RecordsApplyValidationException($problems, 0, RecordsApplyValidationException::TOOL_CODE_SYS_CATEGORY_DRY_RUN);
             $this->audit->log($tool, $batchId, true, false, 'validation', $operations, $fieldNames, $exception->getMessage(), $exception->getProblems(), self::recordIds($datamap, $cmdmap));
 
             throw $exception;

@@ -22,6 +22,8 @@ namespace NITSAN\NsT3AF\Mcp\Tool\Search;
 /** @internal */
 final class SearchConditionParser
 {
+    /** @var list<string> */
+    public const OPERATORS = ['eq', 'neq', 'like', 'gt', 'gte', 'lt', 'lte', 'in', 'null', 'notNull'];
     /**
      * @param array<string, mixed> $data
      * @param list<string> $allowedFields
@@ -67,11 +69,16 @@ final class SearchConditionParser
     private static function parseCondition(mixed $value): array
     {
         if (is_array($value) && isset($value['op'])) {
-            $op = $value['op'];
+            $op = is_string($value['op']) ? $value['op'] : '';
+            if (!in_array($op, self::OPERATORS, true)) {
+                throw new \InvalidArgumentException(
+                    sprintf('Unknown search operator "%s". Supported: %s.', $op, implode(', ', self::OPERATORS)),
+                );
+            }
             $val = $value['value'] ?? '';
 
             return [
-                'operator' => is_string($op) ? $op : '',
+                'operator' => $op,
                 'value' => is_string($val) || is_int($val) || is_float($val) ? (string) $val : '',
             ];
         }

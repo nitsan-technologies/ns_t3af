@@ -344,6 +344,26 @@ final class RecordsApplyToolTest extends TestCase
             self::assertSame('validation', $payload['stage']);
             self::assertSame('A new record needs a pid.', $payload['problems'][0]['error']);
             self::assertSame(3, $payload['moreProblems']);
+            self::assertSame(1790500006, $exception->getCode());
+        }
+    }
+
+    #[Test]
+    public function sysCategoryDryRunRefusalUsesDedicatedToolCode(): void
+    {
+        $this->service->method('apply')->willThrowException(
+            new RecordsApplyValidationException(
+                [['table' => 'sys_category', 'error' => 'dryRun is not supported']],
+                0,
+                RecordsApplyValidationException::TOOL_CODE_SYS_CATEGORY_DRY_RUN,
+            ),
+        );
+
+        try {
+            $this->tool->execute('{"sys_category":{"NEWc":{"title":"Cat"}}}', dryRun: true);
+            self::fail('Expected a ToolCallException.');
+        } catch (ToolCallException $exception) {
+            self::assertSame(RecordsApplyValidationException::TOOL_CODE_SYS_CATEGORY_DRY_RUN, $exception->getCode());
         }
     }
 

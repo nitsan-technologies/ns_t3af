@@ -93,7 +93,11 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
         }
 
         $allowedFields = array_merge(['uid', 'pid'], $readFields);
-        $validSearch = SearchConditionParser::fromArray($searchData, $allowedFields);
+        try {
+            $validSearch = SearchConditionParser::fromArray($searchData, $allowedFields);
+        } catch (\InvalidArgumentException $e) {
+            throw new \InvalidArgumentException('Invalid search parameter: ' . $e->getMessage(), 1790600005, $e);
+        }
         $ignoredFields = array_values(array_diff(array_keys($searchData), $allowedFields));
 
         if ($validSearch === [] && !$listAll) {
@@ -103,17 +107,7 @@ readonly class RecordSearchTool implements McpNonAiToolInterface
             );
         }
 
-        $resolvedOrderBy = null;
-        if ($orderBy !== '') {
-            if (!in_array($orderBy, $allowedFields, true)) {
-                throw new \InvalidArgumentException('Invalid orderBy field: ' . $orderBy, 1790600007);
-            }
-            $resolvedOrderBy = $orderBy;
-        }
-
-        if (!in_array($orderDirection, ['ASC', 'DESC'], true)) {
-            $orderDirection = 'ASC';
-        }
+        [$resolvedOrderBy, $orderDirection] = SearchSortResolver::resolve($orderBy, $orderDirection, $allowedFields);
 
         $fields = $this->resolveSelectFields($selectFields, $readFields);
 

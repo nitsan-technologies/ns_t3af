@@ -66,7 +66,11 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
 
         $readFields = $this->tcaSchemaService->getReadFields('pages');
         $allowedFields = array_merge(['uid', 'pid'], $readFields);
-        $searchConditions = $this->parseSearch($search, $allowedFields);
+        try {
+            $searchConditions = $this->parseSearch($search, $allowedFields);
+        } catch (\InvalidArgumentException $e) {
+            throw new \InvalidArgumentException('Invalid search parameter: ' . $e->getMessage(), 1790600005, $e);
+        }
 
         if ($searchConditions === []) {
             return json_encode(['error' => 'No valid search conditions provided'], JSON_THROW_ON_ERROR);
@@ -74,14 +78,7 @@ readonly class PagesSearchTool implements McpNonAiToolInterface
 
         $fields = $this->resolveSelectFields($selectFields, $readFields);
 
-        $resolvedOrderBy = null;
-        if ($orderBy !== '' && in_array($orderBy, $allowedFields, true)) {
-            $resolvedOrderBy = $orderBy;
-        }
-
-        if (!in_array($orderDirection, ['ASC', 'DESC'], true)) {
-            $orderDirection = 'ASC';
-        }
+        [$resolvedOrderBy, $orderDirection] = SearchSortResolver::resolve($orderBy, $orderDirection, $allowedFields);
 
         $scopedPid = $pid >= 0 ? $pid : null;
         $result = $this->recordService->search(

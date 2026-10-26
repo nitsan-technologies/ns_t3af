@@ -38,7 +38,7 @@ readonly class RecordsApplyAudit
      * Error codes of the failures this class logs. The MCP error proxy writes one generic entry for every failed tool call;
      * for these it skips that entry, so a refused batch leaves ONE entry, not two.
      */
-    public const AUDITED_ERROR_CODES = [1790500002, 1790500003, 1790500004, 1790500005, 1790500006];
+    public const AUDITED_ERROR_CODES = [1790500002, 1790500003, 1790500004, 1790500005, 1790500006, 1790500032];
 
     /**
      * @param array<string, array<string, int>> $operations

@@ -1192,7 +1192,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     private function refused(\Throwable $exception): string
     {
         if ($exception instanceof RecordsApplyValidationException) {
-            throw new ToolCallException($this->describe($exception), 1790500006, $exception);
+            throw new ToolCallException($this->describe($exception), $exception->getToolResponseCode(), $exception);
         }
 
         if ($exception instanceof ToolCallException
