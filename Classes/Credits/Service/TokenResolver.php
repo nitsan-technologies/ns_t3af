@@ -40,6 +40,7 @@ class TokenResolver
         private readonly CreditsApiResponseCacheInterface $apiResponseCache,
         private readonly CreditsDomainResolver $domainResolver,
         private readonly LicenseContactResolver $licenseContactResolver,
+        private readonly CreditsApiResponseGuard $responseGuard,
         private readonly ?LocalReceiptCache $localReceiptCache = null,
         private readonly ?LoggerInterface $logger = null,
     ) {}
@@ -117,9 +118,7 @@ class TokenResolver
 
         $payload = $this->apiClient->claimToken($claimCode, null, $this->resolveContact($contactOverride));
         $token = trim((string) ($payload['token'] ?? ''));
-        if ($token === '') {
-            throw new CreditsApiException('token_missing', 502, 'Claim endpoint did not return a token');
-        }
+        $this->responseGuard->assertBearerToken($token);
 
         // Replace whatever was stored: on a merge the server hands back the surviving account's
         // bearer, which may differ from the one the code was issued for.
@@ -179,9 +178,7 @@ class TokenResolver
     {
         $payload = $this->apiClient->issueTrialToken(null, $this->resolveContact($contactOverride));
         $token = trim((string) ($payload['token'] ?? ''));
-        if ($token === '') {
-            throw new CreditsApiException('token_missing', 502, 'Token endpoint did not return a token');
-        }
+        $this->responseGuard->assertBearerToken($token);
 
         $this->runtimeSettings->storeToken($token);
         $this->rememberToken($token);
@@ -311,9 +308,7 @@ class TokenResolver
         $domain = $this->domainResolver->resolve();
         $payload = $this->apiClient->refreshBearerToken($current, $domain, $this->licenseContactResolver->resolve());
         $token = trim((string) ($payload['token'] ?? ''));
-        if ($token === '') {
-            throw new CreditsApiException('token_missing', 502, 'RefreshToken endpoint did not return a token');
-        }
+        $this->responseGuard->assertBearerToken($token);
 
         $this->runtimeSettings->storeToken($token);
         $this->rememberToken($token);

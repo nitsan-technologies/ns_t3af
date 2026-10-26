@@ -32,6 +32,7 @@ final class CurrentPlanService
         private readonly TokenResolver $tokenResolver,
         private readonly CreditsDomainResolver $domainResolver,
         private readonly CreditsApiResponseCacheInterface $responseCache,
+        private readonly CreditsApiResponseGuard $responseGuard,
     ) {}
 
     /**
@@ -44,10 +45,10 @@ final class CurrentPlanService
 
         $cached = $this->responseCache->get(CreditsApiResponseCache::SCOPE_CURRENT_PLAN, $domain, $token);
         if ($cached !== null) {
-            return $cached;
+            return $this->responseGuard->guardCurrentPlan($cached);
         }
 
-        $payload = $this->apiClient->currentPlan($domain, $token);
+        $payload = $this->responseGuard->guardCurrentPlan($this->apiClient->currentPlan($domain, $token));
         if (($payload['not_modified'] ?? false) === true) {
             return $payload;
         }
