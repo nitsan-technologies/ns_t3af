@@ -361,6 +361,60 @@ final class CreditsDashboardAssemblerTest extends TestCase
         self::assertSame(100.0, $summary['free']);
     }
 
+    public function testSummarizeBalanceCapsPercentWhenRemainingExceedsTrialCatalog(): void
+    {
+        $summary = $this->createAssembler()->summarizeBalance(
+            [
+                'credits' => [
+                    'free_credits' => 100,
+                    'paid_credits' => 0,
+                    'plan_used' => 0,
+                    'plan_total' => 0,
+                    'plan_sku' => 'none',
+                ],
+            ],
+            ['trial_granted' => true],
+            [
+                'products' => [
+                    [
+                        'sku' => 'trial',
+                        'type' => 'trial',
+                        'credits' => 50,
+                    ],
+                ],
+            ],
+        );
+
+        self::assertSame(100.0, $summary['total']);
+        self::assertSame(100, $summary['percentLeft']);
+    }
+
+    public function testAssembleOmitsInflatedEstimatedDaysWithoutRecentUsage(): void
+    {
+        $dashboard = $this->createAssembler()->assemble(
+            [
+                'credits' => [
+                    'free_credits' => 50,
+                    'paid_credits' => 0,
+                    'plan_used' => 0,
+                    'plan_total' => 0,
+                ],
+            ],
+            ['trial_granted' => true],
+            [
+                'products' => [
+                    ['sku' => 'trial', 'type' => 'trial', 'credits' => 50],
+                ],
+            ],
+            [],
+            [],
+            [],
+            'https://backend.example/return',
+        );
+
+        self::assertNull($dashboard['stats']['estimatedDaysLeft']);
+    }
+
     public function testSummarizeBalanceUsesTrialCatalogTotalAfterPartialUsage(): void
     {
         $summary = $this->createAssembler()->summarizeBalance(

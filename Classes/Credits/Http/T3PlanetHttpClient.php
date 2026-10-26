@@ -230,7 +230,7 @@ class T3PlanetHttpClient
             throw new CreditsApiException(
                 CreditsApiErrorCodes::NETWORK_ERROR,
                 0,
-                $exception->getMessage(),
+                'Could not reach the T3Planet Credits API.',
                 [],
                 $exception,
             );
@@ -261,7 +261,7 @@ class T3PlanetHttpClient
             throw new CreditsApiException(
                 CreditsApiErrorCodes::NETWORK_ERROR,
                 0,
-                $exception->getMessage(),
+                'Could not reach the T3Planet Credits API.',
                 [],
                 $exception,
             );

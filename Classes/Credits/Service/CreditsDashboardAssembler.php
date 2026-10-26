@@ -32,6 +32,9 @@ final class CreditsDashboardAssembler
 {
     private const SECONDS_PER_DAY = 86400;
 
+    /** ponytail: cap runway display when 7-day usage is near zero (upgrade: use plan expiry when available). */
+    private const MAX_ESTIMATED_DAYS_LEFT = 365;
+
     public function __construct(
         private readonly CreditsCheckoutUrlBuilder $checkoutUrlBuilder,
     ) {}
@@ -154,6 +157,7 @@ final class CreditsDashboardAssembler
         $percentLeft = $poolTotalUnits > 0
             ? (int) round(($remainingUnits / $poolTotalUnits) * 100)
             : ($remainingUnits > 0 ? 100 : 0);
+        $percentLeft = max(0, min(100, $percentLeft));
 
         return [
             'remainingUnits' => $remainingUnits,
@@ -356,11 +360,9 @@ final class CreditsDashboardAssembler
     {
         $trialProduct = $this->findTrialProduct($productsPayload);
         $catalogCredits = (int) ($trialProduct['credits'] ?? 0);
-        if ($catalogCredits > 0) {
-            return (float) $catalogCredits;
-        }
+        $catalogTotal = $catalogCredits > 0 ? (float) $catalogCredits : 0.0;
 
-        return max($remaining, 1.0);
+        return max($remaining, $catalogTotal, 1.0);
     }
 
     /**
@@ -449,11 +451,15 @@ final class CreditsDashboardAssembler
         $creditsUsed = $totalUnits > 0
             ? AiCreditUnits::unitsToCredits($totalUnits)
             : $fallbackUsed;
-        $dailyAverageUnits = (int) max(1, (int) round($windowUnits / 7));
-        $dailyAverage = AiCreditUnits::unitsToCredits($dailyAverageUnits);
-        $estimatedDaysLeft = $remainingUnits > 0 && $dailyAverageUnits > 0
-            ? (int) max(1, (int) ceil($remainingUnits / $dailyAverageUnits))
-            : null;
+        $dailyAverageUnits = $windowUnits > 0 ? (int) max(1, (int) round($windowUnits / 7)) : 0;
+        $dailyAverage = $dailyAverageUnits > 0
+            ? AiCreditUnits::unitsToCredits($dailyAverageUnits)
+            : 0.0;
+        $estimatedDaysLeft = null;
+        if ($remainingUnits > 0 && $dailyAverageUnits > 0) {
+            $estimatedDaysLeft = (int) max(1, (int) ceil($remainingUnits / $dailyAverageUnits));
+            $estimatedDaysLeft = min($estimatedDaysLeft, self::MAX_ESTIMATED_DAYS_LEFT);
+        }
 
         return [
             'creditsUsed' => $creditsUsed,

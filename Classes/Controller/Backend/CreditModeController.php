@@ -19,10 +19,12 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Controller\Backend;
 
+use NITSAN\NsT3AF\Access\RecordAccessGate;
 use NITSAN\NsT3AF\Api\CreditsPricing;
 use NITSAN\NsT3AF\Credits\CreditsApiErrorCodes;
 use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
 use NITSAN\NsT3AF\Credits\Service\BalanceService;
+use NITSAN\NsT3AF\Credits\Service\CreditModeRequestParser;
 use NITSAN\NsT3AF\Credits\Service\CreditModeResolver;
 use NITSAN\NsT3AF\Credits\Service\CreditsApiErrorMessageResolver;
 use NITSAN\NsT3AF\Credits\Service\CreditsDashboardService;
@@ -34,8 +36,10 @@ use NITSAN\NsT3AF\Credits\Service\FeatureCatalogService;
 use NITSAN\NsT3AF\Credits\Service\ProductCatalogService;
 use NITSAN\NsT3AF\Credits\Service\RuntimeSettingsService;
 use NITSAN\NsT3AF\Credits\Service\TokenResolver;
+use NITSAN\NsT3AF\Service\CredentialCipher;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Http\JsonResponse;
 
 /**
@@ -45,6 +49,8 @@ use TYPO3\CMS\Core\Http\JsonResponse;
  */
 final class CreditModeController
 {
+    private const PROVIDER_TABLE = 'tx_nst3af_provider';
+
     public function __construct(
         private readonly RuntimeSettingsService $runtimeSettings,
         private readonly CreditModeResolver $creditModeResolver,
@@ -58,17 +64,24 @@ final class CreditModeController
         private readonly CreditsEstimateService $estimateService,
         private readonly CreditsPricingResolver $pricingResolver,
         private readonly CreditsReturnUrlBuilder $creditsReturnUrlBuilder,
+        private readonly RecordAccessGate $recordAccessGate,
+        private readonly CredentialCipher $credentialCipher,
     ) {}
 
     public function statusAction(ServerRequestInterface $request): ResponseInterface
     {
+        $denied = $this->denyUnlessCreditsManager();
+        if ($denied !== null) {
+            return $denied;
+        }
+
         return new JsonResponse([
             'featureAvailable' => $this->creditModeResolver->isPubliclyAvailable(),
             'creditMode' => $this->runtimeSettings->isCreditModeEnabled(),
             'active' => $this->creditModeResolver->isActive(),
             'needsContact' => $this->tokenResolver->needsContactForActivation(),
             'pricing' => $this->serializePricing($this->pricingResolver->resolve()),
-            'creditsBearerToken' => $this->runtimeSettings->getTokenPlain() ?? '',
+            'creditsBearerToken' => $this->bearerTokenForResponse(includePlain: false),
             'licenseKeys' => $this->runtimeSettings->getLicenseKeys(),
             'selectedLicenseExtKey' => $this->runtimeSettings->getSelectedLicenseExtKey(),
             'licenses' => [],
@@ -77,8 +90,20 @@ final class CreditModeController
 
     public function toggleAction(ServerRequestInterface $request): ResponseInterface
     {
+        $denied = $this->denyUnlessCreditsManager();
+        if ($denied !== null) {
+            return $denied;
+        }
+
         $body = $this->parseRequestBody($request);
-        $enabled = $this->parseBoolean($body['enabled'] ?? false);
+        $enabled = CreditModeRequestParser::enabledFromBody($body);
+        if ($enabled === null) {
+            return new JsonResponse([
+                'status' => false,
+                'error_code' => CreditsApiErrorCodes::REQUIRED_FIELD_MISSING,
+                'userMessage' => 'Send enabled as true or false.',
+            ], 400);
+        }
         if ($enabled && !$this->creditModeResolver->isPubliclyAvailable()) {
             return new JsonResponse([
                 'error_code' => 'credits_unavailable',
@@ -103,6 +128,11 @@ final class CreditModeController
 
     public function saveLicenseAction(ServerRequestInterface $request): ResponseInterface
     {
+        $denied = $this->denyUnlessCreditsManager();
+        if ($denied !== null) {
+            return $denied;
+        }
+
         return new JsonResponse([
             'licenseKeys' => '',
             'selectedLicenseExtKey' => 'ns_t3af',
@@ -111,6 +141,11 @@ final class CreditModeController
 
     public function activateAction(ServerRequestInterface $request): ResponseInterface
     {
+        $denied = $this->denyUnlessCreditsManager();
+        if ($denied !== null) {
+            return $denied;
+        }
+
         if (!$this->creditModeResolver->isPubliclyAvailable()) {
             return new JsonResponse([
                 'error_code' => 'credits_unavailable',
@@ -147,7 +182,7 @@ final class CreditModeController
                 'active' => $this->creditModeResolver->isActive(),
                 'needsContact' => false,
                 'adoptedExistingAccount' => ($activation['action'] ?? '') === 'adopted',
-                'creditsBearerToken' => $this->runtimeSettings->getTokenPlain() ?? '',
+                'creditsBearerToken' => $this->bearerTokenForResponse(includePlain: true),
                 'balance' => $balance,
                 'pricing' => $this->serializePricing($this->pricingResolver->resolve()),
             ]);
@@ -163,6 +198,11 @@ final class CreditModeController
      */
     public function claimAction(ServerRequestInterface $request): ResponseInterface
     {
+        $denied = $this->denyUnlessCreditsManager();
+        if ($denied !== null) {
+            return $denied;
+        }
+
         if (!$this->creditModeResolver->isPubliclyAvailable()) {
             return new JsonResponse([
                 'error_code' => 'credits_unavailable',
@@ -172,7 +212,14 @@ final class CreditModeController
 
         try {
             $body = $this->parseRequestBody($request);
-            $claimCode = trim((string) ($body['claimCode'] ?? $body['claim_code'] ?? ''));
+            $claimCode = CreditModeRequestParser::claimCodeFromBody($body);
+            if ($claimCode === null) {
+                return new JsonResponse([
+                    'status' => false,
+                    'error_code' => CreditsApiErrorCodes::REQUIRED_FIELD_MISSING,
+                    'userMessage' => 'Claim code must be a single text value.',
+                ], 400);
+            }
             if ($claimCode === '') {
                 return new JsonResponse([
                     'status' => false,
@@ -193,7 +240,7 @@ final class CreditModeController
                 'needsContact' => false,
                 'action' => $claim['action'],
                 'mergedIntoExistingAccount' => $claim['merged'] ?? false,
-                'creditsBearerToken' => $this->runtimeSettings->getTokenPlain() ?? '',
+                'creditsBearerToken' => $this->bearerTokenForResponse(includePlain: true),
                 'balance' => $balance,
                 'pricing' => $this->serializePricing($this->pricingResolver->resolve()),
             ]);
@@ -212,6 +259,11 @@ final class CreditModeController
      */
     public function requestClaimCodeAction(ServerRequestInterface $request): ResponseInterface
     {
+        $denied = $this->denyUnlessCreditsManager();
+        if ($denied !== null) {
+            return $denied;
+        }
+
         if (!$this->creditModeResolver->isPubliclyAvailable()) {
             return new JsonResponse([
                 'error_code' => 'credits_unavailable',
@@ -245,6 +297,11 @@ final class CreditModeController
 
     public function refreshTokenAction(ServerRequestInterface $request): ResponseInterface
     {
+        $denied = $this->denyUnlessCreditsManager();
+        if ($denied !== null) {
+            return $denied;
+        }
+
         if (!$this->creditModeResolver->isActive()) {
             return new JsonResponse([
                 'status' => false,
@@ -287,6 +344,11 @@ final class CreditModeController
 
     public function dashboardAction(ServerRequestInterface $request): ResponseInterface
     {
+        $denied = $this->denyUnlessCreditsManager();
+        if ($denied !== null) {
+            return $denied;
+        }
+
         if (!$this->creditModeResolver->isActive()) {
             return new JsonResponse([
                 'status' => false,
@@ -313,21 +375,41 @@ final class CreditModeController
 
     public function balanceAction(ServerRequestInterface $request): ResponseInterface
     {
+        $denied = $this->denyUnlessCreditsManager();
+        if ($denied !== null) {
+            return $denied;
+        }
+
         return $this->wrapApiCall(fn(): array => $this->balanceService->fetch());
     }
 
     public function currentPlanAction(ServerRequestInterface $request): ResponseInterface
     {
+        $denied = $this->denyUnlessCreditsManager();
+        if ($denied !== null) {
+            return $denied;
+        }
+
         return $this->wrapApiCall(fn(): array => $this->currentPlanService->fetch());
     }
 
     public function featuresAction(ServerRequestInterface $request): ResponseInterface
     {
+        $denied = $this->denyUnlessCreditsManager();
+        if ($denied !== null) {
+            return $denied;
+        }
+
         return $this->wrapApiCall(fn(): array => $this->featureCatalogService->fetch());
     }
 
     public function productsAction(ServerRequestInterface $request): ResponseInterface
     {
+        $denied = $this->denyUnlessCreditsManager();
+        if ($denied !== null) {
+            return $denied;
+        }
+
         $redirectTo = $this->creditsReturnUrlBuilder->normalize(
             trim((string) ($request->getQueryParams()['redirect_to'] ?? $request->getQueryParams()['return'] ?? '')),
         );
@@ -342,6 +424,11 @@ final class CreditModeController
 
     public function estimateAction(ServerRequestInterface $request): ResponseInterface
     {
+        $denied = $this->denyUnlessCreditsManager();
+        if ($denied !== null) {
+            return $denied;
+        }
+
         $body = $this->parseRequestBody($request);
         $metaJson = $body['meta_json'] ?? [];
         if (!is_array($metaJson)) {
@@ -430,7 +517,7 @@ final class CreditModeController
         $apiException = new CreditsApiException(
             CreditsApiErrorCodes::INTERNAL_ERROR,
             500,
-            $exception->getMessage(),
+            CreditsApiErrorCodes::INTERNAL_ERROR,
             [],
             $exception,
         );
@@ -439,6 +526,37 @@ final class CreditModeController
             $this->errorMessages->buildErrorPayload($apiException),
             500,
         );
+    }
+
+    private function denyUnlessCreditsManager(): ?JsonResponse
+    {
+        $user = $GLOBALS['BE_USER'] ?? null;
+        if (!$user instanceof BackendUserAuthentication) {
+            return new JsonResponse([
+                'status' => false,
+                'error_code' => 'access_denied',
+                'userMessage' => 'You do not have permission to manage T3Planet Credits.',
+            ], 403);
+        }
+        if ($this->recordAccessGate->canModifyTable($user, self::PROVIDER_TABLE)) {
+            return null;
+        }
+
+        return new JsonResponse([
+            'status' => false,
+            'error_code' => 'access_denied',
+            'userMessage' => 'You do not have permission to manage T3Planet Credits.',
+        ], 403);
+    }
+
+    private function bearerTokenForResponse(bool $includePlain): string
+    {
+        $plain = $this->runtimeSettings->getTokenPlain() ?? '';
+        if ($plain === '') {
+            return '';
+        }
+
+        return $includePlain ? $plain : $this->credentialCipher->mask($plain);
     }
 
     /**
@@ -461,20 +579,6 @@ final class CreditModeController
         $decoded = json_decode($raw, true);
 
         return is_array($decoded) ? $decoded : [];
-    }
-
-    private function parseBoolean(mixed $value): bool
-    {
-        if (is_bool($value)) {
-            return $value;
-        }
-        if (is_int($value) || is_float($value)) {
-            return (int) $value === 1;
-        }
-
-        $normalized = strtolower(trim((string) $value));
-
-        return in_array($normalized, ['1', 'true', 'yes', 'on'], true);
     }
 
     /**

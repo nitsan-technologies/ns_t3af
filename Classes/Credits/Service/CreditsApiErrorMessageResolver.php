@@ -38,11 +38,6 @@ final class CreditsApiErrorMessageResolver
             return $message;
         }
 
-        $fallback = trim($exception->getMessage());
-        if ($fallback !== '' && $fallback !== $exception->errorCode) {
-            return $fallback;
-        }
-
         return $this->translate('api_error', $exception)
             ?: 'The T3Planet Credits service returned an unexpected error. Please try again later.';
     }
@@ -52,12 +47,13 @@ final class CreditsApiErrorMessageResolver
      */
     public function buildErrorPayload(CreditsApiException $exception): array
     {
+        $userMessage = $this->resolve($exception);
         $payload = [
             'status' => false,
             'error_code' => $exception->errorCode,
             'error' => $exception->errorCode,
-            'message' => $exception->getMessage() !== '' ? $exception->getMessage() : $exception->errorCode,
-            'userMessage' => $this->resolve($exception),
+            'message' => $userMessage,
+            'userMessage' => $userMessage,
         ];
 
         if ($exception instanceof InsufficientCreditsException && $exception->topupUrl !== '') {
