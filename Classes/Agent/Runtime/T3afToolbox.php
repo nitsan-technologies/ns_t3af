@@ -254,6 +254,26 @@ final class T3afToolbox implements ToolboxInterface
     }
 
     /**
+     * Approve-all must not list drafts or copy a handful of fileUids onto the confirmation card.
+     */
+    private function refuseApproveAllDetour(string $name, ToolCall $toolCall, string $requestQuery): ?ToolResult
+    {
+        if (!AgentRunner::isApproveAllAltTextRequest($requestQuery) || !isset($this->catalog['t3aa_alt_text_approve'])) {
+            return null;
+        }
+        $all = $toolCall->getArguments()['all'] ?? false;
+        $wantsAll = $all === true || $all === 1 || $all === '1' || $all === 'true';
+        if ($name !== 't3aa_alt_text_drafts_list' && ($name !== 't3aa_alt_text_approve' || $wantsAll)) {
+            return null;
+        }
+
+        return new ToolResult(
+            $toolCall,
+            'Not executed: the editor asked to approve every pending alt text draft. Call t3aa_alt_text_approve with all=true and no fileUids.',
+        );
+    }
+
+    /**
      * The image-text tools do not show languageUid to the model (it picks the language by isoCode),
      * so a languageUid it sends anyway is a guess.
      */
@@ -288,6 +308,12 @@ final class T3afToolbox implements ToolboxInterface
             return new ToolResult($toolCall, $this->findTools((string) ($toolCall->getArguments()['query'] ?? '')));
         }
         $requestQuery = trim((string) ($this->runtime->body['requestQuery'] ?? ''));
+        $approveAllDetour = $this->refuseApproveAllDetour($name, $toolCall, $requestQuery);
+        if ($approveAllDetour !== null) {
+            $outcome = 'invalid';
+
+            return $approveAllDetour;
+        }
         if ($name === 'pages_move' && (PageCreateBefore::isCreateBefore($requestQuery) || PageCreateAfter::isCreateAfter($requestQuery) || PageCreateAfter::isLastUnder($requestQuery))) {
             $outcome = 'invalid';
             $place = PageCreateAfter::isCreateAfter($requestQuery) || PageCreateAfter::isLastUnder($requestQuery) ? 'afterUid' : 'beforeUid';

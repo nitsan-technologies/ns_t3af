@@ -2881,6 +2881,14 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <source>Files</source>
                 <target>Dateien</target>
             </trans-unit>
+            <trans-unit id="agent.arg.all">
+                <source>All pending drafts</source>
+                <target>Alle offenen Entwürfe</target>
+            </trans-unit>
+            <trans-unit id="agent.arg.draftCount">
+                <source>Drafts</source>
+                <target>Entwürfe</target>
+            </trans-unit>
             <trans-unit id="agent.arg.folder">
                 <source>Folder</source>
                 <target>Ordner</target>

@@ -2270,6 +2270,12 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.arg.fileUids" resname="agent.arg.fileUids">
         <source>Files</source>
       </trans-unit>
+      <trans-unit id="agent.arg.all" resname="agent.arg.all">
+        <source>All pending drafts</source>
+      </trans-unit>
+      <trans-unit id="agent.arg.draftCount" resname="agent.arg.draftCount">
+        <source>Drafts</source>
+      </trans-unit>
       <trans-unit id="agent.arg.folder" resname="agent.arg.folder">
         <source>Folder</source>
       </trans-unit>

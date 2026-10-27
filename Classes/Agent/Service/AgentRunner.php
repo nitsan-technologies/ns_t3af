@@ -1150,6 +1150,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if (self::asksSeoForAllPages($query) || self::isMassSeoEnableRequest($query)) {
             $found = [...self::toolsByName(['pages_tree', 'pages_list', 't3ai_generate_seo_batch', 't3ai_mass_seo_queue_add'], $executableTools, $offeredNames), ...$found];
         }
+        if (self::isApproveAllAltTextRequest($query)) {
+            $found = [...self::toolsByName(['t3aa_alt_text_approve'], $executableTools, $offeredNames), ...$found];
+        }
         $found = [...self::fileActionTools($query, $executableTools, $offeredNames), ...$found];
         $workPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
         if (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $gateRequest)) {
@@ -1348,8 +1351,27 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $names[] = $name;
             }
         }
+        if (self::isApproveAllAltTextRequest($query)) {
+            $names[] = 't3aa_alt_text_drafts_list';
+            $names[] = 't3aa_list_files_missing_alt_text';
+        }
 
         return $names;
+    }
+
+    /**
+     * "Approve all pending alt text drafts": the approve tool must run with all=true, not a copied UID list.
+     */
+    public static function isApproveAllAltTextRequest(string $query): bool
+    {
+        if (preg_match('/\b(approve|accept|publish|freigeb\w*|uebernehm\w*|übernehm\w*)\b/iu', $query) !== 1) {
+            return false;
+        }
+        if (preg_match('/\b(all|every|alle|sämtlich\w*)\b/iu', $query) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(alt\s*texts?|drafts?|entw[uü]rfe|vorschl[aä]ge)\b/iu', $query) === 1;
     }
 
     /**

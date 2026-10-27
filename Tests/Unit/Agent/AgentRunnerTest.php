@@ -563,6 +563,13 @@ final class AgentRunnerTest extends TestCase
         self::assertNotContains('t3ai_generate_all_seo', AgentRunner::toolsNotAskedFor('Write all SEO texts for this page'));
         self::assertContains('t3aa_generate_voice_over', AgentRunner::toolsNotAskedFor('Generate a picture for the news'));
         self::assertNotContains('t3aa_generate_voice_over', AgentRunner::toolsNotAskedFor('Create a voice-over for this page'));
+        self::assertTrue(AgentRunner::isApproveAllAltTextRequest('Approve all alt text drafts'));
+        self::assertTrue(AgentRunner::isApproveAllAltTextRequest('Approve ALL pending alt text drafts'));
+        self::assertTrue(AgentRunner::isApproveAllAltTextRequest('Alle Alt-Text-Entwürfe freigeben'));
+        self::assertFalse(AgentRunner::isApproveAllAltTextRequest('Approve these alt text drafts'));
+        self::assertFalse(AgentRunner::isApproveAllAltTextRequest('Show alt text drafts'));
+        self::assertContains('t3aa_alt_text_drafts_list', AgentRunner::toolsNotAskedFor('Approve all alt text drafts'));
+        self::assertNotContains('t3aa_alt_text_drafts_list', AgentRunner::toolsNotAskedFor('Show alt text drafts'));
     }
 
     #[Test]
