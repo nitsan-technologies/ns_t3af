@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Tool\Record;
 
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\FileFieldAttachmentValidator;
 use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
@@ -28,6 +29,7 @@ use NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Resource\ResourceFactory;
 
 /**
  * @internal
@@ -55,7 +57,14 @@ final class WriteTableToolTest extends TestCase
         $recordService = $this->createMock(RecordService::class);
         $dataHandlerService = $this->createMock(DataHandlerService::class);
 
-        $this->tool = new WriteTableTool($dataHandlerService, $recordService, $tcaSchemaService, $this->createMock(RecordsApplyService::class));
+        $this->tool = new WriteTableTool(
+            $dataHandlerService,
+            $recordService,
+            $tcaSchemaService,
+            $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator($tcaSchemaService),
+            $this->createMock(ResourceFactory::class),
+        );
     }
 
     protected function tearDown(): void
@@ -144,6 +153,8 @@ final class WriteTableToolTest extends TestCase
             $recordService,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -179,6 +190,8 @@ final class WriteTableToolTest extends TestCase
             $recordService,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         try {
@@ -247,6 +260,8 @@ final class WriteTableToolTest extends TestCase
             $recordService,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $this->expectException(\InvalidArgumentException::class);
@@ -369,11 +384,14 @@ final class WriteTableToolTest extends TestCase
         $access->method('isUnrestricted')->willReturn(false);
         $access->method('canReadPage')->with(225)->willReturn(false);
 
+        $tca = new TcaSchemaService();
         $tool = new WriteTableTool(
             $this->createMock(DataHandlerService::class),
             $this->createMock(RecordService::class),
-            new TcaSchemaService(),
+            $tca,
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator($tca),
+            $this->createMock(ResourceFactory::class),
             $access,
         );
 
@@ -400,6 +418,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $this->expectException(\InvalidArgumentException::class);
@@ -422,6 +442,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -437,6 +459,15 @@ final class WriteTableToolTest extends TestCase
     public function planCreateBeforeAPageUsesThePreviousSiblingEvenWhenTheParentPidIsSent(): void
     {
         $records = $this->createMock(RecordService::class);
+        $records->method('findExistingUids')->willReturnCallback(
+            static function (string $table, array $uids): array {
+                if ($table === 'pages' && $uids === [70]) {
+                    return [70];
+                }
+
+                return [];
+            },
+        );
         $records->expects(self::once())->method('targetBeforePage')->with(70)->willReturn(-68);
         $records->expects(self::once())->method('assertInsertAfterExists')->with('tt_content', 68);
 
@@ -445,6 +476,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -455,6 +488,34 @@ final class WriteTableToolTest extends TestCase
         ]);
 
         self::assertSame(-68, $plan->context['pid']);
+    }
+
+    #[Test]
+    public function planCreateBeforeContentElementHonorsBeforeUidWhenBothAreOnlyInDataJson(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::once())->method('findExistingUids')->with('tt_content', [773])->willReturn([773]);
+        $records->expects(self::once())->method('findByUid')->with('tt_content', 773, ['pid'])->willReturn(['pid' => 2]);
+        $records->expects(self::once())->method('targetBeforeRecord')->with('tt_content', 773)->willReturn(-752);
+        $records->expects(self::never())->method('targetBeforePage');
+        $records->expects(self::once())->method('assertInsertAfterExists')->with('tt_content', 752);
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
+        );
+
+        $plan = $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'data' => ['pid' => 2, 'beforeUid' => 773, 'header' => 'New element'],
+        ]);
+
+        self::assertSame(-752, $plan->context['pid']);
     }
 
     #[Test]
@@ -472,6 +533,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -498,6 +561,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -511,11 +576,18 @@ final class WriteTableToolTest extends TestCase
     }
 
     #[Test]
-    public function planCreateBeforeACollidingContentUidOnAnotherPageKeepsThePid(): void
+    public function planCreateBeforeACollidingContentUidOnAnotherPageKeepsThePidWhenItIsTheParentPage(): void
     {
-        // beforeUid 1 exists as tt_content somewhere, but not on pid 2 — treat as parent-page mistake.
         $records = $this->createMock(RecordService::class);
-        $records->expects(self::once())->method('findExistingUids')->with('tt_content', [1])->willReturn([1]);
+        $records->method('findExistingUids')->willReturnCallback(
+            static function (string $table, array $uids): array {
+                if ($table === 'tt_content' && $uids === [1]) {
+                    return [1];
+                }
+
+                return [];
+            },
+        );
         $records->expects(self::exactly(2))->method('findByUid')->willReturnCallback(
             static function (string $table, int $uid, array $fields): ?array {
                 if ($table === 'tt_content' && $uid === 1) {
@@ -536,6 +608,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -546,6 +620,106 @@ final class WriteTableToolTest extends TestCase
         ]);
 
         self::assertSame(2, $plan->context['pid']);
+    }
+
+    #[Test]
+    public function planCreateBeforeAContentUidOnAnotherPageIsRefused(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->method('findExistingUids')->willReturnCallback(
+            static function (string $table, array $uids): array {
+                if ($table === 'tt_content' && $uids === [5]) {
+                    return [5];
+                }
+
+                return [];
+            },
+        );
+        $records->expects(self::exactly(2))->method('findByUid')->willReturnCallback(
+            static function (string $table, int $uid, array $fields): ?array {
+                if ($table === 'tt_content' && $uid === 5) {
+                    return ['pid' => 99];
+                }
+                if ($table === 'pages' && $uid === 2) {
+                    return ['pid' => 68];
+                }
+
+                return null;
+            },
+        );
+        $records->expects(self::never())->method('targetBeforeRecord');
+        $records->expects(self::never())->method('targetBeforePage');
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('beforeUid 5 is a content element on page 99');
+
+        $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'beforeUid' => 5,
+            'data' => ['pid' => 2, 'CType' => 'text', 'header' => 'New Text Element'],
+        ]);
+    }
+
+    #[Test]
+    public function planCreateRejectsBeforeUidAndAfterUidTogether(): void
+    {
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $this->createMock(RecordService::class),
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('not both');
+
+        $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'beforeUid' => 10,
+            'afterUid' => 11,
+            'data' => ['pid' => 2, 'header' => 'X'],
+        ]);
+    }
+
+    #[Test]
+    public function planCreateBeforeAnUnknownContentUidDoesNotCallTargetBeforePage(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->expects(self::exactly(2))->method('findExistingUids')->willReturn([]);
+        $records->expects(self::once())->method('findByUid')->with('pages', 2, ['pid'])->willReturn(['pid' => 1]);
+        $records->expects(self::never())->method('targetBeforePage');
+
+        $tool = new WriteTableTool(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            new TcaSchemaService(),
+            $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('no tt_content record with uid 999999');
+
+        $tool->plan([
+            'action' => 'create',
+            'tableName' => 'tt_content',
+            'beforeUid' => 999999,
+            'data' => ['pid' => 2, 'header' => 'X'],
+        ]);
     }
 
     #[Test]
@@ -560,6 +734,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -576,6 +752,15 @@ final class WriteTableToolTest extends TestCase
     public function planCreateBeforeANamedPageIgnoresTheParentPid(): void
     {
         $records = $this->createMock(RecordService::class);
+        $records->method('findExistingUids')->willReturnCallback(
+            static function (string $table, array $uids): array {
+                if ($table === 'pages' && $uids === [111]) {
+                    return [111];
+                }
+
+                return [];
+            },
+        );
         $records->expects(self::once())
             ->method('findDefaultLanguagePagesByTitle')
             ->with('C')
@@ -588,6 +773,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -612,6 +799,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -637,6 +826,8 @@ final class WriteTableToolTest extends TestCase
             $records,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -657,11 +848,14 @@ final class WriteTableToolTest extends TestCase
         $access = $this->createMock(PageAccessService::class);
         $access->method('isUnrestricted')->willReturn(false);
 
+        $tca = new TcaSchemaService();
         $tool = new WriteTableTool(
             $this->createMock(DataHandlerService::class),
             $records,
-            new TcaSchemaService(),
+            $tca,
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator($tca),
+            $this->createMock(ResourceFactory::class),
             $access,
         );
 
@@ -746,6 +940,8 @@ final class WriteTableToolTest extends TestCase
             $recordService,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -784,6 +980,8 @@ final class WriteTableToolTest extends TestCase
             $recordService,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([
@@ -820,6 +1018,8 @@ final class WriteTableToolTest extends TestCase
             $recordService,
             new TcaSchemaService(),
             $this->createMock(RecordsApplyService::class),
+            new FileFieldAttachmentValidator(new TcaSchemaService()),
+            $this->createMock(ResourceFactory::class),
         );
 
         $plan = $tool->plan([

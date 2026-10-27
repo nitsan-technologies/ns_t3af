@@ -31,6 +31,7 @@ use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\FileFieldAttachmentValidator;
 use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
@@ -47,6 +48,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
         private McpConfirmationPlanBuilder $confirmationPlanBuilder,
         private RecordService $recordService,
         private ResourceFactory $resourceFactory,
+        private FileFieldAttachmentValidator $fileFieldAttachmentValidator,
     ) {}
 
     /**
@@ -90,12 +92,16 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
             ));
         }
         $this->assertFieldIsShownForRecord($table, $uid, $record, $fieldName, $fileFields);
-        $files = $this->filesToAttach(self::withoutAlreadyAttached(
+        $files = $this->filesToAttach(
             $table,
-            $uid,
             $fieldName,
-            self::numericFileUids($fileUids),
-        ));
+            self::withoutAlreadyAttached(
+                $table,
+                $uid,
+                $fieldName,
+                self::numericFileUids($fileUids),
+            ),
+        );
         $fileLabels = implode(', ', array_map(
             static fn(File $file): string => $file->getName() . ' (uid ' . $file->getUid() . ')',
             $files,
@@ -174,19 +180,21 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
         try {
             $this->assertFieldIsShownForRecord($table, $uid, $record, $fieldName, $fileFields);
             $parsedUids = $this->withoutAlreadyAttached($table, $uid, $fieldName, $parsedUids);
-            $this->filesToAttach($parsedUids);
+            $this->filesToAttach($table, $fieldName, $parsedUids);
         } catch (\InvalidArgumentException $exception) {
             return $this->encodeError($exception->getMessage());
         }
 
         try {
+            $referencePid = $table === 'pages'
+                ? $uid
+                : (int) ($record['pid'] ?? 0);
             $referenceUids = $this->dataHandlerService->createFileReferences(
                 $table,
                 $uid,
                 $fieldName,
                 $parsedUids,
-                // References live on the page of their record.
-                (int) ($record['pid'] ?? 0),
+                $referencePid,
                 $texts,
             );
             $parentCount = count($this->recordService->findFileReferences($table, $uid, $fieldName));
@@ -359,7 +367,7 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
      * @param list<int> $fileUids
      * @return list<File>
      */
-    private function filesToAttach(array $fileUids): array
+    private function filesToAttach(string $table, string $fieldName, array $fileUids): array
     {
         $files = [];
         $problems = [];
@@ -385,6 +393,12 @@ readonly class FileReferenceAddTool implements McpNonAiToolInterface, McpPlannab
             if (!$onDisk) {
                 $problems[] = sprintf('The file %s (sys_file uid %d) is missing from the storage, so it would show as a broken image.', $file->getName(), $fileUid);
                 $missing = true;
+                continue;
+            }
+            try {
+                $this->fileFieldAttachmentValidator->assertFileAllowedForField($table, $fieldName, $file);
+            } catch (\InvalidArgumentException $e) {
+                $problems[] = $e->getMessage();
                 continue;
             }
             $files[] = $file;

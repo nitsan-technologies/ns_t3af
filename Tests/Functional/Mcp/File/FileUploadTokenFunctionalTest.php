@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Tests\Functional\Mcp\File;
 
 use NITSAN\NsT3AF\Mcp\Http\FileUploadEndpoint;
 use NITSAN\NsT3AF\Mcp\Service\FileUploadService;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyPayloadStore;
 use PHPUnit\Framework\Attributes\Test;
 use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\Http\Stream;
@@ -186,6 +187,61 @@ final class FileUploadTokenFunctionalTest extends FunctionalTestCase
         self::assertIsArray($payload);
         self::assertStringContainsString('not a real .woff2 font', (string) ($payload['error'] ?? ''));
         self::assertSame(1747320030, $payload['code'] ?? null);
+
+        $row = $this->getConnectionPool()->getConnectionForTable('tx_nst3af_upload_tokens')
+            ->select(['used'], 'tx_nst3af_upload_tokens', ['token' => hash('sha256', $plaintext)])
+            ->fetchAssociative();
+        self::assertIsArray($row);
+        self::assertSame(0, (int) ($row['used'] ?? 1));
+
+        $body->rewind();
+        $retry = $endpoint((new ServerRequest('http://localhost/mcp_upload', 'PUT'))
+            ->withBody($body)
+            ->withHeader('Authorization', 'Bearer ' . $plaintext)
+            ->withHeader('Content-Type', 'application/octet-stream'));
+        self::assertSame(400, $retry->getStatusCode());
+        $retryPayload = json_decode((string) $retry->getBody(), true);
+        self::assertIsArray($retryPayload);
+        self::assertSame(1747320030, $retryPayload['code'] ?? null);
+        self::assertStringNotContainsString('already used', strtolower((string) ($retryPayload['error'] ?? '')));
+    }
+
+    #[Test]
+    public function uploadEndpointAcceptsRecordsApplyPayloadWithoutQueryFileName(): void
+    {
+        $plaintext = bin2hex(random_bytes(16));
+        $payloadId = bin2hex(random_bytes(16));
+        $this->getConnectionPool()->getConnectionForTable('tx_nst3af_upload_tokens')->insert('tx_nst3af_upload_tokens', [
+            'token' => hash('sha256', $plaintext),
+            'be_user_uid' => 1,
+            'storage_uid' => RecordsApplyPayloadStore::TOKEN_STORAGE_UID,
+            'target_folder' => RecordsApplyPayloadStore::TOKEN_FOLDER_PREFIX . $payloadId,
+            'file_name' => '',
+            'expires' => time() + 900,
+            'used' => 0,
+            'tstamp' => time(),
+            'crdate' => time(),
+        ]);
+
+        $json = '{"data":{"pages":{"NEWp":{"pid":1,"title":"QA"}}}}';
+        $body = new Stream('php://temp', 'rw');
+        $body->write($json);
+        $body->rewind();
+
+        $request = (new ServerRequest('http://localhost/mcp_upload', 'PUT'))
+            ->withBody($body)
+            ->withHeader('Authorization', 'Bearer ' . $plaintext)
+            ->withHeader('Content-Type', 'application/json');
+
+        /** @var FileUploadEndpoint $endpoint */
+        $endpoint = $this->get(FileUploadEndpoint::class);
+        $response = $endpoint($request);
+
+        self::assertSame(201, $response->getStatusCode());
+        $payload = json_decode((string) $response->getBody(), true);
+        self::assertIsArray($payload);
+        self::assertSame('records_apply_payload', $payload['purpose'] ?? null);
+        self::assertSame($payloadId, $payload['payloadId'] ?? null);
     }
 
     #[Test]

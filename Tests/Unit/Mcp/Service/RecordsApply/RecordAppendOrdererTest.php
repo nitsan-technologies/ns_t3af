@@ -82,6 +82,25 @@ final class RecordAppendOrdererTest extends TestCase
     }
 
     #[Test]
+    public function explicitBeforeUidPlacementKeepsAPositivePagePidEvenWhenSiblingsExist(): void
+    {
+        $this->locator->expects(self::never())->method('lastUid');
+
+        $result = $this->orderer->apply([
+            'tt_content' => [
+                'NEWa' => [
+                    'pid' => 12,
+                    'header' => 'Before first',
+                    '__nst3af_skip_append_order' => 1,
+                ],
+            ],
+        ]);
+
+        self::assertSame(12, $result['tt_content']['NEWa']['pid']);
+        self::assertArrayNotHasKey('__nst3af_skip_append_order', $result['tt_content']['NEWa']);
+    }
+
+    #[Test]
     public function anEmptyPageKeepsThePositivePidForTheFirstRecord(): void
     {
         $this->locator->method('lastUid')->willReturn(null);

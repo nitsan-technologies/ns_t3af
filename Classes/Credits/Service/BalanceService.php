@@ -33,6 +33,7 @@ final class BalanceService
         private readonly CreditsDomainResolver $domainResolver,
         private readonly RuntimeSettingsService $runtimeSettings,
         private readonly CreditsApiResponseCacheInterface $responseCache,
+        private readonly CreditsApiResponseGuard $responseGuard,
     ) {}
 
     /**
@@ -45,10 +46,10 @@ final class BalanceService
 
         $cached = $this->responseCache->get(CreditsApiResponseCache::SCOPE_BALANCE, $domain, $token);
         if ($cached !== null) {
-            return $cached;
+            return $this->responseGuard->guardBalance($cached);
         }
 
-        $payload = $this->apiClient->balance($domain, $token);
+        $payload = $this->responseGuard->guardBalance($this->apiClient->balance($domain, $token));
         if (($payload['not_modified'] ?? false) === true) {
             return $payload;
         }

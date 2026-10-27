@@ -146,6 +146,7 @@ final class CreditsEstimateService
                 pageId: $options->pageId,
                 requestUuid: $options->requestUuid,
                 extra: $extra,
+                timeoutSeconds: $options->timeoutSeconds,
             ),
             'complete',
         );

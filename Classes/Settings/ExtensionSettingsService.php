@@ -119,9 +119,7 @@ class ExtensionSettingsService
             $stored = $this->secretService->decryptValues($extensionKey, $stored);
 
             foreach ($stored as $key => $value) {
-                if ($value !== '' || !array_key_exists($key, $merged)) {
-                    $merged[$key] = $value;
-                }
+                $merged[$key] = $value;
             }
         }
 

@@ -37,6 +37,8 @@ use ReflectionClass;
 /** @internal */
 final class ErrorHandlingProxy
 {
+    private const UNEXPECTED_ERROR_MESSAGE = 'The operation failed due to an unexpected server error. See the TYPO3 log for details.';
+
     public function __construct(
         private readonly object $inner,
         private readonly LoggerInterface $logger,
@@ -75,6 +77,18 @@ final class ErrorHandlingProxy
             $this->toolLogService->logFailure($this->inner, $this->type, $arguments, $executionTimeMs, $e->getMessage());
 
             throw self::ensureCodedToolCallException($e);
+        } catch (\InvalidArgumentException $e) {
+            $executionTimeMs = (int) ((hrtime(true) - $startTime) / 1000000);
+            $handlerName = $this->getHandlerName();
+            $this->auditLogger->logFailure($handlerName, $this->type, $arguments, $executionTimeMs, $e->getMessage());
+            $this->toolLogService->logFailure($this->inner, $this->type, $arguments, $executionTimeMs, $e->getMessage());
+
+            $code = (int) $e->getCode();
+            if ($code === 0) {
+                $code = 1790700000;
+            }
+
+            throw self::ensureCodedToolCallException(new ToolCallException(self::errorPayload($e->getMessage(), $code), $code, $e));
         } catch (\Throwable $e) {
             $executionTimeMs = (int) ((hrtime(true) - $startTime) / 1000000);
             $handlerName = $this->getHandlerName();
@@ -87,7 +101,7 @@ final class ErrorHandlingProxy
                 $code = 1790700000;
             }
 
-            throw new ToolCallException(self::errorPayload($e->getMessage(), $code), $code, $e);
+            throw new ToolCallException(self::errorPayload(self::UNEXPECTED_ERROR_MESSAGE, $code), $code, $e);
         }
     }
 

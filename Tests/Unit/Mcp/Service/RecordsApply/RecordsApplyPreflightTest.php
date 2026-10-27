@@ -19,10 +19,13 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Service\RecordsApply;
 
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\InlineForeignFields;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyPreflight;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyProblems;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyValidationException;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
+use NITSAN\NsT3AF\Mcp\Service\RecordSiteLanguageGuard;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -30,6 +33,7 @@ use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\Connection;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Site\SiteFinder;
 
 /**
  * @internal
@@ -62,6 +66,15 @@ final class RecordsApplyPreflightTest extends TestCase
             'ctrl' => ['label' => 'header'],
             'columns' => [
                 'header' => ['config' => ['type' => 'input']],
+                'CType' => [
+                    'config' => [
+                        'type' => 'select',
+                        'items' => [
+                            ['label' => 'Text', 'value' => 'text'],
+                            ['label' => 'Header', 'value' => 'header'],
+                        ],
+                    ],
+                ],
                 'locked' => ['config' => ['type' => 'input', 'readOnly' => true]],
                 'categories' => ['config' => ['type' => 'category']],
                 'assets' => ['config' => ['type' => 'file']],
@@ -89,7 +102,22 @@ final class RecordsApplyPreflightTest extends TestCase
             ->willReturnCallback(static fn(string $type, string $table): bool => $table !== 'tx_denied');
         $GLOBALS['BE_USER'] = $backendUser;
 
-        $this->preflight = new RecordsApplyPreflight(new TcaSchemaService(), $this->recordService, $this->connectionPool);
+        $this->preflight = $this->makePreflight();
+    }
+
+    private function makePreflight(?RecordsApplyFileAccess $fileAccess = null, ?RecordService $recordService = null): RecordsApplyPreflight
+    {
+        $tca = new TcaSchemaService();
+        $guard = new RecordSiteLanguageGuard($tca, $this->createMock(SiteFinder::class));
+
+        return new RecordsApplyPreflight(
+            $tca,
+            $recordService ?? $this->recordService,
+            $this->connectionPool,
+            $guard,
+            new InlineForeignFields(),
+            $fileAccess,
+        );
     }
 
     protected function tearDown(): void
@@ -97,6 +125,35 @@ final class RecordsApplyPreflightTest extends TestCase
         $GLOBALS['TCA'] = $this->originalTca;
         unset($GLOBALS['BE_USER']);
         parent::tearDown();
+    }
+
+    #[Test]
+    public function invalidCTypeIsRefusedInStrictMode(): void
+    {
+        try {
+            $this->preflight->check(
+                ['tt_content' => ['NEWc' => ['pid' => 1, 'header' => 'A', 'CType' => 'nonexistent_ctype']]],
+                [],
+                true,
+            );
+            self::fail('Expected a validation exception.');
+        } catch (RecordsApplyValidationException $exception) {
+            self::assertStringContainsString('not allowed', (string) ($exception->getProblems()[0]['error'] ?? ''));
+            self::assertSame(['CType'], $exception->getProblems()[0]['fields']);
+        }
+    }
+
+    #[Test]
+    public function invalidCTypeIsDroppedWhenNotStrict(): void
+    {
+        $checked = $this->preflight->check(
+            ['tt_content' => ['NEWc' => ['pid' => 1, 'header' => 'A', 'CType' => 'nonexistent_ctype']]],
+            [],
+            false,
+        );
+
+        self::assertSame(['pid' => 1, 'header' => 'A'], $checked['datamap']['tt_content']['NEWc']);
+        self::assertSame([['table' => 'tt_content', 'id' => 'NEWc', 'fields' => ['CType']]], $checked['ignored']);
     }
 
     #[Test]
@@ -138,7 +195,7 @@ final class RecordsApplyPreflightTest extends TestCase
         $recordService = $this->createMock(RecordService::class);
         $recordService->method('findExistingUids')
             ->willReturnCallback(static fn(string $table, array $uids): array => $table === 'pages' ? [1] : $uids);
-        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $recordService, $this->connectionPool);
+        $preflight = $this->makePreflight(null, $recordService);
 
         try {
             $preflight->check(['tt_content' => ['NEWa' => ['pid' => 1, 'header' => 'A'], 'NEWb' => ['pid' => 404, 'header' => 'B']]], [], true);
@@ -156,7 +213,7 @@ final class RecordsApplyPreflightTest extends TestCase
         $recordService = $this->createMock(RecordService::class);
         $recordService->method('findExistingUids')
             ->willReturnCallback(static fn(string $table, array $uids): array => array_values(array_diff($uids, [77])));
-        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $recordService, $this->connectionPool);
+        $preflight = $this->makePreflight(null, $recordService);
 
         try {
             $preflight->check(['tt_content' => ['NEWa' => ['pid' => -77, 'header' => 'A'], 'NEWb' => ['pid' => -78, 'header' => 'B']]], [], true);
@@ -352,7 +409,7 @@ final class RecordsApplyPreflightTest extends TestCase
     {
         $recordService = $this->createMock(RecordService::class);
         $recordService->method('findExistingUids')->willReturn([]);
-        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $recordService, $this->connectionPool);
+        $preflight = $this->makePreflight(null, $recordService);
 
         try {
             $preflight->check(['tt_content' => [5 => ['header' => 'A']]], ['tt_content' => [6 => ['delete' => 1]]], true);
@@ -369,7 +426,7 @@ final class RecordsApplyPreflightTest extends TestCase
         $recordService = $this->createMock(RecordService::class);
         $recordService->method('findExistingUids')
             ->willReturnCallback(static fn(string $table, array $uids): array => $table === 'pages' ? [] : $uids);
-        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $recordService, $this->connectionPool);
+        $preflight = $this->makePreflight(null, $recordService);
 
         try {
             $preflight->check(
@@ -401,7 +458,7 @@ final class RecordsApplyPreflightTest extends TestCase
     {
         $recordService = $this->createMock(RecordService::class);
         $recordService->expects(self::never())->method('findExistingUids');
-        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $recordService, $this->connectionPool);
+        $preflight = $this->makePreflight(null, $recordService);
 
         $checked = $preflight->check([], ['tt_content' => [9 => ['undelete' => 1]]], true);
 
@@ -515,12 +572,164 @@ final class RecordsApplyPreflightTest extends TestCase
     }
 
     #[Test]
+    public function aMissingRelationUidIsRefused(): void
+    {
+        $GLOBALS['TCA']['tt_content']['columns']['categories'] = [
+            'config' => ['type' => 'category', 'foreign_table' => 'sys_category'],
+        ];
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->method('findExistingUids')
+            ->willReturnCallback(static fn(string $table, array $uids): array => $table === 'sys_category' ? [] : $uids);
+        $preflight = $this->makePreflight(null, $recordService);
+
+        $problems = new RecordsApplyProblems();
+        $method = new \ReflectionMethod(RecordsApplyPreflight::class, 'validateRelationUidList');
+        self::assertFalse($method->invoke($preflight, 'tt_content', 'categories', '42', ['table' => 'tt_content', 'id' => '5'], $problems));
+
+        try {
+            $preflight->check(['tt_content' => ['5' => ['categories' => '42']]], [], false);
+            self::fail('Expected a missing category uid to be refused.');
+        } catch (RecordsApplyValidationException $exception) {
+            self::assertSame(['categories'], $exception->getProblems()[0]['fields']);
+        }
+    }
+
+    #[Test]
+    public function aFileReferenceWithABadUidForeignIsRefused(): void
+    {
+        $GLOBALS['TCA']['pages']['columns']['media'] = [
+            'config' => [
+                'type' => 'file',
+                'foreign_table' => 'sys_file_reference',
+                'foreign_field' => 'uid_foreign',
+            ],
+        ];
+        $GLOBALS['TCA']['sys_file_reference']['columns'] = [
+            'uid_foreign' => ['config' => ['type' => 'passthrough']],
+            'uid_local' => ['config' => ['type' => 'passthrough']],
+            'tablenames' => ['config' => ['type' => 'input']],
+            'fieldname' => ['config' => ['type' => 'input']],
+        ];
+
+        $batch = [
+            'pages' => ['NEWp' => ['pid' => 1, 'title' => 'P']],
+            'sys_file_reference' => [
+                'NEWref' => [
+                    'pid' => 'NEWp',
+                    'uid_local' => 2,
+                    'uid_foreign' => 'NEW_bad',
+                    'tablenames' => 'pages',
+                    'fieldname' => 'media',
+                ],
+            ],
+        ];
+
+        foreach (['NEW_bad', 'newp', 'NEW', 'abc', -5, 'NEWmissing'] as $badForeign) {
+            $data = $batch;
+            $data['sys_file_reference']['NEWref']['uid_foreign'] = $badForeign;
+            try {
+                $this->preflight->check($data, [], false);
+                self::fail('Expected validation for uid_foreign ' . var_export($badForeign, true));
+            } catch (RecordsApplyValidationException $exception) {
+                $problem = $exception->getProblems()[0];
+                self::assertSame(['uid_foreign'], $problem['fields'] ?? null, (string) ($problem['error'] ?? ''));
+            }
+        }
+    }
+
+    #[Test]
+    public function aFileReferenceToANonexistentParentUidIsRefused(): void
+    {
+        $GLOBALS['TCA']['pages']['columns']['media'] = [
+            'config' => [
+                'type' => 'file',
+                'foreign_table' => 'sys_file_reference',
+                'foreign_field' => 'uid_foreign',
+            ],
+        ];
+        $GLOBALS['TCA']['sys_file_reference']['columns'] = [
+            'uid_foreign' => ['config' => ['type' => 'passthrough']],
+            'uid_local' => ['config' => ['type' => 'passthrough']],
+            'tablenames' => ['config' => ['type' => 'input']],
+            'fieldname' => ['config' => ['type' => 'input']],
+        ];
+
+        $recordService = $this->createMock(RecordService::class);
+        $recordService->method('findExistingUids')
+            ->willReturnCallback(static function (string $table, array $uids): array {
+                if ($table === 'pages' && $uids === [999999]) {
+                    return [];
+                }
+
+                return $uids;
+            });
+        $preflight = $this->makePreflight(null, $recordService);
+
+        try {
+            $preflight->check([
+                'sys_file_reference' => [
+                    'NEWref' => [
+                        'pid' => 1,
+                        'uid_local' => 2,
+                        'uid_foreign' => 999999,
+                        'tablenames' => 'pages',
+                        'fieldname' => 'media',
+                    ],
+                ],
+            ], [], false);
+            self::fail('Expected validation for missing parent page uid.');
+        } catch (RecordsApplyValidationException $exception) {
+            self::assertSame(['uid_foreign'], $exception->getProblems()[0]['fields']);
+            self::assertStringContainsString('999999', (string) $exception->getProblems()[0]['error']);
+        }
+    }
+
+    #[Test]
+    public function aFileReferenceUidForeignNewIdMustMatchTablenames(): void
+    {
+        $GLOBALS['TCA']['pages']['columns']['media'] = [
+            'config' => [
+                'type' => 'file',
+                'foreign_table' => 'sys_file_reference',
+                'foreign_field' => 'uid_foreign',
+            ],
+        ];
+        $GLOBALS['TCA']['sys_file_reference']['columns'] = [
+            'uid_foreign' => ['config' => ['type' => 'passthrough']],
+            'uid_local' => ['config' => ['type' => 'passthrough']],
+            'tablenames' => ['config' => ['type' => 'input']],
+            'fieldname' => ['config' => ['type' => 'input']],
+        ];
+
+        try {
+            $this->preflight->check([
+                'pages' => ['NEWp' => ['pid' => 1, 'title' => 'P']],
+                'tt_content' => ['NEWce' => ['pid' => 'NEWp', 'CType' => 'text', 'header' => 'H']],
+                'sys_file_reference' => [
+                    'NEWref' => [
+                        'pid' => 'NEWp',
+                        'uid_local' => 2,
+                        'uid_foreign' => 'NEWce',
+                        'tablenames' => 'pages',
+                        'fieldname' => 'media',
+                    ],
+                ],
+            ], [], false);
+            self::fail('Expected validation when uid_foreign NEW id is on another table.');
+        } catch (RecordsApplyValidationException $exception) {
+            self::assertSame(['uid_foreign'], $exception->getProblems()[0]['fields']);
+            self::assertStringContainsString('NEWce', (string) $exception->getProblems()[0]['error']);
+            self::assertStringContainsString('pages', (string) $exception->getProblems()[0]['error']);
+        }
+    }
+
+    #[Test]
     public function aFileReferenceToAFileOutsideTheEditorsMountsIsRefused(): void
     {
         $GLOBALS['TCA']['sys_file_reference']['columns']['uid_local'] = ['config' => ['type' => 'input']];
         $fileAccess = $this->createMock(RecordsApplyFileAccess::class);
         $fileAccess->method('canRead')->willReturnCallback(static fn(int $uid): bool => $uid === 12);
-        $preflight = new RecordsApplyPreflight(new TcaSchemaService(), $this->recordService, $this->connectionPool, $fileAccess);
+        $preflight = $this->makePreflight($fileAccess);
 
         $checked = $preflight->check(['sys_file_reference' => ['NEWr1' => ['pid' => '1', 'uid_local' => 12]]], [], true);
         self::assertSame(12, $checked['datamap']['sys_file_reference']['NEWr1']['uid_local']);

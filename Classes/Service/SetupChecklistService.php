@@ -206,6 +206,24 @@ final class SetupChecklistService
             'actionTabKey' => 'providers',
         ];
 
+        $failedProviders = [];
+        foreach ($enabled as $provider) {
+            if ($provider->lastStatus !== 'disconnected') {
+                continue;
+            }
+            $failedProviders[] = $provider->title !== '' ? $provider->title : $provider->identifier;
+        }
+        if ($failedProviders !== []) {
+            $items[] = [
+                'status' => 'warn',
+                'titleKey' => 'checklist.providerModel.title',
+                'descKey' => 'checklist.providerModel.descFailed',
+                'descArgs' => [implode(', ', $failedProviders)],
+                'actionRoute' => 't3af_dashboard.providers',
+                'actionTabKey' => 'providers',
+            ];
+        }
+
         $items[] = $this->mcpChecklistItem($request);
         $items[] = $this->brandContextChecklistItem($request);
         $items[] = $this->budgetChecklistItem();

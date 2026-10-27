@@ -41,18 +41,27 @@
                         <code class="aiu-mcp-url-row__code"
                               data-copy-target="personal-bearer-token"
                               data-token-uid="{mcpPersonalTokenUid}"><f:if condition="{mcpPersonalTokenPlain}"><f:then>{mcpPersonalTokenPlain}</f:then><f:else>{mcpPersonalTokenPreview}</f:else></f:if></code>
-                        <button type="button" class="btn btn-sm btn-default" data-copy="personal-bearer-token">
-                            <core:icon identifier="actions-clipboard" size="small" />
-                            <f:translate key="{ll}:module.mcpServer.action.copyToken" />
-                        </button>
+                        <f:if condition="{mcpPersonalTokenPlain} != ''">
+                            <f:then>
+                                <button type="button" class="btn btn-sm btn-default" data-copy="personal-bearer-token">
+                                    <core:icon identifier="actions-clipboard" size="small" />
+                                    <f:translate key="{ll}:module.mcpServer.action.copyToken" />
+                                </button>
+                            </f:then>
+                            <f:else>
+                                <a class="btn btn-sm btn-default" href="{mcpCreatePersonalTokenUrl}">
+                                    <f:translate key="{ll}:module.mcpServer.personalToken.regenerate" />
+                                </a>
+                            </f:else>
+                        </f:if>
                     </div>
                 </f:then>
                 <f:else>
                     <div class="aiu-mcp-url-row">
-                        <span>No personal token yet. Opening this page does not create one.</span>
+                        <span><f:translate key="{ll}:module.mcpServer.personalToken.missing" /></span>
                         <a class="btn btn-sm btn-default" href="{mcpCreatePersonalTokenUrl}">
                             <core:icon identifier="actions-add" size="small" />
-                            Create personal token
+                            <f:translate key="{ll}:module.mcpServer.personalToken.create" />
                         </a>
                     </div>
                 </f:else>

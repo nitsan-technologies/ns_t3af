@@ -28,6 +28,8 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Database\Query\QueryBuilder;
+use TYPO3\CMS\Core\Database\Query\Restriction\DeletedRestriction;
+use TYPO3\CMS\Core\Utility\GeneralUtility;
 
 readonly class RecordService
 {
@@ -152,6 +154,17 @@ readonly class RecordService
         }
     }
 
+    public function assertRecordExists(string $table, int $uid): void
+    {
+        if ($uid <= 0) {
+            throw new \InvalidArgumentException('Record uid must be positive.');
+        }
+
+        if ($this->findExistingUids($table, [$uid]) === []) {
+            throw new \InvalidArgumentException('Record not found: ' . $table . ' uid ' . $uid);
+        }
+    }
+
     /**
      * DataHandler target that places a record directly before this page.
      * The previous default-language sibling becomes a negative "after" target.
@@ -176,6 +189,7 @@ readonly class RecordService
         $sorting = (int) ($page['sorting'] ?? 0);
         $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
         $queryBuilder->getRestrictions()->removeAll();
+        $queryBuilder->getRestrictions()->add(GeneralUtility::makeInstance(DeletedRestriction::class));
         $this->workspaceContext->applyRestriction($queryBuilder, 'pages');
 
         $constraints = [

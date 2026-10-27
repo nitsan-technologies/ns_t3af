@@ -85,7 +85,7 @@ Relations, collections, and SEO file fields
 ``table_schema`` now surfaces:
 
 * **category / MM select** (e.g. ``categories``, ``authors``, ``tags``) with ``writableAs: uid_list`` — write ``"126"`` or ``"8,12"`` via ``write_table``. Reads (``pages_get`` / ``content_get`` / list / search) return the same UID-list string, not the parent counter.
-* **file fields** (``og_image``, ``image``, ``assets``, …) with ``writableAs: file_references`` — use ``file_reference_add`` or ``[{"uid_local": N}]``; do not set a bare integer. ``file_reference_add`` syncs the parent counter used by SEO generators.
+* **file fields** (``og_image``, ``image``, ``assets``, …) with ``writableAs: file_references`` — use ``file_reference_add`` or ``[{"uid_local": N}]``; do not set a bare integer. ``file_reference_add`` syncs the parent counter used by SEO generators. Fields with ``common-image-types`` reject document extensions such as PDF and Illustrator (``.ai``) even when ``GFX/imagefile_ext`` allows them on your instance.
 * **Content Blocks collections** (``type: collection``) — do not write the parent field; create child rows in ``foreignTable`` with ``foreignField`` (often ``foreign_table_parent_uid``). Order with ``pid=<page>`` then ``pid=-<previousChildUid>``.
 
 When ``write_table`` ignores a field, the response includes ``ignoredFieldDetails`` with a concrete ``hint``.

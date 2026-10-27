@@ -19,8 +19,10 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Credits;
 
+use NITSAN\NsT3AF\Credits\CreditsApiErrorCodes;
 use NITSAN\NsT3AF\Credits\Domain\Repository\RuntimeSettingsRepository;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
+use NITSAN\NsT3AF\Credits\Service\CreditsApiResponseGuard;
 use NITSAN\NsT3AF\Credits\Service\CreditsDomainResolver;
 use NITSAN\NsT3AF\Credits\Service\LicenseContactResolver;
 use NITSAN\NsT3AF\Credits\Service\RuntimeSettingsService;
@@ -31,13 +33,21 @@ use TYPO3\CMS\Core\Cache\Frontend\NullFrontend;
 
 final class TokenResolverTest extends TestCase
 {
+    private const VALID_BEARER = 'bearer-test-token-abc';
+
     /** @var array<string, mixed>|null */
     private ?array $previousTypo3ConfVars = null;
+
+    private string|false $previousDdevPrimaryUrl = false;
 
     protected function setUp(): void
     {
         $this->previousTypo3ConfVars = $GLOBALS['TYPO3_CONF_VARS'] ?? null;
         $GLOBALS['TYPO3_CONF_VARS']['SYS']['encryptionKey'] = 'unit-test-key-' . str_repeat('x', 32);
+
+        $this->previousDdevPrimaryUrl = getenv('DDEV_PRIMARY_URL');
+        putenv('DDEV_PRIMARY_URL');
+        unset($_SERVER['HTTP_HOST'], $_SERVER['SERVER_NAME']);
     }
 
     protected function tearDown(): void
@@ -47,13 +57,90 @@ final class TokenResolverTest extends TestCase
         } else {
             $GLOBALS['TYPO3_CONF_VARS'] = $this->previousTypo3ConfVars;
         }
+
+        if ($this->previousDdevPrimaryUrl === false) {
+            putenv('DDEV_PRIMARY_URL');
+        } elseif ($this->previousDdevPrimaryUrl === '') {
+            putenv('DDEV_PRIMARY_URL=');
+        } else {
+            putenv('DDEV_PRIMARY_URL=' . $this->previousDdevPrimaryUrl);
+        }
+    }
+
+    public function testClaimWithCodeRejectsShortBearerFromApi(): void
+    {
+        $api = $this->createMock(T3PlanetApiClient::class);
+        $api->expects(self::once())->method('claimToken')->willReturn([
+            'token' => 'x',
+            'action' => 'claimed',
+        ]);
+
+        [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
+        $repository = $this->createMock(RuntimeSettingsRepository::class);
+        $repository->method('findSingleton')->willReturn([
+            'token_enc' => '',
+            't3planet_api_base_url' => 'https://composer.example',
+        ]);
+        $runtime = new RuntimeSettingsService(
+            $repository,
+            new CredentialCipher(),
+            new \TYPO3\CMS\Core\Configuration\ExtensionConfiguration(),
+        );
+
+        $resolver = new TokenResolver(
+            $api,
+            $runtime,
+            $cache,
+            $apiResponseCache,
+            $this->domainResolver($runtime),
+            $this->contactResolver(),
+            new CreditsApiResponseGuard(),
+        );
+
+        try {
+            $resolver->claimWithCode('any-code');
+            self::fail('Expected CreditsApiException');
+        } catch (\NITSAN\NsT3AF\Credits\Exception\CreditsApiException $exception) {
+            self::assertSame(CreditsApiErrorCodes::INVALID_RESPONSE, $exception->errorCode);
+        }
+
+        self::assertSame('', $runtime->getTokenPlain() ?? '');
+    }
+
+    public function testClaimWithCodeRejectsJunkBalanceInClaimResponse(): void
+    {
+        $api = $this->createMock(T3PlanetApiClient::class);
+        $api->expects(self::once())->method('claimToken')->willReturn([
+            'token' => self::VALID_BEARER,
+            'balance' => 'abc123junk',
+        ]);
+
+        [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
+        $resolver = new TokenResolver(
+            $api,
+            $runtime,
+            $cache,
+            $apiResponseCache,
+            $this->domainResolver($runtime),
+            $this->contactResolver(),
+            new CreditsApiResponseGuard(),
+        );
+
+        try {
+            $resolver->claimWithCode('any-code');
+            self::fail('Expected CreditsApiException');
+        } catch (\NITSAN\NsT3AF\Credits\Exception\CreditsApiException $exception) {
+            self::assertSame(CreditsApiErrorCodes::INVALID_RESPONSE, $exception->errorCode);
+        }
+
+        self::assertNull($runtime->getTokenPlain());
     }
 
     public function testIssueFreshTokenStoresEncryptedToken(): void
     {
         $api = $this->createMock(T3PlanetApiClient::class);
         $api->expects(self::once())->method('issueTrialToken')->with(null, [])->willReturn([
-            'token' => 'bearer-abc',
+            'token' => self::VALID_BEARER,
         ]);
 
         [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
@@ -64,16 +151,17 @@ final class TokenResolverTest extends TestCase
             $apiResponseCache,
             $this->domainResolver($runtime),
             $this->contactResolver(),
+            new CreditsApiResponseGuard(),
         );
 
-        self::assertSame('bearer-abc', $resolver->issueFreshToken());
+        self::assertSame(self::VALID_BEARER, $resolver->issueFreshToken());
     }
 
     public function testActivateTrialTokenMintsWhenNoTokenExists(): void
     {
         $api = $this->createMock(T3PlanetApiClient::class);
         $api->expects(self::once())->method('issueTrialToken')->with(null, [])->willReturn([
-            'token' => 'bearer-new',
+            'token' => 'bearer-test-token-new',
         ]);
 
         [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
@@ -84,12 +172,13 @@ final class TokenResolverTest extends TestCase
             $apiResponseCache,
             $this->domainResolver($runtime),
             $this->contactResolver(),
+            new CreditsApiResponseGuard(),
         );
 
         $result = $resolver->activateTrialToken();
 
         self::assertSame('minted', $result['action']);
-        self::assertSame('bearer-new', $result['token']);
+        self::assertSame('bearer-test-token-new', $result['token']);
     }
 
     public function testNeedsContactForActivationWhenNoLicenseAndNoToken(): void
@@ -102,6 +191,7 @@ final class TokenResolverTest extends TestCase
             $apiResponseCache,
             $this->domainResolver($runtime),
             $this->contactResolver(),
+            new CreditsApiResponseGuard(),
         );
 
         self::assertTrue($resolver->needsContactForActivation());
@@ -114,7 +204,7 @@ final class TokenResolverTest extends TestCase
             'name' => 'Alex',
             'email' => 'alex@example.com',
         ])->willReturn([
-            'token' => 'bearer-form',
+            'token' => 'bearer-test-token-form',
         ]);
 
         [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
@@ -125,6 +215,7 @@ final class TokenResolverTest extends TestCase
             $apiResponseCache,
             $this->domainResolver($runtime),
             $this->contactResolver(),
+            new CreditsApiResponseGuard(),
         );
 
         $result = $resolver->activateTrialToken([
@@ -133,7 +224,7 @@ final class TokenResolverTest extends TestCase
         ]);
 
         self::assertSame('minted', $result['action']);
-        self::assertSame('bearer-form', $result['token']);
+        self::assertSame('bearer-test-token-form', $result['token']);
     }
 
     public function testActivateTrialTokenBindsIpWhenTokenExists(): void
@@ -167,6 +258,7 @@ final class TokenResolverTest extends TestCase
             $apiResponseCache,
             $this->domainResolver($runtime),
             $this->contactResolver(),
+            new CreditsApiResponseGuard(),
         );
         $result = $resolver->activateTrialToken();
 
@@ -198,6 +290,7 @@ final class TokenResolverTest extends TestCase
             $apiResponseCache,
             $this->domainResolver($runtime),
             $this->contactResolver(),
+            new CreditsApiResponseGuard(),
         );
         $resolver->invalidate();
     }
@@ -208,7 +301,7 @@ final class TokenResolverTest extends TestCase
         $api->expects(self::once())->method('issueTrialToken')->with(null, [
             'name' => 'Jane',
             'email' => 'jane@example.com',
-        ])->willReturn(['token' => 'bearer-with-contact']);
+        ])->willReturn(['token' => 'bearer-with-contact-ok']);
 
         [$runtime, $cache, $apiResponseCache] = $this->runtimeFixtures();
         $licenses = $this->createMock(\NITSAN\NsT3AF\Credits\Contract\LicenseDataRepositoryInterface::class);
@@ -233,9 +326,10 @@ final class TokenResolverTest extends TestCase
             $apiResponseCache,
             $this->domainResolver($runtime),
             new LicenseContactResolver($licenses),
+            new CreditsApiResponseGuard(),
         );
 
-        self::assertSame('bearer-with-contact', $resolver->issueFreshToken());
+        self::assertSame('bearer-with-contact-ok', $resolver->issueFreshToken());
     }
 
     public function testRefreshBearerTokenStoresNewSecret(): void
@@ -280,6 +374,7 @@ final class TokenResolverTest extends TestCase
             $apiResponseCache,
             $this->domainResolver($runtime),
             $this->contactResolver(),
+            new CreditsApiResponseGuard(),
         );
         $token = $resolver->refreshBearerToken();
 
@@ -305,7 +400,7 @@ final class TokenResolverTest extends TestCase
         $api->expects(self::once())->method('bindIp')->willThrowException(
             new \NITSAN\NsT3AF\Credits\Exception\CreditsApiException('token_ip_conflict', 403),
         );
-        $api->expects(self::once())->method('issueTrialToken')->willReturn(['token' => 'ip-owner-token']);
+        $api->expects(self::once())->method('issueTrialToken')->willReturn(['token' => 'ip-owner-token-xyz12']);
 
         $cipher = new CredentialCipher();
         $repository = $this->createMock(RuntimeSettingsRepository::class);
@@ -329,11 +424,12 @@ final class TokenResolverTest extends TestCase
             $apiResponseCache,
             $this->domainResolver($runtime),
             $this->contactResolver(),
+            new CreditsApiResponseGuard(),
         );
         $result = $resolver->activateTrialToken();
 
         self::assertSame('adopted', $result['action']);
-        self::assertSame('ip-owner-token', $result['token']);
+        self::assertSame('ip-owner-token-xyz12', $result['token']);
     }
 
     public function testActivateTrialTokenRethrowsOtherBindErrors(): void
@@ -362,6 +458,7 @@ final class TokenResolverTest extends TestCase
             $this->createMock(\NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface::class),
             $this->domainResolver($runtime),
             $this->contactResolver(),
+            new CreditsApiResponseGuard(),
         );
 
         $this->expectException(\NITSAN\NsT3AF\Credits\Exception\CreditsApiException::class);

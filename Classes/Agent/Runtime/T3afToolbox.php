@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Agent\Runtime;
 use NITSAN\NsT3AF\Agent\Service\AgentAttachTargetRequest;
 use NITSAN\NsT3AF\Agent\Service\AgentPlan;
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
+use NITSAN\NsT3AF\Agent\Service\AgentRequestChecklist;
 use NITSAN\NsT3AF\Agent\Service\AgentRequestedFiles;
 use NITSAN\NsT3AF\Agent\Service\AgentRunner;
 use NITSAN\NsT3AF\Agent\Service\AgentToolSearch;
@@ -254,6 +255,171 @@ final class T3afToolbox implements ToolboxInterface
     }
 
     /**
+     * "What issues" / "suggest fixes" must not open a Check accessibility write card.
+     * A fix request must not list issues and then invent the solutions.
+     */
+    private function refuseAccessibilityScanDetour(string $name, ToolCall $toolCall): ?ToolResult
+    {
+        $request = $this->gateRequest();
+        if (
+            $name === 't3aa_accessibility_issues'
+            && AgentRunner::isAccessibilityFixRequest($request)
+            && !AgentRunner::isAccessibilityIssuesRequest($request)
+            && isset($this->catalog['t3aa_accessibility_fix_suggestions'])
+        ) {
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked how to fix accessibility issues. Call t3aa_accessibility_fix_suggestions'
+                    . ' (it also reports a missing scan). Do not rewrite the issues list yourself.',
+            );
+        }
+        if ($name !== 't3aa_accessibility_scan_run' || AgentRunner::isAccessibilityScanRequest($request)) {
+            return null;
+        }
+        $parts = [];
+        if (AgentRunner::isAccessibilityIssuesRequest($request) || !AgentRunner::isAccessibilityFixRequest($request)) {
+            $parts[] = 't3aa_accessibility_issues';
+        }
+        if (
+            AgentRunner::isAccessibilityFixRequest($request)
+            && isset($this->catalog['t3aa_accessibility_fix_suggestions'])
+        ) {
+            $parts[] = 't3aa_accessibility_fix_suggestions';
+        }
+        if (AgentRunner::isPageSpeedRequest($request) && isset($this->catalog['t3aa_get_page_speed'])) {
+            $parts[] = 't3aa_get_page_speed';
+        }
+        $read = $parts !== [] ? implode(' and ', $parts) : 't3aa_accessibility_issues';
+
+        return new ToolResult(
+            $toolCall,
+            'Not executed: the editor did not ask to run a new scan. Call ' . $read
+                . ' for the last scan (it also says when none exists). Do not invent a scan result.',
+        );
+    }
+
+    /**
+     * Approve-all must not list drafts or copy a handful of fileUids onto the confirmation card.
+     */
+    private function refuseApproveAllDetour(string $name, ToolCall $toolCall, string $requestQuery): ?ToolResult
+    {
+        if (!AgentRunner::isApproveAllAltTextRequest($requestQuery) || !isset($this->catalog['t3aa_alt_text_approve'])) {
+            return null;
+        }
+        $all = $toolCall->getArguments()['all'] ?? false;
+        $wantsAll = $all === true || $all === 1 || $all === '1' || $all === 'true';
+        if ($name !== 't3aa_alt_text_drafts_list' && ($name !== 't3aa_alt_text_approve' || $wantsAll)) {
+            return null;
+        }
+
+        return new ToolResult(
+            $toolCall,
+            'Not executed: the editor asked to approve every pending alt text draft. Call t3aa_alt_text_approve with all=true and no fileUids.',
+        );
+    }
+
+    /**
+     * "Show me the drafts. Do not approve them until I say so."
+     */
+    private function refuseDoNotApproveDetour(string $name, ToolCall $toolCall, string $requestQuery): ?ToolResult
+    {
+        if ($name !== 't3aa_alt_text_approve' || !AgentRunner::isDoNotApproveAltTextRequest($requestQuery)) {
+            return null;
+        }
+
+        return new ToolResult(
+            $toolCall,
+            'Not executed: the editor asked not to approve drafts yet. Call t3aa_alt_text_drafts_list to show them. Do not call t3aa_alt_text_approve until they ask.',
+        );
+    }
+
+    /**
+     * The image-text tools find a named file in any folder; browsing for it only costs steps.
+     */
+    private function refuseNamedFileBrowseDetour(string $name, ToolCall $toolCall, string $requestQuery): ?ToolResult
+    {
+        if (!in_array($name, ['file_list', 'file_get_info'], true)) {
+            return null;
+        }
+        $gate = $this->gateRequest();
+        $next = AgentToolTurnProcessor::nextRequestedFileName($gate, $this->conversationHistory())
+            ?? AgentToolTurnProcessor::requestedFileNames($gate)[0] ?? null;
+        if ($next === null) {
+            return null;
+        }
+        if (AgentRunner::isDecorativeImageRequest($gate) && isset($this->catalog['t3aa_mark_image_decorative'])) {
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor named the file "' . $next . '". Call t3aa_mark_image_decorative with fileUrl "' . $next . '".',
+            );
+        }
+        if (
+            isset($this->catalog['t3aa_update_file_metadata'])
+            && !in_array('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor($gate), true)
+        ) {
+            $named = AgentToolTurnProcessor::requestedFileNames($gate);
+            $rest = array_slice($named, 1);
+            $more = $rest === [] ? '' : ' After Apply, call it again for "' . implode('", "', $rest) . '".';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor named the file "' . $next . '". t3aa_get_file_metadata and t3aa_update_file_metadata'
+                    . ' take fileUrl "' . $next . '" and find it in any folder. Call the one the request needs with that fileUrl;'
+                    . ' for texts in another language add isoCode.' . $more,
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * Several named files, or a missing-alt list: the call must be the next remaining file, not the previous image.
+     */
+    private function refuseWrongImageTextFile(string $name, ToolCall $toolCall): ?ToolResult
+    {
+        if (!in_array($name, ['t3aa_update_file_metadata', 't3aa_get_file_metadata', 't3aa_mark_image_decorative'], true)) {
+            return null;
+        }
+        $gate = $this->gateRequest();
+        $history = $this->conversationHistory();
+        $arguments = $toolCall->getArguments();
+        $fileUrl = trim((string) ($arguments['fileUrl'] ?? ''));
+        $fileUid = (int) ($arguments['fileUid'] ?? 0);
+        $calledBase = $fileUrl !== '' ? strtolower(basename($fileUrl)) : '';
+
+        $nextNamed = AgentToolTurnProcessor::nextRequestedFileName($gate, $history);
+        if ($nextNamed !== null && $name !== 't3aa_get_file_metadata') {
+            $nextBase = strtolower(basename($nextNamed));
+            if ($calledBase !== '' && $calledBase !== $nextBase) {
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: the next named file is "' . $nextNamed . '". Call ' . $name . ' with fileUrl "' . $nextNamed . '". One file per call.',
+                );
+            }
+        }
+
+        $nextMissing = AgentToolTurnProcessor::nextMissingAltFile($history, $gate);
+        if ($nextMissing === null || $name !== 't3aa_update_file_metadata') {
+            return null;
+        }
+        if ($fileUid <= 0 && $calledBase === '') {
+            return null;
+        }
+        if ($fileUid > 0 && $fileUid === $nextMissing['fileUid']) {
+            return null;
+        }
+        if ($calledBase !== '' && str_contains(strtolower($nextMissing['identifier']), $calledBase)) {
+            return null;
+        }
+
+        return new ToolResult(
+            $toolCall,
+            'Not executed: generate alt text only for images from t3aa_list_files_missing_alt_text. Next is fileUid '
+                . $nextMissing['fileUid'] . ' (' . $nextMissing['identifier'] . '). Skip files that already have alt text.',
+        );
+    }
+
+    /**
      * The image-text tools do not show languageUid to the model (it picks the language by isoCode),
      * so a languageUid it sends anyway is a guess.
      */
@@ -288,6 +454,44 @@ final class T3afToolbox implements ToolboxInterface
             return new ToolResult($toolCall, $this->findTools((string) ($toolCall->getArguments()['query'] ?? '')));
         }
         $requestQuery = trim((string) ($this->runtime->body['requestQuery'] ?? ''));
+        $approveAllDetour = $this->refuseApproveAllDetour($name, $toolCall, $requestQuery);
+        if ($approveAllDetour !== null) {
+            $outcome = 'invalid';
+
+            return $approveAllDetour;
+        }
+        $doNotApproveDetour = $this->refuseDoNotApproveDetour($name, $toolCall, $requestQuery);
+        if ($doNotApproveDetour !== null) {
+            $outcome = 'invalid';
+
+            return $doNotApproveDetour;
+        }
+        $wrongImageTextFile = $this->refuseWrongImageTextFile($name, $toolCall);
+        if ($wrongImageTextFile !== null) {
+            $outcome = 'invalid';
+
+            return $wrongImageTextFile;
+        }
+        $scanDetour = $this->refuseAccessibilityScanDetour($name, $toolCall);
+        if ($scanDetour !== null) {
+            $outcome = 'invalid';
+
+            return $scanDetour;
+        }
+        $uidTypeDetour = $this->refuseUidTypeMixup($name, $toolCall, $this->gateRequest());
+        if ($uidTypeDetour !== null) {
+            $outcome = 'invalid';
+
+            return $uidTypeDetour;
+        }
+        $simplifyDetour = $this->refuseSimplifyTranslateDetour($name, $toolCall, $this->gateRequest());
+        if ($simplifyDetour !== null) {
+            $outcome = 'invalid';
+
+            return $simplifyDetour;
+        }
+        $toolCall = $this->withNamedSimplifyLanguage($toolCall, $this->gateRequest());
+        $toolCall = $this->withNamedSummarizePage($toolCall, $this->gateRequest());
         if ($name === 'pages_move' && (PageCreateBefore::isCreateBefore($requestQuery) || PageCreateAfter::isCreateAfter($requestQuery) || PageCreateAfter::isLastUnder($requestQuery))) {
             $outcome = 'invalid';
             $place = PageCreateAfter::isCreateAfter($requestQuery) || PageCreateAfter::isLastUnder($requestQuery) ? 'afterUid' : 'beforeUid';
@@ -308,23 +512,11 @@ final class T3afToolbox implements ToolboxInterface
                 : 'Not executed: the editor asked for an AI-generated image, and AI image generation is not available to this editor.'
                     . ' Do not upload a web image instead: do the rest of the request and tell the editor in one sentence that the image could not be generated.');
         }
-        // The image-text tools find a named file in any folder; browsing for it only costs steps.
-        $namedFile = in_array($name, ['file_list', 'file_get_info'], true)
-            ? AgentToolTurnProcessor::requestedFileName($requestQuery)
-            : null;
-        if (
-            $namedFile !== null
-            && isset($this->catalog['t3aa_update_file_metadata'])
-            && !in_array('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor($this->gateRequest()), true)
-        ) {
+        $namedFileDetour = $this->refuseNamedFileBrowseDetour($name, $toolCall, $requestQuery);
+        if ($namedFileDetour !== null) {
             $outcome = 'invalid';
 
-            return new ToolResult(
-                $toolCall,
-                'Not executed: the editor named the file "' . $namedFile . '". t3aa_get_file_metadata and t3aa_update_file_metadata'
-                    . ' take fileUrl "' . $namedFile . '" and find it in any folder. Call the one the request needs with that fileUrl;'
-                    . ' for texts in another language add isoCode.',
-            );
+            return $namedFileDetour;
         }
         $describedFile = $name === AgentRequestedFiles::GENERATION_TOOL
             ? AgentToolTurnProcessor::requestedFileName((string) ($toolCall->getArguments()['prompt'] ?? ''))
@@ -345,6 +537,7 @@ final class T3afToolbox implements ToolboxInterface
             && isset($this->catalog['t3aa_update_file_metadata'])
             && AgentRunner::usedRecently('t3aa_update_file_metadata', $conversationHistory)
             && !AgentRequestedFiles::asksForGeneratedImage($requestQuery)
+            && AgentRunner::isImageTextFollowUpQuery($this->gateRequest())
         ) {
             $outcome = 'invalid';
 
@@ -443,6 +636,34 @@ final class T3afToolbox implements ToolboxInterface
                 $toolCall,
                 'Not executed: the editor asked for SEO for all pages, not for the open page. Call pages_tree (or pages_list) for the page uids, then t3ai_generate_seo_batch with pageIds of those pages. With more than 20 pages, ask first whether to queue them instead (t3ai_mass_seo_queue_add with pageIds).',
             );
+        }
+        // File metadata lives on t3aa_update_file_metadata, never write_table on sys_file.
+        if (
+            $name === 'write_table'
+            && isset($this->catalog['t3aa_update_file_metadata'])
+            && in_array(
+                strtolower((string) ($toolCall->getArguments()['tableName'] ?? $toolCall->getArguments()['table'] ?? '')),
+                ['sys_file', 'sys_file_metadata'],
+                true,
+            )
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: file texts are not a table write. Call t3aa_update_file_metadata'
+                    . ' (fileUid or fileUrl, then altText / title / description). Do not use write_table on sys_file.',
+            );
+        }
+        if (
+            in_array($name, ['write_table', 't3ai_create_content_element', 'file_reference_add'], true)
+            && AgentRequestChecklist::isFileMetadataOnlyRequest($this->gateRequest())
+        ) {
+            $outcome = 'invalid';
+            $next = AgentToolTurnProcessor::remainingImageTextReminder($this->conversationHistory(), $this->gateRequest());
+            $hint = $next !== '' ? $next : 'Call t3aa_update_file_metadata, t3aa_list_files_missing_alt_text, t3aa_mark_image_decorative or t3aa_alt_text_queue_folder as the request asks. Do not create a content element or attach the file.';
+
+            return new ToolResult($toolCall, 'Not executed: this request is about file texts, not page content. ' . $hint);
         }
         // "Make the German version visible" changes the hidden field. The model sometimes tries a delete first.
         if ($name === 'content_delete' && AgentRunner::isVisibilityRequest($requestQuery)) {
@@ -675,6 +896,13 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: this call already failed for the same reason. Do not call it again. The turn ends.',
             );
         }
+        if (
+            $name === 't3aa_list_files_missing_alt_text'
+            && AgentRunner::isMissingAltMassDeleteRequest($this->gateRequest())
+            && ($message['meta']['success'] ?? true) !== false
+        ) {
+            $message['meta']['orchestratorPause'] = true;
+        }
         $this->state->addMessage($message);
         // The step that was running failed: the Progress list shows it instead of spinning on.
         if (($message['meta']['type'] ?? '') === 'error' && $this->state->plan !== []) {
@@ -688,11 +916,156 @@ final class T3afToolbox implements ToolboxInterface
         }
 
         $forModel = $this->summaryForModel($message);
+        if (
+            $name === 't3aa_list_files_missing_alt_text'
+            && AgentRunner::isMissingAltMassDeleteRequest($this->gateRequest())
+        ) {
+            $forModel .= ' Show this list to the editor. Do not call file_delete, directory_delete or content_delete.'
+                . ' Offer generate alt text or queue drafts instead. Do not prepare a mass delete.';
+        }
         if ($isRead) {
             $this->state->readResults[$readKey] = $forModel;
         }
 
         return new ToolResult($toolCall, $forModel);
+    }
+
+    /**
+     * A sys_file uid or a page uid is never a tt_content uid.
+     */
+    private function refuseUidTypeMixup(string $name, ToolCall $toolCall, string $requestQuery): ?ToolResult
+    {
+        $arguments = $toolCall->getArguments();
+        $uid = (int) ($arguments['uid'] ?? $arguments['contentUid'] ?? 0);
+        if ($uid <= 0 && is_array($arguments['data'] ?? null)) {
+            $keys = array_keys($arguments['data']);
+            if (count($keys) === 1 && ctype_digit((string) $keys[0])) {
+                $uid = (int) $keys[0];
+            }
+        }
+        $pageId = (int) ($arguments['pageId'] ?? 0);
+        $contentUid = (int) ($arguments['contentUid'] ?? 0);
+        $namedPage = AgentRunner::namedPageUid($requestQuery);
+
+        if ($name === 'content_delete' && AgentRunner::isFileRecordDeleteRequest($requestQuery)) {
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked about files, not a content element. Call t3aa_list_files_missing_alt_text'
+                    . ' to list them. Never pass a sys_file uid to content_delete.',
+            );
+        }
+        if (
+            in_array($name, ['file_delete', 'directory_delete'], true)
+            && AgentRunner::isMissingAltMassDeleteRequest($requestQuery)
+        ) {
+            return new ToolResult(
+                $toolCall,
+                'Not executed: do not delete files from storage for this request. Call t3aa_list_files_missing_alt_text'
+                    . ' and show the list. Offer to generate alt text or queue drafts; do not prepare a mass delete.',
+            );
+        }
+        if (
+            $name === self::ASK_CLARIFICATION
+            && AgentRunner::isMissingAltMassDeleteRequest($requestQuery)
+            && preg_match(
+                '/\b(delete|remove|lösch\w*|loesch\w*|entfernen)\b/iu',
+                (string) ($toolCall->getArguments()['question'] ?? ''),
+            ) === 1
+        ) {
+            return new ToolResult(
+                $toolCall,
+                'Not executed: do not ask to delete these files. Call t3aa_list_files_missing_alt_text and show the list.'
+                    . ' Offer to generate alt text or queue drafts; do not prepare a mass delete.',
+            );
+        }
+        if (
+            $name === 't3aa_summarize_content'
+            && $namedPage > 0
+            && $pageId !== $namedPage
+            && ($contentUid === $namedPage || ($pageId === 0 && $contentUid === 0))
+        ) {
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor named page ' . $namedPage . '. Call t3aa_summarize_content with pageId '
+                    . $namedPage . '. Do not pass a page uid as contentUid.',
+            );
+        }
+        if (
+            in_array($name, ['content_get', 'content_delete', 'write_table'], true)
+            && AgentRunner::usesPageUidAsContentUid($requestQuery, $uid)
+        ) {
+            $hint = AgentRunner::isSummarizeRequest($requestQuery)
+                ? ' Call t3aa_summarize_content with pageId ' . $namedPage . '.'
+                : ' Use pages_get or content_list on that page uid.';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: uid ' . $uid . ' is the page the editor named, not a content element.' . $hint,
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * "Create a simplified text version in German" is summarize, not translate with contentUid 0.
+     */
+    private function refuseSimplifyTranslateDetour(string $name, ToolCall $toolCall, string $requestQuery): ?ToolResult
+    {
+        if (!AgentRunner::isSimplifyRequest($requestQuery) || !AgentToolTurnProcessor::isTranslateTool($name)) {
+            return null;
+        }
+        if (!isset($this->catalog['t3aa_summarize_content'])) {
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for simplified text, not a translation.',
+            );
+        }
+        $language = RequestedLanguage::namedIn($requestQuery);
+        $hint = $language !== '' ? ' and language "' . $language . '"' : '';
+
+        return new ToolResult(
+            $toolCall,
+            'Not executed: the editor asked for simplified text, not a translation. Call t3aa_summarize_content'
+                . ' with pageId of this page' . $hint . '. Do not pass contentUid 0.',
+        );
+    }
+
+    private function withNamedSimplifyLanguage(ToolCall $toolCall, string $requestQuery): ToolCall
+    {
+        if ($toolCall->getName() !== 't3aa_summarize_content' || !AgentRunner::isSimplifyRequest($requestQuery)) {
+            return $toolCall;
+        }
+        $arguments = $toolCall->getArguments();
+        if (trim((string) ($arguments['language'] ?? '')) !== '') {
+            return $toolCall;
+        }
+        $language = RequestedLanguage::namedIn($requestQuery);
+        if ($language === '') {
+            return $toolCall;
+        }
+        $arguments['language'] = $language;
+
+        return new ToolCall($toolCall->getId(), $toolCall->getName(), $arguments);
+    }
+
+    /**
+     * "Summarize page 234" must use pageId 234, never contentUid 234.
+     */
+    private function withNamedSummarizePage(ToolCall $toolCall, string $requestQuery): ToolCall
+    {
+        if ($toolCall->getName() !== 't3aa_summarize_content') {
+            return $toolCall;
+        }
+        $namedPage = AgentRunner::namedPageUid($requestQuery);
+        if ($namedPage <= 0) {
+            return $toolCall;
+        }
+        $arguments = $toolCall->getArguments();
+        $arguments['pageId'] = $namedPage;
+        unset($arguments['contentUid']);
+
+        return new ToolCall($toolCall->getId(), $toolCall->getName(), $arguments);
     }
 
     /**
@@ -876,7 +1249,11 @@ final class T3afToolbox implements ToolboxInterface
             'label' => $this->runtime->translator->translate('agent.live.findingTools'),
         ]);
 
-        $candidates = array_values(array_diff_key($this->catalog, $this->definitions));
+        $notAskedFor = array_flip(AgentRunner::toolsNotAskedFor($this->gateRequest()));
+        $candidates = array_values(array_filter(
+            array_diff_key($this->catalog, $this->definitions),
+            static fn(array $tool): bool => !isset($notAskedFor[(string) ($tool['name'] ?? '')]),
+        ));
         $result = $this->runtime->toolSearch->search($query, $candidates, self::FOUND_TOOLS_LIMIT);
         $foundTools = $result['tools'];
         // "Make the page visible" ranks page and cache tools; the record writer is what changes a field.

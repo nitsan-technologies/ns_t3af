@@ -494,6 +494,7 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
             self::fail('Expected dryRun with sys_category to be refused.');
         } catch (RecordsApplyValidationException $exception) {
             self::assertStringContainsString('sys_category', $exception->getProblems()[0]['error'] ?? '');
+            self::assertSame(RecordsApplyValidationException::TOOL_CODE_SYS_CATEGORY_DRY_RUN, $exception->getToolResponseCode());
         }
 
         self::assertSame(

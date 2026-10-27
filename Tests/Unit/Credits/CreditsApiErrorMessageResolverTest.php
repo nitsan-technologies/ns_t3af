@@ -91,7 +91,7 @@ final class CreditsApiErrorMessageResolverTest extends TestCase
         self::assertFalse($payload['status']);
         self::assertSame('api_error', $payload['error_code']);
         self::assertSame('Generic API error.', $payload['userMessage']);
-        self::assertSame('upstream failed', $payload['message']);
+        self::assertSame('Generic API error.', $payload['message']);
     }
 
     public function testResolveFillsModelAndParamPlaceholders(): void

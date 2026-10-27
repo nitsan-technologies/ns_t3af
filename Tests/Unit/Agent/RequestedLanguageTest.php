@@ -88,4 +88,13 @@ final class RequestedLanguageTest extends TestCase
         self::assertTrue(RequestedLanguage::isLanguageTool('t3ai_translate_page'));
         self::assertFalse(RequestedLanguage::isLanguageTool('write_table'));
     }
+
+    #[Test]
+    public function namedInReturnsTheLanguageTheEditorWrote(): void
+    {
+        self::assertSame('German', RequestedLanguage::namedIn('Create a simplified text version in German'));
+        self::assertSame('German', RequestedLanguage::namedIn('Vereinfachten Text auf Deutsch schreiben'));
+        self::assertSame('', RequestedLanguage::namedIn('Create a simplified text version'));
+        self::assertSame('', RequestedLanguage::namedIn('Save the glossary term "French fries" as "Pommes"'));
+    }
 }

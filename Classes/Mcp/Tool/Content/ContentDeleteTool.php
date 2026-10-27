@@ -77,9 +77,10 @@ readonly class ContentDeleteTool implements McpNonAiToolInterface, McpPlannableT
     #[McpTool(
         name: 'content_delete',
         description: 'Delete a content element (tt_content) by its uid.'
-            . ' Pass the content element uid (not the page id).'
+            . ' Pass the content element uid (not a page id and not a sys_file uid).'
             . ' The agent shows a confirmation draft before anything is deleted.'
-            . ' Do not use content_move for deletion.',
+            . ' Do not use content_move for deletion. Images without alt text: call t3aa_list_files_missing_alt_text'
+            . ' and show the list; do not delete those files from storage.',
     )]
     public function execute(int $uid): string
     {

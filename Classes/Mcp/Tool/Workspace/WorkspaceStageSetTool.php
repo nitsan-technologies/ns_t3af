@@ -90,7 +90,7 @@ readonly class WorkspaceStageSetTool implements McpNonAiToolInterface, McpPlanna
     #[McpTool(
         name: 'workspace_stage_set',
         description: 'Move a workspace version to a different stage. Pass table, workspaceVersionUid, and stage.'
-            . ' Built-in stages: 0 = editing, -10 = ready to publish, -20 = ready to review.'
+            . ' Built-in stages: 0 = editing, -10 = ready to publish. To publish now, use workspace_publish (stage -20 is not stored).'
             . ' Custom stage uids (>0) reference sys_workspace_stage. Requires cms-workspaces extension.',
     )]
     public function execute(string $table, int $workspaceVersionUid, int $stage): string
@@ -99,24 +99,40 @@ readonly class WorkspaceStageSetTool implements McpNonAiToolInterface, McpPlanna
             return json_encode(['error' => 'cms-workspaces extension is not installed'], JSON_THROW_ON_ERROR);
         }
 
-        $beUser = $this->workspaceVersionService->requireBackendUser();
-        if (!$beUser->workspaceCheckStageForCurrent($stage)) {
-            return json_encode(['error' => 'Stage not accessible to current user', 'stage' => $stage], JSON_THROW_ON_ERROR);
-        }
+        try {
+            $beUser = $this->workspaceVersionService->requireBackendUser();
+            $row = $this->workspaceVersionService->loadVersionRow($table, $workspaceVersionUid);
+            if ($row === null) {
+                return json_encode(
+                    ['error' => 'Workspace version not found', 'table' => $table, 'uid' => $workspaceVersionUid],
+                    JSON_THROW_ON_ERROR,
+                );
+            }
 
-        $row = $this->workspaceVersionService->loadVersionRow($table, $workspaceVersionUid);
-        if ($row === null) {
+            $workspaceId = (int) ($row['t3ver_wsid'] ?? 0);
+            $this->workspaceVersionService->assertStageExistsForWorkspace($stage, $workspaceId);
+            $this->workspaceVersionService->assertUserMaySetStage($beUser, $stage);
+
+            $this->dataHandlerService->setWorkspaceStage($table, $workspaceVersionUid, $stage);
+
+            $updatedRow = $this->workspaceVersionService->loadVersionRow($table, $workspaceVersionUid);
+            $actualStage = is_array($updatedRow) ? (int) ($updatedRow['t3ver_stage'] ?? -999) : -999;
+            if ($actualStage !== $stage) {
+                return json_encode([
+                    'error' => 'Workspace stage was not updated.',
+                    'table' => $table,
+                    'uid' => $workspaceVersionUid,
+                    'requestedStage' => $stage,
+                    'actualStage' => $actualStage >= 0 ? $actualStage : null,
+                ], JSON_THROW_ON_ERROR);
+            }
+
             return json_encode(
-                ['error' => 'Workspace version not found', 'table' => $table, 'uid' => $workspaceVersionUid],
+                ['updated' => true, 'table' => $table, 'uid' => $workspaceVersionUid, 'stage' => $stage],
                 JSON_THROW_ON_ERROR,
             );
+        } catch (\InvalidArgumentException $exception) {
+            return json_encode(['error' => $exception->getMessage(), 'stage' => $stage], JSON_THROW_ON_ERROR);
         }
-
-        $this->dataHandlerService->updateRecord($table, $workspaceVersionUid, ['t3ver_stage' => $stage]);
-
-        return json_encode(
-            ['updated' => true, 'table' => $table, 'uid' => $workspaceVersionUid, 'stage' => $stage],
-            JSON_THROW_ON_ERROR,
-        );
     }
 }

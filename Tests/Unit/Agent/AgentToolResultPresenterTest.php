@@ -267,7 +267,7 @@ final class AgentToolResultPresenterTest extends TestCase
         self::assertTrue($presented['success']);
         self::assertStringContainsString('43 images missing alt text', $presented['content']);
         self::assertStringContainsString('hero.png', $presented['content']);
-        self::assertStringContainsString('Generate file metadata', $presented['content']);
+        self::assertStringContainsString('generate file metadata', $presented['content']);
         self::assertSame('43', $presented['facts'][0]['value']);
         self::assertSame('Images missing alt text', $presented['facts'][0]['label']);
     }

@@ -38,6 +38,7 @@ final class ProductCatalogService
         private readonly ConnectionPool $connectionPool,
         private readonly CreditsApiResponseCacheInterface $responseCache,
         private readonly CreditsCatalogLanguageResolver $catalogLanguage,
+        private readonly CreditsApiResponseGuard $responseGuard,
     ) {}
 
     /**
@@ -53,7 +54,7 @@ final class ProductCatalogService
 
         $memoryCached = $this->responseCache->get($cacheScope, $domain, $token);
         if ($memoryCached !== null) {
-            return $memoryCached;
+            return $this->responseGuard->guardProducts($memoryCached);
         }
 
         $cached = $this->loadCachedForLanguage($language);
@@ -69,6 +70,7 @@ final class ProductCatalogService
         if (($result['body']['not_modified'] ?? false) === true && is_array($cached)) {
             $body = json_decode((string) ($cached['body_json'] ?? ''), true);
             $body = is_array($body) ? $body : [];
+            $body = $this->responseGuard->guardProducts($body);
             $this->rememberMemoryCache($domain, $token, $redirectTo, $language, $body);
 
             return $body;
@@ -78,6 +80,8 @@ final class ProductCatalogService
         if (($body['not_modified'] ?? false) === true) {
             return $body;
         }
+
+        $body = $this->responseGuard->guardProducts($body);
 
         $this->storeCache($body, (string) ($result['etag'] ?? ''));
         $this->rememberMemoryCache($domain, $token, $redirectTo, $language, $body);

@@ -77,7 +77,11 @@ readonly class RecordCountTool implements McpNonAiToolInterface
             }
 
             $allowedFields = array_merge(['uid', 'pid'], $readFields);
-            $searchConditions = SearchConditionParser::fromArray($searchData, $allowedFields);
+            try {
+                $searchConditions = SearchConditionParser::fromArray($searchData, $allowedFields);
+            } catch (\InvalidArgumentException $e) {
+                throw new \InvalidArgumentException('Invalid search parameter: ' . $e->getMessage(), 1790600005, $e);
+            }
             $ignoredFields = array_values(array_diff(array_keys($searchData), $allowedFields));
         }
 

@@ -25,13 +25,14 @@ use Mcp\Exception\ToolCallException;
 use Mcp\Server\Builder;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Repository\DiscoveredTableRepository;
+use NITSAN\NsT3AF\Mcp\Server\McpServerToolRegistration;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
-use NITSAN\NsT3AF\Mcp\Service\McpToolSchemaAugmenter;
 use NITSAN\NsT3AF\Mcp\Service\McpToolSeverityResolver;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyBatchRunner;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyMoveCommandChainer;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyPreflight;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
+use NITSAN\NsT3AF\Mcp\Service\RecordSiteLanguageGuard;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Helper\MoveTarget;
 use NITSAN\NsT3AF\Mcp\Tool\Result\BatchRecordsDeletedResult;
@@ -52,8 +53,9 @@ readonly class NsT3afDynamicToolRegistrar
         private TcaSchemaService $tcaSchemaService,
         private DiscoveredTableRepository $discoveredTableRepository,
         private LoggerInterface $logger,
-        private McpToolSchemaAugmenter $toolSchemaAugmenter,
+        private McpServerToolRegistration $toolRegistration,
         private RecordsApplyBatchRunner $batchRunner,
+        private RecordSiteLanguageGuard $siteLanguageGuard,
     ) {}
 
     /**
@@ -348,6 +350,7 @@ readonly class NsT3afDynamicToolRegistrar
         $logger = $this->logger;
         $writableFields = $config['writableFields'];
         $languageField = $config['translationConfig']['languageField'];
+        $siteLanguageGuard = $this->siteLanguageGuard;
 
         /** @param array<string, mixed> $data */
         $createHandler = static function (
@@ -360,7 +363,20 @@ readonly class NsT3afDynamicToolRegistrar
             $tableName,
             $writableFields,
             $languageField,
+            $siteLanguageGuard,
         ): RecordCreatedResult|ErrorResult {
+            if ($languageField !== null) {
+                try {
+                    $siteLanguageGuard->assertCreateLanguageAllowed(
+                        $tableName,
+                        [$languageField => $sysLanguageUid] + $data,
+                        $pid,
+                    );
+                } catch (\InvalidArgumentException $exception) {
+                    return new ErrorResult($exception->getMessage());
+                }
+            }
+
             $filteredData = array_intersect_key($data, array_flip($writableFields));
 
             if ($languageField !== null) {
@@ -386,7 +402,7 @@ readonly class NsT3afDynamicToolRegistrar
         };
 
         $description = 'Create a new ' . $config['label'] . ' record. Pass fields as a JSON object string.'
-            . ' Available fields: ' . implode(', ', $config['writableFields']) . '.';
+            . ' Use table_schema for allowed field names.';
 
         if ($languageField !== null) {
             $this->addAugmentedTool(
@@ -429,6 +445,8 @@ readonly class NsT3afDynamicToolRegistrar
         $dataHandlerService = $this->dataHandlerService;
         $logger = $this->logger;
         $writableFields = $config['writableFields'];
+        $blockedOnUpdate = $this->tcaSchemaService->getTranslationFieldsBlockedOnUpdate($tableName);
+        $writableForUpdate = array_values(array_diff($writableFields, $blockedOnUpdate));
 
         $this->addAugmentedTool(
             $builder,
@@ -439,12 +457,12 @@ readonly class NsT3afDynamicToolRegistrar
                 $dataHandlerService,
                 $logger,
                 $tableName,
-                $writableFields,
+                $writableForUpdate,
             ): RecordUpdatedResult|ErrorResult {
                 /** @var array<string, mixed> $data */
                 $data = json_decode($fields, true, 512, JSON_THROW_ON_ERROR);
 
-                $filteredData = array_intersect_key($data, array_flip($writableFields));
+                $filteredData = array_intersect_key($data, array_flip($writableForUpdate));
                 $ignoredFields = array_values(array_diff(array_keys($data), array_keys($filteredData)));
 
                 if ($filteredData === []) {
@@ -463,8 +481,7 @@ readonly class NsT3afDynamicToolRegistrar
             },
             name: $config['prefix'] . '_update',
             description: 'Update an existing ' . $config['label'] . ' record. Pass fields as a JSON object string'
-                . ' with field names and their new values. Available fields: '
-                . implode(', ', $config['writableFields']) . '.',
+                . ' with field names and their new values. Use table_schema for allowed field names.',
         );
     }
 
@@ -636,7 +653,7 @@ readonly class NsT3afDynamicToolRegistrar
             name: $toolName,
             description: 'Update the same fields on multiple ' . $config['label'] . ' records (all or nothing, at most 500 uids per call).'
                 . ' Pass UIDs as comma-separated (e.g. "1,2,3") and fields as a JSON object (e.g. {"hidden":1}).'
-                . ' Available fields: ' . implode(', ', $config['writableFields']) . '.'
+                . ' Use table_schema for allowed field names.'
                 . ' Non-existent UIDs are skipped and reported in skippedUids.'
                 . ' Returns a batchId for records_undo.',
         );
@@ -710,12 +727,7 @@ readonly class NsT3afDynamicToolRegistrar
 
     private function addAugmentedTool(Builder $builder, \Closure|string $handler, string $name, string $description): void
     {
-        $builder->addTool(
-            handler: $handler,
-            name: $name,
-            description: $description,
-            inputSchema: $this->toolSchemaAugmenter->generateForDynamicCallable($handler),
-        );
+        $this->toolRegistration->addDynamicTool($builder, $handler, $name, $description);
     }
 
     /**

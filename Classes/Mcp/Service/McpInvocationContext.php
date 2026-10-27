@@ -44,24 +44,24 @@ final class McpInvocationContext
      */
     private ?int $workspaceBeforeOverride = null;
 
+    /** When set, {@see clear()} leaves the backend user in the workspace chosen during this call (workspace_switch). */
+    private bool $keepWorkspaceAfterCall = false;
+
     /**
      * @param array<string, mixed> $arguments
      */
-    public function applyFromArguments(array $arguments): void
+    public function applyFromArguments(array $arguments, bool $applyWorkspaceOverride = true): void
     {
         $this->active = true;
         $this->providerIdentifier = null;
 
-        if (array_key_exists('workspaceId', $arguments)) {
+        if ($applyWorkspaceOverride && array_key_exists('workspaceId', $arguments)) {
             $workspaceId = (int) $arguments['workspaceId'];
             if ($workspaceId < 0) {
                 throw new \RuntimeException('workspaceId must be zero or a positive sys_workspace uid.');
             }
-            // 0 is schema default for Live; omit means use BE module preference (already applied).
-            // Only positive UIDs override the global MCP Server workspace dropdown.
-            if ($workspaceId > 0) {
-                $this->applyWorkspace($workspaceId);
-            }
+            // Explicit 0 forces Live for this call; omit workspaceId to keep the saved MCP preference.
+            $this->applyWorkspace($workspaceId);
         }
 
         if (!isset($arguments['aiProvider']) || !is_string($arguments['aiProvider'])) {
@@ -85,7 +85,18 @@ final class McpInvocationContext
     {
         $this->active = false;
         $this->providerIdentifier = null;
-        $this->restoreWorkspace();
+        if (!$this->keepWorkspaceAfterCall) {
+            $this->restoreWorkspace();
+        } else {
+            $this->workspaceBeforeOverride = null;
+        }
+        $this->keepWorkspaceAfterCall = false;
+    }
+
+    /** Persisted workspace switches must survive the per-call restore in {@see ContextualReferenceHandler}. */
+    public function keepWorkspaceAfterCall(): void
+    {
+        $this->keepWorkspaceAfterCall = true;
     }
 
     public function getProviderIdentifier(): ?string
@@ -125,6 +136,7 @@ final class McpInvocationContext
             pageId: $options->pageId,
             requestUuid: $options->requestUuid,
             extra: $options->extra,
+            timeoutSeconds: $options->timeoutSeconds,
         );
     }
 
@@ -153,6 +165,7 @@ final class McpInvocationContext
             pageId: $options->pageId,
             requestUuid: $options->requestUuid,
             extra: $options->extra,
+            timeoutSeconds: $options->timeoutSeconds,
         );
     }
 

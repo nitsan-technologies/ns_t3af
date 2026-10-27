@@ -27,7 +27,9 @@ use NITSAN\NsT3AF\Mcp\Service\McpToolIntrospectorService;
 use Symfony\AI\Platform\Vector\Vector;
 use Symfony\AI\Store\Document\Metadata;
 use Symfony\AI\Store\Document\VectorDocument;
+use Symfony\AI\Store\Document\VectorDocumentInterface;
 use Symfony\AI\Store\InMemory\Store;
+use Symfony\AI\Store\Query\TextQuery;
 use Symfony\AI\Store\Query\VectorQuery;
 
 /**
@@ -53,13 +55,18 @@ final class AgentToolIndexService implements AgentToolIndexInterface
         private readonly AgentToolDocumentBuilder $documentBuilder,
     ) {}
 
+    public function invalidate(): void
+    {
+        $this->cache->remove(self::CACHE_KEY);
+        $this->hydratedStore = null;
+        $this->hydratedFingerprint = null;
+    }
+
     public function rebuild(): void
     {
         $source = $this->embeddingSourceResolver->resolve();
         if ($source === null) {
-            $this->cache->remove(self::CACHE_KEY);
-            $this->hydratedStore = null;
-            $this->hydratedFingerprint = null;
+            $this->invalidate();
 
             return;
         }
@@ -106,19 +113,27 @@ final class AgentToolIndexService implements AgentToolIndexInterface
         $this->ensureFresh(rebuildIfStale: false);
         $store = $this->hydrateStore($source);
         if ($store === null) {
+            $cached = $this->cache->get(self::CACHE_KEY);
+            if (is_array($cached) && is_array($cached['documents'] ?? null) && $cached['documents'] !== []) {
+                $this->hydratedStore = null;
+                $this->hydratedFingerprint = null;
+                $store = $this->hydrateStore($source);
+            }
+        }
+        if ($store === null) {
             return [];
         }
 
         $queryVector = $source->embed($message);
         $limit = max(1, $limit);
-        $results = $store->query(
+        $results = iterator_to_array($store->query(
             new VectorQuery(new Vector($queryVector)),
             ['maxItems' => $limit],
-        );
+        ), false);
 
         $out = [];
         foreach ($results as $document) {
-            if (!$document instanceof VectorDocument) {
+            if (!$document instanceof VectorDocumentInterface) {
                 continue;
             }
             $name = (string) $document->getId();
@@ -129,6 +144,70 @@ final class AgentToolIndexService implements AgentToolIndexInterface
                 'name' => $name,
                 'score' => $similarity,
             ];
+        }
+
+        if ($out !== []) {
+            return $out;
+        }
+
+        if (trim($message) !== '' && $store->supports(TextQuery::class)) {
+            $textResults = iterator_to_array($store->query(
+                new TextQuery([$message]),
+                ['maxItems' => $limit],
+            ), false);
+            foreach ($textResults as $document) {
+                if (!$document instanceof VectorDocumentInterface) {
+                    continue;
+                }
+                $out[] = [
+                    'name' => (string) $document->getId(),
+                    'score' => 0.5,
+                ];
+            }
+        }
+
+        if ($out !== []) {
+            return $out;
+        }
+
+        return $this->fallbackKeywordHitsFromCache($message, $limit);
+    }
+
+    /**
+     * @return list<array{name: string, score: float}>
+     */
+    private function fallbackKeywordHitsFromCache(string $message, int $limit): array
+    {
+        $cached = $this->cache->get(self::CACHE_KEY);
+        if (!is_array($cached) || !is_array($cached['documents'] ?? null)) {
+            return [];
+        }
+
+        $needle = strtolower(trim($message));
+        if ($needle === '') {
+            return [];
+        }
+
+        $out = [];
+        foreach ($cached['documents'] as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $id = (string) ($row['id'] ?? '');
+            if ($id === '') {
+                continue;
+            }
+            $haystack = strtolower(str_replace('_', ' ', $id) . "\n" . (string) ($row['text'] ?? ''));
+            if (!str_contains($haystack, $needle)) {
+                continue;
+            }
+            $out[] = [
+                'name' => $id,
+                'score' => 0.5,
+            ];
+            if (count($out) >= $limit) {
+                break;
+            }
         }
 
         return $out;
@@ -254,11 +333,16 @@ final class AgentToolIndexService implements AgentToolIndexInterface
 
     private function definitionHash(): string
     {
+        $tools = $this->indexableTools();
+        usort(
+            $tools,
+            static fn(array $a, array $b): int => strcmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? '')),
+        );
+
         $parts = [];
-        foreach ($this->indexableTools() as $tool) {
+        foreach ($tools as $tool) {
             $parts[] = $this->buildDocumentText($tool);
         }
-        sort($parts);
 
         return hash('sha256', implode("\n", $parts));
     }

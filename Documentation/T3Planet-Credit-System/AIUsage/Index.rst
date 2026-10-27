@@ -15,6 +15,14 @@ Dashboard
 
 **Path:** :guilabel:`AI Foundation > Dashboard`
 
+Use the switch at the top of the Dashboard to look at :guilabel:`Own API Keys`
+or :guilabel:`T3Planet Credits`. The credits view shows the numbers below.
+The banner above the cards reads :guilabel:`T3PLANET CREDITS MODE` and has the
+period filter on its right. The :guilabel:`Credit Balance` card on the Dashboard
+has the buttons :guilabel:`Top up` and :guilabel:`Manage`. Both open
+:guilabel:`AI Foundation > AI Providers`, where you buy credits and see the
+details.
+
 .. figure:: ../../Images/t3planet-credits-dashboard.png
    :alt: AI Foundation Dashboard in T3Planet Credits mode with balance, credit burn chart, and spend by extension
    :class: with-border with-shadow
@@ -43,6 +51,53 @@ Period filter
 
 Use Today, Yesterday, 7 / 14 / 30 days, or a custom range. Charts, KPIs, and
 the recent-requests list follow this filter.
+
+Credits panel on AI Providers
+-----------------------------
+
+**Path:** :guilabel:`AI Foundation > AI Providers` (Credits active)
+
+This page has the most detail about your credits:
+
+* :guilabel:`Credit Balance` — credits left and :guilabel:`Buy more credits`
+* **Credits used**, **Daily average** and **Est. remaining days** — a quick
+  forecast based on your recent use
+* :guilabel:`AI Credit Bundles` — plans and top-ups, see
+  :ref:`Buy credits <t3planet-credits-buy>`
+* :guilabel:`Credit Costs per Operation` — what each AI action costs, so there
+  are no surprises
+* :guilabel:`Recent AI Usage` — charges on this site. Filter by
+  :guilabel:`Entry type` (:guilabel:`All`, :guilabel:`Debit`,
+  :guilabel:`Credit`). Purchases appear after the next sync with T3Planet.
+
+.. figure:: ../../Images/credits-costs.png
+   :alt: Credit Costs per Operation table with SEO page metadata, Image metadata, Content element, Translation and more, with example cost per 500 credits
+   :class: with-border with-shadow
+
+   :guilabel:`Credit Costs per Operation`: each AI feature with an example of
+   how many actions 500 credits cover, and the credits used so far.
+
+.. figure:: ../../Images/credits-recent-usage.png
+   :alt: Recent AI Usage table with columns Description, Extension, Page, Latency, Status, Request UUID, Date and Credits; Trial credit rows with plus 50 cr and usage rows with negative credits
+   :class: with-border with-shadow
+
+   :guilabel:`Recent AI Usage`. Request IDs are blurred in this screenshot.
+
+**What you should see in Recent AI Usage:** one row per entry with
+:guilabel:`Description`, :guilabel:`Extension`, :guilabel:`Page`,
+:guilabel:`Latency`, :guilabel:`Status`, :guilabel:`Request UUID`,
+:guilabel:`Date` and :guilabel:`Credits`. Credits you receive (for example the
+free trial) show as :guilabel:`credit` with a green *+50 cr*. AI calls show as
+:guilabel:`success` with a negative amount such as *-0.047 cr*.
+
+The top bar of the TYPO3 backend also shows a credit counter (used / total,
+for example *7.94/158 cr*).
+
+.. note::
+
+   The :guilabel:`Recent AI Usage` list is a copy kept on this installation. If
+   you connect a different credits account with a claim code, the copy is
+   cleared and fills again from the new account.
 
 .. _t3planet-credits-ai-usage-section:
 

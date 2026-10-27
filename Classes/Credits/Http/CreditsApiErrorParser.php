@@ -75,13 +75,21 @@ final class CreditsApiErrorParser
             $code = (string) ($nested['code'] ?? $decoded['error_code'] ?? CreditsApiErrorCodes::API_ERROR);
             $message = (string) ($nested['message'] ?? $decoded['message'] ?? '');
         } else {
-            $code = is_string($errorField) && $errorField !== ''
-                ? $errorField
-                : (string) ($decoded['error_code'] ?? $decoded['code'] ?? CreditsApiErrorCodes::API_ERROR);
+            $code = CreditsApiErrorCodeNormalizer::normalize(
+                $decoded['error_code'] ?? $decoded['code'] ?? null,
+            );
+            if ($code === CreditsApiErrorCodes::API_ERROR && is_string($errorField) && $errorField !== '') {
+                $code = CreditsApiErrorCodeNormalizer::normalize($errorField);
+            }
             $message = (string) ($decoded['message'] ?? '');
-        }
-        if ($code === '') {
-            $code = CreditsApiErrorCodes::API_ERROR;
+            if (
+                $message === ''
+                && is_string($errorField)
+                && $errorField !== ''
+                && preg_match('/^[a-z][a-z0-9_]*$/', trim($errorField)) !== 1
+            ) {
+                $message = $errorField;
+            }
         }
 
         $extra = [];

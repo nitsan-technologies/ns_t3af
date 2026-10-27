@@ -113,9 +113,18 @@
                                     {creditsDashboard.stats.creditsUsedFormatted}
                                     <f:if condition="{creditsDashboard.balance.total} > 0">
                                         <span class="aiu-credits-plan-stats__meta">
-                                            <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.ofTotal"
-                                                         arguments="{0: creditsDashboard.balance.total}"
-                                                         default="of %s purchased" />
+                                            <f:if condition="{creditsDashboard.plan.isTrial} == 1">
+                                                <f:then>
+                                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.ofTrialPool"
+                                                                 arguments="{0: creditsDashboard.balance.totalFormatted}"
+                                                                 default="of %s trial pool" />
+                                                </f:then>
+                                                <f:else>
+                                                    <f:translate key="LLL:EXT:ns_t3af/Resources/Private/Language/locallang_mod_dashboard.xlf:credits.dashboard.stats.ofTotal"
+                                                                 arguments="{0: creditsDashboard.balance.totalFormatted}"
+                                                                 default="of %s purchased" />
+                                                </f:else>
+                                            </f:if>
                                         </span>
                                     </f:if>
                                 </div>

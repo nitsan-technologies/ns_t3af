@@ -299,12 +299,12 @@ MCP Inspector (OAuth)
 
    .. code-block:: bash
 
-      npx @modelcontextprotocol/inspector --transport http --server-url https://t3af.ddev.site/mcp
+      npx @modelcontextprotocol/inspector@latest --transport http --server-url https://t3af.ddev.site/mcp
 
-2. Run it in your terminal.
-3. Open the Inspector UI in the browser (URL printed in the terminal).
+2. Run it in your terminal (Node.js 18+). On DDEV with HTTPS, export ``NODE_EXTRA_CA_CERTS`` to your mkcert root CA if needed.
+3. Open the Inspector v2 URL printed in the terminal (connect → authenticate).
 4. Complete **OAuth** when prompted.
-5. Use the **Tools** panel to invoke ``table_schema``:
+5. Use **Tools** or **Prompts** to invoke ``table_schema``:
 
    .. code-block:: json
 

@@ -47,6 +47,7 @@ readonly class RecordsApplyFileSource
         private ResourceFactory $resourceFactory,
         private AdvancedSettingsService $settings,
         private ?RecordsApplyFileAccess $fileAccess = null,
+        private ?RecordsApplyPayloadStore $payloadStore = null,
     ) {}
 
     /**
@@ -100,6 +101,23 @@ readonly class RecordsApplyFileSource
         if (strlen($contents) > $cap) {
             throw new ToolCallException(sprintf('The file is too large: the maximum is %d bytes. Nothing was written.', $cap), 1790500029);
         }
+
+        return self::parse($contents);
+    }
+
+    /**
+     * @return array{0: array<mixed>, 1: array<mixed>, 2: array<mixed>}
+     * @throws ToolCallException
+     */
+    public function readFromPayloadId(string $payloadId): array
+    {
+        $backendUser = $GLOBALS['BE_USER'] ?? null;
+        if (!$backendUser instanceof BackendUserAuthentication) {
+            throw new ToolCallException('fromPayloadId needs an authenticated backend user. Nothing was written.', 1790500027);
+        }
+
+        $store = $this->payloadStore ?? new RecordsApplyPayloadStore();
+        $contents = $store->consume($payloadId, (int) ($backendUser->user['uid'] ?? 0));
 
         return self::parse($contents);
     }

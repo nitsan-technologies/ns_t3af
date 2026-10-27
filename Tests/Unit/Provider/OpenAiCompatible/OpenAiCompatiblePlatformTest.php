@@ -95,6 +95,59 @@ final class OpenAiCompatiblePlatformTest extends TestCase
         self::assertSame(['tail'], $chunks);
     }
 
+    public function testStreamReadsUsageChunkAndAsksOpenAiForIt(): void
+    {
+        $factory = $this->createMock(RequestFactory::class);
+        $factory->expects(self::once())
+            ->method('request')
+            ->with(
+                self::anything(),
+                self::identicalTo('POST'),
+                self::callback(static function (array $options): bool {
+                    return ($options['json']['stream_options']['include_usage'] ?? false) === true;
+                }),
+            )
+            ->willReturn(new Response(200, [], "data: {\"choices\":[{\"delta\":{\"content\":\"Hi\"}}]}\n\n"
+                . "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":12,\"completion_tokens\":3}}\n\ndata: [DONE]\n\n"));
+
+        $adapter = new OpenAiCompatibleAdapter(new CredentialCipher(), $factory);
+        $provider = $this->makeProvider(
+            adapterType: Provider::ADAPTER_OPENAI_COMPATIBLE,
+            endpointUrl: 'https://api.openai.com/v1',
+            apiKeyCipher: '',
+        );
+        $platform = $this->platform($adapter, $provider);
+
+        self::assertSame(['Hi'], iterator_to_array($platform->stream('gpt-4o', 'hello'), false));
+        self::assertSame(['prompt_tokens' => 12, 'completion_tokens' => 3], $platform->lastStreamUsage());
+    }
+
+    public function testStreamDoesNotSendStreamOptionsToOtherServers(): void
+    {
+        $factory = $this->createMock(RequestFactory::class);
+        $factory->expects(self::once())
+            ->method('request')
+            ->with(
+                self::anything(),
+                self::identicalTo('POST'),
+                self::callback(static function (array $options): bool {
+                    return !array_key_exists('stream_options', $options['json'] ?? []);
+                }),
+            )
+            ->willReturn(new Response(200, [], "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\n"));
+
+        $adapter = new OpenAiCompatibleAdapter(new CredentialCipher(), $factory);
+        $provider = $this->makeProvider(
+            adapterType: Provider::ADAPTER_OPENAI_COMPATIBLE,
+            endpointUrl: 'https://api.example.com/v1',
+            apiKeyCipher: '',
+        );
+        $platform = $this->platform($adapter, $provider);
+
+        self::assertSame(['ok'], iterator_to_array($platform->stream('gpt-4o', 'hello'), false));
+        self::assertSame([], $platform->lastStreamUsage());
+    }
+
     public function testStreamUsesStandardPathWhenBaseAlreadyEndsWithV1(): void
     {
         $factory = $this->createMock(RequestFactory::class);
@@ -258,6 +311,41 @@ final class OpenAiCompatiblePlatformTest extends TestCase
         self::assertIsArray($capturedOptions);
         self::assertSame('dall-e-3', $capturedOptions['json']['model']);
         self::assertSame('A red balloon', $capturedOptions['json']['prompt']);
+    }
+
+    public function testPlatformWithTimeoutLimitsRequestDuration(): void
+    {
+        $captured = [];
+        $factory = $this->createMock(RequestFactory::class);
+        $factory->expects(self::exactly(2))
+            ->method('request')
+            ->with(
+                self::stringContains('/chat/completions'),
+                self::identicalTo('POST'),
+                self::callback(static function (array $options) use (&$captured): bool {
+                    $captured[] = [$options['timeout'] ?? null, $options['connect_timeout'] ?? null];
+
+                    return true;
+                }),
+            )
+            ->willReturnCallback(static fn(): Response => new Response(200, [], json_encode([
+                'choices' => [['message' => ['content' => 'ok']]],
+            ]) ?: ''));
+
+        $adapter = new OpenAiCompatibleAdapter(new CredentialCipher(), $factory);
+        $provider = $this->makeProvider(
+            adapterType: Provider::ADAPTER_OPENAI_COMPATIBLE,
+            endpointUrl: 'https://api.example.com/v1',
+            apiKeyCipher: '',
+        );
+        $payload = ['messages' => [['role' => 'user', 'content' => 'hello']]];
+
+        $this->platform($adapter, $provider)->invoke('any-model', $payload);
+        $limited = $adapter->platformWithTimeout($provider, 2.5);
+        self::assertInstanceOf(OpenAiCompatiblePlatform::class, $limited);
+        $limited->invoke('any-model', $payload);
+
+        self::assertSame([[120, 10], [2.5, 2.5]], $captured);
     }
 
     public function testInvokePreservesStringMessageContent(): void

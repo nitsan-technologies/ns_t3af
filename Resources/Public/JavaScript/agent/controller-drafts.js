@@ -564,6 +564,10 @@ export const draftMethods = {
       const discarded = draft.discarded === true;
       const displayLabel = resolveToolDisplayLabel(draft);
       const summary = String(draft.summary ?? message.content ?? '');
+      const lead = String(message.content ?? '').trim();
+      const leadHtml = lead !== '' && lead !== summary
+        ? `<div class="nst3af-agent-msg__body">${renderMessageBody(lead)}</div>`
+        : '';
       const args = Array.isArray(draft.arguments) ? draft.arguments : [];
 
       const argRows = args.map((entry) => {
@@ -611,6 +615,7 @@ export const draftMethods = {
 
       return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant">
         <div class="nst3af-agent-msg__who">AI Agent</div>
+        ${leadHtml}
         <div class="nst3af-agent-draft nst3af-agent-tool-confirm${severityClass}${armedClass}" data-nst3af-agent-draft="1" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}" data-message-index="${messageIndex}" data-severity="${escapeHtml(severity)}">
           <div class="nst3af-agent-draft__header">
             <span class="nst3af-agent-sev-dot nst3af-agent-sev-dot--${escapeHtml(severity)}" aria-hidden="true"></span>

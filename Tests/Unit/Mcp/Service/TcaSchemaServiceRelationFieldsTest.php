@@ -182,4 +182,20 @@ final class TcaSchemaServiceRelationFieldsTest extends TestCase
         self::assertSame('file_field', $detail['reason']);
         self::assertStringContainsString('file_reference_add', $detail['hint']);
     }
+
+    #[Test]
+    public function describeIgnoredWritableSelectFieldUsesValueNotAllowedReason(): void
+    {
+        $GLOBALS['TCA']['tt_content']['columns']['CType'] = [
+            'config' => [
+                'type' => 'select',
+                'items' => [
+                    ['label' => 'Text', 'value' => 'text'],
+                ],
+            ],
+        ];
+        $detail = $this->service->describeIgnoredField('tt_content', 'CType');
+        self::assertSame('value_not_allowed', $detail['reason']);
+        self::assertStringContainsString('not allowed by TCA', $detail['hint']);
+    }
 }

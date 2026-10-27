@@ -32,6 +32,9 @@ final class CreditsDashboardAssembler
 {
     private const SECONDS_PER_DAY = 86400;
 
+    /** ponytail: cap runway display when 7-day usage is near zero (upgrade: use plan expiry when available). */
+    private const MAX_ESTIMATED_DAYS_LEFT = 365;
+
     public function __construct(
         private readonly CreditsCheckoutUrlBuilder $checkoutUrlBuilder,
     ) {}
@@ -70,31 +73,39 @@ final class CreditsDashboardAssembler
             $statsWindowUnits,
         );
         $pricing = $this->resolvePricing($balance, $featuresPayload, $productsPayload);
+        $planView = $this->normalizePlan(
+            $plan,
+            $balanceSummary['credits'],
+            $productsPayload,
+            $balanceSummary,
+        );
+        $balanceView = [
+            'remaining' => $balanceSummary['remaining'],
+            'remainingFormatted' => $balanceSummary['remainingFormatted'],
+            'remainingUnits' => $balanceSummary['remainingUnits'],
+            'total' => $balanceSummary['total'],
+            'totalFormatted' => $balanceSummary['totalFormatted'],
+            'used' => max(0.0, $stats['creditsUsed']),
+            'usedFormatted' => $stats['creditsUsedFormatted'],
+            'percentLeft' => $balanceSummary['percentLeft'],
+            'free' => $balanceSummary['free'],
+            'paid' => $balanceSummary['paid'],
+            'planUsed' => $balanceSummary['planUsed'],
+            'planTotal' => $balanceSummary['planTotal'],
+        ];
+        [$balanceView, $planView] = $this->applyTrialLifetimeUsage(
+            $balanceView,
+            $planView,
+            $productsPayload,
+            (float) $stats['creditsUsed'],
+        );
 
         return [
             'loaded' => $errors === [],
             'errors' => $errors,
             'pricing' => $pricing->toArray(),
-            'balance' => [
-                'remaining' => $balanceSummary['remaining'],
-                'remainingFormatted' => $balanceSummary['remainingFormatted'],
-                'remainingUnits' => $balanceSummary['remainingUnits'],
-                'total' => $balanceSummary['total'],
-                'totalFormatted' => $balanceSummary['totalFormatted'],
-                'used' => max(0.0, $stats['creditsUsed']),
-                'usedFormatted' => $stats['creditsUsedFormatted'],
-                'percentLeft' => $balanceSummary['percentLeft'],
-                'free' => $balanceSummary['free'],
-                'paid' => $balanceSummary['paid'],
-                'planUsed' => $balanceSummary['planUsed'],
-                'planTotal' => $balanceSummary['planTotal'],
-            ],
-            'plan' => $this->normalizePlan(
-                $plan,
-                $balanceSummary['credits'],
-                $productsPayload,
-                $balanceSummary,
-            ),
+            'balance' => $balanceView,
+            'plan' => $planView,
             'stats' => $stats,
             'products' => $this->normalizeProducts($productsPayload, $returnUrl),
             'features' => $this->normalizeFeatures($featuresPayload, $usedUnitsByFeatureKey),
@@ -144,7 +155,7 @@ final class CreditsDashboardAssembler
             $poolTotal = $buckets['planTotalCredits'];
             $poolTotalUnits = $buckets['planTotalUnits'];
         } elseif ($this->isTrialAccount($plan, $credits, $sku, $currentSku, $buckets)) {
-            $poolTotal = $this->resolveTrialCreditsTotal($productsPayload, $remaining);
+            $poolTotal = $this->trialPoolTotalCredits($remaining, 0.0, $productsPayload);
             $poolTotalUnits = AiCreditUnits::creditsToUnits($poolTotal, $scale);
         } else {
             $poolTotalUnits = max($remainingUnits, $buckets['freeUnits'] + $buckets['paidUnits']);
@@ -154,6 +165,7 @@ final class CreditsDashboardAssembler
         $percentLeft = $poolTotalUnits > 0
             ? (int) round(($remainingUnits / $poolTotalUnits) * 100)
             : ($remainingUnits > 0 ? 100 : 0);
+        $percentLeft = max(0, min(100, $percentLeft));
 
         return [
             'remainingUnits' => $remainingUnits,
@@ -167,7 +179,55 @@ final class CreditsDashboardAssembler
             'planUsed' => $buckets['planUsedCredits'],
             'planTotal' => $buckets['planTotalCredits'],
             'credits' => $credits,
+            'isTrial' => $this->isTrialAccount($plan, $credits, $sku, $currentSku, $buckets),
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $balance
+     * @param array<string, mixed> $plan
+     * @param array<string, mixed> $productsPayload
+     * @return array{0: array<string, mixed>, 1: array<string, mixed>}
+     */
+    public function applyTrialLifetimeUsage(
+        array $balance,
+        array $plan,
+        array $productsPayload,
+        float $lifetimeUsedCredits,
+    ): array {
+        if ((int) ($plan['isTrial'] ?? 0) !== 1) {
+            return [$balance, $plan];
+        }
+
+        $remaining = max(0.0, (float) ($balance['remaining'] ?? 0.0));
+        $used = max(0.0, $lifetimeUsedCredits);
+        $total = $this->trialPoolTotalCredits($remaining, $used, $productsPayload);
+        if ($used <= 0.0) {
+            $impliedUsed = max(0.0, $total - $remaining);
+            if ($impliedUsed > 0.0) {
+                $used = $impliedUsed;
+            }
+        }
+        $percentLeft = $total > 0.0
+            ? (int) round(($remaining / $total) * 100)
+            : ($remaining > 0.0 ? 100 : 0);
+        $percentLeft = max(0, min(100, $percentLeft));
+
+        $balance['total'] = $total;
+        $balance['totalFormatted'] = AiCreditUnits::formatCredits($total);
+        $balance['used'] = $used;
+        $balance['usedFormatted'] = AiCreditUnits::formatCredits($used);
+        $balance['percentLeft'] = $percentLeft;
+
+        $plan['creditsTotal'] = $total;
+        $plan['creditsTotalFormatted'] = AiCreditUnits::formatCredits($total);
+        $plan['creditsUsed'] = $used;
+        $plan['creditsUsedFormatted'] = AiCreditUnits::formatCredits($used);
+        $plan['creditsRemaining'] = $remaining;
+        $plan['creditsRemainingFormatted'] = AiCreditUnits::formatCredits($remaining);
+        $plan['progressPercent'] = $total > 0.0 ? (int) round(($used / $total) * 100) : 0;
+
+        return [$balance, $plan];
     }
 
     /**
@@ -296,7 +356,7 @@ final class CreditsDashboardAssembler
         array $buckets,
     ): array {
         $remaining = max(0.0, $buckets['freeCredits']);
-        $total = $this->resolveTrialCreditsTotal($productsPayload, $remaining);
+        $total = $this->trialPoolTotalCredits($remaining, 0.0, $productsPayload);
         $used = max(0.0, $total - $remaining);
         $trialProduct = $this->findTrialProduct($productsPayload);
         $name = (string) ($trialProduct['title'] ?? 'Free Trial');
@@ -352,15 +412,14 @@ final class CreditsDashboardAssembler
     /**
      * @param array<string, mixed> $productsPayload
      */
-    private function resolveTrialCreditsTotal(array $productsPayload, float $remaining): float
+    private function trialPoolTotalCredits(float $remaining, float $lifetimeUsedCredits, array $productsPayload): float
     {
         $trialProduct = $this->findTrialProduct($productsPayload);
         $catalogCredits = (int) ($trialProduct['credits'] ?? 0);
-        if ($catalogCredits > 0) {
-            return (float) $catalogCredits;
-        }
+        $catalogTotal = $catalogCredits > 0 ? (float) $catalogCredits : 0.0;
+        $consumedPool = max(0.0, $remaining) + max(0.0, $lifetimeUsedCredits);
 
-        return max($remaining, 1.0);
+        return max($catalogTotal, $consumedPool, 1.0);
     }
 
     /**
@@ -449,11 +508,15 @@ final class CreditsDashboardAssembler
         $creditsUsed = $totalUnits > 0
             ? AiCreditUnits::unitsToCredits($totalUnits)
             : $fallbackUsed;
-        $dailyAverageUnits = (int) max(1, (int) round($windowUnits / 7));
-        $dailyAverage = AiCreditUnits::unitsToCredits($dailyAverageUnits);
-        $estimatedDaysLeft = $remainingUnits > 0 && $dailyAverageUnits > 0
-            ? (int) max(1, (int) ceil($remainingUnits / $dailyAverageUnits))
-            : null;
+        $dailyAverageUnits = $windowUnits > 0 ? (int) max(1, (int) round($windowUnits / 7)) : 0;
+        $dailyAverage = $dailyAverageUnits > 0
+            ? AiCreditUnits::unitsToCredits($dailyAverageUnits)
+            : 0.0;
+        $estimatedDaysLeft = null;
+        if ($remainingUnits > 0 && $dailyAverageUnits > 0) {
+            $estimatedDaysLeft = (int) max(1, (int) ceil($remainingUnits / $dailyAverageUnits));
+            $estimatedDaysLeft = min($estimatedDaysLeft, self::MAX_ESTIMATED_DAYS_LEFT);
+        }
 
         return [
             'creditsUsed' => $creditsUsed,

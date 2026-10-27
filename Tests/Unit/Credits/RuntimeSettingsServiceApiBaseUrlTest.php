@@ -29,6 +29,8 @@ use TYPO3\CMS\Core\Configuration\ExtensionConfiguration;
 
 final class RuntimeSettingsServiceApiBaseUrlTest extends TestCase
 {
+    private string|false $previousCreditsApiBaseUrl = false;
+
     /** @var array<string, string|int> */
     private array $row = [
         'credit_mode' => 0,
@@ -36,6 +38,21 @@ final class RuntimeSettingsServiceApiBaseUrlTest extends TestCase
         'token_enc' => '',
         't3planet_api_base_url' => '',
     ];
+
+    protected function setUp(): void
+    {
+        $this->previousCreditsApiBaseUrl = getenv(CreditsApiBaseUrlResolver::ENVIRONMENT_VARIABLE);
+        putenv(CreditsApiBaseUrlResolver::ENVIRONMENT_VARIABLE);
+    }
+
+    protected function tearDown(): void
+    {
+        if ($this->previousCreditsApiBaseUrl === false) {
+            putenv(CreditsApiBaseUrlResolver::ENVIRONMENT_VARIABLE);
+        } else {
+            putenv(CreditsApiBaseUrlResolver::ENVIRONMENT_VARIABLE . '=' . $this->previousCreditsApiBaseUrl);
+        }
+    }
 
     public function testSyncUpdatesEmptyDatabaseToResolvedDefault(): void
     {

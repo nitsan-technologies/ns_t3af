@@ -27,11 +27,20 @@ namespace NITSAN\NsT3AF\Mcp\Service\RecordsApply;
  */
 final class RecordsApplyValidationException extends \RuntimeException
 {
+    /** MCP tool response code for a normal validation refusal. */
+    public const TOOL_CODE_DEFAULT = 1790500006;
+
+    /** MCP tool response when dryRun touches sys_category (cache flush breaks rollback). */
+    public const TOOL_CODE_SYS_CATEGORY_DRY_RUN = 1790500032;
+
     /**
      * @param list<array<string, mixed>> $problems
      */
-    public function __construct(private readonly array $problems, private readonly int $moreProblems = 0)
-    {
+    public function __construct(
+        private readonly array $problems,
+        private readonly int $moreProblems = 0,
+        private readonly int $toolResponseCode = self::TOOL_CODE_DEFAULT,
+    ) {
         parent::__construct(
             sprintf('records_apply request rejected: %d problem(s), nothing was written.', count($problems) + $moreProblems),
             1790500001,
@@ -48,5 +57,10 @@ final class RecordsApplyValidationException extends \RuntimeException
     public function getMoreProblems(): int
     {
         return $this->moreProblems;
+    }
+
+    public function getToolResponseCode(): int
+    {
+        return $this->toolResponseCode;
     }
 }

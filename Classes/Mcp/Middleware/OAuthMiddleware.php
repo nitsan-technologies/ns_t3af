@@ -32,6 +32,7 @@ use NITSAN\NsT3AF\Mcp\Domain\Repository\ClientRepository;
 use NITSAN\NsT3AF\Mcp\OAuth\AuthorizationService;
 use NITSAN\NsT3AF\Mcp\OAuth\OAuthAuthorizePageRenderer;
 use NITSAN\NsT3AF\Mcp\OAuth\OAuthClientLabelResolver;
+use NITSAN\NsT3AF\Mcp\OAuth\OAuthRedirectUriPolicy;
 use NITSAN\NsT3AF\Mcp\OAuth\RateLimitService;
 use NITSAN\NsT3AF\Mcp\Service\AdvancedSettingsService;
 use NITSAN\NsT3AF\Mcp\Service\McpPathProvider;
@@ -49,6 +50,10 @@ use TYPO3\CMS\Core\Http\NormalizedParams;
 
 readonly class OAuthMiddleware implements MiddlewareInterface
 {
+    private const MAX_CLIENT_NAME_LENGTH = 255;
+    private const MAX_REDIRECT_URIS = 32;
+    private const MAX_REDIRECT_URI_LENGTH = 2048;
+
     public function __construct(
         private AuthorizationService $authorizationService,
         private ClientRepository $clientRepository,
@@ -59,6 +64,7 @@ readonly class OAuthMiddleware implements MiddlewareInterface
         private AdvancedSettingsService $advancedSettingsService,
         private OAuthAuthorizePageRenderer $authorizePageRenderer,
         private OAuthClientLabelResolver $clientLabelResolver,
+        private OAuthRedirectUriPolicy $redirectUriPolicy,
         private WorkspacePreferenceService $workspacePreferenceService,
         private ResponseFactoryInterface $responseFactory,
         private StreamFactoryInterface $streamFactory,
@@ -172,7 +178,13 @@ readonly class OAuthMiddleware implements MiddlewareInterface
 
         $csrfToken = bin2hex(random_bytes(32));
 
-        $html = $this->authorizePageRenderer->render($clientName, $params, $csrfToken);
+        $html = $this->authorizePageRenderer->render(
+            $clientName,
+            $params,
+            $csrfToken,
+            '',
+            $this->resolveAuthorizeScopeDisplay($params),
+        );
 
         return $this->responseFactory->createResponse(200)
             ->withHeader('Content-Type', 'text/html; charset=utf-8')
@@ -205,6 +217,14 @@ readonly class OAuthMiddleware implements MiddlewareInterface
             return $this->createJsonResponse(400, ['error' => 'invalid_request', 'error_description' => 'Invalid redirect_uri']);
         }
 
+        if (!$this->redirectUriPolicy->isAllowed($redirectUri)) {
+            return $this->createJsonResponse(400, ['error' => 'invalid_request', 'error_description' => 'Redirect URI is not allowed by MCP OAuth settings']);
+        }
+
+        if (($body['deny'] ?? '') === '1') {
+            return $this->redirectOAuthError($redirectUri, (string) ($body['state'] ?? ''), 'access_denied', 'Authorization denied by user');
+        }
+
         $username = (string) ($body['username'] ?? '');
         $password = (string) ($body['password'] ?? '');
         $codeChallenge = (string) ($body['code_challenge'] ?? '');
@@ -229,7 +249,13 @@ readonly class OAuthMiddleware implements MiddlewareInterface
                 'response_type' => 'code',
             ];
 
-            $html = $this->authorizePageRenderer->render($clientName, $params, $newCsrfToken, 'Invalid username or password.');
+            $html = $this->authorizePageRenderer->render(
+                $clientName,
+                $params,
+                $newCsrfToken,
+                'Invalid username or password.',
+                $this->resolveAuthorizeScopeDisplay($params),
+            );
 
             return $this->responseFactory->createResponse(200)
                 ->withHeader('Content-Type', 'text/html; charset=utf-8')
@@ -312,10 +338,26 @@ readonly class OAuthMiddleware implements MiddlewareInterface
             );
         }
 
-        /** @var array<string, mixed> $body */
-        $body = json_decode((string) $request->getBody(), true, 16, JSON_THROW_ON_ERROR);
+        try {
+            /** @var array<string, mixed> $body */
+            $body = json_decode((string) $request->getBody(), true, 16, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return $this->createJsonResponse(
+                400,
+                ['error' => 'invalid_request', 'error_description' => 'Request body must be valid JSON'],
+            );
+        }
 
-        $clientName = is_string($body['client_name'] ?? null) ? $body['client_name'] : 'MCP Client';
+        $clientName = is_string($body['client_name'] ?? null) ? trim($body['client_name']) : 'MCP Client';
+        if ($clientName === '') {
+            $clientName = 'MCP Client';
+        }
+        if (strlen($clientName) > self::MAX_CLIENT_NAME_LENGTH) {
+            return $this->createJsonResponse(
+                400,
+                ['error' => 'invalid_client_metadata', 'error_description' => 'client_name must be at most 255 characters'],
+            );
+        }
 
         $redirectUris = [];
         if (is_array($body['redirect_uris'] ?? null)) {
@@ -333,7 +375,35 @@ readonly class OAuthMiddleware implements MiddlewareInterface
             );
         }
 
+        if (count($redirectUris) > self::MAX_REDIRECT_URIS) {
+            return $this->createJsonResponse(
+                400,
+                ['error' => 'invalid_client_metadata', 'error_description' => 'Too many redirect_uris'],
+            );
+        }
+
+        foreach ($redirectUris as $uri) {
+            if (strlen($uri) > self::MAX_REDIRECT_URI_LENGTH) {
+                return $this->createJsonResponse(
+                    400,
+                    ['error' => 'invalid_client_metadata', 'error_description' => 'redirect_uri is too long'],
+                );
+            }
+        }
+
         $clientName = $this->clientLabelResolver->normalizeClientName($clientName, $redirectUris);
+        if (strlen($clientName) > self::MAX_CLIENT_NAME_LENGTH) {
+            return $this->createJsonResponse(
+                400,
+                ['error' => 'invalid_client_metadata', 'error_description' => 'client_name must be at most 255 characters'],
+            );
+        }
+
+        try {
+            $this->redirectUriPolicy->assertAllAllowed($redirectUris);
+        } catch (\InvalidArgumentException $e) {
+            return $this->createJsonResponse(400, ['error' => 'invalid_request', 'error_description' => $e->getMessage()]);
+        }
 
         $client = $this->clientRepository->registerClient($clientName, $redirectUris);
 
@@ -388,6 +458,10 @@ readonly class OAuthMiddleware implements MiddlewareInterface
 
         if (!$this->clientRepository->validateRedirectUri($clientId, $redirectUri)) {
             return 'Invalid redirect_uri';
+        }
+
+        if (!$this->redirectUriPolicy->isAllowed($redirectUri)) {
+            return 'Redirect URI is not allowed by MCP OAuth settings';
         }
 
         if ($this->advancedSettingsService->enforcePkce()) {
@@ -448,6 +522,22 @@ readonly class OAuthMiddleware implements MiddlewareInterface
         return is_string($cookies['mcp_csrf'] ?? null) ? $cookies['mcp_csrf'] : '';
     }
 
+    private function redirectOAuthError(string $redirectUri, string $state, string $error, string $description): ResponseInterface
+    {
+        $redirectTarget = $redirectUri . '?' . http_build_query(array_filter([
+            'error' => $error,
+            'error_description' => $description,
+            'state' => $state !== '' ? $state : null,
+        ]));
+
+        return $this->responseFactory->createResponse(302)
+            ->withHeader('Location', $redirectTarget)
+            ->withHeader('Set-Cookie', sprintf(
+                'mcp_csrf=; Path=%s; HttpOnly; SameSite=Strict; Secure; Max-Age=0',
+                $this->pathProvider->getOAuthCookiePath(),
+            ));
+    }
+
     private function oauthServerErrorResponse(\RuntimeException $exception, string $context): ResponseInterface
     {
         $correlationId = bin2hex(random_bytes(8));
@@ -478,6 +568,17 @@ readonly class OAuthMiddleware implements MiddlewareInterface
             'error' => 'invalid_grant',
             'error_description' => 'The provided authorization grant or refresh token is invalid, expired, or revoked.',
         ]);
+    }
+
+    /** @param array<string, mixed> $params */
+    private function resolveAuthorizeScopeDisplay(array $params): string
+    {
+        $scope = is_string($params['scope'] ?? null) ? trim($params['scope']) : '';
+        if ($scope !== '') {
+            return $scope;
+        }
+
+        return $this->advancedSettingsService->oauthDefaultScopes();
     }
 
     /**

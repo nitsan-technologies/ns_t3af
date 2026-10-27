@@ -45,7 +45,7 @@ readonly class WorkspaceChangesListTool implements McpNonAiToolInterface
         description: 'List records modified in the current workspace, grouped by table.'
             . ' Optional table filter restricts to a single workspace-aware table.'
             . ' Each record includes uid (workspace version), liveUid (t3ver_oid, 0 for new placeholders),'
-            . ' state (default, new, deletePlaceholder, movePointer), and stage (-10/-20/0/custom).'
+            . ' state (default, new, deletePlaceholder, movePointer), and stage (-10/0/custom; -20 is publish-now only in the backend).'
             . ' Requires cms-workspaces extension.',
     )]
     public function execute(string $table = '', int $limit = 100): string

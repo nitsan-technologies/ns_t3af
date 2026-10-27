@@ -154,6 +154,11 @@ readonly class AdvancedSettingsService
         return $this->string('oauthDefaultScopes', 'mcp:read mcp:write mcp:tools');
     }
 
+    public function oauthDefaultRedirectUris(): string
+    {
+        return $this->string('oauthDefaultRedirectUris', '');
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -196,7 +201,7 @@ readonly class AdvancedSettingsService
             }
             $normalized[$key] = (string) $value;
         }
-        $this->extensionSettingsService->merge(self::EXTENSION_KEY, $normalized);
+        $this->extensionSettingsService->mergeGlobal(self::EXTENSION_KEY, $normalized);
     }
 
     /**
@@ -204,7 +209,7 @@ readonly class AdvancedSettingsService
      */
     private function config(): array
     {
-        return $this->extensionSettingsService->getAll(self::EXTENSION_KEY);
+        return $this->extensionSettingsService->getAllIgnorePid(self::EXTENSION_KEY);
     }
 
     private function bool(string $key, bool $default): bool

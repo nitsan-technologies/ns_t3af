@@ -67,6 +67,10 @@ readonly class RecordAppendOrderer
                     continue;
                 }
 
+                if (RecordsApplyDatamapMeta::pullSkipAppendOrder($datamap[$table][$id])) {
+                    continue;
+                }
+
                 $key = implode('|', [
                     $pid,
                     (string) ($fields['colPos'] ?? ''),

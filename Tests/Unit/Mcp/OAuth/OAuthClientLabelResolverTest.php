@@ -46,6 +46,10 @@ final class OAuthClientLabelResolverTest extends TestCase
             'Cursor',
             $this->resolver->inferFromRedirectUris(['cursor://anysphere.cursor-mcp/oauth/callback']),
         );
+        self::assertSame(
+            'Cursor',
+            $this->resolver->inferFromRedirectUris(['https://www.cursor.com/agents/mcp/oauth/callback']),
+        );
     }
 
     #[Test]

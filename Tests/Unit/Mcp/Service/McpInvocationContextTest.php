@@ -25,6 +25,7 @@ use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\ProviderLookupInterface;
 use NITSAN\NsT3AF\Mcp\Service\McpInvocationContext;
 use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
+use NITSAN\NsT3AF\Tests\Unit\Access\Support\LoadedExtensionsTestTrait;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
@@ -34,8 +35,11 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
  */
 final class McpInvocationContextTest extends TestCase
 {
+    use LoadedExtensionsTestTrait;
+
     protected function tearDown(): void
     {
+        $this->resetLoadedExtensions();
         unset($GLOBALS['BE_USER']);
         parent::tearDown();
     }
@@ -146,17 +150,18 @@ final class McpInvocationContextTest extends TestCase
     }
 
     #[Test]
-    public function applyFromArgumentsIgnoresZeroWorkspaceIdToPreserveBackendPreference(): void
+    public function applyFromArgumentsForcesLiveWhenZeroWorkspaceIdIsPassedExplicitly(): void
     {
+        $this->mockLoadedExtensions(['workspaces']);
         $backendUser = $this->createMock(BackendUserAuthentication::class);
-        $backendUser->workspace = 1;
-        $backendUser->expects(self::never())->method('setWorkspace');
+        $backendUser->workspace = 4;
+        $backendUser->expects(self::once())->method('setTemporaryWorkspace')->with(0)->willReturn(true);
         $GLOBALS['BE_USER'] = $backendUser;
 
         $context = new McpInvocationContext($this->createMock(WorkspaceListService::class));
         $context->applyFromArguments(['workspaceId' => 0]);
 
-        self::assertSame(1, $backendUser->workspace);
+        $context->clear();
     }
 
     #[Test]
@@ -178,6 +183,24 @@ final class McpInvocationContextTest extends TestCase
     }
 
     #[Test]
+    public function keepWorkspaceAfterCallSkipsRestoreOnClear(): void
+    {
+        $backendUser = $this->createMock(BackendUserAuthentication::class);
+        $backendUser->workspace = 3;
+        $backendUser->expects(self::never())->method('setTemporaryWorkspace');
+        $GLOBALS['BE_USER'] = $backendUser;
+
+        $context = new McpInvocationContext($this->createMock(WorkspaceListService::class));
+        $property = new \ReflectionProperty($context, 'workspaceBeforeOverride');
+        $property->setValue($context, 0);
+
+        $context->keepWorkspaceAfterCall();
+        $context->clear();
+
+        self::assertNull($property->getValue($context));
+    }
+
+    #[Test]
     public function clearLeavesTheWorkspaceAloneWhenNothingWasOverridden(): void
     {
         $backendUser = $this->createMock(BackendUserAuthentication::class);
@@ -186,7 +209,7 @@ final class McpInvocationContextTest extends TestCase
         $GLOBALS['BE_USER'] = $backendUser;
 
         $context = new McpInvocationContext($this->createMock(WorkspaceListService::class));
-        $context->applyFromArguments(['workspaceId' => 0]);
+        $context->applyFromArguments([]);
         $context->clear();
 
         self::assertSame(3, $backendUser->workspace);

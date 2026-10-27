@@ -142,6 +142,33 @@ Cursor example (stdio / DDEV)
      }
    }
 
+OAuth redirect URI allow-list
+-----------------------------
+
+In :guilabel:`AI Foundation > MCP Server > Advanced`, **Allowed redirect URIs**
+(``oauthDefaultRedirectUris``) limits which ``redirect_uri`` values MCP clients
+may register and use during authorization.
+
+* **Empty field** — No allow-list is enforced; dynamic registration accepts any
+  redirect URI (client records are still validated). Save an empty textarea and
+  reload to confirm the field stays empty.
+* **One URI per line** — Exact match (for example ``https://claude.ai/oauth/callback``).
+* **Prefix rules** — A line ending with ``*`` allows any URI that starts with the
+  prefix before ``*``. Examples: ``cursor://*`` (shorthand for legacy ``cursor://``
+  URIs plus current Cursor remote OAuth at ``https://www.cursor.com/agents/mcp/oauth/``
+  and ``http://localhost:*`` / ``http://127.0.0.1:*``), ``http://127.0.0.1:*`` for
+  other desktop clients). Redirect URIs with a ``user@`` userinfo part are always
+  rejected (they would otherwise bypass host checks). Broad patterns such as ``https://*``
+  are ignored for security.
+
+Default starter lines ship in extension settings (Claude Desktop
+``https://claude.ai/api/mcp/auth_callback`` and ``https://claude.com/api/mcp/auth_callback``,
+Cursor prefix, local loopback prefixes, n8n). Tighten or extend the list for your environment.
+
+The consent screen shows the redirect host, requested scopes, and the application
+name **as supplied by the client** during registration. Use **Deny** without
+entering backend credentials when you do not trust the request.
+
 Security
 --------
 

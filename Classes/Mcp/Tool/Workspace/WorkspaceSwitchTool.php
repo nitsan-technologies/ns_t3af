@@ -27,11 +27,14 @@ use const JSON_THROW_ON_ERROR;
 
 use Mcp\Capability\Attribute\McpTool;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
+use NITSAN\NsT3AF\Mcp\Authentication\BackendUserBootstrap;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
+use NITSAN\NsT3AF\Mcp\Service\McpInvocationContext;
 use NITSAN\NsT3AF\Mcp\Service\WorkspaceListService;
+use NITSAN\NsT3AF\Mcp\Service\WorkspacePreferenceService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
@@ -42,6 +45,9 @@ readonly class WorkspaceSwitchTool implements McpNonAiToolInterface, McpPlannabl
     public function __construct(
         private McpConfirmationPlanBuilder $confirmationPlanBuilder,
         private WorkspaceListService $workspaceListService,
+        private WorkspacePreferenceService $workspacePreferenceService,
+        private BackendUserBootstrap $backendUserBootstrap,
+        private McpInvocationContext $invocationContext,
     ) {}
 
     /**
@@ -81,10 +87,13 @@ readonly class WorkspaceSwitchTool implements McpNonAiToolInterface, McpPlannabl
 
     #[McpTool(
         name: 'workspace_switch',
-        description: 'Switch the active workspace for the current backend user. Persists to be_users.workspace_id.'
-            . ' Subsequent record reads/writes will use the new workspace context. Use 0 for the live workspace.'
-            . ' Requires cms-workspaces extension.',
+        description: 'Set the MCP Server workspace preference for this backend user (MCP module dropdown / OAuth token default).'
+            . ' Use 0 for Live. Subsequent MCP calls use this workspace unless a per-call workspaceId override is passed.'
+            . ' Does not change the editor\'s own backend UI workspace. Requires cms-workspaces extension.',
     )]
+    /**
+     * @param int $workspaceId Workspace UID to save for MCP (0 = Live). Persists until workspace_switch is called again.
+     */
     public function execute(int $workspaceId): string
     {
         if (!ExtensionManagementUtility::isLoaded('workspaces')) {
@@ -97,9 +106,11 @@ readonly class WorkspaceSwitchTool implements McpNonAiToolInterface, McpPlannabl
             return json_encode(['error' => 'Workspace not accessible to current user', 'workspaceId' => $workspaceId], JSON_THROW_ON_ERROR);
         }
 
-        $beUser->setWorkspace($workspaceId);
+        $saved = $this->workspacePreferenceService->saveForCurrentUser($workspaceId);
+        $this->backendUserBootstrap->applyWorkspace($beUser, $saved);
+        $this->invocationContext->keepWorkspaceAfterCall();
 
-        return json_encode(['workspaceId' => $workspaceId, 'switched' => true], JSON_THROW_ON_ERROR);
+        return json_encode(['workspaceId' => $saved, 'switched' => true], JSON_THROW_ON_ERROR);
     }
 
     private function requireBackendUser(): BackendUserAuthentication

@@ -61,8 +61,7 @@ readonly class ContentSearchTool implements McpNonAiToolInterface
         string $orderDirection = 'ASC',
         string $selectFields = '',
     ): string {
-        // A limit of 1 hides a second element with a similar name, so the Agent never sees an ambiguity.
-        $limit = max(5, $limit);
+        $limit = min(max($limit, 1), 500);
         if ($pid > 0 && !$this->pageAccess->canReadPage($pid)) {
             return json_encode(['error' => PageAccessService::ACCESS_DENIED_MESSAGE, 'pageId' => $pid], JSON_THROW_ON_ERROR);
         }
@@ -74,7 +73,11 @@ readonly class ContentSearchTool implements McpNonAiToolInterface
 
         $readFields = $this->tcaSchemaService->getReadFields('tt_content');
         $allowedFields = array_merge(['uid', 'pid'], $readFields);
-        $searchConditions = $this->parseSearch($search, $allowedFields);
+        try {
+            $searchConditions = $this->parseSearch($search, $allowedFields);
+        } catch (\InvalidArgumentException $e) {
+            throw new \InvalidArgumentException('Invalid search parameter: ' . $e->getMessage(), 1790600005, $e);
+        }
 
         if ($searchConditions === []) {
             return json_encode(['error' => 'No valid search conditions provided'], JSON_THROW_ON_ERROR);
@@ -84,14 +87,7 @@ readonly class ContentSearchTool implements McpNonAiToolInterface
             $searchConditions['sys_language_uid'] = ['operator' => 'eq', 'value' => (string) $sysLanguageUid];
         }
 
-        $resolvedOrderBy = null;
-        if ($orderBy !== '' && in_array($orderBy, $allowedFields, true)) {
-            $resolvedOrderBy = $orderBy;
-        }
-
-        if (!in_array($orderDirection, ['ASC', 'DESC'], true)) {
-            $orderDirection = 'ASC';
-        }
+        [$resolvedOrderBy, $orderDirection] = SearchSortResolver::resolve($orderBy, $orderDirection, $allowedFields);
 
         $fields = $this->resolveSelectFields($selectFields, $readFields);
 

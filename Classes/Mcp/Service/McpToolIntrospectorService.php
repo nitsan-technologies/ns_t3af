@@ -30,6 +30,7 @@ use NITSAN\NsT3AF\Mcp\Contract\McpExternalContentToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpFalStorageToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Tool\Workspace\WorkspaceSwitchTool;
 use ReflectionMethod;
 use ReflectionNamedType;
 use ReflectionParameter;
@@ -132,7 +133,7 @@ class McpToolIntrospectorService
             $tool instanceof McpDualModeContentToolInterface => $this->mcpModeResolver->isNative(),
             default => true,
         };
-        $includeWorkspaceId = !$tool instanceof McpFalStorageToolInterface;
+        $includeWorkspaceId = !$tool instanceof McpFalStorageToolInterface && !$tool instanceof WorkspaceSwitchTool;
         foreach ($this->toolSchemaAugmenter->standardParameterDefinitions($includeAiProvider, $includeWorkspaceId) as $standardParam) {
             $params[] = [
                 'name' => $standardParam['name'],

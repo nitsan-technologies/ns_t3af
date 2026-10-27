@@ -7,7 +7,7 @@
 Configuration
 =============
 
-Turn on T3Planet Credits from AI Foundation and manage limits and top-ups.
+Turn on T3Planet Credits from AI Foundation, set limits, and add credits.
 
 **Path:** :guilabel:`AI Foundation > AI Providers`
 
@@ -16,6 +16,16 @@ Before you start
 
 * AI Foundation (``EXT:ns_t3af``) installed and active
 * Server can reach the T3Planet API
+
+Two ways to connect
+===================
+
+* **Start free** — follow *Activate Credits* below. You get free trial credits.
+  Each public server IP address can start one trial.
+* **You already bought credits** — skip :guilabel:`Activate` and use a
+  **claim code** instead. See :ref:`Use a claim code <t3planet-credits-claim-code>`.
+
+.. _t3planet-credits-activate:
 
 Activate Credits
 ================
@@ -46,7 +56,8 @@ Activate Credits
 .. note::
 
    If Activate fails, check that the server can reach the T3Planet API and try
-   again. When no license contact exists, complete the free-credits name/email
+   again. If TYPO3 says the server IP already belongs to a paying account, use a
+   :ref:`claim code <t3planet-credits-claim-code>` instead. When no license contact exists, complete the free-credits name/email
    form. See :ref:`Troubleshooting <t3planet-credits-troubleshooting>` for
    common fixes.
 
@@ -80,9 +91,10 @@ Administrator users are exempt from these caps.
 Buy more credits
 ================
 
-When your balance is low, open :guilabel:`Buy more credits` on the Credits
-panel or Dashboard. You complete purchase on the T3Planet checkout page;
-invoices stay in your T3Planet account.
+When your balance is low, click :guilabel:`Buy more credits` in the
+:guilabel:`Credit Balance` panel and pick a bundle. You pay on the T3Planet
+checkout page; invoices stay in your T3Planet account. Step by step, including
+buying on the website: :ref:`Buy credits <t3planet-credits-buy>`.
 
 .. warning::
 

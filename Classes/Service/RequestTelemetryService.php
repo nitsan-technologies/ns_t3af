@@ -252,7 +252,7 @@ final class RequestTelemetryService
             'model_requested' => $provider->modelId,
             'model_used' => '',
             'success' => 0,
-            'error_code' => (string) $error->getCode(),
+            'error_code' => $this->normalizeErrorCode($error),
             'error_class' => $error::class,
             'prompt_fingerprint' => hash('sha256', $sourceText),
             'prompt_tokens' => mb_strlen($sourceText),
@@ -290,7 +290,7 @@ final class RequestTelemetryService
             'model_requested'      => $options->modelId ?? $provider->modelId,
             'model_used'           => '',
             'success'              => 0,
-            'error_code'           => (string) $error->getCode(),
+            'error_code'           => $this->normalizeErrorCode($error),
             'error_class'          => $error::class,
             'prompt_fingerprint'   => hash('sha256', $text),
             'prompt_tokens'        => 0,
@@ -374,7 +374,7 @@ final class RequestTelemetryService
             'model_requested'      => $options->modelId ?? $provider->modelId,
             'model_used'           => '',
             'success'              => 0,
-            'error_code'           => (string) $error->getCode(),
+            'error_code'           => $this->normalizeErrorCode($error),
             'error_class'          => $error::class,
             'prompt_fingerprint'   => hash('sha256', $prompt),
             'prompt_tokens'        => 0,
@@ -412,7 +412,7 @@ final class RequestTelemetryService
             'model_requested' => $provider->modelId,
             'model_used' => '',
             'success' => 0,
-            'error_code' => (string) $error->getCode(),
+            'error_code' => $this->normalizeErrorCode($error),
             'error_class' => $error::class,
             'prompt_fingerprint' => hash('sha256', $prompt),
             'prompt_tokens' => 0,
@@ -476,7 +476,32 @@ final class RequestTelemetryService
         return array_merge([
             'adapter_type' => $provider->adapterType,
             'message' => $error->getMessage(),
+            'user_message' => $this->userFacingFailureMessage($error),
         ], $extra);
+    }
+
+    private function normalizeErrorCode(\Throwable $error): string
+    {
+        $code = (int) $error->getCode();
+        if ($code !== 0) {
+            return (string) $code;
+        }
+
+        $class = $error::class;
+        if (str_contains($class, 'Transport') || str_contains($class, 'Connect') || str_contains($class, 'Connection')) {
+            return 'connection_failed';
+        }
+
+        return 'provider_error';
+    }
+
+    private function userFacingFailureMessage(\Throwable $error): string
+    {
+        if ($this->normalizeErrorCode($error) === 'connection_failed') {
+            return 'The AI provider could not be reached.';
+        }
+
+        return 'The AI request failed.';
     }
 
     /**

@@ -1657,6 +1657,9 @@
       <trans-unit id="credits.dashboard.stats.ofTotal" resname="credits.dashboard.stats.ofTotal">
         <source>of %s purchased</source>
       </trans-unit>
+      <trans-unit id="credits.dashboard.stats.ofTrialPool" resname="credits.dashboard.stats.ofTrialPool">
+        <source>of %s trial pool</source>
+      </trans-unit>
       <trans-unit id="credits.dashboard.stats.daily" resname="credits.dashboard.stats.daily">
         <source>Daily average</source>
       </trans-unit>

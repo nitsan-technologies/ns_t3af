@@ -93,6 +93,24 @@ final class RequestedLanguage
     }
 
     /**
+     * First language name the editor wrote ("in German" → German). Quoted text is ignored.
+     */
+    public static function namedIn(string $request): string
+    {
+        $text = (string) preg_replace('/(["“”„\'‚‘’«»]).{0,200}?\1/u', ' ', $request);
+        $text = (string) preg_replace('/[“„«][^”“»]{0,200}[”“»]/u', ' ', $text);
+        foreach (self::LANGUAGES as $aliases) {
+            foreach ($aliases as $alias) {
+                if (preg_match(self::aliasPattern($alias), $text) === 1) {
+                    return $aliases[0];
+                }
+            }
+        }
+
+        return '';
+    }
+
+    /**
      * The first named language the site does not have, or null. Only a request that names no site language
      * counts: "French fries in German" is about German.
      *

@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Service\RecordsApply;
 
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
+use NITSAN\NsT3AF\Mcp\Service\RecordSiteLanguageGuard;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\Connection;
@@ -56,6 +57,8 @@ readonly class RecordsApplyPreflight
         private TcaSchemaService $tcaSchemaService,
         private RecordService $recordService,
         private ConnectionPool $connectionPool,
+        private RecordSiteLanguageGuard $siteLanguageGuard,
+        private InlineForeignFields $inlineForeignFields,
         private ?RecordsApplyFileAccess $fileAccess = null,
     ) {}
 
@@ -145,6 +148,7 @@ readonly class RecordsApplyPreflight
 
             $writable = array_flip($this->tcaSchemaService->getApplyWritableFields($table));
             $listFields = array_flip($this->tcaSchemaService->getApplyListFields($table));
+            $relationUidListFields = array_flip($this->tcaSchemaService->getRelationUidListFields($table));
             /** @var list<int> $existing */
             $existing = [];
             /** @var array<int, list<array<string, mixed>>> $afterRecords records that new ones are placed after (negative pid) */
@@ -165,6 +169,8 @@ readonly class RecordsApplyPreflight
                     $problems->add($where + ['error' => 'Fields must be an object of field => value.']);
                     continue;
                 }
+
+                $skipAppendOrder = RecordsApplyDatamapMeta::pullSkipAppendOrder($fields);
 
                 $pid = null;
                 if (array_key_exists('pid', $fields)) {
@@ -203,8 +209,38 @@ readonly class RecordsApplyPreflight
                     continue;
                 }
 
+                if ($isNew) {
+                    $pageIdForLanguage = $this->resolveLanguagePageId($table, $pid);
+                    if ($pageIdForLanguage > 0) {
+                        try {
+                            $this->siteLanguageGuard->assertCreateLanguageAllowed($table, $fields, $pageIdForLanguage);
+                        } catch (\InvalidArgumentException $exception) {
+                            $problems->add($where + ['error' => $exception->getMessage()]);
+                            continue;
+                        }
+                    }
+                } else {
+                    $blockedTranslation = $this->siteLanguageGuard->findTranslationFieldsPresentOnUpdate($table, $fields);
+                    if ($blockedTranslation !== []) {
+                        $names = array_map(RecordsApplyProblems::safe(...), $blockedTranslation);
+                        if ($strict) {
+                            $problems->add($where + [
+                                'error' => 'Translation and language fields cannot be changed on update (strict mode refuses the whole call).',
+                                'fields' => $names,
+                            ]);
+                            continue;
+                        }
+
+                        $ignored[] = ['table' => $table, 'id' => RecordsApplyProblems::safe($id), 'fields' => $names];
+                    }
+                    $fields = $this->siteLanguageGuard->stripTranslationFieldsForUpdate($table, $fields);
+                }
+
                 $unwritable = [];
                 foreach (array_keys($fields) as $fieldName) {
+                    if (RecordsApplyDatamapMeta::isMetaField((string) $fieldName)) {
+                        continue;
+                    }
                     if (!isset($writable[(string) $fieldName])) {
                         $unwritable[] = (string) $fieldName;
                     }
@@ -239,6 +275,73 @@ readonly class RecordsApplyPreflight
                     $fields = array_diff_key($fields, array_flip($denied));
                 }
 
+                $pageIdForValues = $this->resolvePageIdForFieldValues($table, $id, $isNew, $pid);
+                $invalid = [];
+                foreach ($fields as $fieldName => $fieldValue) {
+                    if ($this->tcaSchemaService->isFieldValueSemanticallyInvalid($table, (string) $fieldName, $fieldValue, $pageIdForValues)) {
+                        $invalid[] = (string) $fieldName;
+                    }
+                }
+
+                if ($invalid !== []) {
+                    $names = array_map(RecordsApplyProblems::safe(...), $invalid);
+                    if ($strict) {
+                        $problems->add($where + [
+                            'error' => 'Field value is not allowed by TCA or backend layout (strict mode refuses the whole call).',
+                            'fields' => $names,
+                        ]);
+                        continue;
+                    }
+
+                    $ignored[] = ['table' => $table, 'id' => RecordsApplyProblems::safe($id), 'fields' => $names];
+                    $fields = array_diff_key($fields, array_flip($invalid));
+                }
+
+                foreach ($this->inlineForeignFields->ofChildTable($table) as $parentField) {
+                    if ($table === 'sys_file_reference' && $parentField === 'uid_foreign') {
+                        continue;
+                    }
+                    if (!array_key_exists($parentField, $fields)) {
+                        continue;
+                    }
+                    $inlineError = self::inlineForeignFieldError($fields[$parentField], $allNewIds, $parentField);
+                    if ($inlineError !== null) {
+                        $problems->add($where + [
+                            'error' => $inlineError,
+                            'fields' => [RecordsApplyProblems::safe($parentField)],
+                        ]);
+                        continue 2;
+                    }
+                }
+
+                if ($table === 'sys_file_reference' && array_key_exists('uid_foreign', $fields)) {
+                    $tablenames = is_string($fields['tablenames'] ?? null) ? trim($fields['tablenames']) : '';
+                    if ($tablenames === '') {
+                        $problems->add($where + [
+                            'error' => 'Field uid_foreign requires tablenames (the parent record table).',
+                            'fields' => ['tablenames', 'uid_foreign'],
+                        ]);
+                        continue;
+                    }
+                    if (!$this->checkTable($tablenames, 'data', $backendUser, $problems)) {
+                        continue;
+                    }
+                    $parentNewIds = $newIds[$tablenames] ?? [];
+                    $foreignError = $this->fileReferenceUidForeignError(
+                        $fields['uid_foreign'],
+                        $tablenames,
+                        $parentNewIds,
+                        $allNewIds,
+                    );
+                    if ($foreignError !== null) {
+                        $problems->add($where + [
+                            'error' => $foreignError,
+                            'fields' => ['uid_foreign'],
+                        ]);
+                        continue;
+                    }
+                }
+
                 if ($fields === [] && !$isNew) {
                     $problems->add($where + ['error' => 'No writable fields left to update.']);
                     continue;
@@ -271,6 +374,10 @@ readonly class RecordsApplyPreflight
                     }
 
                     $fields[$fieldName] = $normalized;
+
+                    if ($valid && isset($relationUidListFields[(string) $fieldName]) && $normalized !== '') {
+                        $valid = $this->validateRelationUidList($table, (string) $fieldName, $normalized, $where, $problems);
+                    }
                 }
 
                 if (!$valid) {
@@ -286,6 +393,9 @@ readonly class RecordsApplyPreflight
                 }
 
                 $clean[$table][$id] = $pid === null ? $fields : ['pid' => $pid] + $fields;
+                if ($skipAppendOrder) {
+                    $clean[$table][$id][RecordsApplyDatamapMeta::SKIP_APPEND_ORDER] = 1;
+                }
                 if (!$isNew) {
                     $existing[] = (int) $id;
                 }
@@ -607,6 +717,32 @@ readonly class RecordsApplyPreflight
      * so strict mode has to ask first: exclude fields the group did not allow, admin-only fields, select values
      * behind authMode, and the page types (doktype) the group may use.
      */
+    /**
+     * @param int|string|null $pid placement from a new record, or null on update
+     */
+    private function resolvePageIdForFieldValues(string $table, string $id, bool $isNew, int|string|null $pid): int
+    {
+        if ($table !== 'tt_content') {
+            return 0;
+        }
+
+        if ($isNew) {
+            if (is_int($pid) && $pid > 0) {
+                return $pid;
+            }
+
+            return 0;
+        }
+
+        if (!ctype_digit($id)) {
+            return 0;
+        }
+
+        $row = $this->recordService->findByUid($table, (int) $id, ['pid']);
+
+        return is_array($row) ? (int) ($row['pid'] ?? 0) : 0;
+    }
+
     private static function userMayWrite(BackendUserAuthentication $backendUser, string $table, string $field, mixed $value): bool
     {
         $column = $GLOBALS['TCA'][$table]['columns'][$field] ?? null;
@@ -652,6 +788,62 @@ readonly class RecordsApplyPreflight
         return null;
     }
 
+    /**
+     * @param array<string, mixed> $where
+     */
+    private function validateRelationUidList(
+        string $table,
+        string $fieldName,
+        string $normalized,
+        array $where,
+        RecordsApplyProblems $problems,
+    ): bool {
+        $config = $this->tcaSchemaService->getColumnFieldConfig($table, $fieldName);
+        $foreignTable = is_array($config) && is_string($config['foreign_table'] ?? null) && $config['foreign_table'] !== ''
+            ? $config['foreign_table']
+            : null;
+        if ($foreignTable === null && is_array($config) && ($config['type'] ?? '') === 'category') {
+            $foreignTable = 'sys_category';
+        }
+        if ($foreignTable === null) {
+            return true;
+        }
+
+        /** @var list<int> $uids */
+        $uids = [];
+        foreach (explode(',', $normalized) as $item) {
+            $item = trim($item);
+            if ($item === '' || preg_match(self::NEW_ID, $item) === 1) {
+                continue;
+            }
+            if (ctype_digit($item)) {
+                $uids[] = (int) $item;
+                continue;
+            }
+            if (preg_match('/^[A-Za-z0-9_]+_(\d+)$/', $item, $match) === 1) {
+                $uids[] = (int) $match[1];
+            }
+        }
+
+        if ($uids === []) {
+            return true;
+        }
+
+        $found = $this->recordService->findExistingUids($foreignTable, $uids);
+        foreach (array_diff($uids, $found) as $missing) {
+            $problems->add($where + [
+                'error' => sprintf(
+                    'Related record %d for field "%s" was not found or is not accessible.',
+                    $missing,
+                    RecordsApplyProblems::safe($fieldName),
+                ),
+                'fields' => [RecordsApplyProblems::safe($fieldName)],
+            ]);
+        }
+
+        return array_diff($uids, $found) === [];
+    }
+
     /** @return string|null comma-separated list, or null when the value is not a valid uid list */
     private function normalizeList(mixed $value): ?string
     {
@@ -690,5 +882,137 @@ readonly class RecordsApplyPreflight
         }
 
         return implode(',', $normalized);
+    }
+
+    private function resolveLanguagePageId(string $table, int|string $pid): int
+    {
+        if (!is_int($pid)) {
+            return 0;
+        }
+
+        if ($pid > 0) {
+            return $pid;
+        }
+
+        if ($pid < 0) {
+            $sibling = $this->recordService->findByUid($table, -$pid, ['pid']);
+
+            return (int) ($sibling['pid'] ?? 0);
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param array<string, true> $newIdsOnParentTable
+     * @param array<string, true> $allNewIds
+     */
+    private function fileReferenceUidForeignError(
+        mixed $parentRef,
+        string $parentTable,
+        array $newIdsOnParentTable,
+        array $allNewIds,
+    ): ?string {
+        if (is_string($parentRef)) {
+            $trimmed = trim($parentRef);
+            if (preg_match(self::NEW_ID, $trimmed) === 1 && !isset($newIdsOnParentTable[$trimmed]) && isset($allNewIds[$trimmed])) {
+                return sprintf(
+                    'Field uid_foreign refers to NEW id %s, which is not created as a %s record in this call.',
+                    RecordsApplyProblems::safe($trimmed),
+                    RecordsApplyProblems::safe($parentTable),
+                );
+            }
+        }
+
+        $formatError = self::inlineForeignFieldError($parentRef, $newIdsOnParentTable, 'uid_foreign');
+        if ($formatError !== null) {
+            return $formatError;
+        }
+
+        $uid = null;
+        if (is_int($parentRef) && $parentRef > 0) {
+            $uid = $parentRef;
+        } elseif (is_string($parentRef)) {
+            $trimmed = trim($parentRef);
+            if (ctype_digit($trimmed)) {
+                $uid = (int) $trimmed;
+            }
+        }
+
+        if ($uid !== null && $this->recordService->findExistingUids($parentTable, [$uid]) === []) {
+            return sprintf(
+                'Field uid_foreign refers to %s uid %d, which was not found or is not accessible.',
+                RecordsApplyProblems::safe($parentTable),
+                $uid,
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, true> $allNewIds
+     */
+    private static function inlineForeignFieldError(mixed $parentRef, array $allNewIds, string $parentField): ?string
+    {
+        if (is_int($parentRef)) {
+            if ($parentRef <= 0) {
+                return sprintf(
+                    'Field %s must be a positive uid or a NEW id created in this call.',
+                    RecordsApplyProblems::safe($parentField),
+                );
+            }
+
+            return null;
+        }
+
+        if (!is_string($parentRef)) {
+            return sprintf(
+                'Field %s must be a uid or a NEW id created in this call.',
+                RecordsApplyProblems::safe($parentField),
+            );
+        }
+
+        $parentRef = trim($parentRef);
+        if ($parentRef === '') {
+            return sprintf(
+                'Field %s must be a positive uid or a NEW id created in this call.',
+                RecordsApplyProblems::safe($parentField),
+            );
+        }
+
+        if (str_starts_with($parentRef, 'NEW')) {
+            if (preg_match(self::NEW_ID, $parentRef) !== 1) {
+                return sprintf(
+                    'Field %s uses an invalid NEW id. Use letters and digits only after NEW, e.g. NEWpage1 (no underscore).',
+                    RecordsApplyProblems::safe($parentField),
+                );
+            }
+            if (!isset($allNewIds[$parentRef])) {
+                return sprintf(
+                    'Field %s refers to NEW id %s, which is not created in this call.',
+                    RecordsApplyProblems::safe($parentField),
+                    RecordsApplyProblems::safe($parentRef),
+                );
+            }
+
+            return null;
+        }
+
+        if (ctype_digit($parentRef)) {
+            if ((int) $parentRef <= 0) {
+                return sprintf(
+                    'Field %s must be a positive uid or a NEW id created in this call.',
+                    RecordsApplyProblems::safe($parentField),
+                );
+            }
+
+            return null;
+        }
+
+        return sprintf(
+            'Field %s must be a positive uid or a NEW id created in this call.',
+            RecordsApplyProblems::safe($parentField),
+        );
     }
 }

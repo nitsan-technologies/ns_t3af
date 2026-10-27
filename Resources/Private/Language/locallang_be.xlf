@@ -337,7 +337,7 @@
         <source>Default OAuth client ID: Suggested client identifier for documentation and dynamic registration.</source>
       </trans-unit>
       <trans-unit id="extmng.oauthDefaultRedirectUris" resname="extmng.oauthDefaultRedirectUris">
-        <source>Default OAuth redirect URIs: One allowed redirect URI per line for OAuth clients.</source>
+        <source>Default OAuth redirect URIs: One URI per line; leave empty to disable the allow-list. Use a trailing * for prefix rules (e.g. cursor://*).</source>
       </trans-unit>
       <trans-unit id="extmng.oauthDefaultScopes" resname="extmng.oauthDefaultScopes">
         <source>Default OAuth scopes: Space-separated default scopes (e.g. mcp:read mcp:write mcp:tools).</source>
@@ -1322,7 +1322,7 @@
         <source>Good news — no images are missing alt text in this storage.</source>
       </trans-unit>
       <trans-unit id="agent.result.nextAltTextHint" resname="agent.result.nextAltTextHint">
-        <source>Next: use “Generate file metadata (alt, title)” or ask to write alt text for a specific file.</source>
+        <source>Next: call generate file metadata for each listed file, one file at a time. After Apply, continue with the next. Skip files that already have alt text.</source>
       </trans-unit>
       <trans-unit id="agent.result.folderContents" resname="agent.result.folderContents">
         <source>This folder contains %1$s file(s) and %2$s subfolder(s).</source>
@@ -1527,6 +1527,9 @@
       </trans-unit>
       <trans-unit id="agent.plan.unsupportedDynamicOperation" resname="agent.plan.unsupportedDynamicOperation">
         <source>Unsupported dynamic operation: %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.turn.confirmAccessibilityScan" resname="agent.turn.confirmAccessibilityScan">
+        <source>Please confirm to start the scan.</source>
       </trans-unit>
       <trans-unit id="agent.turn.notAvailableInAgent" resname="agent.turn.notAvailableInAgent">
         <source>%1$s is not available in the AI Agent yet. Use the MCP Playground or the extension backend module instead.</source>
@@ -2269,6 +2272,12 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       </trans-unit>
       <trans-unit id="agent.arg.fileUids" resname="agent.arg.fileUids">
         <source>Files</source>
+      </trans-unit>
+      <trans-unit id="agent.arg.all" resname="agent.arg.all">
+        <source>All pending drafts</source>
+      </trans-unit>
+      <trans-unit id="agent.arg.draftCount" resname="agent.arg.draftCount">
+        <source>Drafts</source>
       </trans-unit>
       <trans-unit id="agent.arg.folder" resname="agent.arg.folder">
         <source>Folder</source>

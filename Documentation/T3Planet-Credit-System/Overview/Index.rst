@@ -21,12 +21,21 @@ T3Planet Credits is T3Planet’s managed AI access in AI Foundation (``ns_t3af``
 * AI Foundation sends those calls to T3Planet
 * Usage is counted in **credits**
 
+.. tip::
+
+   **You can buy credits from the TYPO3 backend too.** Open
+   :guilabel:`AI Foundation > AI Providers` and use :guilabel:`AI Credit
+   Bundles`. See :ref:`Buy credits <t3planet-credits-buy>`.
+
 Requirements
 ============
 
 * AI Foundation (``EXT:ns_t3af``) installed and active
 * Server can reach the T3Planet Credits API (for Credits mode)
 * No product licence key is required for AI Foundation itself
+* Your name and email, if TYPO3 asks for them when you start the free trial
+* A **claim code** only if you bought credits on t3planet.de, or you are
+  recovering an account (see :ref:`Use a claim code <t3planet-credits-claim-code>`)
 
 What's covered
 ==============
@@ -58,9 +67,19 @@ Own API Keys vs Credits
 Selected vs Active
 ==================
 
-* **Selected** — Credits card chosen; token not yet issued. Complete
-  :guilabel:`Activate` to finish setup.
-* **Active** — License available and token ready. AI can run through Credits.
+* **Selected** — Credits card chosen; no access token yet. Complete
+  :guilabel:`Activate` (free trial) or :ref:`use a claim code
+  <t3planet-credits-claim-code>` (credits you bought) to finish setup.
+* **Active** — This site is connected to a credits account and the access token
+  is stored. AI can run through Credits. No licence key is involved.
+
+Where credits come from
+=======================
+
+* Free trial credits when you click :guilabel:`Activate`
+* Plans and top-ups bought in the backend (:ref:`Buy credits <t3planet-credits-buy>`)
+* Credits bought on https://t3planet.de/ki-credits and connected with a claim
+  code (:ref:`Use a claim code <t3planet-credits-claim-code>`)
 
 When to use Credits
 ===================

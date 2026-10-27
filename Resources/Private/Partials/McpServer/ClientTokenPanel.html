@@ -4,7 +4,7 @@
     <f:if condition="{tokenState.active} == 1">
         <f:then>
             <div class="aiu-flash aiu-flash--success aiu-mcp-client-token__active">
-                <strong><f:translate key="{ll}:module.mcpServer.clientToken.active" arguments="{0: clientKey}" /></strong>
+                <strong><f:translate key="{ll}:module.mcpServer.clientToken.active" arguments="{0: tokenState.displayName}" /></strong>
             </div>
             <div class="aiu-mcp-field-row">
                 <label class="aiu-field-label"><f:translate key="{ll}:module.mcpServer.clientToken.bearerLabel" /></label>
@@ -14,7 +14,7 @@
                         data-copy-target="client-token-{clientKey}"
                         data-client-token-value="{clientKey}"
                     ><f:if condition="{tokenState.preview} != ''"><f:then>{tokenState.preview}</f:then><f:else>…</f:else></f:if></code>
-                    <button type="button" class="btn btn-sm btn-default" data-copy="client-token-{clientKey}">
+                    <button type="button" class="btn btn-sm btn-default d-none" data-copy="client-token-{clientKey}" data-copy-when-stored="1">
                         <f:translate key="{ll}:module.mcpServer.action.copyToken" />
                     </button>
                 </div>
@@ -23,10 +23,10 @@
         <f:else>
             <div class="aiu-flash aiu-flash--info aiu-mcp-client-token__missing">
                 <p class="aiu-mcp-client-token__missing-text">
-                    <f:translate key="{ll}:module.mcpServer.clientToken.missing" arguments="{0: clientKey}" />
+                    <f:translate key="{ll}:module.mcpServer.clientToken.missing" arguments="{0: tokenState.displayName}" />
                 </p>
                 <button type="button" class="btn btn-primary aiu-mcp-client-token__create" data-action="issue-client-token" data-client="{clientKey}">
-                    <f:translate key="{ll}:module.mcpServer.clientToken.create" arguments="{0: clientKey}" />
+                    <f:translate key="{ll}:module.mcpServer.clientToken.create" arguments="{0: tokenState.displayName}" />
                 </button>
             </div>
         </f:else>

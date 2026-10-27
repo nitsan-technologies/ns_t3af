@@ -20,8 +20,10 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Service;
 
 use Doctrine\DBAL\ParameterType;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
 /**
  * @internal
@@ -54,5 +56,49 @@ readonly class WorkspaceVersionService
             ->fetchAssociative();
 
         return $row !== false ? $row : null;
+    }
+
+    public function assertStageExistsForWorkspace(int $stageId, int $workspaceId): void
+    {
+        if ($stageId === -20) {
+            throw new \InvalidArgumentException(
+                'Stage -20 is publish-now in the TYPO3 backend and is not stored on the record. Use workspace_publish instead.',
+            );
+        }
+
+        if (!ExtensionManagementUtility::isLoaded('workspaces')) {
+            throw new \InvalidArgumentException('cms-workspaces extension is not installed.');
+        }
+
+        if (in_array($stageId, [0, -10], true)) {
+            return;
+        }
+
+        if ($stageId < 0) {
+            throw new \InvalidArgumentException('stage must be 0, -10, or a positive sys_workspace_stage uid.');
+        }
+
+        $stageRow = BackendUtility::getRecord('sys_workspace_stage', $stageId);
+        if (!is_array($stageRow)) {
+            throw new \InvalidArgumentException('Workspace stage ' . $stageId . ' does not exist.');
+        }
+
+        $stageWorkspaceId = (int) ($stageRow['parentid'] ?? 0);
+        if ($workspaceId > 0 && $stageWorkspaceId !== $workspaceId) {
+            throw new \InvalidArgumentException(
+                'Workspace stage ' . $stageId . ' does not belong to workspace ' . $workspaceId . '.',
+            );
+        }
+    }
+
+    public function assertUserMaySetStage(BackendUserAuthentication $backendUser, int $stageId): void
+    {
+        if ($backendUser->isAdmin()) {
+            return;
+        }
+
+        if (!$backendUser->workspaceCheckStageForCurrent($stageId)) {
+            throw new \InvalidArgumentException('Stage not accessible to current user.');
+        }
     }
 }

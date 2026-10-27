@@ -23,6 +23,7 @@ use Mcp\Server;
 use NITSAN\NsT3AF\Mcp\Prompt\McpDynamicPromptRegistrar;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPromptTemplateRepository;
 use NITSAN\NsT3AF\Mcp\Service\Backend\McpPromptTemplateService;
+use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use PHPUnit\Framework\TestCase;
 
 final class McpDynamicPromptRegistrarTest extends TestCase
@@ -48,11 +49,21 @@ final class McpDynamicPromptRegistrarTest extends TestCase
             ],
         ]);
 
-        $registrar = new McpDynamicPromptRegistrar($service, $repository);
+        $registrar = new McpDynamicPromptRegistrar($service, $repository, $this->createMock(RecordService::class));
         $builder = Server::builder();
         $registrar->register($builder);
 
         $server = $builder->build();
         self::assertInstanceOf(\Mcp\Server::class, $server);
+
+        $rendered = McpDynamicPromptRegistrar::renderTemplateBody(
+            'Brief {{brief}} on page {{pid}}',
+            [
+                ['name' => 'brief', 'required' => true, 'description' => ''],
+                ['name' => 'pid', 'required' => true, 'description' => ''],
+            ],
+            ['brief' => 'QA', 'pid' => '123'],
+        );
+        self::assertSame('Brief QA on page 123', $rendered);
     }
 }

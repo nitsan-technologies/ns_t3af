@@ -76,6 +76,18 @@ final class CreditsApiErrorParserTest extends TestCase
         self::assertSame('https://example.test/top-up', $e->topupUrl);
     }
 
+    public function testHumanReadableFlatErrorUsesApiErrorCode(): void
+    {
+        $e = CreditsApiErrorParser::toException([
+            'status' => false,
+            'error' => 'Internal error',
+            'message' => 'Something broke',
+        ], 500);
+
+        self::assertSame(CreditsApiErrorCodes::API_ERROR, $e->errorCode);
+        self::assertSame('Something broke', $e->getMessage());
+    }
+
     public function testAdditionalExtraDoesNotOverrideParsedFields(): void
     {
         $e = CreditsApiErrorParser::toException(

@@ -20,7 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Service\RecordsApply;
 
 /**
- * Columns on a child table that an inline parent uses as foreign_field.
+ * Columns on a child table that point at a parent record (inline foreign_field or file uid_foreign).
  */
 final class InlineForeignFields
 {
@@ -46,7 +46,8 @@ final class InlineForeignFields
                     continue;
                 }
                 $config = $column['config'] ?? [];
-                if (!is_array($config) || ($config['type'] ?? '') !== 'inline') {
+                $type = $config['type'] ?? '';
+                if (!is_array($config) || !in_array($type, ['inline', 'file'], true)) {
                     continue;
                 }
                 if (($config['foreign_table'] ?? '') !== $childTable) {

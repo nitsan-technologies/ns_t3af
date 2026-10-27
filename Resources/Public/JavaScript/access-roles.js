@@ -1117,8 +1117,12 @@ function initAccessRolesRoot(root) {
     return value.slice(0, maxLen - 1) + '…';
   }
 
-  function matrixCellDash() {
-    return '<span class="aiu-ar-matrix-cell aiu-ar-matrix-cell--none" aria-label="No access">—</span>';
+  function matrixCellNotConfigured() {
+    return '<span class="aiu-ar-matrix-cell aiu-ar-matrix-cell--none" aria-label="Not configured">—</span>';
+  }
+
+  function matrixCellOff() {
+    return '<span class="aiu-ar-matrix-cell aiu-ar-matrix-cell--none" aria-label="Off">—</span>';
   }
 
   function matrixCheckMarkHtml(title = 'On') {
@@ -1131,7 +1135,7 @@ function initAccessRolesRoot(root) {
 
   function matrixFeatureBadge(level, featureId) {
     if (!level || level === 'disabled') {
-      return matrixCellDash();
+      return matrixCellOff();
     }
     if (featureId === 'bulkOps') {
       const bulkMap = {
@@ -1140,7 +1144,7 @@ function initAccessRolesRoot(root) {
       };
       const entry = bulkMap[level];
       if (!entry) {
-        return matrixCellDash();
+        return matrixCellOff();
       }
       return `<span class="badge ${entry[1]}">${escapeHtml(entry[0])}</span>`;
     }
@@ -1154,7 +1158,7 @@ function initAccessRolesRoot(root) {
 
   function matrixRecordBadge(level) {
     if (!level || level === 'none') {
-      return matrixCellDash();
+      return matrixCellOff();
     }
     if (level === 'readwrite') {
       return '<span class="badge badge-success">R+W</span>';
@@ -1162,7 +1166,7 @@ function initAccessRolesRoot(root) {
     if (level === 'read') {
       return '<span class="badge badge-info">Read</span>';
     }
-    return matrixCellDash();
+    return matrixCellOff();
   }
 
   function matrixAuditBadge(policy) {
@@ -1177,7 +1181,7 @@ function initAccessRolesRoot(root) {
 
   function matrixCreditsCell(row) {
     if (!row.configured) {
-      return matrixCellDash();
+      return matrixCellNotConfigured();
     }
     const limits = row.limits ?? {};
     if (limits.creditCapEnabled) {
@@ -1188,21 +1192,21 @@ function initAccessRolesRoot(root) {
 
   function matrixAdminModuleCell(row, moduleKey) {
     if (!row.configured) {
-      return matrixCellDash();
+      return matrixCellNotConfigured();
     }
-    return row.modules?.[moduleKey] ? matrixCellOn('Module enabled') : matrixCellDash();
+    return row.modules?.[moduleKey] ? matrixCellOn('Module enabled') : matrixCellOff();
   }
 
   function matrixChildModuleCell(row, moduleKey) {
     if (!row.configured) {
-      return matrixCellDash();
+      return matrixCellNotConfigured();
     }
-    return row.modules?.[moduleKey] ? matrixCellOn('Extension enabled') : matrixCellDash();
+    return row.modules?.[moduleKey] ? matrixCellOn('Extension enabled') : matrixCellOff();
   }
 
   function matrixFeatureCell(row, featureId, moduleKey) {
     if (!row.configured) {
-      return matrixCellDash();
+      return matrixCellNotConfigured();
     }
     const moduleOff = moduleKey && !row.modules?.[moduleKey];
     const level = row.features?.[featureId] ?? 'disabled';
@@ -1214,7 +1218,7 @@ function initAccessRolesRoot(root) {
 
   function matrixRecordCell(row, recordId, moduleKey) {
     if (!row.configured) {
-      return matrixCellDash();
+      return matrixCellNotConfigured();
     }
     const moduleOff = moduleKey && !row.modules?.[moduleKey];
     const level = row.records?.[recordId] ?? 'none';
@@ -1247,7 +1251,7 @@ function initAccessRolesRoot(root) {
     const headerRow1 = `
       <tr class="aiu-ar-matrix-head-row">
         <th colspan="2" class="aiu-ar-matrix-section aiu-ar-matrix-section--group">Group</th>
-        <th colspan="${adminCount}" class="aiu-ar-matrix-section aiu-ar-matrix-section--admin">Admin Modules</th>
+        <th colspan="${adminCount}" class="aiu-ar-matrix-section aiu-ar-matrix-section--admin">Backend module tabs</th>
         <th colspan="${safetyCount}" class="aiu-ar-matrix-section aiu-ar-matrix-section--safety">AI Safety</th>
       </tr>
       <tr class="aiu-ar-matrix-col-row">
@@ -1261,8 +1265,10 @@ function initAccessRolesRoot(root) {
 
     const body = rows.map((row) => {
       const limits = row.limits ?? {};
-      const workspace = row.configured && limits.workspaceEnforcement ? matrixCellOn('Workspace enforced') : matrixCellDash();
-      const audit = row.configured ? matrixAuditBadge(limits.loggingPolicy ?? 'always') : matrixCellDash();
+      const workspace = !row.configured
+        ? matrixCellNotConfigured()
+        : (limits.workspaceEnforcement ? matrixCellOn('Workspace enforced') : matrixCellOff());
+      const audit = row.configured ? matrixAuditBadge(limits.loggingPolicy ?? 'always') : matrixCellNotConfigured();
       return `
         <tr class="${row.configured ? '' : 'aiu-ar-dim'}">
           ${renderMatrixGroupCell(row)}
@@ -1330,7 +1336,7 @@ function initAccessRolesRoot(root) {
       <div class="aiu-ar-matrix-legend">
         <span>${matrixCheckMarkHtml('Use / Read / On')} Use / Read / On</span>
         <span><span class="badge badge-primary">Mgr</span> Manage / R+W</span>
-        <span><span class="aiu-ar-matrix-cell aiu-ar-matrix-cell--none">—</span> No access</span>
+        <span><span class="aiu-ar-matrix-cell aiu-ar-matrix-cell--none" aria-label="Not configured">—</span> Not configured / off</span>
       </div>`;
   }
 

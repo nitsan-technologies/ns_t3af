@@ -40,6 +40,7 @@ readonly class OAuthClientLabelResolver
     /** @var list<array{pattern: string, label: string}> */
     private const REDIRECT_PATTERNS = [
         ['pattern' => 'anysphere.cursor-mcp', 'label' => 'Cursor'],
+        ['pattern' => 'cursor.com/agents/mcp', 'label' => 'Cursor'],
         ['pattern' => 'cursor://', 'label' => 'Cursor'],
         ['pattern' => 'claude', 'label' => 'Claude Desktop'],
         ['pattern' => 'vscode', 'label' => 'VS Code'],

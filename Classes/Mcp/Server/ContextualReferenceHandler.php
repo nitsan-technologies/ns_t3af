@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Mcp\Server;
 use Mcp\Capability\Registry\ElementReference;
 use Mcp\Capability\Registry\ReferenceHandlerInterface;
 use NITSAN\NsT3AF\Mcp\Service\McpInvocationContext;
+use NITSAN\NsT3AF\Mcp\Tool\Workspace\WorkspaceSwitchTool;
 
 /**
  * Applies global MCP tool context (workspace, AI provider) before delegating to the SDK handler.
@@ -39,11 +40,26 @@ final readonly class ContextualReferenceHandler implements ReferenceHandlerInter
     public function handle(ElementReference $reference, array $arguments): mixed
     {
         try {
-            $this->invocationContext->applyFromArguments($arguments);
+            $this->invocationContext->applyFromArguments(
+                $arguments,
+                !$this->isPersistedWorkspacePreferenceTool($reference),
+            );
 
             return $this->inner->handle($reference, $arguments);
         } finally {
             $this->invocationContext->clear();
         }
+    }
+
+    private function isPersistedWorkspacePreferenceTool(ElementReference $reference): bool
+    {
+        $handler = $reference->handler;
+        if (!is_array($handler) || !isset($handler[0])) {
+            return false;
+        }
+
+        $class = is_object($handler[0]) ? $handler[0]::class : $handler[0];
+
+        return is_string($class) && is_a($class, WorkspaceSwitchTool::class, true);
     }
 }

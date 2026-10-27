@@ -37,26 +37,30 @@ use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Contract\McpPlannableToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\FileFieldAttachmentValidator;
 use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\RecordPayloadNormalizer;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyAudit;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyDatamapMeta;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyResult;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyService;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyValidationException;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
+use NITSAN\NsT3AF\Mcp\Service\RecordSiteLanguageGuard;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Resource\ResourceFactory;
 
 /**
  * One record per call. The write itself runs on the records_apply engine (preflight, one DataHandler
  * run in a transaction, audit, AI Label marking), so a single write and a batch behave the same way.
  * Not strict by default: fields that cannot be written are dropped and reported in "ignoredFields", as before.
  * With strict=true the call is refused instead, and names those fields.
- * A positive pid creates the record as the first child of that page. A negative pid places it directly after that record.
+ * New records on a page are appended after existing siblings (records_apply). Use afterUid, beforeUid, or a negative pid for explicit placement; a positive pid alone does not mean "first child" for content.
  * File fields are attached afterwards, outside that transaction.
  */
 #[McpToolSeverity(ToolSeverity::Write)]
@@ -81,8 +85,11 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         private RecordService $recordService,
         TcaSchemaService $tcaSchemaService,
         private RecordsApplyService $recordsApply,
+        private FileFieldAttachmentValidator $fileFieldAttachmentValidator,
+        private ResourceFactory $resourceFactory,
         private ?PageAccessService $pageAccess = null,
         private ?RecordsApplyFileAccess $fileAccess = null,
+        private ?RecordSiteLanguageGuard $siteLanguageGuard = null,
     ) {
         $this->normalizer = new RecordPayloadNormalizer($tcaSchemaService);
     }
@@ -138,11 +145,11 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         name: 'write_table',
         description: 'Create, update, or delete records in a TYPO3 table via DataHandler.'
             . ' Use table_schema first to discover valid field names and types.'
-            . ' For create, include "pid" in the JSON data object. A positive pid creates the record as the first child of that page.'
-            . ' A negative pid (-uid) creates it directly after that record.'
-            . ' To place a new record directly after an existing one, pass afterUid of that record. afterUid is used instead of pid.'
+            . ' For create, include "pid" in the JSON data object. New records are appended on their page in send order unless you pass afterUid, beforeUid, or a negative pid (-uid) to place after a sibling.'
+            . ' To place a new record directly after an existing one, pass afterUid of that record (afterUid overrides pid).'
             . ' To place a new record directly before an existing one, pass beforeUid of that record. beforeUid is used instead of pid.'
-            . ' "Last under a page" is afterUid of that page\'s last child. "Subpage of page 68" is {"pid": 68}.'
+            . ' "Last under a page" for content: afterUid of the last tt_content on that page (or append with pid only).'
+            . ' New pages under a parent append after existing subpages unless you pass afterUid/beforeUid. "Subpage of page 68" is {"pid": 68}.'
             . ' For update/delete, pass the record uid.'
             . ' strict=true refuses the whole call and names the fields that are unknown or that you may not change; by default they are dropped and reported in "ignoredFields".'
             . ' Category/MM relations (categories, authors, tags, …) accept a comma-separated UID string, e.g. "126" or "8,12".'
@@ -193,6 +200,11 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             $payload = self::decodeData($data, $action);
         } catch (\InvalidArgumentException $exception) {
             return $this->encodeError($exception->getMessage());
+        }
+
+        if ($action === 'create') {
+            $beforeUid = (int) ($beforeUid > 0 ? $beforeUid : ($payload['beforeUid'] ?? 0));
+            $afterUid = (int) ($afterUid > 0 ? $afterUid : ($payload['afterUid'] ?? 0));
         }
 
         return match ($action) {
@@ -541,7 +553,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             throw new \InvalidArgumentException('Record not found: ' . $tableName . ' uid ' . $uid);
         }
 
-        $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
+        $filteredData = $this->normalizer->filterWritableFieldsForUpdate($tableName, $payload);
         if ($filteredData === []) {
             throw new \InvalidArgumentException($this->normalizer->noWritableFieldsMessage($tableName, $payload, $filteredData));
         }
@@ -886,20 +898,37 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     {
         $beforeUid = $beforeUid > 0 ? $beforeUid : (int) ($payload['beforeUid'] ?? 0);
         $afterUid = $afterUid > 0 ? $afterUid : (int) ($payload['afterUid'] ?? 0);
+        if ($beforeUid > 0 && $afterUid > 0) {
+            throw new \InvalidArgumentException('Pass either beforeUid or afterUid for placement, not both.');
+        }
         if ($afterUid > 0 && $beforeUid <= 0) {
             return -$afterUid;
         }
         if ($beforeUid > 0) {
             $contentPid = isset($payload['pid']) && is_numeric($payload['pid']) ? (int) $payload['pid'] : 0;
             // "Before 773" for a content element means that element, never the page with uid 773.
-            // Uids collide across tables: only treat beforeUid as a CE when it sits on the same page as pid.
             if ($tableName !== 'pages' && $this->recordService->findExistingUids($tableName, [$beforeUid]) !== []) {
-                if ($contentPid <= 0) {
-                    return $this->recordService->targetBeforeRecord($tableName, $beforeUid);
-                }
                 $beforeRecord = $this->recordService->findByUid($tableName, $beforeUid, ['pid']);
-                if (is_array($beforeRecord) && (int) ($beforeRecord['pid'] ?? -1) === $contentPid) {
-                    return $this->recordService->targetBeforeRecord($tableName, $beforeUid);
+                if (is_array($beforeRecord)) {
+                    $recordPid = (int) ($beforeRecord['pid'] ?? -1);
+                    if ($contentPid <= 0 || $recordPid === $contentPid) {
+                        return $this->recordService->targetBeforeRecord($tableName, $beforeUid);
+                    }
+                    if ($tableName === 'tt_content') {
+                        $page = $this->recordService->findByUid('pages', $contentPid, ['pid']);
+                        if (is_array($page) && (int) ($page['pid'] ?? -1) === $beforeUid) {
+                            return $contentPid;
+                        }
+
+                        throw new \InvalidArgumentException(sprintf(
+                            'beforeUid %d is a content element on page %d, but pid is %d. Use a content element on the same page.',
+                            $beforeUid,
+                            $recordPid,
+                            $contentPid,
+                        ));
+                    }
+
+                    return $contentPid;
                 }
             }
             // "Before the first element on this page" with beforeUid=<parent page> + pid=<this page>:
@@ -909,6 +938,16 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
                 if (is_array($page) && (int) ($page['pid'] ?? -1) === $beforeUid) {
                     return $contentPid;
                 }
+
+                if ($this->recordService->findExistingUids('pages', [$beforeUid]) !== []) {
+                    return $this->recordService->targetBeforePage($beforeUid);
+                }
+
+                throw new \InvalidArgumentException(sprintf(
+                    'There is no %s record with uid %d. beforeUid must be an existing content element on the same page, a parent page uid when pid is a direct child page, or an existing page uid for page-tree placement.',
+                    $tableName,
+                    $beforeUid,
+                ));
             }
 
             return $this->recordService->targetBeforePage($beforeUid);
@@ -923,6 +962,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     /** @param array<string, mixed> $payload */
     private function create(string $tableName, array $payload, bool $strict = false, int $beforeUid = 0, int $afterUid = 0): string
     {
+        $placementViaBeforeUid = $beforeUid > 0 || (int) ($payload['beforeUid'] ?? 0) > 0;
         try {
             if ($tableName === 'tx_news_domain_model_news') {
                 $payload = $this->withNewsStoragePid($payload);
@@ -936,6 +976,13 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             return $this->encodeError(PageAccessService::ACCESS_DENIED_MESSAGE);
         }
         unset($payload['pid']);
+
+        try {
+            $this->siteLanguageGuard?->assertCreateNotLocalizedRecord($tableName, $payload);
+            $this->siteLanguageGuard?->assertCreateLanguageAllowed($tableName, $payload, $pid);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->encodeError($exception->getMessage());
+        }
 
         [$payload, $fileFields] = $this->normalizer->extractFileFields($tableName, $payload);
         $payload = $this->normalizer->normalizeRelationUidListFields($tableName, $payload);
@@ -953,6 +1000,10 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         if ($unreadable !== null) {
             return $this->encodeError($unreadable);
         }
+        $disallowed = $this->disallowedFileField($tableName, $fileFields);
+        if ($disallowed !== null) {
+            return $this->encodeError($disallowed);
+        }
 
         if ($filteredData === [] && $fileFields === []) {
             return $this->encodeError(
@@ -962,7 +1013,11 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         }
 
         try {
-            $result = $this->write([$tableName => [self::NEW_ID => ['pid' => $pid] + $filteredData]], [], $strict);
+            $createRow = ['pid' => $pid] + $filteredData;
+            if ($placementViaBeforeUid) {
+                $createRow[RecordsApplyDatamapMeta::SKIP_APPEND_ORDER] = 1;
+            }
+            $result = $this->write([$tableName => [self::NEW_ID => $createRow]], [], $strict);
             $newUid = $result->created[self::NEW_ID] ?? 0;
             if ($newUid <= 0) {
                 throw new \RuntimeException('Failed to create record: no uid returned', 1712000020);
@@ -1010,7 +1065,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
                 return $this->encodeError('Record not found: ' . $tableName . ' uid ' . $record['uid'] . '. Nothing was written.');
             }
             [$fields, $fileFields] = $this->normalizer->extractFileFields($tableName, $record['fields']);
-            $filteredData = $this->normalizer->filterWritableFields($tableName, $fields);
+            $filteredData = $this->normalizer->filterWritableFieldsForUpdate($tableName, $fields);
             if ($filteredData === [] && $fileFields === []) {
                 return $this->encodeError('No writable fields for ' . $tableName . ' uid ' . $record['uid'] . '. Nothing was written.');
             }
@@ -1052,7 +1107,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
 
         [$payload, $fileFields] = $this->normalizer->extractFileFields($tableName, $payload);
         $payload = $this->normalizer->normalizeRelationUidListFields($tableName, $payload);
-        $filteredData = $this->normalizer->filterWritableFields($tableName, $payload);
+        $filteredData = $this->normalizer->filterWritableFieldsForUpdate($tableName, $payload);
         $ignoredFields = $this->normalizer->ignoredFields($payload, $filteredData);
 
         if ($strict && $ignoredFields !== []) {
@@ -1065,6 +1120,10 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         $unreadable = $this->unreadableFile($fileFields);
         if ($unreadable !== null) {
             return $this->encodeError($unreadable);
+        }
+        $disallowed = $this->disallowedFileField($tableName, $fileFields);
+        if ($disallowed !== null) {
+            return $this->encodeError($disallowed);
         }
 
         if ($filteredData === [] && $fileFields === []) {
@@ -1171,7 +1230,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     private function refused(\Throwable $exception): string
     {
         if ($exception instanceof RecordsApplyValidationException) {
-            throw new ToolCallException($this->describe($exception), 1790500006, $exception);
+            throw new ToolCallException($this->describe($exception), $exception->getToolResponseCode(), $exception);
         }
 
         if ($exception instanceof ToolCallException
@@ -1213,6 +1272,34 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
     /**
      * The first file reference that points at a file the backend user may not read, as an error message.
      *
+     * @param array<string, list<array{uid_local: int}>> $fileFields
+     */
+    /**
+     * @param array<string, list<array{uid_local: int}>> $fileFields
+     */
+    private function disallowedFileField(string $tableName, array $fileFields): ?string
+    {
+        foreach ($fileFields as $fieldName => $references) {
+            foreach ($references as $reference) {
+                $fileUid = (int) ($reference['uid_local'] ?? 0);
+                if ($fileUid <= 0) {
+                    continue;
+                }
+                try {
+                    $file = $this->resourceFactory->getFileObject($fileUid);
+                    $this->fileFieldAttachmentValidator->assertFileAllowedForField($tableName, $fieldName, $file);
+                } catch (\InvalidArgumentException $exception) {
+                    return $exception->getMessage();
+                } catch (\Throwable) {
+                    continue;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * @param array<string, list<array{uid_local: int}>> $fileFields
      */
     private function unreadableFile(array $fileFields): ?string

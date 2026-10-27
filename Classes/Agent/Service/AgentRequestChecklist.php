@@ -41,6 +41,12 @@ final class AgentRequestChecklist
         if ($message === '' || str_starts_with($message, '[The editor ')) {
             return [];
         }
+        if (self::isChatOnlyWritingRequest($message)) {
+            return [];
+        }
+        if (self::isFileMetadataOnlyRequest($message)) {
+            return [];
+        }
 
         $segments = self::requestSegments($message);
         // "Rename the header of element 5" changes an existing record; the word "header" must not turn it
@@ -195,6 +201,48 @@ final class AgentRequestChecklist
         }
 
         return false;
+    }
+
+    /**
+     * Copy in the agent panel only — no tt_content / page write. "Show me the text in the chat, don't save"
+     * must not open a Create Text step because the word "text" is not a CType request.
+     */
+    public static function isChatOnlyWritingRequest(string $message): bool
+    {
+        $s = mb_strtolower(trim($message));
+        if ($s === '') {
+            return false;
+        }
+        if (preg_match('/\b(?:don\'?t|do\s+not|without|never|nicht)\s+(?:save|store|persist|speicher\w*)\b/u', $s) === 1) {
+            return true;
+        }
+        if (preg_match('/\b(?:just|only|nur)\s+(?:show|give|tell|display|zeig\w*|schick\w*)\b/u', $s) === 1
+            && preg_match('/\b(?:in\s+(?:the\s+)?chat|here\b|in\s+this\s+(?:chat|window|panel)|hier\b|im\s+chat)\b/u', $s) === 1) {
+            return true;
+        }
+        if (preg_match('/\b(?:show|give)\s+me\s+the\s+text\s+(?:here|in\s+the\s+chat)\b/u', $s) === 1) {
+            return true;
+        }
+
+        return preg_match('/\b(?:in\s+the\s+chat|im\s+chat)\b/u', $s) === 1
+            && preg_match('/\b(?:don\'?t|not|nicht)\s+(?:save|add|create|insert|speicher\w*|erstell\w*)\b/u', $s) === 1;
+    }
+
+    /**
+     * Alt text, decorative mark, or folder drafts: existing files, never a new content element.
+     */
+    public static function isFileMetadataOnlyRequest(string $message): bool
+    {
+        if (
+            AgentRunner::isMissingAltTextRequest($message)
+            || AgentRunner::isDecorativeImageRequest($message)
+            || AgentRunner::isQueueFolderAltTextRequest($message)
+        ) {
+            return true;
+        }
+
+        return AgentToolTurnProcessor::requestedFileNames($message) !== []
+            && preg_match('/\b(alt\s*text|image\s*texts?|file\s*meta|metadata|bildtext\w*|alternativtext\w*|datei\s*meta)\b/iu', $message) === 1;
     }
 
     /**

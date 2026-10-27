@@ -28,6 +28,7 @@ use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Psr7\UriResolver;
 use GuzzleHttp\Psr7\Utils;
 use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyFileAccess;
+use NITSAN\NsT3AF\Mcp\Service\RecordsApply\RecordsApplyPayloadStore;
 use NITSAN\NsT3AF\Service\PublicUrlValidator;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -42,8 +43,11 @@ use TYPO3\CMS\Core\Resource\Index\FileIndexRepository;
 use TYPO3\CMS\Core\Resource\MimeTypeDetector;
 use TYPO3\CMS\Core\Resource\OnlineMedia\Helpers\OnlineMediaHelperRegistry;
 use TYPO3\CMS\Core\Resource\ResourceStorage;
+use TYPO3\CMS\Core\Resource\Security\FileNameValidator;
+use TYPO3\CMS\Core\Resource\Service\ResourceConsistencyService;
 use TYPO3\CMS\Core\Resource\StorageRepository;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
+use TYPO3\CMS\Core\Validation\ResultException;
 
 /**
  * Create-only FAL uploads for MCP: deny dangerous names, rename on conflict,
@@ -88,6 +92,7 @@ readonly class FileUploadService
         private PublicUrlValidator $publicUrlValidator,
         private McpPublicUrlService $mcpPublicUrlService,
         private ?RequestFactory $requestFactory = null,
+        private ?PublicHostnameResolverInterface $publicHostnameResolver = null,
     ) {}
 
     /**
@@ -133,15 +138,9 @@ readonly class FileUploadService
      */
     public function storeFile(string $tempPath, string $fileName, Folder $folder): array
     {
+        $this->assertUploadContentReady($tempPath, $fileName, $folder);
         $fileName = basename($fileName);
-        if ($fileName === '' || !str_contains($fileName, '.')) {
-            throw new \InvalidArgumentException(
-                'Could not determine a file name with an extension. Pass an explicit "fileName" like "image.jpg".',
-                1747320001,
-            );
-        }
-
-        $this->assertFileNameIsAllowed($fileName);
+        self::assertFileNameLength($fileName);
 
         $sha1 = sha1_file($tempPath);
         if ($sha1 === false) {
@@ -149,13 +148,15 @@ readonly class FileUploadService
         }
 
         $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-        self::assertFontFileIsGenuine($tempPath, $extension);
         $existingFile = $this->findIdenticalFileInFolder($folder->getStorage(), $sha1, $folder);
         if ($existingFile !== null) {
             self::assertDedupeNameMatchesExisting($existingFile, $fileName, $extension);
 
             return ['file' => $existingFile, 'deduplicated' => true];
         }
+
+        $storage = $folder->getStorage();
+        $this->registerResourceConsistencyExceptionForSmallTextUpload($storage, $tempPath, $fileName);
 
         try {
             $file = $folder->getStorage()->addFile($tempPath, $folder, $fileName, DuplicationBehavior::RENAME);
@@ -358,6 +359,118 @@ readonly class FileUploadService
     }
 
     /**
+     * Same blocked-name rules as {@see assertFileNameIsAllowed()} plus TYPO3's global allowed-extension list.
+     */
+    public function assertStorageAcceptsFileName(Folder $folder, string $fileName): void
+    {
+        $this->assertFileNameIsAllowed($fileName);
+        $this->assertFileNamePassesCoreDenyPattern($fileName);
+        $this->assertFileExtensionInGlobalAllowList($folder->getStorage(), basename($fileName));
+    }
+
+    /**
+     * Content checks that must pass before a single-use upload token is consumed.
+     */
+    public function assertUploadContentReady(string $tempPath, string $fileName, Folder $folder): void
+    {
+        $fileName = basename($fileName);
+        if ($fileName === '' || !str_contains($fileName, '.')) {
+            throw new \InvalidArgumentException(
+                'Could not determine a file name with an extension. Pass an explicit "fileName" like "image.jpg".',
+                1747320001,
+            );
+        }
+
+        $this->assertStorageAcceptsFileName($folder, $fileName);
+
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        self::assertFontFileIsGenuine($tempPath, $extension);
+        $this->assertResourceConsistencyForUpload($folder->getStorage(), $tempPath, $fileName);
+    }
+
+    private function assertFileNamePassesCoreDenyPattern(string $fileName): void
+    {
+        $validator = GeneralUtility::makeInstance(FileNameValidator::class);
+        if (!$validator->isValid(basename($fileName))) {
+            throw new \InvalidArgumentException(
+                'This file extension is not allowed by the storage configuration.',
+                1747320003,
+            );
+        }
+    }
+
+    private function assertFileExtensionInGlobalAllowList(ResourceStorage $storage, string $fileName): void
+    {
+        try {
+            GeneralUtility::makeInstance(ResourceConsistencyService::class)
+                ->validate($storage, '', $fileName);
+        } catch (ResultException $e) {
+            throw new \InvalidArgumentException(
+                self::formatResourceConsistencyFailure($e, $fileName),
+                1747320004,
+                $e,
+            );
+        }
+    }
+
+    private function assertResourceConsistencyForUpload(ResourceStorage $storage, string $tempPath, string $fileName): void
+    {
+        if ($this->isSmallUtf8TextUpload($fileName, $tempPath)) {
+            return;
+        }
+
+        try {
+            GeneralUtility::makeInstance(ResourceConsistencyService::class)
+                ->validate($storage, $tempPath, $fileName);
+        } catch (ResultException $e) {
+            throw new \InvalidArgumentException(
+                self::formatResourceConsistencyFailure($e, $fileName),
+                1747320004,
+                $e,
+            );
+        }
+    }
+
+    /**
+     * finfo often reports 1–2 byte UTF-8 as application/octet-stream; trust declared text extensions instead of padding content.
+     */
+    private function isSmallUtf8TextUpload(string $fileName, string $tempPath): bool
+    {
+        $extension = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+        if (!in_array($extension, ['txt', 'md', 'csv', 'tsv', 'json', 'xml', 'yml', 'yaml', 'css', 'svg'], true)) {
+            return false;
+        }
+
+        $size = filesize($tempPath);
+        if ($size === false || $size > 512) {
+            return false;
+        }
+
+        $content = file_get_contents($tempPath);
+
+        return $content !== false && $content !== '' && mb_check_encoding($content, 'UTF-8');
+    }
+
+    /**
+     * FAL re-validates MIME on addFile(); finfo still reports octet-stream for 1–2 byte UTF-8 text.
+     */
+    private function registerResourceConsistencyExceptionForSmallTextUpload(
+        ResourceStorage $storage,
+        string $tempPath,
+        string $fileName,
+    ): void {
+        if (!$this->isSmallUtf8TextUpload($fileName, $tempPath)) {
+            return;
+        }
+
+        GeneralUtility::makeInstance(ResourceConsistencyService::class)->addExceptionItem(
+            $storage,
+            $tempPath,
+            basename($fileName),
+        );
+    }
+
+    /**
      * @return array{
      *     uid: int,
      *     name: string,
@@ -403,6 +516,10 @@ readonly class FileUploadService
 
         $token = bin2hex(random_bytes(32));
         $validUntil = time() + $this->getUploadTokenTtl();
+        $sanitizedFileName = basename($fileName);
+        if ($sanitizedFileName !== '') {
+            self::assertFileNameLength($sanitizedFileName);
+        }
         $connection = $this->connectionPool->getConnectionForTable(self::TABLE_UPLOAD_TOKENS);
 
         $gcQuery = $connection->createQueryBuilder();
@@ -415,7 +532,7 @@ readonly class FileUploadService
             'be_user_uid' => $userUid,
             'storage_uid' => $folder->getStorage()->getUid(),
             'target_folder' => $folder->getIdentifier(),
-            'file_name' => basename($fileName),
+            'file_name' => $sanitizedFileName,
             'expires' => $validUntil,
             'used' => 0,
             'tstamp' => time(),
@@ -426,11 +543,52 @@ readonly class FileUploadService
     }
 
     /**
-     * Atomically consume a single-use upload token. Returns the DB row once, else null.
+     * Single-use upload token that stores JSON in var/transient (not public fileadmin).
      *
+     * @return array{token: string, validUntil: int, payloadId: string}
+     */
+    public function createRecordsApplyPayloadUploadToken(): array
+    {
+        $user = $GLOBALS['BE_USER'] ?? null;
+        $userUid = (int) ($user->user['uid'] ?? 0);
+        if ($userUid <= 0) {
+            throw new \InvalidArgumentException('No authenticated backend user for upload token creation.', 1747320009);
+        }
+
+        $payloadStore = GeneralUtility::makeInstance(RecordsApplyPayloadStore::class);
+        $payloadId = $payloadStore->generateId();
+        $token = bin2hex(random_bytes(32));
+        $validUntil = time() + $this->getUploadTokenTtl();
+
+        $connection = $this->connectionPool->getConnectionForTable(self::TABLE_UPLOAD_TOKENS);
+        $connection->insert(self::TABLE_UPLOAD_TOKENS, [
+            'token' => hash('sha256', $token),
+            'be_user_uid' => $userUid,
+            'storage_uid' => RecordsApplyPayloadStore::TOKEN_STORAGE_UID,
+            'target_folder' => RecordsApplyPayloadStore::TOKEN_FOLDER_PREFIX . $payloadId,
+            // Leave empty: payload id lives in target_folder; client supplies payload.json via ?fileName= or defaults in the endpoint.
+            'file_name' => '',
+            'expires' => $validUntil,
+            'used' => 0,
+            'tstamp' => time(),
+            'crdate' => time(),
+        ]);
+
+        return ['token' => $token, 'validUntil' => $validUntil, 'payloadId' => $payloadId];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    public function isRecordsApplyPayloadUploadTokenRow(array $row): bool
+    {
+        return GeneralUtility::makeInstance(RecordsApplyPayloadStore::class)->isPayloadUploadTokenRow($row);
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
-    public function consumeUploadToken(string $token): ?array
+    public function peekUploadToken(string $token): ?array
     {
         if ($token === '') {
             return null;
@@ -447,6 +605,22 @@ readonly class FileUploadService
             return null;
         }
 
+        return $row;
+    }
+
+    /**
+     * Atomically consume a single-use upload token. Returns the DB row once, else null.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function consumeUploadToken(string $token): ?array
+    {
+        $row = $this->peekUploadToken($token);
+        if ($row === null) {
+            return null;
+        }
+
+        $connection = $this->connectionPool->getConnectionForTable(self::TABLE_UPLOAD_TOKENS);
         $affected = $connection->executeStatement(
             'UPDATE ' . self::TABLE_UPLOAD_TOKENS . ' SET used = ?, tstamp = ? WHERE uid = ? AND used = 0',
             [time(), time(), (int) $row['uid']],
@@ -595,6 +769,8 @@ readonly class FileUploadService
         }
 
         if ($requestedFileName !== '') {
+            self::assertFileNameLength($requestedFileName);
+
             return [$tempPath, $requestedFileName];
         }
 
@@ -609,7 +785,19 @@ readonly class FileUploadService
             throw $e;
         }
 
+        self::assertFileNameLength($fileName);
+
         return [$tempPath, $fileName];
+    }
+
+    private static function assertFileNameLength(string $fileName): void
+    {
+        if (strlen($fileName) > 255) {
+            throw new \InvalidArgumentException(
+                'The file name must be at most 255 bytes.',
+                1747320026,
+            );
+        }
     }
 
     /**
@@ -698,6 +886,9 @@ readonly class FileUploadService
             'The URL points to a private or reserved network address and cannot be downloaded.',
             1747320019,
         );
+        if (in_array($host, ['localhost', 'localhost.localdomain', 'ip6-localhost', 'ip6-loopback'], true)) {
+            throw $privateAddress;
+        }
         if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
             if (!$this->publicUrlValidator->isPublicUrl($url)) {
                 throw $privateAddress;
@@ -707,10 +898,8 @@ readonly class FileUploadService
         }
 
         // Resolved once: the address that is checked is the address the download is pinned to.
-        $resolvedIp = gethostbyname($host);
-        if ($resolvedIp === $host) {
-            throw new \InvalidArgumentException('Could not resolve host "' . $host . '".', 1747320020);
-        }
+        $resolver = $this->publicHostnameResolver ?? new NativePublicHostnameResolver();
+        $resolvedIp = $resolver->resolve($host);
         $ipHost = str_contains($resolvedIp, ':') ? '[' . $resolvedIp . ']' : $resolvedIp;
         if (!$this->publicUrlValidator->isPublicUrl($scheme . '://' . $ipHost . '/')) {
             throw $privateAddress;

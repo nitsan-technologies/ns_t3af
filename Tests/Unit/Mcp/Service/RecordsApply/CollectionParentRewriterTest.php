@@ -89,6 +89,44 @@ final class CollectionParentRewriterTest extends TestCase
     }
 
     #[Test]
+    public function aFileReferenceParentFromThisBatchIsRewrittenOnUidForeign(): void
+    {
+        $GLOBALS['TCA']['pages'] = [
+            'columns' => [
+                'media' => [
+                    'config' => [
+                        'type' => 'file',
+                        'foreign_table' => 'sys_file_reference',
+                        'foreign_field' => 'uid_foreign',
+                    ],
+                ],
+            ],
+        ];
+        $GLOBALS['TCA']['sys_file_reference'] = [
+            'columns' => [
+                'uid_foreign' => ['config' => ['type' => 'passthrough']],
+                'uid_local' => ['config' => ['type' => 'passthrough']],
+            ],
+        ];
+
+        $updates = $this->rewriter->updates(
+            [
+                'pages' => [
+                    'NEWp' => ['pid' => 1, 'title' => 'With image'],
+                ],
+                'sys_file_reference' => [
+                    'NEWref' => ['uid_local' => 55, 'uid_foreign' => 'NEWp', 'tablenames' => 'pages', 'fieldname' => 'media'],
+                ],
+            ],
+            ['NEWp' => 99, 'NEWref' => 12],
+        );
+
+        self::assertSame([
+            ['table' => 'sys_file_reference', 'uid' => 12, 'field' => 'uid_foreign', 'value' => 99],
+        ], $updates);
+    }
+
+    #[Test]
     public function aPlainIntegerIncludingZeroIsLeftAlone(): void
     {
         $updates = $this->rewriter->updates(

@@ -40,6 +40,7 @@ use NITSAN\NsT3AF\Mcp\Tool\Pages\PagesGetTool;
 use NITSAN\NsT3AF\Mcp\Tool\Record\WriteTableTool;
 use NITSAN\NsT3AF\Mcp\Tool\Schema\TableSchemaTool;
 use NITSAN\NsT3AF\Mcp\Tool\Workspace\WorkspaceListTool;
+use NITSAN\NsT3AF\Mcp\Tool\Workspace\WorkspaceSwitchTool;
 use NITSAN\NsT3AF\Settings\ExtensionSettingsService;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -242,6 +243,108 @@ final class McpToolSchemaAugmenterTest extends TestCase
         self::assertFalse($schema['additionalProperties'] ?? true);
     }
 
+    #[Test]
+    public function pageIdsArrayUsesIntegerItemsNotStringDefault(): void
+    {
+        $augmenter = $this->createAugmenter();
+
+        $schema = $augmenter->augment([
+            'type' => 'object',
+            'properties' => [
+                'pageIds' => ['type' => 'array'],
+            ],
+        ]);
+
+        self::assertSame('integer', $schema['properties']['pageIds']['items']['type'] ?? null);
+    }
+
+    #[Test]
+    public function optionsArrayUsesStringItemsWhenUntyped(): void
+    {
+        $augmenter = $this->createAugmenter();
+
+        $schema = $augmenter->augment([
+            'type' => 'object',
+            'properties' => [
+                'options' => ['type' => 'array', 'items' => new \stdClass()],
+            ],
+        ]);
+
+        self::assertSame('string', $schema['properties']['options']['items']['type'] ?? null);
+    }
+
+    #[Test]
+    public function emptyObjectItemsSchemaInfersIntegerListForPageIds(): void
+    {
+        $augmenter = $this->createAugmenter();
+
+        $schema = $augmenter->augment([
+            'type' => 'object',
+            'properties' => [
+                'pageIds' => ['type' => 'array', 'items' => new \stdClass()],
+            ],
+        ]);
+
+        self::assertSame('integer', $schema['properties']['pageIds']['items']['type'] ?? null);
+    }
+
+    #[Test]
+    public function nullableIntegerParametersAreNormalizedForPortableClients(): void
+    {
+        $augmenter = $this->createAugmenter();
+        $schema = $augmenter->generateForClassHandler([NullablePageSchemaTestTool::class, 'execute']);
+        $pageId = $schema['properties']['pageId'] ?? [];
+        self::assertSame('integer', $pageId['type'] ?? null);
+        self::assertArrayNotHasKey('null', is_array($pageId['type'] ?? null) ? $pageId['type'] : []);
+        self::assertArrayNotHasKey('default', $pageId);
+    }
+
+    #[Test]
+    public function objectOrArrayOneOfCollapsesToArrayBranch(): void
+    {
+        $augmenter = $this->createAugmenter();
+        $schema = $augmenter->augment([
+            'type' => 'object',
+            'properties' => [
+                'payload' => [
+                    'oneOf' => [
+                        ['type' => 'object'],
+                        ['type' => 'array', 'items' => ['type' => 'string']],
+                    ],
+                ],
+            ],
+        ]);
+
+        self::assertArrayNotHasKey('oneOf', $schema['properties']['payload']);
+        self::assertSame('array', $schema['properties']['payload']['type'] ?? null);
+    }
+
+    #[Test]
+    public function workspaceSwitchSchemaUsesWorkspaceEnumOnNativeWorkspaceIdOnly(): void
+    {
+        $augmenter = $this->createAugmenter();
+
+        $schema = $augmenter->generateForHandler([WorkspaceSwitchTool::class, 'execute']);
+
+        self::assertSame([0, 3], $schema['properties']['workspaceId']['enum']);
+        self::assertStringContainsString('persist for MCP', $schema['properties']['workspaceId']['description']);
+        self::assertContains('workspaceId', $schema['required'] ?? []);
+    }
+
+    #[Test]
+    public function augmentFillsMissingPropertyDescriptions(): void
+    {
+        $augmenter = $this->createAugmenter();
+        $schema = $augmenter->augment([
+            'type' => 'object',
+            'properties' => [
+                'uid' => ['type' => 'integer'],
+            ],
+        ]);
+
+        self::assertSame('Record UID to act on.', $schema['properties']['uid']['description'] ?? '');
+    }
+
     private function createAugmenter(string $mode = McpModeResolver::MODE_CONTEXT): McpToolSchemaAugmenter
     {
         $workspaceList = $this->createMock(WorkspaceListService::class);
@@ -292,6 +395,15 @@ final class ParentPageSchemaTestTool implements McpDualModeContentToolInterface
         #[McpParentPageTarget]
         string $parentPageUrl = '',
     ): string {
+        return '';
+    }
+}
+
+final class NullablePageSchemaTestTool implements McpNonAiToolInterface
+{
+    #[McpTool(name: 'test_nullable_page_schema', description: 'Test nullable normalization.')]
+    public function execute(?int $pageId = null): string
+    {
         return '';
     }
 }

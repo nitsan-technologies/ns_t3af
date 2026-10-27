@@ -66,6 +66,26 @@ final class ExtensionSettingsServiceTest extends TestCase
         );
     }
 
+    public function testGetAllIgnorePidHonorsExplicitEmptyRedirectUriOverride(): void
+    {
+        $registry = $this->createMock(ExtensionSettingsRegistry::class);
+        $registry->method('isManaged')->with('ns_t3af')->willReturn(true);
+
+        $repository = $this->createMock(ExtensionSettingsRepository::class);
+        $repository->method('findAllByExtensionKey')->with('ns_t3af')->willReturn([
+            ['pid' => 1, 'extension_key' => 'ns_t3af', 'settings_json' => '{"oauthDefaultRedirectUris":""}'],
+        ]);
+
+        $schemaService = $this->createMock(ExtensionSettingsSchemaService::class);
+        $schemaService->method('getDefaults')->with('ns_t3af')->willReturn([
+            'oauthDefaultRedirectUris' => 'https://claude.ai/oauth/callback',
+        ]);
+
+        $service = $this->createService($registry, $repository, $schemaService);
+
+        self::assertSame('', $service->getAllIgnorePid('ns_t3af')['oauthDefaultRedirectUris']);
+    }
+
     public function testGetAllMergesSchemaDefaultsWithStoredValues(): void
     {
         $registry = $this->createMock(ExtensionSettingsRegistry::class);

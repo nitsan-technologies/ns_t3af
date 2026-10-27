@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Mcp\Tool\File;
 
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
+use NITSAN\NsT3AF\Mcp\Service\FileFieldAttachmentValidator;
 use NITSAN\NsT3AF\Mcp\Service\McpConfirmationPlanBuilder;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
@@ -78,9 +79,10 @@ final class FileReferenceAddToolTest extends TestCase
     private function tca(array $fileFields = ['image', 'assets']): TcaSchemaService&MockObject
     {
         $tcaSchemaService = $this->getMockBuilder(TcaSchemaService::class)
-            ->onlyMethods(['getFileFields'])
+            ->onlyMethods(['getFileFields', 'getColumnFieldConfig'])
             ->getMock();
         $tcaSchemaService->method('getFileFields')->willReturn($fileFields);
+        $tcaSchemaService->method('getColumnFieldConfig')->willReturn(['allowed' => '', 'disallowed' => '']);
 
         return $tcaSchemaService;
     }
@@ -122,6 +124,7 @@ final class FileReferenceAddToolTest extends TestCase
             new McpConfirmationPlanBuilder(),
             $recordService ?? $this->record(),
             $resourceFactory ?? $this->files([]),
+            new FileFieldAttachmentValidator($tcaSchemaService ?? $this->tca()),
         );
     }
 
