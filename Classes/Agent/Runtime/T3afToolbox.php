@@ -263,6 +263,7 @@ final class T3afToolbox implements ToolboxInterface
         if (
             $name === 't3aa_accessibility_issues'
             && AgentRunner::isAccessibilityFixRequest($request)
+            && !AgentRunner::isAccessibilityIssuesRequest($request)
             && isset($this->catalog['t3aa_accessibility_fix_suggestions'])
         ) {
             return new ToolResult(
@@ -274,10 +275,20 @@ final class T3afToolbox implements ToolboxInterface
         if ($name !== 't3aa_accessibility_scan_run' || AgentRunner::isAccessibilityScanRequest($request)) {
             return null;
         }
-        $read = AgentRunner::isAccessibilityFixRequest($request)
+        $parts = [];
+        if (AgentRunner::isAccessibilityIssuesRequest($request) || !AgentRunner::isAccessibilityFixRequest($request)) {
+            $parts[] = 't3aa_accessibility_issues';
+        }
+        if (
+            AgentRunner::isAccessibilityFixRequest($request)
             && isset($this->catalog['t3aa_accessibility_fix_suggestions'])
-            ? 't3aa_accessibility_fix_suggestions'
-            : 't3aa_accessibility_issues';
+        ) {
+            $parts[] = 't3aa_accessibility_fix_suggestions';
+        }
+        if (AgentRunner::isPageSpeedRequest($request) && isset($this->catalog['t3aa_get_page_speed'])) {
+            $parts[] = 't3aa_get_page_speed';
+        }
+        $read = $parts !== [] ? implode(' and ', $parts) : 't3aa_accessibility_issues';
 
         return new ToolResult(
             $toolCall,
@@ -359,6 +370,13 @@ final class T3afToolbox implements ToolboxInterface
 
             return $uidTypeDetour;
         }
+        $simplifyDetour = $this->refuseSimplifyTranslateDetour($name, $toolCall, $this->gateRequest());
+        if ($simplifyDetour !== null) {
+            $outcome = 'invalid';
+
+            return $simplifyDetour;
+        }
+        $toolCall = $this->withNamedSimplifyLanguage($toolCall, $this->gateRequest());
         if ($name === 'pages_move' && (PageCreateBefore::isCreateBefore($requestQuery) || PageCreateAfter::isCreateAfter($requestQuery) || PageCreateAfter::isLastUnder($requestQuery))) {
             $outcome = 'invalid';
             $place = PageCreateAfter::isCreateAfter($requestQuery) || PageCreateAfter::isLastUnder($requestQuery) ? 'afterUid' : 'beforeUid';
@@ -835,6 +853,48 @@ final class T3afToolbox implements ToolboxInterface
         }
 
         return null;
+    }
+
+    /**
+     * "Create a simplified text version in German" is summarize, not translate with contentUid 0.
+     */
+    private function refuseSimplifyTranslateDetour(string $name, ToolCall $toolCall, string $requestQuery): ?ToolResult
+    {
+        if (!AgentRunner::isSimplifyRequest($requestQuery) || !AgentToolTurnProcessor::isTranslateTool($name)) {
+            return null;
+        }
+        if (!isset($this->catalog['t3aa_summarize_content'])) {
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for simplified text, not a translation.',
+            );
+        }
+        $language = RequestedLanguage::namedIn($requestQuery);
+        $hint = $language !== '' ? ' and language "' . $language . '"' : '';
+
+        return new ToolResult(
+            $toolCall,
+            'Not executed: the editor asked for simplified text, not a translation. Call t3aa_summarize_content'
+                . ' with pageId of this page' . $hint . '. Do not pass contentUid 0.',
+        );
+    }
+
+    private function withNamedSimplifyLanguage(ToolCall $toolCall, string $requestQuery): ToolCall
+    {
+        if ($toolCall->getName() !== 't3aa_summarize_content' || !AgentRunner::isSimplifyRequest($requestQuery)) {
+            return $toolCall;
+        }
+        $arguments = $toolCall->getArguments();
+        if (trim((string) ($arguments['language'] ?? '')) !== '') {
+            return $toolCall;
+        }
+        $language = RequestedLanguage::namedIn($requestQuery);
+        if ($language === '') {
+            return $toolCall;
+        }
+        $arguments['language'] = $language;
+
+        return new ToolCall($toolCall->getId(), $toolCall->getName(), $arguments);
     }
 
     /**

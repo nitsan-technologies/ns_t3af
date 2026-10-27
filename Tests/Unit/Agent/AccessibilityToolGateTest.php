@@ -17,9 +17,10 @@ final class AccessibilityToolGateTest extends TestCase
     public function aScanRequestIsNotGated(): void
     {
         self::assertNotContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Run an accessibility scan of this page'));
-        self::assertNotContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Check this page for accessibility issues'));
-        self::assertNotContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Prüfe diese Seite auf Barrierefreiheit'));
         self::assertNotContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Barrierefreiheits-Scan für diese Seite starten'));
+        self::assertNotContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Scan this page'));
+        self::assertFalse(AgentRunner::isAccessibilityScanRequest('Check this page for accessibility issues'));
+        self::assertFalse(AgentRunner::isAccessibilityScanRequest('Prüfe diese Seite auf Barrierefreiheit'));
     }
 
     #[Test]
@@ -41,5 +42,18 @@ final class AccessibilityToolGateTest extends TestCase
         self::assertContains('t3aa_accessibility_issues', AgentRunner::toolsNotAskedFor('Suggest fixes for the critical accessibility issue'));
         self::assertContains('t3aa_accessibility_issues', AgentRunner::toolsNotAskedFor('How do I fix the accessibility issues on this page?'));
         self::assertNotContains('t3aa_accessibility_issues', AgentRunner::toolsNotAskedFor('What accessibility issues are on this page?'));
+    }
+
+    #[Test]
+    public function checkIssuesAndFixesAndPageSpeedDoNotOpenAScanCard(): void
+    {
+        $query = 'Check accessibility issues of page 15 and suggest fixes and tell me page speed';
+        self::assertFalse(AgentRunner::isAccessibilityScanRequest($query));
+        self::assertTrue(AgentRunner::isAccessibilityIssuesRequest($query));
+        self::assertTrue(AgentRunner::isAccessibilityFixRequest($query));
+        self::assertTrue(AgentRunner::isPageSpeedRequest($query));
+        self::assertContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor($query));
+        self::assertNotContains('t3aa_accessibility_issues', AgentRunner::toolsNotAskedFor($query));
+        self::assertContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Check this page for accessibility issues'));
     }
 }

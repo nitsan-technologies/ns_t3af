@@ -68,4 +68,14 @@ final class UidTypeGateTest extends TestCase
         self::assertNotSame('', AgentPromptBuilder::pendingImageAttachNote($attachHistory));
         self::assertTrue(AgentRunner::shouldPromptToContinue($attachHistory, [], $attachRequest, []));
     }
+
+    #[Test]
+    public function simplifiedTextInALanguageIsSummarizeNotTranslate(): void
+    {
+        $query = 'Create a simplified text version in German';
+        self::assertTrue(AgentRunner::isSimplifyRequest($query));
+        self::assertTrue(AgentRunner::isSummarizeRequest($query));
+        self::assertNotContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor($query));
+        self::assertFalse(AgentRunner::isSimplifyRequest('Translate this page into German'));
+    }
 }

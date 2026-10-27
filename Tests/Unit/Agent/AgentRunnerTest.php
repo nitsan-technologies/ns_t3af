@@ -575,8 +575,8 @@ final class AgentRunnerTest extends TestCase
         self::assertContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('How do I fix the accessibility issues on this page?'));
         self::assertContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Show the last accessibility scan result'));
         self::assertNotContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Run an accessibility scan of this page'));
-        self::assertNotContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Check this page for accessibility issues'));
-        self::assertNotContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Prüfe diese Seite auf Barrierefreiheit'));
+        self::assertContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Check this page for accessibility issues'));
+        self::assertContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Prüfe diese Seite auf Barrierefreiheit'));
         self::assertNotContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Barrierefreiheits-Scan für diese Seite starten'));
         self::assertTrue(AgentRunner::isAccessibilityFixRequest('Suggest fixes for the critical accessibility issue'));
         self::assertTrue(AgentRunner::isAccessibilityFixRequest('How do I fix the accessibility issues on this page?'));

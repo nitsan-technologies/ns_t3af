@@ -1127,6 +1127,11 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             // File/page uids are never tt_content uids ("delete images with no alt", "summarize page 234").
             $notAskedFor['content_delete'] = true;
         }
+        if (self::isSimplifyRequest($query)) {
+            foreach (['t3ai_translate_content', 't3ai_translate_page', 't3ai_translate_news', 't3ai_record_translate'] as $translateTool) {
+                $notAskedFor[$translateTool] = true;
+            }
+        }
         $offeredTools = array_values(array_filter(
             $offeredTools,
             static fn(array $tool): bool => !isset($notAskedFor[(string) ($tool['name'] ?? '')]),
@@ -1170,11 +1175,19 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
         if (self::isAccessibilityFixRequest($query)) {
             $found = [...self::toolsByName(['t3aa_accessibility_fix_suggestions'], $executableTools, $offeredNames), ...$found];
-        } elseif (
-            preg_match('/\b(?:accessib|a11y|wcag|barriere)/iu', $query) === 1
-            && !self::isAccessibilityScanRequest($query)
+        }
+        if (
+            self::isAccessibilityIssuesRequest($query)
+            || (
+                preg_match('/\b(?:accessib|a11y|wcag|barriere)/iu', $query) === 1
+                && !self::isAccessibilityScanRequest($query)
+                && !self::isAccessibilityFixRequest($query)
+            )
         ) {
             $found = [...self::toolsByName(['t3aa_accessibility_issues'], $executableTools, $offeredNames), ...$found];
+        }
+        if (self::isPageSpeedRequest($query)) {
+            $found = [...self::toolsByName(['t3aa_get_page_speed'], $executableTools, $offeredNames), ...$found];
         }
         $found = [...self::fileActionTools($query, $executableTools, $offeredNames), ...$found];
         $workPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
@@ -1306,9 +1319,14 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     public const VOICE_OVER_REQUEST = '/\b(voice\s*-?\s*over|voiceover|audio\s*narrat\w*|sprachausgabe|vorlesen|vorlese\w*)\b/iu';
 
     /**
-     * A request to summarize page or content text, not a rewrite.
+     * A request to summarize or simplify page or content text, not a rewrite or a translation.
      */
-    public const SUMMARIZE_REQUEST = '/\b(summar\w*|tl;?dr|zusammenfass\w*|kurzfassung|abstract|gist)\b/iu';
+    public const SUMMARIZE_REQUEST = '/\b(summar\w*|tl;?dr|zusammenfass\w*|kurzfassung|abstract|gist|simplif\w*|plain\s+language|leichte\s+sprache|einfache\s+sprache|vereinfach\w*)\b/iu';
+
+    /**
+     * A live PageSpeed read, not a Lighthouse report stored in the backend.
+     */
+    public const PAGE_SPEED_REQUEST = '/\b(page\s*-?speed|pagespeed|psi)\b/iu';
 
     /**
      * Tools that fit only when the editor says so, and the words that ask for them.
@@ -1382,7 +1400,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if (!self::isAccessibilityScanRequest($query)) {
             $names[] = 't3aa_accessibility_scan_run';
         }
-        if (self::isAccessibilityFixRequest($query)) {
+        if (self::isAccessibilityFixRequest($query) && !self::isAccessibilityIssuesRequest($query)) {
             $names[] = 't3aa_accessibility_issues';
         }
         if (self::isApproveAllAltTextRequest($query)) {
@@ -1397,28 +1415,17 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
-     * Run/start/check a new WCAG scan — not "what issues" or "how do I fix them".
+     * Run/start a new WCAG scan. "Check issues" / "suggest fixes" / "page speed" are reads.
      */
     public static function isAccessibilityScanRequest(string $query): bool
     {
-        $asksToRun = preg_match(
-            '/\b(?:run|start|launch|trigger|re-?scan|scannen|starte\w*|prüf\w*|check)\b/iu',
-            $query,
-        ) === 1;
-        if (
-            !$asksToRun
-            && preg_match('/\b(?:what|welche\w*|show|zeig\w*|list\w*|last|latest|letzten?|result|ergebnis|suggest|vorschla\w*|how|wie)\b/iu', $query) === 1
-        ) {
+        if (self::isAccessibilityFixRequest($query) || self::isAccessibilityIssuesRequest($query)) {
             return false;
         }
 
         return preg_match(
             '/(?:'
-            . '\bcheck\s+.{0,80}accessib'
-            . '|\baccessib.{0,40}\bcheck\b'
-            . '|\bprüf\w*.{0,60}barriere'
-            . '|\bbarriere.{0,60}prüf'
-            . '|\b(?:run|start|launch|trigger|starte\w*)\s+.{0,40}(?:scan|accessib|a11y|wcag|barriere)'
+            . '\b(?:run|start|launch|trigger|starte\w*)\s+.{0,40}(?:scan|accessib|a11y|wcag|barriere)'
             . '|\b(?:scan|accessib|a11y|wcag|barriere).{0,40}\b(?:start|starte\w*|run|launch)\b'
             . '|\b(?:re-?)?scan(?:ning|ned)?\s+(?:this|the|a)?\s*(?:page|site|homepage)'
             . '|\bscan\s+(?:this|the)\s+page'
@@ -1439,6 +1446,38 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return preg_match('/\b(?:accessib|a11y|wcag|barriere)/iu', $query) === 1;
+    }
+
+    /**
+     * "Check accessibility issues" / "what issues" — the last scan result, not a new scan.
+     */
+    public static function isAccessibilityIssuesRequest(string $query): bool
+    {
+        if (preg_match('/\b(?:accessib|a11y|wcag|barriere)/iu', $query) !== 1) {
+            return false;
+        }
+
+        return preg_match(
+            '/\b(?:check|prüf\w*|what|welche\w*|show|zeig\w*|list\w*|last|latest|letzten?)\b/iu',
+            $query,
+        ) === 1
+            && preg_match('/\b(?:issues?|probleme?|fehler|result|ergebnis)\b/iu', $query) === 1;
+    }
+
+    public static function isPageSpeedRequest(string $query): bool
+    {
+        return preg_match(self::PAGE_SPEED_REQUEST, $query) === 1;
+    }
+
+    /**
+     * Plain-language rewrite, not a translation of a content uid.
+     */
+    public static function isSimplifyRequest(string $query): bool
+    {
+        return preg_match(
+            '/\b(simplif\w*|plain\s+language|leichte\s+sprache|einfache\s+sprache|vereinfach\w*)\b/iu',
+            $query,
+        ) === 1;
     }
 
     /**
