@@ -624,6 +624,24 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ((int) ($asked['fileUid'] ?? 0) === $current['fileUid'] && (int) ($asked['languageUid'] ?? -1) === $current['languageUid']) {
             $choices = is_array($asked['choices'] ?? null) ? $asked['choices'] : [];
             if (self::sameChoice($reply, (string) ($choices['keep'] ?? ''))) {
+                $doneHistory = array_merge($history, [[
+                    'role' => 'assistant',
+                    'content' => '',
+                    'meta' => [
+                        'type' => 'suggestions',
+                        'tool' => 't3aa_update_file_metadata',
+                        'previews' => [['fileUid' => $current['fileUid'], 'name' => $current['fileName']]],
+                    ],
+                ]]);
+                $nextNamed = self::nextRequestedFileName($requestQuery, $doneHistory);
+                $nextMissing = self::nextMissingAltFile($doneHistory, $requestQuery);
+                if ($nextNamed !== null) {
+                    return $this->prepareFileMetadataTurn(['fileUrl' => $nextNamed], $body, $requestQuery, $correlationId);
+                }
+                if ($nextMissing !== null) {
+                    return $this->prepareFileMetadataTurn(['fileUid' => $nextMissing['fileUid']], $body, $requestQuery, $correlationId);
+                }
+
                 return ['arguments' => $arguments, 'turn' => [
                     'role' => 'assistant',
                     'content' => $this->translator->translate('agent.fileMeta.kept', [$current['fileName']]),

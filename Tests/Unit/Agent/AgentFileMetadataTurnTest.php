@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
+use NITSAN\NsT3AF\Agent\Service\AgentRequestChecklist;
 use NITSAN\NsT3AF\Agent\Service\AgentRunner;
 use NITSAN\NsT3AF\Agent\Service\AgentToolTurnProcessor;
 use PHPUnit\Framework\Attributes\Test;
@@ -252,5 +253,29 @@ final class AgentFileMetadataTurnTest extends TestCase
         self::assertTrue(AgentRunner::isDoNotApproveAltTextRequest('Queue alt text for "user_upload" folder, then show me the drafts. Do not approve them until I say so.'));
         self::assertContains('t3aa_alt_text_approve', AgentRunner::toolsNotAskedFor('Queue alt text for "user_upload" folder, then show me the drafts. Do not approve them until I say so.'));
         self::assertContains('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor('Queue alt text for "user_upload" folder'));
+    }
+
+    #[Test]
+    public function fileTextRequestsDoNotCreateContentOrAttachTheFile(): void
+    {
+        $twoFiles = 'Write alt text for this "/camino/victoriano-izquierdo-o7G89a9GFdA-unsplash.webp , /camino/damien-dufour-2mMrxyI13QU-unsplash.webp" image and save it.';
+        $missing = 'Find images with no alt text, pick the first three, generate alt text for each, and save them. Then tell me what you wrote for each file.';
+        $decorative = 'Mark this "/camino/fef4453b2185eb0e31f704b6224c66087807f19d.webp" image as decorative.';
+        self::assertSame([], AgentRequestChecklist::parse($twoFiles));
+        self::assertSame([], AgentRequestChecklist::parse($missing));
+        self::assertSame([], AgentRequestChecklist::parse($decorative));
+        self::assertContains('write_table', AgentRunner::toolsNotAskedFor($missing));
+        self::assertContains('file_reference_add', AgentRunner::toolsNotAskedFor($decorative));
+
+        $afterDecorative = [
+            ['role' => 'assistant', 'content' => '', 'meta' => [
+                'type' => 'tool_result',
+                'tool' => 't3aa_mark_image_decorative',
+                'success' => true,
+                'details' => ['fileUid' => 8, 'decorative' => true],
+            ]],
+        ];
+        self::assertSame([], AgentPromptBuilder::unattachedFileUids($afterDecorative));
+        self::assertSame('', AgentPromptBuilder::pendingImageAttachNote($afterDecorative));
     }
 }

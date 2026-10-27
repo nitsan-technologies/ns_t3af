@@ -44,6 +44,9 @@ final class AgentRequestChecklist
         if (self::isChatOnlyWritingRequest($message)) {
             return [];
         }
+        if (self::isFileMetadataOnlyRequest($message)) {
+            return [];
+        }
 
         $segments = self::requestSegments($message);
         // "Rename the header of element 5" changes an existing record; the word "header" must not turn it
@@ -223,6 +226,23 @@ final class AgentRequestChecklist
 
         return preg_match('/\b(?:in\s+the\s+chat|im\s+chat)\b/u', $s) === 1
             && preg_match('/\b(?:don\'?t|not|nicht)\s+(?:save|add|create|insert|speicher\w*|erstell\w*)\b/u', $s) === 1;
+    }
+
+    /**
+     * Alt text, decorative mark, or folder drafts: existing files, never a new content element.
+     */
+    public static function isFileMetadataOnlyRequest(string $message): bool
+    {
+        if (
+            AgentRunner::isMissingAltTextRequest($message)
+            || AgentRunner::isDecorativeImageRequest($message)
+            || AgentRunner::isQueueFolderAltTextRequest($message)
+        ) {
+            return true;
+        }
+
+        return AgentToolTurnProcessor::requestedFileNames($message) !== []
+            && preg_match('/\b(alt\s*text|image\s*texts?|file\s*meta|metadata|bildtext\w*|alternativtext\w*|datei\s*meta)\b/iu', $message) === 1;
     }
 
     /**

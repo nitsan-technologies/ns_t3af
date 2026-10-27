@@ -952,6 +952,17 @@ readonly class AgentPromptBuilder
             if ($tool === 't3aa_generate_voice_over') {
                 continue;
             }
+            // Image texts / decorative / drafts change an existing file; they are not a file to attach.
+            if (in_array($tool, [
+                't3aa_update_file_metadata',
+                't3aa_mark_image_decorative',
+                't3aa_alt_text_queue_folder',
+                't3aa_alt_text_approve',
+                't3aa_get_file_metadata',
+                't3aa_list_files_missing_alt_text',
+            ], true)) {
+                continue;
+            }
             $details = $meta['details'] ?? null;
             if ($tool === 'file_reference_add') {
                 continue;

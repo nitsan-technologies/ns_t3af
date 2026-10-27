@@ -653,6 +653,16 @@ final class T3afToolbox implements ToolboxInterface
                     . ' (fileUid or fileUrl, then altText / title / description). Do not use write_table on sys_file.',
             );
         }
+        if (
+            in_array($name, ['write_table', 't3ai_create_content_element', 'file_reference_add'], true)
+            && AgentRequestChecklist::isFileMetadataOnlyRequest($this->gateRequest())
+        ) {
+            $outcome = 'invalid';
+            $next = AgentToolTurnProcessor::remainingImageTextReminder($this->conversationHistory(), $this->gateRequest());
+            $hint = $next !== '' ? $next : 'Call t3aa_update_file_metadata, t3aa_list_files_missing_alt_text, t3aa_mark_image_decorative or t3aa_alt_text_queue_folder as the request asks. Do not create a content element or attach the file.';
+
+            return new ToolResult($toolCall, 'Not executed: this request is about file texts, not page content. ' . $hint);
+        }
         // "Make the German version visible" changes the hidden field. The model sometimes tries a delete first.
         if ($name === 'content_delete' && AgentRunner::isVisibilityRequest($requestQuery)) {
             $outcome = 'invalid';

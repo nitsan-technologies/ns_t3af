@@ -1428,6 +1428,11 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if (self::isDecorativeImageRequest($query)) {
             $names[] = 't3aa_update_file_metadata';
         }
+        if (AgentRequestChecklist::isFileMetadataOnlyRequest($query)) {
+            $names[] = 'write_table';
+            $names[] = 't3ai_create_content_element';
+            $names[] = 'file_reference_add';
+        }
         if (self::isFileRecordDeleteRequest($query) || self::isMissingAltTextRequest($query) || self::isSummarizeRequest($query)) {
             $names[] = 'content_delete';
         }
