@@ -217,6 +217,53 @@ final class AgentFileMetadataTurnTest extends TestCase
             'camino/damien-dufour-2mMrxyI13QU-unsplash.webp',
             AgentToolTurnProcessor::nextRequestedFileName($request, $afterKeepOnFirst),
         );
+
+        $keepClickHistory = [
+            ['role' => 'user', 'content' => $request],
+            ['role' => 'assistant', 'content' => 'Already has texts', 'meta' => [
+                'type' => 'clarification',
+                'fileMetaOverwrite' => ['fileUid' => 10, 'languageUid' => 0, 'choices' => ['keep' => 'Keep current texts']],
+                'previews' => [['fileUid' => 10, 'name' => 'victoriano-izquierdo-o7G89a9GFdA-unsplash.webp']],
+            ]],
+        ];
+        self::assertSame($request, AgentToolTurnProcessor::namedImageTextRequest('', $keepClickHistory));
+        self::assertSame($request, AgentToolTurnProcessor::namedImageTextRequest('Keep current texts', $keepClickHistory));
+        self::assertSame(
+            'camino/damien-dufour-2mMrxyI13QU-unsplash.webp',
+            AgentToolTurnProcessor::nextRequestedFileName(
+                AgentToolTurnProcessor::namedImageTextRequest('Keep current texts', $keepClickHistory),
+                array_merge($keepClickHistory, $afterFirst),
+            ),
+        );
+
+        $keepClickWithoutPreviewName = [
+            ['role' => 'user', 'content' => $request],
+            ['role' => 'assistant', 'content' => 'Already has texts', 'meta' => [
+                'type' => 'clarification',
+                'tool' => 'ask_clarification',
+                'askedFor' => 't3aa_update_file_metadata',
+                'fileMetaOverwrite' => ['fileUid' => 10, 'languageUid' => 0, 'choices' => ['keep' => 'Keep current texts']],
+            ]],
+        ];
+        $resolvedKeep = AgentToolTurnProcessor::namedImageTextRequest('Keep current texts', $keepClickWithoutPreviewName);
+        $doneAfterKeep = array_merge($keepClickWithoutPreviewName, $afterFirst);
+        self::assertNull(AgentToolTurnProcessor::nextRequestedFileName('Keep current texts', $doneAfterKeep));
+        self::assertSame(
+            'camino/damien-dufour-2mMrxyI13QU-unsplash.webp',
+            AgentToolTurnProcessor::nextRequestedFileName($resolvedKeep, $doneAfterKeep),
+        );
+        self::assertSame(
+            ['fileUrl' => 'camino/damien-dufour-2mMrxyI13QU-unsplash.webp'],
+            AgentToolTurnProcessor::withRequestedFileName(
+                ['fileUrl' => 'camino/damien-dufour-2mMrxyI13QU-unsplash.webp'],
+                $resolvedKeep,
+                static fn(int $uid): string => '',
+                $doneAfterKeep,
+            ),
+        );
+        self::assertStringContainsString('victoriano-izquierdo', AgentRunner::requestQuery('Keep current texts', $keepClickWithoutPreviewName));
+        self::assertStringContainsString('damien-dufour', AgentRunner::requestQuery('Keep current texts', $keepClickWithoutPreviewName));
+        self::assertSame($request, AgentPromptBuilder::latestUserRequestText($keepClickWithoutPreviewName));
     }
 
     #[Test]

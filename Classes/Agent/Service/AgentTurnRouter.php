@@ -187,6 +187,8 @@ final readonly class AgentTurnRouter
             $body['arguments'] = $imageTextAnswer['arguments'];
             $body['conversationHistory'] = $historyMessages;
             $body['userMessage'] = trim($message);
+            $body['requestQuery'] = AgentRunner::requestQuery(trim($message), $historyMessages);
+            $body['requestForGate'] = AgentPromptBuilder::latestUserRequestText($historyMessages);
             $answerMessages = $this->finalizeStructuralMessages(
                 [$this->executeTool($imageTextAnswer['tool'], $context, $body, $user, $correlationId)],
                 $correlationId,

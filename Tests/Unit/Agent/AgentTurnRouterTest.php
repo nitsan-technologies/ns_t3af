@@ -235,6 +235,58 @@ final class AgentTurnRouterTest extends TestCase
     }
 
     #[Test]
+    public function aKeepClickOnImageTextsCarriesTheOriginalNamedFiles(): void
+    {
+        $request = 'Write alt text for this "/camino/victoriano-izquierdo-o7G89a9GFdA-unsplash.webp , /camino/damien-dufour-2mMrxyI13QU-unsplash.webp" image and save it.';
+        $history = [
+            ['role' => 'user', 'content' => $request, 'meta' => []],
+            ['role' => 'assistant', 'content' => 'Already has texts', 'meta' => [
+                'type' => 'clarification',
+                'fileMetaOverwrite' => [
+                    'fileUid' => 10,
+                    'languageUid' => 0,
+                    'choices' => ['regenerate' => 'Regenerate all', 'keep' => 'Keep current texts'],
+                ],
+            ]],
+        ];
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $this->toolTurnProcessor->expects(self::once())
+            ->method('execute')
+            ->with(
+                't3aa_update_file_metadata',
+                self::isType('array'),
+                self::callback(static function (array $body) use ($request): bool {
+                    $query = (string) ($body['requestQuery'] ?? '');
+
+                    return ($body['userMessage'] ?? null) === 'Keep current texts'
+                        && (int) ($body['arguments']['fileUid'] ?? 0) === 10
+                        && str_contains($query, 'victoriano-izquierdo')
+                        && str_contains($query, 'damien-dufour')
+                        && ($body['requestForGate'] ?? null) === $request;
+                }),
+                $user,
+                'corr-keep',
+            )
+            ->willReturn([
+                'role' => 'assistant',
+                'content' => 'next file',
+                'meta' => ['type' => 'clarification', 'tool' => 'ask_clarification'],
+            ]);
+        $this->turnOrchestrator->expects(self::never())->method('runTurn');
+
+        $messages = $this->router->route(
+            'Keep current texts',
+            ['pageId' => 1],
+            [],
+            $user,
+            'corr-keep',
+            $history,
+        );
+
+        self::assertSame('clarification', $messages[0]['meta']['type'] ?? null);
+    }
+
+    #[Test]
     public function aKnownGlossaryPhraseIsSavedWithoutTheModel(): void
     {
         $user = $this->createMock(BackendUserAuthentication::class);

@@ -582,6 +582,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
         $reply = trim((string) ($body['userMessage'] ?? ''));
         $question = self::openQuestionMeta($history);
+        $requestQuery = self::namedImageTextRequest($requestQuery, $history);
 
         $arguments = self::withChosenFile($arguments, $question, $reply);
         $arguments = self::withRequestedFileName($arguments, $requestQuery, null, $history);
@@ -635,6 +636,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 ]]);
                 $nextNamed = self::nextRequestedFileName($requestQuery, $doneHistory);
                 $nextMissing = self::nextMissingAltFile($doneHistory, $requestQuery);
+                // The overwrite card is ask_clarification, so it does not mark the basename done.
+                // Recurse with the synthetic suggestions or withRequestedFileName retargets file 1.
+                $body['conversationHistory'] = $doneHistory;
                 if ($nextNamed !== null) {
                     return $this->prepareFileMetadataTurn(['fileUrl' => $nextNamed], $body, $requestQuery, $correlationId);
                 }
@@ -689,6 +693,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'fileMetaOverwrite' => [
                     'fileUid' => $current['fileUid'],
                     'languageUid' => $current['languageUid'],
+                    'fileName' => $current['fileName'],
                     'choices' => $choices,
                 ],
                 'previews' => isset($this->mediaPreviews) ? $this->mediaPreviews->forRecord('sys_file', $current['fileUid']) : [],
@@ -2516,6 +2521,29 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * A Keep / Regenerate click is the current message; the named files live on the original request.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function namedImageTextRequest(string $requestQuery, array $history): string
+    {
+        if (self::requestedFileNames($requestQuery) !== []) {
+            return $requestQuery;
+        }
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            if (($history[$i]['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $text = trim((string) ($history[$i]['content'] ?? ''));
+            if (self::requestedFileNames($text) !== []) {
+                return $text;
+            }
+        }
+
+        return $requestQuery;
+    }
+
+    /**
      * Named files that still need an image-text card.
      *
      * @param list<array<string, mixed>> $history
@@ -2747,7 +2775,10 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             }
             $overwrite = is_array($meta['fileMetaOverwrite'] ?? null) ? $meta['fileMetaOverwrite'] : [];
             if ((int) ($overwrite['fileUid'] ?? 0) > 0) {
-                $targets[] = ['fileUid' => (int) $overwrite['fileUid'], 'name' => ''];
+                $targets[] = [
+                    'fileUid' => (int) $overwrite['fileUid'],
+                    'name' => (string) ($overwrite['fileName'] ?? ''),
+                ];
             }
             $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
             $uid = (int) ($details['file_uid'] ?? $details['fileUid'] ?? 0);
