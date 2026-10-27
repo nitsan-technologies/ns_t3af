@@ -205,6 +205,18 @@ final class AgentFileMetadataTurnTest extends TestCase
             AgentToolTurnProcessor::remainingImageTextReminder($afterFirst, $request),
         );
         self::assertTrue(AgentPromptBuilder::hasBlockingRemainingWork($afterFirst, [], $request));
+        self::assertSame(
+            ['camino/damien-dufour-2mMrxyI13QU-unsplash.webp'],
+            AgentToolTurnProcessor::remainingNamedImageTextFiles($afterFirst, $request),
+        );
+        $afterKeepOnFirst = [
+            ...$afterFirst,
+            ['role' => 'user', 'content' => 'Keep current texts'],
+        ];
+        self::assertSame(
+            'camino/damien-dufour-2mMrxyI13QU-unsplash.webp',
+            AgentToolTurnProcessor::nextRequestedFileName($request, $afterKeepOnFirst),
+        );
     }
 
     #[Test]

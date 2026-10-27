@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
+use NITSAN\NsT3AF\Agent\Service\AgentRequestChecklist;
 use NITSAN\NsT3AF\Agent\Service\AgentRunner;
+use NITSAN\NsT3AF\Agent\Service\AgentToolTurnProcessor;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -17,13 +19,31 @@ final class UidTypeGateTest extends TestCase
     #[Test]
     public function deletingImagesWithNoAltTextIsNotAContentDelete(): void
     {
-        self::assertTrue(AgentRunner::isFileRecordDeleteRequest('Delete all images that have no alt text'));
-        self::assertTrue(AgentRunner::isMissingAltTextRequest('Delete all images that have no alt text'));
-        self::assertTrue(AgentRunner::isFileRecordDeleteRequest('Lösche alle Bilder ohne Alt-Text'));
+        $nl05 = 'Delete all images that have no alt text';
+        $german = 'Lösche alle Bilder ohne Alt-Text';
+        self::assertTrue(AgentRunner::isFileRecordDeleteRequest($nl05));
+        self::assertTrue(AgentRunner::isMissingAltTextRequest($nl05));
+        self::assertTrue(AgentRunner::isMissingAltMassDeleteRequest($nl05));
+        self::assertTrue(AgentRunner::isMissingAltMassDeleteRequest($german));
+        self::assertTrue(AgentRunner::isFileRecordDeleteRequest($german));
         self::assertFalse(AgentRunner::isFileRecordDeleteRequest('Delete content element 20'));
         self::assertFalse(AgentRunner::isFileRecordDeleteRequest('Change the header of element 12'));
-        self::assertContains('content_delete', AgentRunner::toolsNotAskedFor('Delete all images that have no alt text'));
+        self::assertFalse(AgentRunner::isMissingAltMassDeleteRequest('Delete the file photo.jpg'));
+        self::assertFalse(AgentRunner::isMissingAltMassDeleteRequest(
+            'Find images with no alt text, pick the first three, generate alt text for each, and save them.',
+        ));
+        self::assertContains('content_delete', AgentRunner::toolsNotAskedFor($nl05));
+        self::assertContains('file_delete', AgentRunner::toolsNotAskedFor($nl05));
+        self::assertContains('directory_delete', AgentRunner::toolsNotAskedFor($nl05));
+        self::assertContains('write_table', AgentRunner::toolsNotAskedFor($nl05));
+        self::assertContains('t3ai_create_content_element', AgentRunner::toolsNotAskedFor($nl05));
+        self::assertContains('file_reference_add', AgentRunner::toolsNotAskedFor($nl05));
+        self::assertContains('file_delete', AgentRunner::toolsNotAskedFor($german));
+        self::assertNotContains('file_delete', AgentRunner::toolsNotAskedFor('Delete the file photo.jpg'));
         self::assertNotContains('content_delete', AgentRunner::toolsNotAskedFor('Delete content element 20'));
+        self::assertSame([], AgentRequestChecklist::parse($nl05));
+        self::assertSame([], AgentRequestChecklist::parse($german));
+        self::assertFalse(AgentToolTurnProcessor::asksToWriteMissingAltText($nl05));
     }
 
     #[Test]

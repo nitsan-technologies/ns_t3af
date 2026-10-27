@@ -490,6 +490,7 @@ final class T3afToolbox implements ToolboxInterface
             return $simplifyDetour;
         }
         $toolCall = $this->withNamedSimplifyLanguage($toolCall, $this->gateRequest());
+        $toolCall = $this->withNamedSummarizePage($toolCall, $this->gateRequest());
         if ($name === 'pages_move' && (PageCreateBefore::isCreateBefore($requestQuery) || PageCreateAfter::isCreateAfter($requestQuery) || PageCreateAfter::isLastUnder($requestQuery))) {
             $outcome = 'invalid';
             $place = PageCreateAfter::isCreateAfter($requestQuery) || PageCreateAfter::isLastUnder($requestQuery) ? 'afterUid' : 'beforeUid';
@@ -894,6 +895,13 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: this call already failed for the same reason. Do not call it again. The turn ends.',
             );
         }
+        if (
+            $name === 't3aa_list_files_missing_alt_text'
+            && AgentRunner::isMissingAltMassDeleteRequest($this->gateRequest())
+            && ($message['meta']['success'] ?? true) !== false
+        ) {
+            $message['meta']['orchestratorPause'] = true;
+        }
         $this->state->addMessage($message);
         // The step that was running failed: the Progress list shows it instead of spinning on.
         if (($message['meta']['type'] ?? '') === 'error' && $this->state->plan !== []) {
@@ -907,6 +915,13 @@ final class T3afToolbox implements ToolboxInterface
         }
 
         $forModel = $this->summaryForModel($message);
+        if (
+            $name === 't3aa_list_files_missing_alt_text'
+            && AgentRunner::isMissingAltMassDeleteRequest($this->gateRequest())
+        ) {
+            $forModel .= ' Show this list to the editor. Do not call file_delete, directory_delete or content_delete.'
+                . ' Offer generate alt text or queue drafts instead. Do not prepare a mass delete.';
+        }
         if ($isRead) {
             $this->state->readResults[$readKey] = $forModel;
         }
@@ -936,6 +951,30 @@ final class T3afToolbox implements ToolboxInterface
                 $toolCall,
                 'Not executed: the editor asked about files, not a content element. Call t3aa_list_files_missing_alt_text'
                     . ' to list them. Never pass a sys_file uid to content_delete.',
+            );
+        }
+        if (
+            in_array($name, ['file_delete', 'directory_delete'], true)
+            && AgentRunner::isMissingAltMassDeleteRequest($requestQuery)
+        ) {
+            return new ToolResult(
+                $toolCall,
+                'Not executed: do not delete files from storage for this request. Call t3aa_list_files_missing_alt_text'
+                    . ' and show the list. Offer to generate alt text or queue drafts; do not prepare a mass delete.',
+            );
+        }
+        if (
+            $name === self::ASK_CLARIFICATION
+            && AgentRunner::isMissingAltMassDeleteRequest($requestQuery)
+            && preg_match(
+                '/\b(delete|remove|lösch\w*|loesch\w*|entfernen)\b/iu',
+                (string) ($toolCall->getArguments()['question'] ?? ''),
+            ) === 1
+        ) {
+            return new ToolResult(
+                $toolCall,
+                'Not executed: do not ask to delete these files. Call t3aa_list_files_missing_alt_text and show the list.'
+                    . ' Offer to generate alt text or queue drafts; do not prepare a mass delete.',
             );
         }
         if (
@@ -1005,6 +1044,25 @@ final class T3afToolbox implements ToolboxInterface
             return $toolCall;
         }
         $arguments['language'] = $language;
+
+        return new ToolCall($toolCall->getId(), $toolCall->getName(), $arguments);
+    }
+
+    /**
+     * "Summarize page 234" must use pageId 234, never contentUid 234.
+     */
+    private function withNamedSummarizePage(ToolCall $toolCall, string $requestQuery): ToolCall
+    {
+        if ($toolCall->getName() !== 't3aa_summarize_content') {
+            return $toolCall;
+        }
+        $namedPage = AgentRunner::namedPageUid($requestQuery);
+        if ($namedPage <= 0) {
+            return $toolCall;
+        }
+        $arguments = $toolCall->getArguments();
+        $arguments['pageId'] = $namedPage;
+        unset($arguments['contentUid']);
 
         return new ToolCall($toolCall->getId(), $toolCall->getName(), $arguments);
     }
@@ -1190,7 +1248,11 @@ final class T3afToolbox implements ToolboxInterface
             'label' => $this->runtime->translator->translate('agent.live.findingTools'),
         ]);
 
-        $candidates = array_values(array_diff_key($this->catalog, $this->definitions));
+        $notAskedFor = array_flip(AgentRunner::toolsNotAskedFor($this->gateRequest()));
+        $candidates = array_values(array_filter(
+            array_diff_key($this->catalog, $this->definitions),
+            static fn(array $tool): bool => !isset($notAskedFor[(string) ($tool['name'] ?? '')]),
+        ));
         $result = $this->runtime->toolSearch->search($query, $candidates, self::FOUND_TOOLS_LIMIT);
         $foundTools = $result['tools'];
         // "Make the page visible" ranks page and cache tools; the record writer is what changes a field.

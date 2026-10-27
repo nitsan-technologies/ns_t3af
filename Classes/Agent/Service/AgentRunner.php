@@ -1054,6 +1054,11 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             unset($notAskedFor['t3aa_update_file_metadata']);
         }
         $gateRequest = self::requestForGate($userMessage, $historyMessages);
+        if (self::isMissingAltMassDeleteRequest($query) || self::isMissingAltMassDeleteRequest($gateRequest)) {
+            $notAskedFor['file_delete'] = true;
+            $notAskedFor['directory_delete'] = true;
+            $notAskedFor['content_delete'] = true;
+        }
         $appliedCreateDone = $createContent
             && str_starts_with(ltrim($userMessage), '[The editor confirmed')
             && str_contains($userMessage, 'it was applied')
@@ -1436,6 +1441,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if (self::isFileRecordDeleteRequest($query) || self::isMissingAltTextRequest($query) || self::isSummarizeRequest($query)) {
             $names[] = 'content_delete';
         }
+        if (self::isMissingAltMassDeleteRequest($query)) {
+            $names[] = 'file_delete';
+            $names[] = 'directory_delete';
+        }
 
         return array_values(array_unique($names));
     }
@@ -1587,6 +1596,14 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return preg_match('/\b(images?|files?|alt[\s-]*texts?|bilder?|dateien?)\b/iu', $query) === 1;
+    }
+
+    /**
+     * "Delete all images that have no alt text": list the files, never mass-delete from storage.
+     */
+    public static function isMissingAltMassDeleteRequest(string $query): bool
+    {
+        return self::isMissingAltTextRequest($query) && self::isFileRecordDeleteRequest($query);
     }
 
     /**

@@ -60,7 +60,12 @@ readonly class FileDeleteTool implements McpFalStorageToolInterface, McpPlannabl
         );
     }
 
-    #[McpTool(name: 'file_delete', description: 'Delete a file by its identifier from a storage.')]
+    #[McpTool(
+        name: 'file_delete',
+        description: 'Delete one named file by its identifier from a storage.'
+            . ' Images without alt text: call t3aa_list_files_missing_alt_text and show the list;'
+            . ' do not mass-delete those files.',
+    )]
     public function execute(string $fileIdentifier, int $storageUid = 1): string
     {
         try {
