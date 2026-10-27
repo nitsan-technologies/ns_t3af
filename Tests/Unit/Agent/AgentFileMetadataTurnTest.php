@@ -186,7 +186,7 @@ final class AgentFileMetadataTurnTest extends TestCase
         );
         self::assertSame(
             ['fileUrl' => 'camino/victoriano-izquierdo-o7G89a9GFdA-unsplash.webp'],
-            AgentToolTurnProcessor::withRequestedFileName(['fileUid' => 1], $request),
+            AgentToolTurnProcessor::withRequestedFileName(['fileUid' => 1], $request, static fn(int $uid): string => ''),
         );
 
         $afterFirst = [

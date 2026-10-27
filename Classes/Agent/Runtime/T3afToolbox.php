@@ -22,6 +22,7 @@ namespace NITSAN\NsT3AF\Agent\Runtime;
 use NITSAN\NsT3AF\Agent\Service\AgentAttachTargetRequest;
 use NITSAN\NsT3AF\Agent\Service\AgentPlan;
 use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
+use NITSAN\NsT3AF\Agent\Service\AgentRequestChecklist;
 use NITSAN\NsT3AF\Agent\Service\AgentRequestedFiles;
 use NITSAN\NsT3AF\Agent\Service\AgentRunner;
 use NITSAN\NsT3AF\Agent\Service\AgentToolSearch;
