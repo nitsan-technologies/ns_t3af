@@ -26,17 +26,27 @@ T3Planet runs the AI work and reduces your **credit** balance. In
    On :guilabel:`AI Providers` you can choose between :guilabel:`Your Own API Keys`
    and :guilabel:`T3Planet Credits`.
 
-.. figure:: ../Images/t3planet-credits-dashboard.png
-   :alt: AI Foundation Dashboard in T3Planet Credits mode with balance, credit burn, and spend by extension
-   :class: with-border with-shadow
+.. tip::
 
-   Dashboard — :guilabel:`T3Planet Credits` mode with remaining balance, credit
-   burn over time, and spend by extension.
+   **You can buy credits from the TYPO3 backend too.** No website visit is
+   needed. See :ref:`Buy credits <t3planet-credits-buy>`.
+
+Three ways to get credits
+=========================
+
+1. **Start free.** Select :guilabel:`T3Planet Credits` and click
+   :guilabel:`Activate`. You receive 50 free trial credits once. No card needed.
+   See :ref:`Configuration <t3planet-credits-configuration>`.
+2. **Buy in the TYPO3 backend.** Pick a plan or a top-up under
+   :guilabel:`AI Credit Bundles`. See :ref:`Buy credits <t3planet-credits-buy>`.
+3. **Buy on t3planet.de/ki-credits.** Pay on the website, then paste the
+   **claim code** from your email into TYPO3. See
+   :ref:`Use a claim code <t3planet-credits-claim-code>`.
 
 What you get
 ============
 
-* You'll receive 50 free credits once upon signup
+* 50 free trial credits once (the amount is set by T3Planet)
 * AI features without configuring OpenAI, Anthropic, Gemini, Mistral, or similar
   keys
 * One shared credit balance for this installation
@@ -75,6 +85,8 @@ minimisation, see :ref:`DPA & GDPR <data-processing-agreement>`.
 
    Overview/Index
    Configuration/Index
+   BuyCredits/Index
+   ClaimCode/Index
    AIUsage/Index
    MCPIntegration/Index
    Troubleshooting/Index
