@@ -128,6 +128,10 @@ readonly class AgentPromptBuilder
             'A sys_file uid is never a tt_content uid. To list images without alt text call t3aa_list_files_missing_alt_text. Never pass a file uid to content_delete. Summarize a named page with t3aa_summarize_content pageId — never pass that page uid as contentUid.',
             'A simplified or plain-language version in a named language is t3aa_summarize_content with pageId of this page and that language. It is not t3ai_translate_content. Do not pass contentUid 0.',
             'After t3aa_get_file_metadata, a follow-up such as "change it to …" still means t3aa_update_file_metadata. Do not use write_table on sys_file.',
+            'When the editor names several image files, call t3aa_update_file_metadata once per file (fileUrl of that file). After Apply, continue with the next named file. Do not stop after the first.',
+            'A new request that lists images without alt text, marks an image decorative, or queues a folder is not a follow-up of the previous image. Call t3aa_list_files_missing_alt_text, t3aa_mark_image_decorative (fileUrl of the named file) or t3aa_alt_text_queue_folder as asked. Do not reuse the previous file.',
+            'After t3aa_list_files_missing_alt_text, generate alt text only for files from that list (fileUid). Skip files that already have alt text. One file per t3aa_update_file_metadata call; after Apply continue with the next until the asked count is done.',
+            'When the editor asks to queue alt text drafts and not approve them yet, call t3aa_alt_text_queue_folder then t3aa_alt_text_drafts_list. Do not call t3aa_alt_text_approve.',
             'To change or delete a content element, use its uid from the latest content_list or content_get result; uids from older messages may no longer exist. The uid of a record you just created (from the applied result) is valid.',
             'write_table action must be create, update, or delete only. To show or hide a page or content element, use action update with data {"hidden": 0} or {"hidden": 1}. Never invent other action names. After you create a content element the editor asked for, do not prepare a delete of that same element unless they asked to remove it.',
             'To make a translated page visible, update hidden on that translation page uid and on its hidden content elements (content_list with the default page pid + that language) in the same write_table plan. Do not stop after only the page row. Do not use workspace_stage_set for visibility.',
@@ -652,6 +656,10 @@ readonly class AgentPromptBuilder
         if ($missing !== '' && $checklist === []) {
             // Checklist already encodes attach_image when present; avoid duplicating.
             $parts[] = $missing;
+        }
+        $imageTexts = AgentToolTurnProcessor::remainingImageTextReminder($history, $query);
+        if ($imageTexts !== '') {
+            $parts[] = $imageTexts;
         }
 
         return implode(' ', $parts);

@@ -1050,7 +1050,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $createContent = AgentCoreToolSet::isCreateContentRequest($query);
         $notAskedFor = array_flip(self::toolsNotAskedFor($query));
         // "Now the same in Hindi" / "Change it to …" right after image texts were read or prepared.
-        if (self::isImageTextFollowUpHistory($historyMessages)) {
+        if (self::isImageTextFollowUpHistory($historyMessages) && self::isImageTextFollowUpQuery($query)) {
             unset($notAskedFor['t3aa_update_file_metadata']);
         }
         $gateRequest = self::requestForGate($userMessage, $historyMessages);
@@ -1169,6 +1169,18 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
         if (self::isMissingAltTextRequest($query) && !self::isApproveAllAltTextRequest($query)) {
             $found = [...self::toolsByName(['t3aa_list_files_missing_alt_text'], $executableTools, $offeredNames), ...$found];
+            if (AgentToolTurnProcessor::asksToWriteMissingAltText($query)) {
+                $found = [...self::toolsByName(['t3aa_update_file_metadata'], $executableTools, $offeredNames), ...$found];
+            }
+        }
+        if (self::isDecorativeImageRequest($query)) {
+            $found = [...self::toolsByName(['t3aa_mark_image_decorative'], $executableTools, $offeredNames), ...$found];
+        }
+        if (self::isQueueFolderAltTextRequest($query)) {
+            $found = [...self::toolsByName(['t3aa_alt_text_queue_folder', 't3aa_alt_text_drafts_list'], $executableTools, $offeredNames), ...$found];
+        }
+        if (AgentToolTurnProcessor::remainingNamedImageTextFiles($historyMessages, $query) !== []) {
+            $found = [...self::toolsByName(['t3aa_update_file_metadata'], $executableTools, $offeredNames), ...$found];
         }
         if (self::isSummarizeRequest($query)) {
             $found = [...self::toolsByName(['t3aa_summarize_content'], $executableTools, $offeredNames), ...$found];
@@ -1407,11 +1419,20 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $names[] = 't3aa_alt_text_drafts_list';
             $names[] = 't3aa_list_files_missing_alt_text';
         }
+        if (self::isDoNotApproveAltTextRequest($query)) {
+            $names[] = 't3aa_alt_text_approve';
+        }
+        if (self::isQueueFolderAltTextRequest($query) && AgentToolTurnProcessor::requestedFileNames($query) === []) {
+            $names[] = 't3aa_update_file_metadata';
+        }
+        if (self::isDecorativeImageRequest($query)) {
+            $names[] = 't3aa_update_file_metadata';
+        }
         if (self::isFileRecordDeleteRequest($query) || self::isMissingAltTextRequest($query) || self::isSummarizeRequest($query)) {
             $names[] = 'content_delete';
         }
 
-        return $names;
+        return array_values(array_unique($names));
     }
 
     /**
@@ -1504,6 +1525,48 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     {
         return self::usedRecently('t3aa_update_file_metadata', $historyMessages)
             || self::usedRecently('t3aa_get_file_metadata', $historyMessages);
+    }
+
+    /**
+     * A short follow-up of the previous image ("now Hindi"). A new list / decorative / folder request is not.
+     */
+    public static function isImageTextFollowUpQuery(string $query): bool
+    {
+        if (
+            self::isMissingAltTextRequest($query)
+            || self::isDecorativeImageRequest($query)
+            || self::isQueueFolderAltTextRequest($query)
+            || self::isApproveAllAltTextRequest($query)
+        ) {
+            return false;
+        }
+
+        return AgentToolTurnProcessor::requestedFileNames($query) === [];
+    }
+
+    public static function isDecorativeImageRequest(string $query): bool
+    {
+        return preg_match('/\b(decorativ\w*|dekorativ\w*|dekoration)\b/iu', $query) === 1;
+    }
+
+    public static function isQueueFolderAltTextRequest(string $query): bool
+    {
+        if (preg_match('/\b(alt[\s-]*texts?|alternativtext\w*|drafts?|entw[uü]rfe)\b/iu', $query) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(queue|folder|ordner|verzeichnis\w*|user_upload)\b/iu', $query) === 1;
+    }
+
+    public static function isDoNotApproveAltTextRequest(string $query): bool
+    {
+        return preg_match(
+            '/\b(?:do\s+not|don\'?t)\s+approv'
+            . '|\buntil\s+i\s+say'
+            . '|\bnicht\s+(?:freigeb|genehmig)'
+            . '|\berst\s+wenn\b.{0,40}\b(?:freigeb|genehmig|approv)/iu',
+            $query,
+        ) === 1;
     }
 
     /**

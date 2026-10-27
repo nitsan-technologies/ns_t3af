@@ -1322,7 +1322,7 @@
         <source>Good news — no images are missing alt text in this storage.</source>
       </trans-unit>
       <trans-unit id="agent.result.nextAltTextHint" resname="agent.result.nextAltTextHint">
-        <source>Next: use “Generate file metadata (alt, title)” or ask to write alt text for a specific file.</source>
+        <source>Next: call generate file metadata for each listed file, one file at a time. After Apply, continue with the next. Skip files that already have alt text.</source>
       </trans-unit>
       <trans-unit id="agent.result.folderContents" resname="agent.result.folderContents">
         <source>This folder contains %1$s file(s) and %2$s subfolder(s).</source>

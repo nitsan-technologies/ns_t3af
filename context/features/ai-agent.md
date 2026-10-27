@@ -205,14 +205,15 @@ Phase 4 child tools (all with `McpToolSeverity`, `McpToolIntent` EN/DE, `agent.t
 
 ### Image texts (alt text, title, description)
 
-- A file named in the request (`AgentToolTurnProcessor::requestedFileName`) is the target; `fileUrl` may be just the name and is found in any folder. Only files the editor may read count (`RecordsApplyFileAccess`); files outside their file mounts are neither used nor named.
+- A file named in the request (`AgentToolTurnProcessor::requestedFileName`) is the target; `fileUrl` may be just the name and is found in any folder. Several named files: one `t3aa_update_file_metadata` call per file (`nextRequestedFileName`); after Apply the next named file stays open work. Only files the editor may read count (`RecordsApplyFileAccess`); files outside their file mounts are neither used nor named.
 - `t3aa_get_file_metadata` returns `public_url` (FAL path + `TYPO3_SITE_URL`). Empty when there is no real origin — never a placeholder host. The agent must quote that field, not invent a URL. `t3aa_get_file_for_metadata` stays hidden; if it is called, the turn points at `t3aa_get_file_metadata`.
 - Several readable files with that name: the turn asks which one (`agent.fileMeta.whichFile`, meta `fileChoice`, `fileChoiceTool`). The click (`… [uid]`) goes back to that tool.
 - Texts already stored: before generating, the turn shows them and asks (`agent.fileMeta.overwriteQuestion`, meta `fileMetaOverwrite {fileUid, languageUid, choices}`, `askedFor`). **Regenerate all** builds suggestions; **Fill empty fields only** passes `onlyFields`; **Keep current texts** answers `agent.fileMeta.kept` and changes nothing.
 - A click on one of those options is answered by `AgentTurnRouter` without the model (`AgentToolTurnProcessor::imageTextAnswer()`). `T3afToolbox::answeredImageTextQuestion()` does the same when the runner gets the click.
 - Language: the model passes `isoCode` (`de`, `hi`). `languageUid` is `#[McpAgentHidden]` on the tool parameter, and `T3afToolbox` drops a `languageUid` the model sends anyway. ns_t3aa `MetadataLanguage` maps the code to the site language id.
 - Text the editor wrote for alt text, title or description (`#[McpContentParam(editorText: true)]`) is shown as it is; text the model made up is dropped and generated from the image instead.
-- A follow-up within 3 requests ("now the same in Hindi") keeps the image-text tool offered (`AgentRunner::usedRecently()`); `t3ai_generate_image` is refused there unless the editor asked for a new picture.
+- A follow-up within 3 requests ("now the same in Hindi") keeps the image-text tool offered (`AgentRunner::usedRecently()` + `isImageTextFollowUpQuery()`); a new missing-alt / decorative / queue-folder request is not a follow-up of the previous image. `t3ai_generate_image` is refused on a true follow-up unless the editor asked for a new picture.
+- `t3aa_mark_image_decorative` accepts `fileUrl` (a file name). `t3aa_list_files_missing_alt_text` omits decorative images; "pick the first N and generate" continues with listed `fileUid`s, one card at a time. "Do not approve yet" hides and refuses `t3aa_alt_text_approve`.
 - After Apply, the result links point at the `sys_file_metadata` row (`AgentWriteService` `resultRecords`), and Undo resets that row.
 
 ### Runner safety nets

@@ -318,6 +318,107 @@ final class T3afToolbox implements ToolboxInterface
     }
 
     /**
+     * "Show me the drafts. Do not approve them until I say so."
+     */
+    private function refuseDoNotApproveDetour(string $name, ToolCall $toolCall, string $requestQuery): ?ToolResult
+    {
+        if ($name !== 't3aa_alt_text_approve' || !AgentRunner::isDoNotApproveAltTextRequest($requestQuery)) {
+            return null;
+        }
+
+        return new ToolResult(
+            $toolCall,
+            'Not executed: the editor asked not to approve drafts yet. Call t3aa_alt_text_drafts_list to show them. Do not call t3aa_alt_text_approve until they ask.',
+        );
+    }
+
+    /**
+     * The image-text tools find a named file in any folder; browsing for it only costs steps.
+     */
+    private function refuseNamedFileBrowseDetour(string $name, ToolCall $toolCall, string $requestQuery): ?ToolResult
+    {
+        if (!in_array($name, ['file_list', 'file_get_info'], true)) {
+            return null;
+        }
+        $gate = $this->gateRequest();
+        $next = AgentToolTurnProcessor::nextRequestedFileName($gate, $this->conversationHistory())
+            ?? AgentToolTurnProcessor::requestedFileNames($gate)[0] ?? null;
+        if ($next === null) {
+            return null;
+        }
+        if (AgentRunner::isDecorativeImageRequest($gate) && isset($this->catalog['t3aa_mark_image_decorative'])) {
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor named the file "' . $next . '". Call t3aa_mark_image_decorative with fileUrl "' . $next . '".',
+            );
+        }
+        if (
+            isset($this->catalog['t3aa_update_file_metadata'])
+            && !in_array('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor($gate), true)
+        ) {
+            $named = AgentToolTurnProcessor::requestedFileNames($gate);
+            $rest = array_slice($named, 1);
+            $more = $rest === [] ? '' : ' After Apply, call it again for "' . implode('", "', $rest) . '".';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor named the file "' . $next . '". t3aa_get_file_metadata and t3aa_update_file_metadata'
+                    . ' take fileUrl "' . $next . '" and find it in any folder. Call the one the request needs with that fileUrl;'
+                    . ' for texts in another language add isoCode.' . $more,
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * Several named files, or a missing-alt list: the call must be the next remaining file, not the previous image.
+     */
+    private function refuseWrongImageTextFile(string $name, ToolCall $toolCall): ?ToolResult
+    {
+        if (!in_array($name, ['t3aa_update_file_metadata', 't3aa_get_file_metadata', 't3aa_mark_image_decorative'], true)) {
+            return null;
+        }
+        $gate = $this->gateRequest();
+        $history = $this->conversationHistory();
+        $arguments = $toolCall->getArguments();
+        $fileUrl = trim((string) ($arguments['fileUrl'] ?? ''));
+        $fileUid = (int) ($arguments['fileUid'] ?? 0);
+        $calledBase = $fileUrl !== '' ? strtolower(basename($fileUrl)) : '';
+
+        $nextNamed = AgentToolTurnProcessor::nextRequestedFileName($gate, $history);
+        if ($nextNamed !== null && $name !== 't3aa_get_file_metadata') {
+            $nextBase = strtolower(basename($nextNamed));
+            if ($calledBase !== '' && $calledBase !== $nextBase) {
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: the next named file is "' . $nextNamed . '". Call ' . $name . ' with fileUrl "' . $nextNamed . '". One file per call.',
+                );
+            }
+        }
+
+        $nextMissing = AgentToolTurnProcessor::nextMissingAltFile($history, $gate);
+        if ($nextMissing === null || $name !== 't3aa_update_file_metadata') {
+            return null;
+        }
+        if ($fileUid <= 0 && $calledBase === '') {
+            return null;
+        }
+        if ($fileUid > 0 && $fileUid === $nextMissing['fileUid']) {
+            return null;
+        }
+        if ($calledBase !== '' && str_contains(strtolower($nextMissing['identifier']), $calledBase)) {
+            return null;
+        }
+
+        return new ToolResult(
+            $toolCall,
+            'Not executed: generate alt text only for images from t3aa_list_files_missing_alt_text. Next is fileUid '
+                . $nextMissing['fileUid'] . ' (' . $nextMissing['identifier'] . '). Skip files that already have alt text.',
+        );
+    }
+
+    /**
      * The image-text tools do not show languageUid to the model (it picks the language by isoCode),
      * so a languageUid it sends anyway is a guess.
      */
@@ -358,6 +459,18 @@ final class T3afToolbox implements ToolboxInterface
 
             return $approveAllDetour;
         }
+        $doNotApproveDetour = $this->refuseDoNotApproveDetour($name, $toolCall, $requestQuery);
+        if ($doNotApproveDetour !== null) {
+            $outcome = 'invalid';
+
+            return $doNotApproveDetour;
+        }
+        $wrongImageTextFile = $this->refuseWrongImageTextFile($name, $toolCall);
+        if ($wrongImageTextFile !== null) {
+            $outcome = 'invalid';
+
+            return $wrongImageTextFile;
+        }
         $scanDetour = $this->refuseAccessibilityScanDetour($name, $toolCall);
         if ($scanDetour !== null) {
             $outcome = 'invalid';
@@ -397,23 +510,11 @@ final class T3afToolbox implements ToolboxInterface
                 : 'Not executed: the editor asked for an AI-generated image, and AI image generation is not available to this editor.'
                     . ' Do not upload a web image instead: do the rest of the request and tell the editor in one sentence that the image could not be generated.');
         }
-        // The image-text tools find a named file in any folder; browsing for it only costs steps.
-        $namedFile = in_array($name, ['file_list', 'file_get_info'], true)
-            ? AgentToolTurnProcessor::requestedFileName($requestQuery)
-            : null;
-        if (
-            $namedFile !== null
-            && isset($this->catalog['t3aa_update_file_metadata'])
-            && !in_array('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor($this->gateRequest()), true)
-        ) {
+        $namedFileDetour = $this->refuseNamedFileBrowseDetour($name, $toolCall, $requestQuery);
+        if ($namedFileDetour !== null) {
             $outcome = 'invalid';
 
-            return new ToolResult(
-                $toolCall,
-                'Not executed: the editor named the file "' . $namedFile . '". t3aa_get_file_metadata and t3aa_update_file_metadata'
-                    . ' take fileUrl "' . $namedFile . '" and find it in any folder. Call the one the request needs with that fileUrl;'
-                    . ' for texts in another language add isoCode.',
-            );
+            return $namedFileDetour;
         }
         $describedFile = $name === AgentRequestedFiles::GENERATION_TOOL
             ? AgentToolTurnProcessor::requestedFileName((string) ($toolCall->getArguments()['prompt'] ?? ''))
@@ -434,6 +535,7 @@ final class T3afToolbox implements ToolboxInterface
             && isset($this->catalog['t3aa_update_file_metadata'])
             && AgentRunner::usedRecently('t3aa_update_file_metadata', $conversationHistory)
             && !AgentRequestedFiles::asksForGeneratedImage($requestQuery)
+            && AgentRunner::isImageTextFollowUpQuery($this->gateRequest())
         ) {
             $outcome = 'invalid';
 

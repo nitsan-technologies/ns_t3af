@@ -100,7 +100,12 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
             $arguments = self::withChosenFile($arguments, self::openQuestionMeta($history), trim((string) ($body['userMessage'] ?? '')));
             // A number in the named file ("…_629764.jpeg") is not its uid.
-            $arguments = self::withRequestedFileName($arguments, trim((string) ($body['requestQuery'] ?? '')));
+            $arguments = self::withRequestedFileName(
+                $arguments,
+                trim((string) ($body['requestQuery'] ?? '')),
+                null,
+                $history,
+            );
             $body['arguments'] = $arguments;
             $fileChoice = $this->fileChoiceTurn($arguments, $toolName, $correlationId);
             if ($fileChoice !== null) {
@@ -579,7 +584,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $question = self::openQuestionMeta($history);
 
         $arguments = self::withChosenFile($arguments, $question, $reply);
-        $arguments = self::withRequestedFileName($arguments, $requestQuery);
+        $arguments = self::withRequestedFileName($arguments, $requestQuery, null, $history);
         $fileChoice = $this->fileChoiceTurn($arguments, 't3aa_update_file_metadata', $correlationId);
         if ($fileChoice !== null) {
             return ['arguments' => $arguments, 'turn' => $fileChoice];
@@ -2265,12 +2270,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         if ($toolName === 't3aa_update_file_metadata') {
-            $named = self::withRequestedFileName($arguments, $request);
+            $named = self::withRequestedFileName($arguments, $request, null, $history);
             if ($named !== $arguments) {
                 return $named;
             }
 
-            return $this->enrichFileMetadataArguments($arguments, $history);
+            return $this->enrichFileMetadataArguments($arguments, $history, $request);
+        }
+
+        if ($toolName === 't3aa_mark_image_decorative') {
+            return self::withRequestedFileName($arguments, $request, null, $history);
         }
 
         if ($toolName !== 'file_reference_add') {
@@ -2347,7 +2356,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      * @param list<array<string, mixed>> $history
      * @return array<string, mixed>
      */
-    private function enrichFileMetadataArguments(array $arguments, array $history): array
+    private function enrichFileMetadataArguments(array $arguments, array $history, string $request = ''): array
     {
         $fileUid = (int) ($arguments['fileUid'] ?? 0);
         $fileUrl = trim((string) ($arguments['fileUrl'] ?? ''));
@@ -2359,6 +2368,20 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
 
         if ($fileUrl !== '' && !self::isPlaceholderFileLocator($fileUrl)) {
             return $arguments;
+        }
+
+        $nextMissing = self::nextMissingAltFile($history, $request);
+        if ($nextMissing !== null) {
+            $arguments['fileUid'] = $nextMissing['fileUid'];
+            unset($arguments['fileUrl']);
+
+            return $arguments;
+        }
+
+        if (AgentRunner::isMissingAltTextRequest($request)) {
+            throw new \InvalidArgumentException(
+                'No listed image without alt text is left. Call t3aa_list_files_missing_alt_text first, then t3aa_update_file_metadata with the fileUid of the next listed file.',
+            );
         }
 
         $resolved = AgentPromptBuilder::unattachedFileUids($history);
@@ -2381,15 +2404,17 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      * The editor named one file ("…/photo.jpg"). That file is the target, not a file the model found
      * by browsing with a similar name. The file tool resolves the name to its sys_file record.
      *
-     * A fileUid of a file with that name (picked when several share the name) stays.
+     * Several named files: the next one that has no image-text card yet. A fileUid of a file with
+     * that name (picked when several share the name) stays.
      *
      * @param array<string, mixed> $arguments
      * @param (callable(int): string)|null $fileNameOf sys_file name by uid
+     * @param list<array<string, mixed>> $history
      * @return array<string, mixed>
      */
-    public static function withRequestedFileName(array $arguments, string $request, ?callable $fileNameOf = null): array
+    public static function withRequestedFileName(array $arguments, string $request, ?callable $fileNameOf = null, array $history = []): array
     {
-        $name = self::requestedFileName($request);
+        $name = self::nextRequestedFileName($request, $history);
         if ($name === null) {
             return $arguments;
         }
@@ -2412,24 +2437,309 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
-     * One file name with a file extension in the request, or null when there is none or several.
+     * File names with a file extension in the request, in order, unique by basename.
+     *
+     * @return list<string>
      */
-    public static function requestedFileName(string $request): ?string
+    public static function requestedFileNames(string $request): array
     {
         if ($request === '') {
-            return null;
+            return [];
         }
         preg_match_all(
             '#(?<![\w.-])((?:[\w.-]+/)*[\w.-]+\.(?:jpe?g|png|webp|gif|svg|avif|tiff?|bmp|heic))(?![\w.-])#iu',
             $request,
             $matches,
         );
-        $names = array_values(array_unique(array_map(
-            static fn(string $name): string => ltrim($name, '/'),
-            $matches[1],
-        )));
+        $names = [];
+        $seen = [];
+        foreach ($matches[1] as $name) {
+            $name = ltrim($name, '/');
+            $key = strtolower(basename($name));
+            if ($name === '' || isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $names[] = $name;
+        }
+
+        return $names;
+    }
+
+    /**
+     * One file name with a file extension in the request, or null when there is none or several.
+     */
+    public static function requestedFileName(string $request): ?string
+    {
+        $names = self::requestedFileNames($request);
 
         return count($names) === 1 ? $names[0] : null;
+    }
+
+    /**
+     * The next named file that still needs image texts. Several names: the first not yet prepared.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function nextRequestedFileName(string $request, array $history = []): ?string
+    {
+        $names = self::requestedFileNames($request);
+        if ($names === []) {
+            return null;
+        }
+        $done = self::processedImageTextBasenames($history);
+        foreach ($names as $name) {
+            if (!isset($done[strtolower(basename($name))])) {
+                return $name;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Named files that still need an image-text card.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return list<string>
+     */
+    public static function remainingNamedImageTextFiles(array $history, string $request): array
+    {
+        if (
+            preg_match('/\b(alt\s*text|image\s*texts?|file\s*meta|metadata|bildtext\w*|alternativtext\w*|datei\s*meta)\b/iu', $request) !== 1
+            || AgentRunner::isDecorativeImageRequest($request)
+            || AgentRunner::isQueueFolderAltTextRequest($request)
+        ) {
+            return [];
+        }
+        $done = self::processedImageTextBasenames($history);
+        $left = [];
+        foreach (self::requestedFileNames($request) as $name) {
+            if (!isset($done[strtolower(basename($name))])) {
+                $left[] = $name;
+            }
+        }
+
+        return $left;
+    }
+
+    /**
+     * After listing images without alt text, the next ones the editor asked to fill (e.g. the first three).
+     *
+     * @param list<array<string, mixed>> $history
+     * @return list<array{fileUid: int, identifier: string}>
+     */
+    public static function remainingMissingAltFiles(array $history, string $request): array
+    {
+        if (!AgentRunner::isMissingAltTextRequest($request) || !self::asksToWriteMissingAltText($request)) {
+            return [];
+        }
+        $listed = self::listedMissingAltFiles($history);
+        if ($listed === []) {
+            return [];
+        }
+        $limit = self::requestedMissingAltCount($request);
+        if ($limit > 0) {
+            $listed = array_slice($listed, 0, $limit);
+        }
+        $done = self::processedImageTextFileUids($history);
+        $left = [];
+        foreach ($listed as $file) {
+            if (!isset($done[$file['fileUid']])) {
+                $left[] = $file;
+            }
+        }
+
+        return $left;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function remainingImageTextReminder(array $history, string $request): string
+    {
+        $named = self::remainingNamedImageTextFiles($history, $request);
+        if ($named !== []) {
+            $next = $named[0];
+            $rest = array_slice($named, 1);
+
+            return $rest === []
+                ? 'Remaining: call t3aa_update_file_metadata with fileUrl "' . $next . '". One file per call.'
+                : 'Remaining: call t3aa_update_file_metadata with fileUrl "' . $next . '" (then '
+                    . implode(', ', array_map(static fn(string $name): string => '"' . $name . '"', $rest))
+                    . ' after Apply). One file per call.';
+        }
+        $missing = self::remainingMissingAltFiles($history, $request);
+        if ($missing === []) {
+            return '';
+        }
+        $next = $missing[0];
+        $left = count($missing);
+
+        return sprintf(
+            'Remaining: call t3aa_update_file_metadata with fileUid %d (%s). %d listed image(s) still need alt text. One file per call; after Apply continue with the next listed file. Skip files that already have alt text.',
+            $next['fileUid'],
+            $next['identifier'],
+            $left,
+        );
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @return array{fileUid: int, identifier: string}|null
+     */
+    public static function nextMissingAltFile(array $history, string $request): ?array
+    {
+        $left = self::remainingMissingAltFiles($history, $request);
+
+        return $left[0] ?? null;
+    }
+
+    public static function asksToWriteMissingAltText(string $request): bool
+    {
+        return preg_match(
+            '/\b(generat\w*|write|save|fill|create|pick|suggest|erstell\w*|generier\w*|schreib\w*|speicher\w*|füll\w*|wähl\w*)\b/iu',
+            $request,
+        ) === 1;
+    }
+
+    /**
+     * "pick the first three", "the first 3 images", "drei Bilder".
+     */
+    public static function requestedMissingAltCount(string $request): int
+    {
+        $words = ['two' => 2, 'three' => 3, 'four' => 4, 'five' => 5, 'six' => 6, 'zwei' => 2, 'drei' => 3, 'vier' => 4, 'fünf' => 5, 'sechs' => 6];
+        if (preg_match(
+            '/\b(?:first|erste[ns]?)\s+(\d{1,2}|two|three|four|five|six|zwei|drei|vier|fünf|sechs)\b/iu',
+            $request,
+            $match,
+        ) === 1) {
+            return $words[mb_strtolower($match[1])] ?? (int) $match[1];
+        }
+        if (preg_match(
+            '/\b(\d{1,2}|two|three|four|five|six|zwei|drei|vier|fünf|sechs)\s+(?:[\p{L}-]+\s+){0,3}(?:images?|files?|pictures?|photos?|bilder|dateien|fotos)\b/iu',
+            $request,
+            $match,
+        ) === 1) {
+            return $words[mb_strtolower($match[1])] ?? (int) $match[1];
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @return array<string, true> lowercase basename => true
+     */
+    public static function processedImageTextBasenames(array $history): array
+    {
+        $names = [];
+        foreach (self::processedImageTextTargets($history) as $target) {
+            $name = strtolower(basename($target['name']));
+            if ($name !== '' && $name !== '.' && $name !== '/') {
+                $names[$name] = true;
+            }
+        }
+
+        return $names;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @return array<int, true>
+     */
+    public static function processedImageTextFileUids(array $history): array
+    {
+        $uids = [];
+        foreach (self::processedImageTextTargets($history) as $target) {
+            if ($target['fileUid'] > 0) {
+                $uids[$target['fileUid']] = true;
+            }
+        }
+
+        return $uids;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @return list<array{fileUid: int, identifier: string}>
+     */
+    public static function listedMissingAltFiles(array $history): array
+    {
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            if (
+                ($history[$i]['role'] ?? '') !== 'assistant'
+                || (string) ($meta['tool'] ?? '') !== 't3aa_list_files_missing_alt_text'
+                || ($meta['success'] ?? true) === false
+            ) {
+                continue;
+            }
+            $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+            $items = is_array($details['items'] ?? null) ? $details['items'] : [];
+            $files = [];
+            foreach ($items as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $uid = (int) ($row['file_uid'] ?? $row['fileUid'] ?? $row['uid'] ?? 0);
+                if ($uid <= 0) {
+                    continue;
+                }
+                $files[] = [
+                    'fileUid' => $uid,
+                    'identifier' => (string) ($row['identifier'] ?? $row['name'] ?? (string) $uid),
+                ];
+            }
+
+            return $files;
+        }
+
+        return [];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @return list<array{fileUid: int, name: string}>
+     */
+    private static function processedImageTextTargets(array $history): array
+    {
+        $targets = [];
+        foreach ($history as $entry) {
+            if (($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            $tool = (string) ($meta['tool'] ?? $meta['askedFor'] ?? '');
+            if (!in_array($tool, ['t3aa_update_file_metadata', 't3aa_mark_image_decorative'], true)) {
+                continue;
+            }
+            $type = (string) ($meta['type'] ?? '');
+            if (!in_array($type, ['suggestions', 'tool_result', 'clarification', 'readback_result'], true)) {
+                continue;
+            }
+            foreach (is_array($meta['previews'] ?? null) ? $meta['previews'] : [] as $preview) {
+                if (!is_array($preview)) {
+                    continue;
+                }
+                $targets[] = [
+                    'fileUid' => (int) ($preview['fileUid'] ?? 0),
+                    'name' => (string) ($preview['name'] ?? ''),
+                ];
+            }
+            $overwrite = is_array($meta['fileMetaOverwrite'] ?? null) ? $meta['fileMetaOverwrite'] : [];
+            if ((int) ($overwrite['fileUid'] ?? 0) > 0) {
+                $targets[] = ['fileUid' => (int) $overwrite['fileUid'], 'name' => ''];
+            }
+            $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+            $uid = (int) ($details['file_uid'] ?? $details['fileUid'] ?? 0);
+            $name = (string) ($details['identifier'] ?? $details['fileName'] ?? $details['name'] ?? '');
+            if ($uid > 0 || $name !== '') {
+                $targets[] = ['fileUid' => $uid, 'name' => $name];
+            }
+        }
+
+        return $targets;
     }
 
     private static function isPlaceholderFileLocator(string $value): bool

@@ -1614,8 +1614,8 @@
                 <target>Gute Nachricht – in diesem Speicher fehlt bei keinem Bild der Alt-Text.</target>
             </trans-unit>
             <trans-unit id="agent.result.nextAltTextHint">
-                <source>Next: use “Generate file metadata (alt, title)” or ask to write alt text for a specific file.</source>
-                <target>Weiter: Nutzen Sie „Datei-Metadaten erzeugen (Alt, Titel)“ oder bitten Sie um Alt-Text für eine bestimmte Datei.</target>
+                <source>Next: call generate file metadata for each listed file, one file at a time. After Apply, continue with the next. Skip files that already have alt text.</source>
+                <target>Weiter: Datei-Metadaten für jede gelistete Datei erzeugen, eine Datei nach der anderen. Nach Übernehmen mit der nächsten weitermachen. Dateien mit vorhandenem Alt-Text überspringen.</target>
             </trans-unit>
             <trans-unit id="agent.result.folderContents">
                 <source>This folder contains %1$s file(s) and %2$s subfolder(s).</source>

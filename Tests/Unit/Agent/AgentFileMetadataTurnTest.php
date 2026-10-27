@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
+use NITSAN\NsT3AF\Agent\Service\AgentPromptBuilder;
 use NITSAN\NsT3AF\Agent\Service\AgentRunner;
 use NITSAN\NsT3AF\Agent\Service\AgentToolTurnProcessor;
 use PHPUnit\Framework\Attributes\Test;
@@ -157,11 +158,99 @@ final class AgentFileMetadataTurnTest extends TestCase
 
         self::assertTrue(AgentRunner::usedRecently('t3aa_get_file_metadata', $history));
         self::assertTrue(AgentRunner::isImageTextFollowUpHistory($history));
+        self::assertTrue(AgentRunner::isImageTextFollowUpQuery('now Hindi'));
         self::assertFalse(AgentRunner::isImageTextFollowUpHistory([
             ...$history,
             ['role' => 'user', 'content' => 'thanks', 'meta' => []],
             ['role' => 'user', 'content' => 'create a news article', 'meta' => []],
             ['role' => 'user', 'content' => 'add a teaser', 'meta' => []],
         ]));
+    }
+
+    #[Test]
+    public function severalNamedFilesAreProcessedOneAfterAnother(): void
+    {
+        $request = 'Write alt text for this "/camino/victoriano-izquierdo-o7G89a9GFdA-unsplash.webp , /camino/damien-dufour-2mMrxyI13QU-unsplash.webp" image and save it.';
+        self::assertSame(
+            [
+                'camino/victoriano-izquierdo-o7G89a9GFdA-unsplash.webp',
+                'camino/damien-dufour-2mMrxyI13QU-unsplash.webp',
+            ],
+            AgentToolTurnProcessor::requestedFileNames($request),
+        );
+        self::assertNull(AgentToolTurnProcessor::requestedFileName($request));
+        self::assertSame(
+            'camino/victoriano-izquierdo-o7G89a9GFdA-unsplash.webp',
+            AgentToolTurnProcessor::nextRequestedFileName($request),
+        );
+        self::assertSame(
+            ['fileUrl' => 'camino/victoriano-izquierdo-o7G89a9GFdA-unsplash.webp'],
+            AgentToolTurnProcessor::withRequestedFileName(['fileUid' => 1], $request),
+        );
+
+        $afterFirst = [
+            ['role' => 'assistant', 'content' => '', 'meta' => [
+                'type' => 'suggestions',
+                'tool' => 't3aa_update_file_metadata',
+                'previews' => [['fileUid' => 10, 'name' => 'victoriano-izquierdo-o7G89a9GFdA-unsplash.webp']],
+            ]],
+        ];
+        self::assertSame(
+            'camino/damien-dufour-2mMrxyI13QU-unsplash.webp',
+            AgentToolTurnProcessor::nextRequestedFileName($request, $afterFirst),
+        );
+        self::assertStringContainsString(
+            'damien-dufour-2mMrxyI13QU-unsplash.webp',
+            AgentToolTurnProcessor::remainingImageTextReminder($afterFirst, $request),
+        );
+        self::assertTrue(AgentPromptBuilder::hasBlockingRemainingWork($afterFirst, [], $request));
+    }
+
+    #[Test]
+    public function missingAltGenerateUsesTheListedFilesNotThePreviousImage(): void
+    {
+        $request = 'Find images with no alt text, pick the first three, generate alt text for each, and save them. Then tell me what you wrote for each file.';
+        self::assertTrue(AgentRunner::isMissingAltTextRequest($request));
+        self::assertTrue(AgentToolTurnProcessor::asksToWriteMissingAltText($request));
+        self::assertSame(3, AgentToolTurnProcessor::requestedMissingAltCount($request));
+        self::assertFalse(AgentRunner::isImageTextFollowUpQuery($request));
+        self::assertFalse(AgentRunner::isImageTextFollowUpQuery('Mark this image as decorative'));
+        self::assertFalse(AgentRunner::isImageTextFollowUpQuery('Queue alt text for user_upload folder'));
+
+        $history = [
+            ['role' => 'assistant', 'content' => '', 'meta' => [
+                'type' => 'tool_result',
+                'tool' => 't3aa_list_files_missing_alt_text',
+                'success' => true,
+                'details' => ['items' => [
+                    ['file_uid' => 21, 'identifier' => '/a.webp'],
+                    ['file_uid' => 22, 'identifier' => '/b.webp'],
+                    ['file_uid' => 23, 'identifier' => '/c.webp'],
+                    ['file_uid' => 24, 'identifier' => '/d.webp'],
+                ]],
+            ]],
+        ];
+        self::assertSame(21, AgentToolTurnProcessor::nextMissingAltFile($history, $request)['fileUid'] ?? 0);
+        $afterFirst = [
+            ...$history,
+            ['role' => 'assistant', 'content' => '', 'meta' => [
+                'type' => 'suggestions',
+                'tool' => 't3aa_update_file_metadata',
+                'previews' => [['fileUid' => 21, 'name' => 'a.webp']],
+            ]],
+        ];
+        self::assertSame(22, AgentToolTurnProcessor::nextMissingAltFile($afterFirst, $request)['fileUid'] ?? 0);
+        self::assertCount(2, AgentToolTurnProcessor::remainingMissingAltFiles($afterFirst, $request));
+    }
+
+    #[Test]
+    public function decorativeAndQueueFolderRequestsAreRecognised(): void
+    {
+        self::assertTrue(AgentRunner::isDecorativeImageRequest('Mark this "/camino/fef4453b2185eb0e31f704b6224c66087807f19d.webp" image as decorative.'));
+        self::assertContains('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor('Mark this image as decorative'));
+        self::assertTrue(AgentRunner::isQueueFolderAltTextRequest('Queue alt text for "user_upload" folder, then show me the drafts. Do not approve them until I say so.'));
+        self::assertTrue(AgentRunner::isDoNotApproveAltTextRequest('Queue alt text for "user_upload" folder, then show me the drafts. Do not approve them until I say so.'));
+        self::assertContains('t3aa_alt_text_approve', AgentRunner::toolsNotAskedFor('Queue alt text for "user_upload" folder, then show me the drafts. Do not approve them until I say so.'));
+        self::assertContains('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor('Queue alt text for "user_upload" folder'));
     }
 }
