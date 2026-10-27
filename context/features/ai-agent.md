@@ -197,7 +197,7 @@ Phase 4 child tools (all with `McpToolSeverity`, `McpToolIntent` EN/DE, `agent.t
 | ns_t3af | `file_upload_from_url` — downloads a public URL into FAL. A hostname is pinned with `CURLOPT_RESOLVE` and is not streamed, because the stream handler rejects curl options. A failed download names the host. No card for a placeholder host such as example.com. |
 | ns_t3af | `file_reference_add` — no card for a file name instead of a uid, an unknown or unreadable file, a file missing on disk, or a field the record type does not show (`assets` on Image). The card lists file names. sys_file uids named in the request are checked up front (`AgentRequestedFiles`): missing ones are reported in a `files_unavailable` message and the attach step ends as `failed`. |
 | ns_t3aa | `t3aa_alt_text_queue_folder` (creates the drafts), `t3aa_alt_text_drafts_list` (read only; capped, with paging; an empty list says nothing was generated yet and points to the queue tool), `t3aa_alt_text_approve` (`all=true` for every pending draft; refused with a pointer to `t3aa_update_file_metadata` when a named file has no draft), `t3aa_mark_image_decorative` (`McpAltTextService`) |
-| ns_t3aa | `t3aa_accessibility_scan_run`, `t3aa_accessibility_issues` (`McpAccessibilityService`; one item per rule with summed occurrences, plain-text fix, ready `summary` with score and issue counts) |
+| ns_t3aa | `t3aa_accessibility_scan_run` (write; only when the editor asks to run/start/check a scan), `t3aa_accessibility_issues`, `t3aa_accessibility_fix_suggestions` (`McpAccessibilityService`; one item per rule with summed occurrences, plain-text fix, ready `summary` with score and issue counts). "What issues" / "suggest fixes" must not open a scan confirmation card |
 | ns_t3aa | `t3aa_get_file_metadata`, `t3aa_update_file_metadata` — see "Image texts" below |
 | ns_t3aa | `t3aa_generate_voice_over` — text or page text to MP3, T3AA Media permission. For a page it stores the audio on the page and places the Voiceover content element (`nst3aa_voiceover`) in that language; it never creates Text & Media (`McpVoiceOverService`) |
 | ns_t3aa | `t3aa_get_page_speed` — `pageId` of this site (frontend URL from the site) or a URL the editor wrote; `T3afToolbox` drops a URL whose host the editor never wrote |
@@ -206,6 +206,7 @@ Phase 4 child tools (all with `McpToolSeverity`, `McpToolIntent` EN/DE, `agent.t
 ### Image texts (alt text, title, description)
 
 - A file named in the request (`AgentToolTurnProcessor::requestedFileName`) is the target; `fileUrl` may be just the name and is found in any folder. Only files the editor may read count (`RecordsApplyFileAccess`); files outside their file mounts are neither used nor named.
+- `t3aa_get_file_metadata` returns `public_url` (FAL path + `TYPO3_SITE_URL`). Empty when there is no real origin — never a placeholder host. The agent must quote that field, not invent a URL. `t3aa_get_file_for_metadata` stays hidden; if it is called, the turn points at `t3aa_get_file_metadata`.
 - Several readable files with that name: the turn asks which one (`agent.fileMeta.whichFile`, meta `fileChoice`, `fileChoiceTool`). The click (`… [uid]`) goes back to that tool.
 - Texts already stored: before generating, the turn shows them and asks (`agent.fileMeta.overwriteQuestion`, meta `fileMetaOverwrite {fileUid, languageUid, choices}`, `askedFor`). **Regenerate all** builds suggestions; **Fill empty fields only** passes `onlyFields`; **Keep current texts** answers `agent.fileMeta.kept` and changes nothing.
 - A click on one of those options is answered by `AgentTurnRouter` without the model (`AgentToolTurnProcessor::imageTextAnswer()`). `T3afToolbox::answeredImageTextQuestion()` does the same when the runner gets the click.
@@ -216,6 +217,7 @@ Phase 4 child tools (all with `McpToolSeverity`, `McpToolIntent` EN/DE, `agent.t
 
 ### Runner safety nets
 
+- `t3aa_accessibility_scan_run` is offered only for an explicit run/start/check scan (`AgentRunner::isAccessibilityScanRequest()`). The confirmation card is introduced with `agent.turn.confirmAccessibilityScan` ("Please confirm to start the scan."). "What issues" uses `t3aa_accessibility_issues`. "Suggest fixes" offers only `t3aa_accessibility_fix_suggestions` (the issues list is hidden); `T3afToolbox` refuses a scan or issues detour on those requests.
 - A turn that ends on a failed tool with no reply gets `agent.turn.toolFailedNoReply`.
 - A reply that claims a missing permission while no tool ran and nothing was refused (`AgentRunner::claimsPermissionRefusal()`) is retried once with a nudge to call the offered tool. English wording only; one extra model call.
 - `write_table` is refused when the record is headed "Voice-over", or when the request is about a voice-over and the write attaches a file (`assets`, `media`, `image`), as long as `t3aa_generate_voice_over` is offered.

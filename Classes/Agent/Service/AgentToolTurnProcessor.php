@@ -117,10 +117,13 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $rawTool = $this->findRawTool($toolName);
         if ($rawTool !== null && $this->permittedActionProvider->isHiddenFromAgent($rawTool)) {
             $this->auditLogger->logToolInvocation($correlationId, $toolName, $arguments, false, 0, 'not_available_in_agent');
+            $hiddenMessage = $toolName === 't3aa_get_file_for_metadata'
+                ? 't3aa_get_file_for_metadata is not available in the AI Agent. Call t3aa_get_file_metadata with the same fileUid; it returns public_url. Do not invent a URL.'
+                : $this->translator->translate('agent.turn.notAvailableInAgent', [$toolName]);
 
             return [
                 'role' => 'assistant',
-                'content' => $this->translator->translate('agent.turn.notAvailableInAgent', [$toolName]),
+                'content' => $hiddenMessage,
                 'meta' => [
                     'type' => 'error',
                     'tool' => $toolName,
@@ -1154,6 +1157,13 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $content = ($draftCard['kind'] ?? '') === SatelliteToolPlanService::PLAN_KIND_TOOL_CONFIRMATION
             ? (string) ($draftCard['summary'] ?? $this->translator->translate('agent.draft.proposed', [$editorLabel]))
             : $this->translator->translate('agent.draft.proposed', [$editorLabel]);
+        if ($shownTool === 't3aa_accessibility_scan_run') {
+            $confirm = $this->translator->translate('agent.turn.confirmAccessibilityScan');
+            if ($confirm === 'agent.turn.confirmAccessibilityScan' || $confirm === '') {
+                $confirm = 'Please confirm to start the scan.';
+            }
+            $content = $confirm;
+        }
         $content .= $this->translationProviderNotice($toolName, $arguments, $requestQuery);
 
         return [

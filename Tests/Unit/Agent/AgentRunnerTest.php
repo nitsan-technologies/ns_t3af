@@ -545,16 +545,16 @@ final class AgentRunnerTest extends TestCase
     #[Test]
     public function copyingAPageIsOfferedOnlyWhenAskedFor(): void
     {
-        $gated = ['pages_copy', 'content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'];
+        $gated = ['pages_copy', 'content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over', 't3aa_accessibility_scan_run'];
         self::assertSame($gated, AgentRunner::toolsNotAskedFor('I want a new subpage "Eval yes" under this page'));
         self::assertSame($gated, AgentRunner::toolsNotAskedFor('Ändere die Unterüberschrift von Element 12 auf Hallo'));
-        self::assertSame(['pages_copy', 'content_move', 'pages_move', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Switch to the QA Draft workspace'));
+        self::assertSame(['pages_copy', 'content_move', 'pages_move', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over', 't3aa_accessibility_scan_run'], AgentRunner::toolsNotAskedFor('Switch to the QA Draft workspace'));
         self::assertNotContains('content_move', AgentRunner::toolsNotAskedFor('Move element 12 below element 15'));
         self::assertNotContains('t3ai_analyze_content', AgentRunner::toolsNotAskedFor('Run a content analysis for this page'));
         self::assertContains('t3ai_analyze_content', AgentRunner::toolsNotAskedFor('Change the header of element 12'));
-        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
-        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
-        self::assertSame(['content_move', 'pages_move', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over'], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
+        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over', 't3aa_accessibility_scan_run'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
+        self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over', 't3aa_accessibility_scan_run'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
+        self::assertSame(['content_move', 'pages_move', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over', 't3aa_accessibility_scan_run'], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
         self::assertNotContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor('Summarize this page'));
         self::assertContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor('Rewrite the block so it sounds friendlier'));
         self::assertContains('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor('Generate a picture and attach it to the news'));
@@ -570,6 +570,21 @@ final class AgentRunnerTest extends TestCase
         self::assertFalse(AgentRunner::isApproveAllAltTextRequest('Show alt text drafts'));
         self::assertContains('t3aa_alt_text_drafts_list', AgentRunner::toolsNotAskedFor('Approve all alt text drafts'));
         self::assertNotContains('t3aa_alt_text_drafts_list', AgentRunner::toolsNotAskedFor('Show alt text drafts'));
+        self::assertContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('What accessibility issues are on this page?'));
+        self::assertContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Suggest fixes for the critical accessibility issue'));
+        self::assertContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('How do I fix the accessibility issues on this page?'));
+        self::assertContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Show the last accessibility scan result'));
+        self::assertNotContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Run an accessibility scan of this page'));
+        self::assertNotContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Check this page for accessibility issues'));
+        self::assertNotContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Prüfe diese Seite auf Barrierefreiheit'));
+        self::assertNotContains('t3aa_accessibility_scan_run', AgentRunner::toolsNotAskedFor('Barrierefreiheits-Scan für diese Seite starten'));
+        self::assertTrue(AgentRunner::isAccessibilityFixRequest('Suggest fixes for the critical accessibility issue'));
+        self::assertTrue(AgentRunner::isAccessibilityFixRequest('How do I fix the accessibility issues on this page?'));
+        self::assertFalse(AgentRunner::isAccessibilityFixRequest('What accessibility issues are on this page?'));
+        self::assertFalse(AgentRunner::isAccessibilityScanRequest('Ergebnis des letzten Barrierefreiheits-Scans'));
+        self::assertContains('t3aa_accessibility_issues', AgentRunner::toolsNotAskedFor('Suggest fixes for the critical accessibility issue'));
+        self::assertContains('t3aa_accessibility_issues', AgentRunner::toolsNotAskedFor('How do I fix the accessibility issues on this page?'));
+        self::assertNotContains('t3aa_accessibility_issues', AgentRunner::toolsNotAskedFor('What accessibility issues are on this page?'));
     }
 
     #[Test]

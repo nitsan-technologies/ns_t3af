@@ -254,6 +254,39 @@ final class T3afToolbox implements ToolboxInterface
     }
 
     /**
+     * "What issues" / "suggest fixes" must not open a Check accessibility write card.
+     * A fix request must not list issues and then invent the solutions.
+     */
+    private function refuseAccessibilityScanDetour(string $name, ToolCall $toolCall): ?ToolResult
+    {
+        $request = $this->gateRequest();
+        if (
+            $name === 't3aa_accessibility_issues'
+            && AgentRunner::isAccessibilityFixRequest($request)
+            && isset($this->catalog['t3aa_accessibility_fix_suggestions'])
+        ) {
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked how to fix accessibility issues. Call t3aa_accessibility_fix_suggestions'
+                    . ' (it also reports a missing scan). Do not rewrite the issues list yourself.',
+            );
+        }
+        if ($name !== 't3aa_accessibility_scan_run' || AgentRunner::isAccessibilityScanRequest($request)) {
+            return null;
+        }
+        $read = AgentRunner::isAccessibilityFixRequest($request)
+            && isset($this->catalog['t3aa_accessibility_fix_suggestions'])
+            ? 't3aa_accessibility_fix_suggestions'
+            : 't3aa_accessibility_issues';
+
+        return new ToolResult(
+            $toolCall,
+            'Not executed: the editor did not ask to run a new scan. Call ' . $read
+                . ' for the last scan (it also says when none exists). Do not invent a scan result.',
+        );
+    }
+
+    /**
      * Approve-all must not list drafts or copy a handful of fileUids onto the confirmation card.
      */
     private function refuseApproveAllDetour(string $name, ToolCall $toolCall, string $requestQuery): ?ToolResult
@@ -313,6 +346,12 @@ final class T3afToolbox implements ToolboxInterface
             $outcome = 'invalid';
 
             return $approveAllDetour;
+        }
+        $scanDetour = $this->refuseAccessibilityScanDetour($name, $toolCall);
+        if ($scanDetour !== null) {
+            $outcome = 'invalid';
+
+            return $scanDetour;
         }
         if ($name === 'pages_move' && (PageCreateBefore::isCreateBefore($requestQuery) || PageCreateAfter::isCreateAfter($requestQuery) || PageCreateAfter::isLastUnder($requestQuery))) {
             $outcome = 'invalid';

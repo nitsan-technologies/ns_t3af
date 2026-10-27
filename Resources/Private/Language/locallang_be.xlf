@@ -1528,6 +1528,9 @@
       <trans-unit id="agent.plan.unsupportedDynamicOperation" resname="agent.plan.unsupportedDynamicOperation">
         <source>Unsupported dynamic operation: %1$s</source>
       </trans-unit>
+      <trans-unit id="agent.turn.confirmAccessibilityScan" resname="agent.turn.confirmAccessibilityScan">
+        <source>Please confirm to start the scan.</source>
+      </trans-unit>
       <trans-unit id="agent.turn.notAvailableInAgent" resname="agent.turn.notAvailableInAgent">
         <source>%1$s is not available in the AI Agent yet. Use the MCP Playground or the extension backend module instead.</source>
       </trans-unit>

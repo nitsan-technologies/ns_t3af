@@ -1153,6 +1153,14 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if (self::isApproveAllAltTextRequest($query)) {
             $found = [...self::toolsByName(['t3aa_alt_text_approve'], $executableTools, $offeredNames), ...$found];
         }
+        if (self::isAccessibilityFixRequest($query)) {
+            $found = [...self::toolsByName(['t3aa_accessibility_fix_suggestions'], $executableTools, $offeredNames), ...$found];
+        } elseif (
+            preg_match('/\b(?:accessib|a11y|wcag|barriere)/iu', $query) === 1
+            && !self::isAccessibilityScanRequest($query)
+        ) {
+            $found = [...self::toolsByName(['t3aa_accessibility_issues'], $executableTools, $offeredNames), ...$found];
+        }
         $found = [...self::fileActionTools($query, $executableTools, $offeredNames), ...$found];
         $workPlan = self::planCarriedIntoTurn($userMessage, $historyMessages);
         if (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $gateRequest)) {
@@ -1351,12 +1359,63 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $names[] = $name;
             }
         }
+        if (!self::isAccessibilityScanRequest($query)) {
+            $names[] = 't3aa_accessibility_scan_run';
+        }
+        if (self::isAccessibilityFixRequest($query)) {
+            $names[] = 't3aa_accessibility_issues';
+        }
         if (self::isApproveAllAltTextRequest($query)) {
             $names[] = 't3aa_alt_text_drafts_list';
             $names[] = 't3aa_list_files_missing_alt_text';
         }
 
         return $names;
+    }
+
+    /**
+     * Run/start/check a new WCAG scan — not "what issues" or "how do I fix them".
+     */
+    public static function isAccessibilityScanRequest(string $query): bool
+    {
+        $asksToRun = preg_match(
+            '/\b(?:run|start|launch|trigger|re-?scan|scannen|starte\w*|prüf\w*|check)\b/iu',
+            $query,
+        ) === 1;
+        if (
+            !$asksToRun
+            && preg_match('/\b(?:what|welche\w*|show|zeig\w*|list\w*|last|latest|letzten?|result|ergebnis|suggest|vorschla\w*|how|wie)\b/iu', $query) === 1
+        ) {
+            return false;
+        }
+
+        return preg_match(
+            '/(?:'
+            . '\bcheck\s+.{0,80}accessib'
+            . '|\baccessib.{0,40}\bcheck\b'
+            . '|\bprüf\w*.{0,60}barriere'
+            . '|\bbarriere.{0,60}prüf'
+            . '|\b(?:run|start|launch|trigger|starte\w*)\s+.{0,40}(?:scan|accessib|a11y|wcag|barriere)'
+            . '|\b(?:scan|accessib|a11y|wcag|barriere).{0,40}\b(?:start|starte\w*|run|launch)\b'
+            . '|\b(?:re-?)?scan(?:ning|ned)?\s+(?:this|the|a)?\s*(?:page|site|homepage)'
+            . '|\bscan\s+(?:this|the)\s+page'
+            . '|\bbarrierefreiheits?-?scan\b'
+            . '|\bscannen\b'
+            . ')/iu',
+            $query,
+        ) === 1;
+    }
+
+    /**
+     * "How do I fix these accessibility issues?" — the read Fix Hub tool, not a new scan.
+     */
+    public static function isAccessibilityFixRequest(string $query): bool
+    {
+        if (preg_match('/\b(?:fix|fixes|solve|repair|suggest|beheb\w*|lös\w*|vorschlag|vorschläge)\b/iu', $query) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:accessib|a11y|wcag|barriere)/iu', $query) === 1;
     }
 
     /**
