@@ -153,6 +153,10 @@ final class CreditModeController
             ], 403);
         }
 
+        $creditsActivationArmed = false;
+        $creditModeWasEnabled = false;
+        $previousBearer = null;
+
         try {
             $body = $this->parseRequestBody($request);
             $contactOverride = null;
@@ -174,6 +178,7 @@ final class CreditModeController
             $creditModeWasEnabled = $this->runtimeSettings->isCreditModeEnabled();
             $previousBearer = $this->runtimeSettings->getTokenPlain();
             $this->runtimeSettings->save(['credit_mode' => 1]);
+            $creditsActivationArmed = true;
             $activation = $this->tokenResolver->activateTrialToken($contactOverride);
             $balance = $this->fetchBalanceOrResync();
             $this->pricingResolver->rememberFromPayload($balance);
@@ -189,7 +194,7 @@ final class CreditModeController
                 'pricing' => $this->serializePricing($this->pricingResolver->resolve()),
             ]);
         } catch (CreditsApiException $exception) {
-            if (isset($creditModeWasEnabled, $previousBearer)) {
+            if ($creditsActivationArmed) {
                 $this->rollbackCreditsActivation($previousBearer, $creditModeWasEnabled);
             }
 
@@ -216,6 +221,10 @@ final class CreditModeController
             ], 403);
         }
 
+        $creditsActivationArmed = false;
+        $creditModeWasEnabled = false;
+        $previousBearer = null;
+
         try {
             $body = $this->parseRequestBody($request);
             $claimCode = CreditModeRequestParser::claimCodeFromBody($body);
@@ -237,6 +246,7 @@ final class CreditModeController
             $creditModeWasEnabled = $this->runtimeSettings->isCreditModeEnabled();
             $previousBearer = $this->runtimeSettings->getTokenPlain();
             $this->runtimeSettings->save(['credit_mode' => 1]);
+            $creditsActivationArmed = true;
             $claim = $this->tokenResolver->claimWithCode($claimCode);
             $balance = $this->fetchBalanceOrResync();
             $this->pricingResolver->rememberFromPayload($balance);
@@ -253,7 +263,7 @@ final class CreditModeController
                 'pricing' => $this->serializePricing($this->pricingResolver->resolve()),
             ]);
         } catch (CreditsApiException $exception) {
-            if (isset($creditModeWasEnabled, $previousBearer)) {
+            if ($creditsActivationArmed) {
                 $this->rollbackCreditsActivation($previousBearer, $creditModeWasEnabled);
             }
 
