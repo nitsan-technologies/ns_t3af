@@ -218,6 +218,8 @@ Phase 4 child tools (all with `McpToolSeverity`, `McpToolIntent` EN/DE, `agent.t
 ### Runner safety nets
 
 - `t3aa_accessibility_scan_run` is offered only for an explicit run/start/check scan (`AgentRunner::isAccessibilityScanRequest()`). The confirmation card is introduced with `agent.turn.confirmAccessibilityScan` ("Please confirm to start the scan."). "What issues" uses `t3aa_accessibility_issues`. "Suggest fixes" offers only `t3aa_accessibility_fix_suggestions` (the issues list is hidden); `T3afToolbox` refuses a scan or issues detour on those requests.
+- A sys_file uid or a named page uid is never a tt_content uid. "Delete images with no alt text" lists files (`t3aa_list_files_missing_alt_text`) and hides `content_delete`. "Summarize page 234" must pass `pageId`, not `contentUid`. `T3afToolbox` refuses the mix-up. After `t3aa_get_file_metadata`, "change it to …" keeps `t3aa_update_file_metadata` offered and refuses `write_table` on `sys_file`.
+- `agent.turn.stepsStillOpen` ("Say continue") is only for work that already started (an image still to attach). A never-started text-element create uses `agent.turn.emptyModelReply` instead.
 - A turn that ends on a failed tool with no reply gets `agent.turn.toolFailedNoReply`.
 - A reply that claims a missing permission while no tool ran and nothing was refused (`AgentRunner::claimsPermissionRefusal()`) is retried once with a nudge to call the offered tool. English wording only; one extra model call.
 - `write_table` is refused when the record is headed "Voice-over", or when the request is about a voice-over and the write attaches a file (`assets`, `media`, `image`), as long as `t3aa_generate_voice_over` is offered.

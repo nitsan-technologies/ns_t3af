@@ -353,6 +353,12 @@ final class T3afToolbox implements ToolboxInterface
 
             return $scanDetour;
         }
+        $uidTypeDetour = $this->refuseUidTypeMixup($name, $toolCall, $this->gateRequest());
+        if ($uidTypeDetour !== null) {
+            $outcome = 'invalid';
+
+            return $uidTypeDetour;
+        }
         if ($name === 'pages_move' && (PageCreateBefore::isCreateBefore($requestQuery) || PageCreateAfter::isCreateAfter($requestQuery) || PageCreateAfter::isLastUnder($requestQuery))) {
             $outcome = 'invalid';
             $place = PageCreateAfter::isCreateAfter($requestQuery) || PageCreateAfter::isLastUnder($requestQuery) ? 'afterUid' : 'beforeUid';
@@ -507,6 +513,24 @@ final class T3afToolbox implements ToolboxInterface
             return new ToolResult(
                 $toolCall,
                 'Not executed: the editor asked for SEO for all pages, not for the open page. Call pages_tree (or pages_list) for the page uids, then t3ai_generate_seo_batch with pageIds of those pages. With more than 20 pages, ask first whether to queue them instead (t3ai_mass_seo_queue_add with pageIds).',
+            );
+        }
+        // File metadata lives on t3aa_update_file_metadata, never write_table on sys_file.
+        if (
+            $name === 'write_table'
+            && isset($this->catalog['t3aa_update_file_metadata'])
+            && in_array(
+                strtolower((string) ($toolCall->getArguments()['tableName'] ?? $toolCall->getArguments()['table'] ?? '')),
+                ['sys_file', 'sys_file_metadata'],
+                true,
+            )
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: file texts are not a table write. Call t3aa_update_file_metadata'
+                    . ' (fileUid or fileUrl, then altText / title / description). Do not use write_table on sys_file.',
             );
         }
         // "Make the German version visible" changes the hidden field. The model sometimes tries a delete first.
@@ -758,6 +782,59 @@ final class T3afToolbox implements ToolboxInterface
         }
 
         return new ToolResult($toolCall, $forModel);
+    }
+
+    /**
+     * A sys_file uid or a page uid is never a tt_content uid.
+     */
+    private function refuseUidTypeMixup(string $name, ToolCall $toolCall, string $requestQuery): ?ToolResult
+    {
+        $arguments = $toolCall->getArguments();
+        $uid = (int) ($arguments['uid'] ?? $arguments['contentUid'] ?? 0);
+        if ($uid <= 0 && is_array($arguments['data'] ?? null)) {
+            $keys = array_keys($arguments['data']);
+            if (count($keys) === 1 && ctype_digit((string) $keys[0])) {
+                $uid = (int) $keys[0];
+            }
+        }
+        $pageId = (int) ($arguments['pageId'] ?? 0);
+        $contentUid = (int) ($arguments['contentUid'] ?? 0);
+        $namedPage = AgentRunner::namedPageUid($requestQuery);
+
+        if ($name === 'content_delete' && AgentRunner::isFileRecordDeleteRequest($requestQuery)) {
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked about files, not a content element. Call t3aa_list_files_missing_alt_text'
+                    . ' to list them. Never pass a sys_file uid to content_delete.',
+            );
+        }
+        if (
+            $name === 't3aa_summarize_content'
+            && $namedPage > 0
+            && $pageId !== $namedPage
+            && ($contentUid === $namedPage || ($pageId === 0 && $contentUid === 0))
+        ) {
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor named page ' . $namedPage . '. Call t3aa_summarize_content with pageId '
+                    . $namedPage . '. Do not pass a page uid as contentUid.',
+            );
+        }
+        if (
+            in_array($name, ['content_get', 'content_delete', 'write_table'], true)
+            && AgentRunner::usesPageUidAsContentUid($requestQuery, $uid)
+        ) {
+            $hint = AgentRunner::isSummarizeRequest($requestQuery)
+                ? ' Call t3aa_summarize_content with pageId ' . $namedPage . '.'
+                : ' Use pages_get or content_list on that page uid.';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: uid ' . $uid . ' is the page the editor named, not a content element.' . $hint,
+            );
+        }
+
+        return null;
     }
 
     /**

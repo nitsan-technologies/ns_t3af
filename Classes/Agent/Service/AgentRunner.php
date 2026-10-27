@@ -286,7 +286,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if ($nlContent === '') {
             if ($permissionRefused) {
                 $nlContent = $this->translator->translate('agent.turn.notAllowed');
-            } elseif (AgentPromptBuilder::hasBlockingRemainingWork($historyMessages, $workPlan, $requestForGate)) {
+            } elseif (self::shouldPromptToContinue($historyMessages, $workPlan, $requestForGate, $state->executedTools)) {
                 $nlContent = $this->translator->translate('agent.turn.stepsStillOpen');
             } else {
                 $nlContent = $this->translator->translate('agent.turn.emptyModelReply');
@@ -1049,8 +1049,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         $createContent = AgentCoreToolSet::isCreateContentRequest($query);
         $notAskedFor = array_flip(self::toolsNotAskedFor($query));
-        // "Now the same in Hindi" right after image texts were prepared still means image texts.
-        if (self::usedRecently('t3aa_update_file_metadata', $historyMessages)) {
+        // "Now the same in Hindi" / "Change it to …" right after image texts were read or prepared.
+        if (self::isImageTextFollowUpHistory($historyMessages)) {
             unset($notAskedFor['t3aa_update_file_metadata']);
         }
         $gateRequest = self::requestForGate($userMessage, $historyMessages);
@@ -1113,9 +1113,18 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $notAskedFor['t3ai_generate_seo_batch'] = true;
             $notAskedFor['t3aa_generate_voice_over'] = true;
         }
-        if ($createContent || self::isPlainEditRequest($query) || self::isNewsOnlyRequest($query) || self::isVisibilityRequest($query)) {
+        if (
+            $createContent
+            || self::isPlainEditRequest($query)
+            || self::isNewsOnlyRequest($query)
+            || self::isVisibilityRequest($query)
+            || self::isFileRecordDeleteRequest($query)
+            || self::isMissingAltTextRequest($query)
+            || self::isSummarizeRequest($query)
+        ) {
             // "Change the header of element 5" is an update: with the delete tool at hand the model sometimes
             // answers with a delete card plus a create card instead.
+            // File/page uids are never tt_content uids ("delete images with no alt", "summarize page 234").
             $notAskedFor['content_delete'] = true;
         }
         $offeredTools = array_values(array_filter(
@@ -1152,6 +1161,12 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
         if (self::isApproveAllAltTextRequest($query)) {
             $found = [...self::toolsByName(['t3aa_alt_text_approve'], $executableTools, $offeredNames), ...$found];
+        }
+        if (self::isMissingAltTextRequest($query) && !self::isApproveAllAltTextRequest($query)) {
+            $found = [...self::toolsByName(['t3aa_list_files_missing_alt_text'], $executableTools, $offeredNames), ...$found];
+        }
+        if (self::isSummarizeRequest($query)) {
+            $found = [...self::toolsByName(['t3aa_summarize_content'], $executableTools, $offeredNames), ...$found];
         }
         if (self::isAccessibilityFixRequest($query)) {
             $found = [...self::toolsByName(['t3aa_accessibility_fix_suggestions'], $executableTools, $offeredNames), ...$found];
@@ -1291,6 +1306,11 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     public const VOICE_OVER_REQUEST = '/\b(voice\s*-?\s*over|voiceover|audio\s*narrat\w*|sprachausgabe|vorlesen|vorlese\w*)\b/iu';
 
     /**
+     * A request to summarize page or content text, not a rewrite.
+     */
+    public const SUMMARIZE_REQUEST = '/\b(summar\w*|tl;?dr|zusammenfass\w*|kurzfassung|abstract|gist)\b/iu';
+
+    /**
      * Tools that fit only when the editor says so, and the words that ask for them.
      * "Create a new subpage" must not end in a copy of another page.
      *
@@ -1304,7 +1324,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         'pages_move' => '/\b(move|moves|moved|moving|verschieb\w*)\b/iu',
         'workspace_switch' => '/\b(workspaces?|arbeitsbereich\w*|switch\w*|wechsel\w*)\b/iu',
         // A rewrite or edit is not a summary: the summarize tool answered "rewrite friendlier" with an unrelated welcome text.
-        't3aa_summarize_content' => '/\b(summar\w*|tl;?dr|zusammenfass\w*|kurzfassung|abstract|gist)\b/iu',
+        't3aa_summarize_content' => self::SUMMARIZE_REQUEST,
         // Generate+attach must not detour into a metadata card with a fake /generated-image.jpg path.
         't3aa_update_file_metadata' => '/\b(alt\s*text|image\s*texts?|file\s*meta|metadata|bildtext\w*|alternativtext\w*|datei\s*meta)\b/iu',
         // "Generate the picture" must not become Write all SEO texts / SEO batch.
@@ -1369,6 +1389,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $names[] = 't3aa_alt_text_drafts_list';
             $names[] = 't3aa_list_files_missing_alt_text';
         }
+        if (self::isFileRecordDeleteRequest($query) || self::isMissingAltTextRequest($query) || self::isSummarizeRequest($query)) {
+            $names[] = 'content_delete';
+        }
 
         return $names;
     }
@@ -1431,6 +1454,85 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return preg_match('/\b(alt\s*texts?|drafts?|entw[uü]rfe|vorschl[aä]ge)\b/iu', $query) === 1;
+    }
+
+    /**
+     * "What is the alt text of file 360?" then "Change it to …" still means image texts.
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function isImageTextFollowUpHistory(array $historyMessages): bool
+    {
+        return self::usedRecently('t3aa_update_file_metadata', $historyMessages)
+            || self::usedRecently('t3aa_get_file_metadata', $historyMessages);
+    }
+
+    /**
+     * "Delete all images that have no alt text" is about files, not tt_content.
+     */
+    public static function isFileRecordDeleteRequest(string $query): bool
+    {
+        if (preg_match('/\b(delete|remove|lösch\w*|loesch\w*|entfernen)\b/iu', $query) !== 1) {
+            return false;
+        }
+        if (preg_match('/\b(content\s+elements?|tt_content|inhaltselement\w*)\b/iu', $query) === 1) {
+            return false;
+        }
+
+        return preg_match('/\b(images?|files?|alt[\s-]*texts?|bilder?|dateien?)\b/iu', $query) === 1;
+    }
+
+    /**
+     * List or delete files that still have no alt text.
+     */
+    public static function isMissingAltTextRequest(string $query): bool
+    {
+        if (preg_match('/\b(alt[\s-]*texts?|alternativtext\w*)\b/iu', $query) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(missing|without|no|ohne|fehlend\w*|keine[nr]?)\b/iu', $query) === 1;
+    }
+
+    public static function isSummarizeRequest(string $query): bool
+    {
+        return preg_match(self::SUMMARIZE_REQUEST, $query) === 1;
+    }
+
+    /**
+     * Page uid the editor named ("page 234", "Seite 234"). Not "content element 234".
+     */
+    public static function namedPageUid(string $query): int
+    {
+        if (preg_match('/\b(?:page|seite)\s+(?:uid\s+|id\s+)?(\d+)\b/iu', $query, $match) !== 1) {
+            return 0;
+        }
+
+        return (int) $match[1];
+    }
+
+    public static function usesPageUidAsContentUid(string $query, int $uid): bool
+    {
+        $named = self::namedPageUid($query);
+
+        return $named > 0 && $uid === $named;
+    }
+
+    /**
+     * "Say continue" is for work that already started (an image still to attach).
+     * A never-started text-element create must not use that fallback.
+     *
+     * @param list<array<string, mixed>> $history
+     * @param list<array{title: string, status: string}> $plan
+     * @param list<string> $executedToolsThisTurn
+     */
+    public static function shouldPromptToContinue(array $history, array $plan, string $request, array $executedToolsThisTurn): bool
+    {
+        if (!AgentPromptBuilder::hasBlockingRemainingWork($history, $plan, $request)) {
+            return false;
+        }
+
+        return $executedToolsThisTurn !== [] || AgentPromptBuilder::pendingImageAttachNote($history) !== '';
     }
 
     /**

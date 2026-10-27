@@ -146,4 +146,22 @@ final class AgentFileMetadataTurnTest extends TestCase
             ['role' => 'user', 'content' => 'add a teaser', 'meta' => []],
         ]));
     }
+
+    #[Test]
+    public function aFollowUpAfterReadingFileMetadataStillMeansImageTexts(): void
+    {
+        $history = [
+            ['role' => 'user', 'content' => 'What is the alt text of file 360?', 'meta' => []],
+            ['role' => 'assistant', 'content' => 'Current alt: old', 'meta' => ['type' => 'tool_result', 'tool' => 't3aa_get_file_metadata']],
+        ];
+
+        self::assertTrue(AgentRunner::usedRecently('t3aa_get_file_metadata', $history));
+        self::assertTrue(AgentRunner::isImageTextFollowUpHistory($history));
+        self::assertFalse(AgentRunner::isImageTextFollowUpHistory([
+            ...$history,
+            ['role' => 'user', 'content' => 'thanks', 'meta' => []],
+            ['role' => 'user', 'content' => 'create a news article', 'meta' => []],
+            ['role' => 'user', 'content' => 'add a teaser', 'meta' => []],
+        ]));
+    }
 }
