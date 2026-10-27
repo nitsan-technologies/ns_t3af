@@ -171,15 +171,11 @@ final class CreditModeController
                 $contactOverride = $contact;
             }
 
+            $creditModeWasEnabled = $this->runtimeSettings->isCreditModeEnabled();
             $previousBearer = $this->runtimeSettings->getTokenPlain();
             $this->runtimeSettings->save(['credit_mode' => 1]);
             $activation = $this->tokenResolver->activateTrialToken($contactOverride);
-            try {
-                $balance = $this->fetchBalanceOrResync();
-            } catch (CreditsApiException $exception) {
-                $this->tokenResolver->rollbackStoredBearer($previousBearer);
-                throw $exception;
-            }
+            $balance = $this->fetchBalanceOrResync();
             $this->pricingResolver->rememberFromPayload($balance);
 
             return new JsonResponse([
@@ -193,6 +189,10 @@ final class CreditModeController
                 'pricing' => $this->serializePricing($this->pricingResolver->resolve()),
             ]);
         } catch (CreditsApiException $exception) {
+            if (isset($creditModeWasEnabled, $previousBearer)) {
+                $this->rollbackCreditsActivation($previousBearer, $creditModeWasEnabled);
+            }
+
             return $this->errorResponse($exception);
         } catch (\Throwable $exception) {
             return $this->unexpectedErrorResponse($exception);
@@ -234,15 +234,11 @@ final class CreditModeController
                 ], 400);
             }
 
+            $creditModeWasEnabled = $this->runtimeSettings->isCreditModeEnabled();
             $previousBearer = $this->runtimeSettings->getTokenPlain();
             $this->runtimeSettings->save(['credit_mode' => 1]);
             $claim = $this->tokenResolver->claimWithCode($claimCode);
-            try {
-                $balance = $this->fetchBalanceOrResync();
-            } catch (CreditsApiException $exception) {
-                $this->tokenResolver->rollbackStoredBearer($previousBearer);
-                throw $exception;
-            }
+            $balance = $this->fetchBalanceOrResync();
             $this->pricingResolver->rememberFromPayload($balance);
 
             return new JsonResponse([
@@ -257,6 +253,10 @@ final class CreditModeController
                 'pricing' => $this->serializePricing($this->pricingResolver->resolve()),
             ]);
         } catch (CreditsApiException $exception) {
+            if (isset($creditModeWasEnabled, $previousBearer)) {
+                $this->rollbackCreditsActivation($previousBearer, $creditModeWasEnabled);
+            }
+
             return $this->errorResponse($exception);
         } catch (\Throwable $exception) {
             return $this->unexpectedErrorResponse($exception);
@@ -538,6 +538,14 @@ final class CreditModeController
             $this->errorMessages->buildErrorPayload($apiException),
             500,
         );
+    }
+
+    private function rollbackCreditsActivation(?string $previousBearer, bool $creditModeWasEnabled): void
+    {
+        $this->tokenResolver->rollbackStoredBearer($previousBearer);
+        if (!$creditModeWasEnabled) {
+            $this->runtimeSettings->save(['credit_mode' => 0]);
+        }
     }
 
     private function denyUnlessCreditsManager(): ?JsonResponse

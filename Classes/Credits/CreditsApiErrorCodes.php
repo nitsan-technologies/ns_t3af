@@ -97,7 +97,7 @@ final class CreditsApiErrorCodes
             self::UPSTREAM_AI_ERROR, self::UPSTREAM_AI_TIMEOUT => 502,
             self::METHOD_NOT_ALLOWED => 405,
             self::CONTENT_REMOVED => 410,
-            self::LICENSE_KEYS_MISSING, self::NO_LICENSES, self::FEATURE_KEY_REQUIRED, self::CONTACT_REQUIRED, self::BATCH_INVALID => 400,
+            self::LICENSE_KEYS_MISSING, self::NO_LICENSES, self::FEATURE_KEY_REQUIRED, self::CONTACT_REQUIRED, self::BATCH_INVALID, 'invalid_claim_code', 'claim_code_expired', 'claim_code_used' => 400,
             self::NETWORK_ERROR, self::INVALID_RESPONSE, self::API_ERROR => 502,
             default => 500,
         };

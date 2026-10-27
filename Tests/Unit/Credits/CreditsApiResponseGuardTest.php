@@ -42,6 +42,7 @@ final class CreditsApiResponseGuardTest extends TestCase
     public function testAcceptsTypicalBearerLength(): void
     {
         $this->guard->assertBearerToken('bearer-test-token-abc');
+        self::addToAssertionCount(1);
     }
 
     public function testRejectsNegativeBalance(): void
@@ -121,5 +122,40 @@ final class CreditsApiResponseGuardTest extends TestCase
             'token' => 'bearer-test-token-abc',
             'balance' => ['oops' => true],
         ]);
+    }
+
+    public function testGuardProductsRejectsTopLevelHtmlPlan(): void
+    {
+        $this->expectException(CreditsApiException::class);
+        $this->guard->guardProducts([
+            'plan' => '<script>alert(1)</script>Starter',
+            'products' => [],
+        ]);
+    }
+
+    public function testGuardProductsRejectsJunkBalanceOnProductRow(): void
+    {
+        $this->expectException(CreditsApiException::class);
+        $this->guard->guardProducts([
+            'products' => [
+                ['title' => 'Starter', 'balance' => 'abc123junk'],
+            ],
+        ]);
+    }
+
+    public function testGuardProductsRejectsInvalidExpiresAtOnProductRow(): void
+    {
+        $this->expectException(CreditsApiException::class);
+        $this->guard->guardProducts([
+            'products' => [
+                ['title' => 'Starter', 'expires_at' => 'not-a-date'],
+            ],
+        ]);
+    }
+
+    public function testGuardCurrentPlanRejectsScalarHugeCredits(): void
+    {
+        $this->expectException(CreditsApiException::class);
+        $this->guard->guardCurrentPlan(['credits' => '1e18']);
     }
 }

@@ -163,6 +163,8 @@ final class CreditsApiResponseGuard
             $this->assertPlainTextFields($credits);
             $this->assertTimestampFields($credits);
             $this->assertCreditBlock($credits);
+        } else {
+            $this->assertCreditBlock($payload);
         }
 
         return $payload;
@@ -217,6 +219,22 @@ final class CreditsApiResponseGuard
             return $payload;
         }
 
+        $this->assertPlainTextFields($payload);
+        $this->assertTimestampFields($payload);
+
+        if (array_key_exists('balance', $payload)) {
+            $this->assertCreditAmount($payload['balance'], 'balance');
+        }
+
+        $credits = $payload['credits'] ?? null;
+        if (is_array($credits)) {
+            $this->assertPlainTextFields($credits);
+            $this->assertTimestampFields($credits);
+            $this->assertCreditBlock($credits);
+        } else {
+            $this->assertCreditBlock($payload);
+        }
+
         $products = $payload['products'] ?? null;
         if (!is_array($products)) {
             return $payload;
@@ -227,6 +245,10 @@ final class CreditsApiResponseGuard
                 throw $this->invalidResponse('Invalid product entry at index ' . $index);
             }
             $this->assertPlainTextFields($product);
+            $this->assertTimestampFields($product);
+            if (array_key_exists('balance', $product)) {
+                $this->assertCreditAmount($product['balance'], 'products.balance');
+            }
             if (array_key_exists('credits', $product)) {
                 $this->assertCreditAmount($product['credits'], 'products.credits');
             }
