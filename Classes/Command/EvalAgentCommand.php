@@ -30,7 +30,6 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 
 #[AsCommand(
@@ -71,7 +70,7 @@ final class EvalAgentCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output);
+        $io = new CommandIo($input, $output);
         $directory = $input->getOption('dir');
         $directory = is_string($directory) && $directory !== ''
             ? $directory
@@ -93,7 +92,7 @@ final class EvalAgentCommand extends Command
         }
     }
 
-    private function record(InputInterface $input, SymfonyStyle $io, string $directory): int
+    private function record(InputInterface $input, CommandIo $io, string $directory): int
     {
         $id = trim((string) $input->getOption('id'));
         if ($id === '') {
@@ -129,7 +128,7 @@ final class EvalAgentCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function live(InputInterface $input, SymfonyStyle $io): int
+    private function live(InputInterface $input, CommandIo $io): int
     {
         $pageId = (int) $input->getOption('page');
         if ($pageId <= 0) {
@@ -225,7 +224,7 @@ final class EvalAgentCommand extends Command
     /**
      * @param array<string, mixed> $report
      */
-    private function printScenario(SymfonyStyle $io, array $report): void
+    private function printScenario(CommandIo $io, array $report): void
     {
         $tag = match ($report['status']) {
             'pass' => '<info>PASS</info>',
@@ -267,7 +266,7 @@ final class EvalAgentCommand extends Command
         }
     }
 
-    private function replay(SymfonyStyle $io, string $directory): int
+    private function replay(CommandIo $io, string $directory): int
     {
         $results = $this->evalRunner->replay($directory);
         if ($results === []) {
