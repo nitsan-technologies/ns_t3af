@@ -113,7 +113,16 @@ export const chromeMethods = {
             }
           }
         }
-        if (target.closest('[data-nst3af-agent-backdrop]')) {
+        // The backdrop itself is pointer-events:none (see agent.css) so a real click over the
+        // module content iframe reaches the iframe's own DOM instead of being swallowed by this
+        // full-viewport overlay — a Fix button inside a report tab would otherwise be
+        // unclickable whenever the panel is already open. "Click outside the panel closes it"
+        // is therefore detected here instead of on the (now click-through) backdrop element.
+        if (
+          this.isOpen
+          && !target.closest('[data-nst3af-agent-panel]')
+          && !target.closest('[data-nst3af-agent-open]')
+        ) {
           this.close();
         }
         if (target.closest('[data-nst3af-agent-starter]')) {
@@ -506,6 +515,41 @@ export const chromeMethods = {
     },
 
   /**
+     * F1 — opens the panel pre-loaded with a caller's context chips and a
+     * pre-filled prompt (e.g. ns_t3ai's Fix button). Stores the payload for
+     * `restoreSession()` to consume-and-clear on the very next session
+     * load, then opens exactly as a plain toolbar/hotkey open would — no
+     * opener element, since this call did not originate from a click in
+     * this document.
+     *
+     * @param {{chips?: Array<{key: string, label: string, value: string}>, promptText?: string, context?: Record<string, unknown>}} payload
+     */
+    openWithContext(payload) {
+      this.pendingOpenPayload = payload && typeof payload === 'object' ? payload : null;
+      // Panel already open: open() is a no-op, so apply chips/prompt here (Fix from a module).
+      if (this.isOpen) {
+        const openPayload = this.pendingOpenPayload;
+        this.pendingOpenPayload = null;
+        const openChips = Array.isArray(openPayload?.chips) ? openPayload.chips : [];
+        const openPromptText = typeof openPayload?.promptText === 'string' ? openPayload.promptText : '';
+        if (openPayload && typeof openPayload.context === 'object' && openPayload.context !== null) {
+          this.context = { ...this.context, ...openPayload.context };
+        }
+        if (openChips.length > 0) {
+          const existingChips = Array.isArray(this.context?.chips) ? this.context.chips : [];
+          this.context = { ...(this.context ?? {}), chips: [...existingChips, ...openChips] };
+        }
+        if (openPromptText !== '' && this.input) {
+          this.input.value = openPromptText;
+        }
+        this.renderContext?.();
+        this.input?.focus?.();
+        return;
+      }
+      void this.open(null);
+    },
+
+  /**
      * @param {Element|null} opener
      */
     async open(opener) {
@@ -542,10 +586,14 @@ export const chromeMethods = {
 
       // Resume the last-viewed conversation for this conversation-scope key when remembered;
       // otherwise the server opens the latest of the configured scope (see restoreSession).
-      await this.restoreSession(this.lastSessionOpenOptions());
-      this.isLoadingSession = false;
-      this.loadedScopeKey = this.sessionScopeKey();
-      this.panel.removeAttribute('aria-busy');
+      try {
+        await this.restoreSession(this.lastSessionOpenOptions());
+      } finally {
+        // Always clear loading chrome — a throw in restoreSession used to leave aria-busy stuck
+        // so Fix/openWithContext looked like a hang with an empty composer.
+        this.isLoadingSession = false;
+        this.panel.removeAttribute('aria-busy');
+      }
 
       this.renderContext();
       this.renderStream();

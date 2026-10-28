@@ -1660,6 +1660,13 @@ final class AgentAjaxController
         $query = $request->getQueryParams();
         $body = $request->getMethod() === 'POST' ? $this->parseRequestBody($request) : [];
 
+        // F1 — additive agent-open API (context/phase0/spike-f1-agent-open-api.md): a caller
+        // (e.g. ns_t3ai's Fix button, via window.top.NsT3afAgent.openWithContext()) may carry an
+        // `openContext` key in the query or body. Absent — the normal case, a plain toolbar or
+        // hotkey open — this is a no-op: $openContext stays [] and the merge below is byte-for-byte
+        // what it was before this feature existed.
+        $openContext = $this->readOpenContext($body, $query);
+
         $merged = array_merge([
             'pageId' => (int) ($body['pageId'] ?? $query['pageId'] ?? $query['id'] ?? 0),
             'module' => trim((string) ($body['module'] ?? $query['module'] ?? '')),
@@ -1669,9 +1676,43 @@ final class AgentAjaxController
             'workspaceId' => (int) ($clientContext['workspaceId'] ?? 0),
             'storageUid' => max(0, (int) ($clientContext['storageUid'] ?? 0)),
             'folderIdentifier' => trim((string) ($clientContext['folderIdentifier'] ?? '')),
-        ], $clientContext);
+        ], $clientContext, $openContext);
 
-        return $this->contextPresenter->present($merged, $this->resolveBackendUser());
+        $presented = $this->contextPresenter->present($merged, $this->resolveBackendUser());
+
+        // Caller-supplied chips/prompt text never feed back into AgentContextResolver::resolve()
+        // (they are not part of $merged's recognised keys) — they ride along on the presented
+        // payload purely for the client to render/pre-fill, same as the JS side already treats them.
+        if (isset($openContext['chips']) && is_array($openContext['chips'])) {
+            $presented['openChips'] = $openContext['chips'];
+        }
+        if (isset($openContext['promptText']) && is_string($openContext['promptText']) && $openContext['promptText'] !== '') {
+            $presented['openPromptText'] = $openContext['promptText'];
+        }
+
+        return $presented;
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @param array<string, mixed> $query
+     * @return array<string, mixed>
+     */
+    private function readOpenContext(array $body, array $query): array
+    {
+        if (is_array($body['openContext'] ?? null)) {
+            return $body['openContext'];
+        }
+        if (is_array($query['openContext'] ?? null)) {
+            return $query['openContext'];
+        }
+        if (is_string($query['openContext'] ?? null) && $query['openContext'] !== '') {
+            $decoded = json_decode($query['openContext'], true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
     }
 
     /**
