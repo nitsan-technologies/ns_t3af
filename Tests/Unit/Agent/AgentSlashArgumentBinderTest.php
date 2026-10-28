@@ -127,6 +127,34 @@ final class AgentSlashArgumentBinderTest extends TestCase
     }
 
     #[Test]
+    public function aLeadingDigitStaysTextWhenTheIntegerIsOptional(): void
+    {
+        $params = [
+            ['name' => 'search', 'type' => 'string', 'required' => true, 'default' => null],
+            ['name' => 'limit', 'type' => 'int', 'required' => false, 'default' => '20'],
+        ];
+
+        self::assertSame(
+            ['search' => '10'],
+            $this->binder->bind([], '10', $params),
+        );
+    }
+
+    #[Test]
+    public function mapsLeadingDigitToRequiredRootPageId(): void
+    {
+        $params = [
+            ['name' => 'rootPageId', 'type' => 'int', 'required' => true, 'default' => null],
+            ['name' => 'dataId', 'type' => 'int', 'required' => false, 'default' => '0'],
+        ];
+
+        self::assertSame(
+            ['rootPageId' => 48],
+            $this->binder->bind([], '48', $params),
+        );
+    }
+
+    #[Test]
     public function mapsLeadingDigitToUidAndRestToString(): void
     {
         $params = [

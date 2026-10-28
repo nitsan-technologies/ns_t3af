@@ -99,10 +99,56 @@ final class AgentMessageParser
             }
         }
 
+        $named = self::namedArguments($rest);
+        if ($named !== null) {
+            return [
+                'name' => $name,
+                'arguments' => $named['arguments'],
+                'remainder' => $named['remainder'],
+            ];
+        }
+
         return [
             'name' => $name,
             'arguments' => [],
             'remainder' => $rest,
         ];
+    }
+
+    /**
+     * `rootPageId=48` is a named argument. Free text such as "What can you do here?" is not.
+     *
+     * @return array{arguments: array<string, int|string>, remainder: string}|null
+     */
+    private static function namedArguments(string $rest): ?array
+    {
+        $tokens = preg_split('/\s+/', $rest) ?: [];
+        $arguments = [];
+        $leftover = [];
+        foreach ($tokens as $token) {
+            if (preg_match('/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/', $token, $matches) !== 1 || $matches[2] === '') {
+                $leftover[] = $token;
+                continue;
+            }
+            $arguments[$matches[1]] = self::castNamedValue($matches[2]);
+        }
+        if ($arguments === []) {
+            return null;
+        }
+
+        return [
+            'arguments' => $arguments,
+            'remainder' => implode(' ', $leftover),
+        ];
+    }
+
+    private static function castNamedValue(string $value): int|string
+    {
+        $value = trim($value, "\"'");
+        if (preg_match('/^-?\d+$/', $value) === 1) {
+            return (int) $value;
+        }
+
+        return $value;
     }
 }

@@ -101,9 +101,7 @@ final class AgentSlashArgumentBinder
                 || $baseType === 'integer'
                 || in_array($name, self::ID_PARAM_NAMES, true)
             ) {
-                if (in_array($name, self::ID_PARAM_NAMES, true)) {
-                    $idParams[] = $param;
-                }
+                $idParams[] = $param;
                 continue;
             }
 
@@ -114,8 +112,16 @@ final class AgentSlashArgumentBinder
         $first = $parts[0] ?? '';
         $afterFirst = trim($parts[1] ?? '');
 
-        if ($first !== '' && ctype_digit($first) && $idParams !== []) {
-            $idName = (string) ($idParams[0]['name'] ?? 'uid');
+        $bindableIds = array_values(array_filter(
+            $idParams,
+            static function (array $param): bool {
+                $name = (string) ($param['name'] ?? '');
+
+                return in_array($name, self::ID_PARAM_NAMES, true) || ($param['required'] ?? false) === true;
+            },
+        ));
+        if ($first !== '' && ctype_digit($first) && $bindableIds !== []) {
+            $idName = (string) (self::preferredIdParam($bindableIds)['name'] ?? 'uid');
             $arguments[$idName] = (int) $first;
             $remainder = $afterFirst;
             if ($remainder === '') {
@@ -171,6 +177,14 @@ final class AgentSlashArgumentBinder
                 $hasPageIds = true;
             }
             if (in_array($name, self::ID_PARAM_NAMES, true)) {
+                return null;
+            }
+            $type = strtolower((string) ($param['type'] ?? ''));
+            $baseType = explode('|', $type)[0];
+            if (
+                ($param['required'] ?? false) === true
+                && ($baseType === 'int' || $baseType === 'integer')
+            ) {
                 return null;
             }
         }
@@ -243,5 +257,30 @@ final class AgentSlashArgumentBinder
         }
 
         return [...$required, ...$optionalEmpty];
+    }
+
+    /**
+     * A required id wins, then a known page/file id, then any other integer.
+     * `rootPageId` is required on training summary; `dataId` is optional and must not take `48`.
+     *
+     * @param list<array{name?: string, type?: string, required?: bool, default?: string|null}> $params
+     * @return array{name?: string, type?: string, required?: bool, default?: string|null}
+     */
+    private static function preferredIdParam(array $params): array
+    {
+        $buckets = [[], [], [], []];
+        foreach ($params as $param) {
+            $name = (string) ($param['name'] ?? '');
+            $required = ($param['required'] ?? false) === true;
+            $known = in_array($name, self::ID_PARAM_NAMES, true);
+            $buckets[$required ? ($known ? 0 : 1) : ($known ? 2 : 3)][] = $param;
+        }
+        foreach ($buckets as $bucket) {
+            if ($bucket !== []) {
+                return $bucket[0];
+            }
+        }
+
+        return $params[0];
     }
 }
