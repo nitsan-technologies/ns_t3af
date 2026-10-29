@@ -229,8 +229,19 @@ final class DashboardViewModelBuilder
         $remaining = (float) ($balance['remaining'] ?? 0.0);
         $total = (float) ($balance['total'] ?? 0.0);
         $used = (float) ($balance['used'] ?? max(0.0, $total - $remaining));
-        $percentLeft = (int) ($balance['percentLeft'] ?? 0);
+        $percentLeft = max(0, min(100, (int) ($balance['percentLeft'] ?? 0)));
         $consumedPercent = $total > 0.0 ? (int) round(($used / $total) * 100) : 0;
+        $consumedPercent = max(0, min(100, $consumedPercent));
+        $balanceErrors = [];
+        foreach (is_array($creditsDashboard['errors'] ?? null) ? $creditsDashboard['errors'] : [] as $error) {
+            if (is_string($error) && trim($error) !== '') {
+                $balanceErrors[] = trim($error);
+            }
+        }
+        // Inactive mode uses an empty prompt (loaded false, no errors) and keeps the activate card.
+        // A failed balance call sets loaded false and at least one error; do not paint that as 0 of 0.
+        $loaded = (bool) ($creditsDashboard['loaded'] ?? true);
+        $balanceUnavailable = $loaded === false && $balanceErrors !== [];
 
         $weeklyBurn = 0.0;
         foreach ($analyticsCredits['creditsByDayAndExtension'] ?? [] as $dayRow) {
@@ -262,6 +273,8 @@ final class DashboardViewModelBuilder
             'used' => $used,
             'total' => $total,
             'consumedPercent' => $consumedPercent,
+            'balanceUnavailable' => $balanceUnavailable ? 1 : 0,
+            'balanceErrorMessage' => $balanceErrors[0] ?? '',
             'planLine' => $planLine,
             'daysLeftLabel' => $daysLeft > 0 ? '~' . $daysLeft . ' days at current rate' : '',
             'dailyAverageFormatted' => (string) ($stats['dailyAverageFormatted'] ?? '0'),
