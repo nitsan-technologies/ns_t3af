@@ -211,6 +211,12 @@ final readonly class AgentGovernanceGuard
         if (($presented['details'] ?? null) !== null) {
             $presented['details'] = $this->maskAnything($presented['details']);
         }
+        if (is_array($presented['lines'] ?? null)) {
+            $presented['lines'] = array_map(
+                fn(mixed $line): string => $this->maskPii((string) $line),
+                $presented['lines'],
+            );
+        }
 
         return $presented;
     }

@@ -212,6 +212,14 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        if ((string) ($tool['name'] ?? '') === 't3cs_list_queue_items' && (int) ($arguments['dataId'] ?? 0) <= 0) {
+            $resolved = $this->resolveMissingQueueSource($context, $correlationId);
+            if ($resolved['turn'] !== null) {
+                return $resolved['turn'];
+            }
+            $arguments['dataId'] = $resolved['dataId'];
+            $body['arguments'] = $arguments;
+        }
         $arguments = $this->mergeContextArguments(
             $arguments,
             $context,
@@ -279,6 +287,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($presented['previews'] !== []) {
             $meta['previews'] = $presented['previews'];
         }
+        $meta = $this->withPresentedLines($meta, $presented);
 
         $handoff = $this->schedulerHandoff->buildHandoffMeta(
             $tool,
@@ -418,6 +427,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($presented['previews'] !== []) {
             $meta['previews'] = $presented['previews'];
         }
+        $meta = $this->withPresentedLines($meta, $presented);
 
         return [
             'role' => 'assistant',
@@ -701,6 +711,178 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'orchestratorPause' => true,
             ],
         ]];
+    }
+
+    /**
+     * One datasource is used at once. Several become buttons ("Name (type) [uid]"). None stays empty.
+     *
+     * @param list<array<string, mixed>> $sources
+     * @return array{dataId: int, options: list<string>}
+     */
+    public static function queueSourceDecision(array $sources): array
+    {
+        $options = [];
+        $onlyId = 0;
+        foreach ($sources as $source) {
+            if (!is_array($source)) {
+                continue;
+            }
+            $uid = (int) ($source['uid'] ?? 0);
+            if ($uid <= 0) {
+                continue;
+            }
+            $name = trim((string) ($source['name'] ?? ''));
+            $type = trim((string) ($source['type'] ?? ''));
+            $label = $name !== '' ? $name : 'Source';
+            if ($type !== '') {
+                $label .= ' (' . $type . ')';
+            }
+            $options[] = $label . ' [' . $uid . ']';
+            $onlyId = $uid;
+        }
+        if (count($options) === 1) {
+            return ['dataId' => $onlyId, 'options' => []];
+        }
+
+        return ['dataId' => 0, 'options' => $options];
+    }
+
+    /**
+     * The datasource the editor picked from the training-queue question, or 0 when this message is not that answer.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function dataIdFromQueueChoice(string $reply, array $history): int
+    {
+        $question = self::openQuestionMeta($history);
+        if ((string) ($question['askedFor'] ?? '') !== 't3cs_list_queue_items') {
+            return 0;
+        }
+        $options = array_values(array_filter(
+            is_array($question['options'] ?? null) ? $question['options'] : [],
+            'is_string',
+        ));
+        $reply = trim($reply);
+        foreach ($options as $option) {
+            if (self::sameChoice($reply, $option)) {
+                return self::uidInBrackets($option);
+            }
+        }
+        $uid = 0;
+        if (preg_match('/\[(\d+)\]\s*$/', $reply, $bracket) === 1) {
+            $uid = (int) $bracket[1];
+        } elseif (preg_match('/^\d+$/', $reply) === 1) {
+            $uid = (int) $reply;
+        }
+        if ($uid > 0) {
+            foreach ($options as $option) {
+                if (self::uidInBrackets($option) === $uid) {
+                    return $uid;
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @return array{turn: array{role: string, content: string, meta: array<string, mixed>}|null, dataId: int}
+     */
+    private function resolveMissingQueueSource(array $context, string $correlationId): array
+    {
+        $rootPageId = $this->siteRootPageId($context);
+        if ($rootPageId <= 0) {
+            return ['turn' => $this->queueNotice($this->translator->translate('agent.queue.noSite'), $correlationId), 'dataId' => 0];
+        }
+
+        $listed = $this->playgroundService->invoke('t3cs_list_datasources', ['rootPageId' => $rootPageId]);
+        $payload = $listed['result'] ?? null;
+        if (is_string($payload)) {
+            $decoded = json_decode($payload, true);
+            $payload = is_array($decoded) ? $decoded : null;
+        }
+        if (($listed['success'] ?? false) !== true || !is_array($payload)) {
+            $message = trim((string) ($listed['message'] ?? ''));
+
+            return [
+                'turn' => $this->queueNotice(
+                    $message !== '' ? $message : $this->translator->translate('agent.queue.noSources'),
+                    $correlationId,
+                ),
+                'dataId' => 0,
+            ];
+        }
+        if (isset($payload['error']) && is_string($payload['error']) && trim($payload['error']) !== '') {
+            return ['turn' => $this->queueNotice(trim($payload['error']), $correlationId), 'dataId' => 0];
+        }
+
+        $sources = is_array($payload['datasources'] ?? null) ? $payload['datasources'] : [];
+        $decision = self::queueSourceDecision($sources);
+        if ($decision['dataId'] > 0) {
+            return ['turn' => null, 'dataId' => $decision['dataId']];
+        }
+        if ($decision['options'] === []) {
+            return ['turn' => $this->queueNotice($this->translator->translate('agent.queue.noSources'), $correlationId), 'dataId' => 0];
+        }
+
+        return [
+            'turn' => [
+                'role' => 'assistant',
+                'content' => $this->translator->translate('agent.queue.whichSource'),
+                'meta' => [
+                    'type' => 'clarification',
+                    'tool' => 'ask_clarification',
+                    'options' => $decision['options'],
+                    'contentChoice' => true,
+                    'askedFor' => 't3cs_list_queue_items',
+                    'correlationId' => $correlationId,
+                    'orchestratorPause' => true,
+                ],
+            ],
+            'dataId' => 0,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function siteRootPageId(array $context): int
+    {
+        $pageId = (int) ($context['pageId'] ?? 0);
+        if ($pageId <= 0) {
+            return 0;
+        }
+        try {
+            return GeneralUtility::makeInstance(SiteFinder::class)->getSiteByPageId($pageId)->getRootPageId();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    /**
+     * @return array{role: string, content: string, meta: array<string, mixed>}
+     */
+    private function queueNotice(string $content, string $correlationId): array
+    {
+        return [
+            'role' => 'assistant',
+            'content' => $content,
+            'meta' => [
+                'type' => 'nl_reply',
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
+    }
+
+    private static function uidInBrackets(string $label): int
+    {
+        if (preg_match('/\[(\d+)\]\s*$/', $label, $match) !== 1) {
+            return 0;
+        }
+
+        return (int) $match[1];
     }
 
     /**
@@ -3106,6 +3288,21 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      * @param array<string, mixed> $presented
      * @return array<string, mixed>
      */
+    /**
+     * @param array<string, mixed> $meta
+     * @param array<string, mixed> $presented
+     * @return array<string, mixed>
+     */
+    private function withPresentedLines(array $meta, array $presented): array
+    {
+        $lines = $presented['lines'] ?? null;
+        if (is_array($lines) && $lines !== []) {
+            $meta['lines'] = array_values($lines);
+        }
+
+        return $meta;
+    }
+
     private function maskPresented(BackendUserAuthentication $user, array $presented): array
     {
         return $this->governanceGuard->requiresPiiMasking($user)

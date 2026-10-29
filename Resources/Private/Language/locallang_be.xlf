@@ -1318,6 +1318,9 @@
       <trans-unit id="agent.result.openDetails" resname="agent.result.openDetails">
         <source>Open Details for the full list (%1$s total).</source>
       </trans-unit>
+      <trans-unit id="agent.result.showAll" resname="agent.result.showAll">
+        <source>Show all (%1$s)</source>
+      </trans-unit>
       <trans-unit id="agent.result.noMissingAltText" resname="agent.result.noMissingAltText">
         <source>Good news — no images are missing alt text in this storage.</source>
       </trans-unit>
@@ -2215,6 +2218,15 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       </trans-unit>
       <trans-unit id="agent.tool.label.t3cs_list_queue_items" resname="agent.tool.label.t3cs_list_queue_items">
         <source>Show the training queue</source>
+      </trans-unit>
+      <trans-unit id="agent.queue.whichSource" resname="agent.queue.whichSource">
+        <source>Which data source should I show the training queue for?</source>
+      </trans-unit>
+      <trans-unit id="agent.queue.noSources" resname="agent.queue.noSources">
+        <source>This site has no data sources.</source>
+      </trans-unit>
+      <trans-unit id="agent.queue.noSite" resname="agent.queue.noSite">
+        <source>Open a page of the site, then ask for the training queue again.</source>
       </trans-unit>
       <trans-unit id="agent.tool.label.t3cs_reset_failed_queue_item" resname="agent.tool.label.t3cs_reset_failed_queue_item">
         <source>Retry a failed training item</source>

@@ -4,7 +4,7 @@
 
 import { lang, hasTurnGuardWarning, errorText, errorDetails, messageContent, escapeHtml, humanizeKey } from './format.js';
 import { ajaxUrl } from './context.js';
-import { formatSuggestionFieldText, isSuggestionFieldSafe, renderImagePreviews, renderMediaPreview, resolveToolDisplayLabel, renderToolTrace, renderWorkTraceHtml, renderMessageBody } from './render-helpers.js';
+import { formatSuggestionFieldText, isSuggestionFieldSafe, renderImagePreviews, renderMediaPreview, resolveToolDisplayLabel, renderToolTrace, renderWorkTraceHtml, renderMessageBody, renderListLines } from './render-helpers.js';
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
 
 /**
@@ -238,6 +238,7 @@ export const draftMethods = {
           </summary>
           <div class="nst3af-agent-tcall__body">
             <div class="nst3af-agent-msg__body">${renderMessageBody(String(message.content ?? ''))}</div>
+            ${success ? renderListLines(meta) : ''}
             ${success ? renderMediaPreview(meta.details, meta.previews) : ''}
             ${factsHtml}
             ${traceHtml}

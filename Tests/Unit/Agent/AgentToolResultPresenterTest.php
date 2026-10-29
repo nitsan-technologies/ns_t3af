@@ -294,4 +294,42 @@ final class AgentToolResultPresenterTest extends TestCase
             $presented['facts'],
         );
     }
+
+    #[Test]
+    public function trainingQueueListsPathsAndKeepsTheFullListForTheButton(): void
+    {
+        $items = [];
+        for ($uid = 156; $uid <= 161; $uid++) {
+            $items[] = [
+                'uid' => $uid,
+                'path' => '/products/' . $uid,
+                'status' => 'Completed',
+            ];
+        }
+
+        $presented = $this->createPresenter()->present('t3cs_list_queue_items', [
+            'count' => 6,
+            'items' => $items,
+        ], true);
+
+        self::assertStringContainsString('Found 6 items', $presented['content']);
+        self::assertStringContainsString('/products/156 (Completed) [#156]', $presented['content']);
+        self::assertStringNotContainsString('Open Details', $presented['content']);
+        self::assertCount(6, $presented['lines']);
+        self::assertSame('/products/161 (Completed) [#161]', $presented['lines'][5]);
+    }
+
+    #[Test]
+    public function otherLongListsStillPointAtDetails(): void
+    {
+        $rows = [];
+        for ($uid = 1; $uid <= 6; $uid++) {
+            $rows[] = ['uid' => $uid, 'header' => 'Element ' . $uid];
+        }
+
+        $presented = $this->createPresenter()->present('content_list', $rows, true);
+
+        self::assertStringContainsString('Open Details for the full list (6 total).', $presented['content']);
+        self::assertSame([], $presented['lines']);
+    }
 }

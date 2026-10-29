@@ -1609,6 +1609,10 @@
                 <source>Open Details for the full list (%1$s total).</source>
                 <target>Öffnen Sie Details für die vollständige Liste (%1$s insgesamt).</target>
             </trans-unit>
+            <trans-unit id="agent.result.showAll">
+                <source>Show all (%1$s)</source>
+                <target>Alle anzeigen (%1$s)</target>
+            </trans-unit>
             <trans-unit id="agent.result.noMissingAltText">
                 <source>Good news — no images are missing alt text in this storage.</source>
                 <target>Gute Nachricht – in diesem Speicher fehlt bei keinem Bild der Alt-Text.</target>
@@ -2808,6 +2812,18 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
             <trans-unit id="agent.tool.label.t3cs_list_queue_items">
                 <source>Show the training queue</source>
                 <target>Trainings-Warteschlange anzeigen</target>
+            </trans-unit>
+            <trans-unit id="agent.queue.whichSource">
+                <source>Which data source should I show the training queue for?</source>
+                <target>Für welche Datenquelle soll die Trainings-Warteschlange angezeigt werden?</target>
+            </trans-unit>
+            <trans-unit id="agent.queue.noSources">
+                <source>This site has no data sources.</source>
+                <target>Diese Website hat keine Datenquellen.</target>
+            </trans-unit>
+            <trans-unit id="agent.queue.noSite">
+                <source>Open a page of the site, then ask for the training queue again.</source>
+                <target>Öffnen Sie eine Seite der Website und fragen Sie dann erneut nach der Trainings-Warteschlange.</target>
             </trans-unit>
             <trans-unit id="agent.tool.label.t3cs_reset_failed_queue_item">
                 <source>Retry a failed training item</source>

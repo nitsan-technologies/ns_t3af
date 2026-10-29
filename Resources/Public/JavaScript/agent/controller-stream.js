@@ -5,7 +5,7 @@
 import { lang, hasTurnGuardWarning, errorText, escapeHtml, formatWorkDuration } from './format.js';
 import { ajaxUrl } from './context.js';
 import { selectWebPage } from './module-state.js';
-import { resolveToolDisplayLabel, renderMessageBody, renderImagePreviews } from './render-helpers.js';
+import { resolveToolDisplayLabel, renderMessageBody, renderImagePreviews, renderListLines } from './render-helpers.js';
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
 
 export const streamMethods = {
@@ -408,7 +408,7 @@ export const streamMethods = {
           extra += this.renderHandoffCard(meta.schedulerHandoff);
         }
         const previewHtml = renderImagePreviews(meta.previews);
-        return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant"><div class="nst3af-agent-msg__who">AI Agent</div><div class="nst3af-agent-msg__body">${renderMessageBody(String(message.content ?? ''))}</div>${previewHtml}${extra}</div>`;
+        return `<div class="nst3af-agent-msg nst3af-agent-msg--assistant"><div class="nst3af-agent-msg__who">AI Agent</div><div class="nst3af-agent-msg__body">${renderMessageBody(String(message.content ?? ''))}</div>${previewHtml}${renderListLines(meta)}${extra}</div>`;
       }).join('');
 
       const pending = this.pendingExecutableDrafts();

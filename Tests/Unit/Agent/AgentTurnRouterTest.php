@@ -142,6 +142,35 @@ final class AgentTurnRouterTest extends TestCase
     }
 
     #[Test]
+    public function structuralNlReplyForwardsQueueLines(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $lines = ['/products/156 (Completed) [#156]', '/products/157 (Completed) [#157]'];
+        $this->toolTurnProcessor->expects(self::once())
+            ->method('execute')
+            ->willReturn([
+                'role' => 'assistant',
+                'content' => 'Found 2 items.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3cs_list_queue_items',
+                    'success' => true,
+                    'lines' => $lines,
+                ],
+            ]);
+
+        $messages = $this->router->route(
+            '/t3cs_list_queue_items {"dataId":8}',
+            ['pageId' => 1],
+            [],
+            $user,
+            'corr-lines',
+        );
+
+        self::assertSame($lines, $messages[1]['meta']['lines'] ?? null);
+    }
+
+    #[Test]
     public function structuralDraftDoesNotGetTrailingNlReply(): void
     {
         $user = $this->createMock(BackendUserAuthentication::class);
@@ -163,6 +192,140 @@ final class AgentTurnRouterTest extends TestCase
 
         self::assertCount(1, $messages);
         self::assertSame('inline_draft', $messages[0]['meta']['type'] ?? null);
+    }
+
+    #[Test]
+    public function failedSlashToolDoesNotRepeatTheErrorAsAReply(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $hint = 'Missing required argument: rootPageId. Required: rootPageId. Example: /t3cs_training_summary {"rootPageId":1}';
+        $this->toolTurnProcessor->expects(self::once())
+            ->method('execute')
+            ->willReturn([
+                'role' => 'assistant',
+                'content' => $hint,
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3cs_training_summary',
+                    'success' => false,
+                ],
+            ]);
+
+        $messages = $this->router->route(
+            '/t3cs_training_summary',
+            ['pageId' => 1],
+            [],
+            $user,
+            'corr-queue',
+        );
+
+        self::assertCount(1, $messages);
+        self::assertSame('tool_result', $messages[0]['meta']['type'] ?? null);
+        self::assertSame($hint, $messages[0]['content']);
+    }
+
+    #[Test]
+    public function queueListSlashWithoutAnIdCallsTheTool(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $this->toolTurnProcessor->expects(self::once())
+            ->method('execute')
+            ->with(
+                't3cs_list_queue_items',
+                self::isType('array'),
+                self::callback(static fn (array $body): bool => (int) ($body['arguments']['dataId'] ?? 0) === 0),
+                $user,
+                'corr-queue-nl',
+            )
+            ->willReturn([
+                'role' => 'assistant',
+                'content' => 'Which data source?',
+                'meta' => ['type' => 'clarification', 'tool' => 'ask_clarification'],
+            ]);
+        $this->turnOrchestrator->expects(self::never())->method('runTurn');
+
+        $messages = $this->router->route(
+            '/t3cs_list_queue_items',
+            ['pageId' => 1],
+            [],
+            $user,
+            'corr-queue-nl',
+        );
+
+        self::assertSame('clarification', $messages[0]['meta']['type'] ?? null);
+        self::assertSame('Which data source?', $messages[0]['content'] ?? null);
+    }
+
+    #[Test]
+    public function queueSourceButtonOpensThatQueue(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $this->toolTurnProcessor->expects(self::once())
+            ->method('execute')
+            ->with(
+                't3cs_list_queue_items',
+                self::isType('array'),
+                self::callback(static fn (array $body): bool => ($body['arguments']['dataId'] ?? null) === 6),
+                $user,
+                'corr-queue-choice',
+            )
+            ->willReturn([
+                'role' => 'assistant',
+                'content' => '6 items',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3cs_list_queue_items', 'success' => true],
+            ]);
+        $this->turnOrchestrator->expects(self::never())->method('runTurn');
+
+        $messages = $this->router->route(
+            'T3CS FAQ Source (qa) [6]',
+            ['pageId' => 1],
+            [],
+            $user,
+            'corr-queue-choice',
+            [[
+                'role' => 'assistant',
+                'content' => 'Which data source?',
+                'meta' => [
+                    'type' => 'clarification',
+                    'askedFor' => 't3cs_list_queue_items',
+                    'options' => ['Asus (web_pages) [5]', 'T3CS FAQ Source (qa) [6]'],
+                ],
+            ]],
+        );
+
+        self::assertSame('6 items', $messages[1]['content'] ?? null);
+    }
+
+    #[Test]
+    public function queueListSlashWithAnIdStillCallsTheTool(): void
+    {
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $this->toolTurnProcessor->expects(self::once())
+            ->method('execute')
+            ->with(
+                't3cs_list_queue_items',
+                self::isType('array'),
+                self::callback(static fn (array $body): bool => ($body['arguments']['dataId'] ?? null) === 8),
+                $user,
+                'corr-queue-id',
+            )
+            ->willReturn([
+                'role' => 'assistant',
+                'content' => '6 items',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3cs_list_queue_items', 'success' => true],
+            ]);
+        $this->turnOrchestrator->expects(self::never())->method('runTurn');
+
+        $messages = $this->router->route(
+            '/t3cs_list_queue_items {"dataId":8}',
+            ['pageId' => 1],
+            [],
+            $user,
+            'corr-queue-id',
+        );
+
+        self::assertSame('tool_result', $messages[0]['meta']['type'] ?? null);
+        self::assertSame('6 items', $messages[1]['content'] ?? null);
     }
 
     #[Test]

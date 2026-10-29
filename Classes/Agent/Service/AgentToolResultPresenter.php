@@ -124,6 +124,7 @@ final readonly class AgentToolResultPresenter
      *     facts: list<array{key: string, label: string, value: string}>,
      *     details: mixed,
      *     previews: list<array{fileUid: int, url: string, href: string, name: string, alt: string}>,
+     *     lines: list<string>,
      *     error: string|null
      * }
      */
@@ -160,6 +161,7 @@ final readonly class AgentToolResultPresenter
 
         $listLead = $this->buildListLeadSummary($toolName, $facts, $details);
         $toolLead = $this->buildToolSpecificContent($toolName, $facts, $details);
+        $lines = $error === null ? $this->queueItemLines($toolName, $details) : [];
 
         return [
             // The tool's own summary says more than "Found N items" (score, what was queued, …).
@@ -171,6 +173,8 @@ final readonly class AgentToolResultPresenter
             'details' => $details,
             // Thumbnails of the images the result is about (generated image, file list, metadata).
             'previews' => $error === null && $this->mediaPreviews !== null ? $this->mediaPreviews->forDetails($details) : [],
+            // Plain lines for the training queue. The chat renders these behind "Show all".
+            'lines' => $lines,
             'error' => $error,
         ];
     }
@@ -300,7 +304,9 @@ final readonly class AgentToolResultPresenter
         };
 
         $facts = [$this->fact($countKey, (string) $total)];
-        $examples = $this->extractRowLabels($rows);
+        $examples = $toolName === 't3cs_list_queue_items'
+            ? $this->queueExampleLabels($rows)
+            : $this->extractRowLabels($rows);
         if ($examples !== []) {
             $facts[] = $this->fact('examples', implode(', ', $examples));
         }
@@ -452,6 +458,77 @@ final readonly class AgentToolResultPresenter
     /**
      * @param array<string, mixed> $row
      */
+    /**
+     * @param list<array<string, mixed>> $rows
+     * @return list<string>
+     */
+    private function queueExampleLabels(array $rows): array
+    {
+        $labels = [];
+        foreach (array_slice($rows, 0, 5) as $row) {
+            $label = $this->queueRowLabel($row);
+            if ($label !== '') {
+                $labels[] = $label;
+            }
+        }
+
+        return $labels;
+    }
+
+    /**
+     * Every returned queue row, as one readable line. Empty for every other tool.
+     *
+     * @return list<string>
+     */
+    private function queueItemLines(string $toolName, mixed $details): array
+    {
+        if ($toolName !== 't3cs_list_queue_items' || !is_array($details) || !is_array($details['items'] ?? null)) {
+            return [];
+        }
+
+        $lines = [];
+        foreach ($details['items'] as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $label = $this->queueRowLabel($item);
+            if ($label !== '') {
+                $lines[] = $label;
+            }
+        }
+
+        return $lines;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function queueRowLabel(array $row): string
+    {
+        $uid = (int) ($row['uid'] ?? 0);
+        $name = trim((string) ($row['path'] ?? ''));
+        if ($name === '') {
+            $name = trim((string) (preg_replace('/\s+/u', ' ', (string) ($row['contentPreview'] ?? '')) ?? ''));
+        }
+        if (mb_strlen($name) > 80) {
+            $name = rtrim(mb_substr($name, 0, 79)) . '…';
+        }
+        if ($name === '') {
+            $name = $uid > 0 ? '#' . $uid : '';
+        }
+        if ($name === '') {
+            return '';
+        }
+
+        $status = trim((string) ($row['status'] ?? ''));
+        $label = $status !== '' ? $name . ' (' . $status . ')' : $name;
+        if ($uid > 0) {
+            $label .= ' [#' . $uid . ']';
+        }
+
+        return $label;
+    }
+
     private function rowDisplayLabel(array $row): string
     {
         if (isset($row['identifier']) && is_string($row['identifier'])) {
@@ -642,7 +719,8 @@ final readonly class AgentToolResultPresenter
 
         if ($examples !== null && $examples !== '') {
             $lead .= "\n\n" . $this->translator->translate('agent.result.examplesLead', [$examples]);
-            if ($count > 5) {
+            // The training queue renders its own "Show all" control, so this sentence would point nowhere.
+            if ($count > 5 && $toolName !== 't3cs_list_queue_items') {
                 $lead .= "\n\n" . $this->translator->translate('agent.result.openDetails', [$count]);
             }
         }

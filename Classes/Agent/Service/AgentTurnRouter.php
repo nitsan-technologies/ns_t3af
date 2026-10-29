@@ -183,6 +183,22 @@ final readonly class AgentTurnRouter
         $imageTextAnswer = $attachmentMessages === [] && !is_array($body['continuation'] ?? null)
             ? AgentToolTurnProcessor::imageTextAnswer(trim($message), $historyMessages)
             : null;
+        $queueDataId = $attachmentMessages === [] && !is_array($body['continuation'] ?? null)
+            ? AgentToolTurnProcessor::dataIdFromQueueChoice(trim($message), $historyMessages)
+            : 0;
+        if ($queueDataId > 0) {
+            $body['arguments'] = ['dataId' => $queueDataId];
+            $body['conversationHistory'] = $historyMessages;
+            $body['userMessage'] = trim($message);
+            $queueMessages = $this->finalizeStructuralMessages(
+                [$this->executeTool('t3cs_list_queue_items', $context, $body, $user, $correlationId)],
+                $correlationId,
+            );
+            $this->emitMessages($emitEvent, $queueMessages);
+
+            return $queueMessages;
+        }
+
         if ($imageTextAnswer !== null && $this->isKnownTool($imageTextAnswer['tool'])) {
             $body['arguments'] = $imageTextAnswer['arguments'];
             $body['conversationHistory'] = $historyMessages;
@@ -721,6 +737,10 @@ final readonly class AgentTurnRouter
             if ($content === '') {
                 continue;
             }
+            // A failed call keeps its card open, so the same text as a second reply would show twice.
+            if (($meta['success'] ?? true) === false) {
+                continue;
+            }
             $replyMeta = [
                 'type' => 'nl_reply',
                 'correlationId' => $correlationId,
@@ -729,6 +749,13 @@ final readonly class AgentTurnRouter
             $previews = is_array($meta['previews'] ?? null) ? $meta['previews'] : [];
             if ($previews !== []) {
                 $replyMeta['previews'] = $previews;
+            }
+            $lines = array_values(array_filter(
+                is_array($meta['lines'] ?? null) ? $meta['lines'] : [],
+                'is_string',
+            ));
+            if ($lines !== []) {
+                $replyMeta['lines'] = $lines;
             }
             $out[] = [
                 'role' => 'assistant',
