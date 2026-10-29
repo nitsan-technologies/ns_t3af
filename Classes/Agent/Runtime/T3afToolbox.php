@@ -823,6 +823,18 @@ final class T3afToolbox implements ToolboxInterface
         }
 
         if ($name === self::ASK_CLARIFICATION) {
+            $soleSyncId = $this->soleNamedSyncDataId();
+            if ($soleSyncId > 0) {
+                $outcome = 'invalid';
+
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: exactly one data source matches this request. Call t3cs_sync_datasource with scope "one" and dataId '
+                    . $soleSyncId
+                    . '. Do not ask which source.',
+                );
+            }
+
             return new ToolResult($toolCall, $this->askClarification($this->withoutUnavailableLanguages($validation['arguments'])));
         }
 
@@ -1076,6 +1088,38 @@ final class T3afToolbox implements ToolboxInterface
         $request = trim((string) ($this->runtime->body['requestForGate'] ?? ''));
 
         return $request !== '' ? $request : trim((string) ($this->runtime->body['requestQuery'] ?? ''));
+    }
+
+    /**
+     * After the source list, one matching name is the sync target. Two matches still ask.
+     */
+    private function soleNamedSyncDataId(): int
+    {
+        $request = $this->gateRequest();
+        if (!AgentRunner::asksToSyncDatasource($request)) {
+            return 0;
+        }
+        $sources = [];
+        foreach ($this->state->messages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
+            if (($meta['tool'] ?? '') !== 't3cs_list_datasources') {
+                continue;
+            }
+            $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+            $rows = is_array($details['datasources'] ?? null) ? $details['datasources'] : [];
+            if ($rows !== []) {
+                $sources = $rows;
+            }
+        }
+        if ($sources === []) {
+            return 0;
+        }
+        $decision = AgentToolTurnProcessor::namedSyncDecision($request, $sources, 'one', 0);
+
+        return $decision['action'] === 'use' ? (int) $decision['dataId'] : 0;
     }
 
     /**

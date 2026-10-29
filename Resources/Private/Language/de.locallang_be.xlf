@@ -2841,6 +2841,10 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <source>Which data source should I sync?</source>
                 <target>Welche Datenquelle soll ich synchronisieren?</target>
             </trans-unit>
+            <trans-unit id="agent.sync.notRun">
+                <source>Nothing was synced. Prepare the sync first.</source>
+                <target>Es wurde nichts synchronisiert. Der Sync muss zuerst vorbereitet werden.</target>
+            </trans-unit>
             <trans-unit id="agent.sync.requestedOne">
                 <source>Sync was requested for "%1$s".</source>
                 <target>Sync für „%1$s“ wurde angefordert.</target>

@@ -88,6 +88,20 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         't3as_create_predefined_question',
     ];
 
+    /**
+     * These tables are not versioned. A workspace id on the card does not change the stored row.
+     * Versioned tools, including t3as_create_predefined_question, keep the editor's workspace.
+     */
+    private const WORKSPACE_EXEMPT_TOOLS = [
+        't3cs_list_datasources',
+        't3cs_training_summary',
+        't3cs_usage_analytics_summary',
+        't3cs_sync_datasource',
+        't3cs_save_datasource',
+        't3as_search_settings',
+        't3as_search_settings_get',
+    ];
+
     /** Tools that create pages under a parent page (argument parentPageId). */
     private const PARENT_PAGE_TOOLS = [
         't3ai_create_page_simple',
@@ -1297,6 +1311,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
         if (self::askedForEverySource($text)) {
             return ['action' => 'keep', 'scope' => 'all', 'dataId' => 0, 'options' => []];
+        }
+
+        $namedUid = self::uidNamedInText($text, array_keys($known));
+        if ($namedUid > 0 && isset($known[$namedUid])) {
+            return ['action' => 'use', 'scope' => 'one', 'dataId' => $namedUid, 'options' => []];
         }
 
         $matches = self::matchingSourceIds($text, $known);
@@ -3179,7 +3198,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         // by a model-supplied value; the workspace_* tools take their own workspaceId argument.
         if (
             !str_starts_with(strtolower(trim($toolName)), 'workspace_')
-            && !in_array(strtolower(trim($toolName)), self::ROOT_PAGE_TOOLS, true)
+            && !in_array(strtolower(trim($toolName)), self::WORKSPACE_EXEMPT_TOOLS, true)
         ) {
             $workspaceId = (int) ($context['workspaceId'] ?? 0);
             $beUser = $GLOBALS['BE_USER'] ?? null;

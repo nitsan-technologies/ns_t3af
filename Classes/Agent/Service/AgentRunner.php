@@ -556,6 +556,25 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $finalText = AgentPromptBuilder::isCardHistoryEcho($retryText) ? '' : $retryText;
             }
             $finalText = self::withoutLeadingHistoryTag($finalText);
+            if (
+                !$retried
+                && self::asksToSyncDatasource($userMessage)
+                && self::claimsUnbackedSync($finalText, $state->messages)
+                && !$state->isPaused()
+                && !$state->failed
+                && !$state->isCancelled()
+            ) {
+                $nudge = $userMessage . "\n\n[System: Do not say a data source was synced. Nothing was synced. Call t3cs_sync_datasource now so the editor gets an approval card.]";
+                $retryPlan = $state->plan !== [] ? $state->plan : $plan;
+                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan, $requestForChecklist))->getResult();
+                $content = $agentResult->getContent();
+                $retryText = is_string($content) ? trim($content) : '';
+                $finalText = AgentPromptBuilder::isCardHistoryEcho($retryText) ? '' : $retryText;
+                $retried = true;
+            }
+            if (self::asksToSyncDatasource($userMessage) && self::claimsUnbackedSync($finalText, $state->messages)) {
+                $finalText = $this->translator->translate('agent.sync.notRun');
+            }
         } catch (MaxIterationsExceededException) {
             $state->addMessage([
                 'role' => 'assistant',
@@ -1003,6 +1022,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $unavailableFiles = AgentRequestedFiles::promptNote($historyMessages, $request);
         if ($unavailableFiles !== '') {
             $system .= "\n" . $unavailableFiles;
+        }
+        if (self::isHelpRequest($userMessage)) {
+            $system .= "\n" . self::helpReplyLanguageInstruction($userMessage);
         }
         if ($system !== '') {
             $bag->add(Message::forSystem($system));
@@ -2040,6 +2062,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 continue;
             }
             $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            // "Click Apply" is the newest assistant message. The card it points at is still the open one.
+            if (trim((string) ($meta['draftId'] ?? '')) !== '' && ($meta['type'] ?? '') !== 'inline_draft') {
+                continue;
+            }
             if (($meta['type'] ?? '') !== 'inline_draft') {
                 return '';
             }
@@ -2064,20 +2090,92 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
     public static function isHelpRequest(string $message): bool
     {
-        return in_array(self::plainReply($message), [
+        $plain = self::plainReply($message);
+
+        return in_array($plain, self::englishHelpPhrases(), true) || in_array($plain, self::germanHelpPhrases(), true);
+    }
+
+    /**
+     * A capability answer follows the language of this message. Other turns keep the backend language.
+     */
+    public static function helpReplyLanguageInstruction(string $message): string
+    {
+        if (in_array(self::plainReply($message), self::germanHelpPhrases(), true)) {
+            return 'For this capability answer only, reply in German and address the editor formally (Sie). This overrides the reply-language rule above.';
+        }
+
+        return 'For this capability answer only, reply in English. This overrides the reply-language rule above.';
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function englishHelpPhrases(): array
+    {
+        return [
             'help',
-            'hilfe',
             'menu',
             'options',
             'what can you do',
             'what can you do here',
             'can you help me',
+            'how can you help',
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function germanHelpPhrases(): array
+    {
+        return [
+            'hilfe',
             'hilfe bitte',
             'was kannst du',
             'was kannst du tun',
-            'how can you help',
             'wie kannst du helfen',
-        ], true);
+        ];
+    }
+
+    public static function asksToSyncDatasource(string $message): bool
+    {
+        if (preg_match('/\b(?:sync|synchronis\w*)\b/iu', $message) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:data\s*sources?|datenquellen?|datasources?|sources?|quelle)\b/iu', $message) === 1
+            || preg_match('/[\'"“”][^\'"“”]{2,}[\'"“”]/u', $message) === 1
+            || preg_match('/\b(?:uid|data\s*id|source)\s*#?\s*\d+/iu', $message) === 1;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $messages
+     */
+    public static function claimsUnbackedSync(string $text, array $messages): bool
+    {
+        if (self::turnPreparedSync($messages)) {
+            return false;
+        }
+
+        return preg_match('/\b(?:sync(?:ed|hronised|hronized)|synchronis\w*)\b/iu', $text) === 1;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $messages
+     */
+    public static function turnPreparedSync(array $messages): bool
+    {
+        foreach ($messages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
+            if (($meta['tool'] ?? '') === 't3cs_sync_datasource') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static function isDraftConfirmation(string $message): bool

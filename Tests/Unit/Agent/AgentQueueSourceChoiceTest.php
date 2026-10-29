@@ -224,4 +224,21 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertSame(1, AgentToolTurnProcessor::resolvedRootPageId(1, true, 48, 0, 48));
         self::assertSame(0, AgentToolTurnProcessor::resolvedRootPageId(1, false, 0, 0, 0));
     }
+
+    #[Test]
+    public function oneNamedSourceIsUsedAfterTheList(): void
+    {
+        $sources = [
+            ['uid' => 8, 'name' => 'Asus', 'type' => 'sitemap'],
+            ['uid' => 14, 'name' => 'Pages', 'type' => 'typo3_pages'],
+        ];
+
+        $byName = AgentToolTurnProcessor::namedSyncDecision("Sync 'Asus'", $sources, 'one', 0);
+        self::assertSame('use', $byName['action']);
+        self::assertSame(8, $byName['dataId']);
+
+        $byUid = AgentToolTurnProcessor::namedSyncDecision('sync data source 8', $sources, 'one', 0);
+        self::assertSame('use', $byUid['action']);
+        self::assertSame(8, $byUid['dataId']);
+    }
 }

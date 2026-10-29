@@ -549,6 +549,29 @@ final class AgentRunnerTest extends TestCase
         ];
         self::assertNull(AgentRunner::openDraftFollowUp('yes', $olderCard));
         self::assertSame('Yes', AgentRunner::requestQuery('Yes', []));
+
+        $afterYes = [
+            $history[0],
+            ['role' => 'user', 'content' => 'yes do it', 'meta' => []],
+            [
+                'role' => 'assistant',
+                'content' => 'Click Apply on the card above.',
+                'meta' => ['type' => 'nl_reply', 'draftId' => 'd1', 'orchestratorPause' => true],
+            ],
+        ];
+        $neverMind = AgentRunner::openDraftFollowUp('never mind', $afterYes);
+        self::assertTrue($neverMind['discard'] ?? false);
+        self::assertSame('d1', $neverMind['draftId'] ?? null);
+        self::assertStringContainsString('English', AgentRunner::helpReplyLanguageInstruction('help'));
+        self::assertStringContainsString('German', AgentRunner::helpReplyLanguageInstruction('hilfe'));
+        self::assertTrue(AgentRunner::asksToSyncDatasource("Sync 'Asus'"));
+        self::assertTrue(AgentRunner::claimsUnbackedSync('The data source has been successfully synced.', []));
+        self::assertFalse(AgentRunner::claimsUnbackedSync('The data source has been successfully synced.', [[
+            'role' => 'assistant',
+            'content' => 'Sync was requested.',
+            'meta' => ['tool' => 't3cs_sync_datasource'],
+        ]]));
+        self::assertFalse(AgentRunner::claimsUnbackedSync('The page text was updated.', []));
     }
 
     #[Test]
