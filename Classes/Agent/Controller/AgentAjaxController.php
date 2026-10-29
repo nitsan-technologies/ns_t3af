@@ -706,6 +706,34 @@ final class AgentAjaxController
     }
 
     /**
+     * "never mind" discards only the latest open card, including when the browser request fails.
+     *
+     * @param list<array<string, mixed>> $history
+     * @param list<array<string, mixed>> $assistantMessages
+     * @return list<array<string, mixed>>
+     */
+    private function withDiscardedOpenDrafts(array $history, array $assistantMessages): array
+    {
+        $draftId = '';
+        foreach ($assistantMessages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
+            if (($meta['discardOpenDrafts'] ?? false) === true) {
+                $draftId = trim((string) ($meta['draftId'] ?? ''));
+                break;
+            }
+        }
+        if ($draftId === '') {
+            return $history;
+        }
+        $this->draftSession->removeDraft($draftId);
+
+        return $this->conversationRecorder->declined($history, $draftId);
+    }
+
+    /**
      * Applies a card outcome to the stored conversation (the server is its only writer).
      * Failing to record never fails the action itself.
      *
@@ -1205,7 +1233,10 @@ final class AgentAjaxController
             $lease->release();
         }
 
-        $allMessages = is_array($restored) ? $restored['all'] : [...$turn['messages'], ...$assistantMessages];
+        $history = is_array($restored)
+            ? $turn['messages']
+            : $this->withDiscardedOpenDrafts($turn['messages'], $assistantMessages);
+        $allMessages = is_array($restored) ? $restored['all'] : [...$history, ...$assistantMessages];
         $this->conversationSession->save($user, $allMessages, $turn['context'], $turn['provider']);
         $sessionTitle = $this->maybeApplyShortTitle($user, $allMessages, $turn['provider'], $turn['context']);
 
@@ -1317,7 +1348,7 @@ final class AgentAjaxController
                             }
                         },
                     );
-                    $allMessages = [...$turn['messages'], ...$assistantMessages];
+                    $allMessages = [...$this->withDiscardedOpenDrafts($turn['messages'], $assistantMessages), ...$assistantMessages];
                 }
                 $this->conversationSession->save($user, $allMessages, $turn['context'], $turn['provider']);
                 $sessionTitle = $this->maybeApplyShortTitle($user, $allMessages, $turn['provider'], $turn['context']);

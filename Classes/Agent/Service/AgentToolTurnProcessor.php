@@ -923,7 +923,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      */
     private function datasourceRows(array $context): ?array
     {
-        $rootPageId = $this->siteRootPageId($context);
+        $rootPageId = $this->listingRootPageId($context);
         if ($rootPageId <= 0) {
             return null;
         }
@@ -971,7 +971,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      */
     private function datasourceIds(array $context): ?array
     {
-        $rootPageId = $this->siteRootPageId($context);
+        $rootPageId = $this->listingRootPageId($context);
         if ($rootPageId <= 0) {
             return null;
         }
@@ -1572,7 +1572,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         array $pendingArguments = [],
     ): array
     {
-        $rootPageId = $this->siteRootPageId($context);
+        $rootPageId = $this->listingRootPageId($context);
         if ($rootPageId <= 0) {
             return ['turn' => $this->queueNotice($this->translator->translate('agent.queue.noSite'), $correlationId), 'dataId' => 0];
         }
@@ -1640,6 +1640,88 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         } catch (\Throwable) {
             return 0;
         }
+    }
+
+    /**
+     * The Dashboard has no open page. One site in the installation is still a root page.
+     */
+    private function onlySiteRootPageId(): int
+    {
+        try {
+            $sites = GeneralUtility::makeInstance(SiteFinder::class)->getAllSites();
+        } catch (\Throwable) {
+            return 0;
+        }
+        $ids = [];
+        foreach ($sites as $site) {
+            $id = $site->getRootPageId();
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+
+        return count($ids) === 1 ? (int) array_key_first($ids) : 0;
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function listingRootPageId(array $context): int
+    {
+        $rootPageId = $this->siteRootPageId($context);
+
+        return $rootPageId > 0 ? $rootPageId : $this->onlySiteRootPageId();
+    }
+
+    private function isSiteRoot(int $pageId): bool
+    {
+        if ($pageId <= 0) {
+            return false;
+        }
+        try {
+            GeneralUtility::makeInstance(SiteFinder::class)->getSiteByRootPageId($pageId);
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * A named source belongs to one site. Used only when the sent root is missing or not a site root.
+     */
+    private function siteIdOfDatasource(int $dataId): int
+    {
+        if ($dataId <= 0 || !class_exists(\NITSAN\NsT3Cs\Domain\Repository\DatasourceRepository::class)) {
+            return 0;
+        }
+        try {
+            $row = GeneralUtility::makeInstance(\NITSAN\NsT3Cs\Domain\Repository\DatasourceRepository::class)
+                ->findOneByUidAndOptionalSiteId($dataId, 0);
+        } catch (\Throwable) {
+            return 0;
+        }
+        $siteId = is_array($row) ? (int) ($row['site_id'] ?? 0) : 0;
+
+        return $this->isSiteRoot($siteId) ? $siteId : 0;
+    }
+
+    /**
+     * A positive root stays when it is a real site root. A guessed id such as 1 does not.
+     */
+    public static function resolvedRootPageId(int $given, bool $givenIsSiteRoot, int $fromOpenPage, int $fromDataSource, int $onlySite): int
+    {
+        if ($given > 0 && $givenIsSiteRoot) {
+            return $given;
+        }
+        if ($fromOpenPage > 0) {
+            return $fromOpenPage;
+        }
+        if ($fromDataSource > 0) {
+            return $fromDataSource;
+        }
+
+        return $onlySite > 0 ? $onlySite : 0;
     }
 
     /**
@@ -3095,7 +3177,10 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         // The workspace follows the editor: the one they work in, otherwise "MCP Server > Workspace
         // selection" (Live when none is chosen). It is applied for this call only and never replaced
         // by a model-supplied value; the workspace_* tools take their own workspaceId argument.
-        if (!str_starts_with(strtolower(trim($toolName)), 'workspace_')) {
+        if (
+            !str_starts_with(strtolower(trim($toolName)), 'workspace_')
+            && !in_array(strtolower(trim($toolName)), self::ROOT_PAGE_TOOLS, true)
+        ) {
             $workspaceId = (int) ($context['workspaceId'] ?? 0);
             $beUser = $GLOBALS['BE_USER'] ?? null;
             if (isset($this->workspaceTarget) && $beUser instanceof BackendUserAuthentication) {
@@ -3139,10 +3224,23 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         $toolKey = strtolower(trim($toolName));
-        if (in_array($toolKey, self::ROOT_PAGE_TOOLS, true) && (int) ($arguments['rootPageId'] ?? 0) <= 0) {
-            $rootPageId = $this->siteRootPageId($context);
+        if (in_array($toolKey, self::ROOT_PAGE_TOOLS, true)) {
+            $given = (int) ($arguments['rootPageId'] ?? 0);
+            $givenIsSiteRoot = $this->isSiteRoot($given);
+            $fromOpenPage = $this->siteRootPageId($context);
+            $fromDataSource = 0;
+            $onlySite = 0;
+            if (!$givenIsSiteRoot && $fromOpenPage <= 0) {
+                $fromDataSource = $this->siteIdOfDatasource((int) ($arguments['dataId'] ?? 0));
+                if ($fromDataSource <= 0) {
+                    $onlySite = $this->onlySiteRootPageId();
+                }
+            }
+            $rootPageId = self::resolvedRootPageId($given, $givenIsSiteRoot, $fromOpenPage, $fromDataSource, $onlySite);
             if ($rootPageId > 0) {
                 $arguments['rootPageId'] = $rootPageId;
+            } elseif ($given > 0) {
+                unset($arguments['rootPageId']);
             }
         }
 

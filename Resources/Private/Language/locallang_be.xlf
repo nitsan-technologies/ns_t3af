@@ -1041,6 +1041,12 @@
       <trans-unit id="agent.draft.discarded" resname="agent.draft.discarded">
         <source>Draft discarded. Nothing was written.</source>
       </trans-unit>
+      <trans-unit id="agent.draft.clickApply" resname="agent.draft.clickApply">
+        <source>Click Apply on the card above. Nothing else was changed.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.cancelledOpen" resname="agent.draft.cancelledOpen">
+        <source>The open cards were discarded. Nothing was saved.</source>
+      </trans-unit>
       <trans-unit id="agent.draft.undone" resname="agent.draft.undone">
         <source>Undone. Your previous version is back.</source>
       </trans-unit>

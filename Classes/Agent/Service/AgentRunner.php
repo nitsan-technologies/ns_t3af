@@ -119,6 +119,20 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                     'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
                 ]);
             }
+            $openDraft = self::openDraftFollowUp($userMessage, $historyMessages);
+            if ($openDraft !== null) {
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $this->translator->translate($openDraft['label']),
+                    'meta' => [
+                        'type' => 'nl_reply',
+                        'correlationId' => $correlationId,
+                        'orchestratorPause' => true,
+                        'discardOpenDrafts' => $openDraft['discard'],
+                        'draftId' => $openDraft['draftId'],
+                    ],
+                ]);
+            }
         }
 
         $pageId = (int) ($context['pageId'] ?? 0);
@@ -1045,6 +1059,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $query = self::requestQuery($userMessage, $historyMessages);
         if ($query === '') {
             return $offeredTools;
+        }
+        if (self::isHelpRequest($userMessage)) {
+            return self::toolsByName(['explain_capabilities'], $executableTools, []);
         }
 
         $createContent = AgentCoreToolSet::isCreateContentRequest($query);
@@ -1989,12 +2006,163 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * "help" is its own question. A short "yes" or "never mind" refers to an open card, not a new change.
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     * @return array{label: string, discard: bool, draftId: string}|null
+     */
+    public static function openDraftFollowUp(string $userMessage, array $historyMessages): ?array
+    {
+        $draftId = self::openDraftId($historyMessages);
+        if ($draftId === '') {
+            return null;
+        }
+        if (self::isDraftCancellation($userMessage)) {
+            return ['label' => 'agent.draft.cancelledOpen', 'discard' => true, 'draftId' => $draftId];
+        }
+        if (self::isDraftConfirmation($userMessage)) {
+            return ['label' => 'agent.draft.clickApply', 'discard' => false, 'draftId' => $draftId];
+        }
+
+        return null;
+    }
+
+    /**
+     * Only the latest assistant card. An older T3AI or T3AA card stays open.
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function openDraftId(array $historyMessages): string
+    {
+        for ($index = count($historyMessages) - 1; $index >= 0; $index--) {
+            $entry = $historyMessages[$index];
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($meta['type'] ?? '') !== 'inline_draft') {
+                return '';
+            }
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            if (($draft['applied'] ?? false) === true || ($draft['discarded'] ?? false) === true || ($draft['failed'] ?? false) === true) {
+                return '';
+            }
+
+            return trim((string) ($draft['draftId'] ?? ''));
+        }
+
+        return '';
+    }
+
+    /**
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function hasOpenDraft(array $historyMessages): bool
+    {
+        return self::openDraftId($historyMessages) !== '';
+    }
+
+    public static function isHelpRequest(string $message): bool
+    {
+        return in_array(self::plainReply($message), [
+            'help',
+            'hilfe',
+            'menu',
+            'options',
+            'what can you do',
+            'what can you do here',
+            'can you help me',
+            'hilfe bitte',
+            'was kannst du',
+            'was kannst du tun',
+            'how can you help',
+            'wie kannst du helfen',
+        ], true);
+    }
+
+    public static function isDraftConfirmation(string $message): bool
+    {
+        return in_array(self::plainReply($message), [
+            'yes',
+            'yes do it',
+            'yes please',
+            'apply it',
+            'ok',
+            'okay',
+            'ok do it',
+            'do it',
+            'go ahead',
+            'please do',
+            'please do it',
+            'ja',
+            'ja bitte',
+            'ja mach das',
+            'ja mach es',
+            'mach das',
+            'mach es',
+            'bitte machen',
+        ], true);
+    }
+
+    public static function isDraftCancellation(string $message): bool
+    {
+        return in_array(self::plainReply($message), [
+            'never mind',
+            'never mind go back',
+            'nevermind',
+            'cancel',
+            'vergiss es',
+            'egal',
+            'abbrechen',
+            'lass es',
+            'forget it',
+            'doch nicht',
+        ], true);
+    }
+
+    /**
+     * The capability overview must not be glued onto the next short message ("help" already returns early).
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function replyFollowsCapability(array $historyMessages, int $index): bool
+    {
+        for ($j = $index; $j >= 0 && $j >= $index - 4; --$j) {
+            $entry = $historyMessages[$j] ?? null;
+            if (!is_array($entry)) {
+                continue;
+            }
+            if (($entry['role'] ?? '') === 'user') {
+                return false;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if ((string) ($meta['tool'] ?? '') === 'explain_capabilities') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function plainReply(string $message): string
+    {
+        $text = mb_strtolower(trim($message));
+        $text = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $text) ?? $text;
+        $text = preg_replace('/\s+/u', ' ', trim($text)) ?? trim($text);
+
+        return $text;
+    }
+
+    /**
      * @param list<array<string, mixed>> $historyMessages
      */
     public static function requestQuery(string $userMessage, array $historyMessages): string
     {
         $message = trim($userMessage);
         $isContinuation = str_starts_with($message, '[The editor ');
+        if (!$isContinuation && self::isHelpRequest($message)) {
+            return $message;
+        }
         if (!$isContinuation && mb_strlen($message) >= self::SHORT_REPLY_CHARS) {
             return $message;
         }
@@ -2020,7 +2188,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $isReply = !$isContinuation
                 && ($entry['role'] ?? '') === 'assistant'
                 && ($meta['type'] ?? '') === 'nl_reply'
-                && $earlier === [];
+                && $earlier === []
+                && !self::replyFollowsCapability($historyMessages, $i);
             if ($isRequest || $isReply) {
                 array_unshift($earlier, mb_substr($content, 0, 300));
             }

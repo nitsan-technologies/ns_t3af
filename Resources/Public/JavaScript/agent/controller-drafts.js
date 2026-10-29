@@ -893,6 +893,24 @@ export const draftMethods = {
     },
 
   /**
+     * "never mind" discards every open card without starting another turn.
+     */
+    discardOpenDraftsQuietly(draftId = '') {
+      const targetId = String(draftId ?? '');
+      if (targetId === '') {
+        return;
+      }
+      for (const message of this.messages) {
+        const draft = message?.meta?.draft;
+        const id = String(draft?.draftId ?? '');
+        if (message?.meta?.type !== 'inline_draft' || !draft || id !== targetId || draft.applied === true || draft.discarded === true || draft.failed === true) {
+          continue;
+        }
+        draft.discarded = true;
+      }
+    },
+
+  /**
      * @param {Element|null} button
      */
     async discardDraft(button) {

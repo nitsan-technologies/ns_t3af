@@ -1241,6 +1241,14 @@
                 <source>Draft discarded. Nothing was written.</source>
                 <target>Entwurf verworfen. Es wurde nichts geschrieben.</target>
             </trans-unit>
+            <trans-unit id="agent.draft.clickApply">
+                <source>Click Apply on the card above. Nothing else was changed.</source>
+                <target>Klicken Sie auf der Karte oben auf Anwenden. Sonst wurde nichts geändert.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.cancelledOpen">
+                <source>The open cards were discarded. Nothing was saved.</source>
+                <target>Die offenen Karten wurden verworfen. Es wurde nichts gespeichert.</target>
+            </trans-unit>
             <trans-unit id="agent.draft.undone">
                 <source>Undone. Your previous version is back.</source>
                 <target>Rückgängig gemacht. Ihre vorherige Version ist wieder da.</target>

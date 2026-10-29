@@ -215,4 +215,13 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertSame('notFound', $decision['action']);
         self::assertSame(123, $decision['dataId']);
     }
+
+    #[Test]
+    public function aGuessedRootIsReplacedOnlyWhenItIsNotASiteRoot(): void
+    {
+        self::assertSame(48, AgentToolTurnProcessor::resolvedRootPageId(1, false, 0, 0, 48));
+        self::assertSame(48, AgentToolTurnProcessor::resolvedRootPageId(1, false, 0, 48, 0));
+        self::assertSame(1, AgentToolTurnProcessor::resolvedRootPageId(1, true, 48, 0, 48));
+        self::assertSame(0, AgentToolTurnProcessor::resolvedRootPageId(1, false, 0, 0, 0));
+    }
 }

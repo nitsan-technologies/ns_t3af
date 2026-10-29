@@ -512,6 +512,46 @@ final class AgentRunnerTest extends TestCase
     }
 
     #[Test]
+    public function helpIsNotGluedToThePreviousAnswer(): void
+    {
+        $history = [
+            ['role' => 'user', 'content' => 'what can you do?', 'meta' => []],
+            ['role' => 'assistant', 'content' => 'Create new content on this page.', 'meta' => ['type' => 'nl_reply', 'tool' => 'explain_capabilities']],
+        ];
+
+        self::assertSame('help', AgentRunner::requestQuery('help', $history));
+        $followUp = AgentRunner::requestQuery('ok', $history);
+        self::assertStringNotContainsString('Create new content', $followUp);
+        self::assertStringContainsString('ok', $followUp);
+    }
+
+    #[Test]
+    public function anOpenCardTakesYesAndNeverMind(): void
+    {
+        $history = [[
+            'role' => 'assistant',
+            'content' => 'Review the data source.',
+            'meta' => ['type' => 'inline_draft', 'draft' => ['draftId' => 'd1', 'applied' => false]],
+        ]];
+
+        self::assertSame('agent.draft.clickApply', AgentRunner::openDraftFollowUp('yes do it', $history)['label'] ?? null);
+        self::assertSame('d1', AgentRunner::openDraftFollowUp('never mind, go back', $history)['draftId'] ?? null);
+        self::assertTrue(AgentRunner::openDraftFollowUp('never mind, go back', $history)['discard'] ?? false);
+        self::assertNull(AgentRunner::openDraftFollowUp('never mind, create a page about cats instead', $history));
+        self::assertNull(AgentRunner::openDraftFollowUp('create it', $history));
+        self::assertNull(AgentRunner::openDraftFollowUp('yes do it', []));
+        self::assertNull(AgentRunner::openDraftFollowUp('go back', $history));
+        self::assertNull(AgentRunner::openDraftFollowUp('help me create a page', $history));
+
+        $olderCard = [
+            $history[0],
+            ['role' => 'assistant', 'content' => 'Created the page.', 'meta' => ['type' => 'nl_reply']],
+        ];
+        self::assertNull(AgentRunner::openDraftFollowUp('yes', $olderCard));
+        self::assertSame('Yes', AgentRunner::requestQuery('Yes', []));
+    }
+
+    #[Test]
     public function everyToolCallIsReportedWithItsOutcome(): void
     {
         $responses = [
