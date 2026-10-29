@@ -41,6 +41,9 @@ final readonly class AiResponse
      * @param CreditsUsage|null     $credits                         Set when T3Planet Credits mode handled the request.
      * @param QualityScore|null     $quality                         Optional response quality assessment for telemetry/UI.
      * @param int|null              $appliedBrandContextProfileUid   Brand profile uid applied to this request, when any.
+     * @param array<string, mixed>|null $structured                  Decoded JSON object when the call used
+     *                                                               {@see AiOptions::$jsonSchema}; `null` otherwise
+     *                                                               or when content was not valid JSON.
      */
     public function __construct(
         public string $content,
@@ -54,5 +57,6 @@ final readonly class AiResponse
         public ?CreditsUsage $credits = null,
         public ?QualityScore $quality = null,
         public ?int $appliedBrandContextProfileUid = null,
+        public ?array $structured = null,
     ) {}
 }

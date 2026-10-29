@@ -149,6 +149,7 @@ final class AiService implements AiServiceInterface
             cached: false,
             raw: $invocation['raw'],
             appliedBrandContextProfileUid: BrandContextLineage::profileUidFromOptions($before->getOptions()),
+            structured: $this->decodeStructuredContent($invocation['content'], $before->getOptions()),
         );
 
         $after = new AfterProviderResponseEvent(
@@ -597,10 +598,11 @@ final class AiService implements AiServiceInterface
             ? $this->openAiCompatibleInvokePayloads($prompt, $provider, $options)
             : $this->symfonyPlatformInvokePayloads($prompt, $provider, $modelId, $options);
 
+        $invokeOptions = $this->buildInvokeOptions($options);
         if (method_exists($platform, 'invoke')) {
-            $result = $this->invokeWithPayloadFallbacks($platform, 'invoke', $modelId, $payloads);
+            $result = $this->invokeWithPayloadFallbacks($platform, 'invoke', $modelId, $payloads, $invokeOptions);
         } elseif (method_exists($platform, 'request')) {
-            $result = $this->invokeWithPayloadFallbacks($platform, 'request', $modelId, $payloads);
+            $result = $this->invokeWithPayloadFallbacks($platform, 'request', $modelId, $payloads, $invokeOptions);
         } else {
             throw new AdapterRuntimeException('Platform object exposes neither invoke() nor request().');
         }
@@ -1251,6 +1253,76 @@ final class AiService implements AiServiceInterface
         }
 
         return (string) $chunk;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildInvokeOptions(AiOptions $options): array
+    {
+        $invokeOptions = [];
+        if ($options->temperature !== null) {
+            $invokeOptions['temperature'] = $options->temperature;
+        }
+        $schema = $this->resolveJsonSchema($options);
+        if ($schema !== null) {
+            $name = 'structured_output';
+            if (isset($schema['name']) && is_string($schema['name']) && $schema['name'] !== '') {
+                $name = preg_replace('/[^a-zA-Z0-9_]/', '_', $schema['name']) ?: 'structured_output';
+                $schema = is_array($schema['schema'] ?? null) ? $schema['schema'] : $schema;
+                unset($schema['name'], $schema['schema'], $schema['strict']);
+            }
+            $invokeOptions['response_format'] = [
+                'type' => 'json_schema',
+                'json_schema' => [
+                    'name' => $name,
+                    'schema' => $schema,
+                    'strict' => true,
+                ],
+            ];
+        }
+
+        return $invokeOptions;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function resolveJsonSchema(AiOptions $options): ?array
+    {
+        if ($options->jsonSchema !== null && $options->jsonSchema !== []) {
+            return $options->jsonSchema;
+        }
+        $fromExtra = $options->extra['jsonSchema'] ?? null;
+
+        return is_array($fromExtra) && $fromExtra !== [] ? $fromExtra : null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function decodeStructuredContent(string $content, AiOptions $options): ?array
+    {
+        if ($this->resolveJsonSchema($options) === null) {
+            return null;
+        }
+        $trimmed = trim($content);
+        if ($trimmed === '') {
+            return null;
+        }
+        // Some models wrap JSON in fences despite response_format.
+        if (str_starts_with($trimmed, '```')) {
+            $trimmed = preg_replace('/^```(?:json)?\s*/i', '', $trimmed) ?? $trimmed;
+            $trimmed = preg_replace('/\s*```$/', '', $trimmed) ?? $trimmed;
+            $trimmed = trim($trimmed);
+        }
+        try {
+            $decoded = json_decode($trimmed, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+
+        return is_array($decoded) ? $decoded : null;
     }
 
     /**
