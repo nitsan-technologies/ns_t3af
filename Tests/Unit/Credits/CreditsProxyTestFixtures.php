@@ -24,6 +24,7 @@ use NITSAN\NsT3AF\Credits\Contract\CreditsApiResponseCacheInterface;
 use NITSAN\NsT3AF\Credits\Contract\LicenseDataRepositoryInterface;
 use NITSAN\NsT3AF\Credits\Domain\Repository\RuntimeSettingsRepository;
 use NITSAN\NsT3AF\Credits\Http\T3PlanetApiClient;
+use NITSAN\NsT3AF\Credits\Service\CreditsApiErrorMessageResolver;
 use NITSAN\NsT3AF\Credits\Service\CreditsChargeRecorder;
 use NITSAN\NsT3AF\Credits\Service\CreditsDomainResolver;
 use NITSAN\NsT3AF\Credits\Service\CreditsFeatureKeyMapper;
@@ -147,6 +148,7 @@ trait CreditsProxyTestFixtures
         return new RequestTelemetryService(
             new RequestLogRepository($connectionPool),
             new RequestQualityResolver(),
+            new CreditsApiErrorMessageResolver(),
         );
     }
 

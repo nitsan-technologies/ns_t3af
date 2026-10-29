@@ -147,4 +147,61 @@ final class DashboardViewModelBuilderTest extends TestCase
         self::assertNotContains('tokens', $ids);
         self::assertContains('creditsUsed', $ids);
     }
+
+    public function testBuildCreditsHeroCapsConsumedPercent(): void
+    {
+        $hero = $this->builder->buildCreditsHero([
+            'loaded' => true,
+            'errors' => [],
+            'balance' => [
+                'remaining' => 0.0,
+                'total' => 0.001,
+                'used' => 57.744,
+                'percentLeft' => 0,
+                'remainingFormatted' => '0',
+                'totalFormatted' => '0',
+                'usedFormatted' => '57.74',
+            ],
+        ], [], ['runOutDate' => '', 'dailyAvgFormatted' => '']);
+
+        self::assertSame(100, $hero['consumedPercent']);
+        self::assertSame(0, $hero['percentLeft']);
+        self::assertSame(0, $hero['balanceUnavailable']);
+    }
+
+    public function testBuildCreditsHeroMarksFailedBalance(): void
+    {
+        $hero = $this->builder->buildCreditsHero([
+            'loaded' => false,
+            'errors' => ['The security token does not match this server.'],
+            'balance' => [
+                'remaining' => 0.0,
+                'total' => 0.001,
+                'used' => 57.744,
+                'percentLeft' => 0,
+            ],
+        ], [], ['runOutDate' => '', 'dailyAvgFormatted' => '']);
+
+        self::assertSame(1, $hero['balanceUnavailable']);
+        self::assertSame('The security token does not match this server.', $hero['balanceErrorMessage']);
+        self::assertSame(100, $hero['consumedPercent']);
+    }
+
+    public function testBuildCreditsHeroKeepsInactiveEmptyPromptAsNumbers(): void
+    {
+        $hero = $this->builder->buildCreditsHero([
+            'loaded' => false,
+            'errors' => [],
+            'balance' => [
+                'remaining' => 0.0,
+                'total' => 0.0,
+                'used' => 0.0,
+                'percentLeft' => 100,
+            ],
+        ], [], ['runOutDate' => '', 'dailyAvgFormatted' => '']);
+
+        self::assertSame(0, $hero['balanceUnavailable']);
+        self::assertSame('', $hero['balanceErrorMessage']);
+        self::assertSame(0, $hero['consumedPercent']);
+    }
 }
