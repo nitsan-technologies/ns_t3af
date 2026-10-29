@@ -320,6 +320,26 @@ final class AgentToolResultPresenterTest extends TestCase
     }
 
     #[Test]
+    public function aTruncatedQueueReportsTheRealTotal(): void
+    {
+        $items = [];
+        for ($uid = 1; $uid <= 3; $uid++) {
+            $items[] = ['uid' => $uid, 'path' => '/p/' . $uid, 'status' => 'Completed'];
+        }
+
+        $presented = $this->createPresenter()->present('t3cs_list_queue_items', [
+            'count' => 3,
+            'totalMatched' => 706,
+            'truncated' => true,
+            'items' => $items,
+        ], true);
+
+        self::assertStringContainsString('Found 706 items', $presented['content']);
+        self::assertStringContainsString('706 items match. The first 3 are shown.', $presented['content']);
+        self::assertCount(3, $presented['lines']);
+    }
+
+    #[Test]
     public function otherLongListsStillPointAtDetails(): void
     {
         $rows = [];

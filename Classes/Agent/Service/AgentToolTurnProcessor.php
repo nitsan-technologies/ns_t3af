@@ -53,6 +53,41 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         't3ai_mass_translation_queue_add',
     ];
 
+    /**
+     * A missing id is asked as buttons. The value is the argument the button fills.
+     *
+     * @var array<string, string>
+     */
+    private const CHOICE_ARGUMENT = [
+        't3cs_list_queue_items' => 'dataId',
+        't3cs_reset_failed_queue_item' => 'dataId',
+        't3cs_sync_datasource' => 'dataId',
+        't3cs_save_datasource' => 'dataId',
+        't3ac_chatbot_settings' => 'chatbotUid',
+        't3ac_chatbot_settings_get' => 'chatbotUid',
+    ];
+
+    /** @var array<string, string> */
+    private const SOURCE_QUESTION = [
+        't3cs_list_queue_items' => 'agent.queue.whichSource',
+        't3cs_reset_failed_queue_item' => 'agent.source.whichReset',
+        't3cs_sync_datasource' => 'agent.source.whichSync',
+        't3cs_save_datasource' => 'agent.source.whichUpdate',
+    ];
+
+    /** Site root is filled only when the tool already takes rootPageId and the caller left it empty. */
+    private const ROOT_PAGE_TOOLS = [
+        't3cs_list_datasources',
+        't3cs_training_summary',
+        't3cs_usage_analytics_summary',
+        't3cs_sync_datasource',
+        't3cs_save_datasource',
+        't3as_search_settings',
+        't3as_search_settings_get',
+        't3as_list_predefined_questions',
+        't3as_create_predefined_question',
+    ];
+
     /** Tools that create pages under a parent page (argument parentPageId). */
     private const PARENT_PAGE_TOOLS = [
         't3ai_create_page_simple',
@@ -185,6 +220,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             ];
         }
 
+        $choiceTurn = $this->choiceTurnBeforeRun($toolName, $body, $context, $catalog, $correlationId);
+        if ($choiceTurn !== null) {
+            return $choiceTurn;
+        }
+
         $severity = $this->effectiveSeverity($tool, $body);
         $isDualMode = ($tool['dualMode'] ?? false) === true || ($rawTool['dualMode'] ?? false) === true;
         $isPreviewable = ($tool['previewable'] ?? false) === true || ($rawTool['previewable'] ?? false) === true;
@@ -212,14 +252,6 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
-        if ((string) ($tool['name'] ?? '') === 't3cs_list_queue_items' && (int) ($arguments['dataId'] ?? 0) <= 0) {
-            $resolved = $this->resolveMissingQueueSource($context, $correlationId);
-            if ($resolved['turn'] !== null) {
-                return $resolved['turn'];
-            }
-            $arguments['dataId'] = $resolved['dataId'];
-            $body['arguments'] = $arguments;
-        }
         $arguments = $this->mergeContextArguments(
             $arguments,
             $context,
@@ -714,6 +746,407 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * Ask which datasource or chatbot to use when that id is missing. A call that already has the id
+     * is left on its current path. Returns a question, or null after filling the only match onto $body.
+     *
+     * @param array<string, mixed> $body
+     * @param array<string, mixed> $context
+     * @param array{executable: list<array<string, mixed>>, locked: list<array<string, mixed>>} $catalog
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function choiceTurnBeforeRun(string $toolName, array &$body, array $context, array $catalog, string $correlationId): ?array
+    {
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $detour = $this->chatbotSettingsDetour($toolName, $body, $catalog, $correlationId);
+        if ($detour !== null) {
+            return $detour;
+        }
+        $unsaved = $this->unsavedSourceFollowUp($toolName, $arguments, $body, $context, $correlationId);
+        if ($unsaved !== null) {
+            return $unsaved;
+        }
+
+        $sourceQuestion = self::SOURCE_QUESTION[$toolName] ?? null;
+        if ($sourceQuestion !== null && $this->sourceIdIsMissing($toolName, $arguments)) {
+            $resolved = $this->resolveMissingQueueSource($context, $correlationId, $sourceQuestion, $toolName, $arguments);
+            if ($resolved['turn'] !== null) {
+                return $resolved['turn'];
+            }
+            $arguments['dataId'] = $resolved['dataId'];
+            if ($toolName === 't3cs_sync_datasource') {
+                $arguments['scope'] = 'one';
+            }
+            if ($toolName === 't3cs_save_datasource' && trim((string) ($arguments['operation'] ?? '')) === '') {
+                $arguments['operation'] = 'update';
+            }
+            $body['arguments'] = $arguments;
+
+            return null;
+        }
+
+        if (isset(self::CHOICE_ARGUMENT[$toolName]) && self::CHOICE_ARGUMENT[$toolName] === 'chatbotUid' && (int) ($arguments['chatbotUid'] ?? 0) <= 0) {
+            $resolved = $this->resolveMissingChatbot($context, $correlationId, $toolName, $arguments);
+            if ($resolved['turn'] !== null) {
+                return $resolved['turn'];
+            }
+            $arguments['chatbotUid'] = $resolved['chatbotUid'];
+            $body['arguments'] = $arguments;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    private function sourceIdIsMissing(string $toolName, array $arguments): bool
+    {
+        if ((int) ($arguments['dataId'] ?? 0) > 0) {
+            return false;
+        }
+        if ($toolName === 't3cs_sync_datasource' && strtolower(trim((string) ($arguments['scope'] ?? 'one'))) === 'all') {
+            return false;
+        }
+        if ($toolName === 't3cs_save_datasource' && strtolower(trim((string) ($arguments['operation'] ?? 'create'))) !== 'update') {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * The editor pointed at a source that was never saved ("sync that one" after a failed create).
+     * A named, existing source is not touched.
+     *
+     * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $body
+     * @param array<string, mixed> $context
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function unsavedSourceFollowUp(string $toolName, array $arguments, array $body, array $context, string $correlationId): ?array
+    {
+        if (!in_array($toolName, ['t3cs_sync_datasource', 't3cs_save_datasource'], true)) {
+            return null;
+        }
+        $operation = strtolower(trim((string) ($arguments['operation'] ?? '')));
+        if ($toolName === 't3cs_save_datasource' && $operation !== 'update') {
+            return null;
+        }
+        $history = is_array($body['conversationHistory'] ?? null) ? $body['conversationHistory'] : [];
+        $text = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        $pronoun = self::refersToThatSource($text);
+        $failedCreate = self::latestSaveFailed($history);
+        $scopeAll = $toolName === 't3cs_sync_datasource' && strtolower(trim((string) ($arguments['scope'] ?? 'one'))) === 'all';
+        $dataId = (int) ($arguments['dataId'] ?? 0);
+
+        if ($failedCreate && ($pronoun || ($scopeAll && $pronoun))) {
+            return $this->queueNotice($this->translator->translate('agent.source.notCreated'), $correlationId);
+        }
+        if ($scopeAll) {
+            return null;
+        }
+
+        return $dataId > 0 ? $this->unknownSourceTurn($dataId, $context, $correlationId, $failedCreate && $pronoun) : null;
+    }
+
+    /**
+     * A positive id that is not one of this site's sources does not become a draft.
+     * When the source list cannot be read, the existing path stays.
+     *
+     * @param array<string, mixed> $context
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function unknownSourceTurn(int $dataId, array $context, string $correlationId, bool $afterFailedCreate): ?array
+    {
+        if ($dataId <= 0) {
+            return null;
+        }
+        $known = $this->datasourceIds($context);
+        if ($known === null || in_array($dataId, $known, true)) {
+            return null;
+        }
+        $message = $afterFailedCreate
+            ? $this->translator->translate('agent.source.notCreated')
+            : $this->translator->translate('agent.source.notFound', [$dataId]);
+
+        return $this->queueNotice($message, $correlationId);
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @return list<int>|null null when the list could not be read
+     */
+    private function datasourceIds(array $context): ?array
+    {
+        $rootPageId = $this->siteRootPageId($context);
+        if ($rootPageId <= 0) {
+            return null;
+        }
+        $payload = $this->invokePayload('t3cs_list_datasources', ['rootPageId' => $rootPageId]);
+        if ($payload === null || (isset($payload['error']) && is_string($payload['error']))) {
+            return null;
+        }
+        $sources = is_array($payload['datasources'] ?? null) ? $payload['datasources'] : [];
+        $ids = [];
+        foreach ($sources as $source) {
+            if (is_array($source) && (int) ($source['uid'] ?? 0) > 0) {
+                $ids[] = (int) $source['uid'];
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Chatbot settings are not data sources. A locked chatbot tool answers with its own message.
+     *
+     * @param array<string, mixed> $body
+     * @param array{executable: list<array<string, mixed>>, locked: list<array<string, mixed>>} $catalog
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function chatbotSettingsDetour(string $toolName, array $body, array $catalog, string $correlationId): ?array
+    {
+        if ($toolName !== 't3cs_list_datasources') {
+            return null;
+        }
+        $text = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        if (!self::asksForChatbotSettings($text)) {
+            return null;
+        }
+        $locked = null;
+        foreach ($catalog['locked'] as $tool) {
+            if ((string) ($tool['name'] ?? '') === 't3ac_chatbot_settings_get') {
+                $locked = $tool;
+                break;
+            }
+        }
+        if ($locked === null) {
+            return null;
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $this->entitlementExplanation->buildMessage($locked),
+            'meta' => array_merge(
+                $this->entitlementExplanation->buildMeta($locked),
+                ['correlationId' => $correlationId, 'orchestratorPause' => true],
+            ),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @param array<string, mixed> $pendingArguments
+     * @return array{turn: array{role: string, content: string, meta: array<string, mixed>}|null, chatbotUid: int}
+     */
+    private function resolveMissingChatbot(array $context, string $correlationId, string $askedFor, array $pendingArguments): array
+    {
+        $pageId = (int) ($context['pageId'] ?? 0);
+        $payload = $this->invokePayload('t3ac_chatbot_list', $pageId > 0 ? ['pageId' => $pageId] : []);
+        if ($payload === null) {
+            return ['turn' => $this->queueNotice($this->translator->translate('agent.chatbot.none'), $correlationId), 'chatbotUid' => 0];
+        }
+        if (isset($payload['error']) && is_string($payload['error']) && trim($payload['error']) !== '') {
+            return ['turn' => $this->queueNotice(trim($payload['error']), $correlationId), 'chatbotUid' => 0];
+        }
+        $items = is_array($payload['items'] ?? null) ? $payload['items'] : [];
+        $decision = self::chatbotDecision($items);
+        if ($decision['chatbotUid'] > 0) {
+            return ['turn' => null, 'chatbotUid' => $decision['chatbotUid']];
+        }
+        if ($decision['options'] === []) {
+            return ['turn' => $this->queueNotice($this->translator->translate('agent.chatbot.none'), $correlationId), 'chatbotUid' => 0];
+        }
+
+        return [
+            'turn' => [
+                'role' => 'assistant',
+                'content' => $this->translator->translate('agent.chatbot.whichOne'),
+                'meta' => [
+                    'type' => 'clarification',
+                    'tool' => 'ask_clarification',
+                    'options' => $decision['options'],
+                    'contentChoice' => true,
+                    'askedFor' => $askedFor,
+                    'pendingArguments' => $pendingArguments,
+                    'correlationId' => $correlationId,
+                    'orchestratorPause' => true,
+                ],
+            ],
+            'chatbotUid' => 0,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function invokePayload(string $toolName, array $arguments): ?array
+    {
+        $listed = $this->playgroundService->invoke($toolName, $arguments);
+        $payload = $listed['result'] ?? null;
+        if (is_string($payload)) {
+            $decoded = json_decode($payload, true);
+            $payload = is_array($decoded) ? $decoded : null;
+        }
+        if (($listed['success'] ?? false) !== true || !is_array($payload)) {
+            return null;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * One chatbot on this site is used at once. Several on this site become buttons.
+     * When none are on this site, every chatbot is offered.
+     *
+     * @param list<array<string, mixed>> $items
+     * @return array{chatbotUid: int, options: list<string>}
+     */
+    public static function chatbotDecision(array $items): array
+    {
+        $onSite = [];
+        $all = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $uid = (int) ($item['chatbotUid'] ?? $item['uid'] ?? 0);
+            if ($uid <= 0) {
+                continue;
+            }
+            $title = trim((string) ($item['title'] ?? ''));
+            $label = ($title !== '' ? $title : 'Chatbot') . ' [' . $uid . ']';
+            $all[] = $label;
+            if (($item['onThisSite'] ?? false) === true) {
+                $onSite[] = ['uid' => $uid, 'label' => $label];
+            }
+        }
+        if (count($onSite) === 1) {
+            return ['chatbotUid' => $onSite[0]['uid'], 'options' => []];
+        }
+        if (count($onSite) > 1) {
+            return ['chatbotUid' => 0, 'options' => array_column($onSite, 'label')];
+        }
+        if (count($all) === 1) {
+            return ['chatbotUid' => self::uidInBrackets($all[0]), 'options' => []];
+        }
+
+        return ['chatbotUid' => 0, 'options' => $all];
+    }
+
+    /**
+     * The button the editor clicked, including the arguments that were already known.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array{tool: string, arguments: array<string, mixed>}|null
+     */
+    public static function openChoiceTarget(string $reply, array $history): ?array
+    {
+        $question = self::openQuestionMeta($history);
+        $tool = (string) ($question['askedFor'] ?? '');
+        $argument = self::CHOICE_ARGUMENT[$tool] ?? null;
+        if ($argument === null) {
+            return null;
+        }
+        $options = array_values(array_filter(
+            is_array($question['options'] ?? null) ? $question['options'] : [],
+            'is_string',
+        ));
+        $uid = self::uidFromChoiceOptions(trim($reply), $options);
+        if ($uid <= 0) {
+            return null;
+        }
+        $arguments = is_array($question['pendingArguments'] ?? null) ? $question['pendingArguments'] : [];
+        $arguments[$argument] = $uid;
+        if ($tool === 't3cs_sync_datasource') {
+            $arguments['scope'] = 'one';
+        }
+        if ($tool === 't3cs_save_datasource' && trim((string) ($arguments['operation'] ?? '')) === '') {
+            $arguments['operation'] = 'update';
+        }
+
+        return ['tool' => $tool, 'arguments' => $arguments];
+    }
+
+    /**
+     * @param list<string> $options
+     */
+    private static function uidFromChoiceOptions(string $reply, array $options): int
+    {
+        foreach ($options as $option) {
+            if (self::sameChoice($reply, $option)) {
+                return self::uidInBrackets($option);
+            }
+        }
+        $uid = 0;
+        if (preg_match('/\[(\d+)\]\s*$/', $reply, $bracket) === 1) {
+            $uid = (int) $bracket[1];
+        } elseif (preg_match('/^\d+$/', $reply) === 1) {
+            $uid = (int) $reply;
+        }
+        if ($uid <= 0) {
+            return 0;
+        }
+        foreach ($options as $option) {
+            if (self::uidInBrackets($option) === $uid) {
+                return $uid;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function latestSaveFailed(array $history): bool
+    {
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $entry = $history[$i];
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if ((string) ($meta['tool'] ?? '') !== 't3cs_save_datasource') {
+                continue;
+            }
+            if (($meta['success'] ?? true) === false || ($meta['type'] ?? '') === 'error') {
+                return true;
+            }
+
+            return false;
+        }
+
+        return false;
+    }
+
+    public static function refersToThatSource(string $text): bool
+    {
+        $text = mb_strtolower($text);
+        foreach (['that one', 'that source', 'this one', 'this source', 'activate it', 'sync it', 'sync that', 'diese eine', 'diese quelle', 'die eine'] as $needle) {
+            if (str_contains($text, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static function asksForChatbotSettings(string $text): bool
+    {
+        $text = mb_strtolower($text);
+        if (str_contains($text, 'data source') || str_contains($text, 'datasource') || str_contains($text, 'datenquelle')) {
+            return false;
+        }
+
+        return str_contains($text, 'chatbot settings')
+            || str_contains($text, 'chatbot configuration')
+            || str_contains($text, 'chatbot-einstellungen')
+            || str_contains($text, 'einstellungen des chatbots')
+            || str_contains($text, 'einstellungen für den chatbot');
+    }
+
+    /**
      * One datasource is used at once. Several become buttons ("Name (type) [uid]"). None stays empty.
      *
      * @param list<array<string, mixed>> $sources
@@ -787,9 +1220,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
 
     /**
      * @param array<string, mixed> $context
+     * @param array<string, mixed> $pendingArguments
      * @return array{turn: array{role: string, content: string, meta: array<string, mixed>}|null, dataId: int}
      */
-    private function resolveMissingQueueSource(array $context, string $correlationId): array
+    private function resolveMissingQueueSource(
+        array $context,
+        string $correlationId,
+        string $questionKey = 'agent.queue.whichSource',
+        string $askedFor = 't3cs_list_queue_items',
+        array $pendingArguments = [],
+    ): array
     {
         $rootPageId = $this->siteRootPageId($context);
         if ($rootPageId <= 0) {
@@ -829,13 +1269,14 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         return [
             'turn' => [
                 'role' => 'assistant',
-                'content' => $this->translator->translate('agent.queue.whichSource'),
+                'content' => $this->translator->translate($questionKey),
                 'meta' => [
                     'type' => 'clarification',
                     'tool' => 'ask_clarification',
                     'options' => $decision['options'],
                     'contentChoice' => true,
-                    'askedFor' => 't3cs_list_queue_items',
+                    'askedFor' => $askedFor,
+                    'pendingArguments' => $pendingArguments,
                     'correlationId' => $correlationId,
                     'orchestratorPause' => true,
                 ],
@@ -2354,6 +2795,14 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 }
             }
             unset($arguments['pageId'], $arguments['pid']);
+        }
+
+        $toolKey = strtolower(trim($toolName));
+        if (in_array($toolKey, self::ROOT_PAGE_TOOLS, true) && (int) ($arguments['rootPageId'] ?? 0) <= 0) {
+            $rootPageId = $this->siteRootPageId($context);
+            if ($rootPageId > 0) {
+                $arguments['rootPageId'] = $rootPageId;
+            }
         }
 
         return $arguments;

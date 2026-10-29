@@ -2228,6 +2228,33 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.queue.noSite" resname="agent.queue.noSite">
         <source>Open a page of the site, then ask for the training queue again.</source>
       </trans-unit>
+      <trans-unit id="agent.source.whichReset" resname="agent.source.whichReset">
+        <source>Which data source should I retry the failed training items for?</source>
+      </trans-unit>
+      <trans-unit id="agent.source.whichSync" resname="agent.source.whichSync">
+        <source>Which data source should I sync?</source>
+      </trans-unit>
+      <trans-unit id="agent.source.whichUpdate" resname="agent.source.whichUpdate">
+        <source>Which data source should I update?</source>
+      </trans-unit>
+      <trans-unit id="agent.source.notCreated" resname="agent.source.notCreated">
+        <source>The data source was not created, so there is nothing to change.</source>
+      </trans-unit>
+      <trans-unit id="agent.source.notFound" resname="agent.source.notFound">
+        <source>Data source %1$s was not found.</source>
+      </trans-unit>
+      <trans-unit id="agent.chatbot.whichOne" resname="agent.chatbot.whichOne">
+        <source>Which chatbot should I use?</source>
+      </trans-unit>
+      <trans-unit id="agent.chatbot.none" resname="agent.chatbot.none">
+        <source>This installation has no chatbot.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.queueTruncated" resname="agent.result.queueTruncated">
+        <source>%1$s items match. The first %2$s are shown.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.licenceUnavailable" resname="agent.tool.licenceUnavailable">
+        <source>%1$s is installed, but its licence is missing or invalid. Add a valid licence key to use these actions.</source>
+      </trans-unit>
       <trans-unit id="agent.tool.label.t3cs_reset_failed_queue_item" resname="agent.tool.label.t3cs_reset_failed_queue_item">
         <source>Retry a failed training item</source>
       </trans-unit>

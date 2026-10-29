@@ -183,20 +183,20 @@ final readonly class AgentTurnRouter
         $imageTextAnswer = $attachmentMessages === [] && !is_array($body['continuation'] ?? null)
             ? AgentToolTurnProcessor::imageTextAnswer(trim($message), $historyMessages)
             : null;
-        $queueDataId = $attachmentMessages === [] && !is_array($body['continuation'] ?? null)
-            ? AgentToolTurnProcessor::dataIdFromQueueChoice(trim($message), $historyMessages)
-            : 0;
-        if ($queueDataId > 0) {
-            $body['arguments'] = ['dataId' => $queueDataId];
+        $choice = $attachmentMessages === [] && !is_array($body['continuation'] ?? null)
+            ? AgentToolTurnProcessor::openChoiceTarget(trim($message), $historyMessages)
+            : null;
+        if ($choice !== null && $this->isKnownTool($choice['tool'])) {
+            $body['arguments'] = $choice['arguments'];
             $body['conversationHistory'] = $historyMessages;
             $body['userMessage'] = trim($message);
-            $queueMessages = $this->finalizeStructuralMessages(
-                [$this->executeTool('t3cs_list_queue_items', $context, $body, $user, $correlationId)],
+            $choiceMessages = $this->finalizeStructuralMessages(
+                [$this->executeTool($choice['tool'], $context, $body, $user, $correlationId)],
                 $correlationId,
             );
-            $this->emitMessages($emitEvent, $queueMessages);
+            $this->emitMessages($emitEvent, $choiceMessages);
 
-            return $queueMessages;
+            return $choiceMessages;
         }
 
         if ($imageTextAnswer !== null && $this->isKnownTool($imageTextAnswer['tool'])) {

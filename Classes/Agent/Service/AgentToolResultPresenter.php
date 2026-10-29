@@ -162,10 +162,15 @@ final readonly class AgentToolResultPresenter
         $listLead = $this->buildListLeadSummary($toolName, $facts, $details);
         $toolLead = $this->buildToolSpecificContent($toolName, $facts, $details);
         $lines = $error === null ? $this->queueItemLines($toolName, $details) : [];
+        $content = $llmSummary ?? $toolLead ?? ($hasReadySummary ? $summary : null) ?? $listLead ?? $summary;
+        $truncation = $error === null ? $this->queueTruncationNote($toolName, $details) : null;
+        if ($truncation !== null && is_string($content)) {
+            $content .= "\n\n" . $truncation;
+        }
 
         return [
             // The tool's own summary says more than "Found N items" (score, what was queued, …).
-            'content' => $llmSummary ?? $toolLead ?? ($hasReadySummary ? $summary : null) ?? $listLead ?? $summary,
+            'content' => $content,
             'success' => $error === null,
             'summary' => $summary,
             'llmSummary' => $llmSummary,
@@ -344,6 +349,9 @@ final readonly class AgentToolResultPresenter
             if ($total === 0) {
                 $total = count($rows);
             }
+            if (isset($details['totalMatched']) && is_numeric($details['totalMatched']) && (int) $details['totalMatched'] > $total) {
+                $total = (int) $details['totalMatched'];
+            }
 
             if ($rows === [] && $total === 0) {
                 continue;
@@ -480,6 +488,20 @@ final readonly class AgentToolResultPresenter
      *
      * @return list<string>
      */
+    private function queueTruncationNote(string $toolName, mixed $details): ?string
+    {
+        if ($toolName !== 't3cs_list_queue_items' || !is_array($details) || ($details['truncated'] ?? false) !== true) {
+            return null;
+        }
+        $total = (int) ($details['totalMatched'] ?? 0);
+        $shown = (int) ($details['count'] ?? 0);
+        if ($total <= $shown || $shown <= 0) {
+            return null;
+        }
+
+        return $this->translator->translate('agent.result.queueTruncated', [$total, $shown]);
+    }
+
     private function queueItemLines(string $toolName, mixed $details): array
     {
         if ($toolName !== 't3cs_list_queue_items' || !is_array($details) || !is_array($details['items'] ?? null)) {

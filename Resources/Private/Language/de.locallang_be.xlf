@@ -2825,6 +2825,42 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <source>Open a page of the site, then ask for the training queue again.</source>
                 <target>Öffnen Sie eine Seite der Website und fragen Sie dann erneut nach der Trainings-Warteschlange.</target>
             </trans-unit>
+            <trans-unit id="agent.source.whichReset">
+                <source>Which data source should I retry the failed training items for?</source>
+                <target>Für welche Datenquelle soll ich die fehlgeschlagenen Trainingseinträge erneut versuchen?</target>
+            </trans-unit>
+            <trans-unit id="agent.source.whichSync">
+                <source>Which data source should I sync?</source>
+                <target>Welche Datenquelle soll ich synchronisieren?</target>
+            </trans-unit>
+            <trans-unit id="agent.source.whichUpdate">
+                <source>Which data source should I update?</source>
+                <target>Welche Datenquelle soll ich aktualisieren?</target>
+            </trans-unit>
+            <trans-unit id="agent.source.notCreated">
+                <source>The data source was not created, so there is nothing to change.</source>
+                <target>Die Datenquelle wurde nicht angelegt, daher gibt es nichts zu ändern.</target>
+            </trans-unit>
+            <trans-unit id="agent.source.notFound">
+                <source>Data source %1$s was not found.</source>
+                <target>Datenquelle %1$s wurde nicht gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.chatbot.whichOne">
+                <source>Which chatbot should I use?</source>
+                <target>Welchen Chatbot soll ich verwenden?</target>
+            </trans-unit>
+            <trans-unit id="agent.chatbot.none">
+                <source>This installation has no chatbot.</source>
+                <target>In dieser Installation gibt es keinen Chatbot.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.queueTruncated">
+                <source>%1$s items match. The first %2$s are shown.</source>
+                <target>%1$s Einträge passen. Die ersten %2$s werden angezeigt.</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.licenceUnavailable">
+                <source>%1$s is installed, but its licence is missing or invalid. Add a valid licence key to use these actions.</source>
+                <target>%1$s ist installiert, aber die Lizenz fehlt oder ist ungültig. Fügen Sie einen gültigen Lizenzschlüssel hinzu, um diese Aktionen zu nutzen.</target>
+            </trans-unit>
             <trans-unit id="agent.tool.label.t3cs_reset_failed_queue_item">
                 <source>Retry a failed training item</source>
                 <target>Fehlgeschlagenen Trainingseintrag erneut versuchen</target>

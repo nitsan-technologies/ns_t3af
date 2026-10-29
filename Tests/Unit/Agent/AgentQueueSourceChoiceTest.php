@@ -78,4 +78,51 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertSame(0, AgentToolTurnProcessor::dataIdFromQueueChoice('9', $history));
         self::assertSame(0, AgentToolTurnProcessor::dataIdFromQueueChoice('T3CS FAQ Source (qa) [6]', []));
     }
+
+    #[Test]
+    public function oneChatbotOnThisSiteIsUsed(): void
+    {
+        $decision = AgentToolTurnProcessor::chatbotDecision([
+            ['chatbotUid' => 3, 'title' => 'Other site', 'onThisSite' => false],
+            ['chatbotUid' => 4, 'title' => 'Home bot', 'onThisSite' => true],
+        ]);
+
+        self::assertSame(4, $decision['chatbotUid']);
+        self::assertSame([], $decision['options']);
+    }
+
+    #[Test]
+    public function aButtonKeepsTheArgumentsAlreadyKnown(): void
+    {
+        $target = AgentToolTurnProcessor::openChoiceTarget('Home bot [4]', [[
+            'role' => 'assistant',
+            'meta' => [
+                'type' => 'clarification',
+                'askedFor' => 't3ac_chatbot_settings',
+                'options' => ['Home bot [4]', 'Docs bot [5]'],
+                'pendingArguments' => ['operation' => 'update', 'settingsJson' => '{"title":"Home"}'],
+            ],
+        ]]);
+
+        self::assertSame('t3ac_chatbot_settings', $target['tool'] ?? null);
+        self::assertSame(4, $target['arguments']['chatbotUid'] ?? null);
+        self::assertSame('{"title":"Home"}', $target['arguments']['settingsJson'] ?? null);
+    }
+
+    #[Test]
+    public function thatOneAfterAFailedCreateIsRecognized(): void
+    {
+        self::assertTrue(AgentToolTurnProcessor::refersToThatSource('Sync that one now'));
+        self::assertFalse(AgentToolTurnProcessor::refersToThatSource('Sync all sources'));
+        self::assertTrue(AgentToolTurnProcessor::latestSaveFailed([[
+            'role' => 'assistant',
+            'meta' => ['tool' => 't3cs_save_datasource', 'type' => 'tool_result', 'success' => false],
+        ]]));
+        self::assertFalse(AgentToolTurnProcessor::latestSaveFailed([[
+            'role' => 'assistant',
+            'meta' => ['tool' => 't3cs_save_datasource', 'type' => 'tool_result', 'success' => true],
+        ]]));
+        self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings('Show the AI Chatbot settings for chatbot 1'));
+        self::assertFalse(AgentToolTurnProcessor::asksForChatbotSettings('List the chatbot data sources'));
+    }
 }

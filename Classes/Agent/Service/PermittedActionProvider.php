@@ -177,8 +177,14 @@ final readonly class PermittedActionProvider implements AgentActionCatalogInterf
             $lockReason = $this->translator->translate('agent.tool.blockedForGroup');
         } elseif (!$this->entitlementResolver->isExecutable($ownerKey)) {
             $executable = false;
-            $lockKind = 'extension';
-            $lockReason = $this->translator->translate('agent.tool.extensionUnavailable', [$this->formatOwnerLabel($ownerKey)]);
+            $ownerLabel = $this->formatOwnerLabel($ownerKey);
+            if (ExtensionManagementUtility::isLoaded($ownerKey)) {
+                $lockKind = 'licence';
+                $lockReason = $this->translator->translate('agent.tool.licenceUnavailable', [$ownerLabel]);
+            } else {
+                $lockKind = 'extension';
+                $lockReason = $this->translator->translate('agent.tool.extensionUnavailable', [$ownerLabel]);
+            }
         } elseif (
             ($severity === ToolSeverity::Write || $severity === ToolSeverity::Destructive)
             && ($tool['previewable'] ?? false) !== true
