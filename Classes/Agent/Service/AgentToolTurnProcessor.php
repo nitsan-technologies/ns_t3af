@@ -85,12 +85,12 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         't3as_search_settings',
         't3as_search_settings_get',
         't3as_list_predefined_questions',
-        't3as_create_predefined_question',
+        't3as_predefined_questions_create',
     ];
 
     /**
      * These tables are not versioned. A workspace id on the card does not change the stored row.
-     * Versioned tools, including t3as_create_predefined_question, keep the editor's workspace.
+     * Versioned tools, including t3as_predefined_questions_create, keep the editor's workspace.
      */
     private const WORKSPACE_EXEMPT_TOOLS = [
         't3cs_list_datasources',
