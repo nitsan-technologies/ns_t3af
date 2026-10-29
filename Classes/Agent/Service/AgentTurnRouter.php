@@ -132,11 +132,26 @@ final readonly class AgentTurnRouter
         );
 
         if ($selectedTool !== '' && $slashRemainder !== '') {
-            $toolArguments = $this->slashArgumentBinder->bindForTool(
-                $selectedTool,
-                $toolArguments,
-                $slashRemainder,
-            );
+            try {
+                $toolArguments = $this->slashArgumentBinder->bindForTool(
+                    $selectedTool,
+                    $toolArguments,
+                    $slashRemainder,
+                );
+            } catch (\InvalidArgumentException $exception) {
+                $messages = [[
+                    'role' => 'assistant',
+                    'content' => $exception->getMessage(),
+                    'meta' => [
+                        'type' => 'error',
+                        'tool' => $selectedTool,
+                        'correlationId' => $correlationId,
+                    ],
+                ]];
+                $this->emitMessages($emitEvent, $messages);
+
+                return $messages;
+            }
         }
 
         $body['arguments'] = $toolArguments;

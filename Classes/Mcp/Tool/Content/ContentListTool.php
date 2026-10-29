@@ -54,6 +54,10 @@ readonly class ContentListTool implements McpNonAiToolInterface
         // the default-language page with sys_language_uid set. Remap so "German content of page 70"
         // lists the overlays on pid = l10n_parent instead of an empty list. When the caller did not
         // pass a language filter, default to that overlay page's own language.
+        if ($pid > 0 && !$this->recordService->parentPageExists($pid)) {
+            return json_encode(['error' => 'Page not found', 'pageId' => $pid], JSON_THROW_ON_ERROR);
+        }
+
         if ($pid > 0) {
             $page = $this->recordService->findByUid('pages', $pid, ['uid', 'l10n_parent', 'sys_language_uid']);
             $defaultPid = is_array($page) ? (int) ($page['l10n_parent'] ?? 0) : 0;

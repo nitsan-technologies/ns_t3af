@@ -149,8 +149,9 @@ final readonly class AgentToolResultPresenter
             && isset($details['summary'])
             && is_string($details['summary'])
             && trim($details['summary']) !== '';
-        if ($toolName === 't3cs_sync_datasource') {
+        if ($toolName === 't3cs_sync_datasource' || $toolName === 't3as_search_settings_get') {
             // The sync sentence is the tool's scope and source. A model summary can name a different source.
+            // Search settings answer from the saved fields, not a second model call.
             $allowLlmSummary = false;
         }
         if (
@@ -766,6 +767,13 @@ final readonly class AgentToolResultPresenter
             }
         }
 
+        if ($toolName === 't3as_search_settings_get') {
+            $search = $this->searchSettingsContent($details);
+            if ($search !== null) {
+                return $search;
+            }
+        }
+
         if ($toolName === 't3aa_list_files_missing_alt_text') {
             $total = $this->primaryCountFromFacts($facts) ?? 0;
             if ($total === 0) {
@@ -802,6 +810,28 @@ final readonly class AgentToolResultPresenter
         }
 
         return null;
+    }
+
+    /**
+     * Enabled and the search engine, from the settings row. There is no separate model field.
+     */
+    private function searchSettingsContent(mixed $details): ?string
+    {
+        if (!is_array($details)) {
+            return null;
+        }
+        $settings = is_array($details['settings'] ?? null) ? $details['settings'] : $details;
+        $enabledRaw = $settings['enable_ai_search'] ?? $settings['enableAiSearch'] ?? 0;
+        $enabled = $enabledRaw === 1 || $enabledRaw === '1' || $enabledRaw === true;
+        $engine = trim((string) ($settings['search_engine'] ?? $settings['searchEngine'] ?? ''));
+        if (!$enabled) {
+            return $this->translator->translate('agent.search.disabled');
+        }
+        if ($engine === '') {
+            return $this->translator->translate('agent.search.enabledNoEngine');
+        }
+
+        return $this->translator->translate('agent.search.enabled', [$engine]);
     }
 
     /**

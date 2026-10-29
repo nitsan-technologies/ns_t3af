@@ -2906,8 +2906,20 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <target>Trainingsstatus anzeigen</target>
             </trans-unit>
             <trans-unit id="agent.tool.label.t3cs_usage_analytics_summary">
-                <source>Show chatbot usage</source>
-                <target>Chatbot-Nutzung anzeigen</target>
+                <source>Show usage analytics</source>
+                <target>Nutzungsstatistik anzeigen</target>
+            </trans-unit>
+            <trans-unit id="agent.search.disabled">
+                <source>AI Search is switched off.</source>
+                <target>KI-Suche ist ausgeschaltet.</target>
+            </trans-unit>
+            <trans-unit id="agent.search.enabled">
+                <source>AI Search is enabled. The search engine is %s.</source>
+                <target>KI-Suche ist eingeschaltet. Die Suchmaschine ist %s.</target>
+            </trans-unit>
+            <trans-unit id="agent.search.enabledNoEngine">
+                <source>AI Search is enabled. No search engine is set.</source>
+                <target>KI-Suche ist eingeschaltet. Es ist keine Suchmaschine gesetzt.</target>
             </trans-unit>
             <trans-unit id="agent.plan.namedTool">
                 <source>%1$s%2$s.</source>

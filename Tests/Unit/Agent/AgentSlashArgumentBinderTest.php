@@ -155,6 +155,19 @@ final class AgentSlashArgumentBinderTest extends TestCase
     }
 
     #[Test]
+    public function aNegativeIdIsRefusedInsteadOfAStringArgument(): void
+    {
+        $params = [
+            ['name' => 'rootPageId', 'type' => 'int', 'required' => true, 'default' => null],
+            ['name' => 'usageType', 'type' => 'string', 'required' => false, 'default' => ''],
+        ];
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('positive number');
+        $this->binder->bind([], '-5', $params);
+    }
+
+    #[Test]
     public function mapsLeadingDigitToUidAndRestToString(): void
     {
         $params = [

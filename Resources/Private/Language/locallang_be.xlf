@@ -2289,7 +2289,16 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
         <source>Show the training status</source>
       </trans-unit>
       <trans-unit id="agent.tool.label.t3cs_usage_analytics_summary" resname="agent.tool.label.t3cs_usage_analytics_summary">
-        <source>Show chatbot usage</source>
+        <source>Show usage analytics</source>
+      </trans-unit>
+      <trans-unit id="agent.search.disabled" resname="agent.search.disabled">
+        <source>AI Search is switched off.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.enabled" resname="agent.search.enabled">
+        <source>AI Search is enabled. The search engine is %s.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.enabledNoEngine" resname="agent.search.enabledNoEngine">
+        <source>AI Search is enabled. No search engine is set.</source>
       </trans-unit>
       <trans-unit id="agent.plan.namedTool" resname="agent.plan.namedTool">
         <source>%1$s%2$s.</source>

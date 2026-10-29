@@ -120,7 +120,10 @@ final class AgentSlashArgumentBinder
                 return in_array($name, self::ID_PARAM_NAMES, true) || ($param['required'] ?? false) === true;
             },
         ));
-        if ($first !== '' && ctype_digit($first) && $bindableIds !== []) {
+        if ($first !== '' && preg_match('/^-?\d+$/', $first) === 1 && $bindableIds !== []) {
+            if (str_starts_with($first, '-')) {
+                throw new \InvalidArgumentException('That id is not valid. Use a positive number.');
+            }
             $idName = (string) (self::preferredIdParam($bindableIds)['name'] ?? 'uid');
             $arguments[$idName] = (int) $first;
             $remainder = $afterFirst;

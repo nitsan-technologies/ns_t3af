@@ -46,6 +46,7 @@ final class FileReferenceListToolTest extends TestCase
     public function textmediaImageFieldListsAssetsInstead(): void
     {
         $recordService = $this->createMock(RecordService::class);
+        $recordService->method('recordExists')->with('tt_content', 82)->willReturn(true);
         $recordService->method('findByUid')->with('tt_content', 82, ['uid', 'CType'])->willReturn([
             'uid' => 82,
             'CType' => 'textmedia',

@@ -239,6 +239,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return $choiceTurn;
         }
 
+        $searchRead = $this->searchSettingsReadTool($toolName, $body, $catalog);
+        if ($searchRead !== null) {
+            $tool = $searchRead;
+        }
+
         $severity = $this->effectiveSeverity($tool, $body);
         $isDualMode = ($tool['dualMode'] ?? false) === true || ($rawTool['dualMode'] ?? false) === true;
         $isPreviewable = ($tool['previewable'] ?? false) === true || ($rawTool['previewable'] ?? false) === true;
@@ -4162,9 +4167,32 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * A read sent to the search-settings write tool is the get tool. A real update stays a write.
+     *
+     * @param array<string, mixed> $body
      * @param array{executable: list<array<string, mixed>>, locked: list<array<string, mixed>>} $catalog
      * @return array<string, mixed>|null
      */
+    private function searchSettingsReadTool(string $toolName, array &$body, array $catalog): ?array
+    {
+        if ($toolName !== 't3as_search_settings') {
+            return null;
+        }
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $operation = strtolower(trim((string) ($arguments['operation'] ?? 'update')));
+        if ($operation === 'update') {
+            return null;
+        }
+        $getTool = $this->findTool($catalog, 't3as_search_settings_get');
+        if ($getTool === null || ($getTool['executable'] ?? false) !== true) {
+            return null;
+        }
+        unset($arguments['operation'], $arguments['settingsJson']);
+        $body['arguments'] = $arguments;
+
+        return $getTool;
+    }
+
     private function findTool(array $catalog, string $toolName): ?array
     {
         $needle = strtolower(trim($toolName));

@@ -340,6 +340,30 @@ readonly class RecordService
      * @param list<int> $uids
      * @return list<int>
      */
+    /**
+     * The row is in the table. This does not apply the page-read check, so a hidden row
+     * can be told apart from an id that was never saved.
+     */
+    public function recordExists(string $table, int $uid): bool
+    {
+        if ($uid <= 0 || $table === '') {
+            return false;
+        }
+
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable($table);
+        $queryBuilder->getRestrictions()->removeAll();
+        $this->workspaceContext->applyRestriction($queryBuilder, $table);
+
+        $found = $queryBuilder
+            ->count('uid')
+            ->from($table)
+            ->where($queryBuilder->expr()->eq('uid', $queryBuilder->createNamedParameter($uid, ParameterType::INTEGER)))
+            ->executeQuery()
+            ->fetchOne();
+
+        return (int) $found > 0;
+    }
+
     public function findExistingUids(string $table, array $uids): array
     {
         if ($uids === []) {
