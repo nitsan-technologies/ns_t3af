@@ -2234,6 +2234,18 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.source.whichSync" resname="agent.source.whichSync">
         <source>Which data source should I sync?</source>
       </trans-unit>
+      <trans-unit id="agent.sync.requestedOne" resname="agent.sync.requestedOne">
+        <source>Sync was requested for "%1$s".</source>
+      </trans-unit>
+      <trans-unit id="agent.sync.requestedAll" resname="agent.sync.requestedAll">
+        <source>Sync was requested for all %1$s data sources.</source>
+      </trans-unit>
+      <trans-unit id="agent.sync.ranOne" resname="agent.sync.ranOne">
+        <source>"%1$s" was synced.</source>
+      </trans-unit>
+      <trans-unit id="agent.sync.ranAll" resname="agent.sync.ranAll">
+        <source>All %1$s data sources were synced.</source>
+      </trans-unit>
       <trans-unit id="agent.source.whichUpdate" resname="agent.source.whichUpdate">
         <source>Which data source should I update?</source>
       </trans-unit>

@@ -149,6 +149,10 @@ final readonly class AgentToolResultPresenter
             && isset($details['summary'])
             && is_string($details['summary'])
             && trim($details['summary']) !== '';
+        if ($toolName === 't3cs_sync_datasource') {
+            // The sync sentence is the tool's scope and source. A model summary can name a different source.
+            $allowLlmSummary = false;
+        }
         if (
             $allowLlmSummary
             && !($this->creditModeResolver?->isActive() ?? false)
@@ -755,6 +759,13 @@ final readonly class AgentToolResultPresenter
      */
     private function buildToolSpecificContent(string $toolName, array $facts, mixed $details): ?string
     {
+        if ($toolName === 't3cs_sync_datasource') {
+            $sync = $this->syncResultContent($details);
+            if ($sync !== null) {
+                return $sync;
+            }
+        }
+
         if ($toolName === 't3aa_list_files_missing_alt_text') {
             $total = $this->primaryCountFromFacts($facts) ?? 0;
             if ($total === 0) {
@@ -788,6 +799,33 @@ final readonly class AgentToolResultPresenter
         $actionMessage = $this->buildActionSuccessContent($details);
         if ($actionMessage !== null) {
             return $actionMessage;
+        }
+
+        return null;
+    }
+
+    /**
+     * The visible sync reply is the scope and the source the tool reported.
+     */
+    private function syncResultContent(mixed $details): ?string
+    {
+        if (!is_array($details) || ($details['success'] ?? false) !== true) {
+            return null;
+        }
+        $scope = strtolower(trim((string) ($details['scope'] ?? '')));
+        $immediate = strtolower(trim((string) ($details['mode'] ?? ''))) === 'immediate';
+        if ($scope === 'one') {
+            $name = trim((string) ($details['name'] ?? ''));
+            if ($name === '') {
+                $name = (string) (int) ($details['dataId'] ?? 0);
+            }
+
+            return $this->translator->translate($immediate ? 'agent.sync.ranOne' : 'agent.sync.requestedOne', [$name]);
+        }
+        if ($scope === 'all') {
+            $count = (int) ($details['sourcesRequested'] ?? $details['sourcesProcessed'] ?? $details['totalSources'] ?? 0);
+
+            return $this->translator->translate($immediate ? 'agent.sync.ranAll' : 'agent.sync.requestedAll', [$count]);
         }
 
         return null;

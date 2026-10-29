@@ -123,6 +123,96 @@ final class AgentQueueSourceChoiceTest extends TestCase
             'meta' => ['tool' => 't3cs_save_datasource', 'type' => 'tool_result', 'success' => true],
         ]]));
         self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings('Show the AI Chatbot settings for chatbot 1'));
+        self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings('chatbot settings?'));
         self::assertFalse(AgentToolTurnProcessor::asksForChatbotSettings('List the chatbot data sources'));
+        self::assertTrue(AgentToolTurnProcessor::chatbotSettingsNeedLicenceMessage('chatbot settings?', true));
+        self::assertFalse(AgentToolTurnProcessor::chatbotSettingsNeedLicenceMessage('chatbot settings?', false));
+    }
+
+    #[Test]
+    public function aNamedSourceStaysScopeOne(): void
+    {
+        $decision = AgentToolTurnProcessor::namedSyncDecision(
+            'Sync only the sitemap data source of root page 1 (changed pages only).',
+            [
+                ['uid' => 1, 'name' => 'Sitemap', 'type' => 'sitemap'],
+                ['uid' => 8, 'name' => 'Pages', 'type' => 'typo3_pages'],
+            ],
+            'all',
+            0,
+        );
+
+        self::assertSame('use', $decision['action']);
+        self::assertSame('one', $decision['scope']);
+        self::assertSame(1, $decision['dataId']);
+    }
+
+    #[Test]
+    public function twoSourcesWithTheSameNameAreAQuestion(): void
+    {
+        $decision = AgentToolTurnProcessor::namedSyncDecision(
+            "Sync the data source 'QA Deep Web OK' now.",
+            [
+                ['uid' => 14, 'name' => 'QA Deep Web OK', 'type' => 'web_pages'],
+                ['uid' => 17, 'name' => 'QA Deep Web OK', 'type' => 'web_pages'],
+                ['uid' => 1, 'name' => 'Sitemap', 'type' => 'sitemap'],
+            ],
+            'one',
+            123,
+        );
+
+        self::assertSame('ask', $decision['action']);
+        self::assertSame(['QA Deep Web OK (web_pages) [14]', 'QA Deep Web OK (web_pages) [17]'], $decision['options']);
+    }
+
+    #[Test]
+    public function aChosenUidBreaksTheTie(): void
+    {
+        $decision = AgentToolTurnProcessor::namedSyncDecision(
+            'QA Deep Web OK (web_pages) [14]',
+            [
+                ['uid' => 14, 'name' => 'QA Deep Web OK', 'type' => 'web_pages'],
+                ['uid' => 17, 'name' => 'QA Deep Web OK', 'type' => 'web_pages'],
+            ],
+            'one',
+            0,
+        );
+
+        self::assertSame('use', $decision['action']);
+        self::assertSame(14, $decision['dataId']);
+    }
+
+    #[Test]
+    public function everySourceStaysScopeAll(): void
+    {
+        $decision = AgentToolTurnProcessor::namedSyncDecision(
+            'Sync all sources',
+            [
+                ['uid' => 1, 'name' => 'Sitemap', 'type' => 'sitemap'],
+                ['uid' => 8, 'name' => 'Pages', 'type' => 'typo3_pages'],
+            ],
+            'one',
+            8,
+        );
+
+        self::assertSame('keep', $decision['action']);
+        self::assertSame('all', $decision['scope']);
+        self::assertSame(0, $decision['dataId']);
+    }
+
+    #[Test]
+    public function anInventedIdIsNotFound(): void
+    {
+        $decision = AgentToolTurnProcessor::namedSyncDecision(
+            'Sync it now',
+            [
+                ['uid' => 1, 'name' => 'Sitemap', 'type' => 'sitemap'],
+            ],
+            'one',
+            123,
+        );
+
+        self::assertSame('notFound', $decision['action']);
+        self::assertSame(123, $decision['dataId']);
     }
 }

@@ -49,6 +49,10 @@ export function draftApplySkipsFollowUp(tool, content, planSteps = []) {
   if (seoQueueAddSkipsFollowUp(tool, content)) {
     return true;
   }
+  // The sync card already states the scope and the source. A follow-up turn rewrites that in the model's words.
+  if (tool === 't3cs_sync_datasource') {
+    return true;
+  }
   if (tool !== 't3ai_create_page_structure') {
     return false;
   }

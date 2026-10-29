@@ -352,4 +352,30 @@ final class AgentToolResultPresenterTest extends TestCase
         self::assertStringContainsString('Open Details for the full list (6 total).', $presented['content']);
         self::assertSame([], $presented['lines']);
     }
+
+    #[Test]
+    public function aSyncResultNamesTheScopeFromTheTool(): void
+    {
+        $ai = $this->createMock(AiServiceInterface::class);
+        $ai->expects(self::never())->method('complete');
+
+        $one = $this->createPresenter($ai)->present('t3cs_sync_datasource', [
+            'success' => true,
+            'scope' => 'one',
+            'mode' => 'request',
+            'name' => 'Sitemap',
+            'dataId' => 1,
+            'message' => 'Sync requested.',
+        ], true);
+        $all = $this->createPresenter($ai)->present('t3cs_sync_datasource', [
+            'success' => true,
+            'scope' => 'all',
+            'mode' => 'request',
+            'sourcesRequested' => 14,
+            'message' => 'Sync requested for all sources.',
+        ], true);
+
+        self::assertSame('Sync was requested for "Sitemap".', $one['content']);
+        self::assertSame('Sync was requested for all 14 data sources.', $all['content']);
+    }
 }

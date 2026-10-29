@@ -2833,6 +2833,22 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <source>Which data source should I sync?</source>
                 <target>Welche Datenquelle soll ich synchronisieren?</target>
             </trans-unit>
+            <trans-unit id="agent.sync.requestedOne">
+                <source>Sync was requested for "%1$s".</source>
+                <target>Sync für „%1$s“ wurde angefordert.</target>
+            </trans-unit>
+            <trans-unit id="agent.sync.requestedAll">
+                <source>Sync was requested for all %1$s data sources.</source>
+                <target>Sync für alle %1$s Datenquellen wurde angefordert.</target>
+            </trans-unit>
+            <trans-unit id="agent.sync.ranOne">
+                <source>"%1$s" was synced.</source>
+                <target>„%1$s“ wurde synchronisiert.</target>
+            </trans-unit>
+            <trans-unit id="agent.sync.ranAll">
+                <source>All %1$s data sources were synced.</source>
+                <target>Alle %1$s Datenquellen wurden synchronisiert.</target>
+            </trans-unit>
             <trans-unit id="agent.source.whichUpdate">
                 <source>Which data source should I update?</source>
                 <target>Welche Datenquelle soll ich aktualisieren?</target>
