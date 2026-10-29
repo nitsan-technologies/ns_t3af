@@ -124,9 +124,15 @@ final class AgentQueueSourceChoiceTest extends TestCase
         ]]));
         self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings('Show the AI Chatbot settings for chatbot 1'));
         self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings('chatbot settings?'));
+        self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings('Rename the chatbot to Maybelline Helper'));
+        self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings("Change the title of AI chatbot 1 to 'QA Deep Chatbot'."));
         self::assertFalse(AgentToolTurnProcessor::asksForChatbotSettings('List the chatbot data sources'));
-        self::assertTrue(AgentToolTurnProcessor::chatbotSettingsNeedLicenceMessage('chatbot settings?', true));
-        self::assertFalse(AgentToolTurnProcessor::chatbotSettingsNeedLicenceMessage('chatbot settings?', false));
+        self::assertTrue(AgentToolTurnProcessor::chatbotSettingsNeedLicenceMessage('Rename the chatbot to Maybelline Helper', true));
+        self::assertFalse(AgentToolTurnProcessor::chatbotSettingsNeedLicenceMessage('Rename the chatbot to Maybelline Helper', false));
+        self::assertTrue(AgentToolTurnProcessor::asksToDeleteDataSources('delete all my data sources'));
+        self::assertFalse(AgentToolTurnProcessor::asksToDeleteDataSources('list all my data sources'));
+        self::assertFalse(AgentToolTurnProcessor::asksToDeleteDataSources('delete this page'));
+        self::assertFalse(AgentToolTurnProcessor::asksToDeleteDataSources('remove the failed items from this data source'));
     }
 
     #[Test]

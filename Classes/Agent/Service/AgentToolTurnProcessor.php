@@ -776,6 +776,10 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     private function choiceTurnBeforeRun(string $toolName, array &$body, array $context, array $catalog, string $correlationId): ?array
     {
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $requestText = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        if (self::asksToDeleteDataSources($requestText)) {
+            return $this->cannotDeleteDataSourcesTurn($correlationId);
+        }
         $detour = $this->chatbotSettingsDetour($toolName, $body, $catalog, $correlationId);
         if ($detour !== null) {
             return $detour;
@@ -1089,6 +1093,27 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * @return array{role: string, content: string, meta: array<string, mixed>}
+     */
+    private function cannotDeleteDataSourcesTurn(string $correlationId): array
+    {
+        $sentence = $this->translator->translate('agent.datasource.cannotDelete');
+        if ($sentence === '' || $sentence === 'agent.datasource.cannotDelete') {
+            $sentence = 'The agent cannot delete data sources. You can still list them. Remove a data source in the AI Chatbot/Search module, on the Data Sources tab.';
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $sentence,
+            'meta' => [
+                'type' => 'info',
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     private function invokePayload(string $toolName, array $arguments): ?array
@@ -1250,12 +1275,43 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return false;
         }
 
-        return str_contains($text, 'chatbot settings')
+        $aboutChatbot = str_contains($text, 'chatbot');
+        $renamesChatbot = $aboutChatbot && (
+            str_contains($text, 'rename')
+            || str_contains($text, 'umbenennen')
+            || str_contains($text, 'title')
+            || str_contains($text, 'titel')
+        );
+
+        return $renamesChatbot
+            || str_contains($text, 'chatbot settings')
             || str_contains($text, 'chatbot configuration')
             || str_contains($text, 'chatbot-einstellungen')
             || str_contains($text, 'chatbot einstellungen')
             || str_contains($text, 'einstellungen des chatbots')
             || str_contains($text, 'einstellungen für den chatbot');
+    }
+
+    /**
+     * There is no data-source delete tool. A delete request must not be told it is a permission problem.
+     */
+    public static function asksToDeleteDataSources(string $text): bool
+    {
+        $text = mb_strtolower($text);
+        $aboutSource = str_contains($text, 'data source')
+            || str_contains($text, 'datasource')
+            || str_contains($text, 'datenquelle');
+        if (!$aboutSource || str_contains($text, 'queue') || str_contains($text, 'failed')) {
+            return false;
+        }
+
+        foreach (['delete', 'remove', 'löschen', 'loeschen', 'entfern'] as $verb) {
+            if (str_contains($text, $verb)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

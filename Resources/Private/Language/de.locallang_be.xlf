@@ -2885,6 +2885,10 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <source>This installation has no chatbot.</source>
                 <target>In dieser Installation gibt es keinen Chatbot.</target>
             </trans-unit>
+            <trans-unit id="agent.datasource.cannotDelete">
+                <source>The agent cannot delete data sources. You can still list them. Remove a data source in the AI Chatbot/Search module, on the Data Sources tab.</source>
+                <target>Der Agent kann Datenquellen nicht löschen. Sie können sie weiterhin auflisten. Entfernen Sie eine Datenquelle im Modul AI Chatbot/Search auf der Registerkarte Data Sources.</target>
+            </trans-unit>
             <trans-unit id="agent.result.queueTruncated">
                 <source>%1$s items match. The first %2$s are shown.</source>
                 <target>%1$s Einträge passen. Die ersten %2$s werden angezeigt.</target>

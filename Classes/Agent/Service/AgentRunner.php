@@ -119,6 +119,18 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                     'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
                 ]);
             }
+            if (AgentToolTurnProcessor::asksToDeleteDataSources($userMessage)) {
+                $sentence = $this->translator->translate('agent.datasource.cannotDelete');
+                if ($sentence === '' || $sentence === 'agent.datasource.cannotDelete') {
+                    $sentence = 'The agent cannot delete data sources. You can still list them. Remove a data source in the AI Chatbot/Search module, on the Data Sources tab.';
+                }
+
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $sentence,
+                    'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ]);
+            }
             $openDraft = self::openDraftFollowUp($userMessage, $historyMessages);
             if ($openDraft !== null) {
                 return $this->single($emitEvent, [
@@ -146,6 +158,12 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         $catalog = $this->actionCatalog->buildCatalog();
+        if ($continuation === []) {
+            $lockedChatbotReply = $this->lockedChatbotReply($userMessage, $catalog, $correlationId);
+            if ($lockedChatbotReply !== null) {
+                return $this->single($emitEvent, $lockedChatbotReply);
+            }
+        }
         $executableTools = $catalog['executable'];
         if ($executableTools === []) {
             return $this->single($emitEvent, $this->info('agent.turn.noExecutableTools', $correlationId));
@@ -1049,6 +1067,36 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return ['messages' => [$message], 'paused' => false, 'pauseReason' => null];
+    }
+
+    /**
+     * A rename or other chatbot change is the licence reply while those tools are locked.
+     * A licensed chatbot tool stays on the normal path.
+     *
+     * @param array{executable?: list<array<string, mixed>>, locked?: list<array<string, mixed>>} $catalog
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function lockedChatbotReply(string $userMessage, array $catalog, string $correlationId): ?array
+    {
+        $locked = null;
+        foreach ($catalog['locked'] ?? [] as $tool) {
+            if ((string) ($tool['name'] ?? '') === 't3ac_chatbot_settings_get') {
+                $locked = $tool;
+                break;
+            }
+        }
+        if (!is_array($locked) || !AgentToolTurnProcessor::chatbotSettingsNeedLicenceMessage($userMessage, true)) {
+            return null;
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $this->entitlementExplanation->buildMessage($locked),
+            'meta' => array_merge(
+                $this->entitlementExplanation->buildMeta($locked),
+                ['correlationId' => $correlationId, 'orchestratorPause' => true],
+            ),
+        ];
     }
 
     /**
