@@ -66,13 +66,13 @@ export const draftMethods = {
      * @param {boolean} destructive
      * @returns {string}
      */
-    renderDraftTarget(destructive) {
+    renderDraftTarget(destructive, cannotUndo = false) {
       const workspace = this.context.details?.workspace ?? null;
       const live = workspace === null || workspace.live !== false;
       const text = live
         ? lang('agent.draft.targetLive', 'On confirm this goes live on the website.')
         : lang('agent.draft.targetWorkspace', 'On confirm this is saved as a draft in the workspace “%1$s”.', [String(workspace.title ?? '')]);
-      const warn = destructive ? ` ${lang('agent.draft.targetDestructive', 'This cannot be undone.')}` : '';
+      const warn = destructive || cannotUndo ? ` ${lang('agent.draft.targetDestructive', 'This cannot be undone.')}` : '';
       return `<p class="nst3af-agent-draft__target nst3af-agent-draft__target--${live ? 'live' : 'draft'}">${escapeHtml(text + warn)}</p>`;
     },
 
@@ -630,7 +630,7 @@ export const draftMethods = {
           <p class="nst3af-agent-tool-confirm__summary">${escapeHtml(summary)}</p>
           ${renderImagePreviews(message.meta?.previews)}
           ${argsBlock}
-          ${this.renderDraftTarget(isDestructive)}
+          ${this.renderDraftTarget(isDestructive, !draftKeepsUndo(draft))}
           <div class="nst3af-agent-draft__actions">
             <button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-draft-apply="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(applyLabel)}</button>
             <button type="button" class="btn btn-default btn-sm" data-nst3af-agent-draft-discard="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(lang('agent.draft.decline', 'Cancel'))}</button>
@@ -1233,6 +1233,17 @@ export const draftMethods = {
       }
     },
 };
+
+/**
+ * Glossary terms and added file references can be undone. Other tool cards cannot.
+ *
+ * @param {object} draft
+ * @returns {boolean}
+ */
+function draftKeepsUndo(draft) {
+  const tool = String(draft.tool ?? '');
+  return tool === 't3ai_glossary_save' || tool === 'file_reference_add';
+}
 
 /**
  * Same create offered twice (follow-up before Execute) shares this fingerprint.

@@ -1046,7 +1046,8 @@ final class AgentAjaxController
     }
 
     /**
-     * "Put the old text back" restores the latest applied change, the same way as its Undo button.
+     * "Put the old text back" restores the latest applied change that has an Undo button.
+     * A latest change that cannot be undone gets a plain reply instead of that button.
      * Null means this is not that request, so the model may still run.
      *
      * @param list<array<string, mixed>> $messages
@@ -1058,10 +1059,14 @@ final class AgentAjaxController
             return null;
         }
 
-        $changeId = AgentRestoreRequest::latestChangeId($messages);
-        if ($changeId === null) {
+        $latest = AgentRestoreRequest::latestAppliedChange($messages);
+        if ($latest === null) {
             return $this->restoreReply($messages, $this->undoButtonHint());
         }
+        if ($latest['undoable'] === false) {
+            return $this->restoreReply($messages, $this->cannotUndoReply());
+        }
+        $changeId = $latest['changeId'];
 
         $changeWorkspace = $this->undoService->workspaceOf($changeId);
         if ($changeWorkspace !== null) {
@@ -1113,6 +1118,16 @@ final class AgentAjaxController
         $hint = $this->translator->translate('agent.undo.useButton');
         if ($hint === '' || $hint === 'agent.undo.useButton') {
             return 'Use the Undo button on the applied change to put the old text back.';
+        }
+
+        return $hint;
+    }
+
+    private function cannotUndoReply(): string
+    {
+        $hint = $this->translator->translate('agent.undo.cannotUndo');
+        if ($hint === '' || $hint === 'agent.undo.cannotUndo') {
+            return 'This change can\'t be undone automatically.';
         }
 
         return $hint;

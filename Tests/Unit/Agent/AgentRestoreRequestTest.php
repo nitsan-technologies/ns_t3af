@@ -68,4 +68,23 @@ final class AgentRestoreRequestTest extends TestCase
             ['meta' => ['type' => 'info']],
         ]));
     }
+
+    #[Test]
+    public function theLatestAppliedChangeIsReportedWhenItCannotBeUndone(): void
+    {
+        self::assertSame(
+            ['changeId' => 'settings', 'undoable' => false],
+            AgentRestoreRequest::latestAppliedChange([
+                ['meta' => ['changeId' => 'page', 'undoable' => true]],
+                ['meta' => ['changeId' => 'settings', 'undoable' => false]],
+            ]),
+        );
+        self::assertSame(
+            ['changeId' => 'page', 'undoable' => true],
+            AgentRestoreRequest::latestAppliedChange([
+                ['meta' => ['changeId' => 'settings', 'undoable' => false, 'undone' => true]],
+                ['meta' => ['changeId' => 'page', 'undoable' => true]],
+            ]),
+        );
+    }
 }
