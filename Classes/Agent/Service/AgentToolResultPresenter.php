@@ -149,7 +149,7 @@ final readonly class AgentToolResultPresenter
             && isset($details['summary'])
             && is_string($details['summary'])
             && trim($details['summary']) !== '';
-        if ($toolName === 't3cs_sync_datasource' || $toolName === 't3as_search_settings_get') {
+        if ($toolName === 't3cs_sync_datasource' || $toolName === 't3as_search_settings_get' || $toolName === 't3cs_usage_analytics_summary') {
             // The sync sentence is the tool's scope and source. A model summary can name a different source.
             // Search settings answer from the saved fields, not a second model call.
             $allowLlmSummary = false;
@@ -165,7 +165,10 @@ final readonly class AgentToolResultPresenter
         }
 
         $listLead = $this->buildListLeadSummary($toolName, $facts, $details);
-        $toolLead = $this->buildToolSpecificContent($toolName, $facts, $details);
+        $toolLead = $error === null ? $this->buildToolSpecificContent($toolName, $facts, $details) : null;
+        if (is_string($toolLead) && $toolLead !== '') {
+            $summary = $toolLead;
+        }
         $lines = $error === null ? $this->queueItemLines($toolName, $details) : [];
         $content = $llmSummary ?? $toolLead ?? ($hasReadySummary ? $summary : null) ?? $listLead ?? $summary;
         $truncation = $error === null ? $this->queueTruncationNote($toolName, $details) : null;
@@ -774,6 +777,13 @@ final readonly class AgentToolResultPresenter
             }
         }
 
+        if ($toolName === 't3cs_usage_analytics_summary') {
+            $usage = $this->usageAnalyticsContent($details);
+            if ($usage !== null) {
+                return $usage;
+            }
+        }
+
         if ($toolName === 't3aa_list_files_missing_alt_text') {
             $total = $this->primaryCountFromFacts($facts) ?? 0;
             if ($total === 0) {
@@ -813,25 +823,83 @@ final readonly class AgentToolResultPresenter
     }
 
     /**
-     * Enabled and the search engine, from the settings row. There is no separate model field.
+     * The main search settings. The Solr password is never included.
      */
     private function searchSettingsContent(mixed $details): ?string
     {
-        if (!is_array($details)) {
+        if (!is_array($details) || isset($details['error'])) {
             return null;
         }
         $settings = is_array($details['settings'] ?? null) ? $details['settings'] : $details;
         $enabledRaw = $settings['enable_ai_search'] ?? $settings['enableAiSearch'] ?? 0;
         $enabled = $enabledRaw === 1 || $enabledRaw === '1' || $enabledRaw === true;
         $engine = trim((string) ($settings['search_engine'] ?? $settings['searchEngine'] ?? ''));
-        if (!$enabled) {
-            return $this->translator->translate('agent.search.disabled');
+        $lines = [];
+        if ($enabled && $engine !== '') {
+            $lines[] = $this->translator->translate('agent.search.enabled', [$engine]);
+        } elseif ($enabled) {
+            $lines[] = $this->translator->translate('agent.search.enabledNoEngine');
+        } else {
+            $lines[] = $this->translator->translate('agent.search.disabled');
+            $lines[] = $engine !== ''
+                ? $this->translator->translate('agent.search.engine', [$engine])
+                : $this->translator->translate('agent.search.noEngine');
         }
-        if ($engine === '') {
-            return $this->translator->translate('agent.search.enabledNoEngine');
+        $resultStyle = trim((string) ($settings['result_style'] ?? $settings['resultStyle'] ?? ''));
+        if ($resultStyle !== '') {
+            $lines[] = $this->translator->translate('agent.search.resultStyle', [$resultStyle]);
+        }
+        $instructions = $this->plainInstructions((string) ($settings['instructions'] ?? ''));
+        $lines[] = $instructions === ''
+            ? $this->translator->translate('agent.search.instructionsNotSet')
+            : $this->translator->translate('agent.search.instructions', [$instructions]);
+        $questionsOn = $this->settingOn($settings['predefined_questions'] ?? $settings['predefinedQuestions'] ?? 0);
+        $limit = trim((string) ($settings['questions_limit'] ?? $settings['questionsLimit'] ?? ''));
+        $lines[] = $questionsOn
+            ? $this->translator->translate('agent.search.questionsOn', [$limit !== '' ? $limit : '0'])
+            : $this->translator->translate('agent.search.questionsOff');
+        $widgetMode = trim((string) ($settings['widget_mode'] ?? $settings['widgetMode'] ?? ''));
+        $lines[] = $widgetMode !== ''
+            ? $this->translator->translate('agent.search.widgetMode', [$widgetMode])
+            : $this->translator->translate('agent.search.widgetModeNotSet');
+
+        return implode(' ', $lines);
+    }
+
+    private function plainInstructions(string $raw): string
+    {
+        $text = html_entity_decode(strip_tags($raw), ENT_QUOTES | ENT_HTML5);
+        $text = str_replace("\u{00A0}", ' ', $text);
+        $text = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+
+        return $text;
+    }
+
+    private function settingOn(mixed $value): bool
+    {
+        return $value === 1 || $value === '1' || $value === true;
+    }
+
+    /**
+     * The usage counts for the requested period. A period with no rows is still those counts.
+     */
+    private function usageAnalyticsContent(mixed $details): ?string
+    {
+        if (!is_array($details) || isset($details['error'])) {
+            return null;
+        }
+        $period = trim((string) ($details['period'] ?? ''));
+        if ($period === '') {
+            $period = 'this period';
         }
 
-        return $this->translator->translate('agent.search.enabled', [$engine]);
+        return $this->translator->translate('agent.usage.summary', [
+            $period,
+            (int) ($details['totalSearchCount'] ?? 0),
+            (int) ($details['totalChatCount'] ?? 0),
+            (int) ($details['feedbackPositiveCount'] ?? 0),
+            (int) ($details['feedbackNegativeCount'] ?? 0),
+        ]);
     }
 
     /**

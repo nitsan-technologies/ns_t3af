@@ -378,4 +378,53 @@ final class AgentToolResultPresenterTest extends TestCase
         self::assertSame('Sync was requested for "Sitemap".', $one['content']);
         self::assertSame('Sync was requested for all 14 data sources.', $all['content']);
     }
+
+    #[Test]
+    public function searchSettingsReadListsTheMainFieldsAndSkipsThePassword(): void
+    {
+        $presented = $this->createPresenter()->present('t3as_search_settings_get', [
+            'operation' => 'get',
+            'rootPageId' => 1,
+            'settings' => [
+                'enableAiSearch' => 0,
+                'searchEngine' => 'sitecontent',
+                'resultStyle' => 'longAnswer',
+                'instructions' => '<p>&nbsp;</p>',
+                'predefinedQuestions' => 1,
+                'questionsLimit' => 5,
+                'widgetMode' => 'modal-box',
+                'solr_password' => 'secret',
+            ],
+        ], true);
+
+        self::assertStringContainsString('AI Search is switched off.', $presented['content']);
+        self::assertStringContainsString('The search engine is sitecontent.', $presented['content']);
+        self::assertStringContainsString('The result style is longAnswer.', $presented['content']);
+        self::assertStringContainsString('Instructions are not set.', $presented['content']);
+        self::assertStringContainsString('Predefined questions are on, up to 5.', $presented['content']);
+        self::assertStringContainsString('The widget mode is modal-box.', $presented['content']);
+        self::assertStringNotContainsString('secret', $presented['content']);
+        self::assertStringNotContainsString('solr_password', $presented['content']);
+        self::assertSame($presented['content'], $presented['summary']);
+    }
+
+    #[Test]
+    public function usageAnalyticsReadShowsTheCounts(): void
+    {
+        $ai = $this->createMock(AiServiceInterface::class);
+        $ai->expects(self::never())->method('complete');
+        $presented = $this->createPresenter($ai)->present('t3cs_usage_analytics_summary', [
+            'period' => 'custom',
+            'totalSearchCount' => 0,
+            'totalChatCount' => 4,
+            'feedbackPositiveCount' => 1,
+            'feedbackNegativeCount' => 0,
+        ], true);
+
+        self::assertSame(
+            'Usage for custom: 0 searches, 4 chatbot messages, 1 positive and 0 negative feedback.',
+            $presented['content'],
+        );
+        self::assertSame($presented['content'], $presented['summary']);
+    }
 }

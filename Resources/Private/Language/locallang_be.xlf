@@ -2306,6 +2306,36 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.search.enabledNoEngine" resname="agent.search.enabledNoEngine">
         <source>AI Search is enabled. No search engine is set.</source>
       </trans-unit>
+      <trans-unit id="agent.search.engine" resname="agent.search.engine">
+        <source>The search engine is %1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.noEngine" resname="agent.search.noEngine">
+        <source>No search engine is set.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.resultStyle" resname="agent.search.resultStyle">
+        <source>The result style is %1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.instructions" resname="agent.search.instructions">
+        <source>Instructions: %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.search.instructionsNotSet" resname="agent.search.instructionsNotSet">
+        <source>Instructions are not set.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.questionsOn" resname="agent.search.questionsOn">
+        <source>Predefined questions are on, up to %1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.questionsOff" resname="agent.search.questionsOff">
+        <source>Predefined questions are off.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.widgetMode" resname="agent.search.widgetMode">
+        <source>The widget mode is %1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.widgetModeNotSet" resname="agent.search.widgetModeNotSet">
+        <source>The widget mode is not set.</source>
+      </trans-unit>
+      <trans-unit id="agent.usage.summary" resname="agent.usage.summary">
+        <source>Usage for %1$s: %2$s searches, %3$s chatbot messages, %4$s positive and %5$s negative feedback.</source>
+      </trans-unit>
       <trans-unit id="agent.plan.namedTool" resname="agent.plan.namedTool">
         <source>%1$s%2$s.</source>
       </trans-unit>
