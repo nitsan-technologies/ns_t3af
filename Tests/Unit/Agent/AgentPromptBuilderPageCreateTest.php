@@ -67,10 +67,48 @@ final class AgentPromptBuilderPageCreateTest extends TestCase
     }
 
     #[Test]
+    public function aSavedDataSourceStaysInTheHistoryNote(): void
+    {
+        $block = AgentPromptBuilder::appliedRecordsBlock([
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [[
+                        'table' => 'pages',
+                        'uid' => 4,
+                        'values' => ['title' => 'Home'],
+                    ]],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3cs_save_datasource',
+                    'success' => true,
+                    'autoRan' => false,
+                    'details' => [
+                        'dataId' => 25,
+                        'type' => 'text',
+                        'typeValue' => 'Wash your face.',
+                    ],
+                ],
+            ],
+        ]);
+
+        self::assertStringContainsString('pages uid 4', $block);
+        self::assertStringContainsString('data source uid 25 (text) text "Wash your face."', $block);
+        self::assertStringContainsString('do not say nothing was saved', $block);
+    }
+
+    #[Test]
     public function aSearchSettingUsesTheFormValues(): void
     {
         $prompt = $this->prompt();
 
+        self::assertStringContainsString('ask what text to add and do not draft a card', $prompt);
+        self::assertStringContainsString('Do not say nothing was saved', $prompt);
         self::assertStringContainsString('questionsLimit is 3, 5, or 10', $prompt);
         self::assertStringContainsString('allowedDomains is host names such as example.com', $prompt);
         self::assertStringContainsString('Do not claim the setting was saved', $prompt);

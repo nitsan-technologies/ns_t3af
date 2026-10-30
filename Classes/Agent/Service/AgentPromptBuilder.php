@@ -131,7 +131,7 @@ readonly class AgentPromptBuilder
             'Today is ' . date('Y-m-d') . '. To compare chatbot or search usage this month and last month, call t3cs_usage_analytics_summary twice, with period this_month and period last_month. Use only the dates and counts in those results. Do not use 30d as a calendar month, and do not name a month or year that is not in the results.',
             'For a Q&A data source, put every pair in qaPairs as a JSON array of {"q","a"}. Do not put the pairs only in typeValue, and do not wrap the array in another object. Send every pair the editor gave.',
             'Adding answers to a named data source is t3cs_save_datasource for that source. It is not a predefined search question. A request for a suggested search question still uses t3as_predefined_questions_create.',
-            'A text data source is type text. Put the text in typeValue. When the editor says inactive, set activate to 0. Do not use type qa for a text source.',
+            'A text data source is type text. Put only the text the editor wrote into typeValue. When they did not give the text, ask what text to add and do not draft a card. Do not write the text yourself and do not add Markdown. When the editor says inactive, set activate to 0. Do not use type qa for a text source. After the source is saved, the history names that source and its text. Do not say nothing was saved.',
             'There is no tool to delete a data source. If the editor asks to delete data sources, say the agent cannot delete them and that a data source can be removed in the AI Chatbot/Search module on the Data Sources tab. Do not say the editor is not allowed to delete or list them.',
             'For t3cs_save_datasource, if the editor mentions the bot or chatbot, set usageType to chatbot or both. If unsure, omit usageType. Never say AI Search was enabled unless a t3as_search_settings update was applied.',
             'When creating a data source or a predefined question, if one with the same name already exists on that site, or in that folder and language, the tool names its uid and does not create another. Call ask_clarification with that uid and "Create another anyway". Set allowDuplicate to 1 only after the editor chooses create anyway.',
@@ -202,23 +202,69 @@ readonly class AgentPromptBuilder
     public static function appliedRecordsBlock(array $historyMessages): string
     {
         $records = [];
-        for ($i = count($historyMessages) - 1; $i >= 0 && count($records) < 8; --$i) {
+        $savedSources = [];
+        for ($i = count($historyMessages) - 1; $i >= 0 && count($records) + count($savedSources) < 8; --$i) {
             $meta = is_array($historyMessages[$i]['meta'] ?? null) ? $historyMessages[$i]['meta'] : [];
-            if (($meta['type'] ?? '') !== 'readback_result') {
-                continue;
+            if (($meta['type'] ?? '') === 'readback_result') {
+                $note = trim(self::appliedRecordsNote($meta), ' .');
+                if (str_starts_with($note, 'Records: ')) {
+                    foreach (explode('; ', substr($note, strlen('Records: '))) as $record) {
+                        $records[$record] = true;
+                    }
+                }
             }
-            $note = trim(self::appliedRecordsNote($meta), ' .');
-            if (str_starts_with($note, 'Records: ')) {
-                foreach (explode('; ', substr($note, strlen('Records: '))) as $record) {
-                    $records[$record] = true;
+            if (($meta['type'] ?? '') === 'tool_result'
+                && (string) ($meta['tool'] ?? '') === 't3cs_save_datasource'
+                && ($meta['success'] ?? true) !== false
+                && ($meta['autoRan'] ?? true) === false
+            ) {
+                $saved = self::savedDatasourceNote($meta['details'] ?? null);
+                if ($saved !== '') {
+                    $savedSources[$saved] = true;
                 }
             }
         }
 
-        return $records === []
-            ? ''
-            : 'Records the editor applied in this conversation (use these uids as pageId / pid / uid, never a guessed URL): '
+        $lines = [];
+        if ($records !== []) {
+            $lines[] = 'Records the editor applied in this conversation (use these uids as pageId / pid / uid, never a guessed URL): '
                 . implode('; ', array_slice(array_keys($records), 0, 8)) . '.';
+        }
+        if ($savedSources !== []) {
+            $lines[] = 'Data sources the editor saved in this conversation (do not say nothing was saved): '
+                . implode('; ', array_slice(array_keys($savedSources), 0, 8)) . '.';
+        }
+
+        return implode(' ', $lines);
+    }
+
+    /**
+     * The data source a confirmed save wrote, including the text, so a later "what did you save?"
+     * can answer from the history.
+     */
+    public static function savedDatasourceNote(mixed $details): string
+    {
+        if (!is_array($details)) {
+            return '';
+        }
+        $dataId = (int) ($details['dataId'] ?? 0);
+        $type = trim((string) ($details['type'] ?? ''));
+        $text = trim((string) ($details['typeValue'] ?? ''));
+        if ($dataId <= 0 && $text === '') {
+            return '';
+        }
+        $note = 'data source';
+        if ($dataId > 0) {
+            $note .= ' uid ' . $dataId;
+        }
+        if ($type !== '') {
+            $note .= ' (' . $type . ')';
+        }
+        if ($text !== '') {
+            $note .= ' text "' . self::shorten($text, 240) . '"';
+        }
+
+        return $note;
     }
 
     /**
@@ -345,6 +391,12 @@ readonly class AgentPromptBuilder
                 : ''),
             default => $content,
         };
+        if ($type === 'tool_result' && (string) ($meta['tool'] ?? '') === 't3cs_save_datasource') {
+            $saved = self::savedDatasourceNote($meta['details'] ?? null);
+            if ($saved !== '') {
+                $content .= ' Saved: ' . $saved . '.';
+            }
+        }
         $content = trim($content);
         if ($content === '') {
             return null;

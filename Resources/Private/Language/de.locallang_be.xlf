@@ -2905,6 +2905,10 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <source>Name the page the chatbot and search should learn. It will be added as a TYPO3 pages data source.</source>
                 <target>Nennen Sie die Seite, die Chatbot und Suche lernen sollen. Sie wird als TYPO3-Seiten-Datenquelle hinzugefügt.</target>
             </trans-unit>
+            <trans-unit id="agent.datasource.whichText">
+                <source>What text should this data source contain?</source>
+                <target>Welchen Text soll diese Datenquelle enthalten?</target>
+            </trans-unit>
             <trans-unit id="agent.datasource.answersOnSource">
                 <source>Those answers belong on the Q&amp;A data source %s. They were not added as a suggested search question.</source>
                 <target>Diese Antworten gehören zur Q&amp;A-Datenquelle %s. Sie wurden nicht als vorgeschlagene Suchfrage angelegt.</target>

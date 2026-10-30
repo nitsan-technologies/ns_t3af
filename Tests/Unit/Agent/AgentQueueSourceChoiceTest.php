@@ -201,6 +201,16 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertSame('text', $textSource['action']);
         self::assertSame('multi test', $textSource['text'] ?? null);
         self::assertTrue($textSource['inactive'] ?? false);
+        self::assertSame('ask_text', AgentToolTurnProcessor::datasourceCreateAdjustment(
+            'Create a text source for beauty tips.',
+            ['operation' => 'create', 'type' => 'text', 'typeValue' => "**Skincare Routine:**\nWash your face."],
+        )['action']);
+        $quoted = AgentToolTurnProcessor::datasourceCreateAdjustment(
+            "Create a text source with the text 'Wash your face. **Keep this.**'",
+            ['operation' => 'create', 'type' => 'text', 'typeValue' => 'invented tips'],
+        );
+        self::assertSame('text', $quoted['action']);
+        self::assertSame('Wash your face. **Keep this.**', $quoted['text'] ?? null);
         self::assertSame(
             'QA RUALL FAQ',
             AgentToolTurnProcessor::addedAnswersTarget('Add these answers to QA RUALL FAQ'),

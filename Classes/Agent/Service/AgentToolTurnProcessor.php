@@ -1324,10 +1324,19 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return ['action' => 'keep'];
         }
         $type = strtolower(trim((string) ($arguments['type'] ?? '')));
-        if (self::asksForTextDataSource($text) && ($type === 'qa' || $type === '')) {
+        if ((self::asksForTextDataSource($text) || $type === 'text')
+            && !self::asksForQaSource($text)
+            && self::httpUrlInText($text) === null
+            && !self::asksToTrainAPage($text)
+        ) {
+            $textBody = self::textBodyInRequest($text);
+            if ($textBody === '') {
+                return ['action' => 'ask_text'];
+            }
+
             return [
                 'action' => 'text',
-                'text' => self::textBodyInRequest($text),
+                'text' => $textBody,
                 'inactive' => self::asksForInactiveSource($text),
             ];
         }
@@ -1383,7 +1392,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
 
         return str_contains($text, 'text data source')
             || str_contains($text, 'text datasource')
-            || str_contains($text, 'textdatenquelle');
+            || str_contains($text, 'text source')
+            || str_contains($text, 'textdatenquelle')
+            || str_contains($text, 'textquelle');
     }
 
     public static function asksForInactiveSource(string $text): bool
@@ -1504,6 +1515,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
         if ($adjustment['action'] === 'ask_page') {
             return $this->datasourceSentenceTurn($correlationId, 'agent.datasource.whichPage', 'Name the page the chatbot and search should learn. It will be added as a TYPO3 pages data source.');
+        }
+        if ($adjustment['action'] === 'ask_text') {
+            return $this->datasourceSentenceTurn($correlationId, 'agent.datasource.whichText', 'What text should this data source contain?');
         }
         if ($adjustment['action'] === 'web_pages') {
             $url = (string) ($adjustment['url'] ?? '');

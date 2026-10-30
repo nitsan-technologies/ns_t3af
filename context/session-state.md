@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — Text data source uses only the editor's text
+
+**Done:** "Create a text source for beauty tips" asks for the text and drafts no card. Quoted text is saved as given. A saved data source, including its text, is in the history the next turn reads, so "What did you save?" does not say nothing was saved. ClickUp: 14zervyxq8n.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — Follow-up after a data source was not created
 
 **Done:** "Activate it" or "sync that one" after a failed data-source create is answered before the model runs, so it cannot become the Mass SEO scheduler or a card for another source. "Sync all my data sources" is scope all. "The second one" after the data-source list is that row, not a page translation. "No" and "nein" cancel an open card. ClickUp: 14zervyxpjf.
