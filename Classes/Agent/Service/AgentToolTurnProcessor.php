@@ -1542,6 +1542,93 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * "What did you change in this conversation?" is a recap, not a new write.
+     */
+    public static function asksWhatChangedInConversation(string $text): bool
+    {
+        $text = mb_strtolower(trim($text));
+        if ($text === '') {
+            return false;
+        }
+
+        return preg_match(
+            '/(?:'
+            . 'what did you (?:change|save)'
+            . '|what was (?:changed|saved)'
+            . '|what changed in this conversation'
+            . '|was hast du (?:geändert|geaendert|gespeichert)'
+            . '|was wurde (?:geändert|geaendert|gespeichert)'
+            . ')/u',
+            $text,
+        ) === 1;
+    }
+
+    /**
+     * Writes that were actually applied. A waiting or failed card is not listed.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return list<string>
+     */
+    public static function appliedChangesInConversation(array $history): array
+    {
+        $saved = [];
+        foreach ($history as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            $type = (string) ($meta['type'] ?? '');
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            if ($type === 'readback_result') {
+                $note = trim(AgentPromptBuilder::appliedRecordsNote($meta), ' .');
+                if (str_starts_with($note, 'Records: ')) {
+                    $saved[] = substr($note, strlen('Records: '));
+                }
+                continue;
+            }
+            if ($type === 'tool_result' && ($meta['success'] ?? true) !== false && ($meta['autoRan'] ?? true) === false) {
+                $tool = (string) ($meta['tool'] ?? '');
+                if ($tool === 't3cs_save_datasource') {
+                    $note = AgentPromptBuilder::savedDatasourceNote($meta['details'] ?? null);
+                    $saved[] = $note !== '' ? $note : 'a data source';
+                    continue;
+                }
+                if ($tool === 't3cs_sync_datasource') {
+                    $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+                    $dataId = (int) ($details['dataId'] ?? 0);
+                    $saved[] = $dataId > 0 ? 'synced data source uid ' . $dataId : 'a data source sync';
+                    continue;
+                }
+                $label = trim((string) ($meta['editorLabel'] ?? $meta['toolCallLabel'] ?? ''));
+                $saved[] = $label !== '' ? $label : ($tool !== '' ? $tool : 'a change');
+                continue;
+            }
+            if ($type === 'inline_draft' && ($draft['applied'] ?? false) === true) {
+                $label = trim((string) ($draft['editorLabel'] ?? $meta['editorLabel'] ?? ''));
+                $saved[] = $label !== '' ? $label : 'a change';
+            }
+        }
+
+        return array_values(array_unique($saved));
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function conversationChangeSummary(array $history): string
+    {
+        $items = self::appliedChangesInConversation($history);
+        if ($items !== []) {
+            return 'Saved in this conversation: ' . implode('; ', $items) . '.';
+        }
+        if (self::latestSaveFailed($history)) {
+            return 'Nothing was saved in this conversation. The data source was not created, so it was not activated or synced.';
+        }
+
+        return 'Nothing was saved in this conversation.';
+    }
+
+    /**
      * A URL request must not become an invented Q&A source. A named TYPO3 page must not either,
      * unless the editor asked for a Q&A or FAQ source.
      *

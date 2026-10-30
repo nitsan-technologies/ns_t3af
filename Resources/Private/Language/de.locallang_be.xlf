@@ -2929,6 +2929,18 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <source>Data source %1$s was not found.</source>
                 <target>Datenquelle %1$s wurde nicht gefunden.</target>
             </trans-unit>
+            <trans-unit id="agent.conversation.nothingSaved">
+                <source>Nothing was saved in this conversation.</source>
+                <target>In diesem Gespräch wurde nichts gespeichert.</target>
+            </trans-unit>
+            <trans-unit id="agent.conversation.nothingSavedCreateFailed">
+                <source>Nothing was saved in this conversation. The data source was not created, so it was not activated or synced.</source>
+                <target>In diesem Gespräch wurde nichts gespeichert. Die Datenquelle wurde nicht angelegt, daher wurde sie nicht aktiviert und nicht synchronisiert.</target>
+            </trans-unit>
+            <trans-unit id="agent.conversation.saved">
+                <source>Saved in this conversation: %1$s.</source>
+                <target>In diesem Gespräch gespeichert: %1$s.</target>
+            </trans-unit>
             <trans-unit id="agent.chatbot.whichOne">
                 <source>Which chatbot should I use?</source>
                 <target>Welchen Chatbot soll ich verwenden?</target>

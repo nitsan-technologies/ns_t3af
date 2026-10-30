@@ -2306,6 +2306,15 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.source.notFound" resname="agent.source.notFound">
         <source>Data source %1$s was not found.</source>
       </trans-unit>
+      <trans-unit id="agent.conversation.nothingSaved" resname="agent.conversation.nothingSaved">
+        <source>Nothing was saved in this conversation.</source>
+      </trans-unit>
+      <trans-unit id="agent.conversation.nothingSavedCreateFailed" resname="agent.conversation.nothingSavedCreateFailed">
+        <source>Nothing was saved in this conversation. The data source was not created, so it was not activated or synced.</source>
+      </trans-unit>
+      <trans-unit id="agent.conversation.saved" resname="agent.conversation.saved">
+        <source>Saved in this conversation: %1$s.</source>
+      </trans-unit>
       <trans-unit id="agent.chatbot.whichOne" resname="agent.chatbot.whichOne">
         <source>Which chatbot should I use?</source>
       </trans-unit>

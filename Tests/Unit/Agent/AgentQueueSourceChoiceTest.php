@@ -186,6 +186,33 @@ final class AgentQueueSourceChoiceTest extends TestCase
         ]];
         self::assertFalse(AgentToolTurnProcessor::latestSaveFailed($waitingUpdate));
         self::assertFalse(AgentToolTurnProcessor::blocksFollowUpOfFailedCreate('Sync that one now.', $waitingUpdate));
+        self::assertTrue(AgentToolTurnProcessor::asksWhatChangedInConversation('What did you change in this conversation?'));
+        self::assertTrue(AgentToolTurnProcessor::asksWhatChangedInConversation('What did you save?'));
+        self::assertTrue(AgentToolTurnProcessor::asksWhatChangedInConversation('Was hast du geändert?'));
+        self::assertFalse(AgentToolTurnProcessor::asksWhatChangedInConversation('change it back'));
+        self::assertFalse(AgentToolTurnProcessor::asksWhatChangedInConversation('Change the title of this page'));
+        self::assertSame(
+            'Nothing was saved in this conversation. The data source was not created, so it was not activated or synced.',
+            AgentToolTurnProcessor::conversationChangeSummary($waitingCreate),
+        );
+        self::assertSame(
+            'Nothing was saved in this conversation. The data source was not created, so it was not activated or synced.',
+            AgentToolTurnProcessor::conversationChangeSummary($failedApply),
+        );
+        self::assertSame([], AgentToolTurnProcessor::appliedChangesInConversation($waitingCreate));
+        self::assertSame(
+            ['data source uid 25 (text) text "Wash your face."'],
+            AgentToolTurnProcessor::appliedChangesInConversation([[
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3cs_save_datasource',
+                    'success' => true,
+                    'autoRan' => false,
+                    'details' => ['dataId' => 25, 'type' => 'text', 'typeValue' => 'Wash your face.'],
+                ],
+            ]]),
+        );
         self::assertSame(8, AgentToolTurnProcessor::namedSyncDecision(
             'Sync that one now',
             [['uid' => 8, 'name' => 'Asus', 'type' => 'sitemap']],

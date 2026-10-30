@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — A failed create is not listed as a saved change
+
+**Done:** "What did you change in this conversation?" is answered from applied results only. After a 404 create that was not saved, the recap says nothing was saved and that the source was not created, activated, or synced. A waiting or failed card is not listed as created. An applied save is still listed. ClickUp: 14zervyxpje.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — Turn on AI search is a settings card again
 
 **Done:** "Turn on AI search" and "Turn off AI search" prepare `t3as_search_settings` with `enableAiSearch`. After Apply, "change it back" writes the previous switch. If nothing was saved, the agent says there is nothing to restore. A usage question still does not repeat that card. ClickUp: 14zervyxq5c.

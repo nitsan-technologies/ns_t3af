@@ -167,6 +167,32 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                     'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
                 ]);
             }
+            if (AgentToolTurnProcessor::asksWhatChangedInConversation($userMessage)) {
+                $items = AgentToolTurnProcessor::appliedChangesInConversation($historyMessages);
+                if ($items !== []) {
+                    $list = implode('; ', $items);
+                    $sentence = $this->translator->translate('agent.conversation.saved', [$list]);
+                    if ($sentence === '' || $sentence === 'agent.conversation.saved') {
+                        $sentence = 'Saved in this conversation: ' . $list . '.';
+                    }
+                } elseif (AgentToolTurnProcessor::latestSaveFailed($historyMessages)) {
+                    $sentence = $this->translator->translate('agent.conversation.nothingSavedCreateFailed');
+                    if ($sentence === '' || $sentence === 'agent.conversation.nothingSavedCreateFailed') {
+                        $sentence = 'Nothing was saved in this conversation. The data source was not created, so it was not activated or synced.';
+                    }
+                } else {
+                    $sentence = $this->translator->translate('agent.conversation.nothingSaved');
+                    if ($sentence === '' || $sentence === 'agent.conversation.nothingSaved') {
+                        $sentence = 'Nothing was saved in this conversation.';
+                    }
+                }
+
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $sentence,
+                    'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ]);
+            }
             $listedSource = self::listedSourceFromOrdinal($userMessage, $historyMessages);
             if ($listedSource !== null) {
                 $sentence = $this->translator->translate('agent.source.listed', [
