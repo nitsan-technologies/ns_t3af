@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — PHPStan list and phpdoc mismatches
+
+**Done:** Conversation history, chatbot items, and datasource rows are normalized to a list of maps before list-typed helpers. A confirmation baseline field list is `array_values` so PHPStan sees a list. Misplaced or missing phpdocs (`findExistingUids`, presenter lines, session methods, findTool) are on the methods they describe. Dashboard and queue-source tests pass the declared shapes.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — records_apply rollback tests no longer use be_groups
 
 **Done:** Functional tests that need DataHandler to refuse a root-level row below a page now use `sys_file_storage`. `be_groups` is refused in preflight (MCP cannot write backend auth tables), so it never reached DataHandler. ClickUp: 14zervyxjm8.

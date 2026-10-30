@@ -149,7 +149,7 @@ readonly class DataHandlerService
                 $existing = BackendUtility::getRecord($table, $uid) ?? [];
                 $fields = SchedulerUpdateTool::withExistingSchedule(
                     $fields,
-                    is_array($existing) ? $existing : [],
+                    $existing,
                 );
             }
 

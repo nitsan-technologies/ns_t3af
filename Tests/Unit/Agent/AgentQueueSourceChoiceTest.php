@@ -727,7 +727,7 @@ final class AgentQueueSourceChoiceTest extends TestCase
         $usageUpdate = AgentToolTurnProcessor::usageSourceUpdate($usage, [], $sources);
         self::assertSame('use', $usageUpdate['status']);
         self::assertSame(1, $usageUpdate['dataId']);
-        self::assertSame('chatbot', $usageUpdate['usageType']);
+        self::assertSame('chatbot', $usageUpdate['usageType'] ?? '');
 
         $history = [['role' => 'user', 'content' => $usage]];
         $neither = 'actually no, neither of them should use it';
@@ -736,7 +736,7 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertSame(0, $neitherCard['arguments']['activate'] ?? null);
         $neitherUpdate = AgentToolTurnProcessor::usageSourceUpdate($neither, $history, $sources);
         self::assertSame(1, $neitherUpdate['dataId']);
-        self::assertSame(0, $neitherUpdate['activate']);
+        self::assertSame(0, $neitherUpdate['activate'] ?? null);
 
         $turnOn = AgentToolTurnProcessor::directToolRequest('Turn on AI search');
         self::assertSame('t3as_search_settings', $turnOn['tool'] ?? '');
@@ -845,6 +845,7 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertSame([], AgentRunner::withoutUnaskedSearchSettingsCards(
             [[
                 'role' => 'assistant',
+                'content' => '',
                 'meta' => [
                     'type' => 'inline_draft',
                     'draft' => ['tool' => 't3as_search_settings', 'arguments' => ['operation' => 'update']],

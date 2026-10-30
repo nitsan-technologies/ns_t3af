@@ -266,7 +266,7 @@ final class AgentWriteService
                 }
             }
 
-            return $fields === [] ? null : ['table' => self::DATASOURCE_TABLE, 'uid' => $uid, 'fields' => $fields];
+            return $fields === [] ? null : ['table' => self::DATASOURCE_TABLE, 'uid' => $uid, 'fields' => array_values($fields)];
         }
         if ($toolName !== 't3ac_chatbot_settings') {
             return null;

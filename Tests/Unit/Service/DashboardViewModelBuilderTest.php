@@ -162,7 +162,7 @@ final class DashboardViewModelBuilderTest extends TestCase
                 'totalFormatted' => '0',
                 'usedFormatted' => '57.74',
             ],
-        ], [], ['runOutDate' => '', 'dailyAvgFormatted' => '']);
+        ], [], ['runOutDate' => '', 'dailyAvg' => 0.0, 'dailyAvgFormatted' => '']);
 
         self::assertSame(100, $hero['consumedPercent']);
         self::assertSame(0, $hero['percentLeft']);
@@ -180,7 +180,7 @@ final class DashboardViewModelBuilderTest extends TestCase
                 'used' => 57.744,
                 'percentLeft' => 0,
             ],
-        ], [], ['runOutDate' => '', 'dailyAvgFormatted' => '']);
+        ], [], ['runOutDate' => '', 'dailyAvg' => 0.0, 'dailyAvgFormatted' => '']);
 
         self::assertSame(1, $hero['balanceUnavailable']);
         self::assertSame('The security token does not match this server.', $hero['balanceErrorMessage']);
@@ -198,7 +198,7 @@ final class DashboardViewModelBuilderTest extends TestCase
                 'used' => 0.0,
                 'percentLeft' => 100,
             ],
-        ], [], ['runOutDate' => '', 'dailyAvgFormatted' => '']);
+        ], [], ['runOutDate' => '', 'dailyAvg' => 0.0, 'dailyAvgFormatted' => '']);
 
         self::assertSame(0, $hero['balanceUnavailable']);
         self::assertSame('', $hero['balanceErrorMessage']);

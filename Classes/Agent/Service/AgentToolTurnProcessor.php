@@ -818,7 +818,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return $this->cannotDeleteDataSourcesTurn($correlationId);
         }
         if ($toolName === 't3cs_save_datasource') {
-            $history = is_array($body['conversationHistory'] ?? null) ? $body['conversationHistory'] : [];
+            $history = self::listOfMaps($body['conversationHistory'] ?? null);
             if (self::asksToSetDatasourceDescription($requestText)) {
                 $described = $this->pinDescribedDatasource($arguments, $requestText, $context, $correlationId);
                 if ($described !== null) {
@@ -939,7 +939,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($toolName === 't3cs_save_datasource' && $operation !== 'update') {
             return null;
         }
-        $history = is_array($body['conversationHistory'] ?? null) ? $body['conversationHistory'] : [];
+        $history = self::listOfMaps($body['conversationHistory'] ?? null);
         $text = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
         $scopeAll = $toolName === 't3cs_sync_datasource' && strtolower(trim((string) ($arguments['scope'] ?? 'one'))) === 'all';
         $dataId = (int) ($arguments['dataId'] ?? 0);
@@ -972,7 +972,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return null;
         }
         $text = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
-        $history = is_array($body['conversationHistory'] ?? null) ? $body['conversationHistory'] : [];
+        $history = self::listOfMaps($body['conversationHistory'] ?? null);
         $ordinalUid = self::sourceUidFromOrdinal($text, self::datasourcesInLatestList($history));
         if ($ordinalUid > 0) {
             $arguments['scope'] = 'one';
@@ -1292,7 +1292,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if (isset($payload['error']) && is_string($payload['error']) && trim($payload['error']) !== '') {
             return ['turn' => $this->queueNotice(trim($payload['error']), $correlationId), 'chatbotUid' => 0];
         }
-        $items = is_array($payload['items'] ?? null) ? $payload['items'] : [];
+        $items = self::listOfMaps($payload['items'] ?? null);
         $decision = self::chatbotDecision($items);
         if ($decision['chatbotUid'] > 0) {
             return ['turn' => null, 'chatbotUid' => $decision['chatbotUid']];
@@ -1342,6 +1342,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * @param array<string, mixed> $arguments
      * @return array<string, mixed>|null
      */
     private function invokePayload(string $toolName, array $arguments): ?array
@@ -2177,6 +2178,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             && self::chatbotReplyMissesTheCard($turnMessages);
     }
 
+    /**
+     * @param array<mixed> $messages
+     */
     public static function chatbotReplyMissesTheCard(array $messages): bool
     {
         foreach ($messages as $message) {
@@ -3603,6 +3607,27 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * JSON and request bodies are arrays, not lists. Callers that need a list of maps use this.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function listOfMaps(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+        /** @var list<array<string, mixed>> $maps */
+        $maps = [];
+        foreach ($value as $item) {
+            if (is_array($item)) {
+                $maps[] = $item;
+            }
+        }
+
+        return $maps;
+    }
+
+    /**
      * Decide the sync target from the editor's words and the sources on this site.
      *
      * @param list<array<string, mixed>> $sources
@@ -3943,7 +3968,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return ['turn' => $this->queueNotice(trim($payload['error']), $correlationId), 'dataId' => 0];
         }
 
-        $sources = is_array($payload['datasources'] ?? null) ? $payload['datasources'] : [];
+        $sources = self::listOfMaps($payload['datasources'] ?? null);
         $decision = self::queueSourceDecision($sources);
         if ($decision['dataId'] > 0) {
             return ['turn' => null, 'dataId' => $decision['dataId']];
@@ -4375,6 +4400,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         ];
     }
 
+    /**
+     * @param array<string, mixed> $arguments
+     */
     private function logRefusedPlan(string $correlationId, string $toolName, array $arguments, \Throwable $exception): void
     {
         $this->auditLogger->logToolInvocation($correlationId, $toolName, $arguments, false, 0, mb_substr($exception->getMessage(), 0, 250));
@@ -6638,12 +6666,19 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         return $getTool;
     }
 
+    /**
+     * @param array<string, mixed> $catalog
+     * @return array<string, mixed>|null
+     */
     private function findTool(array $catalog, string $toolName): ?array
     {
         $needle = strtolower(trim($toolName));
         foreach ([$catalog['executable'], $catalog['locked']] as $group) {
+            if (!is_array($group)) {
+                continue;
+            }
             foreach ($group as $tool) {
-                if (strtolower((string) ($tool['name'] ?? '')) === $needle) {
+                if (is_array($tool) && strtolower((string) ($tool['name'] ?? '')) === $needle) {
                     return $tool;
                 }
             }
@@ -6663,12 +6698,6 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
-     * Masks a presented tool result once, right after presenting and before any of it is used.
-     *
-     * @param array<string, mixed> $presented
-     * @return array<string, mixed>
-     */
-    /**
      * @param array<string, mixed> $meta
      * @param array<string, mixed> $presented
      * @return array<string, mixed>
@@ -6683,6 +6712,12 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         return $meta;
     }
 
+    /**
+     * Masks a presented tool result once, right after presenting and before any of it is used.
+     *
+     * @param array<string, mixed> $presented
+     * @return array<string, mixed>
+     */
     private function maskPresented(BackendUserAuthentication $user, array $presented): array
     {
         return $this->governanceGuard->requiresPiiMasking($user)

@@ -1156,7 +1156,7 @@ final class T3afToolbox implements ToolboxInterface
             $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
             $rows = is_array($details['datasources'] ?? null) ? $details['datasources'] : [];
             if ($rows !== []) {
-                $sources = $rows;
+                $sources = AgentToolTurnProcessor::listOfMaps($rows);
             }
         }
         if ($sources === []) {
