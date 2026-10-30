@@ -850,6 +850,35 @@ function initAiFeatures(root) {
       await loadExtConfSettings(settingsScope, configExtKey);
       return;
     }
+
+    // Info-only cards (e.g. site-scoped AI Crawlers): show description, no saveable form.
+    const description = String(card.getAttribute('data-aiu-feature-description') || '').trim();
+    if (description !== '' && settingsScope === '') {
+      state.activeScope = '';
+      state.activeExtension = '';
+      if (localConfig instanceof HTMLElement) {
+        localConfig.classList.add('is-hidden');
+        localConfig.setAttribute('hidden', 'hidden');
+      }
+      if (extConfConfig instanceof HTMLElement) {
+        extConfConfig.classList.remove('is-hidden');
+        extConfConfig.removeAttribute('hidden');
+      }
+      if (extConfForm instanceof HTMLFormElement) {
+        const note = document.createElement('p');
+        note.className = 'text-body-secondary mb-0';
+        note.textContent = description;
+        extConfForm.innerHTML = '';
+        extConfForm.appendChild(note);
+      }
+      if (drawerSave instanceof HTMLButtonElement) {
+        drawerSave.disabled = true;
+        drawerSave.setAttribute('aria-disabled', 'true');
+        drawerSave.classList.add('disabled');
+      }
+      return;
+    }
+
     setDrawerLocalMode();
   };
 
