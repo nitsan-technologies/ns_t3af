@@ -107,6 +107,8 @@ final class AgentPromptBuilderPageCreateTest extends TestCase
     {
         $prompt = $this->prompt();
 
+        self::assertStringContainsString('Do not call pages_move for a rename', $prompt);
+        self::assertStringContainsString('Do not describe the older card as saved', $prompt);
         self::assertStringContainsString('ask what text to add and do not draft a card', $prompt);
         self::assertStringContainsString('Do not say nothing was saved', $prompt);
         self::assertStringContainsString('questionsLimit is 3, 5, or 10', $prompt);

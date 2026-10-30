@@ -56,6 +56,38 @@ final class AgentWriteService
     /** A prepared change that was not executed within this time is treated as outdated. */
     public const DRAFT_MAX_AGE_SECONDS = 3600;
 
+    private const DATASOURCE_TABLE = 'tx_nst3cs_domain_model_datasource';
+
+    private const CHATBOT_TABLE = 'tx_nst3ac_domain_model_chatbot';
+
+    /** Argument name to the column a data-source update writes. */
+    private const DATASOURCE_ARGUMENT_COLUMNS = [
+        'name' => 'name',
+        'description' => 'description',
+        'type' => 'type',
+        'typeValue' => 'type_value',
+        'type_value' => 'type_value',
+        'activate' => 'activate',
+        'interval' => 'interval',
+        'usageType' => 'usage_type',
+        'usage_type' => 'usage_type',
+    ];
+
+    /** Columns a chatbot settings update may change. tstamp and crdate are always rewritten by the save. */
+    private const CHATBOT_COLUMNS = [
+        'title', 'short_description', 'bubble_message', 'first_message', 'quick_replies', 'instructions', 'active',
+        'position', 'color', 'trigger_avatar_size', 'widget_bottom_space', 'show_logo', 'show_datetime',
+        'transparent_trigger', 'logo', 'avatar_image_radio', 'enable_chatbot_pages', 'disable_chatbot_pages',
+        'internal_css', 'allow_any_domain', 'allowed_domains', 'external_css', 'enable_sources_links', 'max_source_links',
+        'enable_chatbot_feedback', 'enable_email_transcript', 'email_transcript_from', 'email_transcript_from_name',
+        'enable_chatbot_history', 'enable_clear_chat', 'enable_privacy_notice', 'privacy_policy_url',
+        'answer_in_visitor_language', 'no_answer_message', 'chatbot_language', 'chatbot_root_page', 'identifier',
+        'widget_position_desktop', 'widget_position_mobile', 'widget_hide_on_desktop', 'widget_hide_on_mobile',
+        'btn_exact_position', 'btn_exact_position_mobile', 'desktop_x_value', 'desktop_y_value',
+        'desktop_horizontal_position', 'desktop_vertical_position', 'mobile_x_value', 'mobile_y_value',
+        'mobile_horizontal_position', 'mobile_vertical_position',
+    ];
+
     public function __construct(
         private readonly DataHandlerService $dataHandlerService,
         private readonly RecordService $recordService,
@@ -211,6 +243,71 @@ final class AgentWriteService
     }
 
     /**
+     * The record and columns a data-source or chatbot update will write.
+     * Other tool confirmations, including page SEO and file tools, have no baseline.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array{table: string, uid: int, fields: list<string>}|null
+     */
+    public static function confirmationBaselineTarget(string $toolName, array $arguments): ?array
+    {
+        if ($toolName === 't3cs_save_datasource') {
+            if (strtolower(trim((string) ($arguments['operation'] ?? ''))) !== 'update') {
+                return null;
+            }
+            $uid = (int) ($arguments['dataId'] ?? $arguments['data_id'] ?? 0);
+            if ($uid <= 0) {
+                return null;
+            }
+            $fields = [];
+            foreach (self::DATASOURCE_ARGUMENT_COLUMNS as $argument => $column) {
+                if (array_key_exists($argument, $arguments) && !in_array($column, $fields, true)) {
+                    $fields[] = $column;
+                }
+            }
+
+            return $fields === [] ? null : ['table' => self::DATASOURCE_TABLE, 'uid' => $uid, 'fields' => $fields];
+        }
+        if ($toolName !== 't3ac_chatbot_settings') {
+            return null;
+        }
+        if (strtolower(trim((string) ($arguments['operation'] ?? ''))) !== 'update') {
+            return null;
+        }
+        $uid = (int) ($arguments['chatbotUid'] ?? $arguments['chatbot_uid'] ?? 0);
+        if ($uid <= 0) {
+            return null;
+        }
+        $settings = $arguments['settingsJson'] ?? $arguments['settings_json'] ?? null;
+        if (is_string($settings)) {
+            $decoded = json_decode($settings, true);
+            $settings = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($settings)) {
+            return null;
+        }
+        $fields = [];
+        foreach ($settings as $key => $value) {
+            $column = self::chatbotColumn((string) $key);
+            if ($column !== null && !in_array($column, $fields, true)) {
+                $fields[] = $column;
+            }
+        }
+
+        return $fields === [] ? null : ['table' => self::CHATBOT_TABLE, 'uid' => $uid, 'fields' => $fields];
+    }
+
+    private static function chatbotColumn(string $key): ?string
+    {
+        $column = strtolower((string) preg_replace('/(?<!^)[A-Z]/', '_$0', $key));
+        if (!in_array($column, self::CHATBOT_COLUMNS, true)) {
+            return null;
+        }
+
+        return $column;
+    }
+
+    /**
      * @param list<string> $keptFieldKeys
      * @return array<string, mixed>
      */
@@ -302,6 +399,52 @@ final class AgentWriteService
             'notAllowedFields' => is_array($plan->context['notAllowedFields'] ?? null) ? array_values(array_map('strval', $plan->context['notAllowedFields'])) : [],
             'attachNote' => $attachNote,
         ];
+    }
+
+    /**
+     * A data-source or chatbot card is refused when the fields it will write have changed since it was drafted.
+     *
+     * @param array<string, mixed> $baseline
+     */
+    private function assertBaselineUnchanged(array $baseline): void
+    {
+        $table = (string) ($baseline['table'] ?? '');
+        $uid = (int) ($baseline['uid'] ?? 0);
+        $values = is_array($baseline['values'] ?? null) ? $baseline['values'] : [];
+        if ($table === '' || $uid <= 0 || $values === []) {
+            return;
+        }
+        $fields = [];
+        foreach ($values as $field => $value) {
+            if (is_string($field) && $field !== '') {
+                $fields[] = $field;
+            }
+        }
+        if ($fields === []) {
+            return;
+        }
+        $record = $this->recordService->findByUid($table, $uid, $fields);
+        if ($record === null) {
+            throw new \RuntimeException(
+                $this->translator->translate('agent.write.recordGone', [sprintf('%s #%d', $table, $uid)]),
+                1712003222,
+            );
+        }
+        $changed = [];
+        foreach ($fields as $field) {
+            if (!array_key_exists($field, $record)) {
+                continue;
+            }
+            if (self::comparable($record[$field]) !== self::comparable($values[$field])) {
+                $changed[] = sprintf('%s #%d (%s)', $table, $uid, $field);
+            }
+        }
+        if ($changed !== []) {
+            throw new \RuntimeException(
+                $this->translator->translate('agent.write.changedSince', [implode(', ', array_slice($changed, 0, 5))]),
+                1712003221,
+            );
+        }
     }
 
     /**
@@ -1155,6 +1298,9 @@ final class AgentWriteService
         $arguments = is_array($stored['arguments'] ?? null) ? $stored['arguments'] : [];
         if ($arguments === [] && is_array($plan->context['arguments'] ?? null)) {
             $arguments = $plan->context['arguments'];
+        }
+        if (is_array($stored['recordBaseline'] ?? null)) {
+            $this->assertBaselineUnchanged($stored['recordBaseline']);
         }
 
         $invokeResult = $this->playgroundService->invoke($toolName, $arguments, true);

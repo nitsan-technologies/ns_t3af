@@ -2028,6 +2028,18 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * A page rename is a title update. A request that also asks to move the page stays a move.
+     */
+    public static function isPageRenameNotMove(string $text): bool
+    {
+        if (preg_match('/\b(?:move|moves|moved|moving|verschieb\w*)\b/iu', $text) === 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:renam\w*|umbenenn\w*)\b/iu', $text) === 1;
+    }
+
+    /**
      * "Make the German version visible", "hide this page": a change of the hidden field, never a delete.
      */
     public static function isVisibilityRequest(string $query): bool

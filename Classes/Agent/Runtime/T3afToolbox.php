@@ -501,6 +501,14 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: this creates a new page. Call write_table with action create, tableName pages, and ' . $place . ' of the page that sets the place. Do not call pages_move.',
             );
         }
+        if ($name === 'pages_move' && AgentRunner::isPageRenameNotMove($requestQuery)) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked to rename a page. Call write_table with action update, tableName pages, and data {"title": "the new title"} on that page uid. Do not call pages_move.',
+            );
+        }
         // Asked for an AI-generated image, the model otherwise uploads a stock photo from a URL it made up.
         if ($name === 'file_upload_from_url' && AgentRequestedFiles::asksForGeneratedImage($requestQuery) && !AgentRequestedFiles::namesUrl($requestQuery)) {
             $outcome = 'invalid';

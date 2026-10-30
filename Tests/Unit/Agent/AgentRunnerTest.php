@@ -620,6 +620,9 @@ final class AgentRunnerTest extends TestCase
         self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over', 't3aa_accessibility_scan_run'], AgentRunner::toolsNotAskedFor('Copy this page below "Services"'));
         self::assertSame(['content_move', 'pages_move', 'workspace_switch', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over', 't3aa_accessibility_scan_run'], AgentRunner::toolsNotAskedFor('Dupliziere diese Seite'));
         self::assertSame(['content_move', 'pages_move', 't3aa_summarize_content', 't3aa_update_file_metadata', 't3ai_generate_all_seo', 't3ai_generate_seo_batch', 't3ai_analyze_content', 't3aa_generate_voice_over', 't3aa_accessibility_scan_run'], AgentRunner::toolsNotAskedFor('Copy this page and switch to the draft workspace'));
+        self::assertTrue(AgentRunner::isPageRenameNotMove('Rename this page to QA Gap A'));
+        self::assertFalse(AgentRunner::isPageRenameNotMove('Move this page under Services'));
+        self::assertFalse(AgentRunner::isPageRenameNotMove('Rename this page and move it under Services'));
         self::assertNotContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor('Summarize this page'));
         self::assertContains('t3aa_summarize_content', AgentRunner::toolsNotAskedFor('Rewrite the block so it sounds friendlier'));
         self::assertContains('t3aa_update_file_metadata', AgentRunner::toolsNotAskedFor('Generate a picture and attach it to the news'));

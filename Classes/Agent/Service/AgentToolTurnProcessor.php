@@ -2515,6 +2515,44 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      *
      * @param array<string, mixed> $arguments
      */
+    /**
+     * The current values a data-source or chatbot update will replace.
+     * Missing when this tool does not update one of those records.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array{table: string, uid: int, values: array<string, mixed>}|null
+     */
+    private function recordBaseline(string $toolName, array $arguments): ?array
+    {
+        $target = AgentWriteService::confirmationBaselineTarget($toolName, $arguments);
+        if ($target === null) {
+            return null;
+        }
+        try {
+            $row = BackendUtility::getRecord($target['table'], $target['uid'], implode(',', $target['fields']));
+        } catch (\Throwable) {
+            return null;
+        }
+        if (!is_array($row)) {
+            return null;
+        }
+        $values = [];
+        foreach ($target['fields'] as $field) {
+            if (array_key_exists($field, $row)) {
+                $values[$field] = $row[$field];
+            }
+        }
+        if ($values === []) {
+            return null;
+        }
+
+        return [
+            'table' => $target['table'],
+            'uid' => $target['uid'],
+            'values' => $values,
+        ];
+    }
+
     private function logRefusedPlan(string $correlationId, string $toolName, array $arguments, \Throwable $exception): void
     {
         $this->auditLogger->logToolInvocation($correlationId, $toolName, $arguments, false, 0, mb_substr($exception->getMessage(), 0, 250));
@@ -2764,6 +2802,10 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                     $extra['pendingAttachFileUid'] = $fileUid;
                 }
             }
+        }
+        $baseline = $this->recordBaseline($plan->toolName !== '' ? $plan->toolName : $toolName, $arguments);
+        if ($baseline !== null) {
+            $extra['recordBaseline'] = $baseline;
         }
         $this->draftService->persistDraft($draftCard, $plan, $arguments, $this->draftSession, null, $extra);
 

@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — An older data-source or chatbot card cannot overwrite a newer save
+
+**Done:** Apply of a data-source or chatbot card is refused when the fields it would write changed after the card was drafted. A page rename is a title update, and `pages_move` is refused unless the editor also asked to move the page. ClickUp: 14zervyxqa6.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — Text data source uses only the editor's text
 
 **Done:** "Create a text source for beauty tips" asks for the text and drafts no card. Quoted text is saved as given. A saved data source, including its text, is in the history the next turn reads, so "What did you save?" does not say nothing was saved. ClickUp: 14zervyxq8n.
