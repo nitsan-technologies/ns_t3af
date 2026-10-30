@@ -147,6 +147,45 @@ final class AgentQueueSourceChoiceTest extends TestCase
             ],
         ]]));
         self::assertFalse(AgentToolTurnProcessor::blocksFollowUpOfFailedCreate('Sync the Asus source', $failedApply));
+        $waitingCreate = [[
+            'role' => 'assistant',
+            'meta' => [
+                'type' => 'inline_draft',
+                'tool' => 't3cs_save_datasource',
+                'draft' => [
+                    'tool' => 't3cs_save_datasource',
+                    'kind' => 'tool_confirmation',
+                    'action' => 'update',
+                    'applied' => false,
+                    'arguments' => [
+                        ['key' => 'operation', 'value' => 'create'],
+                        ['key' => 'name', 'value' => 'QA Deep Web'],
+                        ['key' => 'type', 'value' => 'web_pages'],
+                        ['key' => 'typeValue', 'value' => 'https://example.com/missing'],
+                    ],
+                ],
+            ],
+        ]];
+        self::assertTrue(AgentToolTurnProcessor::latestSaveFailed($waitingCreate));
+        self::assertTrue(AgentToolTurnProcessor::blocksFollowUpOfFailedCreate('Now activate it.', $waitingCreate));
+        self::assertTrue(AgentToolTurnProcessor::blocksFollowUpOfFailedCreate('Sync that one now.', $waitingCreate));
+        $waitingUpdate = [[
+            'role' => 'assistant',
+            'meta' => [
+                'type' => 'inline_draft',
+                'tool' => 't3cs_save_datasource',
+                'draft' => [
+                    'tool' => 't3cs_save_datasource',
+                    'applied' => false,
+                    'arguments' => [
+                        ['key' => 'operation', 'value' => 'update'],
+                        ['key' => 'dataId', 'value' => '1'],
+                    ],
+                ],
+            ],
+        ]];
+        self::assertFalse(AgentToolTurnProcessor::latestSaveFailed($waitingUpdate));
+        self::assertFalse(AgentToolTurnProcessor::blocksFollowUpOfFailedCreate('Sync that one now.', $waitingUpdate));
         self::assertSame(8, AgentToolTurnProcessor::namedSyncDecision(
             'Sync that one now',
             [['uid' => 8, 'name' => 'Asus', 'type' => 'sitemap']],

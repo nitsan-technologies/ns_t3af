@@ -84,7 +84,7 @@
 
 ## 2026-10-30 — Follow-up after a data source was not created
 
-**Done:** "Activate it" or "sync that one" after a failed data-source create is answered before the model runs, so it cannot become the Mass SEO scheduler or a card for another source. "Sync all my data sources" is scope all. "The second one" after the data-source list is that row, not a page translation. "No" and "nein" cancel an open card. ClickUp: 14zervyxpjf.
+**Done:** "Activate it" or "sync that one" after a failed data-source create is answered before the model runs, so it cannot become the Mass SEO scheduler or a card for another source. A create that is still waiting, including HTTP 404 Apply that did not mark `draft.failed`, is treated the same: "Now activate it" and "Sync that one now" say the source was not created and draft no card. A 404 (or other unreachable URL) on `t3cs_save_datasource` is `retryable: false`, so Apply is not offered again. "Sync all my data sources" is scope all. "The second one" after the data-source list is that row, not a page translation. "No" and "nein" cancel an open card. ClickUp: 14zervyxpjf.
 
 **Last touched:** 2026-10-30
 

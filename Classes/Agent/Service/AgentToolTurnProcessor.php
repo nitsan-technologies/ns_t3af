@@ -1462,11 +1462,61 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             if (($meta['success'] ?? true) === false || ($meta['type'] ?? '') === 'error') {
                 return true;
             }
+            // A create that was never applied (waiting card, or HTTP 404 that stayed retryable)
+            // is not in the database. A waiting update of an existing source is not that case.
+            if (($meta['type'] ?? '') === 'inline_draft' && self::saveCreateWasNotApplied($draft, $meta)) {
+                return true;
+            }
 
             return false;
         }
 
         return false;
+    }
+
+    /**
+     * @param array<string, mixed> $draft
+     * @param array<string, mixed> $meta
+     */
+    private static function saveCreateWasNotApplied(array $draft, array $meta): bool
+    {
+        if (($draft['applied'] ?? false) === true) {
+            return false;
+        }
+        $operation = strtolower(self::saveArgument($draft, $meta, 'operation'));
+        if ($operation === 'update') {
+            return false;
+        }
+        if ($operation === 'create') {
+            return true;
+        }
+
+        return (int) self::saveArgument($draft, $meta, 'dataId') <= 0;
+    }
+
+    /**
+     * Confirmation cards store display rows ({key, value}); tool-result meta stores a map.
+     *
+     * @param array<string, mixed> $draft
+     * @param array<string, mixed> $meta
+     */
+    private static function saveArgument(array $draft, array $meta, string $name): string
+    {
+        $arguments = is_array($draft['arguments'] ?? null) ? $draft['arguments'] : [];
+        if (isset($arguments[$name]) && is_scalar($arguments[$name])) {
+            return trim((string) $arguments[$name]);
+        }
+        foreach ($arguments as $row) {
+            if (is_array($row) && strtolower((string) ($row['key'] ?? '')) === strtolower($name)) {
+                return trim((string) ($row['value'] ?? ''));
+            }
+        }
+        $metaArgs = is_array($meta['arguments'] ?? null) ? $meta['arguments'] : [];
+        if (isset($metaArgs[$name]) && is_scalar($metaArgs[$name])) {
+            return trim((string) $metaArgs[$name]);
+        }
+
+        return '';
     }
 
     /**
