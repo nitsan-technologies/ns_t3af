@@ -27,3 +27,5 @@
 **Do not** paste full specs into `context/features/` — link to `context/specs/FEATURE_*.md` instead.
 
 After landing a feature: append 3–5 lines to `context/session-state.md` with date + summary.
+
+After a write-tool fix: confirm MCP `execute()` **and** agent Apply (`plan()` → `applyFilteredPlan` with card `keptFieldKeys`). If a required field is not on the card, merge it in `DataHandlerService`, not only in `execute()`. Update `context/features/ai-agent.md` and `context/features/mcp-server.md` in the same change.

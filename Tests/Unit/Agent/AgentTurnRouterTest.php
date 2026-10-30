@@ -77,7 +77,9 @@ final class AgentTurnRouterTest extends TestCase
             ->with(
                 'pages_get',
                 self::isType('array'),
-                self::callback(static fn(array $body): bool => ($body['arguments']['uid'] ?? null) === 49),
+                self::callback(static fn(array $body): bool => ($body['arguments']['uid'] ?? null) === 49
+                    && str_contains((string) ($body['requestQuery'] ?? ''), '/pages_get 49')
+                    && str_contains((string) ($body['userMessage'] ?? ''), '/pages_get 49')),
                 $user,
                 'corr-1',
             )

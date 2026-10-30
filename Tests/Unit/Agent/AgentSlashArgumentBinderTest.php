@@ -152,6 +152,10 @@ final class AgentSlashArgumentBinderTest extends TestCase
             ['rootPageId' => 48],
             $this->binder->bind([], '48', $params),
         );
+        self::assertSame(
+            ['rootPageId' => 999999],
+            $this->binder->bind([], '999999', $params),
+        );
     }
 
     #[Test]

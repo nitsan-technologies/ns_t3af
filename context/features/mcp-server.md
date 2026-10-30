@@ -11,7 +11,7 @@
 - **Transports:** Streamable HTTP at `{basePath}` (OAuth 2.1 + PKCE), mcp-remote URL tokens (`/mcp/r/{token}`), stdio CLI (`nst3af:mcp:serve` / `vendor/bin/typo3 mcp:server`).
 - **OAuth:** client registration, authorization code + PKCE, token revocation, rate limiting.
 - **Workspace pinning:** each token has `workspace_id` (default `0` = live); `BackendUserBootstrap` applies it.
-- **Core tools:** `table_schema`, `pages_get`, `content_list`, `write_table` (create/update/delete via DataHandler). `write_table` and `records_apply` refuse `be_users`, `be_groups`, and `be_sessions`, including for an admin. `explain_capabilities` continues when one extension's status check fails. `scheduler_update` keeps flash data in memory because MCP has no login session. `redirect_create` refuses a `javascript:` target, a status other than 301/302/303/307/308, and a duplicate host and path; a DataHandler error deletes the new row.
+- **Core tools:** `table_schema`, `pages_get`, `content_list`, `write_table` (create/update/delete via DataHandler). `write_table` and `records_apply` refuse `be_users`, `be_groups`, and `be_sessions`, including for an admin. Rollback functional tests use `sys_file_storage` on a page as the DataHandler refuse, not `be_groups`. `explain_capabilities` continues when one extension's status check fails. `scheduler_update` keeps flash data in memory because MCP has no login session. A description-only DataHandler write (agent Apply) keeps the stored start date. `redirect_create` refuses a `javascript:` target, a status other than 301/302/303/307/308, and a duplicate host and path; a DataHandler error deletes the new row.
 - **Dynamic tools:** per discovered extension table — 9 tools each (list, get, CRUD, move, batch) via `NsT3afDynamicToolRegistrar`.
 - **Custom tools:** any extension via `McpToolHandlerInterface` + `#[McpTool]` + `mcp.tool` DI tag.
 - **Backend:** MCP Server tab (connections, OAuth paths, advanced settings) + MCP Tools tab (extension catalog).
@@ -74,6 +74,8 @@ Access (2.0.0): the 11 settings actions of `McpServerController` (status, connec
 **Do:** Call `table_schema` before `write_table` or dynamic create/update tools.
 
 **Do:** Use `ErrorHandlingProxy` — tools should not wrap everything in try/catch.
+
+**Do:** Merge required validator fields that are not on the agent card in `DataHandlerService::updateRecord` (MCP execute and agent Apply both write there).
 
 **Don't:** Install `marekskopal/typo3-mcp-server` or `hn/typo3-mcp-server` alongside (Composer conflicts).
 

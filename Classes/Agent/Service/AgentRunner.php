@@ -167,6 +167,32 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                     'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
                 ]);
             }
+            if (AgentToolTurnProcessor::asksWhatChangedInConversation($userMessage)) {
+                $items = AgentToolTurnProcessor::appliedChangesInConversation($historyMessages);
+                if ($items !== []) {
+                    $list = implode('; ', $items);
+                    $sentence = $this->translator->translate('agent.conversation.saved', [$list]);
+                    if ($sentence === '' || $sentence === 'agent.conversation.saved') {
+                        $sentence = 'Saved in this conversation: ' . $list . '.';
+                    }
+                } elseif (AgentToolTurnProcessor::latestSaveFailed($historyMessages)) {
+                    $sentence = $this->translator->translate('agent.conversation.nothingSavedCreateFailed');
+                    if ($sentence === '' || $sentence === 'agent.conversation.nothingSavedCreateFailed') {
+                        $sentence = 'Nothing was saved in this conversation. The data source was not created, so it was not activated or synced.';
+                    }
+                } else {
+                    $sentence = $this->translator->translate('agent.conversation.nothingSaved');
+                    if ($sentence === '' || $sentence === 'agent.conversation.nothingSaved') {
+                        $sentence = 'Nothing was saved in this conversation.';
+                    }
+                }
+
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $sentence,
+                    'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ]);
+            }
             $listedSource = self::listedSourceFromOrdinal($userMessage, $historyMessages);
             if ($listedSource !== null) {
                 $sentence = $this->translator->translate('agent.source.listed', [
@@ -665,8 +691,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $finalText = $this->translator->translate('agent.sync.notRun');
             }
             if (
-                AgentToolTurnProcessor::asksToChangeChatbotBehavior($userMessage, $historyMessages)
-                && AgentToolTurnProcessor::chatbotReplyMissesTheCard($state->messages)
+                AgentToolTurnProcessor::shouldForceChatbotSettingsCard($userMessage, $historyMessages, $state->messages, $continuation)
                 && !$state->isPaused()
                 && !$state->failed
                 && !$state->isCancelled()
@@ -1338,6 +1363,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                     'agent.chatbot.whichGreeting' => 'What should the greeting say?',
                     'agent.source.whichDescription' => 'What description should I save?',
                     'agent.scheduler.whichDescription' => 'What description should the scheduler task have?',
+                    'agent.search.changeBack' => 'That AI Search change was not saved, so there is nothing to restore.',
                     default => 'What should I change it back to?',
                 };
             }
@@ -1458,6 +1484,19 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             );
         if ($appliedCreateDone) {
             // Intro/paragraph create already applied: do not invent a follow-up change or delete card.
+            $notAskedFor['write_table'] = true;
+            $notAskedFor['content_delete'] = true;
+            $notAskedFor['t3ai_create_content_element'] = true;
+        }
+        $appliedDatasource = str_starts_with(ltrim($userMessage), '[The editor confirmed')
+            && str_contains($userMessage, 'it was applied')
+            && in_array(AgentPromptBuilder::lastConfirmedTool($historyMessages), [
+                't3cs_save_datasource',
+                't3cs_sync_datasource',
+                't3cs_reset_failed_queue_item',
+            ], true)
+            && !AgentCoreToolSet::isCreateContentRequest($gateRequest);
+        if ($appliedDatasource) {
             $notAskedFor['write_table'] = true;
             $notAskedFor['content_delete'] = true;
             $notAskedFor['t3ai_create_content_element'] = true;
@@ -1826,6 +1865,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $names[] = 't3ai_create_content_element';
             $names[] = 'file_reference_add';
         }
+        if (self::isDatasourceOnlyRequest($query)) {
+            $names[] = 'write_table';
+            $names[] = 't3ai_create_content_element';
+        }
         if (self::isFileRecordDeleteRequest($query) || self::isMissingAltTextRequest($query) || self::isSummarizeRequest($query)) {
             $names[] = 'content_delete';
         }
@@ -1835,6 +1878,37 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return array_values(array_unique($names));
+    }
+
+    /**
+     * A data-source request that did not also ask for a content element on the page.
+     */
+    public static function isDatasourceOnlyRequest(string $query): bool
+    {
+        return AgentToolTurnProcessor::asksForADataSource($query)
+            && !AgentCoreToolSet::isCreateContentRequest($query);
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public static function isUnaskedPageContentCreate(string $toolName, array $arguments, string $request): bool
+    {
+        if (!self::isDatasourceOnlyRequest($request)) {
+            return false;
+        }
+        if ($toolName === 't3ai_create_content_element') {
+            return true;
+        }
+        if ($toolName !== 'write_table') {
+            return false;
+        }
+        if (strtolower(trim((string) ($arguments['action'] ?? 'create'))) !== 'create') {
+            return false;
+        }
+        $table = strtolower(trim((string) ($arguments['tableName'] ?? $arguments['table'] ?? '')));
+
+        return in_array($table, ['tt_content', 'pages'], true);
     }
 
     /**

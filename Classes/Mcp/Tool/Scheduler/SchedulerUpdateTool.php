@@ -33,7 +33,6 @@ use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\McpRecordPlanService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
-use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
 #[McpToolSeverity(ToolSeverity::Write)]
@@ -97,8 +96,8 @@ readonly class SchedulerUpdateTool implements McpNonAiToolInterface, McpPlannabl
         }
 
         $updatedFields = array_keys($filteredData);
-        $existing = BackendUtility::getRecord(self::TABLE, $uid) ?? [];
-        $filteredData = self::withExistingSchedule($filteredData, is_array($existing) ? $existing : []);
+        // Required schedule fields are merged in DataHandlerService::updateRecord so
+        // MCP execute and agent Apply (description-only card) take the same path.
 
         $this->dataHandlerService->updateRecord(self::TABLE, $uid, $filteredData);
 
@@ -115,9 +114,18 @@ readonly class SchedulerUpdateTool implements McpNonAiToolInterface, McpPlannabl
      */
     public static function withExistingSchedule(array $fields, array $existing): array
     {
-        if (!array_key_exists('execution_details', $fields) && array_key_exists('execution_details', $existing)) {
-            $fields['execution_details'] = $existing['execution_details'];
+        if (array_key_exists('execution_details', $fields) || !array_key_exists('execution_details', $existing)) {
+            return $fields;
         }
+        $details = $existing['execution_details'];
+        if (is_string($details) && $details !== '') {
+            try {
+                $decoded = json_decode($details, true, 512, JSON_THROW_ON_ERROR);
+                $details = is_array($decoded) ? $decoded : $details;
+            } catch (\JsonException) {
+            }
+        }
+        $fields['execution_details'] = $details;
 
         return $fields;
     }

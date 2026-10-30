@@ -36,6 +36,7 @@ final class AgentSlashArgumentBinder
         'uid',
         'pageId',
         'pid',
+        'rootPageId',
         'workspaceVersionUid',
         'parentPageId',
         'target',

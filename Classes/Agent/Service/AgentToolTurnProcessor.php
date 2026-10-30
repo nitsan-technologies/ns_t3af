@@ -145,9 +145,30 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     ): array {
         $catalog = $this->permittedActionProvider->buildCatalog();
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
-        $requestText = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
-        $arguments = self::tuneChatbotArguments($toolName, $arguments, $requestText);
+        $userMessage = trim((string) ($body['userMessage'] ?? ''));
+        $requestText = $userMessage . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        $arguments = self::tuneChatbotArguments($toolName, $arguments, $userMessage !== '' ? $userMessage : $requestText);
+        $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
+        $arguments = self::tuneDatasourceArguments(
+            $toolName,
+            $arguments,
+            $userMessage !== '' ? $userMessage : $requestText,
+            $history,
+        );
+        $arguments = self::tuneUsagePeriodArguments(
+            $toolName,
+            $arguments,
+            $userMessage !== '' ? $userMessage : $requestText,
+        );
         $body['arguments'] = $arguments;
+        if (in_array($toolName, ['t3as_predefined_questions_create', 't3as_list_predefined_questions'], true)) {
+            $qaCreate = self::qaAnswersCreateRequest($requestText);
+            if ($qaCreate !== null) {
+                $body['arguments'] = $qaCreate['arguments'];
+
+                return $this->execute('t3cs_save_datasource', $context, $body, $user, $correlationId);
+            }
+        }
         $syncedAll = $this->forceSyncOfEverySource($toolName, $body, $context, $user, $correlationId);
         if ($syncedAll !== null) {
             return $syncedAll;
@@ -289,6 +310,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $context,
             (string) ($tool['name'] ?? ''),
             (string) ($body['provider'] ?? ''),
+            self::requestTextFromBody($body),
         );
 
         $result = $this->playgroundService->invoke($tool['name'], $arguments);
@@ -435,6 +457,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $context,
             (string) ($tool['name'] ?? ''),
             (string) ($body['provider'] ?? ''),
+            self::requestTextFromBody($body),
         );
 
         $result = $this->playgroundService->invokeWithMode(
@@ -531,6 +554,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $context,
             $toolName,
             (string) ($body['provider'] ?? ''),
+            self::requestTextFromBody($body),
         );
 
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
@@ -794,7 +818,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return $this->cannotDeleteDataSourcesTurn($correlationId);
         }
         if ($toolName === 't3cs_save_datasource') {
-            $history = is_array($body['conversationHistory'] ?? null) ? $body['conversationHistory'] : [];
+            $history = self::listOfMaps($body['conversationHistory'] ?? null);
             if (self::asksToSetDatasourceDescription($requestText)) {
                 $described = $this->pinDescribedDatasource($arguments, $requestText, $context, $correlationId);
                 if ($described !== null) {
@@ -915,7 +939,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($toolName === 't3cs_save_datasource' && $operation !== 'update') {
             return null;
         }
-        $history = is_array($body['conversationHistory'] ?? null) ? $body['conversationHistory'] : [];
+        $history = self::listOfMaps($body['conversationHistory'] ?? null);
         $text = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
         $scopeAll = $toolName === 't3cs_sync_datasource' && strtolower(trim((string) ($arguments['scope'] ?? 'one'))) === 'all';
         $dataId = (int) ($arguments['dataId'] ?? 0);
@@ -948,7 +972,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return null;
         }
         $text = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
-        $history = is_array($body['conversationHistory'] ?? null) ? $body['conversationHistory'] : [];
+        $history = self::listOfMaps($body['conversationHistory'] ?? null);
         $ordinalUid = self::sourceUidFromOrdinal($text, self::datasourcesInLatestList($history));
         if ($ordinalUid > 0) {
             $arguments['scope'] = 'one';
@@ -1268,7 +1292,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if (isset($payload['error']) && is_string($payload['error']) && trim($payload['error']) !== '') {
             return ['turn' => $this->queueNotice(trim($payload['error']), $correlationId), 'chatbotUid' => 0];
         }
-        $items = is_array($payload['items'] ?? null) ? $payload['items'] : [];
+        $items = self::listOfMaps($payload['items'] ?? null);
         $decision = self::chatbotDecision($items);
         if ($decision['chatbotUid'] > 0) {
             return ['turn' => null, 'chatbotUid' => $decision['chatbotUid']];
@@ -1318,6 +1342,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * @param array<string, mixed> $arguments
      * @return array<string, mixed>|null
      */
     private function invokePayload(string $toolName, array $arguments): ?array
@@ -1461,11 +1486,61 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             if (($meta['success'] ?? true) === false || ($meta['type'] ?? '') === 'error') {
                 return true;
             }
+            // A create that was never applied (waiting card, or HTTP 404 that stayed retryable)
+            // is not in the database. A waiting update of an existing source is not that case.
+            if (($meta['type'] ?? '') === 'inline_draft' && self::saveCreateWasNotApplied($draft, $meta)) {
+                return true;
+            }
 
             return false;
         }
 
         return false;
+    }
+
+    /**
+     * @param array<string, mixed> $draft
+     * @param array<string, mixed> $meta
+     */
+    private static function saveCreateWasNotApplied(array $draft, array $meta): bool
+    {
+        if (($draft['applied'] ?? false) === true) {
+            return false;
+        }
+        $operation = strtolower(self::saveArgument($draft, $meta, 'operation'));
+        if ($operation === 'update') {
+            return false;
+        }
+        if ($operation === 'create') {
+            return true;
+        }
+
+        return (int) self::saveArgument($draft, $meta, 'dataId') <= 0;
+    }
+
+    /**
+     * Confirmation cards store display rows ({key, value}); tool-result meta stores a map.
+     *
+     * @param array<string, mixed> $draft
+     * @param array<string, mixed> $meta
+     */
+    private static function saveArgument(array $draft, array $meta, string $name): string
+    {
+        $arguments = is_array($draft['arguments'] ?? null) ? $draft['arguments'] : [];
+        if (isset($arguments[$name]) && is_scalar($arguments[$name])) {
+            return trim((string) $arguments[$name]);
+        }
+        foreach ($arguments as $row) {
+            if (is_array($row) && strtolower((string) ($row['key'] ?? '')) === strtolower($name)) {
+                return trim((string) ($row['value'] ?? ''));
+            }
+        }
+        $metaArgs = is_array($meta['arguments'] ?? null) ? $meta['arguments'] : [];
+        if (isset($metaArgs[$name]) && is_scalar($metaArgs[$name])) {
+            return trim((string) $metaArgs[$name]);
+        }
+
+        return '';
     }
 
     /**
@@ -1488,6 +1563,93 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return false;
+    }
+
+    /**
+     * "What did you change in this conversation?" is a recap, not a new write.
+     */
+    public static function asksWhatChangedInConversation(string $text): bool
+    {
+        $text = mb_strtolower(trim($text));
+        if ($text === '') {
+            return false;
+        }
+
+        return preg_match(
+            '/(?:'
+            . 'what did you (?:change|save)'
+            . '|what was (?:changed|saved)'
+            . '|what changed in this conversation'
+            . '|was hast du (?:geändert|geaendert|gespeichert)'
+            . '|was wurde (?:geändert|geaendert|gespeichert)'
+            . ')/u',
+            $text,
+        ) === 1;
+    }
+
+    /**
+     * Writes that were actually applied. A waiting or failed card is not listed.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return list<string>
+     */
+    public static function appliedChangesInConversation(array $history): array
+    {
+        $saved = [];
+        foreach ($history as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            $type = (string) ($meta['type'] ?? '');
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            if ($type === 'readback_result') {
+                $note = trim(AgentPromptBuilder::appliedRecordsNote($meta), ' .');
+                if (str_starts_with($note, 'Records: ')) {
+                    $saved[] = substr($note, strlen('Records: '));
+                }
+                continue;
+            }
+            if ($type === 'tool_result' && ($meta['success'] ?? true) !== false && ($meta['autoRan'] ?? true) === false) {
+                $tool = (string) ($meta['tool'] ?? '');
+                if ($tool === 't3cs_save_datasource') {
+                    $note = AgentPromptBuilder::savedDatasourceNote($meta['details'] ?? null);
+                    $saved[] = $note !== '' ? $note : 'a data source';
+                    continue;
+                }
+                if ($tool === 't3cs_sync_datasource') {
+                    $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+                    $dataId = (int) ($details['dataId'] ?? 0);
+                    $saved[] = $dataId > 0 ? 'synced data source uid ' . $dataId : 'a data source sync';
+                    continue;
+                }
+                $label = trim((string) ($meta['editorLabel'] ?? $meta['toolCallLabel'] ?? ''));
+                $saved[] = $label !== '' ? $label : ($tool !== '' ? $tool : 'a change');
+                continue;
+            }
+            if ($type === 'inline_draft' && ($draft['applied'] ?? false) === true) {
+                $label = trim((string) ($draft['editorLabel'] ?? $meta['editorLabel'] ?? ''));
+                $saved[] = $label !== '' ? $label : 'a change';
+            }
+        }
+
+        return array_values(array_unique($saved));
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function conversationChangeSummary(array $history): string
+    {
+        $items = self::appliedChangesInConversation($history);
+        if ($items !== []) {
+            return 'Saved in this conversation: ' . implode('; ', $items) . '.';
+        }
+        if (self::latestSaveFailed($history)) {
+            return 'Nothing was saved in this conversation. The data source was not created, so it was not activated or synced.';
+        }
+
+        return 'Nothing was saved in this conversation.';
     }
 
     /**
@@ -1559,8 +1721,105 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if (!str_contains($lower, 'add these answers') && !str_contains($lower, 'add the answers') && !str_contains($lower, 'diese antworten')) {
             return null;
         }
+        if (self::qaAnswersCreateRequest($text) !== null) {
+            return null;
+        }
         if (preg_match('/\bto\s+(.+)$/iu', trim($text), $match) === 1) {
             return trim((string) $match[1], " \t.\"'");
+        }
+
+        return '';
+    }
+
+    /**
+     * "Add these answers for the bot" with Q:/A: pairs is a new Q&A source, not a suggested search question.
+     *
+     * @return array{tool: string, arguments: array<string, mixed>}|null
+     */
+    public static function qaAnswersCreateRequest(string $text): ?array
+    {
+        if (preg_match('/suggested|predefined|vorgeschlag|search question/u', mb_strtolower($text)) === 1) {
+            return null;
+        }
+        $name = self::namedDatasourceTitle($text);
+        $pairs = self::qaPairsFromQaLines($text);
+        if ($pairs === []) {
+            return null;
+        }
+        $lower = mb_strtolower($text);
+        $forTheBot = str_contains($lower, 'for the bot')
+            || str_contains($lower, 'for the chatbot')
+            || str_contains($lower, 'für den bot')
+            || str_contains($lower, 'fuer den bot')
+            || str_contains($lower, 'add these answers')
+            || str_contains($lower, 'add the answers')
+            || str_contains($lower, 'diese antworten');
+        if (!$forTheBot) {
+            return null;
+        }
+        if (preg_match('/\bto\s+(.+)$/iu', trim($text)) === 1 && !preg_match('/\b(?:name it|call it)\b/iu', $lower)) {
+            return null;
+        }
+        $json = json_encode($pairs, JSON_UNESCAPED_UNICODE);
+        if (!is_string($json)) {
+            return null;
+        }
+        if ($name === '') {
+            $name = $pairs[0]['q'];
+        }
+
+        return [
+            'tool' => 't3cs_save_datasource',
+            'arguments' => [
+                'operation' => 'create',
+                'type' => 'qa',
+                'qaPairs' => $json,
+                'usageType' => 'chatbot',
+                'rootPageId' => 0,
+                'name' => $name,
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array{q: string, a: string}>
+     */
+    public static function qaPairsFromQaLines(string $text): array
+    {
+        $text = self::withoutTrailingDatasourceName($text);
+        if (preg_match_all('/Q:\s*(.*?)\s*A:\s*(.*?)(?=\s*Q:|$)/su', $text, $matches, PREG_SET_ORDER) < 1) {
+            return [];
+        }
+        $pairs = [];
+        foreach ($matches as $match) {
+            $question = trim((string) ($match[1] ?? ''));
+            $answer = trim((string) ($match[2] ?? ''));
+            if ($question !== '' && $answer !== '') {
+                $pairs[] = ['q' => $question, 'a' => $answer];
+            }
+        }
+
+        return $pairs;
+    }
+
+    public static function withoutTrailingDatasourceName(string $text): string
+    {
+        $stripped = preg_replace(
+            '/\s*\b(?:name it|call it|nenn(?:e)? (?:es|sie))\s+[\'"]?.+?[\'"]?\s*$/iu',
+            '',
+            trim($text),
+        );
+
+        return is_string($stripped) ? trim($stripped) : trim($text);
+    }
+
+    public static function namedDatasourceTitle(string $text): string
+    {
+        if (preg_match('/\b(?:name it|call it|nenn(?:e)? (?:es|sie))\s+[\'"]?(.+?)[\'"]?\s*$/iu', trim($text), $match) === 1) {
+            return trim((string) $match[1], " \t.\"'");
+        }
+        if (preg_match('/\bnamed\s+[\'"]([^\'"]+)[\'"]/iu', $text, $match) === 1) {
+            return trim((string) $match[1]);
         }
 
         return '';
@@ -1575,6 +1834,23 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             || str_contains($text, 'text source')
             || str_contains($text, 'textdatenquelle')
             || str_contains($text, 'textquelle');
+    }
+
+    /**
+     * A knowledge-base source (text, Q&A, sitemap, PDF, web), not a page content element.
+     */
+    public static function asksForADataSource(string $text): bool
+    {
+        if (self::asksForTextDataSource($text) || self::asksForQaSource($text)) {
+            return true;
+        }
+        $lower = mb_strtolower($text);
+        if (preg_match('/\b(?:data\s*source|datasource|datenquelle|wissensquelle|knowledge(?:-|\s)?base)\b/u', $lower) === 1) {
+            return true;
+        }
+
+        return preg_match('/\b(?:sitemap|pdf|web\s*pages?|typo3\s*pages?)\b/u', $lower) === 1
+            && preg_match('/\b(?:source|quelle)\b/u', $lower) === 1;
     }
 
     public static function asksForInactiveSource(string $text): bool
@@ -1877,6 +2153,34 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     /**
      * @param list<array<string, mixed>> $messages
      */
+    /**
+     * After Apply of chatbot settings the change is already saved. Do not replace that
+     * confirmation with "nothing was saved".
+     *
+     * @param list<array<string, mixed>> $history
+     * @param list<array<string, mixed>> $turnMessages
+     * @param array<string, mixed> $continuation
+     */
+    public static function shouldForceChatbotSettingsCard(
+        string $message,
+        array $history,
+        array $turnMessages,
+        array $continuation = [],
+    ): bool {
+        if (($continuation['outcome'] ?? '') === 'applied') {
+            return false;
+        }
+        if (self::chatbotSettingsWereApplied($history)) {
+            return false;
+        }
+
+        return self::asksToChangeChatbotBehavior($message, $history)
+            && self::chatbotReplyMissesTheCard($turnMessages);
+    }
+
+    /**
+     * @param array<mixed> $messages
+     */
     public static function chatbotReplyMissesTheCard(array $messages): bool
     {
         foreach ($messages as $message) {
@@ -1940,7 +2244,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      *
      * @param list<array<string, mixed>> $history
      */
-    private static function chatbotSettingsWereApplied(array $history): bool
+    public static function chatbotSettingsWereApplied(array $history): bool
     {
         $lastRequest = -1;
         foreach ($history as $index => $message) {
@@ -2022,6 +2326,42 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'arguments' => [
                     'operation' => 'update',
                     'chatbotUid' => $previous['uid'],
+                    'settingsJson' => $json,
+                ],
+            ];
+        }
+
+        if (self::asksToRestoreChatbotSetting($message)
+            && (self::latestAppliedTool($history) === 't3as_search_settings' || self::recentGlobalAiSearchSwitch($history))
+        ) {
+            $previous = self::previousSearchSetting($history);
+            if ($previous === null) {
+                return ['ask' => 'agent.search.changeBack'];
+            }
+            $json = json_encode($previous, JSON_UNESCAPED_UNICODE);
+            if (!is_string($json)) {
+                return ['ask' => 'agent.search.changeBack'];
+            }
+
+            return [
+                'tool' => 't3as_search_settings',
+                'arguments' => [
+                    'operation' => 'update',
+                    'settingsJson' => $json,
+                ],
+            ];
+        }
+
+        if (self::isGlobalAiSearchSwitch($message)) {
+            $json = json_encode(['enableAiSearch' => self::globalAiSearchEnabled($message) ? 1 : 0], JSON_UNESCAPED_UNICODE);
+            if (!is_string($json)) {
+                return null;
+            }
+
+            return [
+                'tool' => 't3as_search_settings',
+                'arguments' => [
+                    'operation' => 'update',
                     'settingsJson' => $json,
                 ],
             ];
@@ -2112,6 +2452,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             ];
         }
 
+        $qaCreate = self::qaAnswersCreateRequest($message);
+        if ($qaCreate !== null) {
+            return $qaCreate;
+        }
+
         if (!self::asksToRefreshADatasource($message, $history)) {
             return null;
         }
@@ -2191,6 +2536,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return preg_match('/\b(?:source|datenquelle|datasource|quelle)\b/u', $text) === 1;
+    }
+
+    public static function asksToCorrectDatasourceName(string $message): bool
+    {
+        $text = mb_strtolower($message);
+        if (preg_match('/\b(?:no|nein|actually|stattdessen)\b/u', $text) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:call it|name it|nenn(?:e)? (?:es|sie)|heisse?)\b/u', $text) === 1;
     }
 
     public static function renamedDatasourceName(string $message): string
@@ -2315,6 +2670,30 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     {
         return preg_match('/\b(?:turn\s+(?:it\s+)?(?:on|off)|enable|disable|switch\s+(?:on|off)|aktivieren|deaktivieren)\b/iu', $message) === 1
             && preg_match('/\b(?:ai[\s-]*search|ki[\s-]*suche)\b/iu', $message) === 1;
+    }
+
+    public static function globalAiSearchEnabled(string $message): bool
+    {
+        return preg_match('/\b(?:turn\s+(?:it\s+)?off|disable|switch\s+off|deaktivieren)\b/iu', $message) !== 1;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function recentGlobalAiSearchSwitch(array $history): bool
+    {
+        for ($index = count($history) - 1, $seen = 0; $index >= 0 && $seen < 6; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $seen++;
+            if (self::isGlobalAiSearchSwitch((string) ($entry['content'] ?? ''))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static function asksToStopAllDatasourceUse(string $message): bool
@@ -2565,11 +2944,13 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($quoted !== []) {
             return $quoted[0];
         }
-        if (preg_match('/\b(?:to|zu|in)\s+(.+?)\s*$/iu', $message, $match) === 1) {
-            return trim($match[1], ' .');
+        if (preg_match('/\b(?:to|zu|in)\s+(.+?)\s*$/iu', $message, $match) !== 1) {
+            return '';
         }
+        $title = trim((string) $match[1], ' .');
+        $title = trim((string) preg_replace('/\s+(?:rename|umbenennen|benenne)\b.*$/iu', '', $title));
 
-        return '';
+        return trim($title, ' .');
     }
 
     public static function asksToChangeGreeting(string $message): bool
@@ -2615,6 +2996,106 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $arguments['settingsJson'] = $json;
 
         return $arguments;
+    }
+
+    /**
+     * A rename, or "No, call it B", keeps that source's uid and only the new name.
+     *
+     * @param array<string, mixed> $arguments
+     * @param list<array<string, mixed>> $history
+     * @return array<string, mixed>
+     */
+    public static function tuneDatasourceArguments(string $toolName, array $arguments, string $message, array $history = []): array
+    {
+        if ($toolName !== 't3cs_save_datasource') {
+            return $arguments;
+        }
+        $isCorrection = self::asksToCorrectDatasourceName($message);
+        if (!self::asksToRenameADatasource($message) && !$isCorrection) {
+            return $arguments;
+        }
+        $name = self::renamedDatasourceName($message);
+        if ($name === '') {
+            $name = self::namedDatasourceTitle($message);
+        }
+        if ($name === '') {
+            return $arguments;
+        }
+        $dataId = $isCorrection ? self::openDatasourceRenameId($history) : 0;
+        if ($dataId <= 0) {
+            $dataId = (int) ($arguments['dataId'] ?? $arguments['data_id'] ?? 0);
+        }
+        if ($dataId <= 0) {
+            return $arguments;
+        }
+        $tuned = [
+            'operation' => 'update',
+            'dataId' => $dataId,
+            'name' => $name,
+        ];
+        $rootPageId = (int) ($arguments['rootPageId'] ?? 0);
+        if ($rootPageId > 0) {
+            $tuned['rootPageId'] = $rootPageId;
+        }
+
+        return $tuned;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function openDatasourceRenameId(array $history): int
+    {
+        for ($index = count($history) - 1; $index >= 0; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            $tool = (string) ($draft['tool'] ?? $meta['tool'] ?? '');
+            if ($tool !== 't3cs_save_datasource') {
+                continue;
+            }
+            if (($draft['applied'] ?? false) === true
+                || ($draft['discarded'] ?? false) === true
+                || ($draft['failed'] ?? false) === true
+            ) {
+                continue;
+            }
+            $baseline = is_array($draft['recordBaseline'] ?? null) ? $draft['recordBaseline'] : [];
+            $uid = (int) ($baseline['uid'] ?? 0);
+            if ($uid > 0) {
+                return $uid;
+            }
+            $args = $draft['arguments'] ?? [];
+            if (is_array($args) && (int) ($args['dataId'] ?? $args['data_id'] ?? 0) > 0) {
+                return (int) ($args['dataId'] ?? $args['data_id'] ?? 0);
+            }
+            if (is_array($args)) {
+                foreach ($args as $row) {
+                    if (!is_array($row)) {
+                        continue;
+                    }
+                    if (($row['key'] ?? '') === 'dataId') {
+                        $fromRow = (int) ($row['value'] ?? 0);
+                        if ($fromRow > 0) {
+                            return $fromRow;
+                        }
+                    }
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    private static function requestTextFromBody(array $body): string
+    {
+        return trim(trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? '')));
     }
 
     /**
@@ -2682,6 +3163,153 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return null;
+    }
+
+    /**
+     * The enable switch from before the latest applied AI Search card.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array<string, mixed>|null
+     */
+    public static function previousSearchSetting(array $history): ?array
+    {
+        $sawApplied = false;
+        for ($index = count($history) - 1; $index >= 0; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if ((string) ($meta['type'] ?? '') !== 'tool_result' || (string) ($meta['tool'] ?? '') !== 't3as_search_settings') {
+                continue;
+            }
+            if (($meta['autoRan'] ?? true) !== false || ($meta['success'] ?? true) === false) {
+                continue;
+            }
+            $sawApplied = true;
+            $enabled = self::enableAiSearchFromAppliedSettings($meta['appliedSettings'] ?? null);
+            if ($enabled === null) {
+                continue;
+            }
+
+            return ['enableAiSearch' => $enabled === 1 ? 0 : 1];
+        }
+
+        if (!$sawApplied) {
+            return null;
+        }
+
+        for ($index = count($history) - 1; $index >= 0; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || (string) ($entry['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $message = trim((string) ($entry['content'] ?? ''));
+            if (!self::isGlobalAiSearchSwitch($message)) {
+                continue;
+            }
+
+            return ['enableAiSearch' => self::globalAiSearchEnabled($message) ? 0 : 1];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param mixed $settings
+     */
+    public static function enableAiSearchFromAppliedSettings(mixed $settings): ?int
+    {
+        if (is_string($settings) && trim($settings) !== '') {
+            $decoded = json_decode($settings, true);
+            $settings = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($settings)) {
+            return null;
+        }
+        $enabled = $settings['enableAiSearch'] ?? $settings['enable_ai_search'] ?? null;
+        if ($enabled !== null && $enabled !== '') {
+            return self::truthyEnableValue($enabled);
+        }
+        foreach ($settings as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $key = (string) ($row['key'] ?? '');
+            if ($key === 'settingsJson' || $key === 'settings_json') {
+                $fromJson = self::enableAiSearchFromAppliedSettings($row['value'] ?? null);
+                if ($fromJson !== null) {
+                    return $fromJson;
+                }
+            }
+            if ($key === 'enableAiSearch' || $key === 'enable_ai_search') {
+                $fromRow = self::truthyEnableValue($row['value'] ?? null);
+                if ($fromRow !== null) {
+                    return $fromRow;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private static function truthyEnableValue(mixed $value): ?int
+    {
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+        if (is_int($value) || is_float($value)) {
+            return ((int) $value) === 1 ? 1 : 0;
+        }
+        $text = strtolower(trim((string) $value));
+        if ($text === '') {
+            return null;
+        }
+        if (in_array($text, ['1', 'true', 'yes', 'on'], true)) {
+            return 1;
+        }
+        if (in_array($text, ['0', 'false', 'no', 'off'], true)) {
+            return 0;
+        }
+
+        return ((int) $value) === 1 ? 1 : 0;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function tuneUsagePeriodArguments(string $toolName, array $arguments, string $message): array
+    {
+        if ($toolName !== 't3cs_usage_analytics_summary') {
+            return $arguments;
+        }
+        $period = trim((string) ($arguments['period'] ?? ''));
+        $normalized = self::usagePeriodAlias($period !== '' ? $period : $message);
+        if ($normalized !== '') {
+            $arguments['period'] = $normalized;
+        }
+
+        return $arguments;
+    }
+
+    public static function usagePeriodAlias(string $text): string
+    {
+        $lower = mb_strtolower(trim($text));
+        $compact = preg_replace('/[\s\-]+/', '_', $lower) ?? $lower;
+        if ($compact === 'this_week' || $compact === 'diese_woche'
+            || preg_match('/\bthis\s+week\b|\bdiese\s+woche\b|\bthis_week\b/u', $lower) === 1
+        ) {
+            return '7d';
+        }
+
+        return match ($compact) {
+            'today', 'yesterday', '7d', '14d', '30d', 'this_month', 'last_month', 'custom' => $compact,
+            default => '',
+        };
     }
 
     /**
@@ -2976,6 +3604,27 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return $this->execute('t3cs_sync_datasource', $context, $body, $user, $correlationId);
+    }
+
+    /**
+     * JSON and request bodies are arrays, not lists. Callers that need a list of maps use this.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function listOfMaps(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+        /** @var list<array<string, mixed>> $maps */
+        $maps = [];
+        foreach ($value as $item) {
+            if (is_array($item)) {
+                $maps[] = $item;
+            }
+        }
+
+        return $maps;
     }
 
     /**
@@ -3319,7 +3968,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return ['turn' => $this->queueNotice(trim($payload['error']), $correlationId), 'dataId' => 0];
         }
 
-        $sources = is_array($payload['datasources'] ?? null) ? $payload['datasources'] : [];
+        $sources = self::listOfMaps($payload['datasources'] ?? null);
         $decision = self::queueSourceDecision($sources);
         if ($decision['dataId'] > 0) {
             return ['turn' => null, 'dataId' => $decision['dataId']];
@@ -3428,11 +4077,18 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
-     * A positive root stays when it is a real site root. A guessed id such as 1 does not.
+     * A positive root stays when it is a real site root, or when the editor named that id.
+     * A guessed id such as 1 does not replace an explicit 999999.
      */
-    public static function resolvedRootPageId(int $given, bool $givenIsSiteRoot, int $fromOpenPage, int $fromDataSource, int $onlySite): int
-    {
-        if ($given > 0 && $givenIsSiteRoot) {
+    public static function resolvedRootPageId(
+        int $given,
+        bool $givenIsSiteRoot,
+        int $fromOpenPage,
+        int $fromDataSource,
+        int $onlySite,
+        bool $keepGiven = false,
+    ): int {
+        if ($given > 0 && ($givenIsSiteRoot || $keepGiven || $given > 1)) {
             return $given;
         }
         if ($fromOpenPage > 0) {
@@ -3443,6 +4099,15 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return $onlySite > 0 ? $onlySite : 0;
+    }
+
+    public static function requestNamesInteger(string $text, int $value): bool
+    {
+        if ($value <= 0 || trim($text) === '') {
+            return false;
+        }
+
+        return preg_match('/(?<!\d)' . preg_quote((string) $value, '/') . '(?!\d)/', $text) === 1;
     }
 
     /**
@@ -3735,6 +4400,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         ];
     }
 
+    /**
+     * @param array<string, mixed> $arguments
+     */
     private function logRefusedPlan(string $correlationId, string $toolName, array $arguments, \Throwable $exception): void
     {
         $this->auditLogger->logToolInvocation($correlationId, $toolName, $arguments, false, 0, mb_substr($exception->getMessage(), 0, 250));
@@ -3763,6 +4431,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $context,
             $toolName,
             (string) ($body['provider'] ?? ''),
+            self::requestTextFromBody($body),
         );
         /** @var list<array<string, mixed>> $history */
         $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
@@ -4850,6 +5519,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         array $context,
         string $toolName = '',
         string $providerIdentifier = '',
+        string $requestText = '',
     ): array {
         // An id and a URL for the same target: the id (e.g. from an applied result) wins, a guessed URL must not contradict it.
         foreach ([['pageId', 'pageUrl'], ['parentPageId', 'parentPageUrl']] as [$idKey, $urlKey]) {
@@ -5028,7 +5698,15 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                     $onlySite = $this->onlySiteRootPageId();
                 }
             }
-            $rootPageId = self::resolvedRootPageId($given, $givenIsSiteRoot, $fromOpenPage, $fromDataSource, $onlySite);
+            $keepGiven = $given > 0 && self::requestNamesInteger($requestText, $given);
+            $rootPageId = self::resolvedRootPageId(
+                $given,
+                $givenIsSiteRoot,
+                $fromOpenPage,
+                $fromDataSource,
+                $onlySite,
+                $keepGiven,
+            );
             if ($rootPageId > 0) {
                 $arguments['rootPageId'] = $rootPageId;
             } elseif ($given > 0) {
@@ -5988,12 +6666,19 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         return $getTool;
     }
 
+    /**
+     * @param array<string, mixed> $catalog
+     * @return array<string, mixed>|null
+     */
     private function findTool(array $catalog, string $toolName): ?array
     {
         $needle = strtolower(trim($toolName));
         foreach ([$catalog['executable'], $catalog['locked']] as $group) {
+            if (!is_array($group)) {
+                continue;
+            }
             foreach ($group as $tool) {
-                if (strtolower((string) ($tool['name'] ?? '')) === $needle) {
+                if (is_array($tool) && strtolower((string) ($tool['name'] ?? '')) === $needle) {
                     return $tool;
                 }
             }
@@ -6013,12 +6698,6 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
-     * Masks a presented tool result once, right after presenting and before any of it is used.
-     *
-     * @param array<string, mixed> $presented
-     * @return array<string, mixed>
-     */
-    /**
      * @param array<string, mixed> $meta
      * @param array<string, mixed> $presented
      * @return array<string, mixed>
@@ -6033,6 +6712,12 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         return $meta;
     }
 
+    /**
+     * Masks a presented tool result once, right after presenting and before any of it is used.
+     *
+     * @param array<string, mixed> $presented
+     * @return array<string, mixed>
+     */
     private function maskPresented(BackendUserAuthentication $user, array $presented): array
     {
         return $this->governanceGuard->requiresPiiMasking($user)

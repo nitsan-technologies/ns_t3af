@@ -147,6 +147,72 @@ final class AgentQueueSourceChoiceTest extends TestCase
             ],
         ]]));
         self::assertFalse(AgentToolTurnProcessor::blocksFollowUpOfFailedCreate('Sync the Asus source', $failedApply));
+        $waitingCreate = [[
+            'role' => 'assistant',
+            'meta' => [
+                'type' => 'inline_draft',
+                'tool' => 't3cs_save_datasource',
+                'draft' => [
+                    'tool' => 't3cs_save_datasource',
+                    'kind' => 'tool_confirmation',
+                    'action' => 'update',
+                    'applied' => false,
+                    'arguments' => [
+                        ['key' => 'operation', 'value' => 'create'],
+                        ['key' => 'name', 'value' => 'QA Deep Web'],
+                        ['key' => 'type', 'value' => 'web_pages'],
+                        ['key' => 'typeValue', 'value' => 'https://example.com/missing'],
+                    ],
+                ],
+            ],
+        ]];
+        self::assertTrue(AgentToolTurnProcessor::latestSaveFailed($waitingCreate));
+        self::assertTrue(AgentToolTurnProcessor::blocksFollowUpOfFailedCreate('Now activate it.', $waitingCreate));
+        self::assertTrue(AgentToolTurnProcessor::blocksFollowUpOfFailedCreate('Sync that one now.', $waitingCreate));
+        $waitingUpdate = [[
+            'role' => 'assistant',
+            'meta' => [
+                'type' => 'inline_draft',
+                'tool' => 't3cs_save_datasource',
+                'draft' => [
+                    'tool' => 't3cs_save_datasource',
+                    'applied' => false,
+                    'arguments' => [
+                        ['key' => 'operation', 'value' => 'update'],
+                        ['key' => 'dataId', 'value' => '1'],
+                    ],
+                ],
+            ],
+        ]];
+        self::assertFalse(AgentToolTurnProcessor::latestSaveFailed($waitingUpdate));
+        self::assertFalse(AgentToolTurnProcessor::blocksFollowUpOfFailedCreate('Sync that one now.', $waitingUpdate));
+        self::assertTrue(AgentToolTurnProcessor::asksWhatChangedInConversation('What did you change in this conversation?'));
+        self::assertTrue(AgentToolTurnProcessor::asksWhatChangedInConversation('What did you save?'));
+        self::assertTrue(AgentToolTurnProcessor::asksWhatChangedInConversation('Was hast du geändert?'));
+        self::assertFalse(AgentToolTurnProcessor::asksWhatChangedInConversation('change it back'));
+        self::assertFalse(AgentToolTurnProcessor::asksWhatChangedInConversation('Change the title of this page'));
+        self::assertSame(
+            'Nothing was saved in this conversation. The data source was not created, so it was not activated or synced.',
+            AgentToolTurnProcessor::conversationChangeSummary($waitingCreate),
+        );
+        self::assertSame(
+            'Nothing was saved in this conversation. The data source was not created, so it was not activated or synced.',
+            AgentToolTurnProcessor::conversationChangeSummary($failedApply),
+        );
+        self::assertSame([], AgentToolTurnProcessor::appliedChangesInConversation($waitingCreate));
+        self::assertSame(
+            ['data source uid 25 (text) text "Wash your face."'],
+            AgentToolTurnProcessor::appliedChangesInConversation([[
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3cs_save_datasource',
+                    'success' => true,
+                    'autoRan' => false,
+                    'details' => ['dataId' => 25, 'type' => 'text', 'typeValue' => 'Wash your face.'],
+                ],
+            ]]),
+        );
         self::assertSame(8, AgentToolTurnProcessor::namedSyncDecision(
             'Sync that one now',
             [['uid' => 8, 'name' => 'Asus', 'type' => 'sitemap']],
@@ -179,6 +245,63 @@ final class AgentQueueSourceChoiceTest extends TestCase
             'content' => 'Chatbot settings saved.',
             'meta' => ['tool' => 't3ac_chatbot_settings', 'success' => true, 'autoRan' => false],
         ]]));
+        $sourceLinksOff = 'turn off the source links under the chatbot answers';
+        $appliedHistory = [
+            ['role' => 'user', 'content' => $sourceLinksOff],
+            [
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3ac_chatbot_settings', 'success' => true, 'autoRan' => false],
+            ],
+        ];
+        $continuationText = '[The editor confirmed "Change chatbot settings" and it was applied.] My request was: "' . $sourceLinksOff . '".';
+        self::assertFalse(AgentToolTurnProcessor::shouldForceChatbotSettingsCard(
+            $continuationText,
+            $appliedHistory,
+            [],
+            ['outcome' => 'applied'],
+        ));
+        self::assertFalse(AgentToolTurnProcessor::shouldForceChatbotSettingsCard($continuationText, $appliedHistory, []));
+        self::assertTrue(AgentToolTurnProcessor::shouldForceChatbotSettingsCard($sourceLinksOff, [], []));
+        $maxLinks = "show at most 3 links under the bot's answers";
+        $maxHistory = [
+            ['role' => 'user', 'content' => $maxLinks],
+            [
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3ac_chatbot_settings', 'success' => true, 'autoRan' => false],
+            ],
+        ];
+        $maxContinuation = '[The editor confirmed "Change chatbot settings" and it was applied.] My request was: "' . $maxLinks . '".';
+        self::assertFalse(AgentToolTurnProcessor::shouldForceChatbotSettingsCard(
+            $maxContinuation,
+            $maxHistory,
+            [],
+            ['outcome' => 'applied'],
+        ));
+        $makeItTwo = [
+            ['role' => 'user', 'content' => $maxLinks],
+            [
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3ac_chatbot_settings', 'success' => true, 'autoRan' => false],
+            ],
+            ['role' => 'user', 'content' => 'make it 2 actually'],
+            [
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3ac_chatbot_settings', 'success' => true, 'autoRan' => false],
+            ],
+        ];
+        self::assertFalse(AgentToolTurnProcessor::shouldForceChatbotSettingsCard(
+            '[The editor confirmed "Change chatbot settings" and it was applied.] My request was: "make it 2 actually".',
+            $makeItTwo,
+            [],
+            ['outcome' => 'applied'],
+        ));
+        self::assertTrue(AgentToolTurnProcessor::shouldForceChatbotSettingsCard('make it 2 actually', [
+            ['role' => 'user', 'content' => $maxLinks],
+        ], []));
         $colour = 'make the search look more like our brand, use pink #e6007e as the main colour';
         $kept = AgentRunner::searchSettingsArgumentsForRequest([
             'settingsJson' => '{"primaryColor":"#e6007e","secondaryColor":"#ffffff","textColor":"#ffffff","widgetAppearance":"light","widgetMode":"sidebar","enableAiSearch":1,"instructions":"Be pink."}',
@@ -251,6 +374,25 @@ final class AgentQueueSourceChoiceTest extends TestCase
             AgentToolTurnProcessor::addedAnswersTarget('Add these answers to QA RUALL FAQ'),
         );
         self::assertNull(AgentToolTurnProcessor::addedAnswersTarget('Add a suggested search question about opening hours'));
+        $forTheBot = "add these answers for the bot. Q: Is Fit Me vegan? A: Please check the ingredients on the product label. Q: Do you have a store in Pune? A: We don't run our own stores, Maybelline is sold through retailers. Name it QA Jay RUALL FAQ R1";
+        $created = AgentToolTurnProcessor::directToolRequest($forTheBot);
+        self::assertSame('t3cs_save_datasource', $created['tool'] ?? '');
+        self::assertSame('create', $created['arguments']['operation'] ?? '');
+        self::assertSame('qa', $created['arguments']['type'] ?? '');
+        self::assertSame('QA Jay RUALL FAQ R1', $created['arguments']['name'] ?? '');
+        self::assertSame('chatbot', $created['arguments']['usageType'] ?? '');
+        $pairs = json_decode((string) ($created['arguments']['qaPairs'] ?? ''), true);
+        self::assertSame('Is Fit Me vegan?', $pairs[0]['q'] ?? '');
+        self::assertSame('Please check the ingredients on the product label.', $pairs[0]['a'] ?? '');
+        self::assertSame('Do you have a store in Pune?', $pairs[1]['q'] ?? '');
+        self::assertSame(
+            "We don't run our own stores, Maybelline is sold through retailers.",
+            $pairs[1]['a'] ?? '',
+        );
+        self::assertStringNotContainsString('Name it', (string) ($pairs[1]['a'] ?? ''));
+        self::assertNull(AgentToolTurnProcessor::addedAnswersTarget($forTheBot));
+        self::assertNull(AgentToolTurnProcessor::directToolRequest('Add a suggested search question about opening hours'));
+        self::assertNull(AgentToolTurnProcessor::qaAnswersCreateRequest('Add these answers to QA RUALL FAQ'));
     }
 
     #[Test]
@@ -392,6 +534,13 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertSame(48, AgentToolTurnProcessor::resolvedRootPageId(1, false, 0, 48, 0));
         self::assertSame(1, AgentToolTurnProcessor::resolvedRootPageId(1, true, 48, 0, 48));
         self::assertSame(0, AgentToolTurnProcessor::resolvedRootPageId(1, false, 0, 0, 0));
+        self::assertSame(999999, AgentToolTurnProcessor::resolvedRootPageId(999999, false, 1, 0, 0, true));
+        self::assertSame(999999, AgentToolTurnProcessor::resolvedRootPageId(999999, false, 1, 0, 0, false));
+        self::assertSame(48, AgentToolTurnProcessor::resolvedRootPageId(1, false, 48, 0, 0, false));
+        self::assertSame(1, AgentToolTurnProcessor::resolvedRootPageId(1, false, 48, 0, 0, true));
+        self::assertTrue(AgentToolTurnProcessor::requestNamesInteger('/t3cs_list_datasources 999999', 999999));
+        self::assertFalse(AgentToolTurnProcessor::requestNamesInteger('list sources for root 1', 999999));
+        self::assertFalse(AgentToolTurnProcessor::requestNamesInteger('page 1999999', 999999));
     }
 
     #[Test]
@@ -481,7 +630,24 @@ final class AgentQueueSourceChoiceTest extends TestCase
 
         $title = AgentToolTurnProcessor::directToolRequest('Rename the chatbot to Maybelline Helper');
         self::assertSame('t3ac_chatbot_settings', $title['tool'] ?? '');
-        self::assertStringContainsString('Maybelline Helper', (string) ($title['arguments']['settingsJson'] ?? ''));
+        self::assertSame(
+            'Maybelline Helper',
+            json_decode((string) ($title['arguments']['settingsJson'] ?? ''), true)['title'] ?? '',
+        );
+        $glued = AgentToolTurnProcessor::tuneChatbotArguments(
+            't3ac_chatbot_settings',
+            ['operation' => 'update', 'chatbotUid' => 1, 'settingsJson' => '{"title":"Maybelline Helper Rename the chatbot to Maybelline Helper"}'],
+            'Rename the chatbot to Maybelline Helper Rename the chatbot to Maybelline Helper',
+        );
+        self::assertSame(
+            'Maybelline Helper',
+            json_decode((string) ($glued['settingsJson'] ?? ''), true)['title'] ?? '',
+        );
+        $quoted = AgentToolTurnProcessor::directToolRequest("Rename the chatbot to 'Beauty Buddy'");
+        self::assertSame(
+            'Beauty Buddy',
+            json_decode((string) ($quoted['arguments']['settingsJson'] ?? ''), true)['title'] ?? '',
+        );
 
         $history = [[
             'role' => 'assistant',
@@ -561,7 +727,7 @@ final class AgentQueueSourceChoiceTest extends TestCase
         $usageUpdate = AgentToolTurnProcessor::usageSourceUpdate($usage, [], $sources);
         self::assertSame('use', $usageUpdate['status']);
         self::assertSame(1, $usageUpdate['dataId']);
-        self::assertSame('chatbot', $usageUpdate['usageType']);
+        self::assertSame('chatbot', $usageUpdate['usageType'] ?? '');
 
         $history = [['role' => 'user', 'content' => $usage]];
         $neither = 'actually no, neither of them should use it';
@@ -570,10 +736,175 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertSame(0, $neitherCard['arguments']['activate'] ?? null);
         $neitherUpdate = AgentToolTurnProcessor::usageSourceUpdate($neither, $history, $sources);
         self::assertSame(1, $neitherUpdate['dataId']);
-        self::assertSame(0, $neitherUpdate['activate']);
+        self::assertSame(0, $neitherUpdate['activate'] ?? null);
 
-        self::assertNull(AgentToolTurnProcessor::directToolRequest('Turn off AI search'));
+        $turnOn = AgentToolTurnProcessor::directToolRequest('Turn on AI search');
+        self::assertSame('t3as_search_settings', $turnOn['tool'] ?? '');
+        self::assertSame('update', $turnOn['arguments']['operation'] ?? '');
+        self::assertSame(
+            1,
+            json_decode((string) ($turnOn['arguments']['settingsJson'] ?? ''), true)['enableAiSearch'] ?? null,
+        );
+        $turnOff = AgentToolTurnProcessor::directToolRequest('Turn off AI search');
+        self::assertSame(
+            0,
+            json_decode((string) ($turnOff['arguments']['settingsJson'] ?? ''), true)['enableAiSearch'] ?? null,
+        );
         self::assertTrue(AgentToolTurnProcessor::isGlobalAiSearchSwitch('Turn on AI search'));
         self::assertFalse(AgentToolTurnProcessor::asksToChangeDatasourceUsage('Turn off AI search'));
+        $searchHistory = [
+            ['role' => 'user', 'content' => 'Turn on AI search'],
+            [
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3as_search_settings',
+                    'success' => true,
+                    'autoRan' => false,
+                    'appliedSettings' => '{"enableAiSearch":1}',
+                ],
+            ],
+        ];
+        $back = AgentToolTurnProcessor::directToolRequest('Change it back to how it was before.', $searchHistory);
+        self::assertSame('t3as_search_settings', $back['tool'] ?? '');
+        self::assertSame(
+            0,
+            json_decode((string) ($back['arguments']['settingsJson'] ?? ''), true)['enableAiSearch'] ?? null,
+        );
+        self::assertSame(
+            'agent.search.changeBack',
+            AgentToolTurnProcessor::directToolRequest('Change it back to how it was before.', [
+                ['role' => 'user', 'content' => 'Turn on AI search'],
+            ])['ask'] ?? '',
+        );
+
+        $appliedWithoutSettings = [
+            ['role' => 'user', 'content' => 'Turn on AI search'],
+            [
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3as_search_settings',
+                    'success' => true,
+                    'autoRan' => false,
+                ],
+            ],
+        ];
+        $backWithoutSettings = AgentToolTurnProcessor::directToolRequest(
+            'Change it back to how it was before.',
+            $appliedWithoutSettings,
+        );
+        self::assertSame('t3as_search_settings', $backWithoutSettings['tool'] ?? '');
+        self::assertSame(
+            0,
+            json_decode((string) ($backWithoutSettings['arguments']['settingsJson'] ?? ''), true)['enableAiSearch'] ?? null,
+        );
+
+        $displayRows = [
+            ['role' => 'user', 'content' => 'Turn on AI search'],
+            [
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3as_search_settings',
+                    'success' => true,
+                    'autoRan' => false,
+                    'appliedSettings' => [
+                        ['key' => 'settingsJson', 'value' => '{"enableAiSearch":1}'],
+                    ],
+                ],
+            ],
+        ];
+        $backFromRows = AgentToolTurnProcessor::directToolRequest('Change it back to how it was before.', $displayRows);
+        self::assertSame(
+            0,
+            json_decode((string) ($backFromRows['arguments']['settingsJson'] ?? ''), true)['enableAiSearch'] ?? null,
+        );
+
+        self::assertSame(
+            '7d',
+            AgentToolTurnProcessor::tuneUsagePeriodArguments(
+                't3cs_usage_analytics_summary',
+                ['period' => 'this week'],
+                'How many times was the chatbot used this week?',
+            )['period'] ?? '',
+        );
+        self::assertSame(
+            '7d',
+            AgentToolTurnProcessor::tuneUsagePeriodArguments(
+                't3cs_usage_analytics_summary',
+                [],
+                'How many times was the chatbot used this week?',
+            )['period'] ?? '',
+        );
+        self::assertSame('7d', AgentToolTurnProcessor::usagePeriodAlias('diese Woche'));
+        self::assertSame('this_month', AgentToolTurnProcessor::usagePeriodAlias('this_month'));
+        self::assertSame([], AgentRunner::withoutUnaskedSearchSettingsCards(
+            [[
+                'role' => 'assistant',
+                'content' => '',
+                'meta' => [
+                    'type' => 'inline_draft',
+                    'draft' => ['tool' => 't3as_search_settings', 'arguments' => ['operation' => 'update']],
+                ],
+            ]],
+            'How many times was the chatbot used this week?',
+        ));
+    }
+
+    #[Test]
+    public function aCorrectedDatasourceNameKeepsTheOpenCardUid(): void
+    {
+        $history = [[
+            'role' => 'assistant',
+            'meta' => [
+                'type' => 'inline_draft',
+                'tool' => 't3cs_save_datasource',
+                'draft' => [
+                    'tool' => 't3cs_save_datasource',
+                    'applied' => false,
+                    'recordBaseline' => ['uid' => 17],
+                    'arguments' => [
+                        ['key' => 'dataId', 'value' => '17'],
+                        ['key' => 'name', 'value' => 'QA Gap A'],
+                        ['key' => 'activate', 'value' => '0'],
+                    ],
+                ],
+            ],
+        ]];
+        $tuned = AgentToolTurnProcessor::tuneDatasourceArguments(
+            't3cs_save_datasource',
+            [
+                'operation' => 'update',
+                'dataId' => 10,
+                'name' => 'QA Gap B',
+                'activate' => 0,
+                'usageType' => 'chatbot',
+            ],
+            "No, call it 'QA Gap B'",
+            $history,
+        );
+
+        self::assertTrue(AgentToolTurnProcessor::asksForADataSource("Create an inactive text data source named 'QA Weekly R9' for root page 1 with the text 'Weekly test' that syncs once a week."));
+        self::assertTrue(AgentToolTurnProcessor::asksForADataSource('Create a sitemap source for https://example.com/sitemap.xml'));
+        self::assertFalse(AgentToolTurnProcessor::asksForADataSource('Create a new text element on this page.'));
+        self::assertTrue(AgentToolTurnProcessor::asksToCorrectDatasourceName("No, call it 'QA Gap B'"));
+        self::assertSame(17, AgentToolTurnProcessor::openDatasourceRenameId($history));
+        self::assertSame('update', $tuned['operation'] ?? '');
+        self::assertSame(17, $tuned['dataId'] ?? 0);
+        self::assertSame('QA Gap B', $tuned['name'] ?? '');
+        self::assertArrayNotHasKey('activate', $tuned);
+        self::assertArrayNotHasKey('usageType', $tuned);
+        self::assertSame(
+            ['operation' => 'create', 'type' => 'text'],
+            AgentToolTurnProcessor::tuneDatasourceArguments(
+                't3cs_save_datasource',
+                ['operation' => 'create', 'type' => 'text'],
+                'Create a text source for beauty tips.',
+            ),
+        );
     }
 }

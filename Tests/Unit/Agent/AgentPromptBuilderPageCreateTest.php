@@ -111,13 +111,22 @@ final class AgentPromptBuilderPageCreateTest extends TestCase
         self::assertStringContainsString('Do not describe the older card as saved', $prompt);
         self::assertStringContainsString('ask what text to add and do not draft a card', $prompt);
         self::assertStringContainsString('Do not say nothing was saved', $prompt);
+        self::assertStringContainsString('list only applied results', $prompt);
+        self::assertStringContainsString('After a failed create, say nothing was saved', $prompt);
+        self::assertStringContainsString('Adding answers for the bot with Q: and A: pairs', $prompt);
         self::assertStringContainsString('questionsLimit is 3, 5, or 10', $prompt);
         self::assertStringContainsString('allowedDomains is host names such as example.com', $prompt);
         self::assertStringContainsString('Do not claim the setting was saved', $prompt);
         self::assertStringContainsString('A main colour is primaryColor and nothing else', $prompt);
+        self::assertStringContainsString('Turn on AI search', $prompt);
+        self::assertStringContainsString('enableAiSearch', $prompt);
         self::assertStringContainsString('answer_in_visitor_language', $prompt);
         self::assertStringContainsString('Make it 2', $prompt);
+        self::assertStringContainsString('Show at most 3 links under the bot\'s answers', $prompt);
+        self::assertStringContainsString('After those settings are applied, say they were saved', $prompt);
+        self::assertStringContainsString('The title is only the new name, not the rest of the sentence', $prompt);
         self::assertStringContainsString('call scheduler_update with that uid and the new description', $prompt);
+        self::assertStringContainsString('A data source request is not a content element', $prompt);
         self::assertStringContainsString('Providers page', $prompt);
         self::assertStringContainsString('Do not repeat a pasted key', $prompt);
     }

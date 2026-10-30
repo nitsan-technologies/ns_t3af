@@ -42,12 +42,12 @@ class McpBackendUserAuthentication extends BackendUserAuthentication
         $this->uc['moduleData'][$module] = $data;
     }
 
-    public function setSessionData($key, $data)
+    public function setSessionData($key, $data): void
     {
         $this->memorySession()->set((string) $key, $data);
     }
 
-    public function setAndSaveSessionData($key, $data)
+    public function setAndSaveSessionData($key, $data): void
     {
         $this->setSessionData($key, $data);
     }

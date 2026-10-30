@@ -172,7 +172,7 @@ final readonly class AgentToolResultPresenter
         $lines = $error === null ? $this->queueItemLines($toolName, $details) : [];
         $content = $llmSummary ?? $toolLead ?? ($hasReadySummary ? $summary : null) ?? $listLead ?? $summary;
         $truncation = $error === null ? $this->queueTruncationNote($toolName, $details) : null;
-        if ($truncation !== null && is_string($content)) {
+        if ($truncation !== null) {
             $content .= "\n\n" . $truncation;
         }
 
@@ -492,9 +492,9 @@ final readonly class AgentToolResultPresenter
     }
 
     /**
-     * Every returned queue row, as one readable line. Empty for every other tool.
+     * Note when the queue list was cut. Empty for every other tool.
      *
-     * @return list<string>
+     * @return string|null
      */
     private function queueTruncationNote(string $toolName, mixed $details): ?string
     {
@@ -510,6 +510,11 @@ final readonly class AgentToolResultPresenter
         return $this->translator->translate('agent.result.queueTruncated', [$total, $shown]);
     }
 
+    /**
+     * Every returned queue row, as one readable line. Empty for every other tool.
+     *
+     * @return list<string>
+     */
     private function queueItemLines(string $toolName, mixed $details): array
     {
         if ($toolName !== 't3cs_list_queue_items' || !is_array($details) || !is_array($details['items'] ?? null)) {
@@ -559,6 +564,9 @@ final readonly class AgentToolResultPresenter
         return $label;
     }
 
+    /**
+     * @param array<string, mixed> $row
+     */
     private function rowDisplayLabel(array $row): string
     {
         if (isset($row['identifier']) && is_string($row['identifier'])) {

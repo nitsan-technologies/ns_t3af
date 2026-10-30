@@ -1073,7 +1073,52 @@ final class AgentRunnerTest extends TestCase
         );
         self::assertStringContainsString('The data source change is done.', $savedSource);
         self::assertStringContainsString('Do not create a content element or a page.', $savedSource);
+        self::assertSame('t3cs_save_datasource', AgentPromptBuilder::lastConfirmedTool([[
+            'role' => 'assistant',
+            'meta' => ['type' => 'tool_result', 'tool' => 't3cs_save_datasource', 'autoRan' => false],
+        ]]));
+        $weekly = "Create an inactive text data source named 'QA Weekly R9' for root page 1 with the text 'Weekly test' that syncs once a week.";
+        self::assertTrue(AgentRunner::isDatasourceOnlyRequest($weekly));
+        self::assertTrue(AgentRunner::isDatasourceOnlyRequest("Create an inactive text data source named 'QA Jay Tips R3' for root page 1 with the text 'Wash your face.'"));
+        self::assertTrue(AgentRunner::isDatasourceOnlyRequest('Create a sitemap source for https://example.com/sitemap.xml'));
+        self::assertFalse(AgentRunner::isDatasourceOnlyRequest('Add a text element here'));
+        self::assertFalse(AgentRunner::isDatasourceOnlyRequest('Create a text source and add a paragraph to this page.'));
+        self::assertContains('write_table', AgentRunner::toolsNotAskedFor($weekly));
+        self::assertContains('t3ai_create_content_element', AgentRunner::toolsNotAskedFor($weekly));
+        self::assertNotContains('write_table', AgentRunner::toolsNotAskedFor('Add a text element here'));
+        self::assertTrue(AgentRunner::isUnaskedPageContentCreate(
+            'write_table',
+            ['action' => 'create', 'tableName' => 'tt_content', 'data' => ['header' => 'Home', 'bodytext' => '<p>Home</p>']],
+            $weekly,
+        ));
+        self::assertFalse(AgentRunner::isUnaskedPageContentCreate(
+            'write_table',
+            ['action' => 'create', 'tableName' => 'tt_content'],
+            'Add a text element here',
+        ));
+        self::assertFalse(AgentRunner::isUnaskedPageContentCreate(
+            't3ai_generate_all_seo',
+            [],
+            $weekly,
+        ));
+        self::assertFalse(AgentRunner::isUnaskedPageContentCreate(
+            't3aa_update_file_metadata',
+            [],
+            $weekly,
+        ));
         self::assertStringContainsString('Do not name a page or a title.', $message);
+
+        $savedChatbot = AgentPromptBuilder::continuationMessage(
+            ['outcome' => 'applied', 'label' => 'Change chatbot settings', 'result' => 'Saved.'],
+            [[
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3ac_chatbot_settings', 'autoRan' => false],
+            ]],
+        );
+        self::assertStringContainsString('Chatbot settings saved.', $savedChatbot);
+        self::assertStringContainsString('Do not say nothing was saved.', $savedChatbot);
+        self::assertStringNotContainsString('turn off the source links', $savedChatbot);
     }
 
     #[Test]

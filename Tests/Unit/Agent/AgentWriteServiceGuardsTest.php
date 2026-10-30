@@ -298,6 +298,24 @@ final class AgentWriteServiceGuardsTest extends TestCase
     }
 
     #[Test]
+    public function datasourceCreateThatCanNeverWorkIsNotOfferedAgain(): void
+    {
+        $service = $this->datasourceCreateService(
+            '{"error":"The URL returned an error (HTTP 404). Please use a valid, reachable URL.","retryable":false}',
+        );
+
+        try {
+            $service->apply('draft-1', []);
+            self::fail('A failed create must be reported.');
+        } catch (AgentApplyNotRetryableException $exception) {
+            self::assertSame(1712003211, $exception->getCode());
+            self::assertStringContainsString('HTTP 404', $exception->getMessage());
+        }
+
+        self::assertNull((new AgentDraftSession())->getDraft('draft-1'));
+    }
+
+    #[Test]
     public function downloadThatMayWorkLaterStaysOnTheCard(): void
     {
         $service = $this->downloadService('{"error":"Could not download the file from example.com."}');
@@ -337,6 +355,29 @@ final class AgentWriteServiceGuardsTest extends TestCase
         $plan = new ToolPlan('create', 'file_upload_from_url', [], [
             'planKind' => SatelliteToolPlanService::PLAN_KIND_TOOL_CONFIRMATION,
             'arguments' => ['url' => 'https://no-such-host.invalid/a.jpg', 'directoryPath' => 'user_upload'],
+        ]);
+        $playground = $this->createMock(McpPlaygroundService::class);
+        $playground->method('invoke')->willReturn([
+            'success' => false,
+            'result' => $toolResult,
+            'latencyMs' => 1,
+            'message' => (string) (json_decode($toolResult, true)['error'] ?? 'failed'),
+        ]);
+
+        return $this->service($this->createMock(DataHandlerService::class), $this->createMock(RecordService::class), time(), $plan, $playground);
+    }
+
+    private function datasourceCreateService(string $toolResult): AgentWriteService
+    {
+        $plan = new ToolPlan('update', 't3cs_save_datasource', [], [
+            'planKind' => SatelliteToolPlanService::PLAN_KIND_TOOL_CONFIRMATION,
+            'arguments' => [
+                'operation' => 'create',
+                'name' => 'QA Deep Web',
+                'type' => 'web_pages',
+                'typeValue' => 'https://example.com/missing',
+                'rootPageId' => 1,
+            ],
         ]);
         $playground = $this->createMock(McpPlaygroundService::class);
         $playground->method('invoke')->willReturn([

@@ -52,4 +52,16 @@ final class SchedulerUpdateToolTest extends TestCase
 
         self::assertSame(1, $merged['execution_details']['start']);
     }
+
+    #[Test]
+    public function aStoredJsonScheduleKeepsTheStartDate(): void
+    {
+        $merged = SchedulerUpdateTool::withExistingSchedule(
+            ['description' => 'T3CS Training (Site 1) QA'],
+            ['execution_details' => '{"start":1793277266,"end":0,"cronCmd":"0 */1 * * *"}'],
+        );
+
+        self::assertSame(1793277266, $merged['execution_details']['start']);
+        self::assertSame('0 */1 * * *', $merged['execution_details']['cronCmd']);
+    }
 }

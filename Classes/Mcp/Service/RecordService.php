@@ -335,12 +335,6 @@ readonly class RecordService
     }
 
     /**
-     * Return the subset of UIDs that actually exist in the given table.
-     *
-     * @param list<int> $uids
-     * @return list<int>
-     */
-    /**
      * The row is in the table. This does not apply the page-read check, so a hidden row
      * can be told apart from an id that was never saved.
      */
@@ -364,6 +358,12 @@ readonly class RecordService
         return (int) $found > 0;
     }
 
+    /**
+     * Return the subset of UIDs that actually exist in the given table.
+     *
+     * @param list<int> $uids
+     * @return list<int>
+     */
     public function findExistingUids(string $table, array $uids): array
     {
         if ($uids === []) {

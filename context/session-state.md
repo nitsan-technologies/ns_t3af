@@ -2,9 +2,97 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — PHPStan list and phpdoc mismatches
+
+**Done:** Conversation history, chatbot items, and datasource rows are normalized to a list of maps before list-typed helpers. Confirmation baseline `fields` is built like the chatbot path: iterate unknown `$arguments` through `datasourceColumn()`, append to a list. Do not `foreach` `DATASOURCE_ARGUMENT_COLUMNS` (PHPStan unrolls it into non-list shapes) and do not wrap with `array_values()` (`arrayValues.list`). Misplaced or missing phpdocs (`findExistingUids`, presenter lines, session methods, findTool) are on the methods they describe. Dashboard and queue-source tests pass the declared shapes.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — records_apply rollback tests no longer use be_groups
+
+**Done:** Functional tests that need DataHandler to refuse a root-level row below a page now use `sys_file_storage`. `be_groups` is refused in preflight (MCP cannot write backend auth tables), so it never reached DataHandler. ClickUp: 14zervyxjm8.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — A named root stays 999999, and Name it is not the last answer
+
+**Done:** `/t3cs_list_datasources 999999` keeps 999999 even when the slash body has no `requestQuery`, and does not list the open page's site. MCP still returns that no site uses that root. "Add these answers for the bot" with Q:/A: pairs still creates a Q&A source; "Name it …" is only the source name, not part of the last answer. ClickUp: 14zervyxjjz, 14zervyxprd.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — Change it back after Apply restores the AI Search switch
+
+**Done:** Apply of `t3as_search_settings` stores `appliedSettings` from the invoke arguments or from the display rows on the card. "Change it back" inverts that switch. If Apply succeeded but `appliedSettings` is missing, the last "Turn on/off AI search" request is inverted. If nothing was saved, the agent still says there is nothing to restore. A usage question still does not repeat that card. "This week" on `t3cs_usage_analytics_summary` is period `7d` (agent bind and MCP). ClickUp: 14zervyxq5c.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — A saved data source does not become page content
+
+**Done:** After Apply of a text or other data source, including weekly/inactive and a second Apply of the same name, the agent confirms the source. It does not open a Create Page Content card (including a Home header from the open page). `write_table` is hidden and refused for that request. The checklist is not a Text element. ClickUp: 14zervyxpzh.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — A named root, a saved text source, and a rename correction stay in place
+
+**Done:** `/t3cs_list_datasources 999999` keeps 999999 even when the slash body has no `requestQuery`, and does not list the open page's site. Apply of a text-source create that already saved that name, type, and text returns that uid. "Create a text source" is not a content-element checklist. "No, call it B" after a rename card keeps that source's uid and only the new name. ClickUp: 14zervyxjjz, 14zervyxq8n, 14zervyxqa6.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — Answers for the bot are a Q&A data source
+
+**Done:** "Add these answers for the bot" with Q:/A: pairs drafts `t3cs_save_datasource` type `qa` and that name. "Name it …" is the source name and is not stored in the last answer. It does not become AI Search predefined questions or a missing-folder reply. "Add these answers to [existing source]" still stays on that source. A suggested search question still uses that tool. ClickUp: 14zervyxprd.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — A failed create is not listed as a saved change
+
+**Done:** "What did you change in this conversation?" is answered from applied results only. After a 404 create that was not saved, the recap says nothing was saved and that the source was not created, activated, or synced. A waiting or failed card is not listed as created. An applied save is still listed. ClickUp: 14zervyxpje.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — Turn on AI search is a settings card again
+
+**Done:** "Turn on AI search" and "Turn off AI search" prepare `t3as_search_settings` with `enableAiSearch`. After Apply, "change it back" writes the previous switch, including when the card showed display rows and when `appliedSettings` was not stored. If nothing was saved, the agent says there is nothing to restore. A usage question still does not repeat that card. ClickUp: 14zervyxq5c.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — A chatbot rename keeps only the new name
+
+**Done:** "Rename the chatbot to Maybelline Helper" saves the title `Maybelline Helper`. The request is not appended to the name. A quoted name stays the quoted name. "change it back" still restores the previous title. ClickUp: 14zervyxqg7.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — Applied chatbot settings are not answered as unsaved
+
+**Done:** After Apply of `t3ac_chatbot_settings`, including turning source links off, "show at most 3 links under the bot's answers", and "make it 2 actually", the reply is that the settings were saved. It does not say a card is still needed or that nothing was saved. ClickUp: 14zervyxr39, 14zervyxr2r.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — A scheduler description, a saved data source, and a pasted API key stay in place
 
-**Done:** `scheduler_update` of a description keeps the stored start date. After Apply of a data source, the continuation does not create page content. A request to switch provider with a pasted key is answered before the model: provider settings cannot be changed from the AI Agent, the key is not repeated, and stored conversation messages mask keys. ClickUp: 14zervyxjrg, 14zervyxpzh, 14zervyxqhh.
+**Done:** `scheduler_update` of a description keeps the stored start date on MCP execute and on agent Apply (DataHandler). The card still shows only the description. The merge lives in `DataHandlerService::updateRecord`, so both write paths share it. After Apply of a data source, `write_table` is hidden and refused so the continuation does not create page content. A request to switch provider with a pasted key is answered before the model: provider settings cannot be changed from the AI Agent, the key is not repeated, and stored conversation messages mask keys. ClickUp: 14zervyxjrg, 14zervyxpzh, 14zervyxqhh.
 
 **Last touched:** 2026-10-30
 
@@ -44,7 +132,7 @@
 
 ## 2026-10-30 — An older data-source or chatbot card cannot overwrite a newer save
 
-**Done:** Apply of a data-source or chatbot card is refused when the fields it would write changed after the card was drafted. A page rename is a title update, and `pages_move` is refused unless the editor also asked to move the page. ClickUp: 14zervyxqa6.
+**Done:** Apply of a data-source or chatbot card is refused when the fields it would write changed after the card was drafted. "No, call it B" after a rename card keeps that source's uid and only the new name. A page rename is a title update, and `pages_move` is refused unless the editor also asked to move the page. ClickUp: 14zervyxqa6.
 
 **Last touched:** 2026-10-30
 
@@ -52,7 +140,7 @@
 
 ## 2026-10-30 — Text data source uses only the editor's text
 
-**Done:** "Create a text source for beauty tips" asks for the text and drafts no card. Quoted text is saved as given. A saved data source, including its text, is in the history the next turn reads, so "What did you save?" does not say nothing was saved. ClickUp: 14zervyxq8n.
+**Done:** "Create a text source for beauty tips" asks for the text and drafts no card. That request is not a "Create Text element" checklist. Quoted text is saved as given. Apply of a create that already saved that name, type, and text returns that uid. A saved data source, including its text, is in the history the next turn reads, so "What did you save?" does not say nothing was saved. ClickUp: 14zervyxq8n.
 
 **Last touched:** 2026-10-30
 
@@ -60,7 +148,7 @@
 
 ## 2026-10-30 — Follow-up after a data source was not created
 
-**Done:** "Activate it" or "sync that one" after a failed data-source create is answered before the model runs, so it cannot become the Mass SEO scheduler or a card for another source. "Sync all my data sources" is scope all. "The second one" after the data-source list is that row, not a page translation. "No" and "nein" cancel an open card. ClickUp: 14zervyxpjf.
+**Done:** "Activate it" or "sync that one" after a failed data-source create is answered before the model runs, so it cannot become the Mass SEO scheduler or a card for another source. A create that is still waiting, including HTTP 404 Apply that did not mark `draft.failed`, is treated the same: "Now activate it" and "Sync that one now" say the source was not created and draft no card. A 404 (or other unreachable URL) on `t3cs_save_datasource` is `retryable: false`, so Apply is not offered again. "Sync all my data sources" is scope all. "The second one" after the data-source list is that row, not a page translation. "No" and "nein" cancel an open card. ClickUp: 14zervyxpjf.
 
 **Last touched:** 2026-10-30
 
