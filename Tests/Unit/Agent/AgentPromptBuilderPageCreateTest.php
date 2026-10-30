@@ -115,6 +115,8 @@ final class AgentPromptBuilderPageCreateTest extends TestCase
         self::assertStringContainsString('allowedDomains is host names such as example.com', $prompt);
         self::assertStringContainsString('Do not claim the setting was saved', $prompt);
         self::assertStringContainsString('A main colour is primaryColor and nothing else', $prompt);
+        self::assertStringContainsString('Turn on AI search', $prompt);
+        self::assertStringContainsString('enableAiSearch', $prompt);
         self::assertStringContainsString('answer_in_visitor_language', $prompt);
         self::assertStringContainsString('Make it 2', $prompt);
         self::assertStringContainsString('Show at most 3 links under the bot\'s answers', $prompt);

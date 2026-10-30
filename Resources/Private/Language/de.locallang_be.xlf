@@ -1853,6 +1853,10 @@
                 <source>What should I change it back to?</source>
                 <target>Worauf soll ich es zurücksetzen?</target>
             </trans-unit>
+            <trans-unit id="agent.search.changeBack">
+                <source>That AI Search change was not saved, so there is nothing to restore.</source>
+                <target>Diese KI-Suche-Änderung wurde nicht gespeichert, daher gibt es nichts zurückzusetzen.</target>
+            </trans-unit>
             <trans-unit id="agent.chatbot.whichGreeting">
                 <source>What should the greeting say?</source>
                 <target>Wie soll die Begrüßung lauten?</target>

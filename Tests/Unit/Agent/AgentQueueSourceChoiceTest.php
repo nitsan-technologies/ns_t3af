@@ -646,8 +646,45 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertSame(1, $neitherUpdate['dataId']);
         self::assertSame(0, $neitherUpdate['activate']);
 
-        self::assertNull(AgentToolTurnProcessor::directToolRequest('Turn off AI search'));
+        $turnOn = AgentToolTurnProcessor::directToolRequest('Turn on AI search');
+        self::assertSame('t3as_search_settings', $turnOn['tool'] ?? '');
+        self::assertSame('update', $turnOn['arguments']['operation'] ?? '');
+        self::assertSame(
+            1,
+            json_decode((string) ($turnOn['arguments']['settingsJson'] ?? ''), true)['enableAiSearch'] ?? null,
+        );
+        $turnOff = AgentToolTurnProcessor::directToolRequest('Turn off AI search');
+        self::assertSame(
+            0,
+            json_decode((string) ($turnOff['arguments']['settingsJson'] ?? ''), true)['enableAiSearch'] ?? null,
+        );
         self::assertTrue(AgentToolTurnProcessor::isGlobalAiSearchSwitch('Turn on AI search'));
         self::assertFalse(AgentToolTurnProcessor::asksToChangeDatasourceUsage('Turn off AI search'));
+        $searchHistory = [
+            ['role' => 'user', 'content' => 'Turn on AI search'],
+            [
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3as_search_settings',
+                    'success' => true,
+                    'autoRan' => false,
+                    'appliedSettings' => '{"enableAiSearch":1}',
+                ],
+            ],
+        ];
+        $back = AgentToolTurnProcessor::directToolRequest('Change it back to how it was before.', $searchHistory);
+        self::assertSame('t3as_search_settings', $back['tool'] ?? '');
+        self::assertSame(
+            0,
+            json_decode((string) ($back['arguments']['settingsJson'] ?? ''), true)['enableAiSearch'] ?? null,
+        );
+        self::assertSame(
+            'agent.search.changeBack',
+            AgentToolTurnProcessor::directToolRequest('Change it back to how it was before.', [
+                ['role' => 'user', 'content' => 'Turn on AI search'],
+            ])['ask'] ?? '',
+        );
     }
 }

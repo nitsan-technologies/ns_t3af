@@ -110,6 +110,10 @@ final readonly class AgentConversationRecorder
             if ($tool === 't3ac_chatbot_settings' && is_array($draft['recordBaseline'] ?? null)) {
                 $resultMeta['recordBaseline'] = $draft['recordBaseline'];
             }
+            if ($tool === 't3as_search_settings') {
+                $arguments = is_array($draft['arguments'] ?? null) ? $draft['arguments'] : [];
+                $resultMeta['appliedSettings'] = $arguments['settingsJson'] ?? $arguments['settings_json'] ?? null;
+            }
             $messages[$index] = [
                 'role' => 'assistant',
                 'content' => $content !== '' ? $content : ($responseMessage !== '' ? $responseMessage : $this->translator->translate('agent.draft.toolApplied')),

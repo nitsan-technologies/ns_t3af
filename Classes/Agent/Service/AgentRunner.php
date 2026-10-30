@@ -1337,6 +1337,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 'agent.chatbot.whichGreeting' => 'What should the greeting say?',
                 'agent.source.whichDescription' => 'What description should I save?',
                 'agent.scheduler.whichDescription' => 'What description should the scheduler task have?',
+                'agent.search.changeBack' => 'That AI Search change was not saved, so there is nothing to restore.',
                 default => 'What should I change it back to?',
             };
             }

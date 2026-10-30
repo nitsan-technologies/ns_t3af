@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — Turn on AI search is a settings card again
+
+**Done:** "Turn on AI search" and "Turn off AI search" prepare `t3as_search_settings` with `enableAiSearch`. After Apply, "change it back" writes the previous switch. If nothing was saved, the agent says there is nothing to restore. A usage question still does not repeat that card. ClickUp: 14zervyxq5c.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — A chatbot rename keeps only the new name
 
 **Done:** "Rename the chatbot to Maybelline Helper" saves the title `Maybelline Helper`. The request is not appended to the name. A quoted name stays the quoted name. "change it back" still restores the previous title. ClickUp: 14zervyxqg7.

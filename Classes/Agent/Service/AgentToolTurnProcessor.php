@@ -2053,6 +2053,42 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             ];
         }
 
+        if (self::asksToRestoreChatbotSetting($message)
+            && (self::latestAppliedTool($history) === 't3as_search_settings' || self::recentGlobalAiSearchSwitch($history))
+        ) {
+            $previous = self::previousSearchSetting($history);
+            if ($previous === null) {
+                return ['ask' => 'agent.search.changeBack'];
+            }
+            $json = json_encode($previous, JSON_UNESCAPED_UNICODE);
+            if (!is_string($json)) {
+                return ['ask' => 'agent.search.changeBack'];
+            }
+
+            return [
+                'tool' => 't3as_search_settings',
+                'arguments' => [
+                    'operation' => 'update',
+                    'settingsJson' => $json,
+                ],
+            ];
+        }
+
+        if (self::isGlobalAiSearchSwitch($message)) {
+            $json = json_encode(['enableAiSearch' => self::globalAiSearchEnabled($message) ? 1 : 0], JSON_UNESCAPED_UNICODE);
+            if (!is_string($json)) {
+                return null;
+            }
+
+            return [
+                'tool' => 't3as_search_settings',
+                'arguments' => [
+                    'operation' => 'update',
+                    'settingsJson' => $json,
+                ],
+            ];
+        }
+
         $greeting = self::chatbotGreetingText($message);
         $title = self::chatbotRenameTitle($message);
         if (self::asksToChangeGreeting($message) && $greeting === '' && $title === '') {
@@ -2341,6 +2377,30 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     {
         return preg_match('/\b(?:turn\s+(?:it\s+)?(?:on|off)|enable|disable|switch\s+(?:on|off)|aktivieren|deaktivieren)\b/iu', $message) === 1
             && preg_match('/\b(?:ai[\s-]*search|ki[\s-]*suche)\b/iu', $message) === 1;
+    }
+
+    public static function globalAiSearchEnabled(string $message): bool
+    {
+        return preg_match('/\b(?:turn\s+(?:it\s+)?off|disable|switch\s+off|deaktivieren)\b/iu', $message) !== 1;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function recentGlobalAiSearchSwitch(array $history): bool
+    {
+        for ($index = count($history) - 1, $seen = 0; $index >= 0 && $seen < 6; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $seen++;
+            if (self::isGlobalAiSearchSwitch((string) ($entry['content'] ?? ''))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static function asksToStopAllDatasourceUse(string $message): bool
@@ -2707,6 +2767,45 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             }
 
             return ['uid' => $uid, 'settings' => $settings];
+        }
+
+        return null;
+    }
+
+    /**
+     * The enable switch from before the latest applied AI Search card.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array<string, mixed>|null
+     */
+    public static function previousSearchSetting(array $history): ?array
+    {
+        for ($index = count($history) - 1; $index >= 0; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if ((string) ($meta['type'] ?? '') !== 'tool_result' || (string) ($meta['tool'] ?? '') !== 't3as_search_settings') {
+                continue;
+            }
+            if (($meta['autoRan'] ?? true) !== false || ($meta['success'] ?? true) === false) {
+                continue;
+            }
+            $settings = $meta['appliedSettings'] ?? null;
+            if (is_string($settings)) {
+                $decoded = json_decode($settings, true);
+                $settings = is_array($decoded) ? $decoded : [];
+            }
+            if (!is_array($settings)) {
+                $settings = [];
+            }
+            $enabled = $settings['enableAiSearch'] ?? $settings['enable_ai_search'] ?? null;
+            if ($enabled === null) {
+                return null;
+            }
+
+            return ['enableAiSearch' => ((int) $enabled) === 1 ? 0 : 1];
         }
 
         return null;
