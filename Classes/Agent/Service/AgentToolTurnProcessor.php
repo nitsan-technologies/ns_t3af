@@ -794,10 +794,25 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return $this->cannotDeleteDataSourcesTurn($correlationId);
         }
         if ($toolName === 't3cs_save_datasource') {
+            $history = is_array($body['conversationHistory'] ?? null) ? $body['conversationHistory'] : [];
+            if (self::asksToSetDatasourceDescription($requestText)) {
+                $described = $this->pinDescribedDatasource($arguments, $requestText, $context, $correlationId);
+                if ($described !== null) {
+                    return $described;
+                }
+                $body['arguments'] = $arguments;
+            } elseif (self::asksToChangeDatasourceUsage($requestText, $history)) {
+                $usage = $this->pinUsageDatasource($arguments, $requestText, $history, $context, $correlationId);
+                if ($usage !== null) {
+                    return $usage;
+                }
+                $body['arguments'] = $arguments;
+            }
             $adjusted = $this->applyDatasourceCreateAdjustment($body, $requestText, $correlationId);
             if ($adjusted !== null) {
                 return $adjusted;
             }
+            $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : $arguments;
             if (self::asksToRenameADatasource($requestText)) {
                 $arguments['operation'] = 'update';
                 $renamed = self::renamedDatasourceName($requestText);
@@ -1029,6 +1044,129 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($uid > 0) {
             $arguments['dataId'] = $uid;
         }
+    }
+
+    /**
+     * A quoted source name owns the description update. Another data id is not kept.
+     *
+     * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $context
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function pinDescribedDatasource(array &$arguments, string $requestText, array $context, string $correlationId): ?array
+    {
+        $rows = $this->datasourceRows($context);
+        if ($rows === null) {
+            return null;
+        }
+        $update = self::describedSourceUpdate($requestText, $rows);
+        if ($update['status'] === 'missing') {
+            $sentence = $this->translator->translate('agent.source.notNamed', [$update['name']]);
+            if ($sentence === '' || $sentence === 'agent.source.notNamed') {
+                $sentence = 'No data source is named "' . $update['name'] . '".';
+            }
+
+            return [
+                'role' => 'assistant',
+                'content' => $sentence,
+                'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+            ];
+        }
+        if ($update['status'] === 'ask') {
+            return $this->sourceChoiceTurn($correlationId, 'agent.source.whichUpdate', 't3cs_save_datasource', $update['ids'], $rows, [
+                'operation' => 'update',
+                'description' => $update['description'],
+            ]);
+        }
+        if ($update['status'] !== 'use') {
+            return null;
+        }
+        $arguments = [
+            'operation' => 'update',
+            'dataId' => $update['dataId'],
+            'description' => $update['description'],
+        ];
+
+        return null;
+    }
+
+    /**
+     * Who may use a source is that source's usage or active flag. AI Search stays as it is.
+     *
+     * @param array<string, mixed> $arguments
+     * @param list<array<string, mixed>> $history
+     * @param array<string, mixed> $context
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function pinUsageDatasource(array &$arguments, string $requestText, array $history, array $context, string $correlationId): ?array
+    {
+        $rows = $this->datasourceRows($context);
+        if ($rows === null) {
+            return null;
+        }
+        $update = self::usageSourceUpdate($requestText, $history, $rows);
+        if ($update['status'] === 'ask') {
+            $pending = ['operation' => 'update'];
+            foreach (['usageType', 'activate'] as $field) {
+                if (array_key_exists($field, $update)) {
+                    $pending[$field] = $update[$field];
+                }
+            }
+            if ($update['ids'] === []) {
+                $arguments = $pending;
+                $arguments['dataId'] = 0;
+
+                return null;
+            }
+
+            return $this->sourceChoiceTurn($correlationId, 'agent.source.whichUpdate', 't3cs_save_datasource', $update['ids'], $rows, $pending);
+        }
+        if ($update['status'] !== 'use') {
+            return null;
+        }
+        $arguments = ['operation' => 'update', 'dataId' => $update['dataId']];
+        if (array_key_exists('usageType', $update)) {
+            $arguments['usageType'] = $update['usageType'];
+        }
+        if (array_key_exists('activate', $update)) {
+            $arguments['activate'] = $update['activate'];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<int> $ids
+     * @param list<array<string, mixed>> $rows
+     * @param array<string, mixed> $pending
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function sourceChoiceTurn(string $correlationId, string $questionKey, string $toolName, array $ids, array $rows, array $pending): ?array
+    {
+        $known = self::knownSources($rows);
+        $options = self::optionLabelsFor($ids, $known);
+        if ($options === []) {
+            return null;
+        }
+        $sentence = $this->translator->translate($questionKey);
+        if ($sentence === '' || $sentence === $questionKey) {
+            $sentence = 'Which data source should I update?';
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $sentence,
+            'meta' => [
+                'type' => 'clarification',
+                'tool' => 'ask_clarification',
+                'options' => $options,
+                'contentChoice' => true,
+                'askedFor' => $toolName,
+                'pendingArguments' => $pending,
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
     }
 
     /**
@@ -1922,6 +2060,32 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             ];
         }
 
+        if (self::asksToSetDatasourceDescription($message)) {
+            $description = self::datasourceDescriptionText($message);
+            if ($description === '') {
+                return ['ask' => 'agent.source.whichDescription'];
+            }
+
+            return [
+                'tool' => 't3cs_save_datasource',
+                'arguments' => [
+                    'operation' => 'update',
+                    'dataId' => 0,
+                    'description' => $description,
+                ],
+            ];
+        }
+
+        if (self::asksToChangeDatasourceUsage($message, $history)) {
+            return [
+                'tool' => 't3cs_save_datasource',
+                'arguments' => array_merge(
+                    ['operation' => 'update', 'dataId' => 0],
+                    self::datasourceUsageFields($message),
+                ),
+            ];
+        }
+
         if (self::asksToRenameADatasource($message)) {
             return [
                 'tool' => 't3cs_save_datasource',
@@ -2025,6 +2189,278 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return '';
+    }
+
+    public static function asksToSetDatasourceDescription(string $message): bool
+    {
+        $text = mb_strtolower($message);
+        if (preg_match('/\b(?:description|beschreibung)\b/u', $text) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:data\s*sources?|datasources?|datenquellen?)\b/u', $text) === 1;
+    }
+
+    public static function datasourceDescriptionName(string $message): string
+    {
+        $quoted = self::quotedNames($message);
+
+        return $quoted[0] ?? '';
+    }
+
+    public static function datasourceDescriptionText(string $message): string
+    {
+        $quoted = self::quotedNames($message);
+        if (count($quoted) >= 2) {
+            return $quoted[count($quoted) - 1];
+        }
+
+        return '';
+    }
+
+    /**
+     * The description is saved on the source whose name matches the quote. A different id is ignored.
+     *
+     * @param list<array<string, mixed>> $sources
+     * @return array{status: string, dataId: int, description: string, name: string, ids: list<int>}
+     */
+    public static function describedSourceUpdate(string $message, array $sources): array
+    {
+        $name = self::datasourceDescriptionName($message);
+        $description = self::datasourceDescriptionText($message);
+        $ids = $name === '' ? [] : self::exactSourceIdsByName($name, $sources);
+        $status = count($ids) === 1 ? 'use' : ($ids === [] ? 'missing' : 'ask');
+
+        return [
+            'status' => $status,
+            'dataId' => count($ids) === 1 ? $ids[0] : 0,
+            'description' => $description,
+            'name' => $name,
+            'ids' => $ids,
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $sources
+     * @return list<int>
+     */
+    public static function exactSourceIdsByName(string $name, array $sources): array
+    {
+        $needle = mb_strtolower(trim($name));
+        if ($needle === '') {
+            return [];
+        }
+        $ids = [];
+        foreach (self::knownSources($sources) as $uid => $source) {
+            $sourceName = mb_strtolower(trim((string) ($source['name'] ?? '')));
+            if ($sourceName !== '' && $sourceName === $needle) {
+                $ids[] = (int) $uid;
+            }
+        }
+
+        return $ids;
+    }
+
+    public static function isGlobalAiSearchSwitch(string $message): bool
+    {
+        return preg_match('/\b(?:turn\s+(?:it\s+)?(?:on|off)|enable|disable|switch\s+(?:on|off)|aktivieren|deaktivieren)\b/iu', $message) === 1
+            && preg_match('/\b(?:ai[\s-]*search|ki[\s-]*suche)\b/iu', $message) === 1;
+    }
+
+    public static function asksToStopAllDatasourceUse(string $message): bool
+    {
+        return preg_match('/\b(?:neither|none of them|keines|keiner|beide nicht)\b/iu', $message) === 1;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function asksToChangeDatasourceUsage(string $message, array $history = []): bool
+    {
+        if (self::isGlobalAiSearchSwitch($message)) {
+            return false;
+        }
+        if (self::messageChangesDatasourceUsage($message) && !self::asksToStopAllDatasourceUse($message)) {
+            return true;
+        }
+        if (!self::asksToStopAllDatasourceUse($message)) {
+            return false;
+        }
+        if (preg_match('/\b(?:source|datenquelle|datasource|stuff|chat-?bot|search|suche)\b/iu', $message) === 1) {
+            return true;
+        }
+
+        return self::historyChangesDatasourceUsage($history);
+    }
+
+    /**
+     * @return array{usageType?: string, activate?: int}
+     */
+    public static function datasourceUsageFields(string $message): array
+    {
+        if (self::asksToStopAllDatasourceUse($message)) {
+            return ['activate' => 0];
+        }
+        $text = mb_strtolower($message);
+        $onlyChatbot = preg_match('/\bonly the (?:chat-?bot|bot)\b|\bnur (?:der|die|das) (?:chat-?bot|bot)\b/u', $text) === 1;
+        $onlySearch = preg_match('/\bonly the search\b|\bnur die suche\b/u', $text) === 1;
+        $dropSearch = preg_match('/\b(?:search|suche)\b/u', $text) === 1
+            && preg_match("/\b(?:shouldn't|should not|shouldnt|nicht mehr)\b/u", $text) === 1;
+        if ($onlyChatbot || $dropSearch) {
+            return ['usageType' => 'chatbot'];
+        }
+        if ($onlySearch) {
+            return ['usageType' => 'search'];
+        }
+
+        return ['activate' => 0];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @param list<array<string, mixed>> $sources
+     * @return array{status: string, dataId: int, ids: list<int>, usageType?: string, activate?: int}
+     */
+    public static function usageSourceUpdate(string $message, array $history, array $sources): array
+    {
+        $fields = self::datasourceUsageFields($message);
+        $ids = self::mentionedSourceIds(self::usageSourceText($message, $history), $sources);
+        $status = count($ids) === 1 ? 'use' : 'ask';
+        $update = [
+            'status' => $status,
+            'dataId' => count($ids) === 1 ? $ids[0] : 0,
+            'ids' => $ids,
+        ];
+
+        return array_merge($update, $fields);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function usageSourceText(string $message, array $history): string
+    {
+        if (!self::asksToStopAllDatasourceUse($message)) {
+            return $message;
+        }
+        $seen = 0;
+        for ($index = count($history) - 1; $index >= 0 && $seen < 6; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || (string) ($entry['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $seen++;
+            $content = trim((string) ($entry['content'] ?? ''));
+            if ($content !== '' && self::messageChangesDatasourceUsage($content) && !self::asksToStopAllDatasourceUse($content)) {
+                return $message . ' ' . $content;
+            }
+        }
+
+        return $message;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $sources
+     * @return list<int>
+     */
+    public static function mentionedSourceIds(string $text, array $sources): array
+    {
+        $words = self::mentionWords($text);
+        $known = self::knownSources($sources);
+        if ($words === [] || $known === []) {
+            return [];
+        }
+        $scores = [];
+        foreach ($known as $uid => $source) {
+            $haystack = mb_strtolower(trim(
+                (string) ($source['name'] ?? '') . ' '
+                . (string) ($source['typeValue'] ?? '') . ' '
+                . (string) ($source['typeValuePreview'] ?? '') . ' '
+                . (string) ($source['type_value'] ?? ''),
+            ));
+            $haystack = str_replace(['.', '/', ':', '-', '_'], ' ', $haystack);
+            $score = 0;
+            foreach ($words as $word) {
+                $pattern = '/(?<![\p{L}\p{N}])' . preg_quote($word, '/') . '(?![\p{L}\p{N}])/u';
+                if (preg_match($pattern, $haystack) === 1) {
+                    $score++;
+                }
+            }
+            if ($score > 0) {
+                $scores[(int) $uid] = $score;
+            }
+        }
+        if ($scores === []) {
+            return [];
+        }
+        $best = max($scores);
+        $ids = [];
+        foreach ($scores as $uid => $score) {
+            if ($score === $best) {
+                $ids[] = $uid;
+            }
+        }
+
+        return $ids;
+    }
+
+    private static function messageChangesDatasourceUsage(string $message): bool
+    {
+        if (self::isGlobalAiSearchSwitch($message)) {
+            return false;
+        }
+        $text = mb_strtolower($message);
+        $changes = preg_match("/\b(?:shouldn't|should not|shouldnt|nicht mehr)\b.{0,80}\b(?:use|verwend\w*|nutzen)\b/u", $text) === 1
+            || preg_match('/\bonly the (?:chat-?bot|bot|search)\b|\bnur (?:der|die|das) (?:chat-?bot|bot|suche)\b/iu', $text) === 1;
+        if (!$changes) {
+            return false;
+        }
+
+        return preg_match('/\b(?:source|datenquelle|datasource|quelle|stuff|chat-?bot|bot|search|suche)\b/u', $text) === 1;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    private static function historyChangesDatasourceUsage(array $history): bool
+    {
+        $seen = 0;
+        for ($index = count($history) - 1; $index >= 0 && $seen < 6; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || (string) ($entry['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $seen++;
+            if (self::messageChangesDatasourceUsage((string) ($entry['content'] ?? ''))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function mentionWords(string $text): array
+    {
+        if (preg_match_all('/\p{L}{4,}/u', mb_strtolower($text), $matches) < 1) {
+            return [];
+        }
+        $stop = [
+            'search', 'suche', 'chatbot', 'chatbots', 'stuff', 'anymore', 'should', 'shouldn', 'neither',
+            'them', 'only', 'source', 'sources', 'datasource', 'datasources', 'datenquelle', 'datenquellen',
+            'using', 'used', 'use', 'both', 'this', 'that', 'with', 'from', 'have', 'been', 'when', 'your',
+            'actually', 'request', 'please', 'bitte',
+        ];
+        $words = [];
+        foreach ($matches[0] as $word) {
+            if (!in_array($word, $stop, true)) {
+                $words[] = $word;
+            }
+        }
+
+        return array_values(array_unique($words));
     }
 
     /**

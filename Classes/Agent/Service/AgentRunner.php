@@ -1322,9 +1322,11 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $key = (string) $request['ask'];
             $sentence = $this->translator->translate($key);
             if ($sentence === '' || $sentence === $key) {
-                $sentence = $key === 'agent.chatbot.whichGreeting'
-                    ? 'What should the greeting say?'
-                    : 'What should I change it back to?';
+            $sentence = match ($key) {
+                'agent.chatbot.whichGreeting' => 'What should the greeting say?',
+                'agent.source.whichDescription' => 'What description should I save?',
+                default => 'What should I change it back to?',
+            };
             }
 
             return $this->single($emitEvent, [

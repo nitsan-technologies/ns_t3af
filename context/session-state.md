@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — A named description and a source's usage stay on that source
+
+**Done:** Setting the description of a named data source updates that exact name. "Only the chatbot" sets that source's usage to chatbot, including a match on its address. "Neither should use it" deactivates that same source. "Turn on AI search" and "Turn off AI search" stay the global AI Search switch. ClickUp: 14zervyxqa7, 14zervyxr3w.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — A bot refresh, a greeting, and a chatbot rename stay on the right card
 
 **Done:** "Refresh", "learn again", "neu lernen", or "in the bot" syncs that data source and does not search news. "Fix the failed one" retries that source's failed training. After a sync of everything is cancelled, "just A and B" asks only those sources. "Rename the X source" updates that source's name. A welcome or Begrüßung is an update of `first_message`, and a chatbot get is a read. A chatbot rename is a settings card with the new title. After Apply, "change it back" writes the previous title or greeting. ClickUp: 14zervyxr35, 14zervyxqg6, 14zervyxqg7.

@@ -2897,6 +2897,14 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <source>Which data source should I update?</source>
                 <target>Welche Datenquelle soll ich aktualisieren?</target>
             </trans-unit>
+            <trans-unit id="agent.source.notNamed">
+                <source>No data source is named "%s".</source>
+                <target>Es gibt keine Datenquelle mit dem Namen "%s".</target>
+            </trans-unit>
+            <trans-unit id="agent.source.whichDescription">
+                <source>What description should I save?</source>
+                <target>Welche Beschreibung soll ich speichern?</target>
+            </trans-unit>
             <trans-unit id="agent.source.notCreated">
                 <source>The data source was not created, so there is nothing to change.</source>
                 <target>Die Datenquelle wurde nicht angelegt, daher gibt es nichts zu ändern.</target>

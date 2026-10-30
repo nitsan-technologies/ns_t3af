@@ -2282,6 +2282,12 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.source.whichUpdate" resname="agent.source.whichUpdate">
         <source>Which data source should I update?</source>
       </trans-unit>
+      <trans-unit id="agent.source.notNamed" resname="agent.source.notNamed">
+        <source>No data source is named "%s".</source>
+      </trans-unit>
+      <trans-unit id="agent.source.whichDescription" resname="agent.source.whichDescription">
+        <source>What description should I save?</source>
+      </trans-unit>
       <trans-unit id="agent.source.notCreated" resname="agent.source.notCreated">
         <source>The data source was not created, so there is nothing to change.</source>
       </trans-unit>

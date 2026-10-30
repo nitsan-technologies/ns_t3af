@@ -514,4 +514,51 @@ final class AgentQueueSourceChoiceTest extends TestCase
         );
         self::assertNull(AgentToolTurnProcessor::directToolRequest('change it back'));
     }
+
+    #[Test]
+    public function aNamedDescriptionAndSourceUsageStayOnThatSource(): void
+    {
+        $sources = [
+            ['uid' => 21, 'name' => 'QA Gap Queue Src', 'type' => 'web_pages', 'typeValue' => 'https://example.com/queue'],
+            ['uid' => 34, 'name' => 'QA Gap XConv', 'type' => 'text', 'typeValue' => 'notes'],
+            ['uid' => 1, 'name' => 'sitemap', 'type' => 'sitemap', 'typeValue' => 'https://tata.cars/sitemap.xml'],
+        ];
+        $description = "Set the description of the data source 'QA Gap XConv' (root page 1) to 'from conv2'.";
+        $update = AgentToolTurnProcessor::describedSourceUpdate($description, $sources);
+        self::assertSame('use', $update['status']);
+        self::assertSame(34, $update['dataId']);
+        self::assertSame('from conv2', $update['description']);
+        $card = AgentToolTurnProcessor::directToolRequest($description);
+        self::assertSame('t3cs_save_datasource', $card['tool'] ?? '');
+        self::assertSame('update', $card['arguments']['operation'] ?? '');
+        self::assertSame('from conv2', $card['arguments']['description'] ?? '');
+        self::assertArrayNotHasKey('name', $card['arguments'] ?? []);
+        self::assertFalse(AgentToolTurnProcessor::asksToSetDatasourceDescription("Set the description of this page to 'hello'"));
+        self::assertSame('missing', AgentToolTurnProcessor::describedSourceUpdate(
+            "Set the description of the data source 'Missing Source' to 'from conv2'.",
+            $sources,
+        )['status']);
+
+        $usage = 'the search shouldn\'t use the tata cars stuff anymore, only the chatbot';
+        $usageCard = AgentToolTurnProcessor::directToolRequest($usage);
+        self::assertSame('t3cs_save_datasource', $usageCard['tool'] ?? '');
+        self::assertSame('chatbot', $usageCard['arguments']['usageType'] ?? '');
+        $usageUpdate = AgentToolTurnProcessor::usageSourceUpdate($usage, [], $sources);
+        self::assertSame('use', $usageUpdate['status']);
+        self::assertSame(1, $usageUpdate['dataId']);
+        self::assertSame('chatbot', $usageUpdate['usageType']);
+
+        $history = [['role' => 'user', 'content' => $usage]];
+        $neither = 'actually no, neither of them should use it';
+        $neitherCard = AgentToolTurnProcessor::directToolRequest($neither, $history);
+        self::assertSame('t3cs_save_datasource', $neitherCard['tool'] ?? '');
+        self::assertSame(0, $neitherCard['arguments']['activate'] ?? null);
+        $neitherUpdate = AgentToolTurnProcessor::usageSourceUpdate($neither, $history, $sources);
+        self::assertSame(1, $neitherUpdate['dataId']);
+        self::assertSame(0, $neitherUpdate['activate']);
+
+        self::assertNull(AgentToolTurnProcessor::directToolRequest('Turn off AI search'));
+        self::assertTrue(AgentToolTurnProcessor::isGlobalAiSearchSwitch('Turn on AI search'));
+        self::assertFalse(AgentToolTurnProcessor::asksToChangeDatasourceUsage('Turn off AI search'));
+    }
 }

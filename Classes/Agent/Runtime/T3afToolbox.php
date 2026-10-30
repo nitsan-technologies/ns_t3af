@@ -604,11 +604,13 @@ final class T3afToolbox implements ToolboxInterface
             );
         }
         if (
-            in_array($name, ['record_search', 'write_table', 'records_apply', 'directory_rename', 'directory_create', 'pages_move'], true)
+            in_array($name, ['record_search', 'write_table', 'records_apply', 'directory_rename', 'directory_create', 'pages_move', 't3as_search_settings', 't3as_search_settings_get'], true)
             && (
                 AgentToolTurnProcessor::asksToRefreshADatasource($requestQuery)
                 || AgentToolTurnProcessor::asksToRetryFailedTraining($requestQuery)
                 || AgentToolTurnProcessor::asksToRenameADatasource($requestQuery)
+                || AgentToolTurnProcessor::asksToSetDatasourceDescription($requestQuery)
+                || AgentToolTurnProcessor::asksToChangeDatasourceUsage($requestQuery)
                 || AgentToolTurnProcessor::chatbotGreetingText($requestQuery) !== ''
                 || AgentToolTurnProcessor::chatbotRenameTitle($requestQuery) !== ''
             )
