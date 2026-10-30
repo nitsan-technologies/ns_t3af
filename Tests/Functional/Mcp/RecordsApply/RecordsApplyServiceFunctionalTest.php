@@ -156,9 +156,9 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
             $this->service->apply(
                 [
                     'pages' => ['NEWpage' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Must not survive']],
-                    // The preflight cannot foresee this one: be_groups is a root-level table, so DataHandler
-                    // refuses it below a page even for an admin. Only DataHandler knows.
-                    'be_groups' => ['NEWgroup' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Nowhere']],
+                    // be_groups is refused in preflight. sys_news is still rootLevel-only: preflight
+                    // allows it, DataHandler refuses pid below a page — that rolls the page back.
+                    'sys_news' => ['NEWnews' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Nowhere']],
                 ],
                 [],
                 false,
@@ -171,7 +171,7 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
         }
 
         self::assertSame(0, $this->countWhere('pages', 'title', 'Must not survive'));
-        self::assertSame(0, $this->countWhere('be_groups', 'title', 'Nowhere'));
+        self::assertSame(0, $this->countWhere('sys_news', 'title', 'Nowhere'));
     }
 
     #[Test]
@@ -179,7 +179,7 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
     {
         try {
             $this->service->apply(
-                ['be_groups' => ['NEWgroup' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Nowhere']]],
+                ['sys_news' => ['NEWnews' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Nowhere']]],
                 [],
                 false,
                 true,
@@ -559,7 +559,7 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
             $this->service->apply(
                 [
                     'sys_category' => ['NEWbad' => ['pid' => 0, 'title' => 'Must not survive category']],
-                    'be_groups' => ['NEWgroup' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Nowhere']],
+                    'sys_news' => ['NEWnews' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Nowhere']],
                 ],
                 [],
                 false,

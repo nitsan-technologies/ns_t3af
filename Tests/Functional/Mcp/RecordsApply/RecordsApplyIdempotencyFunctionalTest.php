@@ -129,7 +129,9 @@ final class RecordsApplyIdempotencyFunctionalTest extends FunctionalTestCase
     #[Test]
     public function aFailedCallFreesTheRequestIdForARetry(): void
     {
-        $broken = ['be_groups' => ['NEWgroup' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Nowhere']]];
+        // be_groups is refused in preflight (RecordAccessGate). sys_news is still rootLevel-only:
+        // preflight allows it, DataHandler refuses pid below a page — that frees the request id.
+        $broken = ['sys_news' => ['NEWnews' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Nowhere']]];
 
         try {
             $this->service->apply($broken, [], false, true, false, [], 'records_apply', 'req-3');
