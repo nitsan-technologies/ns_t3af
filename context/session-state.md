@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — Answers for the bot are a Q&A data source
+
+**Done:** "Add these answers for the bot" with Q:/A: pairs drafts `t3cs_save_datasource` type `qa` and that name. It does not become AI Search predefined questions or a missing-folder reply. "Add these answers to [existing source]" still stays on that source. A suggested search question still uses that tool. ClickUp: 14zervyxprd.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — A failed create is not listed as a saved change
 
 **Done:** "What did you change in this conversation?" is answered from applied results only. After a 404 create that was not saved, the recap says nothing was saved and that the source was not created, activated, or synced. A waiting or failed card is not listed as created. An applied save is still listed. ClickUp: 14zervyxpje.

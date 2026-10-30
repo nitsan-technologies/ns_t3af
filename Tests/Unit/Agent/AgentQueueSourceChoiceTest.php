@@ -374,6 +374,20 @@ final class AgentQueueSourceChoiceTest extends TestCase
             AgentToolTurnProcessor::addedAnswersTarget('Add these answers to QA RUALL FAQ'),
         );
         self::assertNull(AgentToolTurnProcessor::addedAnswersTarget('Add a suggested search question about opening hours'));
+        $forTheBot = "add these answers for the bot. Q: Is Fit Me vegan? A: Please check the ingredients on the product label. Q: Do you have a store in Pune? A: We don't run our own stores, Maybelline is sold through retailers. Name it QA Jay RUALL FAQ R1";
+        $created = AgentToolTurnProcessor::directToolRequest($forTheBot);
+        self::assertSame('t3cs_save_datasource', $created['tool'] ?? '');
+        self::assertSame('create', $created['arguments']['operation'] ?? '');
+        self::assertSame('qa', $created['arguments']['type'] ?? '');
+        self::assertSame('QA Jay RUALL FAQ R1', $created['arguments']['name'] ?? '');
+        self::assertSame('chatbot', $created['arguments']['usageType'] ?? '');
+        $pairs = json_decode((string) ($created['arguments']['qaPairs'] ?? ''), true);
+        self::assertSame('Is Fit Me vegan?', $pairs[0]['q'] ?? '');
+        self::assertSame('Please check the ingredients on the product label.', $pairs[0]['a'] ?? '');
+        self::assertSame('Do you have a store in Pune?', $pairs[1]['q'] ?? '');
+        self::assertNull(AgentToolTurnProcessor::addedAnswersTarget($forTheBot));
+        self::assertNull(AgentToolTurnProcessor::directToolRequest('Add a suggested search question about opening hours'));
+        self::assertNull(AgentToolTurnProcessor::qaAnswersCreateRequest('Add these answers to QA RUALL FAQ'));
     }
 
     #[Test]

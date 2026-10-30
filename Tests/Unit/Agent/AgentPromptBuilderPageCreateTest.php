@@ -113,6 +113,7 @@ final class AgentPromptBuilderPageCreateTest extends TestCase
         self::assertStringContainsString('Do not say nothing was saved', $prompt);
         self::assertStringContainsString('list only applied results', $prompt);
         self::assertStringContainsString('After a failed create, say nothing was saved', $prompt);
+        self::assertStringContainsString('Adding answers for the bot with Q: and A: pairs', $prompt);
         self::assertStringContainsString('questionsLimit is 3, 5, or 10', $prompt);
         self::assertStringContainsString('allowedDomains is host names such as example.com', $prompt);
         self::assertStringContainsString('Do not claim the setting was saved', $prompt);

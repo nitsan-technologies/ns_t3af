@@ -149,6 +149,14 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $requestText = $userMessage . ' ' . trim((string) ($body['requestQuery'] ?? ''));
         $arguments = self::tuneChatbotArguments($toolName, $arguments, $userMessage !== '' ? $userMessage : $requestText);
         $body['arguments'] = $arguments;
+        if (in_array($toolName, ['t3as_predefined_questions_create', 't3as_list_predefined_questions'], true)) {
+            $qaCreate = self::qaAnswersCreateRequest($requestText);
+            if ($qaCreate !== null) {
+                $body['arguments'] = $qaCreate['arguments'];
+
+                return $this->execute('t3cs_save_datasource', $context, $body, $user, $correlationId);
+            }
+        }
         $syncedAll = $this->forceSyncOfEverySource($toolName, $body, $context, $user, $correlationId);
         if ($syncedAll !== null) {
             return $syncedAll;
@@ -1697,8 +1705,93 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if (!str_contains($lower, 'add these answers') && !str_contains($lower, 'add the answers') && !str_contains($lower, 'diese antworten')) {
             return null;
         }
+        if (self::qaAnswersCreateRequest($text) !== null) {
+            return null;
+        }
         if (preg_match('/\bto\s+(.+)$/iu', trim($text), $match) === 1) {
             return trim((string) $match[1], " \t.\"'");
+        }
+
+        return '';
+    }
+
+    /**
+     * "Add these answers for the bot" with Q:/A: pairs is a new Q&A source, not a suggested search question.
+     *
+     * @return array{tool: string, arguments: array<string, mixed>}|null
+     */
+    public static function qaAnswersCreateRequest(string $text): ?array
+    {
+        if (preg_match('/suggested|predefined|vorgeschlag|search question/u', mb_strtolower($text)) === 1) {
+            return null;
+        }
+        $pairs = self::qaPairsFromQaLines($text);
+        if ($pairs === []) {
+            return null;
+        }
+        $lower = mb_strtolower($text);
+        $forTheBot = str_contains($lower, 'for the bot')
+            || str_contains($lower, 'for the chatbot')
+            || str_contains($lower, 'für den bot')
+            || str_contains($lower, 'fuer den bot')
+            || str_contains($lower, 'add these answers')
+            || str_contains($lower, 'add the answers')
+            || str_contains($lower, 'diese antworten');
+        if (!$forTheBot) {
+            return null;
+        }
+        if (preg_match('/\bto\s+(.+)$/iu', trim($text)) === 1 && !preg_match('/\b(?:name it|call it)\b/iu', $lower)) {
+            return null;
+        }
+        $json = json_encode($pairs, JSON_UNESCAPED_UNICODE);
+        if (!is_string($json)) {
+            return null;
+        }
+        $name = self::namedDatasourceTitle($text);
+        if ($name === '') {
+            $name = $pairs[0]['q'];
+        }
+
+        return [
+            'tool' => 't3cs_save_datasource',
+            'arguments' => [
+                'operation' => 'create',
+                'type' => 'qa',
+                'qaPairs' => $json,
+                'usageType' => 'chatbot',
+                'rootPageId' => 0,
+                'name' => $name,
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array{q: string, a: string}>
+     */
+    public static function qaPairsFromQaLines(string $text): array
+    {
+        if (preg_match_all('/Q:\s*(.*?)\s*A:\s*(.*?)(?=\s*Q:|$)/su', $text, $matches, PREG_SET_ORDER) < 1) {
+            return [];
+        }
+        $pairs = [];
+        foreach ($matches as $match) {
+            $question = trim((string) ($match[1] ?? ''));
+            $answer = trim((string) ($match[2] ?? ''));
+            if ($question !== '' && $answer !== '') {
+                $pairs[] = ['q' => $question, 'a' => $answer];
+            }
+        }
+
+        return $pairs;
+    }
+
+    public static function namedDatasourceTitle(string $text): string
+    {
+        if (preg_match('/\b(?:name it|call it|nenn(?:e)? (?:es|sie))\s+[\'"]?(.+?)[\'"]?\s*$/iu', trim($text), $match) === 1) {
+            return trim((string) $match[1], " \t.\"'");
+        }
+        if (preg_match('/\bnamed\s+[\'"]([^\'"]+)[\'"]/iu', $text, $match) === 1) {
+            return trim((string) $match[1]);
         }
 
         return '';
@@ -2309,6 +2402,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                     'name' => self::renamedDatasourceName($message),
                 ],
             ];
+        }
+
+        $qaCreate = self::qaAnswersCreateRequest($message);
+        if ($qaCreate !== null) {
+            return $qaCreate;
         }
 
         if (!self::asksToRefreshADatasource($message, $history)) {
