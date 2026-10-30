@@ -179,6 +179,24 @@ final class AgentQueueSourceChoiceTest extends TestCase
             'content' => 'Chatbot settings saved.',
             'meta' => ['tool' => 't3ac_chatbot_settings', 'success' => true, 'autoRan' => false],
         ]]));
+        $sourceLinksOff = 'turn off the source links under the chatbot answers';
+        $appliedHistory = [
+            ['role' => 'user', 'content' => $sourceLinksOff],
+            [
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3ac_chatbot_settings', 'success' => true, 'autoRan' => false],
+            ],
+        ];
+        $continuationText = '[The editor confirmed "Change chatbot settings" and it was applied.] My request was: "' . $sourceLinksOff . '".';
+        self::assertFalse(AgentToolTurnProcessor::shouldForceChatbotSettingsCard(
+            $continuationText,
+            $appliedHistory,
+            [],
+            ['outcome' => 'applied'],
+        ));
+        self::assertFalse(AgentToolTurnProcessor::shouldForceChatbotSettingsCard($continuationText, $appliedHistory, []));
+        self::assertTrue(AgentToolTurnProcessor::shouldForceChatbotSettingsCard($sourceLinksOff, [], []));
         $colour = 'make the search look more like our brand, use pink #e6007e as the main colour';
         $kept = AgentRunner::searchSettingsArgumentsForRequest([
             'settingsJson' => '{"primaryColor":"#e6007e","secondaryColor":"#ffffff","textColor":"#ffffff","widgetAppearance":"light","widgetMode":"sidebar","enableAiSearch":1,"instructions":"Be pink."}',

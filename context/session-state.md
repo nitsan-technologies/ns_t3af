@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — Applied chatbot settings are not answered as unsaved
+
+**Done:** After Apply of `t3ac_chatbot_settings`, including turning source links off, the reply is that the settings were saved. It does not say a card is still needed or that nothing was saved. ClickUp: 14zervyxr39.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — A scheduler description, a saved data source, and a pasted API key stay in place
 
 **Done:** `scheduler_update` of a description keeps the stored start date. After Apply of a data source, the continuation does not create page content. A request to switch provider with a pasted key is answered before the model: provider settings cannot be changed from the AI Agent, the key is not repeated, and stored conversation messages mask keys. ClickUp: 14zervyxjrg, 14zervyxpzh, 14zervyxqhh.

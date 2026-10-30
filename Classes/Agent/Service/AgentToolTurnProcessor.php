@@ -1877,6 +1877,31 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     /**
      * @param list<array<string, mixed>> $messages
      */
+    /**
+     * After Apply of chatbot settings the change is already saved. Do not replace that
+     * confirmation with "nothing was saved".
+     *
+     * @param list<array<string, mixed>> $history
+     * @param list<array<string, mixed>> $turnMessages
+     * @param array<string, mixed> $continuation
+     */
+    public static function shouldForceChatbotSettingsCard(
+        string $message,
+        array $history,
+        array $turnMessages,
+        array $continuation = [],
+    ): bool {
+        if (($continuation['outcome'] ?? '') === 'applied') {
+            return false;
+        }
+        if (self::chatbotSettingsWereApplied($history)) {
+            return false;
+        }
+
+        return self::asksToChangeChatbotBehavior($message, $history)
+            && self::chatbotReplyMissesTheCard($turnMessages);
+    }
+
     public static function chatbotReplyMissesTheCard(array $messages): bool
     {
         foreach ($messages as $message) {
@@ -1940,7 +1965,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      *
      * @param list<array<string, mixed>> $history
      */
-    private static function chatbotSettingsWereApplied(array $history): bool
+    public static function chatbotSettingsWereApplied(array $history): bool
     {
         $lastRequest = -1;
         foreach ($history as $index => $message) {

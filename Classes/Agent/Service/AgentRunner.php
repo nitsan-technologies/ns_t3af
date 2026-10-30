@@ -665,8 +665,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $finalText = $this->translator->translate('agent.sync.notRun');
             }
             if (
-                AgentToolTurnProcessor::asksToChangeChatbotBehavior($userMessage, $historyMessages)
-                && AgentToolTurnProcessor::chatbotReplyMissesTheCard($state->messages)
+                AgentToolTurnProcessor::shouldForceChatbotSettingsCard($userMessage, $historyMessages, $state->messages, $continuation)
                 && !$state->isPaused()
                 && !$state->failed
                 && !$state->isCancelled()
