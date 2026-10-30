@@ -117,6 +117,9 @@ final class AgentPromptBuilderPageCreateTest extends TestCase
         self::assertStringContainsString('A main colour is primaryColor and nothing else', $prompt);
         self::assertStringContainsString('answer_in_visitor_language', $prompt);
         self::assertStringContainsString('Make it 2', $prompt);
+        self::assertStringContainsString('call scheduler_update with that uid and the new description', $prompt);
+        self::assertStringContainsString('Providers page', $prompt);
+        self::assertStringContainsString('Do not repeat a pasted key', $prompt);
     }
 
     #[Test]

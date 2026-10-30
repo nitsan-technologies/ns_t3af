@@ -1062,6 +1062,17 @@ final class AgentRunnerTest extends TestCase
         );
 
         self::assertStringContainsString('Search settings saved.', $message);
+
+        $savedSource = AgentPromptBuilder::continuationMessage(
+            ['outcome' => 'applied', 'label' => 'Save a chatbot data source', 'result' => 'Saved.'],
+            [[
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3cs_save_datasource', 'autoRan' => false],
+            ]],
+        );
+        self::assertStringContainsString('The data source change is done.', $savedSource);
+        self::assertStringContainsString('Do not create a content element or a page.', $savedSource);
         self::assertStringContainsString('Do not name a page or a title.', $message);
     }
 

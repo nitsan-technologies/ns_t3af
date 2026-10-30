@@ -513,6 +513,21 @@ final class AgentQueueSourceChoiceTest extends TestCase
             AgentToolTurnProcessor::directToolRequest('change it back', $withoutPrevious)['ask'] ?? '',
         );
         self::assertNull(AgentToolTurnProcessor::directToolRequest('change it back'));
+
+        $scheduler = AgentToolTurnProcessor::directToolRequest(
+            "Change the description of scheduler task 1 to 'T3CS Training (Site 1) QA'.",
+        );
+        self::assertSame('scheduler_update', $scheduler['tool'] ?? '');
+        self::assertSame(1, $scheduler['arguments']['uid'] ?? 0);
+        self::assertStringContainsString('T3CS Training (Site 1) QA', (string) ($scheduler['arguments']['fields'] ?? ''));
+        self::assertFalse(AgentToolTurnProcessor::asksToSetDatasourceDescription(
+            "Change the description of scheduler task 1 to 'T3CS Training (Site 1) QA'.",
+        ));
+
+        self::assertTrue(AgentToolTurnProcessor::asksToChangeAiProvider(
+            'our boss wants us to use OpenAI GPT-4o instead of Mistral. here is the key: sk-qa-test-1234567890. please set it up',
+        ));
+        self::assertFalse(AgentToolTurnProcessor::asksToChangeAiProvider('Write SEO with OpenAI'));
     }
 
     #[Test]

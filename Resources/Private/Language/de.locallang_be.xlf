@@ -1861,6 +1861,14 @@
                 <source>That change has no fields, so nothing was prepared.</source>
                 <target>Diese Änderung hat keine Felder, daher wurde nichts vorbereitet.</target>
             </trans-unit>
+            <trans-unit id="agent.provider.cannotChange">
+                <source>AI provider and API key settings cannot be changed from the AI Agent. An administrator can change them on the Providers page. The key was not saved.</source>
+                <target>KI-Anbieter und API-Schlüssel können im KI-Agenten nicht geändert werden. Ein Administrator kann sie auf der Seite Anbieter ändern. Der Schlüssel wurde nicht gespeichert.</target>
+            </trans-unit>
+            <trans-unit id="agent.scheduler.whichDescription">
+                <source>What description should the scheduler task have?</source>
+                <target>Welche Beschreibung soll die Planeraufgabe haben?</target>
+            </trans-unit>
             <trans-unit id="agent.draft.expired">
                 <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
                 <target>Dieser Vorschlag ist veraltet und wurde nicht ausgeführt. Fragen Sie erneut, um einen aktuellen zu erhalten.</target>

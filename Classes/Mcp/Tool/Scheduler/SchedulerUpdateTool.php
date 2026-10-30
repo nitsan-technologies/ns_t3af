@@ -33,6 +33,7 @@ use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
 use NITSAN\NsT3AF\Mcp\Service\DataHandlerService;
 use NITSAN\NsT3AF\Mcp\Service\McpRecordPlanService;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Utility\ExtensionManagementUtility;
 
 #[McpToolSeverity(ToolSeverity::Write)]
@@ -95,8 +96,29 @@ readonly class SchedulerUpdateTool implements McpNonAiToolInterface, McpPlannabl
             return json_encode(['error' => 'No valid fields provided', 'ignoredFields' => $ignoredFields], JSON_THROW_ON_ERROR);
         }
 
+        $updatedFields = array_keys($filteredData);
+        $existing = BackendUtility::getRecord(self::TABLE, $uid) ?? [];
+        $filteredData = self::withExistingSchedule($filteredData, is_array($existing) ? $existing : []);
+
         $this->dataHandlerService->updateRecord(self::TABLE, $uid, $filteredData);
 
-        return json_encode(['uid' => $uid, 'updatedFields' => array_keys($filteredData), 'ignoredFields' => $ignoredFields], JSON_THROW_ON_ERROR);
+        return json_encode(['uid' => $uid, 'updatedFields' => $updatedFields, 'ignoredFields' => $ignoredFields], JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * The core scheduler validator checks start date and frequency on every save.
+     * A description-only update keeps the stored schedule so that check still passes.
+     *
+     * @param array<string, mixed> $fields
+     * @param array<string, mixed> $existing
+     * @return array<string, mixed>
+     */
+    public static function withExistingSchedule(array $fields, array $existing): array
+    {
+        if (!array_key_exists('execution_details', $fields) && array_key_exists('execution_details', $existing)) {
+            $fields['execution_details'] = $existing['execution_details'];
+        }
+
+        return $fields;
     }
 }

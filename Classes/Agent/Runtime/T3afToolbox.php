@@ -603,6 +603,16 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: the editor named an existing record to attach the image to. Call file_reference_add for that record (news: fal_media, textmedia: assets). Do not create a new record.',
             );
         }
+        if (AgentToolTurnProcessor::asksToChangeAiProvider($requestQuery)
+            && !in_array($name, ['explain_capabilities', 'explain_identity', 'ask_clarification'], true)
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: AI provider and API key settings cannot be changed from the AI Agent. Tell the editor that an administrator can change them on the Providers page. Do not repeat the key.',
+            );
+        }
         if (
             in_array($name, ['record_search', 'write_table', 'records_apply', 'directory_rename', 'directory_create', 'pages_move', 't3as_search_settings', 't3as_search_settings_get'], true)
             && (

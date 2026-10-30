@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — A scheduler description, a saved data source, and a pasted API key stay in place
+
+**Done:** `scheduler_update` of a description keeps the stored start date. After Apply of a data source, the continuation does not create page content. A request to switch provider with a pasted key is answered before the model: provider settings cannot be changed from the AI Agent, the key is not repeated, and stored conversation messages mask keys. ClickUp: 14zervyxjrg, 14zervyxpzh, 14zervyxqhh.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — MCP cannot write backend users, crash capabilities, or save a broken redirect
 
 **Done:** `write_table` and `records_apply` refuse `be_users`, `be_groups`, and `be_sessions`, including for an admin. A missing `HTTP_HOST` no longer takes down `explain_capabilities`; a throwing status check leaves the other extensions. `scheduler_update` stores flash data in memory. `redirect_create` refuses a `javascript:` target, status 999, and a duplicate host and path, and a DataHandler error deletes the new row. ClickUp: 14zervyxjm8, 14zervyxjk1, 14zervyxjk2, 14zervyxjk3.

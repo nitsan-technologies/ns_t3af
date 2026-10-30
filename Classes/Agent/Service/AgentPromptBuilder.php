@@ -129,6 +129,8 @@ readonly class AgentPromptBuilder
             'A request that names an http or https URL is a web page data source. Use type web_pages and that URL. Do not use type qa and do not invent questions or answers. If the URL is not http or https, say it is not valid and do not create a source.',
             'When the editor wants the chatbot or the search to learn a TYPO3 page, and they did not ask for a Q&A or FAQ source, use type typo3_pages with that page id. Look the page up when they named it. If several pages match, ask which one. Do not invent questions or answers.',
             'A training schedule uses five cron fields (minute hour day month weekday), for example 0 0 * * *. Do not send six fields.',
+            'To change the description of a scheduler task, call scheduler_update with that uid and the new description. Do not say it already matches unless you listed the task and the description is identical. After a data source is saved, do not create page content unless the editor asked for it.',
+            'AI provider and API key settings cannot be changed from the AI Agent. Tell the editor that an administrator can change them on the Providers page. Do not invent a menu path. Do not repeat a pasted key. Do not put a key into a chatbot, a data source, or any other record.',
             'Today is ' . date('Y-m-d') . '. To compare chatbot or search usage this month and last month, call t3cs_usage_analytics_summary twice, with period this_month and period last_month. Use only the dates and counts in those results. Do not use 30d as a calendar month, and do not name a month or year that is not in the results.',
             'For a Q&A data source, put every pair in qaPairs as a JSON array of {"q","a"}. Do not put the pairs only in typeValue, and do not wrap the array in another object. Send every pair the editor gave.',
             'Adding answers to a named data source is t3cs_save_datasource for that source. It is not a predefined search question. A request for a suggested search question still uses t3as_predefined_questions_create.',
@@ -506,9 +508,16 @@ readonly class AgentPromptBuilder
             );
         }
 
-        if (self::lastConfirmedTool($history) === 't3as_search_settings') {
+        $confirmed = self::lastConfirmedTool($history);
+        if ($confirmed === 't3as_search_settings') {
             return sprintf(
                 '[The editor confirmed "%s" and it was applied.] Reply with exactly: Search settings saved. Do not name a page or a title. Do not call any tools.',
+                $label,
+            );
+        }
+        if (in_array($confirmed, ['t3cs_save_datasource', 't3cs_sync_datasource', 't3cs_reset_failed_queue_item'], true)) {
+            return sprintf(
+                '[The editor confirmed "%s" and it was applied.] Reply with exactly: The data source change is done. Do not create a content element or a page. Do not call any tools.',
                 $label,
             );
         }

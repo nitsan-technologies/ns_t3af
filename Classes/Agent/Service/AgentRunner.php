@@ -119,6 +119,18 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                     'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
                 ]);
             }
+            if (AgentToolTurnProcessor::asksToChangeAiProvider($userMessage)) {
+                $sentence = $this->translator->translate('agent.provider.cannotChange');
+                if ($sentence === '' || $sentence === 'agent.provider.cannotChange') {
+                    $sentence = 'AI provider and API key settings cannot be changed from the AI Agent. An administrator can change them on the Providers page. The key was not saved.';
+                }
+
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $sentence,
+                    'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ]);
+            }
             if (AgentToolTurnProcessor::asksToDeleteDataSources($userMessage)) {
                 $sentence = $this->translator->translate('agent.datasource.cannotDelete');
                 if ($sentence === '' || $sentence === 'agent.datasource.cannotDelete') {
@@ -1325,6 +1337,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $sentence = match ($key) {
                 'agent.chatbot.whichGreeting' => 'What should the greeting say?',
                 'agent.source.whichDescription' => 'What description should I save?',
+                'agent.scheduler.whichDescription' => 'What description should the scheduler task have?',
                 default => 'What should I change it back to?',
             };
             }

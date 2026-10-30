@@ -1507,6 +1507,12 @@
       <trans-unit id="agent.draft.noFields" resname="agent.draft.noFields">
         <source>That change has no fields, so nothing was prepared.</source>
       </trans-unit>
+      <trans-unit id="agent.provider.cannotChange" resname="agent.provider.cannotChange">
+        <source>AI provider and API key settings cannot be changed from the AI Agent. An administrator can change them on the Providers page. The key was not saved.</source>
+      </trans-unit>
+      <trans-unit id="agent.scheduler.whichDescription" resname="agent.scheduler.whichDescription">
+        <source>What description should the scheduler task have?</source>
+      </trans-unit>
       <trans-unit id="agent.draft.expired" resname="agent.draft.expired">
         <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
       </trans-unit>

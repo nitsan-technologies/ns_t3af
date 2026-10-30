@@ -171,6 +171,7 @@ final class AgentConversationSession
             $this->startNew($user, $context);
         }
         $row = $this->row ?? [];
+        $messages = AgentProviderTurnErrorPresenter::maskConversationMessages($messages);
 
         $title = trim((string) ($row['title'] ?? '')) === ''
             ? AgentConversationSessionsUpdate::titleFromMessages($messages, (int) ($row['page_id'] ?? 0))

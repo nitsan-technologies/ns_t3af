@@ -2053,6 +2053,21 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             }
         }
 
+        if (self::asksToChangeSchedulerDescription($message)) {
+            $description = self::schedulerDescriptionText($message);
+            if ($description === '') {
+                return ['ask' => 'agent.scheduler.whichDescription'];
+            }
+
+            return [
+                'tool' => 'scheduler_update',
+                'arguments' => [
+                    'uid' => self::schedulerTaskUid($message),
+                    'fields' => json_encode(['description' => $description], JSON_UNESCAPED_UNICODE),
+                ],
+            ];
+        }
+
         if (self::asksToRetryFailedTraining($message)) {
             return [
                 'tool' => 't3cs_reset_failed_queue_item',
@@ -2189,6 +2204,41 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return '';
+    }
+
+    public static function asksToChangeSchedulerDescription(string $message): bool
+    {
+        if (preg_match('/\bscheduler\s+task\b|\bplaneraufgabe\b|\bzeitplaner\b/iu', $message) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:description|beschreibung)\b/iu', $message) === 1;
+    }
+
+    public static function schedulerTaskUid(string $message): int
+    {
+        if (preg_match('/\btask\s+(\d+)\b/iu', $message, $match) === 1) {
+            return (int) $match[1];
+        }
+
+        return 0;
+    }
+
+    public static function schedulerDescriptionText(string $message): string
+    {
+        $quoted = self::quotedNames($message);
+
+        return $quoted[count($quoted) - 1] ?? '';
+    }
+
+    public static function asksToChangeAiProvider(string $message): bool
+    {
+        $hasKey = preg_match('/\b(?:api[\s_-]?key|sk-[A-Za-z0-9_-]{8,})\b/u', $message) === 1;
+        if (!$hasKey) {
+            return false;
+        }
+
+        return preg_match('/\b(?:openai|mistral|gemini|anthropic|gpt-4|provider|switch|set it up|set up)\b/iu', $message) === 1;
     }
 
     public static function asksToSetDatasourceDescription(string $message): bool
