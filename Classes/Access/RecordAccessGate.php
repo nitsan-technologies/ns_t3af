@@ -26,9 +26,30 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
  */
 final class RecordAccessGate
 {
+    /**
+     * Backend auth tables: never created or changed through MCP or the generic record writer.
+     *
+     * @var list<string>
+     */
+    public const BACKEND_AUTH_TABLES = [
+        'be_users',
+        'be_groups',
+        'be_sessions',
+    ];
+
     public function __construct(
         private readonly RecordPermissionCatalog $recordCatalog = new RecordPermissionCatalog(),
     ) {}
+
+    public static function isBackendAuthTable(string $table): bool
+    {
+        return in_array($table, self::BACKEND_AUTH_TABLES, true);
+    }
+
+    public static function backendAuthWriteDeniedMessage(): string
+    {
+        return 'Backend users, groups, and sessions cannot be created or changed through MCP.';
+    }
 
     public function canSelectTable(?BackendUserAuthentication $user, string $table): bool
     {
@@ -44,7 +65,7 @@ final class RecordAccessGate
 
     public function canModifyTable(?BackendUserAuthentication $user, string $table): bool
     {
-        if ($user === null) {
+        if ($user === null || self::isBackendAuthTable($table)) {
             return false;
         }
         if ($user->isAdmin()) {

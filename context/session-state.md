@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — MCP cannot write backend users, crash capabilities, or save a broken redirect
+
+**Done:** `write_table` and `records_apply` refuse `be_users`, `be_groups`, and `be_sessions`, including for an admin. A missing `HTTP_HOST` no longer takes down `explain_capabilities`; a throwing status check leaves the other extensions. `scheduler_update` stores flash data in memory. `redirect_create` refuses a `javascript:` target, status 999, and a duplicate host and path, and a DataHandler error deletes the new row. ClickUp: 14zervyxjm8, 14zervyxjk1, 14zervyxjk2, 14zervyxjk3.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — A named description and a source's usage stay on that source
 
 **Done:** Setting the description of a named data source updates that exact name. "Only the chatbot" sets that source's usage to chatbot, including a match on its address. "Neither should use it" deactivates that same source. "Turn on AI search" and "Turn off AI search" stay the global AI Search switch. ClickUp: 14zervyxqa7, 14zervyxr3w.

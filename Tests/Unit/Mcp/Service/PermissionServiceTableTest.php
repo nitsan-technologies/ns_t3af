@@ -48,4 +48,19 @@ final class PermissionServiceTableTest extends TestCase
 
         $service->checkTableAccess('not_a_real_table_xyz');
     }
+
+    #[Test]
+    public function aBackendAuthTableCannotBeModifiedEvenByAnAdmin(): void
+    {
+        $GLOBALS['TCA'] = ['be_users' => [], 'pages' => []];
+        $user = $this->createMock(BackendUserAuthentication::class);
+        $user->method('isAdmin')->willReturn(true);
+        $user->method('check')->willReturn(true);
+        $GLOBALS['BE_USER'] = $user;
+
+        $service = new PermissionService();
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionCode(1790600003);
+        $service->assertCanModifyTable('be_users');
+    }
 }

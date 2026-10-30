@@ -116,7 +116,11 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
         // The table comes first: a user who may not change this kind of record must hear that, not a page error.
         $user = $GLOBALS['BE_USER'] ?? null;
         if ($user instanceof BackendUserAuthentication && !(new RecordAccessGate())->canModifyTable($user, $tableName)) {
-            throw new \InvalidArgumentException('You are not allowed to change this kind of record with your backend account.');
+            throw new \InvalidArgumentException(
+                RecordAccessGate::isBackendAuthTable($tableName)
+                    ? RecordAccessGate::backendAuthWriteDeniedMessage()
+                    : 'You are not allowed to change this kind of record with your backend account.'
+            );
         }
 
         $payload = self::decodeData($dataRaw, $action);
@@ -192,8 +196,12 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             return $this->encodeError('No backend user context. Authenticate via OAuth or stdio --user.');
         }
 
-        if (!$backendUser->check('tables_modify', $tableName)) {
-            return $this->encodeError('Permission denied: tables_modify on ' . $tableName);
+        if (!(new RecordAccessGate())->canModifyTable($backendUser, $tableName)) {
+            return $this->encodeError(
+                RecordAccessGate::isBackendAuthTable($tableName)
+                    ? RecordAccessGate::backendAuthWriteDeniedMessage()
+                    : 'Permission denied: tables_modify on ' . $tableName
+            );
         }
 
         try {

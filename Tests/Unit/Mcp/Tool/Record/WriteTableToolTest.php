@@ -122,6 +122,33 @@ final class WriteTableToolTest extends TestCase
     }
 
     #[Test]
+    public function aBackendUserWriteIsRefusedEvenForAnAdmin(): void
+    {
+        $this->bootstrapAdminUser();
+        $GLOBALS['TCA']['be_users'] = ['ctrl' => ['label' => 'username'], 'columns' => ['username' => [], 'admin' => []]];
+
+        $created = json_decode($this->tool->execute('create', 'be_users', '{"pid":0,"username":"mcpqa_evidence_admin","admin":1}'), true);
+        self::assertSame(
+            'Backend users, groups, and sessions cannot be created or changed through MCP.',
+            $created['error'] ?? null,
+        );
+
+        $updated = json_decode($this->tool->execute('update', 'be_users', '{"admin":1}', 4), true);
+        self::assertSame(
+            'Backend users, groups, and sessions cannot be created or changed through MCP.',
+            $updated['error'] ?? null,
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Backend users, groups, and sessions cannot be created or changed through MCP.');
+        $this->tool->plan([
+            'action' => 'create',
+            'tableName' => 'be_users',
+            'data' => '{"pid":0,"username":"mcpqa_evidence_admin","admin":1}',
+        ]);
+    }
+
+    #[Test]
     public function createRequiresPidInData(): void
     {
         $this->bootstrapAdminUser();
@@ -343,6 +370,7 @@ final class WriteTableToolTest extends TestCase
     private function bootstrapAdminUser(): void
     {
         $backendUser = $this->createMock(BackendUserAuthentication::class);
+        $backendUser->method('isAdmin')->willReturn(true);
         $backendUser->method('check')->willReturn(true);
         $GLOBALS['BE_USER'] = $backendUser;
     }
