@@ -145,6 +145,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     ): array {
         $catalog = $this->permittedActionProvider->buildCatalog();
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $requestText = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        $arguments = self::tuneChatbotArguments($toolName, $arguments, $requestText);
+        $body['arguments'] = $arguments;
         $syncedAll = $this->forceSyncOfEverySource($toolName, $body, $context, $user, $correlationId);
         if ($syncedAll !== null) {
             return $syncedAll;
@@ -247,6 +250,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $searchRead = $this->searchSettingsReadTool($toolName, $body, $catalog);
         if ($searchRead !== null) {
             $tool = $searchRead;
+        }
+        $chatbotRead = $this->chatbotSettingsReadTool($toolName, $body, $catalog);
+        if ($chatbotRead !== null) {
+            $tool = $chatbotRead;
+            $toolName = (string) ($tool['name'] ?? $toolName);
         }
 
         $severity = $this->effectiveSeverity($tool, $body);
@@ -790,6 +798,19 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             if ($adjusted !== null) {
                 return $adjusted;
             }
+            if (self::asksToRenameADatasource($requestText)) {
+                $arguments['operation'] = 'update';
+                $renamed = self::renamedDatasourceName($requestText);
+                if ($renamed !== '') {
+                    $arguments['name'] = $renamed;
+                }
+                $this->pinDatasourceId($arguments, $requestText, $context, true);
+                $body['arguments'] = $arguments;
+            }
+        }
+        if ($toolName === 't3cs_reset_failed_queue_item' && self::asksToRetryFailedTraining($requestText)) {
+            $this->pinDatasourceId($arguments, $requestText, $context, false);
+            $body['arguments'] = $arguments;
         }
         if ($toolName === 't3as_predefined_questions_create') {
             $answerTarget = self::addedAnswersTarget($requestText);
@@ -987,6 +1008,27 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return $rows;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $context
+     */
+    private function pinDatasourceId(array &$arguments, string $requestText, array $context, bool $rename): void
+    {
+        if ((int) ($arguments['dataId'] ?? 0) > 0) {
+            return;
+        }
+        $rows = $this->datasourceRows($context);
+        if (!is_array($rows)) {
+            return;
+        }
+        $uid = $rename
+            ? self::datasourceRenameTarget($requestText, $rows)
+            : self::trainingSourceTarget($requestText, $rows);
+        if ($uid > 0) {
+            $arguments['dataId'] = $uid;
+        }
     }
 
     /**
@@ -1819,10 +1861,488 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * A refresh, a failed training retry, a data-source rename, a greeting, or a chatbot
+     * rename is prepared before the model can search news or open an empty record card.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array{tool: string, arguments: array<string, mixed>}|array{ask: string}|null
+     */
+    public static function directToolRequest(string $message, array $history = []): ?array
+    {
+        if (self::asksToRestoreChatbotSetting($message) && self::latestAppliedTool($history) === 't3ac_chatbot_settings') {
+            $previous = self::previousChatbotSetting($history);
+            if ($previous === null) {
+                return ['ask' => 'agent.chatbot.changeBack'];
+            }
+            $json = json_encode($previous['settings'], JSON_UNESCAPED_UNICODE);
+            if (!is_string($json)) {
+                return ['ask' => 'agent.chatbot.changeBack'];
+            }
+
+            return [
+                'tool' => 't3ac_chatbot_settings',
+                'arguments' => [
+                    'operation' => 'update',
+                    'chatbotUid' => $previous['uid'],
+                    'settingsJson' => $json,
+                ],
+            ];
+        }
+
+        $greeting = self::chatbotGreetingText($message);
+        $title = self::chatbotRenameTitle($message);
+        if (self::asksToChangeGreeting($message) && $greeting === '' && $title === '') {
+            return ['ask' => 'agent.chatbot.whichGreeting'];
+        }
+        if ($greeting !== '' || $title !== '') {
+            $settings = [];
+            if ($title !== '') {
+                $settings['title'] = $title;
+            }
+            if ($greeting !== '') {
+                $settings['first_message'] = $greeting;
+            }
+            $json = json_encode($settings, JSON_UNESCAPED_UNICODE);
+            if (is_string($json)) {
+                return [
+                    'tool' => 't3ac_chatbot_settings',
+                    'arguments' => [
+                        'operation' => 'update',
+                        'chatbotUid' => 0,
+                        'settingsJson' => $json,
+                    ],
+                ];
+            }
+        }
+
+        if (self::asksToRetryFailedTraining($message)) {
+            return [
+                'tool' => 't3cs_reset_failed_queue_item',
+                'arguments' => ['dataId' => 0, 'queueItemUid' => 0],
+            ];
+        }
+
+        if (self::asksToRenameADatasource($message)) {
+            return [
+                'tool' => 't3cs_save_datasource',
+                'arguments' => [
+                    'operation' => 'update',
+                    'dataId' => 0,
+                    'name' => self::renamedDatasourceName($message),
+                ],
+            ];
+        }
+
+        if (!self::asksToRefreshADatasource($message, $history)) {
+            return null;
+        }
+
+        return [
+            'tool' => 't3cs_sync_datasource',
+            'arguments' => [
+                'scope' => self::asksToRefreshEverySource($message) ? 'all' : 'one',
+                'dataId' => 0,
+                'mode' => 'request',
+            ],
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function asksToRefreshADatasource(string $message, array $history = []): bool
+    {
+        if (self::asksToRenameADatasource($message) || self::asksToRetryFailedTraining($message)) {
+            return false;
+        }
+        if (self::messageRefreshesADatasource($message)) {
+            return true;
+        }
+        if (!self::historyAskedToRefreshEverything($history)) {
+            return false;
+        }
+
+        return preg_match('/\b(?:just|only|nur)\b/iu', $message) === 1
+            || preg_match('/\band\b|\bund\b/iu', $message) === 1;
+    }
+
+    public static function asksToRefreshEverySource(string $text): bool
+    {
+        $text = mb_strtolower($text);
+        $refresh = preg_match('/\b(?:refresh|retrain|re-?learn|neu lernen|neu trainieren)\b/u', $text) === 1
+            || str_contains($text, 'learn again')
+            || str_contains($text, 'alles neu');
+        if (!$refresh) {
+            return false;
+        }
+
+        return preg_match('/\b(?:everything|all|alle|alles)\b/u', $text) === 1;
+    }
+
+    public static function asksToRetryFailedTraining(string $message): bool
+    {
+        $text = mb_strtolower($message);
+        if (preg_match('/\b(?:translat\w*|übersetz\w*|uebersetz\w*)\b/u', $text) === 1) {
+            return false;
+        }
+        if (preg_match('/\b(?:failed|failure|fehlgeschlagen\w*)\b/u', $text) !== 1) {
+            return false;
+        }
+        if (preg_match('/\b(?:fix|retry|erneut|reparier\w*)\b/u', $text) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:article|artikel|source|quelle|training|bot|chatbot|one|eintrag)\b/u', $text) === 1;
+    }
+
+    public static function asksToRenameADatasource(string $message): bool
+    {
+        $text = mb_strtolower($message);
+        if (preg_match('/\b(?:rename|umbenennen|benenne)\b/u', $text) !== 1) {
+            return false;
+        }
+        if (preg_match('/\b(?:folder|ordner|directory|datei|file|page|seite)\b/u', $text) === 1) {
+            return false;
+        }
+        if (
+            preg_match('/\bchat-?bots?\b/u', $text) === 1
+            && preg_match('/\b(?:source|datenquelle|datasource|quelle)\b/u', $text) !== 1
+        ) {
+            return false;
+        }
+
+        return preg_match('/\b(?:source|datenquelle|datasource|quelle)\b/u', $text) === 1;
+    }
+
+    public static function renamedDatasourceName(string $message): string
+    {
+        $quoted = self::quotedNames($message);
+        if ($quoted !== []) {
+            return $quoted[0];
+        }
+        if (preg_match('/\b(?:to|zu)\s+(.+?)\s*$/iu', $message, $match) === 1) {
+            return trim($match[1], " .");
+        }
+
+        return '';
+    }
+
+    /**
+     * The source named in the sentence, ignoring the new name in quotes.
+     *
+     * @param list<array<string, mixed>> $sources
+     */
+    public static function datasourceRenameTarget(string $text, array $sources): int
+    {
+        $stripped = preg_replace('/[\'"“”„«»][^\'"“”„«»]*[\'"“”„«»]/u', ' ', $text) ?? $text;
+
+        return self::trainingSourceTarget($stripped, $sources);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $sources
+     */
+    public static function trainingSourceTarget(string $text, array $sources): int
+    {
+        $known = self::knownSources($sources);
+        $matches = self::matchingSourceIds($text, $known);
+        if (count($matches) === 1) {
+            return $matches[0];
+        }
+        $topic = self::topicSourceIds($text, $known);
+
+        return count($topic) === 1 ? $topic[0] : 0;
+    }
+
+    public static function chatbotGreetingText(string $message): string
+    {
+        if (!self::mentionsGreeting($message)) {
+            return '';
+        }
+        $quoted = self::quotedNames($message);
+
+        return $quoted[0] ?? '';
+    }
+
+    public static function chatbotRenameTitle(string $message): string
+    {
+        if (self::asksToRenameADatasource($message) || self::asksToRestoreChatbotSetting($message)) {
+            return '';
+        }
+        if (preg_match('/\b(?:rename|umbenennen|benenne)\b/iu', $message) !== 1) {
+            return '';
+        }
+        if (preg_match('/\bchat-?bots?\b/iu', $message) !== 1) {
+            return '';
+        }
+        $quoted = self::quotedNames($message);
+        if ($quoted !== []) {
+            return $quoted[0];
+        }
+        if (preg_match('/\b(?:to|zu|in)\s+(.+?)\s*$/iu', $message, $match) === 1) {
+            return trim($match[1], " .");
+        }
+
+        return '';
+    }
+
+    public static function asksToChangeGreeting(string $message): bool
+    {
+        if (!self::mentionsGreeting($message)) {
+            return false;
+        }
+
+        return preg_match('/\b(?:change|set|update|ändere|aendere|setzen|mach)\b/iu', $message) === 1;
+    }
+
+    public static function asksToRestoreChatbotSetting(string $message): bool
+    {
+        return preg_match('/\b(?:change|set|put|switch)\s+it\s+back\b|\bänder\w*\s+(?:es|das)\s+zurück\b|\bwie\s+es\s+war\b/iu', $message) === 1;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function tuneChatbotArguments(string $toolName, array $arguments, string $message): array
+    {
+        if (!in_array($toolName, ['t3ac_chatbot_settings', 't3ac_chatbot_settings_get'], true)) {
+            return $arguments;
+        }
+        $greeting = self::chatbotGreetingText($message);
+        $title = self::chatbotRenameTitle($message);
+        if ($greeting === '' && $title === '') {
+            return $arguments;
+        }
+        $settings = [];
+        if ($title !== '') {
+            $settings['title'] = $title;
+        }
+        if ($greeting !== '') {
+            $settings['first_message'] = $greeting;
+        }
+        $json = json_encode($settings, JSON_UNESCAPED_UNICODE);
+        if (!is_string($json)) {
+            return $arguments;
+        }
+        $arguments['operation'] = 'update';
+        $arguments['settingsJson'] = $json;
+
+        return $arguments;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function latestAppliedTool(array $history): string
+    {
+        for ($index = count($history) - 1; $index >= 0; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if ((string) ($meta['type'] ?? '') !== 'tool_result' || ($meta['autoRan'] ?? true) !== false) {
+                continue;
+            }
+            if (($meta['success'] ?? true) === false) {
+                continue;
+            }
+
+            return (string) ($meta['tool'] ?? '');
+        }
+
+        return '';
+    }
+
+    /**
+     * The title or greeting from before the latest applied chatbot card.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array{uid: int, settings: array<string, mixed>}|null
+     */
+    public static function previousChatbotSetting(array $history): ?array
+    {
+        for ($index = count($history) - 1; $index >= 0; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if ((string) ($meta['type'] ?? '') !== 'tool_result' || (string) ($meta['tool'] ?? '') !== 't3ac_chatbot_settings') {
+                continue;
+            }
+            if (($meta['autoRan'] ?? true) !== false || ($meta['success'] ?? true) === false) {
+                continue;
+            }
+            $baseline = is_array($meta['recordBaseline'] ?? null) ? $meta['recordBaseline'] : [];
+            $uid = (int) ($baseline['uid'] ?? 0);
+            $values = is_array($baseline['values'] ?? null) ? $baseline['values'] : [];
+            $settings = [];
+            foreach (['title', 'first_message'] as $field) {
+                if (!array_key_exists($field, $values)) {
+                    continue;
+                }
+                if ($field === 'title' && trim((string) $values[$field]) === '') {
+                    continue;
+                }
+                $settings[$field] = $values[$field];
+            }
+            if ($uid <= 0 || $settings === []) {
+                return null;
+            }
+
+            return ['uid' => $uid, 'settings' => $settings];
+        }
+
+        return null;
+    }
+
+    /**
+     * Words from the request that appear in exactly one source name, or the sources that tie.
+     *
+     * @param array<int, array<string, mixed>> $known
+     * @return list<int>
+     */
+    public static function topicSourceIds(string $text, array $known): array
+    {
+        $words = self::significantWords($text);
+        if ($words === [] || $known === []) {
+            return [];
+        }
+        $scores = [];
+        foreach ($known as $uid => $source) {
+            if (!is_array($source)) {
+                continue;
+            }
+            $name = mb_strtolower(trim((string) ($source['name'] ?? '')));
+            $score = 0;
+            foreach ($words as $word) {
+                if ($word !== '' && str_contains($name, $word)) {
+                    $score++;
+                }
+            }
+            if ($score > 0) {
+                $scores[(int) $uid] = $score;
+            }
+        }
+        if ($scores === []) {
+            return [];
+        }
+        $best = max($scores);
+        $ids = [];
+        foreach ($scores as $uid => $score) {
+            if ($score === $best) {
+                $ids[] = $uid;
+            }
+        }
+
+        return $ids;
+    }
+
+    private static function mentionsGreeting(string $message): bool
+    {
+        return preg_match('/\b(?:welcome message|greeting|begrüß\w*|begruess\w*|willkommens\w*)\b/iu', $message) === 1;
+    }
+
+    private static function messageRefreshesADatasource(string $message): bool
+    {
+        $text = mb_strtolower($message);
+        if (
+            preg_match('/\b(?:news|nachricht|blog)\b/u', $text) === 1
+            && preg_match('/\b(?:bot|chatbot|source|quelle|datenquelle)\b/u', $text) !== 1
+        ) {
+            return false;
+        }
+        $refresh = preg_match('/\b(?:refresh|retrain|re-?learn|neu lernen|neu trainieren)\b/u', $text) === 1
+            || preg_match('/\blearn (?:that|it|again|this)\b/u', $text) === 1
+            || preg_match('/\b(?:outdated|veraltet)\b/u', $text) === 1
+            || str_contains($text, 'learn again')
+            || str_contains($text, 'nochmal lernen')
+            || str_contains($text, 'erneut lernen');
+        if (!$refresh) {
+            return false;
+        }
+
+        return preg_match('/\b(?:bot|chatbot|source|quelle|datenquelle|article|artikel|page|seite)\b/u', $text) === 1
+            || self::asksToRefreshEverySource($message);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    private static function historyAskedToRefreshEverything(array $history): bool
+    {
+        $seen = 0;
+        for ($index = count($history) - 1; $index >= 0 && $seen < 8; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || (string) ($entry['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $seen++;
+            if (self::asksToRefreshEverySource((string) ($entry['content'] ?? ''))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $sources
+     * @return array<int, array<string, mixed>>
+     */
+    private static function knownSources(array $sources): array
+    {
+        $known = [];
+        foreach ($sources as $uid => $source) {
+            if (!is_array($source)) {
+                continue;
+            }
+            $id = (int) ($source['uid'] ?? 0);
+            if ($id <= 0 && is_int($uid)) {
+                $id = $uid;
+            }
+            if ($id > 0) {
+                $known[$id] = $source;
+            }
+        }
+
+        return $known;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function significantWords(string $text): array
+    {
+        if (preg_match_all('/\p{L}{5,}/u', mb_strtolower($text), $matches) < 1) {
+            return [];
+        }
+        $stop = [
+            'please', 'bitte', 'updated', 'chatbot', 'chatbots', 'source', 'sources', 'quelle', 'quellen',
+            'datenquelle', 'datenquellen', 'refresh', 'refreshed', 'learn', 'again', 'everything', 'article',
+            'artikel', 'about', 'page', 'seite', 'outdated', 'veraltet', 'training', 'failed', 'failure',
+            'something', 'makeup', 'which', 'there', 'their', 'should', 'would', 'could',
+        ];
+        $words = [];
+        foreach ($matches[0] as $word) {
+            if (!in_array($word, $stop, true)) {
+                $words[] = $word;
+            }
+        }
+
+        return array_values(array_unique($words));
+    }
+
+    /**
      * A request to sync every source. A list of every source is not a sync.
      */
     public static function askedForEverySource(string $text): bool
     {
+        if (self::asksToRefreshEverySource($text)) {
+            return true;
+        }
         if (preg_match('/\b(?:sync|synchronis\w*)\b/iu', $text) !== 1) {
             return false;
         }
@@ -2016,6 +2536,21 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 'dataId' => 0,
                 'options' => self::optionLabelsFor($matches, $known),
             ];
+        }
+
+        if (self::asksToRefreshADatasource($text) || preg_match('/\b(?:just|only|nur)\b/iu', $text) === 1) {
+            $topic = self::topicSourceIds($text, $known);
+            if (count($topic) === 1) {
+                return ['action' => 'use', 'scope' => 'one', 'dataId' => $topic[0], 'options' => []];
+            }
+            if (count($topic) > 1) {
+                return [
+                    'action' => 'ask',
+                    'scope' => 'one',
+                    'dataId' => 0,
+                    'options' => self::optionLabelsFor($topic, $known),
+                ];
+            }
         }
 
         if ($scope === 'all') {
@@ -2936,6 +3471,27 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             ];
         }
 
+        $plainRequest = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        if (
+            $plan->fields === []
+            && (
+                self::chatbotRenameTitle($plainRequest) !== ''
+                || self::chatbotGreetingText($plainRequest) !== ''
+                || self::asksToRenameADatasource($plainRequest)
+            )
+        ) {
+            $sentence = $this->translator->translate('agent.draft.noFields');
+            if ($sentence === '' || $sentence === 'agent.draft.noFields') {
+                $sentence = 'That change has no fields, so nothing was prepared.';
+            }
+
+            return [
+                'role' => 'assistant',
+                'content' => $sentence,
+                'meta' => ['type' => 'info', 'tool' => $toolName, 'orchestratorPause' => true],
+            ];
+        }
+
         $shownTool = $plan->toolName !== '' && $plan->toolName !== $toolName ? $plan->toolName : $toolName;
         $editorLabel = $shownTool === $toolName
             ? $this->editorLabelService->resolve($tool)
@@ -2975,6 +3531,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $baseline = $this->recordBaseline($plan->toolName !== '' ? $plan->toolName : $toolName, $arguments);
         if ($baseline !== null) {
             $extra['recordBaseline'] = $baseline;
+            $draftCard['recordBaseline'] = $baseline;
         }
         $this->draftService->persistDraft($draftCard, $plan, $arguments, $this->draftSession, null, $extra);
 
@@ -4910,6 +5467,33 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return null;
         }
         $getTool = $this->findTool($catalog, 't3as_search_settings_get');
+        if ($getTool === null || ($getTool['executable'] ?? false) !== true) {
+            return null;
+        }
+        unset($arguments['operation'], $arguments['settingsJson']);
+        $body['arguments'] = $arguments;
+
+        return $getTool;
+    }
+
+    /**
+     * A read sent to the chatbot write tool is the get tool. A greeting or a rename stays a write.
+     *
+     * @param array<string, mixed> $body
+     * @param array{executable: list<array<string, mixed>>, locked: list<array<string, mixed>>} $catalog
+     * @return array<string, mixed>|null
+     */
+    private function chatbotSettingsReadTool(string $toolName, array &$body, array $catalog): ?array
+    {
+        if ($toolName !== 't3ac_chatbot_settings') {
+            return null;
+        }
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $operation = strtolower(trim((string) ($arguments['operation'] ?? 'update')));
+        if ($operation === 'update') {
+            return null;
+        }
+        $getTool = $this->findTool($catalog, 't3ac_chatbot_settings_get');
         if ($getTool === null || ($getTool['executable'] ?? false) !== true) {
             return null;
         }

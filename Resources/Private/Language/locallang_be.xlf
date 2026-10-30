@@ -1498,6 +1498,15 @@
       <trans-unit id="agent.chatbot.needsCard" resname="agent.chatbot.needsCard">
         <source>That needs a chatbot settings card. Nothing was saved.</source>
       </trans-unit>
+      <trans-unit id="agent.chatbot.changeBack" resname="agent.chatbot.changeBack">
+        <source>What should I change it back to?</source>
+      </trans-unit>
+      <trans-unit id="agent.chatbot.whichGreeting" resname="agent.chatbot.whichGreeting">
+        <source>What should the greeting say?</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.noFields" resname="agent.draft.noFields">
+        <source>That change has no fields, so nothing was prepared.</source>
+      </trans-unit>
       <trans-unit id="agent.draft.expired" resname="agent.draft.expired">
         <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
       </trans-unit>

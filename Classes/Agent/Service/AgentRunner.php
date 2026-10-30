@@ -189,6 +189,18 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                     ],
                 ]);
             }
+            $prepared = $this->directPreparedChange(
+                $userMessage,
+                $historyMessages,
+                $context,
+                $body,
+                $user,
+                $correlationId,
+                $emitEvent,
+            );
+            if ($prepared !== null) {
+                return $prepared;
+            }
         }
 
         $pageId = (int) ($context['pageId'] ?? 0);
@@ -1282,6 +1294,62 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return ['messages' => [$message], 'paused' => false, 'pauseReason' => null];
+    }
+
+    /**
+     * A data-source refresh, a failed training retry, a source rename, a greeting, or a chatbot
+     * rename is a card before the model can search news or open an empty record.
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     * @param array<string, mixed> $context
+     * @param array<string, mixed> $body
+     * @return array{messages: list<array{role: string, content: string, meta: array<string, mixed>}>, paused: bool, pauseReason: string|null}|null
+     */
+    private function directPreparedChange(
+        string $userMessage,
+        array $historyMessages,
+        array $context,
+        array $body,
+        BackendUserAuthentication $user,
+        string $correlationId,
+        ?callable $emitEvent,
+    ): ?array {
+        $request = AgentToolTurnProcessor::directToolRequest($userMessage, $historyMessages);
+        if ($request === null) {
+            return null;
+        }
+        if (isset($request['ask'])) {
+            $key = (string) $request['ask'];
+            $sentence = $this->translator->translate($key);
+            if ($sentence === '' || $sentence === $key) {
+                $sentence = $key === 'agent.chatbot.whichGreeting'
+                    ? 'What should the greeting say?'
+                    : 'What should I change it back to?';
+            }
+
+            return $this->single($emitEvent, [
+                'role' => 'assistant',
+                'content' => $sentence,
+                'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+            ]);
+        }
+
+        $turnBody = $body;
+        $turnBody['userMessage'] = $userMessage;
+        $turnBody['requestQuery'] = $userMessage;
+        $turnBody['conversationHistory'] = $historyMessages;
+        $turnBody['arguments'] = $request['arguments'];
+        $message = $this->toolExecutor->execute((string) $request['tool'], $context, $turnBody, $user, $correlationId);
+        if ($emitEvent !== null) {
+            $emitEvent('message', ['message' => $message]);
+        }
+        $pause = ($message['meta']['orchestratorPause'] ?? false) === true;
+
+        return [
+            'messages' => [$message],
+            'paused' => $pause,
+            'pauseReason' => $pause ? (string) ($message['meta']['type'] ?? 'draft_review') : null,
+        ];
     }
 
     /**

@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — A bot refresh, a greeting, and a chatbot rename stay on the right card
+
+**Done:** "Refresh", "learn again", "neu lernen", or "in the bot" syncs that data source and does not search news. "Fix the failed one" retries that source's failed training. After a sync of everything is cancelled, "just A and B" asks only those sources. "Rename the X source" updates that source's name. A welcome or Begrüßung is an update of `first_message`, and a chatbot get is a read. A chatbot rename is a settings card with the new title. After Apply, "change it back" writes the previous title or greeting. ClickUp: 14zervyxr35, 14zervyxqg6, 14zervyxqg7.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — Chatbot behaviour and a search colour stay on the named field
 
 **Done:** Links under the bot, the visitor language, and a rule for the bot call `t3ac_chatbot_settings` (`enable_sources_links`, `max_source_links`, `answer_in_visitor_language`, `instructions`). "Make it 2" keeps the source-link count. "Is that active now?" says the setting was not saved when nothing was applied, and does not ask which data source to sync. A main-colour request keeps `primaryColor` only. Undo when nothing was applied says nothing was changed. ClickUp: 14zervyxr2r, 14zervyxr39, 14zervyxr4g.

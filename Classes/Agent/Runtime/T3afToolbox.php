@@ -603,6 +603,23 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: the editor named an existing record to attach the image to. Call file_reference_add for that record (news: fal_media, textmedia: assets). Do not create a new record.',
             );
         }
+        if (
+            in_array($name, ['record_search', 'write_table', 'records_apply', 'directory_rename', 'directory_create', 'pages_move'], true)
+            && (
+                AgentToolTurnProcessor::asksToRefreshADatasource($requestQuery)
+                || AgentToolTurnProcessor::asksToRetryFailedTraining($requestQuery)
+                || AgentToolTurnProcessor::asksToRenameADatasource($requestQuery)
+                || AgentToolTurnProcessor::chatbotGreetingText($requestQuery) !== ''
+                || AgentToolTurnProcessor::chatbotRenameTitle($requestQuery) !== ''
+            )
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: this is a data source or chatbot change. Call t3cs_sync_datasource, t3cs_reset_failed_queue_item, t3cs_save_datasource, or t3ac_chatbot_settings. Do not search news, rename a folder, or update another table.',
+            );
+        }
         // EXT:news missing: do not search or write the news table, and do not run news MCP tools.
         if (!\TYPO3\CMS\Core\Utility\ExtensionManagementUtility::isLoaded('news')) {
             $newsTable = strtolower((string) ($toolCall->getArguments()['tableName'] ?? $toolCall->getArguments()['table'] ?? ''));

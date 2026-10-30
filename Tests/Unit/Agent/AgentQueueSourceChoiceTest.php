@@ -410,4 +410,108 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertSame('use', $byUid['action']);
         self::assertSame(8, $byUid['dataId']);
     }
+
+    #[Test]
+    public function aBotRefreshAGreetingAndARenameStayOnTheRightTool(): void
+    {
+        $sources = [
+            ['uid' => 8, 'name' => 'Asus product pages', 'type' => 'web_pages'],
+            ['uid' => 3, 'name' => 'Myntra', 'type' => 'web_pages'],
+            ['uid' => 10, 'name' => 'Makeup brush article', 'type' => 'web_pages'],
+            ['uid' => 9, 'name' => 'Beginners makeup kit', 'type' => 'web_pages'],
+            ['uid' => 11, 'name' => 'Blush types article', 'type' => 'web_pages'],
+        ];
+
+        $refresh = AgentToolTurnProcessor::directToolRequest(
+            'the blush types article on maybelline was updated, please refresh it in the bot',
+        );
+        self::assertSame('t3cs_sync_datasource', $refresh['tool'] ?? '');
+        self::assertSame('one', $refresh['arguments']['scope'] ?? '');
+        $blush = AgentToolTurnProcessor::namedSyncDecision(
+            'the blush types article on maybelline was updated, please refresh it in the bot',
+            $sources,
+            'one',
+            0,
+        );
+        self::assertSame('use', $blush['action']);
+        self::assertSame(11, $blush['dataId']);
+
+        self::assertTrue(AgentToolTurnProcessor::askedForEverySource('refresh everything in the bot now'));
+        $both = AgentToolTurnProcessor::namedSyncDecision(
+            'ok no, just the makeup brush article and the beginners makeup kit one',
+            $sources,
+            'one',
+            0,
+        );
+        self::assertSame('ask', $both['action']);
+        self::assertCount(2, $both['options']);
+
+        $retry = AgentToolTurnProcessor::directToolRequest('something failed with the makeup brush article, fix it');
+        self::assertSame('t3cs_reset_failed_queue_item', $retry['tool'] ?? '');
+        self::assertSame(10, AgentToolTurnProcessor::trainingSourceTarget(
+            'something failed with the makeup brush article, fix it',
+            $sources,
+        ));
+        self::assertNull(AgentToolTurnProcessor::directToolRequest('retry the failed translations'));
+
+        $rename = AgentToolTurnProcessor::directToolRequest("rename the myntra source to 'Myntra shop (old)'");
+        self::assertSame('t3cs_save_datasource', $rename['tool'] ?? '');
+        self::assertSame('Myntra shop (old)', $rename['arguments']['name'] ?? '');
+        self::assertSame(3, AgentToolTurnProcessor::datasourceRenameTarget(
+            "rename the myntra source to 'Myntra shop (old)'",
+            $sources,
+        ));
+        self::assertNull(AgentToolTurnProcessor::directToolRequest('Rename this page to QA Gap A'));
+        self::assertFalse(AgentToolTurnProcessor::asksToRefreshADatasource('learn page 66'));
+
+        $greeting = AgentToolTurnProcessor::directToolRequest(
+            "Ändere die Begrüßung des Chatbots zu 'Hallo! Wie kann ich dir bei Make-up helfen?'",
+        );
+        self::assertSame('t3ac_chatbot_settings', $greeting['tool'] ?? '');
+        self::assertSame('update', $greeting['arguments']['operation'] ?? '');
+        self::assertStringContainsString('first_message', (string) ($greeting['arguments']['settingsJson'] ?? ''));
+        self::assertStringContainsString('Hallo! Wie kann ich dir bei Make-up helfen?', (string) ($greeting['arguments']['settingsJson'] ?? ''));
+        $tuned = AgentToolTurnProcessor::tuneChatbotArguments(
+            't3ac_chatbot_settings',
+            ['operation' => 'get', 'chatbotUid' => 4],
+            "Change the chatbot welcome message to 'Welcome to Maybelline! Ask me anything.'",
+        );
+        self::assertSame('update', $tuned['operation']);
+        self::assertStringNotContainsString('instructions', (string) $tuned['settingsJson']);
+
+        $title = AgentToolTurnProcessor::directToolRequest('Rename the chatbot to Maybelline Helper');
+        self::assertSame('t3ac_chatbot_settings', $title['tool'] ?? '');
+        self::assertStringContainsString('Maybelline Helper', (string) ($title['arguments']['settingsJson'] ?? ''));
+
+        $history = [[
+            'role' => 'assistant',
+            'content' => 'Saved.',
+            'meta' => [
+                'type' => 'tool_result',
+                'tool' => 't3ac_chatbot_settings',
+                'autoRan' => false,
+                'success' => true,
+                'recordBaseline' => ['uid' => 4, 'values' => ['title' => 'AI Chatbot']],
+            ],
+        ]];
+        $back = AgentToolTurnProcessor::directToolRequest('change it back', $history);
+        self::assertSame('t3ac_chatbot_settings', $back['tool'] ?? '');
+        self::assertSame(4, $back['arguments']['chatbotUid'] ?? 0);
+        self::assertStringContainsString('AI Chatbot', (string) ($back['arguments']['settingsJson'] ?? ''));
+        $withoutPrevious = [[
+            'role' => 'assistant',
+            'content' => 'Saved.',
+            'meta' => [
+                'type' => 'tool_result',
+                'tool' => 't3ac_chatbot_settings',
+                'autoRan' => false,
+                'success' => true,
+            ],
+        ]];
+        self::assertSame(
+            'agent.chatbot.changeBack',
+            AgentToolTurnProcessor::directToolRequest('change it back', $withoutPrevious)['ask'] ?? '',
+        );
+        self::assertNull(AgentToolTurnProcessor::directToolRequest('change it back'));
+    }
 }
