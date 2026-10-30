@@ -1098,6 +1098,9 @@
       <trans-unit id="agent.draft.toolApplied" resname="agent.draft.toolApplied">
         <source>Tool ran successfully.</source>
       </trans-unit>
+      <trans-unit id="agent.draft.searchSettingsSaved" resname="agent.draft.searchSettingsSaved">
+        <source>Search settings saved.</source>
+      </trans-unit>
       <trans-unit id="agent.draft.readback" resname="agent.draft.readback">
         <source>Written through DataHandler, then read back from the database. Workspace and publishing are untouched.</source>
       </trans-unit>

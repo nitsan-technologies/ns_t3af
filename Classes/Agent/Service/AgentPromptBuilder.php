@@ -440,6 +440,13 @@ readonly class AgentPromptBuilder
             );
         }
 
+        if (self::lastConfirmedTool($history) === 't3as_search_settings') {
+            return sprintf(
+                '[The editor confirmed "%s" and it was applied.] Reply with exactly: Search settings saved. Do not name a page or a title. Do not call any tools.',
+                $label,
+            );
+        }
+
         $requestText = self::latestUserRequestText($history);
         // An edit of existing records ("change the header of element 5") has no create step: nothing new may follow.
         // Free multi-create wording ("intro and a team section") has an empty checklist but still creates.
@@ -491,6 +498,26 @@ readonly class AgentPromptBuilder
         $reminder = self::remainingWorkReminder($history, AgentPlan::latest($history), $request);
 
         return $reminder !== '' ? $message . ' ' . $reminder : $message;
+    }
+
+    /**
+     * The tool whose confirmation was just applied, when that result is the latest one before the next request.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    private static function lastConfirmedTool(array $history): string
+    {
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            if (($history[$i]['role'] ?? '') === 'user') {
+                break;
+            }
+            if (($meta['type'] ?? '') === 'tool_result' && ($meta['autoRan'] ?? true) === false) {
+                return (string) ($meta['tool'] ?? '');
+            }
+        }
+
+        return '';
     }
 
     /**

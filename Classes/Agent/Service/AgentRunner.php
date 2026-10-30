@@ -214,6 +214,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $declinedDropped = 0;
         $failedDropped = 0;
         $state->messages = self::withoutRepeatedDeclinedDrafts($state->messages, $historyMessages, ($continuation['outcome'] ?? '') === 'declined', $declinedDropped, $failedDropped);
+        if ($continuation === []) {
+            $state->messages = self::withoutUnaskedSearchSettingsCards($state->messages, $userMessage);
+        }
         $cardDropped = $declinedDropped > 0;
 
         $state->attachPendingPlan();
@@ -853,6 +856,53 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return $kept;
+    }
+
+    /**
+     * A search-settings card is offered only when this message asks for that change.
+     * A later usage question must not repeat the card that is still waiting.
+     *
+     * @param list<array{role: string, content: string, meta: array<string, mixed>}> $messages
+     * @return list<array{role: string, content: string, meta: array<string, mixed>}>
+     */
+    public static function withoutUnaskedSearchSettingsCards(array $messages, string $userMessage): array
+    {
+        if (self::asksToChangeSearchSettings($userMessage)) {
+            return $messages;
+        }
+
+        $kept = [];
+        foreach ($messages as $message) {
+            $draft = is_array($message['meta']['draft'] ?? null) ? $message['meta']['draft'] : [];
+            $tool = (string) ($draft['tool'] ?? $message['meta']['tool'] ?? '');
+            if (($message['meta']['type'] ?? '') === 'inline_draft' && $tool === 't3as_search_settings') {
+                continue;
+            }
+            $kept[] = $message;
+        }
+
+        return $kept;
+    }
+
+    /**
+     * True when this message is about changing AI Search, including "change it back" and a widget or color change.
+     */
+    public static function asksToChangeSearchSettings(string $message): bool
+    {
+        if (preg_match('/t3as_search_settings|enableAiSearch|enable_ai_search|settingsJson/i', $message) === 1) {
+            return true;
+        }
+
+        return preg_match(
+            '/\b(?:ai[\s-]*search|search settings|sucheinstellung\w*|ki[\s-]*suche)\b'
+            . '|\b(?:change|set|put|switch|turn)\s+it\s+back\b'
+            . '|\bhow it was\b'
+            . '|\bwie es (?:war|vorher)\b'
+            . '|\br(?:ü|ue)ckg(?:ä|ae)ngig\b'
+            . '|\bwidget\b'
+            . '|\b(?:primary[\s-]?colou?r|farbe|colou?r)\b/iu',
+            $message,
+        ) === 1;
     }
 
     /**

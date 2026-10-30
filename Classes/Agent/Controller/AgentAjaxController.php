@@ -606,9 +606,14 @@ final class AgentAjaxController
             : null;
 
         $labelledResult = $this->labelReadback($result, $labelsBefore);
-        $message = ($result['toolConfirmation'] ?? false) === true
-            ? $this->translator->translate('agent.draft.toolApplied')
-            : $this->changeMessages->applied($labelledResult);
+        $appliedTool = (string) ($result['tool'] ?? '');
+        if ($appliedTool === 't3as_search_settings') {
+            $message = $this->translator->translate('agent.draft.searchSettingsSaved');
+        } elseif (($result['toolConfirmation'] ?? false) === true) {
+            $message = $this->translator->translate('agent.draft.toolApplied');
+        } else {
+            $message = $this->changeMessages->applied($labelledResult);
+        }
         // One-Apply create+attach: say the file was attached so the follow-up does not open a second card.
         $attachNote = trim((string) ($result['attachNote'] ?? ''));
         if ($attachNote !== '') {

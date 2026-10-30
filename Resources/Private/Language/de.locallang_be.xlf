@@ -1317,6 +1317,10 @@
                 <source>Tool ran successfully.</source>
                 <target>Das Tool wurde erfolgreich ausgeführt.</target>
             </trans-unit>
+            <trans-unit id="agent.draft.searchSettingsSaved">
+                <source>Search settings saved.</source>
+                <target>Sucheinstellungen gespeichert.</target>
+            </trans-unit>
             <trans-unit id="agent.draft.readback">
                 <source>Written through DataHandler, then read back from the database. Workspace and publishing are untouched.</source>
                 <target>Über den DataHandler geschrieben und anschließend aus der Datenbank zurückgelesen. Workspace und Veröffentlichung bleiben unberührt.</target>
