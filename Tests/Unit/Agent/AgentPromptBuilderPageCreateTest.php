@@ -126,6 +126,7 @@ final class AgentPromptBuilderPageCreateTest extends TestCase
         self::assertStringContainsString('After those settings are applied, say they were saved', $prompt);
         self::assertStringContainsString('The title is only the new name, not the rest of the sentence', $prompt);
         self::assertStringContainsString('call scheduler_update with that uid and the new description', $prompt);
+        self::assertStringContainsString('A data source request is not a content element', $prompt);
         self::assertStringContainsString('Providers page', $prompt);
         self::assertStringContainsString('Do not repeat a pasted key', $prompt);
     }

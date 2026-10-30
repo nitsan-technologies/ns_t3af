@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — A saved data source does not become page content
+
+**Done:** After Apply of a text or other data source, including weekly/inactive and a second Apply of the same name, the agent confirms the source. It does not open a Create Page Content card (including a Home header from the open page). `write_table` is hidden and refused for that request. The checklist is not a Text element. ClickUp: 14zervyxpzh.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — A named root, a saved text source, and a rename correction stay in place
 
 **Done:** `/t3cs_list_datasources 999999` keeps 999999 and does not list the open page's site. Apply of a text-source create that already saved that name, type, and text returns that uid. "Create a text source" is not a content-element checklist. "No, call it B" after a rename card keeps that source's uid and only the new name. ClickUp: 14zervyxjjz, 14zervyxq8n, 14zervyxqa6.
@@ -52,7 +60,7 @@
 
 ## 2026-10-30 — A scheduler description, a saved data source, and a pasted API key stay in place
 
-**Done:** `scheduler_update` of a description keeps the stored start date on MCP execute and on agent Apply (DataHandler). The card still shows only the description. The merge lives in `DataHandlerService::updateRecord`, so both write paths share it. After Apply of a data source, the continuation does not create page content. A request to switch provider with a pasted key is answered before the model: provider settings cannot be changed from the AI Agent, the key is not repeated, and stored conversation messages mask keys. ClickUp: 14zervyxjrg, 14zervyxpzh, 14zervyxqhh.
+**Done:** `scheduler_update` of a description keeps the stored start date on MCP execute and on agent Apply (DataHandler). The card still shows only the description. The merge lives in `DataHandlerService::updateRecord`, so both write paths share it. After Apply of a data source, `write_table` is hidden and refused so the continuation does not create page content. A request to switch provider with a pasted key is answered before the model: provider settings cannot be changed from the AI Agent, the key is not repeated, and stored conversation messages mask keys. ClickUp: 14zervyxjrg, 14zervyxpzh, 14zervyxqhh.
 
 **Last touched:** 2026-10-30
 

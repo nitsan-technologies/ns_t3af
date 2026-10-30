@@ -734,6 +734,14 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: the editor asked for one content element, not the whole page. Call t3ai_translate_content with contentUid of that element (content_list on the open page gives the order) and targetLanguageUid of the language named in the request.',
             );
         }
+        if (AgentRunner::isUnaskedPageContentCreate($name, $toolCall->getArguments(), $this->gateRequest())) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for a data source, not a content element or a page. Call t3cs_save_datasource. Do not create page content.',
+            );
+        }
         // "Generate a Person schema" is schema markup for a page. The model otherwise tries to create a folder or a content element.
         if (
             AgentRunner::isSchemaRequest($requestQuery)

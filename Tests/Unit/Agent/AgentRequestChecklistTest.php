@@ -44,6 +44,8 @@ final class AgentRequestChecklistTest extends TestCase
         self::assertNotSame([], AgentRequestChecklist::parse('Add a text block with our opening hours.'));
         self::assertSame([], AgentRequestChecklist::parse('Create a text source for beauty tips.'));
         self::assertSame([], AgentRequestChecklist::parse("Create a text source with the text 'Wash your face.'"));
+        self::assertSame([], AgentRequestChecklist::parse("Create an inactive text data source named 'QA Weekly R9' for root page 1 with the text 'Weekly test' that syncs once a week."));
+        self::assertSame([], AgentRequestChecklist::parse("Create an inactive text data source named 'QA Jay Tips R3' for root page 1 with the text 'Wash your face.'"));
         self::assertNotSame([], AgentRequestChecklist::parse('Create a new text element on this page.'));
     }
 

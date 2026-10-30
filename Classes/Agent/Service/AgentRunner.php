@@ -1488,6 +1488,19 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $notAskedFor['content_delete'] = true;
             $notAskedFor['t3ai_create_content_element'] = true;
         }
+        $appliedDatasource = str_starts_with(ltrim($userMessage), '[The editor confirmed')
+            && str_contains($userMessage, 'it was applied')
+            && in_array(AgentPromptBuilder::lastConfirmedTool($historyMessages), [
+                't3cs_save_datasource',
+                't3cs_sync_datasource',
+                't3cs_reset_failed_queue_item',
+            ], true)
+            && !AgentCoreToolSet::isCreateContentRequest($gateRequest);
+        if ($appliedDatasource) {
+            $notAskedFor['write_table'] = true;
+            $notAskedFor['content_delete'] = true;
+            $notAskedFor['t3ai_create_content_element'] = true;
+        }
         $newsCreate = self::isNewsCreateRequest($query);
         if (!self::asksForNewPage($query)) {
             foreach (self::PAGE_CREATE_TOOL_NAMES as $pageCreateTool) {
@@ -1852,6 +1865,10 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $names[] = 't3ai_create_content_element';
             $names[] = 'file_reference_add';
         }
+        if (self::isDatasourceOnlyRequest($query)) {
+            $names[] = 'write_table';
+            $names[] = 't3ai_create_content_element';
+        }
         if (self::isFileRecordDeleteRequest($query) || self::isMissingAltTextRequest($query) || self::isSummarizeRequest($query)) {
             $names[] = 'content_delete';
         }
@@ -1861,6 +1878,37 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return array_values(array_unique($names));
+    }
+
+    /**
+     * A data-source request that did not also ask for a content element on the page.
+     */
+    public static function isDatasourceOnlyRequest(string $query): bool
+    {
+        return AgentToolTurnProcessor::asksForADataSource($query)
+            && !AgentCoreToolSet::isCreateContentRequest($query);
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    public static function isUnaskedPageContentCreate(string $toolName, array $arguments, string $request): bool
+    {
+        if (!self::isDatasourceOnlyRequest($request)) {
+            return false;
+        }
+        if ($toolName === 't3ai_create_content_element') {
+            return true;
+        }
+        if ($toolName !== 'write_table') {
+            return false;
+        }
+        if (strtolower(trim((string) ($arguments['action'] ?? 'create'))) !== 'create') {
+            return false;
+        }
+        $table = strtolower(trim((string) ($arguments['tableName'] ?? $arguments['table'] ?? '')));
+
+        return in_array($table, ['tt_content', 'pages'], true);
     }
 
     /**

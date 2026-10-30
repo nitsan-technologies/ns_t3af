@@ -1818,6 +1818,23 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             || str_contains($text, 'textquelle');
     }
 
+    /**
+     * A knowledge-base source (text, Q&A, sitemap, PDF, web), not a page content element.
+     */
+    public static function asksForADataSource(string $text): bool
+    {
+        if (self::asksForTextDataSource($text) || self::asksForQaSource($text)) {
+            return true;
+        }
+        $lower = mb_strtolower($text);
+        if (preg_match('/\b(?:data\s*source|datasource|datenquelle|wissensquelle|knowledge(?:-|\s)?base)\b/u', $lower) === 1) {
+            return true;
+        }
+
+        return preg_match('/\b(?:sitemap|pdf|web\s*pages?|typo3\s*pages?)\b/u', $lower) === 1
+            && preg_match('/\b(?:source|quelle)\b/u', $lower) === 1;
+    }
+
     public static function asksForInactiveSource(string $text): bool
     {
         return preg_match('/\b(inactive|inaktiv)\b/iu', $text) === 1;

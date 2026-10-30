@@ -47,7 +47,7 @@ final class AgentRequestChecklist
         if (self::isFileMetadataOnlyRequest($message)) {
             return [];
         }
-        if (AgentToolTurnProcessor::asksForTextDataSource($message)) {
+        if (AgentToolTurnProcessor::asksForADataSource($message) && !AgentCoreToolSet::isCreateContentRequest($message)) {
             return [];
         }
 

@@ -806,6 +806,9 @@ final class AgentQueueSourceChoiceTest extends TestCase
             $history,
         );
 
+        self::assertTrue(AgentToolTurnProcessor::asksForADataSource("Create an inactive text data source named 'QA Weekly R9' for root page 1 with the text 'Weekly test' that syncs once a week."));
+        self::assertTrue(AgentToolTurnProcessor::asksForADataSource('Create a sitemap source for https://example.com/sitemap.xml'));
+        self::assertFalse(AgentToolTurnProcessor::asksForADataSource('Create a new text element on this page.'));
         self::assertTrue(AgentToolTurnProcessor::asksToCorrectDatasourceName("No, call it 'QA Gap B'"));
         self::assertSame(17, AgentToolTurnProcessor::openDatasourceRenameId($history));
         self::assertSame('update', $tuned['operation'] ?? '');
