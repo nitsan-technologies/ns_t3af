@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — Change it back after Apply restores the AI Search switch
+
+**Done:** Apply of `t3as_search_settings` stores `appliedSettings` from the invoke arguments or from the display rows on the card. "Change it back" inverts that switch. If Apply succeeded but `appliedSettings` is missing, the last "Turn on/off AI search" request is inverted. If nothing was saved, the agent still says there is nothing to restore. A usage question still does not repeat that card. "This week" on `t3cs_usage_analytics_summary` is period `7d` (agent bind and MCP). ClickUp: 14zervyxq5c.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — A saved data source does not become page content
 
 **Done:** After Apply of a text or other data source, including weekly/inactive and a second Apply of the same name, the agent confirms the source. It does not open a Create Page Content card (including a Home header from the open page). `write_table` is hidden and refused for that request. The checklist is not a Text element. ClickUp: 14zervyxpzh.
@@ -36,7 +44,7 @@
 
 ## 2026-10-30 — Turn on AI search is a settings card again
 
-**Done:** "Turn on AI search" and "Turn off AI search" prepare `t3as_search_settings` with `enableAiSearch`. After Apply, "change it back" writes the previous switch. If nothing was saved, the agent says there is nothing to restore. A usage question still does not repeat that card. ClickUp: 14zervyxq5c.
+**Done:** "Turn on AI search" and "Turn off AI search" prepare `t3as_search_settings` with `enableAiSearch`. After Apply, "change it back" writes the previous switch, including when the card showed display rows and when `appliedSettings` was not stored. If nothing was saved, the agent says there is nothing to restore. A usage question still does not repeat that card. ClickUp: 14zervyxq5c.
 
 **Last touched:** 2026-10-30
 

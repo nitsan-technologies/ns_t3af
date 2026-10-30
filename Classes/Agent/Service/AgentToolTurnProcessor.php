@@ -155,6 +155,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $userMessage !== '' ? $userMessage : $requestText,
             $history,
         );
+        $arguments = self::tuneUsagePeriodArguments(
+            $toolName,
+            $arguments,
+            $userMessage !== '' ? $userMessage : $requestText,
+        );
         $body['arguments'] = $arguments;
         if (in_array($toolName, ['t3as_predefined_questions_create', 't3as_list_predefined_questions'], true)) {
             $qaCreate = self::qaAnswersCreateRequest($requestText);
@@ -3152,6 +3157,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      */
     public static function previousSearchSetting(array $history): ?array
     {
+        $sawApplied = false;
         for ($index = count($history) - 1; $index >= 0; $index--) {
             $entry = $history[$index];
             if (!is_array($entry)) {
@@ -3164,23 +3170,130 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             if (($meta['autoRan'] ?? true) !== false || ($meta['success'] ?? true) === false) {
                 continue;
             }
-            $settings = $meta['appliedSettings'] ?? null;
-            if (is_string($settings)) {
-                $decoded = json_decode($settings, true);
-                $settings = is_array($decoded) ? $decoded : [];
-            }
-            if (!is_array($settings)) {
-                $settings = [];
-            }
-            $enabled = $settings['enableAiSearch'] ?? $settings['enable_ai_search'] ?? null;
+            $sawApplied = true;
+            $enabled = self::enableAiSearchFromAppliedSettings($meta['appliedSettings'] ?? null);
             if ($enabled === null) {
-                return null;
+                continue;
             }
 
-            return ['enableAiSearch' => ((int) $enabled) === 1 ? 0 : 1];
+            return ['enableAiSearch' => $enabled === 1 ? 0 : 1];
+        }
+
+        if (!$sawApplied) {
+            return null;
+        }
+
+        for ($index = count($history) - 1; $index >= 0; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || (string) ($entry['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $message = trim((string) ($entry['content'] ?? ''));
+            if (!self::isGlobalAiSearchSwitch($message)) {
+                continue;
+            }
+
+            return ['enableAiSearch' => self::globalAiSearchEnabled($message) ? 0 : 1];
         }
 
         return null;
+    }
+
+    /**
+     * @param mixed $settings
+     */
+    public static function enableAiSearchFromAppliedSettings(mixed $settings): ?int
+    {
+        if (is_string($settings) && trim($settings) !== '') {
+            $decoded = json_decode($settings, true);
+            $settings = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($settings)) {
+            return null;
+        }
+        $enabled = $settings['enableAiSearch'] ?? $settings['enable_ai_search'] ?? null;
+        if ($enabled !== null && $enabled !== '') {
+            return self::truthyEnableValue($enabled);
+        }
+        foreach ($settings as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $key = (string) ($row['key'] ?? '');
+            if ($key === 'settingsJson' || $key === 'settings_json') {
+                $fromJson = self::enableAiSearchFromAppliedSettings($row['value'] ?? null);
+                if ($fromJson !== null) {
+                    return $fromJson;
+                }
+            }
+            if ($key === 'enableAiSearch' || $key === 'enable_ai_search') {
+                $fromRow = self::truthyEnableValue($row['value'] ?? null);
+                if ($fromRow !== null) {
+                    return $fromRow;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private static function truthyEnableValue(mixed $value): ?int
+    {
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+        if (is_int($value) || is_float($value)) {
+            return ((int) $value) === 1 ? 1 : 0;
+        }
+        $text = strtolower(trim((string) $value));
+        if ($text === '') {
+            return null;
+        }
+        if (in_array($text, ['1', 'true', 'yes', 'on'], true)) {
+            return 1;
+        }
+        if (in_array($text, ['0', 'false', 'no', 'off'], true)) {
+            return 0;
+        }
+
+        return ((int) $value) === 1 ? 1 : 0;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function tuneUsagePeriodArguments(string $toolName, array $arguments, string $message): array
+    {
+        if ($toolName !== 't3cs_usage_analytics_summary') {
+            return $arguments;
+        }
+        $period = trim((string) ($arguments['period'] ?? ''));
+        $normalized = self::usagePeriodAlias($period !== '' ? $period : $message);
+        if ($normalized !== '') {
+            $arguments['period'] = $normalized;
+        }
+
+        return $arguments;
+    }
+
+    public static function usagePeriodAlias(string $text): string
+    {
+        $lower = mb_strtolower(trim($text));
+        $compact = preg_replace('/[\s\-]+/', '_', $lower) ?? $lower;
+        if ($compact === 'this_week' || $compact === 'diese_woche'
+            || preg_match('/\bthis\s+week\b|\bdiese\s+woche\b|\bthis_week\b/u', $lower) === 1
+        ) {
+            return '7d';
+        }
+
+        return match ($compact) {
+            'today', 'yesterday', '7d', '14d', '30d', 'this_month', 'last_month', 'custom' => $compact,
+            default => '',
+        };
     }
 
     /**

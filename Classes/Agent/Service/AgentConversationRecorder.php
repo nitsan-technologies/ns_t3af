@@ -111,8 +111,10 @@ final readonly class AgentConversationRecorder
                 $resultMeta['recordBaseline'] = $draft['recordBaseline'];
             }
             if ($tool === 't3as_search_settings') {
-                $arguments = is_array($draft['arguments'] ?? null) ? $draft['arguments'] : [];
-                $resultMeta['appliedSettings'] = $arguments['settingsJson'] ?? $arguments['settings_json'] ?? null;
+                $fromResult = is_array($result['arguments'] ?? null) ? $result['arguments'] : [];
+                $fromDraft = is_array($draft['arguments'] ?? null) ? $draft['arguments'] : [];
+                $resultMeta['appliedSettings'] = self::settingsJsonFromArguments($fromResult)
+                    ?? self::settingsJsonFromArguments($fromDraft);
             }
             $messages[$index] = [
                 'role' => 'assistant',
@@ -267,6 +269,80 @@ final readonly class AgentConversationRecorder
         }
 
         return $tool !== '' ? $this->editorLabelService->resolveByName($tool) : '';
+    }
+
+    /**
+     * Raw tool args, or the display rows shown on the confirmation card.
+     *
+     * @param array<string, mixed>|list<array<string, mixed>> $arguments
+     */
+    public static function settingsJsonFromArguments(array $arguments): ?string
+    {
+        $raw = $arguments['settingsJson'] ?? $arguments['settings_json'] ?? null;
+        $encoded = self::encodeSettingsJson($raw);
+        if ($encoded !== null) {
+            return $encoded;
+        }
+
+        foreach ($arguments as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $key = (string) ($row['key'] ?? '');
+            if ($key === 'settingsJson' || $key === 'settings_json') {
+                $encoded = self::encodeSettingsJson($row['value'] ?? null);
+                if ($encoded !== null) {
+                    return $encoded;
+                }
+            }
+            if ($key === 'enableAiSearch' || $key === 'enable_ai_search') {
+                $on = self::truthyEnableValue($row['value'] ?? null);
+                if ($on === null) {
+                    continue;
+                }
+                $json = json_encode(['enableAiSearch' => $on], JSON_UNESCAPED_UNICODE);
+
+                return is_string($json) ? $json : null;
+            }
+        }
+
+        return null;
+    }
+
+    private static function encodeSettingsJson(mixed $raw): ?string
+    {
+        if (is_array($raw)) {
+            $json = json_encode($raw, JSON_UNESCAPED_UNICODE);
+
+            return is_string($json) ? $json : null;
+        }
+        if (is_string($raw) && trim($raw) !== '') {
+            return $raw;
+        }
+
+        return null;
+    }
+
+    private static function truthyEnableValue(mixed $value): ?int
+    {
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+        if (is_int($value) || is_float($value)) {
+            return ((int) $value) === 1 ? 1 : 0;
+        }
+        $text = strtolower(trim((string) $value));
+        if ($text === '') {
+            return null;
+        }
+        if (in_array($text, ['1', 'true', 'yes', 'on'], true)) {
+            return 1;
+        }
+        if (in_array($text, ['0', 'false', 'no', 'off'], true)) {
+            return 0;
+        }
+
+        return null;
     }
 
     /**

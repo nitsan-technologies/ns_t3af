@@ -1349,6 +1349,7 @@ final class AgentWriteService
             'tool' => $toolName,
             'toolConfirmation' => true,
             'presentation' => $presentation,
+            'arguments' => $arguments,
         ];
     }
 }

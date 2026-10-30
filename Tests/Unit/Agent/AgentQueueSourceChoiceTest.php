@@ -771,6 +771,80 @@ final class AgentQueueSourceChoiceTest extends TestCase
                 ['role' => 'user', 'content' => 'Turn on AI search'],
             ])['ask'] ?? '',
         );
+
+        $appliedWithoutSettings = [
+            ['role' => 'user', 'content' => 'Turn on AI search'],
+            [
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3as_search_settings',
+                    'success' => true,
+                    'autoRan' => false,
+                ],
+            ],
+        ];
+        $backWithoutSettings = AgentToolTurnProcessor::directToolRequest(
+            'Change it back to how it was before.',
+            $appliedWithoutSettings,
+        );
+        self::assertSame('t3as_search_settings', $backWithoutSettings['tool'] ?? '');
+        self::assertSame(
+            0,
+            json_decode((string) ($backWithoutSettings['arguments']['settingsJson'] ?? ''), true)['enableAiSearch'] ?? null,
+        );
+
+        $displayRows = [
+            ['role' => 'user', 'content' => 'Turn on AI search'],
+            [
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3as_search_settings',
+                    'success' => true,
+                    'autoRan' => false,
+                    'appliedSettings' => [
+                        ['key' => 'settingsJson', 'value' => '{"enableAiSearch":1}'],
+                    ],
+                ],
+            ],
+        ];
+        $backFromRows = AgentToolTurnProcessor::directToolRequest('Change it back to how it was before.', $displayRows);
+        self::assertSame(
+            0,
+            json_decode((string) ($backFromRows['arguments']['settingsJson'] ?? ''), true)['enableAiSearch'] ?? null,
+        );
+
+        self::assertSame(
+            '7d',
+            AgentToolTurnProcessor::tuneUsagePeriodArguments(
+                't3cs_usage_analytics_summary',
+                ['period' => 'this week'],
+                'How many times was the chatbot used this week?',
+            )['period'] ?? '',
+        );
+        self::assertSame(
+            '7d',
+            AgentToolTurnProcessor::tuneUsagePeriodArguments(
+                't3cs_usage_analytics_summary',
+                [],
+                'How many times was the chatbot used this week?',
+            )['period'] ?? '',
+        );
+        self::assertSame('7d', AgentToolTurnProcessor::usagePeriodAlias('diese Woche'));
+        self::assertSame('this_month', AgentToolTurnProcessor::usagePeriodAlias('this_month'));
+        self::assertSame([], AgentRunner::withoutUnaskedSearchSettingsCards(
+            [[
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'inline_draft',
+                    'draft' => ['tool' => 't3as_search_settings', 'arguments' => ['operation' => 'update']],
+                ],
+            ]],
+            'How many times was the chatbot used this week?',
+        ));
     }
 
     #[Test]
