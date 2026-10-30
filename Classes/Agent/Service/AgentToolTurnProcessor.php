@@ -145,8 +145,9 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     ): array {
         $catalog = $this->permittedActionProvider->buildCatalog();
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
-        $requestText = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
-        $arguments = self::tuneChatbotArguments($toolName, $arguments, $requestText);
+        $userMessage = trim((string) ($body['userMessage'] ?? ''));
+        $requestText = $userMessage . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        $arguments = self::tuneChatbotArguments($toolName, $arguments, $userMessage !== '' ? $userMessage : $requestText);
         $body['arguments'] = $arguments;
         $syncedAll = $this->forceSyncOfEverySource($toolName, $body, $context, $user, $correlationId);
         if ($syncedAll !== null) {
@@ -2590,11 +2591,13 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($quoted !== []) {
             return $quoted[0];
         }
-        if (preg_match('/\b(?:to|zu|in)\s+(.+?)\s*$/iu', $message, $match) === 1) {
-            return trim($match[1], " .");
+        if (preg_match('/\b(?:to|zu|in)\s+(.+)/iu', $message, $match) !== 1) {
+            return '';
         }
+        $title = trim((string) $match[1], " .");
+        $title = trim((string) preg_replace('/\s+(?:rename|umbenennen|benenne)\b.*$/iu', '', $title));
 
-        return '';
+        return trim($title, " .");
     }
 
     public static function asksToChangeGreeting(string $message): bool

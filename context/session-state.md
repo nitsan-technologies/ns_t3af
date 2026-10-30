@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — A chatbot rename keeps only the new name
+
+**Done:** "Rename the chatbot to Maybelline Helper" saves the title `Maybelline Helper`. The request is not appended to the name. A quoted name stays the quoted name. "change it back" still restores the previous title. ClickUp: 14zervyxqg7.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — Applied chatbot settings are not answered as unsaved
 
 **Done:** After Apply of `t3ac_chatbot_settings`, including turning source links off, the reply is that the settings were saved. It does not say a card is still needed or that nothing was saved. ClickUp: 14zervyxr39.

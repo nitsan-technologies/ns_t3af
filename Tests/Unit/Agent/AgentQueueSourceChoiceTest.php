@@ -499,7 +499,24 @@ final class AgentQueueSourceChoiceTest extends TestCase
 
         $title = AgentToolTurnProcessor::directToolRequest('Rename the chatbot to Maybelline Helper');
         self::assertSame('t3ac_chatbot_settings', $title['tool'] ?? '');
-        self::assertStringContainsString('Maybelline Helper', (string) ($title['arguments']['settingsJson'] ?? ''));
+        self::assertSame(
+            'Maybelline Helper',
+            json_decode((string) ($title['arguments']['settingsJson'] ?? ''), true)['title'] ?? '',
+        );
+        $glued = AgentToolTurnProcessor::tuneChatbotArguments(
+            't3ac_chatbot_settings',
+            ['operation' => 'update', 'chatbotUid' => 1, 'settingsJson' => '{"title":"Maybelline Helper Rename the chatbot to Maybelline Helper"}'],
+            'Rename the chatbot to Maybelline Helper Rename the chatbot to Maybelline Helper',
+        );
+        self::assertSame(
+            'Maybelline Helper',
+            json_decode((string) ($glued['settingsJson'] ?? ''), true)['title'] ?? '',
+        );
+        $quoted = AgentToolTurnProcessor::directToolRequest("Rename the chatbot to 'Beauty Buddy'");
+        self::assertSame(
+            'Beauty Buddy',
+            json_decode((string) ($quoted['arguments']['settingsJson'] ?? ''), true)['title'] ?? '',
+        );
 
         $history = [[
             'role' => 'assistant',
