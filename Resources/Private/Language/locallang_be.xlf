@@ -2348,6 +2348,9 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.usage.summary" resname="agent.usage.summary">
         <source>Usage for %1$s: %2$s searches, %3$s chatbot messages, %4$s positive and %5$s negative feedback.</source>
       </trans-unit>
+      <trans-unit id="agent.usage.summaryRange" resname="agent.usage.summaryRange">
+        <source>Usage from %1$s to %2$s: %3$s searches, %4$s chatbot messages, %5$s positive and %6$s negative feedback.</source>
+      </trans-unit>
       <trans-unit id="agent.plan.namedTool" resname="agent.plan.namedTool">
         <source>%1$s%2$s.</source>
       </trans-unit>

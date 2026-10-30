@@ -427,4 +427,27 @@ final class AgentToolResultPresenterTest extends TestCase
         );
         self::assertSame($presented['content'], $presented['summary']);
     }
+
+    #[Test]
+    public function usageAnalyticsReadShowsTheDateRange(): void
+    {
+        $ai = $this->createMock(AiServiceInterface::class);
+        $ai->expects(self::never())->method('complete');
+        $presented = $this->createPresenter($ai)->present('t3cs_usage_analytics_summary', [
+            'period' => 'this_month',
+            'periodFrom' => '2026-10-01',
+            'periodTo' => '2026-10-30',
+            'totalSearchCount' => 12,
+            'totalChatCount' => 22,
+            'feedbackPositiveCount' => 3,
+            'feedbackNegativeCount' => 1,
+        ], true);
+
+        self::assertSame(
+            'Usage from 2026-10-01 to 2026-10-30: 12 searches, 22 chatbot messages, 3 positive and 1 negative feedback.',
+            $presented['content'],
+        );
+        self::assertStringNotContainsString('July', $presented['content']);
+        self::assertStringNotContainsString('August', $presented['content']);
+    }
 }

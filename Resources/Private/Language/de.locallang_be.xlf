@@ -2985,6 +2985,10 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <source>Usage for %1$s: %2$s searches, %3$s chatbot messages, %4$s positive and %5$s negative feedback.</source>
                 <target>Nutzung für %1$s: %2$s Suchen, %3$s Chatbot-Nachrichten, %4$s positives und %5$s negatives Feedback.</target>
             </trans-unit>
+            <trans-unit id="agent.usage.summaryRange">
+                <source>Usage from %1$s to %2$s: %3$s searches, %4$s chatbot messages, %5$s positive and %6$s negative feedback.</source>
+                <target>Nutzung von %1$s bis %2$s: %3$s Suchen, %4$s Chatbot-Nachrichten, %5$s positives und %6$s negatives Feedback.</target>
+            </trans-unit>
             <trans-unit id="agent.plan.namedTool">
                 <source>%1$s%2$s.</source>
                 <target>%1$s%2$s.</target>

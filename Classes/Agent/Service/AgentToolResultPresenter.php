@@ -888,6 +888,23 @@ final readonly class AgentToolResultPresenter
         if (!is_array($details) || isset($details['error'])) {
             return null;
         }
+        $searches = (int) ($details['totalSearchCount'] ?? 0);
+        $chats = (int) ($details['totalChatCount'] ?? 0);
+        $positive = (int) ($details['feedbackPositiveCount'] ?? 0);
+        $negative = (int) ($details['feedbackNegativeCount'] ?? 0);
+        $from = trim((string) ($details['periodFrom'] ?? ''));
+        $to = trim((string) ($details['periodTo'] ?? ''));
+        if ($from !== '' && $to !== '') {
+            return $this->translator->translate('agent.usage.summaryRange', [
+                $from,
+                $to,
+                $searches,
+                $chats,
+                $positive,
+                $negative,
+            ]);
+        }
+
         $period = trim((string) ($details['period'] ?? ''));
         if ($period === '') {
             $period = 'this period';
@@ -895,10 +912,10 @@ final readonly class AgentToolResultPresenter
 
         return $this->translator->translate('agent.usage.summary', [
             $period,
-            (int) ($details['totalSearchCount'] ?? 0),
-            (int) ($details['totalChatCount'] ?? 0),
-            (int) ($details['feedbackPositiveCount'] ?? 0),
-            (int) ($details['feedbackNegativeCount'] ?? 0),
+            $searches,
+            $chats,
+            $positive,
+            $negative,
         ]);
     }
 
