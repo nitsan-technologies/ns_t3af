@@ -2889,6 +2889,14 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <source>The agent cannot delete data sources. You can still list them. Remove a data source in the AI Chatbot/Search module, on the Data Sources tab.</source>
                 <target>Der Agent kann Datenquellen nicht löschen. Sie können sie weiterhin auflisten. Entfernen Sie eine Datenquelle im Modul AI Chatbot/Search auf der Registerkarte Data Sources.</target>
             </trans-unit>
+            <trans-unit id="agent.datasource.invalidUrl">
+                <source>That address is not a valid http or https URL. No data source was created.</source>
+                <target>Diese Adresse ist keine gültige http- oder https-URL. Es wurde keine Datenquelle angelegt.</target>
+            </trans-unit>
+            <trans-unit id="agent.datasource.whichPage">
+                <source>Name the page the chatbot and search should learn. It will be added as a TYPO3 pages data source.</source>
+                <target>Nennen Sie die Seite, die Chatbot und Suche lernen sollen. Sie wird als TYPO3-Seiten-Datenquelle hinzugefügt.</target>
+            </trans-unit>
             <trans-unit id="agent.result.queueTruncated">
                 <source>%1$s items match. The first %2$s are shown.</source>
                 <target>%1$s Einträge passen. Die ersten %2$s werden angezeigt.</target>

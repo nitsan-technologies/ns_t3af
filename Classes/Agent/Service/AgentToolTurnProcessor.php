@@ -780,6 +780,12 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if (self::asksToDeleteDataSources($requestText)) {
             return $this->cannotDeleteDataSourcesTurn($correlationId);
         }
+        if ($toolName === 't3cs_save_datasource') {
+            $adjusted = $this->applyDatasourceCreateAdjustment($body, $requestText, $correlationId);
+            if ($adjusted !== null) {
+                return $adjusted;
+            }
+        }
         $detour = $this->chatbotSettingsDetour($toolName, $body, $catalog, $correlationId);
         if ($detour !== null) {
             return $detour;
@@ -1266,6 +1272,193 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return false;
+    }
+
+    /**
+     * A URL request must not become an invented Q&A source. A named TYPO3 page must not either,
+     * unless the editor asked for a Q&A or FAQ source.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array{action: string, url?: string, pageId?: int}
+     */
+    public static function datasourceCreateAdjustment(string $text, array $arguments): array
+    {
+        $operation = strtolower(trim((string) ($arguments['operation'] ?? 'create')));
+        if ($operation !== '' && $operation !== 'create') {
+            return ['action' => 'keep'];
+        }
+        if (self::asksForQaSource($text)) {
+            return ['action' => 'keep'];
+        }
+        $type = strtolower(trim((string) ($arguments['type'] ?? '')));
+        if (self::invalidUrlNamedInText($text)) {
+            return ['action' => 'invalid_url'];
+        }
+        $typeValue = trim((string) ($arguments['typeValue'] ?? $arguments['type_value'] ?? ''));
+        if ($type === 'web_pages' && $typeValue !== '' && !self::looksLikeWebAddress($typeValue)) {
+            return ['action' => 'invalid_url'];
+        }
+        $url = self::httpUrlInText($text);
+        if ($url !== null && $type === 'qa') {
+            return ['action' => 'web_pages', 'url' => $url];
+        }
+        if ($type === 'qa' && self::asksToTrainAPage($text)) {
+            $pageId = self::contentPageIdInText($text);
+            if ($pageId > 0) {
+                return ['action' => 'typo3_pages', 'pageId' => $pageId];
+            }
+
+            return ['action' => 'ask_page'];
+        }
+
+        return ['action' => 'keep'];
+    }
+
+    public static function asksForQaSource(string $text): bool
+    {
+        $text = mb_strtolower($text);
+        foreach (['q&a', 'q & a', 'faq', 'question and answer', 'questions and answers', 'fragen und antworten'] as $phrase) {
+            if (str_contains($text, $phrase)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static function invalidUrlNamedInText(string $text): bool
+    {
+        if (preg_match_all('/\burl\s*[:=]?\s*([^\s,;]+)/iu', $text, $matches) < 1) {
+            return false;
+        }
+        foreach ($matches[1] as $token) {
+            $token = trim((string) $token, " \t\n\r\0\x0B.\"'");
+            if ($token === '') {
+                continue;
+            }
+            $lower = mb_strtolower($token);
+            if (!str_starts_with($lower, 'http://') && !str_starts_with($lower, 'https://')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static function httpUrlInText(string $text): ?string
+    {
+        if (preg_match('#https?://[^\s,;\'"<>]+#i', $text, $match) !== 1) {
+            return null;
+        }
+
+        return rtrim($match[0], '.');
+    }
+
+    public static function asksToTrainAPage(string $text): bool
+    {
+        $text = mb_strtolower($text);
+        if (self::asksForQaSource($text) || self::httpUrlInText($text) !== null) {
+            return false;
+        }
+        if (str_contains($text, 'web page') || str_contains($text, 'webseite')) {
+            return false;
+        }
+        $aboutPage = str_contains($text, 'page') || str_contains($text, 'seite');
+        $aboutTraining = str_contains($text, 'chatbot') || str_contains($text, 'search') || str_contains($text, 'suche');
+
+        return $aboutPage && $aboutTraining;
+    }
+
+    public static function contentPageIdInText(string $text): int
+    {
+        if (preg_match_all('/\b((?:root\s+)?)(page|seite)\s+(?:id\s+)?(\d+)\b/iu', $text, $matches, PREG_SET_ORDER) < 1) {
+            return 0;
+        }
+        $pageId = 0;
+        foreach ($matches as $match) {
+            if (trim((string) ($match[1] ?? '')) !== '') {
+                continue;
+            }
+            $pageId = (int) ($match[3] ?? 0);
+        }
+
+        return $pageId;
+    }
+
+    public static function looksLikeWebAddress(string $value): bool
+    {
+        $value = trim($value);
+        if (str_starts_with($value, 'singlePage:1|')) {
+            $value = trim(substr($value, 13));
+        }
+        if (str_contains($value, '*')) {
+            $value = trim(explode('*', $value, 2)[0] ?? '');
+            if ($value !== '' && !str_ends_with($value, '/')) {
+                $value .= '/';
+            }
+        }
+        if (filter_var($value, FILTER_VALIDATE_URL) === false) {
+            return false;
+        }
+        $scheme = parse_url($value, PHP_URL_SCHEME);
+
+        return $scheme === 'http' || $scheme === 'https';
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function applyDatasourceCreateAdjustment(array &$body, string $requestText, string $correlationId): ?array
+    {
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $adjustment = self::datasourceCreateAdjustment($requestText, $arguments);
+        if ($adjustment['action'] === 'invalid_url') {
+            return $this->datasourceSentenceTurn($correlationId, 'agent.datasource.invalidUrl', 'That address is not a valid http or https URL. No data source was created.');
+        }
+        if ($adjustment['action'] === 'ask_page') {
+            return $this->datasourceSentenceTurn($correlationId, 'agent.datasource.whichPage', 'Name the page the chatbot and search should learn. It will be added as a TYPO3 pages data source.');
+        }
+        if ($adjustment['action'] === 'web_pages') {
+            $url = (string) ($adjustment['url'] ?? '');
+            $arguments['type'] = 'web_pages';
+            $arguments['typeValue'] = $url;
+            unset($arguments['qaPairs'], $arguments['qa_pairs']);
+            $path = parse_url($url, PHP_URL_PATH);
+            if (is_string($path) && $path !== '' && $path !== '/') {
+                $arguments['singlePage'] = 1;
+            }
+            $body['arguments'] = $arguments;
+        }
+        if ($adjustment['action'] === 'typo3_pages') {
+            $arguments['type'] = 'typo3_pages';
+            $arguments['typeValue'] = (string) ($adjustment['pageId'] ?? 0);
+            unset($arguments['qaPairs'], $arguments['qa_pairs']);
+            $body['arguments'] = $arguments;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{role: string, content: string, meta: array<string, mixed>}
+     */
+    private function datasourceSentenceTurn(string $correlationId, string $label, string $fallback): array
+    {
+        $sentence = $this->translator->translate($label);
+        if ($sentence === '' || $sentence === $label) {
+            $sentence = $fallback;
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $sentence,
+            'meta' => [
+                'type' => 'info',
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
     }
 
     public static function asksForChatbotSettings(string $text): bool

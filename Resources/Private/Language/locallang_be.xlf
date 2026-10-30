@@ -2276,6 +2276,12 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.datasource.cannotDelete" resname="agent.datasource.cannotDelete">
         <source>The agent cannot delete data sources. You can still list them. Remove a data source in the AI Chatbot/Search module, on the Data Sources tab.</source>
       </trans-unit>
+      <trans-unit id="agent.datasource.invalidUrl" resname="agent.datasource.invalidUrl">
+        <source>That address is not a valid http or https URL. No data source was created.</source>
+      </trans-unit>
+      <trans-unit id="agent.datasource.whichPage" resname="agent.datasource.whichPage">
+        <source>Name the page the chatbot and search should learn. It will be added as a TYPO3 pages data source.</source>
+      </trans-unit>
       <trans-unit id="agent.result.queueTruncated" resname="agent.result.queueTruncated">
         <source>%1$s items match. The first %2$s are shown.</source>
       </trans-unit>

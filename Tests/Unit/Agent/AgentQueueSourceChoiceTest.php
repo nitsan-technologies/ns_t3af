@@ -133,6 +133,37 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertFalse(AgentToolTurnProcessor::asksToDeleteDataSources('list all my data sources'));
         self::assertFalse(AgentToolTurnProcessor::asksToDeleteDataSources('delete this page'));
         self::assertFalse(AgentToolTurnProcessor::asksToDeleteDataSources('remove the failed items from this data source'));
+        self::assertSame('invalid_url', AgentToolTurnProcessor::datasourceCreateAdjustment(
+            "Create a web page data source named 'QA Bad URL' for root page 1 with the URL not-a-url.",
+            ['operation' => 'create', 'type' => 'qa', 'qaPairs' => '[{"q":"What happens?","a":"An error."}]'],
+        )['action']);
+        self::assertSame('web_pages', AgentToolTurnProcessor::datasourceCreateAdjustment(
+            'teach our search about this article https://en.wikipedia.org/wiki/TYPO3 - only for the search',
+            ['operation' => 'create', 'type' => 'qa'],
+        )['action']);
+        self::assertSame(
+            'https://en.wikipedia.org/wiki/TYPO3',
+            AgentToolTurnProcessor::datasourceCreateAdjustment(
+                'teach our search about this article https://en.wikipedia.org/wiki/TYPO3',
+                ['operation' => 'create', 'type' => 'qa'],
+            )['url'] ?? null,
+        );
+        self::assertSame('keep', AgentToolTurnProcessor::datasourceCreateAdjustment(
+            'Add an FAQ about opening hours. The answer can link to https://example.com/hours',
+            ['operation' => 'create', 'type' => 'qa'],
+        )['action']);
+        self::assertSame('ask_page', AgentToolTurnProcessor::datasourceCreateAdjustment(
+            'yes the Summer Offers page. both chatbot and search pls',
+            ['operation' => 'create', 'type' => 'qa'],
+        )['action']);
+        self::assertSame(66, AgentToolTurnProcessor::datasourceCreateAdjustment(
+            'make sure the chatbot and the search know about page 66',
+            ['operation' => 'create', 'type' => 'qa'],
+        )['pageId'] ?? null);
+        self::assertSame('keep', AgentToolTurnProcessor::datasourceCreateAdjustment(
+            'teach our search about this article https://en.wikipedia.org/wiki/TYPO3',
+            ['operation' => 'update', 'type' => 'qa', 'dataId' => 15],
+        )['action']);
     }
 
     #[Test]
