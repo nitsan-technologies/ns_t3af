@@ -876,12 +876,10 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
         $history = is_array($body['conversationHistory'] ?? null) ? $body['conversationHistory'] : [];
         $text = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
-        $pronoun = self::refersToThatSource($text);
-        $failedCreate = self::latestSaveFailed($history);
         $scopeAll = $toolName === 't3cs_sync_datasource' && strtolower(trim((string) ($arguments['scope'] ?? 'one'))) === 'all';
         $dataId = (int) ($arguments['dataId'] ?? 0);
 
-        if ($failedCreate && ($pronoun || ($scopeAll && $pronoun))) {
+        if (self::blocksFollowUpOfFailedCreate($text, $history)) {
             return $this->queueNotice($this->translator->translate('agent.source.notCreated'), $correlationId);
         }
         // Sync scope and a named source are resolved next. An unknown id is checked there,
@@ -890,7 +888,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return null;
         }
 
-        return $dataId > 0 ? $this->unknownSourceTurn($dataId, $context, $correlationId, $failedCreate && $pronoun) : null;
+        return $dataId > 0 ? $this->unknownSourceTurn($dataId, $context, $correlationId, self::blocksFollowUpOfFailedCreate($text, $history)) : null;
     }
 
     /**
@@ -1255,8 +1253,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 continue;
             }
             $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
-            if ((string) ($meta['tool'] ?? '') !== 't3cs_save_datasource') {
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            $tool = (string) ($meta['tool'] ?? '');
+            if ($tool === '') {
+                $tool = (string) ($draft['tool'] ?? '');
+            }
+            if ($tool !== 't3cs_save_datasource') {
                 continue;
+            }
+            if (($draft['failed'] ?? false) === true) {
+                return true;
             }
             if (($meta['success'] ?? true) === false || ($meta['type'] ?? '') === 'error') {
                 return true;
@@ -1266,6 +1272,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return false;
+    }
+
+    /**
+     * "Sync that one" after a create that was not saved must not pick another source.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function blocksFollowUpOfFailedCreate(string $text, array $history): bool
+    {
+        return self::refersToThatSource($text) && self::latestSaveFailed($history);
     }
 
     public static function refersToThatSource(string $text): bool

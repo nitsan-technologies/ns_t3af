@@ -872,11 +872,20 @@ export const draftMethods = {
       } catch (error) {
         draft.applying = false;
         const { text, retryable } = await errorDetails(error);
+        const failedTool = String(draft.tool ?? message.meta?.tool ?? '');
         if (retryable) {
-          this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
+          const failedMeta = { type: 'error', success: false };
+          if (failedTool !== '') {
+            failedMeta.tool = failedTool;
+          }
+          this.messages.push({ role: 'assistant', content: text, meta: failedMeta });
         } else {
           draft.failed = true;
           draft.failureMessage = text;
+          if (failedTool !== '') {
+            message.meta.tool = failedTool;
+          }
+          message.meta.success = false;
           this.announce(text);
         }
         this.renderStream();

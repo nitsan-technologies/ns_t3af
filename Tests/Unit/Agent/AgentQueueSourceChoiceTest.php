@@ -122,6 +122,35 @@ final class AgentQueueSourceChoiceTest extends TestCase
             'role' => 'assistant',
             'meta' => ['tool' => 't3cs_save_datasource', 'type' => 'tool_result', 'success' => true],
         ]]));
+        $failedApply = [[
+            'role' => 'assistant',
+            'meta' => [
+                'type' => 'inline_draft',
+                'tool' => 't3cs_save_datasource',
+                'draft' => ['tool' => 't3cs_save_datasource', 'applied' => false],
+            ],
+        ], [
+            'role' => 'assistant',
+            'content' => 'The change could not be saved: The URL returned an error (HTTP 404).',
+            'meta' => ['type' => 'error', 'tool' => 't3cs_save_datasource', 'success' => false],
+        ]];
+        self::assertTrue(AgentToolTurnProcessor::latestSaveFailed($failedApply));
+        self::assertTrue(AgentToolTurnProcessor::blocksFollowUpOfFailedCreate('Sync that one now', $failedApply));
+        self::assertTrue(AgentToolTurnProcessor::latestSaveFailed([[
+            'role' => 'assistant',
+            'meta' => [
+                'type' => 'inline_draft',
+                'tool' => 't3cs_save_datasource',
+                'draft' => ['tool' => 't3cs_save_datasource', 'failed' => true, 'failureMessage' => 'The URL returned an error (HTTP 404).'],
+            ],
+        ]]));
+        self::assertFalse(AgentToolTurnProcessor::blocksFollowUpOfFailedCreate('Sync the Asus source', $failedApply));
+        self::assertSame(8, AgentToolTurnProcessor::namedSyncDecision(
+            'Sync that one now',
+            [['uid' => 8, 'name' => 'Asus', 'type' => 'sitemap']],
+            'one',
+            8,
+        )['dataId']);
         self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings('Show the AI Chatbot settings for chatbot 1'));
         self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings('chatbot settings?'));
         self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings('Rename the chatbot to Maybelline Helper'));
