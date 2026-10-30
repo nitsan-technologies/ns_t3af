@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — Search setting values in the agent prompt
+
+**Done:** The agent prompt tells the model the search-form limits for `t3as_search_settings` (colour, questionsLimit 3/5/10, position, offset 5–500, host names, true/false). A refused value is said as the tool message. The setting is not described as saved.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-20 — Symfony AI 0.14
 
 **Done:** Raised Symfony AI constraints to `^0.14` (`symfony/ai-agent` `~0.14.0`). Locked platform and agent at 0.14.1 and the bundled bridges plus store at 0.14.0. Agent tool search accepts `VectorDocumentInterface` from the store query results.

@@ -259,4 +259,4 @@ composer stan
 ```
 
 Manual: File module → “list images missing alt text” → **List images missing alt text** header, count + examples, no duplicate facts block. Hard-refresh backend JS after `agent.js` changes.
-- Write tools can implement `McpArgumentCheckInterface::checkArguments()`: `AgentToolPlanResolver` calls it before a card is built; an `\InvalidArgumentException` goes back to the model (no card), e.g. unknown setting names in `t3ac_chatbot_settings` / `t3as_search_settings`.
+- Write tools can implement `McpArgumentCheckInterface::checkArguments()`: `AgentToolPlanResolver` calls it before a card is built; an `\InvalidArgumentException` goes back to the model (no card), e.g. unknown setting names in `t3ac_chatbot_settings` / `t3as_search_settings`. A `t3as_search_settings` value the search form would not save (colour, limit, position, offset, domain, or switch) is refused the same way, and nothing is written. The prompt tells the model those limits.

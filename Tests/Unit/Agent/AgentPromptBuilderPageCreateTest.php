@@ -57,6 +57,16 @@ final class AgentPromptBuilderPageCreateTest extends TestCase
     }
 
     #[Test]
+    public function aSearchSettingUsesTheFormValues(): void
+    {
+        $prompt = $this->prompt();
+
+        self::assertStringContainsString('questionsLimit is 3, 5, or 10', $prompt);
+        self::assertStringContainsString('allowedDomains is host names such as example.com', $prompt);
+        self::assertStringContainsString('Do not claim the setting was saved', $prompt);
+    }
+
+    #[Test]
     public function aContentAnalysisIsAReportThatChangesNothing(): void
     {
         $prompt = $this->prompt();
