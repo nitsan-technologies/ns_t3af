@@ -2267,6 +2267,9 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.source.notCreated" resname="agent.source.notCreated">
         <source>The data source was not created, so there is nothing to change.</source>
       </trans-unit>
+      <trans-unit id="agent.source.listed" resname="agent.source.listed">
+        <source>%1$s is a %2$s data source, data id %3$s.</source>
+      </trans-unit>
       <trans-unit id="agent.source.notFound" resname="agent.source.notFound">
         <source>Data source %1$s was not found.</source>
       </trans-unit>

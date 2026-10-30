@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — Follow-up after a data source was not created
+
+**Done:** "Activate it" or "sync that one" after a failed data-source create is answered before the model runs, so it cannot become the Mass SEO scheduler or a card for another source. "Sync all my data sources" is scope all. "The second one" after the data-source list is that row, not a page translation. "No" and "nein" cancel an open card. ClickUp: 14zervyxpjf.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — Search setting values in the agent prompt
 
 **Done:** The agent prompt tells the model the search-form limits for `t3as_search_settings` (colour, questionsLimit 3/5/10, position, offset 5–500, host names, true/false). A refused value is said as the tool message. The setting is not described as saved.

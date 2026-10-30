@@ -535,6 +535,8 @@ final class AgentRunnerTest extends TestCase
         ]];
 
         self::assertSame('agent.draft.clickApply', AgentRunner::openDraftFollowUp('yes do it', $history)['label'] ?? null);
+        self::assertTrue(AgentRunner::openDraftFollowUp('no', $history)['discard'] ?? false);
+        self::assertTrue(AgentRunner::openDraftFollowUp('nein', $history)['discard'] ?? false);
         self::assertSame('d1', AgentRunner::openDraftFollowUp('never mind, go back', $history)['draftId'] ?? null);
         self::assertTrue(AgentRunner::openDraftFollowUp('never mind, go back', $history)['discard'] ?? false);
         self::assertNull(AgentRunner::openDraftFollowUp('never mind, create a page about cats instead', $history));

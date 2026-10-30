@@ -136,6 +136,7 @@ final class AgentQueueSourceChoiceTest extends TestCase
         ]];
         self::assertTrue(AgentToolTurnProcessor::latestSaveFailed($failedApply));
         self::assertTrue(AgentToolTurnProcessor::blocksFollowUpOfFailedCreate('Sync that one now', $failedApply));
+        self::assertTrue(AgentToolTurnProcessor::blocksFollowUpOfFailedCreate('Now activate it.', $failedApply));
         self::assertTrue(AgentToolTurnProcessor::latestSaveFailed([[
             'role' => 'assistant',
             'meta' => [
@@ -276,6 +277,51 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertSame('keep', $decision['action']);
         self::assertSame('all', $decision['scope']);
         self::assertSame(0, $decision['dataId']);
+    }
+
+    #[Test]
+    public function allMyDataSourcesIsScopeAll(): void
+    {
+        $decision = AgentToolTurnProcessor::namedSyncDecision(
+            'Request a sync of all my data sources on root page 1 (only changed pages).',
+            [
+                ['uid' => 1, 'name' => 'Sitemap', 'type' => 'sitemap'],
+                ['uid' => 9, 'name' => 'Single Web Pages', 'type' => 'web_pages'],
+            ],
+            'one',
+            0,
+        );
+
+        self::assertSame('keep', $decision['action']);
+        self::assertSame('all', $decision['scope']);
+        self::assertSame(0, $decision['dataId']);
+        self::assertFalse(AgentToolTurnProcessor::askedForEverySource('List all my data sources'));
+    }
+
+    #[Test]
+    public function theSecondListedSourceIsThatUid(): void
+    {
+        $sources = [
+            ['uid' => 1, 'name' => 'QA Gap Queue Source', 'type' => 'qa'],
+            ['uid' => 9, 'name' => 'Single Web Pages', 'type' => 'web_pages'],
+        ];
+        $history = [[
+            'role' => 'assistant',
+            'meta' => [
+                'type' => 'tool_result',
+                'tool' => 't3cs_list_datasources',
+                'success' => true,
+                'details' => ['datasources' => $sources],
+            ],
+        ]];
+
+        self::assertSame(9, AgentToolTurnProcessor::sourceUidFromOrdinal('Tell me more about the second one', $sources));
+        self::assertSame(9, AgentToolTurnProcessor::sourceUidFromOrdinal('Tell me more about the second one', AgentToolTurnProcessor::datasourcesInLatestList($history)));
+        self::assertSame(0, AgentToolTurnProcessor::sourceUidFromOrdinal('Tell me more about the second page', $sources));
+        self::assertSame([], AgentToolTurnProcessor::datasourcesInLatestList([[
+            'role' => 'assistant',
+            'meta' => ['type' => 'tool_result', 'tool' => 'pages_get', 'success' => true, 'details' => ['uid' => 48]],
+        ]]));
     }
 
     #[Test]

@@ -131,6 +131,38 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                     'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
                 ]);
             }
+            if (AgentToolTurnProcessor::blocksFollowUpOfFailedCreate($userMessage, $historyMessages)) {
+                $sentence = $this->translator->translate('agent.source.notCreated');
+                if ($sentence === '' || $sentence === 'agent.source.notCreated') {
+                    $sentence = 'The data source was not created, so there is nothing to change.';
+                }
+
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $sentence,
+                    'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ]);
+            }
+            $listedSource = self::listedSourceFromOrdinal($userMessage, $historyMessages);
+            if ($listedSource !== null) {
+                $sentence = $this->translator->translate('agent.source.listed', [
+                    $listedSource['name'],
+                    $listedSource['type'],
+                    (string) $listedSource['uid'],
+                ]);
+                if ($sentence === '' || $sentence === 'agent.source.listed') {
+                    $sentence = $listedSource['name'] . ' is a ' . $listedSource['type'] . ' data source, data id ' . $listedSource['uid'] . '.';
+                }
+                if ($listedSource['detail'] !== '') {
+                    $sentence .= ' ' . $listedSource['detail'];
+                }
+
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $sentence,
+                    'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ]);
+            }
             $openDraft = self::openDraftFollowUp($userMessage, $historyMessages);
             if ($openDraft !== null) {
                 return $this->single($emitEvent, [
@@ -2313,6 +2345,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             'lass es',
             'forget it',
             'doch nicht',
+            'no',
+            'nein',
         ], true);
     }
 
@@ -2338,6 +2372,47 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return false;
+    }
+
+    /**
+     * "The second one" after the data-source list. A sync or activate of that row is not answered here.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array{name: string, type: string, uid: int, detail: string}|null
+     */
+    private static function listedSourceFromOrdinal(string $message, array $history): ?array
+    {
+        if (AgentToolTurnProcessor::changesADatasource($message)) {
+            return null;
+        }
+        $sources = AgentToolTurnProcessor::datasourcesInLatestList($history);
+        $uid = AgentToolTurnProcessor::sourceUidFromOrdinal($message, $sources);
+        if ($uid <= 0) {
+            return null;
+        }
+        foreach ($sources as $source) {
+            $name = trim((string) ($source['name'] ?? ''));
+            $type = trim((string) ($source['type'] ?? ''));
+            if ((int) ($source['uid'] ?? 0) !== $uid) {
+                continue;
+            }
+            $detail = trim((string) ($source['description'] ?? ''));
+            if ($detail === '') {
+                $detail = trim((string) ($source['typeValuePreview'] ?? ''));
+            }
+            if (mb_strlen($detail) > 240) {
+                $detail = mb_substr($detail, 0, 237) . '...';
+            }
+
+            return [
+                'name' => $name !== '' ? $name : 'Data source',
+                'type' => $type !== '' ? $type : 'data',
+                'uid' => $uid,
+                'detail' => $detail,
+            ];
+        }
+
+        return null;
     }
 
     private static function plainReply(string $message): string

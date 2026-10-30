@@ -145,6 +145,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     ): array {
         $catalog = $this->permittedActionProvider->buildCatalog();
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $syncedAll = $this->forceSyncOfEverySource($toolName, $body, $context, $user, $correlationId);
+        if ($syncedAll !== null) {
+            return $syncedAll;
+        }
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : $arguments;
         if ($toolName === 't3aa_get_file_metadata') {
             $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
             $arguments = self::withChosenFile($arguments, self::openQuestionMeta($history), trim((string) ($body['userMessage'] ?? '')));
@@ -907,6 +912,15 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return null;
         }
         $text = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        $history = is_array($body['conversationHistory'] ?? null) ? $body['conversationHistory'] : [];
+        $ordinalUid = self::sourceUidFromOrdinal($text, self::datasourcesInLatestList($history));
+        if ($ordinalUid > 0) {
+            $arguments['scope'] = 'one';
+            $arguments['dataId'] = $ordinalUid;
+            $body['arguments'] = $arguments;
+
+            return null;
+        }
         $decision = self::namedSyncDecision(
             $text,
             $sources,
@@ -1629,10 +1643,13 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
-     * Words that mean every source on the site, not one named source.
+     * A request to sync every source. A list of every source is not a sync.
      */
     public static function askedForEverySource(string $text): bool
     {
+        if (preg_match('/\b(?:sync|synchronis\w*)\b/iu', $text) !== 1) {
+            return false;
+        }
         $text = mb_strtolower($text);
         foreach ([
             'all sources',
@@ -1651,9 +1668,132 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 return true;
             }
         }
+        if (preg_match('/\b(?:all|every|alle)\b(?:\s+\p{L}+){0,3}\s+(?:data\s+)?(?:sources|source|datenquellen|quellen)\b/u', $text) === 1) {
+            return true;
+        }
 
         return preg_match('/\bsync all\b/u', $text) === 1
             && preg_match('/\b(sitemap|pdf|faq|q&a)\b/u', $text) !== 1;
+    }
+
+    /**
+     * "The second one" after a data-source list is that row, not a page translation.
+     * "The second page" stays a page.
+     *
+     * @param list<array<string, mixed>> $sources
+     */
+    public static function sourceUidFromOrdinal(string $text, array $sources): int
+    {
+        if (preg_match('/\b(?:first|second|third|fourth|fifth|\d(?:st|nd|rd|th)|erste\w*|zweite\w*|dritte\w*|vierte\w*|fünfte\w*|fuenfte\w*)\s+(?:page|seite)\b/iu', $text) === 1) {
+            return 0;
+        }
+        $index = self::listOrdinalIndex($text);
+        if ($index === null) {
+            return 0;
+        }
+        $rows = [];
+        foreach ($sources as $source) {
+            if (is_array($source) && (int) ($source['uid'] ?? 0) > 0) {
+                $rows[] = $source;
+            }
+        }
+
+        return (int) ($rows[$index]['uid'] ?? 0);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @return list<array<string, mixed>>
+     */
+    public static function datasourcesInLatestList(array $history): array
+    {
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $entry = $history[$i];
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($meta['type'] ?? '') !== 'tool_result') {
+                continue;
+            }
+            if (($meta['tool'] ?? '') !== 't3cs_list_datasources' || ($meta['success'] ?? true) === false) {
+                return [];
+            }
+            $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+            $rows = is_array($details['datasources'] ?? null) ? $details['datasources'] : [];
+            $sources = [];
+            foreach ($rows as $row) {
+                if (is_array($row) && (int) ($row['uid'] ?? 0) > 0) {
+                    $sources[] = $row;
+                }
+            }
+
+            return $sources;
+        }
+
+        return [];
+    }
+
+    /**
+     * Sync, activate, or save. A question about the listed source is not one of these.
+     */
+    public static function changesADatasource(string $text): bool
+    {
+        return preg_match('/\b(?:sync|synchronis\w*|activate|aktivier\w*|update|save|speicher\w*)\b/iu', $text) === 1;
+    }
+
+    private static function listOrdinalIndex(string $text): ?int
+    {
+        $text = mb_strtolower(trim($text));
+        if (preg_match('/\b(?:first|1st|erste[rnms]?|erster)\b/u', $text) === 1) {
+            return 0;
+        }
+        if (preg_match('/\b(?:second|2nd|zweite[rnms]?)\b/u', $text) === 1) {
+            return 1;
+        }
+        if (preg_match('/\b(?:third|3rd|dritte[rnms]?)\b/u', $text) === 1) {
+            return 2;
+        }
+        if (preg_match('/\b(?:fourth|4th|vierte[rnms]?)\b/u', $text) === 1) {
+            return 3;
+        }
+        if (preg_match('/\b(?:fifth|5th|fünfte[rnms]?|fuenfte[rnms]?)\b/u', $text) === 1) {
+            return 4;
+        }
+
+        return null;
+    }
+
+    /**
+     * "Sync all of my data sources" is one card for every source, even when the model asks which one.
+     *
+     * @param array<string, mixed> $body
+     * @param array<string, mixed> $context
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function forceSyncOfEverySource(
+        string $toolName,
+        array &$body,
+        array $context,
+        BackendUserAuthentication $user,
+        string $correlationId,
+    ): ?array {
+        $text = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        if (!self::askedForEverySource($text)) {
+            return null;
+        }
+        if (!in_array($toolName, ['ask_clarification', 't3cs_list_datasources', 't3cs_sync_datasource'], true)) {
+            return null;
+        }
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $arguments['scope'] = 'all';
+        unset($arguments['dataId'], $arguments['question'], $arguments['options']);
+        $body['arguments'] = $arguments;
+        if ($toolName === 't3cs_sync_datasource') {
+            return null;
+        }
+
+        return $this->execute('t3cs_sync_datasource', $context, $body, $user, $correlationId);
     }
 
     /**

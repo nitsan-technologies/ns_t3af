@@ -57,6 +57,16 @@ final class AgentPromptBuilderPageCreateTest extends TestCase
     }
 
     #[Test]
+    public function aFailedDataSourceCreateIsNotAPageFollowUp(): void
+    {
+        $prompt = $this->prompt();
+
+        self::assertStringContainsString('do not talk about the SEO scheduler', $prompt);
+        self::assertStringContainsString('not a translation of this page', $prompt);
+        self::assertStringContainsString('scope all and do not ask which source', $prompt);
+    }
+
+    #[Test]
     public function aSearchSettingUsesTheFormValues(): void
     {
         $prompt = $this->prompt();

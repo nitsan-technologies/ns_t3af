@@ -2877,6 +2877,10 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <source>The data source was not created, so there is nothing to change.</source>
                 <target>Die Datenquelle wurde nicht angelegt, daher gibt es nichts zu ändern.</target>
             </trans-unit>
+            <trans-unit id="agent.source.listed">
+                <source>%1$s is a %2$s data source, data id %3$s.</source>
+                <target>%1$s ist eine Datenquelle vom Typ %2$s, Daten-ID %3$s.</target>
+            </trans-unit>
             <trans-unit id="agent.source.notFound">
                 <source>Data source %1$s was not found.</source>
                 <target>Datenquelle %1$s wurde nicht gefunden.</target>
