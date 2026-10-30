@@ -164,6 +164,18 @@ final class AgentQueueSourceChoiceTest extends TestCase
             'teach our search about this article https://en.wikipedia.org/wiki/TYPO3',
             ['operation' => 'update', 'type' => 'qa', 'dataId' => 15],
         )['action']);
+        $textSource = AgentToolTurnProcessor::datasourceCreateAdjustment(
+            "Create an inactive text data source 'QA Gap Multi' with the text 'multi test' for root page 1.",
+            ['operation' => 'create', 'type' => 'qa'],
+        );
+        self::assertSame('text', $textSource['action']);
+        self::assertSame('multi test', $textSource['text'] ?? null);
+        self::assertTrue($textSource['inactive'] ?? false);
+        self::assertSame(
+            'QA RUALL FAQ',
+            AgentToolTurnProcessor::addedAnswersTarget('Add these answers to QA RUALL FAQ'),
+        );
+        self::assertNull(AgentToolTurnProcessor::addedAnswersTarget('Add a suggested search question about opening hours'));
     }
 
     #[Test]

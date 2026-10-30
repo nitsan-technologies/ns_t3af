@@ -786,6 +786,12 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 return $adjusted;
             }
         }
+        if ($toolName === 't3as_predefined_questions_create') {
+            $answerTarget = self::addedAnswersTarget($requestText);
+            if ($answerTarget !== null) {
+                return $this->answersBelongOnSourceTurn($correlationId, $answerTarget);
+            }
+        }
         $detour = $this->chatbotSettingsDetour($toolName, $body, $catalog, $correlationId);
         if ($detour !== null) {
             return $detour;
@@ -1287,10 +1293,17 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($operation !== '' && $operation !== 'create') {
             return ['action' => 'keep'];
         }
+        $type = strtolower(trim((string) ($arguments['type'] ?? '')));
+        if (self::asksForTextDataSource($text) && ($type === 'qa' || $type === '')) {
+            return [
+                'action' => 'text',
+                'text' => self::textBodyInRequest($text),
+                'inactive' => self::asksForInactiveSource($text),
+            ];
+        }
         if (self::asksForQaSource($text)) {
             return ['action' => 'keep'];
         }
-        $type = strtolower(trim((string) ($arguments['type'] ?? '')));
         if (self::invalidUrlNamedInText($text)) {
             return ['action' => 'invalid_url'];
         }
@@ -1312,6 +1325,49 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return ['action' => 'keep'];
+    }
+
+    /**
+     * Answers for a named data source are not a suggested search question.
+     * Null when the editor asked for a suggested question. An empty string means the source name was not given.
+     */
+    public static function addedAnswersTarget(string $text): ?string
+    {
+        $lower = mb_strtolower($text);
+        if (preg_match('/suggested|predefined|vorgeschlag|search question/u', $lower) === 1) {
+            return null;
+        }
+        if (!str_contains($lower, 'add these answers') && !str_contains($lower, 'add the answers') && !str_contains($lower, 'diese antworten')) {
+            return null;
+        }
+        if (preg_match('/\bto\s+(.+)$/iu', trim($text), $match) === 1) {
+            return trim((string) $match[1], " \t.\"'");
+        }
+
+        return '';
+    }
+
+    public static function asksForTextDataSource(string $text): bool
+    {
+        $text = mb_strtolower($text);
+
+        return str_contains($text, 'text data source')
+            || str_contains($text, 'text datasource')
+            || str_contains($text, 'textdatenquelle');
+    }
+
+    public static function asksForInactiveSource(string $text): bool
+    {
+        return preg_match('/\b(inactive|inaktiv)\b/iu', $text) === 1;
+    }
+
+    public static function textBodyInRequest(string $text): string
+    {
+        if (preg_match("/with the text\\s+['\"]([^'\"]+)['\"]/iu", $text, $match) === 1) {
+            return trim((string) $match[1]);
+        }
+
+        return '';
     }
 
     public static function asksForQaSource(string $text): bool
@@ -1436,8 +1492,48 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             unset($arguments['qaPairs'], $arguments['qa_pairs']);
             $body['arguments'] = $arguments;
         }
+        if ($adjustment['action'] === 'text') {
+            $arguments['type'] = 'text';
+            $textBody = trim((string) ($adjustment['text'] ?? ''));
+            if ($textBody !== '') {
+                $arguments['typeValue'] = $textBody;
+            }
+            unset($arguments['qaPairs'], $arguments['qa_pairs']);
+            if (($adjustment['inactive'] ?? false) === true) {
+                $arguments['activate'] = 0;
+            }
+            $body['arguments'] = $arguments;
+        }
 
         return null;
+    }
+
+    /**
+     * @return array{role: string, content: string, meta: array<string, mixed>}
+     */
+    private function answersBelongOnSourceTurn(string $correlationId, string $sourceName): array
+    {
+        $sourceName = trim($sourceName);
+        if ($sourceName !== '') {
+            $sentence = $this->translator->translate('agent.datasource.answersOnSource', [$sourceName]);
+            $fallback = 'Those answers belong on the Q&A data source ' . $sourceName . '. They were not added as a suggested search question.';
+        } else {
+            $sentence = $this->translator->translate('agent.datasource.answersOnSourceUnnamed');
+            $fallback = 'Those answers belong on the Q&A data source. They were not added as a suggested search question.';
+        }
+        if ($sentence === '' || str_starts_with($sentence, 'agent.datasource.answersOnSource')) {
+            $sentence = $fallback;
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $sentence,
+            'meta' => [
+                'type' => 'info',
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
     }
 
     /**
