@@ -197,6 +197,45 @@ final class AgentQueueSourceChoiceTest extends TestCase
         ));
         self::assertFalse(AgentToolTurnProcessor::shouldForceChatbotSettingsCard($continuationText, $appliedHistory, []));
         self::assertTrue(AgentToolTurnProcessor::shouldForceChatbotSettingsCard($sourceLinksOff, [], []));
+        $maxLinks = "show at most 3 links under the bot's answers";
+        $maxHistory = [
+            ['role' => 'user', 'content' => $maxLinks],
+            [
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3ac_chatbot_settings', 'success' => true, 'autoRan' => false],
+            ],
+        ];
+        $maxContinuation = '[The editor confirmed "Change chatbot settings" and it was applied.] My request was: "' . $maxLinks . '".';
+        self::assertFalse(AgentToolTurnProcessor::shouldForceChatbotSettingsCard(
+            $maxContinuation,
+            $maxHistory,
+            [],
+            ['outcome' => 'applied'],
+        ));
+        $makeItTwo = [
+            ['role' => 'user', 'content' => $maxLinks],
+            [
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3ac_chatbot_settings', 'success' => true, 'autoRan' => false],
+            ],
+            ['role' => 'user', 'content' => 'make it 2 actually'],
+            [
+                'role' => 'assistant',
+                'content' => 'Saved.',
+                'meta' => ['type' => 'tool_result', 'tool' => 't3ac_chatbot_settings', 'success' => true, 'autoRan' => false],
+            ],
+        ];
+        self::assertFalse(AgentToolTurnProcessor::shouldForceChatbotSettingsCard(
+            '[The editor confirmed "Change chatbot settings" and it was applied.] My request was: "make it 2 actually".',
+            $makeItTwo,
+            [],
+            ['outcome' => 'applied'],
+        ));
+        self::assertTrue(AgentToolTurnProcessor::shouldForceChatbotSettingsCard('make it 2 actually', [
+            ['role' => 'user', 'content' => $maxLinks],
+        ], []));
         $colour = 'make the search look more like our brand, use pink #e6007e as the main colour';
         $kept = AgentRunner::searchSettingsArgumentsForRequest([
             'settingsJson' => '{"primaryColor":"#e6007e","secondaryColor":"#ffffff","textColor":"#ffffff","widgetAppearance":"light","widgetMode":"sidebar","enableAiSearch":1,"instructions":"Be pink."}',

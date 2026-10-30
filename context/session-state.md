@@ -12,7 +12,7 @@
 
 ## 2026-10-30 — Applied chatbot settings are not answered as unsaved
 
-**Done:** After Apply of `t3ac_chatbot_settings`, including turning source links off, the reply is that the settings were saved. It does not say a card is still needed or that nothing was saved. ClickUp: 14zervyxr39.
+**Done:** After Apply of `t3ac_chatbot_settings`, including turning source links off, "show at most 3 links under the bot's answers", and "make it 2 actually", the reply is that the settings were saved. It does not say a card is still needed or that nothing was saved. ClickUp: 14zervyxr39, 14zervyxr2r.
 
 **Last touched:** 2026-10-30
 

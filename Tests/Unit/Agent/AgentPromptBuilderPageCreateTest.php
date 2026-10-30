@@ -117,6 +117,7 @@ final class AgentPromptBuilderPageCreateTest extends TestCase
         self::assertStringContainsString('A main colour is primaryColor and nothing else', $prompt);
         self::assertStringContainsString('answer_in_visitor_language', $prompt);
         self::assertStringContainsString('Make it 2', $prompt);
+        self::assertStringContainsString('Show at most 3 links under the bot\'s answers', $prompt);
         self::assertStringContainsString('After those settings are applied, say they were saved', $prompt);
         self::assertStringContainsString('The title is only the new name, not the rest of the sentence', $prompt);
         self::assertStringContainsString('call scheduler_update with that uid and the new description', $prompt);
