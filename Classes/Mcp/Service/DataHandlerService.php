@@ -28,6 +28,7 @@ use const JSON_THROW_ON_ERROR;
 use NITSAN\NsT3AF\Mcp\Authentication\McpBackendUserAuthentication;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
+use NITSAN\NsT3AF\Mcp\Tool\Scheduler\SchedulerUpdateTool;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -141,6 +142,16 @@ readonly class DataHandlerService
             }
 
             $this->recordService->assertRecordExists($table, $uid);
+
+            // Agent Apply sends only the fields on the card. The scheduler validator still
+            // requires a start date, so a description-only write keeps the stored schedule.
+            if ($table === 'tx_scheduler_task') {
+                $existing = BackendUtility::getRecord($table, $uid) ?? [];
+                $fields = SchedulerUpdateTool::withExistingSchedule(
+                    $fields,
+                    is_array($existing) ? $existing : [],
+                );
+            }
 
             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
             $dataHandler->start([$table => [$uid => $fields]], []);

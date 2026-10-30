@@ -44,7 +44,7 @@
 
 ## 2026-10-30 — A scheduler description, a saved data source, and a pasted API key stay in place
 
-**Done:** `scheduler_update` of a description keeps the stored start date. After Apply of a data source, the continuation does not create page content. A request to switch provider with a pasted key is answered before the model: provider settings cannot be changed from the AI Agent, the key is not repeated, and stored conversation messages mask keys. ClickUp: 14zervyxjrg, 14zervyxpzh, 14zervyxqhh.
+**Done:** `scheduler_update` of a description keeps the stored start date on MCP execute and on agent Apply (DataHandler). The card still shows only the description. After Apply of a data source, the continuation does not create page content. A request to switch provider with a pasted key is answered before the model: provider settings cannot be changed from the AI Agent, the key is not repeated, and stored conversation messages mask keys. ClickUp: 14zervyxjrg, 14zervyxpzh, 14zervyxqhh.
 
 **Last touched:** 2026-10-30
 

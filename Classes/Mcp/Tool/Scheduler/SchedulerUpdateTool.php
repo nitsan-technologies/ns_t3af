@@ -115,9 +115,18 @@ readonly class SchedulerUpdateTool implements McpNonAiToolInterface, McpPlannabl
      */
     public static function withExistingSchedule(array $fields, array $existing): array
     {
-        if (!array_key_exists('execution_details', $fields) && array_key_exists('execution_details', $existing)) {
-            $fields['execution_details'] = $existing['execution_details'];
+        if (array_key_exists('execution_details', $fields) || !array_key_exists('execution_details', $existing)) {
+            return $fields;
         }
+        $details = $existing['execution_details'];
+        if (is_string($details) && $details !== '') {
+            try {
+                $decoded = json_decode($details, true, 512, JSON_THROW_ON_ERROR);
+                $details = is_array($decoded) ? $decoded : $details;
+            } catch (\JsonException) {
+            }
+        }
+        $fields['execution_details'] = $details;
 
         return $fields;
     }
