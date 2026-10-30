@@ -4,7 +4,7 @@
 
 ## 2026-10-30 — PHPStan list and phpdoc mismatches
 
-**Done:** Conversation history, chatbot items, and datasource rows are normalized to a list of maps before list-typed helpers. A confirmation baseline field list is `array_values` so PHPStan sees a list. Misplaced or missing phpdocs (`findExistingUids`, presenter lines, session methods, findTool) are on the methods they describe. Dashboard and queue-source tests pass the declared shapes.
+**Done:** Conversation history, chatbot items, and datasource rows are normalized to a list of maps before list-typed helpers. Confirmation baseline `fields` is built like the chatbot path: iterate unknown `$arguments` through `datasourceColumn()`, append to a list. Do not `foreach` `DATASOURCE_ARGUMENT_COLUMNS` (PHPStan unrolls it into non-list shapes) and do not wrap with `array_values()` (`arrayValues.list`). Misplaced or missing phpdocs (`findExistingUids`, presenter lines, session methods, findTool) are on the methods they describe. Dashboard and queue-source tests pass the declared shapes.
 
 **Last touched:** 2026-10-30
 

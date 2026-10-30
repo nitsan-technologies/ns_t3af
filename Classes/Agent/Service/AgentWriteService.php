@@ -60,7 +60,11 @@ final class AgentWriteService
 
     private const CHATBOT_TABLE = 'tx_nst3ac_domain_model_chatbot';
 
-    /** Argument name to the column a data-source update writes. */
+    /**
+     * Argument name to the column a data-source update writes.
+     *
+     * @var array<string, string>
+     */
     private const DATASOURCE_ARGUMENT_COLUMNS = [
         'name' => 'name',
         'description' => 'description',
@@ -260,13 +264,14 @@ final class AgentWriteService
                 return null;
             }
             $fields = [];
-            foreach (self::DATASOURCE_ARGUMENT_COLUMNS as $argument => $column) {
-                if (array_key_exists($argument, $arguments) && !in_array($column, $fields, true)) {
+            foreach (array_keys($arguments) as $argument) {
+                $column = self::datasourceColumn((string) $argument);
+                if ($column !== null && !in_array($column, $fields, true)) {
                     $fields[] = $column;
                 }
             }
 
-            return $fields === [] ? null : ['table' => self::DATASOURCE_TABLE, 'uid' => $uid, 'fields' => array_values($fields)];
+            return $fields === [] ? null : ['table' => self::DATASOURCE_TABLE, 'uid' => $uid, 'fields' => $fields];
         }
         if ($toolName !== 't3ac_chatbot_settings') {
             return null;
@@ -295,6 +300,11 @@ final class AgentWriteService
         }
 
         return $fields === [] ? null : ['table' => self::CHATBOT_TABLE, 'uid' => $uid, 'fields' => $fields];
+    }
+
+    private static function datasourceColumn(string $argument): ?string
+    {
+        return self::DATASOURCE_ARGUMENT_COLUMNS[$argument] ?? null;
     }
 
     private static function chatbotColumn(string $key): ?string
