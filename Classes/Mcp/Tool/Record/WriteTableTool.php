@@ -119,7 +119,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             throw new \InvalidArgumentException(
                 RecordAccessGate::isBackendAuthTable($tableName)
                     ? RecordAccessGate::backendAuthWriteDeniedMessage()
-                    : 'You are not allowed to change this kind of record with your backend account.'
+                    : 'You are not allowed to change this kind of record with your backend account.',
             );
         }
 
@@ -200,7 +200,7 @@ readonly class WriteTableTool implements McpNonAiToolInterface, McpPlannableTool
             return $this->encodeError(
                 RecordAccessGate::isBackendAuthTable($tableName)
                     ? RecordAccessGate::backendAuthWriteDeniedMessage()
-                    : 'Permission denied: tables_modify on ' . $tableName
+                    : 'Permission denied: tables_modify on ' . $tableName,
             );
         }
 
