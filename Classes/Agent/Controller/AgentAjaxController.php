@@ -1066,7 +1066,12 @@ final class AgentAjaxController
 
         $latest = AgentRestoreRequest::latestAppliedChange($messages);
         if ($latest === null) {
-            return $this->restoreReply($messages, $this->undoButtonHint());
+            return $this->restoreReply(
+                $messages,
+                AgentRestoreRequest::conversationHasChange($messages)
+                    ? $this->undoButtonHint()
+                    : $this->nothingChangedReply(),
+            );
         }
         if ($latest['undoable'] === false) {
             return $this->restoreReply($messages, $this->cannotUndoReply());
@@ -1123,6 +1128,16 @@ final class AgentAjaxController
         $hint = $this->translator->translate('agent.undo.useButton');
         if ($hint === '' || $hint === 'agent.undo.useButton') {
             return 'Use the Undo button on the applied change to put the old text back.';
+        }
+
+        return $hint;
+    }
+
+    private function nothingChangedReply(): string
+    {
+        $hint = $this->translator->translate('agent.undo.nothingChanged');
+        if ($hint === '' || $hint === 'agent.undo.nothingChanged') {
+            return 'Nothing was changed, so there is nothing to undo.';
         }
 
         return $hint;

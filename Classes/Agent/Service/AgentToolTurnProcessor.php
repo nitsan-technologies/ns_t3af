@@ -1622,7 +1622,169 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             || str_contains($text, 'chatbot-einstellungen')
             || str_contains($text, 'chatbot einstellungen')
             || str_contains($text, 'einstellungen des chatbots')
-            || str_contains($text, 'einstellungen für den chatbot');
+            || str_contains($text, 'einstellungen für den chatbot')
+            || self::messageChangesChatbotBehavior($text);
+    }
+
+    /**
+     * Links under the website bot, its visitor language, or a rule for that bot.
+     * A data-source request is not one of these.
+     */
+    public static function messageChangesChatbotBehavior(string $text): bool
+    {
+        $text = mb_strtolower($text);
+        if (str_contains($text, 'data source') || str_contains($text, 'datasource') || str_contains($text, 'datenquelle')) {
+            return false;
+        }
+        if (preg_match('/\b(?:source\s+links?|links?\s+under\s+(?:the\s+)?(?:bot|chatbot|answers))\b/u', $text) === 1) {
+            return true;
+        }
+        if (
+            preg_match('/\b(?:at most|maximum of|maximum|höchstens|hoechstens|maximal)\s+\d+\s+links?\b/u', $text) === 1
+            && (str_contains($text, 'bot') || str_contains($text, 'answer'))
+        ) {
+            return true;
+        }
+        if (
+            preg_match('/\b(?:visitor(?:\'s|s)?|besucher\w*)\s+(?:language|sprache)\b/u', $text) === 1
+            && !str_contains($text, 'search')
+            && !str_contains($text, 'suche')
+        ) {
+            return true;
+        }
+        if (preg_match('/\b(?:tell|ask)\s+the\s+bot\b|\bdem\s+bot\s+(?:sagen|erklären|erklaeren)\b/u', $text) === 1) {
+            return true;
+        }
+
+        return preg_match('/\b(?:never|do not|don\'t|nicht)\b.{0,50}\b(?:recommend|empfehl)/u', $text) === 1
+            && (str_contains($text, 'bot') || str_contains($text, 'chatbot'));
+    }
+
+    /**
+     * A chatbot behaviour change, including "make it 2" after a source-link request.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function asksToChangeChatbotBehavior(string $message, array $history): bool
+    {
+        if (self::messageChangesChatbotBehavior($message)) {
+            return true;
+        }
+        if (!self::historyConcernsChatbotLinks($history)) {
+            return false;
+        }
+
+        return preg_match('/\b(?:make it|set it to|change it to|mach(?:e)? es)\s+\d+\b/iu', $message) === 1;
+    }
+
+    /**
+     * "Is that active now?" after a chatbot change that was not saved.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function unappliedChatbotStatusQuestion(string $message, array $history): bool
+    {
+        if (preg_match('/\b(?:is that|is it|ist das|ist es)\b.{0,40}\b(?:active|aktiv)\b|\bactive now\b|\bjetzt aktiv\b/iu', $message) !== 1) {
+            return false;
+        }
+        if (!self::historyConcernsChatbot($history)) {
+            return false;
+        }
+
+        return !self::chatbotSettingsWereApplied($history);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $messages
+     */
+    public static function chatbotReplyMissesTheCard(array $messages): bool
+    {
+        foreach ($messages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
+            if (($meta['type'] ?? '') === 'clarification') {
+                return false;
+            }
+            $tool = (string) ($meta['tool'] ?? '');
+            if ($tool === 't3ac_chatbot_settings' || $tool === 't3ac_chatbot_settings_get' || $tool === 'ask_clarification') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    private static function historyConcernsChatbotLinks(array $history): bool
+    {
+        foreach (array_slice($history, -6) as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $text = mb_strtolower((string) ($message['content'] ?? ''));
+            if (str_contains($text, 'source link') || str_contains($text, 'links under') || str_contains($text, 'max source')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    private static function historyConcernsChatbot(array $history): bool
+    {
+        foreach (array_slice($history, -8) as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            if (self::messageChangesChatbotBehavior((string) ($message['content'] ?? ''))) {
+                return true;
+            }
+            $tool = (string) (($message['meta']['tool'] ?? ''));
+            if ($tool === 't3ac_chatbot_settings' || $tool === 't3ac_chatbot_settings_get') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * An applied chatbot update after the latest behaviour request.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    private static function chatbotSettingsWereApplied(array $history): bool
+    {
+        $lastRequest = -1;
+        foreach ($history as $index => $message) {
+            if (!is_array($message) || ($message['role'] ?? '') !== 'user') {
+                continue;
+            }
+            if (self::messageChangesChatbotBehavior((string) ($message['content'] ?? ''))) {
+                $lastRequest = $index;
+            }
+        }
+        foreach ($history as $index => $message) {
+            if ($index <= $lastRequest || !is_array($message)) {
+                continue;
+            }
+            $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
+            if (($meta['tool'] ?? '') !== 't3ac_chatbot_settings') {
+                continue;
+            }
+            if (($meta['success'] ?? false) === true && ($meta['autoRan'] ?? true) === false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -2698,6 +2860,13 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             if (is_array($options) && $parsedGlossaryPair === null) {
                 return $this->glossaryLanguageQuestion(array_values(array_filter($options, 'is_string')), $correlationId);
             }
+        }
+
+        if (strtolower($toolName) === 't3as_search_settings') {
+            $arguments = AgentRunner::searchSettingsArgumentsForRequest(
+                $arguments,
+                $requestQuery !== '' ? $requestQuery : $gateRequest,
+            );
         }
 
         try {

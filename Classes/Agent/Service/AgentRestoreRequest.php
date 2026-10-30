@@ -77,6 +77,26 @@ final class AgentRestoreRequest
     }
 
     /**
+     * True when this conversation already applied a change, including one that was undone.
+     *
+     * @param list<array<string, mixed>> $messages
+     */
+    public static function conversationHasChange(array $messages): bool
+    {
+        foreach ($messages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $meta = $message['meta'] ?? null;
+            if (is_array($meta) && trim((string) ($meta['changeId'] ?? '')) !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * The newest applied change that still offers Undo.
      *
      * @param list<array<string, mixed>> $messages

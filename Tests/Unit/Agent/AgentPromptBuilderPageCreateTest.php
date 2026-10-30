@@ -114,6 +114,9 @@ final class AgentPromptBuilderPageCreateTest extends TestCase
         self::assertStringContainsString('questionsLimit is 3, 5, or 10', $prompt);
         self::assertStringContainsString('allowedDomains is host names such as example.com', $prompt);
         self::assertStringContainsString('Do not claim the setting was saved', $prompt);
+        self::assertStringContainsString('A main colour is primaryColor and nothing else', $prompt);
+        self::assertStringContainsString('answer_in_visitor_language', $prompt);
+        self::assertStringContainsString('Make it 2', $prompt);
     }
 
     #[Test]

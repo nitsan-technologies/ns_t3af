@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Agent;
 
+use NITSAN\NsT3AF\Agent\Service\AgentRunner;
 use NITSAN\NsT3AF\Agent\Service\AgentToolTurnProcessor;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -157,6 +158,40 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings('Rename the chatbot to Maybelline Helper'));
         self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings("Change the title of AI chatbot 1 to 'QA Deep Chatbot'."));
         self::assertFalse(AgentToolTurnProcessor::asksForChatbotSettings('List the chatbot data sources'));
+        self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings("show at most 3 links under the bot's answers"));
+        self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings('turn off the source links under the chatbot answers'));
+        self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings("answer in the visitor's language"));
+        self::assertTrue(AgentToolTurnProcessor::asksForChatbotSettings('tell the bot to never recommend other brands'));
+        self::assertFalse(AgentToolTurnProcessor::asksForChatbotSettings('make search answer in the visitor\'s language'));
+        self::assertTrue(AgentToolTurnProcessor::asksToChangeChatbotBehavior('make it 2 actually', [[
+            'role' => 'user',
+            'content' => "show at most 3 links under the bot's answers",
+        ]]));
+        self::assertTrue(AgentToolTurnProcessor::unappliedChatbotStatusQuestion('so is that active now?', [[
+            'role' => 'user',
+            'content' => 'tell the bot to never recommend other brands',
+        ]]));
+        self::assertFalse(AgentToolTurnProcessor::unappliedChatbotStatusQuestion('so is that active now?', [[
+            'role' => 'user',
+            'content' => 'tell the bot to never recommend other brands',
+        ], [
+            'role' => 'assistant',
+            'content' => 'Chatbot settings saved.',
+            'meta' => ['tool' => 't3ac_chatbot_settings', 'success' => true, 'autoRan' => false],
+        ]]));
+        $colour = 'make the search look more like our brand, use pink #e6007e as the main colour';
+        $kept = AgentRunner::searchSettingsArgumentsForRequest([
+            'settingsJson' => '{"primaryColor":"#e6007e","secondaryColor":"#ffffff","textColor":"#ffffff","widgetAppearance":"light","widgetMode":"sidebar","enableAiSearch":1,"instructions":"Be pink."}',
+        ], $colour);
+        $decoded = json_decode((string) $kept['settingsJson'], true);
+        self::assertSame(['primaryColor' => '#e6007e'], $decoded);
+        $withSwitch = AgentRunner::searchSettingsArgumentsForRequest([
+            'settingsJson' => '{"primaryColor":"#e6007e","enableAiSearch":true}',
+        ], 'turn on AI search and use pink #e6007e as the main colour');
+        self::assertSame(
+            ['primaryColor' => '#e6007e', 'enableAiSearch' => true],
+            json_decode((string) $withSwitch['settingsJson'], true),
+        );
         self::assertTrue(AgentToolTurnProcessor::chatbotSettingsNeedLicenceMessage('Rename the chatbot to Maybelline Helper', true));
         self::assertFalse(AgentToolTurnProcessor::chatbotSettingsNeedLicenceMessage('Rename the chatbot to Maybelline Helper', false));
         self::assertTrue(AgentToolTurnProcessor::asksToDeleteDataSources('delete all my data sources'));

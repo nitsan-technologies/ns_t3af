@@ -131,6 +131,18 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                     'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
                 ]);
             }
+            if (AgentToolTurnProcessor::unappliedChatbotStatusQuestion($userMessage, $historyMessages)) {
+                $sentence = $this->translator->translate('agent.chatbot.notSaved');
+                if ($sentence === '' || $sentence === 'agent.chatbot.notSaved') {
+                    $sentence = 'No. That chatbot setting was not saved.';
+                }
+
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $sentence,
+                    'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ]);
+            }
             if (AgentToolTurnProcessor::blocksFollowUpOfFailedCreate($userMessage, $historyMessages)) {
                 $sentence = $this->translator->translate('agent.source.notCreated');
                 if ($sentence === '' || $sentence === 'agent.source.notCreated') {
@@ -191,7 +203,7 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
 
         $catalog = $this->actionCatalog->buildCatalog();
         if ($continuation === []) {
-            $lockedChatbotReply = $this->lockedChatbotReply($userMessage, $catalog, $correlationId);
+            $lockedChatbotReply = $this->lockedChatbotReply($userMessage, $historyMessages, $catalog, $correlationId);
             if ($lockedChatbotReply !== null) {
                 return $this->single($emitEvent, $lockedChatbotReply);
             }
@@ -628,6 +640,29 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             if (self::asksToSyncDatasource($userMessage) && self::claimsUnbackedSync($finalText, $state->messages)) {
                 $finalText = $this->translator->translate('agent.sync.notRun');
             }
+            if (
+                AgentToolTurnProcessor::asksToChangeChatbotBehavior($userMessage, $historyMessages)
+                && AgentToolTurnProcessor::chatbotReplyMissesTheCard($state->messages)
+                && !$state->isPaused()
+                && !$state->failed
+                && !$state->isCancelled()
+            ) {
+                if (!$retried) {
+                    $nudge = $userMessage . "\n\n[System: This is a chatbot setting. Call t3ac_chatbot_settings. Links under the bot's answers are enable_sources_links and max_source_links. Answering in the visitor's language is answer_in_visitor_language. A rule for the website bot is instructions. Do not invent a menu path, do not say the setting is already active, and do not ask which data source to sync.]";
+                    $retryPlan = $state->plan !== [] ? $state->plan : $plan;
+                    $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan, $requestForChecklist))->getResult();
+                    $content = $agentResult->getContent();
+                    $retryText = is_string($content) ? trim($content) : '';
+                    $finalText = AgentPromptBuilder::isCardHistoryEcho($retryText) ? '' : $retryText;
+                    $retried = true;
+                }
+                if (AgentToolTurnProcessor::chatbotReplyMissesTheCard($state->messages)) {
+                    $sentence = $this->translator->translate('agent.chatbot.needsCard');
+                    $finalText = $sentence === '' || $sentence === 'agent.chatbot.needsCard'
+                        ? 'That needs a chatbot settings card. Nothing was saved.'
+                        : $sentence;
+                }
+            }
         } catch (MaxIterationsExceededException) {
             $state->addMessage([
                 'role' => 'assistant',
@@ -938,6 +973,104 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * A colour request keeps the colour that was named. Other search fields stay only when the
+     * editor named them, so Apply cannot save a switch or an instruction that was not asked for.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function searchSettingsArgumentsForRequest(array $arguments, string $message): array
+    {
+        $named = self::namedSearchSettingFields($message);
+        if ($named === []) {
+            return $arguments;
+        }
+        $key = array_key_exists('settingsJson', $arguments)
+            ? 'settingsJson'
+            : (array_key_exists('settings_json', $arguments) ? 'settings_json' : null);
+        if ($key === null) {
+            return $arguments;
+        }
+        $decoded = $arguments[$key];
+        if (is_string($decoded)) {
+            try {
+                $decoded = json_decode($decoded, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                return $arguments;
+            }
+        }
+        if (!is_array($decoded) || $decoded === [] || array_is_list($decoded)) {
+            return $arguments;
+        }
+        $filtered = [];
+        foreach ($decoded as $field => $value) {
+            if (in_array(self::searchFieldName((string) $field), $named, true)) {
+                $filtered[$field] = $value;
+            }
+        }
+        if ($filtered === []) {
+            return $arguments;
+        }
+        $arguments[$key] = json_encode($filtered, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        return $arguments;
+    }
+
+    /**
+     * Search fields the editor named. Empty when this message does not name one.
+     *
+     * @return list<string>
+     */
+    public static function namedSearchSettingFields(string $message): array
+    {
+        $fields = [];
+        $secondary = preg_match('/\bsecondary\s+colou?r\b|\bsekund(?:ä|ae)rfarbe\b/iu', $message) === 1;
+        $text = preg_match('/\btext\s+colou?r\b|\bschriftfarbe\b|\bwhite\s+text\b/iu', $message) === 1;
+        $primary = preg_match('/\b(?:main|primary|brand)\s+colou?r\b|\b(?:haupt|prim(?:ä|ae)r|marken)farbe\b/iu', $message) === 1;
+        $colour = preg_match('/\bcolou?rs?\b|\bfarbe[n]?\b|#[0-9a-f]{3,8}\b/iu', $message) === 1;
+        if ($primary || ($colour && !$secondary && !$text)) {
+            $fields[] = 'primary_color';
+        }
+        if ($secondary) {
+            $fields[] = 'secondary_color';
+        }
+        if ($text) {
+            $fields[] = 'text_color';
+        }
+        if (
+            preg_match('/\b(?:turn\s+(?:it\s+)?(?:on|off)|enable|disable|switch\s+(?:on|off)|aktivieren|deaktivieren)\b/iu', $message) === 1
+            && preg_match('/\b(?:ai[\s-]*search|ki[\s-]*suche)\b/iu', $message) === 1
+        ) {
+            $fields[] = 'enable_ai_search';
+        }
+        if (preg_match('/\binstructions?\b|\banweisungen\b/iu', $message) === 1) {
+            $fields[] = 'instructions';
+        }
+        if (preg_match('/\bappearance\b|\berscheinungsbild\b|\b(?:light|dark)\s+(?:mode|appearance|theme)\b/iu', $message) === 1) {
+            $fields[] = 'widget_appearance';
+        }
+        if (preg_match('/\bwidget\s+mode\b|\bmodal-box\b|\bsidebar\b/iu', $message) === 1) {
+            $fields[] = 'widget_mode';
+        }
+        if (preg_match('/\bloader\b/iu', $message) === 1) {
+            $fields[] = 'loader_type';
+        }
+        if (preg_match('/\bborder[\s-]*radius\b/iu', $message) === 1) {
+            $fields[] = 'border_radius';
+        }
+        if (preg_match('/\bsearch\s+engine\b|\bsolr\b/iu', $message) === 1) {
+            $fields[] = 'search_engine';
+        }
+
+        return $fields;
+    }
+
+    private static function searchFieldName(string $field): string
+    {
+        return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $field) ?? $field);
+    }
+
+    /**
      * Key of a declined tool card. The translate tools are one family: after the editor cancels a page
      * translation, the same translation must not come back through another translate tool.
      */
@@ -1152,13 +1285,14 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
-     * A rename or other chatbot change is the licence reply while those tools are locked.
+     * A chatbot change is the licence reply while those tools are locked.
      * A licensed chatbot tool stays on the normal path.
      *
+     * @param list<array<string, mixed>> $history
      * @param array{executable?: list<array<string, mixed>>, locked?: list<array<string, mixed>>} $catalog
      * @return array{role: string, content: string, meta: array<string, mixed>}|null
      */
-    private function lockedChatbotReply(string $userMessage, array $catalog, string $correlationId): ?array
+    private function lockedChatbotReply(string $userMessage, array $history, array $catalog, string $correlationId): ?array
     {
         $locked = null;
         foreach ($catalog['locked'] ?? [] as $tool) {
@@ -1167,7 +1301,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 break;
             }
         }
-        if (!is_array($locked) || !AgentToolTurnProcessor::chatbotSettingsNeedLicenceMessage($userMessage, true)) {
+        $aboutChatbot = AgentToolTurnProcessor::chatbotSettingsNeedLicenceMessage($userMessage, true)
+            || AgentToolTurnProcessor::asksToChangeChatbotBehavior($userMessage, $history);
+        if (!is_array($locked) || !$aboutChatbot) {
             return null;
         }
 

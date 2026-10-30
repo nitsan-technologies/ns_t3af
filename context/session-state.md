@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — Chatbot behaviour and a search colour stay on the named field
+
+**Done:** Links under the bot, the visitor language, and a rule for the bot call `t3ac_chatbot_settings` (`enable_sources_links`, `max_source_links`, `answer_in_visitor_language`, `instructions`). "Make it 2" keeps the source-link count. "Is that active now?" says the setting was not saved when nothing was applied, and does not ask which data source to sync. A main-colour request keeps `primaryColor` only. Undo when nothing was applied says nothing was changed. ClickUp: 14zervyxr2r, 14zervyxr39, 14zervyxr4g.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — An older data-source or chatbot card cannot overwrite a newer save
 
 **Done:** Apply of a data-source or chatbot card is refused when the fields it would write changed after the card was drafted. A page rename is a title update, and `pages_move` is refused unless the editor also asked to move the page. ClickUp: 14zervyxqa6.

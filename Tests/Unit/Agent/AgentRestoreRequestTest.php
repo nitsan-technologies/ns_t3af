@@ -87,4 +87,15 @@ final class AgentRestoreRequestTest extends TestCase
             ]),
         );
     }
+
+    #[Test]
+    public function aConversationWithNoAppliedChangeHasNothingToUndo(): void
+    {
+        self::assertFalse(AgentRestoreRequest::conversationHasChange([
+            ['role' => 'assistant', 'content' => 'Use the Undo button.'],
+        ]));
+        self::assertTrue(AgentRestoreRequest::conversationHasChange([
+            ['meta' => ['changeId' => 'page', 'undone' => true]],
+        ]));
+    }
 }
