@@ -20,9 +20,9 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Tests\Unit\Service;
 
 use NITSAN\NsT3AF\Api\CreditsUsage;
-use NITSAN\NsT3AF\Credits\Service\CreditsApiErrorMessageResolver;
 use NITSAN\NsT3AF\Api\TtsOptions;
 use NITSAN\NsT3AF\Api\TtsResponse;
+use NITSAN\NsT3AF\Credits\Service\CreditsApiErrorMessageResolver;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\RequestLogRepository;
 use NITSAN\NsT3AF\Service\RequestQualityResolver;

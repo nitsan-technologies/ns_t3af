@@ -233,7 +233,7 @@ final class AgentTurnRouterTest extends TestCase
             ->with(
                 't3cs_list_queue_items',
                 self::isType('array'),
-                self::callback(static fn (array $body): bool => (int) ($body['arguments']['dataId'] ?? 0) === 0),
+                self::callback(static fn(array $body): bool => (int) ($body['arguments']['dataId'] ?? 0) === 0),
                 $user,
                 'corr-queue-nl',
             )
@@ -265,7 +265,7 @@ final class AgentTurnRouterTest extends TestCase
             ->with(
                 't3cs_list_queue_items',
                 self::isType('array'),
-                self::callback(static fn (array $body): bool => ($body['arguments']['dataId'] ?? null) === 6),
+                self::callback(static fn(array $body): bool => ($body['arguments']['dataId'] ?? null) === 6),
                 $user,
                 'corr-queue-choice',
             )
@@ -305,7 +305,7 @@ final class AgentTurnRouterTest extends TestCase
             ->with(
                 't3cs_list_queue_items',
                 self::isType('array'),
-                self::callback(static fn (array $body): bool => ($body['arguments']['dataId'] ?? null) === 8),
+                self::callback(static fn(array $body): bool => ($body['arguments']['dataId'] ?? null) === 8),
                 $user,
                 'corr-queue-id',
             )

@@ -2200,7 +2200,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return $quoted[0];
         }
         if (preg_match('/\b(?:to|zu)\s+(.+?)\s*$/iu', $message, $match) === 1) {
-            return trim($match[1], " .");
+            return trim($match[1], ' .');
         }
 
         return '';
@@ -2566,7 +2566,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             return $quoted[0];
         }
         if (preg_match('/\b(?:to|zu|in)\s+(.+?)\s*$/iu', $message, $match) === 1) {
-            return trim($match[1], " .");
+            return trim($match[1], ' .');
         }
 
         return '';
@@ -3292,8 +3292,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         string $questionKey = 'agent.queue.whichSource',
         string $askedFor = 't3cs_list_queue_items',
         array $pendingArguments = [],
-    ): array
-    {
+    ): array {
         $rootPageId = $this->listingRootPageId($context);
         if ($rootPageId <= 0) {
             return ['turn' => $this->queueNotice($this->translator->translate('agent.queue.noSite'), $correlationId), 'dataId' => 0];
