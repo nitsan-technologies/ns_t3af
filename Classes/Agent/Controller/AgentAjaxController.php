@@ -152,9 +152,32 @@ final class AgentAjaxController
         $catalog = $this->buildToolCatalog();
         if ($query !== '') {
             $needle = strtolower($query);
-            $filter = static fn(array $tool): bool => str_contains(strtolower((string) ($tool['name'] ?? '')), $needle)
-                || str_contains(strtolower((string) ($tool['description'] ?? '')), $needle)
-                || str_contains(strtolower((string) ($tool['editorLabel'] ?? '')), $needle);
+            // F5/A20: also match intent examples/nouns (legacy card names) and searchTerms.
+            $filter = static function (array $tool) use ($needle): bool {
+                foreach (['name', 'description', 'editorLabel', 'editorDescription'] as $field) {
+                    if (str_contains(strtolower((string) ($tool[$field] ?? '')), $needle)) {
+                        return true;
+                    }
+                }
+                $intent = is_array($tool['intent'] ?? null) ? $tool['intent'] : [];
+                if (str_contains(strtolower((string) ($intent['summary'] ?? '')), $needle)) {
+                    return true;
+                }
+                foreach (['examples', 'nouns', 'verbs'] as $listKey) {
+                    foreach (is_array($intent[$listKey] ?? null) ? $intent[$listKey] : [] as $word) {
+                        if (str_contains(strtolower((string) $word), $needle)) {
+                            return true;
+                        }
+                    }
+                }
+                foreach (is_array($tool['searchTerms'] ?? null) ? $tool['searchTerms'] : [] as $term) {
+                    if (str_contains(strtolower((string) $term), $needle)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            };
             $catalog['executable'] = AgentCoreToolSet::rankByNameMatch(array_values(array_filter($catalog['executable'], $filter)), $needle);
             $catalog['locked'] = AgentCoreToolSet::rankByNameMatch(array_values(array_filter($catalog['locked'], $filter)), $needle);
         }
