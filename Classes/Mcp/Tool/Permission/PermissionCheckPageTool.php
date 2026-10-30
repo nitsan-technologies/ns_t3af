@@ -29,6 +29,7 @@ use Mcp\Capability\Attribute\McpTool;
 use NITSAN\NsT3AF\Mcp\Attribute\McpToolSeverity;
 use NITSAN\NsT3AF\Mcp\Contract\McpNonAiToolInterface;
 use NITSAN\NsT3AF\Mcp\Enum\ToolSeverity;
+use NITSAN\NsT3AF\Mcp\Service\PageAccessService;
 use NITSAN\NsT3AF\Mcp\Service\PermissionService;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 
@@ -54,6 +55,13 @@ readonly class PermissionCheckPageTool implements McpNonAiToolInterface
         );
 
         if ($pageRow === null) {
+            if ($this->recordService->parentPageExists($pageId)) {
+                return json_encode(
+                    ['error' => PageAccessService::ACCESS_DENIED_MESSAGE, 'pageId' => $pageId],
+                    JSON_THROW_ON_ERROR,
+                );
+            }
+
             return json_encode(['error' => 'Page not found', 'pageId' => $pageId], JSON_THROW_ON_ERROR);
         }
 

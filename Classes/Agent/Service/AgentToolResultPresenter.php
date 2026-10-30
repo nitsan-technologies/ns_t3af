@@ -124,6 +124,7 @@ final readonly class AgentToolResultPresenter
      *     facts: list<array{key: string, label: string, value: string}>,
      *     details: mixed,
      *     previews: list<array{fileUid: int, url: string, href: string, name: string, alt: string}>,
+     *     lines: list<string>,
      *     error: string|null
      * }
      */
@@ -148,6 +149,11 @@ final readonly class AgentToolResultPresenter
             && isset($details['summary'])
             && is_string($details['summary'])
             && trim($details['summary']) !== '';
+        if ($toolName === 't3cs_sync_datasource' || $toolName === 't3as_search_settings_get' || $toolName === 't3cs_usage_analytics_summary') {
+            // The sync sentence is the tool's scope and source. A model summary can name a different source.
+            // Search settings answer from the saved fields, not a second model call.
+            $allowLlmSummary = false;
+        }
         if (
             $allowLlmSummary
             && !($this->creditModeResolver?->isActive() ?? false)
@@ -159,11 +165,20 @@ final readonly class AgentToolResultPresenter
         }
 
         $listLead = $this->buildListLeadSummary($toolName, $facts, $details);
-        $toolLead = $this->buildToolSpecificContent($toolName, $facts, $details);
+        $toolLead = $error === null ? $this->buildToolSpecificContent($toolName, $facts, $details) : null;
+        if (is_string($toolLead) && $toolLead !== '') {
+            $summary = $toolLead;
+        }
+        $lines = $error === null ? $this->queueItemLines($toolName, $details) : [];
+        $content = $llmSummary ?? $toolLead ?? ($hasReadySummary ? $summary : null) ?? $listLead ?? $summary;
+        $truncation = $error === null ? $this->queueTruncationNote($toolName, $details) : null;
+        if ($truncation !== null && is_string($content)) {
+            $content .= "\n\n" . $truncation;
+        }
 
         return [
             // The tool's own summary says more than "Found N items" (score, what was queued, …).
-            'content' => $llmSummary ?? $toolLead ?? ($hasReadySummary ? $summary : null) ?? $listLead ?? $summary,
+            'content' => $content,
             'success' => $error === null,
             'summary' => $summary,
             'llmSummary' => $llmSummary,
@@ -171,6 +186,8 @@ final readonly class AgentToolResultPresenter
             'details' => $details,
             // Thumbnails of the images the result is about (generated image, file list, metadata).
             'previews' => $error === null && $this->mediaPreviews !== null ? $this->mediaPreviews->forDetails($details) : [],
+            // Plain lines for the training queue. The chat renders these behind "Show all".
+            'lines' => $lines,
             'error' => $error,
         ];
     }
@@ -300,7 +317,9 @@ final readonly class AgentToolResultPresenter
         };
 
         $facts = [$this->fact($countKey, (string) $total)];
-        $examples = $this->extractRowLabels($rows);
+        $examples = $toolName === 't3cs_list_queue_items'
+            ? $this->queueExampleLabels($rows)
+            : $this->extractRowLabels($rows);
         if ($examples !== []) {
             $facts[] = $this->fact('examples', implode(', ', $examples));
         }
@@ -337,6 +356,9 @@ final readonly class AgentToolResultPresenter
             }
             if ($total === 0) {
                 $total = count($rows);
+            }
+            if (isset($details['totalMatched']) && is_numeric($details['totalMatched']) && (int) $details['totalMatched'] > $total) {
+                $total = (int) $details['totalMatched'];
             }
 
             if ($rows === [] && $total === 0) {
@@ -452,6 +474,91 @@ final readonly class AgentToolResultPresenter
     /**
      * @param array<string, mixed> $row
      */
+    /**
+     * @param list<array<string, mixed>> $rows
+     * @return list<string>
+     */
+    private function queueExampleLabels(array $rows): array
+    {
+        $labels = [];
+        foreach (array_slice($rows, 0, 5) as $row) {
+            $label = $this->queueRowLabel($row);
+            if ($label !== '') {
+                $labels[] = $label;
+            }
+        }
+
+        return $labels;
+    }
+
+    /**
+     * Every returned queue row, as one readable line. Empty for every other tool.
+     *
+     * @return list<string>
+     */
+    private function queueTruncationNote(string $toolName, mixed $details): ?string
+    {
+        if ($toolName !== 't3cs_list_queue_items' || !is_array($details) || ($details['truncated'] ?? false) !== true) {
+            return null;
+        }
+        $total = (int) ($details['totalMatched'] ?? 0);
+        $shown = (int) ($details['count'] ?? 0);
+        if ($total <= $shown || $shown <= 0) {
+            return null;
+        }
+
+        return $this->translator->translate('agent.result.queueTruncated', [$total, $shown]);
+    }
+
+    private function queueItemLines(string $toolName, mixed $details): array
+    {
+        if ($toolName !== 't3cs_list_queue_items' || !is_array($details) || !is_array($details['items'] ?? null)) {
+            return [];
+        }
+
+        $lines = [];
+        foreach ($details['items'] as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $label = $this->queueRowLabel($item);
+            if ($label !== '') {
+                $lines[] = $label;
+            }
+        }
+
+        return $lines;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private function queueRowLabel(array $row): string
+    {
+        $uid = (int) ($row['uid'] ?? 0);
+        $name = trim((string) ($row['path'] ?? ''));
+        if ($name === '') {
+            $name = trim((string) (preg_replace('/\s+/u', ' ', (string) ($row['contentPreview'] ?? '')) ?? ''));
+        }
+        if (mb_strlen($name) > 80) {
+            $name = rtrim(mb_substr($name, 0, 79)) . '…';
+        }
+        if ($name === '') {
+            $name = $uid > 0 ? '#' . $uid : '';
+        }
+        if ($name === '') {
+            return '';
+        }
+
+        $status = trim((string) ($row['status'] ?? ''));
+        $label = $status !== '' ? $name . ' (' . $status . ')' : $name;
+        if ($uid > 0) {
+            $label .= ' [#' . $uid . ']';
+        }
+
+        return $label;
+    }
+
     private function rowDisplayLabel(array $row): string
     {
         if (isset($row['identifier']) && is_string($row['identifier'])) {
@@ -642,7 +749,8 @@ final readonly class AgentToolResultPresenter
 
         if ($examples !== null && $examples !== '') {
             $lead .= "\n\n" . $this->translator->translate('agent.result.examplesLead', [$examples]);
-            if ($count > 5) {
+            // The training queue renders its own "Show all" control, so this sentence would point nowhere.
+            if ($count > 5 && $toolName !== 't3cs_list_queue_items') {
                 $lead .= "\n\n" . $this->translator->translate('agent.result.openDetails', [$count]);
             }
         }
@@ -655,6 +763,27 @@ final readonly class AgentToolResultPresenter
      */
     private function buildToolSpecificContent(string $toolName, array $facts, mixed $details): ?string
     {
+        if ($toolName === 't3cs_sync_datasource') {
+            $sync = $this->syncResultContent($details);
+            if ($sync !== null) {
+                return $sync;
+            }
+        }
+
+        if ($toolName === 't3as_search_settings_get') {
+            $search = $this->searchSettingsContent($details);
+            if ($search !== null) {
+                return $search;
+            }
+        }
+
+        if ($toolName === 't3cs_usage_analytics_summary') {
+            $usage = $this->usageAnalyticsContent($details);
+            if ($usage !== null) {
+                return $usage;
+            }
+        }
+
         if ($toolName === 't3aa_list_files_missing_alt_text') {
             $total = $this->primaryCountFromFacts($facts) ?? 0;
             if ($total === 0) {
@@ -688,6 +817,130 @@ final readonly class AgentToolResultPresenter
         $actionMessage = $this->buildActionSuccessContent($details);
         if ($actionMessage !== null) {
             return $actionMessage;
+        }
+
+        return null;
+    }
+
+    /**
+     * The main search settings. The Solr password is never included.
+     */
+    private function searchSettingsContent(mixed $details): ?string
+    {
+        if (!is_array($details) || isset($details['error'])) {
+            return null;
+        }
+        $settings = is_array($details['settings'] ?? null) ? $details['settings'] : $details;
+        $enabledRaw = $settings['enable_ai_search'] ?? $settings['enableAiSearch'] ?? 0;
+        $enabled = $enabledRaw === 1 || $enabledRaw === '1' || $enabledRaw === true;
+        $engine = trim((string) ($settings['search_engine'] ?? $settings['searchEngine'] ?? ''));
+        $lines = [];
+        if ($enabled && $engine !== '') {
+            $lines[] = $this->translator->translate('agent.search.enabled', [$engine]);
+        } elseif ($enabled) {
+            $lines[] = $this->translator->translate('agent.search.enabledNoEngine');
+        } else {
+            $lines[] = $this->translator->translate('agent.search.disabled');
+            $lines[] = $engine !== ''
+                ? $this->translator->translate('agent.search.engine', [$engine])
+                : $this->translator->translate('agent.search.noEngine');
+        }
+        $resultStyle = trim((string) ($settings['result_style'] ?? $settings['resultStyle'] ?? ''));
+        if ($resultStyle !== '') {
+            $lines[] = $this->translator->translate('agent.search.resultStyle', [$resultStyle]);
+        }
+        $instructions = $this->plainInstructions((string) ($settings['instructions'] ?? ''));
+        $lines[] = $instructions === ''
+            ? $this->translator->translate('agent.search.instructionsNotSet')
+            : $this->translator->translate('agent.search.instructions', [$instructions]);
+        $questionsOn = $this->settingOn($settings['predefined_questions'] ?? $settings['predefinedQuestions'] ?? 0);
+        $limit = trim((string) ($settings['questions_limit'] ?? $settings['questionsLimit'] ?? ''));
+        $lines[] = $questionsOn
+            ? $this->translator->translate('agent.search.questionsOn', [$limit !== '' ? $limit : '0'])
+            : $this->translator->translate('agent.search.questionsOff');
+        $widgetMode = trim((string) ($settings['widget_mode'] ?? $settings['widgetMode'] ?? ''));
+        $lines[] = $widgetMode !== ''
+            ? $this->translator->translate('agent.search.widgetMode', [$widgetMode])
+            : $this->translator->translate('agent.search.widgetModeNotSet');
+
+        return implode(' ', $lines);
+    }
+
+    private function plainInstructions(string $raw): string
+    {
+        $text = html_entity_decode(strip_tags($raw), ENT_QUOTES | ENT_HTML5);
+        $text = str_replace("\u{00A0}", ' ', $text);
+        $text = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+
+        return $text;
+    }
+
+    private function settingOn(mixed $value): bool
+    {
+        return $value === 1 || $value === '1' || $value === true;
+    }
+
+    /**
+     * The usage counts for the requested period. A period with no rows is still those counts.
+     */
+    private function usageAnalyticsContent(mixed $details): ?string
+    {
+        if (!is_array($details) || isset($details['error'])) {
+            return null;
+        }
+        $searches = (int) ($details['totalSearchCount'] ?? 0);
+        $chats = (int) ($details['totalChatCount'] ?? 0);
+        $positive = (int) ($details['feedbackPositiveCount'] ?? 0);
+        $negative = (int) ($details['feedbackNegativeCount'] ?? 0);
+        $from = trim((string) ($details['periodFrom'] ?? ''));
+        $to = trim((string) ($details['periodTo'] ?? ''));
+        if ($from !== '' && $to !== '') {
+            return $this->translator->translate('agent.usage.summaryRange', [
+                $from,
+                $to,
+                $searches,
+                $chats,
+                $positive,
+                $negative,
+            ]);
+        }
+
+        $period = trim((string) ($details['period'] ?? ''));
+        if ($period === '') {
+            $period = 'this period';
+        }
+
+        return $this->translator->translate('agent.usage.summary', [
+            $period,
+            $searches,
+            $chats,
+            $positive,
+            $negative,
+        ]);
+    }
+
+    /**
+     * The visible sync reply is the scope and the source the tool reported.
+     */
+    private function syncResultContent(mixed $details): ?string
+    {
+        if (!is_array($details) || ($details['success'] ?? false) !== true) {
+            return null;
+        }
+        $scope = strtolower(trim((string) ($details['scope'] ?? '')));
+        $immediate = strtolower(trim((string) ($details['mode'] ?? ''))) === 'immediate';
+        if ($scope === 'one') {
+            $name = trim((string) ($details['name'] ?? ''));
+            if ($name === '') {
+                $name = (string) (int) ($details['dataId'] ?? 0);
+            }
+
+            return $this->translator->translate($immediate ? 'agent.sync.ranOne' : 'agent.sync.requestedOne', [$name]);
+        }
+        if ($scope === 'all') {
+            $count = (int) ($details['sourcesRequested'] ?? $details['sourcesProcessed'] ?? $details['totalSources'] ?? 0);
+
+            return $this->translator->translate($immediate ? 'agent.sync.ranAll' : 'agent.sync.requestedAll', [$count]);
         }
 
         return null;

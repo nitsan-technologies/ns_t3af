@@ -1041,6 +1041,12 @@
       <trans-unit id="agent.draft.discarded" resname="agent.draft.discarded">
         <source>Draft discarded. Nothing was written.</source>
       </trans-unit>
+      <trans-unit id="agent.draft.clickApply" resname="agent.draft.clickApply">
+        <source>Click Apply on the card above. Nothing else was changed.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.cancelledOpen" resname="agent.draft.cancelledOpen">
+        <source>The open cards were discarded. Nothing was saved.</source>
+      </trans-unit>
       <trans-unit id="agent.draft.undone" resname="agent.draft.undone">
         <source>Undone. Your previous version is back.</source>
       </trans-unit>
@@ -1091,6 +1097,9 @@
       </trans-unit>
       <trans-unit id="agent.draft.toolApplied" resname="agent.draft.toolApplied">
         <source>Tool ran successfully.</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.searchSettingsSaved" resname="agent.draft.searchSettingsSaved">
+        <source>Search settings saved.</source>
       </trans-unit>
       <trans-unit id="agent.draft.readback" resname="agent.draft.readback">
         <source>Written through DataHandler, then read back from the database. Workspace and publishing are untouched.</source>
@@ -1318,6 +1327,9 @@
       <trans-unit id="agent.result.openDetails" resname="agent.result.openDetails">
         <source>Open Details for the full list (%1$s total).</source>
       </trans-unit>
+      <trans-unit id="agent.result.showAll" resname="agent.result.showAll">
+        <source>Show all (%1$s)</source>
+      </trans-unit>
       <trans-unit id="agent.result.noMissingAltText" resname="agent.result.noMissingAltText">
         <source>Good news — no images are missing alt text in this storage.</source>
       </trans-unit>
@@ -1473,6 +1485,33 @@
       </trans-unit>
       <trans-unit id="agent.undo.useButton" resname="agent.undo.useButton">
         <source>Use the Undo button on the applied change to put the old text back.</source>
+      </trans-unit>
+      <trans-unit id="agent.undo.cannotUndo" resname="agent.undo.cannotUndo">
+        <source>This change can't be undone automatically.</source>
+      </trans-unit>
+      <trans-unit id="agent.undo.nothingChanged" resname="agent.undo.nothingChanged">
+        <source>Nothing was changed, so there is nothing to undo.</source>
+      </trans-unit>
+      <trans-unit id="agent.chatbot.notSaved" resname="agent.chatbot.notSaved">
+        <source>No. That chatbot setting was not saved.</source>
+      </trans-unit>
+      <trans-unit id="agent.chatbot.needsCard" resname="agent.chatbot.needsCard">
+        <source>That needs a chatbot settings card. Nothing was saved.</source>
+      </trans-unit>
+      <trans-unit id="agent.chatbot.changeBack" resname="agent.chatbot.changeBack">
+        <source>What should I change it back to?</source>
+      </trans-unit>
+      <trans-unit id="agent.chatbot.whichGreeting" resname="agent.chatbot.whichGreeting">
+        <source>What should the greeting say?</source>
+      </trans-unit>
+      <trans-unit id="agent.draft.noFields" resname="agent.draft.noFields">
+        <source>That change has no fields, so nothing was prepared.</source>
+      </trans-unit>
+      <trans-unit id="agent.provider.cannotChange" resname="agent.provider.cannotChange">
+        <source>AI provider and API key settings cannot be changed from the AI Agent. An administrator can change them on the Providers page. The key was not saved.</source>
+      </trans-unit>
+      <trans-unit id="agent.scheduler.whichDescription" resname="agent.scheduler.whichDescription">
+        <source>What description should the scheduler task have?</source>
       </trans-unit>
       <trans-unit id="agent.draft.expired" resname="agent.draft.expired">
         <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
@@ -2216,6 +2255,84 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
       <trans-unit id="agent.tool.label.t3cs_list_queue_items" resname="agent.tool.label.t3cs_list_queue_items">
         <source>Show the training queue</source>
       </trans-unit>
+      <trans-unit id="agent.queue.whichSource" resname="agent.queue.whichSource">
+        <source>Which data source should I show the training queue for?</source>
+      </trans-unit>
+      <trans-unit id="agent.queue.noSources" resname="agent.queue.noSources">
+        <source>This site has no data sources.</source>
+      </trans-unit>
+      <trans-unit id="agent.queue.noSite" resname="agent.queue.noSite">
+        <source>Open a page of the site, then ask for the training queue again.</source>
+      </trans-unit>
+      <trans-unit id="agent.source.whichReset" resname="agent.source.whichReset">
+        <source>Which data source should I retry the failed training items for?</source>
+      </trans-unit>
+      <trans-unit id="agent.source.whichSync" resname="agent.source.whichSync">
+        <source>Which data source should I sync?</source>
+      </trans-unit>
+      <trans-unit id="agent.sync.notRun" resname="agent.sync.notRun">
+        <source>Nothing was synced. Prepare the sync first.</source>
+      </trans-unit>
+      <trans-unit id="agent.sync.requestedOne" resname="agent.sync.requestedOne">
+        <source>Sync was requested for "%1$s".</source>
+      </trans-unit>
+      <trans-unit id="agent.sync.requestedAll" resname="agent.sync.requestedAll">
+        <source>Sync was requested for all %1$s data sources.</source>
+      </trans-unit>
+      <trans-unit id="agent.sync.ranOne" resname="agent.sync.ranOne">
+        <source>"%1$s" was synced.</source>
+      </trans-unit>
+      <trans-unit id="agent.sync.ranAll" resname="agent.sync.ranAll">
+        <source>All %1$s data sources were synced.</source>
+      </trans-unit>
+      <trans-unit id="agent.source.whichUpdate" resname="agent.source.whichUpdate">
+        <source>Which data source should I update?</source>
+      </trans-unit>
+      <trans-unit id="agent.source.notNamed" resname="agent.source.notNamed">
+        <source>No data source is named "%s".</source>
+      </trans-unit>
+      <trans-unit id="agent.source.whichDescription" resname="agent.source.whichDescription">
+        <source>What description should I save?</source>
+      </trans-unit>
+      <trans-unit id="agent.source.notCreated" resname="agent.source.notCreated">
+        <source>The data source was not created, so there is nothing to change.</source>
+      </trans-unit>
+      <trans-unit id="agent.source.listed" resname="agent.source.listed">
+        <source>%1$s is a %2$s data source, data id %3$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.source.notFound" resname="agent.source.notFound">
+        <source>Data source %1$s was not found.</source>
+      </trans-unit>
+      <trans-unit id="agent.chatbot.whichOne" resname="agent.chatbot.whichOne">
+        <source>Which chatbot should I use?</source>
+      </trans-unit>
+      <trans-unit id="agent.chatbot.none" resname="agent.chatbot.none">
+        <source>This installation has no chatbot.</source>
+      </trans-unit>
+      <trans-unit id="agent.datasource.cannotDelete" resname="agent.datasource.cannotDelete">
+        <source>The agent cannot delete data sources. You can still list them. Remove a data source in the AI Chatbot/Search module, on the Data Sources tab.</source>
+      </trans-unit>
+      <trans-unit id="agent.datasource.invalidUrl" resname="agent.datasource.invalidUrl">
+        <source>That address is not a valid http or https URL. No data source was created.</source>
+      </trans-unit>
+      <trans-unit id="agent.datasource.whichPage" resname="agent.datasource.whichPage">
+        <source>Name the page the chatbot and search should learn. It will be added as a TYPO3 pages data source.</source>
+      </trans-unit>
+      <trans-unit id="agent.datasource.whichText" resname="agent.datasource.whichText">
+        <source>What text should this data source contain?</source>
+      </trans-unit>
+      <trans-unit id="agent.datasource.answersOnSource" resname="agent.datasource.answersOnSource">
+        <source>Those answers belong on the Q&amp;A data source %s. They were not added as a suggested search question.</source>
+      </trans-unit>
+      <trans-unit id="agent.datasource.answersOnSourceUnnamed" resname="agent.datasource.answersOnSourceUnnamed">
+        <source>Those answers belong on the Q&amp;A data source. They were not added as a suggested search question.</source>
+      </trans-unit>
+      <trans-unit id="agent.result.queueTruncated" resname="agent.result.queueTruncated">
+        <source>%1$s items match. The first %2$s are shown.</source>
+      </trans-unit>
+      <trans-unit id="agent.tool.licenceUnavailable" resname="agent.tool.licenceUnavailable">
+        <source>%1$s is installed, but its licence is missing or invalid. Add a valid licence key to use these actions.</source>
+      </trans-unit>
       <trans-unit id="agent.tool.label.t3cs_reset_failed_queue_item" resname="agent.tool.label.t3cs_reset_failed_queue_item">
         <source>Retry a failed training item</source>
       </trans-unit>
@@ -2229,7 +2346,49 @@ Should I generate new suggestions? Nothing is replaced until you save one.</sour
         <source>Show the training status</source>
       </trans-unit>
       <trans-unit id="agent.tool.label.t3cs_usage_analytics_summary" resname="agent.tool.label.t3cs_usage_analytics_summary">
-        <source>Show chatbot usage</source>
+        <source>Show usage analytics</source>
+      </trans-unit>
+      <trans-unit id="agent.search.disabled" resname="agent.search.disabled">
+        <source>AI Search is switched off.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.enabled" resname="agent.search.enabled">
+        <source>AI Search is enabled. The search engine is %s.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.enabledNoEngine" resname="agent.search.enabledNoEngine">
+        <source>AI Search is enabled. No search engine is set.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.engine" resname="agent.search.engine">
+        <source>The search engine is %1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.noEngine" resname="agent.search.noEngine">
+        <source>No search engine is set.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.resultStyle" resname="agent.search.resultStyle">
+        <source>The result style is %1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.instructions" resname="agent.search.instructions">
+        <source>Instructions: %1$s</source>
+      </trans-unit>
+      <trans-unit id="agent.search.instructionsNotSet" resname="agent.search.instructionsNotSet">
+        <source>Instructions are not set.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.questionsOn" resname="agent.search.questionsOn">
+        <source>Predefined questions are on, up to %1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.questionsOff" resname="agent.search.questionsOff">
+        <source>Predefined questions are off.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.widgetMode" resname="agent.search.widgetMode">
+        <source>The widget mode is %1$s.</source>
+      </trans-unit>
+      <trans-unit id="agent.search.widgetModeNotSet" resname="agent.search.widgetModeNotSet">
+        <source>The widget mode is not set.</source>
+      </trans-unit>
+      <trans-unit id="agent.usage.summary" resname="agent.usage.summary">
+        <source>Usage for %1$s: %2$s searches, %3$s chatbot messages, %4$s positive and %5$s negative feedback.</source>
+      </trans-unit>
+      <trans-unit id="agent.usage.summaryRange" resname="agent.usage.summaryRange">
+        <source>Usage from %1$s to %2$s: %3$s searches, %4$s chatbot messages, %5$s positive and %6$s negative feedback.</source>
       </trans-unit>
       <trans-unit id="agent.plan.namedTool" resname="agent.plan.namedTool">
         <source>%1$s%2$s.</source>

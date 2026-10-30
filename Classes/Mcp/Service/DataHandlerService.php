@@ -71,10 +71,17 @@ readonly class DataHandlerService
             $dataHandler->start([$table => [$newId => $fields]], []);
             $dataHandler->process_datamap();
 
-            $this->checkErrors($dataHandler);
-
             /** @var int|string|null $uid */
             $uid = $dataHandler->substNEWwithIDs[$newId] ?? null;
+            try {
+                $this->checkErrors($dataHandler);
+            } catch (\RuntimeException $exception) {
+                if (is_numeric($uid) && (int) $uid > 0) {
+                    $this->discardCreatedRecord($table, (int) $uid);
+                }
+
+                throw $exception;
+            }
             if ($uid === null) {
                 throw new \RuntimeException('Failed to create record: no uid returned', 1712000020);
             }
@@ -745,6 +752,13 @@ readonly class DataHandlerService
     private function discardUpdateSignal(): void
     {
         McpBackendUserAuthentication::discardUpdateSignal($GLOBALS['BE_USER'] ?? null);
+    }
+
+    private function discardCreatedRecord(string $table, int $uid): void
+    {
+        GeneralUtility::makeInstance(ConnectionPool::class)
+            ->getConnectionForTable($table)
+            ->delete($table, ['uid' => $uid]);
     }
 
     private function checkErrors(DataHandler $dataHandler): void

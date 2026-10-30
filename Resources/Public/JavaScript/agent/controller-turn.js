@@ -178,6 +178,10 @@ export const turnMethods = {
             }
             this.messages.push(reply);
           });
+          const discardReply = replies.find((reply) => reply?.meta?.discardOpenDrafts === true);
+          if (discardReply) {
+            this.discardOpenDraftsQuietly(discardReply.meta?.draftId ?? '');
+          }
         }
         this.context = payload.context ?? this.context;
         if (payload.userMessage && typeof payload.userMessage === 'object') {
@@ -515,6 +519,9 @@ export const turnMethods = {
           const meta = reply.meta ?? {};
           if (hasTurnGuardWarning(meta) && reply.content) {
             reply.content = String(meta.turnGuardWarning) + '\n\n' + String(reply.content);
+          }
+          if (reply.meta?.discardOpenDrafts === true) {
+            this.discardOpenDraftsQuietly(reply.meta?.draftId ?? '');
           }
           if (streamingMessage !== null && reply.meta?.type === 'nl_reply') {
             if (revealState !== null && revealState.shown < revealState.full.length) {

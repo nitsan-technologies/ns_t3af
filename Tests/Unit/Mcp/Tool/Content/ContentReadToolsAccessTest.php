@@ -45,6 +45,7 @@ final class ContentReadToolsAccessTest extends TestCase
     public function contentListRefusesAnOutsidePage(): void
     {
         $records = $this->createMock(RecordService::class);
+        $records->method('parentPageExists')->with(self::OUTSIDE_PAGE)->willReturn(true);
         $records->method('findByUid')->with('pages', self::OUTSIDE_PAGE, ['uid', 'l10n_parent', 'sys_language_uid'])->willReturn(null);
         $records->expects(self::never())->method('findByPid');
         $tool = new ContentListTool($records, $this->untouchedSchema(), $this->access());
@@ -60,6 +61,7 @@ final class ContentReadToolsAccessTest extends TestCase
     public function contentListStillListsAMountedPage(): void
     {
         $records = $this->createMock(RecordService::class);
+        $records->method('parentPageExists')->with(self::MOUNTED_PAGE)->willReturn(true);
         $records->method('findByUid')->with('pages', self::MOUNTED_PAGE, ['uid', 'l10n_parent', 'sys_language_uid'])->willReturn(
             ['uid' => self::MOUNTED_PAGE, 'l10n_parent' => 0, 'sys_language_uid' => 0],
         );
@@ -86,6 +88,7 @@ final class ContentReadToolsAccessTest extends TestCase
         $overlayUid = 70;
         $defaultPid = 2;
         $records = $this->createMock(RecordService::class);
+        $records->method('parentPageExists')->with($overlayUid)->willReturn(true);
         $records->method('findByUid')->with('pages', $overlayUid, ['uid', 'l10n_parent', 'sys_language_uid'])->willReturn(
             ['uid' => $overlayUid, 'l10n_parent' => $defaultPid, 'sys_language_uid' => 1],
         );
@@ -114,6 +117,20 @@ final class ContentReadToolsAccessTest extends TestCase
 
         self::assertArrayNotHasKey('error', $decoded);
         self::assertSame(1, $decoded['total']);
+    }
+
+    #[Test]
+    public function contentListSaysNotFoundWhenThePageDoesNotExist(): void
+    {
+        $records = $this->createMock(RecordService::class);
+        $records->method('parentPageExists')->with(999999)->willReturn(false);
+        $records->expects(self::never())->method('findByPid');
+        $tool = new ContentListTool($records, $this->untouchedSchema(), $this->access(unrestricted: true));
+
+        $decoded = $this->decode($tool->execute(999999));
+
+        self::assertSame('Page not found', $decoded['error']);
+        self::assertSame(999999, $decoded['pageId']);
     }
 
     #[Test]

@@ -2,6 +2,78 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — A scheduler description, a saved data source, and a pasted API key stay in place
+
+**Done:** `scheduler_update` of a description keeps the stored start date. After Apply of a data source, the continuation does not create page content. A request to switch provider with a pasted key is answered before the model: provider settings cannot be changed from the AI Agent, the key is not repeated, and stored conversation messages mask keys. ClickUp: 14zervyxjrg, 14zervyxpzh, 14zervyxqhh.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — MCP cannot write backend users, crash capabilities, or save a broken redirect
+
+**Done:** `write_table` and `records_apply` refuse `be_users`, `be_groups`, and `be_sessions`, including for an admin. A missing `HTTP_HOST` no longer takes down `explain_capabilities`; a throwing status check leaves the other extensions. `scheduler_update` stores flash data in memory. `redirect_create` refuses a `javascript:` target, status 999, and a duplicate host and path, and a DataHandler error deletes the new row. ClickUp: 14zervyxjm8, 14zervyxjk1, 14zervyxjk2, 14zervyxjk3.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — A named description and a source's usage stay on that source
+
+**Done:** Setting the description of a named data source updates that exact name. "Only the chatbot" sets that source's usage to chatbot, including a match on its address. "Neither should use it" deactivates that same source. "Turn on AI search" and "Turn off AI search" stay the global AI Search switch. ClickUp: 14zervyxqa7, 14zervyxr3w.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — A bot refresh, a greeting, and a chatbot rename stay on the right card
+
+**Done:** "Refresh", "learn again", "neu lernen", or "in the bot" syncs that data source and does not search news. "Fix the failed one" retries that source's failed training. After a sync of everything is cancelled, "just A and B" asks only those sources. "Rename the X source" updates that source's name. A welcome or Begrüßung is an update of `first_message`, and a chatbot get is a read. A chatbot rename is a settings card with the new title. After Apply, "change it back" writes the previous title or greeting. ClickUp: 14zervyxr35, 14zervyxqg6, 14zervyxqg7.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — Chatbot behaviour and a search colour stay on the named field
+
+**Done:** Links under the bot, the visitor language, and a rule for the bot call `t3ac_chatbot_settings` (`enable_sources_links`, `max_source_links`, `answer_in_visitor_language`, `instructions`). "Make it 2" keeps the source-link count. "Is that active now?" says the setting was not saved when nothing was applied, and does not ask which data source to sync. A main-colour request keeps `primaryColor` only. Undo when nothing was applied says nothing was changed. ClickUp: 14zervyxr2r, 14zervyxr39, 14zervyxr4g.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — An older data-source or chatbot card cannot overwrite a newer save
+
+**Done:** Apply of a data-source or chatbot card is refused when the fields it would write changed after the card was drafted. A page rename is a title update, and `pages_move` is refused unless the editor also asked to move the page. ClickUp: 14zervyxqa6.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — Text data source uses only the editor's text
+
+**Done:** "Create a text source for beauty tips" asks for the text and drafts no card. Quoted text is saved as given. A saved data source, including its text, is in the history the next turn reads, so "What did you save?" does not say nothing was saved. ClickUp: 14zervyxq8n.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — Follow-up after a data source was not created
+
+**Done:** "Activate it" or "sync that one" after a failed data-source create is answered before the model runs, so it cannot become the Mass SEO scheduler or a card for another source. "Sync all my data sources" is scope all. "The second one" after the data-source list is that row, not a page translation. "No" and "nein" cancel an open card. ClickUp: 14zervyxpjf.
+
+**Last touched:** 2026-10-30
+
+---
+
+## 2026-10-30 — Search setting values in the agent prompt
+
+**Done:** The agent prompt tells the model the search-form limits for `t3as_search_settings` (colour, questionsLimit 3/5/10, position, offset 5–500, host names, true/false). A refused value is said as the tool message. The setting is not described as saved.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-20 — Symfony AI 0.14
 
 **Done:** Raised Symfony AI constraints to `^0.14` (`symfony/ai-agent` `~0.14.0`). Locked platform and agent at 0.14.1 and the bundled bridges plus store at 0.14.0. Agent tool search accepts `VectorDocumentInterface` from the store query results.

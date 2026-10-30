@@ -86,4 +86,24 @@ final class DashboardPeriodResolverTest extends TestCase
         self::assertSame(strtotime('2026-06-28 12:00:00'), $period['fromTimestamp']);
         self::assertSame(strtotime('2026-07-28 12:00:00'), $period['toTimestamp']);
     }
+
+    public function testStrictModeRejectsABogusPeriodAndAReversedRange(): void
+    {
+        $resolver = new DashboardPeriodResolver();
+
+        try {
+            $resolver->resolveFromQueryParams(['period' => 'bogus'], DashboardPeriodResolver::PRESET_30D, true);
+            self::fail('A bogus period was accepted.');
+        } catch (\InvalidArgumentException $exception) {
+            self::assertStringContainsString('Invalid period', $exception->getMessage());
+        }
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid date range');
+        $resolver->resolveFromQueryParams([
+            'period' => 'custom',
+            'from' => '2026-07-20',
+            'to' => '2026-07-01',
+        ], DashboardPeriodResolver::PRESET_30D, true);
+    }
 }

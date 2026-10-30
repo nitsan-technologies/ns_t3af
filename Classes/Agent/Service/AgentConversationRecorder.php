@@ -89,27 +89,31 @@ final readonly class AgentConversationRecorder
             $presented = is_array($result['presentation'] ?? null) ? $result['presentation'] : [];
             $tool = (string) ($result['tool'] ?? $draft['tool'] ?? '');
             $content = trim((string) ($presented['content'] ?? ''));
+            $resultMeta = [
+                'type' => 'tool_result',
+                'tool' => $tool,
+                'toolCallLabel' => $this->label($draft, $tool),
+                'success' => ($presented['success'] ?? true) !== false,
+                'severity' => (string) ($draft['severity'] ?? 'write'),
+                'severityLabel' => 'Write',
+                'facts' => array_values(is_array($presented['facts'] ?? null) ? $presented['facts'] : []),
+                'details' => $presented['details'] ?? null,
+                'previews' => array_values(is_array($presented['previews'] ?? null) ? $presented['previews'] : []),
+                'autoRan' => false,
+                'correlationId' => (string) ($result['correlationId'] ?? $meta['correlationId'] ?? ''),
+                'changeId' => (string) ($result['changeId'] ?? ''),
+                'undoable' => ($result['undoable'] ?? false) === true,
+                'schedulerHandoff' => $handoff,
+                'links' => $links,
+                'fromRunner' => ($meta['fromRunner'] ?? false) === true,
+            ];
+            if ($tool === 't3ac_chatbot_settings' && is_array($draft['recordBaseline'] ?? null)) {
+                $resultMeta['recordBaseline'] = $draft['recordBaseline'];
+            }
             $messages[$index] = [
                 'role' => 'assistant',
                 'content' => $content !== '' ? $content : ($responseMessage !== '' ? $responseMessage : $this->translator->translate('agent.draft.toolApplied')),
-                'meta' => [
-                    'type' => 'tool_result',
-                    'tool' => $tool,
-                    'toolCallLabel' => $this->label($draft, $tool),
-                    'success' => ($presented['success'] ?? true) !== false,
-                    'severity' => (string) ($draft['severity'] ?? 'write'),
-                    'severityLabel' => 'Write',
-                    'facts' => array_values(is_array($presented['facts'] ?? null) ? $presented['facts'] : []),
-                    'details' => $presented['details'] ?? null,
-                    'previews' => array_values(is_array($presented['previews'] ?? null) ? $presented['previews'] : []),
-                    'autoRan' => false,
-                    'correlationId' => (string) ($result['correlationId'] ?? $meta['correlationId'] ?? ''),
-                    'changeId' => (string) ($result['changeId'] ?? ''),
-                    'undoable' => ($result['undoable'] ?? false) === true,
-                    'schedulerHandoff' => $handoff,
-                    'links' => $links,
-                    'fromRunner' => ($meta['fromRunner'] ?? false) === true,
-                ],
+                'meta' => $resultMeta,
             ];
 
             return $messages;

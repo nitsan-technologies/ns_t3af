@@ -49,6 +49,54 @@ final class AgentRestoreRequest
     }
 
     /**
+     * The newest applied change, including one that has no Undo button.
+     * An already undone change is skipped.
+     *
+     * @param list<array<string, mixed>> $messages
+     * @return array{changeId: string, undoable: bool}|null
+     */
+    public static function latestAppliedChange(array $messages): ?array
+    {
+        for ($index = count($messages) - 1; $index >= 0; $index--) {
+            $meta = $messages[$index]['meta'] ?? null;
+            if (!is_array($meta) || ($meta['undone'] ?? false) === true) {
+                continue;
+            }
+            $changeId = trim((string) ($meta['changeId'] ?? ''));
+            if ($changeId === '') {
+                continue;
+            }
+
+            return [
+                'changeId' => $changeId,
+                'undoable' => ($meta['undoable'] ?? true) !== false,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * True when this conversation already applied a change, including one that was undone.
+     *
+     * @param list<array<string, mixed>> $messages
+     */
+    public static function conversationHasChange(array $messages): bool
+    {
+        foreach ($messages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $meta = $message['meta'] ?? null;
+            if (is_array($meta) && trim((string) ($meta['changeId'] ?? '')) !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * The newest applied change that still offers Undo.
      *
      * @param list<array<string, mixed>> $messages

@@ -49,9 +49,9 @@ final class DashboardPeriodResolver
      *   labelKey: string
      * }
      */
-    public function resolve(ServerRequestInterface $request): array
+    public function resolve(ServerRequestInterface $request, bool $strict = false): array
     {
-        return $this->resolveFromQueryParams($request->getQueryParams());
+        return $this->resolveFromQueryParams($request->getQueryParams(), self::PRESET_30D, $strict);
     }
 
     /**
@@ -65,10 +65,15 @@ final class DashboardPeriodResolver
      *   labelKey: string
      * }
      */
-    public function resolveFromQueryParams(array $query, string $defaultPreset = self::PRESET_30D): array
+    public function resolveFromQueryParams(array $query, string $defaultPreset = self::PRESET_30D, bool $strict = false): array
     {
         $preset = (string) ($query['period'] ?? $defaultPreset);
         if (!in_array($preset, $this->allowedPresets(), true)) {
+            if ($strict) {
+                throw new \InvalidArgumentException(
+                    'Invalid period. Allowed: today, yesterday, 7d, 14d, 30d, custom (with from and to).',
+                );
+            }
             $preset = $defaultPreset;
         }
 
@@ -101,6 +106,11 @@ final class DashboardPeriodResolver
                 $days = max(1, (int) ceil(($toTimestamp - $fromTimestamp + 1) / 86400));
 
                 return $this->buildResult($preset, $days, $fromTimestamp, $toTimestamp);
+            }
+            if ($strict) {
+                throw new \InvalidArgumentException(
+                    'Invalid date range. Use from and to as YYYY-MM-DD, with from on or before to.',
+                );
             }
             $days = max(1, min(365, (int) ($query['days'] ?? 30)));
             $fromTimestamp = $now - $days * 86400;

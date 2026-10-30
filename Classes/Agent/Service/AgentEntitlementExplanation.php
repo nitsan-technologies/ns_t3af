@@ -33,6 +33,7 @@ use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 final readonly class AgentEntitlementExplanation
 {
     private const LOCK_KIND_EXTENSION = 'extension';
+    private const LOCK_KIND_LICENCE = 'licence';
     private const LOCK_KIND_PLAN = 'plan';
     private const LOCK_KIND_SEVERITY = 'severity';
     private const LOCK_KIND_COMPOSER = 'composer';
@@ -56,6 +57,9 @@ final readonly class AgentEntitlementExplanation
             self::LOCK_KIND_SEVERITY => $this->buildSeverityLockedMessage($tool),
             self::LOCK_KIND_COMPOSER => $this->buildComposerLockedMessage($tool),
             self::LOCK_KIND_GROUP => $this->translator->translate('agent.entitlement.groupLockedLead', [$this->toolLabel($tool)]),
+            self::LOCK_KIND_LICENCE => $this->translator->translate('agent.tool.licenceUnavailable', [
+                (string) ($tool['ownerLabel'] ?? $tool['ownerExtensionKey'] ?? ''),
+            ]),
             default => $this->buildExtensionLockedMessage($tool),
         };
     }

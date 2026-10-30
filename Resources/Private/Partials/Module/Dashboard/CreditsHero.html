@@ -16,6 +16,21 @@
                     </h2>
                 </div>
             </div>
+            <f:if condition="{hero.balanceUnavailable} == 1">
+                <f:then>
+                    <div class="card-body d-flex flex-column gap-3">
+                        <p class="mb-0" role="alert">{hero.balanceErrorMessage}</p>
+                        <div class="d-flex flex-wrap gap-2 mt-auto">
+                            <a href="{providersUri}" class="btn btn-default">
+                                <f:translate key="{ll}:dashboard.topUp" />
+                            </a>
+                            <a href="{providersUri}" class="btn btn-primary">
+                                <f:translate key="{ll}:dashboard.manage" />
+                            </a>
+                        </div>
+                    </div>
+                </f:then>
+                <f:else>
             <div class="card-body d-flex flex-column gap-3">
                 <div class="d-flex align-items-center gap-3">
                     <div class="aiu-progress-ring aiu-progress-ring--hero flex-shrink-0"
@@ -118,6 +133,8 @@
                     </a>
                 </div>
             </div>
+                </f:else>
+            </f:if>
         </f:then>
         <f:else>
             <div class="card-header">

@@ -4,7 +4,7 @@
 
 import { lang, hasTurnGuardWarning, errorText, errorDetails, messageContent, escapeHtml, humanizeKey } from './format.js';
 import { ajaxUrl } from './context.js';
-import { formatSuggestionFieldText, isSuggestionFieldSafe, renderImagePreviews, renderMediaPreview, resolveToolDisplayLabel, renderToolTrace, renderWorkTraceHtml, renderMessageBody } from './render-helpers.js';
+import { formatSuggestionFieldText, isSuggestionFieldSafe, renderImagePreviews, renderMediaPreview, resolveToolDisplayLabel, renderToolTrace, renderWorkTraceHtml, renderMessageBody, renderListLines } from './render-helpers.js';
 import AjaxRequest from '@typo3/core/ajax/ajax-request.js';
 
 /**
@@ -49,6 +49,10 @@ export function draftApplySkipsFollowUp(tool, content, planSteps = []) {
   if (seoQueueAddSkipsFollowUp(tool, content)) {
     return true;
   }
+  // The sync card already states the scope and the source. A follow-up turn rewrites that in the model's words.
+  if (tool === 't3cs_sync_datasource') {
+    return true;
+  }
   if (tool !== 't3ai_create_page_structure') {
     return false;
   }
@@ -62,13 +66,13 @@ export const draftMethods = {
      * @param {boolean} destructive
      * @returns {string}
      */
-    renderDraftTarget(destructive) {
+    renderDraftTarget(destructive, cannotUndo = false) {
       const workspace = this.context.details?.workspace ?? null;
       const live = workspace === null || workspace.live !== false;
       const text = live
         ? lang('agent.draft.targetLive', 'On confirm this goes live on the website.')
         : lang('agent.draft.targetWorkspace', 'On confirm this is saved as a draft in the workspace “%1$s”.', [String(workspace.title ?? '')]);
-      const warn = destructive ? ` ${lang('agent.draft.targetDestructive', 'This cannot be undone.')}` : '';
+      const warn = destructive || cannotUndo ? ` ${lang('agent.draft.targetDestructive', 'This cannot be undone.')}` : '';
       return `<p class="nst3af-agent-draft__target nst3af-agent-draft__target--${live ? 'live' : 'draft'}">${escapeHtml(text + warn)}</p>`;
     },
 
@@ -238,6 +242,7 @@ export const draftMethods = {
           </summary>
           <div class="nst3af-agent-tcall__body">
             <div class="nst3af-agent-msg__body">${renderMessageBody(String(message.content ?? ''))}</div>
+            ${success ? renderListLines(meta) : ''}
             ${success ? renderMediaPreview(meta.details, meta.previews) : ''}
             ${factsHtml}
             ${traceHtml}
@@ -640,7 +645,7 @@ export const draftMethods = {
           <p class="nst3af-agent-tool-confirm__summary">${escapeHtml(summary)}</p>
           ${renderImagePreviews(message.meta?.previews)}
           ${argsBlock}
-          ${this.renderDraftTarget(isDestructive)}
+          ${this.renderDraftTarget(isDestructive, !draftKeepsUndo(draft))}
           <div class="nst3af-agent-draft__actions">
             <button type="button" class="btn btn-primary btn-sm" data-nst3af-agent-draft-apply="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(applyLabel)}</button>
             <button type="button" class="btn btn-default btn-sm" data-nst3af-agent-draft-discard="1" data-message-index="${messageIndex}" data-draft-id="${escapeHtml(String(draft.draftId ?? ''))}">${escapeHtml(lang('agent.draft.decline', 'Cancel'))}</button>
@@ -882,11 +887,20 @@ export const draftMethods = {
       } catch (error) {
         draft.applying = false;
         const { text, retryable } = await errorDetails(error);
+        const failedTool = String(draft.tool ?? message.meta?.tool ?? '');
         if (retryable) {
-          this.messages.push({ role: 'assistant', content: text, meta: { type: 'error' } });
+          const failedMeta = { type: 'error', success: false };
+          if (failedTool !== '') {
+            failedMeta.tool = failedTool;
+          }
+          this.messages.push({ role: 'assistant', content: text, meta: failedMeta });
         } else {
           draft.failed = true;
           draft.failureMessage = text;
+          if (failedTool !== '') {
+            message.meta.tool = failedTool;
+          }
+          message.meta.success = false;
           this.announce(text);
         }
         this.renderStream();
@@ -900,6 +914,24 @@ export const draftMethods = {
         this.renderStream();
       }
       await this.flushContinuation();
+    },
+
+  /**
+     * "never mind" discards every open card without starting another turn.
+     */
+    discardOpenDraftsQuietly(draftId = '') {
+      const targetId = String(draftId ?? '');
+      if (targetId === '') {
+        return;
+      }
+      for (const message of this.messages) {
+        const draft = message?.meta?.draft;
+        const id = String(draft?.draftId ?? '');
+        if (message?.meta?.type !== 'inline_draft' || !draft || id !== targetId || draft.applied === true || draft.discarded === true || draft.failed === true) {
+          continue;
+        }
+        draft.discarded = true;
+      }
     },
 
   /**
@@ -1225,6 +1257,17 @@ export const draftMethods = {
       }
     },
 };
+
+/**
+ * Glossary terms and added file references can be undone. Other tool cards cannot.
+ *
+ * @param {object} draft
+ * @returns {boolean}
+ */
+function draftKeepsUndo(draft) {
+  const tool = String(draft.tool ?? '');
+  return tool === 't3ai_glossary_save' || tool === 'file_reference_add';
+}
 
 /**
  * Same create offered twice (follow-up before Execute) shares this fingerprint.

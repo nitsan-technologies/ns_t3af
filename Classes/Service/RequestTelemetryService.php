@@ -25,6 +25,9 @@ use NITSAN\NsT3AF\Api\CreditsUsage;
 use NITSAN\NsT3AF\Api\EmbeddingResponse;
 use NITSAN\NsT3AF\Api\TtsOptions;
 use NITSAN\NsT3AF\Api\TtsResponse;
+use NITSAN\NsT3AF\Credits\CreditsApiErrorCodes;
+use NITSAN\NsT3AF\Credits\Exception\CreditsApiException;
+use NITSAN\NsT3AF\Credits\Service\CreditsApiErrorMessageResolver;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\RequestLogRepository;
 use NITSAN\NsT3AF\Governance\PrivacyLevel;
@@ -40,6 +43,7 @@ final class RequestTelemetryService
     public function __construct(
         private readonly RequestLogRepository $requestLogs,
         private readonly RequestQualityResolver $qualityResolver,
+        private readonly CreditsApiErrorMessageResolver $errorMessages,
     ) {}
 
     public function logCompletion(
@@ -497,11 +501,39 @@ final class RequestTelemetryService
 
     private function userFacingFailureMessage(\Throwable $error): string
     {
+        $creditsMessage = $this->creditsFailureMessage($error);
+        if ($creditsMessage !== null) {
+            return $creditsMessage;
+        }
+
         if ($this->normalizeErrorCode($error) === 'connection_failed') {
             return 'The AI provider could not be reached.';
         }
 
         return 'The AI request failed.';
+    }
+
+    /**
+     * Rate-limit and concurrency texts only, and only when the language service can translate them.
+     * Every other credits error keeps the generic failure line. A wrapped exception is unwrapped.
+     */
+    private function creditsFailureMessage(\Throwable $error): ?string
+    {
+        for ($current = $error; $current !== null; $current = $current->getPrevious()) {
+            if (!$current instanceof CreditsApiException) {
+                continue;
+            }
+            if (!in_array($current->errorCode, [
+                CreditsApiErrorCodes::RATE_LIMITED,
+                CreditsApiErrorCodes::CONCURRENCY_LIMIT,
+            ], true) || ($GLOBALS['LANG'] ?? null) === null) {
+                return null;
+            }
+
+            return $this->errorMessages->resolve($current);
+        }
+
+        return null;
     }
 
     /**

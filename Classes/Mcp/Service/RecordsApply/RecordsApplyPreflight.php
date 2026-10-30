@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Mcp\Service\RecordsApply;
 
+use NITSAN\NsT3AF\Access\RecordAccessGate;
 use NITSAN\NsT3AF\Mcp\Service\RecordService;
 use NITSAN\NsT3AF\Mcp\Service\RecordSiteLanguageGuard;
 use NITSAN\NsT3AF\Mcp\Service\TcaSchemaService;
@@ -696,8 +697,14 @@ readonly class RecordsApplyPreflight
             return false;
         }
 
-        if (!$backendUser->check('tables_modify', $table)) {
-            $problems->add($where + ['error' => 'No permission to modify this table.']);
+        if (RecordAccessGate::isBackendAuthTable($table)
+            || !$backendUser->check('tables_modify', $table)
+        ) {
+            $problems->add($where + [
+                'error' => RecordAccessGate::isBackendAuthTable($table)
+                    ? RecordAccessGate::backendAuthWriteDeniedMessage()
+                    : 'No permission to modify this table.',
+            ]);
 
             return false;
         }

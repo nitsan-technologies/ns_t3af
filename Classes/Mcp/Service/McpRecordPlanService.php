@@ -68,7 +68,11 @@ final class McpRecordPlanService
             return;
         }
         if (!(new RecordAccessGate())->canModifyTable($user, $tableName)) {
-            throw new \InvalidArgumentException('You are not allowed to change this kind of record with your backend account.');
+            throw new \InvalidArgumentException(
+                RecordAccessGate::isBackendAuthTable($tableName)
+                    ? RecordAccessGate::backendAuthWriteDeniedMessage()
+                    : 'You are not allowed to change this kind of record with your backend account.'
+            );
         }
     }
 

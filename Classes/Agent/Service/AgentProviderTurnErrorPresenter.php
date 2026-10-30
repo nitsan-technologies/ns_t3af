@@ -177,6 +177,60 @@ final class AgentProviderTurnErrorPresenter
         return $masked;
     }
 
+    /**
+     * Keys in a stored conversation. URLs and other message text stay as they are.
+     */
+    public static function maskApiKeysInText(string $text): string
+    {
+        if ($text === '') {
+            return $text;
+        }
+
+        $masked = (string) preg_replace('/\bsk-proj-[a-zA-Z0-9_-]{4,}[a-zA-Z0-9_-]*/u', 'sk-proj-…', $text);
+        $masked = (string) preg_replace('/\bsk-ant-[a-zA-Z0-9_-]{4,}[a-zA-Z0-9_-]*/u', 'sk-ant-…', $masked);
+        $masked = (string) preg_replace('/\bsk-[a-zA-Z0-9_-]{8,}[a-zA-Z0-9_-]*/u', 'sk-…', $masked);
+        $masked = (string) preg_replace('/\bAIza[0-9A-Za-z_-]{20,}\b/u', 'AIza…', $masked);
+        $masked = (string) preg_replace('/\bxox[baprs]-[0-9A-Za-z-]{10,}\b/u', 'xox…', $masked);
+        $masked = (string) preg_replace('/\bBearer\s+\S+/iu', 'Bearer …', $masked);
+        $masked = (string) preg_replace('/"(?:api[_-]?key|apiKey)"\s*:\s*"[^"]*"/u', '"api_key":"…"', $masked);
+
+        return $masked;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $messages
+     * @return list<array<string, mixed>>
+     */
+    public static function maskConversationMessages(array $messages): array
+    {
+        $masked = [];
+        foreach ($messages as $message) {
+            $masked[] = is_array($message) ? self::maskConversationValue($message) : $message;
+        }
+
+        return $masked;
+    }
+
+    /**
+     * @param array<string, mixed> $value
+     * @return array<string, mixed>
+     */
+    private static function maskConversationValue(array $value): array
+    {
+        $out = [];
+        foreach ($value as $key => $item) {
+            if (is_string($item)) {
+                $out[$key] = self::maskApiKeysInText($item);
+            } elseif (is_array($item)) {
+                $out[$key] = self::maskConversationValue($item);
+            } else {
+                $out[$key] = $item;
+            }
+        }
+
+        return $out;
+    }
+
     private static function isGenericWrapperMessage(string $readable): bool
     {
         if (preg_match('/^complete_with_tools failed$/i', $readable) === 1) {

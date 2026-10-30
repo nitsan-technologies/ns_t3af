@@ -57,6 +57,72 @@ final class AgentPromptBuilderPageCreateTest extends TestCase
     }
 
     #[Test]
+    public function aFailedDataSourceCreateIsNotAPageFollowUp(): void
+    {
+        $prompt = $this->prompt();
+
+        self::assertStringContainsString('do not talk about the SEO scheduler', $prompt);
+        self::assertStringContainsString('not a translation of this page', $prompt);
+        self::assertStringContainsString('scope all and do not ask which source', $prompt);
+    }
+
+    #[Test]
+    public function aSavedDataSourceStaysInTheHistoryNote(): void
+    {
+        $block = AgentPromptBuilder::appliedRecordsBlock([
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'readback_result',
+                    'readback' => [[
+                        'table' => 'pages',
+                        'uid' => 4,
+                        'values' => ['title' => 'Home'],
+                    ]],
+                ],
+            ],
+            [
+                'role' => 'assistant',
+                'meta' => [
+                    'type' => 'tool_result',
+                    'tool' => 't3cs_save_datasource',
+                    'success' => true,
+                    'autoRan' => false,
+                    'details' => [
+                        'dataId' => 25,
+                        'type' => 'text',
+                        'typeValue' => 'Wash your face.',
+                    ],
+                ],
+            ],
+        ]);
+
+        self::assertStringContainsString('pages uid 4', $block);
+        self::assertStringContainsString('data source uid 25 (text) text "Wash your face."', $block);
+        self::assertStringContainsString('do not say nothing was saved', $block);
+    }
+
+    #[Test]
+    public function aSearchSettingUsesTheFormValues(): void
+    {
+        $prompt = $this->prompt();
+
+        self::assertStringContainsString('Do not call pages_move for a rename', $prompt);
+        self::assertStringContainsString('Do not describe the older card as saved', $prompt);
+        self::assertStringContainsString('ask what text to add and do not draft a card', $prompt);
+        self::assertStringContainsString('Do not say nothing was saved', $prompt);
+        self::assertStringContainsString('questionsLimit is 3, 5, or 10', $prompt);
+        self::assertStringContainsString('allowedDomains is host names such as example.com', $prompt);
+        self::assertStringContainsString('Do not claim the setting was saved', $prompt);
+        self::assertStringContainsString('A main colour is primaryColor and nothing else', $prompt);
+        self::assertStringContainsString('answer_in_visitor_language', $prompt);
+        self::assertStringContainsString('Make it 2', $prompt);
+        self::assertStringContainsString('call scheduler_update with that uid and the new description', $prompt);
+        self::assertStringContainsString('Providers page', $prompt);
+        self::assertStringContainsString('Do not repeat a pasted key', $prompt);
+    }
+
+    #[Test]
     public function aContentAnalysisIsAReportThatChangesNothing(): void
     {
         $prompt = $this->prompt();

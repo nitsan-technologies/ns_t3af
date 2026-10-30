@@ -119,6 +119,100 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                     'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
                 ]);
             }
+            if (AgentToolTurnProcessor::asksToChangeAiProvider($userMessage)) {
+                $sentence = $this->translator->translate('agent.provider.cannotChange');
+                if ($sentence === '' || $sentence === 'agent.provider.cannotChange') {
+                    $sentence = 'AI provider and API key settings cannot be changed from the AI Agent. An administrator can change them on the Providers page. The key was not saved.';
+                }
+
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $sentence,
+                    'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ]);
+            }
+            if (AgentToolTurnProcessor::asksToDeleteDataSources($userMessage)) {
+                $sentence = $this->translator->translate('agent.datasource.cannotDelete');
+                if ($sentence === '' || $sentence === 'agent.datasource.cannotDelete') {
+                    $sentence = 'The agent cannot delete data sources. You can still list them. Remove a data source in the AI Chatbot/Search module, on the Data Sources tab.';
+                }
+
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $sentence,
+                    'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ]);
+            }
+            if (AgentToolTurnProcessor::unappliedChatbotStatusQuestion($userMessage, $historyMessages)) {
+                $sentence = $this->translator->translate('agent.chatbot.notSaved');
+                if ($sentence === '' || $sentence === 'agent.chatbot.notSaved') {
+                    $sentence = 'No. That chatbot setting was not saved.';
+                }
+
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $sentence,
+                    'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ]);
+            }
+            if (AgentToolTurnProcessor::blocksFollowUpOfFailedCreate($userMessage, $historyMessages)) {
+                $sentence = $this->translator->translate('agent.source.notCreated');
+                if ($sentence === '' || $sentence === 'agent.source.notCreated') {
+                    $sentence = 'The data source was not created, so there is nothing to change.';
+                }
+
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $sentence,
+                    'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ]);
+            }
+            $listedSource = self::listedSourceFromOrdinal($userMessage, $historyMessages);
+            if ($listedSource !== null) {
+                $sentence = $this->translator->translate('agent.source.listed', [
+                    $listedSource['name'],
+                    $listedSource['type'],
+                    (string) $listedSource['uid'],
+                ]);
+                if ($sentence === '' || $sentence === 'agent.source.listed') {
+                    $sentence = $listedSource['name'] . ' is a ' . $listedSource['type'] . ' data source, data id ' . $listedSource['uid'] . '.';
+                }
+                if ($listedSource['detail'] !== '') {
+                    $sentence .= ' ' . $listedSource['detail'];
+                }
+
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $sentence,
+                    'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+                ]);
+            }
+            $openDraft = self::openDraftFollowUp($userMessage, $historyMessages);
+            if ($openDraft !== null) {
+                return $this->single($emitEvent, [
+                    'role' => 'assistant',
+                    'content' => $this->translator->translate($openDraft['label']),
+                    'meta' => [
+                        'type' => 'nl_reply',
+                        'correlationId' => $correlationId,
+                        'orchestratorPause' => true,
+                        'discardOpenDrafts' => $openDraft['discard'],
+                        'draftId' => $openDraft['draftId'],
+                    ],
+                ]);
+            }
+            $prepared = $this->directPreparedChange(
+                $userMessage,
+                $historyMessages,
+                $context,
+                $body,
+                $user,
+                $correlationId,
+                $emitEvent,
+            );
+            if ($prepared !== null) {
+                return $prepared;
+            }
         }
 
         $pageId = (int) ($context['pageId'] ?? 0);
@@ -132,6 +226,12 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         $catalog = $this->actionCatalog->buildCatalog();
+        if ($continuation === []) {
+            $lockedChatbotReply = $this->lockedChatbotReply($userMessage, $historyMessages, $catalog, $correlationId);
+            if ($lockedChatbotReply !== null) {
+                return $this->single($emitEvent, $lockedChatbotReply);
+            }
+        }
         $executableTools = $catalog['executable'];
         if ($executableTools === []) {
             return $this->single($emitEvent, $this->info('agent.turn.noExecutableTools', $correlationId));
@@ -182,6 +282,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $declinedDropped = 0;
         $failedDropped = 0;
         $state->messages = self::withoutRepeatedDeclinedDrafts($state->messages, $historyMessages, ($continuation['outcome'] ?? '') === 'declined', $declinedDropped, $failedDropped);
+        if ($continuation === []) {
+            $state->messages = self::withoutUnaskedSearchSettingsCards($state->messages, $userMessage);
+        }
         $cardDropped = $declinedDropped > 0;
 
         $state->attachPendingPlan();
@@ -542,6 +645,48 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
                 $finalText = AgentPromptBuilder::isCardHistoryEcho($retryText) ? '' : $retryText;
             }
             $finalText = self::withoutLeadingHistoryTag($finalText);
+            if (
+                !$retried
+                && self::asksToSyncDatasource($userMessage)
+                && self::claimsUnbackedSync($finalText, $state->messages)
+                && !$state->isPaused()
+                && !$state->failed
+                && !$state->isCancelled()
+            ) {
+                $nudge = $userMessage . "\n\n[System: Do not say a data source was synced. Nothing was synced. Call t3cs_sync_datasource now so the editor gets an approval card.]";
+                $retryPlan = $state->plan !== [] ? $state->plan : $plan;
+                $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan, $requestForChecklist))->getResult();
+                $content = $agentResult->getContent();
+                $retryText = is_string($content) ? trim($content) : '';
+                $finalText = AgentPromptBuilder::isCardHistoryEcho($retryText) ? '' : $retryText;
+                $retried = true;
+            }
+            if (self::asksToSyncDatasource($userMessage) && self::claimsUnbackedSync($finalText, $state->messages)) {
+                $finalText = $this->translator->translate('agent.sync.notRun');
+            }
+            if (
+                AgentToolTurnProcessor::asksToChangeChatbotBehavior($userMessage, $historyMessages)
+                && AgentToolTurnProcessor::chatbotReplyMissesTheCard($state->messages)
+                && !$state->isPaused()
+                && !$state->failed
+                && !$state->isCancelled()
+            ) {
+                if (!$retried) {
+                    $nudge = $userMessage . "\n\n[System: This is a chatbot setting. Call t3ac_chatbot_settings. Links under the bot's answers are enable_sources_links and max_source_links. Answering in the visitor's language is answer_in_visitor_language. A rule for the website bot is instructions. Do not invent a menu path, do not say the setting is already active, and do not ask which data source to sync.]";
+                    $retryPlan = $state->plan !== [] ? $state->plan : $plan;
+                    $agentResult = $agent->call($this->buildMessages($nudge, $historyMessages, $context, $retryPlan, $requestForChecklist))->getResult();
+                    $content = $agentResult->getContent();
+                    $retryText = is_string($content) ? trim($content) : '';
+                    $finalText = AgentPromptBuilder::isCardHistoryEcho($retryText) ? '' : $retryText;
+                    $retried = true;
+                }
+                if (AgentToolTurnProcessor::chatbotReplyMissesTheCard($state->messages)) {
+                    $sentence = $this->translator->translate('agent.chatbot.needsCard');
+                    $finalText = $sentence === '' || $sentence === 'agent.chatbot.needsCard'
+                        ? 'That needs a chatbot settings card. Nothing was saved.'
+                        : $sentence;
+                }
+            }
         } catch (MaxIterationsExceededException) {
             $state->addMessage([
                 'role' => 'assistant',
@@ -805,6 +950,151 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * A search-settings card is offered only when this message asks for that change.
+     * A later usage question must not repeat the card that is still waiting.
+     *
+     * @param list<array{role: string, content: string, meta: array<string, mixed>}> $messages
+     * @return list<array{role: string, content: string, meta: array<string, mixed>}>
+     */
+    public static function withoutUnaskedSearchSettingsCards(array $messages, string $userMessage): array
+    {
+        if (self::asksToChangeSearchSettings($userMessage)) {
+            return $messages;
+        }
+
+        $kept = [];
+        foreach ($messages as $message) {
+            $draft = is_array($message['meta']['draft'] ?? null) ? $message['meta']['draft'] : [];
+            $tool = (string) ($draft['tool'] ?? $message['meta']['tool'] ?? '');
+            if (($message['meta']['type'] ?? '') === 'inline_draft' && $tool === 't3as_search_settings') {
+                continue;
+            }
+            $kept[] = $message;
+        }
+
+        return $kept;
+    }
+
+    /**
+     * True when this message is about changing AI Search, including "change it back" and a widget or color change.
+     */
+    public static function asksToChangeSearchSettings(string $message): bool
+    {
+        if (preg_match('/t3as_search_settings|enableAiSearch|enable_ai_search|settingsJson/i', $message) === 1) {
+            return true;
+        }
+
+        return preg_match(
+            '/\b(?:ai[\s-]*search|search settings|sucheinstellung\w*|ki[\s-]*suche)\b'
+            . '|\b(?:change|set|put|switch|turn)\s+it\s+back\b'
+            . '|\bhow it was\b'
+            . '|\bwie es (?:war|vorher)\b'
+            . '|\br(?:ü|ue)ckg(?:ä|ae)ngig\b'
+            . '|\bwidget\b'
+            . '|\b(?:primary[\s-]?colou?r|farbe|colou?r)\b/iu',
+            $message,
+        ) === 1;
+    }
+
+    /**
+     * A colour request keeps the colour that was named. Other search fields stay only when the
+     * editor named them, so Apply cannot save a switch or an instruction that was not asked for.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function searchSettingsArgumentsForRequest(array $arguments, string $message): array
+    {
+        $named = self::namedSearchSettingFields($message);
+        if ($named === []) {
+            return $arguments;
+        }
+        $key = array_key_exists('settingsJson', $arguments)
+            ? 'settingsJson'
+            : (array_key_exists('settings_json', $arguments) ? 'settings_json' : null);
+        if ($key === null) {
+            return $arguments;
+        }
+        $decoded = $arguments[$key];
+        if (is_string($decoded)) {
+            try {
+                $decoded = json_decode($decoded, true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                return $arguments;
+            }
+        }
+        if (!is_array($decoded) || $decoded === [] || array_is_list($decoded)) {
+            return $arguments;
+        }
+        $filtered = [];
+        foreach ($decoded as $field => $value) {
+            if (in_array(self::searchFieldName((string) $field), $named, true)) {
+                $filtered[$field] = $value;
+            }
+        }
+        if ($filtered === []) {
+            return $arguments;
+        }
+        $arguments[$key] = json_encode($filtered, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        return $arguments;
+    }
+
+    /**
+     * Search fields the editor named. Empty when this message does not name one.
+     *
+     * @return list<string>
+     */
+    public static function namedSearchSettingFields(string $message): array
+    {
+        $fields = [];
+        $secondary = preg_match('/\bsecondary\s+colou?r\b|\bsekund(?:ä|ae)rfarbe\b/iu', $message) === 1;
+        $text = preg_match('/\btext\s+colou?r\b|\bschriftfarbe\b|\bwhite\s+text\b/iu', $message) === 1;
+        $primary = preg_match('/\b(?:main|primary|brand)\s+colou?r\b|\b(?:haupt|prim(?:ä|ae)r|marken)farbe\b/iu', $message) === 1;
+        $colour = preg_match('/\bcolou?rs?\b|\bfarbe[n]?\b|#[0-9a-f]{3,8}\b/iu', $message) === 1;
+        if ($primary || ($colour && !$secondary && !$text)) {
+            $fields[] = 'primary_color';
+        }
+        if ($secondary) {
+            $fields[] = 'secondary_color';
+        }
+        if ($text) {
+            $fields[] = 'text_color';
+        }
+        if (
+            preg_match('/\b(?:turn\s+(?:it\s+)?(?:on|off)|enable|disable|switch\s+(?:on|off)|aktivieren|deaktivieren)\b/iu', $message) === 1
+            && preg_match('/\b(?:ai[\s-]*search|ki[\s-]*suche)\b/iu', $message) === 1
+        ) {
+            $fields[] = 'enable_ai_search';
+        }
+        if (preg_match('/\binstructions?\b|\banweisungen\b/iu', $message) === 1) {
+            $fields[] = 'instructions';
+        }
+        if (preg_match('/\bappearance\b|\berscheinungsbild\b|\b(?:light|dark)\s+(?:mode|appearance|theme)\b/iu', $message) === 1) {
+            $fields[] = 'widget_appearance';
+        }
+        if (preg_match('/\bwidget\s+mode\b|\bmodal-box\b|\bsidebar\b/iu', $message) === 1) {
+            $fields[] = 'widget_mode';
+        }
+        if (preg_match('/\bloader\b/iu', $message) === 1) {
+            $fields[] = 'loader_type';
+        }
+        if (preg_match('/\bborder[\s-]*radius\b/iu', $message) === 1) {
+            $fields[] = 'border_radius';
+        }
+        if (preg_match('/\bsearch\s+engine\b|\bsolr\b/iu', $message) === 1) {
+            $fields[] = 'search_engine';
+        }
+
+        return $fields;
+    }
+
+    private static function searchFieldName(string $field): string
+    {
+        return strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $field) ?? $field);
+    }
+
+    /**
      * Key of a declined tool card. The translate tools are one family: after the editor cancels a page
      * translation, the same translation must not come back through another translate tool.
      */
@@ -990,6 +1280,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         if ($unavailableFiles !== '') {
             $system .= "\n" . $unavailableFiles;
         }
+        if (self::isHelpRequest($userMessage)) {
+            $system .= "\n" . self::helpReplyLanguageInstruction($userMessage);
+        }
         if ($system !== '') {
             $bag->add(Message::forSystem($system));
         }
@@ -1013,6 +1306,98 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
 
         return ['messages' => [$message], 'paused' => false, 'pauseReason' => null];
+    }
+
+    /**
+     * A data-source refresh, a failed training retry, a source rename, a greeting, or a chatbot
+     * rename is a card before the model can search news or open an empty record.
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     * @param array<string, mixed> $context
+     * @param array<string, mixed> $body
+     * @return array{messages: list<array{role: string, content: string, meta: array<string, mixed>}>, paused: bool, pauseReason: string|null}|null
+     */
+    private function directPreparedChange(
+        string $userMessage,
+        array $historyMessages,
+        array $context,
+        array $body,
+        BackendUserAuthentication $user,
+        string $correlationId,
+        ?callable $emitEvent,
+    ): ?array {
+        $request = AgentToolTurnProcessor::directToolRequest($userMessage, $historyMessages);
+        if ($request === null) {
+            return null;
+        }
+        if (isset($request['ask'])) {
+            $key = (string) $request['ask'];
+            $sentence = $this->translator->translate($key);
+            if ($sentence === '' || $sentence === $key) {
+            $sentence = match ($key) {
+                'agent.chatbot.whichGreeting' => 'What should the greeting say?',
+                'agent.source.whichDescription' => 'What description should I save?',
+                'agent.scheduler.whichDescription' => 'What description should the scheduler task have?',
+                default => 'What should I change it back to?',
+            };
+            }
+
+            return $this->single($emitEvent, [
+                'role' => 'assistant',
+                'content' => $sentence,
+                'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+            ]);
+        }
+
+        $turnBody = $body;
+        $turnBody['userMessage'] = $userMessage;
+        $turnBody['requestQuery'] = $userMessage;
+        $turnBody['conversationHistory'] = $historyMessages;
+        $turnBody['arguments'] = $request['arguments'];
+        $message = $this->toolExecutor->execute((string) $request['tool'], $context, $turnBody, $user, $correlationId);
+        if ($emitEvent !== null) {
+            $emitEvent('message', ['message' => $message]);
+        }
+        $pause = ($message['meta']['orchestratorPause'] ?? false) === true;
+
+        return [
+            'messages' => [$message],
+            'paused' => $pause,
+            'pauseReason' => $pause ? (string) ($message['meta']['type'] ?? 'draft_review') : null,
+        ];
+    }
+
+    /**
+     * A chatbot change is the licence reply while those tools are locked.
+     * A licensed chatbot tool stays on the normal path.
+     *
+     * @param list<array<string, mixed>> $history
+     * @param array{executable?: list<array<string, mixed>>, locked?: list<array<string, mixed>>} $catalog
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function lockedChatbotReply(string $userMessage, array $history, array $catalog, string $correlationId): ?array
+    {
+        $locked = null;
+        foreach ($catalog['locked'] ?? [] as $tool) {
+            if ((string) ($tool['name'] ?? '') === 't3ac_chatbot_settings_get') {
+                $locked = $tool;
+                break;
+            }
+        }
+        $aboutChatbot = AgentToolTurnProcessor::chatbotSettingsNeedLicenceMessage($userMessage, true)
+            || AgentToolTurnProcessor::asksToChangeChatbotBehavior($userMessage, $history);
+        if (!is_array($locked) || !$aboutChatbot) {
+            return null;
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $this->entitlementExplanation->buildMessage($locked),
+            'meta' => array_merge(
+                $this->entitlementExplanation->buildMeta($locked),
+                ['correlationId' => $correlationId, 'orchestratorPause' => true],
+            ),
+        ];
     }
 
     /**
@@ -1045,6 +1430,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         $query = self::requestQuery($userMessage, $historyMessages);
         if ($query === '') {
             return $offeredTools;
+        }
+        if (self::isHelpRequest($userMessage)) {
+            return self::toolsByName(['explain_capabilities'], $executableTools, []);
         }
 
         $createContent = AgentCoreToolSet::isCreateContentRequest($query);
@@ -1859,6 +2247,18 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * A page rename is a title update. A request that also asks to move the page stays a move.
+     */
+    public static function isPageRenameNotMove(string $text): bool
+    {
+        if (preg_match('/\b(?:move|moves|moved|moving|verschieb\w*)\b/iu', $text) === 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:renam\w*|umbenenn\w*)\b/iu', $text) === 1;
+    }
+
+    /**
      * "Make the German version visible", "hide this page": a change of the hidden field, never a delete.
      */
     public static function isVisibilityRequest(string $query): bool
@@ -1989,12 +2389,282 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * "help" is its own question. A short "yes" or "never mind" refers to an open card, not a new change.
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     * @return array{label: string, discard: bool, draftId: string}|null
+     */
+    public static function openDraftFollowUp(string $userMessage, array $historyMessages): ?array
+    {
+        $draftId = self::openDraftId($historyMessages);
+        if ($draftId === '') {
+            return null;
+        }
+        if (self::isDraftCancellation($userMessage)) {
+            return ['label' => 'agent.draft.cancelledOpen', 'discard' => true, 'draftId' => $draftId];
+        }
+        if (self::isDraftConfirmation($userMessage)) {
+            return ['label' => 'agent.draft.clickApply', 'discard' => false, 'draftId' => $draftId];
+        }
+
+        return null;
+    }
+
+    /**
+     * Only the latest assistant card. An older T3AI or T3AA card stays open.
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function openDraftId(array $historyMessages): string
+    {
+        for ($index = count($historyMessages) - 1; $index >= 0; $index--) {
+            $entry = $historyMessages[$index];
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            // "Click Apply" is the newest assistant message. The card it points at is still the open one.
+            if (trim((string) ($meta['draftId'] ?? '')) !== '' && ($meta['type'] ?? '') !== 'inline_draft') {
+                continue;
+            }
+            if (($meta['type'] ?? '') !== 'inline_draft') {
+                return '';
+            }
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            if (($draft['applied'] ?? false) === true || ($draft['discarded'] ?? false) === true || ($draft['failed'] ?? false) === true) {
+                return '';
+            }
+
+            return trim((string) ($draft['draftId'] ?? ''));
+        }
+
+        return '';
+    }
+
+    /**
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function hasOpenDraft(array $historyMessages): bool
+    {
+        return self::openDraftId($historyMessages) !== '';
+    }
+
+    public static function isHelpRequest(string $message): bool
+    {
+        $plain = self::plainReply($message);
+
+        return in_array($plain, self::englishHelpPhrases(), true) || in_array($plain, self::germanHelpPhrases(), true);
+    }
+
+    /**
+     * A capability answer follows the language of this message. Other turns keep the backend language.
+     */
+    public static function helpReplyLanguageInstruction(string $message): string
+    {
+        if (in_array(self::plainReply($message), self::germanHelpPhrases(), true)) {
+            return 'For this capability answer only, reply in German and address the editor formally (Sie). This overrides the reply-language rule above.';
+        }
+
+        return 'For this capability answer only, reply in English. This overrides the reply-language rule above.';
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function englishHelpPhrases(): array
+    {
+        return [
+            'help',
+            'menu',
+            'options',
+            'what can you do',
+            'what can you do here',
+            'can you help me',
+            'how can you help',
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function germanHelpPhrases(): array
+    {
+        return [
+            'hilfe',
+            'hilfe bitte',
+            'was kannst du',
+            'was kannst du tun',
+            'wie kannst du helfen',
+        ];
+    }
+
+    public static function asksToSyncDatasource(string $message): bool
+    {
+        if (preg_match('/\b(?:sync|synchronis\w*)\b/iu', $message) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:data\s*sources?|datenquellen?|datasources?|sources?|quelle)\b/iu', $message) === 1
+            || preg_match('/[\'"“”][^\'"“”]{2,}[\'"“”]/u', $message) === 1
+            || preg_match('/\b(?:uid|data\s*id|source)\s*#?\s*\d+/iu', $message) === 1;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $messages
+     */
+    public static function claimsUnbackedSync(string $text, array $messages): bool
+    {
+        if (self::turnPreparedSync($messages)) {
+            return false;
+        }
+
+        return preg_match('/\b(?:sync(?:ed|hronised|hronized)|synchronis\w*)\b/iu', $text) === 1;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $messages
+     */
+    public static function turnPreparedSync(array $messages): bool
+    {
+        foreach ($messages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
+            if (($meta['tool'] ?? '') === 't3cs_sync_datasource') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static function isDraftConfirmation(string $message): bool
+    {
+        return in_array(self::plainReply($message), [
+            'yes',
+            'yes do it',
+            'yes please',
+            'apply it',
+            'ok',
+            'okay',
+            'ok do it',
+            'do it',
+            'go ahead',
+            'please do',
+            'please do it',
+            'ja',
+            'ja bitte',
+            'ja mach das',
+            'ja mach es',
+            'mach das',
+            'mach es',
+            'bitte machen',
+        ], true);
+    }
+
+    public static function isDraftCancellation(string $message): bool
+    {
+        return in_array(self::plainReply($message), [
+            'never mind',
+            'never mind go back',
+            'nevermind',
+            'cancel',
+            'vergiss es',
+            'egal',
+            'abbrechen',
+            'lass es',
+            'forget it',
+            'doch nicht',
+            'no',
+            'nein',
+        ], true);
+    }
+
+    /**
+     * The capability overview must not be glued onto the next short message ("help" already returns early).
+     *
+     * @param list<array<string, mixed>> $historyMessages
+     */
+    public static function replyFollowsCapability(array $historyMessages, int $index): bool
+    {
+        for ($j = $index; $j >= 0 && $j >= $index - 4; --$j) {
+            $entry = $historyMessages[$j] ?? null;
+            if (!is_array($entry)) {
+                continue;
+            }
+            if (($entry['role'] ?? '') === 'user') {
+                return false;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if ((string) ($meta['tool'] ?? '') === 'explain_capabilities') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * "The second one" after the data-source list. A sync or activate of that row is not answered here.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array{name: string, type: string, uid: int, detail: string}|null
+     */
+    private static function listedSourceFromOrdinal(string $message, array $history): ?array
+    {
+        if (AgentToolTurnProcessor::changesADatasource($message)) {
+            return null;
+        }
+        $sources = AgentToolTurnProcessor::datasourcesInLatestList($history);
+        $uid = AgentToolTurnProcessor::sourceUidFromOrdinal($message, $sources);
+        if ($uid <= 0) {
+            return null;
+        }
+        foreach ($sources as $source) {
+            $name = trim((string) ($source['name'] ?? ''));
+            $type = trim((string) ($source['type'] ?? ''));
+            if ((int) ($source['uid'] ?? 0) !== $uid) {
+                continue;
+            }
+            $detail = trim((string) ($source['description'] ?? ''));
+            if ($detail === '') {
+                $detail = trim((string) ($source['typeValuePreview'] ?? ''));
+            }
+            if (mb_strlen($detail) > 240) {
+                $detail = mb_substr($detail, 0, 237) . '...';
+            }
+
+            return [
+                'name' => $name !== '' ? $name : 'Data source',
+                'type' => $type !== '' ? $type : 'data',
+                'uid' => $uid,
+                'detail' => $detail,
+            ];
+        }
+
+        return null;
+    }
+
+    private static function plainReply(string $message): string
+    {
+        $text = mb_strtolower(trim($message));
+        $text = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', $text) ?? $text;
+        $text = preg_replace('/\s+/u', ' ', trim($text)) ?? trim($text);
+
+        return $text;
+    }
+
+    /**
      * @param list<array<string, mixed>> $historyMessages
      */
     public static function requestQuery(string $userMessage, array $historyMessages): string
     {
         $message = trim($userMessage);
         $isContinuation = str_starts_with($message, '[The editor ');
+        if (!$isContinuation && self::isHelpRequest($message)) {
+            return $message;
+        }
         if (!$isContinuation && mb_strlen($message) >= self::SHORT_REPLY_CHARS) {
             return $message;
         }
@@ -2020,7 +2690,8 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
             $isReply = !$isContinuation
                 && ($entry['role'] ?? '') === 'assistant'
                 && ($meta['type'] ?? '') === 'nl_reply'
-                && $earlier === [];
+                && $earlier === []
+                && !self::replyFollowsCapability($historyMessages, $i);
             if ($isRequest || $isReply) {
                 array_unshift($earlier, mb_substr($content, 0, 300));
             }

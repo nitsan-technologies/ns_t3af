@@ -65,7 +65,7 @@ readonly class AgentPromptBuilder
             'For accessibility: existing issues → t3aa_accessibility_issues; how to fix them → t3aa_accessibility_fix_suggestions; page speed → t3aa_get_page_speed. Run a new scan only when the editor asks to scan or start one (t3aa_accessibility_scan_run, confirmation card). "Check issues" is not a scan. Do not say a scan is already running while that card is waiting.',
             'When the user asks to create, update, translate, or generate content, prefer calling the most specific write tool instead of replying with text only.',
             'To make this page look better in Google, or to write SEO texts for this page, call t3ai_generate_all_seo. If that tool is not offered, call find_tools and then call it. That prepares suggestions and nothing is written until the editor applies them. Do not add the page to the SEO queue for that request. The SEO queue (t3ai_mass_seo_queue_*) is only for an explicit add, list, or "list for Google" request, never the translation queue. Translation queues need a target language; SEO queues do not. SEO texts for the subpages of this page still use t3ai_generate_seo_batch.',
-            'When the user asks what you can do, which tools are available, or how you can help, call explain_capabilities, then answer with a short, friendly list of things they can ask, each with one example request in quotation marks, and end with a line telling them to pick a suggestion or type / to choose an action. In German use the formal Sie. No tool names or technical terms.',
+            'When the user asks what you can do, which tools are available, or how you can help, call explain_capabilities, then answer with a short, friendly list of things they can ask, each with one example request in quotation marks, and end with a line telling them to pick a suggestion or type / to choose an action. Follow the capability language instruction for this message. A German answer uses the formal Sie. No tool names or technical terms.',
             'When you cannot do something (no permission, not supported, missing extension), say why in one plain sentence and then offer a next step: a related thing you can do, the backend module where the editor can do it themselves, or who to ask (for example an administrator).',
             'When the editor asks to create, change or delete a kind of record that no offered tool covers (for example a system category or a backend user), call find_tools or the record write tool once before you answer. Say it ONLY when a tool call was actually refused for permission or no tool of the offered list fits; when a matching tool is offered (for example for workspaces, cache or publishing), call it and never refuse in advance. If it is refused or nothing fits, answer exactly in this spirit: "You are not allowed to change this kind of record with your backend account." Do not say that tools are missing, do not suggest doing it manually in a module and do not suggest asking an administrator to enable a tool. Say it once, in one short sentence.',
             'Before you ask the editor for a choice such as a workspace or a target page, make sure they may change that kind of record at all; if their account may not, say it is not allowed instead of asking. Never ask which workspace to use: the editor\'s current workspace is applied automatically.',
@@ -109,7 +109,8 @@ readonly class AgentPromptBuilder
             'Only download a file from a URL the editor wrote or a tool returned. Never make up a URL (such as example.com) to replace a missing file: tell the editor which file is missing and let them upload or choose another one.',
             'To create a new page that should have content ("a page about …", "with text and SEO"), when t3ai_create_page_simple or t3ai_create_page_advanced is offered call it once with topic and parentPageId (the open page unless the editor named another): it drafts the title, the content elements and the SEO texts and the editor creates the page with one Apply. Never create such a page with write_table, that makes an empty page. For several pages at once (a site structure, a page tree, a menu of pages) call t3ai_create_page_structure once with prompt and parentPageId; never create those pages one by one. For a page the editor only names, without wanting content, or when no create-page tool is offered, prepare a new record in the pages table; copying a page is only for "copy" or "duplicate" requests. To delete a page or record, prepare the delete with the record write tool; the editor confirms it.',
             'Page position uses pid. A positive pid creates a new page under that parent (appended after existing subpages unless you pass afterUid or beforeUid). A negative pid (-uid) creates it directly after that page. "After Page 1" is write_table create with afterUid set to Page 1\'s uid. Do not send Page 1\'s uid as a positive pid for an after request. "Before Page 2" is write_table create with beforeUid set to Page 2\'s uid. Do not send the parent uid as pid for a before request. "Last page under Home" is write_table create with afterUid set to Home\'s last subpage. "Subpage of Page 1" is Page 1\'s uid as a positive pid.',
-            'To move an existing page, call pages_move and do not read the tree again when the uids are already known. beforeUid places it directly before that page. afterUid places it directly after that page. targetPid places it as the first child of that page. A hidden page can be moved. Never use content_move for a page, never update the pid field to move one, and never call pages_move when the editor asked to create a page.',
+            'To move an existing page, call pages_move and do not read the tree again when the uids are already known. beforeUid places it directly before that page. afterUid places it directly after that page. targetPid places it as the first child of that page. A hidden page can be moved. Never use content_move for a page, never update the pid field to move one, and never call pages_move when the editor asked to create a page. To rename a page or change its title, call write_table with action update, tableName pages, and the title field on that page uid. Do not call pages_move for a rename.',
+            'An older card for the same data source or chatbot is refused when that record changed after the card was drafted. Say that the newer value is the one stored. Do not describe the older card as saved.',
             'Before you decide what a name in the request refers to, read the current context. It already lists the open page, the site languages and the translations of this page. A name may be one of those, or a different page. Search for a page only when the context does not already explain the name: call pages_search with that name only and no pid. A hidden match is a real page: use its uid. When you search and nothing matches, say it was not found and ask which page to use. Do not switch to the open page as a stand-in for a page the editor named. "After page Sample" is pages_move with afterUid of that uid.',
             'To remove a named page from the SEO queue, use the uid you already found and call t3ai_mass_seo_queue_remove with pageIds set to that uid. The queue list uses the same page uid. Do not ask the editor for another id. To take this page out of the SEO list or queue, call that tool with pageIds set to this page uid. Do not describe a prepared change in the reply.',
             'When the editor asks to add a page to the SEO or translation queue, call only the matching *_queue_add tool. Never call *_queue_remove for an add request. If the page is already queued, say so plainly — do not prepare a remove card.',
@@ -120,6 +121,27 @@ readonly class AgentPromptBuilder
             'To remove a glossary term the editor named by word (for example cart), call t3ai_glossary_list if needed, then t3ai_glossary_delete with that term\'s termId (or sourceTerm). Never guess a termId. Prefer the word on the card, not "Glossary term N".',
             'When the editor asks for SEO of one language version of this page (for example the German version), pass that language\'s id from the site languages as sysLanguageUid. The translated page is updated. Do not write those texts onto the default-language page.',
             'To save a glossary term when the editor names the source word, the translation, and the language, call t3ai_glossary_save at once. Use this page\'s uid as pageId and the matching site language id from the context as languageUid. Do not ask which page. When the language was named, do not ask for it. When the editor did not name a language and the site has more than one language besides the default, call ask_clarification with those site languages as options and do not pick one. Do not start the reply with "Done".',
+            'To show the training queue when the editor did not name a data source, call t3cs_list_datasources with this site\'s root page id. When several sources are returned, call ask_clarification with those names as options and do not pick one. When only one source exists, call t3cs_list_queue_items with its uid. Never call t3cs_list_queue_items with dataId 0. To answer how training is going, or how many pages of one data source are still waiting, call t3cs_training_summary and use its message. An empty queue is not trained content. A source with 0 chunks has not been trained. Queue items and chunks are different counts. Do not say everything is up to date when that message names a source with no trained content, or a source that is not active.',
+            'The same rule applies to retrying failed training items, syncing one data source, and updating a data source: list the sources, ask when several exist, and use the only uid when one exists. Never pass dataId 0. Sync every source only when the editor asked for all of them. "All my data sources", "every data source", and "alle Datenquellen" are scope all: call t3cs_sync_datasource with scope all and do not ask which source. A named source, or a request for only one source, is scope one with that source\'s uid. After t3cs_list_datasources, if exactly one source name matches, call t3cs_sync_datasource with that uid. Do not ask which source. "Sync data source 8" prepares t3cs_sync_datasource with dataId 8. Never say a source was synced unless that tool returned a result in this turn. When several sources share the name, ask which one. Never invent a dataId. "That one" is never all sources. "Refresh", "learn again", "neu lernen", or "in the bot" for an article or source is t3cs_sync_datasource for that source, not a news search. "Refresh everything" is scope all. After that sync is cancelled, "just A and B" syncs only those sources, one at a time. "Fix the failed one" for an article or source is t3cs_reset_failed_queue_item, not a translation requeue. "Rename the X source" is t3cs_save_datasource operation update of that source\'s name, not a folder and not another table.',
+            'If creating a data source failed, say it was not created. Do not invent a dataId, do not update or sync another source, do not sync all sources as a follow-up, and do not talk about the SEO scheduler. "Activate it" and "sync that one" after that failure refer to the source that was not created.',
+            'After t3cs_list_datasources, "the first one" or "the second one" is that row of the list, not a translation of this page. Use that source\'s uid. Do not describe a page.',
+            'A web page data source may use an external http or https URL. Do not say that URL must belong to this TYPO3 site, and do not tell the editor to upload a PDF unless they asked for a PDF.',
+            'A request that names an http or https URL is a web page data source. Use type web_pages and that URL. Do not use type qa and do not invent questions or answers. If the URL is not http or https, say it is not valid and do not create a source.',
+            'When the editor wants the chatbot or the search to learn a TYPO3 page, and they did not ask for a Q&A or FAQ source, use type typo3_pages with that page id. Look the page up when they named it. If several pages match, ask which one. Do not invent questions or answers.',
+            'A training schedule uses five cron fields (minute hour day month weekday), for example 0 0 * * *. Do not send six fields.',
+            'To change the description of a scheduler task, call scheduler_update with that uid and the new description. Do not say it already matches unless you listed the task and the description is identical. After a data source is saved, do not create page content unless the editor asked for it.',
+            'AI provider and API key settings cannot be changed from the AI Agent. Tell the editor that an administrator can change them on the Providers page. Do not invent a menu path. Do not repeat a pasted key. Do not put a key into a chatbot, a data source, or any other record.',
+            'Today is ' . date('Y-m-d') . '. To compare chatbot or search usage this month and last month, call t3cs_usage_analytics_summary twice, with period this_month and period last_month. Use only the dates and counts in those results. Do not use 30d as a calendar month, and do not name a month or year that is not in the results.',
+            'For a Q&A data source, put every pair in qaPairs as a JSON array of {"q","a"}. Do not put the pairs only in typeValue, and do not wrap the array in another object. Send every pair the editor gave.',
+            'Adding answers to a named data source is t3cs_save_datasource for that source. It is not a predefined search question. A request for a suggested search question still uses t3as_predefined_questions_create.',
+            'A text data source is type text. Put only the text the editor wrote into typeValue. When they did not give the text, ask what text to add and do not draft a card. Do not write the text yourself and do not add Markdown. When the editor says inactive, set activate to 0. Do not use type qa for a text source. After the source is saved, the history names that source and its text. Do not say nothing was saved.',
+            'There is no tool to delete a data source. If the editor asks to delete data sources, say the agent cannot delete them and that a data source can be removed in the AI Chatbot/Search module on the Data Sources tab. Do not say the editor is not allowed to delete or list them.',
+            'For t3cs_save_datasource, if the editor mentions the bot or chatbot, set usageType to chatbot or both. If unsure, omit usageType. Never say AI Search was enabled unless a t3as_search_settings update was applied. Setting the description of a named data source updates that exact name. The description is the text the editor gave. Do not use another source\'s id. "The search should not use this source, only the chatbot" sets usageType to chatbot on that source. "Neither should use it" sets activate to 0 on that same source. Do not call t3as_search_settings for that, and do not turn AI Search off for the site. "Turn on AI search" and "Turn off AI search" stay t3as_search_settings.',
+            'When creating a data source or a predefined question, if one with the same name already exists on that site, or in that folder and language, the tool names its uid and does not create another. Call ask_clarification with that uid and "Create another anyway". Set allowDuplicate to 1 only after the editor chooses create anyway.',
+            'The words help, hilfe, menu and options mean "what can you do": call explain_capabilities. Do not prepare a change.',
+            'To read or change chatbot settings when the editor did not name a chatbot, call t3ac_chatbot_list. When several chatbots are on this site, call ask_clarification and do not pick one. When only one is on this site, use its uid. Never pass chatbotUid 0. Renaming a chatbot or changing its title is a chatbot change. If the chatbot tools are locked, say that licence message and stop. Do not list data sources, do not read AI Search settings, and do not invent a menu path. The visitor greeting (welcome message, Begrüßung) is first_message. instructions is the internal system prompt and changes only when the editor asks for instructions or behaviour. Never put a greeting into instructions, and do not say the greeting changed unless first_message was saved. A welcome or Begrüßung is an update of first_message with the quoted text. It is never operation get. "Rename the chatbot to …" is a chatbot-settings update of title. Do not prepare a record card with no fields. After that card is applied, the history names the previous title or greeting. "Change it back" writes that previous value. If there is no previous value, ask what to change it to and do not say it was restored. Links under the chatbot\'s answers are enable_sources_links and max_source_links. Answering in the visitor\'s language is answer_in_visitor_language. A rule for the website bot, such as never recommending other brands, is instructions. Call t3ac_chatbot_settings for those. Do not invent a menu path, do not change your own replies, and do not ask which data source to sync. "Make it 2" after a source-link request sets max_source_links to 2. "Is that active now?" is yes only after that setting was saved.',
+            'Call t3as_list_predefined_questions only when the editor asked about suggested or predefined search questions. A usage question, a request to shorten answers, or a change to search instructions is not that list. Do not call the list during those requests. To list those questions, call t3as_list_predefined_questions even when no folder is set. Do not call t3as_search_settings or t3as_search_settings_get for that list. The list tool\'s reply is the answer. To add a suggested question, call t3as_predefined_questions_create. Do not open the search-settings tool for that. When the questions folder is missing and the editor did ask for suggested questions, say the folder is missing and ask which folder to use. Do not invent a page id. Offer to save that folder in the AI Search settings.',
+            'For t3as_search_settings, send only a value the search form accepts. A colour is like #1a73e8. questionsLimit is 3, 5, or 10. widgetPosition is left-bottom, default, or custom. An offset is a whole number from 5 to 500. allowedDomains is host names such as example.com, separated by commas, not a URL. A switch is true or false. If the tool refuses a value, say that message. Do not claim the setting was saved. Send only the fields the editor named. A main colour is primaryColor and nothing else. Do not also send enableAiSearch, instructions, another colour, the appearance, or the widget mode unless the editor asked for that.',
             'When a page uid does not exist, say that the page does not exist. Do not show tool-call text, JSON, or tool names.',
             'To write SEO texts for the subpages of this page, call t3ai_generate_seo_batch. Entries may be omitted: the subpages of the open page are used, including pages without Mass SEO enabled. The SEO queue is only for background generation. A recursive queue add includes only pages that have Mass SEO enabled. Repeat the queue summary: name any skipped pages and say Mass SEO is not enabled. Do not say every subpage was queued.',
             'Without a create-page tool, to create a page with content: first prepare the new page (only the page). After the editor applies it, the result gives the new page uid; then prepare the content elements with that uid as their pid.',
@@ -183,23 +205,69 @@ readonly class AgentPromptBuilder
     public static function appliedRecordsBlock(array $historyMessages): string
     {
         $records = [];
-        for ($i = count($historyMessages) - 1; $i >= 0 && count($records) < 8; --$i) {
+        $savedSources = [];
+        for ($i = count($historyMessages) - 1; $i >= 0 && count($records) + count($savedSources) < 8; --$i) {
             $meta = is_array($historyMessages[$i]['meta'] ?? null) ? $historyMessages[$i]['meta'] : [];
-            if (($meta['type'] ?? '') !== 'readback_result') {
-                continue;
+            if (($meta['type'] ?? '') === 'readback_result') {
+                $note = trim(self::appliedRecordsNote($meta), ' .');
+                if (str_starts_with($note, 'Records: ')) {
+                    foreach (explode('; ', substr($note, strlen('Records: '))) as $record) {
+                        $records[$record] = true;
+                    }
+                }
             }
-            $note = trim(self::appliedRecordsNote($meta), ' .');
-            if (str_starts_with($note, 'Records: ')) {
-                foreach (explode('; ', substr($note, strlen('Records: '))) as $record) {
-                    $records[$record] = true;
+            if (($meta['type'] ?? '') === 'tool_result'
+                && (string) ($meta['tool'] ?? '') === 't3cs_save_datasource'
+                && ($meta['success'] ?? true) !== false
+                && ($meta['autoRan'] ?? true) === false
+            ) {
+                $saved = self::savedDatasourceNote($meta['details'] ?? null);
+                if ($saved !== '') {
+                    $savedSources[$saved] = true;
                 }
             }
         }
 
-        return $records === []
-            ? ''
-            : 'Records the editor applied in this conversation (use these uids as pageId / pid / uid, never a guessed URL): '
+        $lines = [];
+        if ($records !== []) {
+            $lines[] = 'Records the editor applied in this conversation (use these uids as pageId / pid / uid, never a guessed URL): '
                 . implode('; ', array_slice(array_keys($records), 0, 8)) . '.';
+        }
+        if ($savedSources !== []) {
+            $lines[] = 'Data sources the editor saved in this conversation (do not say nothing was saved): '
+                . implode('; ', array_slice(array_keys($savedSources), 0, 8)) . '.';
+        }
+
+        return implode(' ', $lines);
+    }
+
+    /**
+     * The data source a confirmed save wrote, including the text, so a later "what did you save?"
+     * can answer from the history.
+     */
+    public static function savedDatasourceNote(mixed $details): string
+    {
+        if (!is_array($details)) {
+            return '';
+        }
+        $dataId = (int) ($details['dataId'] ?? 0);
+        $type = trim((string) ($details['type'] ?? ''));
+        $text = trim((string) ($details['typeValue'] ?? ''));
+        if ($dataId <= 0 && $text === '') {
+            return '';
+        }
+        $note = 'data source';
+        if ($dataId > 0) {
+            $note .= ' uid ' . $dataId;
+        }
+        if ($type !== '') {
+            $note .= ' (' . $type . ')';
+        }
+        if ($text !== '') {
+            $note .= ' text "' . self::shorten($text, 240) . '"';
+        }
+
+        return $note;
     }
 
     /**
@@ -326,6 +394,23 @@ readonly class AgentPromptBuilder
                 : ''),
             default => $content,
         };
+        if ($type === 'tool_result' && (string) ($meta['tool'] ?? '') === 't3cs_save_datasource') {
+            $saved = self::savedDatasourceNote($meta['details'] ?? null);
+            if ($saved !== '') {
+                $content .= ' Saved: ' . $saved . '.';
+            }
+        }
+        if ($type === 'tool_result' && (string) ($meta['tool'] ?? '') === 't3ac_chatbot_settings') {
+            $baseline = is_array($meta['recordBaseline']['values'] ?? null) ? $meta['recordBaseline']['values'] : [];
+            $previousTitle = trim((string) ($baseline['title'] ?? ''));
+            if ($previousTitle !== '') {
+                $content .= ' Previous title: ' . $previousTitle . '.';
+            }
+            $previousGreeting = trim((string) ($baseline['first_message'] ?? ''));
+            if ($previousGreeting !== '') {
+                $content .= ' Previous greeting: ' . $previousGreeting . '.';
+            }
+        }
         $content = trim($content);
         if ($content === '') {
             return null;
@@ -423,6 +508,20 @@ readonly class AgentPromptBuilder
             );
         }
 
+        $confirmed = self::lastConfirmedTool($history);
+        if ($confirmed === 't3as_search_settings') {
+            return sprintf(
+                '[The editor confirmed "%s" and it was applied.] Reply with exactly: Search settings saved. Do not name a page or a title. Do not call any tools.',
+                $label,
+            );
+        }
+        if (in_array($confirmed, ['t3cs_save_datasource', 't3cs_sync_datasource', 't3cs_reset_failed_queue_item'], true)) {
+            return sprintf(
+                '[The editor confirmed "%s" and it was applied.] Reply with exactly: The data source change is done. Do not create a content element or a page. Do not call any tools.',
+                $label,
+            );
+        }
+
         $requestText = self::latestUserRequestText($history);
         // An edit of existing records ("change the header of element 5") has no create step: nothing new may follow.
         // Free multi-create wording ("intro and a team section") has an empty checklist but still creates.
@@ -474,6 +573,26 @@ readonly class AgentPromptBuilder
         $reminder = self::remainingWorkReminder($history, AgentPlan::latest($history), $request);
 
         return $reminder !== '' ? $message . ' ' . $reminder : $message;
+    }
+
+    /**
+     * The tool whose confirmation was just applied, when that result is the latest one before the next request.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    private static function lastConfirmedTool(array $history): string
+    {
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $meta = is_array($history[$i]['meta'] ?? null) ? $history[$i]['meta'] : [];
+            if (($history[$i]['role'] ?? '') === 'user') {
+                break;
+            }
+            if (($meta['type'] ?? '') === 'tool_result' && ($meta['autoRan'] ?? true) === false) {
+                return (string) ($meta['tool'] ?? '');
+            }
+        }
+
+        return '';
     }
 
     /**

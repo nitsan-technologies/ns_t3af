@@ -116,6 +116,25 @@ final class AgentProviderTurnErrorPresenterTest extends TestCase
     }
 
     #[Test]
+    public function aStoredConversationMasksAnApiKeyAndKeepsUrls(): void
+    {
+        $messages = [[
+            'role' => 'user',
+            'content' => 'use OpenAI. here is the key: sk-qa-test-1234567890. please set it up',
+            'meta' => [
+                'draft' => ['arguments' => ['typeValue' => '{"api_key":"sk-qa-test-1234567890"}']],
+            ],
+        ]];
+        $masked = AgentProviderTurnErrorPresenter::maskConversationMessages($messages);
+        self::assertStringNotContainsString('sk-qa-test-1234567890', (string) json_encode($masked));
+        self::assertStringContainsString('sk-…', (string) ($masked[0]['content'] ?? ''));
+        self::assertSame(
+            'https://tata.cars/sitemap.xml',
+            AgentProviderTurnErrorPresenter::maskApiKeysInText('https://tata.cars/sitemap.xml'),
+        );
+    }
+
+    #[Test]
     public function nestedHttpJsonIsExtractedFromExceptionChain(): void
     {
         $inner = new \RuntimeException('HTTP 402 returned: {"error":{"message":"Insufficient credits on Anthropic account"}}');

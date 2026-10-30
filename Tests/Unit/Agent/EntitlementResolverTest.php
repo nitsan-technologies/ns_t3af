@@ -81,4 +81,46 @@ final class EntitlementResolverTest extends TestCase
         // Extension not loaded in unit context — should be false for fake keys
         self::assertFalse($resolver->isExecutable('definitely_not_an_extension_key_xyz'));
     }
+
+    public function testAThrowingStatusLeavesOtherExtensionsExecutable(): void
+    {
+        $this->mockLoadedExtensions(['ns_t3as', 'ns_t3ai']);
+        $broken = new class implements ExtensionOperationalStatusInterface {
+            public function extensionKey(): string
+            {
+                return 'ns_t3as';
+            }
+
+            public function isOperational(): bool
+            {
+                throw new \TypeError('str_ends_with(): Argument #1 ($haystack) must be of type string, null given');
+            }
+
+            public function toolCount(): int
+            {
+                return 3;
+            }
+        };
+        $working = new class implements ExtensionOperationalStatusInterface {
+            public function extensionKey(): string
+            {
+                return 'ns_t3ai';
+            }
+
+            public function isOperational(): bool
+            {
+                return true;
+            }
+
+            public function toolCount(): int
+            {
+                return 23;
+            }
+        };
+
+        $resolver = new EntitlementResolver([$broken, $working], new ExtensionAvailability());
+
+        self::assertFalse($resolver->isExecutable('ns_t3as'));
+        self::assertTrue($resolver->isExecutable('ns_t3ai'));
+    }
 }

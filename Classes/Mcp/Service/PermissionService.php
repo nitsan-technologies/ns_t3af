@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Mcp\Service;
 
+use NITSAN\NsT3AF\Access\RecordAccessGate;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Type\Bitmask\Permission;
 
@@ -63,6 +64,29 @@ readonly class PermissionService
         throw new \InvalidArgumentException(
             sprintf('You are not allowed to read table "%s" with your backend account.', $table),
             1790600001,
+        );
+    }
+
+    /**
+     * Refuse a write to backend users, groups, or sessions, including for an admin.
+     *
+     * @throws \InvalidArgumentException code 1790600003
+     */
+    public function assertCanModifyTable(string $table): void
+    {
+        if (RecordAccessGate::isBackendAuthTable($table)) {
+            throw new \InvalidArgumentException(
+                RecordAccessGate::backendAuthWriteDeniedMessage(),
+                1790600003,
+            );
+        }
+        if ($this->getBackendUser()->check('tables_modify', $table)) {
+            return;
+        }
+
+        throw new \InvalidArgumentException(
+            sprintf('You are not allowed to change table "%s" with your backend account.', $table),
+            1790600004,
         );
     }
 

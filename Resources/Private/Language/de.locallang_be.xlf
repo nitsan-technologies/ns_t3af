@@ -1241,6 +1241,14 @@
                 <source>Draft discarded. Nothing was written.</source>
                 <target>Entwurf verworfen. Es wurde nichts geschrieben.</target>
             </trans-unit>
+            <trans-unit id="agent.draft.clickApply">
+                <source>Click Apply on the card above. Nothing else was changed.</source>
+                <target>Klicken Sie auf der Karte oben auf Anwenden. Sonst wurde nichts geändert.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.cancelledOpen">
+                <source>The open cards were discarded. Nothing was saved.</source>
+                <target>Die offenen Karten wurden verworfen. Es wurde nichts gespeichert.</target>
+            </trans-unit>
             <trans-unit id="agent.draft.undone">
                 <source>Undone. Your previous version is back.</source>
                 <target>Rückgängig gemacht. Ihre vorherige Version ist wieder da.</target>
@@ -1308,6 +1316,10 @@
             <trans-unit id="agent.draft.toolApplied">
                 <source>Tool ran successfully.</source>
                 <target>Das Tool wurde erfolgreich ausgeführt.</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.searchSettingsSaved">
+                <source>Search settings saved.</source>
+                <target>Sucheinstellungen gespeichert.</target>
             </trans-unit>
             <trans-unit id="agent.draft.readback">
                 <source>Written through DataHandler, then read back from the database. Workspace and publishing are untouched.</source>
@@ -1609,6 +1621,10 @@
                 <source>Open Details for the full list (%1$s total).</source>
                 <target>Öffnen Sie Details für die vollständige Liste (%1$s insgesamt).</target>
             </trans-unit>
+            <trans-unit id="agent.result.showAll">
+                <source>Show all (%1$s)</source>
+                <target>Alle anzeigen (%1$s)</target>
+            </trans-unit>
             <trans-unit id="agent.result.noMissingAltText">
                 <source>Good news — no images are missing alt text in this storage.</source>
                 <target>Gute Nachricht – in diesem Speicher fehlt bei keinem Bild der Alt-Text.</target>
@@ -1816,6 +1832,42 @@
             <trans-unit id="agent.undo.useButton">
                 <source>Use the Undo button on the applied change to put the old text back.</source>
                 <target>Nutzen Sie die Schaltfläche „Zurücknehmen“ an der angewendeten Änderung, um den alten Text zurückzuholen.</target>
+            </trans-unit>
+            <trans-unit id="agent.undo.cannotUndo">
+                <source>This change can't be undone automatically.</source>
+                <target>Diese Änderung kann nicht automatisch rückgängig gemacht werden.</target>
+            </trans-unit>
+            <trans-unit id="agent.undo.nothingChanged">
+                <source>Nothing was changed, so there is nothing to undo.</source>
+                <target>Es wurde nichts geändert, also gibt es nichts rückgängig zu machen.</target>
+            </trans-unit>
+            <trans-unit id="agent.chatbot.notSaved">
+                <source>No. That chatbot setting was not saved.</source>
+                <target>Nein. Diese Chatbot-Einstellung wurde nicht gespeichert.</target>
+            </trans-unit>
+            <trans-unit id="agent.chatbot.needsCard">
+                <source>That needs a chatbot settings card. Nothing was saved.</source>
+                <target>Dafür braucht es eine Chatbot-Einstellungskarte. Es wurde nichts gespeichert.</target>
+            </trans-unit>
+            <trans-unit id="agent.chatbot.changeBack">
+                <source>What should I change it back to?</source>
+                <target>Worauf soll ich es zurücksetzen?</target>
+            </trans-unit>
+            <trans-unit id="agent.chatbot.whichGreeting">
+                <source>What should the greeting say?</source>
+                <target>Wie soll die Begrüßung lauten?</target>
+            </trans-unit>
+            <trans-unit id="agent.draft.noFields">
+                <source>That change has no fields, so nothing was prepared.</source>
+                <target>Diese Änderung hat keine Felder, daher wurde nichts vorbereitet.</target>
+            </trans-unit>
+            <trans-unit id="agent.provider.cannotChange">
+                <source>AI provider and API key settings cannot be changed from the AI Agent. An administrator can change them on the Providers page. The key was not saved.</source>
+                <target>KI-Anbieter und API-Schlüssel können im KI-Agenten nicht geändert werden. Ein Administrator kann sie auf der Seite Anbieter ändern. Der Schlüssel wurde nicht gespeichert.</target>
+            </trans-unit>
+            <trans-unit id="agent.scheduler.whichDescription">
+                <source>What description should the scheduler task have?</source>
+                <target>Welche Beschreibung soll die Planeraufgabe haben?</target>
             </trans-unit>
             <trans-unit id="agent.draft.expired">
                 <source>This proposal is out of date and was not applied. Ask again to get a fresh one.</source>
@@ -2809,6 +2861,110 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <source>Show the training queue</source>
                 <target>Trainings-Warteschlange anzeigen</target>
             </trans-unit>
+            <trans-unit id="agent.queue.whichSource">
+                <source>Which data source should I show the training queue for?</source>
+                <target>Für welche Datenquelle soll die Trainings-Warteschlange angezeigt werden?</target>
+            </trans-unit>
+            <trans-unit id="agent.queue.noSources">
+                <source>This site has no data sources.</source>
+                <target>Diese Website hat keine Datenquellen.</target>
+            </trans-unit>
+            <trans-unit id="agent.queue.noSite">
+                <source>Open a page of the site, then ask for the training queue again.</source>
+                <target>Öffnen Sie eine Seite der Website und fragen Sie dann erneut nach der Trainings-Warteschlange.</target>
+            </trans-unit>
+            <trans-unit id="agent.source.whichReset">
+                <source>Which data source should I retry the failed training items for?</source>
+                <target>Für welche Datenquelle soll ich die fehlgeschlagenen Trainingseinträge erneut versuchen?</target>
+            </trans-unit>
+            <trans-unit id="agent.source.whichSync">
+                <source>Which data source should I sync?</source>
+                <target>Welche Datenquelle soll ich synchronisieren?</target>
+            </trans-unit>
+            <trans-unit id="agent.sync.notRun">
+                <source>Nothing was synced. Prepare the sync first.</source>
+                <target>Es wurde nichts synchronisiert. Der Sync muss zuerst vorbereitet werden.</target>
+            </trans-unit>
+            <trans-unit id="agent.sync.requestedOne">
+                <source>Sync was requested for "%1$s".</source>
+                <target>Sync für „%1$s“ wurde angefordert.</target>
+            </trans-unit>
+            <trans-unit id="agent.sync.requestedAll">
+                <source>Sync was requested for all %1$s data sources.</source>
+                <target>Sync für alle %1$s Datenquellen wurde angefordert.</target>
+            </trans-unit>
+            <trans-unit id="agent.sync.ranOne">
+                <source>"%1$s" was synced.</source>
+                <target>„%1$s“ wurde synchronisiert.</target>
+            </trans-unit>
+            <trans-unit id="agent.sync.ranAll">
+                <source>All %1$s data sources were synced.</source>
+                <target>Alle %1$s Datenquellen wurden synchronisiert.</target>
+            </trans-unit>
+            <trans-unit id="agent.source.whichUpdate">
+                <source>Which data source should I update?</source>
+                <target>Welche Datenquelle soll ich aktualisieren?</target>
+            </trans-unit>
+            <trans-unit id="agent.source.notNamed">
+                <source>No data source is named "%s".</source>
+                <target>Es gibt keine Datenquelle mit dem Namen "%s".</target>
+            </trans-unit>
+            <trans-unit id="agent.source.whichDescription">
+                <source>What description should I save?</source>
+                <target>Welche Beschreibung soll ich speichern?</target>
+            </trans-unit>
+            <trans-unit id="agent.source.notCreated">
+                <source>The data source was not created, so there is nothing to change.</source>
+                <target>Die Datenquelle wurde nicht angelegt, daher gibt es nichts zu ändern.</target>
+            </trans-unit>
+            <trans-unit id="agent.source.listed">
+                <source>%1$s is a %2$s data source, data id %3$s.</source>
+                <target>%1$s ist eine Datenquelle vom Typ %2$s, Daten-ID %3$s.</target>
+            </trans-unit>
+            <trans-unit id="agent.source.notFound">
+                <source>Data source %1$s was not found.</source>
+                <target>Datenquelle %1$s wurde nicht gefunden.</target>
+            </trans-unit>
+            <trans-unit id="agent.chatbot.whichOne">
+                <source>Which chatbot should I use?</source>
+                <target>Welchen Chatbot soll ich verwenden?</target>
+            </trans-unit>
+            <trans-unit id="agent.chatbot.none">
+                <source>This installation has no chatbot.</source>
+                <target>In dieser Installation gibt es keinen Chatbot.</target>
+            </trans-unit>
+            <trans-unit id="agent.datasource.cannotDelete">
+                <source>The agent cannot delete data sources. You can still list them. Remove a data source in the AI Chatbot/Search module, on the Data Sources tab.</source>
+                <target>Der Agent kann Datenquellen nicht löschen. Sie können sie weiterhin auflisten. Entfernen Sie eine Datenquelle im Modul AI Chatbot/Search auf der Registerkarte Data Sources.</target>
+            </trans-unit>
+            <trans-unit id="agent.datasource.invalidUrl">
+                <source>That address is not a valid http or https URL. No data source was created.</source>
+                <target>Diese Adresse ist keine gültige http- oder https-URL. Es wurde keine Datenquelle angelegt.</target>
+            </trans-unit>
+            <trans-unit id="agent.datasource.whichPage">
+                <source>Name the page the chatbot and search should learn. It will be added as a TYPO3 pages data source.</source>
+                <target>Nennen Sie die Seite, die Chatbot und Suche lernen sollen. Sie wird als TYPO3-Seiten-Datenquelle hinzugefügt.</target>
+            </trans-unit>
+            <trans-unit id="agent.datasource.whichText">
+                <source>What text should this data source contain?</source>
+                <target>Welchen Text soll diese Datenquelle enthalten?</target>
+            </trans-unit>
+            <trans-unit id="agent.datasource.answersOnSource">
+                <source>Those answers belong on the Q&amp;A data source %s. They were not added as a suggested search question.</source>
+                <target>Diese Antworten gehören zur Q&amp;A-Datenquelle %s. Sie wurden nicht als vorgeschlagene Suchfrage angelegt.</target>
+            </trans-unit>
+            <trans-unit id="agent.datasource.answersOnSourceUnnamed">
+                <source>Those answers belong on the Q&amp;A data source. They were not added as a suggested search question.</source>
+                <target>Diese Antworten gehören zur Q&amp;A-Datenquelle. Sie wurden nicht als vorgeschlagene Suchfrage angelegt.</target>
+            </trans-unit>
+            <trans-unit id="agent.result.queueTruncated">
+                <source>%1$s items match. The first %2$s are shown.</source>
+                <target>%1$s Einträge passen. Die ersten %2$s werden angezeigt.</target>
+            </trans-unit>
+            <trans-unit id="agent.tool.licenceUnavailable">
+                <source>%1$s is installed, but its licence is missing or invalid. Add a valid licence key to use these actions.</source>
+                <target>%1$s ist installiert, aber die Lizenz fehlt oder ist ungültig. Fügen Sie einen gültigen Lizenzschlüssel hinzu, um diese Aktionen zu nutzen.</target>
+            </trans-unit>
             <trans-unit id="agent.tool.label.t3cs_reset_failed_queue_item">
                 <source>Retry a failed training item</source>
                 <target>Fehlgeschlagenen Trainingseintrag erneut versuchen</target>
@@ -2826,8 +2982,64 @@ Soll ich neue Vorschläge erstellen? Ersetzt wird erst, wenn Sie einen Vorschlag
                 <target>Trainingsstatus anzeigen</target>
             </trans-unit>
             <trans-unit id="agent.tool.label.t3cs_usage_analytics_summary">
-                <source>Show chatbot usage</source>
-                <target>Chatbot-Nutzung anzeigen</target>
+                <source>Show usage analytics</source>
+                <target>Nutzungsstatistik anzeigen</target>
+            </trans-unit>
+            <trans-unit id="agent.search.disabled">
+                <source>AI Search is switched off.</source>
+                <target>KI-Suche ist ausgeschaltet.</target>
+            </trans-unit>
+            <trans-unit id="agent.search.enabled">
+                <source>AI Search is enabled. The search engine is %s.</source>
+                <target>KI-Suche ist eingeschaltet. Die Suchmaschine ist %s.</target>
+            </trans-unit>
+            <trans-unit id="agent.search.enabledNoEngine">
+                <source>AI Search is enabled. No search engine is set.</source>
+                <target>KI-Suche ist eingeschaltet. Es ist keine Suchmaschine gesetzt.</target>
+            </trans-unit>
+            <trans-unit id="agent.search.engine">
+                <source>The search engine is %1$s.</source>
+                <target>Die Suchmaschine ist %1$s.</target>
+            </trans-unit>
+            <trans-unit id="agent.search.noEngine">
+                <source>No search engine is set.</source>
+                <target>Es ist keine Suchmaschine gesetzt.</target>
+            </trans-unit>
+            <trans-unit id="agent.search.resultStyle">
+                <source>The result style is %1$s.</source>
+                <target>Der Ergebnisstil ist %1$s.</target>
+            </trans-unit>
+            <trans-unit id="agent.search.instructions">
+                <source>Instructions: %1$s</source>
+                <target>Anweisungen: %1$s</target>
+            </trans-unit>
+            <trans-unit id="agent.search.instructionsNotSet">
+                <source>Instructions are not set.</source>
+                <target>Es sind keine Anweisungen gesetzt.</target>
+            </trans-unit>
+            <trans-unit id="agent.search.questionsOn">
+                <source>Predefined questions are on, up to %1$s.</source>
+                <target>Vorgeschlagene Fragen sind an, bis zu %1$s.</target>
+            </trans-unit>
+            <trans-unit id="agent.search.questionsOff">
+                <source>Predefined questions are off.</source>
+                <target>Vorgeschlagene Fragen sind aus.</target>
+            </trans-unit>
+            <trans-unit id="agent.search.widgetMode">
+                <source>The widget mode is %1$s.</source>
+                <target>Der Widget-Modus ist %1$s.</target>
+            </trans-unit>
+            <trans-unit id="agent.search.widgetModeNotSet">
+                <source>The widget mode is not set.</source>
+                <target>Der Widget-Modus ist nicht gesetzt.</target>
+            </trans-unit>
+            <trans-unit id="agent.usage.summary">
+                <source>Usage for %1$s: %2$s searches, %3$s chatbot messages, %4$s positive and %5$s negative feedback.</source>
+                <target>Nutzung für %1$s: %2$s Suchen, %3$s Chatbot-Nachrichten, %4$s positives und %5$s negatives Feedback.</target>
+            </trans-unit>
+            <trans-unit id="agent.usage.summaryRange">
+                <source>Usage from %1$s to %2$s: %3$s searches, %4$s chatbot messages, %5$s positive and %6$s negative feedback.</source>
+                <target>Nutzung von %1$s bis %2$s: %3$s Suchen, %4$s Chatbot-Nachrichten, %5$s positives und %6$s negatives Feedback.</target>
             </trans-unit>
             <trans-unit id="agent.plan.namedTool">
                 <source>%1$s%2$s.</source>

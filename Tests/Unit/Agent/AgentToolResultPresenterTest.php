@@ -294,4 +294,160 @@ final class AgentToolResultPresenterTest extends TestCase
             $presented['facts'],
         );
     }
+
+    #[Test]
+    public function trainingQueueListsPathsAndKeepsTheFullListForTheButton(): void
+    {
+        $items = [];
+        for ($uid = 156; $uid <= 161; $uid++) {
+            $items[] = [
+                'uid' => $uid,
+                'path' => '/products/' . $uid,
+                'status' => 'Completed',
+            ];
+        }
+
+        $presented = $this->createPresenter()->present('t3cs_list_queue_items', [
+            'count' => 6,
+            'items' => $items,
+        ], true);
+
+        self::assertStringContainsString('Found 6 items', $presented['content']);
+        self::assertStringContainsString('/products/156 (Completed) [#156]', $presented['content']);
+        self::assertStringNotContainsString('Open Details', $presented['content']);
+        self::assertCount(6, $presented['lines']);
+        self::assertSame('/products/161 (Completed) [#161]', $presented['lines'][5]);
+    }
+
+    #[Test]
+    public function aTruncatedQueueReportsTheRealTotal(): void
+    {
+        $items = [];
+        for ($uid = 1; $uid <= 3; $uid++) {
+            $items[] = ['uid' => $uid, 'path' => '/p/' . $uid, 'status' => 'Completed'];
+        }
+
+        $presented = $this->createPresenter()->present('t3cs_list_queue_items', [
+            'count' => 3,
+            'totalMatched' => 706,
+            'truncated' => true,
+            'items' => $items,
+        ], true);
+
+        self::assertStringContainsString('Found 706 items', $presented['content']);
+        self::assertStringContainsString('706 items match. The first 3 are shown.', $presented['content']);
+        self::assertCount(3, $presented['lines']);
+    }
+
+    #[Test]
+    public function otherLongListsStillPointAtDetails(): void
+    {
+        $rows = [];
+        for ($uid = 1; $uid <= 6; $uid++) {
+            $rows[] = ['uid' => $uid, 'header' => 'Element ' . $uid];
+        }
+
+        $presented = $this->createPresenter()->present('content_list', $rows, true);
+
+        self::assertStringContainsString('Open Details for the full list (6 total).', $presented['content']);
+        self::assertSame([], $presented['lines']);
+    }
+
+    #[Test]
+    public function aSyncResultNamesTheScopeFromTheTool(): void
+    {
+        $ai = $this->createMock(AiServiceInterface::class);
+        $ai->expects(self::never())->method('complete');
+
+        $one = $this->createPresenter($ai)->present('t3cs_sync_datasource', [
+            'success' => true,
+            'scope' => 'one',
+            'mode' => 'request',
+            'name' => 'Sitemap',
+            'dataId' => 1,
+            'message' => 'Sync requested.',
+        ], true);
+        $all = $this->createPresenter($ai)->present('t3cs_sync_datasource', [
+            'success' => true,
+            'scope' => 'all',
+            'mode' => 'request',
+            'sourcesRequested' => 14,
+            'message' => 'Sync requested for all sources.',
+        ], true);
+
+        self::assertSame('Sync was requested for "Sitemap".', $one['content']);
+        self::assertSame('Sync was requested for all 14 data sources.', $all['content']);
+    }
+
+    #[Test]
+    public function searchSettingsReadListsTheMainFieldsAndSkipsThePassword(): void
+    {
+        $presented = $this->createPresenter()->present('t3as_search_settings_get', [
+            'operation' => 'get',
+            'rootPageId' => 1,
+            'settings' => [
+                'enableAiSearch' => 0,
+                'searchEngine' => 'sitecontent',
+                'resultStyle' => 'longAnswer',
+                'instructions' => '<p>&nbsp;</p>',
+                'predefinedQuestions' => 1,
+                'questionsLimit' => 5,
+                'widgetMode' => 'modal-box',
+                'solr_password' => 'secret',
+            ],
+        ], true);
+
+        self::assertStringContainsString('AI Search is switched off.', $presented['content']);
+        self::assertStringContainsString('The search engine is sitecontent.', $presented['content']);
+        self::assertStringContainsString('The result style is longAnswer.', $presented['content']);
+        self::assertStringContainsString('Instructions are not set.', $presented['content']);
+        self::assertStringContainsString('Predefined questions are on, up to 5.', $presented['content']);
+        self::assertStringContainsString('The widget mode is modal-box.', $presented['content']);
+        self::assertStringNotContainsString('secret', $presented['content']);
+        self::assertStringNotContainsString('solr_password', $presented['content']);
+        self::assertSame($presented['content'], $presented['summary']);
+    }
+
+    #[Test]
+    public function usageAnalyticsReadShowsTheCounts(): void
+    {
+        $ai = $this->createMock(AiServiceInterface::class);
+        $ai->expects(self::never())->method('complete');
+        $presented = $this->createPresenter($ai)->present('t3cs_usage_analytics_summary', [
+            'period' => 'custom',
+            'totalSearchCount' => 0,
+            'totalChatCount' => 4,
+            'feedbackPositiveCount' => 1,
+            'feedbackNegativeCount' => 0,
+        ], true);
+
+        self::assertSame(
+            'Usage for custom: 0 searches, 4 chatbot messages, 1 positive and 0 negative feedback.',
+            $presented['content'],
+        );
+        self::assertSame($presented['content'], $presented['summary']);
+    }
+
+    #[Test]
+    public function usageAnalyticsReadShowsTheDateRange(): void
+    {
+        $ai = $this->createMock(AiServiceInterface::class);
+        $ai->expects(self::never())->method('complete');
+        $presented = $this->createPresenter($ai)->present('t3cs_usage_analytics_summary', [
+            'period' => 'this_month',
+            'periodFrom' => '2026-10-01',
+            'periodTo' => '2026-10-30',
+            'totalSearchCount' => 12,
+            'totalChatCount' => 22,
+            'feedbackPositiveCount' => 3,
+            'feedbackNegativeCount' => 1,
+        ], true);
+
+        self::assertSame(
+            'Usage from 2026-10-01 to 2026-10-30: 12 searches, 22 chatbot messages, 3 positive and 1 negative feedback.',
+            $presented['content'],
+        );
+        self::assertStringNotContainsString('July', $presented['content']);
+        self::assertStringNotContainsString('August', $presented['content']);
+    }
 }
