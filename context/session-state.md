@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — records_apply rollback tests no longer use be_groups
+
+**Done:** Functional tests that need DataHandler to refuse a root-level row below a page now use `sys_file_storage`. `be_groups` is refused in preflight (MCP cannot write backend auth tables), so it never reached DataHandler. ClickUp: 14zervyxjm8.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — A named root stays 999999, and Name it is not the last answer
 
 **Done:** `/t3cs_list_datasources 999999` keeps 999999 even when the slash body has no `requestQuery`, and does not list the open page's site. MCP still returns that no site uses that root. "Add these answers for the bot" with Q:/A: pairs still creates a Q&A source; "Name it …" is only the source name, not part of the last answer. ClickUp: 14zervyxjjz, 14zervyxprd.

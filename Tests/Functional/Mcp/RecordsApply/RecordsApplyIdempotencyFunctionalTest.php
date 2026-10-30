@@ -129,7 +129,7 @@ final class RecordsApplyIdempotencyFunctionalTest extends FunctionalTestCase
     #[Test]
     public function aFailedCallFreesTheRequestIdForARetry(): void
     {
-        $broken = ['be_groups' => ['NEWgroup' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Nowhere']]];
+        $broken = ['sys_file_storage' => ['NEWstorage' => ['pid' => self::SITE_ROOT_PAGE_ID, 'name' => 'Nowhere']]];
 
         try {
             $this->service->apply($broken, [], false, true, false, [], 'records_apply', 'req-3');
