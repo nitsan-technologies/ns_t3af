@@ -49,6 +49,11 @@
     color-mix(in srgb, var(--typo3-overlay-bg, #000) 72%, transparent)
   );
   z-index: 1080;
+  /* Visual dim only — never intercepts clicks. A real mouse click over the module content
+     iframe must reach the iframe's own DOM (e.g. a report's Fix button) even while the panel
+     is open; "click outside the panel closes it" is handled by a document-level check in
+     controller-chrome.js's bindEvents() instead of by this element being the click target. */
+  pointer-events: none;
 }
 
 .nst3af-agent-panel {

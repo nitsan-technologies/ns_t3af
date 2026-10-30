@@ -36,8 +36,10 @@ final class AgentDraftSession
     private const REGISTRY_NAMESPACE = 'tx_nst3af_agent_change';
     private const DRAFT_REGISTRY_NAMESPACE = 'tx_nst3af_agent_draft';
     private const DRAFT_KEEP_SECONDS = 86400;
+    private const CHANGE_KEEP_SECONDS = 2592000;
 
     private bool $staleDraftsPruned = false;
+    private bool $staleChangesPruned = false;
 
     /**
      * Drafts live in the registry, one row each, not in the backend session: every backend request
@@ -181,14 +183,57 @@ final class AgentDraftSession
         // The session copy is lost when the backend session is replaced (new login, switched language,
         // two requests saving the session at once); Undo must still find the change then.
         try {
+            $this->pruneStaleChanges();
             GeneralUtility::makeInstance(Registry::class)->set(
                 self::REGISTRY_NAMESPACE,
                 $changeId,
-                ['userUid' => (int) ($user->user['uid'] ?? 0), 'payload' => $payload],
+                ['userUid' => (int) ($user->user['uid'] ?? 0), 'storedAt' => time(), 'payload' => $payload],
             );
         } catch (\Throwable) {
             // Registry not reachable (unit tests, broken database): the session copy still works.
         }
+    }
+
+    /**
+     * Once per request: the session copy already expires with the BE session, but the registry
+     * fallback (see storeChange()) has no natural expiry, so it is the one place that must honour
+     * the 30-day undo retention product decision.
+     */
+    private function pruneStaleChanges(): void
+    {
+        if ($this->staleChangesPruned) {
+            return;
+        }
+        $this->staleChangesPruned = true;
+        $this->pruneExpiredChanges();
+    }
+
+    /**
+     * CLI/scheduler hook (t3af:mcp:cleanup): delete registry-fallback changes older than the
+     * 30-day undo retention window regardless of whether anyone has written a change since.
+     */
+    public function pruneExpiredChanges(): int
+    {
+        try {
+            $rows = GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable('sys_registry')
+                ->select(['entry_key', 'entry_value'], 'sys_registry', ['entry_namespace' => self::REGISTRY_NAMESPACE])
+                ->fetchAllAssociative();
+        } catch (\Throwable) {
+            return 0;
+        }
+
+        $registry = GeneralUtility::makeInstance(Registry::class);
+        $cutoff = time() - self::CHANGE_KEEP_SECONDS;
+        $deleted = 0;
+        foreach ($rows as $row) {
+            $value = @unserialize((string) $row['entry_value'], ['allowed_classes' => false]);
+            if (!is_array($value) || (int) ($value['storedAt'] ?? 0) < $cutoff) {
+                $registry->remove(self::REGISTRY_NAMESPACE, (string) $row['entry_key']);
+                ++$deleted;
+            }
+        }
+
+        return $deleted;
     }
 
     /**

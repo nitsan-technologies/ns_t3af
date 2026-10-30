@@ -198,10 +198,11 @@ final class OpenAiCompatiblePlatform
     /**
      * Non-streaming chat completion (POST …/chat/completions).
      *
-     * @param mixed $payload {@see AiService} passes string | array with messages/input shape.
+     * @param mixed                $payload {@see AiService} passes string | array with messages/input shape.
+     * @param array<string, mixed> $options Invoke options (e.g. `response_format` for structured output).
      * @return array{content: string, usage?: array<string, mixed>, raw: array<string, mixed>}
      */
-    public function invoke(string $modelId, mixed $payload): array
+    public function invoke(string $modelId, mixed $payload, array $options = []): array
     {
         $messages = $this->normalizeMessages($payload);
         $body = [
@@ -209,6 +210,12 @@ final class OpenAiCompatiblePlatform
             'messages' => $messages,
             'temperature' => $this->provider->temperature,
         ];
+        if (isset($options['response_format']) && is_array($options['response_format'])) {
+            $body['response_format'] = $options['response_format'];
+        }
+        if (isset($options['temperature']) && is_numeric($options['temperature'])) {
+            $body['temperature'] = (float) $options['temperature'];
+        }
 
         $response = $this->postJson($this->chatCompletionsPath(), $body);
         $this->assertOk($response, 'chat/completions');

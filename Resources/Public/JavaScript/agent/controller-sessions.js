@@ -262,6 +262,20 @@ export const sessionMethods = {
         query.searchParams.set('fresh', '1');
       }
 
+      // F1: consume-and-clear the pending openWithContext() payload for this one load.
+      // A plain toolbar/hotkey open never sets this, so the query is unchanged for that case.
+      const openPayload = this.pendingOpenPayload;
+      this.pendingOpenPayload = null;
+      const openChips = Array.isArray(openPayload?.chips) ? openPayload.chips : [];
+      const openPromptText = typeof openPayload?.promptText === 'string' ? openPayload.promptText : '';
+      if (openPayload && typeof openPayload.context === 'object' && openPayload.context !== null) {
+        try {
+          query.searchParams.set('openContext', JSON.stringify(openPayload.context));
+        } catch {
+          // Non-serializable context (should not happen for a plain data object) — drop it, open as normal.
+        }
+      }
+
       try {
         const payload = await new AjaxRequest(query.toString()).get().then((r) => r.resolve());
         if (!payload?.ok) {
@@ -273,6 +287,15 @@ export const sessionMethods = {
           meta: stripEphemeralWorkTraceMeta(message.meta ?? {}),
         }));
         this.context = payload.context ?? backendContext;
+        // F1: caller-supplied chips are additional, informational-only — appended after
+        // whatever the server resolved, never replacing it (see AgentContextPresenter's chips()).
+        if (openChips.length > 0) {
+          const existingChips = Array.isArray(this.context.chips) ? this.context.chips : [];
+          this.context = { ...this.context, chips: [...existingChips, ...openChips] };
+        }
+        if (openPromptText !== '' && this.input) {
+          this.input.value = openPromptText;
+        }
         this.starters = payload.starters ?? { executable: [], locked: [] };
         this.greeting = payload.greeting ?? null;
         this.session = payload.session ?? null;

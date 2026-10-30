@@ -2944,7 +2944,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($quoted !== []) {
             return $quoted[0];
         }
-        if (preg_match('/\b(?:to|zu|in)\s+(.+)/iu', $message, $match) !== 1) {
+        if (preg_match('/\b(?:to|zu|in)\s+(.+?)\s*$/iu', $message, $match) !== 1) {
             return '';
         }
         $title = trim((string) $match[1], ' .');

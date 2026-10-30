@@ -409,12 +409,27 @@ export const draftMethods = {
   /**
      * Reload what the editor is looking at (and the page tree) after the agent changed or restored
      * something, so the page behind the panel shows the new state.
+     *
+     * Child modules may claim the content refresh (cancelable `nst3af:agent:applied`) so they can
+     * finish an async rescan before reloading the iframe — ContentContainer.refresh() would abort
+     * that request. Page tree always refreshes; content refresh is the default when nobody claims.
      */
     refreshBackendContent() {
       try {
         const top = window.top;
-        top?.TYPO3?.Backend?.ContentContainer?.refresh?.();
+        const pageId = Number(this.context?.pageId ?? 0);
+        const applied = new CustomEvent('nst3af:agent:applied', {
+          cancelable: true,
+          detail: {
+            pageId: pageId > 0 ? pageId : 0,
+            languageId: Number(this.context?.languageId ?? 0),
+          },
+        });
+        const claimed = top?.document != null && !top.document.dispatchEvent(applied);
         top?.document?.dispatchEvent(new CustomEvent('typo3:pagetree:refresh'));
+        if (!claimed) {
+          top?.TYPO3?.Backend?.ContentContainer?.refresh?.();
+        }
       } catch {
         // Cross-origin or no backend shell: nothing to refresh.
       }

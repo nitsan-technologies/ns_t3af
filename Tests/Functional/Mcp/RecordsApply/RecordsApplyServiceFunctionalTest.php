@@ -156,9 +156,9 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
             $this->service->apply(
                 [
                     'pages' => ['NEWpage' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Must not survive']],
-                    // sys_file_storage is root-level: DataHandler refuses it below a page. MCP already
-                    // refuses be_groups in preflight, so that table cannot be used to reach DataHandler.
-                    'sys_file_storage' => ['NEWstorage' => ['pid' => self::SITE_ROOT_PAGE_ID, 'name' => 'Nowhere']],
+                    // be_groups is refused in preflight. sys_news is still rootLevel-only: preflight
+                    // allows it, DataHandler refuses pid below a page — that rolls the page back.
+                    'sys_news' => ['NEWnews' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Nowhere']],
                 ],
                 [],
                 false,
@@ -171,7 +171,7 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
         }
 
         self::assertSame(0, $this->countWhere('pages', 'title', 'Must not survive'));
-        self::assertSame(0, $this->countWhere('sys_file_storage', 'name', 'Nowhere'));
+        self::assertSame(0, $this->countWhere('sys_news', 'title', 'Nowhere'));
     }
 
     #[Test]
@@ -179,7 +179,7 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
     {
         try {
             $this->service->apply(
-                ['sys_file_storage' => ['NEWstorage' => ['pid' => self::SITE_ROOT_PAGE_ID, 'name' => 'Nowhere']]],
+                ['sys_news' => ['NEWnews' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Nowhere']]],
                 [],
                 false,
                 true,
@@ -559,7 +559,7 @@ final class RecordsApplyServiceFunctionalTest extends FunctionalTestCase
             $this->service->apply(
                 [
                     'sys_category' => ['NEWbad' => ['pid' => 0, 'title' => 'Must not survive category']],
-                    'sys_file_storage' => ['NEWstorage' => ['pid' => self::SITE_ROOT_PAGE_ID, 'name' => 'Nowhere']],
+                    'sys_news' => ['NEWnews' => ['pid' => self::SITE_ROOT_PAGE_ID, 'title' => 'Nowhere']],
                 ],
                 [],
                 false,

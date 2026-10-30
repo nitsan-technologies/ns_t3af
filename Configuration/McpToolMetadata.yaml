@@ -633,3 +633,36 @@ tools:
     searchTerms:
       - 'send to review stage, approve changes'
       - 'Zur Prüfung senden, Änderungen freigeben'
+
+  # --- ns_t3ai legacy card names (A20 slash-search / find_tools) ---
+  t3ai_generate_all_seo:
+    category: SEO
+    status: ready
+    tagline: Generate or apply all SEO metadata for a page
+    searchTerms:
+      - 'SEO All Meta, SEO Meta, Mass SEO, Mass Optimize SEO'
+      - 'SEO Alle Metadaten, Massen-SEO'
+
+  t3ai_mass_seo_queue_add:
+    category: SEO
+    status: ready
+    tagline: Queue pages for bulk SEO generation
+    searchTerms:
+      - 'Mass SEO, Mass Optimize SEO, bulk SEO queue'
+      - 'Massen-SEO, SEO-Warteschlange'
+
+  t3ai_translate_page:
+    category: Translation
+    status: ready
+    tagline: Translate a whole page and its content
+    searchTerms:
+      - 'Translation Pages, Mass Translation, Translate Page Content'
+      - 'Seiten übersetzen, Massenübersetzung'
+
+  t3ai_generate_image:
+    category: Media
+    status: ready
+    tagline: Generate or find an image
+    searchTerms:
+      - 'Generate or find image, AI Images, DALL-E, Midjourney, Pexels, Unsplash'
+      - 'KI-Bilder, Bild erzeugen oder finden'

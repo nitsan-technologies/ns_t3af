@@ -26,7 +26,6 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(name: 't3af:ailabel:audit', description: 'Report-only AI Label audit (never writes labels)')]
 final class AiLabelAuditCommand extends Command
@@ -41,15 +40,15 @@ final class AiLabelAuditCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $io = new SymfonyStyle($input, $output);
+        $io = new CommandIo($input, $output);
         $coverage = $this->coverageScoreService->compute($this->originRecorder, $this->iconManifest);
         $unbound = $this->originRecorder->listUnboundGenerations();
 
         $io->title('AI Label audit');
-        $io->writeln('Coverage score: ' . $coverage['score'] . '%');
-        $io->writeln('Unbound generations: ' . count($unbound));
+        $io->line('Coverage score: ' . $coverage['score'] . '%');
+        $io->line('Unbound generations: ' . count($unbound));
         foreach ($coverage['blindSpots'] as $spot) {
-            $io->writeln('Blind spot: ' . $spot);
+            $io->line('Blind spot: ' . $spot);
         }
 
         return Command::SUCCESS;

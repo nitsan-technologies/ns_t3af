@@ -5,6 +5,10 @@
 **Settings route:** `t3af_dashboard.ai_agent`  
 **Verify:** `Documentation/Agent/VerifySuite.md`, `Tests/Unit/Agent/` · routing docs: `Documentation/Agent/Routing.md`, `PreviewApply.md`, `Eval.md`
 
+### Spec amendment (F7 / R38 / open item 2) — locked 21 Oct 2026
+
+The agent surface for T3AI (and child Fix / ask-bar callers) is **this** right-edge panel as shipped: full-height, ~800px, with the existing full-screen dimming backdrop (`Resources/Public/Css/module/agent.css`, `AgentToolbarItem`). **No** bottom drawer inside the module content area, **no** centred modal, **no** separate "AI Agent workspace" screen in `ns_t3ai`. Earlier prototype / pattern-library text that described a bottom drawer or centred modal is superseded; amend external `ux-spec.md` / revision-log / open item 2 to match this note rather than changing the panel.
+
 ---
 
 ## What it does
