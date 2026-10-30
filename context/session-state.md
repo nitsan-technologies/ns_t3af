@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — A named root, a saved text source, and a rename correction stay in place
+
+**Done:** `/t3cs_list_datasources 999999` keeps 999999 and does not list the open page's site. Apply of a text-source create that already saved that name, type, and text returns that uid. "Create a text source" is not a content-element checklist. "No, call it B" after a rename card keeps that source's uid and only the new name. ClickUp: 14zervyxjjz, 14zervyxq8n, 14zervyxqa6.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — Answers for the bot are a Q&A data source
 
 **Done:** "Add these answers for the bot" with Q:/A: pairs drafts `t3cs_save_datasource` type `qa` and that name. It does not become AI Search predefined questions or a missing-folder reply. "Add these answers to [existing source]" still stays on that source. A suggested search question still uses that tool. ClickUp: 14zervyxprd.
@@ -44,7 +52,7 @@
 
 ## 2026-10-30 — A scheduler description, a saved data source, and a pasted API key stay in place
 
-**Done:** `scheduler_update` of a description keeps the stored start date on MCP execute and on agent Apply (DataHandler). The card still shows only the description. After Apply of a data source, the continuation does not create page content. A request to switch provider with a pasted key is answered before the model: provider settings cannot be changed from the AI Agent, the key is not repeated, and stored conversation messages mask keys. ClickUp: 14zervyxjrg, 14zervyxpzh, 14zervyxqhh.
+**Done:** `scheduler_update` of a description keeps the stored start date on MCP execute and on agent Apply (DataHandler). The card still shows only the description. The merge lives in `DataHandlerService::updateRecord`, so both write paths share it. After Apply of a data source, the continuation does not create page content. A request to switch provider with a pasted key is answered before the model: provider settings cannot be changed from the AI Agent, the key is not repeated, and stored conversation messages mask keys. ClickUp: 14zervyxjrg, 14zervyxpzh, 14zervyxqhh.
 
 **Last touched:** 2026-10-30
 
@@ -84,7 +92,7 @@
 
 ## 2026-10-30 — An older data-source or chatbot card cannot overwrite a newer save
 
-**Done:** Apply of a data-source or chatbot card is refused when the fields it would write changed after the card was drafted. A page rename is a title update, and `pages_move` is refused unless the editor also asked to move the page. ClickUp: 14zervyxqa6.
+**Done:** Apply of a data-source or chatbot card is refused when the fields it would write changed after the card was drafted. "No, call it B" after a rename card keeps that source's uid and only the new name. A page rename is a title update, and `pages_move` is refused unless the editor also asked to move the page. ClickUp: 14zervyxqa6.
 
 **Last touched:** 2026-10-30
 
@@ -92,7 +100,7 @@
 
 ## 2026-10-30 — Text data source uses only the editor's text
 
-**Done:** "Create a text source for beauty tips" asks for the text and drafts no card. Quoted text is saved as given. A saved data source, including its text, is in the history the next turn reads, so "What did you save?" does not say nothing was saved. ClickUp: 14zervyxq8n.
+**Done:** "Create a text source for beauty tips" asks for the text and drafts no card. That request is not a "Create Text element" checklist. Quoted text is saved as given. Apply of a create that already saved that name, type, and text returns that uid. A saved data source, including its text, is in the history the next turn reads, so "What did you save?" does not say nothing was saved. ClickUp: 14zervyxq8n.
 
 **Last touched:** 2026-10-30
 

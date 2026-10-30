@@ -47,6 +47,9 @@ final class AgentRequestChecklist
         if (self::isFileMetadataOnlyRequest($message)) {
             return [];
         }
+        if (AgentToolTurnProcessor::asksForTextDataSource($message)) {
+            return [];
+        }
 
         $segments = self::requestSegments($message);
         // "Rename the header of element 5" changes an existing record; the word "header" must not turn it

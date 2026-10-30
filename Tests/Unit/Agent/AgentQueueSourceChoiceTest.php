@@ -529,6 +529,11 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertSame(48, AgentToolTurnProcessor::resolvedRootPageId(1, false, 0, 48, 0));
         self::assertSame(1, AgentToolTurnProcessor::resolvedRootPageId(1, true, 48, 0, 48));
         self::assertSame(0, AgentToolTurnProcessor::resolvedRootPageId(1, false, 0, 0, 0));
+        self::assertSame(999999, AgentToolTurnProcessor::resolvedRootPageId(999999, false, 1, 0, 0, true));
+        self::assertSame(1, AgentToolTurnProcessor::resolvedRootPageId(999999, false, 1, 0, 0, false));
+        self::assertTrue(AgentToolTurnProcessor::requestNamesInteger('/t3cs_list_datasources 999999', 999999));
+        self::assertFalse(AgentToolTurnProcessor::requestNamesInteger('list sources for root 1', 999999));
+        self::assertFalse(AgentToolTurnProcessor::requestNamesInteger('page 1999999', 999999));
     }
 
     #[Test]
@@ -765,6 +770,56 @@ final class AgentQueueSourceChoiceTest extends TestCase
             AgentToolTurnProcessor::directToolRequest('Change it back to how it was before.', [
                 ['role' => 'user', 'content' => 'Turn on AI search'],
             ])['ask'] ?? '',
+        );
+    }
+
+    #[Test]
+    public function aCorrectedDatasourceNameKeepsTheOpenCardUid(): void
+    {
+        $history = [[
+            'role' => 'assistant',
+            'meta' => [
+                'type' => 'inline_draft',
+                'tool' => 't3cs_save_datasource',
+                'draft' => [
+                    'tool' => 't3cs_save_datasource',
+                    'applied' => false,
+                    'recordBaseline' => ['uid' => 17],
+                    'arguments' => [
+                        ['key' => 'dataId', 'value' => '17'],
+                        ['key' => 'name', 'value' => 'QA Gap A'],
+                        ['key' => 'activate', 'value' => '0'],
+                    ],
+                ],
+            ],
+        ]];
+        $tuned = AgentToolTurnProcessor::tuneDatasourceArguments(
+            't3cs_save_datasource',
+            [
+                'operation' => 'update',
+                'dataId' => 10,
+                'name' => 'QA Gap B',
+                'activate' => 0,
+                'usageType' => 'chatbot',
+            ],
+            "No, call it 'QA Gap B'",
+            $history,
+        );
+
+        self::assertTrue(AgentToolTurnProcessor::asksToCorrectDatasourceName("No, call it 'QA Gap B'"));
+        self::assertSame(17, AgentToolTurnProcessor::openDatasourceRenameId($history));
+        self::assertSame('update', $tuned['operation'] ?? '');
+        self::assertSame(17, $tuned['dataId'] ?? 0);
+        self::assertSame('QA Gap B', $tuned['name'] ?? '');
+        self::assertArrayNotHasKey('activate', $tuned);
+        self::assertArrayNotHasKey('usageType', $tuned);
+        self::assertSame(
+            ['operation' => 'create', 'type' => 'text'],
+            AgentToolTurnProcessor::tuneDatasourceArguments(
+                't3cs_save_datasource',
+                ['operation' => 'create', 'type' => 'text'],
+                'Create a text source for beauty tips.',
+            ),
         );
     }
 }

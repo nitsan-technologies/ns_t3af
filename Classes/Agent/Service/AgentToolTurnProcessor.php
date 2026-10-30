@@ -148,6 +148,13 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $userMessage = trim((string) ($body['userMessage'] ?? ''));
         $requestText = $userMessage . ' ' . trim((string) ($body['requestQuery'] ?? ''));
         $arguments = self::tuneChatbotArguments($toolName, $arguments, $userMessage !== '' ? $userMessage : $requestText);
+        $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
+        $arguments = self::tuneDatasourceArguments(
+            $toolName,
+            $arguments,
+            $userMessage !== '' ? $userMessage : $requestText,
+            $history,
+        );
         $body['arguments'] = $arguments;
         if (in_array($toolName, ['t3as_predefined_questions_create', 't3as_list_predefined_questions'], true)) {
             $qaCreate = self::qaAnswersCreateRequest($requestText);
@@ -298,6 +305,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $context,
             (string) ($tool['name'] ?? ''),
             (string) ($body['provider'] ?? ''),
+            self::requestTextFromBody($body),
         );
 
         $result = $this->playgroundService->invoke($tool['name'], $arguments);
@@ -444,6 +452,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $context,
             (string) ($tool['name'] ?? ''),
             (string) ($body['provider'] ?? ''),
+            self::requestTextFromBody($body),
         );
 
         $result = $this->playgroundService->invokeWithMode(
@@ -540,6 +549,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $context,
             $toolName,
             (string) ($body['provider'] ?? ''),
+            self::requestTextFromBody($body),
         );
 
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
@@ -2490,6 +2500,16 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         return preg_match('/\b(?:source|datenquelle|datasource|quelle)\b/u', $text) === 1;
     }
 
+    public static function asksToCorrectDatasourceName(string $message): bool
+    {
+        $text = mb_strtolower($message);
+        if (preg_match('/\b(?:no|nein|actually|stattdessen)\b/u', $text) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:call it|name it|nenn(?:e)? (?:es|sie)|heisse?)\b/u', $text) === 1;
+    }
+
     public static function renamedDatasourceName(string $message): string
     {
         $quoted = self::quotedNames($message);
@@ -2938,6 +2958,106 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         $arguments['settingsJson'] = $json;
 
         return $arguments;
+    }
+
+    /**
+     * A rename, or "No, call it B", keeps that source's uid and only the new name.
+     *
+     * @param array<string, mixed> $arguments
+     * @param list<array<string, mixed>> $history
+     * @return array<string, mixed>
+     */
+    public static function tuneDatasourceArguments(string $toolName, array $arguments, string $message, array $history = []): array
+    {
+        if ($toolName !== 't3cs_save_datasource') {
+            return $arguments;
+        }
+        $isCorrection = self::asksToCorrectDatasourceName($message);
+        if (!self::asksToRenameADatasource($message) && !$isCorrection) {
+            return $arguments;
+        }
+        $name = self::renamedDatasourceName($message);
+        if ($name === '') {
+            $name = self::namedDatasourceTitle($message);
+        }
+        if ($name === '') {
+            return $arguments;
+        }
+        $dataId = $isCorrection ? self::openDatasourceRenameId($history) : 0;
+        if ($dataId <= 0) {
+            $dataId = (int) ($arguments['dataId'] ?? $arguments['data_id'] ?? 0);
+        }
+        if ($dataId <= 0) {
+            return $arguments;
+        }
+        $tuned = [
+            'operation' => 'update',
+            'dataId' => $dataId,
+            'name' => $name,
+        ];
+        $rootPageId = (int) ($arguments['rootPageId'] ?? 0);
+        if ($rootPageId > 0) {
+            $tuned['rootPageId'] = $rootPageId;
+        }
+
+        return $tuned;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function openDatasourceRenameId(array $history): int
+    {
+        for ($index = count($history) - 1; $index >= 0; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            $tool = (string) ($draft['tool'] ?? $meta['tool'] ?? '');
+            if ($tool !== 't3cs_save_datasource') {
+                continue;
+            }
+            if (($draft['applied'] ?? false) === true
+                || ($draft['discarded'] ?? false) === true
+                || ($draft['failed'] ?? false) === true
+            ) {
+                continue;
+            }
+            $baseline = is_array($draft['recordBaseline'] ?? null) ? $draft['recordBaseline'] : [];
+            $uid = (int) ($baseline['uid'] ?? 0);
+            if ($uid > 0) {
+                return $uid;
+            }
+            $args = $draft['arguments'] ?? [];
+            if (is_array($args) && (int) ($args['dataId'] ?? $args['data_id'] ?? 0) > 0) {
+                return (int) ($args['dataId'] ?? $args['data_id'] ?? 0);
+            }
+            if (is_array($args)) {
+                foreach ($args as $row) {
+                    if (!is_array($row)) {
+                        continue;
+                    }
+                    if (($row['key'] ?? '') === 'dataId') {
+                        $fromRow = (int) ($row['value'] ?? 0);
+                        if ($fromRow > 0) {
+                            return $fromRow;
+                        }
+                    }
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    private static function requestTextFromBody(array $body): string
+    {
+        return trim(trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? '')));
     }
 
     /**
@@ -3791,11 +3911,18 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
-     * A positive root stays when it is a real site root. A guessed id such as 1 does not.
+     * A positive root stays when it is a real site root, or when the editor named that id.
+     * A guessed id such as 1 does not replace an explicit 999999.
      */
-    public static function resolvedRootPageId(int $given, bool $givenIsSiteRoot, int $fromOpenPage, int $fromDataSource, int $onlySite): int
-    {
-        if ($given > 0 && $givenIsSiteRoot) {
+    public static function resolvedRootPageId(
+        int $given,
+        bool $givenIsSiteRoot,
+        int $fromOpenPage,
+        int $fromDataSource,
+        int $onlySite,
+        bool $keepGiven = false,
+    ): int {
+        if ($given > 0 && ($givenIsSiteRoot || $keepGiven)) {
             return $given;
         }
         if ($fromOpenPage > 0) {
@@ -3806,6 +3933,15 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return $onlySite > 0 ? $onlySite : 0;
+    }
+
+    public static function requestNamesInteger(string $text, int $value): bool
+    {
+        if ($value <= 0 || trim($text) === '') {
+            return false;
+        }
+
+        return preg_match('/(?<!\d)' . preg_quote((string) $value, '/') . '(?!\d)/', $text) === 1;
     }
 
     /**
@@ -4126,6 +4262,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $context,
             $toolName,
             (string) ($body['provider'] ?? ''),
+            self::requestTextFromBody($body),
         );
         /** @var list<array<string, mixed>> $history */
         $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
@@ -5213,6 +5350,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         array $context,
         string $toolName = '',
         string $providerIdentifier = '',
+        string $requestText = '',
     ): array {
         // An id and a URL for the same target: the id (e.g. from an applied result) wins, a guessed URL must not contradict it.
         foreach ([['pageId', 'pageUrl'], ['parentPageId', 'parentPageUrl']] as [$idKey, $urlKey]) {
@@ -5391,7 +5529,15 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                     $onlySite = $this->onlySiteRootPageId();
                 }
             }
-            $rootPageId = self::resolvedRootPageId($given, $givenIsSiteRoot, $fromOpenPage, $fromDataSource, $onlySite);
+            $keepGiven = $given > 0 && self::requestNamesInteger($requestText, $given);
+            $rootPageId = self::resolvedRootPageId(
+                $given,
+                $givenIsSiteRoot,
+                $fromOpenPage,
+                $fromDataSource,
+                $onlySite,
+                $keepGiven,
+            );
             if ($rootPageId > 0) {
                 $arguments['rootPageId'] = $rootPageId;
             } elseif ($given > 0) {

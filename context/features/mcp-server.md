@@ -75,6 +75,8 @@ Access (2.0.0): the 11 settings actions of `McpServerController` (status, connec
 
 **Do:** Use `ErrorHandlingProxy` — tools should not wrap everything in try/catch.
 
+**Do:** Merge required validator fields that are not on the agent card in `DataHandlerService::updateRecord` (MCP execute and agent Apply both write there).
+
 **Don't:** Install `marekskopal/typo3-mcp-server` or `hn/typo3-mcp-server` alongside (Composer conflicts).
 
 ---
