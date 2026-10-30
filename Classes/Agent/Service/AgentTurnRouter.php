@@ -157,6 +157,12 @@ final readonly class AgentTurnRouter
         $body['arguments'] = $toolArguments;
 
         if ($selectedTool !== '') {
+            if (trim((string) ($body['userMessage'] ?? '')) === '') {
+                $body['userMessage'] = $message;
+            }
+            if (trim((string) ($body['requestQuery'] ?? '')) === '') {
+                $body['requestQuery'] = $message;
+            }
             $messages = $this->finalizeStructuralMessages(
                 [$this->executeTool($selectedTool, $context, $body, $user, $correlationId)],
                 $correlationId,

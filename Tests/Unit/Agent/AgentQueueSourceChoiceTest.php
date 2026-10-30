@@ -385,6 +385,11 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertSame('Is Fit Me vegan?', $pairs[0]['q'] ?? '');
         self::assertSame('Please check the ingredients on the product label.', $pairs[0]['a'] ?? '');
         self::assertSame('Do you have a store in Pune?', $pairs[1]['q'] ?? '');
+        self::assertSame(
+            "We don't run our own stores, Maybelline is sold through retailers.",
+            $pairs[1]['a'] ?? '',
+        );
+        self::assertStringNotContainsString('Name it', (string) ($pairs[1]['a'] ?? ''));
         self::assertNull(AgentToolTurnProcessor::addedAnswersTarget($forTheBot));
         self::assertNull(AgentToolTurnProcessor::directToolRequest('Add a suggested search question about opening hours'));
         self::assertNull(AgentToolTurnProcessor::qaAnswersCreateRequest('Add these answers to QA RUALL FAQ'));
@@ -530,7 +535,9 @@ final class AgentQueueSourceChoiceTest extends TestCase
         self::assertSame(1, AgentToolTurnProcessor::resolvedRootPageId(1, true, 48, 0, 48));
         self::assertSame(0, AgentToolTurnProcessor::resolvedRootPageId(1, false, 0, 0, 0));
         self::assertSame(999999, AgentToolTurnProcessor::resolvedRootPageId(999999, false, 1, 0, 0, true));
-        self::assertSame(1, AgentToolTurnProcessor::resolvedRootPageId(999999, false, 1, 0, 0, false));
+        self::assertSame(999999, AgentToolTurnProcessor::resolvedRootPageId(999999, false, 1, 0, 0, false));
+        self::assertSame(48, AgentToolTurnProcessor::resolvedRootPageId(1, false, 48, 0, 0, false));
+        self::assertSame(1, AgentToolTurnProcessor::resolvedRootPageId(1, false, 48, 0, 0, true));
         self::assertTrue(AgentToolTurnProcessor::requestNamesInteger('/t3cs_list_datasources 999999', 999999));
         self::assertFalse(AgentToolTurnProcessor::requestNamesInteger('list sources for root 1', 999999));
         self::assertFalse(AgentToolTurnProcessor::requestNamesInteger('page 1999999', 999999));

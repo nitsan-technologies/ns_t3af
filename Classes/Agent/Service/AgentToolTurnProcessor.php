@@ -1740,6 +1740,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if (preg_match('/suggested|predefined|vorgeschlag|search question/u', mb_strtolower($text)) === 1) {
             return null;
         }
+        $name = self::namedDatasourceTitle($text);
         $pairs = self::qaPairsFromQaLines($text);
         if ($pairs === []) {
             return null;
@@ -1762,7 +1763,6 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if (!is_string($json)) {
             return null;
         }
-        $name = self::namedDatasourceTitle($text);
         if ($name === '') {
             $name = $pairs[0]['q'];
         }
@@ -1785,6 +1785,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      */
     public static function qaPairsFromQaLines(string $text): array
     {
+        $text = self::withoutTrailingDatasourceName($text);
         if (preg_match_all('/Q:\s*(.*?)\s*A:\s*(.*?)(?=\s*Q:|$)/su', $text, $matches, PREG_SET_ORDER) < 1) {
             return [];
         }
@@ -1798,6 +1799,17 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         }
 
         return $pairs;
+    }
+
+    public static function withoutTrailingDatasourceName(string $text): string
+    {
+        $stripped = preg_replace(
+            '/\s*\b(?:name it|call it|nenn(?:e)? (?:es|sie))\s+[\'"]?.+?[\'"]?\s*$/iu',
+            '',
+            trim($text),
+        );
+
+        return is_string($stripped) ? trim($stripped) : trim($text);
     }
 
     public static function namedDatasourceTitle(string $text): string
@@ -4052,7 +4064,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         int $onlySite,
         bool $keepGiven = false,
     ): int {
-        if ($given > 0 && ($givenIsSiteRoot || $keepGiven)) {
+        if ($given > 0 && ($givenIsSiteRoot || $keepGiven || $given > 1)) {
             return $given;
         }
         if ($fromOpenPage > 0) {

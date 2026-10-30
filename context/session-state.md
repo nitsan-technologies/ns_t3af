@@ -2,6 +2,14 @@
 
 *Living work log — update at end of each session. Historical detail from the pre-2026-06-08 monolithic AGENTS.md is preserved below.*
 
+## 2026-10-30 — A named root stays 999999, and Name it is not the last answer
+
+**Done:** `/t3cs_list_datasources 999999` keeps 999999 even when the slash body has no `requestQuery`, and does not list the open page's site. MCP still returns that no site uses that root. "Add these answers for the bot" with Q:/A: pairs still creates a Q&A source; "Name it …" is only the source name, not part of the last answer. ClickUp: 14zervyxjjz, 14zervyxprd.
+
+**Last touched:** 2026-10-30
+
+---
+
 ## 2026-10-30 — Change it back after Apply restores the AI Search switch
 
 **Done:** Apply of `t3as_search_settings` stores `appliedSettings` from the invoke arguments or from the display rows on the card. "Change it back" inverts that switch. If Apply succeeded but `appliedSettings` is missing, the last "Turn on/off AI search" request is inverted. If nothing was saved, the agent still says there is nothing to restore. A usage question still does not repeat that card. "This week" on `t3cs_usage_analytics_summary` is period `7d` (agent bind and MCP). ClickUp: 14zervyxq5c.
@@ -20,7 +28,7 @@
 
 ## 2026-10-30 — A named root, a saved text source, and a rename correction stay in place
 
-**Done:** `/t3cs_list_datasources 999999` keeps 999999 and does not list the open page's site. Apply of a text-source create that already saved that name, type, and text returns that uid. "Create a text source" is not a content-element checklist. "No, call it B" after a rename card keeps that source's uid and only the new name. ClickUp: 14zervyxjjz, 14zervyxq8n, 14zervyxqa6.
+**Done:** `/t3cs_list_datasources 999999` keeps 999999 even when the slash body has no `requestQuery`, and does not list the open page's site. Apply of a text-source create that already saved that name, type, and text returns that uid. "Create a text source" is not a content-element checklist. "No, call it B" after a rename card keeps that source's uid and only the new name. ClickUp: 14zervyxjjz, 14zervyxq8n, 14zervyxqa6.
 
 **Last touched:** 2026-10-30
 
@@ -28,7 +36,7 @@
 
 ## 2026-10-30 — Answers for the bot are a Q&A data source
 
-**Done:** "Add these answers for the bot" with Q:/A: pairs drafts `t3cs_save_datasource` type `qa` and that name. It does not become AI Search predefined questions or a missing-folder reply. "Add these answers to [existing source]" still stays on that source. A suggested search question still uses that tool. ClickUp: 14zervyxprd.
+**Done:** "Add these answers for the bot" with Q:/A: pairs drafts `t3cs_save_datasource` type `qa` and that name. "Name it …" is the source name and is not stored in the last answer. It does not become AI Search predefined questions or a missing-folder reply. "Add these answers to [existing source]" still stays on that source. A suggested search question still uses that tool. ClickUp: 14zervyxprd.
 
 **Last touched:** 2026-10-30
 
