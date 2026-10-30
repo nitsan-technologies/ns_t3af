@@ -39,6 +39,9 @@ final class RecordAccessGateTest extends TestCase
 
         self::assertTrue($this->gate->canSelectTable($user, 'tx_nst3af_provider'));
         self::assertTrue($this->gate->canModifyTable($user, 'tx_nst3af_provider'));
+        self::assertFalse($this->gate->canModifyTable($user, 'be_users'));
+        self::assertFalse($this->gate->canModifyTable($user, 'be_groups'));
+        self::assertFalse($this->gate->canModifyTable($user, 'be_sessions'));
     }
 
     public function testReadOnlyTableAccess(): void

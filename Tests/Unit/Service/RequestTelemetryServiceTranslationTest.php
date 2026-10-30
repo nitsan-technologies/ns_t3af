@@ -19,6 +19,7 @@ declare(strict_types=1);
 
 namespace NITSAN\NsT3AF\Tests\Unit\Service;
 
+use NITSAN\NsT3AF\Credits\Service\CreditsApiErrorMessageResolver;
 use NITSAN\NsT3AF\Domain\Model\Provider;
 use NITSAN\NsT3AF\Domain\Repository\RequestLogRepository;
 use NITSAN\NsT3AF\Service\RequestQualityResolver;
@@ -37,6 +38,7 @@ final class RequestTelemetryServiceTranslationTest extends TestCase
         $service = new RequestTelemetryService(
             $this->capturingRepository(),
             new RequestQualityResolver(),
+            new CreditsApiErrorMessageResolver(),
         );
 
         $service->logTranslation(

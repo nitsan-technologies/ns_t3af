@@ -132,16 +132,37 @@ final readonly class AgentTurnRouter
         );
 
         if ($selectedTool !== '' && $slashRemainder !== '') {
-            $toolArguments = $this->slashArgumentBinder->bindForTool(
-                $selectedTool,
-                $toolArguments,
-                $slashRemainder,
-            );
+            try {
+                $toolArguments = $this->slashArgumentBinder->bindForTool(
+                    $selectedTool,
+                    $toolArguments,
+                    $slashRemainder,
+                );
+            } catch (\InvalidArgumentException $exception) {
+                $messages = [[
+                    'role' => 'assistant',
+                    'content' => $exception->getMessage(),
+                    'meta' => [
+                        'type' => 'error',
+                        'tool' => $selectedTool,
+                        'correlationId' => $correlationId,
+                    ],
+                ]];
+                $this->emitMessages($emitEvent, $messages);
+
+                return $messages;
+            }
         }
 
         $body['arguments'] = $toolArguments;
 
         if ($selectedTool !== '') {
+            if (trim((string) ($body['userMessage'] ?? '')) === '') {
+                $body['userMessage'] = $message;
+            }
+            if (trim((string) ($body['requestQuery'] ?? '')) === '') {
+                $body['requestQuery'] = $message;
+            }
             $messages = $this->finalizeStructuralMessages(
                 [$this->executeTool($selectedTool, $context, $body, $user, $correlationId)],
                 $correlationId,
@@ -183,6 +204,22 @@ final readonly class AgentTurnRouter
         $imageTextAnswer = $attachmentMessages === [] && !is_array($body['continuation'] ?? null)
             ? AgentToolTurnProcessor::imageTextAnswer(trim($message), $historyMessages)
             : null;
+        $choice = $attachmentMessages === [] && !is_array($body['continuation'] ?? null)
+            ? AgentToolTurnProcessor::openChoiceTarget(trim($message), $historyMessages)
+            : null;
+        if ($choice !== null && $this->isKnownTool($choice['tool'])) {
+            $body['arguments'] = $choice['arguments'];
+            $body['conversationHistory'] = $historyMessages;
+            $body['userMessage'] = trim($message);
+            $choiceMessages = $this->finalizeStructuralMessages(
+                [$this->executeTool($choice['tool'], $context, $body, $user, $correlationId)],
+                $correlationId,
+            );
+            $this->emitMessages($emitEvent, $choiceMessages);
+
+            return $choiceMessages;
+        }
+
         if ($imageTextAnswer !== null && $this->isKnownTool($imageTextAnswer['tool'])) {
             $body['arguments'] = $imageTextAnswer['arguments'];
             $body['conversationHistory'] = $historyMessages;
@@ -721,6 +758,10 @@ final readonly class AgentTurnRouter
             if ($content === '') {
                 continue;
             }
+            // A failed call keeps its card open, so the same text as a second reply would show twice.
+            if (($meta['success'] ?? true) === false) {
+                continue;
+            }
             $replyMeta = [
                 'type' => 'nl_reply',
                 'correlationId' => $correlationId,
@@ -729,6 +770,13 @@ final readonly class AgentTurnRouter
             $previews = is_array($meta['previews'] ?? null) ? $meta['previews'] : [];
             if ($previews !== []) {
                 $replyMeta['previews'] = $previews;
+            }
+            $lines = array_values(array_filter(
+                is_array($meta['lines'] ?? null) ? $meta['lines'] : [],
+                'is_string',
+            ));
+            if ($lines !== []) {
+                $replyMeta['lines'] = $lines;
             }
             $out[] = [
                 'role' => 'assistant',

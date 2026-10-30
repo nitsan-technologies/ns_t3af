@@ -64,7 +64,11 @@ final readonly class EntitlementResolver
             return true;
         }
 
-        return $status->isOperational();
+        try {
+            return $status->isOperational();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function getToolCount(?string $ownerExtensionKey): int

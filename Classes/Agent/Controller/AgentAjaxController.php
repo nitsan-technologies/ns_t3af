@@ -606,9 +606,14 @@ final class AgentAjaxController
             : null;
 
         $labelledResult = $this->labelReadback($result, $labelsBefore);
-        $message = ($result['toolConfirmation'] ?? false) === true
-            ? $this->translator->translate('agent.draft.toolApplied')
-            : $this->changeMessages->applied($labelledResult);
+        $appliedTool = (string) ($result['tool'] ?? '');
+        if ($appliedTool === 't3as_search_settings') {
+            $message = $this->translator->translate('agent.draft.searchSettingsSaved');
+        } elseif (($result['toolConfirmation'] ?? false) === true) {
+            $message = $this->translator->translate('agent.draft.toolApplied');
+        } else {
+            $message = $this->changeMessages->applied($labelledResult);
+        }
         // One-Apply create+attach: say the file was attached so the follow-up does not open a second card.
         $attachNote = trim((string) ($result['attachNote'] ?? ''));
         if ($attachNote !== '') {
@@ -703,6 +708,34 @@ final class AgentAjaxController
         }
 
         return $label . "\n" . $outline;
+    }
+
+    /**
+     * "never mind" discards only the latest open card, including when the browser request fails.
+     *
+     * @param list<array<string, mixed>> $history
+     * @param list<array<string, mixed>> $assistantMessages
+     * @return list<array<string, mixed>>
+     */
+    private function withDiscardedOpenDrafts(array $history, array $assistantMessages): array
+    {
+        $draftId = '';
+        foreach ($assistantMessages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
+            if (($meta['discardOpenDrafts'] ?? false) === true) {
+                $draftId = trim((string) ($meta['draftId'] ?? ''));
+                break;
+            }
+        }
+        if ($draftId === '') {
+            return $history;
+        }
+        $this->draftSession->removeDraft($draftId);
+
+        return $this->conversationRecorder->declined($history, $draftId);
     }
 
     /**
@@ -1018,7 +1051,8 @@ final class AgentAjaxController
     }
 
     /**
-     * "Put the old text back" restores the latest applied change, the same way as its Undo button.
+     * "Put the old text back" restores the latest applied change that has an Undo button.
+     * A latest change that cannot be undone gets a plain reply instead of that button.
      * Null means this is not that request, so the model may still run.
      *
      * @param list<array<string, mixed>> $messages
@@ -1030,10 +1064,19 @@ final class AgentAjaxController
             return null;
         }
 
-        $changeId = AgentRestoreRequest::latestChangeId($messages);
-        if ($changeId === null) {
-            return $this->restoreReply($messages, $this->undoButtonHint());
+        $latest = AgentRestoreRequest::latestAppliedChange($messages);
+        if ($latest === null) {
+            return $this->restoreReply(
+                $messages,
+                AgentRestoreRequest::conversationHasChange($messages)
+                    ? $this->undoButtonHint()
+                    : $this->nothingChangedReply(),
+            );
         }
+        if ($latest['undoable'] === false) {
+            return $this->restoreReply($messages, $this->cannotUndoReply());
+        }
+        $changeId = $latest['changeId'];
 
         $changeWorkspace = $this->undoService->workspaceOf($changeId);
         if ($changeWorkspace !== null) {
@@ -1085,6 +1128,26 @@ final class AgentAjaxController
         $hint = $this->translator->translate('agent.undo.useButton');
         if ($hint === '' || $hint === 'agent.undo.useButton') {
             return 'Use the Undo button on the applied change to put the old text back.';
+        }
+
+        return $hint;
+    }
+
+    private function nothingChangedReply(): string
+    {
+        $hint = $this->translator->translate('agent.undo.nothingChanged');
+        if ($hint === '' || $hint === 'agent.undo.nothingChanged') {
+            return 'Nothing was changed, so there is nothing to undo.';
+        }
+
+        return $hint;
+    }
+
+    private function cannotUndoReply(): string
+    {
+        $hint = $this->translator->translate('agent.undo.cannotUndo');
+        if ($hint === '' || $hint === 'agent.undo.cannotUndo') {
+            return 'This change can\'t be undone automatically.';
         }
 
         return $hint;
@@ -1205,7 +1268,10 @@ final class AgentAjaxController
             $lease->release();
         }
 
-        $allMessages = is_array($restored) ? $restored['all'] : [...$turn['messages'], ...$assistantMessages];
+        $history = is_array($restored)
+            ? $turn['messages']
+            : $this->withDiscardedOpenDrafts($turn['messages'], $assistantMessages);
+        $allMessages = is_array($restored) ? $restored['all'] : [...$history, ...$assistantMessages];
         $this->conversationSession->save($user, $allMessages, $turn['context'], $turn['provider']);
         $sessionTitle = $this->maybeApplyShortTitle($user, $allMessages, $turn['provider'], $turn['context']);
 
@@ -1317,7 +1383,7 @@ final class AgentAjaxController
                             }
                         },
                     );
-                    $allMessages = [...$turn['messages'], ...$assistantMessages];
+                    $allMessages = [...$this->withDiscardedOpenDrafts($turn['messages'], $assistantMessages), ...$assistantMessages];
                 }
                 $this->conversationSession->save($user, $allMessages, $turn['context'], $turn['provider']);
                 $sessionTitle = $this->maybeApplyShortTitle($user, $allMessages, $turn['provider'], $turn['context']);

@@ -20,6 +20,7 @@ declare(strict_types=1);
 namespace NITSAN\NsT3AF\Mcp\Service\Backend;
 
 use Mcp\Capability\Attribute\McpTool;
+use NITSAN\NsT3AF\Agent\Service\AgentMissingArgumentHint;
 use NITSAN\NsT3AF\Mcp\Contract\McpPreviewableToolInterface;
 use NITSAN\NsT3AF\Mcp\Dto\PreviewResult;
 use NITSAN\NsT3AF\Mcp\Service\McpInvocationContext;
@@ -189,7 +190,7 @@ readonly class McpPlaygroundService
                 'success' => false,
                 'result' => null,
                 'latencyMs' => $latencyMs,
-                'message' => $exception->getMessage(),
+                'message' => AgentMissingArgumentHint::append($toolName, $handler, $exception->getMessage()),
             ];
         } finally {
             $this->invocationContext->clear();

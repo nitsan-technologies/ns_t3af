@@ -95,8 +95,38 @@ readonly class SchedulerUpdateTool implements McpNonAiToolInterface, McpPlannabl
             return json_encode(['error' => 'No valid fields provided', 'ignoredFields' => $ignoredFields], JSON_THROW_ON_ERROR);
         }
 
+        $updatedFields = array_keys($filteredData);
+        // Required schedule fields are merged in DataHandlerService::updateRecord so
+        // MCP execute and agent Apply (description-only card) take the same path.
+
         $this->dataHandlerService->updateRecord(self::TABLE, $uid, $filteredData);
 
-        return json_encode(['uid' => $uid, 'updatedFields' => array_keys($filteredData), 'ignoredFields' => $ignoredFields], JSON_THROW_ON_ERROR);
+        return json_encode(['uid' => $uid, 'updatedFields' => $updatedFields, 'ignoredFields' => $ignoredFields], JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * The core scheduler validator checks start date and frequency on every save.
+     * A description-only update keeps the stored schedule so that check still passes.
+     *
+     * @param array<string, mixed> $fields
+     * @param array<string, mixed> $existing
+     * @return array<string, mixed>
+     */
+    public static function withExistingSchedule(array $fields, array $existing): array
+    {
+        if (array_key_exists('execution_details', $fields) || !array_key_exists('execution_details', $existing)) {
+            return $fields;
+        }
+        $details = $existing['execution_details'];
+        if (is_string($details) && $details !== '') {
+            try {
+                $decoded = json_decode($details, true, 512, JSON_THROW_ON_ERROR);
+                $details = is_array($decoded) ? $decoded : $details;
+            } catch (\JsonException) {
+            }
+        }
+        $fields['execution_details'] = $details;
+
+        return $fields;
     }
 }

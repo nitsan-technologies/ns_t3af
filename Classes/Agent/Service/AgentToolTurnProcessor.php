@@ -53,6 +53,55 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         't3ai_mass_translation_queue_add',
     ];
 
+    /**
+     * A missing id is asked as buttons. The value is the argument the button fills.
+     *
+     * @var array<string, string>
+     */
+    private const CHOICE_ARGUMENT = [
+        't3cs_list_queue_items' => 'dataId',
+        't3cs_reset_failed_queue_item' => 'dataId',
+        't3cs_sync_datasource' => 'dataId',
+        't3cs_save_datasource' => 'dataId',
+        't3ac_chatbot_settings' => 'chatbotUid',
+        't3ac_chatbot_settings_get' => 'chatbotUid',
+    ];
+
+    /** @var array<string, string> */
+    private const SOURCE_QUESTION = [
+        't3cs_list_queue_items' => 'agent.queue.whichSource',
+        't3cs_reset_failed_queue_item' => 'agent.source.whichReset',
+        't3cs_sync_datasource' => 'agent.source.whichSync',
+        't3cs_save_datasource' => 'agent.source.whichUpdate',
+    ];
+
+    /** Site root is filled only when the tool already takes rootPageId and the caller left it empty. */
+    private const ROOT_PAGE_TOOLS = [
+        't3cs_list_datasources',
+        't3cs_training_summary',
+        't3cs_usage_analytics_summary',
+        't3cs_sync_datasource',
+        't3cs_save_datasource',
+        't3as_search_settings',
+        't3as_search_settings_get',
+        't3as_list_predefined_questions',
+        't3as_predefined_questions_create',
+    ];
+
+    /**
+     * These tables are not versioned. A workspace id on the card does not change the stored row.
+     * Versioned tools, including t3as_predefined_questions_create, keep the editor's workspace.
+     */
+    private const WORKSPACE_EXEMPT_TOOLS = [
+        't3cs_list_datasources',
+        't3cs_training_summary',
+        't3cs_usage_analytics_summary',
+        't3cs_sync_datasource',
+        't3cs_save_datasource',
+        't3as_search_settings',
+        't3as_search_settings_get',
+    ];
+
     /** Tools that create pages under a parent page (argument parentPageId). */
     private const PARENT_PAGE_TOOLS = [
         't3ai_create_page_simple',
@@ -96,6 +145,35 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     ): array {
         $catalog = $this->permittedActionProvider->buildCatalog();
         $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $userMessage = trim((string) ($body['userMessage'] ?? ''));
+        $requestText = $userMessage . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        $arguments = self::tuneChatbotArguments($toolName, $arguments, $userMessage !== '' ? $userMessage : $requestText);
+        $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
+        $arguments = self::tuneDatasourceArguments(
+            $toolName,
+            $arguments,
+            $userMessage !== '' ? $userMessage : $requestText,
+            $history,
+        );
+        $arguments = self::tuneUsagePeriodArguments(
+            $toolName,
+            $arguments,
+            $userMessage !== '' ? $userMessage : $requestText,
+        );
+        $body['arguments'] = $arguments;
+        if (in_array($toolName, ['t3as_predefined_questions_create', 't3as_list_predefined_questions'], true)) {
+            $qaCreate = self::qaAnswersCreateRequest($requestText);
+            if ($qaCreate !== null) {
+                $body['arguments'] = $qaCreate['arguments'];
+
+                return $this->execute('t3cs_save_datasource', $context, $body, $user, $correlationId);
+            }
+        }
+        $syncedAll = $this->forceSyncOfEverySource($toolName, $body, $context, $user, $correlationId);
+        if ($syncedAll !== null) {
+            return $syncedAll;
+        }
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : $arguments;
         if ($toolName === 't3aa_get_file_metadata') {
             $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
             $arguments = self::withChosenFile($arguments, self::openQuestionMeta($history), trim((string) ($body['userMessage'] ?? '')));
@@ -185,6 +263,21 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             ];
         }
 
+        $choiceTurn = $this->choiceTurnBeforeRun($toolName, $body, $context, $catalog, $correlationId);
+        if ($choiceTurn !== null) {
+            return $choiceTurn;
+        }
+
+        $searchRead = $this->searchSettingsReadTool($toolName, $body, $catalog);
+        if ($searchRead !== null) {
+            $tool = $searchRead;
+        }
+        $chatbotRead = $this->chatbotSettingsReadTool($toolName, $body, $catalog);
+        if ($chatbotRead !== null) {
+            $tool = $chatbotRead;
+            $toolName = (string) ($tool['name'] ?? $toolName);
+        }
+
         $severity = $this->effectiveSeverity($tool, $body);
         $isDualMode = ($tool['dualMode'] ?? false) === true || ($rawTool['dualMode'] ?? false) === true;
         $isPreviewable = ($tool['previewable'] ?? false) === true || ($rawTool['previewable'] ?? false) === true;
@@ -217,6 +310,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $context,
             (string) ($tool['name'] ?? ''),
             (string) ($body['provider'] ?? ''),
+            self::requestTextFromBody($body),
         );
 
         $result = $this->playgroundService->invoke($tool['name'], $arguments);
@@ -279,6 +373,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($presented['previews'] !== []) {
             $meta['previews'] = $presented['previews'];
         }
+        $meta = $this->withPresentedLines($meta, $presented);
 
         $handoff = $this->schedulerHandoff->buildHandoffMeta(
             $tool,
@@ -362,6 +457,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $context,
             (string) ($tool['name'] ?? ''),
             (string) ($body['provider'] ?? ''),
+            self::requestTextFromBody($body),
         );
 
         $result = $this->playgroundService->invokeWithMode(
@@ -418,6 +514,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($presented['previews'] !== []) {
             $meta['previews'] = $presented['previews'];
         }
+        $meta = $this->withPresentedLines($meta, $presented);
 
         return [
             'role' => 'assistant',
@@ -457,6 +554,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $context,
             $toolName,
             (string) ($body['provider'] ?? ''),
+            self::requestTextFromBody($body),
         );
 
         $requestQuery = trim((string) ($body['requestQuery'] ?? ''));
@@ -704,6 +802,3340 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * Ask which datasource or chatbot to use when that id is missing. A call that already has the id
+     * is left on its current path. Returns a question, or null after filling the only match onto $body.
+     *
+     * @param array<string, mixed> $body
+     * @param array<string, mixed> $context
+     * @param array{executable: list<array<string, mixed>>, locked: list<array<string, mixed>>} $catalog
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function choiceTurnBeforeRun(string $toolName, array &$body, array $context, array $catalog, string $correlationId): ?array
+    {
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $requestText = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        if (self::asksToDeleteDataSources($requestText)) {
+            return $this->cannotDeleteDataSourcesTurn($correlationId);
+        }
+        if ($toolName === 't3cs_save_datasource') {
+            $history = self::listOfMaps($body['conversationHistory'] ?? null);
+            if (self::asksToSetDatasourceDescription($requestText)) {
+                $described = $this->pinDescribedDatasource($arguments, $requestText, $context, $correlationId);
+                if ($described !== null) {
+                    return $described;
+                }
+                $body['arguments'] = $arguments;
+            } elseif (self::asksToChangeDatasourceUsage($requestText, $history)) {
+                $usage = $this->pinUsageDatasource($arguments, $requestText, $history, $context, $correlationId);
+                if ($usage !== null) {
+                    return $usage;
+                }
+                $body['arguments'] = $arguments;
+            }
+            $adjusted = $this->applyDatasourceCreateAdjustment($body, $requestText, $correlationId);
+            if ($adjusted !== null) {
+                return $adjusted;
+            }
+            $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : $arguments;
+            if (self::asksToRenameADatasource($requestText)) {
+                $arguments['operation'] = 'update';
+                $renamed = self::renamedDatasourceName($requestText);
+                if ($renamed !== '') {
+                    $arguments['name'] = $renamed;
+                }
+                $this->pinDatasourceId($arguments, $requestText, $context, true);
+                $body['arguments'] = $arguments;
+            }
+        }
+        if ($toolName === 't3cs_reset_failed_queue_item' && self::asksToRetryFailedTraining($requestText)) {
+            $this->pinDatasourceId($arguments, $requestText, $context, false);
+            $body['arguments'] = $arguments;
+        }
+        if ($toolName === 't3as_predefined_questions_create') {
+            $answerTarget = self::addedAnswersTarget($requestText);
+            if ($answerTarget !== null) {
+                return $this->answersBelongOnSourceTurn($correlationId, $answerTarget);
+            }
+        }
+        $detour = $this->chatbotSettingsDetour($toolName, $body, $catalog, $correlationId);
+        if ($detour !== null) {
+            return $detour;
+        }
+        $unsaved = $this->unsavedSourceFollowUp($toolName, $arguments, $body, $context, $correlationId);
+        if ($unsaved !== null) {
+            return $unsaved;
+        }
+        if ($toolName === 't3cs_sync_datasource') {
+            $named = $this->resolveNamedSync($arguments, $body, $context, $correlationId);
+            if ($named !== null) {
+                return $named;
+            }
+            $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : $arguments;
+        }
+
+        $sourceQuestion = self::SOURCE_QUESTION[$toolName] ?? null;
+        if ($sourceQuestion !== null && $this->sourceIdIsMissing($toolName, $arguments)) {
+            $resolved = $this->resolveMissingQueueSource($context, $correlationId, $sourceQuestion, $toolName, $arguments);
+            if ($resolved['turn'] !== null) {
+                return $resolved['turn'];
+            }
+            $arguments['dataId'] = $resolved['dataId'];
+            if ($toolName === 't3cs_sync_datasource') {
+                $arguments['scope'] = 'one';
+            }
+            if ($toolName === 't3cs_save_datasource' && trim((string) ($arguments['operation'] ?? '')) === '') {
+                $arguments['operation'] = 'update';
+            }
+            $body['arguments'] = $arguments;
+
+            return null;
+        }
+
+        if (isset(self::CHOICE_ARGUMENT[$toolName]) && self::CHOICE_ARGUMENT[$toolName] === 'chatbotUid' && (int) ($arguments['chatbotUid'] ?? 0) <= 0) {
+            $resolved = $this->resolveMissingChatbot($context, $correlationId, $toolName, $arguments);
+            if ($resolved['turn'] !== null) {
+                return $resolved['turn'];
+            }
+            $arguments['chatbotUid'] = $resolved['chatbotUid'];
+            $body['arguments'] = $arguments;
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
+    private function sourceIdIsMissing(string $toolName, array $arguments): bool
+    {
+        if ((int) ($arguments['dataId'] ?? 0) > 0) {
+            return false;
+        }
+        if ($toolName === 't3cs_sync_datasource' && strtolower(trim((string) ($arguments['scope'] ?? 'one'))) === 'all') {
+            return false;
+        }
+        if ($toolName === 't3cs_save_datasource' && strtolower(trim((string) ($arguments['operation'] ?? 'create'))) !== 'update') {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * The editor pointed at a source that was never saved ("sync that one" after a failed create).
+     * A named, existing source is not touched.
+     *
+     * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $body
+     * @param array<string, mixed> $context
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function unsavedSourceFollowUp(string $toolName, array $arguments, array $body, array $context, string $correlationId): ?array
+    {
+        if (!in_array($toolName, ['t3cs_sync_datasource', 't3cs_save_datasource'], true)) {
+            return null;
+        }
+        $operation = strtolower(trim((string) ($arguments['operation'] ?? '')));
+        if ($toolName === 't3cs_save_datasource' && $operation !== 'update') {
+            return null;
+        }
+        $history = self::listOfMaps($body['conversationHistory'] ?? null);
+        $text = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        $scopeAll = $toolName === 't3cs_sync_datasource' && strtolower(trim((string) ($arguments['scope'] ?? 'one'))) === 'all';
+        $dataId = (int) ($arguments['dataId'] ?? 0);
+
+        if (self::blocksFollowUpOfFailedCreate($text, $history)) {
+            return $this->queueNotice($this->translator->translate('agent.source.notCreated'), $correlationId);
+        }
+        // Sync scope and a named source are resolved next. An unknown id is checked there,
+        // so a quoted name can replace an invented id instead of stopping at "not found".
+        if ($toolName === 't3cs_sync_datasource' || $scopeAll) {
+            return null;
+        }
+
+        return $dataId > 0 ? $this->unknownSourceTurn($dataId, $context, $correlationId, self::blocksFollowUpOfFailedCreate($text, $history)) : null;
+    }
+
+    /**
+     * "Only the sitemap" stays scope one. Two sources with the same name are a question.
+     * An id that is not on this site is not drafted. Scope all stays only when the editor asked for every source.
+     *
+     * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $body
+     * @param array<string, mixed> $context
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function resolveNamedSync(array $arguments, array &$body, array $context, string $correlationId): ?array
+    {
+        $sources = $this->datasourceRows($context);
+        if ($sources === null) {
+            return null;
+        }
+        $text = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        $history = self::listOfMaps($body['conversationHistory'] ?? null);
+        $ordinalUid = self::sourceUidFromOrdinal($text, self::datasourcesInLatestList($history));
+        if ($ordinalUid > 0) {
+            $arguments['scope'] = 'one';
+            $arguments['dataId'] = $ordinalUid;
+            $body['arguments'] = $arguments;
+
+            return null;
+        }
+        $decision = self::namedSyncDecision(
+            $text,
+            $sources,
+            (string) ($arguments['scope'] ?? 'one'),
+            (int) ($arguments['dataId'] ?? 0),
+        );
+        if ($decision['action'] === 'use' || ($decision['action'] === 'keep' && $decision['scope'] === 'all')) {
+            $arguments['scope'] = $decision['scope'];
+            $arguments['dataId'] = $decision['dataId'];
+            $body['arguments'] = $arguments;
+
+            return null;
+        }
+        if ($decision['action'] === 'ask' && $decision['options'] !== []) {
+            $pending = $arguments;
+            $pending['scope'] = 'one';
+            unset($pending['dataId']);
+
+            return [
+                'role' => 'assistant',
+                'content' => $this->translator->translate('agent.source.whichSync'),
+                'meta' => [
+                    'type' => 'clarification',
+                    'tool' => 'ask_clarification',
+                    'options' => $decision['options'],
+                    'contentChoice' => true,
+                    'askedFor' => 't3cs_sync_datasource',
+                    'pendingArguments' => $pending,
+                    'correlationId' => $correlationId,
+                    'orchestratorPause' => true,
+                ],
+            ];
+        }
+        if ($decision['action'] === 'notFound') {
+            return $this->queueNotice(
+                $this->translator->translate('agent.source.notFound', [$decision['dataId']]),
+                $correlationId,
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @return list<array<string, mixed>>|null null when the list could not be read
+     */
+    private function datasourceRows(array $context): ?array
+    {
+        $rootPageId = $this->listingRootPageId($context);
+        if ($rootPageId <= 0) {
+            return null;
+        }
+        $payload = $this->invokePayload('t3cs_list_datasources', ['rootPageId' => $rootPageId]);
+        if ($payload === null || (isset($payload['error']) && is_string($payload['error']))) {
+            return null;
+        }
+        $sources = is_array($payload['datasources'] ?? null) ? $payload['datasources'] : [];
+        $rows = [];
+        foreach ($sources as $source) {
+            if (is_array($source) && (int) ($source['uid'] ?? 0) > 0) {
+                $rows[] = $source;
+            }
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $context
+     */
+    private function pinDatasourceId(array &$arguments, string $requestText, array $context, bool $rename): void
+    {
+        if ((int) ($arguments['dataId'] ?? 0) > 0) {
+            return;
+        }
+        $rows = $this->datasourceRows($context);
+        if (!is_array($rows)) {
+            return;
+        }
+        $uid = $rename
+            ? self::datasourceRenameTarget($requestText, $rows)
+            : self::trainingSourceTarget($requestText, $rows);
+        if ($uid > 0) {
+            $arguments['dataId'] = $uid;
+        }
+    }
+
+    /**
+     * A quoted source name owns the description update. Another data id is not kept.
+     *
+     * @param array<string, mixed> $arguments
+     * @param array<string, mixed> $context
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function pinDescribedDatasource(array &$arguments, string $requestText, array $context, string $correlationId): ?array
+    {
+        $rows = $this->datasourceRows($context);
+        if ($rows === null) {
+            return null;
+        }
+        $update = self::describedSourceUpdate($requestText, $rows);
+        if ($update['status'] === 'missing') {
+            $sentence = $this->translator->translate('agent.source.notNamed', [$update['name']]);
+            if ($sentence === '' || $sentence === 'agent.source.notNamed') {
+                $sentence = 'No data source is named "' . $update['name'] . '".';
+            }
+
+            return [
+                'role' => 'assistant',
+                'content' => $sentence,
+                'meta' => ['type' => 'info', 'correlationId' => $correlationId, 'orchestratorPause' => true],
+            ];
+        }
+        if ($update['status'] === 'ask') {
+            return $this->sourceChoiceTurn($correlationId, 'agent.source.whichUpdate', 't3cs_save_datasource', $update['ids'], $rows, [
+                'operation' => 'update',
+                'description' => $update['description'],
+            ]);
+        }
+        if ($update['status'] !== 'use') {
+            return null;
+        }
+        $arguments = [
+            'operation' => 'update',
+            'dataId' => $update['dataId'],
+            'description' => $update['description'],
+        ];
+
+        return null;
+    }
+
+    /**
+     * Who may use a source is that source's usage or active flag. AI Search stays as it is.
+     *
+     * @param array<string, mixed> $arguments
+     * @param list<array<string, mixed>> $history
+     * @param array<string, mixed> $context
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function pinUsageDatasource(array &$arguments, string $requestText, array $history, array $context, string $correlationId): ?array
+    {
+        $rows = $this->datasourceRows($context);
+        if ($rows === null) {
+            return null;
+        }
+        $update = self::usageSourceUpdate($requestText, $history, $rows);
+        if ($update['status'] === 'ask') {
+            $pending = ['operation' => 'update'];
+            foreach (['usageType', 'activate'] as $field) {
+                if (array_key_exists($field, $update)) {
+                    $pending[$field] = $update[$field];
+                }
+            }
+            if ($update['ids'] === []) {
+                $arguments = $pending;
+                $arguments['dataId'] = 0;
+
+                return null;
+            }
+
+            return $this->sourceChoiceTurn($correlationId, 'agent.source.whichUpdate', 't3cs_save_datasource', $update['ids'], $rows, $pending);
+        }
+        if ($update['status'] !== 'use') {
+            return null;
+        }
+        $arguments = ['operation' => 'update', 'dataId' => $update['dataId']];
+        if (array_key_exists('usageType', $update)) {
+            $arguments['usageType'] = $update['usageType'];
+        }
+        if (array_key_exists('activate', $update)) {
+            $arguments['activate'] = $update['activate'];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<int> $ids
+     * @param list<array<string, mixed>> $rows
+     * @param array<string, mixed> $pending
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function sourceChoiceTurn(string $correlationId, string $questionKey, string $toolName, array $ids, array $rows, array $pending): ?array
+    {
+        $known = self::knownSources($rows);
+        $options = self::optionLabelsFor($ids, $known);
+        if ($options === []) {
+            return null;
+        }
+        $sentence = $this->translator->translate($questionKey);
+        if ($sentence === '' || $sentence === $questionKey) {
+            $sentence = 'Which data source should I update?';
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $sentence,
+            'meta' => [
+                'type' => 'clarification',
+                'tool' => 'ask_clarification',
+                'options' => $options,
+                'contentChoice' => true,
+                'askedFor' => $toolName,
+                'pendingArguments' => $pending,
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
+    }
+
+    /**
+     * A positive id that is not one of this site's sources does not become a draft.
+     * When the source list cannot be read, the existing path stays.
+     *
+     * @param array<string, mixed> $context
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function unknownSourceTurn(int $dataId, array $context, string $correlationId, bool $afterFailedCreate): ?array
+    {
+        if ($dataId <= 0) {
+            return null;
+        }
+        $known = $this->datasourceIds($context);
+        if ($known === null || in_array($dataId, $known, true)) {
+            return null;
+        }
+        $message = $afterFailedCreate
+            ? $this->translator->translate('agent.source.notCreated')
+            : $this->translator->translate('agent.source.notFound', [$dataId]);
+
+        return $this->queueNotice($message, $correlationId);
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @return list<int>|null null when the list could not be read
+     */
+    private function datasourceIds(array $context): ?array
+    {
+        $rootPageId = $this->listingRootPageId($context);
+        if ($rootPageId <= 0) {
+            return null;
+        }
+        $payload = $this->invokePayload('t3cs_list_datasources', ['rootPageId' => $rootPageId]);
+        if ($payload === null || (isset($payload['error']) && is_string($payload['error']))) {
+            return null;
+        }
+        $sources = is_array($payload['datasources'] ?? null) ? $payload['datasources'] : [];
+        $ids = [];
+        foreach ($sources as $source) {
+            if (is_array($source) && (int) ($source['uid'] ?? 0) > 0) {
+                $ids[] = (int) $source['uid'];
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Chatbot settings are not data sources or AI Search settings.
+     * A locked chatbot tool answers with its own message, whichever tool was called.
+     *
+     * @param array<string, mixed> $body
+     * @param array{executable: list<array<string, mixed>>, locked: list<array<string, mixed>>} $catalog
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function chatbotSettingsDetour(string $toolName, array $body, array $catalog, string $correlationId): ?array
+    {
+        $text = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        $locked = null;
+        foreach ($catalog['locked'] as $tool) {
+            if ((string) ($tool['name'] ?? '') === 't3ac_chatbot_settings_get') {
+                $locked = $tool;
+                break;
+            }
+        }
+        if ($locked === null || !self::chatbotSettingsNeedLicenceMessage($text, true)) {
+            return null;
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $this->entitlementExplanation->buildMessage($locked),
+            'meta' => array_merge(
+                $this->entitlementExplanation->buildMeta($locked),
+                [
+                    'correlationId' => $correlationId,
+                    'orchestratorPause' => true,
+                    'replacedTool' => $toolName,
+                ],
+            ),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @param array<string, mixed> $pendingArguments
+     * @return array{turn: array{role: string, content: string, meta: array<string, mixed>}|null, chatbotUid: int}
+     */
+    private function resolveMissingChatbot(array $context, string $correlationId, string $askedFor, array $pendingArguments): array
+    {
+        $pageId = (int) ($context['pageId'] ?? 0);
+        $payload = $this->invokePayload('t3ac_chatbot_list', $pageId > 0 ? ['pageId' => $pageId] : []);
+        if ($payload === null) {
+            return ['turn' => $this->queueNotice($this->translator->translate('agent.chatbot.none'), $correlationId), 'chatbotUid' => 0];
+        }
+        if (isset($payload['error']) && is_string($payload['error']) && trim($payload['error']) !== '') {
+            return ['turn' => $this->queueNotice(trim($payload['error']), $correlationId), 'chatbotUid' => 0];
+        }
+        $items = self::listOfMaps($payload['items'] ?? null);
+        $decision = self::chatbotDecision($items);
+        if ($decision['chatbotUid'] > 0) {
+            return ['turn' => null, 'chatbotUid' => $decision['chatbotUid']];
+        }
+        if ($decision['options'] === []) {
+            return ['turn' => $this->queueNotice($this->translator->translate('agent.chatbot.none'), $correlationId), 'chatbotUid' => 0];
+        }
+
+        return [
+            'turn' => [
+                'role' => 'assistant',
+                'content' => $this->translator->translate('agent.chatbot.whichOne'),
+                'meta' => [
+                    'type' => 'clarification',
+                    'tool' => 'ask_clarification',
+                    'options' => $decision['options'],
+                    'contentChoice' => true,
+                    'askedFor' => $askedFor,
+                    'pendingArguments' => $pendingArguments,
+                    'correlationId' => $correlationId,
+                    'orchestratorPause' => true,
+                ],
+            ],
+            'chatbotUid' => 0,
+        ];
+    }
+
+    /**
+     * @return array{role: string, content: string, meta: array<string, mixed>}
+     */
+    private function cannotDeleteDataSourcesTurn(string $correlationId): array
+    {
+        $sentence = $this->translator->translate('agent.datasource.cannotDelete');
+        if ($sentence === '' || $sentence === 'agent.datasource.cannotDelete') {
+            $sentence = 'The agent cannot delete data sources. You can still list them. Remove a data source in the AI Chatbot/Search module, on the Data Sources tab.';
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $sentence,
+            'meta' => [
+                'type' => 'info',
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>|null
+     */
+    private function invokePayload(string $toolName, array $arguments): ?array
+    {
+        $listed = $this->playgroundService->invoke($toolName, $arguments);
+        $payload = $listed['result'] ?? null;
+        if (is_string($payload)) {
+            $decoded = json_decode($payload, true);
+            $payload = is_array($decoded) ? $decoded : null;
+        }
+        if (($listed['success'] ?? false) !== true || !is_array($payload)) {
+            return null;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * One chatbot on this site is used at once. Several on this site become buttons.
+     * When none are on this site, every chatbot is offered.
+     *
+     * @param list<array<string, mixed>> $items
+     * @return array{chatbotUid: int, options: list<string>}
+     */
+    public static function chatbotDecision(array $items): array
+    {
+        $onSite = [];
+        $all = [];
+        foreach ($items as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $uid = (int) ($item['chatbotUid'] ?? $item['uid'] ?? 0);
+            if ($uid <= 0) {
+                continue;
+            }
+            $title = trim((string) ($item['title'] ?? ''));
+            $label = ($title !== '' ? $title : 'Chatbot') . ' [' . $uid . ']';
+            $all[] = $label;
+            if (($item['onThisSite'] ?? false) === true) {
+                $onSite[] = ['uid' => $uid, 'label' => $label];
+            }
+        }
+        if (count($onSite) === 1) {
+            return ['chatbotUid' => $onSite[0]['uid'], 'options' => []];
+        }
+        if (count($onSite) > 1) {
+            return ['chatbotUid' => 0, 'options' => array_column($onSite, 'label')];
+        }
+        if (count($all) === 1) {
+            return ['chatbotUid' => self::uidInBrackets($all[0]), 'options' => []];
+        }
+
+        return ['chatbotUid' => 0, 'options' => $all];
+    }
+
+    /**
+     * The button the editor clicked, including the arguments that were already known.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array{tool: string, arguments: array<string, mixed>}|null
+     */
+    public static function openChoiceTarget(string $reply, array $history): ?array
+    {
+        $question = self::openQuestionMeta($history);
+        $tool = (string) ($question['askedFor'] ?? '');
+        $argument = self::CHOICE_ARGUMENT[$tool] ?? null;
+        if ($argument === null) {
+            return null;
+        }
+        $options = array_values(array_filter(
+            is_array($question['options'] ?? null) ? $question['options'] : [],
+            'is_string',
+        ));
+        $uid = self::uidFromChoiceOptions(trim($reply), $options);
+        if ($uid <= 0) {
+            return null;
+        }
+        $arguments = is_array($question['pendingArguments'] ?? null) ? $question['pendingArguments'] : [];
+        $arguments[$argument] = $uid;
+        if ($tool === 't3cs_sync_datasource') {
+            $arguments['scope'] = 'one';
+        }
+        if ($tool === 't3cs_save_datasource' && trim((string) ($arguments['operation'] ?? '')) === '') {
+            $arguments['operation'] = 'update';
+        }
+
+        return ['tool' => $tool, 'arguments' => $arguments];
+    }
+
+    /**
+     * @param list<string> $options
+     */
+    private static function uidFromChoiceOptions(string $reply, array $options): int
+    {
+        foreach ($options as $option) {
+            if (self::sameChoice($reply, $option)) {
+                return self::uidInBrackets($option);
+            }
+        }
+        $uid = 0;
+        if (preg_match('/\[(\d+)\]\s*$/', $reply, $bracket) === 1) {
+            $uid = (int) $bracket[1];
+        } elseif (preg_match('/^\d+$/', $reply) === 1) {
+            $uid = (int) $reply;
+        }
+        if ($uid <= 0) {
+            return 0;
+        }
+        foreach ($options as $option) {
+            if (self::uidInBrackets($option) === $uid) {
+                return $uid;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function latestSaveFailed(array $history): bool
+    {
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $entry = $history[$i];
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            $tool = (string) ($meta['tool'] ?? '');
+            if ($tool === '') {
+                $tool = (string) ($draft['tool'] ?? '');
+            }
+            if ($tool !== 't3cs_save_datasource') {
+                continue;
+            }
+            if (($draft['failed'] ?? false) === true) {
+                return true;
+            }
+            if (($meta['success'] ?? true) === false || ($meta['type'] ?? '') === 'error') {
+                return true;
+            }
+            // A create that was never applied (waiting card, or HTTP 404 that stayed retryable)
+            // is not in the database. A waiting update of an existing source is not that case.
+            if (($meta['type'] ?? '') === 'inline_draft' && self::saveCreateWasNotApplied($draft, $meta)) {
+                return true;
+            }
+
+            return false;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param array<string, mixed> $draft
+     * @param array<string, mixed> $meta
+     */
+    private static function saveCreateWasNotApplied(array $draft, array $meta): bool
+    {
+        if (($draft['applied'] ?? false) === true) {
+            return false;
+        }
+        $operation = strtolower(self::saveArgument($draft, $meta, 'operation'));
+        if ($operation === 'update') {
+            return false;
+        }
+        if ($operation === 'create') {
+            return true;
+        }
+
+        return (int) self::saveArgument($draft, $meta, 'dataId') <= 0;
+    }
+
+    /**
+     * Confirmation cards store display rows ({key, value}); tool-result meta stores a map.
+     *
+     * @param array<string, mixed> $draft
+     * @param array<string, mixed> $meta
+     */
+    private static function saveArgument(array $draft, array $meta, string $name): string
+    {
+        $arguments = is_array($draft['arguments'] ?? null) ? $draft['arguments'] : [];
+        if (isset($arguments[$name]) && is_scalar($arguments[$name])) {
+            return trim((string) $arguments[$name]);
+        }
+        foreach ($arguments as $row) {
+            if (is_array($row) && strtolower((string) ($row['key'] ?? '')) === strtolower($name)) {
+                return trim((string) ($row['value'] ?? ''));
+            }
+        }
+        $metaArgs = is_array($meta['arguments'] ?? null) ? $meta['arguments'] : [];
+        if (isset($metaArgs[$name]) && is_scalar($metaArgs[$name])) {
+            return trim((string) $metaArgs[$name]);
+        }
+
+        return '';
+    }
+
+    /**
+     * "Sync that one" after a create that was not saved must not pick another source.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function blocksFollowUpOfFailedCreate(string $text, array $history): bool
+    {
+        return self::refersToThatSource($text) && self::latestSaveFailed($history);
+    }
+
+    public static function refersToThatSource(string $text): bool
+    {
+        $text = mb_strtolower($text);
+        foreach (['that one', 'that source', 'this one', 'this source', 'activate it', 'sync it', 'sync that', 'diese eine', 'diese quelle', 'die eine'] as $needle) {
+            if (str_contains($text, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * "What did you change in this conversation?" is a recap, not a new write.
+     */
+    public static function asksWhatChangedInConversation(string $text): bool
+    {
+        $text = mb_strtolower(trim($text));
+        if ($text === '') {
+            return false;
+        }
+
+        return preg_match(
+            '/(?:'
+            . 'what did you (?:change|save)'
+            . '|what was (?:changed|saved)'
+            . '|what changed in this conversation'
+            . '|was hast du (?:geändert|geaendert|gespeichert)'
+            . '|was wurde (?:geändert|geaendert|gespeichert)'
+            . ')/u',
+            $text,
+        ) === 1;
+    }
+
+    /**
+     * Writes that were actually applied. A waiting or failed card is not listed.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return list<string>
+     */
+    public static function appliedChangesInConversation(array $history): array
+    {
+        $saved = [];
+        foreach ($history as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            $type = (string) ($meta['type'] ?? '');
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            if ($type === 'readback_result') {
+                $note = trim(AgentPromptBuilder::appliedRecordsNote($meta), ' .');
+                if (str_starts_with($note, 'Records: ')) {
+                    $saved[] = substr($note, strlen('Records: '));
+                }
+                continue;
+            }
+            if ($type === 'tool_result' && ($meta['success'] ?? true) !== false && ($meta['autoRan'] ?? true) === false) {
+                $tool = (string) ($meta['tool'] ?? '');
+                if ($tool === 't3cs_save_datasource') {
+                    $note = AgentPromptBuilder::savedDatasourceNote($meta['details'] ?? null);
+                    $saved[] = $note !== '' ? $note : 'a data source';
+                    continue;
+                }
+                if ($tool === 't3cs_sync_datasource') {
+                    $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+                    $dataId = (int) ($details['dataId'] ?? 0);
+                    $saved[] = $dataId > 0 ? 'synced data source uid ' . $dataId : 'a data source sync';
+                    continue;
+                }
+                $label = trim((string) ($meta['editorLabel'] ?? $meta['toolCallLabel'] ?? ''));
+                $saved[] = $label !== '' ? $label : ($tool !== '' ? $tool : 'a change');
+                continue;
+            }
+            if ($type === 'inline_draft' && ($draft['applied'] ?? false) === true) {
+                $label = trim((string) ($draft['editorLabel'] ?? $meta['editorLabel'] ?? ''));
+                $saved[] = $label !== '' ? $label : 'a change';
+            }
+        }
+
+        return array_values(array_unique($saved));
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function conversationChangeSummary(array $history): string
+    {
+        $items = self::appliedChangesInConversation($history);
+        if ($items !== []) {
+            return 'Saved in this conversation: ' . implode('; ', $items) . '.';
+        }
+        if (self::latestSaveFailed($history)) {
+            return 'Nothing was saved in this conversation. The data source was not created, so it was not activated or synced.';
+        }
+
+        return 'Nothing was saved in this conversation.';
+    }
+
+    /**
+     * A URL request must not become an invented Q&A source. A named TYPO3 page must not either,
+     * unless the editor asked for a Q&A or FAQ source.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array{action: string, url?: string, pageId?: int}
+     */
+    public static function datasourceCreateAdjustment(string $text, array $arguments): array
+    {
+        $operation = strtolower(trim((string) ($arguments['operation'] ?? 'create')));
+        if ($operation !== '' && $operation !== 'create') {
+            return ['action' => 'keep'];
+        }
+        $type = strtolower(trim((string) ($arguments['type'] ?? '')));
+        if ((self::asksForTextDataSource($text) || $type === 'text')
+            && !self::asksForQaSource($text)
+            && self::httpUrlInText($text) === null
+            && !self::asksToTrainAPage($text)
+        ) {
+            $textBody = self::textBodyInRequest($text);
+            if ($textBody === '') {
+                return ['action' => 'ask_text'];
+            }
+
+            return [
+                'action' => 'text',
+                'text' => $textBody,
+                'inactive' => self::asksForInactiveSource($text),
+            ];
+        }
+        if (self::asksForQaSource($text)) {
+            return ['action' => 'keep'];
+        }
+        if (self::invalidUrlNamedInText($text)) {
+            return ['action' => 'invalid_url'];
+        }
+        $typeValue = trim((string) ($arguments['typeValue'] ?? $arguments['type_value'] ?? ''));
+        if ($type === 'web_pages' && $typeValue !== '' && !self::looksLikeWebAddress($typeValue)) {
+            return ['action' => 'invalid_url'];
+        }
+        $url = self::httpUrlInText($text);
+        if ($url !== null && $type === 'qa') {
+            return ['action' => 'web_pages', 'url' => $url];
+        }
+        if ($type === 'qa' && self::asksToTrainAPage($text)) {
+            $pageId = self::contentPageIdInText($text);
+            if ($pageId > 0) {
+                return ['action' => 'typo3_pages', 'pageId' => $pageId];
+            }
+
+            return ['action' => 'ask_page'];
+        }
+
+        return ['action' => 'keep'];
+    }
+
+    /**
+     * Answers for a named data source are not a suggested search question.
+     * Null when the editor asked for a suggested question. An empty string means the source name was not given.
+     */
+    public static function addedAnswersTarget(string $text): ?string
+    {
+        $lower = mb_strtolower($text);
+        if (preg_match('/suggested|predefined|vorgeschlag|search question/u', $lower) === 1) {
+            return null;
+        }
+        if (!str_contains($lower, 'add these answers') && !str_contains($lower, 'add the answers') && !str_contains($lower, 'diese antworten')) {
+            return null;
+        }
+        if (self::qaAnswersCreateRequest($text) !== null) {
+            return null;
+        }
+        if (preg_match('/\bto\s+(.+)$/iu', trim($text), $match) === 1) {
+            return trim((string) $match[1], " \t.\"'");
+        }
+
+        return '';
+    }
+
+    /**
+     * "Add these answers for the bot" with Q:/A: pairs is a new Q&A source, not a suggested search question.
+     *
+     * @return array{tool: string, arguments: array<string, mixed>}|null
+     */
+    public static function qaAnswersCreateRequest(string $text): ?array
+    {
+        if (preg_match('/suggested|predefined|vorgeschlag|search question/u', mb_strtolower($text)) === 1) {
+            return null;
+        }
+        $name = self::namedDatasourceTitle($text);
+        $pairs = self::qaPairsFromQaLines($text);
+        if ($pairs === []) {
+            return null;
+        }
+        $lower = mb_strtolower($text);
+        $forTheBot = str_contains($lower, 'for the bot')
+            || str_contains($lower, 'for the chatbot')
+            || str_contains($lower, 'für den bot')
+            || str_contains($lower, 'fuer den bot')
+            || str_contains($lower, 'add these answers')
+            || str_contains($lower, 'add the answers')
+            || str_contains($lower, 'diese antworten');
+        if (!$forTheBot) {
+            return null;
+        }
+        if (preg_match('/\bto\s+(.+)$/iu', trim($text)) === 1 && !preg_match('/\b(?:name it|call it)\b/iu', $lower)) {
+            return null;
+        }
+        $json = json_encode($pairs, JSON_UNESCAPED_UNICODE);
+        if (!is_string($json)) {
+            return null;
+        }
+        if ($name === '') {
+            $name = $pairs[0]['q'];
+        }
+
+        return [
+            'tool' => 't3cs_save_datasource',
+            'arguments' => [
+                'operation' => 'create',
+                'type' => 'qa',
+                'qaPairs' => $json,
+                'usageType' => 'chatbot',
+                'rootPageId' => 0,
+                'name' => $name,
+            ],
+        ];
+    }
+
+    /**
+     * @return list<array{q: string, a: string}>
+     */
+    public static function qaPairsFromQaLines(string $text): array
+    {
+        $text = self::withoutTrailingDatasourceName($text);
+        if (preg_match_all('/Q:\s*(.*?)\s*A:\s*(.*?)(?=\s*Q:|$)/su', $text, $matches, PREG_SET_ORDER) < 1) {
+            return [];
+        }
+        $pairs = [];
+        foreach ($matches as $match) {
+            $question = trim((string) ($match[1] ?? ''));
+            $answer = trim((string) ($match[2] ?? ''));
+            if ($question !== '' && $answer !== '') {
+                $pairs[] = ['q' => $question, 'a' => $answer];
+            }
+        }
+
+        return $pairs;
+    }
+
+    public static function withoutTrailingDatasourceName(string $text): string
+    {
+        $stripped = preg_replace(
+            '/\s*\b(?:name it|call it|nenn(?:e)? (?:es|sie))\s+[\'"]?.+?[\'"]?\s*$/iu',
+            '',
+            trim($text),
+        );
+
+        return is_string($stripped) ? trim($stripped) : trim($text);
+    }
+
+    public static function namedDatasourceTitle(string $text): string
+    {
+        if (preg_match('/\b(?:name it|call it|nenn(?:e)? (?:es|sie))\s+[\'"]?(.+?)[\'"]?\s*$/iu', trim($text), $match) === 1) {
+            return trim((string) $match[1], " \t.\"'");
+        }
+        if (preg_match('/\bnamed\s+[\'"]([^\'"]+)[\'"]/iu', $text, $match) === 1) {
+            return trim((string) $match[1]);
+        }
+
+        return '';
+    }
+
+    public static function asksForTextDataSource(string $text): bool
+    {
+        $text = mb_strtolower($text);
+
+        return str_contains($text, 'text data source')
+            || str_contains($text, 'text datasource')
+            || str_contains($text, 'text source')
+            || str_contains($text, 'textdatenquelle')
+            || str_contains($text, 'textquelle');
+    }
+
+    /**
+     * A knowledge-base source (text, Q&A, sitemap, PDF, web), not a page content element.
+     */
+    public static function asksForADataSource(string $text): bool
+    {
+        if (self::asksForTextDataSource($text) || self::asksForQaSource($text)) {
+            return true;
+        }
+        $lower = mb_strtolower($text);
+        if (preg_match('/\b(?:data\s*source|datasource|datenquelle|wissensquelle|knowledge(?:-|\s)?base)\b/u', $lower) === 1) {
+            return true;
+        }
+
+        return preg_match('/\b(?:sitemap|pdf|web\s*pages?|typo3\s*pages?)\b/u', $lower) === 1
+            && preg_match('/\b(?:source|quelle)\b/u', $lower) === 1;
+    }
+
+    public static function asksForInactiveSource(string $text): bool
+    {
+        return preg_match('/\b(inactive|inaktiv)\b/iu', $text) === 1;
+    }
+
+    public static function textBodyInRequest(string $text): string
+    {
+        if (preg_match("/with the text\\s+['\"]([^'\"]+)['\"]/iu", $text, $match) === 1) {
+            return trim((string) $match[1]);
+        }
+
+        return '';
+    }
+
+    public static function asksForQaSource(string $text): bool
+    {
+        $text = mb_strtolower($text);
+        foreach (['q&a', 'q & a', 'faq', 'question and answer', 'questions and answers', 'fragen und antworten'] as $phrase) {
+            if (str_contains($text, $phrase)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static function invalidUrlNamedInText(string $text): bool
+    {
+        if (preg_match_all('/\burl\s*[:=]?\s*([^\s,;]+)/iu', $text, $matches) < 1) {
+            return false;
+        }
+        foreach ($matches[1] as $token) {
+            $token = trim((string) $token, " \t\n\r\0\x0B.\"'");
+            if ($token === '') {
+                continue;
+            }
+            $lower = mb_strtolower($token);
+            if (!str_starts_with($lower, 'http://') && !str_starts_with($lower, 'https://')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static function httpUrlInText(string $text): ?string
+    {
+        if (preg_match('#https?://[^\s,;\'"<>]+#i', $text, $match) !== 1) {
+            return null;
+        }
+
+        return rtrim($match[0], '.');
+    }
+
+    public static function asksToTrainAPage(string $text): bool
+    {
+        $text = mb_strtolower($text);
+        if (self::asksForQaSource($text) || self::httpUrlInText($text) !== null) {
+            return false;
+        }
+        if (str_contains($text, 'web page') || str_contains($text, 'webseite')) {
+            return false;
+        }
+        $aboutPage = str_contains($text, 'page') || str_contains($text, 'seite');
+        $aboutTraining = str_contains($text, 'chatbot') || str_contains($text, 'search') || str_contains($text, 'suche');
+
+        return $aboutPage && $aboutTraining;
+    }
+
+    public static function contentPageIdInText(string $text): int
+    {
+        if (preg_match_all('/\b((?:root\s+)?)(page|seite)\s+(?:id\s+)?(\d+)\b/iu', $text, $matches, PREG_SET_ORDER) < 1) {
+            return 0;
+        }
+        $pageId = 0;
+        foreach ($matches as $match) {
+            if (trim((string) ($match[1] ?? '')) !== '') {
+                continue;
+            }
+            $pageId = (int) ($match[3] ?? 0);
+        }
+
+        return $pageId;
+    }
+
+    public static function looksLikeWebAddress(string $value): bool
+    {
+        $value = trim($value);
+        if (str_starts_with($value, 'singlePage:1|')) {
+            $value = trim(substr($value, 13));
+        }
+        if (str_contains($value, '*')) {
+            $value = trim(explode('*', $value, 2)[0] ?? '');
+            if ($value !== '' && !str_ends_with($value, '/')) {
+                $value .= '/';
+            }
+        }
+        if (filter_var($value, FILTER_VALIDATE_URL) === false) {
+            return false;
+        }
+        $scheme = parse_url($value, PHP_URL_SCHEME);
+
+        return $scheme === 'http' || $scheme === 'https';
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function applyDatasourceCreateAdjustment(array &$body, string $requestText, string $correlationId): ?array
+    {
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $adjustment = self::datasourceCreateAdjustment($requestText, $arguments);
+        if ($adjustment['action'] === 'invalid_url') {
+            return $this->datasourceSentenceTurn($correlationId, 'agent.datasource.invalidUrl', 'That address is not a valid http or https URL. No data source was created.');
+        }
+        if ($adjustment['action'] === 'ask_page') {
+            return $this->datasourceSentenceTurn($correlationId, 'agent.datasource.whichPage', 'Name the page the chatbot and search should learn. It will be added as a TYPO3 pages data source.');
+        }
+        if ($adjustment['action'] === 'ask_text') {
+            return $this->datasourceSentenceTurn($correlationId, 'agent.datasource.whichText', 'What text should this data source contain?');
+        }
+        if ($adjustment['action'] === 'web_pages') {
+            $url = (string) ($adjustment['url'] ?? '');
+            $arguments['type'] = 'web_pages';
+            $arguments['typeValue'] = $url;
+            unset($arguments['qaPairs'], $arguments['qa_pairs']);
+            $path = parse_url($url, PHP_URL_PATH);
+            if (is_string($path) && $path !== '' && $path !== '/') {
+                $arguments['singlePage'] = 1;
+            }
+            $body['arguments'] = $arguments;
+        }
+        if ($adjustment['action'] === 'typo3_pages') {
+            $arguments['type'] = 'typo3_pages';
+            $arguments['typeValue'] = (string) ($adjustment['pageId'] ?? 0);
+            unset($arguments['qaPairs'], $arguments['qa_pairs']);
+            $body['arguments'] = $arguments;
+        }
+        if ($adjustment['action'] === 'text') {
+            $arguments['type'] = 'text';
+            $textBody = trim((string) ($adjustment['text'] ?? ''));
+            if ($textBody !== '') {
+                $arguments['typeValue'] = $textBody;
+            }
+            unset($arguments['qaPairs'], $arguments['qa_pairs']);
+            if (($adjustment['inactive'] ?? false) === true) {
+                $arguments['activate'] = 0;
+            }
+            $body['arguments'] = $arguments;
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{role: string, content: string, meta: array<string, mixed>}
+     */
+    private function answersBelongOnSourceTurn(string $correlationId, string $sourceName): array
+    {
+        $sourceName = trim($sourceName);
+        if ($sourceName !== '') {
+            $sentence = $this->translator->translate('agent.datasource.answersOnSource', [$sourceName]);
+            $fallback = 'Those answers belong on the Q&A data source ' . $sourceName . '. They were not added as a suggested search question.';
+        } else {
+            $sentence = $this->translator->translate('agent.datasource.answersOnSourceUnnamed');
+            $fallback = 'Those answers belong on the Q&A data source. They were not added as a suggested search question.';
+        }
+        if ($sentence === '' || str_starts_with($sentence, 'agent.datasource.answersOnSource')) {
+            $sentence = $fallback;
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $sentence,
+            'meta' => [
+                'type' => 'info',
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
+    }
+
+    /**
+     * @return array{role: string, content: string, meta: array<string, mixed>}
+     */
+    private function datasourceSentenceTurn(string $correlationId, string $label, string $fallback): array
+    {
+        $sentence = $this->translator->translate($label);
+        if ($sentence === '' || $sentence === $label) {
+            $sentence = $fallback;
+        }
+
+        return [
+            'role' => 'assistant',
+            'content' => $sentence,
+            'meta' => [
+                'type' => 'info',
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
+    }
+
+    public static function asksForChatbotSettings(string $text): bool
+    {
+        $text = mb_strtolower($text);
+        if (str_contains($text, 'data source') || str_contains($text, 'datasource') || str_contains($text, 'datenquelle')) {
+            return false;
+        }
+
+        $aboutChatbot = str_contains($text, 'chatbot');
+        $renamesChatbot = $aboutChatbot && (
+            str_contains($text, 'rename')
+            || str_contains($text, 'umbenennen')
+            || str_contains($text, 'title')
+            || str_contains($text, 'titel')
+        );
+
+        return $renamesChatbot
+            || str_contains($text, 'chatbot settings')
+            || str_contains($text, 'chatbot configuration')
+            || str_contains($text, 'chatbot-einstellungen')
+            || str_contains($text, 'chatbot einstellungen')
+            || str_contains($text, 'einstellungen des chatbots')
+            || str_contains($text, 'einstellungen für den chatbot')
+            || self::messageChangesChatbotBehavior($text);
+    }
+
+    /**
+     * Links under the website bot, its visitor language, or a rule for that bot.
+     * A data-source request is not one of these.
+     */
+    public static function messageChangesChatbotBehavior(string $text): bool
+    {
+        $text = mb_strtolower($text);
+        if (str_contains($text, 'data source') || str_contains($text, 'datasource') || str_contains($text, 'datenquelle')) {
+            return false;
+        }
+        if (preg_match('/\b(?:source\s+links?|links?\s+under\s+(?:the\s+)?(?:bot|chatbot|answers))\b/u', $text) === 1) {
+            return true;
+        }
+        if (
+            preg_match('/\b(?:at most|maximum of|maximum|höchstens|hoechstens|maximal)\s+\d+\s+links?\b/u', $text) === 1
+            && (str_contains($text, 'bot') || str_contains($text, 'answer'))
+        ) {
+            return true;
+        }
+        if (
+            preg_match('/\b(?:visitor(?:\'s|s)?|besucher\w*)\s+(?:language|sprache)\b/u', $text) === 1
+            && !str_contains($text, 'search')
+            && !str_contains($text, 'suche')
+        ) {
+            return true;
+        }
+        if (preg_match('/\b(?:tell|ask)\s+the\s+bot\b|\bdem\s+bot\s+(?:sagen|erklären|erklaeren)\b/u', $text) === 1) {
+            return true;
+        }
+
+        return preg_match('/\b(?:never|do not|don\'t|nicht)\b.{0,50}\b(?:recommend|empfehl)/u', $text) === 1
+            && (str_contains($text, 'bot') || str_contains($text, 'chatbot'));
+    }
+
+    /**
+     * A chatbot behaviour change, including "make it 2" after a source-link request.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function asksToChangeChatbotBehavior(string $message, array $history): bool
+    {
+        if (self::messageChangesChatbotBehavior($message)) {
+            return true;
+        }
+        if (!self::historyConcernsChatbotLinks($history)) {
+            return false;
+        }
+
+        return preg_match('/\b(?:make it|set it to|change it to|mach(?:e)? es)\s+\d+\b/iu', $message) === 1;
+    }
+
+    /**
+     * "Is that active now?" after a chatbot change that was not saved.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function unappliedChatbotStatusQuestion(string $message, array $history): bool
+    {
+        if (preg_match('/\b(?:is that|is it|ist das|ist es)\b.{0,40}\b(?:active|aktiv)\b|\bactive now\b|\bjetzt aktiv\b/iu', $message) !== 1) {
+            return false;
+        }
+        if (!self::historyConcernsChatbot($history)) {
+            return false;
+        }
+
+        return !self::chatbotSettingsWereApplied($history);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $messages
+     */
+    /**
+     * After Apply of chatbot settings the change is already saved. Do not replace that
+     * confirmation with "nothing was saved".
+     *
+     * @param list<array<string, mixed>> $history
+     * @param list<array<string, mixed>> $turnMessages
+     * @param array<string, mixed> $continuation
+     */
+    public static function shouldForceChatbotSettingsCard(
+        string $message,
+        array $history,
+        array $turnMessages,
+        array $continuation = [],
+    ): bool {
+        if (($continuation['outcome'] ?? '') === 'applied') {
+            return false;
+        }
+        if (self::chatbotSettingsWereApplied($history)) {
+            return false;
+        }
+
+        return self::asksToChangeChatbotBehavior($message, $history)
+            && self::chatbotReplyMissesTheCard($turnMessages);
+    }
+
+    /**
+     * @param array<mixed> $messages
+     */
+    public static function chatbotReplyMissesTheCard(array $messages): bool
+    {
+        foreach ($messages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
+            if (($meta['type'] ?? '') === 'clarification') {
+                return false;
+            }
+            $tool = (string) ($meta['tool'] ?? '');
+            if ($tool === 't3ac_chatbot_settings' || $tool === 't3ac_chatbot_settings_get' || $tool === 'ask_clarification') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    private static function historyConcernsChatbotLinks(array $history): bool
+    {
+        foreach (array_slice($history, -6) as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $text = mb_strtolower((string) ($message['content'] ?? ''));
+            if (str_contains($text, 'source link') || str_contains($text, 'links under') || str_contains($text, 'max source')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    private static function historyConcernsChatbot(array $history): bool
+    {
+        foreach (array_slice($history, -8) as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            if (self::messageChangesChatbotBehavior((string) ($message['content'] ?? ''))) {
+                return true;
+            }
+            $tool = (string) (($message['meta']['tool'] ?? ''));
+            if ($tool === 't3ac_chatbot_settings' || $tool === 't3ac_chatbot_settings_get') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * An applied chatbot update after the latest behaviour request.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function chatbotSettingsWereApplied(array $history): bool
+    {
+        $lastRequest = -1;
+        foreach ($history as $index => $message) {
+            if (!is_array($message) || ($message['role'] ?? '') !== 'user') {
+                continue;
+            }
+            if (self::messageChangesChatbotBehavior((string) ($message['content'] ?? ''))) {
+                $lastRequest = $index;
+            }
+        }
+        foreach ($history as $index => $message) {
+            if ($index <= $lastRequest || !is_array($message)) {
+                continue;
+            }
+            $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
+            if (($meta['tool'] ?? '') !== 't3ac_chatbot_settings') {
+                continue;
+            }
+            if (($meta['success'] ?? false) === true && ($meta['autoRan'] ?? true) === false) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * There is no data-source delete tool. A delete request must not be told it is a permission problem.
+     */
+    public static function asksToDeleteDataSources(string $text): bool
+    {
+        $text = mb_strtolower($text);
+        $aboutSource = str_contains($text, 'data source')
+            || str_contains($text, 'datasource')
+            || str_contains($text, 'datenquelle');
+        if (!$aboutSource || str_contains($text, 'queue') || str_contains($text, 'failed')) {
+            return false;
+        }
+
+        foreach (['delete', 'remove', 'löschen', 'loeschen', 'entfern'] as $verb) {
+            if (str_contains($text, $verb)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * A chatbot-settings question is the licence message when those tools are locked.
+     * AI Search settings and the data-source list are not a stand-in.
+     */
+    public static function chatbotSettingsNeedLicenceMessage(string $text, bool $chatbotToolLocked): bool
+    {
+        return $chatbotToolLocked && self::asksForChatbotSettings($text);
+    }
+
+    /**
+     * A refresh, a failed training retry, a data-source rename, a greeting, or a chatbot
+     * rename is prepared before the model can search news or open an empty record card.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array{tool: string, arguments: array<string, mixed>}|array{ask: string}|null
+     */
+    public static function directToolRequest(string $message, array $history = []): ?array
+    {
+        if (self::asksToRestoreChatbotSetting($message) && self::latestAppliedTool($history) === 't3ac_chatbot_settings') {
+            $previous = self::previousChatbotSetting($history);
+            if ($previous === null) {
+                return ['ask' => 'agent.chatbot.changeBack'];
+            }
+            $json = json_encode($previous['settings'], JSON_UNESCAPED_UNICODE);
+            if (!is_string($json)) {
+                return ['ask' => 'agent.chatbot.changeBack'];
+            }
+
+            return [
+                'tool' => 't3ac_chatbot_settings',
+                'arguments' => [
+                    'operation' => 'update',
+                    'chatbotUid' => $previous['uid'],
+                    'settingsJson' => $json,
+                ],
+            ];
+        }
+
+        if (self::asksToRestoreChatbotSetting($message)
+            && (self::latestAppliedTool($history) === 't3as_search_settings' || self::recentGlobalAiSearchSwitch($history))
+        ) {
+            $previous = self::previousSearchSetting($history);
+            if ($previous === null) {
+                return ['ask' => 'agent.search.changeBack'];
+            }
+            $json = json_encode($previous, JSON_UNESCAPED_UNICODE);
+            if (!is_string($json)) {
+                return ['ask' => 'agent.search.changeBack'];
+            }
+
+            return [
+                'tool' => 't3as_search_settings',
+                'arguments' => [
+                    'operation' => 'update',
+                    'settingsJson' => $json,
+                ],
+            ];
+        }
+
+        if (self::isGlobalAiSearchSwitch($message)) {
+            $json = json_encode(['enableAiSearch' => self::globalAiSearchEnabled($message) ? 1 : 0], JSON_UNESCAPED_UNICODE);
+            if (!is_string($json)) {
+                return null;
+            }
+
+            return [
+                'tool' => 't3as_search_settings',
+                'arguments' => [
+                    'operation' => 'update',
+                    'settingsJson' => $json,
+                ],
+            ];
+        }
+
+        $greeting = self::chatbotGreetingText($message);
+        $title = self::chatbotRenameTitle($message);
+        if (self::asksToChangeGreeting($message) && $greeting === '' && $title === '') {
+            return ['ask' => 'agent.chatbot.whichGreeting'];
+        }
+        if ($greeting !== '' || $title !== '') {
+            $settings = [];
+            if ($title !== '') {
+                $settings['title'] = $title;
+            }
+            if ($greeting !== '') {
+                $settings['first_message'] = $greeting;
+            }
+            $json = json_encode($settings, JSON_UNESCAPED_UNICODE);
+            if (is_string($json)) {
+                return [
+                    'tool' => 't3ac_chatbot_settings',
+                    'arguments' => [
+                        'operation' => 'update',
+                        'chatbotUid' => 0,
+                        'settingsJson' => $json,
+                    ],
+                ];
+            }
+        }
+
+        if (self::asksToChangeSchedulerDescription($message)) {
+            $description = self::schedulerDescriptionText($message);
+            if ($description === '') {
+                return ['ask' => 'agent.scheduler.whichDescription'];
+            }
+
+            return [
+                'tool' => 'scheduler_update',
+                'arguments' => [
+                    'uid' => self::schedulerTaskUid($message),
+                    'fields' => json_encode(['description' => $description], JSON_UNESCAPED_UNICODE),
+                ],
+            ];
+        }
+
+        if (self::asksToRetryFailedTraining($message)) {
+            return [
+                'tool' => 't3cs_reset_failed_queue_item',
+                'arguments' => ['dataId' => 0, 'queueItemUid' => 0],
+            ];
+        }
+
+        if (self::asksToSetDatasourceDescription($message)) {
+            $description = self::datasourceDescriptionText($message);
+            if ($description === '') {
+                return ['ask' => 'agent.source.whichDescription'];
+            }
+
+            return [
+                'tool' => 't3cs_save_datasource',
+                'arguments' => [
+                    'operation' => 'update',
+                    'dataId' => 0,
+                    'description' => $description,
+                ],
+            ];
+        }
+
+        if (self::asksToChangeDatasourceUsage($message, $history)) {
+            return [
+                'tool' => 't3cs_save_datasource',
+                'arguments' => array_merge(
+                    ['operation' => 'update', 'dataId' => 0],
+                    self::datasourceUsageFields($message),
+                ),
+            ];
+        }
+
+        if (self::asksToRenameADatasource($message)) {
+            return [
+                'tool' => 't3cs_save_datasource',
+                'arguments' => [
+                    'operation' => 'update',
+                    'dataId' => 0,
+                    'name' => self::renamedDatasourceName($message),
+                ],
+            ];
+        }
+
+        $qaCreate = self::qaAnswersCreateRequest($message);
+        if ($qaCreate !== null) {
+            return $qaCreate;
+        }
+
+        if (!self::asksToRefreshADatasource($message, $history)) {
+            return null;
+        }
+
+        return [
+            'tool' => 't3cs_sync_datasource',
+            'arguments' => [
+                'scope' => self::asksToRefreshEverySource($message) ? 'all' : 'one',
+                'dataId' => 0,
+                'mode' => 'request',
+            ],
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function asksToRefreshADatasource(string $message, array $history = []): bool
+    {
+        if (self::asksToRenameADatasource($message) || self::asksToRetryFailedTraining($message)) {
+            return false;
+        }
+        if (self::messageRefreshesADatasource($message)) {
+            return true;
+        }
+        if (!self::historyAskedToRefreshEverything($history)) {
+            return false;
+        }
+
+        return preg_match('/\b(?:just|only|nur)\b/iu', $message) === 1
+            || preg_match('/\band\b|\bund\b/iu', $message) === 1;
+    }
+
+    public static function asksToRefreshEverySource(string $text): bool
+    {
+        $text = mb_strtolower($text);
+        $refresh = preg_match('/\b(?:refresh|retrain|re-?learn|neu lernen|neu trainieren)\b/u', $text) === 1
+            || str_contains($text, 'learn again')
+            || str_contains($text, 'alles neu');
+        if (!$refresh) {
+            return false;
+        }
+
+        return preg_match('/\b(?:everything|all|alle|alles)\b/u', $text) === 1;
+    }
+
+    public static function asksToRetryFailedTraining(string $message): bool
+    {
+        $text = mb_strtolower($message);
+        if (preg_match('/\b(?:translat\w*|übersetz\w*|uebersetz\w*)\b/u', $text) === 1) {
+            return false;
+        }
+        if (preg_match('/\b(?:failed|failure|fehlgeschlagen\w*)\b/u', $text) !== 1) {
+            return false;
+        }
+        if (preg_match('/\b(?:fix|retry|erneut|reparier\w*)\b/u', $text) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:article|artikel|source|quelle|training|bot|chatbot|one|eintrag)\b/u', $text) === 1;
+    }
+
+    public static function asksToRenameADatasource(string $message): bool
+    {
+        $text = mb_strtolower($message);
+        if (preg_match('/\b(?:rename|umbenennen|benenne)\b/u', $text) !== 1) {
+            return false;
+        }
+        if (preg_match('/\b(?:folder|ordner|directory|datei|file|page|seite)\b/u', $text) === 1) {
+            return false;
+        }
+        if (
+            preg_match('/\bchat-?bots?\b/u', $text) === 1
+            && preg_match('/\b(?:source|datenquelle|datasource|quelle)\b/u', $text) !== 1
+        ) {
+            return false;
+        }
+
+        return preg_match('/\b(?:source|datenquelle|datasource|quelle)\b/u', $text) === 1;
+    }
+
+    public static function asksToCorrectDatasourceName(string $message): bool
+    {
+        $text = mb_strtolower($message);
+        if (preg_match('/\b(?:no|nein|actually|stattdessen)\b/u', $text) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:call it|name it|nenn(?:e)? (?:es|sie)|heisse?)\b/u', $text) === 1;
+    }
+
+    public static function renamedDatasourceName(string $message): string
+    {
+        $quoted = self::quotedNames($message);
+        if ($quoted !== []) {
+            return $quoted[0];
+        }
+        if (preg_match('/\b(?:to|zu)\s+(.+?)\s*$/iu', $message, $match) === 1) {
+            return trim($match[1], ' .');
+        }
+
+        return '';
+    }
+
+    public static function asksToChangeSchedulerDescription(string $message): bool
+    {
+        if (preg_match('/\bscheduler\s+task\b|\bplaneraufgabe\b|\bzeitplaner\b/iu', $message) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:description|beschreibung)\b/iu', $message) === 1;
+    }
+
+    public static function schedulerTaskUid(string $message): int
+    {
+        if (preg_match('/\btask\s+(\d+)\b/iu', $message, $match) === 1) {
+            return (int) $match[1];
+        }
+
+        return 0;
+    }
+
+    public static function schedulerDescriptionText(string $message): string
+    {
+        $quoted = self::quotedNames($message);
+
+        return $quoted[count($quoted) - 1] ?? '';
+    }
+
+    public static function asksToChangeAiProvider(string $message): bool
+    {
+        $hasKey = preg_match('/\b(?:api[\s_-]?key|sk-[A-Za-z0-9_-]{8,})\b/u', $message) === 1;
+        if (!$hasKey) {
+            return false;
+        }
+
+        return preg_match('/\b(?:openai|mistral|gemini|anthropic|gpt-4|provider|switch|set it up|set up)\b/iu', $message) === 1;
+    }
+
+    public static function asksToSetDatasourceDescription(string $message): bool
+    {
+        $text = mb_strtolower($message);
+        if (preg_match('/\b(?:description|beschreibung)\b/u', $text) !== 1) {
+            return false;
+        }
+
+        return preg_match('/\b(?:data\s*sources?|datasources?|datenquellen?)\b/u', $text) === 1;
+    }
+
+    public static function datasourceDescriptionName(string $message): string
+    {
+        $quoted = self::quotedNames($message);
+
+        return $quoted[0] ?? '';
+    }
+
+    public static function datasourceDescriptionText(string $message): string
+    {
+        $quoted = self::quotedNames($message);
+        if (count($quoted) >= 2) {
+            return $quoted[count($quoted) - 1];
+        }
+
+        return '';
+    }
+
+    /**
+     * The description is saved on the source whose name matches the quote. A different id is ignored.
+     *
+     * @param list<array<string, mixed>> $sources
+     * @return array{status: string, dataId: int, description: string, name: string, ids: list<int>}
+     */
+    public static function describedSourceUpdate(string $message, array $sources): array
+    {
+        $name = self::datasourceDescriptionName($message);
+        $description = self::datasourceDescriptionText($message);
+        $ids = $name === '' ? [] : self::exactSourceIdsByName($name, $sources);
+        $status = count($ids) === 1 ? 'use' : ($ids === [] ? 'missing' : 'ask');
+
+        return [
+            'status' => $status,
+            'dataId' => count($ids) === 1 ? $ids[0] : 0,
+            'description' => $description,
+            'name' => $name,
+            'ids' => $ids,
+        ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $sources
+     * @return list<int>
+     */
+    public static function exactSourceIdsByName(string $name, array $sources): array
+    {
+        $needle = mb_strtolower(trim($name));
+        if ($needle === '') {
+            return [];
+        }
+        $ids = [];
+        foreach (self::knownSources($sources) as $uid => $source) {
+            $sourceName = mb_strtolower(trim((string) ($source['name'] ?? '')));
+            if ($sourceName !== '' && $sourceName === $needle) {
+                $ids[] = (int) $uid;
+            }
+        }
+
+        return $ids;
+    }
+
+    public static function isGlobalAiSearchSwitch(string $message): bool
+    {
+        return preg_match('/\b(?:turn\s+(?:it\s+)?(?:on|off)|enable|disable|switch\s+(?:on|off)|aktivieren|deaktivieren)\b/iu', $message) === 1
+            && preg_match('/\b(?:ai[\s-]*search|ki[\s-]*suche)\b/iu', $message) === 1;
+    }
+
+    public static function globalAiSearchEnabled(string $message): bool
+    {
+        return preg_match('/\b(?:turn\s+(?:it\s+)?off|disable|switch\s+off|deaktivieren)\b/iu', $message) !== 1;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function recentGlobalAiSearchSwitch(array $history): bool
+    {
+        for ($index = count($history) - 1, $seen = 0; $index >= 0 && $seen < 6; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $seen++;
+            if (self::isGlobalAiSearchSwitch((string) ($entry['content'] ?? ''))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public static function asksToStopAllDatasourceUse(string $message): bool
+    {
+        return preg_match('/\b(?:neither|none of them|keines|keiner|beide nicht)\b/iu', $message) === 1;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function asksToChangeDatasourceUsage(string $message, array $history = []): bool
+    {
+        if (self::isGlobalAiSearchSwitch($message)) {
+            return false;
+        }
+        if (self::messageChangesDatasourceUsage($message) && !self::asksToStopAllDatasourceUse($message)) {
+            return true;
+        }
+        if (!self::asksToStopAllDatasourceUse($message)) {
+            return false;
+        }
+        if (preg_match('/\b(?:source|datenquelle|datasource|stuff|chat-?bot|search|suche)\b/iu', $message) === 1) {
+            return true;
+        }
+
+        return self::historyChangesDatasourceUsage($history);
+    }
+
+    /**
+     * @return array{usageType?: string, activate?: int}
+     */
+    public static function datasourceUsageFields(string $message): array
+    {
+        if (self::asksToStopAllDatasourceUse($message)) {
+            return ['activate' => 0];
+        }
+        $text = mb_strtolower($message);
+        $onlyChatbot = preg_match('/\bonly the (?:chat-?bot|bot)\b|\bnur (?:der|die|das) (?:chat-?bot|bot)\b/u', $text) === 1;
+        $onlySearch = preg_match('/\bonly the search\b|\bnur die suche\b/u', $text) === 1;
+        $dropSearch = preg_match('/\b(?:search|suche)\b/u', $text) === 1
+            && preg_match("/\b(?:shouldn't|should not|shouldnt|nicht mehr)\b/u", $text) === 1;
+        if ($onlyChatbot || $dropSearch) {
+            return ['usageType' => 'chatbot'];
+        }
+        if ($onlySearch) {
+            return ['usageType' => 'search'];
+        }
+
+        return ['activate' => 0];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @param list<array<string, mixed>> $sources
+     * @return array{status: string, dataId: int, ids: list<int>, usageType?: string, activate?: int}
+     */
+    public static function usageSourceUpdate(string $message, array $history, array $sources): array
+    {
+        $fields = self::datasourceUsageFields($message);
+        $ids = self::mentionedSourceIds(self::usageSourceText($message, $history), $sources);
+        $status = count($ids) === 1 ? 'use' : 'ask';
+        $update = [
+            'status' => $status,
+            'dataId' => count($ids) === 1 ? $ids[0] : 0,
+            'ids' => $ids,
+        ];
+
+        return array_merge($update, $fields);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function usageSourceText(string $message, array $history): string
+    {
+        if (!self::asksToStopAllDatasourceUse($message)) {
+            return $message;
+        }
+        $seen = 0;
+        for ($index = count($history) - 1; $index >= 0 && $seen < 6; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || (string) ($entry['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $seen++;
+            $content = trim((string) ($entry['content'] ?? ''));
+            if ($content !== '' && self::messageChangesDatasourceUsage($content) && !self::asksToStopAllDatasourceUse($content)) {
+                return $message . ' ' . $content;
+            }
+        }
+
+        return $message;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $sources
+     * @return list<int>
+     */
+    public static function mentionedSourceIds(string $text, array $sources): array
+    {
+        $words = self::mentionWords($text);
+        $known = self::knownSources($sources);
+        if ($words === [] || $known === []) {
+            return [];
+        }
+        $scores = [];
+        foreach ($known as $uid => $source) {
+            $haystack = mb_strtolower(trim(
+                (string) ($source['name'] ?? '') . ' '
+                . (string) ($source['typeValue'] ?? '') . ' '
+                . (string) ($source['typeValuePreview'] ?? '') . ' '
+                . (string) ($source['type_value'] ?? ''),
+            ));
+            $haystack = str_replace(['.', '/', ':', '-', '_'], ' ', $haystack);
+            $score = 0;
+            foreach ($words as $word) {
+                $pattern = '/(?<![\p{L}\p{N}])' . preg_quote($word, '/') . '(?![\p{L}\p{N}])/u';
+                if (preg_match($pattern, $haystack) === 1) {
+                    $score++;
+                }
+            }
+            if ($score > 0) {
+                $scores[(int) $uid] = $score;
+            }
+        }
+        if ($scores === []) {
+            return [];
+        }
+        $best = max($scores);
+        $ids = [];
+        foreach ($scores as $uid => $score) {
+            if ($score === $best) {
+                $ids[] = $uid;
+            }
+        }
+
+        return $ids;
+    }
+
+    private static function messageChangesDatasourceUsage(string $message): bool
+    {
+        if (self::isGlobalAiSearchSwitch($message)) {
+            return false;
+        }
+        $text = mb_strtolower($message);
+        $changes = preg_match("/\b(?:shouldn't|should not|shouldnt|nicht mehr)\b.{0,80}\b(?:use|verwend\w*|nutzen)\b/u", $text) === 1
+            || preg_match('/\bonly the (?:chat-?bot|bot|search)\b|\bnur (?:der|die|das) (?:chat-?bot|bot|suche)\b/iu', $text) === 1;
+        if (!$changes) {
+            return false;
+        }
+
+        return preg_match('/\b(?:source|datenquelle|datasource|quelle|stuff|chat-?bot|bot|search|suche)\b/u', $text) === 1;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    private static function historyChangesDatasourceUsage(array $history): bool
+    {
+        $seen = 0;
+        for ($index = count($history) - 1; $index >= 0 && $seen < 6; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || (string) ($entry['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $seen++;
+            if (self::messageChangesDatasourceUsage((string) ($entry['content'] ?? ''))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function mentionWords(string $text): array
+    {
+        if (preg_match_all('/\p{L}{4,}/u', mb_strtolower($text), $matches) < 1) {
+            return [];
+        }
+        $stop = [
+            'search', 'suche', 'chatbot', 'chatbots', 'stuff', 'anymore', 'should', 'shouldn', 'neither',
+            'them', 'only', 'source', 'sources', 'datasource', 'datasources', 'datenquelle', 'datenquellen',
+            'using', 'used', 'use', 'both', 'this', 'that', 'with', 'from', 'have', 'been', 'when', 'your',
+            'actually', 'request', 'please', 'bitte',
+        ];
+        $words = [];
+        foreach ($matches[0] as $word) {
+            if (!in_array($word, $stop, true)) {
+                $words[] = $word;
+            }
+        }
+
+        return array_values(array_unique($words));
+    }
+
+    /**
+     * The source named in the sentence, ignoring the new name in quotes.
+     *
+     * @param list<array<string, mixed>> $sources
+     */
+    public static function datasourceRenameTarget(string $text, array $sources): int
+    {
+        $stripped = preg_replace('/[\'"“”„«»][^\'"“”„«»]*[\'"“”„«»]/u', ' ', $text) ?? $text;
+
+        return self::trainingSourceTarget($stripped, $sources);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $sources
+     */
+    public static function trainingSourceTarget(string $text, array $sources): int
+    {
+        $known = self::knownSources($sources);
+        $matches = self::matchingSourceIds($text, $known);
+        if (count($matches) === 1) {
+            return $matches[0];
+        }
+        $topic = self::topicSourceIds($text, $known);
+
+        return count($topic) === 1 ? $topic[0] : 0;
+    }
+
+    public static function chatbotGreetingText(string $message): string
+    {
+        if (!self::mentionsGreeting($message)) {
+            return '';
+        }
+        $quoted = self::quotedNames($message);
+
+        return $quoted[0] ?? '';
+    }
+
+    public static function chatbotRenameTitle(string $message): string
+    {
+        if (self::asksToRenameADatasource($message) || self::asksToRestoreChatbotSetting($message)) {
+            return '';
+        }
+        if (preg_match('/\b(?:rename|umbenennen|benenne)\b/iu', $message) !== 1) {
+            return '';
+        }
+        if (preg_match('/\bchat-?bots?\b/iu', $message) !== 1) {
+            return '';
+        }
+        $quoted = self::quotedNames($message);
+        if ($quoted !== []) {
+            return $quoted[0];
+        }
+        if (preg_match('/\b(?:to|zu|in)\s+(.+)/iu', $message, $match) !== 1) {
+            return '';
+        }
+        $title = trim((string) $match[1], ' .');
+        $title = trim((string) preg_replace('/\s+(?:rename|umbenennen|benenne)\b.*$/iu', '', $title));
+
+        return trim($title, ' .');
+    }
+
+    public static function asksToChangeGreeting(string $message): bool
+    {
+        if (!self::mentionsGreeting($message)) {
+            return false;
+        }
+
+        return preg_match('/\b(?:change|set|update|ändere|aendere|setzen|mach)\b/iu', $message) === 1;
+    }
+
+    public static function asksToRestoreChatbotSetting(string $message): bool
+    {
+        return preg_match('/\b(?:change|set|put|switch)\s+it\s+back\b|\bänder\w*\s+(?:es|das)\s+zurück\b|\bwie\s+es\s+war\b/iu', $message) === 1;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function tuneChatbotArguments(string $toolName, array $arguments, string $message): array
+    {
+        if (!in_array($toolName, ['t3ac_chatbot_settings', 't3ac_chatbot_settings_get'], true)) {
+            return $arguments;
+        }
+        $greeting = self::chatbotGreetingText($message);
+        $title = self::chatbotRenameTitle($message);
+        if ($greeting === '' && $title === '') {
+            return $arguments;
+        }
+        $settings = [];
+        if ($title !== '') {
+            $settings['title'] = $title;
+        }
+        if ($greeting !== '') {
+            $settings['first_message'] = $greeting;
+        }
+        $json = json_encode($settings, JSON_UNESCAPED_UNICODE);
+        if (!is_string($json)) {
+            return $arguments;
+        }
+        $arguments['operation'] = 'update';
+        $arguments['settingsJson'] = $json;
+
+        return $arguments;
+    }
+
+    /**
+     * A rename, or "No, call it B", keeps that source's uid and only the new name.
+     *
+     * @param array<string, mixed> $arguments
+     * @param list<array<string, mixed>> $history
+     * @return array<string, mixed>
+     */
+    public static function tuneDatasourceArguments(string $toolName, array $arguments, string $message, array $history = []): array
+    {
+        if ($toolName !== 't3cs_save_datasource') {
+            return $arguments;
+        }
+        $isCorrection = self::asksToCorrectDatasourceName($message);
+        if (!self::asksToRenameADatasource($message) && !$isCorrection) {
+            return $arguments;
+        }
+        $name = self::renamedDatasourceName($message);
+        if ($name === '') {
+            $name = self::namedDatasourceTitle($message);
+        }
+        if ($name === '') {
+            return $arguments;
+        }
+        $dataId = $isCorrection ? self::openDatasourceRenameId($history) : 0;
+        if ($dataId <= 0) {
+            $dataId = (int) ($arguments['dataId'] ?? $arguments['data_id'] ?? 0);
+        }
+        if ($dataId <= 0) {
+            return $arguments;
+        }
+        $tuned = [
+            'operation' => 'update',
+            'dataId' => $dataId,
+            'name' => $name,
+        ];
+        $rootPageId = (int) ($arguments['rootPageId'] ?? 0);
+        if ($rootPageId > 0) {
+            $tuned['rootPageId'] = $rootPageId;
+        }
+
+        return $tuned;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function openDatasourceRenameId(array $history): int
+    {
+        for ($index = count($history) - 1; $index >= 0; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || ($entry['role'] ?? '') !== 'assistant') {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            $draft = is_array($meta['draft'] ?? null) ? $meta['draft'] : [];
+            $tool = (string) ($draft['tool'] ?? $meta['tool'] ?? '');
+            if ($tool !== 't3cs_save_datasource') {
+                continue;
+            }
+            if (($draft['applied'] ?? false) === true
+                || ($draft['discarded'] ?? false) === true
+                || ($draft['failed'] ?? false) === true
+            ) {
+                continue;
+            }
+            $baseline = is_array($draft['recordBaseline'] ?? null) ? $draft['recordBaseline'] : [];
+            $uid = (int) ($baseline['uid'] ?? 0);
+            if ($uid > 0) {
+                return $uid;
+            }
+            $args = $draft['arguments'] ?? [];
+            if (is_array($args) && (int) ($args['dataId'] ?? $args['data_id'] ?? 0) > 0) {
+                return (int) ($args['dataId'] ?? $args['data_id'] ?? 0);
+            }
+            if (is_array($args)) {
+                foreach ($args as $row) {
+                    if (!is_array($row)) {
+                        continue;
+                    }
+                    if (($row['key'] ?? '') === 'dataId') {
+                        $fromRow = (int) ($row['value'] ?? 0);
+                        if ($fromRow > 0) {
+                            return $fromRow;
+                        }
+                    }
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    private static function requestTextFromBody(array $body): string
+    {
+        return trim(trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? '')));
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    public static function latestAppliedTool(array $history): string
+    {
+        for ($index = count($history) - 1; $index >= 0; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if ((string) ($meta['type'] ?? '') !== 'tool_result' || ($meta['autoRan'] ?? true) !== false) {
+                continue;
+            }
+            if (($meta['success'] ?? true) === false) {
+                continue;
+            }
+
+            return (string) ($meta['tool'] ?? '');
+        }
+
+        return '';
+    }
+
+    /**
+     * The title or greeting from before the latest applied chatbot card.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array{uid: int, settings: array<string, mixed>}|null
+     */
+    public static function previousChatbotSetting(array $history): ?array
+    {
+        for ($index = count($history) - 1; $index >= 0; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if ((string) ($meta['type'] ?? '') !== 'tool_result' || (string) ($meta['tool'] ?? '') !== 't3ac_chatbot_settings') {
+                continue;
+            }
+            if (($meta['autoRan'] ?? true) !== false || ($meta['success'] ?? true) === false) {
+                continue;
+            }
+            $baseline = is_array($meta['recordBaseline'] ?? null) ? $meta['recordBaseline'] : [];
+            $uid = (int) ($baseline['uid'] ?? 0);
+            $values = is_array($baseline['values'] ?? null) ? $baseline['values'] : [];
+            $settings = [];
+            foreach (['title', 'first_message'] as $field) {
+                if (!array_key_exists($field, $values)) {
+                    continue;
+                }
+                if ($field === 'title' && trim((string) $values[$field]) === '') {
+                    continue;
+                }
+                $settings[$field] = $values[$field];
+            }
+            if ($uid <= 0 || $settings === []) {
+                return null;
+            }
+
+            return ['uid' => $uid, 'settings' => $settings];
+        }
+
+        return null;
+    }
+
+    /**
+     * The enable switch from before the latest applied AI Search card.
+     *
+     * @param list<array<string, mixed>> $history
+     * @return array<string, mixed>|null
+     */
+    public static function previousSearchSetting(array $history): ?array
+    {
+        $sawApplied = false;
+        for ($index = count($history) - 1; $index >= 0; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if ((string) ($meta['type'] ?? '') !== 'tool_result' || (string) ($meta['tool'] ?? '') !== 't3as_search_settings') {
+                continue;
+            }
+            if (($meta['autoRan'] ?? true) !== false || ($meta['success'] ?? true) === false) {
+                continue;
+            }
+            $sawApplied = true;
+            $enabled = self::enableAiSearchFromAppliedSettings($meta['appliedSettings'] ?? null);
+            if ($enabled === null) {
+                continue;
+            }
+
+            return ['enableAiSearch' => $enabled === 1 ? 0 : 1];
+        }
+
+        if (!$sawApplied) {
+            return null;
+        }
+
+        for ($index = count($history) - 1; $index >= 0; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || (string) ($entry['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $message = trim((string) ($entry['content'] ?? ''));
+            if (!self::isGlobalAiSearchSwitch($message)) {
+                continue;
+            }
+
+            return ['enableAiSearch' => self::globalAiSearchEnabled($message) ? 0 : 1];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param mixed $settings
+     */
+    public static function enableAiSearchFromAppliedSettings(mixed $settings): ?int
+    {
+        if (is_string($settings) && trim($settings) !== '') {
+            $decoded = json_decode($settings, true);
+            $settings = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($settings)) {
+            return null;
+        }
+        $enabled = $settings['enableAiSearch'] ?? $settings['enable_ai_search'] ?? null;
+        if ($enabled !== null && $enabled !== '') {
+            return self::truthyEnableValue($enabled);
+        }
+        foreach ($settings as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $key = (string) ($row['key'] ?? '');
+            if ($key === 'settingsJson' || $key === 'settings_json') {
+                $fromJson = self::enableAiSearchFromAppliedSettings($row['value'] ?? null);
+                if ($fromJson !== null) {
+                    return $fromJson;
+                }
+            }
+            if ($key === 'enableAiSearch' || $key === 'enable_ai_search') {
+                $fromRow = self::truthyEnableValue($row['value'] ?? null);
+                if ($fromRow !== null) {
+                    return $fromRow;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param mixed $value
+     */
+    private static function truthyEnableValue(mixed $value): ?int
+    {
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+        if (is_int($value) || is_float($value)) {
+            return ((int) $value) === 1 ? 1 : 0;
+        }
+        $text = strtolower(trim((string) $value));
+        if ($text === '') {
+            return null;
+        }
+        if (in_array($text, ['1', 'true', 'yes', 'on'], true)) {
+            return 1;
+        }
+        if (in_array($text, ['0', 'false', 'no', 'off'], true)) {
+            return 0;
+        }
+
+        return ((int) $value) === 1 ? 1 : 0;
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     * @return array<string, mixed>
+     */
+    public static function tuneUsagePeriodArguments(string $toolName, array $arguments, string $message): array
+    {
+        if ($toolName !== 't3cs_usage_analytics_summary') {
+            return $arguments;
+        }
+        $period = trim((string) ($arguments['period'] ?? ''));
+        $normalized = self::usagePeriodAlias($period !== '' ? $period : $message);
+        if ($normalized !== '') {
+            $arguments['period'] = $normalized;
+        }
+
+        return $arguments;
+    }
+
+    public static function usagePeriodAlias(string $text): string
+    {
+        $lower = mb_strtolower(trim($text));
+        $compact = preg_replace('/[\s\-]+/', '_', $lower) ?? $lower;
+        if ($compact === 'this_week' || $compact === 'diese_woche'
+            || preg_match('/\bthis\s+week\b|\bdiese\s+woche\b|\bthis_week\b/u', $lower) === 1
+        ) {
+            return '7d';
+        }
+
+        return match ($compact) {
+            'today', 'yesterday', '7d', '14d', '30d', 'this_month', 'last_month', 'custom' => $compact,
+            default => '',
+        };
+    }
+
+    /**
+     * Words from the request that appear in exactly one source name, or the sources that tie.
+     *
+     * @param array<int, array<string, mixed>> $known
+     * @return list<int>
+     */
+    public static function topicSourceIds(string $text, array $known): array
+    {
+        $words = self::significantWords($text);
+        if ($words === [] || $known === []) {
+            return [];
+        }
+        $scores = [];
+        foreach ($known as $uid => $source) {
+            if (!is_array($source)) {
+                continue;
+            }
+            $name = mb_strtolower(trim((string) ($source['name'] ?? '')));
+            $score = 0;
+            foreach ($words as $word) {
+                if ($word !== '' && str_contains($name, $word)) {
+                    $score++;
+                }
+            }
+            if ($score > 0) {
+                $scores[(int) $uid] = $score;
+            }
+        }
+        if ($scores === []) {
+            return [];
+        }
+        $best = max($scores);
+        $ids = [];
+        foreach ($scores as $uid => $score) {
+            if ($score === $best) {
+                $ids[] = $uid;
+            }
+        }
+
+        return $ids;
+    }
+
+    private static function mentionsGreeting(string $message): bool
+    {
+        return preg_match('/\b(?:welcome message|greeting|begrüß\w*|begruess\w*|willkommens\w*)\b/iu', $message) === 1;
+    }
+
+    private static function messageRefreshesADatasource(string $message): bool
+    {
+        $text = mb_strtolower($message);
+        if (
+            preg_match('/\b(?:news|nachricht|blog)\b/u', $text) === 1
+            && preg_match('/\b(?:bot|chatbot|source|quelle|datenquelle)\b/u', $text) !== 1
+        ) {
+            return false;
+        }
+        $refresh = preg_match('/\b(?:refresh|retrain|re-?learn|neu lernen|neu trainieren)\b/u', $text) === 1
+            || preg_match('/\blearn (?:that|it|again|this)\b/u', $text) === 1
+            || preg_match('/\b(?:outdated|veraltet)\b/u', $text) === 1
+            || str_contains($text, 'learn again')
+            || str_contains($text, 'nochmal lernen')
+            || str_contains($text, 'erneut lernen');
+        if (!$refresh) {
+            return false;
+        }
+
+        return preg_match('/\b(?:bot|chatbot|source|quelle|datenquelle|article|artikel|page|seite)\b/u', $text) === 1
+            || self::asksToRefreshEverySource($message);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     */
+    private static function historyAskedToRefreshEverything(array $history): bool
+    {
+        $seen = 0;
+        for ($index = count($history) - 1; $index >= 0 && $seen < 8; $index--) {
+            $entry = $history[$index];
+            if (!is_array($entry) || (string) ($entry['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $seen++;
+            if (self::asksToRefreshEverySource((string) ($entry['content'] ?? ''))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $sources
+     * @return array<int, array<string, mixed>>
+     */
+    private static function knownSources(array $sources): array
+    {
+        $known = [];
+        foreach ($sources as $uid => $source) {
+            if (!is_array($source)) {
+                continue;
+            }
+            $id = (int) ($source['uid'] ?? 0);
+            if ($id <= 0 && is_int($uid)) {
+                $id = $uid;
+            }
+            if ($id > 0) {
+                $known[$id] = $source;
+            }
+        }
+
+        return $known;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function significantWords(string $text): array
+    {
+        if (preg_match_all('/\p{L}{5,}/u', mb_strtolower($text), $matches) < 1) {
+            return [];
+        }
+        $stop = [
+            'please', 'bitte', 'updated', 'chatbot', 'chatbots', 'source', 'sources', 'quelle', 'quellen',
+            'datenquelle', 'datenquellen', 'refresh', 'refreshed', 'learn', 'again', 'everything', 'article',
+            'artikel', 'about', 'page', 'seite', 'outdated', 'veraltet', 'training', 'failed', 'failure',
+            'something', 'makeup', 'which', 'there', 'their', 'should', 'would', 'could',
+        ];
+        $words = [];
+        foreach ($matches[0] as $word) {
+            if (!in_array($word, $stop, true)) {
+                $words[] = $word;
+            }
+        }
+
+        return array_values(array_unique($words));
+    }
+
+    /**
+     * A request to sync every source. A list of every source is not a sync.
+     */
+    public static function askedForEverySource(string $text): bool
+    {
+        if (self::asksToRefreshEverySource($text)) {
+            return true;
+        }
+        if (preg_match('/\b(?:sync|synchronis\w*)\b/iu', $text) !== 1) {
+            return false;
+        }
+        $text = mb_strtolower($text);
+        foreach ([
+            'all sources',
+            'all data sources',
+            'all datasources',
+            'every source',
+            'every data source',
+            'sync everything',
+            'synchronise everything',
+            'synchronize everything',
+            'alle quellen',
+            'alle datenquellen',
+            'alles synchronisieren',
+        ] as $needle) {
+            if (str_contains($text, $needle)) {
+                return true;
+            }
+        }
+        if (preg_match('/\b(?:all|every|alle)\b(?:\s+\p{L}+){0,3}\s+(?:data\s+)?(?:sources|source|datenquellen|quellen)\b/u', $text) === 1) {
+            return true;
+        }
+
+        return preg_match('/\bsync all\b/u', $text) === 1
+            && preg_match('/\b(sitemap|pdf|faq|q&a)\b/u', $text) !== 1;
+    }
+
+    /**
+     * "The second one" after a data-source list is that row, not a page translation.
+     * "The second page" stays a page.
+     *
+     * @param list<array<string, mixed>> $sources
+     */
+    public static function sourceUidFromOrdinal(string $text, array $sources): int
+    {
+        if (preg_match('/\b(?:first|second|third|fourth|fifth|\d(?:st|nd|rd|th)|erste\w*|zweite\w*|dritte\w*|vierte\w*|fünfte\w*|fuenfte\w*)\s+(?:page|seite)\b/iu', $text) === 1) {
+            return 0;
+        }
+        $index = self::listOrdinalIndex($text);
+        if ($index === null) {
+            return 0;
+        }
+        $rows = [];
+        foreach ($sources as $source) {
+            if (is_array($source) && (int) ($source['uid'] ?? 0) > 0) {
+                $rows[] = $source;
+            }
+        }
+
+        return (int) ($rows[$index]['uid'] ?? 0);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $history
+     * @return list<array<string, mixed>>
+     */
+    public static function datasourcesInLatestList(array $history): array
+    {
+        for ($i = count($history) - 1; $i >= 0; --$i) {
+            $entry = $history[$i];
+            if (!is_array($entry)) {
+                continue;
+            }
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : [];
+            if (($meta['type'] ?? '') !== 'tool_result') {
+                continue;
+            }
+            if (($meta['tool'] ?? '') !== 't3cs_list_datasources' || ($meta['success'] ?? true) === false) {
+                return [];
+            }
+            $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+            $rows = is_array($details['datasources'] ?? null) ? $details['datasources'] : [];
+            $sources = [];
+            foreach ($rows as $row) {
+                if (is_array($row) && (int) ($row['uid'] ?? 0) > 0) {
+                    $sources[] = $row;
+                }
+            }
+
+            return $sources;
+        }
+
+        return [];
+    }
+
+    /**
+     * Sync, activate, or save. A question about the listed source is not one of these.
+     */
+    public static function changesADatasource(string $text): bool
+    {
+        return preg_match('/\b(?:sync|synchronis\w*|activate|aktivier\w*|update|save|speicher\w*)\b/iu', $text) === 1;
+    }
+
+    private static function listOrdinalIndex(string $text): ?int
+    {
+        $text = mb_strtolower(trim($text));
+        if (preg_match('/\b(?:first|1st|erste[rnms]?|erster)\b/u', $text) === 1) {
+            return 0;
+        }
+        if (preg_match('/\b(?:second|2nd|zweite[rnms]?)\b/u', $text) === 1) {
+            return 1;
+        }
+        if (preg_match('/\b(?:third|3rd|dritte[rnms]?)\b/u', $text) === 1) {
+            return 2;
+        }
+        if (preg_match('/\b(?:fourth|4th|vierte[rnms]?)\b/u', $text) === 1) {
+            return 3;
+        }
+        if (preg_match('/\b(?:fifth|5th|fünfte[rnms]?|fuenfte[rnms]?)\b/u', $text) === 1) {
+            return 4;
+        }
+
+        return null;
+    }
+
+    /**
+     * "Sync all of my data sources" is one card for every source, even when the model asks which one.
+     *
+     * @param array<string, mixed> $body
+     * @param array<string, mixed> $context
+     * @return array{role: string, content: string, meta: array<string, mixed>}|null
+     */
+    private function forceSyncOfEverySource(
+        string $toolName,
+        array &$body,
+        array $context,
+        BackendUserAuthentication $user,
+        string $correlationId,
+    ): ?array {
+        $text = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        if (!self::askedForEverySource($text)) {
+            return null;
+        }
+        if (!in_array($toolName, ['ask_clarification', 't3cs_list_datasources', 't3cs_sync_datasource'], true)) {
+            return null;
+        }
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $arguments['scope'] = 'all';
+        unset($arguments['dataId'], $arguments['question'], $arguments['options']);
+        $body['arguments'] = $arguments;
+        if ($toolName === 't3cs_sync_datasource') {
+            return null;
+        }
+
+        return $this->execute('t3cs_sync_datasource', $context, $body, $user, $correlationId);
+    }
+
+    /**
+     * JSON and request bodies are arrays, not lists. Callers that need a list of maps use this.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function listOfMaps(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+        /** @var list<array<string, mixed>> $maps */
+        $maps = [];
+        foreach ($value as $item) {
+            if (is_array($item)) {
+                $maps[] = $item;
+            }
+        }
+
+        return $maps;
+    }
+
+    /**
+     * Decide the sync target from the editor's words and the sources on this site.
+     *
+     * @param list<array<string, mixed>> $sources
+     * @return array{action: string, scope: string, dataId: int, options: list<string>}
+     */
+    public static function namedSyncDecision(string $text, array $sources, string $scope, int $dataId): array
+    {
+        $scope = strtolower(trim($scope)) === 'all' ? 'all' : 'one';
+        $known = [];
+        foreach ($sources as $source) {
+            if (!is_array($source)) {
+                continue;
+            }
+            $uid = (int) ($source['uid'] ?? 0);
+            if ($uid > 0) {
+                $known[$uid] = $source;
+            }
+        }
+        if (self::askedForEverySource($text)) {
+            return ['action' => 'keep', 'scope' => 'all', 'dataId' => 0, 'options' => []];
+        }
+
+        $namedUid = self::uidNamedInText($text, array_keys($known));
+        if ($namedUid > 0 && isset($known[$namedUid])) {
+            return ['action' => 'use', 'scope' => 'one', 'dataId' => $namedUid, 'options' => []];
+        }
+
+        $matches = self::matchingSourceIds($text, $known);
+        if (count($matches) === 1) {
+            return ['action' => 'use', 'scope' => 'one', 'dataId' => $matches[0], 'options' => []];
+        }
+        if (count($matches) > 1) {
+            $namedUid = self::uidNamedInText($text, $matches);
+            if ($namedUid > 0) {
+                return ['action' => 'use', 'scope' => 'one', 'dataId' => $namedUid, 'options' => []];
+            }
+
+            return [
+                'action' => 'ask',
+                'scope' => 'one',
+                'dataId' => 0,
+                'options' => self::optionLabelsFor($matches, $known),
+            ];
+        }
+
+        if (self::asksToRefreshADatasource($text) || preg_match('/\b(?:just|only|nur)\b/iu', $text) === 1) {
+            $topic = self::topicSourceIds($text, $known);
+            if (count($topic) === 1) {
+                return ['action' => 'use', 'scope' => 'one', 'dataId' => $topic[0], 'options' => []];
+            }
+            if (count($topic) > 1) {
+                return [
+                    'action' => 'ask',
+                    'scope' => 'one',
+                    'dataId' => 0,
+                    'options' => self::optionLabelsFor($topic, $known),
+                ];
+            }
+        }
+
+        if ($scope === 'all') {
+            $options = self::optionLabelsFor(array_keys($known), $known);
+            if (count($known) === 1) {
+                return ['action' => 'use', 'scope' => 'one', 'dataId' => (int) array_key_first($known), 'options' => []];
+            }
+            if ($options !== []) {
+                return ['action' => 'ask', 'scope' => 'one', 'dataId' => 0, 'options' => $options];
+            }
+
+            return ['action' => 'keep', 'scope' => 'all', 'dataId' => 0, 'options' => []];
+        }
+        if ($dataId > 0 && isset($known[$dataId])) {
+            return ['action' => 'keep', 'scope' => 'one', 'dataId' => $dataId, 'options' => []];
+        }
+        if ($dataId > 0) {
+            return ['action' => 'notFound', 'scope' => 'one', 'dataId' => $dataId, 'options' => []];
+        }
+
+        return ['action' => 'keep', 'scope' => 'one', 'dataId' => 0, 'options' => []];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $known
+     * @return list<int>
+     */
+    private static function matchingSourceIds(string $text, array $known): array
+    {
+        $quoted = self::quotedNames($text);
+        if ($quoted !== []) {
+            $ids = [];
+            foreach ($known as $uid => $source) {
+                $name = mb_strtolower(trim((string) ($source['name'] ?? '')));
+                foreach ($quoted as $quote) {
+                    if ($name !== '' && $name === mb_strtolower($quote)) {
+                        $ids[] = (int) $uid;
+                    }
+                }
+            }
+
+            return $ids;
+        }
+
+        $types = self::typesNamedInText($text);
+        $ids = [];
+        foreach ($known as $uid => $source) {
+            $name = trim((string) ($source['name'] ?? ''));
+            $type = strtolower(trim((string) ($source['type'] ?? '')));
+            if ($types !== []) {
+                // "sitemap" must not also match a source whose name merely appears in the sentence ("pages").
+                if (in_array($type, $types, true) || self::nameMatchesNamedType($name, $types)) {
+                    $ids[] = (int) $uid;
+                }
+                continue;
+            }
+            if (self::textContainsName($text, $name)) {
+                $ids[] = (int) $uid;
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function quotedNames(string $text): array
+    {
+        if (preg_match_all('/[\'"“”]([^\'"“”]{2,})[\'"“”]/u', $text, $matches) < 1) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(static fn(string $name): string => trim($name), $matches[1]), static fn(string $name): bool => $name !== ''));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function typesNamedInText(string $text): array
+    {
+        $text = mb_strtolower($text);
+        $types = [];
+        foreach ([
+            'web pages' => 'web_pages',
+            'web page' => 'web_pages',
+            'typo3 pages' => 'typo3_pages',
+            'typo3 page' => 'typo3_pages',
+            'q & a' => 'qa',
+            'q&a' => 'qa',
+            'sitemap' => 'sitemap',
+            'faq' => 'qa',
+            'pdf' => 'pdf',
+        ] as $phrase => $type) {
+            $pattern = '/(?<![\p{L}\p{N}])' . preg_quote($phrase, '/') . '(?![\p{L}\p{N}])/u';
+            if (preg_match($pattern, $text) === 1) {
+                $types[$type] = true;
+            }
+        }
+
+        return array_keys($types);
+    }
+
+    /**
+     * @param list<string> $types
+     */
+    private static function nameMatchesNamedType(string $name, array $types): bool
+    {
+        $name = mb_strtolower($name);
+        foreach ($types as $type) {
+            if ($type === 'sitemap' && str_contains($name, 'sitemap')) {
+                return true;
+            }
+            if ($type === 'pdf' && str_contains($name, 'pdf')) {
+                return true;
+            }
+            if ($type === 'qa' && (str_contains($name, 'faq') || str_contains($name, 'q&a') || str_contains($name, 'q & a'))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function textContainsName(string $text, string $name): bool
+    {
+        $name = trim(mb_strtolower($name));
+        if (mb_strlen($name) < 4) {
+            return false;
+        }
+        $pattern = '/(?<![\p{L}\p{N}])' . preg_quote($name, '/') . '(?![\p{L}\p{N}])/u';
+
+        return preg_match($pattern, mb_strtolower($text)) === 1;
+    }
+
+    /**
+     * @param list<int> $uids
+     */
+    private static function uidNamedInText(string $text, array $uids): int
+    {
+        $found = [];
+        foreach ($uids as $uid) {
+            if ($uid <= 0) {
+                continue;
+            }
+            $number = preg_quote((string) $uid, '/');
+            $pattern = '/(?:\b(?:uid|dataid|data id|source|quelle)\s*#?\s*' . $number . '\b)|(?:\[' . $number . '\])/i';
+            if (preg_match($pattern, $text) === 1) {
+                $found[] = $uid;
+            }
+        }
+
+        return count($found) === 1 ? $found[0] : 0;
+    }
+
+    /**
+     * @param list<int> $ids
+     * @param array<int, array<string, mixed>> $known
+     * @return list<string>
+     */
+    private static function optionLabelsFor(array $ids, array $known): array
+    {
+        $rows = [];
+        foreach ($ids as $id) {
+            if (isset($known[$id])) {
+                $rows[] = $known[$id];
+            }
+        }
+
+        return self::queueSourceDecision($rows)['options'];
+    }
+
+    /**
+     * One datasource is used at once. Several become buttons ("Name (type) [uid]"). None stays empty.
+     *
+     * @param list<array<string, mixed>> $sources
+     * @return array{dataId: int, options: list<string>}
+     */
+    public static function queueSourceDecision(array $sources): array
+    {
+        $options = [];
+        $onlyId = 0;
+        foreach ($sources as $source) {
+            if (!is_array($source)) {
+                continue;
+            }
+            $uid = (int) ($source['uid'] ?? 0);
+            if ($uid <= 0) {
+                continue;
+            }
+            $name = trim((string) ($source['name'] ?? ''));
+            $type = trim((string) ($source['type'] ?? ''));
+            $label = $name !== '' ? $name : 'Source';
+            if ($type !== '') {
+                $label .= ' (' . $type . ')';
+            }
+            $options[] = $label . ' [' . $uid . ']';
+            $onlyId = $uid;
+        }
+        if (count($options) === 1) {
+            return ['dataId' => $onlyId, 'options' => []];
+        }
+
+        return ['dataId' => 0, 'options' => $options];
+    }
+
+    /**
+     * The datasource the editor picked from the training-queue question, or 0 when this message is not that answer.
+     *
+     * @param list<array<string, mixed>> $history
+     */
+    public static function dataIdFromQueueChoice(string $reply, array $history): int
+    {
+        $question = self::openQuestionMeta($history);
+        if ((string) ($question['askedFor'] ?? '') !== 't3cs_list_queue_items') {
+            return 0;
+        }
+        $options = array_values(array_filter(
+            is_array($question['options'] ?? null) ? $question['options'] : [],
+            'is_string',
+        ));
+        $reply = trim($reply);
+        foreach ($options as $option) {
+            if (self::sameChoice($reply, $option)) {
+                return self::uidInBrackets($option);
+            }
+        }
+        $uid = 0;
+        if (preg_match('/\[(\d+)\]\s*$/', $reply, $bracket) === 1) {
+            $uid = (int) $bracket[1];
+        } elseif (preg_match('/^\d+$/', $reply) === 1) {
+            $uid = (int) $reply;
+        }
+        if ($uid > 0) {
+            foreach ($options as $option) {
+                if (self::uidInBrackets($option) === $uid) {
+                    return $uid;
+                }
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     * @param array<string, mixed> $pendingArguments
+     * @return array{turn: array{role: string, content: string, meta: array<string, mixed>}|null, dataId: int}
+     */
+    private function resolveMissingQueueSource(
+        array $context,
+        string $correlationId,
+        string $questionKey = 'agent.queue.whichSource',
+        string $askedFor = 't3cs_list_queue_items',
+        array $pendingArguments = [],
+    ): array {
+        $rootPageId = $this->listingRootPageId($context);
+        if ($rootPageId <= 0) {
+            return ['turn' => $this->queueNotice($this->translator->translate('agent.queue.noSite'), $correlationId), 'dataId' => 0];
+        }
+
+        $listed = $this->playgroundService->invoke('t3cs_list_datasources', ['rootPageId' => $rootPageId]);
+        $payload = $listed['result'] ?? null;
+        if (is_string($payload)) {
+            $decoded = json_decode($payload, true);
+            $payload = is_array($decoded) ? $decoded : null;
+        }
+        if (($listed['success'] ?? false) !== true || !is_array($payload)) {
+            $message = trim((string) ($listed['message'] ?? ''));
+
+            return [
+                'turn' => $this->queueNotice(
+                    $message !== '' ? $message : $this->translator->translate('agent.queue.noSources'),
+                    $correlationId,
+                ),
+                'dataId' => 0,
+            ];
+        }
+        if (isset($payload['error']) && is_string($payload['error']) && trim($payload['error']) !== '') {
+            return ['turn' => $this->queueNotice(trim($payload['error']), $correlationId), 'dataId' => 0];
+        }
+
+        $sources = self::listOfMaps($payload['datasources'] ?? null);
+        $decision = self::queueSourceDecision($sources);
+        if ($decision['dataId'] > 0) {
+            return ['turn' => null, 'dataId' => $decision['dataId']];
+        }
+        if ($decision['options'] === []) {
+            return ['turn' => $this->queueNotice($this->translator->translate('agent.queue.noSources'), $correlationId), 'dataId' => 0];
+        }
+
+        return [
+            'turn' => [
+                'role' => 'assistant',
+                'content' => $this->translator->translate($questionKey),
+                'meta' => [
+                    'type' => 'clarification',
+                    'tool' => 'ask_clarification',
+                    'options' => $decision['options'],
+                    'contentChoice' => true,
+                    'askedFor' => $askedFor,
+                    'pendingArguments' => $pendingArguments,
+                    'correlationId' => $correlationId,
+                    'orchestratorPause' => true,
+                ],
+            ],
+            'dataId' => 0,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function siteRootPageId(array $context): int
+    {
+        $pageId = (int) ($context['pageId'] ?? 0);
+        if ($pageId <= 0) {
+            return 0;
+        }
+        try {
+            return GeneralUtility::makeInstance(SiteFinder::class)->getSiteByPageId($pageId)->getRootPageId();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    /**
+     * The Dashboard has no open page. One site in the installation is still a root page.
+     */
+    private function onlySiteRootPageId(): int
+    {
+        try {
+            $sites = GeneralUtility::makeInstance(SiteFinder::class)->getAllSites();
+        } catch (\Throwable) {
+            return 0;
+        }
+        $ids = [];
+        foreach ($sites as $site) {
+            $id = $site->getRootPageId();
+            if ($id > 0) {
+                $ids[$id] = $id;
+            }
+        }
+
+        return count($ids) === 1 ? (int) array_key_first($ids) : 0;
+    }
+
+    /**
+     * @param array<string, mixed> $context
+     */
+    private function listingRootPageId(array $context): int
+    {
+        $rootPageId = $this->siteRootPageId($context);
+
+        return $rootPageId > 0 ? $rootPageId : $this->onlySiteRootPageId();
+    }
+
+    private function isSiteRoot(int $pageId): bool
+    {
+        if ($pageId <= 0) {
+            return false;
+        }
+        try {
+            GeneralUtility::makeInstance(SiteFinder::class)->getSiteByRootPageId($pageId);
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * A named source belongs to one site. Used only when the sent root is missing or not a site root.
+     */
+    private function siteIdOfDatasource(int $dataId): int
+    {
+        if ($dataId <= 0 || !class_exists(\NITSAN\NsT3Cs\Domain\Repository\DatasourceRepository::class)) {
+            return 0;
+        }
+        try {
+            $row = GeneralUtility::makeInstance(\NITSAN\NsT3Cs\Domain\Repository\DatasourceRepository::class)
+                ->findOneByUidAndOptionalSiteId($dataId, 0);
+        } catch (\Throwable) {
+            return 0;
+        }
+        $siteId = is_array($row) ? (int) ($row['site_id'] ?? 0) : 0;
+
+        return $this->isSiteRoot($siteId) ? $siteId : 0;
+    }
+
+    /**
+     * A positive root stays when it is a real site root, or when the editor named that id.
+     * A guessed id such as 1 does not replace an explicit 999999.
+     */
+    public static function resolvedRootPageId(
+        int $given,
+        bool $givenIsSiteRoot,
+        int $fromOpenPage,
+        int $fromDataSource,
+        int $onlySite,
+        bool $keepGiven = false,
+    ): int {
+        if ($given > 0 && ($givenIsSiteRoot || $keepGiven || $given > 1)) {
+            return $given;
+        }
+        if ($fromOpenPage > 0) {
+            return $fromOpenPage;
+        }
+        if ($fromDataSource > 0) {
+            return $fromDataSource;
+        }
+
+        return $onlySite > 0 ? $onlySite : 0;
+    }
+
+    public static function requestNamesInteger(string $text, int $value): bool
+    {
+        if ($value <= 0 || trim($text) === '') {
+            return false;
+        }
+
+        return preg_match('/(?<!\d)' . preg_quote((string) $value, '/') . '(?!\d)/', $text) === 1;
+    }
+
+    /**
+     * @return array{role: string, content: string, meta: array<string, mixed>}
+     */
+    private function queueNotice(string $content, string $correlationId): array
+    {
+        return [
+            'role' => 'assistant',
+            'content' => $content,
+            'meta' => [
+                'type' => 'nl_reply',
+                'correlationId' => $correlationId,
+                'orchestratorPause' => true,
+            ],
+        ];
+    }
+
+    private static function uidInBrackets(string $label): int
+    {
+        if (preg_match('/\[(\d+)\]\s*$/', $label, $match) !== 1) {
+            return 0;
+        }
+
+        return (int) $match[1];
+    }
+
+    /**
      * The editor clicked an option of the agent's image-text question ("Regenerate all", "Keep current
      * texts", or one of several files with the same name): the tool and target that click stands for.
      *
@@ -930,6 +4362,47 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
      *
      * @param array<string, mixed> $arguments
      */
+    /**
+     * The current values a data-source or chatbot update will replace.
+     * Missing when this tool does not update one of those records.
+     *
+     * @param array<string, mixed> $arguments
+     * @return array{table: string, uid: int, values: array<string, mixed>}|null
+     */
+    private function recordBaseline(string $toolName, array $arguments): ?array
+    {
+        $target = AgentWriteService::confirmationBaselineTarget($toolName, $arguments);
+        if ($target === null) {
+            return null;
+        }
+        try {
+            $row = BackendUtility::getRecord($target['table'], $target['uid'], implode(',', $target['fields']));
+        } catch (\Throwable) {
+            return null;
+        }
+        if (!is_array($row)) {
+            return null;
+        }
+        $values = [];
+        foreach ($target['fields'] as $field) {
+            if (array_key_exists($field, $row)) {
+                $values[$field] = $row[$field];
+            }
+        }
+        if ($values === []) {
+            return null;
+        }
+
+        return [
+            'table' => $target['table'],
+            'uid' => $target['uid'],
+            'values' => $values,
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $arguments
+     */
     private function logRefusedPlan(string $correlationId, string $toolName, array $arguments, \Throwable $exception): void
     {
         $this->auditLogger->logToolInvocation($correlationId, $toolName, $arguments, false, 0, mb_substr($exception->getMessage(), 0, 250));
@@ -958,6 +4431,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             $context,
             $toolName,
             (string) ($body['provider'] ?? ''),
+            self::requestTextFromBody($body),
         );
         /** @var list<array<string, mixed>> $history */
         $history = is_array($body['conversationHistory'] ?? null) ? array_values($body['conversationHistory']) : [];
@@ -1077,6 +4551,13 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             }
         }
 
+        if (strtolower($toolName) === 't3as_search_settings') {
+            $arguments = AgentRunner::searchSettingsArgumentsForRequest(
+                $arguments,
+                $requestQuery !== '' ? $requestQuery : $gateRequest,
+            );
+        }
+
         try {
             $plan = $this->toolPlanResolver->plan($toolName, $arguments);
         } catch (UnsupportedPlanException $exception) {
@@ -1144,6 +4625,27 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
             ];
         }
 
+        $plainRequest = trim((string) ($body['userMessage'] ?? '')) . ' ' . trim((string) ($body['requestQuery'] ?? ''));
+        if (
+            $plan->fields === []
+            && (
+                self::chatbotRenameTitle($plainRequest) !== ''
+                || self::chatbotGreetingText($plainRequest) !== ''
+                || self::asksToRenameADatasource($plainRequest)
+            )
+        ) {
+            $sentence = $this->translator->translate('agent.draft.noFields');
+            if ($sentence === '' || $sentence === 'agent.draft.noFields') {
+                $sentence = 'That change has no fields, so nothing was prepared.';
+            }
+
+            return [
+                'role' => 'assistant',
+                'content' => $sentence,
+                'meta' => ['type' => 'info', 'tool' => $toolName, 'orchestratorPause' => true],
+            ];
+        }
+
         $shownTool = $plan->toolName !== '' && $plan->toolName !== $toolName ? $plan->toolName : $toolName;
         $editorLabel = $shownTool === $toolName
             ? $this->editorLabelService->resolve($tool)
@@ -1179,6 +4681,11 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                     $extra['pendingAttachFileUid'] = $fileUid;
                 }
             }
+        }
+        $baseline = $this->recordBaseline($plan->toolName !== '' ? $plan->toolName : $toolName, $arguments);
+        if ($baseline !== null) {
+            $extra['recordBaseline'] = $baseline;
+            $draftCard['recordBaseline'] = $baseline;
         }
         $this->draftService->persistDraft($draftCard, $plan, $arguments, $this->draftSession, null, $extra);
 
@@ -2012,6 +5519,7 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         array $context,
         string $toolName = '',
         string $providerIdentifier = '',
+        string $requestText = '',
     ): array {
         // An id and a URL for the same target: the id (e.g. from an applied result) wins, a guessed URL must not contradict it.
         foreach ([['pageId', 'pageUrl'], ['parentPageId', 'parentPageUrl']] as [$idKey, $urlKey]) {
@@ -2131,7 +5639,10 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         // The workspace follows the editor: the one they work in, otherwise "MCP Server > Workspace
         // selection" (Live when none is chosen). It is applied for this call only and never replaced
         // by a model-supplied value; the workspace_* tools take their own workspaceId argument.
-        if (!str_starts_with(strtolower(trim($toolName)), 'workspace_')) {
+        if (
+            !str_starts_with(strtolower(trim($toolName)), 'workspace_')
+            && !in_array(strtolower(trim($toolName)), self::WORKSPACE_EXEMPT_TOOLS, true)
+        ) {
             $workspaceId = (int) ($context['workspaceId'] ?? 0);
             $beUser = $GLOBALS['BE_USER'] ?? null;
             if (isset($this->workspaceTarget) && $beUser instanceof BackendUserAuthentication) {
@@ -2172,6 +5683,35 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
                 }
             }
             unset($arguments['pageId'], $arguments['pid']);
+        }
+
+        $toolKey = strtolower(trim($toolName));
+        if (in_array($toolKey, self::ROOT_PAGE_TOOLS, true)) {
+            $given = (int) ($arguments['rootPageId'] ?? 0);
+            $givenIsSiteRoot = $this->isSiteRoot($given);
+            $fromOpenPage = $this->siteRootPageId($context);
+            $fromDataSource = 0;
+            $onlySite = 0;
+            if (!$givenIsSiteRoot && $fromOpenPage <= 0) {
+                $fromDataSource = $this->siteIdOfDatasource((int) ($arguments['dataId'] ?? 0));
+                if ($fromDataSource <= 0) {
+                    $onlySite = $this->onlySiteRootPageId();
+                }
+            }
+            $keepGiven = $given > 0 && self::requestNamesInteger($requestText, $given);
+            $rootPageId = self::resolvedRootPageId(
+                $given,
+                $givenIsSiteRoot,
+                $fromOpenPage,
+                $fromDataSource,
+                $onlySite,
+                $keepGiven,
+            );
+            if ($rootPageId > 0) {
+                $arguments['rootPageId'] = $rootPageId;
+            } elseif ($given > 0) {
+                unset($arguments['rootPageId']);
+            }
         }
 
         return $arguments;
@@ -3073,15 +6613,72 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
     }
 
     /**
+     * A read sent to the search-settings write tool is the get tool. A real update stays a write.
+     *
+     * @param array<string, mixed> $body
      * @param array{executable: list<array<string, mixed>>, locked: list<array<string, mixed>>} $catalog
+     * @return array<string, mixed>|null
+     */
+    private function searchSettingsReadTool(string $toolName, array &$body, array $catalog): ?array
+    {
+        if ($toolName !== 't3as_search_settings') {
+            return null;
+        }
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $operation = strtolower(trim((string) ($arguments['operation'] ?? 'update')));
+        if ($operation === 'update') {
+            return null;
+        }
+        $getTool = $this->findTool($catalog, 't3as_search_settings_get');
+        if ($getTool === null || ($getTool['executable'] ?? false) !== true) {
+            return null;
+        }
+        unset($arguments['operation'], $arguments['settingsJson']);
+        $body['arguments'] = $arguments;
+
+        return $getTool;
+    }
+
+    /**
+     * A read sent to the chatbot write tool is the get tool. A greeting or a rename stays a write.
+     *
+     * @param array<string, mixed> $body
+     * @param array{executable: list<array<string, mixed>>, locked: list<array<string, mixed>>} $catalog
+     * @return array<string, mixed>|null
+     */
+    private function chatbotSettingsReadTool(string $toolName, array &$body, array $catalog): ?array
+    {
+        if ($toolName !== 't3ac_chatbot_settings') {
+            return null;
+        }
+        $arguments = is_array($body['arguments'] ?? null) ? $body['arguments'] : [];
+        $operation = strtolower(trim((string) ($arguments['operation'] ?? 'update')));
+        if ($operation === 'update') {
+            return null;
+        }
+        $getTool = $this->findTool($catalog, 't3ac_chatbot_settings_get');
+        if ($getTool === null || ($getTool['executable'] ?? false) !== true) {
+            return null;
+        }
+        unset($arguments['operation'], $arguments['settingsJson']);
+        $body['arguments'] = $arguments;
+
+        return $getTool;
+    }
+
+    /**
+     * @param array<string, mixed> $catalog
      * @return array<string, mixed>|null
      */
     private function findTool(array $catalog, string $toolName): ?array
     {
         $needle = strtolower(trim($toolName));
         foreach ([$catalog['executable'], $catalog['locked']] as $group) {
+            if (!is_array($group)) {
+                continue;
+            }
             foreach ($group as $tool) {
-                if (strtolower((string) ($tool['name'] ?? '')) === $needle) {
+                if (is_array($tool) && strtolower((string) ($tool['name'] ?? '')) === $needle) {
                     return $tool;
                 }
             }
@@ -3098,6 +6695,21 @@ final readonly class AgentToolTurnProcessor implements AgentToolTurnExecutorInte
         if ($message !== null && $message !== '') {
             $meta['turnGuardWarning'] = $message;
         }
+    }
+
+    /**
+     * @param array<string, mixed> $meta
+     * @param array<string, mixed> $presented
+     * @return array<string, mixed>
+     */
+    private function withPresentedLines(array $meta, array $presented): array
+    {
+        $lines = $presented['lines'] ?? null;
+        if (is_array($lines) && $lines !== []) {
+            $meta['lines'] = array_values($lines);
+        }
+
+        return $meta;
     }
 
     /**

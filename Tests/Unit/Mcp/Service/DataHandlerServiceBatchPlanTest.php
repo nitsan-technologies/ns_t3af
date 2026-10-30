@@ -84,6 +84,36 @@ final class DataHandlerServiceBatchPlanTest extends TestCase
         self::assertSame([['table' => 'pages', 'uid' => 500]], $result['affected']);
     }
 
+    #[Test]
+    public function aSchedulerDescriptionApplySendsOnlyTheKeptFields(): void
+    {
+        $updated = [];
+        $service = $this->createPartialMock(DataHandlerService::class, ['updateRecord']);
+        $service->method('updateRecord')->willReturnCallback(
+            static function (string $table, int $uid, array $fields) use (&$updated): array {
+                $updated = [$table, $uid, $fields];
+
+                return [];
+            },
+        );
+
+        $plan = new ToolPlan('update', 'scheduler_update', [
+            new ToolPlanField(
+                'tx_scheduler_task:1:description',
+                'tx_scheduler_task',
+                1,
+                'description',
+                'T3CS Training (Site 1)',
+                'T3CS Training (Site 1) QA',
+            ),
+        ]);
+        $service->applyFilteredPlan($plan, ['tx_scheduler_task:1:description'], 'c4');
+
+        self::assertSame('tx_scheduler_task', $updated[0] ?? null);
+        self::assertSame(1, $updated[1] ?? null);
+        self::assertSame(['description' => 'T3CS Training (Site 1) QA'], $updated[2] ?? null);
+    }
+
     private function field(int $uid): ToolPlanField
     {
         return new ToolPlanField('tt_content:' . $uid . ':_record', 'tt_content', $uid, '_record', null, null);

@@ -120,6 +120,9 @@ final class AgentToolSelectionTest extends TestCase
         self::assertFalse(AgentCoreToolSet::isCreateContentRequest('Replace the text element with a new one'));
         self::assertFalse(AgentCoreToolSet::isCreateContentRequest('Alte Inhaltselemente löschen und neue anlegen'));
         self::assertFalse(AgentCoreToolSet::isCreateContentRequest('Create a new page'));
+        self::assertFalse(AgentCoreToolSet::isCreateContentRequest(
+            "Create an inactive text data source named 'QA Weekly R9' for root page 1 with the text 'Weekly test' that syncs once a week.",
+        ));
         self::assertFalse(AgentCoreToolSet::isCreateContentRequest('List backend user groups'));
     }
 

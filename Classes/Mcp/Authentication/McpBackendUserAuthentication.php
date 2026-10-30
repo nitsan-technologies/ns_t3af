@@ -21,6 +21,7 @@ namespace NITSAN\NsT3AF\Mcp\Authentication;
 
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
+use TYPO3\CMS\Core\Session\UserSession;
 
 /**
  * Backend user for an MCP request.
@@ -39,6 +40,25 @@ class McpBackendUserAuthentication extends BackendUserAuthentication
     public function pushModuleData(string $module, mixed $data, bool $dontPersistImmediately = false): void
     {
         $this->uc['moduleData'][$module] = $data;
+    }
+
+    public function setSessionData($key, $data): void
+    {
+        $this->memorySession()->set((string) $key, $data);
+    }
+
+    public function setAndSaveSessionData($key, $data): void
+    {
+        $this->setSessionData($key, $data);
+    }
+
+    private function memorySession(): UserSession
+    {
+        if ($this->userSession === null) {
+            $this->userSession = UserSession::createNonFixated('mcp-' . bin2hex(random_bytes(8)));
+        }
+
+        return $this->userSession;
     }
 
     public static function discardUpdateSignal(mixed $user): void

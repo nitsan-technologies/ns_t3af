@@ -501,6 +501,14 @@ final class T3afToolbox implements ToolboxInterface
                 'Not executed: this creates a new page. Call write_table with action create, tableName pages, and ' . $place . ' of the page that sets the place. Do not call pages_move.',
             );
         }
+        if ($name === 'pages_move' && AgentRunner::isPageRenameNotMove($requestQuery)) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked to rename a page. Call write_table with action update, tableName pages, and data {"title": "the new title"} on that page uid. Do not call pages_move.',
+            );
+        }
         // Asked for an AI-generated image, the model otherwise uploads a stock photo from a URL it made up.
         if ($name === 'file_upload_from_url' && AgentRequestedFiles::asksForGeneratedImage($requestQuery) && !AgentRequestedFiles::namesUrl($requestQuery)) {
             $outcome = 'invalid';
@@ -593,6 +601,35 @@ final class T3afToolbox implements ToolboxInterface
             return new ToolResult(
                 $toolCall,
                 'Not executed: the editor named an existing record to attach the image to. Call file_reference_add for that record (news: fal_media, textmedia: assets). Do not create a new record.',
+            );
+        }
+        if (AgentToolTurnProcessor::asksToChangeAiProvider($requestQuery)
+            && !in_array($name, ['explain_capabilities', 'explain_identity', 'ask_clarification'], true)
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: AI provider and API key settings cannot be changed from the AI Agent. Tell the editor that an administrator can change them on the Providers page. Do not repeat the key.',
+            );
+        }
+        if (
+            in_array($name, ['record_search', 'write_table', 'records_apply', 'directory_rename', 'directory_create', 'pages_move', 't3as_search_settings', 't3as_search_settings_get'], true)
+            && (
+                AgentToolTurnProcessor::asksToRefreshADatasource($requestQuery)
+                || AgentToolTurnProcessor::asksToRetryFailedTraining($requestQuery)
+                || AgentToolTurnProcessor::asksToRenameADatasource($requestQuery)
+                || AgentToolTurnProcessor::asksToSetDatasourceDescription($requestQuery)
+                || AgentToolTurnProcessor::asksToChangeDatasourceUsage($requestQuery)
+                || AgentToolTurnProcessor::chatbotGreetingText($requestQuery) !== ''
+                || AgentToolTurnProcessor::chatbotRenameTitle($requestQuery) !== ''
+            )
+        ) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: this is a data source or chatbot change. Call t3cs_sync_datasource, t3cs_reset_failed_queue_item, t3cs_save_datasource, or t3ac_chatbot_settings. Do not search news, rename a folder, or update another table.',
             );
         }
         // EXT:news missing: do not search or write the news table, and do not run news MCP tools.
@@ -695,6 +732,14 @@ final class T3afToolbox implements ToolboxInterface
             return new ToolResult(
                 $toolCall,
                 'Not executed: the editor asked for one content element, not the whole page. Call t3ai_translate_content with contentUid of that element (content_list on the open page gives the order) and targetLanguageUid of the language named in the request.',
+            );
+        }
+        if (AgentRunner::isUnaskedPageContentCreate($name, $toolCall->getArguments(), $this->gateRequest())) {
+            $outcome = 'invalid';
+
+            return new ToolResult(
+                $toolCall,
+                'Not executed: the editor asked for a data source, not a content element or a page. Call t3cs_save_datasource. Do not create page content.',
             );
         }
         // "Generate a Person schema" is schema markup for a page. The model otherwise tries to create a folder or a content element.
@@ -823,6 +868,18 @@ final class T3afToolbox implements ToolboxInterface
         }
 
         if ($name === self::ASK_CLARIFICATION) {
+            $soleSyncId = $this->soleNamedSyncDataId();
+            if ($soleSyncId > 0) {
+                $outcome = 'invalid';
+
+                return new ToolResult(
+                    $toolCall,
+                    'Not executed: exactly one data source matches this request. Call t3cs_sync_datasource with scope "one" and dataId '
+                    . $soleSyncId
+                    . '. Do not ask which source.',
+                );
+            }
+
             return new ToolResult($toolCall, $this->askClarification($this->withoutUnavailableLanguages($validation['arguments'])));
         }
 
@@ -1076,6 +1133,38 @@ final class T3afToolbox implements ToolboxInterface
         $request = trim((string) ($this->runtime->body['requestForGate'] ?? ''));
 
         return $request !== '' ? $request : trim((string) ($this->runtime->body['requestQuery'] ?? ''));
+    }
+
+    /**
+     * After the source list, one matching name is the sync target. Two matches still ask.
+     */
+    private function soleNamedSyncDataId(): int
+    {
+        $request = $this->gateRequest();
+        if (!AgentRunner::asksToSyncDatasource($request)) {
+            return 0;
+        }
+        $sources = [];
+        foreach ($this->state->messages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $meta = is_array($message['meta'] ?? null) ? $message['meta'] : [];
+            if (($meta['tool'] ?? '') !== 't3cs_list_datasources') {
+                continue;
+            }
+            $details = is_array($meta['details'] ?? null) ? $meta['details'] : [];
+            $rows = is_array($details['datasources'] ?? null) ? $details['datasources'] : [];
+            if ($rows !== []) {
+                $sources = AgentToolTurnProcessor::listOfMaps($rows);
+            }
+        }
+        if ($sources === []) {
+            return 0;
+        }
+        $decision = AgentToolTurnProcessor::namedSyncDecision($request, $sources, 'one', 0);
+
+        return $decision['action'] === 'use' ? (int) $decision['dataId'] : 0;
     }
 
     /**

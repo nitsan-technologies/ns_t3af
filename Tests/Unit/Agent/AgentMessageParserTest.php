@@ -62,6 +62,19 @@ final class AgentMessageParserTest extends TestCase
     }
 
     #[Test]
+    public function extractSlashCommandParsesNamedArguments(): void
+    {
+        self::assertSame(
+            [
+                'name' => 't3cs_training_summary',
+                'arguments' => ['rootPageId' => 48],
+                'remainder' => '',
+            ],
+            $this->parser->extractSlashCommand('/t3cs_training_summary rootPageId=48'),
+        );
+    }
+
+    #[Test]
     public function extractSlashCommandParsesJsonArguments(): void
     {
         self::assertSame(

@@ -28,6 +28,7 @@ use const JSON_THROW_ON_ERROR;
 use NITSAN\NsT3AF\Mcp\Authentication\McpBackendUserAuthentication;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlan;
 use NITSAN\NsT3AF\Mcp\Tool\Result\ToolPlanField;
+use NITSAN\NsT3AF\Mcp\Tool\Scheduler\SchedulerUpdateTool;
 use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Authentication\BackendUserAuthentication;
 use TYPO3\CMS\Core\Database\ConnectionPool;
@@ -71,10 +72,17 @@ readonly class DataHandlerService
             $dataHandler->start([$table => [$newId => $fields]], []);
             $dataHandler->process_datamap();
 
-            $this->checkErrors($dataHandler);
-
             /** @var int|string|null $uid */
             $uid = $dataHandler->substNEWwithIDs[$newId] ?? null;
+            try {
+                $this->checkErrors($dataHandler);
+            } catch (\RuntimeException $exception) {
+                if (is_numeric($uid) && (int) $uid > 0) {
+                    $this->discardCreatedRecord($table, (int) $uid);
+                }
+
+                throw $exception;
+            }
             if ($uid === null) {
                 throw new \RuntimeException('Failed to create record: no uid returned', 1712000020);
             }
@@ -134,6 +142,16 @@ readonly class DataHandlerService
             }
 
             $this->recordService->assertRecordExists($table, $uid);
+
+            // Agent Apply sends only the fields on the card. The scheduler validator still
+            // requires a start date, so a description-only write keeps the stored schedule.
+            if ($table === 'tx_scheduler_task') {
+                $existing = BackendUtility::getRecord($table, $uid) ?? [];
+                $fields = SchedulerUpdateTool::withExistingSchedule(
+                    $fields,
+                    $existing,
+                );
+            }
 
             $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
             $dataHandler->start([$table => [$uid => $fields]], []);
@@ -745,6 +763,13 @@ readonly class DataHandlerService
     private function discardUpdateSignal(): void
     {
         McpBackendUserAuthentication::discardUpdateSignal($GLOBALS['BE_USER'] ?? null);
+    }
+
+    private function discardCreatedRecord(string $table, int $uid): void
+    {
+        GeneralUtility::makeInstance(ConnectionPool::class)
+            ->getConnectionForTable($table)
+            ->delete($table, ['uid' => $uid]);
     }
 
     private function checkErrors(DataHandler $dataHandler): void

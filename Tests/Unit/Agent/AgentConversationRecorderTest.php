@@ -110,6 +110,38 @@ final class AgentConversationRecorderTest extends TestCase
     }
 
     #[Test]
+    public function appliedSearchSettingsKeepTheSwitchFromDisplayRows(): void
+    {
+        $messages = [
+            ['role' => 'assistant', 'content' => 'Turn on AI search', 'meta' => ['type' => 'inline_draft', 'draft' => [
+                'draftId' => 'd-search',
+                'kind' => 'tool_confirmation',
+                'tool' => 't3as_search_settings',
+                'severity' => 'write',
+                'arguments' => [
+                    ['key' => 'operation', 'value' => 'update', 'label' => 'Operation'],
+                    ['key' => 'settingsJson', 'value' => '{"enableAiSearch":1}', 'label' => 'Settings'],
+                ],
+            ]]],
+        ];
+
+        $fromCard = $this->recorder->applied($messages, 'd-search', [
+            'tool' => 't3as_search_settings',
+            'presentation' => ['content' => 'Saved.', 'success' => true, 'facts' => []],
+        ], ['message' => 'Saved.']);
+
+        self::assertSame('{"enableAiSearch":1}', $fromCard[0]['meta']['appliedSettings']);
+
+        $fromApply = $this->recorder->applied($messages, 'd-search', [
+            'tool' => 't3as_search_settings',
+            'arguments' => ['operation' => 'update', 'settingsJson' => '{"enableAiSearch":0}'],
+            'presentation' => ['content' => 'Saved.', 'success' => true, 'facts' => []],
+        ], ['message' => 'Saved.']);
+
+        self::assertSame('{"enableAiSearch":0}', $fromApply[0]['meta']['appliedSettings']);
+    }
+
+    #[Test]
     public function appliedSuggestionsKeepTheChoice(): void
     {
         $messages = [['role' => 'assistant', 'content' => 'Suggestions', 'meta' => ['type' => 'suggestions', 'draftId' => 's1']]];

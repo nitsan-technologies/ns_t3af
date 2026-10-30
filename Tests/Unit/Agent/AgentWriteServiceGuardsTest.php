@@ -187,6 +187,101 @@ final class AgentWriteServiceGuardsTest extends TestCase
     }
 
     #[Test]
+    public function anOlderDataSourceCardDoesNotOverwriteTheNewerName(): void
+    {
+        $playground = $this->createMock(McpPlaygroundService::class);
+        $playground->expects(self::never())->method('invoke');
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->willReturn(['name' => 'QA Gap B']);
+        $service = $this->service(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            time(),
+            $this->datasourceRenamePlan(),
+            $playground,
+            ['recordBaseline' => [
+                'table' => 'tx_nst3cs_domain_model_datasource',
+                'uid' => 33,
+                'values' => ['name' => 'QA Gap Stale'],
+            ]],
+        );
+
+        try {
+            $service->apply('draft-1', []);
+            self::fail('An older card must not overwrite the newer name.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame(1712003221, $exception->getCode());
+            self::assertStringContainsString('name', $exception->getMessage());
+        }
+    }
+
+    #[Test]
+    public function aDataSourceCardStillAppliesWhenTheNameIsUnchanged(): void
+    {
+        $playground = $this->createMock(McpPlaygroundService::class);
+        $playground->expects(self::once())->method('invoke')->willReturn([
+            'success' => false,
+            'message' => 'stopped after the check',
+            'result' => null,
+        ]);
+        $records = $this->createMock(RecordService::class);
+        $records->method('findByUid')->willReturn(['name' => 'QA Gap Stale']);
+        $service = $this->service(
+            $this->createMock(DataHandlerService::class),
+            $records,
+            time(),
+            $this->datasourceRenamePlan(),
+            $playground,
+            ['recordBaseline' => [
+                'table' => 'tx_nst3cs_domain_model_datasource',
+                'uid' => 33,
+                'values' => ['name' => 'QA Gap Stale'],
+            ]],
+        );
+
+        try {
+            $service->apply('draft-1', []);
+            self::fail('The tool is reached only after the name still matches.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame(1712003211, $exception->getCode());
+        }
+    }
+
+    #[Test]
+    public function aChatbotTitleCardUsesTheSameCheck(): void
+    {
+        $target = AgentWriteService::confirmationBaselineTarget('t3ac_chatbot_settings', [
+            'operation' => 'update',
+            'chatbotUid' => 1,
+            'settingsJson' => '{"title":"QA Gap A"}',
+        ]);
+        $datasource = AgentWriteService::confirmationBaselineTarget('t3cs_save_datasource', [
+            'operation' => 'update',
+            'dataId' => 33,
+            'name' => 'QA Gap A',
+        ]);
+        $create = AgentWriteService::confirmationBaselineTarget('t3cs_save_datasource', [
+            'operation' => 'create',
+            'name' => 'QA Gap A',
+        ]);
+        $seo = AgentWriteService::confirmationBaselineTarget('t3ai_generate_all_seo', [
+            'pageId' => 4,
+        ]);
+
+        self::assertSame(['title'], $target['fields'] ?? null);
+        self::assertSame(1, $target['uid'] ?? null);
+        self::assertSame(['name'], $datasource['fields'] ?? null);
+        self::assertSame(33, $datasource['uid'] ?? null);
+        self::assertNull($create);
+        self::assertNull($seo);
+        self::assertSame(['first_message'], AgentWriteService::confirmationBaselineTarget('t3ac_chatbot_settings', [
+            'operation' => 'update',
+            'chatbotUid' => 1,
+            'settingsJson' => ['firstMessage' => 'Hello'],
+        ])['fields'] ?? null);
+    }
+
+    #[Test]
     public function downloadThatCanNeverWorkIsNotOfferedAgain(): void
     {
         $service = $this->downloadService('{"error":"Could not resolve host \"no-such-host.invalid\".","retryable":false}');
@@ -197,6 +292,24 @@ final class AgentWriteServiceGuardsTest extends TestCase
         } catch (AgentApplyNotRetryableException $exception) {
             self::assertSame(1712003211, $exception->getCode());
             self::assertStringContainsString('Could not resolve host', $exception->getMessage());
+        }
+
+        self::assertNull((new AgentDraftSession())->getDraft('draft-1'));
+    }
+
+    #[Test]
+    public function datasourceCreateThatCanNeverWorkIsNotOfferedAgain(): void
+    {
+        $service = $this->datasourceCreateService(
+            '{"error":"The URL returned an error (HTTP 404). Please use a valid, reachable URL.","retryable":false}',
+        );
+
+        try {
+            $service->apply('draft-1', []);
+            self::fail('A failed create must be reported.');
+        } catch (AgentApplyNotRetryableException $exception) {
+            self::assertSame(1712003211, $exception->getCode());
+            self::assertStringContainsString('HTTP 404', $exception->getMessage());
         }
 
         self::assertNull((new AgentDraftSession())->getDraft('draft-1'));
@@ -254,6 +367,29 @@ final class AgentWriteServiceGuardsTest extends TestCase
         return $this->service($this->createMock(DataHandlerService::class), $this->createMock(RecordService::class), time(), $plan, $playground);
     }
 
+    private function datasourceCreateService(string $toolResult): AgentWriteService
+    {
+        $plan = new ToolPlan('update', 't3cs_save_datasource', [], [
+            'planKind' => SatelliteToolPlanService::PLAN_KIND_TOOL_CONFIRMATION,
+            'arguments' => [
+                'operation' => 'create',
+                'name' => 'QA Deep Web',
+                'type' => 'web_pages',
+                'typeValue' => 'https://example.com/missing',
+                'rootPageId' => 1,
+            ],
+        ]);
+        $playground = $this->createMock(McpPlaygroundService::class);
+        $playground->method('invoke')->willReturn([
+            'success' => false,
+            'result' => $toolResult,
+            'latencyMs' => 1,
+            'message' => (string) (json_decode($toolResult, true)['error'] ?? 'failed'),
+        ]);
+
+        return $this->service($this->createMock(DataHandlerService::class), $this->createMock(RecordService::class), time(), $plan, $playground);
+    }
+
     /** @return DataHandlerService&MockObject */
     private function dataHandlerApplying(): DataHandlerService
     {
@@ -293,12 +429,24 @@ final class AgentWriteServiceGuardsTest extends TestCase
         return $records;
     }
 
+    private function datasourceRenamePlan(): ToolPlan
+    {
+        return new ToolPlan('update', 't3cs_save_datasource', [], [
+            'planKind' => SatelliteToolPlanService::PLAN_KIND_TOOL_CONFIRMATION,
+            'arguments' => ['operation' => 'update', 'dataId' => 33, 'name' => 'QA Gap A'],
+        ]);
+    }
+
+    /**
+     * @param array<string, mixed>|null $extra
+     */
     private function service(
         DataHandlerService $dataHandler,
         RecordService $records,
         ?int $createdAt,
         ?ToolPlan $plan = null,
         ?McpPlaygroundService $playground = null,
+        ?array $extra = null,
     ): AgentWriteService {
         $plan ??= new ToolPlan('update', 'write_table', [
             new ToolPlanField(self::FIELD_KEY, 'tt_content', 42, 'header', 'Old', 'New'),
@@ -311,6 +459,9 @@ final class AgentWriteServiceGuardsTest extends TestCase
         ];
         if ($createdAt !== null) {
             $stored['createdAt'] = $createdAt;
+        }
+        if ($extra !== null) {
+            $stored = [...$stored, ...$extra];
         }
         $draftSession = $this->createDraftSession();
         $draftSession->storeDraft('draft-1', $stored);

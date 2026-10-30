@@ -29,6 +29,12 @@ use TYPO3\CMS\Backend\Utility\BackendUtility;
  */
 final class McpBackendUserAuthenticationTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $GLOBALS['EXEC_TIME'] = time();
+    }
+
     #[Test]
     public function moduleDataIsKeptInMemoryWithoutASession(): void
     {
@@ -48,5 +54,15 @@ final class McpBackendUserAuthenticationTest extends TestCase
 
         self::assertNull($user->getModuleData($key));
         self::assertNull((new \ReflectionProperty($user, 'userSession'))->getValue($user));
+    }
+
+    #[Test]
+    public function schedulerFlashDataIsKeptInMemoryWithoutASession(): void
+    {
+        $user = new McpBackendUserAuthentication();
+        $user->setAndSaveSessionData('core.template.flashMessages', ['saved']);
+
+        self::assertSame(['saved'], $user->getSessionData('core.template.flashMessages'));
+        self::assertNotNull((new \ReflectionProperty($user, 'userSession'))->getValue($user));
     }
 }

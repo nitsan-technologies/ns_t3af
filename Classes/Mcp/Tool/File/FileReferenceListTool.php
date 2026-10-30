@@ -55,6 +55,10 @@ readonly class FileReferenceListTool implements McpNonAiToolInterface
             );
         }
 
+        if ($uid > 0 && !$this->recordService->recordExists($table, $uid)) {
+            return $this->encodeError('Record not found: ' . $table . ' uid ' . $uid . '.');
+        }
+
         // "image" on a Text & Media element is always empty: the element keeps its pictures in "assets".
         $note = '';
         $usable = $this->usableFileFieldsOfRecord($table, $uid, $fieldName, $fileFields);

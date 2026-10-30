@@ -89,27 +89,37 @@ final readonly class AgentConversationRecorder
             $presented = is_array($result['presentation'] ?? null) ? $result['presentation'] : [];
             $tool = (string) ($result['tool'] ?? $draft['tool'] ?? '');
             $content = trim((string) ($presented['content'] ?? ''));
+            $resultMeta = [
+                'type' => 'tool_result',
+                'tool' => $tool,
+                'toolCallLabel' => $this->label($draft, $tool),
+                'success' => ($presented['success'] ?? true) !== false,
+                'severity' => (string) ($draft['severity'] ?? 'write'),
+                'severityLabel' => 'Write',
+                'facts' => array_values(is_array($presented['facts'] ?? null) ? $presented['facts'] : []),
+                'details' => $presented['details'] ?? null,
+                'previews' => array_values(is_array($presented['previews'] ?? null) ? $presented['previews'] : []),
+                'autoRan' => false,
+                'correlationId' => (string) ($result['correlationId'] ?? $meta['correlationId'] ?? ''),
+                'changeId' => (string) ($result['changeId'] ?? ''),
+                'undoable' => ($result['undoable'] ?? false) === true,
+                'schedulerHandoff' => $handoff,
+                'links' => $links,
+                'fromRunner' => ($meta['fromRunner'] ?? false) === true,
+            ];
+            if ($tool === 't3ac_chatbot_settings' && is_array($draft['recordBaseline'] ?? null)) {
+                $resultMeta['recordBaseline'] = $draft['recordBaseline'];
+            }
+            if ($tool === 't3as_search_settings') {
+                $fromResult = is_array($result['arguments'] ?? null) ? $result['arguments'] : [];
+                $fromDraft = is_array($draft['arguments'] ?? null) ? $draft['arguments'] : [];
+                $resultMeta['appliedSettings'] = self::settingsJsonFromArguments($fromResult)
+                    ?? self::settingsJsonFromArguments($fromDraft);
+            }
             $messages[$index] = [
                 'role' => 'assistant',
                 'content' => $content !== '' ? $content : ($responseMessage !== '' ? $responseMessage : $this->translator->translate('agent.draft.toolApplied')),
-                'meta' => [
-                    'type' => 'tool_result',
-                    'tool' => $tool,
-                    'toolCallLabel' => $this->label($draft, $tool),
-                    'success' => ($presented['success'] ?? true) !== false,
-                    'severity' => (string) ($draft['severity'] ?? 'write'),
-                    'severityLabel' => 'Write',
-                    'facts' => array_values(is_array($presented['facts'] ?? null) ? $presented['facts'] : []),
-                    'details' => $presented['details'] ?? null,
-                    'previews' => array_values(is_array($presented['previews'] ?? null) ? $presented['previews'] : []),
-                    'autoRan' => false,
-                    'correlationId' => (string) ($result['correlationId'] ?? $meta['correlationId'] ?? ''),
-                    'changeId' => (string) ($result['changeId'] ?? ''),
-                    'undoable' => ($result['undoable'] ?? false) === true,
-                    'schedulerHandoff' => $handoff,
-                    'links' => $links,
-                    'fromRunner' => ($meta['fromRunner'] ?? false) === true,
-                ],
+                'meta' => $resultMeta,
             ];
 
             return $messages;
@@ -259,6 +269,80 @@ final readonly class AgentConversationRecorder
         }
 
         return $tool !== '' ? $this->editorLabelService->resolveByName($tool) : '';
+    }
+
+    /**
+     * Raw tool args, or the display rows shown on the confirmation card.
+     *
+     * @param array<string, mixed>|list<array<string, mixed>> $arguments
+     */
+    public static function settingsJsonFromArguments(array $arguments): ?string
+    {
+        $raw = $arguments['settingsJson'] ?? $arguments['settings_json'] ?? null;
+        $encoded = self::encodeSettingsJson($raw);
+        if ($encoded !== null) {
+            return $encoded;
+        }
+
+        foreach ($arguments as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $key = (string) ($row['key'] ?? '');
+            if ($key === 'settingsJson' || $key === 'settings_json') {
+                $encoded = self::encodeSettingsJson($row['value'] ?? null);
+                if ($encoded !== null) {
+                    return $encoded;
+                }
+            }
+            if ($key === 'enableAiSearch' || $key === 'enable_ai_search') {
+                $on = self::truthyEnableValue($row['value'] ?? null);
+                if ($on === null) {
+                    continue;
+                }
+                $json = json_encode(['enableAiSearch' => $on], JSON_UNESCAPED_UNICODE);
+
+                return is_string($json) ? $json : null;
+            }
+        }
+
+        return null;
+    }
+
+    private static function encodeSettingsJson(mixed $raw): ?string
+    {
+        if (is_array($raw)) {
+            $json = json_encode($raw, JSON_UNESCAPED_UNICODE);
+
+            return is_string($json) ? $json : null;
+        }
+        if (is_string($raw) && trim($raw) !== '') {
+            return $raw;
+        }
+
+        return null;
+    }
+
+    private static function truthyEnableValue(mixed $value): ?int
+    {
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
+        }
+        if (is_int($value) || is_float($value)) {
+            return ((int) $value) === 1 ? 1 : 0;
+        }
+        $text = strtolower(trim((string) $value));
+        if ($text === '') {
+            return null;
+        }
+        if (in_array($text, ['1', 'true', 'yes', 'on'], true)) {
+            return 1;
+        }
+        if (in_array($text, ['0', 'false', 'no', 'off'], true)) {
+            return 0;
+        }
+
+        return null;
     }
 
     /**

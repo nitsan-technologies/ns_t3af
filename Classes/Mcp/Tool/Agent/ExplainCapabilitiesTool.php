@@ -180,12 +180,15 @@ final readonly class ExplainCapabilitiesTool implements McpNonAiToolInterface
         if ($locked !== []) {
             $lines[] = sprintf('%d actions need another extension or plan.', count($locked));
         }
+        foreach ($this->extensionGroupLines($executable, $locked) as $groupLine) {
+            $lines[] = $groupLine;
+        }
         $lines[] = 'Tip: pick a suggestion, or type / to choose an action.';
 
         return json_encode([
             'ok' => true,
             'summary' => implode("\n", $lines),
-            'replyGuidance' => 'Answer in the editor\'s language as a short, friendly list. Every item has the form: what you can do, then one example request in quotation marks the editor can copy. Always end with one closing line: pick a suggestion or type / to choose an action. In German address the editor formally (Sie). Do not mention tool names or technical terms.',
+            'replyGuidance' => 'Answer as a short, friendly list in the language the system instruction sets for this capability answer. An English question stays in English. A German question uses the formal Sie. Every item has the form: what you can do, then one example request in quotation marks the editor can copy. Always end with one closing line: pick a suggestion or type / to choose an action. Do not mention tool names or technical terms.',
             'executableCount' => count($executable),
             'listedCount' => $listed,
             'listedTools' => $shown,
@@ -193,6 +196,48 @@ final readonly class ExplainCapabilitiesTool implements McpNonAiToolInterface
             'pageId' => $pageId,
             'module' => $module,
         ], JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * Training, AI Search and the chatbot stay visible after the short page list, including a licence lock.
+     *
+     * @param list<array<string, mixed>> $executable
+     * @param list<array<string, mixed>> $locked
+     * @return list<string>
+     */
+    private function extensionGroupLines(array $executable, array $locked): array
+    {
+        $lines = [];
+        foreach ([
+            't3cs_' => 'Training data',
+            't3as_' => 'AI Search',
+            't3ac_' => 'AI Chatbot',
+        ] as $prefix => $title) {
+            $open = [];
+            $lockReason = '';
+            foreach ($executable as $tool) {
+                $name = (string) ($tool['name'] ?? '');
+                if (str_starts_with($name, $prefix)) {
+                    $open[] = $this->shortLabel($tool);
+                }
+            }
+            foreach ($locked as $tool) {
+                $name = (string) ($tool['name'] ?? '');
+                if ($lockReason === '' && str_starts_with($name, $prefix)) {
+                    $lockReason = trim((string) ($tool['lockReason'] ?? ''));
+                }
+            }
+            if ($open === [] && $lockReason === '') {
+                continue;
+            }
+            $text = $title . ': ' . implode('; ', array_slice($open, 0, 3));
+            if ($lockReason !== '') {
+                $text = rtrim($text, ': ') . ($open !== [] ? '. ' : ': ') . $lockReason;
+            }
+            $lines[] = $text;
+        }
+
+        return $lines;
     }
 
     /**

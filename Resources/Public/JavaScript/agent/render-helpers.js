@@ -511,3 +511,20 @@ export function ensureMessageRenderer() {
 export function renderMessageBody(content) {
   return renderMessageBodyImpl(content);
 }
+
+/**
+ * The training queue's full list, behind one button. Five or fewer lines are already in the answer.
+ *
+ * @param {object} meta
+ * @returns {string}
+ */
+export function renderListLines(meta) {
+  const lines = Array.isArray(meta?.lines)
+    ? meta.lines.map((line) => String(line).trim()).filter((line) => line !== '')
+    : [];
+  if (lines.length <= 5) {
+    return '';
+  }
+  const label = lang('agent.result.showAll', 'Show all (%1$s)', [String(lines.length)]);
+  return `<details class="nst3af-agent-lines"><summary class="btn btn-default btn-sm">${escapeHtml(label)}</summary><ul>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ul></details>`;
+}
