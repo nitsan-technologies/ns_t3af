@@ -481,7 +481,8 @@ export function ensureMessageRenderer() {
           import('dompurify'),
         ]);
         const DOMPurify = dompurifyModule.default ?? dompurifyModule;
-        marked.setOptions({ gfm: true, breaks: false });
+        // breaks: true keeps composer line breaks (Fix-N scan prompts) as <br> instead of spaces.
+        marked.setOptions({ gfm: true, breaks: true });
         const sanitizeConfig = {
           ALLOWED_TAGS: ['blockquote', 'br', 'code', 'em', 'hr', 'kbd', 'li', 'ol', 'p', 'pre', 'strong', 'ul'],
           ALLOWED_ATTR: [],
