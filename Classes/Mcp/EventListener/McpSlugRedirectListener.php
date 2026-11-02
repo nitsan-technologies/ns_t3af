@@ -68,4 +68,40 @@ final class McpSlugRedirectListener
 
         $this->guard->rememberCreated($event->getRedirectRecord());
     }
+
+    public function forcePermanentRedirect(object $event): void
+    {
+        $eventClass = 'TYPO3\\CMS\\Redirects\\Event\\ModifyAutoCreateRedirectRecordBeforePersistingEvent';
+        if (!$this->guard->isActive() || !class_exists($eventClass) || !$event instanceof $eventClass) {
+            return;
+        }
+
+        $siteHost = '';
+        try {
+            $siteHost = $event->getSlugRedirectChangeItem()->getSite()->getBase()->getHost();
+        } catch (\Throwable) {
+            $siteHost = '';
+        }
+
+        $event->setRedirectRecord(self::applySeoRedirectDefaults($event->getRedirectRecord(), $siteHost));
+    }
+
+    /**
+     * Agent slug applies must be a 301 on a real host, not TCA's 307 / a bare DDEV project name.
+     *
+     * @param array<string, mixed> $record
+     * @return array<string, mixed>
+     * @internal used by unit tests
+     */
+    public static function applySeoRedirectDefaults(array $record, string $siteHost): array
+    {
+        $record['target_statuscode'] = 301;
+        $host = trim((string) ($record['source_host'] ?? ''));
+        $hasRealHost = $host !== '' && $host !== '*' && str_contains($host, '.');
+        if (!$hasRealHost) {
+            $record['source_host'] = $siteHost !== '' ? $siteHost : '*';
+        }
+
+        return $record;
+    }
 }
