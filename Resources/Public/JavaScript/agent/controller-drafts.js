@@ -564,6 +564,7 @@ export const draftMethods = {
           <div class="nst3af-agent-draft__cols" aria-hidden="true"><span></span><span>${escapeHtml(lang('agent.draft.colCurrent', 'Now'))}</span><span>${escapeHtml(lang('agent.draft.colProposed', 'New'))}</span><span></span></div>
           <div class="nst3af-agent-draft__fields">${rows}</div>
           ${this.renderDraftTarget(isDestructive)}
+          ${String(draft.notice ?? '').trim() !== '' ? `<p class="nst3af-agent-draft__hint" role="status">${escapeHtml(String(draft.notice).trim())}</p>` : ''}
           ${nothingKept ? `<p class="nst3af-agent-draft__hint" role="status">${escapeHtml(lang('agent.draft.nothingKept', 'Nothing is selected. Include at least one change or cancel.'))}</p>` : ''}
           ${!nothingKept && blankProposed ? `<p class="nst3af-agent-draft__hint" role="status">${escapeHtml(lang('agent.draft.blankProposed', 'A change has no new value. Leave it out or cancel.'))}</p>` : ''}
           <div class="nst3af-agent-draft__actions">
