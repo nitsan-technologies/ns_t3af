@@ -409,6 +409,10 @@
 }
 
 .nst3af-agent-msg--user p {
+  margin: 0 0 8px;
+}
+
+.nst3af-agent-msg--user p:last-child {
   margin-bottom: 0;
 }
 

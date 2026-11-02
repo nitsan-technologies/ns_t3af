@@ -1160,6 +1160,15 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
     }
 
     /**
+     * Whole-page translation — hide t3ai_fix_check so a prior SEO finding does not steal the turn.
+     */
+    public static function isWholePageTranslateRequest(string $query): bool
+    {
+        return preg_match('/\b(translat\w*|locali[sz]\w*|übersetz\w*|uebersetz\w*)\b/iu', $query) === 1
+            && preg_match('/\b(page|seite)\b/iu', $query) === 1;
+    }
+
+    /**
      * What a create card makes: its tool, table and content type ("write_table tt_content textmedia").
      *
      * @param array<string, mixed> $draft
@@ -1853,6 +1862,9 @@ final readonly class AgentRunner implements AgentTurnRunnerInterface
         }
         if (self::isDoNotApproveAltTextRequest($query)) {
             $names[] = 't3aa_alt_text_approve';
+        }
+        if (self::isWholePageTranslateRequest($query) && !self::asksForOneElementTranslation($query)) {
+            $names[] = 't3ai_fix_check';
         }
         if (self::isQueueFolderAltTextRequest($query) && AgentToolTurnProcessor::requestedFileNames($query) === []) {
             $names[] = 't3aa_update_file_metadata';
